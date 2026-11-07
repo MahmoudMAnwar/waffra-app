@@ -15,8 +15,9 @@ void main(){
   expect(home,contains("if(choice=='exclude')senderBlockChoices.add(sender);"));
   expect(home,contains('WaffraAutoSms.excludeSender(sender)'));
   // The opt-in follows queue acknowledgement, not a bulk-select tap.
+  expect(home,contains('if(!await WaffraAutoSms.excludeMessages(batch))'));
   expect(home.indexOf('for(final sender in clearedSenders.where(senderBlockChoices.contains))'),
-   greaterThan(home.indexOf('if(!await WaffraAutoSms.acknowledge(batch))')));
+   greaterThan(home.indexOf('if(!await WaffraAutoSms.excludeMessages(batch))')));
  });
 
  test('M470 #8: excluded senders have a dedicated restore control',(){
