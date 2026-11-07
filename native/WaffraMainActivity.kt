@@ -435,6 +435,18 @@ class MainActivity : FlutterFragmentActivity() {
                         runOnUiThread { result.success(acknowledged) }
                     }
                 }
+                "excludeAutoBankSms" -> {
+                    // M514 #448: unlike a reviewed financial commit, an
+                    // excluded message is sealed against rescan in its OWN
+                    // owner-scoped policy, never in the finance fingerprint.
+                    val values = call.arguments as? List<*>
+                    val ids = values?.filterIsInstance<String>()?.toSet() ?: emptySet()
+                    val app = applicationContext
+                    smsHistoryExecutor.execute {
+                        val excluded = WaffraAutoSmsStore.excludeMessages(app, ids)
+                        runOnUiThread { result.success(excluded) }
+                    }
+                }
                 "ackCommittedAutoBankSms" -> {
                     // Called ONLY after verified SQLCipher ledger hash presence.
                     // An excluded or cancelled message uses ordinary ACK.
