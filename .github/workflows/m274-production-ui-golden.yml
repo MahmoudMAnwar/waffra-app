@@ -24,11 +24,17 @@ concurrency:
 
 jobs:
   m412-impact:
-    name: M412 Only Run Tests Impacted By Latest PR Update
+    name: M412 Impact Telemetry (M274 always verifies real Android UI)
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      run: ${{ steps.impact.outputs.run }}
+      # M533: GitHub evaluates this M274 workflow against the cumulative PR
+      # diff, but M412's incremental classifier checks just the last commit.
+      # A docs-only release note must never turn skipped device jobs green.
+      # Keep diagnostic impact telemetry, but *always* execute the real jobs
+      # on every triggered M274 workflow. Failure of this prerequisite remains
+      # a hard failure and dependent jobs are not claimed as passed.
+      run: 'true'
     steps:
       - uses: actions/checkout@v4
         with:
