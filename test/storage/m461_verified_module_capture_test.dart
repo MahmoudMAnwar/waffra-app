@@ -80,6 +80,33 @@ void main() {
       throwsStateError);
   });
 
+  test('budget save keeps only budget projections on a fresh encrypted vault', () {
+    final capture = displayed()
+      ..['waffra_named_budgets_v1'] = '[{"id":"budget-1","accountId":"bank-1"}]';
+    WaffraHomeTransactionCapture.narrowVerifiedModuleEdit(
+      route: WaffraFinanceRoute.challengeAndBudgetUpdate,
+      source: encrypted, snapshot: capture, witnessedValues: fresh);
+    expect(capture.keys.toSet(), {
+      'waffra_named_budgets_v1',
+      'waffra_challenges_v1',
+      'waffra_monthly_budget_v1',
+      'waffra_monthly_budget_enabled_v1',
+      'waffra_categories_v24',
+    });
+    expect(capture['waffra_named_budgets_v1'],
+      '[{"id":"budget-1","accountId":"bank-1"}]');
+    expect(capture.containsKey('entries'), isFalse);
+  });
+
+  test('budget save rejects unrelated persisted ledger mutation', () {
+    final capture = displayed()
+      ..['entries'] = '[{"id":"unexpected"}]';
+    expect(() => WaffraHomeTransactionCapture.narrowVerifiedModuleEdit(
+      route: WaffraFinanceRoute.challengeAndBudgetUpdate,
+      source: encrypted, snapshot: capture, witnessedValues: fresh),
+      throwsStateError);
+  });
+
   test('unchanged legacy captures retain original full snapshot', () {
     final capture = displayed();
     WaffraHomeTransactionCapture.narrowVerifiedModuleEdit(
