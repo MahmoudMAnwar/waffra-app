@@ -589,6 +589,9 @@ class WaffraVerifiedFinanceAuthority {
       // they need an atomic entry+postponement posting writer separately.
       final allowed = switch (route) {
         WaffraFinanceRoute.challengeAndBudgetUpdate => <String>{
+          // Independent, account-linked envelopes are financial budget data.
+          // This route is still barred from changing ledger or bank balances.
+          'waffra_named_budgets_v1',
           'waffra_challenges_v1',
           'waffra_monthly_budget_v1',
           'waffra_monthly_budget_enabled_v1',
