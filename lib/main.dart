@@ -4026,6 +4026,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  bool _autoSmsHistoryComplete=false;
  bool _autoSmsRescanRunning=false;
  Map<String,Object?> _autoSmsProgress=const <String,Object?>{};
+ // Count this exact explicit rescan, never reuse historical cumulative count.
+ int? _autoSmsLastRescanScanned;
  DateTime? _autoSmsLastChecked;
  String? _autoSmsStatusProblem;
  final List<Map<String,Object?>> _autoSmsPending=<Map<String,Object?>>[];
@@ -4214,14 +4216,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    await _refreshAutoSmsInbox(importMonth:true);
    if(!mounted)return;
    final after=await WaffraAutoSms.scanProgress();
-   if(after!=null)setState(()=>_autoSmsProgress=after);
+   final priorScanned=before?['scanned'] is num?
+    (before!['scanned'] as num).toInt():0;
+   final nowScanned=after?['scanned'] is num?
+    (after!['scanned'] as num).toInt():priorScanned;
+   // A completed cursor was reset BEFORE 'before'; an unfinished cursor
+   // kept its counters. Both yield a per-button delta.
+   final scanned=(nowScanned-priorScanned).clamp(0,2147483647);
+   if(after!=null)setState((){
+    _autoSmsProgress=after;
+    _autoSmsLastRescanScanned=scanned;
+   });
    final previous=before?['added'] is num?
     (before!['added'] as num).toInt():0;
    final current=after?['added'] is num?
     (after!['added'] as num).toInt():previous;
    final added=(current-previous).clamp(0,2147483647);
-   final scanned=after?['scanned'] is num?
-    (after!['scanned'] as num).toInt():0;
    if(_autoSmsStatusProblem!=null){
     snack(context,_autoSmsStatusProblem!,isError:true);
    }else if(after?['complete']!=true){
@@ -4384,7 +4394,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final failedAcks=<String>{};
    for(var from=0;from<toAcknowledge.length;from+=100){
     final batch=toAcknowledge.skip(from).take(100).toList(growable:false);
-    final removed=await WaffraAutoSms.acknowledge(batch);
+    final removed=await WaffraAutoSms.excludeMessages(batch);
     if(!removed)failedAcks.addAll(batch);
    }
    waiting.addAll(toRestoreOnAckFailure.where(
@@ -4744,8 +4754,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           leading:const Icon(Icons.sms_outlined,color:emerald),
           title:WaffraText(suggestion==null?
            (local==null?
-            (waffraIsEnglish?'Ambiguous • needs review':
-             'عملية غامضة • تحتاج مراجعة'):
+            (waffraIsEnglish?'Needs review':
+             'عملية تحتاج مراجعة'):
             (waffraIsEnglish?'Local rule • ':'قاعدة محلية • ')+
              (local['kind']=='transfer'?
               (waffraIsEnglish?'Transfer':'تحويل'):
@@ -4881,13 +4891,41 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            // Stop at the first failed batch; never claim partial success.
            for(var at=0;at<ids.length;at+=100){
             final batch=ids.skip(at).take(100).toList(growable:false);
-            if(!await WaffraAutoSms.acknowledge(batch)){
+            if(!await WaffraAutoSms.excludeMessages(batch)){
              failed=true;break;
             }
             done.addAll(batch);
            }
            final clearedSenders=<String>[];
            if(done.isNotEmpty){
+            // Bulk and individual exclusions learn identical safe,
+            // owner-encrypted review-only keywords after native success.
+            if(_smsRuleOwnerKey.isNotEmpty){
+             try{
+              final store=const WaffraSmsLocalRuleStore();
+              final previous=await store.read(_smsRuleOwnerKey);
+              var next=previous;
+              for(final row in _autoSmsPending.where(
+                  (row)=>done.contains(row['id']))){
+               final body=row['body'],sender=row['sender'];
+               if(body is! String||sender is! String)continue;
+               final candidate=WaffraSmsLocalRules.suggestedRule(
+                body:body,sender:sender,kind:'excluded',
+                confidentOnly:true);
+               if(candidate!=null){
+                next=WaffraSmsLocalRules.upsertLearned(
+                 existing:next,candidate:candidate);
+               }
+              }
+              if(!identical(previous,next)){
+               await store.write(_smsRuleOwnerKey,next);
+              }
+             }catch(_){
+              if(mounted)snack(context,waffraIsEnglish?
+               'Messages excluded; safe rule learning unavailable.':
+               'تم الاستبعاد، لكن تعذر حفظ قاعدة تعلم آمنة.',isError:true);
+             }
+            }
             for(final sender in senders){
              final groupIds=idsOf(bySender[sender]??const []);
              if(groupIds.isNotEmpty&&groupIds.every(done.contains)){
@@ -5015,8 +5053,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       if(count>0)...[
        const SizedBox(height:5),
        WaffraText(waffraIsEnglish?
-        '$localCount classified locally • ${ambiguous<0?0:ambiguous} ambiguous':
-        '$localCount مصنفة محليًا • ${ambiguous<0?0:ambiguous} غامضة',
+        '$localCount classified locally • ${ambiguous<0?0:ambiguous} need review':
+        '$localCount مصنفة محليًا • ${ambiguous<0?0:ambiguous} تحتاج مراجعة',
         style:const TextStyle(color:emerald,fontSize:12,
          fontWeight:FontWeight.w600)),
       ],
@@ -5039,10 +5077,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        ]),
        const SizedBox(height:10),
       ],
-      if(_autoSmsProgress['scanned'] is num)...[
+      if(_autoSmsLastRescanScanned!=null)...[
        WaffraText(waffraIsEnglish?
-        'Total SMS scanned: ${_autoSmsProgress['scanned']} • Awaiting review: ${_autoSmsProgress['pending']}':
-        'إجمالي الرسائل المفحوصة: ${_autoSmsProgress['scanned']} • بانتظار المراجعة: ${_autoSmsProgress['pending']}',
+        'Last rescan checked: $_autoSmsLastRescanScanned • Awaiting review: ${_autoSmsProgress['pending']}':
+        'آخر إعادة فحص: $_autoSmsLastRescanScanned رسالة • بانتظار المراجعة: ${_autoSmsProgress['pending']}',
         style:const TextStyle(fontSize:12,color:emerald)),
        if(_autoSmsLastChecked!=null)
         WaffraText(waffraIsEnglish?
@@ -5349,8 +5387,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        ),
      ]));
    if(decision=='exclude'&&mounted){
-    // Excluding ONE message must never silently block its sender.
-    final acknowledged=await WaffraAutoSms.acknowledge([id]);
+    // Never mark user-excluded SMS as a financially committed transaction.
+    final acknowledged=await WaffraAutoSms.excludeMessages([id]);
     if(acknowledged&&mounted){
      setState(()=>_autoSmsPending.removeWhere((item)=>item['id']==id));
      snackSuccess(context,waffraIsEnglish?
