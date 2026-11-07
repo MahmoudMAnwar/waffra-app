@@ -37,7 +37,17 @@ void main() {
   expect(store,contains('isExcludedMessageLocked(context, fingerprint) ||'));
   expect(store,contains('isCompletedTransferLocked(context, fingerprint)'));
   expect(store,contains('if (ids.any { !present.contains(it) &&'));
-  expect(store,contains('if (key.startsWith(committedBucketPrefix)) editor.remove(key)'));
+  // On an explicit owner change, the same transaction clears ALL sensitive
+  // marker families, not just committed finance hashes. Do not weaken dedup.
+  expect(store,contains('if (previous != null && previous != owner) {'));
+  expect(store,contains('for (key in prefs.all.keys) {'));
+  expect(store,contains('if (key.startsWith(committedBucketPrefix) ||'));
+  expect(store,contains('key.startsWith(excludedMessageBucketPrefix) ||'));
+  expect(store,contains('key.startsWith(excludedMessageInfoBucketPrefix) ||'));
+  expect(store,contains('key.startsWith(completedTransferBucketPrefix)) editor.remove(key)'));
+  expect(store,contains('committedCipherCache.clear()'));
+  expect(store,contains('excludedMessageCipherCache.clear()'));
+  expect(store,contains('completedTransferCipherCache.clear()'));
   expect(store,contains('editor.commit()'));
  });
 
