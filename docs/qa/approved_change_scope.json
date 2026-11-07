@@ -197,10 +197,6 @@
     ],
     "lib/storage/waffra_verified_finance_authority.dart": [
       {
-        "start": "        WaffraFinanceRoute.challengeAndBudgetUpdate => <String>{",
-        "end": "        WaffraFinanceRoute.recurringPostingAndPostponement => <String>{"
-      },
-      {
         "start": "  Future<WaffraFinanceAuthorityRead> saveCaptured({",
         "end": "  /// M457: add one user-confirmed manual entry without rewriting any existing"
       }
