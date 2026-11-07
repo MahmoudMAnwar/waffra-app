@@ -40,7 +40,8 @@
     "test/m515_budget_verified_save_test.dart",
     "test/qa/m452_sms_review_signup_regression_test.py",
     "test/storage/m514_sms_receipt_regression_test.dart",
-    "test/storage/m515_budget_account_save_test.dart"
+    "test/storage/m515_budget_account_save_test.dart",
+    "test/storage/m461_verified_module_capture_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -215,6 +216,12 @@
       {
         "start": "  static void narrowVerifiedModuleEdit({",
         "end": "  /// Exact string equality is equivalent to encoding both JSON strings,"
+      }
+    ],
+    "test/storage/m461_verified_module_capture_test.dart": [
+      {
+        "start": "  test('unpersisted nonempty budget is not silently dropped', () {",
+        "end": "  test('unchanged legacy captures retain original full snapshot', () {"
       }
     ]
   }
