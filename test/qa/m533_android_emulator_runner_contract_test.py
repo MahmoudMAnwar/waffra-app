@@ -18,7 +18,13 @@ class M533AndroidEmulatorStabilityContractTest(unittest.TestCase):
         self.assertNotIn("-gpu software", WORKFLOW)
         self.assertNotIn("-gpu swiftshader_indirect", WORKFLOW)
         self.assertIn("36.4.10.0 (build_id 15004761)", WORKFLOW)
-        self.assertIn("36.4.10.0 (build_id 15004761)", SCRIPT)
+        # M534: the workflow verifies actual build before launch; the runner
+        # inspects installed metadata without executing emulator -version twice.
+        self.assertIn('emulator/source.properties', SCRIPT)
+        self.assertIn('M534_EMULATOR_PACKAGE_VERIFIED:36.4.10', SCRIPT)
+        self.assertIn("Pkg", SCRIPT)
+        self.assertNotIn('version_output=', SCRIPT)
+        self.assertNotIn('emulator_bin=', SCRIPT)
 
     def test_preserves_exact_flutter_driver_and_real_android_ui(self):
         self.assertIn("api-level: 35", WORKFLOW)
