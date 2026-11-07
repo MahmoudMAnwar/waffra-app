@@ -17,9 +17,9 @@ class M274EmulatorDiskBudgetTest(unittest.TestCase):
             "reactivecircus/android-emulator-runner@v2",
             "bash .github/scripts/run-m274-android-tap-smoke.sh",
             "api-level: 35",
-            "target: google_apis",
+            "target: aosp_atd",
             "arch: x86_64",
-            "profile: pixel_6",
+            "profile: pixel_2",
         ):
             self.assertIn(required, self.workflow)
 
@@ -29,8 +29,9 @@ class M274EmulatorDiskBudgetTest(unittest.TestCase):
         )[-1]
         self.assertIn("disk-size: 3072M", from_anchor)
         self.assertLess(3072, 5911, "Emulator partition must fit observed runner free space")
-        self.assertIn("ram-size: 2048M", from_anchor)
-        self.assertIn("heap-size: 256M", from_anchor)
+        self.assertIn("cores: 4", from_anchor)
+        self.assertIn("ram-size: 3072M", from_anchor)
+        self.assertIn("heap-size: 384M", from_anchor)
         self.assertIn("emulator-boot-timeout: 600", from_anchor)
 
     def test_android_gradle_ndk_compilation_finishes_before_emulator_launch(self):

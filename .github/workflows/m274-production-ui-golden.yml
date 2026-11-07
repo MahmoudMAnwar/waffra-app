@@ -13,6 +13,8 @@ on:
       - 'lib/main.dart'
       - 'lib/waffra_footer.dart'
       - 'lib/waffra_balance_art.dart'
+      # M534: M449 requires release-notes-last; certify the final exact PR SHA.
+      - 'docs/release/WAFFRA_APPROVED_CHANGES.txt'
   workflow_dispatch:
 
 permissions:
@@ -24,11 +26,17 @@ concurrency:
 
 jobs:
   m412-impact:
-    name: M412 Only Run Tests Impacted By Latest PR Update
+    name: M412 Impact Telemetry (M274 always verifies real Android UI)
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      run: ${{ steps.impact.outputs.run }}
+      # M533: GitHub evaluates this M274 workflow against the cumulative PR
+      # diff, but M412's incremental classifier checks just the last commit.
+      # A docs-only release note must never turn skipped device jobs green.
+      # Keep diagnostic impact telemetry, but *always* execute the real jobs
+      # on every triggered M274 workflow. Failure of this prerequisite remains
+      # a hard failure and dependent jobs are not claimed as passed.
+      run: 'true'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -108,6 +116,26 @@ jobs:
           python3 scripts/qa/m287_patch_tesseract_gradle.py
       - name: Generate temporary Android host for disposable UI test
         run: flutter create --no-pub --platforms=android --project-name=waffra --org com.waffra .
+      # M543: Flutter upstream #192736: Impeller/GLES can terminate Linux
+      # x86_64 software-emulator QEMU. Work around ONLY in the generated
+      # disposable CI Android project. Never change the production manifest.
+      - name: Apply test-only Linux emulator Impeller compatibility setting
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          manifest = Path('android/app/src/main/AndroidManifest.xml')
+          source = manifest.read_text()
+          assert source.count('<application') == 1 and source.count('</application>') == 1
+          assert 'io.flutter.embedding.android.EnableImpeller' not in source
+          source = source.replace('</application>',
+              '    <meta-data android:name="io.flutter.embedding.android.EnableImpeller" '
+              'android:value="false" />\n    </application>', 1)
+          manifest.write_text(source)
+          assert 'android:value="false"' in manifest.read_text()
+          print('M543_CI_ONLY_IMPELLER_DISABLED:real_android_engine_skia')
+          PY
       - name: Configure Java library desugaring for Android UI emulator
         shell: bash
         run: |
@@ -214,16 +242,66 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
-          target: google_apis
+          # M535: dedicated Android Test Device image reduces unrelated GMS
+          # service startup while preserving the same real API35 Flutter engine.
+          target: aosp_atd
           arch: x86_64
-          profile: pixel_6
-          cores: 2
+          # M541: AOSP ATD emitted malformed Pixel 6 SystemUI overlay commands
+          # immediately before the repeatable emulator disconnect. Use the
+          # runner's smaller Pixel 2 hardware profile for the same real API35
+          # Flutter UI assertions; no test skips or reduced Android API.
+          profile: pixel_2
+          cores: 4
+          # M533 (#481): emulator 37.2.13 repeatedly terminated at the balance
+          # eye test after footer succeeded. Freeze stable upstream 36.4.10
+          # instead of floating sdkmanager's latest emulator release.
+          # This is an official archived Linux emulator build, NOT a fake pass.
+          emulator-build: 15004761
           # M386: cap AVD userdata instead of accepting Pixel default > available
           # GitHub runner disk. Keep the real Android UI tap test mandatory.
           disk-size: 3072M
-          ram-size: 2048M
-          heap-size: 256M
+          ram-size: 3072M
+          heap-size: 384M
           disable-animations: true
           emulator-boot-timeout: 600
-          emulator-options: -no-window -no-audio -no-snapshot -gpu software -no-boot-anim
+          # M533: prefer dedicated stable SwiftShader GLES instead of auto
+          # Lavapipe/Vulkan; never use deprecated swiftshader_indirect.
+          emulator-options: -no-window -no-audio -no-snapshot -gpu swiftshader -feature -Vulkan -no-boot-anim
+          # M543: no pre-emulator-launch-script; it returned exit 127 while
+          # the real runner already verifies pinned SDK source.properties.
           script: bash .github/scripts/run-m274-android-tap-smoke.sh
+      - name: Upload actual Android emulator failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m274-android-failure-${{ github.event.pull_request.head.sha || github.sha }}
+          path: build/m274/*.log
+          if-no-files-found: warn
+          retention-days: 7
+
+  # M533: GitHub reports a workflow successful even when a conditional job
+  # was skipped. A release gate must prove the ACTUAL emulator and golden
+  # suites completed, not merely that the workflow had no failed jobs.
+  m274-required-android-certification:
+    name: M274 Mandatory Actual Android + Golden Completion Gate
+    needs: [m412-impact, widget-ui-and-golden-candidates, android-emulator-ui-taps]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Reject any skipped, cancelled or failed required UI job
+        shell: bash
+        env:
+          M274_IMPACT_RESULT: ${{ needs.m412-impact.result }}
+          M274_GOLDEN_RESULT: ${{ needs.widget-ui-and-golden-candidates.result }}
+          M274_ANDROID_RESULT: ${{ needs.android-emulator-ui-taps.result }}
+        run: |
+          set -euo pipefail
+          echo "M533 certification: M412=$M274_IMPACT_RESULT golden=$M274_GOLDEN_RESULT android=$M274_ANDROID_RESULT"
+          if [[ "$M274_IMPACT_RESULT" != "success" ||
+                "$M274_GOLDEN_RESULT" != "success" ||
+                "$M274_ANDROID_RESULT" != "success" ]]; then
+            echo "::error::M274 cannot certify a skipped, cancelled or failed real Android UI or golden job"
+            exit 1
+          fi
+          echo "M533_M274_REAL_JOBS_CONFIRMED:android_and_golden_success"
