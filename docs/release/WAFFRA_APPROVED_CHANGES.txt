@@ -2495,3 +2495,9 @@ M462 category-precedence follow-up (5 Nov 2026): only an owner-confirmed learned
 - These are PR SOURCE CANDIDATES only. Required exact-HEAD CI and signed-Android on-device acceptance have NOT been declared successful. No production SQLCipher cutover, legacy restore/destruction or permission expansion is authorized.
 
 - M514 #447 follow-up: replaced the final two Arabic user-facing «غامضة» labels in the optional AI-review consent title and SMS security-settings subtitle with explicit «تحتاج مراجعة» wording. Added source regression assertions for both strings. This note follows the latest app-code modification; classification and review-only safeguards are unchanged. Device acceptance and exact-head CI are still pending.
+
+[M515 / Issue #452 / PR #445] 2026-11-07 — Verified linked standalone budget persistence
+- Owner's Android screenshot showed the newly created SAR 1,000 account-linked monthly budget in Home but a contradictory «لم يتم تأكيد الحفظ» error from the verified finance save.
+- The budget creation route sent `waffra_named_budgets_v1` but the SQLCipher `challengeAndBudgetUpdate` authority allowlist omitted it. The module capture also lacked a budget-specific scope; optional Home snapshot defaults can be unrelated to a new encrypted vault.
+- Added strict budget-only capture narrowing with existing allowed budget/challenge/categorical settings, and allowed the named budget field in the encrypted scalar budget route without allowing ledger posting/account mutations. Real finance data and other module edits stay source-witness protected.
+- Added M515 regression tests for first fresh encrypted account-linked budget capture, retained existing budget, unrelated goals/ledger rejection, and authority field allowlist. Code candidate only; exact-head CI, Android save/cold reopen, failure rollback and duplicate retry remain to be verified. No production cutover/credential or backup mutation.
