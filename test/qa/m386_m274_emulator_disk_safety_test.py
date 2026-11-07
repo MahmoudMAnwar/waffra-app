@@ -17,7 +17,7 @@ class M274EmulatorDiskBudgetTest(unittest.TestCase):
             "reactivecircus/android-emulator-runner@v2",
             "bash .github/scripts/run-m274-android-tap-smoke.sh",
             "api-level: 35",
-            "target: google_apis",
+            "target: aosp_atd",
             "arch: x86_64",
             "profile: pixel_6",
         ):
