@@ -79,8 +79,8 @@
     ],
     "test/qa/m386_m274_emulator_disk_safety_test.py": [
       {
-        "start": "    def test_real_android_engine_is_still_required(self):",
-        "end": "    def test_lower_emulator_userdata_budget_avoids_documented_7372_mb_requirement"
+        "start": "    def test_lower_emulator_userdata_budget_avoids_documented_7372_mb_requirement",
+        "end": "    def test_android_gradle_ndk_compilation_finishes_before_emulator_launch"
       }
     ]
   }
