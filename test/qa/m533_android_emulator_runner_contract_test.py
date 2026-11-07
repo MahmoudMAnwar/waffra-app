@@ -32,6 +32,8 @@ class M533AndroidEmulatorStabilityContractTest(unittest.TestCase):
         self.assertIn("api-level: 35", WORKFLOW)
         self.assertIn("arch: x86_64", WORKFLOW)
         self.assertIn("cores: 4", WORKFLOW)
+        self.assertIn("profile: pixel_2", WORKFLOW)
+        self.assertNotIn("profile: pixel_6", WORKFLOW)
         self.assertIn("uses: reactivecircus/android-emulator-runner@v2", WORKFLOW)
         self.assertIn("script: bash .github/scripts/run-m274-android-tap-smoke.sh",
                       WORKFLOW)
