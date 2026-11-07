@@ -430,3 +430,12 @@ Each issue requires linked source changes, exact-head CI, tests and real Android
 - **Tracking:** https://github.com/MahmoudMAnwar/waffra-app/issues/454
 - **State:** documented / pending audit. No code refactor or regression-test success claimed.
 - **Execution:** inventory and root-cause matrix first, targeted scoped PRs with regression tests next; protect existing SQLCipher data and upgrade paths; require CI and device acceptance before merge.
+
+
+## M527 — Home account dropdown cold-open feedback (2026-11-07; #467, audit #454 F-454-P04)
+
+- **Owner requirement:** further improve all button/dropdown tap smoothness, beyond M525 budget re-use and M526 instant precomputed insights.
+- **Source defect candidate:** the Home account picker waits for a verified SQLCipher balance/context read before displaying any sheet on a cold cache, so the first tap can look unresponsive.
+- **Proposed behavior:** present a lightweight modal immediately on cold cache, retain verified SQLCipher read before any account is selectable, replace loader with existing verified account sheet only after verification, otherwise show non-destructive retry guidance. Hot-cache opens the existing sheet directly. Selection and save/source guards unchanged.
+- **Tracking:** [Issue #467](https://github.com/MahmoudMAnwar/waffra-app/issues/467), isolated Draft PR from main, explicit bounded M385 scope and source/widget regressions, release note after implementation.
+- **Status:** requirement recorded first; code/CI/device not verified. Require Android profile timings and existing encrypted-data smoke test.
