@@ -5190,7 +5190,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       Expanded(child:WaffraAccountTransactionForm(
        accounts:accounts,english:waffraIsEnglish,
        initialSmsTransfer:prefill,
-       onCreateAccount:(group,createProvider)async{
+       onCreateSmsAccount:(group,createProvider,isDestination)async{
         // #416: never infer transfer source or destination from SMS sender.
         final existing=await api.balances();
         if(!mounted)return null;
@@ -5202,9 +5202,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            a.customSubtypeLabel!=null).map((a)=>a.customSubtypeLabel!)
            .toSet().toList()..sort(),
         };
+        // For a source-account creation, only propose the masked debit
+        // suffix from the SAME confirmed bank. The destination may belong
+        // to another person; never copy the source digits onto it.
+        final detectedBank=WaffraSmsAccountLearning.bankGroup(
+         item['sender'] is String?item['sender'] as String:'');
+        final suggestedBank=bank??(createProvider?detectedBank:null);
+        final proposedSuffix=!isDestination&&
+         (bank==null||bank==detectedBank)?
+         WaffraSmsAccountLearning.suffix4(facts.sourceSuffix):null;
         final choice=await showWaffraDialog<WaffraNewAccountDraft>(
          context:context,builder:(ctx)=>WaffraNewAccountDialog(
-          english:waffraIsEnglish,suggestedProviderId:bank,
+          english:waffraIsEnglish,suggestedProviderId:suggestedBank,
+          suggestedLastFour:proposedSuffix,
           customSubtypeOptions:custom));
         if(choice==null||!mounted)return null;
         if(bank!=null&&(choice.kind!='bank'||choice.providerId!=bank)){
