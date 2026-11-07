@@ -662,3 +662,9 @@ M274 must also trigger on `docs/release/WAFFRA_APPROVED_CHANGES.txt` changes bec
 - Exact-head M174 run 42391379538 failed in `test_preserves_exact_flutter_driver_and_real_android_ui` because the old source contract required `cores: 2` while the approved M538 real Android experiment intentionally sets `cores: 4`.
 - Update only that exact assertion to `cores: 4`, explicitly bound its function in `docs/qa/approved_change_scope.json`. Preserve actual API35 AOSP ATD, `flutter drive`, emulator version pin, hard failure on offline devices and independent golden/Android certification.
 - No auth/finance source changes. Verification: new exact-head M174 and M274 must pass before merge; until then this is a code fix, not a confirmed Android success.
+
+
+### M541 — Real Android emulator repeated host crash after UI assertions (2026-11-07)
+- M274 run 42391593765: actual API35 AOSP ATD Flutter driver passed rapid footer taps, reached balance eye test, then Flutter VM extension disappeared and `adb` went offline; QEMU emulator process vanished. Independent widget/golden job passed. Host still had ~14 GiB available RAM and 80 GiB free disk. This is an emulator-host disconnect, not a proven login/logout defect.
+- Emulator startup also logged malformed Pixel 6 SystemUI overlay shell commands. Replace only M274 emulator AVD `profile: pixel_6` with lean `profile: pixel_2` as a bounded stability hypothesis; preserve real API35 AOSP ATD, Flutter driver, strict M274 certification and no skip-on-failure. Assert this exact profile in M533 source contract.
+- This is an experiment, NOT a proven permanent fix. Require a successful full actual M274 Android run plus M174 and all exact-head gates before merge. If it fails again, inspect runner crash artifacts and use an independently stable Android runner/device rather than claiming success.
