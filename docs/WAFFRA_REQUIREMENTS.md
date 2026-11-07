@@ -423,3 +423,10 @@ Each issue requires linked source changes, exact-head CI, tests and real Android
 - **Guardrails:** no financial/data/auth behavior change to coerce tests. Reconcile stale source assertions against verified M506/M507/M508/M510 implementation while preserving secure atomic SMS+receipts, first-launch two-choice screen, one-page registration, verified account selection, no ledger auto-post, never-guess account IDs, independently biometric-gated logout recovery, safe keyword library.
 - **Nine failures:** M473 first SMS learning mistaken for manual learning; M507 empty optional accountId sentinel; M402 reviewed transfer provider catalog selector; M463 old direct-signup expectation conflicts with M510 chooser; M510 first welcome choice has duplicated decorative text and conditional gender-chip key; M506 authority forwards receipt bytes via `manualReceiptImages` and logout preflights an already-ready verifier before new recovery; M508 regex accidentally matches every keyword using quantified backslash. This is a **test-contract correction**, not blanket test bypass.
 - **Acceptance:** exact M385 bounded manifest, regression assertions for current secure behavior, targeted nine Dart tests, all latest-SHA full CI workflows (including M282/Full Offline/M160/M103), Android fresh/install-over-existing-device validation prior to release. **Status: recorded; code and latest-head CI pending.**
+
+
+### Quality audit initiative — Issue #454 (2026-11-07)
+- **Requested:** whole-app audit for duplicated functions, inconsistent implementations, divergent manual/SMS/recurring/transfer finance writes, login/logout/biometric paths, SMS rules, budgets, backup/restore, UI error handling, and CI guard overlap.
+- **Tracking:** https://github.com/MahmoudMAnwar/waffra-app/issues/454
+- **State:** documented / pending audit. No code refactor or regression-test success claimed.
+- **Execution:** inventory and root-cause matrix first, targeted scoped PRs with regression tests next; protect existing SQLCipher data and upgrade paths; require CI and device acceptance before merge.
