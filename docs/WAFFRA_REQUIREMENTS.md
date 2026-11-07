@@ -435,3 +435,20 @@ Each issue requires linked source changes, exact-head CI, tests and real Android
 - **Acceptance:** dedicated Yes/No widget tests for Home, pending-OS-biometric and idle-gate; missing-verifier case cannot invoke signOut or a password dialog; already-ready verifier permits safe sign-out and original password login; M385 approved exact files/sections, all latest-head CI, signed Android new registration + in-place-update device tests. No user data deletion. **Status: issue documented, implementation and device verification in progress.**
 
 - **CI update 2026-11-07:** M429 combined test uncovered M424 stale assertion that Sign out instantly runs without the newly required Yes/No choice. Preserve all previous biometric checks; update only the one confirmation test, record its exact M385 boundary and rerun exact-head suite. No production code change authorized by this test-only reconciliation.
+
+## M514 — Android SMS review / rescan / exclusion / attachment regressions (2026-11-07, PR #445)
+
+User approved implementation on **#445**, with six independently numbered Issues. All statuses below are **OPEN / not Android-verified**, regardless of any source-level fixes. Preserve existing M513 sign-out and no data-destructive storage changes. Evidence: eight Android screenshots reported on 2026-11-07.
+
+| ID / issue | Accepted behavior / exact regression to prevent | Code | CI | Device |
+| --- | --- | --- | --- | --- |
+| M514-01 / #446 | Rescan numbers represent **this button invocation** (checked, new, pending, incomplete/complete), not cumulative 2000 since install; bounded cursor pages resume and never repeatedly claim completion | Pending | Pending | Pending |
+| M514-02 / #447 | Replace user-facing "غامضة" with "تحتاج مراجعة" / "عملية تحتاج مراجعة" across Home + sender review, without pretending a safe financial classification | Pending | Pending | Pending |
+| M514-03 / #448 | Single and bulk excluded SMS retain owner-encrypted per-message exclusion identifiers and safe learned rules, re-apply on refresh/rescan and after relaunch, keep explicit sender block separate/reversible; exclusions never poison ledger-committed hashes | Pending | Pending | Pending |
+| M514-04 / #449 | Incoming transfer credits vs outgoing transfer vs user-confirmed *own account to own account* distinguished with SMS fact fixtures; tapping review offers a working edit flow or actionable reason, not silence or auto posting | Pending | Pending | Pending |
+| M514-05 / #450 | Creating first account from reviewed SMS prefills exactly the correct masked 4 source/destination digits when unambiguous, editable and user-confirmed, without assuming ownership | Pending | Pending | Pending |
+| M514-06 / #451 | SMS income/expense with encrypted receipt uses the same verified atomic writer guarantees as working manual with receipt; on failure rollback receipt/finance, no duplicates and no lost existing data | Pending | Pending | Pending |
+
+**Required regression evidence:** >2000 historical SMS; two consecutive rescan taps; zero/partial/capacity-limit/error; excluded single + multi-select then rescans and reboot; learned exclusion UI counts; incoming/outgoing AlinmaPay example and no false own-account transfer; CTA click with 0/1/2 accounts and fee-only/missing-amount; correct four-digit masked origin on account form; SMS with/without a receipt and manual with/without a receipt; repeated retries and ledger hashes; clean signup → logout (Yes/No) → login with same password; no destructive migration. No 'Done' until latest-head CI and real signed Android evidence.
+
+**Implementation policy:** Record changed paths and anchored function/file boundaries in `docs/qa/approved_change_scope.json`; preserve M385 enforcement and separate native exclusion from confirmed finance fingerprint. M514 must not broaden permissions, access unconsented messages, or silently auto-import as transactions.
