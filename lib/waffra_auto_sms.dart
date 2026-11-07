@@ -129,193 +129,32 @@ abstract final class WaffraAutoSms {
   }on MissingPluginException{return null;}
    on PlatformException{return null;}
  }
- /// Encrypted native policy: one entry per excluded SMS, not whole-sender.
- /// Only sender and time are returned, never raw message or bank digits.
+ /// Individually excluded SMS are encrypted natively, scoped to the owner.
+ /// Only opaque identity, sender label and receipt time cross this boundary.
+ /// A missing plugin or malformed payload is UNKNOWN, not an empty policy.
  static Future<List<Map<String,Object?>>?> excludedMessages()async{
   if(!Platform.isAndroid)return null;
   try{
-   final entries=await channel.invokeListMethod<dynamic>('excludedAutoSmsMessages');
-   if(entries==null)return null;
-   return entries.map((item){
-    if(item is! Map)throw const FormatException('Invalid SMS exclusion item');
-    final id=item['id'],sender=item['sender'],at=item['receivedAt'];
-    if(id is! String||!RegExp(r'^[a-f0-9]{64}
-  if(sender.trim().isEmpty)return false;
-  return _boolCall('excludeAutoSmsSender',sender.trim());
- }
- static Future<bool> restoreExcludedSender(String sender)async{
-  if(sender.trim().isEmpty)return false;
-  return _boolCall('restoreExcludedAutoSmsSender',sender.trim());
- }
- // Only after verified financial hash is present in SQLCipher.
- static Future<bool> acknowledgeCommitted(List<String> ids)async{
-  if(ids.isEmpty||ids.length>100||
-     ids.any((id)=>!RegExp(r'^[a-f0-9]{64}$').hasMatch(id)))return false;
-  return _boolCall('ackCommittedAutoBankSms',ids);
- }
-
- /// M514 #448: persist exclusions independently of financial commits.
- static Future<bool> excludeMessages(List<String> ids)async{
-  if(ids.isEmpty || ids.length>100 ||
-     ids.any((id)=>!RegExp(r'^[a-f0-9]{64}$').hasMatch(id)))return false;
-  return _boolCall('excludeAutoBankSms',ids);
- }
- /// Stable per-SMS transfer ID: native fingerprint includes sender + body
- /// + reception timestamp, so two identical texts can be distinct transfers.
- static String transferIdForMessage(String fingerprint){
-  if(!RegExp(r'^[a-f0-9]{64}
- /// replay, separate from explicit exclusions and income/expense commits.
- static Future<bool> acknowledgeCompletedTransfer(List<String> ids)async{
-  if(ids.isEmpty||ids.length>100||
-     ids.any((id)=>!RegExp(r'^[a-f0-9]{64}$').hasMatch(id)))return false;
-  return _boolCall('ackCompletedTransferAutoBankSms',ids);
- }
- static Future<bool> acknowledge(List<String> ids)async{
-  if(ids.isEmpty||ids.length>100)return false;
-  return _boolCall('ackAutoBankSms',ids);
- }
- static Future<bool> notifyCommitted({
-  required String hash,required double amount,required bool income,
-  required bool linkedBudget,
- })async{
-  if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(hash)||!amount.isFinite||amount<=0)
-   return false;
-  return _boolCall('notifyAutoSmsSaved',{
-   'hash':hash,'amount':amount.toStringAsFixed(2),
-   'income':income,'linkedBudget':linkedBudget,
-  });
- }
- static Future<bool> notifyReview(String hash)async{
-  if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(hash))return false;
-  return _boolCall('notifyAutoSmsNeedsReview',hash);
- }
-}
-).hasMatch(fingerprint)){
-   throw ArgumentError.value(fingerprint,'fingerprint','Invalid SMS identity');
-  }
-  return 'sms-transfer-$fingerprint';
- }
- /// M516: permanently seal a *successful* internal SMS transfer against
- /// replay, separate from explicit exclusions and income/expense commits.
- static Future<bool> acknowledgeCompletedTransfer(List<String> ids)async{
-  if(ids.isEmpty||ids.length>100||
-     ids.any((id)=>!RegExp(r'^[a-f0-9]{64}$').hasMatch(id)))return false;
-  return _boolCall('ackCompletedTransferAutoBankSms',ids);
- }
- static Future<bool> acknowledge(List<String> ids)async{
-  if(ids.isEmpty||ids.length>100)return false;
-  return _boolCall('ackAutoBankSms',ids);
- }
- static Future<bool> notifyCommitted({
-  required String hash,required double amount,required bool income,
-  required bool linkedBudget,
- })async{
-  if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(hash)||!amount.isFinite||amount<=0)
-   return false;
-  return _boolCall('notifyAutoSmsSaved',{
-   'hash':hash,'amount':amount.toStringAsFixed(2),
-   'income':income,'linkedBudget':linkedBudget,
-  });
- }
- static Future<bool> notifyReview(String hash)async{
-  if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(hash))return false;
-  return _boolCall('notifyAutoSmsNeedsReview',hash);
- }
-}
-).hasMatch(id)||
-       sender is! String||at is! int||at<0) {
-     throw const FormatException('Invalid SMS exclusion identity');
+   final items=await channel.invokeListMethod<dynamic>(
+    'excludedAutoSmsMessages');
+   if(items==null)return null;
+   return items.map((item){
+    if(item is! Map)throw const FormatException('Invalid excluded SMS item');
+    final id=item['id'],sender=item['sender'],receivedAt=item['receivedAt'];
+    if(id is! String||
+       !RegExp(r'^[a-f0-9]{64}$').hasMatch(id)||
+       sender is! String||
+       receivedAt is! int||receivedAt<0){
+     throw const FormatException('Invalid excluded SMS metadata');
     }
-    return Map<String,Object?>.unmodifiable(
-     {'id':id,'sender':sender,'receivedAt':at});
+    return Map<String,Object?>.unmodifiable({
+     'id':id,'sender':sender,'receivedAt':receivedAt,
+    });
    }).toList(growable:false);
   }catch(_){return null;}
  }
  static Future<bool> restoreExcludedMessage(String id)async{
-  if(!RegExp(r'^[a-f0-9]{64}
-  if(sender.trim().isEmpty)return false;
-  return _boolCall('excludeAutoSmsSender',sender.trim());
- }
- static Future<bool> restoreExcludedSender(String sender)async{
-  if(sender.trim().isEmpty)return false;
-  return _boolCall('restoreExcludedAutoSmsSender',sender.trim());
- }
- // Only after verified financial hash is present in SQLCipher.
- static Future<bool> acknowledgeCommitted(List<String> ids)async{
-  if(ids.isEmpty||ids.length>100||
-     ids.any((id)=>!RegExp(r'^[a-f0-9]{64}$').hasMatch(id)))return false;
-  return _boolCall('ackCommittedAutoBankSms',ids);
- }
-
- /// M514 #448: persist exclusions independently of financial commits.
- static Future<bool> excludeMessages(List<String> ids)async{
-  if(ids.isEmpty || ids.length>100 ||
-     ids.any((id)=>!RegExp(r'^[a-f0-9]{64}$').hasMatch(id)))return false;
-  return _boolCall('excludeAutoBankSms',ids);
- }
- /// Stable per-SMS transfer ID: native fingerprint includes sender + body
- /// + reception timestamp, so two identical texts can be distinct transfers.
- static String transferIdForMessage(String fingerprint){
-  if(!RegExp(r'^[a-f0-9]{64}
- /// replay, separate from explicit exclusions and income/expense commits.
- static Future<bool> acknowledgeCompletedTransfer(List<String> ids)async{
-  if(ids.isEmpty||ids.length>100||
-     ids.any((id)=>!RegExp(r'^[a-f0-9]{64}$').hasMatch(id)))return false;
-  return _boolCall('ackCompletedTransferAutoBankSms',ids);
- }
- static Future<bool> acknowledge(List<String> ids)async{
-  if(ids.isEmpty||ids.length>100)return false;
-  return _boolCall('ackAutoBankSms',ids);
- }
- static Future<bool> notifyCommitted({
-  required String hash,required double amount,required bool income,
-  required bool linkedBudget,
- })async{
-  if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(hash)||!amount.isFinite||amount<=0)
-   return false;
-  return _boolCall('notifyAutoSmsSaved',{
-   'hash':hash,'amount':amount.toStringAsFixed(2),
-   'income':income,'linkedBudget':linkedBudget,
-  });
- }
- static Future<bool> notifyReview(String hash)async{
-  if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(hash))return false;
-  return _boolCall('notifyAutoSmsNeedsReview',hash);
- }
-}
-).hasMatch(fingerprint)){
-   throw ArgumentError.value(fingerprint,'fingerprint','Invalid SMS identity');
-  }
-  return 'sms-transfer-$fingerprint';
- }
- /// M516: permanently seal a *successful* internal SMS transfer against
- /// replay, separate from explicit exclusions and income/expense commits.
- static Future<bool> acknowledgeCompletedTransfer(List<String> ids)async{
-  if(ids.isEmpty||ids.length>100||
-     ids.any((id)=>!RegExp(r'^[a-f0-9]{64}$').hasMatch(id)))return false;
-  return _boolCall('ackCompletedTransferAutoBankSms',ids);
- }
- static Future<bool> acknowledge(List<String> ids)async{
-  if(ids.isEmpty||ids.length>100)return false;
-  return _boolCall('ackAutoBankSms',ids);
- }
- static Future<bool> notifyCommitted({
-  required String hash,required double amount,required bool income,
-  required bool linkedBudget,
- })async{
-  if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(hash)||!amount.isFinite||amount<=0)
-   return false;
-  return _boolCall('notifyAutoSmsSaved',{
-   'hash':hash,'amount':amount.toStringAsFixed(2),
-   'income':income,'linkedBudget':linkedBudget,
-  });
- }
- static Future<bool> notifyReview(String hash)async{
-  if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(hash))return false;
-  return _boolCall('notifyAutoSmsNeedsReview',hash);
- }
-}
-).hasMatch(id))return false;
+  if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(id))return false;
   return _boolCall('restoreExcludedAutoSmsMessage',id);
  }
  static Future<bool> excludeSender(String sender)async{
@@ -333,49 +172,22 @@ abstract final class WaffraAutoSms {
   return _boolCall('ackCommittedAutoBankSms',ids);
  }
 
- /// M514 #448: persist exclusions independently of financial commits.
+ /// M514: an SMS explicitly excluded by the user must never be booked as
+ /// a completed income/expense. Native exclusion policy is independent.
  static Future<bool> excludeMessages(List<String> ids)async{
-  if(ids.isEmpty || ids.length>100 ||
+  if(ids.isEmpty||ids.length>100||
      ids.any((id)=>!RegExp(r'^[a-f0-9]{64}$').hasMatch(id)))return false;
   return _boolCall('excludeAutoBankSms',ids);
  }
- /// Stable per-SMS transfer ID: native fingerprint includes sender + body
- /// + reception timestamp, so two identical texts can be distinct transfers.
+ /// M516: the immutable native fingerprint contains sender, body and time.
+ /// It differs from historical body-only financial entry hashes.
  static String transferIdForMessage(String fingerprint){
-  if(!RegExp(r'^[a-f0-9]{64}
- /// replay, separate from explicit exclusions and income/expense commits.
- static Future<bool> acknowledgeCompletedTransfer(List<String> ids)async{
-  if(ids.isEmpty||ids.length>100||
-     ids.any((id)=>!RegExp(r'^[a-f0-9]{64}$').hasMatch(id)))return false;
-  return _boolCall('ackCompletedTransferAutoBankSms',ids);
- }
- static Future<bool> acknowledge(List<String> ids)async{
-  if(ids.isEmpty||ids.length>100)return false;
-  return _boolCall('ackAutoBankSms',ids);
- }
- static Future<bool> notifyCommitted({
-  required String hash,required double amount,required bool income,
-  required bool linkedBudget,
- })async{
-  if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(hash)||!amount.isFinite||amount<=0)
-   return false;
-  return _boolCall('notifyAutoSmsSaved',{
-   'hash':hash,'amount':amount.toStringAsFixed(2),
-   'income':income,'linkedBudget':linkedBudget,
-  });
- }
- static Future<bool> notifyReview(String hash)async{
-  if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(hash))return false;
-  return _boolCall('notifyAutoSmsNeedsReview',hash);
- }
-}
-).hasMatch(fingerprint)){
+  if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(fingerprint)){
    throw ArgumentError.value(fingerprint,'fingerprint','Invalid SMS identity');
   }
   return 'sms-transfer-$fingerprint';
  }
- /// M516: permanently seal a *successful* internal SMS transfer against
- /// replay, separate from explicit exclusions and income/expense commits.
+ /// Durable completed-transfer ACK; only call after verified SQLCipher save.
  static Future<bool> acknowledgeCompletedTransfer(List<String> ids)async{
   if(ids.isEmpty||ids.length>100||
      ids.any((id)=>!RegExp(r'^[a-f0-9]{64}$').hasMatch(id)))return false;
