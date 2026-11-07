@@ -225,5 +225,5 @@ jobs:
           heap-size: 256M
           disable-animations: true
           emulator-boot-timeout: 600
-          emulator-options: -no-window -no-audio -no-snapshot -gpu swiftshader_indirect -no-boot-anim
+          emulator-options: -no-window -no-audio -no-snapshot -gpu software -no-boot-anim
           script: bash .github/scripts/run-m274-android-tap-smoke.sh
