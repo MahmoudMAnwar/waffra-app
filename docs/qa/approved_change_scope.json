@@ -33,6 +33,7 @@
     "test/m506_android_nine_regressions_test.dart",
     "test/m513_logout_confirmation_test.dart",
     "test/m514_sms_review_regressions_test.dart",
+    "test/qa/m452_sms_review_signup_regression_test.py",
     "test/storage/m514_sms_receipt_regression_test.dart"
   ],
   "bounded_sections": {
@@ -184,6 +185,12 @@
       {
         "start": "  Future<WaffraFinanceAuthorityRead> commitConfirmedManual({",
         "end": "  /// A future encrypted-only receipt attachment route."
+      }
+    ],
+    "test/qa/m452_sms_review_signup_regression_test.py": [
+      {
+        "start": "    def test_sms_review_is_collapsible_and_count_remains_visible(self):",
+        "end": "    def test_registration_has_single_submit_and_avatar_choices(self):"
       }
     ]
   }
