@@ -390,6 +390,26 @@ class MainActivity : FlutterFragmentActivity() {
                         }
                     }
                 }
+                "excludedAutoSmsMessages" -> {
+                    val app = applicationContext
+                    smsHistoryExecutor.execute {
+                        try {
+                            val items = WaffraAutoSmsStore.excludedMessages(app)
+                            runOnUiThread { result.success(items) }
+                        } catch (_: Exception) {
+                            runOnUiThread { result.error("SMS_EXCLUDED_MESSAGES_READ_FAILED",
+                                "Could not verify excluded message policy", null) }
+                        }
+                    }
+                }
+                "restoreExcludedAutoSmsMessage" -> {
+                    val id = call.arguments as? String ?: ""
+                    val app = applicationContext
+                    smsHistoryExecutor.execute {
+                        val restored = WaffraAutoSmsStore.restoreExcludedMessage(app, id)
+                        runOnUiThread { result.success(restored) }
+                    }
+                }
                 "excludeAutoSmsSender" -> {
                     val sender = call.arguments as? String ?: ""
                     val app = applicationContext
