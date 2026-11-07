@@ -656,3 +656,9 @@ M274 must also trigger on `docs/release/WAFFRA_APPROVED_CHANGES.txt` changes bec
 - Run 42389972623: actual API35 AOSP ATD boots and Flutter Driver connects; first footer test begins, then VM Service disappears and ADB reports device offline. Separate widget/golden job passed; mandatory Android gate correctly failed. Host after crash had 15Gi total RAM, 14Gi available and 81G disk free, so the precise emulator termination cause is not yet established.
 - **Scoped stability attempt:** increase virtual emulator resources from 2 to 4 cores, 2048M to 3072M RAM and 256M to 384M heap. Keep pinned emulator 36.4.10, AOSP ATD API35, actual footer/balance test and hard fail gate; update M386 resource regression accordingly. No production finance/auth code changed.
 - **Acceptance:** real Android test must complete and mandatory certification succeed on final exact SHA; if crash persists, inspect host kernel/emulator crash diagnostics rather than declaring fixed. PR #480, issue #482. **Status: awaiting CI evidence.**
+
+
+### M540 — Strict M533 Android runner contract aligned with M538 emulator resources (2026-11-07)
+- Exact-head M174 run 42391379538 failed in `test_preserves_exact_flutter_driver_and_real_android_ui` because the old source contract required `cores: 2` while the approved M538 real Android experiment intentionally sets `cores: 4`.
+- Update only that exact assertion to `cores: 4`, explicitly bound its function in `docs/qa/approved_change_scope.json`. Preserve actual API35 AOSP ATD, `flutter drive`, emulator version pin, hard failure on offline devices and independent golden/Android certification.
+- No auth/finance source changes. Verification: new exact-head M174 and M274 must pass before merge; until then this is a code fix, not a confirmed Android success.
