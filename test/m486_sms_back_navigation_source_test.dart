@@ -36,7 +36,8 @@ void main(){
   final detail=source.substring(detailStart,end);
   expect(detail,contains('await entrySheet(sms:true,initialSms:body,reviewedSender:sender);'));
   expect(detail,contains('if(smsHashes.contains(bankSmsHash(body)))'));
-  expect(detail,contains('await WaffraAutoSms.acknowledge([id]);'));
+  expect(detail,contains('await WaffraAutoSms.acknowledgeCommitted([id]);'));
+  expect(detail,isNot(contains('await WaffraAutoSms.acknowledge([id]);')));
   expect(detail,contains('A failed Android acknowledgement must retain the review row.'));
   expect(detail,contains('if(acknowledged&&mounted){'));
   expect(detail,contains('_autoSmsReviewOpen=false;'));
