@@ -1287,6 +1287,21 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  final WaffraLiveAccountWriteAuthority _accountWriteAuthority=
      const WaffraLiveAccountWriteAuthority();
  Future<void> saveUser(Person u)async {
+  // M513: refuse to declare a new phone profile successfully registered if
+  // Android never retained a verifier for that exact account. Keeping the
+  // existing login password usable is part of successful account creation.
+  if(u.provider.toLowerCase().trim()=='phone'){
+   final phone=WaffraSaudiMobile.inputFromStored(u.phone);
+   final integrity=await WaffraLocalPhoneCredentials.probeForPhone(phone);
+   if(integrity!=WaffraLocalCredentialProbe.ready){
+    final existing=await SharedPreferences.getInstance();
+    final hasLegacy=existing.getString('waffra_local_password_salt')!=null&&
+     existing.getString('waffra_local_password_hash')!=null;
+    if(integrity!=WaffraLocalCredentialProbe.missing||!hasLegacy){
+     throw StateError('phone_credential_not_persisted_for_profile');
+    }
+   }
+  }
   // Profile edits cannot silently detach the stored phone/password verifier.
   if(profile!=null&&profile!.provider.toLowerCase()=='phone'&&
      u.provider.toLowerCase()=='phone'&&profile!.phone!=u.phone){
@@ -1342,8 +1357,8 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   if(mounted)_showLogoutFeedback(waffraIsEnglish?
    'Signing out securely…':'جارٍ تسجيل الخروج بأمان…');
   try{
-  // A phone user must not lose access after an apparently successful logout.
-  // Check OS-protected verifier ownership before clearing the session.
+  // M513: a successful sign-out must leave the ORIGINAL phone/password
+  // verifier usable for next login. Never create a new password here.
   final current=profile;
   if(current!=null&&current.provider.toLowerCase().trim()=='phone'){
    WaffraLocalCredentialProbe? integrity;
@@ -1357,25 +1372,20 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     final hasLegacy=p.getString('waffra_local_password_salt')!=null&&
      p.getString('waffra_local_password_hash')!=null;
     if(!hasLegacy){
-     // Do not strand an already-unlocked phone account: a missing secure
-     // verifier can be re-created ONLY after explicit new-password consent
-     // and an independent device biometric challenge. Corrupted or
-     // differently-owned verifier bytes are NEVER overwritten.
-     if(integrity==WaffraLocalCredentialProbe.missing){
-      final recovered=await _repairMissingLocalCredential(
-       WaffraSaudiMobile.inputFromStored(current.phone));
-      if(!recovered)return;
-     }else{
-      if(mounted)_showLogoutFeedback(waffraIsEnglish?
-       (locked&&integrity==WaffraLocalCredentialProbe.missing?
-        'Unlock with biometrics, then use Sign out to securely repair missing login credentials. Do not clear app data.':
-        'Secure credentials need recovery before sign-out. Do not clear app data.'):
-       (locked&&integrity==WaffraLocalCredentialProbe.missing?
-        'افتح بالبصمة أولًا، وبعدها استخدم تسجيل الخروج لإصلاح بيانات الدخول الناقصة بأمان. ما تمسحش بيانات التطبيق.':
-        'بيانات الدخول الآمنة محتاجة استعادة قبل تسجيل الخروج. ما تمسحش بيانات التطبيق.'),
-       isError:true);
-      return;
-     }
+     // A missing/invalid verifier must NEVER be treated as a valid login.
+     // Remain signed in, preserve all finances and show only a concise error.
+     if(mounted)_showLogoutFeedback(waffraIsEnglish?
+      'Sign-out is unavailable because your saved login credentials could not be verified. Your data is safe. Do not clear app data.':
+      'تعذر تسجيل الخروج لأن بيانات الدخول الآمنة غير مكتملة. بياناتك محفوظة؛ ما تمسحش بيانات التطبيق.',
+      isError:true);
+     return;
+    }
+    if(integrity!=WaffraLocalCredentialProbe.missing){
+     if(mounted)_showLogoutFeedback(waffraIsEnglish?
+      'Sign-out is unavailable until your secure account details are verified. Your data is safe.':
+      'تعذر تسجيل الخروج لحين التحقق من بيانات الدخول الآمنة. بياناتك محفوظة.',
+      isError:true);
+     return;
     }
    }
   }
@@ -1409,90 +1419,6 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   }finally{
    _logoutInProgress=false;
   }
- }
- // Recover only a truly MISSING local verifier. No registration can
- // overwrite an existing record, and biometrics are required independently.
- // The newly chosen password must be retained by the user for next login.
- Future<bool> _repairMissingLocalCredential(String phone)async{
-  if(!WaffraLocalPhoneCredentials.validPhone(phone))return false;
-  final host=_logoutNavigatorKey.currentContext;
-  if(host==null||!mounted)return false;
-  final password=TextEditingController();
-  final confirmation=TextEditingController();
-  String? error;
-  var saving=false;
-  try{
-   final repaired=await showWaffraDialog<bool>(context:host,
-    builder:(dialogCtx)=>StatefulBuilder(builder:(dialogCtx,update)=>
-     AlertDialog(
-      title:WaffraText(waffraIsEnglish?
-       'Repair local sign-in before signing out':
-       'إصلاح بيانات الدخول قبل تسجيل الخروج'),
-      content:SingleChildScrollView(child:Column(
-       mainAxisSize:MainAxisSize.min,children:[
-        WaffraText(waffraIsEnglish?
-         'The secure password verifier is missing. To avoid losing access, set the password you will use at your next login. Device biometrics must confirm the repair. Your financial records will not be deleted.':
-         'بيانات تأكيد كلمة السر مش موجودة. اكتب كلمة السر اللي هتستخدمها لما تسجل دخول تاني، وبعدها أكّد ببصمة الجهاز. بياناتك المالية مش هتتمسح.'),
-        const SizedBox(height:14),
-        TextField(key:const Key('m506-recovery-password'),
-         controller:password,obscureText:true,enableSuggestions:false,
-         autocorrect:false,
-         decoration:InputDecoration(labelText:waffraIsEnglish?
-          'New sign-in password':'كلمة السر لتسجيل الدخول')),
-        const SizedBox(height:12),
-        TextField(key:const Key('m506-recovery-confirm'),
-         controller:confirmation,obscureText:true,enableSuggestions:false,
-         autocorrect:false,
-         decoration:InputDecoration(labelText:waffraIsEnglish?
-          'Confirm password':'تأكيد كلمة السر')),
-        if(error!=null)Padding(padding:const EdgeInsets.only(top:12),
-         child:WaffraText(error!,style:const TextStyle(color:Colors.red))),
-       ])),
-      actions:[
-       TextButton(onPressed:saving?null:()=>Navigator.pop(dialogCtx,false),
-        child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
-       FilledButton(
-        key:const Key('m506-recovery-confirm-biometric'),
-        onPressed:saving?null:()async{
-         final chosen=password.text;
-         if(!WaffraLocalPhoneCredentials.validPassword(chosen)||
-            chosen!=confirmation.text){
-          update(()=>error=waffraIsEnglish?
-           'Use a valid password of at least 8 bytes, identical in both fields.':
-           'كلمة السر لازم تكون ٨ حروف على الأقل ومتطابقة في الخانتين.');
-          return;
-         }
-         update((){saving=true;error=null;});
-         try{
-          if(!await WaffraBiometrics.unlockMandatory()){
-           throw StateError('Biometric confirmation not completed.');
-          }
-          // Re-check INSIDE consent: a new device verifier must never
-          // overwrite one created by a concurrent login or external event.
-          if(await WaffraLocalPhoneCredentials.probeForPhone(phone)!=
-             WaffraLocalCredentialProbe.missing){
-           throw StateError('Local credentials changed during recovery.');
-          }
-          await WaffraLocalPhoneCredentials.registerOrResume(
-           phone:phone,password:chosen);
-          if(await WaffraLocalPhoneCredentials.probeForPhone(phone)!=
-             WaffraLocalCredentialProbe.ready){
-           throw StateError('Recovered verifier could not be verified.');
-          }
-          if(dialogCtx.mounted)Navigator.pop(dialogCtx,true);
-         }catch(_){
-          if(dialogCtx.mounted)update(()=>error=waffraIsEnglish?
-           'Recovery could not be verified. No financial data was removed.':
-           'تعذر تأكيد الاستعادة. بياناتك المالية ما اتغيرتش.');
-         }finally{
-          if(dialogCtx.mounted)update(()=>saving=false);
-         }
-        },child:WaffraText(waffraIsEnglish?
-         'Verify fingerprint & repair':'تأكيد بالبصمة وإصلاح الدخول')),
-      ])));
-   return repaired==true;
-  }catch(_){return false;}
-  finally{password.dispose();confirmation.dispose();}
  }
  bool _logoutInProgress=false;
  final _logoutFeedbackKey=GlobalKey<ScaffoldMessengerState>();
@@ -16500,9 +16426,24 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     side:BorderSide(color:(isGuest)?emerald:Colors.red)),
     onPressed:WaffraHaptics.tap(()async{
      if(isGuest){await widget.onLogout();return;}
-     final ok=await confirm(
-      WaffraRegionalCopy.signOutTitle(english:waffraIsEnglish),
-      WaffraRegionalCopy.signOutBody(english:waffraIsEnglish));
+     // One ordinary confirmation: no password or biometric repair wizard.
+     final ok=await showWaffraDialog<bool>(
+      context:context,barrierDismissible:false,builder:(dialogCtx)=>
+       AlertDialog(
+        key:const Key('m513-home-signout-confirmation'),
+        title:WaffraText(waffraIsEnglish?
+         'Are you sure you want to sign out?':
+         'هل أنت متأكد من تسجيل الخروج؟'),
+        actions:[
+         TextButton(
+          key:const Key('m513-home-signout-no'),
+          onPressed:()=>Navigator.pop(dialogCtx,false),
+          child:WaffraText(waffraIsEnglish?'No':'لا')),
+         FilledButton(
+          key:const Key('m513-home-signout-yes'),
+          onPressed:()=>Navigator.pop(dialogCtx,true),
+          child:WaffraText(waffraIsEnglish?'Yes':'نعم')),
+        ]));
      if(ok==true&&mounted)await widget.onLogout();
     }),
     icon:Icon((isGuest)?Icons.login:Icons.logout),
