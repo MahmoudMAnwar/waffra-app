@@ -15,6 +15,63 @@ abstract final class WaffraLocalPhoneCredentials {
  static const _store=FlutterSecureStorage();
  static const _key='waffra_device_phone_credentials_v2';
  static const _iterations=600000;
+ static const _recoveryKey='waffra_phone_missing_verifier_signout_recovery_v1';
+
+ /// One-time handoff for accounts signed in on an older APK which never
+ /// persisted a secure password verifier. ONLY OS-protected storage holds it.
+ /// This grant cannot authenticate alone: next login requires the same
+ /// registered phone and a fresh biometric challenge before password setup.
+ static bool _recoveryMatches(String? saved,String phone){
+  if(!validPhone(phone)||saved==null)return false;
+  try{
+   final obj=jsonDecode(saved);
+   if(obj is! Map<String,dynamic>||obj['version']!=1||
+      obj['phoneHash'] is! String||obj['nonce'] is! String)return false;
+   final nonce=base64Decode(obj['nonce'] as String);
+   if(nonce.length!=32)return false;
+   final expected=legacy_crypto.sha256.convert(utf8.encode(phone)).toString();
+   return _equal(utf8.encode(expected),
+      utf8.encode(obj['phoneHash'] as String));
+  }catch(_){return false;}
+ }
+
+ static Future<bool> hasSignOutRecoveryGrant(String phone)async =>
+  _recoveryMatches(await _store.read(key:_recoveryKey),phone);
+
+ /// Called silently after Yes on sign-out, never a password or biometric
+ /// dialog. Read-back failure refuses sign-out instead of stranding finances.
+ static Future<bool> stageSignOutRecoveryGrant(String phone)async{
+  if(!validPhone(phone)||
+     await probeForPhone(phone)!=WaffraLocalCredentialProbe.missing){
+   return false;
+  }
+  final previous=await _store.read(key:_recoveryKey);
+  if(previous!=null)return _recoveryMatches(previous,phone);
+  final nonce=List<int>.generate(32,(_)=>Random.secure().nextInt(256));
+  final record=jsonEncode(<String,Object?>{
+   'version':1,
+   'phoneHash':legacy_crypto.sha256.convert(utf8.encode(phone)).toString(),
+   'nonce':base64Encode(nonce),
+  });
+  await _store.write(key:_recoveryKey,value:record);
+  return await _store.read(key:_recoveryKey)==record&&
+    await probeForPhone(phone)==WaffraLocalCredentialProbe.missing;
+ }
+
+ /// Caller must FIRST validate registered phone and successfully complete
+ /// fresh OS biometrics. Never called from sign-out or as an implicit reset.
+ static Future<bool> finishSignInRecoveryAfterBiometric({
+  required String phone,required String password,
+ })async{
+  if(!validPhone(phone)||!validPassword(password)||
+     await probeForPhone(phone)!=WaffraLocalCredentialProbe.missing||
+     !await hasSignOutRecoveryGrant(phone))return false;
+  await registerOrResume(phone:phone,password:password);
+  if(await probeForPhone(phone)!=WaffraLocalCredentialProbe.ready||
+     !await verify(phone:phone,password:password))return false;
+  await _store.delete(key:_recoveryKey);
+  return true;
+ }
  static bool validPhone(String phone)=>RegExp(r'^05[0-9]{8}$').hasMatch(phone);
  static bool validPassword(String pass)=>utf8.encode(pass).length>=8&&
    utf8.encode(pass).length<=128&&!pass.contains('\u0000');
