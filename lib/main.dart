@@ -9620,6 +9620,78 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    // Confirmation here only permits the user's explicitly reviewed overlap.
    if(pendingHash!=null)explicitlyApprovedSmsDuplicate=true;
   }
+  // M514 #451: editing an EXISTING reviewed SMS with its FIRST receipt
+  // must not use the legacy whole-ledger optimistic editor. That path
+  // cannot atomically attach encrypted image bytes to the typed SQL row.
+  // This dedicated verified writer only adds receipts; it never posts again.
+  if(initial!=null&&
+     (initial.sourceType=='sms'||initial.sourceType=='manual')&&
+     waffraReceiptPaths(initial.receiptPath).isEmpty&&
+     stagedReceiptCopies.isNotEmpty){
+   Future<void> discardStagedReceipts()async{
+    for(final staged in stagedReceiptCopies){
+     try{final file=File(staged);if(await file.exists())await file.delete();}
+     catch(_){}
+    }
+   }
+   final beforeEdit=Map<String,Object?>.from(initial.toJson())
+    ..remove('receiptPath');
+   final afterEdit=Map<String,Object?>.from(result.toJson())
+    ..remove('receiptPath');
+   if(jsonEncode(beforeEdit)!=jsonEncode(afterEdit)){
+    if(mounted)snack(context,waffraIsEnglish?
+     'Please attach the receipt separately from other changes to this entry.':
+     'أضف المرفق وحده أولًا؛ تعديل بيانات العملية يحتاج حفظًا منفصلًا.',
+     isError:true);
+    await discardStagedReceipts();
+    return;
+   }
+   try{
+    final images=<Uint8List>[];
+    for(final path in waffraReceiptPaths(result.receiptPath)){
+     images.add(await File(path).readAsBytes());
+    }
+    if(images.isEmpty)throw StateError('No verified receipt bytes.');
+    final current=await _saveProgress.track(
+     'attach-verified-existing-receipt',
+     ()=>_financeAuthority.attachReceiptsToExisting(
+      entryId:initial.id,expectedOriginal:initial.toJson(),
+      images:images,userConfirmed:true));
+    final raw=await WaffraLargeJsonDecode.parse(current.ledgerRaw??'[]');
+    if(raw is! List)throw StateError('Verified receipt edit ledger missing.');
+    final verified=raw.map((item)=>MoneyEntry.fromJson(
+     Map<String,dynamic>.from(item as Map))).toList();
+    if(!verified.any((item)=>item.id==initial.id&&
+      waffraReceiptPaths(item.receiptPath).length==images.length)){
+     throw StateError('Verified receipt was not associated with entry.');
+    }
+    if(mounted)setState((){
+     entries..clear()..addAll(verified);
+     _lastFinanceAuthorityRead=current;
+     _lastLedgerSavedRaw=current.ledgerRaw;
+     _lastWidgetRevision=current.widgetRevision;
+    });
+    if(smsEditorDraftKey!=null)_m492SmsEditorDrafts.remove(smsEditorDraftKey);
+    await discardStagedReceipts();
+    if(mounted){
+     snackSuccess(context,waffraIsEnglish?
+      'Receipt attached without recording the transaction again.':
+      'تم حفظ المرفق دون تسجيل العملية أو الخصم مرة تانية.');
+     unawaited(_refreshWidget());
+    }
+   }catch(error){
+    debugPrint('M514 verified existing receipt rejected: ${error.runtimeType}');
+    await discardStagedReceipts();
+    if(mounted){
+     await _refreshFromVerifiedFinance();
+     if(mounted)snack(context,waffraIsEnglish?
+      'Receipt not saved. Your financial transaction is unchanged.':
+      'تعذر حفظ المرفق؛ العملية المالية الأصلية لم تتغير.',
+      isError:true);
+    }
+   }
+   return;
+  }
   final linkedBudget=namedBudgets.where((b)=>b.id==result.budgetId&&!b.deleted).toList();
   final previousSpent=linkedBudget.isEmpty?0.0:waffraNamedBudgetSpent(
     entries.where((e)=>e.id!=result.id),categories,linkedBudget.single,result.date);
