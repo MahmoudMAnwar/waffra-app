@@ -54,6 +54,13 @@ void main() {
         '@override void initState(){super.initState();WaffraBackNavigation');
     expect(resume, contains('if(accountOpened&&mounted)setState((){'));
     expect(resume, contains('_m528CloudConsentFuture=null'));
+
+    // A separate, owner-approved one-message cloud analysis can also change
+    // the same privacy switch; never leave its cached setting stale.
+    final reviewed = between('Future<void> _analyzeAmbiguousSmsOnDemand(',
+        'Future<void> _scanPreviousBankSmsFromSettings()async{');
+    expect(reviewed, contains('WaffraSmsCloudService.setConsent(true)'));
+    expect(reviewed, contains('_m528CloudConsentFuture=null;'));
   });
 
   test('M528 maintains model deletion biometric safety and revision reload', () {
