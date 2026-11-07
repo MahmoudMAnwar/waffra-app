@@ -650,3 +650,9 @@ M274 must also trigger on `docs/release/WAFFRA_APPROVED_CHANGES.txt` changes bec
 - **Implemented:** `test/m537_phone_credential_lifecycle_test.dart` executes the production PBKDF2 verifier with isolated mocked Flutter secure storage: registration/read-back, three repeated login challenges, wrong password, foreign phone, overwrite refusal, missing and malformed verifier, salted hash without plaintext. No user finance or real Android storage touched.
 - **Limitation:** this focused test does not yet execute the full `main.dart` widget logout-to-login session or prove SQLCipher financial preservation; those still need separate integration/Android acceptance.
 - **Status:** committed, awaiting CI execution/results on the exact latest PR HEAD; do not mark passed until confirmed. Do not merge before full required CI and Android acceptance.
+
+### M538 — Android emulator process dies during real footer UI test (2026-11-07)
+
+- Run 42389972623: actual API35 AOSP ATD boots and Flutter Driver connects; first footer test begins, then VM Service disappears and ADB reports device offline. Separate widget/golden job passed; mandatory Android gate correctly failed. Host after crash had 15Gi total RAM, 14Gi available and 81G disk free, so the precise emulator termination cause is not yet established.
+- **Scoped stability attempt:** increase virtual emulator resources from 2 to 4 cores, 2048M to 3072M RAM and 256M to 384M heap. Keep pinned emulator 36.4.10, AOSP ATD API35, actual footer/balance test and hard fail gate; update M386 resource regression accordingly. No production finance/auth code changed.
+- **Acceptance:** real Android test must complete and mandatory certification succeed on final exact SHA; if crash persists, inspect host kernel/emulator crash diagnostics rather than declaring fixed. PR #480, issue #482. **Status: awaiting CI evidence.**
