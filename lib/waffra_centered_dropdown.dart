@@ -24,8 +24,9 @@ class WaffraCenteredDropdownFormField<T> extends FormField<T> {
     autovalidateMode:autovalidateModeAlways
       ?AutovalidateMode.always:AutovalidateMode.disabled,
     builder:(field) {
-      final selected=items.where((item)=>item.value==field.value).toList();
-      final child=selected.isNotEmpty?selected.first.child:
+      // M529: find the current value without allocating a temporary list.
+      final selectedIndex=items.indexWhere((item)=>item.value==field.value);
+      final child=selectedIndex>=0?items[selectedIndex].child:
         Text(decoration.hintText??'',maxLines:1,
           overflow:TextOverflow.ellipsis);
       final enabled=onChanged!=null;
@@ -52,7 +53,11 @@ class WaffraCenteredDropdownFormField<T> extends FormField<T> {
               barrierDismissible:true,
               barrierColor:Colors.black.withValues(alpha:.28),
               builder:(dialogContext)=>BackdropFilter(
-                filter:ui.ImageFilter.blur(sigmaX:6,sigmaY:6),
+                // Keep a subtle blur; respect system reduced-animations mode
+                // without a costly sigma-6 full-screen raster pass.
+                filter:ui.ImageFilter.blur(
+                  sigmaX:MediaQuery.disableAnimationsOf(dialogContext)?0:3,
+                  sigmaY:MediaQuery.disableAnimationsOf(dialogContext)?0:3),
                 child:Center(child:Dialog(
                   insetPadding:const EdgeInsets.symmetric(
                     horizontal:18,vertical:24),
