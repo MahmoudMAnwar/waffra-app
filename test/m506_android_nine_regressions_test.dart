@@ -114,24 +114,23 @@ void main() {
     expect(writer,contains("confirmedRecords.single['sourceType'] == 'sms'"));
   });
 
-  test('M506 local sign-out recovery requires fingerprint and never overwrites a verifier', () {
+  test('M513 sign-out must never prompt for password repair or bypass a missing verifier', () {
     final src=File('lib/main.dart').readAsStringSync();
     final logout=src.substring(src.indexOf(' Future<void> logout()async {'),
       src.indexOf(' Future<void> setPin('));
-    expect(logout,contains('if(integrity==WaffraLocalCredentialProbe.missing){'));
-    expect(logout,contains('await _repairMissingLocalCredential('));
-    expect(logout,contains('if(!WaffraLocalPhoneCredentials.validPhone(phone))return false;'));
-    expect(logout,contains('WaffraBiometrics.unlockMandatory()'));
-    expect(logout,contains('WaffraLocalPhoneCredentials.registerOrResume('));
-    expect(logout,contains('WaffraLocalCredentialProbe.ready'));
+    final registration=src.substring(src.indexOf(' Future<void> saveUser(Person u)async {'),
+      src.indexOf(' Future<void> setUiCountry('));
+    expect(logout,contains('WaffraLocalPhoneCredentials.probeForPhone('));
     expect(logout,contains('if(!hasLegacy){'));
-    expect(logout,contains('_accountWriteAuthority.signOut();'));
-    // The first READY probe belongs to logout's initial preflight; the
-    // subsequent READY probe must verify successful explicit recovery.
-    final recovery=logout.substring(
-      logout.indexOf(' Future<bool> _repairMissingLocalCredential('));
-    expect(recovery.indexOf('WaffraLocalPhoneCredentials.registerOrResume('),
-      lessThan(recovery.indexOf('WaffraLocalCredentialProbe.ready')));
+    expect(logout,contains('WaffraLocalCredentialProbe.missing'));
+    expect(logout,contains('return;'));
+    expect(logout,contains('await _accountWriteAuthority.signOut();'));
+    expect(logout,isNot(contains('_repairMissingLocalCredential(')));
+    expect(logout,isNot(contains('WaffraLocalPhoneCredentials.registerOrResume(')));
+    expect(src,isNot(contains('m506-recovery-password')));
+    expect(registration,contains('phone_credential_not_persisted_for_profile'));
+    expect(registration.indexOf('WaffraLocalPhoneCredentials.probeForPhone('),
+      lessThan(registration.indexOf('await _accountWriteAuthority.saveProfile(')));
   });
 
   test('M506 native bank sender aliases preserve OTP and consented review', () {
