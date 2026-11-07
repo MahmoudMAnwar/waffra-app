@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:waffra/main.dart' show WaffraNamedBudget;
 import 'package:waffra/storage/legacy_snapshot_preflight.dart';
 import 'package:waffra/storage/waffra_accounts_repository.dart';
+import 'package:waffra/storage/waffra_accounts_schema.dart';
 import 'package:waffra/storage/waffra_atomic_finance_snapshot.dart';
 import 'package:waffra/storage/waffra_encrypted_cutover_journal.dart';
 import 'package:waffra/storage/waffra_encrypted_finance_session.dart';
@@ -50,6 +51,7 @@ void main() {
     await WaffraFreshEncryptedVaultBootstrap(
       store: db, experimentalEnabled: true,
     ).initialize(decision: WaffraFirstRunDecision.freshCandidate);
+    await WaffraAccountsSchema.install(db);
     snapshot = WaffraAtomicFinanceSnapshot(
       store: db, experimentalEnabled: true,
     );
