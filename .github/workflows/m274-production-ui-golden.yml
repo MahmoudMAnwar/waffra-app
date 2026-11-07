@@ -116,6 +116,26 @@ jobs:
           python3 scripts/qa/m287_patch_tesseract_gradle.py
       - name: Generate temporary Android host for disposable UI test
         run: flutter create --no-pub --platforms=android --project-name=waffra --org com.waffra .
+      # M543: Flutter upstream #192736: Impeller/GLES can terminate Linux
+      # x86_64 software-emulator QEMU. Work around ONLY in the generated
+      # disposable CI Android project. Never change the production manifest.
+      - name: Apply test-only Linux emulator Impeller compatibility setting
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          manifest = Path('android/app/src/main/AndroidManifest.xml')
+          source = manifest.read_text()
+          assert source.count('<application') == 1 and source.count('</application>') == 1
+          assert 'io.flutter.embedding.android.EnableImpeller' not in source
+          source = source.replace('</application>',
+              '    <meta-data android:name="io.flutter.embedding.android.EnableImpeller" '
+              'android:value="false" />\n    </application>', 1)
+          manifest.write_text(source)
+          assert 'android:value="false"' in manifest.read_text()
+          print('M543_CI_ONLY_IMPELLER_DISABLED:real_android_engine_skia')
+          PY
       - name: Configure Java library desugaring for Android UI emulator
         shell: bash
         run: |
@@ -247,13 +267,8 @@ jobs:
           # M533: prefer dedicated stable SwiftShader GLES instead of auto
           # Lavapipe/Vulkan; never use deprecated swiftshader_indirect.
           emulator-options: -no-window -no-audio -no-snapshot -gpu swiftshader -feature -Vulkan -no-boot-anim
-          pre-emulator-launch-script: |
-            set -eu
-            emulator_bin="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}/emulator/emulator"
-            build="$("$emulator_bin" -version 2>&1)"
-            printf '%s\\n' "$build"
-            printf '%s' "$build" | grep -F 'Android emulator version 36.4.10.0 (build_id 15004761)'
-            echo "M533_EMULATOR_VERSION_VERIFIED:36.4.10.0-15004761"
+          # M543: no pre-emulator-launch-script; it returned exit 127 while
+          # the real runner already verifies pinned SDK source.properties.
           script: bash .github/scripts/run-m274-android-tap-smoke.sh
       - name: Upload actual Android emulator failure diagnostics
         if: failure()
