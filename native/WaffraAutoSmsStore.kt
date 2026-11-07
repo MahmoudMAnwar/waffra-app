@@ -40,6 +40,9 @@ object WaffraAutoSmsStore {
     // M514 #448: excluded review SMS are not finance commits. Keep independent
     // owner-bound encrypted fingerprints so a historical rescan cannot replay them.
     private const val excludedMessageBucketPrefix = "encrypted_excluded_sms_v1_"
+    // M516 #455: a completed self-transfer is neither an excluded SMS nor
+    // a finance income/expense commit; store its own encrypted anti-replay ID.
+    private const val completedTransferBucketPrefix = "encrypted_completed_transfer_sms_v1_"
     private const val activeName = "enabled"
     // Hash of the verified signed-in account. No phone/email is saved here.
     private const val consentedOwnerName = "consented_account_sha256_v1"
@@ -186,10 +189,12 @@ object WaffraAutoSmsStore {
                 // message markers from the previous owner.
                 for (key in prefs.all.keys) {
                     if (key.startsWith(committedBucketPrefix) ||
-                        key.startsWith(excludedMessageBucketPrefix)) editor.remove(key)
+                        key.startsWith(excludedMessageBucketPrefix) ||
+                        key.startsWith(completedTransferBucketPrefix)) editor.remove(key)
                 }
                 committedCipherCache.clear()
                 excludedMessageCipherCache.clear()
+                completedTransferCipherCache.clear()
                 editor.remove(queueName).remove(excludedSendersName).remove(historyCursorAt)
                     .remove(historyCursorId).remove(historySourceMonth)
                     .remove(historyComplete)
@@ -320,6 +325,27 @@ object WaffraAutoSmsStore {
 
     private fun isExcludedMessageLocked(context: Context, id: String) =
         excludedMessageBucket(context, id).contains(id)
+
+    private val completedTransferCipherCache =
+        mutableMapOf<String, Pair<String, Set<String>>>()
+    private fun completedTransferBucket(context: Context, id: String): Set<String> {
+        if (!Regex("^[a-f0-9]{64}$").matches(id))
+            throw IllegalArgumentException("Invalid completed transfer SMS fingerprint")
+        val bucket = id.take(2)
+        val encrypted = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+            .getString(completedTransferBucketPrefix + bucket, "") ?: ""
+        val cached = completedTransferCipherCache[bucket]
+        if (cached != null && cached.first == encrypted) return cached.second
+        val decoded = open(encrypted)
+        val ids = (0 until decoded.length()).map { decoded.getString(it) }.toSet()
+        if (ids.any { !Regex("^[a-f0-9]{64}$").matches(it) })
+            throw IllegalStateException("Invalid completed transfer SMS marker")
+        completedTransferCipherCache[bucket] = encrypted to ids
+        return ids
+    }
+
+    private fun isCompletedTransferLocked(context: Context, id: String) =
+        completedTransferBucket(context, id).contains(id)
 
     // Explicit user sender exclusion is encrypted and bound to this authenticated
     // owner. Do not reuse a removed sender as an automatic learned rule.
@@ -577,7 +603,8 @@ object WaffraAutoSmsStore {
                 // Verified financial SMS is never offered again after
                 // rescan, reinstall-preserving update or OS resume.
                 if (isCommittedLocked(context, fingerprint) ||
-                    isExcludedMessageLocked(context, fingerprint))
+                    isExcludedMessageLocked(context, fingerprint) ||
+                    isCompletedTransferLocked(context, fingerprint))
                     return@synchronized false
                 for (i in 0 until queue.length()) {
                     if (queue.getJSONObject(i).optString("id") == fingerprint)
@@ -767,6 +794,49 @@ object WaffraAutoSmsStore {
                     Handler(Looper.getMainLooper()).post { onChanged?.invoke() }
                 }
                 success
+            } catch (_: Exception) { false }
+        }
+
+    /**
+     * M516 #455: confirmed account-to-account SMS transfer completion.
+     * A successful verified transfer occurs in SQLCipher BEFORE this ACK.
+     * This encrypted, owner-bound marker is NOT a user exclusion and does
+     * NOT claim a bank SMS was booked as an income/expense journal entry.
+     * Marker and queue removal use ONE synchronous preferences commit.
+     */
+    fun acknowledgeCompletedTransfer(context: Context, ids: Set<String>): Boolean =
+        synchronized(mutex) {
+            if (!enabled(context) || ids.isEmpty() || ids.size > 100 ||
+                ids.any { !Regex("^[a-f0-9]{64}$").matches(it) })
+                return@synchronized false
+            try {
+                val queue = read(context)
+                val remaining = JSONArray()
+                val matched = mutableSetOf<String>()
+                for (i in 0 until queue.length()) {
+                    val row = queue.getJSONObject(i)
+                    val fingerprint = row.getString("id")
+                    if (ids.contains(fingerprint)) matched.add(fingerprint)
+                    else remaining.put(row)
+                }
+                if (ids.any { !matched.contains(it) &&
+                        !isCompletedTransferLocked(context, it) })
+                    return@synchronized false
+                val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+                val editor = prefs.edit().putString(queueName, seal(remaining.toString()))
+                for ((bucket, additions) in matched.groupBy { it.take(2) }) {
+                    val updated = completedTransferBucket(context, additions.first())
+                        .toMutableSet()
+                    updated.addAll(additions)
+                    editor.putString(completedTransferBucketPrefix + bucket,
+                        seal(JSONArray(updated.toList()).toString()))
+                }
+                val saved = editor.commit()
+                if (saved) {
+                    completedTransferCipherCache.clear()
+                    Handler(Looper.getMainLooper()).post { onChanged?.invoke() }
+                }
+                saved
             } catch (_: Exception) { false }
         }
 
