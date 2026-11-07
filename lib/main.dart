@@ -1374,9 +1374,10 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    }catch(_){integrity=WaffraLocalCredentialProbe.malformed;}
    if(integrity!=WaffraLocalCredentialProbe.ready){
     final prefs=await SharedPreferences.getInstance();
-    final legacy=prefs.getString('waffra_local_password_salt')!=null&&
+    final hasLegacy=prefs.getString('waffra_local_password_salt')!=null&&
      prefs.getString('waffra_local_password_hash')!=null;
-    if(integrity==WaffraLocalCredentialProbe.missing&&!legacy){
+    if(!hasLegacy){
+     if(integrity==WaffraLocalCredentialProbe.missing){
      var staged=false;
      try{
       staged=await WaffraBiometrics.isAvailable()&&
@@ -1390,10 +1391,18 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
        isError:true);
       return;
      }
-    }else if(integrity!=WaffraLocalCredentialProbe.missing||!legacy){
+     }else{
      if(mounted)_showLogoutFeedback(waffraIsEnglish?
       'Cannot safely sign out with damaged or mismatched account credentials. Your data is unchanged.':
       'بيانات الدخول الآمنة تالفة أو لا تخص هذا الحساب؛ لم يتم تسجيل الخروج وبياناتك محفوظة.',
+      isError:true);
+     return;
+     }
+    }
+    if(hasLegacy&&integrity!=WaffraLocalCredentialProbe.missing){
+     if(mounted)_showLogoutFeedback(waffraIsEnglish?
+      'Secure credentials are corrupt or bound to another account; sign-out was cancelled.':
+      'بيانات الدخول الآمنة تالفة أو لحساب مختلف؛ لم يتم تسجيل الخروج.',
       isError:true);
      return;
     }
