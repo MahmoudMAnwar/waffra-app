@@ -16,7 +16,7 @@
   "bounded_sections": {
     "lib/waffra_budget_directory.part.dart": [
       {
-        "start": "  Widget _budgetDirectoryPanel(StateSetter refresh,{",
+        "start": " Widget _budgetDirectoryPanel(StateSetter refresh,{",
         "end": null
       }
     ]
