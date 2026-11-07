@@ -4590,16 +4590,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           final receivedAt=message['receivedAt'] as int? ?? 0;
           final date=receivedAt>0?
            DateTime.fromMillisecondsSinceEpoch(receivedAt):null;
-          final dateLabel=date==null?'': 
+          final dateLabel=date==null?'':
            '${date.day}/${date.month}/${date.year}';
+          final labelPrefix=dateLabel.isEmpty?'':'$dateLabel • ';
           return ListTile(
            key:Key('waffra-excluded-message-${id.substring(0,12)}'),
            leading:const Icon(Icons.mark_email_read_outlined,color:emerald),
            title:WaffraText(sender.isNotEmpty?sender:
             (waffraIsEnglish?'Excluded message':'رسالة مستبعدة')),
            subtitle:WaffraText(
-            '${dateLabel.isEmpty?'': '$dateLabel • '}'
-            '••••${id.substring(id.length-8)}',
+            '$labelPrefix••••${id.substring(id.length-8)}',
             style:Theme.of(ctx).textTheme.bodySmall),
            trailing:TextButton(
             onPressed:busy?null:()async{
