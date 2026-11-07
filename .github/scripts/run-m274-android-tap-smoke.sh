@@ -33,7 +33,9 @@ for attempt in 1 2; do
   set +e
   # Drive the exact integration APK built before emulator boot. Flutter test
   # would re-run Gradle with the emulator active, exhausting runner memory.
-  timeout --signal=TERM --kill-after=20s 900s \
+  # M535: a Debug VM should attach in minutes. Fail closed after 360s,
+  # not 15 minutes of identical reconnect lines on GitHub Actions.
+  timeout --signal=TERM --kill-after=20s 360s \
     flutter drive --driver=test_driver/integration_test.dart \
       --target="$test_file" --use-application-binary=build/app/outputs/flutter-apk/app-debug.apk \
       -d "$device" --no-pub > "$log" 2>&1
@@ -58,8 +60,15 @@ for attempt in 1 2; do
       # Only enumerate the anonymous disposable CI crash report paths.
       # Do not print dumps, app DB contents, user files or secrets.
       find /tmp/android-runner -maxdepth 2 -type f -name '*crash*' -printf '%f %s bytes\n' 2>/dev/null | head -n 12 || true
-      echo "M533_DEVICE_LOGCAT_LAST_120_LINES_IF_ALIVE"
-      timeout 10s adb -s "$device" logcat -d -t 120 -v brief 2>/dev/null || true
+      echo "M535_VM_HANDSHAKE_EVIDENCE"
+      # Capture ONLY disposable CI emulator telemetry (never user finances).
+      timeout 5s adb -s "$device" forward --list 2>/dev/null || true
+      timeout 5s adb -s "$device" shell pidof com.waffra.waffra 2>/dev/null || true
+      timeout 5s adb -s "$device" shell dumpsys activity activities 2>/dev/null | grep -E 'mResumedActivity|topResumedActivity|com.waffra.waffra' | head -n 15 || true
+      echo "M535_APP_VM_FATAL_LOGCAT_IF_ALIVE"
+      # Tag filtering avoids 120 lines of irrelevant GMS warnings while
+      # retaining Dart/Flutter, process, AndroidRuntime and linker failures.
+      timeout 10s adb -s "$device" logcat -d -v brief -s flutter:I FlutterJNI:I AndroidRuntime:E DEBUG:E ActivityManager:W ActivityTaskManager:W linker:E '*:S' 2>/dev/null | tail -n 90 || true
     } 2>&1 | tee build/m274/emulator-crash-diagnostics.log
     echo "M274_FAILURE_DIAGNOSTICS_END"
   fi
