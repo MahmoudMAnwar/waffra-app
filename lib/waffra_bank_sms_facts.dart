@@ -89,15 +89,15 @@ abstract final class WaffraBankSmsFactsParser {
   // Keep an otherwise unspecified "Credit Transfer" in manual transfer
   // review, but explicitly incoming/wāreda notices are income candidates.
   final explicitlyIncoming=RegExp(
-   r'حوال[ةه](?:\\s+(?:مالي[ةه]|داخلي[ةه]))?\\s+وارد[ةه]|'
-   r'تحويل(?:\\s+بنكي)?\\s+وارد|'
-   r'\\bincoming\\s+(?:bank\\s+)?transfer\\b|'
-   r'\\btransfer\\s+received\\b',
+   r'حوال[ةه](?:\s+(?:مالي[ةه]|داخلي[ةه]))?\s+وارد[ةه]|'
+   r'تحويل(?:\s+بنكي)?\s+وارد|'
+   r'\bincoming\s+(?:bank\s+)?transfer\b|'
+   r'\btransfer\s+received\b',
    caseSensitive:false).hasMatch(header);
   final explicitlyOutgoing=RegExp(
-   r'حوال[ةه](?:\\s+(?:مالي[ةه]|داخلي[ةه]))?\\s+صادر[ةه]|'
-   r'تحويل(?:\\s+بنكي)?\\s+صادر|'
-   r'\\boutgoing\\s+(?:bank\\s+)?transfer\\b',
+   r'حوال[ةه](?:\s+(?:مالي[ةه]|داخلي[ةه]))?\s+صادر[ةه]|'
+   r'تحويل(?:\s+بنكي)?\s+صادر|'
+   r'\boutgoing\s+(?:bank\s+)?transfer\b',
    caseSensitive:false).hasMatch(header);
   final kind=isCard?WaffraBankOperationKind.cardSettlement:
    explicitlyIncoming&&!explicitlyOutgoing?
