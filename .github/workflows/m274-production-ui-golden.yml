@@ -227,7 +227,7 @@ jobs:
           target: aosp_atd
           arch: x86_64
           profile: pixel_6
-          cores: 2
+          cores: 4
           # M533 (#481): emulator 37.2.13 repeatedly terminated at the balance
           # eye test after footer succeeded. Freeze stable upstream 36.4.10
           # instead of floating sdkmanager's latest emulator release.
@@ -236,8 +236,8 @@ jobs:
           # M386: cap AVD userdata instead of accepting Pixel default > available
           # GitHub runner disk. Keep the real Android UI tap test mandatory.
           disk-size: 3072M
-          ram-size: 2048M
-          heap-size: 256M
+          ram-size: 3072M
+          heap-size: 384M
           disable-animations: true
           emulator-boot-timeout: 600
           # M533: prefer dedicated stable SwiftShader GLES instead of auto
