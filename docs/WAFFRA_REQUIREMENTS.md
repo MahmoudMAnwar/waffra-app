@@ -430,3 +430,12 @@ Each issue requires linked source changes, exact-head CI, tests and real Android
 - **Tracking:** https://github.com/MahmoudMAnwar/waffra-app/issues/454
 - **State:** documented / pending audit. No code refactor or regression-test success claimed.
 - **Execution:** inventory and root-cause matrix first, targeted scoped PRs with regression tests next; protect existing SQLCipher data and upgrade paths; require CI and device acceptance before merge.
+
+
+## M528 — Stable asynchronous settings snapshots (2026-11-07; Issue #469 / audit #454 F-454-P06)
+
+- **Owner-approved improvement:** stop repeated storage/permission future creation caused by every unrelated My Account repaint while preserving correct switches and permission consent.
+- **Identified:** profilePage builds three new futures to read Android SMS status, bank SMS cloud consent, and downloaded AI model status on every rebuild.
+- **Expected:** per Home session read futures are reused through unrelated renders; explicit user toggles, reopening account/settings after another screen, and lifecycle re-entry invalidate status; model download/removal changes invalidate using existing revision counter. Never show stale permission/consent as authorized money or network access, skip biometric confirmation, or broaden SMS permissions.
+- **Scope:** issue #469, isolated Draft PR from main, M385 bounded Home fields/profile and Account entry/resume logic, targeted regression tests, M449 notes after code; exact-head CI and Android slow-device smoke/profile.
+- **Status:** recorded before code; no acceptance or device timings claimed.
