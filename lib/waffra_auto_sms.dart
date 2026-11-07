@@ -150,6 +150,41 @@ abstract final class WaffraAutoSms {
      ids.any((id)=>!RegExp(r'^[a-f0-9]{64}$').hasMatch(id)))return false;
   return _boolCall('excludeAutoBankSms',ids);
  }
+ /// Stable per-SMS transfer ID: native fingerprint includes sender + body
+ /// + reception timestamp, so two identical texts can be distinct transfers.
+ static String transferIdForMessage(String fingerprint){
+  if(!RegExp(r'^[a-f0-9]{64}
+ /// replay, separate from explicit exclusions and income/expense commits.
+ static Future<bool> acknowledgeCompletedTransfer(List<String> ids)async{
+  if(ids.isEmpty||ids.length>100||
+     ids.any((id)=>!RegExp(r'^[a-f0-9]{64}$').hasMatch(id)))return false;
+  return _boolCall('ackCompletedTransferAutoBankSms',ids);
+ }
+ static Future<bool> acknowledge(List<String> ids)async{
+  if(ids.isEmpty||ids.length>100)return false;
+  return _boolCall('ackAutoBankSms',ids);
+ }
+ static Future<bool> notifyCommitted({
+  required String hash,required double amount,required bool income,
+  required bool linkedBudget,
+ })async{
+  if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(hash)||!amount.isFinite||amount<=0)
+   return false;
+  return _boolCall('notifyAutoSmsSaved',{
+   'hash':hash,'amount':amount.toStringAsFixed(2),
+   'income':income,'linkedBudget':linkedBudget,
+  });
+ }
+ static Future<bool> notifyReview(String hash)async{
+  if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(hash))return false;
+  return _boolCall('notifyAutoSmsNeedsReview',hash);
+ }
+}
+).hasMatch(fingerprint)){
+   throw ArgumentError.value(fingerprint,'fingerprint','Invalid SMS identity');
+  }
+  return 'sms-transfer-$fingerprint';
+ }
  /// M516: permanently seal a *successful* internal SMS transfer against
  /// replay, separate from explicit exclusions and income/expense commits.
  static Future<bool> acknowledgeCompletedTransfer(List<String> ids)async{
