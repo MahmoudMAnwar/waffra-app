@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_mandatory_biometric_gate.dart';
 
 void main() {
-  testWidgets('M502: pending native biometric must confirm logout with Yes/No', (tester) async {
+  testWidgets('M502: biometric sign-out works during an unfinished OS challenge', (tester) async {
     final osChallenge=Completer<bool>();
     var signOutCalls=0, cancelCalls=0, verifiedCalls=0;
     await tester.pumpWidget(MaterialApp(home:WaffraMandatoryBiometricGate(
