@@ -4,7 +4,8 @@
   "human_scope_review": "Owner requested smooth UI/dropdown improvement and specifically authorized continued fixes. This bounded presentation optimization only caches non-financial settings futures and invalidates on actual changes/resume/re-entry. Approval of release/performance remains pending. Never weaken M385 or finance/SMS permission gates.",
   "user_requested_changes": [
     "2026-11-07 Issue #469 / audit #454 F-454-P06: avoid recreating asynchronous Android SMS, bank cloud consent and AI model disk reads on every unrelated My Account rebuild; invalidate on changes/resume/model revision.",
-    "2026-11-07: preserve independent SMS permission confirmation and AI model deletion biometrics, finance integrity, user settings accuracy and exact-head regression and release notes."
+    "2026-11-07: preserve independent SMS permission confirmation and AI model deletion biometrics, finance integrity, user settings accuracy and exact-head regression and release notes.",
+    "2026-11-07 M528: when the owner separately authorizes one cloud SMS review, invalidate the profile consent read cache so the independent privacy settings never show stale off state."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -34,6 +35,10 @@
       {
         "start": " Future<void> deleteAiModel()async {",
         "end": " Future<void> eraseFinancialData()async {"
+      },
+      {
+        "start": " Future<void> _analyzeAmbiguousSmsOnDemand(",
+        "end": " Future<void> _scanPreviousBankSmsFromSettings()async{"
       }
     ]
   }
