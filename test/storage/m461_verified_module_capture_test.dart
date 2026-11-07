@@ -81,7 +81,11 @@ void main() {
   });
 
   test('budget save keeps only budget projections on a fresh encrypted vault', () {
+    // Fresh vault has no persisted goals/recurring. Nonempty unwitnessed
+    // modules must remain rejected by narrowVerifiedModuleEdit.
     final capture = displayed()
+      ..['waffra_goals_v24'] = '[]'
+      ..['waffra_recurring_v24'] = '[]'
       ..['waffra_named_budgets_v1'] = '[{"id":"budget-1","accountId":"bank-1"}]';
     WaffraHomeTransactionCapture.narrowVerifiedModuleEdit(
       route: WaffraFinanceRoute.challengeAndBudgetUpdate,
