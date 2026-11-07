@@ -321,6 +321,10 @@ class MoneyEntry {
   'sourceType':sourceType,
   'merchantKey':merchantKey,if(budgetId!=null)'budgetId':budgetId,
   if(goalWalletPaidMinor>0)'goalWalletPaidMinor':goalWalletPaidMinor};
+ // M530: pure large-ledger serialization; caller freezes immutable entries
+ // BEFORE its first await. This worker preserves toJson() field order/bytes.
+ static String encodeFrozenSnapshot(List<MoneyEntry> frozenEntries)=>
+  jsonEncode(frozenEntries.map((e)=>e.toJson()).toList(growable:false));
  factory MoneyEntry.fromJson(Map<String,dynamic> j)=>MoneyEntry(
   id:'${j['id']??newId()}',title:'${j['title']??''}',
   category:'${j['category']??'أخرى'}',amount:(j['amount'] as num).toDouble(),
@@ -3773,16 +3777,53 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
 
  Future<void> _m467PickHomeAccount()async{
-  // Open instantly from a verified snapshot; refresh after selection.
-  if(!_m468VerifiedAccountsLoaded)await _m467RefreshHomeAccounts();
+  // M527: a cold verified read must not block the first sheet frame.
+  // No unverified account may ever appear as a selectable money source.
+  final pendingAccounts=_m468VerifiedAccountsLoaded
+   ?null:_m467RefreshHomeAccounts();
   if(!mounted)return;
   final next=await showModalBottomSheet<String>(
    context:context,isScrollControlled:true,useSafeArea:true,
    showDragHandle:true,
-   builder:(sheet)=>WaffraHomeAccountsSheet(
-    english:waffraIsEnglish,
-    selected:_m467SelectedAccount,
-    accounts:_m467Accounts));
+   builder:(sheet){
+    Widget verifiedChoices()=>WaffraHomeAccountsSheet(
+     english:waffraIsEnglish,
+     selected:_m467SelectedAccount,
+     accounts:_m467Accounts);
+    // Warm cache: render original selector with no FutureBuilder wait frame.
+    if(pendingAccounts==null)return verifiedChoices();
+    return FutureBuilder<void>(
+     future:pendingAccounts,
+     builder:(ctx,state){
+      if(state.connectionState!=ConnectionState.done){
+       return SafeArea(top:false,child:SizedBox(
+        key:const Key('m527-account-picker-loading'),
+        height:170,
+        child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
+         const CircularProgressIndicator(strokeWidth:2.7),
+         const SizedBox(height:17),
+         Text(waffraIsEnglish?'Verifying accounts…':
+          'جارٍ التحقق من الحسابات…'),
+        ])));
+      }
+      if(!_m468VerifiedAccountsLoaded){
+       return SafeArea(top:false,child:Padding(
+        key:const Key('m527-account-picker-verification-failed'),
+        padding:const EdgeInsets.symmetric(horizontal:22,vertical:30),
+        child:Column(mainAxisSize:MainAxisSize.min,children:[
+         Text(waffraIsEnglish?
+          'Could not verify your accounts. No balances were changed.':
+          'تعذر التحقق من الحسابات. لم تتغير أي أرصدة.',
+          textAlign:TextAlign.center),
+         const SizedBox(height:14),
+         TextButton(
+          onPressed:()=>Navigator.pop(sheet),
+          child:Text(waffraIsEnglish?'Close and retry':'إغلاق وإعادة المحاولة')),
+        ])));
+      }
+      return verifiedChoices();
+     });
+   });
   if(next==null||!mounted)return;
   if(next=='manage'){
    await openVerifiedAccounts();
@@ -3950,6 +3991,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  String? lastBackupGeneratedAt;
  int? lastBackupBytes;
  bool protectRecentApps=true;
+ // M528: stable permission/consent futures across unrelated profile repaints.
+ Future<bool>? _m528SmsEnabledFuture;
+ Future<bool>? _m528CloudConsentFuture;
+ int? _m528ModelDiskRevision;
+ Future<bool>? _m528ModelDiskFuture;
+ Future<bool> _m528SmsEnabled()=>
+  _m528SmsEnabledFuture??=WaffraAutoSms.enabled();
+ Future<bool> _m528CloudConsent()=>
+  _m528CloudConsentFuture??=WaffraSmsCloudService.hasConsent();
+ Future<bool> _m528ModelDiskStatus(int revision){
+  if(_m528ModelDiskRevision!=revision||_m528ModelDiskFuture==null){
+   _m528ModelDiskRevision=revision;
+   _m528ModelDiskFuture=WaffraOnDeviceQwen.shared.downloadedOnDisk();
+  }
+  return _m528ModelDiskFuture!;
+ }
  String? _accountOpenSection;
  String accountSearch='';
  final _tourKeys=List<GlobalKey>.generate(7,(_)=>GlobalKey());
@@ -4002,6 +4059,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       WaffraExternalMediaSession.shouldSkipResumeBackgroundWork)return;
    // Verified finance/widget read is still required, merely deferred one
    // frame. Never infer cash from an unverified snapshot.
+   if(accountOpened&&mounted)setState((){
+    _m528SmsEnabledFuture=null;
+    _m528CloudConsentFuture=null;
+    _m528ModelDiskRevision=null;
+    _m528ModelDiskFuture=null;
+   });
    unawaited(_syncWidgetTransactions());
    final now=DateTime.now();
    final last=_m468LastResumeSmsScan;
@@ -4464,6 +4527,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      'التحليل السحابي غير متاح. راجع الرسالة بنفسك.',isError:true);
     return;
    }
+   // M528: this explicit owner consent also changes the Account switch.
+   // Re-read it on the next profile build; no extra finance/UI work now.
+   _m528CloudConsentFuture=null;
    final staged=await WaffraSmsCloudReviewAnalyzer.stagePending(
     [selected],maxPerRun:1,explicitlyRequested:true);
    if(!mounted)return;
@@ -6063,10 +6129,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   // overlapping multi-key saves, so a slower old save could finish last.
   // This protects in-app ordering, not cross-process widget writes or a crash
   // in the middle of SharedPreferences' non-atomic multi-key update.
-  // Freeze the complete entry objects synchronously before ANY suspension.
-  // Encoding an old multi-thousand-entry ledger on the main UI isolate
-  // caused the saving spinner to visibly stall after goal/recurring edits.
-  final frozenEntryRows=entries.map((e)=>e.toJson()).toList(growable:false);
+  // Snapshot immutable final-field MoneyEntry references before ANY await.
+  // The expensive per-entry toJson conversion now runs after the spinner
+  // frame and off the UI isolate for large ledgers, without moving the
+  // source snapshot capture past another pending write.
+  final frozenEntries=List<MoneyEntry>.unmodifiable(entries);
   final snapshot=<String,Object>{
    'entries':'', // replaced by the exact frozen payload under the save overlay
    // Migrate old category caps together with the independent budget list.
@@ -6099,7 +6166,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    await previousWrite;
    // The overlay is on screen; move large JSON serialization off the UI
    // isolate without changing a single byte or the source witness.
-   snapshot['entries']=await WaffraLargeJsonDecode.encodeRecords(frozenEntryRows);
+   snapshot['entries']=frozenEntries.length>=
+     WaffraLargeJsonDecode.encodeRowThreshold
+      ?await compute(MoneyEntry.encodeFrozenSnapshot,frozenEntries)
+      :await WaffraLargeJsonDecode.encodeRecords(
+       frozenEntries.map((e)=>e.toJson()).toList(growable:false));
    WaffraHomeTransactionCapture.narrowVerifiedManualAppend(
     route:route,source:baseline?.source,snapshot:snapshot);
    WaffraHomeTransactionCapture.narrowVerifiedModuleEdit(
@@ -12839,37 +12910,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final forecast=now.day>=5&&thisMonthCount>=3?(currentExpense/now.day*monthDays+upcoming):null;
   final weeklySpend=smartCharts.weeklySpend;
   if(!mounted)return;
-  // Blur the underlying screen while the animated analysis indicator runs.
-  // Keep the loader visible long enough to convey progress; calculations are local.
-  if(!mounted)return;
-  await showWaffraDialog<void>(
-   context:context,barrierDismissible:false,barrierColor:Colors.transparent,
-   builder:(ctx){
-    Future<void>.delayed(waffraMotion(1500),(){if(ctx.mounted)Navigator.of(ctx).pop();});
-    return BackdropFilter(filter:ui.ImageFilter.blur(sigmaX:9,sigmaY:9),
-     child:Center(child:Material(color:Colors.transparent,child:Container(
-      width:MediaQuery.of(ctx).size.width*.83,
-      padding:const EdgeInsets.symmetric(horizontal:24,vertical:36),
-      decoration:BoxDecoration(color:Theme.of(ctx).cardColor,
-       borderRadius:BorderRadius.circular(28),
-       border:Border.fromBorderSide(waffraDialogOutline(Theme.of(ctx).brightness))),
-      child:Column(mainAxisSize:MainAxisSize.min,children:[
-       SizedBox(width:104,height:104,child:Stack(alignment:Alignment.center,children:[
-        const SizedBox.expand(child:CircularProgressIndicator(strokeWidth:8,color:emerald,
-         backgroundColor:Color(0xFFD9F1E5))),
-        const Icon(Icons.bar_chart_rounded,color:emerald,size:44),
-       ])),
-       const SizedBox(height:22),
-       WaffraText(waffraIsEnglish?'Analyzing your finances...':'يتم الآن تحليل بياناتك المالية',
-        style:const TextStyle(fontSize:19,fontWeight:FontWeight.bold),textAlign:TextAlign.center),
-       const SizedBox(height:10),
-       WaffraText(waffraIsEnglish?'Reviewing the last 90 days of transactions':
-        'جاري مراجعة معاملات آخر 90 يوم...',textAlign:TextAlign.center),
-      ]),
-     ))));
-   },
-  );
-  if(!mounted)return;
+  // M526: the local financial results have already been computed.
+  // Open the existing results route immediately; do not show a timed
+  // 1.5-second blocking animation that performs no work.
   await showGeneralDialog<void>(
    context:context,
    barrierDismissible:true,
@@ -16059,7 +16102,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   try{
    await model.deleteDownloadedModel();
    if(!mounted)return;
-   setState((){});
+   setState((){
+    _m528ModelDiskRevision=null;
+    _m528ModelDiskFuture=null;
+   });
    snackSuccess(context,waffraIsEnglish?
     'AI model deleted. Standard Waffra and your finance data are unchanged.':
     'تم حذف نموذج الذكاء الاصطناعي. بياناتك المالية والأدوات العادية كما هي.');
@@ -16458,7 +16504,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    ]),
    _accountSection(waffraIsEnglish?'Security & privacy':'الأمان والخصوصية',Icons.shield_outlined,[
     if(Platform.isAndroid)FutureBuilder<bool>(
-     future:WaffraAutoSms.enabled(),builder:(context,snapshot)=>SwitchListTile(
+     future:_m528SmsEnabled(),builder:(context,snapshot)=>SwitchListTile(
       secondary:const Icon(Icons.sms_outlined,color:emerald),
       title:WaffraText(waffraIsEnglish?
        'Automatic bank SMS tracking':'تسجيل الرسائل البنكية تلقائيًا'),
@@ -16476,11 +16522,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        }else{
         await WaffraAutoSms.disable();
        }
-       if(mounted)setState((){});
+       if(mounted)setState((){
+        _m528SmsEnabledFuture=WaffraAutoSms.enabled();
+       });
       }),
      )),
     if(Platform.isAndroid)FutureBuilder<bool>(
-     future:WaffraSmsCloudService.hasConsent(),
+     future:_m528CloudConsent(),
      builder:(context,snapshot)=>SwitchListTile(
       secondary:const Icon(Icons.cloud_outlined,color:emerald),
       title:WaffraText(waffraIsEnglish?
@@ -16513,7 +16561,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          'التحليل السحابي أو حماية التطبيق غير متاحة. لم يتم رفع أي رسالة.',
          isError:true);
        }
-       if(mounted)setState((){});
+       if(mounted)setState((){
+        _m528CloudConsentFuture=WaffraSmsCloudService.hasConsent();
+       });
       }),
      )),
     // Mandatory biometrics: optional PIN settings removed.
@@ -16555,7 +16605,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     ValueListenableBuilder<int>(
      valueListenable:WaffraOnDeviceQwen.shared.revision,
      builder:(context,revision,_)=>FutureBuilder<bool>(
-      future:WaffraOnDeviceQwen.shared.downloadedOnDisk(),
+      future:_m528ModelDiskStatus(revision),
       builder:(context,installed){
        final present=installed.data==true||
         WaffraOnDeviceQwen.shared.isReady;
@@ -16825,6 +16875,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       button:true,child:InkWell(
        key:const Key('waffra-header-account-entry'),
        onTap:WaffraHaptics.tap(()=>setState((){
+        // Device settings might have changed since the previous visit.
+        _m528SmsEnabledFuture=null;
+        _m528CloudConsentFuture=null;
+        _m528ModelDiskRevision=null;
+        _m528ModelDiskFuture=null;
         addFabExpanded=false;goalsOpened=false;accountOpened=true;_headerCompact=false;
        })),
        borderRadius:BorderRadius.circular(30),

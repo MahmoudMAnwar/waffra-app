@@ -32,14 +32,17 @@ void main(){
   expect(start,greaterThan(0));
   expect(end,greaterThan(start));
   final route=src.substring(start,end);
-  expect(route,contains('final frozenEntryRows=entries.map((e)=>e.toJson()).toList(growable:false);'));
-  expect(route,contains("snapshot['entries']=await WaffraLargeJsonDecode.encodeRecords(frozenEntryRows);"));
-  expect(route.indexOf('final frozenEntryRows='),lessThan(route.indexOf('final saving=_saveProgress.track<void>(')));
+  // M530 strengthens the original M468 freeze with immutable final-field
+  // snapshot references. Worker encoding still happens only AFTER the frame.
+  expect(route,contains('final frozenEntries=List<MoneyEntry>.unmodifiable(entries);'));
+  expect(route,contains('await compute(MoneyEntry.encodeFrozenSnapshot,frozenEntries)'));
+  expect(route,contains('await WaffraLargeJsonDecode.encodeRecords('));
+  expect(route.indexOf('final frozenEntries='),lessThan(route.indexOf('final saving=_saveProgress.track<void>(')));
   expect(route,contains('final previousWrite=_m468PersistSequence;'));
   expect(route,contains('await previousWrite;'));
   expect(route,contains('_m468PersistSequence=saving.then<void>('));
-  expect(route.indexOf('await previousWrite;'),lessThan(route.indexOf("snapshot['entries']=await")));
-  expect(route.indexOf("snapshot['entries']=await"),lessThan(route.indexOf('WaffraHomeTransactionCapture.narrowVerifiedModuleEdit(')));
+  expect(route.indexOf('await previousWrite;'),lessThan(route.indexOf("snapshot['entries']=frozenEntries.length>=")));
+  expect(route.indexOf("snapshot['entries']=frozenEntries.length>="),lessThan(route.indexOf('WaffraHomeTransactionCapture.narrowVerifiedModuleEdit(')));
   expect(route,contains('await _financeAuthority.saveCaptured('));
  });
  test('M468 first install and pull use the same verified parsing contract',(){

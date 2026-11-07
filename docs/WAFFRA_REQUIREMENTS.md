@@ -533,3 +533,66 @@ Android screenshot: owner creates a SAR 1,000 standalone monthly budget and link
 - **Source regressions to fix:** outgoing bank transfer SMS `إيبان: **9288` must extract destination suffix without changing source/fee/kind; M515/M461 fresh SQLCipher budget fixture setup separately tracked under M523/#460.
 - **Outdated assertions to reconcile without making tests vacuous:** source tests for `excludeMessages`, `acknowledgeCommitted`, `acknowledgeCompletedTransfer`, native encrypted owner-scoped fingerprint shards, unified excluded SMS list, explicit Yes/No logout and manual account creation must assert the actual protected flows rather than obsolete queue-only ACK or legacy dialog text. Never change financial commits, credential integrity, unconfirmed SMS handling or owner scope just to satisfy assertions.
 - **Acceptance and status:** fix real parsing defects; keep negative and idempotency guards; require new PR head SHA, complete Dart/Flutter tests, Android compile, two-device signed APK QA, and ensure the PR remains Draft until verified. **OPEN — code/CI not yet accepted.**
+
+
+## M525 — Budget sheet spending precomputation (2026-11-07; Issue #463 / parent #454)
+
+- **Owner request:** begin implementing source-audited app-wide tap, dropdown and animation smoothness improvements; preserve finance and encrypted device data.
+- **First scoped slice F-454-P02:** opening / filtering / sorting the budget directory repeatedly calls `waffraNamedBudgetSpent(entries,categories,b,now)` within the sort comparator and once per row, potentially traversing the full ledger multiple times per rebuild.
+- **Approved work candidate:** read-only local `spentByBudgetId` calculated once per saved budget during a panel rebuild; reuse the same value in comparator and tile, without changing budget calculation, dates, user search, status, account scope, finance writes, sources, SQLCipher or UI text. Regression covers one calculation per budget in source and deterministic sorting with substantial data.
+- **Implementation:** isolated Draft PR from main, linked to #463. Declare exact file/anchor authorization in M385 before coding. Run targeted Flutter tests and latest SHA CI and profile on physical Android before claiming smoothness measured or Done.
+- **Status:** Code + three source regressions committed in M525 branch; exact-head CI and real-device latency profiles pending, no measured FPS/latency improvement claimed.
+- **Implementation:** [Draft PR #464](https://github.com/MahmoudMAnwar/waffra-app/pull/464), source `lib/waffra_budget_directory.part.dart`, regression `test/m525_budget_sheet_spend_cache_test.dart`; M385 bounded anchor corrected after first exact-head gate found a whitespace mismatch. All latest-head CI/device checks remain pending.
+- **Follow-ups:** F-454-P01 and P03–P08 remain tracked in #454; do not mark all eight resolved by this slice.
+
+
+## M526 — Instant display of already-computed financial analysis (2026-11-07; Issue #465 / audit #454)
+
+- **Owner requirement:** improve all buttons/dropdowns smoothness and remove avoidable tap-to-next-screen wait. First safe slice M525 covers budget-spend cache; M526 covers analysis result navigation.
+- **Existing source behavior F-454-P05:** `showAiAnalysis()` computes local 90-day values, then presents an additional blurred progress dialog for `waffraMotion(1500)` before opening the already-built results route. The delay does not represent an ongoing asynchronous calculation.
+- **Expected:** show verified local insights immediately after computation; preserve empty-state message, route dismiss/Back, data aggregation, charts, exports, all SQLCipher/finance authority and loading gates for unrelated operations. Remove only that artificial intermediate wait; test that the final results dialog still exists.
+- **Implementation:** [Draft PR #466](https://github.com/MahmoudMAnwar/waffra-app/pull/466), exact M385 scoped function `showAiAnalysis`, regression `test/m526_instant_insights_route_test.dart`, and M449 reviewed notes after code edit. Android first-result-frame profile and exact-head CI required before acceptance. No blanket animation removal.
+- **Status:** Code and two source regressions committed. Latest-head Flutter/Android CI and physical-device frame profiling still pending. No release or merge asserted. Remaining audit findings tracked by #454.
+
+
+## M527 — Home account dropdown cold-open feedback (2026-11-07; #467, audit #454 F-454-P04)
+
+- **Owner requirement:** further improve all button/dropdown tap smoothness, beyond M525 budget re-use and M526 instant precomputed insights.
+- **Source defect candidate:** the Home account picker waits for a verified SQLCipher balance/context read before displaying any sheet on a cold cache, so the first tap can look unresponsive.
+- **Proposed behavior:** present a lightweight modal immediately on cold cache, retain verified SQLCipher read before any account is selectable, replace loader with existing verified account sheet only after verification, otherwise show non-destructive retry guidance. Hot-cache opens the existing sheet directly. Selection and save/source guards unchanged.
+- **Tracking:** [Issue #467](https://github.com/MahmoudMAnwar/waffra-app/issues/467), [Draft PR #468](https://github.com/MahmoudMAnwar/waffra-app/pull/468); code committed in lib/main.dart and 3 regressions in test/m527_home_account_picker_latency_test.dart, M385 bounded; latest-head CI and physical Android profiling pending.
+- **Status:** requirement recorded first; code/CI/device not verified. Require Android profile timings and existing encrypted-data smoke test.
+
+
+## M528 — Stable asynchronous settings snapshots (2026-11-07; Issue #469 / audit #454 F-454-P06)
+
+- **Owner-approved improvement:** stop repeated storage/permission future creation caused by every unrelated My Account repaint while preserving correct switches and permission consent.
+- **Identified:** profilePage builds three new futures to read Android SMS status, bank SMS cloud consent, and downloaded AI model status on every rebuild.
+- **Expected:** per Home session read futures are reused through unrelated renders; explicit user toggles, reopening account/settings after another screen, and lifecycle re-entry invalidate status; model download/removal changes invalidate using existing revision counter. Never show stale permission/consent as authorized money or network access, skip biometric confirmation, or broaden SMS permissions.
+- **Scope:** [Issue #469](https://github.com/MahmoudMAnwar/waffra-app/issues/469), [Draft PR #470](https://github.com/MahmoudMAnwar/waffra-app/pull/470), M385 bounded Home fields/profile plus entry/resume/AI removal, three tests in test/m528_settings_async_cache_regression_test.dart; exact-head CI and Android profile pending.
+- **Status:** recorded before code; no acceptance or device timings claimed.
+
+
+## M529 — Lightweight shared centered dropdown (2026-11-07; Issue #471, audit #454 F-454-P07)
+
+- **Owner intent:** improve all buttons, dropdown openings and after-click animation smoothness while retaining approved blurred centered selectors and RTL/LTR.
+- **Source candidate:** centered picker uses a full-screen sigma-6 blur and allocates a list of selected options each rebuild; neither is necessary for correctness.
+- **Allowed narrow optimization:** preserve visible light blur in normal mode, remove expensive blur when device reduced animations is enabled, use one index search for selected value instead of where().toList(); preserve dialog geometry, list laziness, no-onChange-on-dismiss/back, selected item and account/finance checks.
+- **Tracking:** [#471](https://github.com/MahmoudMAnwar/waffra-app/issues/471), [Draft PR #472](https://github.com/MahmoudMAnwar/waffra-app/pull/472), M385 bounded dropdown class, five Flutter source/widget tests for RTL/LTR selection and cancellation, M449 notes. Exact-head CI and Android performance profile pending.
+- **Status:** requirement recorded before coding; no measured device smoothness or CI approval claimed.
+
+
+## M530 — Immutable finance ledger snapshot off UI isolate (2026-11-07; issue #473, audit #454 P01 partial)
+
+- **User request:** improve smoothness immediately after save/add/tap without sacrificing SQLCipher or immutable transaction data on existing devices.
+- **Current code:** `persist()` freezes a full map of all immutable MoneyEntry rows by calling `toJson()` on the UI isolate before the save progress overlay draws; subsequent large jsonEncode is already offloaded.
+- **Bounded behavior:** retain a List.unmodifiable snapshot of immutable final MoneyEntry references before the first await. Convert/encode large snapshots (existing 240-row boundary) off the UI isolate via compute, preserving byte-for-byte JSON, exact source/witness, save order, pending/failed finance no-double-write guarantees. Small histories retain original encodeRecords path.
+- **Tests:** 5000 actual MoneyEntry objects for JSON bytes/order and optionals, source-level freeze-before-await and worker-before-verified-write, exact M468 regression update, M385 and M449. Require both clean and upgrade-over-existing data plus actual Android frame timelines; no blanket modification of financial routes.
+- **Tracking:** [Issue #473](https://github.com/MahmoudMAnwar/waffra-app/issues/473), [Draft PR #474](https://github.com/MahmoudMAnwar/waffra-app/pull/474), M385 bounded money-entry serializer and persist method, updated original M468 source guard and 3 new 5000-row/immutable snapshot tests. Exact-head CI, Android FPS/first-frame metrics and existing-data acceptance pending.
+- **Status:** code committed for P01's large-ledger segment only; not a measured complete fix.
+
+## M531 — Unified seven-PR release candidate (2026-11-07; Issue #475)
+
+Owner approved consolidating exact green source heads from PRs #445, #464, #466, #468, #470, #472, and #474 into one integration PR targeting `main`. Preserve all protected login, SMS, owner-bound SQLCipher finance, budget, and transfer behavior while combining six non-destructive responsiveness improvements. Shared `lib/main.dart`, requirements, change-scope manifest, and release notes must merge *additively* and cannot overwrite each other.
+
+Acceptance: verify full changed-file union and immutable-outside-approved-section M385 guard; run complete Flutter, Android, QA, combined financial integrity and release-note checks on exact integrated head SHA; fix failures and merge only consolidated PR after green CI. Actual two-device fresh/upgrade encrypted-data acceptance and measured FPS profiling remain separate, unverified stages. Source Issue: https://github.com/MahmoudMAnwar/waffra-app/issues/475. Status: code assembly and combined CI in progress.

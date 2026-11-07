@@ -64,12 +64,17 @@ extension WaffraBudgetDirectory on _HomeScreenState {
     b.budgetLabel??b.name,b.name,waffraTr(b.name),
    ],budgetSearch);
   }).toList();
+  // M525: cache pure read-only spend projections for this sheet build.
+  // Sort comparisons never repeat a full finance-history traversal.
+  // Cache is discarded on every rebuild, so edits/filters remain fresh.
+  final spentByBudgetId=<String,double>{};
+  double spentFor(WaffraNamedBudget b)=>spentByBudgetId.putIfAbsent(
+   b.id,()=>waffraNamedBudgetSpent(entries,categories,b,now));
   if(budgetSort=='name')filtered.sort((a,b)=>
    (a.budgetLabel??a.displayName).compareTo(b.budgetLabel??b.displayName));
   if(budgetSort=='limit')filtered.sort((a,b)=>b.budget.compareTo(a.budget));
   if(budgetSort=='spent')filtered.sort((a,b)=>
-   waffraNamedBudgetSpent(entries,categories,b,now).compareTo(
-    waffraNamedBudgetSpent(entries,categories,a,now)));
+   spentFor(b).compareTo(spentFor(a)));
   final templates=waffraBudgetStarterTemplates.where((t)=>
    waffraSearchAny([
    t.nameAr,t.nameEn,
@@ -193,7 +198,7 @@ extension WaffraBudgetDirectory on _HomeScreenState {
        'لا توجد ميزانيات محفوظة مطابقة',
        textAlign:TextAlign.center)),
      ...filtered.map((b){
-      final spent=waffraNamedBudgetSpent(entries,categories,b,now);
+      final spent=spentFor(b);
       final ratio=(spent/b.budget).clamp(0.0,1.0);
       return Padding(
        padding:const EdgeInsets.only(bottom:12),
