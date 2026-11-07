@@ -447,6 +447,17 @@ class MainActivity : FlutterFragmentActivity() {
                         runOnUiThread { result.success(excluded) }
                     }
                 }
+                "ackCompletedTransferAutoBankSms" -> {
+                    // M516 #455: only invoked after verified SQLCipher transfer;
+                    // a distinct encrypted fingerprint prevents future rescans.
+                    val values = call.arguments as? List<*>
+                    val ids = values?.filterIsInstance<String>()?.toSet() ?: emptySet()
+                    val app = applicationContext
+                    smsHistoryExecutor.execute {
+                        val completed = WaffraAutoSmsStore.acknowledgeCompletedTransfer(app, ids)
+                        runOnUiThread { result.success(completed) }
+                    }
+                }
                 "ackCommittedAutoBankSms" -> {
                     // Called ONLY after verified SQLCipher ledger hash presence.
                     // An excluded or cancelled message uses ordinary ACK.
