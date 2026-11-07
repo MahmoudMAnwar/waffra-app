@@ -37,6 +37,20 @@ class M533AndroidEmulatorStabilityContractTest(unittest.TestCase):
         self.assertIn('exit "$result"', SCRIPT)
         self.assertNotIn('|| true\n    flutter drive', SCRIPT)
 
+    def test_m412_docs_only_sync_cannot_turn_skipped_android_green(self):
+        impact = WORKFLOW.split("  m412-impact:", 1)[1].split(
+            "  widget-ui-and-golden-candidates:", 1)[0]
+        self.assertIn("M412 Impact Telemetry", impact)
+        self.assertIn("run: 'true'", impact)
+        self.assertNotIn("run: ${{ steps.impact.outputs.run }}", impact)
+        # Both expensive jobs MUST actually run whenever M274 is triggered.
+        self.assertEqual(
+            WORKFLOW.count("if: ${{ needs.m412-impact.outputs.run == 'true' }}"),
+            2,
+        )
+        self.assertIn("android-emulator-ui-taps:", WORKFLOW)
+        self.assertIn("widget-ui-and-golden-candidates:", WORKFLOW)
+
     def test_crashed_emulator_is_red_and_has_bounded_diagnostics(self):
         self.assertIn("if: failure()", WORKFLOW)
         self.assertIn("path: build/m274/*.log", WORKFLOW)
