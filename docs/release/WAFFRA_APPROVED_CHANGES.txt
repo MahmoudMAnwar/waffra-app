@@ -2479,3 +2479,17 @@ M462 category-precedence follow-up (5 Nov 2026): only an owner-confirmed learned
 - Regression tests cover Home/biometric/idle Yes-No behavior and original verifier guard. Signed Android clean account creation and upgrade-over-existing-data tests remain required; do not label this production-certified from CI alone.
 
 - M513 final source review (2026-11-07): confirmation UI in the mandatory biometric gate is now within the Scaffold body, preserving M385 approved widget bounds; Android device sign-in/out acceptance is pending. This note postdates the latest application-code edit as required by M449.
+
+===================================================================================================
+[M514 PR #445] 2026-11-07 — Owner-requested Android bank SMS corrections (#446–#451)
+===================================================================================================
+- Per-rescan UI reports checks since the button tap rather than an install-lifetime 2000-message counter; retains incomplete/capacity warnings.
+- Arabic review labels replace "غامضة" with "تحتاج مراجعة". Classification still requires explicit verification.
+- Single/bulk excluded SMS now use owner-bound encrypted native SHA fingerprint buckets, updated atomically with queue removal. Reviewed exclusion is never a committed finance hash. Only safely specific owner-local exclusion patterns may be learned.
+- Explicit incoming bank transfer/credit messages become income review candidates. Unknown/outgoing bank transfers remain review-only; self-transfer is never assumed without two verified owned accounts.
+- Bank-transfer review can open with fewer than two accounts and offers inline creation. Missing principal is editable but not accepted as zero; separate fee is not mistaken for principal.
+- Existing transfer-account creation can suggest a confirmed sender's correct source masked suffix, never a third party's destination suffix by default.
+- First-time receipt attachment to an existing stored SMS/manual transaction now enters an atomic verified SQLCipher writer that preserves the original finance row, dedupe hash and account balance; no second posting.
+- Added targeted parser, source and real encrypted writer tests, including creating manual/SMS receipts, adding an existing SMS receipt, and rollback/repeated attachment refusal.
+- Reconciled M452 old test against the newly approved rescan counter; retain exact-file/section M385 scopes and M513 Yes/No sign-out + secure verifier behavior.
+- These are PR SOURCE CANDIDATES only. Required exact-HEAD CI and signed-Android on-device acceptance have NOT been declared successful. No production SQLCipher cutover, legacy restore/destruction or permission expansion is authorized.
