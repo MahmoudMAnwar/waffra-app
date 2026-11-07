@@ -19,7 +19,18 @@ class M533AndroidEmulatorStabilityContractTest(unittest.TestCase):
                       "-gpu swiftshader -feature -Vulkan -no-boot-anim", WORKFLOW)
         self.assertNotIn("-gpu software", WORKFLOW)
         self.assertNotIn("-gpu swiftshader_indirect", WORKFLOW)
-        self.assertIn("36.4.10.0 (build_id 15004761)", WORKFLOW)
+        # M543: never execute a redundant emulator -version prelaunch
+        # process (it marked the job failed with exit 127 even if UI ran).
+        self.assertNotIn("pre-emulator-launch-script: |", WORKFLOW)
+        # Regression for Flutter engine issue #192736: only the generated
+        # disposable test host selects Skia on Linux headless emulators.
+        self.assertIn("Apply test-only Linux emulator Impeller compatibility setting", WORKFLOW)
+        self.assertIn("android/app/src/main/AndroidManifest.xml", WORKFLOW)
+        self.assertIn("io.flutter.embedding.android.EnableImpeller", WORKFLOW)
+        self.assertIn('android:value="false"', WORKFLOW)
+        self.assertIn("M543_CI_ONLY_IMPELLER_DISABLED:real_android_engine_skia", WORKFLOW)
+        self.assertLess(WORKFLOW.index("Apply test-only Linux emulator Impeller compatibility setting"),
+                        WORKFLOW.index("Precompile Android UI integration APK before emulator launch"))
         # M534: the workflow verifies actual build before launch; the runner
         # inspects installed metadata without executing emulator -version twice.
         self.assertIn('emulator/source.properties', SCRIPT)
