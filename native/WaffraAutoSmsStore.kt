@@ -37,6 +37,9 @@ object WaffraAutoSmsStore {
     // M509 #440: Sharded AES-GCM records of COMPLETED finance SMS fingerprints.
     // Value is sealed, owner-scoped and contains no raw SMS or bank numbers.
     private const val committedBucketPrefix = "encrypted_committed_sms_v1_"
+    // M514 #448: excluded review SMS are not finance commits. Keep independent
+    // owner-bound encrypted fingerprints so a historical rescan cannot replay them.
+    private const val excludedMessageBucketPrefix = "encrypted_excluded_sms_v1_"
     private const val activeName = "enabled"
     // Hash of the verified signed-in account. No phone/email is saved here.
     private const val consentedOwnerName = "consented_account_sha256_v1"
@@ -182,9 +185,11 @@ object WaffraAutoSmsStore {
                 // A different verified account must never inherit completed
                 // message markers from the previous owner.
                 for (key in prefs.all.keys) {
-                    if (key.startsWith(committedBucketPrefix)) editor.remove(key)
+                    if (key.startsWith(committedBucketPrefix) ||
+                        key.startsWith(excludedMessageBucketPrefix)) editor.remove(key)
                 }
                 committedCipherCache.clear()
+                excludedMessageCipherCache.clear()
                 editor.remove(queueName).remove(excludedSendersName).remove(historyCursorAt)
                     .remove(historyCursorId).remove(historySourceMonth)
                     .remove(historyComplete)
@@ -292,6 +297,29 @@ object WaffraAutoSmsStore {
 
     private fun isCommittedLocked(context: Context, id: String) =
         committedBucket(context, id).contains(id)
+
+    private val excludedMessageCipherCache =
+        mutableMapOf<String, Pair<String, Set<String>>>()
+
+    private fun excludedMessageBucket(context: Context, id: String): Set<String> {
+        if (!Regex("^[a-f0-9]{64}$").matches(id))
+            throw IllegalArgumentException("Invalid excluded SMS fingerprint")
+        val bucket = id.take(2)
+        val encrypted = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+            .getString(excludedMessageBucketPrefix + bucket, "") ?: ""
+        val cached = excludedMessageCipherCache[bucket]
+        if (cached != null && cached.first == encrypted) return cached.second
+        val decoded = open(encrypted)
+        val ids = (0 until decoded.length()).map { decoded.getString(it) }.toSet()
+        // Invalid stored policy must fail closed, not silently discard it.
+        if (ids.any { !Regex("^[a-f0-9]{64}$").matches(it) })
+            throw IllegalStateException("Invalid encrypted SMS exclusion record")
+        excludedMessageCipherCache[bucket] = encrypted to ids
+        return ids
+    }
+
+    private fun isExcludedMessageLocked(context: Context, id: String) =
+        excludedMessageBucket(context, id).contains(id)
 
     // Explicit user sender exclusion is encrypted and bound to this authenticated
     // owner. Do not reuse a removed sender as an automatic learned rule.
@@ -548,7 +576,8 @@ object WaffraAutoSmsStore {
                 val fingerprint = id(sender, body, at)
                 // Verified financial SMS is never offered again after
                 // rescan, reinstall-preserving update or OS resume.
-                if (isCommittedLocked(context, fingerprint))
+                if (isCommittedLocked(context, fingerprint) ||
+                    isExcludedMessageLocked(context, fingerprint))
                     return@synchronized false
                 for (i in 0 until queue.length()) {
                     if (queue.getJSONObject(i).optString("id") == fingerprint)
@@ -693,6 +722,51 @@ object WaffraAutoSmsStore {
                     if (!ids.contains(row.getString("id"))) remaining.put(row)
                 }
                 save(context, remaining)
+            } catch (_: Exception) { false }
+        }
+
+    /**
+     * M514 #448: A user-excluded SMS must stay excluded on historical rescan.
+     * Unlike acknowledgeCommitted this does NOT mark any financial hash.
+     * One encrypted preferences commit persists BOTH the exact SMS IDs and
+     * their removal from the encrypted review queue. No whole-sender block.
+     */
+    fun excludeMessages(context: Context, ids: Set<String>): Boolean =
+        synchronized(mutex) {
+            if (!enabled(context) || ids.isEmpty() || ids.size > 100 ||
+                ids.any { !Regex("^[a-f0-9]{64}$").matches(it) })
+                return@synchronized false
+            try {
+                val queue = read(context)
+                val remaining = JSONArray()
+                val matched = mutableSetOf<String>()
+                for (i in 0 until queue.length()) {
+                    val row = queue.getJSONObject(i)
+                    val fingerprint = row.getString("id")
+                    if (ids.contains(fingerprint)) matched.add(fingerprint)
+                    else remaining.put(row)
+                }
+                // Fail closed if a selected SMS was neither queued nor
+                // previously excluded; a wrong-owner ID never gets marked.
+                if (ids.any { !matched.contains(it) &&
+                        !isExcludedMessageLocked(context, it) })
+                    return@synchronized false
+                val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+                val editor = prefs.edit()
+                    .putString(queueName, seal(remaining.toString()))
+                for ((bucket, additions) in matched.groupBy { it.take(2) }) {
+                    val updated = excludedMessageBucket(context,
+                        additions.first()).toMutableSet()
+                    updated.addAll(additions)
+                    editor.putString(excludedMessageBucketPrefix + bucket,
+                        seal(JSONArray(updated.toList()).toString()))
+                }
+                val success = editor.commit()
+                if (success) {
+                    excludedMessageCipherCache.clear()
+                    Handler(Looper.getMainLooper()).post { onChanged?.invoke() }
+                }
+                success
             } catch (_: Exception) { false }
         }
 
