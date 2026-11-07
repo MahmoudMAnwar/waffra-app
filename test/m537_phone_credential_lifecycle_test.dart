@@ -81,4 +81,52 @@ void main() {
     expect(await WaffraLocalPhoneCredentials.verifyRecord(
       record, phone: phone, password: 'wrong-password-123'), isFalse);
   });
+
+  test('M545 old missing verifier stages secure grant and restores at next login', () async {
+    expect(await WaffraLocalPhoneCredentials.probeForPhone(phone),
+      WaffraLocalCredentialProbe.missing);
+    expect(await WaffraLocalPhoneCredentials.stageSignOutRecoveryGrant(phone),
+      isTrue);
+    expect(await WaffraLocalPhoneCredentials.hasSignOutRecoveryGrant(phone),
+      isTrue);
+    expect(await WaffraLocalPhoneCredentials.hasSignOutRecoveryGrant(otherPhone),
+      isFalse);
+    expect(await WaffraLocalPhoneCredentials.stageSignOutRecoveryGrant(otherPhone),
+      isFalse);
+    expect(await WaffraLocalPhoneCredentials.finishSignInRecoveryAfterBiometric(
+      phone: otherPhone, password: password), isFalse);
+    // The UI must first require OS biometrics; this unit test challenges
+    // the storage step directly with a simulated positive biometric result.
+    expect(await WaffraLocalPhoneCredentials.finishSignInRecoveryAfterBiometric(
+      phone: phone, password: password), isTrue);
+    expect(await WaffraLocalPhoneCredentials.verify(
+      phone: phone, password: password), isTrue);
+    expect(await WaffraLocalPhoneCredentials.verify(
+      phone: phone, password: 'wrong-password'), isFalse);
+    expect(await WaffraLocalPhoneCredentials.hasSignOutRecoveryGrant(phone),
+      isFalse);
+    expect(await WaffraLocalPhoneCredentials.finishSignInRecoveryAfterBiometric(
+      phone: phone, password: password), isFalse);
+    expect(await WaffraLocalPhoneCredentials.stageSignOutRecoveryGrant(phone),
+      isFalse);
+  }, timeout: const Timeout(Duration(minutes: 3)));
+
+  test('M545 malformed or unrelated recovery grants fail closed', () async {
+    FlutterSecureStorage.setMockInitialValues(<String, String>{
+      'waffra_phone_missing_verifier_signout_recovery_v1': '{not-json',
+    });
+    expect(await WaffraLocalPhoneCredentials.hasSignOutRecoveryGrant(phone),
+      isFalse);
+    expect(await WaffraLocalPhoneCredentials.stageSignOutRecoveryGrant(phone),
+      isFalse); // never overwrite a damaged secure grant
+    FlutterSecureStorage.setMockInitialValues(<String, String>{
+      'waffra_phone_missing_verifier_signout_recovery_v1': jsonEncode({
+        'version': 1, 'phoneHash': 'foreign', 'nonce': base64Encode(List<int>.filled(32, 1)),
+      }),
+    });
+    expect(await WaffraLocalPhoneCredentials.hasSignOutRecoveryGrant(phone),
+      isFalse);
+    expect(await WaffraLocalPhoneCredentials.finishSignInRecoveryAfterBiometric(
+      phone: phone, password: password), isFalse);
+  });
 }
