@@ -23,7 +23,10 @@ void main(){
   final home=File('lib/main.dart').readAsStringSync();
   final bridge=File('lib/waffra_auto_sms.dart').readAsStringSync();
   expect(home,contains('المستبعدون'));
-  expect(home,contains("Key('waffra-excluded-senders-list')"));
+  expect(home,contains("Key('waffra-excluded-sms-list')"));
+  expect(home,contains('messages.length+senders.length+2'));
+  expect(home,contains('WaffraAutoSms.excludedMessages()'));
+  expect(home,contains('WaffraAutoSms.restoreExcludedMessage(id)'));
   expect(home,contains('WaffraAutoSms.excludedSenders()'));
   expect(home,contains('WaffraAutoSms.restoreExcludedSender(sender)'));
   expect(home,contains('إلغاء الاستبعاد'));
