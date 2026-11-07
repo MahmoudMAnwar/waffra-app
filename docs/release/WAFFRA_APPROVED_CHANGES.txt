@@ -2508,3 +2508,5 @@ M462 category-precedence follow-up (5 Nov 2026): only an owner-confirmed learned
 
 [M518 / 2026-11-07 — Live-vs-history SMS dedupe; Issue #455, PR #445]
 - Read Android inbox date_sent when valid to match broadcast SmsMessage.timestampMillis in native SMS fingerprint; preserve received date and Android provider cursor for UI/history. Fallback on missing sender timestamp. Old owner-scoped exclusions and transfer markers remain intact. Requires OEM-device and exact-head CI acceptance; no finance hash migration included.
+
+M520 (#457) CODE READY / CI PENDING: repaired confirmed Dart build-blocking corruption in lib/waffra_auto_sms.dart; restored merged-main SMS bridge and retained M514/M516/M517 native actions exactly once. Added test/m520_auto_sms_bridge_integrity_test.dart. No finance or login data changed. APK/device verification pending; PR #445 remains Draft.
