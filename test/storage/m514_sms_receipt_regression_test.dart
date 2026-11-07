@@ -73,7 +73,7 @@ void main() {
     );
     await WaffraAccountsRepository(db:db,experimentalEnabled:true)
       .createAccount(id:'m514-money',name:'Test verified bank',
-        kind:'bank',openingMinor:0,createdIso:'2026-11-07T00:00:00Z',
+        kind:'cash',openingMinor:0,createdIso:'2026-11-07T00:00:00Z',
         userConfirmed:true);
   });
 
