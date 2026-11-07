@@ -85,8 +85,8 @@
         "end": " Future<void> _openAutoSmsInbox()async{"
       },
       {
-        "start": "    _accountSection(waffraIsEnglish?'Security & privacy':'الأمان والخصوصية',Icons.shield_outlined,[",
-        "end": "     if(Platform.isAndroid)FutureBuilder<bool>(\n      future:WaffraSmsCloudService.hasConsent()"
+        "start": "   _accountSection(waffraIsEnglish?'Security & privacy':'الأمان والخصوصية',Icons.shield_outlined,[",
+        "end": "    if(Platform.isAndroid)FutureBuilder<bool>(\n     future:WaffraSmsCloudService.hasConsent()"
       }
     ],
     "lib/waffra_mandatory_biometric_gate.dart": [
