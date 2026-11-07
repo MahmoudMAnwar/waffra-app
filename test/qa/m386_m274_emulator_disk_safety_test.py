@@ -19,7 +19,7 @@ class M274EmulatorDiskBudgetTest(unittest.TestCase):
             "api-level: 35",
             "target: aosp_atd",
             "arch: x86_64",
-            "profile: pixel_6",
+            "profile: pixel_2",
         ):
             self.assertIn(required, self.workflow)
 
