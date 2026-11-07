@@ -51,6 +51,21 @@ class M533AndroidEmulatorStabilityContractTest(unittest.TestCase):
         self.assertIn("android-emulator-ui-taps:", WORKFLOW)
         self.assertIn("widget-ui-and-golden-candidates:", WORKFLOW)
 
+    def test_skipped_android_or_golden_cannot_be_certified_green(self):
+        gate = WORKFLOW.split("  m274-required-android-certification:", 1)[1]
+        self.assertIn("if: ${{ always() }}", gate)
+        self.assertIn("needs: [m412-impact, widget-ui-and-golden-candidates, android-emulator-ui-taps]", gate)
+        for token in [
+            "M274_IMPACT_RESULT",
+            "M274_GOLDEN_RESULT",
+            "M274_ANDROID_RESULT",
+            '!= "success"',
+            "exit 1",
+            "M533_M274_REAL_JOBS_CONFIRMED:android_and_golden_success",
+        ]:
+            self.assertIn(token, gate)
+        self.assertIn("M274 Mandatory Actual Android + Golden Completion Gate", gate)
+
     def test_crashed_emulator_is_red_and_has_bounded_diagnostics(self):
         self.assertIn("if: failure()", WORKFLOW)
         self.assertIn("path: build/m274/*.log", WORKFLOW)
