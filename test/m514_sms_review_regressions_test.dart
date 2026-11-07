@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_bank_sms_facts.dart';
+import 'package:waffra/waffra_auto_sms.dart';
 
 void main(){
  test('M514 incoming money is income, not owned-account transfer',(){
@@ -77,5 +78,47 @@ void main(){
   expect(bridge,contains('Future<WaffraFinanceSnapshotState> attachReceiptsToExisting('));
   expect(bridge,contains('return snapshot.store.transaction(() async {'));
   expect(bridge,contains('await vault.attachNewBatch(entryId:entryId,images:frozenImages);'));
+ });
+
+ test('M516 native SMS identity determines transfer id, not body-only hash',(){
+  final smsA=List<String>.filled(64,'a').join();
+  final smsB=List<String>.filled(64,'b').join();
+  final first=WaffraAutoSms.transferIdForMessage(smsA);
+  final second=WaffraAutoSms.transferIdForMessage(smsB);
+  expect(first,'sms-transfer-$smsA');
+  expect(first,WaffraAutoSms.transferIdForMessage(smsA));
+  expect(second,isNot(first)); // Same body, different sender/time => distinct IDs.
+  expect(()=>WaffraAutoSms.transferIdForMessage('invalid'),throwsArgumentError);
+  expect(()=>WaffraAutoSms.transferIdForMessage(smsA.toUpperCase()),
+   throwsArgumentError);
+ });
+
+ test('M516 completed transfer has durable encrypted distinct-from-exclusion ACK',(){
+  final flutter=File('lib/waffra_auto_sms.dart').readAsStringSync();
+  final native=File('native/WaffraAutoSmsStore.kt').readAsStringSync();
+  final platform=File('native/WaffraMainActivity.kt').readAsStringSync();
+  final home=File('lib/main.dart').readAsStringSync();
+  final transfer=home.split('Future<void> _reviewSmsAccountTransfer({').last
+   .split('Future<void> _reviewAutoSmsCandidates({').first;
+  expect(transfer,contains('WaffraAutoSms.transferIdForMessage(id)'));
+  expect(transfer,contains('await api.transfer('));
+  expect(transfer,contains('ack=await WaffraAutoSms.acknowledgeCompletedTransfer([id]);'));
+  expect(transfer,isNot(contains('WaffraAutoSms.acknowledge([id])')));
+  expect(flutter,contains("return _boolCall('ackCompletedTransferAutoBankSms',ids);"));
+  expect(platform,contains('"ackCompletedTransferAutoBankSms" -> {'));
+  expect(platform,contains('WaffraAutoSmsStore.acknowledgeCompletedTransfer(app, ids)'));
+  expect(native,contains('completedTransferBucketPrefix'));
+  expect(native,contains('fun acknowledgeCompletedTransfer(context: Context, ids: Set<String>)'));
+  expect(native,contains('isCompletedTransferLocked(context, fingerprint)'));
+  expect(native,contains('editor.putString(completedTransferBucketPrefix + bucket,'));
+  final ownerSwitch=native.split('if (previous != null && previous != owner)').last
+   .split('if (owner != null)').first;
+  expect(ownerSwitch,contains('key.startsWith(completedTransferBucketPrefix)'));
+  expect(ownerSwitch,contains('completedTransferCipherCache.clear()'));
+  // No marker may be mistaken for a financial-commit or explicit exclusion.
+  final completed=native.split('fun acknowledgeCompletedTransfer(context: Context, ids: Set<String>)').last
+   .split('fun acknowledgeCommitted(context: Context, ids: Set<String>)').first;
+  expect(completed,isNot(contains('committedBucketPrefix + bucket')));
+  expect(completed,isNot(contains('excludedMessageBucketPrefix + bucket')));
  });
 }
