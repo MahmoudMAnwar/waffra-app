@@ -2388,3 +2388,85 @@ M462 category-precedence follow-up (5 Nov 2026): only an owner-confirmed learned
 
 [M503 M429 biometric source-contract follow-up — 2026-11-06]
 - Restore exact pre-existing M424 signed-out state transition in WaffraApp after explicitly dismissing the approved unified footer and ScaffoldMessenger progress feedback. The previous M503 edit had wrapped this transition in a block and broke a source regression test without changing its intended behavior. No test was removed or weakened, the mandatory OS biometric gate remains unchanged, and the original session, local password, native SMS-suspension and encrypted-finance guards remain intact. Exact-head M429 and all full-suite jobs require rerun and device validation.
+
+
+[M506 Draft PR #436 — 2026-11-06: reproduced Android SMS/finance/transfer regressions]
+- Nine issues #427–#435 after merged #402. This draft is not a release and has not passed Android acceptance.
+- Candidate fix: reviewed bank SMS receipt bytes now use the same verified SQLCipher atomic journal as account-linked SMS; learn reviewed expense/income keyword rule only after successful commit; suggest bank provider from validated sender, never infer underlying money account.
+- SMS original appears only once in the editor and details, with a separate optional user-only personalNotes field. For historical saved SMS, original plaintext remains inside the existing protected financial source field and is never displayed as user notes; no scary implementation warning when source unavailable.
+- Known bank dropdown entries including “بنك آخر” are offered without pretending an empty bank has an account. Both source and destination use independent account selection. Transfer date is user-selectable before notes and verified financial accounts are freshly read before the two-sided commit.
+- Android scanner now recognizes known Arabic bank sender aliases and top-up/pay keywords in read-only encrypted review; OTP and personal phone sender protections remain. The dashboard rescans progress and tells the user when the 500-message queue is full or the history cursor is not complete. “2025” was a total scanned-message count, never the year.
+- Do NOT claim performance/biometric-signout root causes fixed: on-device profiling and secure phone-verifier recovery still require work. Avoid disabling verifier integrity checks, erasing credentials, weakening SQLCipher, or posting unreviewed SMS.
+- PR scoped by M385 and tracked in docs/WAFFRA_REQUIREMENTS.md. Every target needs exact-head CI and real Android fresh/update tests; no signed APK or main merge claimed.
+
+[M506 #435 guarded sign-out recovery candidate]
+- Logout now distinguishes missing local secure password verifier from malformed/different-phone records. When the phone owner is already unlocked, an explicit local password repair prompt requests two matching password entries and mandatory OS biometric confirmation before re-creating only a missing secure verifier; it does not delete/change finance, overwrite any existing verifier, accept legacy broken password, or bypass protected login. Locked biometric gate instructs owner to unlock before recovery; malformed/different-phone still fail closed. Real Android proof remains pending.
+
+[M506 biometric-gate sign-out recovery correction]
+- The protected missing-verifier consent dialog also works above the LOCKED biometric page: first cancel its in-progress OS prompt, then collect an explicit replacement password in the root Navigator and require a fresh independent device fingerprint challenge before creating only a truly missing verifier and completing normal sign-out. Protected financial Home never needs to be revealed to perform this recovery. User cancellation leaves all data, verifier, and locked session untouched. Requires physical two-phone test; malformed/different-owner verifier still cannot be overwritten.
+
+
+[M506 #427 bounded cold-launch responsiveness — 2026-11-06]
+- Cold launch previously enforced a fixed 3000ms intro even when finance/profile loading had finished earlier. Shorten the intro visibility minimum to 1750ms and match its visual animation to 1650ms. This reduces the artificial splash floor by 1250ms without changing the required secure-finance readiness check, account session state, mandatory biometric gate, SMS consent, or encrypted storage.
+- Added a WaffraLaunchIntro widget frame-settle regression in test/m506_android_nine_regressions_test.dart. Actual initial loading and broad 2-second tap/refresh/save jank remain OPEN until Android profile-mode before/after frame-timing traces and real-device acceptance. Do not claim nine issues closed or merge solely on widget tests.
+
+
+[M506 startup responsiveness candidate]
+- Shortened the fixed cinematic intro floor from 3000ms to 1750ms, retaining all mandatory finance initialization and biometric gates. This addresses only one cold-launch delay; remaining button, refresh and save jank require measured Android release-profile verification. Latest M506 credential dialog now handles null/cancel safely without logging a user password; no claim of two-device acceptance.
+
+
+[M507 PR #436 — 2026-11-06: Mobile top-up SMS parsing & continuing local learning]
+- User screenshot reproduction: Android reviewed SMS "شحن الجوال / مبلغ:276 ريال / إلى:**8308 / المنتج:سوا فليكس 240 / في:05-11-2026 19:07" was incorrectly treated as an unclear amount and empty category. The conservative financial-kind parser and offline bank parser now recognize a mobile top-up as an outgoing expense, using only source-confirmed explicit SAR 276 and title "شحن الجوال"; masked suffix 8308, product plan 240, timestamp and other unrelated numbers must never be money.
+- Add "شحن الجوال / شحن جوال" into non-posting mobile category hints (فواتير / جوال). Prefer a real active matching child category and parent, otherwise require the user's deliberate selection. No account inferred from text.
+- After confirmed finance commit, reapply locally persisted non-posting keyword/category rules to the pending encrypted review queue. In the multiple-SMS review sheet, read latest rules before each next message rather than reuse a stale first-message guess. Senderless user-reviewed SMS also learns safe description/category after successful verified commit, and manual transactions refresh queued classifications; no background financial posting.
+- New test/m507_sms_amount_and_continuous_review_test.dart covers the exact user screenshot fixture, Arabic digits, misread suffix/product negatives and next-message reviewed rule application.
+- GitHub issues #437 and #438 recorded in docs/WAFFRA_REQUIREMENTS.md and scoped in docs/qa/approved_change_scope.json. Exact-head Flutter/analyzer, parser, Android startup/SMS UI and physical device checks are still required: these are source candidates, not a verified release. No changes to SQLCipher writer, account authentication, SMS dedupe or encrypted original provenance.
+
+[M507 direct-SMS editor follow-up]
+- Reopened native-review SMS editor now reads the latest owner-scoped non-posting encrypted local classification preferences and preselects an active matched leaf category; user drafts and explicit corrections take precedence. This is review-only and does not authorize automatic posting or silently select a child money account. Pending exact-head CI and physical Android validation.
+
+
+[M506 #427 responsive SMS and widget resume — 2026-11-06]
+- Following the already-recorded reduced cold-launch animation, Android message status checks (autoSmsEnabled / autoSmsTrackingStatus / autoSmsScanProgress) now run through the pre-existing single-thread SMS executor instead of querying the encrypted queue and shared mutex on Android's main UI thread. Results/errors are marshaled back to UI without logging sensitive SMS data. Source file: native/WaffraMainActivity.kt.
+- Resume-time verified widget finance ledger loading now delegates large JSON decoding to the established WaffraLargeJsonDecode.parse pathway rather than synchronous jsonDecode on the Flutter UI isolate. Integrity/witness checks and verified snapshot behavior are unchanged. Source file: lib/main.dart.
+- Source contract regressions in test/m506_android_nine_regressions_test.dart. The approved M385 scope manifest uses an unchanged base/head Android permission-line anchor to prove the bounded native modification. Profile-mode frame measurements and Android new/update acceptance remain pending; UI smoothness is not yet certified.
+
+
+[M508 PR #436 Issue #439 — Saudi bilingual default SMS classification library, 2026-11-06]
+- Source research: SAMA Unified Notification Elements (published 2020-11-29) enumerates payment, purchase, merchant, card/wallet, withdrawal, deposit, transfer, fees, bill payment, refund and financing notification fields and bilingual terms; NBK KSA SMS service describes Arabic and English account/SMS alerts. CST and SAMA anti-fraud guidance requires conservative non-financial exclusions. All examples/keywords are independently curated; no personal bank messages, third-party proprietary datasets, or copied OSS code.
+- Added original `lib/waffra_sms_saudi_seed_rules.part.dart`: 177 immutable original review-only seed rule objects with 793 distinctive Arabic/English phrases: 53 income, 102 expense, 8 transfer, 14 excluded. All 155 money category rules reference existing Waffra catalog leaf names; builtIn defaults never assign bank account, post money, or overwrite user-secured learned patterns.
+- `WaffraSmsLocalRules` integrates local static seeds, prioritizes existing saved user preferences, refuses ambiguous conflicting specific built-in categories, continues requiring independent bank income/expense direction and blocks pending/declined events. Default special transfer/exclusion classification is review-only.
+- `lib/main.dart` now explicitly distinguishes immutable default excluded hints from previously owner-approved user exclusions. A built-in excluded rule NEVER auto-ACKs an SMS from the encrypted review queue, even when apparent promotional copy, OTP or rejected status is present.
+- `lib/waffra_sms_rule_settings_page.dart` displays four collapsible default groups with exact count and keyword totals, rendered using bounded lazy scrolling to avoid building hundreds of list tiles during routine navigation. Learned rules remain unchanged and editable in their existing four buckets.
+- New tests `test/m508_saudi_default_sms_rules_test.dart`, audit/provenance `docs/qa/M508_SAUDI_SMS_SEED_LIBRARY.md`, scoped `docs/qa/approved_change_scope.json` and requirements `docs/WAFFRA_REQUIREMENTS.md`.
+- Security: no OTP values, account tails, dates, private SMS, bank linked IDs or financial amounts bundled; foreign currency and money posting are not changed. All default exclusions can only suggest, never silently discard confirmed financial alerts. Built-ins present immediately on fresh and updated installations; no migration/write to encrypted saved rules.
+- Status: candidate feature on Draft PR #436. Exact HEAD CI, complete safety suite, signed APK and two-device Android verification still required. No merge/release certified by documentation alone.
+
+
+[M508 793-keyword UI latency follow-up]
+- Original `WaffraSmsLocalRules.suggestions()` previously scanned all 16 small built-in patterns against up to 100 private local SMS drafts when opening rule suggestions. With M508's 793 new immutable phrases, that could multiply SMS-thread work and worsen the user's reported jank. Bound only quick-add keyword suggestions to the original small default set; the complete new seed dictionary still matches financial incoming messages offline and remains browsable in the four lazy UI groups.
+- Existing user-learned rules and keyword safety checks untouched. M385 scope + fresh/upgrade Android profiling and exact-head regression tests still required.
+
+
+[M509 #440 — all-sender Saudi candidate discovery and permanent committed SMS rescan exclusion, 2026-11-06]
+- User requested detecting income/expense candidates from ALL Android inbox senders since the original installation month's first day, using M508 bilingual Saudi defaults in Dart without a fixed bank-name-only whitelist. Native intake now accepts named senders up to 64 characters when the message includes financial action + amount + supported currency; numeric sender IDs require stronger explicit completed-event evidence. Neither signal links financial accounts or permits auto posting.
+- The explicit Home "إعادة الفحص" action now reopens the original month after a COMPLETED scan and re-evaluates previously rejected candidate messages. When a scan is incomplete (e.g., >2000 source SMS or encrypted pending queue full), Rescan resumes its durable date/_id cursor instead of repeating the earliest pages. Honest UI notices distinguish partial from complete scans.
+- After source SMS was independently confirmed in the verified encrypted finance ledger (including background worker), Flutter calls committed-only acknowledgment. Native atomically removes pending SMS and seals the original sender/body/receivedAt SHA-256 fingerprint into a per-owner AES-GCM encrypted 256-shard journal. Future scans skip that message before enqueue, after app restart or in-place updates. Owner changes wipe only the previous owner's completed markers, pending SMS and excluded sender policy; same-owner updates retain them.
+- Failed/cancelled/declined/rejected or merely excluded SMS DO NOT create completed markers. Existing ledger `smsHashes` remain independent finance-level duplicate prevention. Verified old finance hashes are reconciled to native completed markers on first pending review refresh.
+- Both foreground native MethodChannel and background WorkManager FlutterEngine now honor this same committed-only acknowledgment; immutable built-in exclusion hints cannot auto-ACK in background.
+- M509 Dart test fixture `test/m509_all_sender_sms_rescan_dedup_test.dart` covers 64-char unknown sender acceptance contracts, numeric stronger gates, encrypted journal and owner removal, auto-poster parity, categories and no forced autoPost; additional Android hardware fresh/upgrade tests required.
+- Status: source candidate on Draft PR #436, Issue #440. No main merge, signed APK or physical Android verification claimed.
+
+
+[M509 build and pinned-scope corrections — 2026-11-06]
+- Fixed malformed Dart MethodChannel bridge code in `lib/waffra_auto_sms.dart`; added complete-window rescan and committed-only native API without replacing any existing normal acknowledge/notification methods.
+- M385 guard requires boundary anchors to exist in BOTH merge-base and PR head. Corrected the native MainActivity scope to start from the existing `setAutoSmsEnabled` case and end at existing `scanUnknownFinancialSms`, covering the inserted restart case without changing the guard or widening to unrelated components.
+- Re-tested with current PR head CI; do not treat new queued checks as proof of Android runtime quality.
+
+
+[M510 #441 CRITICAL — restore explicit initial Create Account / Sign In chooser, 2026-11-06]
+- Restored the previously approved visual first-launch choice screen on true Android fresh installs after the animated splash: prominent buttons `إنشاء حساب` / `تسجيل الدخول` (Arabic) and `Create account` / `Sign in` (English). Reuses the existing image asset `assets/waffra_splash_approved_exact.png` without adding login loading/network dependencies.
+- Fixed an unapproved shortcut in `LoginScreen.build` that unconditionally returned the one-page `ProfileForm` when `_freshSignup==true`, bypassing the choice. An explicit screen choice now gates registration/login, and Back returns to chooser. Unified name, gender/avatar, phone, password/confirm form remains unchanged once Create Account is chosen.
+- Existing device sign-out and saved phone/password reauthentication still work from the returning-user path; existing accounts do NOT have to choose again on app updates or biometric unlock. No account, SQLCipher or SMS mutations on choice taps; no remote sign-in guarantee where no local account exists.
+- Added `test/m510_first_launch_auth_choice_test.dart` to verify original branded page, labels, keys, click callbacks and source-gated form entry/back behavior and that existing registered login is retained.
+- Status: Draft PR #436 candidate, CI and Android fresh-install + over-old APK validation pending.

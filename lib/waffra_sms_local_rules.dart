@@ -6,6 +6,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'waffra_bank_sms_facts.dart';
 import 'waffra_merchant_rules.dart';
 
+part 'waffra_sms_saudi_seed_rules.part.dart';
+
 /// Local-only, user-reviewable SMS classification. Rules are suggestions:
 /// neither this file nor the settings screen can post money or link an account.
 class WaffraSmsLocalRule {
@@ -73,8 +75,25 @@ abstract final class WaffraSmsLocalRules {
  static bool safeRuleKeyword(String text,String kind)=>safeKeyword(text)||
   (kind=='excluded'&&const <String>{'otp','pin'}.contains(normalized(text)));
 
+ // Built-in phrases are manually curated and cannot contain amounts,
+ // card suffixes or secrets. Keep user-learned keywords on the stricter
+ // legacy safeKeyword policy; never accept arbitrary bank texts as a rule.
+ static bool _safeSaudiSeedKeyword(String word,String kind){
+  final text=normalized(word);
+  if(text.length<2||text.length>48||
+     !RegExp(r'[a-z\u0621-\u064a]').hasMatch(text)||
+     RegExp(r'[0-9٠-٩۰-۹]|\*|@|#|/|\\|:').hasMatch(text))return false;
+  if(kind!='excluded'&&RegExp(
+    r'(^|[^a-z])(?:otp|pin|password|iban)([^a-z]|$)|'
+    r'رمز التحقق|رمز التفعيل|كلمة المرور',
+    caseSensitive:false).hasMatch(text))return false;
+  return true;
+ }
+
  static bool matches(WaffraSmsLocalRule rule,String body,{String sender=''}) {
+  final trustedSeed=rule.builtIn&&rule.id.startsWith('sa_');
   if(rule.keywords.isEmpty||rule.keywords.any((word)=>
+    trustedSeed?!_safeSaudiSeedKeyword(word,rule.resolvedKind):
     !safeRuleKeyword(word,rule.resolvedKind)))return false;
   if(rule.sender.isNotEmpty&&normalized(rule.sender)!=normalized(sender))return false;
   final source=' ${normalized(body)} ';
@@ -97,7 +116,10 @@ abstract final class WaffraSmsLocalRules {
   required WaffraBankOperationKind bankKind,
   Iterable<WaffraSmsLocalRule> custom=const <WaffraSmsLocalRule>[],
  }) {
-  final eligible=custom.where((rule)=>
+  final eligible=<WaffraSmsLocalRule>[
+   ...custom,
+   ...waffraSaudiSpecialSeedRules,
+  ].where((rule)=>
    ((rule.resolvedKind=='transfer'&&bankKind==WaffraBankOperationKind.transfer)||
     (rule.resolvedKind=='excluded'&&bankKind==WaffraBankOperationKind.uncertain))&&
    matches(rule,body,sender:sender)).toList(growable:false);
@@ -154,11 +176,19 @@ abstract final class WaffraSmsLocalRules {
    if(resolved.map((rule)=>rule!.category).toSet().length!=1)return null;
    return resolved.first;
   }
+  // "Declined purchase", pending authorizations and OTP challenges
+  // are NOT settled transactions, even if they mention a familiar merchant.
+  if(WaffraBankSmsFactsParser.parse(body).pending)return null;
   final eligible=builtIn.where((rule)=>rule.income==income&&
     matches(rule,body,sender:sender)).toList(growable:false);
   if(eligible.isEmpty)return null;
-  // Explicit service/merchant rules first, generic transaction words last.
-  return eligible.first;
+  // High-specificity merchant/service hints beat fallback banking verbs;
+  // conflicting specific categories require explicit user review.
+  final specific=eligible.where((r)=>!const <String>{
+   'builtin_purchase','builtin_payment','builtin_received','builtin_deposit',
+  }.contains(r.id)).toList(growable:false);
+  if(specific.map((r)=>r.category).toSet().length>1)return null;
+  return specific.isNotEmpty?specific.first:eligible.first;
  }
 
  static const builtIn=<WaffraSmsLocalRule>[
@@ -172,12 +202,18 @@ abstract final class WaffraSmsLocalRules {
   WaffraSmsLocalRule(id:'builtin_coffee',name:'قهوة وكافيهات',keywords:['coffee','cafe','قهوة','كافيه','ستاربكس','starbucks'],income:false,category:'مطاعم وكافيهات / مقاهي',matchAll:false,builtIn:true),
   WaffraSmsLocalRule(id:'builtin_fuel',name:'بنزين ووقود',keywords:['وقود','بنزين','fuel','petromin'],income:false,category:'السيارة / بنزين ووقود',matchAll:false,builtIn:true),
   WaffraSmsLocalRule(id:'builtin_taxi',name:'مواصلات',keywords:['uber','careem','اوبر','كريم','taxi'],income:false,category:'مواصلات / أوبر وكريم',matchAll:false,builtIn:true),
-  WaffraSmsLocalRule(id:'builtin_mobile',name:'فاتورة جوال',keywords:['فاتورة جوال','mobile bill','stc bill','mobily bill'],income:false,category:'فواتير / جوال',matchAll:false,builtIn:true),
+  WaffraSmsLocalRule(id:'builtin_mobile',name:'فاتورة جوال',keywords:['فاتورة جوال','mobile bill','stc bill','mobily bill','شحن الجوال','شحن جوال'],income:false,category:'فواتير / جوال',matchAll:false,builtIn:true),
   WaffraSmsLocalRule(id:'builtin_pharmacy',name:'صيدلية وأدوية',keywords:['صيدلية','pharmacy','النهدي','nahdi'],income:false,category:'صحة / صيدلية وأدوية',matchAll:false,builtIn:true),
   WaffraSmsLocalRule(id:'builtin_rent',name:'إيجار',keywords:['ايجار','إيجار','rent'],income:false,category:'سكن / إيجار شهري',matchAll:false,builtIn:true),
   WaffraSmsLocalRule(id:'builtin_subscription',name:'اشتراكات رقمية',keywords:['netflix','نتفليكس','spotify','سبوتيفاي'],income:false,category:'اشتراكات رقمية / بث أفلام',matchAll:false,builtIn:true),
   WaffraSmsLocalRule(id:'builtin_purchase',name:'مشتريات عامة',keywords:['شراء','purchase','pos'],income:false,category:'أخرى / مصروف غير مصنف',matchAll:false,builtIn:true),
   WaffraSmsLocalRule(id:'builtin_payment',name:'مدفوعات عامة',keywords:['خصم','debited','payment','دفع'],income:false,category:'أخرى / مصروف غير مصنف',matchAll:false,builtIn:true),
+  ...waffraSaudiFinancialSeedRules,
+ ];
+ // Built-in income, expense, transfer and excluded hints used by the rules
+ // UI. Personal secure-store rules remain separate and owner-scoped.
+ static const allDefaultRules=<WaffraSmsLocalRule>[
+  ...builtIn,...waffraSaudiSpecialSeedRules,
  ];
 
  static List<String> suggestions(Iterable<String> messages){
@@ -185,7 +221,11 @@ abstract final class WaffraSmsLocalRules {
   final known=<String>{
    'رمز التحقق','رمز التفعيل','رمز الدخول','verification code',
    'security code','one time code','otp',
-   for(final rule in builtIn)
+   // Populate editable quick suggestions from the original small baseline
+   // only: 793 immutable Saudi seed phrases are already available in their
+   // own searchable/read-only buckets. Rechecking each one for 100 SMS would
+   // multiply UI-thread work on first opening the rules editor.
+   for(final rule in builtIn.where((r)=>!r.id.startsWith('sa_')))
     for(final term in rule.keywords)term,
    'حوالة صادرة','تحويل صادر','incoming','outgoing',
    'credited','debited','شراء','راتب',

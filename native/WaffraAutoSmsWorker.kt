@@ -66,6 +66,13 @@ class WaffraAutoSmsWorker(context: Context, parameters: WorkerParameters) :
                                 ?.filterIsInstance<String>()?.toSet() ?: emptySet()
                             result.success(WaffraAutoSmsStore.acknowledge(context, ids))
                         }
+                        "ackCommittedAutoBankSms" -> {
+                            // Only Flutter's independent verified finance-hash
+                            // evidence may call this committed-only API.
+                            val ids = (call.arguments as? List<*>)
+                                ?.filterIsInstance<String>()?.toSet() ?: emptySet()
+                            result.success(WaffraAutoSmsStore.acknowledgeCommitted(context, ids))
+                        }
                         "notifyAutoSmsSaved" -> {
                             val args = call.arguments as? Map<*, *>
                             result.success(WaffraAutoSmsNotifications.notifySaved(

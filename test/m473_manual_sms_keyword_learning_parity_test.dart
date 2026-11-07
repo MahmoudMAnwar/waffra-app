@@ -85,8 +85,18 @@ void main(){
   expect(learning,contains('WaffraSmsLocalRuleStore()'));
   final editor=main.substring(main.indexOf(' Future<void> entrySheet('),
    main.indexOf(' Future<void> showReceipt('));
-  expect(editor.indexOf('try{await _learnManualCategoryPreference(result);}'),
-   greaterThan(editor.indexOf('commitConfirmedManual(')));
+  // The SMS branch precedes the manual branch in the same editor.
+  // Each learning call must follow its OWN verified finance commit.
+  final smsCommit=editor.indexOf('_financeAuthority.commitConfirmedSms(');
+  final smsLearn=editor.indexOf(
+    'try{await _learnManualCategoryPreference(result);}',smsCommit);
+  final manualCommit=editor.indexOf('commitConfirmedManual(');
+  final manualLearn=editor.indexOf(
+    'try{await _learnManualCategoryPreference(result);}',manualCommit);
+  expect(smsCommit,greaterThanOrEqualTo(0));
+  expect(smsLearn,greaterThan(smsCommit));
+  expect(manualCommit,greaterThan(smsLearn));
+  expect(manualLearn,greaterThan(manualCommit));
   final sms=main.substring(main.indexOf(' Future<void> bulkSmsSheet('),
    main.indexOf(' Future<void> entrySheet('));
   expect(sms,contains('final descriptionRule=WaffraSmsLocalRules.manualCategoryPattern('));

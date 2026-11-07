@@ -960,6 +960,7 @@ class WaffraVerifiedFinanceAuthority {
     List<Map<String, Object?>> proposedCategories = const [],
     List<String?>? selectedAccountIds,
     int? expectedAccountGeneration,
+    List<Uint8List>? reviewedSmsReceiptImages,
   }) async {
     if (route != WaffraFinanceRoute.bulkSmsConfirmedSave &&
         route != WaffraFinanceRoute.widgetSmsConfirmedSave) {
@@ -1005,6 +1006,9 @@ class WaffraVerifiedFinanceAuthority {
     final backend = await _requireRoute(route);
     late final int saved, income, expenses, skipped, incomeMinor, expenseMinor;
     if (backend == WaffraRuntimeFinanceBackend.guardedLegacy) {
+      if(reviewedSmsReceiptImages != null){
+        throw StateError('Bank SMS receipts require verified encrypted storage.');
+      }
       if(accounts != null && accounts.any((id)=>id!=null)){
         throw StateError('Account-linked SMS requires verified SQLCipher.');
       }
@@ -1068,6 +1072,7 @@ class WaffraVerifiedFinanceAuthority {
         proposedCategories: frozenCategories,
         selectedAccountIds: accounts,
         expectedAccountGeneration: expectedAccountGeneration,
+        manualReceiptImages: reviewedSmsReceiptImages,
       );
       saved = result.saved;
       income = result.savedIncome;

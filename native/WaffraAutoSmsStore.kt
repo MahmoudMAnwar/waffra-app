@@ -34,6 +34,9 @@ object WaffraAutoSmsStore {
     private const val keyAlias = "waffra_sms_intake_aes_v1"
     private const val queueName = "encrypted_candidates"
     private const val excludedSendersName = "encrypted_excluded_senders_v1"
+    // M509 #440: Sharded AES-GCM records of COMPLETED finance SMS fingerprints.
+    // Value is sealed, owner-scoped and contains no raw SMS or bank numbers.
+    private const val committedBucketPrefix = "encrypted_committed_sms_v1_"
     private const val activeName = "enabled"
     // Hash of the verified signed-in account. No phone/email is saved here.
     private const val consentedOwnerName = "consented_account_sha256_v1"
@@ -176,6 +179,12 @@ object WaffraAutoSmsStore {
             if (previous != null && previous != owner) {
                 // A different account's encrypted queue and read cursor must
                 // never become visible under this explicit new opt-in.
+                // A different verified account must never inherit completed
+                // message markers from the previous owner.
+                for (key in prefs.all.keys) {
+                    if (key.startsWith(committedBucketPrefix)) editor.remove(key)
+                }
+                committedCipherCache.clear()
                 editor.remove(queueName).remove(excludedSendersName).remove(historyCursorAt)
                     .remove(historyCursorId).remove(historySourceMonth)
                     .remove(historyComplete)
@@ -260,6 +269,29 @@ object WaffraAutoSmsStore {
     private fun save(context: Context, content: JSONArray): Boolean =
         context.getSharedPreferences(prefsName, Context.MODE_PRIVATE).edit()
             .putString(queueName, seal(content.toString())).commit()
+
+    // Split marker ciphertext by first two hexadecimal hash characters:
+    // historic inboxes can grow without a single enormous encrypted JSON
+    // array, while cached shards make each SMS lookup O(1) in a scan.
+    private val committedCipherCache =
+        mutableMapOf<String, Pair<String, Set<String>>>()
+
+    private fun committedBucket(context: Context, id: String): Set<String> {
+        if (!Regex("^[a-f0-9]{64}$").matches(id))
+            throw IllegalArgumentException("Invalid SMS fingerprint")
+        val bucket = id.take(2)
+        val ciphertext = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+            .getString(committedBucketPrefix + bucket, "") ?: ""
+        val cached = committedCipherCache[bucket]
+        if (cached != null && cached.first == ciphertext) return cached.second
+        val decoded = open(ciphertext)
+        val result = (0 until decoded.length()).map { decoded.getString(it) }.toSet()
+        committedCipherCache[bucket] = ciphertext to result
+        return result
+    }
+
+    private fun isCommittedLocked(context: Context, id: String) =
+        committedBucket(context, id).contains(id)
 
     // Explicit user sender exclusion is encrypted and bound to this authenticated
     // owner. Do not reuse a removed sender as an automatic learned rule.
@@ -349,7 +381,7 @@ object WaffraAutoSmsStore {
         "password|login.?code|authentication.?code|رمزك\\s*السري)",
         RegexOption.IGNORE_CASE)
     private val action = Regex(
-        "(?:شراء|خصم|سحب|حوالة|تحويل|إيداع|ايداع|راتب|استرداد|سداد|" +
+        "(?:شراء|خصم|سحب|حوالة|تحويل|إيداع|ايداع|راتب|استرداد|سداد|شحن|دفع|" +
         "\\bpurchase\\b|\\bdebited\\b|\\bcredited\\b|\\btransfer\\b|" +
         "\\bwithdrawal\\b|\\bpayment\\b|\\bsalary\\b|\\brefund\\b|" +
         "\\bdeposit\\b)", RegexOption.IGNORE_CASE)
@@ -357,18 +389,37 @@ object WaffraAutoSmsStore {
         "(?:\\b(?:SAR|SR|AED|JOD|EGP|KWD|BHD|OMR|QAR|USD|EUR|GBP)(?=\\b|[0-9٠-٩۰-۹])|" +
         "ر\\.?\\s*س|ريال|درهم|دينار|جنيه|دولار|يورو)", RegexOption.IGNORE_CASE)
     private val digits = Regex("[0-9٠-٩۰-۹][0-9٠-٩۰-۹,.]{0,14}")
-    // Named bank/application senders can be Arabic or English. Personal
-    // numeric phone numbers never enter the automatic review queue.
-    private val senderName = Regex("^[\\p{L}][\\p{L}0-9 _-]{2,24}$")
+    // M509: any branded sender can contain a financial notice, even if
+    // its sender name is not on our fixed bank list. Numeric phone senders
+    // require independent strong completed-event evidence before review.
+    private val senderName = Regex("^[\\p{L}][\\p{L}0-9 _.-]{2,63}$")
+    private val numericSender = Regex("^\\+?[0-9]{7,15}$")
+    private val completedFinancialAction = Regex(
+        "(?:تم\\s+(?:الخصم|خصم|السحب|سحب|الإيداع|ايداع|إيداع|الشراء|شراء|الدفع|دفع)|" +
+        "عملية\\s+(?:شراء|خصم|سحب|إيداع|ايداع)|" +
+        "\\b(?:card\\s+purchase|purchase\\s+approved|salary\\s+credited|" +
+        "account\\s+credited|amount\\s+debited|transfer\\s+received|" +
+        "payment\\s+completed|withdrawal\\s+completed)\\b)",
+        RegexOption.IGNORE_CASE)
     private val brand = Regex(
         "(?:bank|alinma|inma|rajhi|snb|sabb|riyad|bilad|anb|saib|" +
         "aljazira|jazeera|alahli|stcpay|stc.?bank|urpay|mobily.?pay|" +
-        "alrajhi|albilad)", RegexOption.IGNORE_CASE)
+        "alrajhi|albilad|الراجحي|الإنماء|الانماء|الأهلي|الاهلي|الرياض|البلاد)", RegexOption.IGNORE_CASE)
 
     fun qualifies(sender: String, body: String): Boolean {
         val safe = body.trim()
         if (safe.length < 10 || safe.length > 1600) return false
-        if (!senderName.matches(sender.trim())) return false
+        val named = senderName.matches(sender.trim())
+        val phoneLike = numericSender.matches(sender.trim())
+        if (!named && !phoneLike) return false
+        // Personal/phone-number senders cannot qualify based on a price
+        // alone. Direction, currency, completed-event wording and amount
+        // must all be present. This still never authorizes a financial account.
+        if (phoneLike) return safe.length >= 18 &&
+            !otp.containsMatchIn(safe) &&
+            completedFinancialAction.containsMatchIn(safe) &&
+            action.containsMatchIn(safe) && money.containsMatchIn(safe) &&
+            digits.containsMatchIn(safe)
         // Non-financial verification notices are reviewable as EXCLUDED,
         // never processed as money. No original verification digits are kept.
         if (otp.containsMatchIn(safe)) return true
@@ -384,11 +435,11 @@ object WaffraAutoSmsStore {
             money.containsMatchIn(safe) && digits.containsMatchIn(safe)) return true
         if (!action.containsMatchIn(safe) || !money.containsMatchIn(safe) ||
             !digits.containsMatchIn(safe)) return false
-        // Unknown financial senders can be reviewed, but a phone number or
-        // personal sender must never become a financial account automatically.
-        val hasFinancialSender = brand.containsMatchIn(sender) ||
-            (sender.length <= 20 && action.containsMatchIn(safe))
-        return hasFinancialSender
+        // M509: do not reject legitimate messages merely because their
+        // sender does not contain a hard-coded bank alias or exceeds 20 chars.
+        // Dart classifies candidates with the M508 Arabic/English catalog
+        // and independently verifies direction, amount and account.
+        return named
     }
 
     // M437: Unknown-finance lookup is strictly ON-DEMAND, and scans from
@@ -408,7 +459,8 @@ object WaffraAutoSmsStore {
     private val institutionalSender = Regex(
         "(?:etimad|اعتماد|bank|alinma|inma|rajhi|snb|sabb|riyad|" +
         "bilad|anb|saib|aljazira|jazeera|alahli|stcpay|" +
-        "stc.?bank|urpay|mobily.?pay)",
+        "stc.?bank|urpay|mobily.?pay|الراجحي|الإنماء|الانماء|" +
+        "الأهلي|الاهلي|الرياض|البلاد)",
         RegexOption.IGNORE_CASE)
 
     fun unknownFinancialKind(sender: String, body: String): String? {
@@ -494,6 +546,10 @@ object WaffraAutoSmsStore {
                     return@synchronized false
                 val queue = read(context)
                 val fingerprint = id(sender, body, at)
+                // Verified financial SMS is never offered again after
+                // rescan, reinstall-preserving update or OS resume.
+                if (isCommittedLocked(context, fingerprint))
+                    return@synchronized false
                 for (i in 0 until queue.length()) {
                     if (queue.getJSONObject(i).optString("id") == fingerprint)
                         return@synchronized false
@@ -639,6 +695,63 @@ object WaffraAutoSmsStore {
                 save(context, remaining)
             } catch (_: Exception) { false }
         }
+
+    /**
+     * Called ONLY after Flutter independently proves the exact bank SMS hash
+     * exists in the authoritative encrypted financial ledger. An ordinary
+     * exclude/reject/transfer ACK is NOT a financial commit and must never
+     * poison this permanent fingerprint set.
+     *
+     * One SharedPreferences editor commits both the cleared queue and all
+     * affected encrypted fingerprint shards atomically. On any failure the
+     * pending message is preserved for another verified reconciliation.
+     */
+    fun acknowledgeCommitted(context: Context, ids: Set<String>): Boolean =
+        synchronized(mutex) {
+            if (!enabled(context) || ids.isEmpty() || ids.size > 100 ||
+                ids.any { !Regex("^[a-f0-9]{64}$").matches(it) })
+                return@synchronized false
+            try {
+                val data = read(context)
+                val remaining = JSONArray()
+                val present = mutableSetOf<String>()
+                for (i in 0 until data.length()) {
+                    val row = data.getJSONObject(i)
+                    val fingerprint = row.getString("id")
+                    if (ids.contains(fingerprint)) present.add(fingerprint)
+                    else remaining.put(row)
+                }
+                // Never accept an arbitrary ID as a "completed" bank SMS.
+                if (ids.any { !present.contains(it) &&
+                        !isCommittedLocked(context, it) }) return@synchronized false
+                val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+                val changed = present.groupBy { it.take(2) }
+                val editor = prefs.edit()
+                    .putString(queueName, seal(remaining.toString()))
+                for ((bucket, additions) in changed) {
+                    val merged = committedBucket(context, additions.first()).toMutableSet()
+                    merged.addAll(additions)
+                    editor.putString(committedBucketPrefix + bucket,
+                        seal(JSONArray(merged.toList()).toString()))
+                }
+                val succeeded = editor.commit()
+                if (succeeded) committedCipherCache.clear()
+                succeeded
+            } catch (_: Exception) { false }
+        }
+
+    /** Rescan the *entire* installed-month inbox only after a prior scan
+     * completed. An unfinished >2000-message scan always resumes its cursor
+     * instead of restarting the same first pages forever.
+     */
+    fun restartCompletedHistory(context: Context): Boolean = synchronized(mutex) {
+        if (!enabled(context)) return@synchronized false
+        val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+        if (!prefs.getBoolean(historyComplete, false)) return@synchronized false
+        prefs.edit().remove(historyCursorAt).remove(historyCursorId)
+            .remove(historySourceMonth).remove(historyComplete)
+            .remove(historyScannedCount).remove(historyAddedCount).commit()
+    }
 
     /** Resumable history import: from day 1 of installation month through now.
      * This native importer never posts money or contacts a cloud provider.

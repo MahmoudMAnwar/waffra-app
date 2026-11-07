@@ -54,7 +54,12 @@ void main() {
    main.indexOf(' Widget _phoneRegistrationForm(){'),
    main.indexOf(" @override Widget build(BuildContext context){\n  if(widget.initial==null&&widget.provider=='Phone')return _phoneRegistrationForm();"));
   expect(login,contains('if(!_registrationChecked){'));
-  expect(login,contains('if(_freshSignup)return ProfileForm(provider:\'Phone\',onSave:widget.onSave);'));
+  // A clean installation first shows the owner's explicit choice;
+  // the one-page phone form appears only after Create Account is selected.
+  expect(login,contains("if(_freshSignup&&_firstInstallChoice==null)return IntroScreen("));
+  expect(login,contains("if(_freshSignup&&_firstInstallChoice=='create'){"));
+  expect(login,contains("onBack:()=>setState(()=>_firstInstallChoice=null)"));
+  expect(login,isNot(contains("if(_freshSignup)return ProfileForm(")));
   expect(login,contains('signInMode=oldUser?.provider.toLowerCase()==\'phone\';'));
   expect(login,contains("final hasSecureVerifier=await WaffraLocalPhoneCredentials"));
   expect(login,contains("final hasOldProfile=prefs.getString('waffra_profile')!=null;"));

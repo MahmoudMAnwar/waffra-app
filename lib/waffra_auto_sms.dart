@@ -40,6 +40,11 @@ abstract final class WaffraAutoSms {
  }
  // Unlike the legacy importer, this one exposes native failures to the
  // explicit Rescan UI; it never reports an I/O error as an empty inbox.
+ // Explicit Rescan restarts a completed first-install-month cursor only.
+ // Incomplete history keeps its progress and advances on next Rescan.
+ static Future<bool> restartCompletedHistory()=>
+  _boolCall('restartCompletedSmsHistory');
+
  static Future<int> importConsentMonthChecked()async{
   if(!Platform.isAndroid)throw StateError('Android SMS scan is unavailable.');
   return await channel.invokeMethod<int>('importConsentMonthBankSms')??0;
@@ -132,6 +137,13 @@ abstract final class WaffraAutoSms {
   if(sender.trim().isEmpty)return false;
   return _boolCall('restoreExcludedAutoSmsSender',sender.trim());
  }
+ // Only after verified financial hash is present in SQLCipher.
+ static Future<bool> acknowledgeCommitted(List<String> ids)async{
+  if(ids.isEmpty||ids.length>100||
+     ids.any((id)=>!RegExp(r'^[a-f0-9]{64}$').hasMatch(id)))return false;
+  return _boolCall('ackCommittedAutoBankSms',ids);
+ }
+
  static Future<bool> acknowledge(List<String> ids)async{
   if(ids.isEmpty||ids.length>100)return false;
   return _boolCall('ackAutoBankSms',ids);

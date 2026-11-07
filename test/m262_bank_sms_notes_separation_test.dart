@@ -18,7 +18,8 @@ void main() {
     income: false,
     date: DateTime(2026, 10, 26),
     sourceType: 'sms',
-    notes: notes,
+    notes: '',
+    personalNotes: notes,
   );
 
   Widget details(MoneyEntry entry, {String? bankSms = original}) =>
@@ -61,7 +62,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('vault failure is explicit and does not display fake SMS',
+  testWidgets('missing SMS vault does not show technical encryption warning',
       (tester) async {
     waffraLanguage.value = 'ar';
     await tester.pumpWidget(details(
@@ -75,7 +76,7 @@ void main() {
     expect(tester.widget<SelectableText>(personal).data,'ملاحظة منفصلة');
     expect(find.text(
       'الرسالة البنكية الأصلية غير متاحة من التخزين المشفّر.',
-    ), findsWidgets);
+    ), findsNothing);
     expect(find.byKey(
       const Key('waffra-transaction-protected-bank-sms'),
     ), findsNothing);
@@ -95,7 +96,8 @@ void main() {
     expect(method, contains('protectedOriginalSms:originalBankSms'));
     expect(method, isNot(contains('entry.notes.isEmpty')));
     expect(method, isNot(contains("...'notes':original")));
-    expect(home, contains('notes:sms?message.text:notes.text'));
+    expect(home, contains('notes:sms?message.text:'));
+    expect(home, contains("personalNotes:sms||initial?.sourceType=='sms'?notes.text:''"));
     expect(home, isNot(contains('if(sms)notes.text=text;')));
   });
 }

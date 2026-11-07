@@ -329,3 +329,97 @@ Full Flutter QA on M502 exact head failed in three workflows (`Waffra Full Offli
 ## 2026-11-06 — M504: Weekly safe GitHub failed-run retention (separate CI operations request)
 
 **Issue:** [#425](https://github.com/MahmoudMAnwar/waffra-app/issues/425). **Owner-approved behavior:** run weekly Sunday 02:19 UTC, delete at most 20 FAILED PR workflow runs older than 7 full days only when the PR is merged, same-repo/main-target, the same workflow has a newer SUCCESS on that same PR and branch, and the failed run has zero artifacts. Never delete main runs (including failures), successful/active runs, security/release/SQLCipher/migration/backup evidence, open/unmerged PR runs or candidates with missing metadata. Manual dispatch defaults to dry-run; only trusted main schedule/dispatch has actions:write. Independent of M453 cancellation. Docs: `docs/ci/M504_FAILED_RUN_RETENTION.md`. Implementation in dedicated CI PR; Node safety tests run offline. Actual scheduled deletion becomes active only after merge to main. No claims of backdated log recovery.
+
+
+## 2026-11-06 — M506: Nine confirmed APK regressions following merged PR #402
+
+**Tracking source:** User's Android screenshot set and reproduction report 2026-11-06; **fix branch:** `fix/m506-nine-apk-regressions`; **implementation PR:** pending creation (do not claim fixed until code + CI + device proof).
+
+| ID | Issue | Confirmed symptom | Acceptance target | Status |
+|---|---|---|---|---|
+| M506-01 | [#427](https://github.com/MahmoudMAnwar/waffra-app/issues/427) | App-wide ~2s latency / jank (cold start, refresh, save, footer, +) | Performance profiling; smooth UX; Android validation | Reported / not verified fixed |
+| M506-02 | [#428](https://github.com/MahmoudMAnwar/waffra-app/issues/428) | SMS review + receipt save fails; financial write rollback | Atomic receipt+transaction, error tracing, no duplicate charge | Reported / not verified fixed |
+| M506-03 | [#429](https://github.com/MahmoudMAnwar/waffra-app/issues/429) | Confirmed SMS expense does not update learned keyword rules | Post-commit idempotent, safe income/expense learner | Reported / not verified fixed |
+| M506-04 | [#430](https://github.com/MahmoudMAnwar/waffra-app/issues/430) | First SMS sender not preselected; original SMS shown twice | Sender-to-bank prefill; SMS once; notes not prefilled | Reported / not verified fixed |
+| M506-05 | [#431](https://github.com/MahmoudMAnwar/waffra-app/issues/431) | SMS text in transaction notes and confusing encrypted source warning | Separate user notes/source protected SMS; clean details UI | Reported / not verified fixed |
+| M506-06 | [#432](https://github.com/MahmoudMAnwar/waffra-app/issues/432) | Missing recent SMS senders and stale scanned count | Scan since install-month 1st; incremental rescans; true refreshed counts | Reported / not verified fixed |
+| M506-07 | [#433](https://github.com/MahmoudMAnwar/waffra-app/issues/433) | Destination bank selection missing and no transfer date | Independent bank/account selectors and historical date | Reported / not verified fixed |
+| M506-08 | [#434](https://github.com/MahmoudMAnwar/waffra-app/issues/434) | Two-leg transfer rejects valid accounts as changed | Reconcile current accounts and atomic cross-account transfer | Reported / not verified fixed |
+| M506-09 | [#435](https://github.com/MahmoudMAnwar/waffra-app/issues/435) | Logout broken in account page and fingerprint lock | Unified safe logout preserving credentials/encrypted data | Reported / not verified fixed |
+
+### Approved message ownership and privacy contract
+- Imported/read bank SMS is shown **once** during review in a read-only original-message section. The freeform **Notes** field is for **user-entered notes only** and begins empty; do not copy raw SMS into Notes. The original may be retained in the existing encrypted, separately typed SMS provenance store subject to existing consent; never weaken encryption or discard source evidence just to hide a UI message.
+- After saving, transaction details show notes only if provided. An optional read-only original-message expander appears when source is accessible. Never surface implementation text such as “encrypted source not available”; do not falsely claim original source is present. Safely handle old transactions with legacy SMS-in-notes without deleting genuine notes.
+- First-selection sender-to-provider matching uses trusted normalized aliases, not fuzzy guesses. User still selects/creates associated financial account; financial account IDs never inferred solely from provider/sender.
+- Avoid regressions in money accounting: two-sided transfer only, zero budget effect, real snapshot validation; no forced retry bypass and no orphan receipts/duplicate SMS writes.
+
+### Gate
+Each issue requires linked source changes, exact-head CI, tests and real Android confirmation (new installation + update over existing data when applicable). No issue can be marked Done solely from PR creation or green unit tests; no deployment to the wife's existing-data device before backed-up upgrade QA.
+
+### M506 current code checkpoint — 2026-11-06
+- Candidate implemented in #436: verified reviewed-SMS receipt transaction, post-commit keyword learning, trusted first sender bank preselect, single SMS original and optional personal notes, scanned count and Arabic sender recognition, bank/provider choices and historical transfer date, fresh verified account witness, and guarded sign-out recovery for MISSING local credential with explicit new password + device fingerprint.
+- **Not accepted:** no user device APK verification yet. Performance jank (#427) needs release-mode tracing and tuning. Logout (#435) must also be tested for missing, corrupted and different-owner verifier states; corrupted/mismatched values must never be overwritten or silently signed out. Source/schema integration tests and all CI still required.
+- GitHub exact-head test results and Android fresh-install/update acceptance determine whether any of these can be marked Done. Preserve user data and encrypted SMS/receipt vault.
+
+
+### M506-01 splash partial improvement (2026-11-06)
+- In draft PR #436, the unconditional 3000ms intro minimum was reduced to 1750ms and the splash animation to 1650ms. Added a Flutter widget test to catch an accidental return to a three-second animation; bounded code scope and release note have been recorded.
+- **Status: Partial code change / latest-head CI and device verification pending.** The startup loading/biometric critical path and all remaining footer, +, refresh, save and animation jank require Android profile traces, root cause correction, and physical test before issue #427 can be closed.
+
+
+## 2026-11-06 — M507: SMS analyzed prefill + continuous review-only learning (same draft PR #436)
+
+| ID | Issue | Requirement | State |
+|---|---|---|---|
+| M507-01 | [#437](https://github.com/MahmoudMAnwar/waffra-app/issues/437) | Screenshot-proven SMS "شحن الجوال / مبلغ:276 ريال / إلى:**8308 / المنتج:سوا فليكس 240 / في:05-11-2026 19:07" must detect **276 SAR** as the transaction amount, correctly recognize outgoing mobile top-up, prefill title and matching active main/subcategory; never confuse card suffix, product plan, or date with money | **Code ready / exact-head CI and Android QA pending** |
+| M507-02 | [#438](https://github.com/MahmoudMAnwar/waffra-app/issues/438) | After a **successfully verified** SMS/manual income/expense save, update reusable non-posting keywords and immediately reclassify still-pending/new incoming SMS. Next reviewed message prefilled with supported amount, income/expense, title and category/subcategory. Never auto-record money; user confirms real money account and can edit all suggested values | **Code ready / exact-head CI and Android QA pending** |
+
+**Acceptance:** isolate money parser from unrelated numbers and foreign currency, preserve protected original and user notes, use active saved child category or require explicit selection, do not learn on failed/duplicate save, do not discard pending SMS or user drafts, no sensitive keyword training, idempotent review refresh on a successful classification update. Unit/widget coverage for exact screenshot fixture and next SMS reclassification. Phone QA and exact-head CI mandatory before Done.
+
+### M507 committed code checkpoint
+- Source: `lib/main.dart`, `lib/waffra_bank_sms_facts.dart`, and `lib/waffra_sms_local_rules.dart`. Bank operation parser now recognizes a mobile top-up, reads verified explicit SAR and picks active mobile category; native SMS review and direct reviewed-SMS editor use latest local rule suggestions.
+- After a confirmed bank SMS or manual finance save, the encrypted review queue is re-read and reclassified with owner-scoped local rules; follow-on review sheets also re-read rules before each message. No posting is allowed from classification alone.
+- Test: `test/m507_sms_amount_and_continuous_review_test.dart` with exact screenshot, Arabic-Indic amount, card/product mismatch negatives and later similar SMS; source-level acceptance checks added. 
+- CI and physical Android QA remain OPEN; the code candidate must not be represented as production-complete until real-device confirmation.
+
+
+## 2026-11-06 — M508: Large Saudi bilingual default rules for bank SMS
+
+- **Issue [#439](https://github.com/MahmoudMAnwar/waffra-app/issues/439)**, target **Draft PR [#436](https://github.com/MahmoudMAnwar/waffra-app/pull/436)**. User explicitly requested the broadest practical Arabic+English built-in library across *دخل / مصروف / تحويل / مستبعدة*, researched on public web and bundled on fresh + existing installations.
+- **Research baseline:** SAMA bank notification fields, Saudi banks' alerts descriptions, CST anti-fraud guidance; public apps are taxonomy references only. Every template/keyword must be independently curated, not a copy of private banking messages, account details or third-party licensed catalogs.
+- **Built-in rule safety:** no finance posting, no account inference, immutable bundled seeds, user-specific learned rules retained independently, active existing category/leaf only. Direction must be independently verified; transfer is NOT routine income or expense; excluded candidates must NOT auto-ack confirmed money. OTP/fraud/failed notices and marketing are no-finance candidates. Ambiguous signals require review.
+- **Done criteria:** bounded code changes, locale-specific tests for all four buckets, conflicting merchants & financial notifications, release notes, source-reference methodology, exact-head CI and Android profile/new+update tests. **Status: Recorded; not accepted.**
+
+
+## 2026-11-06 — M509: All-sender Saudi financial SMS discovery + lifetime committed-message exclusion
+
+- **Issue [#440](https://github.com/MahmoudMAnwar/waffra-app/issues/440)**, same **Draft PR [#436](https://github.com/MahmoudMAnwar/waffra-app/pull/436)**.
+- **Requested:** Scan incoming Android SMS from **all senders** (not only bank-branded) from the original installation month's first day and suggest financial income/expense from M508 Arabic/English seed catalog. Existing SMS still need independent debit/credit amount/direction evidence; don't mistake ordinary personal, OTP, ads, declines, credit settlement or transfer as confirmed money.
+- **Rescan:** explicit user "إعادة الفحص" must revisit earlier skipped inbox rows when bundled classification expands; native scanning remains paged, background off Android UI thread and queue-limited.
+- **Permanent one-time confirmed SMS:** when user saves reviewed SMS to encrypted verified ledger successfully, remember a privacy-safe sender/body/timestamp fingerprint, bound to the verified owner. Later historical rescans never present it again; keep existing dedupe of ledger SMS hashes as defense in depth. Failure/abort must not consume SMS.
+- **No regression:** finance/account bindings, biometric/SQLCipher, owner lifecycle, merchant corrections, transfer review and user learned rules retained; no default autoPost, no raw SMS copied to new stores.
+- **Done criterion:** precise discovery/committed replay and restore tests, CI exact HEAD, real Android new install + in-place upgrade checks. **Status: tracked; not yet verified.**
+
+
+## 2026-11-06 — M510 CRITICAL: Restore first-install authentication choice
+
+- **Issue [#441](https://github.com/MahmoudMAnwar/waffra-app/issues/441)**, same **Draft PR [#436](https://github.com/MahmoudMAnwar/waffra-app/pull/436)**. User explicitly objected to unapproved removal of initial **إنشاء حساب / تسجيل الدخول** choice page.
+- **Current regression found in code:** `LoginScreen._freshSignup` bypasses the choice and directly instantiates `ProfileForm`; pre-existing branded `IntroScreen` is no longer reached. No user permission to remove it. This fix restores the explicit choice and preserves subsequent one-page registration.
+- **Flow:** truly fresh install → approved branded choice → **إنشاء حساب** gives single registration form; Back returns to choice. **تسجيل الدخول** gives existing login form; Back returns to choice. Returning users and existing data/update-over-old should continue without a newly forced chooser; biometrics, account persistence, SQLCipher remain unchanged.
+- **CI/test acceptance:** widget test proves both CTA labels/click/navigation and no premature form; tests ensure existing login and avatar/password registration regression stays green. Real Android fresh install + existing-device upgrade confirmation required. **Status: Recorded, implementation pending.**
+
+
+## 2026-11-07 — M511: Restore M177 encrypted SMS atomic-write CI witness
+
+- **Issue [#442](https://github.com/MahmoudMAnwar/waffra-app/issues/442)**, implementation in **Draft PR [#436](https://github.com/MahmoudMAnwar/waffra-app/pull/436)**. Failure witnessed on exact SHA `af95b958e5201414f0b5c51f5dd2193284e5e57c`, [encrypted storage smoke run 42293249031](https://github.com/MahmoudMAnwar/waffra-app/actions/runs/42293249031).
+- **Root cause:** M177 source witness still requires inline `records:[Map<String,Object?>.from(result.toJson())]`; M506's verified SMS receipt writer now deliberately stores the sanitized `smsRecord` variable (`receiptPath=null`), stages receipt bytes, and submits records + hash atomically to verified finance authority. Retaining the former exact formatting would regress correct receipt handling.
+- **Acceptance:** update only the stale M177 test assertions to recognize the authoritative atomic path; verify sanitization, receipt-byte handoff, same-source SHA dedupe and absence of legacy bypass. Targeted test and latest-HEAD full CI must pass; do not bypass SQLCipher, change application money behavior, or mark Android device testing complete.
+- **Status:** Issue recorded; CI test correction in progress, exact-head gates pending.
+
+
+## 2026-11-07 — M512: Full Flutter suite regression reconciliation (#443)
+
+- **Source:** [Issue #443](https://github.com/MahmoudMAnwar/waffra-app/issues/443), [Draft PR #436](https://github.com/MahmoudMAnwar/waffra-app/pull/436), baseline exact SHA `4da8f49d2ca82268267e8d6af71550c7077efa80`. Four failed workflow jobs (M282, Full Offline, M160, M103) share **nine** individual failing Flutter tests.
+- **Guardrails:** no financial/data/auth behavior change to coerce tests. Reconcile stale source assertions against verified M506/M507/M508/M510 implementation while preserving secure atomic SMS+receipts, first-launch two-choice screen, one-page registration, verified account selection, no ledger auto-post, never-guess account IDs, independently biometric-gated logout recovery, safe keyword library.
+- **Nine failures:** M473 first SMS learning mistaken for manual learning; M507 empty optional accountId sentinel; M402 reviewed transfer provider catalog selector; M463 old direct-signup expectation conflicts with M510 chooser; M510 first welcome choice has duplicated decorative text and conditional gender-chip key; M506 authority forwards receipt bytes via `manualReceiptImages` and logout preflights an already-ready verifier before new recovery; M508 regex accidentally matches every keyword using quantified backslash. This is a **test-contract correction**, not blanket test bypass.
+- **Acceptance:** exact M385 bounded manifest, regression assertions for current secure behavior, targeted nine Dart tests, all latest-SHA full CI workflows (including M282/Full Offline/M160/M103), Android fresh/install-over-existing-device validation prior to release. **Status: recorded; code and latest-head CI pending.**

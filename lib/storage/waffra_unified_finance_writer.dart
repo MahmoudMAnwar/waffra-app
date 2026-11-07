@@ -70,7 +70,7 @@ class WaffraUnifiedFinanceWriter {
     required bool userConfirmed,
     bool allowDuplicateHashes = false,
     List<Map<String, Object?>> proposedCategories = const [],
-    // Account linkage is permitted ONLY for a single confirmed manual entry.
+    // Confirmed manual and reviewed SMS records both require explicit account linkage.
     // It shares this method's app/widget lock and SQL transaction.
     String? accountId,
     List<String?>? selectedAccountIds,
@@ -107,8 +107,10 @@ class WaffraUnifiedFinanceWriter {
           manualReceiptImages.map(Uint8List.fromList));
     if (frozenReceiptImages != null) {
       if (confirmedRecords.length != 1 ||
-          confirmedHashes.single != null ||
-          confirmedRecords.single['sourceType'] != 'manual' ||
+          !((confirmedHashes.single == null &&
+             confirmedRecords.single['sourceType'] == 'manual') ||
+            (confirmedHashes.single != null &&
+             confirmedRecords.single['sourceType'] == 'sms')) ||
           (confirmedRecords.single['receiptPath'] != null &&
            confirmedRecords.single['receiptPath'] != '') ||
           confirmedRecords.single['id'] is! String ||
@@ -121,7 +123,7 @@ class WaffraUnifiedFinanceWriter {
           frozenReceiptImages.fold<int>(
                   0, (total, image) => total + image.length) >
               60 * 1024 * 1024) {
-        throw StateError('Invalid confirmed manual receipt batch.');
+        throw StateError('Invalid confirmed single-entry receipt batch.');
       }
       final entryId = confirmedRecords.single['id'] as String;
       final refs = List<String>.generate(frozenReceiptImages.length,
@@ -153,7 +155,7 @@ class WaffraUnifiedFinanceWriter {
     }
     final hasAccountLinks=confirmedAccounts.any((id)=>id!=null);
     if(frozenReceiptImages!=null && !hasAccountLinks){
-      throw StateError('Manual receipts require one verified money account.');
+      throw StateError('Confirmed receipts require one verified money account.');
     }
     if(hasAccountLinks && expectedAccountGeneration==null){
       throw StateError('Account-linked save needs witnessed finance generation.');
