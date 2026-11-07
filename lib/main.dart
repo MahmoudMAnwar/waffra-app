@@ -2347,6 +2347,7 @@ class _LoginScreenState extends State<LoginScreen> {
  // one-screen phone registration is shown ONLY after tapping Create Account.
  // Existing registered/logged-out profiles continue straight to login.
  String? _firstInstallChoice;
+ bool _showChoiceAfterBack=false;
  final signInPhone=TextEditingController(),signInPassword=TextEditingController();
  @override void initState(){super.initState();_loadRegistered();}
  Future<void> _loadRegistered()async{
@@ -2556,6 +2557,22 @@ class _LoginScreenState extends State<LoginScreen> {
   }
   // M510 #441: restore the explicit choice before either auth form on a
   // genuinely clean install. Never infer the choice from an empty profile.
+  // M479: View-only Back always returns to the two-choice landing screen.
+  if(_showChoiceAfterBack)return IntroScreen(
+   onStart:()async{
+    if(!mounted)return;
+    setState(()=>_showChoiceAfterBack=false);
+    // An existing owner must sign in; do not overwrite stored finances.
+    chooseRegistration();
+   },
+   onLogin:()async{
+    if(!mounted)return;
+    setState((){
+     _showChoiceAfterBack=false;
+     if(_freshSignup)_firstInstallChoice='login';
+     else signInMode=true;
+    });
+   });
   if(_freshSignup&&_firstInstallChoice==null)return IntroScreen(
    onStart:()async{if(mounted)setState(()=>_firstInstallChoice='create');},
    onLogin:()async{if(mounted)setState(()=>_firstInstallChoice='login');});
@@ -2608,28 +2625,10 @@ class _LoginScreenState extends State<LoginScreen> {
           child:WaffraText(waffraIsEnglish?'Temporary access to old account':'دخول مؤقت للحساب القديم')),
         ]else if((signInMode&&hasExisting)||
          (_freshSignup&&_firstInstallChoice=='login'))...[
-         if(_freshSignup)Align(alignment:Alignment.centerRight,
-          child:TextButton.icon(
-           key:const Key('waffra-auth-choice-back-from-login'),
-           onPressed:WaffraHaptics.tap(()=>
-            setState(()=>_firstInstallChoice=null)),
-           icon:const Icon(Icons.arrow_back_rounded,color:Colors.white),
-           label:WaffraText(waffraIsEnglish?'Back':'رجوع',
-            style:const TextStyle(color:Colors.white)))),
          WaffraText(waffraIsEnglish?'Sign in to Waffra':'تسجيل الدخول إلى وفرة',
           textAlign:TextAlign.center,
           style:const TextStyle(fontSize:18,fontWeight:FontWeight.bold,color:Colors.white)),
          const SizedBox(height:12),
-         if(!hasExisting)...[
-          WaffraText(waffraIsEnglish?
-           'There is no verified local account on this phone yet. To sign in '
-           'to an account from another device, restore its trusted backup first.':
-           'مفيش حساب محلي موثّق على الموبايل ده حاليًا. لو حسابك على جهاز '
-           'تاني، لازم تستعيد النسخة الاحتياطية الموثوقة الأول.',
-           textAlign:TextAlign.center,
-           style:const TextStyle(color:Colors.white70,fontSize:13)),
-          const SizedBox(height:12),
-         ],
          WaffraText(waffraIsEnglish?'Phone number *':'رقم الجوال *',style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold)),
          const SizedBox(height:6),
          TextField(controller:signInPhone,keyboardType:TextInputType.phone,
@@ -2659,8 +2658,15 @@ class _LoginScreenState extends State<LoginScreen> {
           child:WaffraText(signingIn?
            (waffraIsEnglish?'Signing in...':'جارٍ تسجيل الدخول'):
            (waffraIsEnglish?'Sign in':'تسجيل الدخول'))),
-         TextButton(onPressed:WaffraHaptics.tap(()=>setState(()=>signInMode=false)),
-          child:WaffraText(waffraIsEnglish?'Create an account':'إنشاء حساب',
+         TextButton(
+          key:const Key('m479-login-back-to-choice'),
+          onPressed:WaffraHaptics.tap(()=>setState((){
+           signInAttempted=false;
+           signInAuthError=null;
+           if(_freshSignup)_firstInstallChoice=null;
+           else _showChoiceAfterBack=true;
+          })),
+          child:WaffraText(waffraIsEnglish?'Back':'عودة',
            style:const TextStyle(color:Colors.white))),
         ]else...[
          WaffraText(waffraIsEnglish?'Welcome to Waffra':'مرحباً بك في وفرة',
