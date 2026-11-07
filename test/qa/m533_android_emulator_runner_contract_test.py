@@ -13,6 +13,8 @@ SCRIPT = (ROOT / ".github/scripts/run-m274-android-tap-smoke.sh").read_text()
 class M533AndroidEmulatorStabilityContractTest(unittest.TestCase):
     def test_emulator_binary_is_deterministic_stable_and_vulkan_is_disabled(self):
         self.assertIn("emulator-build: 15004761", WORKFLOW)
+        # M449 release-note-last must still launch real M274 on the exact SHA.
+        self.assertIn("'docs/release/WAFFRA_APPROVED_CHANGES.txt'", WORKFLOW)
         self.assertIn("emulator-options: -no-window -no-audio -no-snapshot "
                       "-gpu swiftshader -feature -Vulkan -no-boot-anim", WORKFLOW)
         self.assertNotIn("-gpu software", WORKFLOW)
