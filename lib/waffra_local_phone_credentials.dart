@@ -13,8 +13,19 @@ enum WaffraLocalCredentialProbe { ready, missing, malformed, differentPhone }
 
 abstract final class WaffraLocalPhoneCredentials {
  static const _store=FlutterSecureStorage();
+ // M546: older Android builds can retain a credential in Jetpack encrypted
+ // preferences while the default OS-protected backend has no matching key.
+ // Read ONLY when the primary is genuinely absent, never on corruption/errors.
+ // Existing passwords and all encrypted finance data stay untouched.
+ static const _alternateStore=FlutterSecureStorage(
+  aOptions:AndroidOptions(encryptedSharedPreferences:true));
  static const _key='waffra_device_phone_credentials_v2';
  static const _iterations=600000;
+ static Future<String?> _readVerifier()async{
+  final primary=await _store.read(key:_key);
+  if(primary!=null)return primary; // Do NOT mask damaged or foreign records.
+  return _alternateStore.read(key:_key); // No new enrollment, copy or delete.
+ }
  static const _recoveryKey='waffra_phone_missing_verifier_signout_recovery_v1';
 
  /// One-time handoff for accounts signed in on an older APK which never
@@ -125,7 +136,7 @@ abstract final class WaffraLocalPhoneCredentials {
  /// A secure verifier may remain valid after an older profile was edited.
  /// The existence check never returns the phone, password or verifier bytes.
  static Future<bool> hasRegisteredCredentials() async =>
-   (await _store.read(key:_key))!=null;
+   (await _readVerifier())!=null;
 
  /// Check that sign-out will not strand a phone account with a missing,
  /// invalid or unrelated local verifier. This only checks verifier integrity:
@@ -155,11 +166,11 @@ abstract final class WaffraLocalPhoneCredentials {
   }catch(_){return WaffraLocalCredentialProbe.malformed;}
  }
  static Future<WaffraLocalCredentialProbe> probeForPhone(String phone) async =>
-   inspectStoredRecord(await _store.read(key:_key),phone:phone);
+   inspectStoredRecord(await _readVerifier(),phone:phone);
 
  static Future<void> register({required String phone,
   required String password})async{
-  final saved=await _store.read(key:_key);
+  final saved=await _readVerifier();
   if(saved!=null){
    // Never overwrite a user's password without verifying existing credentials.
    // Reset/login recovery requires a dedicated owner-approved workflow.
@@ -177,7 +188,7 @@ abstract final class WaffraLocalPhoneCredentials {
   if(!validPhone(phone)||!validPassword(password)){
    throw StateError('invalid_local_credentials');
   }
-  final saved=await _store.read(key:_key);
+  final saved=await _readVerifier();
   if(saved==null){
    await register(phone:phone,password:password);
    // Do not write a completed profile if Android secure storage did not
@@ -208,7 +219,7 @@ abstract final class WaffraLocalPhoneCredentials {
   String? oldSalt,String? oldHash,
  })async{
   if(!validPhone(phone)||!validPassword(password))return false;
-  final saved=await _store.read(key:_key);
+  final saved=await _readVerifier();
   if(saved!=null){
    final obj=jsonDecode(saved);
    return obj is Map<String,dynamic> &&

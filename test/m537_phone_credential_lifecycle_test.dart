@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -129,4 +130,41 @@ void main() {
     expect(await WaffraLocalPhoneCredentials.finishSignInRecoveryAfterBiometric(
       phone: phone, password: password), isFalse);
   });
+
+  test('M546 alternate OS verifier lookup is read-only and never masks a primary record', () {
+    final src=File('lib/waffra_local_phone_credentials.dart').readAsStringSync();
+    expect(src, contains('AndroidOptions(encryptedSharedPreferences:true)'));
+    final start=src.indexOf(' static Future<String?> _readVerifier()async{');
+    final end=src.indexOf(' static const _recoveryKey=',start);
+    expect(start, greaterThan(0));
+    expect(end, greaterThan(start));
+    final fallback=src.substring(start,end);
+    expect(fallback,contains('final primary=await _store.read(key:_key);'));
+    expect(fallback,contains('if(primary!=null)return primary;'));
+    expect(fallback,contains('return _alternateStore.read(key:_key);'));
+    expect(fallback.indexOf('if(primary!=null)return primary;'),
+      lessThan(fallback.indexOf('return _alternateStore.read(key:_key);')));
+    expect(fallback,isNot(contains('.write(')));
+    expect(fallback,isNot(contains('.delete(')));
+    expect(src,contains('inspectStoredRecord(await _readVerifier(),phone:phone)'));
+    expect(src,contains('(await _readVerifier())!=null'));
+    expect(RegExp(r'final saved=await _readVerifier\(\);').allMatches(src).length,3);
+  });
+
+  test('M546 a missing original OS verifier is not a wrong password or a license to reset', () async {
+    expect(await WaffraLocalPhoneCredentials.probeForPhone(phone),
+      WaffraLocalCredentialProbe.missing);
+    expect(await WaffraLocalPhoneCredentials.verify(
+      phone:phone,password:password),isFalse);
+    final old=await WaffraLocalPhoneCredentials.deriveRecord(
+      phone:phone,password:password);
+    final unchanged=jsonEncode(old);
+    expect(await WaffraLocalPhoneCredentials.canResumeRecord(
+      unchanged,phone:phone,password:password),isTrue);
+    expect(await WaffraLocalPhoneCredentials.canResumeRecord(
+      unchanged,phone:phone,password:'incorrect-owner-password'),isFalse);
+    expect(await WaffraLocalPhoneCredentials.canResumeRecord(
+      unchanged,phone:otherPhone,password:password),isFalse);
+    expect(jsonEncode(old),unchanged);
+  },timeout:const Timeout(Duration(minutes:3)));
 }
