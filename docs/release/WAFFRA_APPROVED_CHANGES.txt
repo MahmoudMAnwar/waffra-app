@@ -2470,3 +2470,10 @@ M462 category-precedence follow-up (5 Nov 2026): only an owner-confirmed learned
 - Existing device sign-out and saved phone/password reauthentication still work from the returning-user path; existing accounts do NOT have to choose again on app updates or biometric unlock. No account, SQLCipher or SMS mutations on choice taps; no remote sign-in guarantee where no local account exists.
 - Added `test/m510_first_launch_auth_choice_test.dart` to verify original branded page, labels, keys, click callbacks and source-gated form entry/back behavior and that existing registered login is retained.
 - Status: Draft PR #436 candidate, CI and Android fresh-install + over-old APK validation pending.
+
+
+[M513 / 2026-11-07 — Logout confirmation and login credential integrity; PR #445]
+- User-reproduced Android screenshots (#444): remove the second password repair dialog from the sign-out flow. Home and the mandatory/idle biometric gate now ask the single explicit “هل أنت متأكد من تسجيل الخروج؟” with “نعم” and “لا”. Cancel makes no session change; Confirm invokes the same protected sign-out authority.
+- Before a new phone account is marked registered, ensure the expected OS-protected phone/password verifier exists for the registered phone. Subsequent login must still verify the original unmodified password; never reset it during sign-out.
+- If the secure verifier is genuinely missing, malformed, or bound to a different phone and no verified legacy login exists, sign-out refuses safely with short feedback rather than displaying a new-password wizard or stranding the owner. SQLCipher financial data, biometrics, native SMS suspension and existing credentials are untouched.
+- Regression tests cover Home/biometric/idle Yes-No behavior and original verifier guard. Signed Android clean account creation and upgrade-over-existing-data tests remain required; do not label this production-certified from CI alone.
