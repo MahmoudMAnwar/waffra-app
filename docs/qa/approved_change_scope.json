@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
   "change_id": "M513-M514-SAFE-LOGOUT-SMS-REVIEW-20261107",
-  "human_scope_review": "Owner supplied new Android evidence and directly requested all listed SMS review fixes in PR #445 on 2026-11-07, recorded as Issues #446-#451 and docs/WAFFRA_REQUIREMENTS.md. Human owner still must verify actual Android acceptance. M385 scopes below bind all edits to existing M513 logout and M514 SMS scan/count, encrypted per-message exclusions, conditional safe learned rules, bank incoming-transfer classification, screen/account review and exact suffix. No SQLCipher finance cutover, weakening authentication, auto-post, or destruction of wallet/previous installation data is authorized.",
+  "human_scope_review": "Owner supplied new Android evidence and directly requested all listed SMS review fixes in PR #445 on 2026-11-07, recorded as Issues #446-#451 and docs/WAFFRA_REQUIREMENTS.md. Human owner still must verify actual Android acceptance. M385 scopes below bind all edits to existing M513 logout and M514 SMS scan/count, encrypted per-message exclusions, conditional safe learned rules, bank incoming-transfer classification, screen/account review and exact suffix. No SQLCipher finance cutover, weakening authentication, auto-post, or destruction of wallet/previous installation data is authorized. M515 Issue #452: user-created named budget with verified bank account shows false persistence error because challengeAndBudgetUpdate omitted the independent budget field. Bound policy and tests authorize adding that key to strict budget-specific captures only, without changing finance posting authority.",
   "user_requested_changes": [
     "2026-11-07 Issue #444: after signing up, Sign out must show exactly one 'هل أنت متأكد من تسجيل الخروج؟' confirmation with 'نعم' and 'لا' from Home and both biometric lock entry points. No new password/confirmation/repair popup in normal logout.",
     "2026-11-07 Issue #444: ensure successful new phone registration persists a matching OS-secure verifier BEFORE committing the phone profile; re-login must verify original phone/password. A missing/malformed/different-owner secure record must fail closed with a short user-visible error, not silently reset or bypass.",
@@ -14,7 +14,8 @@
     "2026-11-07 owner screenshot #450: When creating verified account while reviewing SMS, prefill source-appropriate masked last-four as editable suggestion only. See docs/WAFFRA_REQUIREMENTS.md and PR #445.",
     "2026-11-07 owner screenshot #451: Investigate and repair confirmed SMS attachments and later editing with same protected SQLCipher guarantees as manual. See docs/WAFFRA_REQUIREMENTS.md and PR #445.",
     "2026-11-07 owner repeated #447: remove the remaining two user-facing Arabic 'غامضة' strings in on-demand AI review confirmation and SMS security settings; use clear 'تحتاج مراجعة' language, while preserving all classification, consent and finance behavior.",
-    "2026-11-07 #452 M515: fix verified SQLCipher account-linked standalone budget failure, using budget-specific captured-field scoping and named-budget allowlist; preserve all other finance and ensure no optimistic success message on failed commit."
+    "2026-11-07 #452 M515: fix verified SQLCipher account-linked standalone budget failure, using budget-specific captured-field scoping and named-budget allowlist; preserve all other finance and ensure no optimistic success message on failed commit.",
+    "2026-11-07 M515 Issue #452 (owner screenshot): fix verified standalone account-linked budget rejection by adding ONLY `waffra_named_budgets_v1` to the approved challengeAndBudgetUpdate scope and narrowing unchanged unrelated optional Home modules; test actual SQLCipher commit, stale conflict, no finance mutation, and cold-reload. No finance write bypass or user-data reset."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -22,6 +23,7 @@
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
     "lib/storage/waffra_encrypted_finance_session.dart",
+    "lib/storage/waffra_home_transaction_capture.dart",
     "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
     "lib/storage/waffra_verified_finance_authority.dart",
     "lib/waffra_account_transaction_form.dart",
@@ -35,10 +37,10 @@
     "test/m506_android_nine_regressions_test.dart",
     "test/m513_logout_confirmation_test.dart",
     "test/m514_sms_review_regressions_test.dart",
+    "test/m515_budget_verified_save_test.dart",
     "test/qa/m452_sms_review_signup_regression_test.py",
     "test/storage/m514_sms_receipt_regression_test.dart",
-    "lib/storage/waffra_home_transaction_capture.dart",
-    "test/m515_budget_verified_save_test.dart"
+    "test/storage/m515_budget_account_save_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -197,6 +199,10 @@
       {
         "start": "        WaffraFinanceRoute.challengeAndBudgetUpdate => <String>{",
         "end": "        WaffraFinanceRoute.recurringPostingAndPostponement => <String>{"
+      },
+      {
+        "start": "  Future<WaffraFinanceAuthorityRead> saveCaptured({",
+        "end": "  /// M457: add one user-confirmed manual entry without rewriting any existing"
       }
     ],
     "test/qa/m452_sms_review_signup_regression_test.py": [
@@ -209,6 +215,10 @@
       {
         "start": "      WaffraFinanceRoute.categoryCreateEditDeleteRestore =>",
         "end": "      _ => const <String>{},"
+      },
+      {
+        "start": "  static void narrowVerifiedModuleEdit({",
+        "end": "  /// Exact string equality is equivalent to encoding both JSON strings,"
       }
     ]
   }
