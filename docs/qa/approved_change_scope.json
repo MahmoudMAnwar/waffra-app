@@ -1,59 +1,26 @@
 {
   "contract_version": 1,
-  "change_id": "M545-CONFIRM-ONLY-LOGOUT-OS-SECURE-RECOVERY-AT-LOGIN-20261107",
-  "human_scope_review": "Owner supplied two signed-Android screenshots Nov 7 2026 (Issue #478 missing secure verifier blocks logout; Issue #479 excessive login explanatory text and wrong Create Account button). Authorized only bounded local phone login/logout recovery and login screen navigation; preserve SQLCipher money, registered profiles, bank SMS consent/owner isolation, biometric security, existing account password when verifier is intact. Human signed Android verification required; no bypass of corrupt/different-owner verifiers. This replaces prior merged M531 candidate scope because the base is current main. M533 Issue #481: recurring M274 emulator crashes on 37.2.13 while actual footer tap succeeds and Flutter Driver dies during eye test (run 42379593762, job 128424273986). Owner demanded definitive fix. Only pinned official stable Android emulator 36.4.10, SwiftShader without Vulkan, binary version verification, bounded failure artifacts and an independent source test are authorized. No skipping real emulator, no fake-pass, no financial/security runtime modifications. M533 followup Issue #481 proves GitHub M274 workflow showed success with both Android and golden jobs skipped on docs-only final push (M412 incremental impact false). Bounded change only inside M274-specific impact job sets run:true on every triggered workflow, retaining M412 telemetry and actual failed jobs' nonzero status. No broad M412 engine behavior changed. M533 follow-up: exact M174 Python QA failed only obsolete M412 wiring test treating the new mandatory terminal no-skip job as normal incremental job; scoped test correction explicitly checks the terminal job's three needs and always() while keeping all older strict requirements for real jobs and other workflows. M534 correction: real Android screenshot requires pinning release-note final HEAD too. Explicit owner request to stop repeated failures approves only M274 pull_request path addition for M449 note, ensuring tests execute on final documentation SHA. No skip. M535 #482: exact SHA f9211d7 M274 full real Android driver timed out with 866 VM Service websocket reconnect warnings, emulator alive; attempt a lightweight supported API35 aosp_atd test image instead of Google APIs, bound VM attach to 360 seconds and preserve ADB/logcat diagnostics on true failure. No test bypass or production runtime change. M536: owner directly requested repair of failing M174 Python regression; obsolete M386 test demands google_apis after approved M535 AOSP ATD switch. Allow only narrow M386 expectation update, preserving mandatory real Android emulator assertions. M537: owner requests executable pre-APK phone credential lifecycle tests. Add isolated FlutterSecureStorage mock-backed test only; no production behavior change; verify registration, repeated authentication, wrong password, foreign phone, malformed and absent verifier, and no overwrite. M538: owner explicitly orders emulator stability fix after run 42389972623: actual AOSP ATD VM connected, emulator process died during first footer test; host 15Gi RAM and 81G disk free after crash. Scope strictly to M274 emulator resources, no UI assertion skips: allocate 4 virtual cores, 3072M RAM and 384M heap and retain pinned API35 AOSP ATD, real driver and hard gate. M539: repair cumulative M385 authorization after M174 run 42391282341 revealed both the M536 AOSP image expectation and M538 emulator resource budget function were edited, so both must remain explicitly bounded; no bypass or broader scope. M540: M174 M533 strict runner test still asserted cores: 2 after the approved 4-core M538 resource experiment; update only its existing real-device contract function to cores: 4; retain all real flutter drive and fail-closed checks. M543: bounded test-only M274 disposable Android manifest compatibility step after flutter create, strict M533 source guard for that test-only step, removal of broken M274 prelaunch emulator -version causing exit 127. Production lib/manifest and real Android/golden gates unchanged. Upstream Flutter engine issue #192736 evidences Linux x86_64 Impeller GLES killing QEMU; exact-head Android success still required. M545 issue #483 supersedes prior M478 password-at-logout wizard: source changes constrained to existing _signIn() and logout() only, removal of obsolete recovery popup, new bounded OS-secure phone grant helpers, and focused M479/M537 regression tests. No SQLCipher or financial changes. Must certify same-SHA M385, whole Flutter and real M274 before merge. M545 M385 exact-diff correction: unlike historic PR #480, this PR only changes seven direct requirement/credential/login/test files. Remove inherited M533/M274 workflow/test filenames from allowed list; never authorize unrelated files. M429 run 42398713719 caught this.",
+  "change_id": "M546-EXISTING-SECURE-VERIFIER-ALTERNATE-READ-ONLY-20261107",
+  "human_scope_review": "M546 Issue #485: new signed Android screenshot proves same-phone/password re-login after M545 logout can hit missing/malformed OS verifier before password authentication. Authorized only read-only existing alternate Android secure-store verifier lookup when preferred record is absent; never fallback on corrupt/foreign primary, change original password, reset credentials, recreate identity, or alter SQLCipher/finance/SMS. New test, bounded code, requirements and final release notes. This is compatibility investigation, not proof of affected handset root cause; real signed Android fresh/update original password cycle required. Production PBKDF2 600000 preserved. No unrequested changes; exact-head CI all green before merge.",
   "user_requested_changes": [
-    "2026-11-07 #478: same owner who can sign in must be able to safely sign out; only a truly missing OS phone credential triggers an explicit fingerprint plus password recovery with read-back, before the otherwise simple Yes/No signout; never silently reset or overwrite passwords, finance or verified identity.",
-    "2026-11-07 #479: remove verbose no-local-account/restore-backup text on sign-in and replace lower Create Account action with Back returning to the initial Create Account / Sign In choice, on both first install and previously signed-out Android account; navigation never overwrites existing identity or finance.",
-    "2026-11-07 #478/#479: add focused source and widget regression, document release details and run full exact-head CI plus real signed Android fresh/update tests before merging.",
-    "2026-11-07 #481 M533: fix repeated Android M274 emulator process deaths with immutable upstream stable emulator 36.4.10 build 15004761, supported SwiftShader GLES and Vulkan disabled, version witness, crash evidence; continue to run actual API35 UI driver and fail on any actual UI or infrastructure failure.",
-    "2026-11-07 Issue #481 M533: do not let M412's latest-commit-only skip change required M274 Android/visual jobs into false-green workflow after last release-notes commit; both actual jobs must run for every triggered M274 PR workflow and have successful independent job conclusions.",
-    "2026-11-07 M533 / #481: align the existing M412 source QA test with the new always-executed mandatory M274 certification job without relaxing exact M412 impact gating checks for the actual Android/golden jobs or any other workflows.",
-    "M534 Issue #481: final release-notes-only push must also run real mandatory M274 Android and golden tests on exact final PR head; add only docs/release/WAFFRA_APPROVED_CHANGES.txt to M274 pull request paths and retain mandatory certification gate.",
-    "2026-11-07 M535 Issue #482: resolve recurring M274 real Android VM Service connection timeout with API35 AOSP Test Device image, bounded attach timeout and debugging; keep genuine footer/eye Flutter engine assertions, fail-closed certification and unaltered SQLCipher finance and authentication sources.",
-    "M536: update stale M386 Android runner source test to assert approved aosp_atd image, without bypassing actual emulator or finance QA.",
-    "M537: executable Flutter test of local credential register, verify, repeated login, wrong password, missing/corrupt/foreign verifier; keep financial data untouched and run exact-head CI.",
-    "M538: stabilize crashing real Android emulator by raising its CPU/RAM/heap within available hosted runner capacity, preserve fail-closed real UI tests.",
-    "M545 2026-11-07 issue #483 user-confirmed final UX OVERRIDES M478: Sign out must ONLY show Yes/No. Yes exits without any password, biometric, recovery wizard or further popup. Missing-verifier compatibility is staged silently, bound to OS-secure storage, then recovered only at next verified login; no data deletion, no weaken PBKDF2, no auto identity takeover."
+    "2026-11-07 Issue #485: owner signout Yes succeeds but original phone/password login fails due to missing/malformed secure verifier; restore only authentic existing secure verifier from supported alternate backend when primary truly absent; preserve finance and original password; do not auto-reset or bypass verification."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "lib/main.dart",
     "lib/waffra_local_phone_credentials.dart",
-    "test/m479_login_logout_and_back_test.dart",
     "test/m537_phone_credential_lifecycle_test.dart"
   ],
   "bounded_sections": {
-    "lib/main.dart": [
-      {
-        "start": " Future<void> completeGoogleCountrySetup(String selectedCurrency)async{",
-        "end": " Future<void> setPin("
-      },
-      {
-        "start": " String? _firstInstallChoice;",
-        "end": " @override void initState(){super.initState();_loadRegistered();}"
-      },
-      {
-        "start": " @override Widget build(BuildContext context){\n  if(!_registrationChecked){",
-        "end": "class ProfileForm extends StatefulWidget {"
-      },
-      {
-        "start": " Future<void> _signIn()async{",
-        "end": " String get maskedLastPhone{"
-      }
-    ],
     "lib/waffra_local_phone_credentials.dart": [
       {
-        "start": " static const _iterations=600000;",
-        "end": " static bool validPhone("
-      }
-    ],
-    "test/m479_login_logout_and_back_test.dart": [
+        "start": " static const _store=FlutterSecureStorage();",
+        "end": " /// One-time handoff for accounts signed in"
+      },
       {
-        "start": " test('M479 sign-in is minimal and Back returns to original auth choice',(){",
-        "end": " test('M478 malformed and foreign verifier never count as recoverable missing',(){"
+        "start": " static Future<bool> hasRegisteredCredentials() async =>",
+        "end": null
       }
     ],
     "test/m537_phone_credential_lifecycle_test.dart": [
