@@ -255,3 +255,30 @@ jobs:
           path: build/m274/*.log
           if-no-files-found: warn
           retention-days: 7
+
+  # M533: GitHub reports a workflow successful even when a conditional job
+  # was skipped. A release gate must prove the ACTUAL emulator and golden
+  # suites completed, not merely that the workflow had no failed jobs.
+  m274-required-android-certification:
+    name: M274 Mandatory Actual Android + Golden Completion Gate
+    needs: [m412-impact, widget-ui-and-golden-candidates, android-emulator-ui-taps]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Reject any skipped, cancelled or failed required UI job
+        shell: bash
+        env:
+          M274_IMPACT_RESULT: ${{ needs.m412-impact.result }}
+          M274_GOLDEN_RESULT: ${{ needs.widget-ui-and-golden-candidates.result }}
+          M274_ANDROID_RESULT: ${{ needs.android-emulator-ui-taps.result }}
+        run: |
+          set -euo pipefail
+          echo "M533 certification: M412=$M274_IMPACT_RESULT golden=$M274_GOLDEN_RESULT android=$M274_ANDROID_RESULT"
+          if [[ "$M274_IMPACT_RESULT" != "success" ||
+                "$M274_GOLDEN_RESULT" != "success" ||
+                "$M274_ANDROID_RESULT" != "success" ]]; then
+            echo "::error::M274 cannot certify a skipped, cancelled or failed real Android UI or golden job"
+            exit 1
+          fi
+          echo "M533_M274_REAL_JOBS_CONFIRMED:android_and_golden_success"
