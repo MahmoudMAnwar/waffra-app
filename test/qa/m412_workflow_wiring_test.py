@@ -63,6 +63,19 @@ class WorkflowWiringTest(unittest.TestCase):
                     block = jobs.split(f"  {job}:\n", 1)[1]
                     block = re.split(r"(?m)^  [a-zA-Z][\w-]*:\s*$",
                                      block, maxsplit=1)[0]
+                    if (name == "m274-production-ui-golden.yml"
+                            and job == "m274-required-android-certification"):
+                        # M533: final release gate is NOT an M412-skippable
+                        # regular test. Require every actual job and always().
+                        self.assertIn(
+                            "    needs: [m412-impact, widget-ui-and-golden-candidates, android-emulator-ui-taps]",
+                            block,
+                        )
+                        self.assertIn("    if: ${{ always() }}", block)
+                        self.assertIn("M274_ANDROID_RESULT", block)
+                        self.assertIn("M274_GOLDEN_RESULT", block)
+                        self.assertIn("exit 1", block)
+                        continue
                     self.assertIn("    needs: m412-impact", block)
                     self.assertIn("    if: ${{ needs.m412-impact.outputs.run == 'true' }}", block)
 
