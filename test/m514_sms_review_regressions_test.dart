@@ -156,4 +156,23 @@ void main(){
    .split('if (owner != null)').first;
   expect(ownerSwitch,contains('key.startsWith(excludedMessageInfoBucketPrefix)'));
  });
+
+ test('M518 live SMS and history prefer the same sender timestamp',(){
+  final receiver=File('native/WaffraAutoSmsReceiver.kt').readAsStringSync();
+  final store=File('native/WaffraAutoSmsStore.kt').readAsStringSync();
+  final history=store.split('fun importConsentMonth(context: Context, maxRead: Int = 500): Int').last
+   .split('fun claimReviewNotification(').first;
+  expect(receiver,contains('sms.timestampMillis'));
+  expect(store,contains('historical: Boolean = false, receivedAt: Long = at'));
+  expect(history,contains('"date_sent"'));
+  expect(history,contains('val senderTime = if (sentCol >= 0'));
+  expect(history,contains('val identityAt = if (senderTime > 946684800000L'));
+  expect(history,contains('historical = true, receivedAt = at'));
+  expect(history,contains('"date ASC, _id ASC"'));
+  expect(history,contains('lastAt = at'));
+  expect(history,contains('lastId = rowId'));
+  // No timestamp can justify coalescing different native SMS identities.
+  final flutter=File('lib/waffra_auto_sms.dart').readAsStringSync();
+  expect(flutter,contains('transferIdForMessage(String fingerprint)'));
+ });
 }
