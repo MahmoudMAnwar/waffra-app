@@ -114,7 +114,7 @@ void main() {
     expect(writer,contains("confirmedRecords.single['sourceType'] == 'sms'"));
   });
 
-  test('M513 sign-out must never prompt for password repair or bypass a missing verifier', () {
+  test('M506 local sign-out recovery requires fingerprint and never overwrites a verifier', () {
     final src=File('lib/main.dart').readAsStringSync();
     final logout=src.substring(src.indexOf(' Future<void> logout()async {'),
       src.indexOf(' Future<void> setPin('));
