@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
   "change_id": "M478-M479-M533-LOGIN-LOGOUT-EMULATOR-STABILITY-20261107",
-  "human_scope_review": "Owner supplied two signed-Android screenshots Nov 7 2026 (Issue #478 missing secure verifier blocks logout; Issue #479 excessive login explanatory text and wrong Create Account button). Authorized only bounded local phone login/logout recovery and login screen navigation; preserve SQLCipher money, registered profiles, bank SMS consent/owner isolation, biometric security, existing account password when verifier is intact. Human signed Android verification required; no bypass of corrupt/different-owner verifiers. This replaces prior merged M531 candidate scope because the base is current main. M533 Issue #481: recurring M274 emulator crashes on 37.2.13 while actual footer tap succeeds and Flutter Driver dies during eye test (run 42379593762, job 128424273986). Owner demanded definitive fix. Only pinned official stable Android emulator 36.4.10, SwiftShader without Vulkan, binary version verification, bounded failure artifacts and an independent source test are authorized. No skipping real emulator, no fake-pass, no financial/security runtime modifications. M533 followup Issue #481 proves GitHub M274 workflow showed success with both Android and golden jobs skipped on docs-only final push (M412 incremental impact false). Bounded change only inside M274-specific impact job sets run:true on every triggered workflow, retaining M412 telemetry and actual failed jobs' nonzero status. No broad M412 engine behavior changed. M533 follow-up: exact M174 Python QA failed only obsolete M412 wiring test treating the new mandatory terminal no-skip job as normal incremental job; scoped test correction explicitly checks the terminal job's three needs and always() while keeping all older strict requirements for real jobs and other workflows. M534 correction: real Android screenshot requires pinning release-note final HEAD too. Explicit owner request to stop repeated failures approves only M274 pull_request path addition for M449 note, ensuring tests execute on final documentation SHA. No skip. M535 #482: exact SHA f9211d7 M274 full real Android driver timed out with 866 VM Service websocket reconnect warnings, emulator alive; attempt a lightweight supported API35 aosp_atd test image instead of Google APIs, bound VM attach to 360 seconds and preserve ADB/logcat diagnostics on true failure. No test bypass or production runtime change.",
+  "human_scope_review": "Owner supplied two signed-Android screenshots Nov 7 2026 (Issue #478 missing secure verifier blocks logout; Issue #479 excessive login explanatory text and wrong Create Account button). Authorized only bounded local phone login/logout recovery and login screen navigation; preserve SQLCipher money, registered profiles, bank SMS consent/owner isolation, biometric security, existing account password when verifier is intact. Human signed Android verification required; no bypass of corrupt/different-owner verifiers. This replaces prior merged M531 candidate scope because the base is current main. M533 Issue #481: recurring M274 emulator crashes on 37.2.13 while actual footer tap succeeds and Flutter Driver dies during eye test (run 42379593762, job 128424273986). Owner demanded definitive fix. Only pinned official stable Android emulator 36.4.10, SwiftShader without Vulkan, binary version verification, bounded failure artifacts and an independent source test are authorized. No skipping real emulator, no fake-pass, no financial/security runtime modifications. M533 followup Issue #481 proves GitHub M274 workflow showed success with both Android and golden jobs skipped on docs-only final push (M412 incremental impact false). Bounded change only inside M274-specific impact job sets run:true on every triggered workflow, retaining M412 telemetry and actual failed jobs' nonzero status. No broad M412 engine behavior changed. M533 follow-up: exact M174 Python QA failed only obsolete M412 wiring test treating the new mandatory terminal no-skip job as normal incremental job; scoped test correction explicitly checks the terminal job's three needs and always() while keeping all older strict requirements for real jobs and other workflows. M534 correction: real Android screenshot requires pinning release-note final HEAD too. Explicit owner request to stop repeated failures approves only M274 pull_request path addition for M449 note, ensuring tests execute on final documentation SHA. No skip. M535 #482: exact SHA f9211d7 M274 full real Android driver timed out with 866 VM Service websocket reconnect warnings, emulator alive; attempt a lightweight supported API35 aosp_atd test image instead of Google APIs, bound VM attach to 360 seconds and preserve ADB/logcat diagnostics on true failure. No test bypass or production runtime change. M536: owner directly requested repair of failing M174 Python regression; obsolete M386 test demands google_apis after approved M535 AOSP ATD switch. Allow only narrow M386 expectation update, preserving mandatory real Android emulator assertions.",
   "user_requested_changes": [
     "2026-11-07 #478: same owner who can sign in must be able to safely sign out; only a truly missing OS phone credential triggers an explicit fingerprint plus password recovery with read-back, before the otherwise simple Yes/No signout; never silently reset or overwrite passwords, finance or verified identity.",
     "2026-11-07 #479: remove verbose no-local-account/restore-backup text on sign-in and replace lower Create Account action with Back returning to the initial Create Account / Sign In choice, on both first install and previously signed-out Android account; navigation never overwrites existing identity or finance.",
@@ -10,7 +10,8 @@
     "2026-11-07 Issue #481 M533: do not let M412's latest-commit-only skip change required M274 Android/visual jobs into false-green workflow after last release-notes commit; both actual jobs must run for every triggered M274 PR workflow and have successful independent job conclusions.",
     "2026-11-07 M533 / #481: align the existing M412 source QA test with the new always-executed mandatory M274 certification job without relaxing exact M412 impact gating checks for the actual Android/golden jobs or any other workflows.",
     "M534 Issue #481: final release-notes-only push must also run real mandatory M274 Android and golden tests on exact final PR head; add only docs/release/WAFFRA_APPROVED_CHANGES.txt to M274 pull request paths and retain mandatory certification gate.",
-    "2026-11-07 M535 Issue #482: resolve recurring M274 real Android VM Service connection timeout with API35 AOSP Test Device image, bounded attach timeout and debugging; keep genuine footer/eye Flutter engine assertions, fail-closed certification and unaltered SQLCipher finance and authentication sources."
+    "2026-11-07 M535 Issue #482: resolve recurring M274 real Android VM Service connection timeout with API35 AOSP Test Device image, bounded attach timeout and debugging; keep genuine footer/eye Flutter engine assertions, fail-closed certification and unaltered SQLCipher finance and authentication sources.",
+    "M536: update stale M386 Android runner source test to assert approved aosp_atd image, without bypassing actual emulator or finance QA."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -21,7 +22,8 @@
     ".github/workflows/m274-production-ui-golden.yml",
     ".github/scripts/run-m274-android-tap-smoke.sh",
     "test/qa/m533_android_emulator_runner_contract_test.py",
-    "test/qa/m412_workflow_wiring_test.py"
+    "test/qa/m412_workflow_wiring_test.py",
+    "test/qa/m386_m274_emulator_disk_safety_test.py"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -70,6 +72,12 @@
       {
         "start": "                for job in names:",
         "end": "    def test_full_financial_security_and_main_release_gates_stay_mandatory"
+      }
+    ],
+    "test/qa/m386_m274_emulator_disk_safety_test.py": [
+      {
+        "start": "    def test_real_android_engine_is_still_required(self):",
+        "end": "    def test_lower_emulator_userdata_budget_avoids_documented_7372_mb_requirement"
       }
     ]
   }
