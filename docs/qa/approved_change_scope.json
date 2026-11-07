@@ -5,7 +5,8 @@
   "user_requested_changes": [
     "2026-11-07 Issue #444: after signing up, Sign out must show exactly one 'هل أنت متأكد من تسجيل الخروج؟' confirmation with 'نعم' and 'لا' from Home and both biometric lock entry points. No new password/confirmation/repair popup in normal logout.",
     "2026-11-07 Issue #444: ensure successful new phone registration persists a matching OS-secure verifier BEFORE committing the phone profile; re-login must verify original phone/password. A missing/malformed/different-owner secure record must fail closed with a short user-visible error, not silently reset or bypass.",
-    "2026-11-07 Issue #444: preserve all previously saved financial records, biometric session protection, native SMS suspension and SQLCipher ledger through signout and interrupted/failed recovery, and add focused regression tests."
+    "2026-11-07 Issue #444: preserve all previously saved financial records, biometric session protection, native SMS suspension and SQLCipher ledger through signout and interrupted/failed recovery, and add focused regression tests.",
+    "2026-11-07 M513 CI witness: reconcile one obsolete M424 biometric sign-out test to require user-confirmed Yes/No before callback, with No not signing out and Yes signing out once; no change to biometric unlocking."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -15,7 +16,8 @@
     "lib/waffra_mandatory_biometric_gate.dart",
     "test/m502_logout_paths_test.dart",
     "test/m506_android_nine_regressions_test.dart",
-    "test/m513_logout_confirmation_test.dart"
+    "test/m513_logout_confirmation_test.dart",
+    "test/m424_mandatory_biometrics_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -60,6 +62,12 @@
       {
         "start": "  test('M506 local sign-out recovery requires fingerprint and never overwrites a verifier',",
         "end": "  test('M506 native bank sender aliases preserve OTP and consented review',"
+      }
+    ],
+    "test/m424_mandatory_biometrics_test.dart": [
+      {
+        "start": "  testWidgets('M424: sign-out remains available without unlocking funds',",
+        "end": "  test('M424: home route no longer exposes optional PIN settings'"
       }
     ]
   }
