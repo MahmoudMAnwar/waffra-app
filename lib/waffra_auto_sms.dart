@@ -144,31 +144,10 @@ abstract final class WaffraAutoSms {
   return _boolCall('ackCommittedAutoBankSms',ids);
  }
 
- /// Owner-confirmed exclude, persisted atomically with removal from review.
- /// This is NEVER a ledger commit and never writes a committed-finance hash.
+ /// M514 #448: persist exclusions independently of financial commits.
  static Future<bool> excludeMessages(List<String> ids)async{
-  if(ids.isEmpty||ids.length>100||
-     ids.any((id)=>!RegExp(r'^[a-f0-9]{64}
-  if(ids.isEmpty||ids.length>100)return false;
-  return _boolCall('ackAutoBankSms',ids);
- }
- static Future<bool> notifyCommitted({
-  required String hash,required double amount,required bool income,
-  required bool linkedBudget,
- })async{
-  if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(hash)||!amount.isFinite||amount<=0)
-   return false;
-  return _boolCall('notifyAutoSmsSaved',{
-   'hash':hash,'amount':amount.toStringAsFixed(2),
-   'income':income,'linkedBudget':linkedBudget,
-  });
- }
- static Future<bool> notifyReview(String hash)async{
-  if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(hash))return false;
-  return _boolCall('notifyAutoSmsNeedsReview',hash);
- }
-}
-).hasMatch(id)))return false;
+  if(ids.isEmpty || ids.length>100 ||
+     ids.any((id)=>!RegExp(r'^[a-f0-9]{64}$').hasMatch(id)))return false;
   return _boolCall('excludeAutoBankSms',ids);
  }
  static Future<bool> acknowledge(List<String> ids)async{
