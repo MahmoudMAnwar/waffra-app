@@ -35,7 +35,9 @@ void main(){
   expect(review,isNot(contains('resumeAfterTeachId')));
   expect(review,contains("decision=='transfer'&&mounted"));
   expect(review,contains('await _reviewSmsAccountTransfer(item:selected,facts:facts);'));
-  expect(review,contains('final acknowledged=await WaffraAutoSms.acknowledge([id]);'));
+  expect(review,contains('final acknowledged=await WaffraAutoSms.excludeMessages([id]);'));
+  expect(review,contains('final acknowledged=await WaffraAutoSms.acknowledgeCommitted([id]);'));
+  expect(review,isNot(contains('WaffraAutoSms.acknowledge([id])')));
   final reviewAction=review.indexOf("decision=='review'&&mounted");
   final confirmed=review.indexOf('if(smsHashes.contains(bankSmsHash(body)))',reviewAction);
   final rule=review.indexOf('await _learnSafeSmsRule(',confirmed);

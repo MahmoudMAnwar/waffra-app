@@ -390,6 +390,26 @@ class MainActivity : FlutterFragmentActivity() {
                         }
                     }
                 }
+                "excludedAutoSmsMessages" -> {
+                    val app = applicationContext
+                    smsHistoryExecutor.execute {
+                        try {
+                            val items = WaffraAutoSmsStore.excludedMessages(app)
+                            runOnUiThread { result.success(items) }
+                        } catch (_: Exception) {
+                            runOnUiThread { result.error("SMS_EXCLUDED_MESSAGES_READ_FAILED",
+                                "Could not verify excluded message policy", null) }
+                        }
+                    }
+                }
+                "restoreExcludedAutoSmsMessage" -> {
+                    val id = call.arguments as? String ?: ""
+                    val app = applicationContext
+                    smsHistoryExecutor.execute {
+                        val restored = WaffraAutoSmsStore.restoreExcludedMessage(app, id)
+                        runOnUiThread { result.success(restored) }
+                    }
+                }
                 "excludeAutoSmsSender" -> {
                     val sender = call.arguments as? String ?: ""
                     val app = applicationContext
@@ -433,6 +453,29 @@ class MainActivity : FlutterFragmentActivity() {
                     smsHistoryExecutor.execute {
                         val acknowledged = WaffraAutoSmsStore.acknowledge(app, ids)
                         runOnUiThread { result.success(acknowledged) }
+                    }
+                }
+                "excludeAutoBankSms" -> {
+                    // M514 #448: unlike a reviewed financial commit, an
+                    // excluded message is sealed against rescan in its OWN
+                    // owner-scoped policy, never in the finance fingerprint.
+                    val values = call.arguments as? List<*>
+                    val ids = values?.filterIsInstance<String>()?.toSet() ?: emptySet()
+                    val app = applicationContext
+                    smsHistoryExecutor.execute {
+                        val excluded = WaffraAutoSmsStore.excludeMessages(app, ids)
+                        runOnUiThread { result.success(excluded) }
+                    }
+                }
+                "ackCompletedTransferAutoBankSms" -> {
+                    // M516 #455: only invoked after verified SQLCipher transfer;
+                    // a distinct encrypted fingerprint prevents future rescans.
+                    val values = call.arguments as? List<*>
+                    val ids = values?.filterIsInstance<String>()?.toSet() ?: emptySet()
+                    val app = applicationContext
+                    smsHistoryExecutor.execute {
+                        val completed = WaffraAutoSmsStore.acknowledgeCompletedTransfer(app, ids)
+                        runOnUiThread { result.success(completed) }
                     }
                 }
                 "ackCommittedAutoBankSms" -> {

@@ -70,10 +70,18 @@ void main(){
   expect(main,contains('forTransfer:true,transferTarget:target'));
   expect(main,contains("value:'__create_transfer_provider__'"));
   expect(main,contains("value:'__create_transfer_child__'"));
-  expect(main,contains('onCreateAccount:(group,createProvider)async{'));
+  expect(main,contains('createAccountInsideEntryDropdown('));
+  expect(main,contains('mainProvider:true,forTransfer:true,transferTarget:target'));
+  expect(main,contains('onCreateSmsAccount:(group,createProvider,isDestination)async{'));
   expect(form,contains('if(!mounted||created==null)return;'));
   expect(form,contains('!belongsTo(destinationProvider,destination)'));
-  expect(form,contains('if(group!=null&&widget.onCreateAccount!=null)'));
+  // The inline Add entry point is available from both manual and SMS review.
+  // Still require a chosen provider before the dependent child is selectable.
+  expect(form,contains('if(group!=null&&(widget.onCreateAccount!=null||widget.onCreateSmsAccount!=null))'));
+  expect(form,contains("value:'__create_child__'"));
+  expect(form,contains('onChanged:saving||saved||creatingAccount||group==null?null:(v)async{'));
+  expect(form,contains("if(v=='__create_child__')"));
+  expect(form,contains('await createFromDropdown(createProvider:false,'));
   expect(manager,contains('onCreateAccount:createAccountInsideComposer'));
  });
 

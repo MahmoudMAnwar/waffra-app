@@ -323,6 +323,20 @@ class WaffraEncryptedFinanceSession {
     );
   }
 
+  /// First encrypted attachment for an existing verified SMS or manual entry.
+  /// Preserves amount, account links, SMS hash and all unrelated ledger rows.
+  Future<WaffraFinanceSnapshotState> attachReceiptsToExisting({
+    required String entryId,
+    required Map<String,Object?> expectedOriginal,
+    required List<Uint8List> images,
+    required bool userConfirmed,
+  }) async {
+    _requireEnabled();
+    return bridge.attachReceiptsToExisting(
+      entryId:entryId,expectedOriginal:expectedOriginal,
+      images:images,userConfirmed:userConfirmed);
+  }
+
   /// Save normalized transaction + raw picker picture bytes atomically after
   /// confirmation. Never create legacy plaintext receipt files.
   Future<WaffraEncryptedReceiptTransactionResult> appendWithReceiptBytes({

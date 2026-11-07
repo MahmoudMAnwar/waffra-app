@@ -35,7 +35,23 @@ class M417AutoSmsContractTest(unittest.TestCase):
         home=self.read("lib/main.dart")
         self.assertIn("bulkSmsSheet(initialText:body,",home)
         self.assertIn("smsHashes.contains(bankSmsHash(body))",home)
-        self.assertIn("await WaffraAutoSms.acknowledge([id])",home)
+        # Income/expense and two-sided transfers have independent durable
+        # acknowledgements. A queue-only ACK can replay money on rescan.
+        self.assertIn(
+            "final acknowledged=await WaffraAutoSms.acknowledgeCommitted([id]);",
+            home)
+        self.assertIn(
+            "ack=await WaffraAutoSms.acknowledgeCompletedTransfer([id]);",
+            home)
+        transfer=home[home.index(" Future<void> _reviewSmsAccountTransfer({"):
+                      home.index(" Future<void> _reviewAutoSmsCandidates({")]
+        self.assertIn("requestId:WaffraAutoSms.transferIdForMessage(id)",transfer)
+        self.assertIn("if(!mounted||!saved)return;",transfer)
+        self.assertLess(
+            transfer.index("await api.transfer("),
+            transfer.index(
+                "ack=await WaffraAutoSms.acknowledgeCompletedTransfer([id]);"))
+        self.assertNotIn("await WaffraAutoSms.acknowledge([id])",home)
         self.assertIn("await WaffraAutoSms.disable();",home)
 
     def test_auto_posting_requires_guarded_finance_and_verified_notification(self):

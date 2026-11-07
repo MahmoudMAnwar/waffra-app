@@ -103,8 +103,10 @@ void main(){
     expect(source,contains('WaffraRegionalCopy.initialize(p)'));
     expect(source,contains('WaffraRegionalCopy.arabicCountrySubtag'));
     expect(source,contains('WaffraRegionalCopy.exitHint(english:waffraIsEnglish)'));
-    expect(source,contains('WaffraRegionalCopy.signOutTitle(english:waffraIsEnglish)'));
-    expect(source,contains('WaffraRegionalCopy.signOutBody(english:waffraIsEnglish)'));
+    expect(source,contains("'هل أنت متأكد من تسجيل الخروج؟'"));
+    expect(source,contains("Key('m513-home-signout-confirmation')"));
+    expect(source,contains("Key('m513-home-signout-no')"));
+    expect(source,contains("Key('m513-home-signout-yes')"));
     expect(source,contains('WaffraRegionalCopy.appError(english:waffraIsEnglish)'));
     expect(source,contains('waffra-regional-arabic-setting'));
     expect(source,contains('waffra-region-choice'));

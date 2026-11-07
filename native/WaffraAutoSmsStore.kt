@@ -37,6 +37,15 @@ object WaffraAutoSmsStore {
     // M509 #440: Sharded AES-GCM records of COMPLETED finance SMS fingerprints.
     // Value is sealed, owner-scoped and contains no raw SMS or bank numbers.
     private const val committedBucketPrefix = "encrypted_committed_sms_v1_"
+    // M514 #448: excluded review SMS are not finance commits. Keep independent
+    // owner-bound encrypted fingerprints so a historical rescan cannot replay them.
+    private const val excludedMessageBucketPrefix = "encrypted_excluded_sms_v1_"
+    // No raw SMS body: encrypted, owner-bound sender/time labels make
+    // individual excluded messages visible and reversible in Settings.
+    private const val excludedMessageInfoBucketPrefix = "encrypted_excluded_sms_info_v1_"
+    // M516 #455: a completed self-transfer is neither an excluded SMS nor
+    // a finance income/expense commit; store its own encrypted anti-replay ID.
+    private const val completedTransferBucketPrefix = "encrypted_completed_transfer_sms_v1_"
     private const val activeName = "enabled"
     // Hash of the verified signed-in account. No phone/email is saved here.
     private const val consentedOwnerName = "consented_account_sha256_v1"
@@ -182,9 +191,14 @@ object WaffraAutoSmsStore {
                 // A different verified account must never inherit completed
                 // message markers from the previous owner.
                 for (key in prefs.all.keys) {
-                    if (key.startsWith(committedBucketPrefix)) editor.remove(key)
+                    if (key.startsWith(committedBucketPrefix) ||
+                        key.startsWith(excludedMessageBucketPrefix) ||
+                        key.startsWith(excludedMessageInfoBucketPrefix) ||
+                        key.startsWith(completedTransferBucketPrefix)) editor.remove(key)
                 }
                 committedCipherCache.clear()
+                excludedMessageCipherCache.clear()
+                completedTransferCipherCache.clear()
                 editor.remove(queueName).remove(excludedSendersName).remove(historyCursorAt)
                     .remove(historyCursorId).remove(historySourceMonth)
                     .remove(historyComplete)
@@ -292,6 +306,130 @@ object WaffraAutoSmsStore {
 
     private fun isCommittedLocked(context: Context, id: String) =
         committedBucket(context, id).contains(id)
+
+    private val excludedMessageCipherCache =
+        mutableMapOf<String, Pair<String, Set<String>>>()
+
+    private fun excludedMessageBucket(context: Context, id: String): Set<String> {
+        if (!Regex("^[a-f0-9]{64}$").matches(id))
+            throw IllegalArgumentException("Invalid excluded SMS fingerprint")
+        val bucket = id.take(2)
+        val encrypted = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+            .getString(excludedMessageBucketPrefix + bucket, "") ?: ""
+        val cached = excludedMessageCipherCache[bucket]
+        if (cached != null && cached.first == encrypted) return cached.second
+        val decoded = open(encrypted)
+        val ids = (0 until decoded.length()).map { decoded.getString(it) }.toSet()
+        // Invalid stored policy must fail closed, not silently discard it.
+        if (ids.any { !Regex("^[a-f0-9]{64}$").matches(it) })
+            throw IllegalStateException("Invalid encrypted SMS exclusion record")
+        excludedMessageCipherCache[bucket] = encrypted to ids
+        return ids
+    }
+
+    private fun isExcludedMessageLocked(context: Context, id: String) =
+        excludedMessageBucket(context, id).contains(id)
+
+    private fun excludedMessageInfo(context: Context, id: String): Map<String, JSONObject> {
+        if (!Regex("^[a-f0-9]{64}$").matches(id))
+            throw IllegalArgumentException("Invalid excluded-message lookup")
+        val ciphertext = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+            .getString(excludedMessageInfoBucketPrefix + id.take(2), "") ?: ""
+        val array = open(ciphertext)
+        val result = mutableMapOf<String, JSONObject>()
+        for (i in 0 until array.length()) {
+            val record = array.getJSONObject(i)
+            val key = record.getString("id")
+            val sender = record.getString("sender")
+            val receivedAt = record.getLong("receivedAt")
+            if (!Regex("^[a-f0-9]{64}$").matches(key) ||
+                key.take(2) != id.take(2) || sender.length > 100 ||
+                receivedAt < 0 || result.put(key, record) != null)
+                throw IllegalStateException("Invalid excluded SMS label")
+        }
+        return result
+    }
+
+    /** Shows only excluded SMS identities and safe sender/time labels;
+     * pre-M517 encrypted fingerprints without labels remain visible by ID.
+     * Every record is still bound to the active owner by enabled().
+     */
+    fun excludedMessages(context: Context): List<Map<String, Any>> =
+        synchronized(mutex) {
+            if (!enabled(context)) throw IllegalStateException("SMS intake not active")
+            val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+            val result = mutableListOf<Map<String, Any>>()
+            val shards = prefs.all.keys.filter {
+                it.startsWith(excludedMessageBucketPrefix)
+            }
+            for (key in shards) {
+                val bucket = key.removePrefix(excludedMessageBucketPrefix)
+                if (!Regex("^[a-f0-9]{2}$").matches(bucket))
+                    throw IllegalStateException("Invalid excluded SMS shard")
+                val exemplar = bucket + "0".repeat(62)
+                val labels = excludedMessageInfo(context, exemplar)
+                for (id in excludedMessageBucket(context, exemplar)) {
+                    val info = labels[id]
+                    result.add(mapOf(
+                        "id" to id,
+                        "sender" to (info?.optString("sender") ?: ""),
+                        "receivedAt" to (info?.optLong("receivedAt", 0L) ?: 0L)
+                    ))
+                }
+            }
+            result.sortedWith(compareByDescending<Map<String, Any>> {
+                (it["receivedAt"] as? Long) ?: 0L
+            }.thenBy { it["id"] as String })
+        }
+
+    /** Restore just one excluded SMS; a later explicit rescan may offer it.
+     * Excluded sender policy, completed transfers and finance are unaffected.
+     */
+    fun restoreExcludedMessage(context: Context, id: String): Boolean =
+        synchronized(mutex) {
+            if (!enabled(context) || !Regex("^[a-f0-9]{64}$").matches(id))
+                return@synchronized false
+            try {
+                val current = excludedMessageBucket(context, id)
+                if (!current.contains(id)) return@synchronized false
+                val savedLabels = excludedMessageInfo(context, id).toMutableMap()
+                savedLabels.remove(id)
+                val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+                val succeeded = prefs.edit()
+                    .putString(excludedMessageBucketPrefix + id.take(2),
+                        seal(JSONArray(current.filter { it != id }).toString()))
+                    .putString(excludedMessageInfoBucketPrefix + id.take(2),
+                        seal(JSONArray(savedLabels.values.toList()).toString()))
+                    .commit()
+                if (succeeded) {
+                    excludedMessageCipherCache.clear()
+                    Handler(Looper.getMainLooper()).post { onChanged?.invoke() }
+                }
+                succeeded
+            } catch (_: Exception) { false }
+        }
+
+
+    private val completedTransferCipherCache =
+        mutableMapOf<String, Pair<String, Set<String>>>()
+    private fun completedTransferBucket(context: Context, id: String): Set<String> {
+        if (!Regex("^[a-f0-9]{64}$").matches(id))
+            throw IllegalArgumentException("Invalid completed transfer SMS fingerprint")
+        val bucket = id.take(2)
+        val encrypted = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+            .getString(completedTransferBucketPrefix + bucket, "") ?: ""
+        val cached = completedTransferCipherCache[bucket]
+        if (cached != null && cached.first == encrypted) return cached.second
+        val decoded = open(encrypted)
+        val ids = (0 until decoded.length()).map { decoded.getString(it) }.toSet()
+        if (ids.any { !Regex("^[a-f0-9]{64}$").matches(it) })
+            throw IllegalStateException("Invalid completed transfer SMS marker")
+        completedTransferCipherCache[bucket] = encrypted to ids
+        return ids
+    }
+
+    private fun isCompletedTransferLocked(context: Context, id: String) =
+        completedTransferBucket(context, id).contains(id)
 
     // Explicit user sender exclusion is encrypted and bound to this authenticated
     // owner. Do not reuse a removed sender as an automatic learned rule.
@@ -531,7 +669,7 @@ object WaffraAutoSmsStore {
     }
 
     fun offer(context: Context, sender: String, body: String, at: Long,
-              historical: Boolean = false): Boolean {
+              historical: Boolean = false, receivedAt: Long = at): Boolean {
         if (!enabled(context)) return false
         // Ignore excluded senders before even local financial parsing.
         try {
@@ -548,7 +686,9 @@ object WaffraAutoSmsStore {
                 val fingerprint = id(sender, body, at)
                 // Verified financial SMS is never offered again after
                 // rescan, reinstall-preserving update or OS resume.
-                if (isCommittedLocked(context, fingerprint))
+                if (isCommittedLocked(context, fingerprint) ||
+                    isExcludedMessageLocked(context, fingerprint) ||
+                    isCompletedTransferLocked(context, fingerprint))
                     return@synchronized false
                 for (i in 0 until queue.length()) {
                     if (queue.getJSONObject(i).optString("id") == fingerprint)
@@ -565,7 +705,7 @@ object WaffraAutoSmsStore {
                 queue.put(JSONObject().put("id", fingerprint)
                     .put("sender", sender.trim()).put("body", masked)
                     .put("sensitiveOtp", sensitive)
-                    .put("receivedAt", at)
+                    .put("receivedAt", receivedAt)
                     .put("reviewNotified", historical))
                 save(context, queue)
             } catch (_: Exception) { false }
@@ -697,6 +837,105 @@ object WaffraAutoSmsStore {
         }
 
     /**
+     * M514 #448: A user-excluded SMS must stay excluded on historical rescan.
+     * Unlike acknowledgeCommitted this does NOT mark any financial hash.
+     * One encrypted preferences commit persists BOTH the exact SMS IDs and
+     * their removal from the encrypted review queue. No whole-sender block.
+     */
+    fun excludeMessages(context: Context, ids: Set<String>): Boolean =
+        synchronized(mutex) {
+            if (!enabled(context) || ids.isEmpty() || ids.size > 100 ||
+                ids.any { !Regex("^[a-f0-9]{64}$").matches(it) })
+                return@synchronized false
+            try {
+                val queue = read(context)
+                val remaining = JSONArray()
+                val matched = mutableSetOf<String>()
+                val labels = mutableMapOf<String, JSONObject>()
+                for (i in 0 until queue.length()) {
+                    val row = queue.getJSONObject(i)
+                    val fingerprint = row.getString("id")
+                    if (ids.contains(fingerprint)) {
+                        matched.add(fingerprint)
+                        labels[fingerprint] = JSONObject()
+                            .put("id", fingerprint)
+                            .put("sender", row.optString("sender").take(100))
+                            .put("receivedAt", row.optLong("receivedAt", 0L))
+                    } else remaining.put(row)
+                }
+                // Fail closed if a selected SMS was neither queued nor
+                // previously excluded; a wrong-owner ID never gets marked.
+                if (ids.any { !matched.contains(it) &&
+                        !isExcludedMessageLocked(context, it) })
+                    return@synchronized false
+                val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+                val editor = prefs.edit()
+                    .putString(queueName, seal(remaining.toString()))
+                for ((bucket, additions) in matched.groupBy { it.take(2) }) {
+                    val updated = excludedMessageBucket(context,
+                        additions.first()).toMutableSet()
+                    updated.addAll(additions)
+                    editor.putString(excludedMessageBucketPrefix + bucket,
+                        seal(JSONArray(updated.toList()).toString()))
+                    val details = excludedMessageInfo(context, additions.first())
+                        .toMutableMap()
+                    for (item in additions) details[item] = labels.getValue(item)
+                    editor.putString(excludedMessageInfoBucketPrefix + bucket,
+                        seal(JSONArray(details.values.toList()).toString()))
+                }
+                val success = editor.commit()
+                if (success) {
+                    excludedMessageCipherCache.clear()
+                    Handler(Looper.getMainLooper()).post { onChanged?.invoke() }
+                }
+                success
+            } catch (_: Exception) { false }
+        }
+
+    /**
+     * M516 #455: confirmed account-to-account SMS transfer completion.
+     * A successful verified transfer occurs in SQLCipher BEFORE this ACK.
+     * This encrypted, owner-bound marker is NOT a user exclusion and does
+     * NOT claim a bank SMS was booked as an income/expense journal entry.
+     * Marker and queue removal use ONE synchronous preferences commit.
+     */
+    fun acknowledgeCompletedTransfer(context: Context, ids: Set<String>): Boolean =
+        synchronized(mutex) {
+            if (!enabled(context) || ids.isEmpty() || ids.size > 100 ||
+                ids.any { !Regex("^[a-f0-9]{64}$").matches(it) })
+                return@synchronized false
+            try {
+                val queue = read(context)
+                val remaining = JSONArray()
+                val matched = mutableSetOf<String>()
+                for (i in 0 until queue.length()) {
+                    val row = queue.getJSONObject(i)
+                    val fingerprint = row.getString("id")
+                    if (ids.contains(fingerprint)) matched.add(fingerprint)
+                    else remaining.put(row)
+                }
+                if (ids.any { !matched.contains(it) &&
+                        !isCompletedTransferLocked(context, it) })
+                    return@synchronized false
+                val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+                val editor = prefs.edit().putString(queueName, seal(remaining.toString()))
+                for ((bucket, additions) in matched.groupBy { it.take(2) }) {
+                    val updated = completedTransferBucket(context, additions.first())
+                        .toMutableSet()
+                    updated.addAll(additions)
+                    editor.putString(completedTransferBucketPrefix + bucket,
+                        seal(JSONArray(updated.toList()).toString()))
+                }
+                val saved = editor.commit()
+                if (saved) {
+                    completedTransferCipherCache.clear()
+                    Handler(Looper.getMainLooper()).post { onChanged?.invoke() }
+                }
+                saved
+            } catch (_: Exception) { false }
+        }
+
+    /**
      * Called ONLY after Flutter independently proves the exact bank SMS hash
      * exists in the authoritative encrypted financial ledger. An ordinary
      * exclude/reject/transfer ACK is NOT a financial commit and must never
@@ -777,7 +1016,10 @@ object WaffraAutoSmsStore {
         val sameSource = prefs.getLong(historySourceMonth, 0L) == start
         var lastAt = if (sameSource) prefs.getLong(historyCursorAt, start - 1) else start - 1
         var lastId = if (sameSource) prefs.getLong(historyCursorId, -1) else -1
-        val projection = arrayOf("_id", "address", "body", "date")
+        // Android inbox 'date' is receipt time; 'date_sent' tracks the original
+        // sender timestamp used by SmsMessage.timestampMillis in broadcasts.
+        // Cursor pagination must STILL order by inbox date and stable row _id.
+        val projection = arrayOf("_id", "address", "body", "date", "date_sent")
         val cursor = try {
             context.contentResolver.query(Uri.parse("content://sms/inbox"),
                 projection, "(date > ? OR (date = ? AND _id > ?)) AND date < ?",
@@ -792,6 +1034,7 @@ object WaffraAutoSmsStore {
             val senderCol = it.getColumnIndex("address")
             val bodyCol = it.getColumnIndex("body")
             val dateCol = it.getColumnIndex("date")
+            val sentCol = it.getColumnIndex("date_sent")
             if (rowCol < 0 || senderCol < 0 || bodyCol < 0 || dateCol < 0)
                 return 0
             while (it.moveToNext()) {
@@ -806,7 +1049,15 @@ object WaffraAutoSmsStore {
                 val body = it.getString(bodyCol) ?: ""
                 // offer() applies the excluded-sender policy before parsing,
                 // and its own qualification check (no duplicate regex work).
-                if (offer(context, sender, body, at, historical = true)) {
+                // M518: match the exact fingerprint from the live SMS receiver when
+                // Android supplied a usable sender timestamp. Fallback keeps
+                // preexisting inbox behavior on devices returning 0/invalid.
+                val senderTime = if (sentCol >= 0 && !it.isNull(sentCol))
+                    it.getLong(sentCol) else 0L
+                val identityAt = if (senderTime > 946684800000L &&
+                    senderTime <= end + 300000L) senderTime else at
+                if (offer(context, sender, body, identityAt,
+                        historical = true, receivedAt = at)) {
                     queued++
                     accepted++
                 }

@@ -42,7 +42,8 @@ void main() {
   expect(review,contains('waffra-sms-select-sender-'));
   expect(review,contains('waffra-sms-select-message-'));
   expect(review,contains('waffra-sms-bulk-exclude-selected'));
-  expect(review,contains('WaffraAutoSms.acknowledge(batch)'));
+  expect(review,contains('WaffraAutoSms.excludeMessages(batch)'));
+  expect(review,isNot(contains('WaffraAutoSms.acknowledge(batch)')));
   expect(review,contains('at+=100'));
   expect(review,contains('showWaffraDialog<bool>'));
   // Selected review entries are removed from Waffra's intake queue only.

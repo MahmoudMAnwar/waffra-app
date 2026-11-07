@@ -48,6 +48,7 @@ class _WaffraMandatoryBiometricGateState
     extends State<WaffraMandatoryBiometricGate> with WidgetsBindingObserver {
   bool _busy = false;
   bool _signingOut = false;
+  bool _confirmingSignOut = false;
   int _authGeneration = 0;
   bool _attempted = false;
   bool _available = false;
@@ -128,16 +129,15 @@ class _WaffraMandatoryBiometricGateState
   }
 
   Future<void> _requestSignOut() async {
-    if (_signingOut) return;
+    if (_signingOut || !_confirmingSignOut) return;
     setState(() {
       _signingOut = true;
-      _authGeneration++; // Ignore a late successful fingerprint result.
+      _confirmingSignOut = false;
+      _authGeneration++; // Ignore stale native biometric success.
       _attempted = true;
       _message = null;
     });
     try {
-      // The sign-out escape must work while the native OS challenge is busy.
-      if (_busy) await widget.cancelAuthentication();
       await widget.onSignOut();
       if (mounted) {
         setState(() => _message = widget.english
@@ -160,6 +160,23 @@ class _WaffraMandatoryBiometricGateState
     }
   }
 
+  // One Yes/No choice; cancel any pending OS prompt and reject its late
+  // completion before presenting the choice on this protected gate itself.
+  Future<void> _showSignOutConfirm() async {
+    if (_signingOut || _confirmingSignOut) return;
+    final wasAuthenticating = _busy;
+    setState(() {
+      _confirmingSignOut = true;
+      _authGeneration++;
+      _attempted = true;
+      _busy = false;
+      _message = null;
+    });
+    if (wasAuthenticating) {
+      try { await widget.cancelAuthentication(); } catch (_) {}
+    }
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
@@ -169,7 +186,8 @@ class _WaffraMandatoryBiometricGateState
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: const Color(0xFF064D3B),
-    body: SafeArea(
+    body:Stack(fit:StackFit.expand,children:[
+     SafeArea(
       child: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(28),
@@ -199,7 +217,7 @@ class _WaffraMandatoryBiometricGateState
             const SizedBox(height: 12),
             TextButton(
               key: const Key('waffra-mandatory-biometric-signout'),
-              onPressed: _signingOut ? null : _requestSignOut,
+              onPressed: (_signingOut || _confirmingSignOut) ? null : _showSignOutConfirm,
               child: Text(widget.english ? 'Sign out' : 'تسجيل الخروج',
                 style: const TextStyle(color: Colors.white)),
             ),
@@ -207,5 +225,24 @@ class _WaffraMandatoryBiometricGateState
         ),
       ),
     ),
+   if(_confirmingSignOut)Positioned.fill(child:Material(
+    color:Colors.black54,
+    child:Center(child:Padding(padding:const EdgeInsets.symmetric(horizontal:20),
+     child:AlertDialog(
+      key:const Key('m513-biometric-signout-confirmation'),
+      title:Text(widget.english?'Are you sure you want to sign out?':
+       'هل أنت متأكد من تسجيل الخروج؟'),
+      actions:[
+       TextButton(
+        key:const Key('m513-biometric-signout-no'),
+        onPressed:()=>setState(()=>_confirmingSignOut=false),
+        child:Text(widget.english?'No':'لا')),
+       FilledButton(
+        key:const Key('m513-biometric-signout-yes'),
+        onPressed:_requestSignOut,
+        child:Text(widget.english?'Yes':'نعم')),
+      ],
+     ))))),
+   ]),
   );
 }

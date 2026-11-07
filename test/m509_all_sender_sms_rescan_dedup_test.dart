@@ -33,9 +33,21 @@ void main() {
   expect(store,contains('private const val committedBucketPrefix'));
   expect(store,contains('fun acknowledgeCommitted(context: Context, ids: Set<String>)'));
   expect(store,contains('seal(JSONArray(merged.toList()).toString())'));
-  expect(store,contains('if (isCommittedLocked(context, fingerprint))'));
+  expect(store,contains('if (isCommittedLocked(context, fingerprint) ||'));
+  expect(store,contains('isExcludedMessageLocked(context, fingerprint) ||'));
+  expect(store,contains('isCompletedTransferLocked(context, fingerprint)'));
   expect(store,contains('if (ids.any { !present.contains(it) &&'));
-  expect(store,contains('if (key.startsWith(committedBucketPrefix)) editor.remove(key)'));
+  // On an explicit owner change, the same transaction clears ALL sensitive
+  // marker families, not just committed finance hashes. Do not weaken dedup.
+  expect(store,contains('if (previous != null && previous != owner) {'));
+  expect(store,contains('for (key in prefs.all.keys) {'));
+  expect(store,contains('if (key.startsWith(committedBucketPrefix) ||'));
+  expect(store,contains('key.startsWith(excludedMessageBucketPrefix) ||'));
+  expect(store,contains('key.startsWith(excludedMessageInfoBucketPrefix) ||'));
+  expect(store,contains('key.startsWith(completedTransferBucketPrefix)) editor.remove(key)'));
+  expect(store,contains('committedCipherCache.clear()'));
+  expect(store,contains('excludedMessageCipherCache.clear()'));
+  expect(store,contains('completedTransferCipherCache.clear()'));
   expect(store,contains('editor.commit()'));
  });
 
@@ -57,7 +69,9 @@ void main() {
   expect(home,contains('final toAcknowledgeCommitted=<String>[];'));
   expect(home,contains('WaffraAutoSms.acknowledgeCommitted(batch)'));
   expect(home,contains('WaffraAutoSms.acknowledgeCommitted([id])'));
-  expect(home,contains('WaffraAutoSms.acknowledge([id])'));
+  expect(home,contains('WaffraAutoSms.excludeMessages([id])'));
+  expect(home,contains('WaffraAutoSms.acknowledgeCompletedTransfer([id])'));
+  expect(home,isNot(contains('WaffraAutoSms.acknowledge([id])')));
   expect(worker,contains('WaffraAutoSms.acknowledgeCommitted([id])'));
   expect(worker,contains("rule?.builtIn==false"));
   expect(nativeMain,contains('"ackCommittedAutoBankSms" -> {'));

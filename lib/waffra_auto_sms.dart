@@ -129,6 +129,34 @@ abstract final class WaffraAutoSms {
   }on MissingPluginException{return null;}
    on PlatformException{return null;}
  }
+ /// Individually excluded SMS are encrypted natively, scoped to the owner.
+ /// Only opaque identity, sender label and receipt time cross this boundary.
+ /// A missing plugin or malformed payload is UNKNOWN, not an empty policy.
+ static Future<List<Map<String,Object?>>?> excludedMessages()async{
+  if(!Platform.isAndroid)return null;
+  try{
+   final items=await channel.invokeListMethod<dynamic>(
+    'excludedAutoSmsMessages');
+   if(items==null)return null;
+   return items.map((item){
+    if(item is! Map)throw const FormatException('Invalid excluded SMS item');
+    final id=item['id'],sender=item['sender'],receivedAt=item['receivedAt'];
+    if(id is! String||
+       !RegExp(r'^[a-f0-9]{64}$').hasMatch(id)||
+       sender is! String||
+       receivedAt is! int||receivedAt<0){
+     throw const FormatException('Invalid excluded SMS metadata');
+    }
+    return Map<String,Object?>.unmodifiable({
+     'id':id,'sender':sender,'receivedAt':receivedAt,
+    });
+   }).toList(growable:false);
+  }catch(_){return null;}
+ }
+ static Future<bool> restoreExcludedMessage(String id)async{
+  if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(id))return false;
+  return _boolCall('restoreExcludedAutoSmsMessage',id);
+ }
  static Future<bool> excludeSender(String sender)async{
   if(sender.trim().isEmpty)return false;
   return _boolCall('excludeAutoSmsSender',sender.trim());
@@ -144,6 +172,27 @@ abstract final class WaffraAutoSms {
   return _boolCall('ackCommittedAutoBankSms',ids);
  }
 
+ /// M514: an SMS explicitly excluded by the user must never be booked as
+ /// a completed income/expense. Native exclusion policy is independent.
+ static Future<bool> excludeMessages(List<String> ids)async{
+  if(ids.isEmpty||ids.length>100||
+     ids.any((id)=>!RegExp(r'^[a-f0-9]{64}$').hasMatch(id)))return false;
+  return _boolCall('excludeAutoBankSms',ids);
+ }
+ /// M516: the immutable native fingerprint contains sender, body and time.
+ /// It differs from historical body-only financial entry hashes.
+ static String transferIdForMessage(String fingerprint){
+  if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(fingerprint)){
+   throw ArgumentError.value(fingerprint,'fingerprint','Invalid SMS identity');
+  }
+  return 'sms-transfer-$fingerprint';
+ }
+ /// Durable completed-transfer ACK; only call after verified SQLCipher save.
+ static Future<bool> acknowledgeCompletedTransfer(List<String> ids)async{
+  if(ids.isEmpty||ids.length>100||
+     ids.any((id)=>!RegExp(r'^[a-f0-9]{64}$').hasMatch(id)))return false;
+  return _boolCall('ackCompletedTransferAutoBankSms',ids);
+ }
  static Future<bool> acknowledge(List<String> ids)async{
   if(ids.isEmpty||ids.length>100)return false;
   return _boolCall('ackAutoBankSms',ids);

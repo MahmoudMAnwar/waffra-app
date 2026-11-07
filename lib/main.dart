@@ -321,6 +321,10 @@ class MoneyEntry {
   'sourceType':sourceType,
   'merchantKey':merchantKey,if(budgetId!=null)'budgetId':budgetId,
   if(goalWalletPaidMinor>0)'goalWalletPaidMinor':goalWalletPaidMinor};
+ // M530: pure large-ledger serialization; caller freezes immutable entries
+ // BEFORE its first await. This worker preserves toJson() field order/bytes.
+ static String encodeFrozenSnapshot(List<MoneyEntry> frozenEntries)=>
+  jsonEncode(frozenEntries.map((e)=>e.toJson()).toList(growable:false));
  factory MoneyEntry.fromJson(Map<String,dynamic> j)=>MoneyEntry(
   id:'${j['id']??newId()}',title:'${j['title']??''}',
   category:'${j['category']??'أخرى'}',amount:(j['amount'] as num).toDouble(),
@@ -1287,6 +1291,21 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  final WaffraLiveAccountWriteAuthority _accountWriteAuthority=
      const WaffraLiveAccountWriteAuthority();
  Future<void> saveUser(Person u)async {
+  // M513: refuse to declare a new phone profile successfully registered if
+  // Android never retained a verifier for that exact account. Keeping the
+  // existing login password usable is part of successful account creation.
+  if(u.provider.toLowerCase().trim()=='phone'){
+   final phone=WaffraSaudiMobile.inputFromStored(u.phone);
+   final integrity=await WaffraLocalPhoneCredentials.probeForPhone(phone);
+   if(integrity!=WaffraLocalCredentialProbe.ready){
+    final existing=await SharedPreferences.getInstance();
+    final hasLegacy=existing.getString('waffra_local_password_salt')!=null&&
+     existing.getString('waffra_local_password_hash')!=null;
+    if(integrity!=WaffraLocalCredentialProbe.missing||!hasLegacy){
+     throw StateError('phone_credential_not_persisted_for_profile');
+    }
+   }
+  }
   // Profile edits cannot silently detach the stored phone/password verifier.
   if(profile!=null&&profile!.provider.toLowerCase()=='phone'&&
      u.provider.toLowerCase()=='phone'&&profile!.phone!=u.phone){
@@ -1342,8 +1361,8 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   if(mounted)_showLogoutFeedback(waffraIsEnglish?
    'Signing out securely…':'جارٍ تسجيل الخروج بأمان…');
   try{
-  // A phone user must not lose access after an apparently successful logout.
-  // Check OS-protected verifier ownership before clearing the session.
+  // M513: a successful sign-out must leave the ORIGINAL phone/password
+  // verifier usable for next login. Never create a new password here.
   final current=profile;
   if(current!=null&&current.provider.toLowerCase().trim()=='phone'){
    WaffraLocalCredentialProbe? integrity;
@@ -1357,25 +1376,20 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     final hasLegacy=p.getString('waffra_local_password_salt')!=null&&
      p.getString('waffra_local_password_hash')!=null;
     if(!hasLegacy){
-     // Do not strand an already-unlocked phone account: a missing secure
-     // verifier can be re-created ONLY after explicit new-password consent
-     // and an independent device biometric challenge. Corrupted or
-     // differently-owned verifier bytes are NEVER overwritten.
-     if(integrity==WaffraLocalCredentialProbe.missing){
-      final recovered=await _repairMissingLocalCredential(
-       WaffraSaudiMobile.inputFromStored(current.phone));
-      if(!recovered)return;
-     }else{
-      if(mounted)_showLogoutFeedback(waffraIsEnglish?
-       (locked&&integrity==WaffraLocalCredentialProbe.missing?
-        'Unlock with biometrics, then use Sign out to securely repair missing login credentials. Do not clear app data.':
-        'Secure credentials need recovery before sign-out. Do not clear app data.'):
-       (locked&&integrity==WaffraLocalCredentialProbe.missing?
-        'افتح بالبصمة أولًا، وبعدها استخدم تسجيل الخروج لإصلاح بيانات الدخول الناقصة بأمان. ما تمسحش بيانات التطبيق.':
-        'بيانات الدخول الآمنة محتاجة استعادة قبل تسجيل الخروج. ما تمسحش بيانات التطبيق.'),
-       isError:true);
-      return;
-     }
+     // A missing/invalid verifier must NEVER be treated as a valid login.
+     // Remain signed in, preserve all finances and show only a concise error.
+     if(mounted)_showLogoutFeedback(waffraIsEnglish?
+      'Sign-out is unavailable because your saved login credentials could not be verified. Your data is safe. Do not clear app data.':
+      'تعذر تسجيل الخروج لأن بيانات الدخول الآمنة غير مكتملة. بياناتك محفوظة؛ ما تمسحش بيانات التطبيق.',
+      isError:true);
+     return;
+    }
+    if(integrity!=WaffraLocalCredentialProbe.missing){
+     if(mounted)_showLogoutFeedback(waffraIsEnglish?
+      'Sign-out is unavailable until your secure account details are verified. Your data is safe.':
+      'تعذر تسجيل الخروج لحين التحقق من بيانات الدخول الآمنة. بياناتك محفوظة.',
+      isError:true);
+     return;
     }
    }
   }
@@ -1409,90 +1423,6 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   }finally{
    _logoutInProgress=false;
   }
- }
- // Recover only a truly MISSING local verifier. No registration can
- // overwrite an existing record, and biometrics are required independently.
- // The newly chosen password must be retained by the user for next login.
- Future<bool> _repairMissingLocalCredential(String phone)async{
-  if(!WaffraLocalPhoneCredentials.validPhone(phone))return false;
-  final host=_logoutNavigatorKey.currentContext;
-  if(host==null||!mounted)return false;
-  final password=TextEditingController();
-  final confirmation=TextEditingController();
-  String? error;
-  var saving=false;
-  try{
-   final repaired=await showWaffraDialog<bool>(context:host,
-    builder:(dialogCtx)=>StatefulBuilder(builder:(dialogCtx,update)=>
-     AlertDialog(
-      title:WaffraText(waffraIsEnglish?
-       'Repair local sign-in before signing out':
-       'إصلاح بيانات الدخول قبل تسجيل الخروج'),
-      content:SingleChildScrollView(child:Column(
-       mainAxisSize:MainAxisSize.min,children:[
-        WaffraText(waffraIsEnglish?
-         'The secure password verifier is missing. To avoid losing access, set the password you will use at your next login. Device biometrics must confirm the repair. Your financial records will not be deleted.':
-         'بيانات تأكيد كلمة السر مش موجودة. اكتب كلمة السر اللي هتستخدمها لما تسجل دخول تاني، وبعدها أكّد ببصمة الجهاز. بياناتك المالية مش هتتمسح.'),
-        const SizedBox(height:14),
-        TextField(key:const Key('m506-recovery-password'),
-         controller:password,obscureText:true,enableSuggestions:false,
-         autocorrect:false,
-         decoration:InputDecoration(labelText:waffraIsEnglish?
-          'New sign-in password':'كلمة السر لتسجيل الدخول')),
-        const SizedBox(height:12),
-        TextField(key:const Key('m506-recovery-confirm'),
-         controller:confirmation,obscureText:true,enableSuggestions:false,
-         autocorrect:false,
-         decoration:InputDecoration(labelText:waffraIsEnglish?
-          'Confirm password':'تأكيد كلمة السر')),
-        if(error!=null)Padding(padding:const EdgeInsets.only(top:12),
-         child:WaffraText(error!,style:const TextStyle(color:Colors.red))),
-       ])),
-      actions:[
-       TextButton(onPressed:saving?null:()=>Navigator.pop(dialogCtx,false),
-        child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
-       FilledButton(
-        key:const Key('m506-recovery-confirm-biometric'),
-        onPressed:saving?null:()async{
-         final chosen=password.text;
-         if(!WaffraLocalPhoneCredentials.validPassword(chosen)||
-            chosen!=confirmation.text){
-          update(()=>error=waffraIsEnglish?
-           'Use a valid password of at least 8 bytes, identical in both fields.':
-           'كلمة السر لازم تكون ٨ حروف على الأقل ومتطابقة في الخانتين.');
-          return;
-         }
-         update((){saving=true;error=null;});
-         try{
-          if(!await WaffraBiometrics.unlockMandatory()){
-           throw StateError('Biometric confirmation not completed.');
-          }
-          // Re-check INSIDE consent: a new device verifier must never
-          // overwrite one created by a concurrent login or external event.
-          if(await WaffraLocalPhoneCredentials.probeForPhone(phone)!=
-             WaffraLocalCredentialProbe.missing){
-           throw StateError('Local credentials changed during recovery.');
-          }
-          await WaffraLocalPhoneCredentials.registerOrResume(
-           phone:phone,password:chosen);
-          if(await WaffraLocalPhoneCredentials.probeForPhone(phone)!=
-             WaffraLocalCredentialProbe.ready){
-           throw StateError('Recovered verifier could not be verified.');
-          }
-          if(dialogCtx.mounted)Navigator.pop(dialogCtx,true);
-         }catch(_){
-          if(dialogCtx.mounted)update(()=>error=waffraIsEnglish?
-           'Recovery could not be verified. No financial data was removed.':
-           'تعذر تأكيد الاستعادة. بياناتك المالية ما اتغيرتش.');
-         }finally{
-          if(dialogCtx.mounted)update(()=>saving=false);
-         }
-        },child:WaffraText(waffraIsEnglish?
-         'Verify fingerprint & repair':'تأكيد بالبصمة وإصلاح الدخول')),
-      ])));
-   return repaired==true;
-  }catch(_){return false;}
-  finally{password.dispose();confirmation.dispose();}
  }
  bool _logoutInProgress=false;
  final _logoutFeedbackKey=GlobalKey<ScaffoldMessengerState>();
@@ -3847,16 +3777,53 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
 
  Future<void> _m467PickHomeAccount()async{
-  // Open instantly from a verified snapshot; refresh after selection.
-  if(!_m468VerifiedAccountsLoaded)await _m467RefreshHomeAccounts();
+  // M527: a cold verified read must not block the first sheet frame.
+  // No unverified account may ever appear as a selectable money source.
+  final pendingAccounts=_m468VerifiedAccountsLoaded
+   ?null:_m467RefreshHomeAccounts();
   if(!mounted)return;
   final next=await showModalBottomSheet<String>(
    context:context,isScrollControlled:true,useSafeArea:true,
    showDragHandle:true,
-   builder:(sheet)=>WaffraHomeAccountsSheet(
-    english:waffraIsEnglish,
-    selected:_m467SelectedAccount,
-    accounts:_m467Accounts));
+   builder:(sheet){
+    Widget verifiedChoices()=>WaffraHomeAccountsSheet(
+     english:waffraIsEnglish,
+     selected:_m467SelectedAccount,
+     accounts:_m467Accounts);
+    // Warm cache: render original selector with no FutureBuilder wait frame.
+    if(pendingAccounts==null)return verifiedChoices();
+    return FutureBuilder<void>(
+     future:pendingAccounts,
+     builder:(ctx,state){
+      if(state.connectionState!=ConnectionState.done){
+       return SafeArea(top:false,child:SizedBox(
+        key:const Key('m527-account-picker-loading'),
+        height:170,
+        child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
+         const CircularProgressIndicator(strokeWidth:2.7),
+         const SizedBox(height:17),
+         Text(waffraIsEnglish?'Verifying accounts…':
+          'جارٍ التحقق من الحسابات…'),
+        ])));
+      }
+      if(!_m468VerifiedAccountsLoaded){
+       return SafeArea(top:false,child:Padding(
+        key:const Key('m527-account-picker-verification-failed'),
+        padding:const EdgeInsets.symmetric(horizontal:22,vertical:30),
+        child:Column(mainAxisSize:MainAxisSize.min,children:[
+         Text(waffraIsEnglish?
+          'Could not verify your accounts. No balances were changed.':
+          'تعذر التحقق من الحسابات. لم تتغير أي أرصدة.',
+          textAlign:TextAlign.center),
+         const SizedBox(height:14),
+         TextButton(
+          onPressed:()=>Navigator.pop(sheet),
+          child:Text(waffraIsEnglish?'Close and retry':'إغلاق وإعادة المحاولة')),
+        ])));
+      }
+      return verifiedChoices();
+     });
+   });
   if(next==null||!mounted)return;
   if(next=='manage'){
    await openVerifiedAccounts();
@@ -4024,6 +3991,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  String? lastBackupGeneratedAt;
  int? lastBackupBytes;
  bool protectRecentApps=true;
+ // M528: stable permission/consent futures across unrelated profile repaints.
+ Future<bool>? _m528SmsEnabledFuture;
+ Future<bool>? _m528CloudConsentFuture;
+ int? _m528ModelDiskRevision;
+ Future<bool>? _m528ModelDiskFuture;
+ Future<bool> _m528SmsEnabled()=>
+  _m528SmsEnabledFuture??=WaffraAutoSms.enabled();
+ Future<bool> _m528CloudConsent()=>
+  _m528CloudConsentFuture??=WaffraSmsCloudService.hasConsent();
+ Future<bool> _m528ModelDiskStatus(int revision){
+  if(_m528ModelDiskRevision!=revision||_m528ModelDiskFuture==null){
+   _m528ModelDiskRevision=revision;
+   _m528ModelDiskFuture=WaffraOnDeviceQwen.shared.downloadedOnDisk();
+  }
+  return _m528ModelDiskFuture!;
+ }
  String? _accountOpenSection;
  String accountSearch='';
  final _tourKeys=List<GlobalKey>.generate(7,(_)=>GlobalKey());
@@ -4076,6 +4059,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       WaffraExternalMediaSession.shouldSkipResumeBackgroundWork)return;
    // Verified finance/widget read is still required, merely deferred one
    // frame. Never infer cash from an unverified snapshot.
+   if(accountOpened&&mounted)setState((){
+    _m528SmsEnabledFuture=null;
+    _m528CloudConsentFuture=null;
+    _m528ModelDiskRevision=null;
+    _m528ModelDiskFuture=null;
+   });
    unawaited(_syncWidgetTransactions());
    final now=DateTime.now();
    final last=_m468LastResumeSmsScan;
@@ -4100,6 +4089,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  bool _autoSmsHistoryComplete=false;
  bool _autoSmsRescanRunning=false;
  Map<String,Object?> _autoSmsProgress=const <String,Object?>{};
+ // Count this exact explicit rescan, never reuse historical cumulative count.
+ int? _autoSmsLastRescanScanned;
  DateTime? _autoSmsLastChecked;
  String? _autoSmsStatusProblem;
  final List<Map<String,Object?>> _autoSmsPending=<Map<String,Object?>>[];
@@ -4288,14 +4279,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    await _refreshAutoSmsInbox(importMonth:true);
    if(!mounted)return;
    final after=await WaffraAutoSms.scanProgress();
-   if(after!=null)setState(()=>_autoSmsProgress=after);
+   final priorScanned=before?['scanned'] is num?
+    (before!['scanned'] as num).toInt():0;
+   final nowScanned=after?['scanned'] is num?
+    (after!['scanned'] as num).toInt():priorScanned;
+   // A completed cursor was reset BEFORE 'before'; an unfinished cursor
+   // kept its counters. Both yield a per-button delta.
+   final scanned=(nowScanned-priorScanned).clamp(0,2147483647);
+   if(after!=null)setState((){
+    _autoSmsProgress=after;
+    _autoSmsLastRescanScanned=scanned;
+   });
    final previous=before?['added'] is num?
     (before!['added'] as num).toInt():0;
    final current=after?['added'] is num?
     (after!['added'] as num).toInt():previous;
    final added=(current-previous).clamp(0,2147483647);
-   final scanned=after?['scanned'] is num?
-    (after!['scanned'] as num).toInt():0;
    if(_autoSmsStatusProblem!=null){
     snack(context,_autoSmsStatusProblem!,isError:true);
    }else if(after?['complete']!=true){
@@ -4458,7 +4457,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final failedAcks=<String>{};
    for(var from=0;from<toAcknowledge.length;from+=100){
     final batch=toAcknowledge.skip(from).take(100).toList(growable:false);
-    final removed=await WaffraAutoSms.acknowledge(batch);
+    final removed=await WaffraAutoSms.excludeMessages(batch);
     if(!removed)failedAcks.addAll(batch);
    }
    waiting.addAll(toRestoreOnAckFailure.where(
@@ -4505,7 +4504,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    builder:(dialog)=>AlertDialog(
     title:WaffraText(waffraIsEnglish?
      'Analyze this unclear message with AI?':
-     'تحليل الرسالة الغامضة بالذكاء الاصطناعي؟'),
+     'تحليل هذه الرسالة التي تحتاج مراجعة بالذكاء الاصطناعي؟'),
     content:WaffraText(waffraIsEnglish?
      'The financial text will be redacted locally before sending it to '
      'OpenRouter through an external service. Processing may occur outside '
@@ -4528,6 +4527,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      'التحليل السحابي غير متاح. راجع الرسالة بنفسك.',isError:true);
     return;
    }
+   // M528: this explicit owner consent also changes the Account switch.
+   // Re-read it on the next profile build; no extra finance/UI work now.
+   _m528CloudConsentFuture=null;
    final staged=await WaffraSmsCloudReviewAnalyzer.stagePending(
     [selected],maxPerRun:1,explicitlyRequested:true);
    if(!mounted)return;
@@ -4596,48 +4598,104 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    )));
  }
  Future<void> _openExcludedSenders()async{
+  // M517: whole-sender exclusion and single/bulk message exclusion are
+  // different encrypted policies. An empty sender list is NOT zero exclusions.
   final saved=await WaffraAutoSms.excludedSenders();
+  final excluded=await WaffraAutoSms.excludedMessages();
   if(!mounted)return;
-  if(saved==null){
+  if(saved==null||excluded==null){
    snack(context,waffraIsEnglish?
-    'Excluded senders are unavailable. Check SMS access and sign-in.':
-    'تعذر قراءة المستبعدين. تأكد من صلاحية الرسائل وتسجيل الدخول.',
+    'Excluded messages could not be verified. Check SMS access and sign-in.':
+    'تعذر قراءة الرسائل المستبعدة بأمان. تأكد من صلاحية الرسائل وتسجيل الدخول.',
     isError:true);
    return;
   }
-  final senders=saved.toList()..sort((a,b)=>a.toLowerCase().compareTo(b.toLowerCase()));
+  final senders=saved.toList()
+   ..sort((a,b)=>a.toLowerCase().compareTo(b.toLowerCase()));
+  final messages=excluded.toList();
   var busy=false;
   await showModalBottomSheet<void>(
    context:context,isScrollControlled:true,useSafeArea:true,showDragHandle:true,
    builder:(sheet)=>StatefulBuilder(builder:(ctx,refresh)=>SafeArea(
-    child:SizedBox(height:min(520.0,MediaQuery.sizeOf(ctx).height*.74),
+    child:SizedBox(height:min(620.0,MediaQuery.sizeOf(ctx).height*.78),
      child:Column(children:[
       Padding(padding:const EdgeInsets.symmetric(horizontal:20,vertical:12),
        child:Row(children:[
         const Icon(Icons.block_rounded,color:forest),
         const SizedBox(width:10),
-        Expanded(child:WaffraText(waffraIsEnglish?'Excluded senders':
+        Expanded(child:WaffraText(waffraIsEnglish?'Excluded SMS':
          'المستبعدون',style:Theme.of(ctx).textTheme.titleLarge)),
        ])),
       Padding(padding:const EdgeInsets.symmetric(horizontal:20,vertical:5),
        child:WaffraText(waffraIsEnglish?
-        'New SMS from excluded senders will not be analyzed or queued. '
-        'Restoring a sender affects future SMS; previously removed messages '
-        'are not restored automatically.':
-        'رسائل المرسل المستبعد الجديدة لن تُحلَّل أو تظهر في المراجعة. '
-        'إلغاء الاستبعاد يسمح بالرسائل القادمة فقط، ولا يستعيد الرسائل '
-        'المستبعدة سابقًا تلقائيًا.',
+        '${messages.length} excluded messages • ${senders.length} blocked senders. '
+        'Restoring an individual message allows it on the next manual rescan; '
+        'blocked senders remain blocked. Financial records are unchanged.':
+        '${messages.length} رسالة مستبعدة • ${senders.length} مرسل مستبعد. '
+        'إلغاء استبعاد رسالة يسمح بمراجعتها عند إعادة الفحص، '
+        'ولا يلغي استبعاد المرسل نفسه. بياناتك المالية لا تتغير.',
         style:Theme.of(ctx).textTheme.bodySmall)),
-      Expanded(child:senders.isEmpty?
+      Expanded(child:messages.isEmpty&&senders.isEmpty?
        Center(child:WaffraText(waffraIsEnglish?
-        'No excluded senders':'لا يوجد مرسلون مستبعدون')):
+        'No excluded SMS':'لا توجد رسائل أو مرسلون مستبعدون')):
        ListView.builder(
-        key:const Key('waffra-excluded-senders-list'),
-        itemCount:senders.length,
+        key:const Key('waffra-excluded-sms-list'),
+        itemCount:messages.length+senders.length+2,
         itemBuilder:(itemContext,index){
-         final sender=senders[index];
+         if(index==0){
+          return Padding(padding:const EdgeInsets.fromLTRB(18,12,18,4),
+           child:WaffraText(waffraIsEnglish?
+            'Individual messages (${messages.length})':
+            'رسائل مستبعدة (${messages.length})',
+            style:Theme.of(ctx).textTheme.titleSmall));
+         }
+         if(index<=messages.length){
+          final message=messages[index-1];
+          final id=message['id'] as String;
+          final sender=message['sender'] as String? ?? '';
+          final receivedAt=message['receivedAt'] as int? ?? 0;
+          final date=receivedAt>0?
+           DateTime.fromMillisecondsSinceEpoch(receivedAt):null;
+          final dateLabel=date==null?'':
+           '${date.day}/${date.month}/${date.year}';
+          final labelPrefix=dateLabel.isEmpty?'':'$dateLabel • ';
+          return ListTile(
+           key:Key('waffra-excluded-message-${id.substring(0,12)}'),
+           leading:const Icon(Icons.mark_email_read_outlined,color:emerald),
+           title:WaffraText(sender.isNotEmpty?sender:
+            (waffraIsEnglish?'Excluded message':'رسالة مستبعدة')),
+           subtitle:WaffraText(
+            '$labelPrefix••••${id.substring(id.length-8)}',
+            style:Theme.of(ctx).textTheme.bodySmall),
+           trailing:TextButton(
+            onPressed:busy?null:()async{
+             refresh(()=>busy=true);
+             final restored=await WaffraAutoSms.restoreExcludedMessage(id);
+             if(ctx.mounted)refresh((){
+              busy=false;
+              if(restored)messages.removeWhere((item)=>item['id']==id);
+             });
+             if(mounted){
+              if(restored)snackSuccess(context,waffraIsEnglish?
+               'Message restored for the next rescan.':
+               'اتلغى استبعاد الرسالة. تقدر ترجعها بإعادة الفحص.');
+              else snack(context,waffraIsEnglish?
+               'Could not restore the message. Retry.':
+               'تعذر إلغاء استبعاد الرسالة. حاول مرة أخرى.',isError:true);
+             }
+            },child:WaffraText(waffraIsEnglish?'Restore':'إلغاء الاستبعاد')),
+          );
+         }
+         if(index==messages.length+1){
+          return Padding(padding:const EdgeInsets.fromLTRB(18,12,18,4),
+           child:WaffraText(waffraIsEnglish?
+            'Blocked senders (${senders.length})':
+            'مرسلون مستبعدون (${senders.length})',
+            style:Theme.of(ctx).textTheme.titleSmall));
+         }
+         final sender=senders[index-messages.length-2];
          return ListTile(
-          key:Key('waffra-excluded-sender-$index'),
+          key:Key('waffra-excluded-sender-${index-messages.length-2}'),
           leading:const Icon(Icons.sms_failed_outlined,color:emerald),
           title:WaffraText(sender,maxLines:2),
           trailing:TextButton(
@@ -4818,8 +4876,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           leading:const Icon(Icons.sms_outlined,color:emerald),
           title:WaffraText(suggestion==null?
            (local==null?
-            (waffraIsEnglish?'Ambiguous • needs review':
-             'عملية غامضة • تحتاج مراجعة'):
+            (waffraIsEnglish?'Needs review':
+             'عملية تحتاج مراجعة'):
             (waffraIsEnglish?'Local rule • ':'قاعدة محلية • ')+
              (local['kind']=='transfer'?
               (waffraIsEnglish?'Transfer':'تحويل'):
@@ -4955,13 +5013,41 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            // Stop at the first failed batch; never claim partial success.
            for(var at=0;at<ids.length;at+=100){
             final batch=ids.skip(at).take(100).toList(growable:false);
-            if(!await WaffraAutoSms.acknowledge(batch)){
+            if(!await WaffraAutoSms.excludeMessages(batch)){
              failed=true;break;
             }
             done.addAll(batch);
            }
            final clearedSenders=<String>[];
            if(done.isNotEmpty){
+            // Bulk and individual exclusions learn identical safe,
+            // owner-encrypted review-only keywords after native success.
+            if(_smsRuleOwnerKey.isNotEmpty){
+             try{
+              final store=const WaffraSmsLocalRuleStore();
+              final previous=await store.read(_smsRuleOwnerKey);
+              var next=previous;
+              for(final row in _autoSmsPending.where(
+                  (row)=>done.contains(row['id']))){
+               final body=row['body'],sender=row['sender'];
+               if(body is! String||sender is! String)continue;
+               final candidate=WaffraSmsLocalRules.suggestedRule(
+                body:body,sender:sender,kind:'excluded',
+                confidentOnly:true);
+               if(candidate!=null){
+                next=WaffraSmsLocalRules.upsertLearned(
+                 existing:next,candidate:candidate);
+               }
+              }
+              if(!identical(previous,next)){
+               await store.write(_smsRuleOwnerKey,next);
+              }
+             }catch(_){
+              if(mounted)snack(context,waffraIsEnglish?
+               'Messages excluded; safe rule learning unavailable.':
+               'تم الاستبعاد، لكن تعذر حفظ قاعدة تعلم آمنة.',isError:true);
+             }
+            }
             for(final sender in senders){
              final groupIds=idsOf(bySender[sender]??const []);
              if(groupIds.isNotEmpty&&groupIds.every(done.contains)){
@@ -5089,8 +5175,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       if(count>0)...[
        const SizedBox(height:5),
        WaffraText(waffraIsEnglish?
-        '$localCount classified locally • ${ambiguous<0?0:ambiguous} ambiguous':
-        '$localCount مصنفة محليًا • ${ambiguous<0?0:ambiguous} غامضة',
+        '$localCount classified locally • ${ambiguous<0?0:ambiguous} need review':
+        '$localCount مصنفة محليًا • ${ambiguous<0?0:ambiguous} تحتاج مراجعة',
         style:const TextStyle(color:emerald,fontSize:12,
          fontWeight:FontWeight.w600)),
       ],
@@ -5113,10 +5199,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        ]),
        const SizedBox(height:10),
       ],
-      if(_autoSmsProgress['scanned'] is num)...[
+      if(_autoSmsLastRescanScanned!=null)...[
        WaffraText(waffraIsEnglish?
-        'Total SMS scanned: ${_autoSmsProgress['scanned']} • Awaiting review: ${_autoSmsProgress['pending']}':
-        'إجمالي الرسائل المفحوصة: ${_autoSmsProgress['scanned']} • بانتظار المراجعة: ${_autoSmsProgress['pending']}',
+        'Last rescan checked: $_autoSmsLastRescanScanned • Awaiting review: ${_autoSmsProgress['pending']}':
+        'آخر إعادة فحص: $_autoSmsLastRescanScanned رسالة • بانتظار المراجعة: ${_autoSmsProgress['pending']}',
         style:const TextStyle(fontSize:12,color:emerald)),
        if(_autoSmsLastChecked!=null)
         WaffraText(waffraIsEnglish?
@@ -5172,15 +5258,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   // Verify the main transfer amount independently from fees/balances.
   // Never use a fee's currency as proof of a SAR account transfer.
   final sourceAmount=WaffraSmsCurrencies.originalAmount(body);
-  if(sourceAmount==null||sourceAmount.currency!='SAR'||
+  if((sourceAmount!=null&&sourceAmount.currency!='SAR')||
      WaffraSmsCurrencies.requiresReviewForSarLedger(body)){
    if(mounted)snack(context,
     'مبلغ التحويل الأساسي أو عملته غير مؤكد من الرسالة. '
     'لن تُسجّل الرسوم أو عملة مجهولة كتحويل.',isError:true);
    return;
   }
-  final verifiedMinor=waffraSarAmountMinor(sourceAmount.amount.toStringAsFixed(2));
-  if(verifiedMinor==null)return;
+  final verifiedMinor=sourceAmount==null?0:
+   (waffraSarAmountMinor(sourceAmount.amount.toStringAsFixed(2))??0);
+  // No confirmed principal means an EMPTY editable field, never the fee.
+  // The verified form refuses zero amounts on submit.
   final bridge=_financeBinding?.accountsBridge;
   if(bridge==null){
    if(mounted)snack(context,'الحسابات الموثقة غير متاحة.',
@@ -5192,21 +5280,24 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final accounts=await api.balances();
    if(!mounted)return;
    if(accounts.where((a)=>!a.archived).length<2){
-    snack(context,'أضف حسابين على الأقل قبل تسجيل التحويل.',isError:true);
-    return;
+    // The editor offers inline creation of a bank provider and child account.
+    // Previously returning here made the transfer CTA look unresponsive.
+    snack(context,'اختار أو أضف حسابين مختلفين داخل شاشة المراجعة.');
    }
    final arrived=DateTime.fromMillisecondsSinceEpoch(
     item['receivedAt'] is int?item['receivedAt'] as int:
      DateTime.now().millisecondsSinceEpoch);
    final date=bankSmsDate(body,referenceDate:arrived)??arrived;
    final prefill=WaffraInternalTransferDraft(
-    requestId:'sms-transfer-'+bankSmsHash(body),
+    // Native fingerprint includes sender, body AND receivedAt; two distinct
+    // identical-body SMS must not share a single SQLCipher transfer ID.
+    requestId:WaffraAutoSms.transferIdForMessage(id),
     fromId:'',toId:'',amountMinor:verifiedMinor,
     occurredIso:date.toIso8601String(),memo:'تحويل من رسالة بنكية');
    var saved=false,ack=false;
    await Navigator.of(context).push<void>(MaterialPageRoute(
     builder:(route)=>Scaffold(
-     appBar:AppBar(title:const WaffraText('مراجعة تحويل بين حساباتي')),
+     appBar:AppBar(title:const WaffraText('مراجعة حوالة بنكية')),
      body:Column(children:[
       Padding(padding:const EdgeInsets.all(12),
        child:WaffraText('من الحساب: '+
@@ -5223,7 +5314,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       Expanded(child:WaffraAccountTransactionForm(
        accounts:accounts,english:waffraIsEnglish,
        initialSmsTransfer:prefill,
-       onCreateAccount:(group,createProvider)async{
+       onCreateSmsAccount:(group,createProvider,isDestination)async{
         // #416: never infer transfer source or destination from SMS sender.
         final existing=await api.balances();
         if(!mounted)return null;
@@ -5235,9 +5326,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            a.customSubtypeLabel!=null).map((a)=>a.customSubtypeLabel!)
            .toSet().toList()..sort(),
         };
+        // For a source-account creation, only propose the masked debit
+        // suffix from the SAME confirmed bank. The destination may belong
+        // to another person; never copy the source digits onto it.
+        final detectedBank=WaffraSmsAccountLearning.bankGroup(
+         item['sender'] is String?item['sender'] as String:'');
+        final suggestedBank=bank??(createProvider?detectedBank:null);
+        final proposedSuffix=!isDestination&&
+         (bank==null||bank==detectedBank)?
+         WaffraSmsAccountLearning.suffix4(facts.sourceSuffix):null;
         final choice=await showWaffraDialog<WaffraNewAccountDraft>(
          context:context,builder:(ctx)=>WaffraNewAccountDialog(
-          english:waffraIsEnglish,suggestedProviderId:bank,
+          english:waffraIsEnglish,suggestedProviderId:suggestedBank,
+          suggestedLastFour:proposedSuffix,
           customSubtypeOptions:custom));
         if(choice==null||!mounted)return null;
         if(bank!=null&&(choice.kind!='bank'||choice.providerId!=bank)){
@@ -5264,7 +5365,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          amountMinor:draft.amountMinor,occurredIso:draft.occurredIso,
          note:draft.memo,userConfirmed:true);
         saved=true;
-        ack=await WaffraAutoSms.acknowledge([id]);
+        // The transfer is already committed. Queue-only ACK would replay
+        // this SMS on historical rescan; use a separate durable marker.
+        ack=await WaffraAutoSms.acknowledgeCompletedTransfer([id]);
         if(route.mounted)Navigator.of(route).pop();
        })),
      ]),
@@ -5396,7 +5499,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         title:WaffraText(sensitive?
          (waffraIsEnglish?'Exclude verification SMS':'استبعاد رسالة التحقق'):
          facts.kind==WaffraBankOperationKind.transfer?
-          (waffraIsEnglish?'Review account transfer':'مراجعة تحويل بين حساباتي'):
+          (waffraIsEnglish?'Review bank transfer':'مراجعة حوالة بنكية'):
          understood?(waffraIsEnglish?'I understand this transaction':'مراجعة العملية'):
          (waffraIsEnglish?'Add a separate manual transaction':'إضافة عملية يدوية')),
         subtitle:WaffraText(sensitive?
@@ -5423,8 +5526,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        ),
      ]));
    if(decision=='exclude'&&mounted){
-    // Excluding ONE message must never silently block its sender.
-    final acknowledged=await WaffraAutoSms.acknowledge([id]);
+    // Never mark user-excluded SMS as a financially committed transaction.
+    final acknowledged=await WaffraAutoSms.excludeMessages([id]);
     if(acknowledged&&mounted){
      setState(()=>_autoSmsPending.removeWhere((item)=>item['id']==id));
      snackSuccess(context,waffraIsEnglish?
@@ -6026,10 +6129,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   // overlapping multi-key saves, so a slower old save could finish last.
   // This protects in-app ordering, not cross-process widget writes or a crash
   // in the middle of SharedPreferences' non-atomic multi-key update.
-  // Freeze the complete entry objects synchronously before ANY suspension.
-  // Encoding an old multi-thousand-entry ledger on the main UI isolate
-  // caused the saving spinner to visibly stall after goal/recurring edits.
-  final frozenEntryRows=entries.map((e)=>e.toJson()).toList(growable:false);
+  // Snapshot immutable final-field MoneyEntry references before ANY await.
+  // The expensive per-entry toJson conversion now runs after the spinner
+  // frame and off the UI isolate for large ledgers, without moving the
+  // source snapshot capture past another pending write.
+  final frozenEntries=List<MoneyEntry>.unmodifiable(entries);
   final snapshot=<String,Object>{
    'entries':'', // replaced by the exact frozen payload under the save overlay
    // Migrate old category caps together with the independent budget list.
@@ -6062,7 +6166,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    await previousWrite;
    // The overlay is on screen; move large JSON serialization off the UI
    // isolate without changing a single byte or the source witness.
-   snapshot['entries']=await WaffraLargeJsonDecode.encodeRecords(frozenEntryRows);
+   snapshot['entries']=frozenEntries.length>=
+     WaffraLargeJsonDecode.encodeRowThreshold
+      ?await compute(MoneyEntry.encodeFrozenSnapshot,frozenEntries)
+      :await WaffraLargeJsonDecode.encodeRecords(
+       frozenEntries.map((e)=>e.toJson()).toList(growable:false));
    WaffraHomeTransactionCapture.narrowVerifiedManualAppend(
     route:route,source:baseline?.source,snapshot:snapshot);
    WaffraHomeTransactionCapture.narrowVerifiedModuleEdit(
@@ -9643,6 +9751,78 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    // Confirmation here only permits the user's explicitly reviewed overlap.
    if(pendingHash!=null)explicitlyApprovedSmsDuplicate=true;
   }
+  // M514 #451: editing an EXISTING reviewed SMS with its FIRST receipt
+  // must not use the legacy whole-ledger optimistic editor. That path
+  // cannot atomically attach encrypted image bytes to the typed SQL row.
+  // This dedicated verified writer only adds receipts; it never posts again.
+  if(initial!=null&&
+     (initial.sourceType=='sms'||initial.sourceType=='manual')&&
+     waffraReceiptPaths(initial.receiptPath).isEmpty&&
+     stagedReceiptCopies.isNotEmpty){
+   Future<void> discardStagedReceipts()async{
+    for(final staged in stagedReceiptCopies){
+     try{final file=File(staged);if(await file.exists())await file.delete();}
+     catch(_){}
+    }
+   }
+   final beforeEdit=Map<String,Object?>.from(initial.toJson())
+    ..remove('receiptPath');
+   final afterEdit=Map<String,Object?>.from(result.toJson())
+    ..remove('receiptPath');
+   if(jsonEncode(beforeEdit)!=jsonEncode(afterEdit)){
+    if(mounted)snack(context,waffraIsEnglish?
+     'Please attach the receipt separately from other changes to this entry.':
+     'أضف المرفق وحده أولًا؛ تعديل بيانات العملية يحتاج حفظًا منفصلًا.',
+     isError:true);
+    await discardStagedReceipts();
+    return;
+   }
+   try{
+    final images=<Uint8List>[];
+    for(final path in waffraReceiptPaths(result.receiptPath)){
+     images.add(await File(path).readAsBytes());
+    }
+    if(images.isEmpty)throw StateError('No verified receipt bytes.');
+    final current=await _saveProgress.track(
+     'attach-verified-existing-receipt',
+     ()=>_financeAuthority.attachReceiptsToExisting(
+      entryId:initial.id,expectedOriginal:initial.toJson(),
+      images:images,userConfirmed:true));
+    final raw=await WaffraLargeJsonDecode.parse(current.ledgerRaw??'[]');
+    if(raw is! List)throw StateError('Verified receipt edit ledger missing.');
+    final verified=raw.map((item)=>MoneyEntry.fromJson(
+     Map<String,dynamic>.from(item as Map))).toList();
+    if(!verified.any((item)=>item.id==initial.id&&
+      waffraReceiptPaths(item.receiptPath).length==images.length)){
+     throw StateError('Verified receipt was not associated with entry.');
+    }
+    if(mounted)setState((){
+     entries..clear()..addAll(verified);
+     _lastFinanceAuthorityRead=current;
+     _lastLedgerSavedRaw=current.ledgerRaw;
+     _lastWidgetRevision=current.widgetRevision;
+    });
+    if(smsEditorDraftKey!=null)_m492SmsEditorDrafts.remove(smsEditorDraftKey);
+    await discardStagedReceipts();
+    if(mounted){
+     snackSuccess(context,waffraIsEnglish?
+      'Receipt attached without recording the transaction again.':
+      'تم حفظ المرفق دون تسجيل العملية أو الخصم مرة تانية.');
+     unawaited(_refreshWidget());
+    }
+   }catch(error){
+    debugPrint('M514 verified existing receipt rejected: ${error.runtimeType}');
+    await discardStagedReceipts();
+    if(mounted){
+     await _refreshFromVerifiedFinance();
+     if(mounted)snack(context,waffraIsEnglish?
+      'Receipt not saved. Your financial transaction is unchanged.':
+      'تعذر حفظ المرفق؛ العملية المالية الأصلية لم تتغير.',
+      isError:true);
+    }
+   }
+   return;
+  }
   final linkedBudget=namedBudgets.where((b)=>b.id==result.budgetId&&!b.deleted).toList();
   final previousSpent=linkedBudget.isEmpty?0.0:waffraNamedBudgetSpent(
     entries.where((e)=>e.id!=result.id),categories,linkedBudget.single,result.date);
@@ -12730,37 +12910,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final forecast=now.day>=5&&thisMonthCount>=3?(currentExpense/now.day*monthDays+upcoming):null;
   final weeklySpend=smartCharts.weeklySpend;
   if(!mounted)return;
-  // Blur the underlying screen while the animated analysis indicator runs.
-  // Keep the loader visible long enough to convey progress; calculations are local.
-  if(!mounted)return;
-  await showWaffraDialog<void>(
-   context:context,barrierDismissible:false,barrierColor:Colors.transparent,
-   builder:(ctx){
-    Future<void>.delayed(waffraMotion(1500),(){if(ctx.mounted)Navigator.of(ctx).pop();});
-    return BackdropFilter(filter:ui.ImageFilter.blur(sigmaX:9,sigmaY:9),
-     child:Center(child:Material(color:Colors.transparent,child:Container(
-      width:MediaQuery.of(ctx).size.width*.83,
-      padding:const EdgeInsets.symmetric(horizontal:24,vertical:36),
-      decoration:BoxDecoration(color:Theme.of(ctx).cardColor,
-       borderRadius:BorderRadius.circular(28),
-       border:Border.fromBorderSide(waffraDialogOutline(Theme.of(ctx).brightness))),
-      child:Column(mainAxisSize:MainAxisSize.min,children:[
-       SizedBox(width:104,height:104,child:Stack(alignment:Alignment.center,children:[
-        const SizedBox.expand(child:CircularProgressIndicator(strokeWidth:8,color:emerald,
-         backgroundColor:Color(0xFFD9F1E5))),
-        const Icon(Icons.bar_chart_rounded,color:emerald,size:44),
-       ])),
-       const SizedBox(height:22),
-       WaffraText(waffraIsEnglish?'Analyzing your finances...':'يتم الآن تحليل بياناتك المالية',
-        style:const TextStyle(fontSize:19,fontWeight:FontWeight.bold),textAlign:TextAlign.center),
-       const SizedBox(height:10),
-       WaffraText(waffraIsEnglish?'Reviewing the last 90 days of transactions':
-        'جاري مراجعة معاملات آخر 90 يوم...',textAlign:TextAlign.center),
-      ]),
-     ))));
-   },
-  );
-  if(!mounted)return;
+  // M526: the local financial results have already been computed.
+  // Open the existing results route immediately; do not show a timed
+  // 1.5-second blocking animation that performs no work.
   await showGeneralDialog<void>(
    context:context,
    barrierDismissible:true,
@@ -15950,7 +16102,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   try{
    await model.deleteDownloadedModel();
    if(!mounted)return;
-   setState((){});
+   setState((){
+    _m528ModelDiskRevision=null;
+    _m528ModelDiskFuture=null;
+   });
    snackSuccess(context,waffraIsEnglish?
     'AI model deleted. Standard Waffra and your finance data are unchanged.':
     'تم حذف نموذج الذكاء الاصطناعي. بياناتك المالية والأدوات العادية كما هي.');
@@ -16349,13 +16504,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    ]),
    _accountSection(waffraIsEnglish?'Security & privacy':'الأمان والخصوصية',Icons.shield_outlined,[
     if(Platform.isAndroid)FutureBuilder<bool>(
-     future:WaffraAutoSms.enabled(),builder:(context,snapshot)=>SwitchListTile(
+     future:_m528SmsEnabled(),builder:(context,snapshot)=>SwitchListTile(
       secondary:const Icon(Icons.sms_outlined,color:emerald),
       title:WaffraText(waffraIsEnglish?
        'Automatic bank SMS tracking':'تسجيل الرسائل البنكية تلقائيًا'),
       subtitle:WaffraText(waffraIsEnglish?
        'Save verified SMS transactions and notify you; uncertain messages need review.':
-       'تسجيل العمليات المؤكدة وإشعارك بعد الحفظ؛ الرسائل الغامضة تحتاج مراجعة.'),
+       'تسجيل العمليات المؤكدة وإشعارك بعد الحفظ؛ الرسائل التي تحتاج مراجعة لا تُسجَّل تلقائيًا.'),
       value:snapshot.data==true,
       onChanged:WaffraHaptics.selection((enabled)async{
        if(enabled){
@@ -16367,11 +16522,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        }else{
         await WaffraAutoSms.disable();
        }
-       if(mounted)setState((){});
+       if(mounted)setState((){
+        _m528SmsEnabledFuture=WaffraAutoSms.enabled();
+       });
       }),
      )),
     if(Platform.isAndroid)FutureBuilder<bool>(
-     future:WaffraSmsCloudService.hasConsent(),
+     future:_m528CloudConsent(),
      builder:(context,snapshot)=>SwitchListTile(
       secondary:const Icon(Icons.cloud_outlined,color:emerald),
       title:WaffraText(waffraIsEnglish?
@@ -16404,7 +16561,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          'التحليل السحابي أو حماية التطبيق غير متاحة. لم يتم رفع أي رسالة.',
          isError:true);
        }
-       if(mounted)setState((){});
+       if(mounted)setState((){
+        _m528CloudConsentFuture=WaffraSmsCloudService.hasConsent();
+       });
       }),
      )),
     // Mandatory biometrics: optional PIN settings removed.
@@ -16446,7 +16605,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     ValueListenableBuilder<int>(
      valueListenable:WaffraOnDeviceQwen.shared.revision,
      builder:(context,revision,_)=>FutureBuilder<bool>(
-      future:WaffraOnDeviceQwen.shared.downloadedOnDisk(),
+      future:_m528ModelDiskStatus(revision),
       builder:(context,installed){
        final present=installed.data==true||
         WaffraOnDeviceQwen.shared.isReady;
@@ -16500,9 +16659,24 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     side:BorderSide(color:(isGuest)?emerald:Colors.red)),
     onPressed:WaffraHaptics.tap(()async{
      if(isGuest){await widget.onLogout();return;}
-     final ok=await confirm(
-      WaffraRegionalCopy.signOutTitle(english:waffraIsEnglish),
-      WaffraRegionalCopy.signOutBody(english:waffraIsEnglish));
+     // One ordinary confirmation: no password or biometric repair wizard.
+     final ok=await showWaffraDialog<bool>(
+      context:context,barrierDismissible:false,builder:(dialogCtx)=>
+       AlertDialog(
+        key:const Key('m513-home-signout-confirmation'),
+        title:WaffraText(waffraIsEnglish?
+         'Are you sure you want to sign out?':
+         'هل أنت متأكد من تسجيل الخروج؟'),
+        actions:[
+         TextButton(
+          key:const Key('m513-home-signout-no'),
+          onPressed:()=>Navigator.pop(dialogCtx,false),
+          child:WaffraText(waffraIsEnglish?'No':'لا')),
+         FilledButton(
+          key:const Key('m513-home-signout-yes'),
+          onPressed:()=>Navigator.pop(dialogCtx,true),
+          child:WaffraText(waffraIsEnglish?'Yes':'نعم')),
+        ]));
      if(ok==true&&mounted)await widget.onLogout();
     }),
     icon:Icon((isGuest)?Icons.login:Icons.logout),
@@ -16701,6 +16875,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       button:true,child:InkWell(
        key:const Key('waffra-header-account-entry'),
        onTap:WaffraHaptics.tap(()=>setState((){
+        // Device settings might have changed since the previous visit.
+        _m528SmsEnabledFuture=null;
+        _m528CloudConsentFuture=null;
+        _m528ModelDiskRevision=null;
+        _m528ModelDiskFuture=null;
         addFabExpanded=false;goalsOpened=false;accountOpened=true;_headerCompact=false;
        })),
        borderRadius:BorderRadius.circular(30),

@@ -589,6 +589,9 @@ class WaffraVerifiedFinanceAuthority {
       // they need an atomic entry+postponement posting writer separately.
       final allowed = switch (route) {
         WaffraFinanceRoute.challengeAndBudgetUpdate => <String>{
+          // Independent, account-linked envelopes are financial budget data.
+          // This route is still barred from changing ledger or bank balances.
+          'waffra_named_budgets_v1',
           'waffra_challenges_v1',
           'waffra_monthly_budget_v1',
           'waffra_monthly_budget_enabled_v1',
@@ -806,6 +809,26 @@ class WaffraVerifiedFinanceAuthority {
       throw StateError('M457 cannot verify committed manual entry.');
     }
     return current;
+  }
+
+  /// User-confirmed attach of first encrypted receipt(s) to an already
+  /// persisted SMS or manual entry; never recharges balances or SMS hashes.
+  Future<WaffraFinanceAuthorityRead> attachReceiptsToExisting({
+    required String entryId,
+    required Map<String,Object?> expectedOriginal,
+    required List<Uint8List> images,
+    required bool userConfirmed,
+  }) async {
+    if(!userConfirmed)throw StateError('Receipt edit needs user approval.');
+    final backend=await _requireRoute(WaffraFinanceRoute.receiptCopyAndAttach);
+    if(backend!=WaffraRuntimeFinanceBackend.verifiedEncrypted ||
+       encryptedSession==null){
+      throw StateError('Existing receipts require verified encrypted storage.');
+    }
+    await encryptedSession!.attachReceiptsToExisting(
+      entryId:entryId,expectedOriginal:expectedOriginal,
+      images:images,userConfirmed:true);
+    return load(route:WaffraFinanceRoute.receiptCopyAndAttach);
   }
 
   /// A future encrypted-only receipt attachment route. The caller supplies
