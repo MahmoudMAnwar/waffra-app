@@ -321,6 +321,10 @@ class MoneyEntry {
   'sourceType':sourceType,
   'merchantKey':merchantKey,if(budgetId!=null)'budgetId':budgetId,
   if(goalWalletPaidMinor>0)'goalWalletPaidMinor':goalWalletPaidMinor};
+ // M530: pure large-ledger serialization; caller freezes immutable entries
+ // BEFORE its first await. This worker preserves toJson() field order/bytes.
+ static String encodeFrozenSnapshot(List<MoneyEntry> frozenEntries)=>
+  jsonEncode(frozenEntries.map((e)=>e.toJson()).toList(growable:false));
  factory MoneyEntry.fromJson(Map<String,dynamic> j)=>MoneyEntry(
   id:'${j['id']??newId()}',title:'${j['title']??''}',
   category:'${j['category']??'أخرى'}',amount:(j['amount'] as num).toDouble(),
@@ -6026,10 +6030,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   // overlapping multi-key saves, so a slower old save could finish last.
   // This protects in-app ordering, not cross-process widget writes or a crash
   // in the middle of SharedPreferences' non-atomic multi-key update.
-  // Freeze the complete entry objects synchronously before ANY suspension.
-  // Encoding an old multi-thousand-entry ledger on the main UI isolate
-  // caused the saving spinner to visibly stall after goal/recurring edits.
-  final frozenEntryRows=entries.map((e)=>e.toJson()).toList(growable:false);
+  // Snapshot immutable final-field MoneyEntry references before ANY await.
+  // The expensive per-entry toJson conversion now runs after the spinner
+  // frame and off the UI isolate for large ledgers, without moving the
+  // source snapshot capture past another pending write.
+  final frozenEntries=List<MoneyEntry>.unmodifiable(entries);
   final snapshot=<String,Object>{
    'entries':'', // replaced by the exact frozen payload under the save overlay
    // Migrate old category caps together with the independent budget list.
@@ -6062,7 +6067,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    await previousWrite;
    // The overlay is on screen; move large JSON serialization off the UI
    // isolate without changing a single byte or the source witness.
-   snapshot['entries']=await WaffraLargeJsonDecode.encodeRecords(frozenEntryRows);
+   snapshot['entries']=frozenEntries.length>=
+     WaffraLargeJsonDecode.encodeRowThreshold
+      ?await compute(MoneyEntry.encodeFrozenSnapshot,frozenEntries)
+      :await WaffraLargeJsonDecode.encodeRecords(
+       frozenEntries.map((e)=>e.toJson()).toList(growable:false));
    WaffraHomeTransactionCapture.narrowVerifiedManualAppend(
     route:route,source:baseline?.source,snapshot:snapshot);
    WaffraHomeTransactionCapture.narrowVerifiedModuleEdit(
