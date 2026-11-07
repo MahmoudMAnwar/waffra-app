@@ -2470,3 +2470,10 @@ M462 category-precedence follow-up (5 Nov 2026): only an owner-confirmed learned
 - Existing device sign-out and saved phone/password reauthentication still work from the returning-user path; existing accounts do NOT have to choose again on app updates or biometric unlock. No account, SQLCipher or SMS mutations on choice taps; no remote sign-in guarantee where no local account exists.
 - Added `test/m510_first_launch_auth_choice_test.dart` to verify original branded page, labels, keys, click callbacks and source-gated form entry/back behavior and that existing registered login is retained.
 - Status: Draft PR #436 candidate, CI and Android fresh-install + over-old APK validation pending.
+
+
+[M526 / 2026-11-07 / Issue #465 — Ready financial insights open without fake loading]
+- Source-audited `showAiAnalysis()` in `lib/main.dart` finishes computing all local financial summaries before presenting its results route. Removed the obsolete, separately dismissed blurred waiting dialog whose `Future<void>.delayed(waffraMotion(1500))` imposed a fixed 1.5-second pause despite no further asynchronous work. The existing detailed report `showGeneralDialog` opens immediately after the same `mounted` guard.
+- Existing 90-day calculations, empty-data prompts, score/forecast/chart/report data, PDF export, report dismiss/back transition, local wallet accounting and verified SQLCipher authority remain unchanged. Other asynchronous financial save/loading paths and visual animations are not bypassed.
+- Added scoped source contract `test/m526_instant_insights_route_test.dart`, registered requirement and Issue #465 before implementation, and retained M385 bounded function-only changes. This reviewed note follows the latest application-code commit for M449.
+- Exact-head Flutter and Android CI, physical Android tap-to-first-insights frame profiles and existing-data regression remain pending. Do NOT interpret this as a complete 8-finding performance fix, measured FPS improvement, signed APK acceptance, or approval to merge.
