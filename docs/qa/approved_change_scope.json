@@ -58,6 +58,10 @@
         "end": "for attempt in 1 2; do"
       },
       {
+        "start": "  # Drive the exact integration APK built before emulator boot. Flutter test",
+        "end": "  result=$?"
+      },
+      {
         "start": "  if (( result != 0 )); then",
         "end": "  if (( result == 0 )); then"
       }
