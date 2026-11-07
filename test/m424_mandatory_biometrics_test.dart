@@ -104,6 +104,19 @@ void main() {
     await tester.tap(find.byKey(
       const Key('waffra-mandatory-biometric-signout')));
     await tester.pumpAndSettle();
+    // M513: the mandatory lock still offers sign-out, but only after
+    // explicit consent; Cancel must not touch the current secure session.
+    expect(find.byKey(const Key('m513-biometric-signout-confirmation')),
+      findsOneWidget);
+    expect(signedOut, 0);
+    await tester.tap(find.byKey(const Key('m513-biometric-signout-no')));
+    await tester.pumpAndSettle();
+    expect(signedOut, 0);
+    await tester.tap(find.byKey(
+      const Key('waffra-mandatory-biometric-signout')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('m513-biometric-signout-yes')));
+    await tester.pumpAndSettle();
     expect(signedOut, 1);
     expect(unlocked, 0);
   });
