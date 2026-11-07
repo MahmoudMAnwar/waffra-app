@@ -121,4 +121,39 @@ void main(){
   expect(completed,isNot(contains('committedBucketPrefix + bucket')));
   expect(completed,isNot(contains('excludedMessageBucketPrefix + bucket')));
  });
+
+ test('M517 excluded SMS list keeps per-message count separate from senders',(){
+  final main=File('lib/main.dart').readAsStringSync();
+  final dart=File('lib/waffra_auto_sms.dart').readAsStringSync();
+  final native=File('native/WaffraAutoSmsStore.kt').readAsStringSync();
+  final activity=File('native/WaffraMainActivity.kt').readAsStringSync();
+  final page=main.split('Future<void> _openExcludedSenders()async{').last
+   .split('Future<void> _openAutoSmsInbox()async{').first;
+  expect(page,contains('WaffraAutoSms.excludedMessages()'));
+  expect(page,contains('WaffraAutoSms.excludedSenders()'));
+  expect(page,contains('messages.length+senders.length+2'));
+  expect(page,contains('WaffraAutoSms.restoreExcludedMessage(id)'));
+  expect(page,contains('رسالة مستبعدة'));
+  expect(dart,contains("'excludedAutoSmsMessages'"));
+  expect(dart,contains("'restoreExcludedAutoSmsMessage'"));
+  expect(activity,contains('"excludedAutoSmsMessages" -> {'));
+  expect(activity,contains('"restoreExcludedAutoSmsMessage" -> {'));
+  expect(native,contains('fun excludedMessages(context: Context)'));
+  expect(native,contains('fun restoreExcludedMessage(context: Context, id: String)'));
+  expect(native,contains('excludedMessageInfoBucketPrefix'));
+  expect(native,contains('excludedMessageBucketPrefix'));
+  expect(native,contains('result.sortedWith('));
+  // Backward compatibility: old hash-only markers must appear even
+  // without the newly introduced encrypted sender/time metadata.
+  expect(native,contains('val info = labels[id]'));
+  expect(native,contains('info?.optString("sender") ?: ""'));
+  // An exclusion restoration must never manipulate completed finance hashes.
+  final restore=native.split('fun restoreExcludedMessage(context: Context, id: String)').last
+   .split('// Explicit user sender exclusion').first;
+  expect(restore,isNot(contains('committedBucketPrefix + id.take(2)')));
+  expect(restore,isNot(contains('completedTransferBucketPrefix + id.take(2)')));
+  final ownerSwitch=native.split('if (previous != null && previous != owner)').last
+   .split('if (owner != null)').first;
+  expect(ownerSwitch,contains('key.startsWith(excludedMessageInfoBucketPrefix)'));
+ });
 }
