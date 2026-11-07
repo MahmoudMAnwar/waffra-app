@@ -5136,15 +5136,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   // Verify the main transfer amount independently from fees/balances.
   // Never use a fee's currency as proof of a SAR account transfer.
   final sourceAmount=WaffraSmsCurrencies.originalAmount(body);
-  if(sourceAmount==null||sourceAmount.currency!='SAR'||
+  if((sourceAmount!=null&&sourceAmount.currency!='SAR')||
      WaffraSmsCurrencies.requiresReviewForSarLedger(body)){
    if(mounted)snack(context,
     'مبلغ التحويل الأساسي أو عملته غير مؤكد من الرسالة. '
     'لن تُسجّل الرسوم أو عملة مجهولة كتحويل.',isError:true);
    return;
   }
-  final verifiedMinor=waffraSarAmountMinor(sourceAmount.amount.toStringAsFixed(2));
-  if(verifiedMinor==null)return;
+  final verifiedMinor=sourceAmount==null?0:
+   (waffraSarAmountMinor(sourceAmount.amount.toStringAsFixed(2))??0);
+  // No confirmed principal means an EMPTY editable field, never the fee.
+  // The verified form refuses zero amounts on submit.
   final bridge=_financeBinding?.accountsBridge;
   if(bridge==null){
    if(mounted)snack(context,'الحسابات الموثقة غير متاحة.',
@@ -5156,8 +5158,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final accounts=await api.balances();
    if(!mounted)return;
    if(accounts.where((a)=>!a.archived).length<2){
-    snack(context,'أضف حسابين على الأقل قبل تسجيل التحويل.',isError:true);
-    return;
+    // The editor offers inline creation of a bank provider and child account.
+    // Previously returning here made the transfer CTA look unresponsive.
+    snack(context,'اختار أو أضف حسابين مختلفين داخل شاشة المراجعة.');
    }
    final arrived=DateTime.fromMillisecondsSinceEpoch(
     item['receivedAt'] is int?item['receivedAt'] as int:
@@ -5170,7 +5173,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    var saved=false,ack=false;
    await Navigator.of(context).push<void>(MaterialPageRoute(
     builder:(route)=>Scaffold(
-     appBar:AppBar(title:const WaffraText('مراجعة تحويل بين حساباتي')),
+     appBar:AppBar(title:const WaffraText('مراجعة حوالة بنكية')),
      body:Column(children:[
       Padding(padding:const EdgeInsets.all(12),
        child:WaffraText('من الحساب: '+
@@ -5360,7 +5363,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         title:WaffraText(sensitive?
          (waffraIsEnglish?'Exclude verification SMS':'استبعاد رسالة التحقق'):
          facts.kind==WaffraBankOperationKind.transfer?
-          (waffraIsEnglish?'Review account transfer':'مراجعة تحويل بين حساباتي'):
+          (waffraIsEnglish?'Review bank transfer':'مراجعة حوالة بنكية'):
          understood?(waffraIsEnglish?'I understand this transaction':'مراجعة العملية'):
          (waffraIsEnglish?'Add a separate manual transaction':'إضافة عملية يدوية')),
         subtitle:WaffraText(sensitive?
