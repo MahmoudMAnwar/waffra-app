@@ -36,7 +36,7 @@ void main() {
     // A previous string substitution expanded a trailing Dart regex
     // dollar-sign into repeated copies of the rest of this entire file.
     expect(source.contains("r'^[a-f0-9]{64}\n"), isFalse);
-    expect(RegExp(r'^abstract final class WaffraAutoSms \\{', multiLine: true)
+    expect(RegExp(r'^abstract final class WaffraAutoSms \{', multiLine: true)
         .allMatches(source).length, 1);
     expect(source.trimRight().endsWith('}'), isTrue);
   });
