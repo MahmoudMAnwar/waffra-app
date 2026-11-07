@@ -226,7 +226,11 @@ jobs:
           # service startup while preserving the same real API35 Flutter engine.
           target: aosp_atd
           arch: x86_64
-          profile: pixel_6
+          # M541: AOSP ATD emitted malformed Pixel 6 SystemUI overlay commands
+          # immediately before the repeatable emulator disconnect. Use the
+          # runner's smaller Pixel 2 hardware profile for the same real API35
+          # Flutter UI assertions; no test skips or reduced Android API.
+          profile: pixel_2
           cores: 4
           # M533 (#481): emulator 37.2.13 repeatedly terminated at the balance
           # eye test after footer succeeded. Freeze stable upstream 36.4.10
