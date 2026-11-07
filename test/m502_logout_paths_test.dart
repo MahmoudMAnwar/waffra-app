@@ -5,12 +5,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_mandatory_biometric_gate.dart';
 
 void main() {
-  testWidgets('M502: biometric sign-out works during an unfinished OS challenge',
-      (tester) async {
+  testWidgets('M502: pending native biometric must confirm logout with Yes/No', (tester) async {
     final osChallenge=Completer<bool>();
     var signOutCalls=0, cancelCalls=0, verifiedCalls=0;
     await tester.pumpWidget(MaterialApp(home:WaffraMandatoryBiometricGate(
-      english:true,
+      english:false,
       checkAvailable:()async=>true,
       authenticate:()=>osChallenge.future,
       cancelAuthentication:()async{cancelCalls++;},
@@ -23,13 +22,24 @@ void main() {
     await tester.tap(button);
     await tester.pump();
     expect(cancelCalls,1);
-    expect(signOutCalls,1);
-    expect(verifiedCalls,0);
-    // OS completion from the canceled challenge cannot unlock old finances.
+    expect(signOutCalls,0);
+    expect(find.byKey(const Key('m513-biometric-signout-confirmation')),findsOneWidget);
+    expect(find.text('هل أنت متأكد من تسجيل الخروج؟'),findsOneWidget);
+    await tester.tap(find.byKey(const Key('m513-biometric-signout-no')));
+    await tester.pump();
+    expect(signOutCalls,0);
+    expect(find.byKey(const Key('m513-biometric-signout-confirmation')),findsNothing);
+    // A canceled OS prompt may report success late; it cannot unlock finance.
     osChallenge.complete(true);
     await tester.pump();
     expect(verifiedCalls,0);
-    expect(find.textContaining('Sign-out did not complete'),findsOneWidget);
+    await tester.tap(button);
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('m513-biometric-signout-yes')));
+    await tester.pump();
+    expect(signOutCalls,1);
+    expect(verifiedCalls,0);
+    expect(find.textContaining('لم يكتمل تسجيل الخروج'),findsOneWidget);
   });
 
   test('M502: root logout reports failures visibly and preserves safety guards',(){
