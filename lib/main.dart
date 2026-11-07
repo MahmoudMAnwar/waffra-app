@@ -2293,7 +2293,7 @@ class _LoginScreenState extends State<LoginScreen> {
    final storedPhone=WaffraSaudiMobile.inputFromStored(account.phone);
    final hasSecureVerifier=
     await WaffraLocalPhoneCredentials.hasRegisteredCredentials();
-   final verifierStatus=await WaffraLocalPhoneCredentials.probeForPhone(
+   var verifierStatus=await WaffraLocalPhoneCredentials.probeForPhone(
     enteredPhone);
    // Missing or malformed OS credentials are not equivalent to a wrong
    // password. Never replace the existing identity or financial data.
@@ -2322,6 +2322,7 @@ class _LoginScreenState extends State<LoginScreen> {
       'تعذر استعادة تسجيل الدخول بأمان، بياناتك المالية محفوظة.');
      return;
     }
+    verifierStatus=await WaffraLocalPhoneCredentials.probeForPhone(enteredPhone);
    }
    if(!hasLegacy&&(verifierStatus==WaffraLocalCredentialProbe.missing||
       verifierStatus==WaffraLocalCredentialProbe.malformed)){
