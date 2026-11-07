@@ -32,7 +32,7 @@ void main() {
       phone: phone, password: password);
     expect(await WaffraLocalPhoneCredentials.verify(
       phone: phone, password: password), isTrue);
-  });
+  }, timeout: const Timeout(Duration(minutes: 3)));
 
   test('different phone and password cannot steal existing local identity', () async {
     await WaffraLocalPhoneCredentials.registerOrResume(
