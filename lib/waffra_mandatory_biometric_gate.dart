@@ -184,10 +184,10 @@ class _WaffraMandatoryBiometricGateState
   }
 
   @override
-  Widget build(BuildContext context) => Stack(fit:StackFit.expand,children:[
-   Scaffold(
+  Widget build(BuildContext context) => Scaffold(
     backgroundColor: const Color(0xFF064D3B),
-    body: SafeArea(
+    body:Stack(fit:StackFit.expand,children:[
+     SafeArea(
       child: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(28),
@@ -225,7 +225,6 @@ class _WaffraMandatoryBiometricGateState
         ),
       ),
     ),
-  ),
    if(_confirmingSignOut)Positioned.fill(child:Material(
     color:Colors.black54,
     child:Center(child:Padding(padding:const EdgeInsets.symmetric(horizontal:20),
@@ -244,5 +243,6 @@ class _WaffraMandatoryBiometricGateState
         child:Text(widget.english?'Yes':'نعم')),
       ],
      ))))),
-  ]);
+   ]),
+  );
 }
