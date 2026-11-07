@@ -46,31 +46,33 @@ void main(){
    expect(login,contains('chooseRegistration();'));
  });
 
- test('M478 missing verifier can recover ONLY with fresh fingerprint and exact password read-back',(){
+ test('M545 logout is only Yes/No; never shows password recovery',(){
    final s=File('lib/main.dart').readAsStringSync();
-   final recovery=s.substring(s.indexOf(' Future<bool> _recoverMissingPhoneVerifier(Person account)async{'),
-    s.indexOf(' Future<void> logout()async {'));
    final signout=s.substring(s.indexOf(' Future<void> logout()async {'),
-    s.indexOf(' Future<void> setPin('));
-   expect(recovery,contains('m478-missing-verifier-recovery'));
-   expect(recovery,contains('WaffraLocalCredentialProbe.missing'));
-   expect(recovery,contains('WaffraBiometrics.unlockMandatory()'));
-   expect(recovery,contains('WaffraLocalPhoneCredentials.registerOrResume('));
-   expect(recovery,contains('WaffraLocalPhoneCredentials.verify('));
-   expect(recovery.indexOf('WaffraBiometrics.unlockMandatory()'),
-    lessThan(recovery.indexOf('WaffraLocalPhoneCredentials.registerOrResume(')));
-   expect(recovery.indexOf('WaffraLocalPhoneCredentials.registerOrResume('),
-    lessThan(recovery.indexOf('WaffraLocalPhoneCredentials.verify(')));
-   expect(signout,contains('if(integrity==WaffraLocalCredentialProbe.missing){'));
-   expect(signout,contains('final restored=await _recoverMissingPhoneVerifier(current);'));
-   expect(signout,contains('if(!restored)return;'));
+     s.indexOf(' Future<void> setPin('));
+   final login=s.substring(s.indexOf('class _LoginScreenState extends State<LoginScreen> {'),
+     s.indexOf('class ProfileForm extends StatefulWidget {'));
+   final account=s.substring(s.indexOf('m513-home-signout-confirmation')-500,
+     s.indexOf('m513-home-signout-yes')+250);
+   expect(account,contains('هل أنت متأكد من تسجيل الخروج؟'));
+   expect(account,contains('m513-home-signout-no'));
+   expect(account,contains('m513-home-signout-yes'));
+   expect(signout,isNot(contains('_recoverMissingPhoneVerifier(')));
+   expect(signout,isNot(contains('showDialog(')));
+   expect(signout,isNot(contains('WaffraLocalPhoneCredentials.registerOrResume(')));
+   expect(signout,isNot(contains('WaffraBiometrics.unlockMandatory()')));
+   expect(s,isNot(contains('m478-missing-verifier-recovery')));
+   expect(s,isNot(contains('استعادة بيانات الدخول مرة واحدة')));
+   expect(signout,contains('stageSignOutRecoveryGrant(phone)'));
    expect(signout,contains('WaffraAutoSms.suspendForSignOut()'));
    expect(signout,contains('await _accountWriteAuthority.signOut();'));
-   expect(signout.indexOf('_recoverMissingPhoneVerifier(current)'),
-    lessThan(signout.indexOf('WaffraAutoSms.suspendForSignOut()')));
-   expect(signout.indexOf('WaffraAutoSms.suspendForSignOut()'),
-    lessThan(signout.indexOf('await _accountWriteAuthority.signOut();')));
-   expect(signout,isNot(contains('WaffraLocalPhoneCredentials.registerOrResume(')));
+   expect(signout.indexOf('stageSignOutRecoveryGrant(phone)'),
+     lessThan(signout.indexOf('await _accountWriteAuthority.signOut();')));
+   expect(login,contains('hasSignOutRecoveryGrant(enteredPhone)'));
+   expect(login,contains('WaffraBiometrics.unlockMandatory()'));
+   expect(login,contains('finishSignInRecoveryAfterBiometric('));
+   expect(login.indexOf('WaffraBiometrics.unlockMandatory()'),
+     lessThan(login.indexOf('finishSignInRecoveryAfterBiometric(')));
  });
 
  test('M478 malformed and foreign verifier never count as recoverable missing',(){
