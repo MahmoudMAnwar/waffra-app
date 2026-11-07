@@ -4441,7 +4441,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    builder:(dialog)=>AlertDialog(
     title:WaffraText(waffraIsEnglish?
      'Analyze this unclear message with AI?':
-     'تحليل الرسالة الغامضة بالذكاء الاصطناعي؟'),
+     'تحليل هذه الرسالة التي تحتاج مراجعة بالذكاء الاصطناعي؟'),
     content:WaffraText(waffraIsEnglish?
      'The financial text will be redacted locally before sending it to '
      'OpenRouter through an external service. Processing may occur outside '
@@ -16404,7 +16404,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        'Automatic bank SMS tracking':'تسجيل الرسائل البنكية تلقائيًا'),
       subtitle:WaffraText(waffraIsEnglish?
        'Save verified SMS transactions and notify you; uncertain messages need review.':
-       'تسجيل العمليات المؤكدة وإشعارك بعد الحفظ؛ الرسائل الغامضة تحتاج مراجعة.'),
+       'تسجيل العمليات المؤكدة وإشعارك بعد الحفظ؛ الرسائل التي تحتاج مراجعة لا تُسجَّل تلقائيًا.'),
       value:snapshot.data==true,
       onChanged:WaffraHaptics.selection((enabled)async{
        if(enabled){
