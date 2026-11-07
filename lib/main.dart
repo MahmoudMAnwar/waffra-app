@@ -5169,7 +5169,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final prefill=WaffraInternalTransferDraft(
     // Native fingerprint includes sender, body AND receivedAt; two distinct
     // identical-body SMS must not share a single SQLCipher transfer ID.
-    requestId:'sms-transfer-$id',
+    requestId:WaffraAutoSms.transferIdForMessage(id),
     fromId:'',toId:'',amountMinor:verifiedMinor,
     occurredIso:date.toIso8601String(),memo:'تحويل من رسالة بنكية');
    var saved=false,ack=false;
