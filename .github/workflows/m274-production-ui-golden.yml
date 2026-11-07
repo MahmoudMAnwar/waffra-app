@@ -222,7 +222,9 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
-          target: google_apis
+          # M535: dedicated Android Test Device image reduces unrelated GMS
+          # service startup while preserving the same real API35 Flutter engine.
+          target: aosp_atd
           arch: x86_64
           profile: pixel_6
           cores: 2
