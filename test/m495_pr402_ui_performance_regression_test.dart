@@ -70,7 +70,9 @@ void main(){
   expect(main,contains('forTransfer:true,transferTarget:target'));
   expect(main,contains("value:'__create_transfer_provider__'"));
   expect(main,contains("value:'__create_transfer_child__'"));
-  expect(main,contains('onCreateAccount:(group,createProvider)async{'));
+  expect(main,contains('createAccountInsideEntryDropdown('));
+  expect(main,contains('mainProvider:true,forTransfer:true,transferTarget:target'));
+  expect(main,contains('onCreateSmsAccount:(group,createProvider,isDestination)async{'));
   expect(form,contains('if(!mounted||created==null)return;'));
   expect(form,contains('!belongsTo(destinationProvider,destination)'));
   expect(form,contains('if(group!=null&&widget.onCreateAccount!=null)'));
