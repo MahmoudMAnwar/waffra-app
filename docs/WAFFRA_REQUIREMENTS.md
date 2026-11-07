@@ -430,3 +430,12 @@ Each issue requires linked source changes, exact-head CI, tests and real Android
 - **Tracking:** https://github.com/MahmoudMAnwar/waffra-app/issues/454
 - **State:** documented / pending audit. No code refactor or regression-test success claimed.
 - **Execution:** inventory and root-cause matrix first, targeted scoped PRs with regression tests next; protect existing SQLCipher data and upgrade paths; require CI and device acceptance before merge.
+
+
+## M526 — Instant display of already-computed financial analysis (2026-11-07; Issue #465 / audit #454)
+
+- **Owner requirement:** improve all buttons/dropdowns smoothness and remove avoidable tap-to-next-screen wait. First safe slice M525 covers budget-spend cache; M526 covers analysis result navigation.
+- **Existing source behavior F-454-P05:** `showAiAnalysis()` computes local 90-day values, then presents an additional blurred progress dialog for `waffraMotion(1500)` before opening the already-built results route. The delay does not represent an ongoing asynchronous calculation.
+- **Expected:** show verified local insights immediately after computation; preserve empty-state message, route dismiss/Back, data aggregation, charts, exports, all SQLCipher/finance authority and loading gates for unrelated operations. Remove only that artificial intermediate wait; test that the final results dialog still exists.
+- **Implementation:** isolated Draft PR to main, exact M385 scoped function, test, and M449 reviewed notes after code edit. Android first-result-frame profile and exact-head CI required before acceptance. No blanket animation removal.
+- **Status:** Recorded before coding; runtime/CI/device verification pending. Remaining audit findings tracked by #454.
