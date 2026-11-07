@@ -430,3 +430,13 @@ Each issue requires linked source changes, exact-head CI, tests and real Android
 - **Tracking:** https://github.com/MahmoudMAnwar/waffra-app/issues/454
 - **State:** documented / pending audit. No code refactor or regression-test success claimed.
 - **Execution:** inventory and root-cause matrix first, targeted scoped PRs with regression tests next; protect existing SQLCipher data and upgrade paths; require CI and device acceptance before merge.
+
+
+## M525 — Budget sheet spending precomputation (2026-11-07; Issue #463 / parent #454)
+
+- **Owner request:** begin implementing source-audited app-wide tap, dropdown and animation smoothness improvements; preserve finance and encrypted device data.
+- **First scoped slice F-454-P02:** opening / filtering / sorting the budget directory repeatedly calls `waffraNamedBudgetSpent(entries,categories,b,now)` within the sort comparator and once per row, potentially traversing the full ledger multiple times per rebuild.
+- **Approved work candidate:** read-only local `spentByBudgetId` calculated once per saved budget during a panel rebuild; reuse the same value in comparator and tile, without changing budget calculation, dates, user search, status, account scope, finance writes, sources, SQLCipher or UI text. Regression covers one calculation per budget in source and deterministic sorting with substantial data.
+- **Implementation:** isolated Draft PR from main, linked to #463. Declare exact file/anchor authorization in M385 before coding. Run targeted Flutter tests and latest SHA CI and profile on physical Android before claiming smoothness measured or Done.
+- **Status:** Recorded; code/CI/device unverified.
+- **Follow-ups:** F-454-P01 and P03–P08 remain tracked in #454; do not mark all eight resolved by this slice.
