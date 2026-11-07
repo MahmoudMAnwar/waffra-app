@@ -45,6 +45,18 @@ class M533AndroidEmulatorStabilityContractTest(unittest.TestCase):
         self.assertIn('exit "$result"', SCRIPT)
         self.assertNotIn('|| true\n    flutter drive', SCRIPT)
 
+    def test_m535_atd_keeps_real_api35_ui_and_diagnoses_vm_handshake(self):
+        self.assertIn("target: aosp_atd", WORKFLOW)
+        self.assertNotIn("target: google_apis", WORKFLOW)
+        self.assertIn("api-level: 35", WORKFLOW)
+        self.assertIn("timeout --signal=TERM --kill-after=20s 360s", SCRIPT)
+        self.assertIn("M535_VM_HANDSHAKE_EVIDENCE", SCRIPT)
+        self.assertIn("M535_APP_VM_FATAL_LOGCAT_IF_ALIVE", SCRIPT)
+        self.assertIn('forward --list', SCRIPT)
+        self.assertIn('shell pidof com.waffra.waffra', SCRIPT)
+        self.assertIn('flutter drive --driver=', SCRIPT)
+        self.assertIn('exit "$result"', SCRIPT)
+
     def test_m534_runner_is_well_scoped_and_reaches_real_flutter_drive(self):
         self.assertEqual(SCRIPT.count('for attempt in 1 2; do'), 1)
         self.assertEqual(SCRIPT.count('adb -s "$device" wait-for-device'), 1)
