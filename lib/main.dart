@@ -5167,7 +5167,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      DateTime.now().millisecondsSinceEpoch);
    final date=bankSmsDate(body,referenceDate:arrived)??arrived;
    final prefill=WaffraInternalTransferDraft(
-    requestId:'sms-transfer-'+bankSmsHash(body),
+    // Native fingerprint includes sender, body AND receivedAt; two distinct
+    // identical-body SMS must not share a single SQLCipher transfer ID.
+    requestId:'sms-transfer-$id',
     fromId:'',toId:'',amountMinor:verifiedMinor,
     occurredIso:date.toIso8601String(),memo:'تحويل من رسالة بنكية');
    var saved=false,ack=false;
@@ -5241,7 +5243,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          amountMinor:draft.amountMinor,occurredIso:draft.occurredIso,
          note:draft.memo,userConfirmed:true);
         saved=true;
-        ack=await WaffraAutoSms.acknowledge([id]);
+        // The transfer is already committed. Queue-only ACK would replay
+        // this SMS on historical rescan; use a separate durable marker.
+        ack=await WaffraAutoSms.acknowledgeCompletedTransfer([id]);
         if(route.mounted)Navigator.of(route).pop();
        })),
      ]),
