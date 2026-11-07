@@ -2470,3 +2470,10 @@ M462 category-precedence follow-up (5 Nov 2026): only an owner-confirmed learned
 - Existing device sign-out and saved phone/password reauthentication still work from the returning-user path; existing accounts do NOT have to choose again on app updates or biometric unlock. No account, SQLCipher or SMS mutations on choice taps; no remote sign-in guarantee where no local account exists.
 - Added `test/m510_first_launch_auth_choice_test.dart` to verify original branded page, labels, keys, click callbacks and source-gated form entry/back behavior and that existing registered login is retained.
 - Status: Draft PR #436 candidate, CI and Android fresh-install + over-old APK validation pending.
+
+
+[M525 / 2026-11-07 / Issue #463 — Budget sheet spent projection reuse]
+- Implemented bounded read-only performance improvement in `lib/waffra_budget_directory.part.dart`: a local `spentByBudgetId` map uses `putIfAbsent` to calculate each visible budget's `waffraNamedBudgetSpent(entries,categories,b,now)` no more than once per sheet rebuild, rather than evaluating full financial history on every spend-sort comparison and again when rendering its tile.
+- Search/status/scope, name/limit/spent order, current month, existing SQLCipher finance source, budget/account links and write operations stay unchanged. Cache exists only inside `_budgetDirectoryPanel`; it cannot survive a changed filter or finance refresh.
+- Added `test/m525_budget_sheet_spend_cache_test.dart` asserting one underlying spend projection call, use by comparator and tiles, and no direct financial save from the panel. Approved scope limited by M385 anchored file change; requirements recorded in `docs/WAFFRA_REQUIREMENTS.md` and #463 before coding.
+- This note is the reviewed source change after the latest app-code commit, satisfying the M449 lineage order. **Not performance measured**: exact-HEAD Flutter/Android CI, Android profile frame timing with large histories, new APK and existing-data regression acceptance are still pending. No main merge or real-device smoothness certification is claimed.
