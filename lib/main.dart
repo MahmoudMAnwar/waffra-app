@@ -4024,6 +4024,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  String? lastBackupGeneratedAt;
  int? lastBackupBytes;
  bool protectRecentApps=true;
+ // M528: stable permission/consent futures across unrelated profile repaints.
+ Future<bool>? _m528SmsEnabledFuture;
+ Future<bool>? _m528CloudConsentFuture;
+ int? _m528ModelDiskRevision;
+ Future<bool>? _m528ModelDiskFuture;
+ Future<bool> _m528SmsEnabled()=>
+  _m528SmsEnabledFuture??=WaffraAutoSms.enabled();
+ Future<bool> _m528CloudConsent()=>
+  _m528CloudConsentFuture??=WaffraSmsCloudService.hasConsent();
+ Future<bool> _m528ModelDiskStatus(int revision){
+  if(_m528ModelDiskRevision!=revision||_m528ModelDiskFuture==null){
+   _m528ModelDiskRevision=revision;
+   _m528ModelDiskFuture=WaffraOnDeviceQwen.shared.downloadedOnDisk();
+  }
+  return _m528ModelDiskFuture!;
+ }
  String? _accountOpenSection;
  String accountSearch='';
  final _tourKeys=List<GlobalKey>.generate(7,(_)=>GlobalKey());
@@ -4076,6 +4092,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       WaffraExternalMediaSession.shouldSkipResumeBackgroundWork)return;
    // Verified finance/widget read is still required, merely deferred one
    // frame. Never infer cash from an unverified snapshot.
+   if(accountOpened&&mounted)setState((){
+    _m528SmsEnabledFuture=null;
+    _m528CloudConsentFuture=null;
+    _m528ModelDiskRevision=null;
+    _m528ModelDiskFuture=null;
+   });
    unawaited(_syncWidgetTransactions());
    final now=DateTime.now();
    final last=_m468LastResumeSmsScan;
@@ -15950,7 +15972,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   try{
    await model.deleteDownloadedModel();
    if(!mounted)return;
-   setState((){});
+   setState((){
+    _m528ModelDiskRevision=null;
+    _m528ModelDiskFuture=null;
+   });
    snackSuccess(context,waffraIsEnglish?
     'AI model deleted. Standard Waffra and your finance data are unchanged.':
     'تم حذف نموذج الذكاء الاصطناعي. بياناتك المالية والأدوات العادية كما هي.');
@@ -16349,7 +16374,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    ]),
    _accountSection(waffraIsEnglish?'Security & privacy':'الأمان والخصوصية',Icons.shield_outlined,[
     if(Platform.isAndroid)FutureBuilder<bool>(
-     future:WaffraAutoSms.enabled(),builder:(context,snapshot)=>SwitchListTile(
+     future:_m528SmsEnabled(),builder:(context,snapshot)=>SwitchListTile(
       secondary:const Icon(Icons.sms_outlined,color:emerald),
       title:WaffraText(waffraIsEnglish?
        'Automatic bank SMS tracking':'تسجيل الرسائل البنكية تلقائيًا'),
@@ -16367,11 +16392,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        }else{
         await WaffraAutoSms.disable();
        }
-       if(mounted)setState((){});
+       if(mounted)setState((){
+        _m528SmsEnabledFuture=WaffraAutoSms.enabled();
+       });
       }),
      )),
     if(Platform.isAndroid)FutureBuilder<bool>(
-     future:WaffraSmsCloudService.hasConsent(),
+     future:_m528CloudConsent(),
      builder:(context,snapshot)=>SwitchListTile(
       secondary:const Icon(Icons.cloud_outlined,color:emerald),
       title:WaffraText(waffraIsEnglish?
@@ -16404,7 +16431,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          'التحليل السحابي أو حماية التطبيق غير متاحة. لم يتم رفع أي رسالة.',
          isError:true);
        }
-       if(mounted)setState((){});
+       if(mounted)setState((){
+        _m528CloudConsentFuture=WaffraSmsCloudService.hasConsent();
+       });
       }),
      )),
     // Mandatory biometrics: optional PIN settings removed.
@@ -16446,7 +16475,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     ValueListenableBuilder<int>(
      valueListenable:WaffraOnDeviceQwen.shared.revision,
      builder:(context,revision,_)=>FutureBuilder<bool>(
-      future:WaffraOnDeviceQwen.shared.downloadedOnDisk(),
+      future:_m528ModelDiskStatus(revision),
       builder:(context,installed){
        final present=installed.data==true||
         WaffraOnDeviceQwen.shared.isReady;
@@ -16701,6 +16730,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       button:true,child:InkWell(
        key:const Key('waffra-header-account-entry'),
        onTap:WaffraHaptics.tap(()=>setState((){
+        // Device settings might have changed since the previous visit.
+        _m528SmsEnabledFuture=null;
+        _m528CloudConsentFuture=null;
+        _m528ModelDiskRevision=null;
+        _m528ModelDiskFuture=null;
         addFabExpanded=false;goalsOpened=false;accountOpened=true;_headerCompact=false;
        })),
        borderRadius:BorderRadius.circular(30),
