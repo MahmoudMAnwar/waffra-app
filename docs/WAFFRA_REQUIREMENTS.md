@@ -438,5 +438,6 @@ Each issue requires linked source changes, exact-head CI, tests and real Android
 - **First scoped slice F-454-P02:** opening / filtering / sorting the budget directory repeatedly calls `waffraNamedBudgetSpent(entries,categories,b,now)` within the sort comparator and once per row, potentially traversing the full ledger multiple times per rebuild.
 - **Approved work candidate:** read-only local `spentByBudgetId` calculated once per saved budget during a panel rebuild; reuse the same value in comparator and tile, without changing budget calculation, dates, user search, status, account scope, finance writes, sources, SQLCipher or UI text. Regression covers one calculation per budget in source and deterministic sorting with substantial data.
 - **Implementation:** isolated Draft PR from main, linked to #463. Declare exact file/anchor authorization in M385 before coding. Run targeted Flutter tests and latest SHA CI and profile on physical Android before claiming smoothness measured or Done.
-- **Status:** Recorded; code/CI/device unverified.
+- **Status:** Code + three source regressions committed in M525 branch; exact-head CI and real-device latency profiles pending, no measured FPS/latency improvement claimed.
+- **Implementation files:** `lib/waffra_budget_directory.part.dart`, `test/m525_budget_sheet_spend_cache_test.dart`; PR link to be attached after opening.
 - **Follow-ups:** F-454-P01 and P03–P08 remain tracked in #454; do not mark all eight resolved by this slice.
