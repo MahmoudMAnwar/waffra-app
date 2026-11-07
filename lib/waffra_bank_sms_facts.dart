@@ -84,7 +84,24 @@ abstract final class WaffraBankSmsFactsParser {
   final isCard=_card.hasMatch(normalized);
   final incoming=_income.hasMatch(header);
   final outgoing=_expense.hasMatch(header);
+  // M514 #449: "incoming credit" describes movement into this account,
+  // NOT proof that the receiving owner also owns the source account.
+  // Keep an otherwise unspecified "Credit Transfer" in manual transfer
+  // review, but explicitly incoming/wāreda notices are income candidates.
+  final explicitlyIncoming=RegExp(
+   r'حوال[ةه](?:\\s+(?:مالي[ةه]|داخلي[ةه]))?\\s+وارد[ةه]|'
+   r'تحويل(?:\\s+بنكي)?\\s+وارد|'
+   r'\\bincoming\\s+(?:bank\\s+)?transfer\\b|'
+   r'\\btransfer\\s+received\\b',
+   caseSensitive:false).hasMatch(header);
+  final explicitlyOutgoing=RegExp(
+   r'حوال[ةه](?:\\s+(?:مالي[ةه]|داخلي[ةه]))?\\s+صادر[ةه]|'
+   r'تحويل(?:\\s+بنكي)?\\s+صادر|'
+   r'\\boutgoing\\s+(?:bank\\s+)?transfer\\b',
+   caseSensitive:false).hasMatch(header);
   final kind=isCard?WaffraBankOperationKind.cardSettlement:
+   explicitlyIncoming&&!explicitlyOutgoing?
+    WaffraBankOperationKind.income:
    isTransfer?WaffraBankOperationKind.transfer:
    incoming&&!outgoing?WaffraBankOperationKind.income:
    outgoing&&!incoming?WaffraBankOperationKind.expense:
