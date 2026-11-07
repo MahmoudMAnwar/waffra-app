@@ -12,7 +12,8 @@
     "2026-11-07 owner screenshot #448: Single and bulk exclusion must persist independent encrypted per-message markers and safely learned owner-scoped rules; no finance hash poisoning. See docs/WAFFRA_REQUIREMENTS.md and PR #445.",
     "2026-11-07 owner screenshot #449: Explicit incoming bank credits are income review candidates; unknown/outgoing bank transfers require ownership verification and actionable editor. See docs/WAFFRA_REQUIREMENTS.md and PR #445.",
     "2026-11-07 owner screenshot #450: When creating verified account while reviewing SMS, prefill source-appropriate masked last-four as editable suggestion only. See docs/WAFFRA_REQUIREMENTS.md and PR #445.",
-    "2026-11-07 owner screenshot #451: Investigate and repair confirmed SMS attachments and later editing with same protected SQLCipher guarantees as manual. See docs/WAFFRA_REQUIREMENTS.md and PR #445."
+    "2026-11-07 owner screenshot #451: Investigate and repair confirmed SMS attachments and later editing with same protected SQLCipher guarantees as manual. See docs/WAFFRA_REQUIREMENTS.md and PR #445.",
+    "2026-11-07 owner repeated #447: remove the remaining two user-facing Arabic 'غامضة' strings in on-demand AI review confirmation and SMS security settings; use clear 'تحتاج مراجعة' language, while preserving all classification, consent and finance behavior."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -73,6 +74,14 @@
       {
         "start": " Future<void> entrySheet(",
         "end": " Future<void> showReceipt("
+      },
+      {
+        "start": " Future<void> _analyzeAmbiguousSmsOnDemand(",
+        "end": " Future<void> _openAutoSmsInbox()async{"
+      },
+      {
+        "start": "    _accountSection(waffraIsEnglish?'Security & privacy':'الأمان والخصوصية',Icons.shield_outlined,[",
+        "end": "     if(Platform.isAndroid)FutureBuilder<bool>(\n      future:WaffraSmsCloudService.hasConsent()"
       }
     ],
     "lib/waffra_mandatory_biometric_gate.dart": [
