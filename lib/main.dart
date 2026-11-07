@@ -4550,6 +4550,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      'التحليل السحابي غير متاح. راجع الرسالة بنفسك.',isError:true);
     return;
    }
+   // M528: this explicit owner consent also changes the Account switch.
+   // Re-read it on the next profile build; no extra finance/UI work now.
+   _m528CloudConsentFuture=null;
    final staged=await WaffraSmsCloudReviewAnalyzer.stagePending(
     [selected],maxPerRun:1,explicitlyRequested:true);
    if(!mounted)return;
