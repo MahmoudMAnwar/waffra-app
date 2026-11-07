@@ -430,3 +430,12 @@ Each issue requires linked source changes, exact-head CI, tests and real Android
 - **Tracking:** https://github.com/MahmoudMAnwar/waffra-app/issues/454
 - **State:** documented / pending audit. No code refactor or regression-test success claimed.
 - **Execution:** inventory and root-cause matrix first, targeted scoped PRs with regression tests next; protect existing SQLCipher data and upgrade paths; require CI and device acceptance before merge.
+
+
+## M529 — Lightweight shared centered dropdown (2026-11-07; Issue #471, audit #454 F-454-P07)
+
+- **Owner intent:** improve all buttons, dropdown openings and after-click animation smoothness while retaining approved blurred centered selectors and RTL/LTR.
+- **Source candidate:** centered picker uses a full-screen sigma-6 blur and allocates a list of selected options each rebuild; neither is necessary for correctness.
+- **Allowed narrow optimization:** preserve visible light blur in normal mode, remove expensive blur when device reduced animations is enabled, use one index search for selected value instead of where().toList(); preserve dialog geometry, list laziness, no-onChange-on-dismiss/back, selected item and account/finance checks.
+- **Tracking:** [#471](https://github.com/MahmoudMAnwar/waffra-app/issues/471), separate Draft PR from main and M385 bounded dropdown class, Flutter widget tests for RTL, selected changes and cancellation, M449 release notes.
+- **Status:** requirement recorded before coding; no measured device smoothness or CI approval claimed.
