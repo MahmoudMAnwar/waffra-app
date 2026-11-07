@@ -283,11 +283,13 @@ void main(){
   final manager=File('lib/waffra_accounts_manager_page.dart')
    .readAsStringSync();
   expect(home,contains('Future<void> _reviewSmsAccountTransfer({'));
-  expect(home,contains("requestId:'sms-transfer-'+bankSmsHash(body)"));
+  expect(home,contains('WaffraAutoSms.transferIdForMessage(id)'));
+  expect(home,isNot(contains("requestId:'sms-transfer-'+bankSmsHash(body)")));
   expect(home,contains("fromId:'',toId:''"));
   expect(home,contains('initialSmsTransfer:prefill'));
   expect(home,contains('await api.transfer(id:draft.requestId'));
-  expect(home,contains('ack=await WaffraAutoSms.acknowledge([id])'));
+  expect(home,contains('ack=await WaffraAutoSms.acknowledgeCompletedTransfer([id])'));
+  expect(home,isNot(contains('ack=await WaffraAutoSms.acknowledge([id])')));
   // The transfer mode must remain locked for both SMS-prefilled transfers
   // and the user's explicit Transfer action from Home +.
   expect(form,contains('widget.initialSmsTransfer!=null||'));
