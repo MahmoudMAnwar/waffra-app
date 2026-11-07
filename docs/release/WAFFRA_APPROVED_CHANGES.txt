@@ -2470,3 +2470,10 @@ M462 category-precedence follow-up (5 Nov 2026): only an owner-confirmed learned
 - Existing device sign-out and saved phone/password reauthentication still work from the returning-user path; existing accounts do NOT have to choose again on app updates or biometric unlock. No account, SQLCipher or SMS mutations on choice taps; no remote sign-in guarantee where no local account exists.
 - Added `test/m510_first_launch_auth_choice_test.dart` to verify original branded page, labels, keys, click callbacks and source-gated form entry/back behavior and that existing registered login is retained.
 - Status: Draft PR #436 candidate, CI and Android fresh-install + over-old APK validation pending.
+
+
+[M529 / 2026-11-07 / Issue #471 — Lightweight shared blurred dropdown]
+- F-454-P07 source audit: the shared centered Waffra picker rendered a full-screen Gaussian backdrop blur with sigma 6 for every selector open and materialized a temporary list of matching selected values during field rebuild, potentially adding GPU/memory work.
+- Preserve the approved blurred dropdown style while reducing normal sigma from 6 to 3, and skip expensive Gaussian blur when the Android Flutter MediaQuery requests reduced animations. Keep identical modal geometry, item structure, safe-area, Arabic/English RTL/LTR, lazy ListView.builder, close/back behavior and onChanged only after a deliberate enabled item tap. The selected display now uses one indexWhere lookup instead of where(...).toList(); no account or financial posting logic changed.
+- Added Flutter widget tests for RTL/LTR selection exactly once, close without mutation and source guard for reduced blur/list allocation in test/m529_centered_dropdown_smoothness_test.dart. M385 exact class anchors, requirement entry and Issue #471 recorded before code.
+- This reviewed release note comes after the application code commit for M449. Exact SHA Flutter/Android CI, real-device raster/build frame measurement under full and reduced animations, first install/upgrade safety, APK acceptance and main merge remain pending; this is NOT certified smoothness or completion of the whole-app audit.
