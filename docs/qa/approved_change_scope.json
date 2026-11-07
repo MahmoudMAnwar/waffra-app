@@ -19,6 +19,9 @@
     "docs/qa/approved_change_scope.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
+    "lib/storage/waffra_encrypted_finance_session.dart",
+    "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
+    "lib/storage/waffra_verified_finance_authority.dart",
     "lib/waffra_account_transaction_form.dart",
     "lib/waffra_auto_sms.dart",
     "lib/waffra_bank_sms_facts.dart",
@@ -28,7 +31,9 @@
     "test/m424_mandatory_biometrics_test.dart",
     "test/m502_logout_paths_test.dart",
     "test/m506_android_nine_regressions_test.dart",
-    "test/m513_logout_confirmation_test.dart"
+    "test/m513_logout_confirmation_test.dart",
+    "test/m514_sms_review_regressions_test.dart",
+    "test/storage/m514_sms_receipt_regression_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -157,6 +162,28 @@
       {
         "start": "                \"ackAutoBankSms\" -> {",
         "end": "                \"ackCommittedAutoBankSms\" -> {"
+      }
+    ],
+    "lib/storage/waffra_verified_encrypted_finance_bridge.dart": [
+      {
+        "start": "import 'waffra_portable_encrypted_backup_exporter.dart';",
+        "end": "import 'waffra_accounts_repository.dart';"
+      },
+      {
+        "start": "  Future<WaffraFinanceSnapshotState> saveHomeChanges({",
+        "end": "  /// Receives explicitly confirmed SMS/manual transaction JSON from either"
+      }
+    ],
+    "lib/storage/waffra_encrypted_finance_session.dart": [
+      {
+        "start": "  Future<WaffraUnifiedWriteResult> appendConfirmed({",
+        "end": "  /// Save normalized transaction + raw picker picture bytes atomically after"
+      }
+    ],
+    "lib/storage/waffra_verified_finance_authority.dart": [
+      {
+        "start": "  Future<WaffraFinanceAuthorityRead> commitConfirmedManual({",
+        "end": "  /// A future encrypted-only receipt attachment route."
       }
     ]
   }
