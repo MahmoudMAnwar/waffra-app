@@ -37,6 +37,10 @@ void main(){
   expect(home,contains('آخر إعادة فحص: \$_autoSmsLastRescanScanned'));
   expect(home,isNot(contains('إجمالي الرسائل المفحوصة:')));
   expect(home,isNot(contains('عملية غامضة')));
+  expect(home,isNot(contains('الرسالة الغامضة')));
+  expect(home,isNot(contains('الرسائل الغامضة')));
+  expect(home,contains('تحليل هذه الرسالة التي تحتاج مراجعة بالذكاء الاصطناعي؟'));
+  expect(home,contains('الرسائل التي تحتاج مراجعة لا تُسجَّل تلقائيًا.'));
  });
 
  test('M514 excluded queue items use dedicated encrypted fingerprints',(){
