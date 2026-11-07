@@ -13,6 +13,8 @@ on:
       - 'lib/main.dart'
       - 'lib/waffra_footer.dart'
       - 'lib/waffra_balance_art.dart'
+      # M534: M449 requires release-notes-last; certify the final exact PR SHA.
+      - 'docs/release/WAFFRA_APPROVED_CHANGES.txt'
   workflow_dispatch:
 
 permissions:
