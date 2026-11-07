@@ -52,6 +52,7 @@ class WaffraAccountTransactionForm extends StatefulWidget {
  const WaffraAccountTransactionForm({
   super.key,required this.accounts,this.english=false,
   this.onConfirmEntry,this.onConfirmTransfer,this.onCreateAccount,
+  this.onCreateSmsAccount,
   this.incomeCategories=const [],this.expenseCategories=const [],
   this.availableBudgets=const {},this.requireKnownCategory=false,
   this.initialSmsTransfer,
@@ -68,6 +69,10 @@ class WaffraAccountTransactionForm extends StatefulWidget {
  final Future<void> Function(WaffraInternalTransferDraft)? onConfirmTransfer;
  /// User-initiated verified account creation; null means cancel.
  final Future<WaffraAccountBalance?> Function(String? group,bool createProvider)? onCreateAccount;
+ /// Reviewed SMS may suggest DIFFERENT source/destination suffixes safely.
+ /// Neither masked suffix is proof of ownership; both require user confirm.
+ final Future<WaffraAccountBalance?> Function(
+  String? group,bool createProvider,bool isDestination)? onCreateSmsAccount;
  @override
  State<WaffraAccountTransactionForm> createState()=>_WaffraAccountTransactionFormState();
 }
@@ -117,7 +122,8 @@ class _WaffraAccountTransactionFormState extends State<WaffraAccountTransactionF
   required bool createProvider,required bool isDestination,
  })async{
   final create=widget.onCreateAccount;
-  if(create==null||saving||saved||creatingAccount)return;
+  final createSms=widget.onCreateSmsAccount;
+  if((create==null&&createSms==null)||saving||saved||creatingAccount)return;
   final selectedId=isDestination?destination:source;
   String? group=isDestination?destinationProvider:sourceProvider;
   if(group==null&&selectedId!=null){
@@ -127,7 +133,9 @@ class _WaffraAccountTransactionFormState extends State<WaffraAccountTransactionF
   }
   setState(()=>creatingAccount=true);
   try{
-   final created=await create(createProvider?null:group,createProvider);
+   final created=createSms==null?
+    await create!(createProvider?null:group,createProvider):
+    await createSms(createProvider?null:group,createProvider,isDestination);
    if(!mounted||created==null)return; // cancel never clears the draft.
    final refreshed=<WaffraAccountBalance>[
     ...active.where((a)=>a.id!=created.id),created,
@@ -269,7 +277,7 @@ class _WaffraAccountTransactionFormState extends State<WaffraAccountTransactionF
       ...providers.map((p)=>DropdownMenuItem<String>(
        value:p.id,child:Text(tr(p.labelAr,p.labelEn),
         maxLines:1,overflow:TextOverflow.ellipsis))),
-      if(widget.onCreateAccount!=null)
+      if((widget.onCreateAccount!=null||widget.onCreateSmsAccount!=null))
        DropdownMenuItem<String>(value:'__create_provider__',
         child:Row(children:[
          const Icon(Icons.add_circle_outline,size:19),
@@ -301,7 +309,7 @@ class _WaffraAccountTransactionFormState extends State<WaffraAccountTransactionF
      items:[
       ...available.map((a)=>DropdownMenuItem<String>(
        value:a.id,child:Text(a.name,overflow:TextOverflow.ellipsis))),
-      if(group!=null&&widget.onCreateAccount!=null)
+      if(group!=null&&(widget.onCreateAccount!=null||widget.onCreateSmsAccount!=null))
        DropdownMenuItem<String>(value:'__create_child__',
         child:Row(children:[
          const Icon(Icons.add_circle_outline,size:19),
