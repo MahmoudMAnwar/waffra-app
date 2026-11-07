@@ -40,6 +40,9 @@ object WaffraAutoSmsStore {
     // M514 #448: excluded review SMS are not finance commits. Keep independent
     // owner-bound encrypted fingerprints so a historical rescan cannot replay them.
     private const val excludedMessageBucketPrefix = "encrypted_excluded_sms_v1_"
+    // No raw SMS body: encrypted, owner-bound sender/time labels make
+    // individual excluded messages visible and reversible in Settings.
+    private const val excludedMessageInfoBucketPrefix = "encrypted_excluded_sms_info_v1_"
     // M516 #455: a completed self-transfer is neither an excluded SMS nor
     // a finance income/expense commit; store its own encrypted anti-replay ID.
     private const val completedTransferBucketPrefix = "encrypted_completed_transfer_sms_v1_"
@@ -190,6 +193,7 @@ object WaffraAutoSmsStore {
                 for (key in prefs.all.keys) {
                     if (key.startsWith(committedBucketPrefix) ||
                         key.startsWith(excludedMessageBucketPrefix) ||
+                        key.startsWith(excludedMessageInfoBucketPrefix) ||
                         key.startsWith(completedTransferBucketPrefix)) editor.remove(key)
                 }
                 committedCipherCache.clear()
@@ -325,6 +329,86 @@ object WaffraAutoSmsStore {
 
     private fun isExcludedMessageLocked(context: Context, id: String) =
         excludedMessageBucket(context, id).contains(id)
+
+    private fun excludedMessageInfo(context: Context, id: String): Map<String, JSONObject> {
+        if (!Regex("^[a-f0-9]{64}$").matches(id))
+            throw IllegalArgumentException("Invalid excluded-message lookup")
+        val ciphertext = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+            .getString(excludedMessageInfoBucketPrefix + id.take(2), "") ?: ""
+        val array = open(ciphertext)
+        val result = mutableMapOf<String, JSONObject>()
+        for (i in 0 until array.length()) {
+            val record = array.getJSONObject(i)
+            val key = record.getString("id")
+            val sender = record.getString("sender")
+            val receivedAt = record.getLong("receivedAt")
+            if (!Regex("^[a-f0-9]{64}$").matches(key) ||
+                key.take(2) != id.take(2) || sender.length > 100 ||
+                receivedAt < 0 || result.put(key, record) != null)
+                throw IllegalStateException("Invalid excluded SMS label")
+        }
+        return result
+    }
+
+    /** Shows only excluded SMS identities and safe sender/time labels;
+     * pre-M517 encrypted fingerprints without labels remain visible by ID.
+     * Every record is still bound to the active owner by enabled().
+     */
+    fun excludedMessages(context: Context): List<Map<String, Any>> =
+        synchronized(mutex) {
+            if (!enabled(context)) throw IllegalStateException("SMS intake not active")
+            val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+            val result = mutableListOf<Map<String, Any>>()
+            val shards = prefs.all.keys.filter {
+                it.startsWith(excludedMessageBucketPrefix)
+            }
+            for (key in shards) {
+                val bucket = key.removePrefix(excludedMessageBucketPrefix)
+                if (!Regex("^[a-f0-9]{2}$").matches(bucket))
+                    throw IllegalStateException("Invalid excluded SMS shard")
+                val exemplar = bucket + "0".repeat(62)
+                val labels = excludedMessageInfo(context, exemplar)
+                for (id in excludedMessageBucket(context, exemplar)) {
+                    val info = labels[id]
+                    result.add(mapOf(
+                        "id" to id,
+                        "sender" to (info?.optString("sender") ?: ""),
+                        "receivedAt" to (info?.optLong("receivedAt", 0L) ?: 0L)
+                    ))
+                }
+            }
+            result.sortedWith(compareByDescending<Map<String, Any>> {
+                (it["receivedAt"] as? Long) ?: 0L
+            }.thenBy { it["id"] as String })
+        }
+
+    /** Restore just one excluded SMS; a later explicit rescan may offer it.
+     * Excluded sender policy, completed transfers and finance are unaffected.
+     */
+    fun restoreExcludedMessage(context: Context, id: String): Boolean =
+        synchronized(mutex) {
+            if (!enabled(context) || !Regex("^[a-f0-9]{64}$").matches(id))
+                return@synchronized false
+            try {
+                val current = excludedMessageBucket(context, id)
+                if (!current.contains(id)) return@synchronized false
+                val savedLabels = excludedMessageInfo(context, id).toMutableMap()
+                savedLabels.remove(id)
+                val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+                val succeeded = prefs.edit()
+                    .putString(excludedMessageBucketPrefix + id.take(2),
+                        seal(JSONArray(current.filter { it != id }).toString()))
+                    .putString(excludedMessageInfoBucketPrefix + id.take(2),
+                        seal(JSONArray(savedLabels.values.toList()).toString()))
+                    .commit()
+                if (succeeded) {
+                    excludedMessageCipherCache.clear()
+                    Handler(Looper.getMainLooper()).post { onChanged?.invoke() }
+                }
+                succeeded
+            } catch (_: Exception) { false }
+        }
+
 
     private val completedTransferCipherCache =
         mutableMapOf<String, Pair<String, Set<String>>>()
@@ -767,11 +851,17 @@ object WaffraAutoSmsStore {
                 val queue = read(context)
                 val remaining = JSONArray()
                 val matched = mutableSetOf<String>()
+                val labels = mutableMapOf<String, JSONObject>()
                 for (i in 0 until queue.length()) {
                     val row = queue.getJSONObject(i)
                     val fingerprint = row.getString("id")
-                    if (ids.contains(fingerprint)) matched.add(fingerprint)
-                    else remaining.put(row)
+                    if (ids.contains(fingerprint)) {
+                        matched.add(fingerprint)
+                        labels[fingerprint] = JSONObject()
+                            .put("id", fingerprint)
+                            .put("sender", row.optString("sender").take(100))
+                            .put("receivedAt", row.optLong("receivedAt", 0L))
+                    } else remaining.put(row)
                 }
                 // Fail closed if a selected SMS was neither queued nor
                 // previously excluded; a wrong-owner ID never gets marked.
@@ -787,6 +877,11 @@ object WaffraAutoSmsStore {
                     updated.addAll(additions)
                     editor.putString(excludedMessageBucketPrefix + bucket,
                         seal(JSONArray(updated.toList()).toString()))
+                    val details = excludedMessageInfo(context, additions.first())
+                        .toMutableMap()
+                    for (item in additions) details[item] = labels.getValue(item)
+                    editor.putString(excludedMessageInfoBucketPrefix + bucket,
+                        seal(JSONArray(details.values.toList()).toString()))
                 }
                 val success = editor.commit()
                 if (success) {
