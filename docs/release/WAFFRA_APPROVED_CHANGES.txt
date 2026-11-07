@@ -2493,3 +2493,5 @@ M462 category-precedence follow-up (5 Nov 2026): only an owner-confirmed learned
 - Added targeted parser, source and real encrypted writer tests, including creating manual/SMS receipts, adding an existing SMS receipt, and rollback/repeated attachment refusal.
 - Reconciled M452 old test against the newly approved rescan counter; retain exact-file/section M385 scopes and M513 Yes/No sign-out + secure verifier behavior.
 - These are PR SOURCE CANDIDATES only. Required exact-HEAD CI and signed-Android on-device acceptance have NOT been declared successful. No production SQLCipher cutover, legacy restore/destruction or permission expansion is authorized.
+
+- M514 #447 follow-up: replaced the final two Arabic user-facing «غامضة» labels in the optional AI-review consent title and SMS security-settings subtitle with explicit «تحتاج مراجعة» wording. Added source regression assertions for both strings. This note follows the latest app-code modification; classification and review-only safeguards are unchanged. Device acceptance and exact-head CI are still pending.
