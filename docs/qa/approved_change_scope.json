@@ -25,6 +25,10 @@
     ],
     "test/m537_phone_credential_lifecycle_test.dart": [
       {
+        "start": "import 'dart:convert';",
+        "end": "import 'package:flutter_test/flutter_test.dart';"
+      },
+      {
         "start": "  test('credential verifier is salted, not a plaintext password', () async {",
         "end": null
       }
