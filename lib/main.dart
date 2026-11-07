@@ -3847,16 +3847,53 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
 
  Future<void> _m467PickHomeAccount()async{
-  // Open instantly from a verified snapshot; refresh after selection.
-  if(!_m468VerifiedAccountsLoaded)await _m467RefreshHomeAccounts();
+  // M527: a cold verified read must not block the first sheet frame.
+  // No unverified account may ever appear as a selectable money source.
+  final pendingAccounts=_m468VerifiedAccountsLoaded
+   ?null:_m467RefreshHomeAccounts();
   if(!mounted)return;
   final next=await showModalBottomSheet<String>(
    context:context,isScrollControlled:true,useSafeArea:true,
    showDragHandle:true,
-   builder:(sheet)=>WaffraHomeAccountsSheet(
-    english:waffraIsEnglish,
-    selected:_m467SelectedAccount,
-    accounts:_m467Accounts));
+   builder:(sheet){
+    Widget verifiedChoices()=>WaffraHomeAccountsSheet(
+     english:waffraIsEnglish,
+     selected:_m467SelectedAccount,
+     accounts:_m467Accounts);
+    // Warm cache: render original selector with no FutureBuilder wait frame.
+    if(pendingAccounts==null)return verifiedChoices();
+    return FutureBuilder<void>(
+     future:pendingAccounts,
+     builder:(ctx,state){
+      if(state.connectionState!=ConnectionState.done){
+       return SafeArea(top:false,child:SizedBox(
+        key:const Key('m527-account-picker-loading'),
+        height:170,
+        child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
+         const CircularProgressIndicator(strokeWidth:2.7),
+         const SizedBox(height:17),
+         Text(waffraIsEnglish?'Verifying accounts…':
+          'جارٍ التحقق من الحسابات…'),
+        ])));
+      }
+      if(!_m468VerifiedAccountsLoaded){
+       return SafeArea(top:false,child:Padding(
+        key:const Key('m527-account-picker-verification-failed'),
+        padding:const EdgeInsets.symmetric(horizontal:22,vertical:30),
+        child:Column(mainAxisSize:MainAxisSize.min,children:[
+         Text(waffraIsEnglish?
+          'Could not verify your accounts. No balances were changed.':
+          'تعذر التحقق من الحسابات. لم تتغير أي أرصدة.',
+          textAlign:TextAlign.center),
+         const SizedBox(height:14),
+         TextButton(
+          onPressed:()=>Navigator.pop(sheet),
+          child:Text(waffraIsEnglish?'Close and retry':'إغلاق وإعادة المحاولة')),
+        ])));
+      }
+      return verifiedChoices();
+     });
+   });
   if(next==null||!mounted)return;
   if(next=='manage'){
    await openVerifiedAccounts();
