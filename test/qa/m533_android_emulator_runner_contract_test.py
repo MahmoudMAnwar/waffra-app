@@ -31,7 +31,7 @@ class M533AndroidEmulatorStabilityContractTest(unittest.TestCase):
     def test_preserves_exact_flutter_driver_and_real_android_ui(self):
         self.assertIn("api-level: 35", WORKFLOW)
         self.assertIn("arch: x86_64", WORKFLOW)
-        self.assertIn("cores: 2", WORKFLOW)
+        self.assertIn("cores: 4", WORKFLOW)
         self.assertIn("uses: reactivecircus/android-emulator-runner@v2", WORKFLOW)
         self.assertIn("script: bash .github/scripts/run-m274-android-tap-smoke.sh",
                       WORKFLOW)
