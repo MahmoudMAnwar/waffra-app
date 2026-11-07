@@ -505,3 +505,8 @@ Android screenshot: owner creates a SAR 1,000 standalone monthly budget and link
 - **Tracking:** https://github.com/MahmoudMAnwar/waffra-app/issues/454
 - **State:** documented / pending audit. No code refactor or regression-test success claimed.
 - **Execution:** inventory and root-cause matrix first, targeted scoped PRs with regression tests next; protect existing SQLCipher data and upgrade paths; require CI and device acceptance before merge.
+
+
+## M521 — Restore non-overlapping M385 exact-head edit scopes (2026-11-07, Issue #458, PR #445)
+
+**Source/CI-confirmed:** latest PR #445 has Flutter CI failures in M174 `pinned-no-go-preflight` and combined Flutter at the unchanged source-authorization gate `scripts/qa/m385_approved_change_guard.py` reporting `Overlapping or reordered sections in lib/main.dart`. Existing approved scope JSON has duplicate/overlapping intervals for SMS processing functions in `lib/main.dart`, nested `acknowledge` bounds in `lib/waffra_auto_sms.dart`, duplicate blocks and an absent-on-main `excludeMessages` start in `native/WaffraAutoSmsStore.kt`, and an absent-on-main `excludeAutoBankSms` start in `native/WaffraMainActivity.kt`. **Allowed remediation:** adjust bounded scope metadata only, retain all strict comparison checks, cover changed sections with unique nonoverlapping valid anchors in both the current base and head. Do not weaken the authorization guard, financial writes, runtime source, or tests. Verify the normalized manifest against exact base/HEAD, then require CI and Android before acceptance. **Status:** Recorded, repair in progress; not yet CI passed.
