@@ -498,3 +498,10 @@ Android screenshot: owner creates a SAR 1,000 standalone monthly budget and link
 ## M520 — SMS bridge Dart syntax corruption blocks build (2026-11-07, Issue #457, PR #445)
 
 **Audit-confirmed P0:** `lib/waffra_auto_sms.dart` on #445 has unterminated `RegExp(r'^[a-f0-9]{64}` strings, duplicated native bridge methods, and stray closing braces/`.hasMatch(...)` outside class scope after M516 and M517 edits. Merged `main` has a healthy baseline; preserve that baseline and add only the new M514/M516/M517 methods in canonical sequence. Each API must exist exactly once. Native exclusions and completed transfer ACK remain independent; reject malformed 64-hex IDs and native metadata, fail closed on absent Android bridge. Source-level test should prevent this exact regression. Do not touch any SQLCipher entries. **Status: Code ready / exact-head CI and APK pending** (M520 bridge reconstructed from merged main; Dart test added).
+
+
+### Quality audit initiative — Issue #454 (2026-11-07)
+- **Requested:** whole-app audit for duplicated functions, inconsistent implementations, divergent manual/SMS/recurring/transfer finance writes, login/logout/biometric paths, SMS rules, budgets, backup/restore, UI error handling, and CI guard overlap.
+- **Tracking:** https://github.com/MahmoudMAnwar/waffra-app/issues/454
+- **State:** documented / pending audit. No code refactor or regression-test success claimed.
+- **Execution:** inventory and root-cause matrix first, targeted scoped PRs with regression tests next; protect existing SQLCipher data and upgrade paths; require CI and device acceptance before merge.
