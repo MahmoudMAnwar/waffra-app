@@ -4,6 +4,7 @@ import 'waffra_account_context_read.dart';
 import 'waffra_account_context_schema.dart';
 import 'waffra_account_context_repository.dart';
 import 'waffra_portable_encrypted_backup_exporter.dart';
+import 'waffra_portable_encrypted_vault_restorer.dart';
 import 'waffra_accounts_repository.dart';
 import 'waffra_fresh_finance_domain_repository.dart';
 import 'waffra_verified_goal_due_snapshot_writer.dart';
@@ -819,6 +820,107 @@ class WaffraVerifiedEncryptedFinanceBridge {
       replacementValues: replacements,
       changedKeys: changedKeys,
     );
+  }
+
+
+  /// M514 #451: add the FIRST batch of encrypted receipts to an EXISTING
+  /// verified finance record. No new money, account association, or SMS hash
+  /// is ever created by this operation. SQL, encrypted blobs and canonical
+  /// ledger references are one all-or-nothing Home/Widget transaction.
+  Future<WaffraFinanceSnapshotState> attachReceiptsToExisting({
+    required String entryId,
+    required Map<String, Object?> expectedOriginal,
+    required List<Uint8List> images,
+    required bool userConfirmed,
+  }) async {
+    if (!experimentalEnabled || !userConfirmed ||
+        entryId.trim().isEmpty || entryId.length > 128 ||
+        images.isEmpty ||
+        images.length > WaffraEncryptedReceiptVault.maxReceiptsPerEntry ||
+        images.any((part) => part.isEmpty ||
+            part.length > WaffraEncryptedReceiptVault.maxReceiptBytes)) {
+      throw StateError('Invalid verified existing-entry receipt request.');
+    }
+    final frozenImages = List<Uint8List>.unmodifiable(
+      images.map(Uint8List.fromList));
+    if (frozenImages.fold<int>(
+        0, (total, part) => total + part.length) > 60 * 1024 * 1024) {
+      throw StateError('Receipt batch is too large.');
+    }
+    final expected = Map<String, Object?>.unmodifiable(
+      Map<String, Object?>.from(
+        jsonDecode(jsonEncode(expectedOriginal)) as Map<String, dynamic>));
+    if (expected['id'] != entryId ||
+        expected['sourceType'] != 'sms' &&
+        expected['sourceType'] != 'manual' ||
+        expected['receiptPath'] != null &&
+        expected['receiptPath'] != '') {
+      throw StateError('Only unattached owner-confirmed entries are supported.');
+    }
+    return WaffraExperimentalWriterGate(
+      disposableDirectory: writerDirectory,
+      experimentalEnabled: true,
+    ).withExclusiveAccess(() async {
+      await _requireActivatedUnderLock();
+      return snapshot.store.transaction(() async {
+        final before = await snapshot.read();
+        final decoded = jsonDecode(before.values['entries'] as String? ?? '[]');
+        if (decoded is! List || decoded.any((item) => item is! Map)) {
+          throw StateError('Canonical finance ledger is invalid.');
+        }
+        final matches = decoded.where((row) =>
+          row is Map && row['id'] == entryId).toList(growable:false);
+        if (matches.length != 1) throw StateError('Finance entry not uniquely found.');
+        final old = Map<String, Object?>.from(matches.single as Map);
+        for (final key in const <String>[
+          'id','title','category','income','amount','date',
+          'sourceType','receiptPath',
+        ]) {
+          if (jsonEncode(old[key]) != jsonEncode(expected[key])) {
+            throw StateError('Existing entry changed; reload before attachment.');
+          }
+        }
+        if (old['receiptPath'] != null && old['receiptPath'] != '') {
+          throw StateError('Existing receipts must not be overwritten.');
+        }
+        final rows = await snapshot.store.customSelect(
+          'SELECT source_json,receipt_count FROM fresh_finance_entries '
+          'WHERE entry_id=?', variables:[Variable.withString(entryId)]).get();
+        if (rows.length != 1 || rows.single.read<int>('receipt_count') != 0 ||
+            jsonEncode(jsonDecode(rows.single.read<String>('source_json'))) !=
+            jsonEncode(old)) {
+          throw StateError('Existing SQL finance projection is inconsistent.');
+        }
+        final refs = List<String>.generate(frozenImages.length,
+            (i) => WaffraEncryptedReceiptReference.of(entryId,i));
+        final updated = Map<String,Object?>.from(old);
+        updated['receiptPath'] =
+            refs.length == 1 ? refs.single : jsonEncode(refs);
+        final vault = WaffraEncryptedReceiptVault(
+          store:snapshot.store,experimentalEnabled:true);
+        await vault.attachNewBatch(entryId:entryId,images:frozenImages);
+        final persisted = await vault.readAll(entryId);
+        if (persisted.length != frozenImages.length) {
+          throw StateError('Encrypted receipt count was not durable.');
+        }
+        for(var i=0;i<persisted.length;i++){
+          final bytes=persisted[i].bytes,expectedBytes=frozenImages[i];
+          if(bytes.length!=expectedBytes.length ||
+              bytes.asMap().entries.any((e)=>e.value!=expectedBytes[e.key])) {
+            throw StateError('Encrypted receipt byte integrity mismatch.');
+          }
+        }
+        await snapshot.store.customStatement(
+          'UPDATE fresh_finance_entries SET source_json=? WHERE entry_id=?',
+          [jsonEncode(updated),entryId]);
+        final nextLedger=decoded.map((row)=>row is Map &&
+            row['id']==entryId ? updated : row).toList(growable:false);
+        final next=Map<String,Object?>.from(before.values)
+          ..['entries']=jsonEncode(nextLedger);
+        return snapshot.commit(expectedGeneration:before.generation,
+          fullFinanceSnapshot:next);
+      });
+    });
   }
 
   /// Receives explicitly confirmed SMS/manual transaction JSON from either
