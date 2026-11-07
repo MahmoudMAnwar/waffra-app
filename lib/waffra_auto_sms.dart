@@ -150,6 +150,13 @@ abstract final class WaffraAutoSms {
      ids.any((id)=>!RegExp(r'^[a-f0-9]{64}$').hasMatch(id)))return false;
   return _boolCall('excludeAutoBankSms',ids);
  }
+ /// M516: permanently seal a *successful* internal SMS transfer against
+ /// replay, separate from explicit exclusions and income/expense commits.
+ static Future<bool> acknowledgeCompletedTransfer(List<String> ids)async{
+  if(ids.isEmpty||ids.length>100||
+     ids.any((id)=>!RegExp(r'^[a-f0-9]{64}$').hasMatch(id)))return false;
+  return _boolCall('ackCompletedTransferAutoBankSms',ids);
+ }
  static Future<bool> acknowledge(List<String> ids)async{
   if(ids.isEmpty||ids.length>100)return false;
   return _boolCall('ackAutoBankSms',ids);
