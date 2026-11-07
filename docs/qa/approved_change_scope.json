@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
   "change_id": "M513-M520-SAFE-LOGOUT-SMS-REVIEW-20261107",
-  "human_scope_review": "Owner supplied new Android evidence and directly requested all listed SMS review fixes in PR #445 on 2026-11-07, recorded as Issues #446-#451 and docs/WAFFRA_REQUIREMENTS.md. Human owner still must verify actual Android acceptance. M385 scopes below bind all edits to existing M513 logout and M514 SMS scan/count, encrypted per-message exclusions, conditional safe learned rules, bank incoming-transfer classification, screen/account review and exact suffix. No SQLCipher finance cutover, weakening authentication, auto-post, or destruction of wallet/previous installation data is authorized. M515 Issue #452: user-created named budget with verified bank account shows false persistence error because challengeAndBudgetUpdate omitted the independent budget field. Bound policy and tests authorize adding that key to strict budget-specific captures only, without changing finance posting authority. M516 Issue #455: source-confirmed completed SMS internal transfers replay after history rescan, and distinct identical-body SMS collide on transfer requestId. Scope adds dedicated encrypted owner-scoped transfer completion markers, per-native-fingerprint transfer request IDs, and regression tests without treating transfer as excluded or finance hash. M517 Issue #448 follow-up: user-visible excluded list only shows sender policy, but per-message exclusions are correctly encrypted elsewhere; add owner-scoped encrypted message-label metadata and UI list/restore without storing SMS body or touching finance. M518 Issue #455: live SMS receiver PDU sent timestamp and historical inbox receive timestamp yield distinct IDs; use inbox date_sent for canonical fingerprints and date for review display/cursor when available. No mutation of old financial SMS hash semantics. M520 Issue #457: confirmed build-breaking corruption of PR-branch Flutter SMS bridge. Scope restores merged-main baseline and inserts only M514/M516/M517 native bridge actions once, adds scoped Dart integrity regression. No production finance cutover or data migration.",
+  "human_scope_review": "Owner supplied new Android evidence and directly requested all listed SMS review fixes in PR #445 on 2026-11-07, recorded as Issues #446-#451 and docs/WAFFRA_REQUIREMENTS.md. Human owner still must verify actual Android acceptance. M385 scopes below bind all edits to existing M513 logout and M514 SMS scan/count, encrypted per-message exclusions, conditional safe learned rules, bank incoming-transfer classification, screen/account review and exact suffix. No SQLCipher finance cutover, weakening authentication, auto-post, or destruction of wallet/previous installation data is authorized. M515 Issue #452: user-created named budget with verified bank account shows false persistence error because challengeAndBudgetUpdate omitted the independent budget field. Bound policy and tests authorize adding that key to strict budget-specific captures only, without changing finance posting authority. M516 Issue #455: source-confirmed completed SMS internal transfers replay after history rescan, and distinct identical-body SMS collide on transfer requestId. Scope adds dedicated encrypted owner-scoped transfer completion markers, per-native-fingerprint transfer request IDs, and regression tests without treating transfer as excluded or finance hash. M517 Issue #448 follow-up: user-visible excluded list only shows sender policy, but per-message exclusions are correctly encrypted elsewhere; add owner-scoped encrypted message-label metadata and UI list/restore without storing SMS body or touching finance. M518 Issue #455: live SMS receiver PDU sent timestamp and historical inbox receive timestamp yield distinct IDs; use inbox date_sent for canonical fingerprints and date for review display/cursor when available. No mutation of old financial SMS hash semantics. M520 Issue #457: confirmed build-breaking corruption of PR-branch Flutter SMS bridge. Scope restores merged-main baseline and inserts only M514/M516/M517 native bridge actions once, adds scoped Dart integrity regression. No production finance cutover or data migration. M521 Issue #458: two exact-head CI failures in strict M385 scope guard due solely to duplicated overlapping and absent-on-base scoped anchors. Authorized manifest-only normalization preserves original authorized source boundaries and M385 fail-closed behavior.",
   "user_requested_changes": [
     "2026-11-07 Issue #444: after signing up, Sign out must show exactly one 'هل أنت متأكد من تسجيل الخروج؟' confirmation with 'نعم' and 'لا' from Home and both biometric lock entry points. No new password/confirmation/repair popup in normal logout.",
     "2026-11-07 Issue #444: ensure successful new phone registration persists a matching OS-secure verifier BEFORE committing the phone profile; re-login must verify original phone/password. A missing/malformed/different-owner secure record must fail closed with a short user-visible error, not silently reset or bypass.",
@@ -19,7 +19,8 @@
     "2026-11-07 M516 Issue #455: audit-found transfer replay after successful SMS internal transfer caused by transient ACK; add durable owner-scoped completion marker, native-id-based idempotency key, no false excluded/financial hash.",
     "2026-11-07 M517 #448: excluded messages are stored but not shown; show sender and message exclusions separately with counts, optional per-SMS restore, AES-GCM metadata and legacy hash-only compatibility.",
     "2026-11-07 M518 audit-found: live and history SMS identity mismatch; align provider date_sent with SmsMessage.timestampMillis, retain inbox date and backward compatibility.",
-    "2026-11-07 M520 Issue #457: full-code audit found syntactically corrupt lib/waffra_auto_sms.dart. Rebuild only native method bridge from merged baseline, preserve M514/M516/M517 behavior and add regression test; CI/Android QA pending."
+    "2026-11-07 M520 Issue #457: full-code audit found syntactically corrupt lib/waffra_auto_sms.dart. Rebuild only native method bridge from merged baseline, preserve M514/M516/M517 behavior and add regression test; CI/Android QA pending.",
+    "2026-11-07 M521 Issue #458: owner ordered repair of two failing CI workflows caused by overlapping/absent-on-main M385 manifest bounds. Normalize duplicate sections only, verified against both base and PR head with strict immutable-outside-bounds policy; no production app changes."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -93,14 +94,6 @@
       {
         "start": "   _accountSection(waffraIsEnglish?'Security & privacy':'الأمان والخصوصية',Icons.shield_outlined,[",
         "end": "    if(Platform.isAndroid)FutureBuilder<bool>(\n     future:WaffraSmsCloudService.hasConsent()"
-      },
-      {
-        "start": " Future<void> _reviewSmsAccountTransfer({",
-        "end": " Future<void> _reviewAutoSmsCandidates({"
-      },
-      {
-        "start": " Future<void> _openExcludedSenders()async{",
-        "end": " Future<void> _openAutoSmsInbox()async{"
       }
     ],
     "lib/waffra_mandatory_biometric_gate.dart": [
@@ -159,10 +152,6 @@
         "end": " static Future<bool> notifyCommitted("
       },
       {
-        "start": " static Future<bool> acknowledge(",
-        "end": " static Future<bool> notifyCommitted("
-      },
-      {
         "start": " static Future<List<String>?> excludedSenders()async{",
         "end": " // Only after verified financial hash is present in SQLCipher."
       }
@@ -195,24 +184,8 @@
         "end": "    /** Rescan the *entire* installed-month inbox"
       },
       {
-        "start": "    private val committedCipherCache =",
-        "end": "    // Explicit user sender exclusion"
-      },
-      {
-        "start": "    fun acknowledge(context: Context",
-        "end": "    /** Rescan the *entire* installed-month inbox"
-      },
-      {
-        "start": "    fun offer(context: Context, sender: String",
-        "end": "    fun pending(context: Context)"
-      },
-      {
         "start": "    fun excludedSenders(context: Context): List<String>",
         "end": "    /** Owner-confirmed sender exclusion."
-      },
-      {
-        "start": "    fun excludeMessages(context: Context",
-        "end": "    /** Rescan the *entire* installed-month inbox"
       },
       {
         "start": "    fun importConsentMonth(context: Context, maxRead: Int = 500): Int {",
@@ -222,10 +195,6 @@
     "native/WaffraMainActivity.kt": [
       {
         "start": "                \"ackAutoBankSms\" -> {",
-        "end": "                \"ackCommittedAutoBankSms\" -> {"
-      },
-      {
-        "start": "                \"excludeAutoBankSms\" -> {",
         "end": "                \"ackCommittedAutoBankSms\" -> {"
       },
       {
