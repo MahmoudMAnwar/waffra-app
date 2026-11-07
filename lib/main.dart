@@ -12730,37 +12730,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final forecast=now.day>=5&&thisMonthCount>=3?(currentExpense/now.day*monthDays+upcoming):null;
   final weeklySpend=smartCharts.weeklySpend;
   if(!mounted)return;
-  // Blur the underlying screen while the animated analysis indicator runs.
-  // Keep the loader visible long enough to convey progress; calculations are local.
-  if(!mounted)return;
-  await showWaffraDialog<void>(
-   context:context,barrierDismissible:false,barrierColor:Colors.transparent,
-   builder:(ctx){
-    Future<void>.delayed(waffraMotion(1500),(){if(ctx.mounted)Navigator.of(ctx).pop();});
-    return BackdropFilter(filter:ui.ImageFilter.blur(sigmaX:9,sigmaY:9),
-     child:Center(child:Material(color:Colors.transparent,child:Container(
-      width:MediaQuery.of(ctx).size.width*.83,
-      padding:const EdgeInsets.symmetric(horizontal:24,vertical:36),
-      decoration:BoxDecoration(color:Theme.of(ctx).cardColor,
-       borderRadius:BorderRadius.circular(28),
-       border:Border.fromBorderSide(waffraDialogOutline(Theme.of(ctx).brightness))),
-      child:Column(mainAxisSize:MainAxisSize.min,children:[
-       SizedBox(width:104,height:104,child:Stack(alignment:Alignment.center,children:[
-        const SizedBox.expand(child:CircularProgressIndicator(strokeWidth:8,color:emerald,
-         backgroundColor:Color(0xFFD9F1E5))),
-        const Icon(Icons.bar_chart_rounded,color:emerald,size:44),
-       ])),
-       const SizedBox(height:22),
-       WaffraText(waffraIsEnglish?'Analyzing your finances...':'يتم الآن تحليل بياناتك المالية',
-        style:const TextStyle(fontSize:19,fontWeight:FontWeight.bold),textAlign:TextAlign.center),
-       const SizedBox(height:10),
-       WaffraText(waffraIsEnglish?'Reviewing the last 90 days of transactions':
-        'جاري مراجعة معاملات آخر 90 يوم...',textAlign:TextAlign.center),
-      ]),
-     ))));
-   },
-  );
-  if(!mounted)return;
+  // M526: the local financial results have already been computed.
+  // Open the existing results route immediately; do not show a timed
+  // 1.5-second blocking animation that performs no work.
   await showGeneralDialog<void>(
    context:context,
    barrierDismissible:true,
