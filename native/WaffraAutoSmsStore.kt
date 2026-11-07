@@ -669,7 +669,7 @@ object WaffraAutoSmsStore {
     }
 
     fun offer(context: Context, sender: String, body: String, at: Long,
-              historical: Boolean = false): Boolean {
+              historical: Boolean = false, receivedAt: Long = at): Boolean {
         if (!enabled(context)) return false
         // Ignore excluded senders before even local financial parsing.
         try {
@@ -705,7 +705,7 @@ object WaffraAutoSmsStore {
                 queue.put(JSONObject().put("id", fingerprint)
                     .put("sender", sender.trim()).put("body", masked)
                     .put("sensitiveOtp", sensitive)
-                    .put("receivedAt", at)
+                    .put("receivedAt", receivedAt)
                     .put("reviewNotified", historical))
                 save(context, queue)
             } catch (_: Exception) { false }
@@ -1016,7 +1016,10 @@ object WaffraAutoSmsStore {
         val sameSource = prefs.getLong(historySourceMonth, 0L) == start
         var lastAt = if (sameSource) prefs.getLong(historyCursorAt, start - 1) else start - 1
         var lastId = if (sameSource) prefs.getLong(historyCursorId, -1) else -1
-        val projection = arrayOf("_id", "address", "body", "date")
+        // Android inbox 'date' is receipt time; 'date_sent' tracks the original
+        // sender timestamp used by SmsMessage.timestampMillis in broadcasts.
+        // Cursor pagination must STILL order by inbox date and stable row _id.
+        val projection = arrayOf("_id", "address", "body", "date", "date_sent")
         val cursor = try {
             context.contentResolver.query(Uri.parse("content://sms/inbox"),
                 projection, "(date > ? OR (date = ? AND _id > ?)) AND date < ?",
@@ -1031,6 +1034,7 @@ object WaffraAutoSmsStore {
             val senderCol = it.getColumnIndex("address")
             val bodyCol = it.getColumnIndex("body")
             val dateCol = it.getColumnIndex("date")
+            val sentCol = it.getColumnIndex("date_sent")
             if (rowCol < 0 || senderCol < 0 || bodyCol < 0 || dateCol < 0)
                 return 0
             while (it.moveToNext()) {
@@ -1045,7 +1049,15 @@ object WaffraAutoSmsStore {
                 val body = it.getString(bodyCol) ?: ""
                 // offer() applies the excluded-sender policy before parsing,
                 // and its own qualification check (no duplicate regex work).
-                if (offer(context, sender, body, at, historical = true)) {
+                // M518: match the exact fingerprint from the live SMS receiver when
+                // Android supplied a usable sender timestamp. Fallback keeps
+                // preexisting inbox behavior on devices returning 0/invalid.
+                val senderTime = if (sentCol >= 0 && !it.isNull(sentCol))
+                    it.getLong(sentCol) else 0L
+                val identityAt = if (senderTime > 946684800000L &&
+                    senderTime <= end + 300000L) senderTime else at
+                if (offer(context, sender, body, identityAt,
+                        historical = true, receivedAt = at)) {
                     queued++
                     accepted++
                 }
