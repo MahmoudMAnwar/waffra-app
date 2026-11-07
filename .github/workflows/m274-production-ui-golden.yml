@@ -218,6 +218,11 @@ jobs:
           arch: x86_64
           profile: pixel_6
           cores: 2
+          # M533 (#481): emulator 37.2.13 repeatedly terminated at the balance
+          # eye test after footer succeeded. Freeze stable upstream 36.4.10
+          # instead of floating sdkmanager's latest emulator release.
+          # This is an official archived Linux emulator build, NOT a fake pass.
+          emulator-build: 15004761
           # M386: cap AVD userdata instead of accepting Pixel default > available
           # GitHub runner disk. Keep the real Android UI tap test mandatory.
           disk-size: 3072M
@@ -225,5 +230,22 @@ jobs:
           heap-size: 256M
           disable-animations: true
           emulator-boot-timeout: 600
-          emulator-options: -no-window -no-audio -no-snapshot -gpu software -no-boot-anim
+          # M533: prefer dedicated stable SwiftShader GLES instead of auto
+          # Lavapipe/Vulkan; never use deprecated swiftshader_indirect.
+          emulator-options: -no-window -no-audio -no-snapshot -gpu swiftshader -feature -Vulkan -no-boot-anim
+          pre-emulator-launch-script: |
+            set -eu
+            emulator_bin="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}/emulator/emulator"
+            build="$("$emulator_bin" -version 2>&1)"
+            printf '%s\\n' "$build"
+            printf '%s' "$build" | grep -F 'Android emulator version 36.4.10.0 (build_id 15004761)'
+            echo "M533_EMULATOR_VERSION_VERIFIED:36.4.10.0-15004761"
           script: bash .github/scripts/run-m274-android-tap-smoke.sh
+      - name: Upload actual Android emulator failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m274-android-failure-${{ github.event.pull_request.head.sha || github.sha }}
+          path: build/m274/*.log
+          if-no-files-found: warn
+          retention-days: 7
