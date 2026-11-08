@@ -4804,10 +4804,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     final localInfo=local is Map?local:null;
     final income=localInfo?['income'];
     final amount=localInfo?['amount'];
+    // One message's own verified local suggestion is authoritative for its
+    // badge. Never infer Expense from a sibling sender or an OTP notice.
+    final localKind=localInfo?['kind'];
+    final noticeKind=sensitive?'excluded':
+     localKind=='excluded'?'excluded':
+     localKind=='transfer'?'transfer':
+     localKind=='income'?'income':
+     localKind=='expense'?'expense':
+     income is bool?(income?'income':'expense'):'needsReview';
     return WaffraReviewNotice(
      id:id,sender:sender.isEmpty?(waffraIsEnglish?'Unknown sender':'مرسل غير محدد'):sender,
      preview:summary.isEmpty?(waffraIsEnglish?'Bank message':'رسالة بنكية'):summary,
-     kind:sensitive?null:(income is bool?(income?'income':'expense'):null),
+     kind:noticeKind,
      amount:sensitive?null:(amount is num?amount.toDouble():null));
    }).toList(growable:false);
  }
@@ -4819,8 +4828,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     onReviewAll:_openAutoSmsInbox,
     onReviewOne:(id)=>_reviewAutoSmsCandidates(targetId:id),
     onRescan:_rescanAutoSmsInbox,
-    canRescan:()=>!_autoSmsRescanRunning&&
-     (_autoSmsStatusProblem!=null||_autoSmsProgress['rescanNeeded']==true),
+    // A user refresh always checks the real incremental native cursor;
+    // a false rescanNeeded hint must not make the button inert.
+    canRescan:()=>!_autoSmsRescanRunning,
    )));
  }
  Future<void> _openAutoSmsInbox()async{
