@@ -2834,3 +2834,7 @@ M550 early CI proof (2026-11-08): First exact-HEAD M550 run audited 107 workflow
 
 [M572 M385 stable M340 guard anchor] 2026-11-08
 - Correct M340 approved source bound to a unique baseline-and-head anchor preceding modified old/new finance quality preflight. Keep only that security source gate section approved, all other changes blocked. No tests disabled.
+
+
+[M573 #495 sender+suffix learning parity in No/Edit] 2026-11-08
+- Verified reviewed SMS editor now forwards the original sender to account confirmation and learns that sender's last-four association after successful SQLCipher commit+hash. No preview/cancel learning, no additional financial commit. M573 regression. CI/device pending.

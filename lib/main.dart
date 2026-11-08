@@ -10103,6 +10103,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     entries.where((e)=>e.id!=result.id),categories,linkedBudget.single,result.date);
   if(pendingHash!=null&&initial==null){
    final reviewedAccount=await reviewSmsAccountLinks([result],
+     smsSender:reviewedSender??'',
      initialSelectedIds:chosenManualAccount==null?null:[chosenManualAccount]);
    if(reviewedAccount==null){
     for(final staged in stagedReceiptCopies){
@@ -10157,6 +10158,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     _lastWidgetRevision=applied.current.widgetRevision;
    });
    if(smsEditorDraftKey!=null)_m492SmsEditorDrafts.remove(smsEditorDraftKey);
+   // No -> edit learns a confirmed sender+last-four bank identity only
+   // after SQLCipher saved this exact reviewed SMS and its fingerprint.
+   // This learning is not a finance write and cannot debit an account.
+   if(reviewedSender!=null&&reviewedSender.trim().isNotEmpty){
+    unawaited(_recordConfirmedSmsAccountAssociation(
+     record:result,sender:reviewedSender,
+     accountId:reviewedAccount.ids?.single));
+   }
    // The expense/income learner applies only AFTER an authoritative commit,
    // and uses user-approved description/category, not the raw SMS body.
    try{await _learnManualCategoryPreference(result);}catch(_){}

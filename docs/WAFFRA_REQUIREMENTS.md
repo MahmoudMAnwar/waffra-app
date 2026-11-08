@@ -813,3 +813,9 @@ M274 must also trigger on `docs/release/WAFFRA_APPROVED_CHANGES.txt` changes bec
 **PR #497. Status: code/test committed; current-head full CI and physical Android acceptance pending.**
 - First verified owner-account choice following a successful SMS journal commit records sender + last four. Same sender+last four may reuse that specific active same-bank account, after re-reading fresh SQLCipher authority; no repeated account-link dialog. The finance action itself still needs Yes confirmation and atomic hash dedup.
 - Sender-only, absent suffix, changed suffix, archived account or wrong bank never auto-link and require new explicit selection. Update M464/M493 tests accordingly.
+
+
+## M573 — #495 Account learning after edited SMS (2026-11-08)
+**PR:** #497. **Status:** Code and regression written, latest exact-SHA CI and real device acceptance pending.
+- No → edit pathway now submits known bank SMS sender for verified account review and records confirmed sender+suffix association only after actual successful encrypted ledger+hash write. No guesses, no repeat debit and no learning from canceled SMS reviews.
+- Test: test/qa/m573_sms_edited_account_learning_test.py.
