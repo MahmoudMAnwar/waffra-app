@@ -36,6 +36,54 @@
         "Only a real profile APK trace can prove no dropped frames, tap-to-feedback and login/logout completion on Android.",
         "Always remove the signout progress overlay on failure as well as success; never begin another logout concurrently."
       ]
+    },
+    {
+      "id": "M602-PHONE-PASSWORD-RELOGIN-DOES-NOT-RELOCK",
+      "issue": "Issue #508, explicit owner requirement",
+      "previous_behavior": "Every new profile saved from the signed-out phone login set locked=true and presented a mandatory fingerprint even after a correct password. First-registration and process-restored profile also required biometric.",
+      "approved_behavior": "Observe explicit sign-out before verified profile save, and only then skip the redundant immediate fingerprint on successful registered phone-password re-login. Preserve first registration and process-restored mandatory biometric, 60-second background idle gate, fail-closed old credential recovery and SQLCipher binding.",
+      "source_paths": [
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m603_app_wide_lag_source_regression_test.dart",
+        "test/m479_login_logout_and_back_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m429-integration-smoke.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "Never let unverified phone/password bypass mandatory recovery biometric.",
+        "Never unlock an existing restored protected session without biometric.",
+        "Encrypted finance/account owner invariant is unchanged."
+      ]
+    },
+    {
+      "id": "M603-SMS-HOME-FINANCE-SAVE-AND-LOGOUT-THREAD",
+      "issue": "Issue #509, owner requires eliminating three Android jank sources",
+      "previous_behavior": "Home began four-page native SMS import immediately after first rendered frame; large verified ledger conversion was synchronous during Home/widget/SMS review; Android pauseAutoSmsForSignOut held queue mutex and committed preferences on main thread; login awaited SMS restart before navigation.",
+      "approved_behavior": "Complete profile transition before native SMS restart; defer history work 900ms after Home interactive frame, yield between import cursor pages without dropping any; use existing 32-row async verified MoneyEntry mapper during startup, refresh, widget sync and reviewed SMS save; for large widget balance sums use compute(); execute native SMS suspension on SMS executor and deliver result on UI thread. Maintain owner-scoped encrypted records, full month scan, review-only SMS and verified ledger save.",
+      "source_paths": [
+        "lib/main.dart",
+        "native/WaffraMainActivity.kt"
+      ],
+      "test_paths": [
+        "test/m603_app_wide_lag_source_regression_test.dart",
+        "test/m580_sms_security_navigation_performance_test.dart",
+        "test/m601_auth_busy_contract_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/android.yml",
+        ".github/workflows/m429-integration-smoke.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "Never fake SMS consent or financial commits; queue remains review-only.",
+        "Android first-month scan must still cover start-of-install month with persistent cursor.",
+        "Must measure actual next APK frame timings before claiming lag-free."
+      ]
     }
   ]
 }
