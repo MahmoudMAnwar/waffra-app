@@ -1313,6 +1313,11 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
      u.provider.toLowerCase()=='phone'&&profile!.phone!=u.phone){
    throw StateError('Changing a sign-in phone requires verified account migration');
   }
+  // Capture signed-out state before profile write clears it.
+  final prefs=await SharedPreferences.getInstance();
+  final ordinaryPhoneRelogin=profile==null&&showLogin&&
+   u.provider.toLowerCase().trim()=='phone'&&
+   (prefs.getBool('waffra_signed_out_explicitly')??false);
   await _accountWriteAuthority.saveProfile(
    profileJson:jsonEncode(u.toJson()),
    registeredProfileJson:u.phone.trim().isNotEmpty?jsonEncode(u.toJson()):null,
@@ -1322,10 +1327,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    email:u.email.trim().isNotEmpty?u.email.trim():null,
    phone:u.phone.trim().isNotEmpty?u.phone.trim():null,
   );
-  // Restore standing SMS consent only for the verified same account. Never
-  // re-request Android SMS permissions after ordinary re-login.
-  if(Platform.isAndroid)await WaffraAutoSms.resumeAfterSignIn();
-  final prefs=await SharedPreferences.getInstance();
+  // Resume native SMS after the verified authenticated frame, not here.
   final needsGoogleSetup=WaffraSaudiRelease.locationCountryOnboarding&&
    waffraGoogleProfileReadyForCountrySetup(u)&&
     !(prefs.getBool(waffraCountrySetupKey(u))??false);
@@ -1336,12 +1338,28 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    // Once the account has been verified, first-run permissions precede
    // the biometric gate. This does NOT apply to a restored, locked session.
    _smsConsentAfterVerifiedSignIn=needsSmsAccessAfterRegistration;
-   // First phone/password login and new registration require biometrics.
-   // Editing a profile in an already-unlocked session does not re-lock.
+   // First-run and restored protected sessions retain biometrics; an
+   // ordinary verified password re-login must not prompt for it again.
    final freshSession=profile==null||showLogin;
    profile=u;showLogin=false;googleFirstRunSetup=needsGoogleSetup;
-   if(freshSession)locked=true;
+   if(freshSession)locked=!ordinaryPhoneRelogin;
   });
+  if(Platform.isAndroid&&mounted){
+   WidgetsBinding.instance.addPostFrameCallback((_){
+    if(!mounted||profile==null||showLogin)return;
+    unawaited(()async{
+     try{
+      final resumed=await WaffraAutoSms.resumeAfterSignIn();
+      // Ignore a late resume when the owner signed out meanwhile.
+      if(resumed&&mounted&&!showLogin&&identical(profile,u)){
+       waffraAutoSmsUpdates.value++;
+      }
+     }catch(error){
+      debugPrint('Deferred SMS restore failed: ${error.runtimeType}');
+     }
+    }());
+   });
+  }
  }
  Future<void> setUiCountry(String? iso)async{
   await WaffraRegionalCopy.setCountry(iso);
@@ -4485,6 +4503,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    // Stop if the encrypted review queue is full until the user reviews items.
    try{
     for(var page=0;page<4;page++){
+     // Preserve complete month scan but avoid uninterrupted native I/O.
+     if(page>0)await Future<void>.delayed(const Duration(milliseconds:500));
+     if(!mounted||!ready)return;
      final imported=await WaffraAutoSms.importConsentMonthChecked();
      final snapshot=await WaffraAutoSms.scanProgress();
      if(mounted&&snapshot!=null)setState(()=>_autoSmsProgress=snapshot);
@@ -6405,8 +6426,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    await load();
    unawaited(_m467RefreshHomeAccounts());
    WidgetsBinding.instance.addPostFrameCallback((_) {
-    if(mounted)unawaited(_refreshAutoSmsInbox(
-     importMonth:!_autoSmsHistoryComplete));
+    // Home first: encrypted SMS scan starts only after initial layout settles.
+    unawaited(()async{
+     await Future<void>.delayed(const Duration(milliseconds:900));
+     if(!mounted||!ready||_financeLoadFailure!=null)return;
+     await _refreshAutoSmsInbox(importMonth:!_autoSmsHistoryComplete);
+    }());
    });
   }catch(e){
    debugPrint('Financial startup integrity/recovery gate blocked access: $e');
@@ -6452,8 +6477,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final parsed=await WaffraLargeJsonDecode.parse(raw);
    if(parsed is! List)throw const FormatException(
     'Widget finance ledger is not a list.');
-   final loaded=parsed
-    .map((item)=>MoneyEntry.fromJson(Map<String,dynamic>.from(item as Map))).toList();
+   final loaded=await _m593BuildVerifiedEntries(parsed);
    if(!mounted)return;
    setState((){
     entries..clear()..addAll(loaded);
@@ -6529,7 +6553,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     if(parsed is! List)throw const FormatException('Invalid finance list.');
     return parsed.map((e)=>make(Map<String,dynamic>.from(e as Map))).toList();
    }
-   final nextEntries=await readList<MoneyEntry>(ledger,MoneyEntry.fromJson);
+   final nextEntries=ledger==null?<MoneyEntry>[]:
+    await _m593BuildVerifiedEntries(
+     (await WaffraLargeJsonDecode.parse(ledger)) as List);
    final nextCategories=catalog==null
     ?defaultCategories()
     :await readList<BudgetCategory>(catalog,BudgetCategory.fromJson);
@@ -6633,7 +6659,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
   _lastWidgetRevision=loadedFinance.widgetRevision;
   _lastLedgerSavedRaw=loadedFinance.ledgerRaw;
-  try{final raw=financeView.getString('entries');if(raw!=null)entries.addAll((await WaffraLargeJsonDecode.parse(raw) as List).map((x)=>MoneyEntry.fromJson(Map<String,dynamic>.from(x))));}catch(e){throw StateError('Saved transactions cannot be decoded safely: $e');}
+  try{final raw=financeView.getString('entries');if(raw!=null)entries.addAll(await _m593BuildVerifiedEntries((await WaffraLargeJsonDecode.parse(raw)) as List));}catch(e){throw StateError('Saved transactions cannot be decoded safely: $e');}
   try{final raw=financeView.getString('waffra_categories_v24');categories.addAll(raw==null?defaultCategories():(await WaffraLargeJsonDecode.parse(raw) as List).map((x)=>BudgetCategory.fromJson(Map<String,dynamic>.from(x))));}catch(e){throw StateError('Saved categories cannot be decoded safely: $e');}
   try{
    final raw=financeView.getString('waffra_named_budgets_v1');
@@ -8822,8 +8848,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         committed.current.ledgerRaw??'[]');
        if(verifiedRaw is! List)throw StateError(
         'Committed reviewed SMS ledger snapshot was not a list.');
-       final verified=verifiedRaw.map((item)=>MoneyEntry.fromJson(
-        Map<String,dynamic>.from(item as Map))).toList();
+       final verified=await _m593BuildVerifiedEntries(verifiedRaw);
        if(!mounted)return;
        setState((){
         entries..clear()..addAll(verified);
