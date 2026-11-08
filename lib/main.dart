@@ -5770,7 +5770,37 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         'Review the message. Safe rules update after confirmed actions.':
         'راجع الرسالة؛ وفرة يتعلم القواعد الآمنة بعد تأكيد العملية.'),
        const SizedBox(height:11),
-       Card(child:ListTile(
+       if(facts.kind==WaffraBankOperationKind.transfer&&!sensitive)
+        Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+         WaffraText(waffraIsEnglish?
+          'A transfer is not automatically income or expense. '
+          'Choose two verified accounts and confirm the principal amount. '
+          'Any transfer fee remains separate and unposted.':
+          'التحويل مش دخل أو مصروف تلقائيًا. اختار حسابين موثّقين '
+          'وراجع مبلغ التحويل الأساسي. أي رسوم تفضل منفصلة ولا تُخصم تلقائيًا.',
+          style:const TextStyle(fontSize:12,height:1.5)),
+         const SizedBox(height:9),
+         FilledButton.icon(
+          key:const Key('m587-sms-transfer-yes'),
+          onPressed:()=>Navigator.pop(dialog,'transfer'),
+          icon:const Icon(Icons.swap_horiz_rounded),
+          label:WaffraText(waffraIsEnglish?
+           'Confirm transfer details':'تأكيد التحويل')),
+         const SizedBox(height:6),
+         OutlinedButton(
+          key:const Key('m587-sms-transfer-no'),
+          onPressed:()=>Navigator.pop(dialog,'transfer-manual'),
+          child:WaffraText(waffraIsEnglish?
+           'No, add income or expense':'لا، إضافة دخل أو مصروف')),
+         const SizedBox(height:4),
+         TextButton.icon(
+          key:const Key('m587-sms-transfer-exclude'),
+          onPressed:()=>Navigator.pop(dialog,'exclude'),
+          icon:const Icon(Icons.block_outlined),
+          label:WaffraText(waffraIsEnglish?
+           'Exclude this message':'استبعاد الرسالة')),
+        ])
+       else Card(child:ListTile(
         key:const Key('waffra-sms-understood-action'),
         leading:Icon(sensitive?Icons.shield_outlined:
          facts.kind==WaffraBankOperationKind.transfer?Icons.sync_alt_rounded:
@@ -5789,9 +5819,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        )),
       ])),
      actions:[
-      TextButton(onPressed:()=>Navigator.pop(dialog),
-       child:WaffraText(waffraIsEnglish?'Later':'لاحقًا')),
-      if(!sensitive&&localFacts==null&&cloudFacts==null)
+      if(facts.kind!=WaffraBankOperationKind.transfer)
+       TextButton(onPressed:()=>Navigator.pop(dialog),
+        child:WaffraText(waffraIsEnglish?'Later':'لاحقًا')),
+      if(!sensitive&&facts.kind!=WaffraBankOperationKind.transfer&&
+          localFacts==null&&cloudFacts==null)
        PopupMenuButton<String>(
         tooltip:waffraIsEnglish?'More options':'خيارات أخرى',
         icon:const Icon(Icons.more_horiz),
@@ -5821,8 +5853,30 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       'تعذر استبعاد الرسالة بأمان. حاول تاني.',isError:true);
     }
    }else if(decision=='transfer'&&mounted){
-    // Directly review verified accounts; save money before learning a rule.
+    // The transfer editor itself requires two different verified accounts,
+    // original principal amount, and an additional owner save confirmation.
     await _reviewSmsAccountTransfer(item:selected,facts:facts);
+   }else if(decision=='transfer-manual'&&mounted){
+    final kind=await showWaffraDialog<String>(context:context,
+     builder:(dialog)=>AlertDialog(
+      title:WaffraText(waffraIsEnglish?
+       'Add a separate manual transaction':'إضافة عملية يدوية منفصلة'),
+      content:WaffraText(waffraIsEnglish?
+       'The bank transfer SMS will remain pending. Choose an independent '
+       'income or expense, enter its true amount, and confirm its own account.':
+       'رسالة التحويل هتفضل للمراجعة. اختار دخل أو مصروف منفصل، '
+       'واكتب مبلغه الحقيقي وأكّد الحساب المالي قبل الحفظ.'),
+      actions:[
+       TextButton(onPressed:()=>Navigator.pop(dialog),
+        child:WaffraText(waffraIsEnglish?'Back':'العودة')),
+       OutlinedButton(onPressed:()=>Navigator.pop(dialog,'expense'),
+        child:WaffraText(waffraIsEnglish?'Expense':'مصروف')),
+       FilledButton(onPressed:()=>Navigator.pop(dialog,'income'),
+        child:WaffraText(waffraIsEnglish?'Income':'دخل')),
+      ]));
+    if(mounted&&(kind=='income'||kind=='expense')){
+     await entrySheet(scannedIncome:kind=='income');
+    }
    }else if(decision=='yes'&&mounted&&canConfirm){
     await _m565ConfirmSms(id:id,body:body,sender:sender,
      category:proposedCategory,income:expectedIncome,
