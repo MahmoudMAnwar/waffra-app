@@ -159,10 +159,10 @@
       ]
     },
     {
-      "id": "M580-M588-SEVEN-FEEDBACK-SECURE-SMS-RESPONSIVE-UI",
+      "id": "M580-M590-SEVEN-FEEDBACK-SECURE-SMS-RESPONSIVE-UI",
       "issue": "Owner approved #498–#504 (WAFFRA-NEW-021..027), draft PR #505",
       "previous_behavior": "OTP security challenges (notably Arabic temporary code) could leak into money labels; a tapped notice marshalled the entire 1000-SMS encrypted queue, an unchanged Back reprocessed it all; notifications showed duplicate large CTA and old filters; cold Home spinner showed blank content and summary numerals overflowed; submit button visually shrank while secure sign-in ran.",
-      "approved_behavior": "Use source-only bilingual OTP verification safety, per-SMS type and redacted review, sender-based direct notification tap with a single verified selected-ID native lookup on the SMS executor, no unconditional 1000-item reread after cancel, live incremental refresh, stable sign-in CTA, a bounded isolated cold Home loading surface, and fitted full currency figures. No automatic SMS deletion or finance posting from preview. Transfer and double-confirm redesign remain pending. M587 presents three explicit transfer preview actions: open guarded confirmed two-account form, add a separately confirmed independent income/expense, or exclude only this SMS. M588 restores the exact main Dart bridge after a real compiler-reported malformed regex insertion; new single-ID fetch retained.",
+      "approved_behavior": "Use source-only bilingual OTP verification safety, per-SMS type and redacted review, sender-based direct notification tap with a single verified selected-ID native lookup on the SMS executor, no unconditional 1000-item reread after cancel, live incremental refresh, stable sign-in CTA, a bounded isolated cold Home loading surface, and fitted full currency figures. No automatic SMS deletion or finance posting from preview. Transfer and double-confirm redesign remain pending. M587 presents three explicit transfer preview actions: open guarded confirmed two-account form, add a separately confirmed independent income/expense, or exclude only this SMS. M588 restores the exact main Dart bridge after a real compiler-reported malformed regex insertion; new single-ID fetch retained. M589 keeps compact verified multi-select/bulk exclusions accessible via AppBar action without the redundant hero. M590 labels pending OTP and suggested exclusions as requiring review; only a durably excluded SMS may be described as excluded.",
       "source_paths": [
         "lib/main.dart",
         "lib/waffra_bank_sms_facts.dart",
@@ -192,7 +192,8 @@
         "Sender-only assumptions cannot authorize a bank account; no source/destination fee posting from an unverified transfer.",
         "Unmodified sender-bulk exclusion, existing finance records, pinned floating + layout, and spouse-device update/migration remain safe.",
         "These changes need full exact-HEAD Android/Flutter/Python native tests and before/after device frame measurements, and do not claim seven features complete.",
-        "Transfer Yes never commits before a second approved verified two-account editor confirmation; No never treats original SMS as posted income or expense, and Exclude never touches Android inbox."
+        "Transfer Yes never commits before a second approved verified two-account editor confirmation; No never treats original SMS as posted income or expense, and Exclude never touches Android inbox.",
+        "Notifications may never describe a pending SMS or suggested excluded rule as an already excluded message, and the original owner-verified bulk review remains accessible."
       ]
     }
   ]
