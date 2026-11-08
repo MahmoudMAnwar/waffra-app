@@ -842,3 +842,16 @@ M274 must also trigger on `docs/release/WAFFRA_APPROVED_CHANGES.txt` changes bec
 ## M580 — stale M177 encrypted storage smoke writer count (2026-11-08)
 **PR:** #497. **Status:** QA code repaired; exact-head encrypted storage smoke + M174/M340 rerun pending.
 - The M177 storage regression previously required exactly 3 atomic bank SMS finance writer call sites, obsolete after approved M565 added fourth verified Yes-confirm path. Preserve all four legitimate source-authorized writers. Require M565 itself to include verified account selection + generation, atomic SMS+fingerprint journal, no duplicates and only post-commit native ACK. Change only the bounded M177 positive test, not any money source or security gate.
+
+
+## WAFFRA-NEW-021 — Sign-in submit responsiveness, disappearing button and ~3s first-time delay (2026-11-08)
+
+**Issue:** [#498](https://github.com/MahmoudMAnwar/waffra-app/issues/498) · **Related:** [#419](https://github.com/MahmoudMAnwar/waffra-app/issues/419), #485 · **Implementation PR:** Not assigned · **Status:** **Recorded / Not implemented — owner explicitly deferred coding until all observations are collected.**
+
+**Owner APK feedback:** Overall app performance has improved substantially, but (a) after Yes-confirmed logout, logging back in with the valid account causes the «تسجيل الدخول» primary button to disappear before the app eventually opens; (b) at first-time account-creation/user-details submission, advancing takes approximately **3 seconds** by user estimate. Screenshot privately provided in conversation; do not copy any visible phone number or password to GitHub.
+
+**Expected UX:** Immediate tap acknowledgement and stable visible submit/loading state, disabling duplicate attempts instead of hiding the button or appearing frozen; smooth transition with no unnecessary stall. Preserve approved sign-in layout, first-run choice, normal Yes/No logout, valid-password sign-in and secure account owner verification. Optimize only after release/profile Android trace identifies actual synchronous work, duplicate queries/initialization, routing/rebuilds, or other measured causes; do **not** downgrade PBKDF2, biometrics, SQLCipher, data/backup integrity or consent to fake speed.
+
+**Acceptance:** Record before/after tap-to-feedback and tap-to-interactive timings, UI/raster frames and auth/storage/route spans; separately cover fresh install → registration completion, logout → login-again, repeated sign-in, warm/cold start, both physical Android devices and upgrade with preserved records. No transient blank CTA, no blocked UI, no duplicate login, correct failures for invalid credentials. Add targeted Flutter widget/integration regressions and pass full exact-head CI + owner Android QA. Do not claim Done until device evidence and owner acceptance.
+
+**Sequence:** First item of the new owner-reported performance/suggestion batch. **Record now; begin all implementations only when owner confirms the complete batch and asks to start in order.**
