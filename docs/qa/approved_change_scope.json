@@ -1,185 +1,50 @@
 {
   "contract_version": 1,
-  "change_id": "M547-SMS-IMPORT-JANK-1000-REVIEW-INCREMENTAL-20261108",
-  "human_scope_review": "User requested source-level remediation for severe Waffra app-wide jank after SMS import, a 1000-entry review queue, and accurate new-only SMS rescan. These bounded files only implement the SMS-related portion; profile/release real-device perf and security/finance Android QA remain mandatory. Auth/login/logout, PBKDF2 iteration strength, SQLCipher finance authority and existing user data must be retained. Manifest enforces exact changed file set and immutable out-of-scope source; human acceptance of physical-device experience is still outstanding. Follow-up PERF-04 from original user message: 3-second login freeze was an explicit preexisting requirement, not a new feature. Isolate only PBKDF2 computation; existing 600000 iterations, device protected verifier, recovery/biometric/session ownership remain identical; stable busy UI and exact-head tests added. Physical Android performance acceptance still mandatory. Additional existing native MethodChannel SMS enable/resume calls serialized on pre-existing SMS I/O executor instead of Android UI thread; callback result remains on UI thread, source tests confirm consent and owner guards. Sign-out untouched. Follow-up on PR #488 six failed workflows after 6cae5d4: three old source-snippet tests are updated only within declared test-case functions; source-critical original behavior remains acceptance guarded. Human mobile performance validation is still outstanding.",
+  "change_id": "M548-REVIEW-SHEET-SIGNUP-FRAME-JANK-20261108",
+  "human_scope_review": "User's Android screenshots on 2026-11-08 show severe lag on opening 1000 pending SMS review, signup completion (~3s), and global navigation even after main merged #488. This is a narrow performance safety candidate; previous logout/login, SQLCipher, biometric and SMS financial authority must remain untouched. Requires full exact-head CI, Android profile/release frame evidence and owner signoff before merge.",
   "user_requested_changes": [
-    "2026-11-08: Remove severe animation and navigation stutter associated with repeated Android SMS history scans and expense/income saves; keep tested login and logout unchanged.",
-    "Increase encrypted pending SMS review capacity from 500 to 1000 while keeping previous SMS owner, exclusions, confirmed finance anti-replay and history intact.",
-    "After first installation month history scan, report accurate per-run inspected and newly queued counts, and thereafter scan only new Android inbox rows without resetting durable cursor; show incomplete first-pass status explicitly.",
-    "2026-11-08 user-reported login first-paint freeze and ~3-second stall after registration/login: offload full-strength 600000 PBKDF2 password computation from Flutter UI isolate and show responsive stable busy feedback; preserve exact previous credential identity and successful logout/login behavior.",
-    "2026-11-08: Restore full Flutter QA after six failed CI workflows share three obsolete M506/M507/M518 source-level expectations; reinforce 1000 SMS capacity, nonblocking rule reload and sender-time anti-replay, never delete or skip checks."
+    "Open the already owner-verified in-memory bank SMS review snapshot immediately with 1000 pending messages; cold/error snapshots still refresh, with no auto-post or data loss.",
+    "Make bank sender grouping linear-time and retain case-insensitive original sender naming, chronological order, exclusions, selection, Back and all financial review behavior.",
+    "Yield between short SMS parser batches to restore smooth Flutter app-wide frames during encrypted queue refresh after navigation and background SMS notices.",
+    "Keep signup secure while avoiding a second redundant 600000-round PBKDF2 verification after fresh exact secure-store readback; display painted progress, prevent duplicate taps, preserve existing-verifier real password checks.",
+    "Require source and 1000-item pure grouping tests, full Flutter CI, native exact-head validation, signed APK physical two-device acceptance and p95 frame profiles before saying app lag is resolved."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
-    "lib/waffra_auto_sms.dart",
     "lib/waffra_local_phone_credentials.dart",
-    "native/WaffraAutoSmsStore.kt",
-    "native/WaffraMainActivity.kt",
-    "test/m429_sms_phone_integration_test.dart",
-    "test/m461_sms_exclusion_and_history_scan_test.dart",
-    "test/m464_sms_bulk_rescan_regression_test.dart",
-    "test/m468_app_refresh_performance_regression_test.dart",
-    "test/m506_android_nine_regressions_test.dart",
-    "test/m507_sms_amount_and_continuous_review_test.dart",
-    "test/m509_all_sender_sms_rescan_dedup_test.dart",
-    "test/m514_sms_review_regressions_test.dart",
-    "test/m547_login_isolate_performance_test.dart",
-    "test/m547_sms_incremental_jank_regression_test.dart",
-    "test/qa/m417_sms_permission_acceptance_test.py",
-    "test/qa/m442_sms_consent_session_recovery_test.py"
+    "lib/waffra_sms_review_groups.dart",
+    "test/m548_review_grouping_and_signup_perf_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
       {
-        "start": " void _m468OnResume(){",
-        "end": " @override void initState(){super.initState();WaffraBackNavigation.onHomeBack="
+        "start": "import 'waffra_sms_local_rules.dart';",
+        "end": "import 'waffra_sms_account_learning.dart';"
       },
       {
-        "start": " Future<void> _rescanAutoSmsInbox()async{",
-        "end": " Future<void>? _autoSmsRefreshInFlight;"
+        "start": " Future<void> save()async {",
+        "end": " Widget _phoneRegistrationForm(){"
+      },
+      {
+        "start": " Widget _phoneRegistrationForm(){",
+        "end": " @override Widget build(BuildContext context){\n  if(widget.initial==null&&widget.provider=='Phone')return _phoneRegistrationForm();"
+      },
+      {
+        "start": " Future<void> _runAutoSmsRefresh({bool importMonth=false})async{",
+        "end": " Future<void> _analyzeAmbiguousSmsOnDemand("
       },
       {
         "start": " Future<void> _openAutoSmsInbox()async{",
         "end": " Widget _autoSmsReviewCard(){"
-      },
-      {
-        "start": " Widget _autoSmsReviewCard(){",
-        "end": " /// Explicit, idempotent account-to-account transfer from reviewed bank SMS."
-      },
-      {
-        "start": " Future<void> bulkSmsSheet({String? initialText,String initialSender='",
-        "end": " Future<void> _previewForeignBankCurrency(String raw)async {"
-      },
-      {
-        "start": "   // The expense/income learner applies only AFTER an authoritative commit,",
-        "end": "   if(applied.originalSmsNotesOmittedOnLegacy&&mounted){"
-      },
-      {
-        "start": "     // A preference failure cannot retry an already-committed debit.",
-        "end": "    }catch(error){\n     // A write may have committed"
-      },
-      {
-        "start": " Future<void> _signIn()async{",
-        "end": " String get maskedLastPhone{"
-      },
-      {
-        "start": "         FilledButton(onPressed:WaffraHaptics.tap(signingIn?null:_signIn),",
-        "end": "         TextButton(\n          key:const Key('m479-login-back-to-choice'),"
-      }
-    ],
-    "lib/waffra_auto_sms.dart": [
-      {
-        "start": " // Unlike the legacy importer, this one exposes native failures to the",
-        "end": " static Future<int> importConsentMonthChecked()async{"
-      }
-    ],
-    "native/WaffraAutoSmsStore.kt": [
-      {
-        "start": "    private const val suspendedAfterLogoutName = ",
-        "end": "    private fun monthStart() = "
-      },
-      {
-        "start": "    /** Read-only progress counters, persisted alongside the resume cursor. */",
-        "end": "    // Explicit opt-out must never auto-resume after a future login."
-      },
-      {
-        "start": "    // Explicit opt-out must never auto-resume after a future login.",
-        "end": "    // Stop collection immediately on logout."
-      },
-      {
-        "start": "    fun acknowledgeCommitted(context: Context, ids: Set<String>): Boolean",
-        "end": "    /** Claim each review notification once;"
-      }
-    ],
-    "native/WaffraMainActivity.kt": [
-      {
-        "start": "                \"restartCompletedSmsHistory\" -> {",
-        "end": "                \"importConsentMonthBankSms\" -> {"
-      },
-      {
-        "start": "                \"resumeAutoSmsAfterSignIn\" -> {",
-        "end": "                \"autoSmsNotificationsEnabled\" ->"
-      },
-      {
-        "start": "                \"setAutoSmsEnabled\" -> {",
-        "end": "                \"restartCompletedSmsHistory\" -> {"
-      }
-    ],
-    "test/m429_sms_phone_integration_test.dart": [
-      {
-        "start": " test('M433 month-bounded encrypted SMS import is manual-review only',(){",
-        "end": " test('M433 Home has stable review inbox count and per-SMS manual review',(){"
-      }
-    ],
-    "test/m461_sms_exclusion_and_history_scan_test.dart": [
-      {
-        "start": "  test('Android history scans are bounded by a durable cursor', () {",
-        "end": "  test('native history scanning does not block Android UI thread',(){"
-      }
-    ],
-    "test/m464_sms_bulk_rescan_regression_test.dart": [
-      {
-        "start": " test('M464 native SMS history has a resumable queue beyond 100',(){",
-        "end": " test('M464 rescan signals active state and returns cumulative counts',(){"
-      }
-    ],
-    "test/m468_app_refresh_performance_regression_test.dart": [
-      {
-        "start": " test('M468 Home refresh reduces duplicate account and SMS scans',(){",
-        "end": " test('M468 no financial authority or history is discarded for faster UI',(){"
-      }
-    ],
-    "test/m509_all_sender_sms_rescan_dedup_test.dart": [
-      {
-        "start": " test('M509 committed markers are owner-bound encrypted hash shards',(){",
-        "end": " test('M509 finance-backed ACK is separate from exclude/reject ACK',(){"
-      }
-    ],
-    "test/qa/m417_sms_permission_acceptance_test.py": [
-      {
-        "start": "    def test_background_cannot_post_finance_or_upload_sms(self):",
-        "end": "    def test_writes_only_from_existing_verified_sms_review(self):"
-      }
-    ],
-    "test/qa/m442_sms_consent_session_recovery_test.py": [
-      {
-        "start": "    def test_logout_races_cannot_capture_or_hide_old_encrypted_data(self):",
-        "end": "    def test_bridge_is_wired_to_native_with_no_os_reprompt_on_relogin(self):"
-      },
-      {
-        "start": "    def test_bridge_is_wired_to_native_with_no_os_reprompt_on_relogin(self):",
-        "end": "    def test_dashboard_does_not_hide_disabled_or_corrupt_queue_as_zero(self):"
       }
     ],
     "lib/waffra_local_phone_credentials.dart": [
       {
-        "start": "import 'dart:convert';",
-        "end": "import 'package:crypto/crypto.dart' as legacy_crypto;"
-      },
-      {
-        "start": " static bool validPassword(String pass)=>",
-        "end": " static bool _equal("
-      }
-    ],
-    "test/m506_android_nine_regressions_test.dart": [
-      {
-        "start": "  test('M506 native bank sender aliases preserve OTP and consented review', () {",
-        "end": null
-      }
-    ],
-    "test/m507_sms_amount_and_continuous_review_test.dart": [
-      {
-        "start": "  test('M507-02 source editor reloads rules for each next SMS', () {",
-        "end": null
-      }
-    ],
-    "test/m514_sms_review_regressions_test.dart": [
-      {
-        "start": " test('M518 live SMS and history prefer the same sender timestamp',(){",
-        "end": null
+        "start": " static Future<void> registerOrResume({",
+        "end": " /// Decode and challenge a pre-existing verifier"
       }
     ]
   }
