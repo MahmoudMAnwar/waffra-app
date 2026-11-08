@@ -40,8 +40,9 @@ abstract final class WaffraAutoSms {
  }
  // Unlike the legacy importer, this one exposes native failures to the
  // explicit Rescan UI; it never reports an I/O error as an empty inbox.
- // Explicit Rescan restarts a completed first-install-month cursor only.
- // Incomplete history keeps its progress and advances on next Rescan.
+ // Legacy compatibility hook is non-destructive. Normal Rescan NEVER
+ // invokes it: new-only and unfinished first-history scans keep their cursor.
+ @Deprecated('History rescans resume the persisted cursor without restart.')
  static Future<bool> restartCompletedHistory()=>
   _boolCall('restartCompletedSmsHistory');
 
