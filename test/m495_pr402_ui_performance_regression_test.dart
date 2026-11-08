@@ -4,25 +4,37 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/main.dart' show WaffraBalanceHeader;
 import 'package:waffra/waffra_account_transaction_form.dart';
+import 'package:waffra/waffra_home_accounts_sheet.dart';
 import 'package:waffra/storage/waffra_accounts_repository.dart';
 
 void main(){
- testWidgets('M495 #401 long selected account label stays visible on narrow Android',
-  (tester)async{
+ testWidgets('M549 selected long account remains accessible on narrow Android',(tester)async{
   await tester.binding.setSurfaceSize(const Size(320,760));
   addTearDown(()async=>tester.binding.setSurfaceSize(null));
   const label='مصرف الإنماء - حساب جاري للراتب والمصاريف المنزلية والالتزامات الشهرية';
+  // Approved compact balance is deliberately free of any account dropdown.
   await tester.pumpWidget(MaterialApp(home:Scaffold(
    body:CustomScrollView(slivers:[
     SliverPersistentHeader(pinned:true,delegate:WaffraBalanceHeader(
-     balance:12345.67,english:false,
+     balance:12345.67,english:false,compact:true,
+     heading:'إجمالي الرصيد',
      selectedAccountLabel:label,onAccountTap:(){},
      refreshVerifiedWidgetBalance:()async{})),
     const SliverToBoxAdapter(child:SizedBox(height:700)),
    ]),
   )));
   await tester.pumpAndSettle();
-  expect(find.byKey(const Key('m470-balance-account-picker')),findsOneWidget);
+  expect(find.byKey(const Key('m470-balance-account-picker')),findsNothing);
+  expect(tester.takeException(),isNull);
+
+  // The independent selector's real sheet retains the complete long label.
+  await tester.pumpWidget(MaterialApp(home:Scaffold(body:
+   WaffraHomeAccountsSheet(english:false,selected:'one',
+    accounts:const [
+     WaffraAccountBalance('one',label,'bank',1234567,false),
+    ]))));
+  await tester.pumpAndSettle();
+  expect(find.byKey(const Key('m467-account-choice-one')),findsOneWidget);
   expect(find.text(label),findsOneWidget);
   expect(tester.takeException(),isNull);
  });

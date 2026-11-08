@@ -2747,3 +2747,7 @@ M550 early CI proof (2026-11-08): First exact-HEAD M550 run audited 107 workflow
 
 [M555 regression correction] 2026-11-08
 - Exact-head M417 Kotlin compile proved original M555 init script mistakenly added a project-level repository, rejected by Flutter included Gradle build's FAIL_ON_PROJECT_REPOS policy. Corrected to Gradle `beforeSettings` and `dependencyResolutionManagement.repositories.exclusiveContent` for ONLY `org.jetbrains.kotlin:kotlin-compiler-embeddable:2.2.21` in the existing locally SHA-verified official Maven cache. Preserves strict repository policy and original Gradle/Flutter/Android tests. Requires exact-head CI proof.
+
+
+[M549 approved account filter regression alignment] 2026-11-08
+- Full UI/finance regression revealed exactly two obsolete assertions still expecting account selector inside balance (M467 and M495), contrary to owner-approved screenshot. Updated M467 to verify actual independent compact month filter and never pass viewing filter into finance commit, and M495 to verify small-screen balance has no dropdown but complete long account names remain accessible in the real account picker. No financial behavior or original unrelated tests were removed. CI and physical screenshots still required.

@@ -39,7 +39,8 @@
     "Move home SMS operations-review card into a dedicated compact notifications center, preserving access to real native pending bank messages, per-message review and explicit user-initiated rescan.",
     "Rename the old SMS sorting sheet label from رسائل للفرز to مراجعة الرسائل البنكية while preserving review, exclusion/restore, owner privacy and safe financial acknowledgement.",
     "Update only the legacy account-in-balance test assertion; retain the existing generic-balance regression, and add a dedicated notification review UI test.",
-    "First-time masked-four account matching, original SMS transaction timestamp and one-tap yes/no bank SMS finance capture remain tracked in Issue #495 and are not yet implemented in this UI-only PR."
+    "First-time masked-four account matching, original SMS transaction timestamp and one-tap yes/no bank SMS finance capture remain tracked in Issue #495 and are not yet implemented in this UI-only PR.",
+    "M549 approved design changes legacy M467 and M495 account-picker expectations: assert independent Home filter outside compact balance and that long account names remain accessible in the real account-selection sheet on narrow Android; keep all other financial regression assertions and type validation unchanged."
   ],
   "allowed_changed_files": [
     ".github/workflows/finance-full-regression.yml",
@@ -171,7 +172,9 @@
     "scripts/qa/prefetch_verified_kotlin.sh",
     "lib/waffra_approved_notifications.dart",
     "test/m470_balance_header_account_picker_test.dart",
-    "test/m549_approved_home_notifications_test.dart"
+    "test/m549_approved_home_notifications_test.dart",
+    "test/m467_account_header_test.dart",
+    "test/m495_pr402_ui_performance_regression_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -914,6 +917,22 @@
       {
         "start": "void main(){",
         "end": " testWidgets('M470 generic balance card has no account-switching action',(tester)async{"
+      }
+    ],
+    "test/m467_account_header_test.dart": [
+      {
+        "start": " test('M467 Home header scope is verified and never passed into finance commits',(){",
+        "end": null
+      }
+    ],
+    "test/m495_pr402_ui_performance_regression_test.dart": [
+      {
+        "start": "import 'package:waffra/waffra_account_transaction_form.dart';",
+        "end": "import 'package:waffra/storage/waffra_accounts_repository.dart';"
+      },
+      {
+        "start": " testWidgets('M495 #401 long selected account label stays visible on narrow Android',",
+        "end": " test('M495 #418 date fills row and budget is equally expanded when present',(){"
       }
     ]
   }
