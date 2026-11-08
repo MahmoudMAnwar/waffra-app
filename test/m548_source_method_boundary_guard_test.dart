@@ -30,6 +30,14 @@ void main(){
    throwsFormatException);
  });
 
+ test('M548 source-contract tests cannot regress to comment slicing',(){
+  final guard=File('test/m547_sms_incremental_jank_regression_test.dart')
+   .readAsStringSync();
+  expect(guard,contains('waffraSourceMethodSection('));
+  expect(guard,isNot(contains(".split('//")));
+  expect(guard,contains('start:\' Future<void> entrySheet('));
+ });
+
  test('M548 explicit history paging belongs to Rescan, not review or rules',(){
   final main=File('lib/main.dart').readAsStringSync();
   final review=waffraSourceMethodSection(main,
