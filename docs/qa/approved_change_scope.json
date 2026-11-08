@@ -8,7 +8,9 @@
     "Yield between short SMS parser batches to restore smooth Flutter app-wide frames during encrypted queue refresh after navigation and background SMS notices.",
     "Keep signup secure while avoiding a second redundant 600000-round PBKDF2 verification after fresh exact secure-store readback; display painted progress, prevent duplicate taps, preserve existing-verifier real password checks.",
     "Require source and 1000-item pure grouping tests, full Flutter CI, native exact-head validation, signed APK physical two-device acceptance and p95 frame profiles before saying app lag is resolved.",
-    "Repair the M429 obsolete implementation-text assertion after moving its same sender-grouping behavior into a tested O(N) helper; keep real sender, selection, review and original provenance checks."
+    "Repair the M429 obsolete implementation-text assertion after moving its same sender-grouping behavior into a tested O(N) helper; keep real sender, selection, review and original provenance checks.",
+    "2026-11-08 repeated PR failure: diagnose all six red full-Flutter CI workflows and repair the single shared M547 source-contract failure without deleting or skipping tests; forbid comment-delimited source guards that silently consume unrelated code.",
+    "2026-11-08 prevent historical SMS reimport when saving local review rules or completing bulk exclusions; only explicit history/rescan action may page Android SMS while existing queue, exclusions and financial deduplication remain preserved."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -18,7 +20,11 @@
     "lib/waffra_local_phone_credentials.dart",
     "lib/waffra_sms_review_groups.dart",
     "test/m429_sms_phone_integration_test.dart",
-    "test/m548_review_grouping_and_signup_perf_test.dart"
+    "test/m461_sms_exclusion_and_history_scan_test.dart",
+    "test/m547_sms_incremental_jank_regression_test.dart",
+    "test/m548_review_grouping_and_signup_perf_test.dart",
+    "test/m548_source_method_boundary_guard_test.dart",
+    "test/support/waffra_source_method_section.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -41,6 +47,10 @@
       {
         "start": " Future<void> _openAutoSmsInbox()async{",
         "end": " Widget _autoSmsReviewCard(){"
+      },
+      {
+        "start": " Future<void> _openSmsRules({String? seedMessage,String? seedKind,",
+        "end": " Future<void> _recordConfirmedSmsAccountAssociation({"
       }
     ],
     "lib/waffra_local_phone_credentials.dart": [
@@ -53,6 +63,22 @@
       {
         "start": " test('M434 encrypted SMS inbox groups real sender and displays count',(){",
         "end": " test('M434 saved transactions preserve genuine SMS versus manual origin',(){"
+      }
+    ],
+    "test/m547_sms_incremental_jank_regression_test.dart": [
+      {
+        "start": "import 'package:flutter_test/flutter_test.dart';",
+        "end": "/// Source-level regression guards for the M547 migration."
+      },
+      {
+        "start": " test('M547 only an explicit rescan fetches historical pages during UI interactions', () {",
+        "end": null
+      }
+    ],
+    "test/m461_sms_exclusion_and_history_scan_test.dart": [
+      {
+        "start": "  test('review refresh serializes work and batches durable exclusions',(){",
+        "end": null
       }
     ]
   }
