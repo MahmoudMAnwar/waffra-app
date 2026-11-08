@@ -88,6 +88,25 @@ void main(){
   expect(summary,contains('alignment:Alignment.center'));
  });
 
+ test('M587 bank transfer shows exactly three non-posting choices',(){
+  final main=File('lib/main.dart').readAsStringSync();
+  final review=main.split(
+   ' Future<void> _reviewAutoSmsCandidates({String? targetId})async {')[1]
+   .split(' void _receiveSharedSms(){')[0];
+  expect(review,contains("Key('m587-sms-transfer-yes')"));
+  expect(review,contains("Key('m587-sms-transfer-no')"));
+  expect(review,contains("Key('m587-sms-transfer-exclude')"));
+  expect(review,contains("Navigator.pop(dialog,'transfer-manual')"));
+  expect(review,contains("await _reviewSmsAccountTransfer(item:selected,facts:facts)"));
+  expect(review,contains("await entrySheet(scannedIncome:kind=='income')"));
+  expect(review,contains("await WaffraAutoSms.excludeMessages([id])"));
+  final writer=main.split(' Future<void> _reviewSmsAccountTransfer({')[1]
+   .split(' /// M565: a reviewed bank SMS posts only')[0];
+  expect(writer,contains('amountMinor:verifiedMinor'));
+  expect(writer,contains('accounts:accounts,english:waffraIsEnglish'));
+  expect(writer,contains('userConfirmed:true'));
+  expect(writer,contains('WaffraAutoSms.acknowledgeCompletedTransfer([id])'));
+ });
  test('notification center never repeats a second review hero',(){
   final ui=File('lib/waffra_approved_notifications.dart')
    .readAsStringSync();
