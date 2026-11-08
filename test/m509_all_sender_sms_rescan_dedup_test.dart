@@ -51,13 +51,16 @@ void main() {
   expect(store,contains('editor.commit()'));
  });
 
- test('M509 only completed full scans are restarted by explicit Rescan',(){
+ test('M547 new-only Rescan preserves completed and unfinished native cursors',(){
   final store=File('native/WaffraAutoSmsStore.kt').readAsStringSync();
   final home=File('lib/main.dart').readAsStringSync();
-  expect(store,contains('fun restartCompletedHistory(context: Context): Boolean'));
-  expect(store,contains('if (!prefs.getBoolean(historyComplete, false))'));
-  expect(home,contains("progress?['complete']==true"));
-  expect(home,contains('WaffraAutoSms.restartCompletedHistory()'));
+  final legacy=store.split(
+   'fun restartCompletedHistory(context: Context): Boolean')[1]
+   .split('private data class HistoricalSmsRow')[0];
+  expect(legacy,contains('intentionally non-destructive'));
+  expect(legacy,isNot(contains('.remove(historyCursorAt)')));
+  expect(home,isNot(contains('WaffraAutoSms.restartCompletedHistory()')));
+  expect(home,contains("before?['initialComplete']!=true"));
   expect(home,contains('await _refreshAutoSmsInbox(importMonth:true)'));
  });
 
