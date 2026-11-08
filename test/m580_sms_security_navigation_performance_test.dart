@@ -274,4 +274,50 @@ void main(){
   expect(ui,contains("'otpReview'=>widget.english?'Verification • review only':"));
   expect(ui,contains("key:Key('m549-notification-message-'+notice.id)"));
  });
+ test('M597 exact halalah transfer fee remains a separate bank charge',(){
+  expect(WaffraBankSmsFactsParser.extraDebitMinor(
+   principalMinor:1900,feeSar:0.58),1958);
+  expect(WaffraBankSmsFactsParser.extraDebitMinor(
+   principalMinor:190000,feeSar:0.58),190058);
+  expect(WaffraBankSmsFactsParser.extraDebitMinor(
+   principalMinor:1900,feeSar:0.005),isNull);
+ });
+
+ test('M597 source SMS transfer, fee expense and hash commit atomically',(){
+  final bridge=File('lib/storage/waffra_verified_encrypted_finance_bridge.dart')
+   .readAsStringSync();
+  final writer=File('lib/storage/waffra_unified_finance_writer.dart')
+   .readAsStringSync().split('appendReviewedSmsTransferWithFee({')[1]
+   .split('  /// Called AFTER explicit confirmation')[0];
+  final api=File('lib/storage/waffra_verified_accounts_api.dart')
+   .readAsStringSync();
+  final main=File('lib/main.dart').readAsStringSync()
+   .split(' Future<void> _reviewSmsAccountTransfer({')[1]
+   .split(' /// M593: even with JSON')[0];
+  expect(bridge,contains('commitReviewedSmsTransferWithFee({'));
+  expect(api,contains('transferReviewedSmsWithFee({'));
+  expect(writer,contains('withExclusiveAccess(() async {'));
+  expect(writer,contains('snapshot.store.transaction(() async {'));
+  expect(writer,contains('await WaffraAccountsSchema.requireReady('));
+  expect(writer,contains('await accounts.transfer('));
+  expect(writer,contains('INSERT INTO fresh_finance_entries'));
+  expect(writer,contains('INSERT INTO fresh_finance_account_entry_links'));
+  expect(writer,contains('INSERT INTO fresh_finance_sms_hashes'));
+  expect(writer,contains('snapshot.commit('));
+  expect(writer.indexOf('await accounts.transfer('),
+   lessThan(writer.indexOf('INSERT INTO fresh_finance_entries')));
+  expect(writer.indexOf('INSERT INTO fresh_finance_entries'),
+   lessThan(writer.indexOf('INSERT INTO fresh_finance_sms_hashes')));
+  expect(writer.indexOf('INSERT INTO fresh_finance_sms_hashes'),
+   lessThan(writer.indexOf('snapshot.commit(')));
+  expect(writer,contains('feeIncludedInDebit ? principalMinor - feeMinor : principalMinor'));
+  expect(writer,contains('Existing transfer must never be double charged.'));
+  expect(main,contains('transferReviewedSmsWithFee('));
+  expect(main,contains('messageHash:id'));
+  expect(main,contains('showDatePicker('));
+  expect(main,contains('showTimePicker('));
+  expect(main.indexOf('transferReviewedSmsWithFee('),
+   lessThan(main.indexOf('acknowledgeCompletedTransfer([id])')));
+ });
+
 }
