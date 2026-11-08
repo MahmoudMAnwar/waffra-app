@@ -2770,3 +2770,9 @@ M550 early CI proof (2026-11-08): First exact-HEAD M550 run audited 107 workflow
 
 [M549 approved account filter regression alignment] 2026-11-08
 - Full UI/finance regression revealed exactly two obsolete assertions still expecting account selector inside balance (M467 and M495), contrary to owner-approved screenshot. Updated M467 to verify actual independent compact month filter and never pass viewing filter into finance commit, and M495 to verify small-screen balance has no dropdown but complete long account names remain accessible in the real account picker. No financial behavior or original unrelated tests were removed. CI and physical screenshots still required.
+
+
+[M559 unified main-target exact-head CI activation] 2026-11-08
+- Consolidated Draft #490 (M548 review/signup latency, SMS exclusions and native integrity/Gradle/Kotlin CI repairs through M558) into the owner-approved screenshot UI PR #497. Its merge commit 9642395 has the exact latest #490 head as second parent; no CI fix, financial source, encrypted data or original positive test was dropped.
+- Re-targeted #497 directly to main and closed now-redundant #490 without deleting its code or branch. This release-note-only synchronize commit deliberately triggers main-targeted PR workflows to test the combined code at ONE new exact SHA; historical #490 green 75/0/1 does NOT prove this new head passes.
+- No main merge or APK release until mandatory exact-head CI plus physical Android performance and owner screenshot acceptance. Issue #495 first-time last-four link, original SMS transaction timestamp and one-tap yes/no confirmation remains incomplete.
