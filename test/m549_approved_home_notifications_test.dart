@@ -11,7 +11,7 @@ void main(){
    kind:'expense',amount:120),
    const WaffraReviewNotice(
    id:'sms2',sender:'OtherBank',preview:'Verification message',
-   kind:'excluded'),
+   kind:'otpReview'),
    const WaffraReviewNotice(
    id:'sms3',sender:'SyntheticBank',preview:'Incoming transfer',
    kind:'income',amount:250)];
@@ -22,7 +22,7 @@ void main(){
    onRescan:()async{},canRescan:()=>true)));
   expect(find.byKey(const Key('m549-notification-review-hero')),findsNothing);
   expect(find.text('Purchase completed'),findsOneWidget);
-  expect(find.text('مستبعدة — رمز تحقق'),findsOneWidget);
+  expect(find.text('رسالة تحقق — تحتاج مراجعة'),findsOneWidget);
   expect(find.byKey(const Key('m580-sender-filters')),findsOneWidget);
   await tester.tap(find.byKey(
    const Key('m580-notification-filter-sender:otherbank')));
