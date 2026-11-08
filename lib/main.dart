@@ -4833,6 +4833,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    builder:(route)=>WaffraApprovedNotificationsPage(
     english:waffraIsEnglish,readPending:_m549ReviewNotices,
     onReviewAll:_openAutoSmsInbox,
+    onBulkExclude:_m592ExcludeNotificationSelection,
     onReviewOne:(id)=>_reviewAutoSmsCandidates(targetId:id),
     onRescan:_rescanAutoSmsInbox,
     // A user refresh always checks the real incremental native cursor;
