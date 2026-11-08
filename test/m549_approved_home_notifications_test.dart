@@ -44,6 +44,12 @@ void main(){
    main.indexOf(' Widget _currentTabContents(){'));
   expect(dashboard,isNot(contains('          _autoSmsReviewCard(),')));
   expect(dashboard,contains('monthlySummaryCard(),'));
+  // The approved three compact finance actions use existing verified flows.
+  expect(dashboard,contains("Key('m549-three-home-finance-actions')"));
+  expect(dashboard,contains('entrySheet(scannedIncome:true)'));
+  expect(dashboard,contains('entrySheet(scannedIncome:false)'));
+  expect(dashboard,contains('openVerifiedTransfer()'));
+  expect(dashboard,isNot(contains("homeSummaryCard(waffraIsEnglish?'Income'")));
   final summary=main.substring(main.indexOf(' Widget monthlySummaryCard(){'),
    main.indexOf(' Widget smartMoneyInsightsCard(){'));
   expect(summary,contains("Key('m549-home-account-filter')"));
