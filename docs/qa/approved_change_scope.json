@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "change_id": "M580-M595-SEVEN-FEEDBACK-SECURE-SMS-UX-PERFORMANCE-PR505",
+  "change_id": "M580-M597-SEVEN-FEEDBACK-SECURE-SMS-UX-PERFORMANCE-PR505",
   "human_scope_review": "Owner explicitly authorized implementing issues #498 through #504 on 2026-11-08 and prioritizing lag after every tap; preserve approved visual references, unchanged floating +, exact SQLCipher finance integrity, OTP masking, both device data, native sender-exclusion consent and all existing tests. This branch contains only early partial source changes plus true regression contracts, not approval to merge until exact-head CI and Android evidence.",
   "user_requested_changes": [
     "#498 Keep a stable visibly loading login button and preserve secure, responsive first registration with no double submission or weakened password controls.",
@@ -13,7 +13,8 @@
     "#500/#501 Owner-approved Arabic naming for excluded rules/messages and shared conservative OTP/temporary-code handling across offline ML and bank parsers.",
     "M591: update M340, M565 and M177 source contracts to require the owner-approved verified SMS account BEFORE Yes and fresh encrypted witness, rather than obsolete post-Yes picker. Preserve all finance-hash, account-generation and negative tests.",
     "#498/#504 Smooth signup submit and prevent verified manual/SMS ledger display model mapping from monopolizing frames after confirmation.",
-    "M595 #502: Existing bank SMS review must expose three real user-selectable Income / Expense / Transfer choices, and independent exclusion, with corrected type routed to a fully verified manual/SMS finance editor. Type chips cannot post money, ACK messages, guess bank identity or bypass the verified Yes account and date requirements."
+    "M595 #502: Existing bank SMS review must expose three real user-selectable Income / Expense / Transfer choices, and independent exclusion, with corrected type routed to a fully verified manual/SMS finance editor. Type chips cannot post money, ACK messages, guess bank identity or bypass the verified Yes account and date requirements.",
+    "M597 #503: an SMS own-account transfer with an explicitly confirmed positive SAR fee must post two verified account movements, one separately attributed fee expense, and one immutable SMS fingerprint within the SAME SQLCipher transaction; rollback on stale source, category mismatch, duplicate, or incomplete insert. Sender/OTP proof, exact date/time and owner consent remain mandatory. Release is blocked until full exact-head automated and device tests."
   ],
   "allowed_changed_files": [
     "docs/qa/approved_change_scope.json",
@@ -32,7 +33,10 @@
     "lib/waffra_sms_rule_settings_page.dart",
     "scripts/qa/m340_financial_quality_gate.py",
     "test/qa/m565_sms_yes_no_test.py",
-    "test/storage/m177_live_finance_authority_integration_test.dart"
+    "test/storage/m177_live_finance_authority_integration_test.dart",
+    "lib/storage/waffra_unified_finance_writer.dart",
+    "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
+    "lib/storage/waffra_verified_accounts_api.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -157,6 +161,28 @@
       {
         "start": "    final reviewedYes=home.split('Future<void> _m565ConfirmSms(')[1]",
         "end": "    // M506 stages receipt bytes separately"
+      }
+    ],
+    "lib/storage/waffra_unified_finance_writer.dart": [
+      {
+        "start": "import 'waffra_accounts_schema.dart';",
+        "end": "import 'waffra_atomic_finance_snapshot.dart';"
+      },
+      {
+        "start": "  /// Optional runtime source verification.",
+        "end": "  /// Called AFTER explicit confirmation for bank SMS, or on a manual save."
+      }
+    ],
+    "lib/storage/waffra_verified_encrypted_finance_bridge.dart": [
+      {
+        "start": "  Future<WaffraFinanceSnapshotState> attachReceiptsToExisting({",
+        "end": "  /// Receives explicitly confirmed SMS/manual transaction JSON from either"
+      }
+    ],
+    "lib/storage/waffra_verified_accounts_api.dart": [
+      {
+        "start": " @override\n Future<bool> transfer({",
+        "end": " /// One manual income/expense + its account association must share a"
       }
     ]
   }
