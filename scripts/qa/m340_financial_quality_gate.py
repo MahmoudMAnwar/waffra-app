@@ -59,7 +59,9 @@ def audit_sources(sources: Mapping[str, str]) -> list[str]:
     else:
         approved_sms = home[start:end]
         for required in (
-            "reviewSmsAccountLinks([reviewed],smsSender:sender)",
+            "required ({List<String?>? ids,int? generation}) selectedAccount",
+            "selectedAccount.ids!.single",
+            "final chosen=selectedAccount;",
             "reviewSmsBudgetLinks([record])",
             "allowDuplicateHashes:false",
             "expectedAccountGeneration:chosen.generation",
@@ -70,6 +72,20 @@ def audit_sources(sources: Mapping[str, str]) -> list[str]:
         ):
             if required not in approved_sms:
                 problems.append(f"{main}: quick SMS review bypasses required authority/approval: {required}")
+
+    # Owner-approved first-time account linkage now happens INSIDE preview
+    # before the final Yes; an old post-Yes picker would fail this check.
+    reviewed_choice = home[end:home.find("void _receiveSharedSms()", end)]
+    for proof in (
+        "reviewSmsAccountLinks([trial],smsSender:sender)",
+        "key:const Key('m590-sms-choose-account-before-yes')",
+        "reviewedAccount?.ids?.single!=null",
+        "selectedAccount:reviewedAccount!",
+    ):
+        if proof not in reviewed_choice:
+            problems.append(
+                f"{main}: selected money account is not verified before user Yes: {proof}"
+            )
 
     for marker, reason in (
         ("_financeAuthority.saveCaptured(", "manual save bypasses verified finance authority"),
