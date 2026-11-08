@@ -72,7 +72,10 @@ void main() {
     expect(bulkStart,greaterThanOrEqualTo(0));
     expect(bulkEnd,greaterThan(bulkStart));
     final bulk=app.substring(bulkStart,bulkEnd);
-    expect(bulk,contains('setState(()=>_autoSmsPending.removeWhere'));
+    // Assert the actual guarded removal without imposing a whitespace layout:
+    // this path intentionally wraps the setState callback across two lines.
+    expect(bulk,contains('if(mounted)setState(()=>'));
+    expect(bulk,contains('_autoSmsPending.removeWhere((row)=>done.contains(row[\'id\']))'));
     expect(bulk,contains('unawaited(_refreshAutoSmsInbox());'));
     expect(bulk,isNot(contains('importMonth:true')));
     final explicitRescan=app.substring(
