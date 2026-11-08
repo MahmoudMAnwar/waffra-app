@@ -6838,6 +6838,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    if(!mounted)return null;
    var active=verified.balances.where((a)=>!a.archived).toList();
    String? createdFromSmsAccountId;
+   // One owner-bound evidence snapshot governs first-time prompt and exact reuse.
+   var learned=<WaffraSmsAccountEvidence>[];
+   if(smsSender.isNotEmpty&&_smsRuleOwnerKey.isNotEmpty){
+    try{learned=await const WaffraSmsAccountLearningStore()
+     .read(_smsRuleOwnerKey);}
+    catch(_){/* Missing evidence must never auto-select an account. */}
+   }
    // First *reviewed* SMS from a known bank with no existing verified
    // account for that institution can offer a NEW account. Neither sender
    // text nor a suggested bank automatically creates a financial account.
@@ -6847,11 +6854,33 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     candidates.single.notes.trim().isNotEmpty&&
     WaffraBankSmsFactsParser.parse(candidates.single.notes)
      .canAutoPostAsIncomeExpense;
-   final alreadyLinkedToBank=knownBank!=null&&active.any((a)=>
-    (a.kind=='bank'||a.kind=='wallet')&&
-    (a.providerId!=null?a.providerId==knownBank:
-     WaffraSmsAccountLearning.bankGroup(a.name)==knownBank));
-   if(firstSenderIncomeExpense&&!alreadyLinkedToBank&&
+   final sameBankIdsForOffer=<String>{
+    if(knownBank!=null)
+     for(final account in active)
+      if((account.kind=='bank'||account.kind=='wallet')&&
+       (account.providerId!=null?account.providerId==knownBank:
+        WaffraSmsAccountLearning.bankGroup(account.name)==knownBank))
+       account.id,
+   };
+   final alreadyLinkedToBank=sameBankIdsForOffer.isNotEmpty;
+   final firstSmsFacts=firstSenderIncomeExpense?
+    WaffraBankSmsFactsParser.parse(candidates.single.notes):null;
+   final identitySuffix=firstSmsFacts==null?null:
+    WaffraSmsAccountLearning.suffix4(
+     firstSmsFacts.kind==WaffraBankOperationKind.income?
+      firstSmsFacts.destinationSuffix:firstSmsFacts.sourceSuffix);
+   final verifiedIdentity=identitySuffix==null?null:
+    WaffraSmsAccountLearning.suggest(learned,sender:smsSender,
+     suffix:identitySuffix,
+     activeAccountIds:active.map((account)=>account.id).toSet(),
+     sameBankAccountIds:sameBankIdsForOffer);
+   // A second account at the SAME bank is a new identity with different
+   // last four. First time: choose an existing account or create a new one.
+   // A previously confirmed exact sender+four must not be prompted again.
+   final needsNewIdentityChoice=firstSenderIncomeExpense&&
+    (!alreadyLinkedToBank||
+     (identitySuffix!=null&&verifiedIdentity==null));
+   if(needsNewIdentityChoice&&
        (initialSelectedIds==null||initialSelectedIds.every((id)=>id==null))){
     final offered=await showWaffraDialog<bool>(
      context:context,builder:(dialog)=>AlertDialog(
@@ -6859,12 +6888,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        'Create an account for this bank?':
        'إنشاء حساب مالي لهذا البنك؟'),
       content:WaffraText(waffraIsEnglish?
-       'This is the first reviewed message without a linked account for '
-       '"$smsSender". Create an account named "$smsSender" with opening '
-       'balance 0 SAR (editable)? No transaction is posted without approval.':
-       'دي أول رسالة قيد المراجعة من "$smsSender" بدون حساب مرتبط. '
-       'هنقترح إنشاء حساب باسم المرسل نفسه ورصيد افتتاحي صفر ريال افتراضيًا '
-       'ويمكنك تغييره. العملية لن تتسجل من غير موافقتك.'),
+       'Bank identity "$smsSender"'+
+        (identitySuffix==null?'':' ••••$identitySuffix')+
+        ' needs account confirmation. Choose an existing bank account or '
+        'create a new one with an editable 0 SAR opening balance. '
+        'No transaction is posted without consent.':
+       'هوية البنك "$smsSender"'+
+        (identitySuffix==null?'':' ••••$identitySuffix')+
+        ' محتاجة ربط أول مرة. اختار حساب موجود أو أنشئ حساب بنكي جديد '
+        'برصيد افتتاحي صفر ريال قابل للتعديل. '
+        'لن تُسجل العملية من غير موافقتك.'),
       actions:[
        TextButton(onPressed:()=>Navigator.pop(dialog,false),
         child:WaffraText(waffraIsEnglish?'Choose existing':'اختيار حساب موجود')),
@@ -6951,13 +6984,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    // Sender-only learning needs two confirmations AND exactly one account
    // whose user-chosen bank name matches the sender. No sender guesses for
    // two accounts at the same bank; suffix evidence remains authoritative.
-   var learned=<WaffraSmsAccountEvidence>[];
-   if(smsSender.isNotEmpty&&_smsRuleOwnerKey.isNotEmpty){
-    try{
-     learned=await const WaffraSmsAccountLearningStore()
-      .read(_smsRuleOwnerKey);
-    }catch(_){/* Unavailable learning never blocks manual review. */}
-   }
+   // Reuse the evidence snapshot read before the first-identity prompt.
    final bankGroup=WaffraSmsAccountLearning.bankGroup(smsSender);
    final sameBankIds=<String>{
     if(bankGroup!=null)

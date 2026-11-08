@@ -825,3 +825,9 @@ M274 must also trigger on `docs/release/WAFFRA_APPROVED_CHANGES.txt` changes bec
 **PR:** #497. **Status:** Committed / full CI and device QA pending.
 - Before Yes/No, preview shows income/expense, bank amount/currency, parsed description, valid main/subcategory, sender, masked original account suffix or missing-identity notice, and bank message's original YYYY-MM-DD HH:mm timestamp. The account is still owner-selected/verified before SQLCipher saving, never guessed from Home's active filter.
 - Test: test/qa/m574_sms_confirmation_full_fields_test.py.
+
+
+## M576 — #495 distinct last-four identities under one bank (2026-11-08)
+**PR:** #497. **Status:** Source and regression code ready; full exact-head CI / Android device acceptance pending.
+- First reviewed SMS for a new sender+four-digit bank identity offers choose existing or create new even if a separate account at the same institution already exists. Previously confirmed identical sender+four suppresses repeat prompt, account still verified under SQLCipher witness; never guess a mismatched four.
+- Test: test/qa/m576_first_distinct_bank_identity_test.py.

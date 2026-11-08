@@ -2846,3 +2846,7 @@ M550 early CI proof (2026-11-08): First exact-HEAD M550 run audited 107 workflow
 
 [M575 strengthened M565 test after M574 preview] 2026-11-08
 - Old M565 test searched for a now obsolete one-line categories.where expression; M574 intentionally split out a validated leaf and confirmed parent. Replace stale literal with three positive validations of the actual previewLeaves and previewParents gates. Preserve all other financial writer and duplicate checks, no skipping.
+
+
+[M576 first distinct bank account identities] 2026-11-08
+- The same bank may have several accounts. First new sender+last-four identity now explicitly offers choose existing / create bank account, rather than silently treating any other account of that bank as linked. Previously confirmed identity avoids prompts. Retains native SMS and SQLCipher source integrity. M576 regression, CI/device pending.
