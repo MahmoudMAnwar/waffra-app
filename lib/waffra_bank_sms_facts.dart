@@ -139,4 +139,16 @@ abstract final class WaffraBankSmsFactsParser {
    pending:securityChallenge||_pending.hasMatch(normalized),
   );
  }
+ /// Display-only accounting preview. A fee never modifies an internal
+ /// transfer until an atomic fee-aware verified finance writer is available.
+ static int? extraDebitMinor({required int principalMinor,double? feeSar}){
+  if(principalMinor<=0||feeSar==null||
+     !feeSar.isFinite||feeSar<0)return null;
+  final exactFee=feeSar*100;
+  final feeMinor=exactFee.round();
+  if((exactFee-feeMinor).abs()>0.000001||
+     principalMinor>9007199254740991-feeMinor)return null;
+  return principalMinor+feeMinor;
+ }
+
 }
