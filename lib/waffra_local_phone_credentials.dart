@@ -200,12 +200,17 @@ abstract final class WaffraLocalPhoneCredentials {
   }
   final saved=await _readVerifier();
   if(saved==null){
-   await register(phone:phone,password:password);
-   // Do not write a completed profile if Android secure storage did not
-   // persist the EXACT same verifier. Never auto-reset a prior identity.
+   // Fresh enrollment needs ONE full-strength 600000-round derivation, not
+   // a redundant second PBKDF2 just to prove the write survived storage.
+   // Verify the complete saved salt/hash/phone/iteration record byte-for-byte.
+   // Interrupted registrations with an existing verifier still require the
+   // original phone+password cryptographic challenge below.
+   final record=await deriveRecord(phone:phone,password:password);
+   final encoded=jsonEncode(record);
+   await _store.write(key:_key,value:encoded);
    final persisted=await _store.read(key:_key);
    if(persisted==null||
-      !await canResumeRecord(persisted,phone:phone,password:password)){
+      !_equal(utf8.encode(persisted),utf8.encode(encoded))){
     throw StateError('local_credential_write_unverified');
    }
    return;
