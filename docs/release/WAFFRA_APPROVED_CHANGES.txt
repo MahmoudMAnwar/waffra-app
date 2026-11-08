@@ -2747,3 +2747,7 @@ M550 early CI proof (2026-11-08): First exact-HEAD M550 run audited 107 workflow
 
 [M555 regression correction] 2026-11-08
 - Exact-head M417 Kotlin compile proved original M555 init script mistakenly added a project-level repository, rejected by Flutter included Gradle build's FAIL_ON_PROJECT_REPOS policy. Corrected to Gradle `beforeSettings` and `dependencyResolutionManagement.repositories.exclusiveContent` for ONLY `org.jetbrains.kotlin:kotlin-compiler-embeddable:2.2.21` in the existing locally SHA-verified official Maven cache. Preserves strict repository policy and original Gradle/Flutter/Android tests. Requires exact-head CI proof.
+
+
+[M555 Gradle repository API fix] 2026-11-08
+- M147 ARM64 log proved Gradle 9.3.1 compiled the initialization script but failed on nested `maven()` in `ExclusiveContentRepositorySpec`. Updated the CI-only beforeSettings script to create the pinned exact official Maven repository via `settings.dependencyResolutionManagement.repositories.maven` first, then use the supported `exclusiveContent { forRepositories(verifiedMaven) }` API, filtering exactly Kotlin compiler 2.2.21. No financial code, plugin versions, tests or Gradle strict policy changed. Verify on next exact SHA before merge.

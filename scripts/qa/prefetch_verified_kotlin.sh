@@ -43,13 +43,13 @@ install -m 0644 "$work/$pom" "$root/$pom"
 # All other modules still use their unchanged official upstream repositories.
 cat > "$home/init.d/waffra-verified-kotlin-2.2.21.gradle" <<'GROOVY'
 gradle.beforeSettings { settings ->
-    settings.dependencyResolutionManagement.repositories.exclusiveContent {
-        forRepository {
-            maven {
-                name = 'WaffraPinnedOfficialKotlinCompiler'
-                url = new File(gradle.gradleUserHomeDir, 'waffra-verified-maven').toURI()
-            }
-        }
+    def repos = settings.dependencyResolutionManagement.repositories
+    def verifiedMaven = repos.maven {
+        name = 'WaffraPinnedOfficialKotlinCompiler'
+        url = new File(gradle.gradleUserHomeDir, 'waffra-verified-maven').toURI()
+    }
+    repos.exclusiveContent {
+        forRepositories(verifiedMaven)
         filter {
             includeVersion('org.jetbrains.kotlin', 'kotlin-compiler-embeddable', '2.2.21')
         }

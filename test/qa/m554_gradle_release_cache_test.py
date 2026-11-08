@@ -32,7 +32,10 @@ class VerifiedGradleCache(unittest.TestCase):
         # Flutter's included Gradle build enforces FAIL_ON_PROJECT_REPOS.
         # Only settings-level exact-module routing is allowed in the init hook.
         self.assertIn('gradle.beforeSettings { settings ->',kotlin)
-        self.assertIn('settings.dependencyResolutionManagement.repositories.exclusiveContent',kotlin)
+        self.assertIn('def repos = settings.dependencyResolutionManagement.repositories',kotlin)
+        self.assertIn('repos.exclusiveContent',kotlin)
+        self.assertIn('forRepositories(verifiedMaven)',kotlin)
+        self.assertNotIn('forRepository {',kotlin)
         self.assertNotIn('gradle.beforeProject',kotlin)
         self.assertNotIn('project.repositories.maven',kotlin)
 
