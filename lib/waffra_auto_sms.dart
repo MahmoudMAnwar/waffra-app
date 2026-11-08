@@ -162,6 +162,14 @@ abstract final class WaffraAutoSms {
   if(sender.trim().isEmpty)return false;
   return _boolCall('excludeAutoSmsSender',sender.trim());
  }
+ /// Atomic native sender exclusion for a large selected review group.
+ static Future<bool> excludeSenders(List<String> senders)async{
+  if(senders.isEmpty||senders.length>1000||
+     senders.any((name)=>name.trim().isEmpty||name.trim().length>100)){
+   return false;
+  }
+  return _boolCall('excludeAutoSmsSenders',senders);
+ }
  static Future<bool> restoreExcludedSender(String sender)async{
   if(sender.trim().isEmpty)return false;
   return _boolCall('restoreExcludedAutoSmsSender',sender.trim());

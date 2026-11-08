@@ -755,7 +755,7 @@ M274 must also trigger on `docs/release/WAFFRA_APPROVED_CHANGES.txt` changes bec
 
 
 ## M549 — 1000 SMS review / sender-only exclusion / smart Rescan / all senders (2026-11-08)
-- **GitHub issue [#491](https://github.com/MahmoudMAnwar/waffra-app/issues/491)**; **implementation PR [#490](https://github.com/MahmoudMAnwar/waffra-app/pull/490)**. Status: **Recorded / implementation pending; CI and Android device validation required**.
+- **GitHub issue [#491](https://github.com/MahmoudMAnwar/waffra-app/issues/491)**; **implementation PR [#490](https://github.com/MahmoudMAnwar/waffra-app/pull/490)**. Status: **Code candidate / exact-head CI and physical Android device validation pending**.
 - 1000/1000 selectable: bulk exclude all review messages from **Waffra encrypted review queue** without deleting Android SMS or any committed finance data; prevent 1000 sequential sender confirmation dialogs; durable idempotent removal, explicit failures, and bounded CPU/IO.
 - When excluding **sender**, keep only its encrypted normalized sender name; purge all of that sender's pending Waffra SMS and previously stored per-message exclusion hashes/labels. Future live/history messages from that sender are ignored before persistence. Existing finance receipts untouched.
 - Rescan must neither re-add the 1000 already pending/previously confirmed/excluded nor restart a completed historical cursor. Dim when initial scan complete and no newly arrived SMS is known, re-enable on fresh SMS or when unfinished history with available capacity can progress. If 1 of 1000 gets confirmed, 999 remain; at most genuinely unseen SMS may fill the freed slot.

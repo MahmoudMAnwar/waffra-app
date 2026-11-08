@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
   "change_id": "M548-REVIEW-SHEET-SIGNUP-FRAME-JANK-20261108",
-  "human_scope_review": "User's Android screenshots on 2026-11-08 show severe lag on opening 1000 pending SMS review, signup completion (~3s), and global navigation even after main merged #488. This is a narrow performance safety candidate; previous logout/login, SQLCipher, biometric and SMS financial authority must remain untouched. Requires full exact-head CI, Android profile/release frame evidence and owner signoff before merge.",
+  "human_scope_review": "User's Android screenshots on 2026-11-08 show severe lag on opening 1000 pending SMS review, signup completion (~3s), and global navigation even after main merged #488. This is a narrow performance safety candidate; previous logout/login, SQLCipher, biometric and SMS financial authority must remain untouched. Requires full exact-head CI, Android profile/release frame evidence and owner signoff before merge. Owner explicitly requests issue #491's all-sender review and sender-only local storage retention with repeated-scan deduplication. Existing OTP masking and SQLCipher financial authority remain unchanged. Device and exact-SHA CI required.",
   "user_requested_changes": [
     "Open the already owner-verified in-memory bank SMS review snapshot immediately with 1000 pending messages; cold/error snapshots still refresh, with no auto-post or data loss.",
     "Make bank sender grouping linear-time and retain case-insensitive original sender naming, chronological order, exclusions, selection, Back and all financial review behavior.",
@@ -12,7 +12,8 @@
     "2026-11-08 repeated PR failure: diagnose all six red full-Flutter CI workflows and repair the single shared M547 source-contract failure without deleting or skipping tests; forbid comment-delimited source guards that silently consume unrelated code.",
     "2026-11-08 prevent historical SMS reimport when saving local review rules or completing bulk exclusions; only explicit history/rescan action may page Android SMS while existing queue, exclusions and financial deduplication remain preserved.",
     "Fix recurring PR CI cancellations: exact-head SHA-scoped concurrency for seven critical full Flutter, Android emulator, financial integrity, backup and release approval workflows, while retaining safe M453 cleanup for genuinely superseded heads.",
-    "Prevent six apparent CI workflow failures caused by old queued synchronize events canceling new PR HEAD jobs; test SHA isolation and keep all original positive finance and security checks active."
+    "Prevent six apparent CI workflow failures caused by old queued synchronize events canceling new PR HEAD jobs; test SHA isolation and keep all original positive finance and security checks active.",
+    "M549 / issue #491: all SMS inbox senders in review instead of only financial-looking banks; remove 1000 selected Waffra SMS with one sender-choice dialog and durable exclusion, optional encrypted sender-only block purges queue and previous labelled SMS receipts; no Android SMS or finance deletion; dim Rescan unless new provider rows exist or history is unfinished with free capacity."
   ],
   "allowed_changed_files": [
     ".github/workflows/finance-full-regression.yml",
@@ -35,7 +36,12 @@
     "test/m548_review_grouping_and_signup_perf_test.dart",
     "test/m548_source_method_boundary_guard_test.dart",
     "test/qa/m548_ci_exact_sha_concurrency_test.py",
-    "test/support/waffra_source_method_section.dart"
+    "test/support/waffra_source_method_section.dart",
+    "native/WaffraAutoSmsStore.kt",
+    "native/WaffraMainActivity.kt",
+    "lib/waffra_auto_sms.dart",
+    "test/m549_sms_review_owner_scoped_test.dart",
+    "test/m464_sms_bulk_rescan_regression_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -62,6 +68,10 @@
       {
         "start": " Future<void> _openSmsRules({String? seedMessage,String? seedKind,",
         "end": " Future<void> _recordConfirmedSmsAccountAssociation({"
+      },
+      {
+        "start": " Widget _autoSmsReviewCard(){",
+        "end": " /// Explicit, idempotent account-to-account transfer from reviewed bank SMS."
       }
     ],
     "lib/waffra_local_phone_credentials.dart": [
@@ -138,6 +148,46 @@
       {
         "start": "    def test_exact_pr_concurrency_for_every_modified_workflow(self):",
         "end": "    def test_cleanup_remains_trusted_and_scoped(self):"
+      }
+    ],
+    "native/WaffraAutoSmsStore.kt": [
+      {
+        "start": "    fun trackingStatus(context: Context): Map<String, Boolean> {",
+        "end": "    // Explicit opt-out must never auto-resume after a future login."
+      },
+      {
+        "start": "    fun excludeSender(context: Context, sender: String): Boolean",
+        "end": "    private val otp = Regex("
+      },
+      {
+        "start": "    private val brand = Regex(",
+        "end": "    // M437: Unknown-finance lookup is strictly ON-DEMAND"
+      },
+      {
+        "start": "    fun offer(context: Context, sender: String, body: String, at: Long,",
+        "end": "    fun pending(context: Context):"
+      },
+      {
+        "start": "    fun importConsentMonth(context: Context, maxRead: Int = 500): Int",
+        "end": "    /** Claim each review notification once"
+      }
+    ],
+    "native/WaffraMainActivity.kt": [
+      {
+        "start": "                \"excludeAutoSmsSender\" -> {",
+        "end": "                \"restoreExcludedAutoSmsSender\" -> {"
+      }
+    ],
+    "lib/waffra_auto_sms.dart": [
+      {
+        "start": " static Future<bool> excludeSender(String sender)async{",
+        "end": " // Only after verified financial hash is present in SQLCipher."
+      }
+    ],
+    "test/m464_sms_bulk_rescan_regression_test.dart": [
+      {
+        "start": " test('M464 rescan signals active state and returns cumulative counts',(){",
+        "end": " test('M464 review supports both sender and individual multi-selection',(){"
       }
     ]
   }

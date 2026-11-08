@@ -5046,49 +5046,60 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           // M479 / #417: no native message acknowledgement occurs until
           // both confirmations are settled. 'Back' preserves selected IDs
           // and returns to this still-open review rather than hiding SMS.
-          final senderBlockChoices=<String>{};
-          for(final sender in List<String>.of(senders)){
-           final senderIds=idsOf(bySender[sender]??const []);
-           if(senderIds.isEmpty||!senderIds.every(idSet.contains))continue;
-           if(!mounted||!ctx.mounted)return;
-           final choice=await showWaffraDialog<String>(
+          // One sender decision for the entire selection rather than one
+          // confirmation dialog PER SENDER (1000 dialogs were possible).
+          final fullySelectedSenders=senders.where((sender){
+           final groupIds=idsOf(bySender[sender]??const []);
+           return groupIds.isNotEmpty&&groupIds.every(idSet.contains);
+          }).toList(growable:false);
+          final senderChoice=fullySelectedSenders.isEmpty?'messages':
+           await showWaffraDialog<String>(
             context:context,builder:(dialog)=>AlertDialog(
              title:WaffraText(waffraIsEnglish?
-              'Exclude the sender too?':
-              'هل تريد استبعاد المرسل نفسه أيضًا؟'),
+              'Exclude these senders too?':'هل تريد استبعاد المرسلين أيضًا؟'),
              content:WaffraText(waffraIsEnglish?
-              'Exclude "$sender" from future SMS review? Back returns to '
-              'your message selection without excluding anything. You can '
-              'restore an excluded sender later from Excluded senders.':
-              'هل تريد استبعاد "$sender" من مراجعة رسائله القادمة؟ '
-              'العودة ترجع لاختيار الرسائل بدون تنفيذ الاستبعاد، '
-              'ويمكنك إلغاء الاستبعاد لاحقًا من «المستبعدون».'),
+              'Exclude selected messages only, or block the selected senders '
+              'from future reviews too? Sender blocking stores names only.':
+              'تستبعد الرسائل المحددة فقط، أو تستبعد المرسلين كمان '
+              'من المراجعات القادمة؟ عند استبعاد المرسل هنحتفظ باسمه فقط.'),
              actions:[
               TextButton(onPressed:()=>Navigator.pop(dialog,'back'),
                child:WaffraText(waffraIsEnglish?'Back':'العودة')),
-              TextButton(onPressed:()=>Navigator.pop(dialog,'no'),
-               child:WaffraText(waffraIsEnglish?'No':'لا')),
-              FilledButton(onPressed:()=>Navigator.pop(dialog,'exclude'),
-               child:WaffraText(waffraIsEnglish?'Exclude sender':
-                'استبعاد المرسل')),
+              TextButton(onPressed:()=>Navigator.pop(dialog,'messages'),
+               child:WaffraText(waffraIsEnglish?'Messages only':'الرسائل فقط')),
+              FilledButton(onPressed:()=>Navigator.pop(dialog,'senders'),
+               child:WaffraText(waffraIsEnglish?'Block senders':'استبعاد المرسلين')),
              ]));
-           if(choice==null||choice=='back'||!ctx.mounted)return;
-           if(choice=='exclude')senderBlockChoices.add(sender);
+          if(senderChoice==null||senderChoice=='back'||!ctx.mounted)return;
+          final senderBlockChoices=senderChoice=='senders'?
+           fullySelectedSenders.toSet():<String>{};
+          final blockedIds=<String>{};
+          for(final sender in senderBlockChoices){
+           blockedIds.addAll(idsOf(bySender[sender]??const []));
           }
           refresh(()=>bulkBusy=true);
           final done=<String>{};
           var failed=false;
           try{
-           // The native acknowledge bridge accepts up to 100 per atomic call.
-           // Stop at the first failed batch; never claim partial success.
-           for(var at=0;at<ids.length;at+=100){
-            final batch=ids.skip(at).take(100).toList(growable:false);
+           // One native encrypted commit blocks selected senders and purges
+           // their queued and previous individually excluded SMS metadata.
+           if(senderBlockChoices.isNotEmpty){
+            if(await WaffraAutoSms.excludeSenders(senderBlockChoices.toList())){
+             done.addAll(blockedIds);
+            }else{failed=true;}
+           }
+           // Unblocked individual SMS need durable anti-replay IDs. Native
+           // policy commits up to 100 IDs per batch and preserves failures.
+           final remainingMessageIds=ids.where((id)=>!blockedIds.contains(id))
+            .toList(growable:false);
+           if(!failed)for(var at=0;at<remainingMessageIds.length;at+=100){
+            final batch=remainingMessageIds.skip(at).take(100)
+             .toList(growable:false);
             if(!await WaffraAutoSms.excludeMessages(batch)){
              failed=true;break;
             }
             done.addAll(batch);
            }
-           final clearedSenders=<String>[];
            if(done.isNotEmpty){
             // Bulk and individual exclusions learn identical safe,
             // owner-encrypted review-only keywords after native success.
@@ -5100,7 +5111,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               for(final row in _autoSmsPending.where(
                   (row)=>done.contains(row['id']))){
                final body=row['body'],sender=row['sender'];
-               if(body is! String||sender is! String)continue;
+               if(body is! String||sender is! String||
+                  blockedIds.contains(row['id']))continue;
                final candidate=WaffraSmsLocalRules.suggestedRule(
                 body:body,sender:sender,kind:'excluded',
                 confidentOnly:true);
@@ -5109,6 +5121,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                  existing:next,candidate:candidate);
                }
               }
+              // Do not retain automatically learned exclusion keywords for
+              // sender-blocked messages. Keep explicit user-authored rules.
+              final blocked=senderBlockChoices.map(
+               WaffraSmsLocalRules.normalized).toSet();
+              final clean=next.where((rule)=>!(rule.id.startsWith('smart_')&&
+               rule.resolvedKind=='excluded'&&blocked.contains(
+                WaffraSmsLocalRules.normalized(rule.sender)))).toList();
+              if(clean.length!=next.length)next=clean;
               if(!identical(previous,next)){
                await store.write(_smsRuleOwnerKey,next);
               }
@@ -5116,12 +5136,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               if(mounted)snack(context,waffraIsEnglish?
                'Messages excluded; safe rule learning unavailable.':
                'تم الاستبعاد، لكن تعذر حفظ قاعدة تعلم آمنة.',isError:true);
-             }
-            }
-            for(final sender in senders){
-             final groupIds=idsOf(bySender[sender]??const []);
-             if(groupIds.isNotEmpty&&groupIds.every(done.contains)){
-              clearedSenders.add(sender);
              }
             }
             if(mounted)setState(()=>
@@ -5135,16 +5149,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            // On a partial native failure, keep the list mounted so the
            // unprocessed selection is still visible and safely retryable.
            if(!failed&&ctx.mounted)Navigator.pop(ctx);
-           // Apply only explicit sender decisions for groups whose selected
-           // messages were fully acknowledged. A partial native failure
-           // must not block the unprocessed sender's future messages.
-           for(final sender in clearedSenders.where(senderBlockChoices.contains)){
-            if(!mounted)break;
-            final saved=await WaffraAutoSms.excludeSender(sender);
-            if(mounted&&!saved)snack(context,waffraIsEnglish?
-             'Sender exclusion could not be saved.':
-             'تعذر حفظ استبعاد المرسل.',isError:true);
-           }
            if(mounted){
             if(failed)snack(context,waffraIsEnglish?
              'Only ${done.length} messages were excluded. Retry remaining items.':
@@ -5192,6 +5196,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final analyzed=_autoSmsPending.where((row)=>row['cloud'] is Map).length;
   final localCount=_autoSmsPending.where((row)=>row['local'] is Map).length;
   final ambiguous=count-localCount-analyzed;
+  final canRescan=!_autoSmsRescanRunning&&
+   (_autoSmsStatusProblem!=null||_autoSmsProgress['rescanNeeded']==true);
   return Container(
    key:const Key('waffra-auto-sms-review-card'),
    decoration:BoxDecoration(color:Theme.of(context).cardColor,
@@ -5268,7 +5274,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          child:CircularProgressIndicator(strokeWidth:2.4)),
         const SizedBox(width:9),
         Expanded(child:WaffraText(waffraIsEnglish?
-         'Scanning bank SMS now…':'جارٍ الآن فحص الرسائل البنكية…')),
+         'Scanning SMS now…':'جارٍ الآن فحص الرسائل…')),
        ]),
        const SizedBox(height:10),
       ],
@@ -5309,8 +5315,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        const SizedBox(width:8),
        OutlinedButton.icon(
         key:const Key('waffra-auto-sms-review-refresh'),
-        onPressed:_autoSmsRescanRunning?null:
-         WaffraHaptics.tap(()=>unawaited(_rescanAutoSmsInbox())),
+        onPressed:canRescan?
+         WaffraHaptics.tap(()=>unawaited(_rescanAutoSmsInbox())):null,
         icon:_autoSmsRescanRunning?
          const SizedBox(width:19,height:19,
           child:CircularProgressIndicator(strokeWidth:2)):

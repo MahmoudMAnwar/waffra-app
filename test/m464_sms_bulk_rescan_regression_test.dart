@@ -27,7 +27,7 @@ void main() {
   expect(app,contains('await _refreshAutoSmsInbox(importMonth:true);'));
   expect(app,contains('await WaffraAutoSms.importConsentMonthChecked()'));
   expect(app,contains('waffra-auto-sms-review-refresh'));
-  expect(app,contains('جارٍ الآن فحص الرسائل البنكية'));
+  expect(app,contains('جارٍ الآن فحص الرسائل'));
   expect(app,contains("snapshot?['pending']"));
  });
 
