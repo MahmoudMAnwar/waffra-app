@@ -47,7 +47,9 @@
       ],
       "test_paths": [
         "test/m603_app_wide_lag_source_regression_test.dart",
-        "test/m479_login_logout_and_back_test.dart"
+        "test/m479_login_logout_and_back_test.dart",
+        "test/m424_mandatory_biometrics_test.dart",
+        "test/m426_local_phone_credentials_test.dart"
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/m429-integration-smoke.yml",
@@ -71,7 +73,9 @@
       "test_paths": [
         "test/m603_app_wide_lag_source_regression_test.dart",
         "test/m580_sms_security_navigation_performance_test.dart",
-        "test/m601_auth_busy_contract_test.dart"
+        "test/m601_auth_busy_contract_test.dart",
+        "test/m468_large_ledger_decode_test.dart",
+        "test/m547_login_isolate_performance_test.dart"
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/android.yml",
@@ -108,6 +112,31 @@
         "No automatic posting of SMS, no duplicate charge, no bypass of verified SQLCipher writes.",
         "Keep native SMS signed-out suspension fail-closed and never expose financial data before authentication.",
         "Do not claim smooth physical Android performance based on source tests alone."
+      ]
+    },
+    {
+      "id": "M604-EXACT-HEAD-TEST-CONTRACT-RECONCILIATION",
+      "issue": "Owner explicit direction to fix M550/M174/M147 on PR #507",
+      "previous_behavior": "Four stale positive tests required unconditional fresh-session biometric, synchronous verified-transaction mapping, and main-thread SMS sign-out suspension.",
+      "approved_behavior": "Test explicitly signed-out verified phone relogin without redundant biometric, while keeping initial, restored and 60s idle biometric gates; check 32-record yielded verified ledger remapping and actual native SMS suspension on worker with fail-closed callbacks.",
+      "source_paths": [
+        "lib/main.dart",
+        "native/WaffraMainActivity.kt"
+      ],
+      "test_paths": [
+        "test/m424_mandatory_biometrics_test.dart",
+        "test/m426_local_phone_credentials_test.dart",
+        "test/m468_large_ledger_decode_test.dart",
+        "test/m547_login_isolate_performance_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "Keep biometric enrollment, restored lock and one-minute idle protection.",
+        "Keep 600000 round password derivation, fail-closed credential recovery and verified SQLCipher financial state.",
+        "Do not certify Android frame performance before real device measurements."
       ]
     }
   ]

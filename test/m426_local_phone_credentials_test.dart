@@ -23,7 +23,7 @@ void main(){
   expect(await WaffraLocalPhoneCredentials.verifyRecord(result,
    phone:'0599999999',password:'CorrectP@ssword12'),false);
  });
- test('M426 main sign in requires password and biometric, no OTP',(){
+ test('M426 verified password, protected startup biometric and no redundant relogin gate',(){
   final main=File('lib/main.dart').readAsStringSync();
   final signin=main.substring(main.indexOf('Future<void> _signIn()async{'),
     main.indexOf('String get maskedLastPhone{'));
@@ -35,7 +35,12 @@ void main(){
     greaterThan(signin.indexOf('if(!match){')));
   expect(main,contains('WaffraMandatoryBiometricGate('));
   expect(main,contains('locked=u!=null;'));
-  expect(main,contains('if(freshSession)locked=true;'));
+  // Fresh registration/restored sessions remain biometric; an explicitly
+  // signed-out verified phone account has already proven its password.
+  expect(main,contains("prefs.getBool('waffra_signed_out_explicitly')"));
+  expect(main,contains("u.provider.toLowerCase().trim()=='phone'"));
+  expect(main,contains('if(freshSession)locked=!ordinaryPhoneRelogin;'));
+  expect(main,contains('locked?WaffraMandatoryBiometricGate('));
   expect(main,isNot(contains('WaffraPhoneSecureAuth')));
   expect(main,isNot(contains('enrollWithOtp')));
   expect(main,isNot(contains('requestCode:_requestVerifiedPhoneCode')));

@@ -54,9 +54,17 @@ void main() {
   }
   expect(resumed,contains('WaffraAutoSmsStore.resumeForSameSignedInOwner(app)'));
   expect(consent,contains('WaffraAutoSmsStore.enable(app, allow)'));
-  // Never change the original confirmed signout method.
-  expect(source,contains(
-   'result.success(WaffraAutoSmsStore.suspendForSignOut(this))'));
+  // M603: signout still waits for a real encrypted SMS suspension,
+  // but its mutex and preferences commit no longer block Android UI.
+  final suspend=source.split('"pauseAutoSmsForSignOut" -> {')[1]
+   .split('"resumeAutoSmsAfterSignIn" -> {')[0];
+  expect(suspend,contains('val app = applicationContext'));
+  expect(suspend,contains('smsHistoryExecutor.execute {'));
+  expect(suspend,contains('WaffraAutoSmsStore.suspendForSignOut(app)'));
+  expect(suspend,contains('runOnUiThread { result.success(paused) }'));
+  expect(suspend,contains('runOnUiThread { result.error("SMS_SIGNOUT_UNAVAILABLE"'));
+  expect(suspend,isNot(contains(
+   'result.success(WaffraAutoSmsStore.suspendForSignOut(this))')));
  });
 
 }
