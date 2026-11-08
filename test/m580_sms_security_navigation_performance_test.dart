@@ -51,6 +51,43 @@ void main(){
   expect(store,contains('if (row.optString("id") != id) continue'));
  });
 
+ test('re-login submit CTA keeps its width and feedback during secure KDF',(){
+  final main=File('lib/main.dart').readAsStringSync();
+  final button=main.split('FilledButton(onPressed:WaffraHaptics.tap(signingIn?null:_signIn)')[1]
+   .split("key:const Key('m479-login-back-to-choice')")[0];
+  expect(button,contains("Key('m585-login-submit-stable')"));
+  expect(button,contains("minimumSize:const Size(218,48)"));
+  expect(button,contains("'جارٍ تسجيل الدخول'"));
+  expect(button,contains("CircularProgressIndicator("));
+ });
+
+ test('cold Home never shows a completely blank spinner-only body',(){
+  final main=File('lib/main.dart').readAsStringSync();
+  expect(main,contains("WaffraText(waffraIsEnglish?'Preparing secure finances…'"));
+  expect(main,contains("'جارٍ تجهيز بياناتك المالية بأمان…'"));
+  expect(main,contains(" !ready?RepaintBoundary("));
+  expect(main,isNot(contains("!ready?const Center(child:CircularProgressIndicator())")));
+ });
+
+ test('canceling SMS review never triggers a redundant full encrypted SMS reread',(){
+  final main=File('lib/main.dart').readAsStringSync();
+  final review=main.split(' Future<void> _reviewAutoSmsCandidates({String? targetId})async {')[1]
+   .split(' void _receiveSharedSms(){')[0];
+  final cleanup=review.split('  }finally{').last;
+  expect(cleanup,contains('_autoSmsReviewOpen=false;'));
+  expect(cleanup,isNot(contains('unawaited(_refreshAutoSmsInbox());')));
+ });
+
+ test('monthly summary amount stays centered within the circle at narrow widths',(){
+  final main=File('lib/main.dart').readAsStringSync();
+  final summary=main.split(' Widget monthlySummaryCard(){')[1]
+   .split(' Widget smartMoneyInsightsCard(){')[0];
+  expect(summary,contains("Key('m584-monthly-summary-circle-value')"));
+  expect(summary,contains("width:74,height:27"));
+  expect(summary,contains('fit:BoxFit.scaleDown'));
+  expect(summary,contains('alignment:Alignment.center'));
+ });
+
  test('notification center never repeats a second review hero',(){
   final ui=File('lib/waffra_approved_notifications.dart')
    .readAsStringSync();
