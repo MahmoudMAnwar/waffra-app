@@ -87,7 +87,14 @@ void main() {
   expect(save,contains('_smsConsentAfterVerifiedSignIn=needsSmsAccessAfterRegistration;'));
   expect(save.indexOf('await _accountWriteAuthority.saveProfile('),
     lessThan(save.indexOf('_smsConsentAfterVerifiedSignIn=needsSmsAccessAfterRegistration;')));
-  expect(save,contains('if(freshSession)locked=true;'));
+  // M602: first install/restored sessions require biometrics; normal verified
+  // sign-out/sign-in does not ask for the same fingerprint twice.
+  expect(save,contains('final freshSession=profile==null||showLogin;'));
+  expect(save,contains('final ordinaryPhoneRelogin=profile==null&&showLogin&&'));
+  expect(save,contains("(prefs.getBool('waffra_signed_out_explicitly')??false);"));
+  expect(save,contains('if(freshSession)locked=!ordinaryPhoneRelogin;'));
+  expect(save.indexOf('await _accountWriteAuthority.saveProfile('),
+   lessThan(save.indexOf('if(freshSession)locked=!ordinaryPhoneRelogin;')));
   final load=main.substring(
    main.indexOf(' Future<void> load()async {'),
    main.indexOf(' Future<void> finishSmsPermissionChoice()async{'));

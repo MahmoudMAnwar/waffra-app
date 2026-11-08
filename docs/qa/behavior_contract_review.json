@@ -139,6 +139,32 @@
         "Keep 600000 round password derivation, fail-closed credential recovery and verified SQLCipher financial state.",
         "Do not certify Android frame performance before real device measurements."
       ]
+    },
+    {
+      "id": "M609-FOUR-OBSOLETE-FULL-SUITE-ASSERTIONS",
+      "issue": "Issues #506 #508 #509 / owner immediate all-CI repair for PR #507",
+      "previous_behavior": "Full-suite M441 expected a second OS secure-store existence read; M463 demanded fingerprint after every password login; M468 demanded a non-null authority ledger to be replaced with [] on impossible null; M470 expected obsolete synchronous MoneyEntry parser call after unchanged-source shortcut.",
+      "approved_behavior": "A single fail-closed OS credential probe still rejects missing/malformed/wrong-phone, uses biometric recovery only if eligible and protected. Initial/restored/60s-lock sessions remain protected, while explicit signout+verified password relogin skips redundant biometric. Verified pull refresh rejects invalid snapshots, avoids unchanged re-decode and uses bounded async M593 materialization of all verified transactions; no silent empty-ledger fallback.",
+      "source_paths": [
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m441_auth_sms_copy_regression_test.dart",
+        "test/m463_auth_first_one_page_test.dart",
+        "test/m468_large_ledger_decode_test.dart",
+        "test/m470_logout_and_refresh_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m429-integration-smoke.yml"
+      ],
+      "safety_invariants": [
+        "Existing owner-bound phone verification, password KDF, missing/foreign/malformed recovery and restored/idle biometric gates remain mandatory.",
+        "No dropping finance records or accepting unverified encrypted ledger bytes.",
+        "Tests are not removed or skipped; only obsolete assertions are updated to inspect the approved current implementation."
+      ]
     }
   ]
 }

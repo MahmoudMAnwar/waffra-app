@@ -50,7 +50,12 @@ void main(){
   expect(src,contains('await WaffraLargeJsonDecode.parse(raw)'));
   // M603: verified ledger projection yields after bounded mapping,
   // retaining all rows, their order and source integrity checks.
-  expect(src,contains('final nextEntries=ledger==null?<MoneyEntry>[]:'));
+  // M607: normalized authority ledger is non-null; never silently replace
+  // invalid verified ciphertext with an empty financial history.
+  expect(src,contains('final refreshSource=WaffraVerifiedPullRefreshSource.fromAuthority(current);'));
+  expect(src,contains('final nextEntries=await _m593BuildVerifiedEntries('));
+  expect(src,contains('(await WaffraLargeJsonDecode.parse(ledger)) as List)'));
+  expect(src,isNot(contains('final nextEntries=ledger==null?<MoneyEntry>[]:')));
   expect(src,contains('await _m593BuildVerifiedEntries('));
   expect(src,contains('const batchSize=32;'));
   expect(src,contains('MoneyEntry.fromJson(Map<String,dynamic>.from(row))'));

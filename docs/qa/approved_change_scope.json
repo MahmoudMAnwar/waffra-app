@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
   "change_id": "M601-M602-M603-P0-AUTH-BIOMETRIC-HOME-SMS-FINANCE-JANK-ISSUES506-508-509",
-  "human_scope_review": "Owner explicitly reported four days of app-wide post-tap jank and an empty login button on Android, and directed a fix for the next build on 2026-11-08. This scope covers the authentication CTA disabled-state visibility and avoiding a redundant OS-keystore verifier read, without weakening 600000-round PBKDF2, biometric/login recovery or verified finance state. Physical Android profile proof is required for any claim of final app-wide lag resolution. Owner subsequently directed immediate remediation of the three identified lag sources and the unwanted post-logout biometric; #508 #509 require additional bounded source, native Android and regression-test edits while protecting security and finance. Owner requested correcting five obsolete positive tests blocking PR #507 M550/M174/M147; this is test-only reconciliation with existing approved behavior and does not relax security, finance or biometric invariants.",
+  "human_scope_review": "Owner explicitly reported four days of app-wide post-tap jank and an empty login button on Android, and directed a fix for the next build on 2026-11-08. This scope covers the authentication CTA disabled-state visibility and avoiding a redundant OS-keystore verifier read, without weakening 600000-round PBKDF2, biometric/login recovery or verified finance state. Physical Android profile proof is required for any claim of final app-wide lag resolution. Owner subsequently directed immediate remediation of the three identified lag sources and the unwanted post-logout biometric; #508 #509 require additional bounded source, native Android and regression-test edits while protecting security and finance. Owner requested correcting five obsolete positive tests blocking PR #507 M550/M174/M147; this is test-only reconciliation with existing approved behavior and does not relax security, finance or biometric invariants. M609 explicitly reconciles four obsolete, positive, complete-suite test literals (M441, M463, M468, M470) against owner-approved secure phone probe, normal signout/relogin biometric behavior and bounded verified ledger refresh, without disabling guards or altering app source.",
   "user_requested_changes": [
     "Issue #506: Fix the real Android post-tap disappearing/empty login CTA; pending/disabled progress and Arabic/English text must remain visible with no double-submit.",
     "Issue #506: Reduce redundant secure-storage calls in the phone login hot path without bypassing the OS verifier, 600000-round PBKDF2 off UI isolate, different-phone rejection, or biometric recovery.",
@@ -13,7 +13,8 @@
     "Issue #509: chunk expensive verified transaction remapping after finance/SMS saves and dashboard refreshes, never publish unverified partial data.",
     "Issue #509: remove synchronous Android UI-thread SMS stop during sign-out, and restore SMS only after verified Home has painted.",
     "Issues #506/#508/#509: fix four stale exact-head positive QA assertions in M424/M426/M468/M547, preserving the stronger current behavioral and safety checks.",
-    "Issue #509 / M174: reconcile the stale M442 native logout SMS consent assertion to demand off-Android-UI executor, same-owner protection, verified completion and fail-closed error callback rather than its former synchronous main-thread call; do not weaken SMS security."
+    "Issue #509 / M174: reconcile the stale M442 native logout SMS consent assertion to demand off-Android-UI executor, same-owner protection, verified completion and fail-closed error callback rather than its former synchronous main-thread call; do not weaken SMS security.",
+    "Issue #506/#508/#509 M609: reconcile four stale full-suite test literals M441/M463/M468/M470 to require fail-closed single OS verifier probe, mandatory first/restored/idle biometric, normal password relogin without repeat prompt, and same-witness short-circuit before verified batched ledger remapping; no relaxed protected checks."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -28,7 +29,10 @@
     "test/m426_local_phone_credentials_test.dart",
     "test/m468_large_ledger_decode_test.dart",
     "test/m547_login_isolate_performance_test.dart",
-    "test/qa/m442_sms_consent_session_recovery_test.py"
+    "test/qa/m442_sms_consent_session_recovery_test.py",
+    "test/m441_auth_sms_copy_regression_test.dart",
+    "test/m463_auth_first_one_page_test.dart",
+    "test/m470_logout_and_refresh_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -111,6 +115,24 @@
       {
         "start": "    def test_bridge_is_wired_to_native_with_no_os_reprompt_on_relogin(self):",
         "end": "    def test_dashboard_does_not_hide_disabled_or_corrupt_queue_as_zero(self):"
+      }
+    ],
+    "test/m441_auth_sms_copy_regression_test.dart": [
+      {
+        "start": "  test('M441: verified phone, not editable display profile, owns login', () {",
+        "end": "  test('M459: Saudi account registration is a single page', () {"
+      }
+    ],
+    "test/m463_auth_first_one_page_test.dart": [
+      {
+        "start": " test('M463 registration/login success precedes SMS prompt and OS biometrics',(){",
+        "end": " test('M463 Android SMS then notifications remains one-time, no AI opt in',(){"
+      }
+    ],
+    "test/m470_logout_and_refresh_test.dart": [
+      {
+        "start": " test('M470 #2 unchanged verified refresh avoids reconstructing whole ledger',(){",
+        "end": null
       }
     ]
   }
