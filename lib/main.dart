@@ -5263,13 +5263,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        if(_autoSmsProgress['complete']==false)
         Padding(padding:const EdgeInsets.only(top:6),child:WaffraText(
          ((_autoSmsProgress['pending'] as num?)?.toInt()??0)>=
-           ((_autoSmsProgress['capacity'] as num?)?.toInt()??500)?
+           ((_autoSmsProgress['capacity'] as num?)?.toInt()??1000)?
           (waffraIsEnglish?
            'Review pending messages to continue scanning other senders.':
            'قائمة المراجعة ممتلئة. راجع بعض الرسائل عشان نكمل فحص باقي المرسلين.'):
+          _autoSmsProgress['initialComplete']!=true?
           (waffraIsEnglish?
-           'History scan is still in progress. Tap Rescan to continue.':
-           'فحص الرسائل لسه ما اكتملش. اضغط إعادة الفحص لاستكماله.'),
+           'First history scan is unfinished. Tap Rescan to continue.':
+           'الفحص الأول للرسائل السابقة لسه ما اكتملش. اضغط إعادة الفحص للاستكمال.'):
+          (waffraIsEnglish?
+           'There are more new messages. Tap Rescan to continue.':
+           'فيه رسائل جديدة باقي فحصها. اضغط إعادة الفحص للاستكمال.'),
          style:const TextStyle(fontSize:12,color:emerald))),
        const SizedBox(height:8),
       ],
