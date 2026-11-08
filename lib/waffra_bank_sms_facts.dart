@@ -130,7 +130,7 @@ abstract final class WaffraBankSmsFactsParser {
   // M596: foreign, unparseable, or sub-halalah fees cannot become SAR.
   // Keep the SMS unposted if fee evidence is ambiguous.
   final feeMentioned=RegExp(
-   r'الرسوم|رسوم|fees?|commission',caseSensitive:false)
+   r'الرسوم|رسوم|\bfees?\b|\bcommission\b',caseSensitive:false)
     .hasMatch(normalized);
   final feeWindow=feeMatch==null?'':normalized.substring(
    feeMatch.start>8?feeMatch.start-8:0,
