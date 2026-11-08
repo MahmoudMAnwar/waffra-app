@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "pr": 490,
+  "issue": "https://github.com/MahmoudMAnwar/waffra-app/issues/492",
+  "workflow_review_policy": "scan-all-registered-workflows",
+  "baseline": "main",
+  "reviewed_at": "2026-11-08",
+  "review_policy": "Review changed behavior against all GitHub Actions workflow scripts, all Dart and Python QA test files, and the original tests' protected security assertions; never edit tests merely to silence red jobs.",
+  "contracts": [
+    {
+      "id": "M548-1000-SMS-UI",
+      "issue": "Issue #489 (M548) and Issue #492 (M550)",
+      "previous_behavior": "Opening the 1000-message sheet reprocessed the entire owner-encrypted review queue and expensive sender grouping.",
+      "approved_behavior": "Open verified snapshot promptly, build stable sender grouping in a linear pass, preserve selection, user confirmation and all finance verification gates.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_sms_review_groups.dart"
+      ],
+      "test_paths": [
+        "test/m548_review_grouping_and_signup_perf_test.dart",
+        "test/m429_sms_phone_integration_test.dart",
+        "test/m549_sms_review_owner_scoped_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/m274-production-ui-golden.yml"
+      ],
+      "safety_invariants": [
+        "Never post income or expense from merely loading or grouping the review queue.",
+        "Keep original SMS IDs, encrypted owner consent, sender selection and data intact."
+      ]
+    },
+    {
+      "id": "M548-SIGNUP-AND-PERFORMANCE",
+      "issue": "Issue #489 (M548) and Issue #492 (M550)",
+      "previous_behavior": "Fresh-account enrollment duplicated an expensive password KDF verification and navigation waited on nonessential review refreshes.",
+      "approved_behavior": "Use authenticated one-pass fresh verifier persistence with existing signed-in password requirements unchanged; show progress immediately and avoid frame blocking.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_local_phone_credentials.dart"
+      ],
+      "test_paths": [
+        "test/m548_review_grouping_and_signup_perf_test.dart",
+        "test/m548_source_method_boundary_guard_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m103-same-sha-release-certification.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "Never permit login with an incorrect password or bypass biometric/session ownership.",
+        "Preserve existing SQLCipher protected user data and recovery credentials."
+      ]
+    },
+    {
+      "id": "M549-ALL-SENDERS-REVIEW-EXCLUSIONS",
+      "issue": "Issue #491 (M549) and Issue #492 (M550)",
+      "previous_behavior": "An older native financial-only SMS qualification filter excluded personal and unknown senders; repeated bulk exclusions re-parsed 1000 message bodies and asked a sender dialog for each group.",
+      "approved_behavior": "All eligible SMS inbox senders enter review only; 1000 selected messages can be excluded after one user choice; blocking senders keeps only encrypted names; durable cursor prevents replay; Rescan dims without unseen messages.",
+      "source_paths": [
+        "native/WaffraAutoSmsStore.kt",
+        "native/WaffraMainActivity.kt",
+        "lib/main.dart",
+        "lib/waffra_auto_sms.dart"
+      ],
+      "test_paths": [
+        "test/m549_sms_review_owner_scoped_test.dart",
+        "test/m464_sms_bulk_rescan_regression_test.dart",
+        "test/qa/m417_sms_permission_acceptance_test.py",
+        "test/m547_sms_incremental_jank_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m417-auto-bank-sms.yml",
+        ".github/workflows/m429-integration-smoke.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "Never delete Android Messages inbox or confirmed SQLCipher finance entries.",
+        "OTP numbers must be masked; owner, committed, excluded and transfer fingerprints prevent replay and double charge.",
+        "No background SMS receiver gains financial ledger or cloud posting authority."
+      ]
+    },
+    {
+      "id": "M550-ALL-CI-EXPECTATIONS-AND-NATIVE-COMPILE",
+      "issue": "Issue #492 (M550) and existing PR #490",
+      "previous_behavior": "Obsolete source-text tests were discovered only after expensive Android/Flutter workflow failures; the new sender restore condition also missed a closing Kotlin parenthesis.",
+      "approved_behavior": "Mandatory early exact-head preflight inventories every workflow job and test, reports affected behavior and stale positive assertions, requires an updated human-reviewed contract for each changed production source, and corrects the Kotlin syntax independently.",
+      "source_paths": [
+        "native/WaffraAutoSmsStore.kt",
+        "native/WaffraMainActivity.kt",
+        "lib/main.dart",
+        "lib/waffra_auto_sms.dart",
+        "lib/waffra_sms_review_groups.dart",
+        "lib/waffra_local_phone_credentials.dart"
+      ],
+      "test_paths": [
+        "test/qa/m550_behavior_contract_preflight_test.py",
+        "test/qa/m417_sms_permission_acceptance_test.py",
+        "test/m549_sms_review_owner_scoped_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/m417-auto-bank-sms.yml"
+      ],
+      "safety_invariants": [
+        "Never skip or rewrite finance and security tests to force a green build.",
+        "Kotlin and Flutter compilation must still run on the exact PR commit.",
+        "A source-level audit is not proof of device performance or correct business semantics."
+      ]
+    }
+  ]
+}

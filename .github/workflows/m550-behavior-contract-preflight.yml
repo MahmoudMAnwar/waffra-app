@@ -1,0 +1,47 @@
+name: M550 Every-PR Behavior and Test Contract Preflight
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Never let delayed events from an old PR commit cancel its new exact head.
+concurrency:
+  group: m550-contracts-${{ github.event.pull_request.number || github.run_id }}-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  behavior-and-all-workflow-inventory:
+    name: Exact-SHA approved behavior vs all registered jobs and tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout exact head and full base history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Test the M550 fail-closed stale-assertion scanner itself
+        run: python3 -m unittest discover -s test/qa -p 'm550_behavior_contract_preflight_test.py' -v
+      - name: Verify all registered workflows and impacted test contracts BEFORE expensive CI
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          TESTED_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$TESTED_SHA"
+          python3 scripts/qa/m550_behavior_contract_preflight.py \
+            --base "$BASE_SHA" --head "$TESTED_SHA" \
+            --report build/qa/m550-behavior-contract-report.json
+      - name: Preserve all-jobs contract evidence, including when guard fails
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m550-behavior-contract-inventory-${{ github.event.pull_request.head.sha || github.sha }}
+          path: build/qa/m550-behavior-contract-report.json
+          if-no-files-found: ignore

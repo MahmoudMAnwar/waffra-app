@@ -567,7 +567,7 @@ object WaffraAutoSmsStore {
 
     fun restoreExcludedSender(context: Context, sender: String): Boolean =
         synchronized(mutex) {
-            if (!enabled(context) || sender.isBlank() || sender.trim().length > 100
+            if (!enabled(context) || sender.isBlank() || sender.trim().length > 100)
                 return@synchronized false
             try {
                 val old = readExcluded(context)

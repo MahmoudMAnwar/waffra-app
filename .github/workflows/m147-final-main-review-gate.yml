@@ -22,6 +22,16 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: M550 current behavior vs all tests and jobs (exact PR head)
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          TESTED_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$TESTED_SHA"
+          python3 -m unittest discover -s test/qa -p 'm550_behavior_contract_preflight_test.py' -v
+          python3 scripts/qa/m550_behavior_contract_preflight.py \
+            --base "$BASE_SHA" --head "$TESTED_SHA"
       - name: Original M147 UI-only, SHA-pinned scope review
         if: github.head_ref == 'review/m147-main-merge-readiness-final-gate'
         env:
