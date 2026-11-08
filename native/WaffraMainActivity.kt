@@ -467,6 +467,19 @@ class MainActivity : FlutterFragmentActivity() {
                         }
                     }
                 }
+                "pendingAutoBankSmsById" -> {
+                    val id = call.arguments as? String ?: ""
+                    val app = applicationContext
+                    smsHistoryExecutor.execute {
+                        try {
+                            val selected = WaffraAutoSmsStore.pendingById(app, id)
+                            runOnUiThread { result.success(selected) }
+                        } catch (_: Exception) {
+                            runOnUiThread { result.error("SMS_REVIEW_READ_FAILED",
+                                "Could not verify selected encrypted SMS", null) }
+                        }
+                    }
+                }
                 "claimAutoBankSmsCloudAttempt" -> result.success(
                     WaffraAutoSmsStore.claimCloudAttempt(this, call.arguments as? String ?: ""))
                 "stageAutoBankSmsCloudAnalysis" -> {
