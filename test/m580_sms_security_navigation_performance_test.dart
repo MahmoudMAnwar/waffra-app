@@ -88,6 +88,25 @@ void main(){
   expect(summary,contains('alignment:Alignment.center'));
  });
 
+ test('M590 review requires verified account BEFORE Yes, and never opens picker after Yes',(){
+  final main=File('lib/main.dart').readAsStringSync();
+  final preview=main.split(
+   ' Future<void> _reviewAutoSmsCandidates({String? targetId})async {')[1]
+   .split(' void _receiveSharedSms(){')[0];
+  expect(preview,contains("Key('m590-sms-choose-account-before-yes')"));
+  expect(preview,contains('reviewedAccount?.ids?.single!=null'));
+  expect(preview,contains('await reviewSmsAccountLinks([trial],smsSender:sender)'));
+  expect(preview,contains('reviewedAccount=(ids:<String?>[id],generation:fresh.witness.generation)'));
+  expect(preview,contains('selectedAccount:reviewedAccount!'));
+  final writer=main.split(' Future<void> _m565ConfirmSms({')[1]
+   .split(' Future<void> _reviewAutoSmsCandidates({')[0];
+  expect(writer,contains('required ({List<String?>? ids,int? generation}) selectedAccount'));
+  expect(writer,contains('final chosen=selectedAccount;'));
+  expect(writer,isNot(contains('await reviewSmsAccountLinks([')));
+  expect(writer,contains('allowDuplicateHashes:false'));
+  expect(writer,contains('expectedAccountGeneration:chosen.generation'));
+ });
+
  test('M587 bank transfer shows exactly three non-posting choices',(){
   final main=File('lib/main.dart').readAsStringSync();
   final review=main.split(
