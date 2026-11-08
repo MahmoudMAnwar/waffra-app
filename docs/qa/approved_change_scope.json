@@ -1,13 +1,17 @@
 {
   "contract_version": 1,
-  "change_id": "M601-P0-AUTH-VISIBLE-BUSY-AND-PROFILE-LATENCY-ISSUE506",
-  "human_scope_review": "Owner explicitly reported four days of app-wide post-tap jank and an empty login button on Android, and directed a fix for the next build on 2026-11-08. This scope covers the authentication CTA disabled-state visibility and avoiding a redundant OS-keystore verifier read, without weakening 600000-round PBKDF2, biometric/login recovery or verified finance state. Physical Android profile proof is required for any claim of final app-wide lag resolution.",
+  "change_id": "M601-M602-M603-P0-AUTH-BIOMETRIC-HOME-SMS-FINANCE-JANK-ISSUES506-508-509",
+  "human_scope_review": "Owner explicitly reported four days of app-wide post-tap jank and an empty login button on Android, and directed a fix for the next build on 2026-11-08. This scope covers the authentication CTA disabled-state visibility and avoiding a redundant OS-keystore verifier read, without weakening 600000-round PBKDF2, biometric/login recovery or verified finance state. Physical Android profile proof is required for any claim of final app-wide lag resolution. Owner subsequently directed immediate remediation of the three identified lag sources and the unwanted post-logout biometric; #508 #509 require additional bounded source, native Android and regression-test edits while protecting security and finance.",
   "user_requested_changes": [
     "Issue #506: Fix the real Android post-tap disappearing/empty login CTA; pending/disabled progress and Arabic/English text must remain visible with no double-submit.",
     "Issue #506: Reduce redundant secure-storage calls in the phone login hot path without bypassing the OS verifier, 600000-round PBKDF2 off UI isolate, different-phone rejection, or biometric recovery.",
     "Issue #506: Capture profile-only sign-in stage timings without personal information and require real Android first-signin, logout and whole-app frame profiling before declaring a smooth release.",
     "Issue #506: Add source plus actual Flutter widget regressions for disabled visual states and preserve existing signed-out Yes/No behavior.",
-    "Issue #506: Immediately after the existing Yes/No sign-out confirmation paint a guarded progress veil, block repeated buttons, and always remove it on safe success or failure."
+    "Issue #506: Immediately after the existing Yes/No sign-out confirmation paint a guarded progress veil, block repeated buttons, and always remove it on safe success or failure.",
+    "Issue #508: normal explicitly signed-out verified phone-password re-login opens Home without a second biometric; onboarding and restored/60-second protected sessions remain protected.",
+    "Issue #509: first Home paint before expensive month SMS scan; avoid multi-page native import burst on startup while preserving full initial-month review and exact consent.",
+    "Issue #509: chunk expensive verified transaction remapping after finance/SMS saves and dashboard refreshes, never publish unverified partial data.",
+    "Issue #509: remove synchronous Android UI-thread SMS stop during sign-out, and restore SMS only after verified Home has painted."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -15,7 +19,9 @@
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
-    "test/m601_auth_busy_contract_test.dart"
+    "test/m601_auth_busy_contract_test.dart",
+    "native/WaffraMainActivity.kt",
+    "test/m603_app_wide_lag_source_regression_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -30,6 +36,44 @@
       {
         "start": " Future<void> logout()async {",
         "end": " Future<void> setPin("
+      },
+      {
+        "start": " Future<void> saveUser(Person u)async {",
+        "end": " Future<void> setUiCountry("
+      },
+      {
+        "start": "  void _m468OnResume(){",
+        "end": " @override void initState(){super.initState();WaffraBackNavigation.onHomeBack="
+      },
+      {
+        "start": "  Future<void> _runAutoSmsRefresh({bool importMonth=false})async{",
+        "end": " Future<void> _analyzeAmbiguousSmsOnDemand("
+      },
+      {
+        "start": "  Future<void> _loadFinanceSafely()async{",
+        "end": "  Widget _financialRecoveryScreen()"
+      },
+      {
+        "start": "  Future<void> _syncWidgetTransactions()async{",
+        "end": "  /// Refresh from the authoritative source"
+      },
+      {
+        "start": "  Future<void> _refreshFromVerifiedFinance()async {",
+        "end": "  Future<void> load()async{"
+      },
+      {
+        "start": "  Future<void> load()async{",
+        "end": "  Future<void> _refreshWidget()async{"
+      },
+      {
+        "start": "        final verifiedRaw=await WaffraLargeJsonDecode.parse(",
+        "end": "        if(!mounted)return;\n        setState((){"
+      }
+    ],
+    "native/WaffraMainActivity.kt": [
+      {
+        "start": "                \"pauseAutoSmsForSignOut\" ->",
+        "end": "                \"resumeAutoSmsAfterSignIn\" ->"
       }
     ]
   }
