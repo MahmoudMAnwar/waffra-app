@@ -12545,8 +12545,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       Column(mainAxisSize:MainAxisSize.min,children:[
        WaffraText(waffraIsEnglish?'Difference':'الفرق',
         style:const TextStyle(fontSize:10)),
-       FittedBox(fit:BoxFit.scaleDown,
-        child:WaffraCurrencyAmount(difference,fontSize:16)),
+       // Bound the actual currency glyphs, not just the outer circle.
+       // The old unbounded Column child never gave FittedBox a width to
+       // scale against, clipping long RTL values on narrow Android screens.
+       SizedBox(key:const Key('m584-monthly-summary-circle-value'),
+        width:74,height:27,
+        child:FittedBox(fit:BoxFit.scaleDown,
+         alignment:Alignment.center,
+         child:Directionality(textDirection:TextDirection.ltr,
+          child:WaffraCurrencyAmount(difference,fontSize:16)))),
       ]),
      ])),
      const SizedBox(width:12),
