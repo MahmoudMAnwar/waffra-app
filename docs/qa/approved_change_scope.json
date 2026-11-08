@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
   "change_id": "M547-SMS-IMPORT-JANK-1000-REVIEW-INCREMENTAL-20261108",
-  "human_scope_review": "User requested source-level remediation for severe Waffra app-wide jank after SMS import, a 1000-entry review queue, and accurate new-only SMS rescan. These bounded files only implement the SMS-related portion; profile/release real-device perf and security/finance Android QA remain mandatory. Auth/login/logout, PBKDF2 iteration strength, SQLCipher finance authority and existing user data must be retained. Manifest enforces exact changed file set and immutable out-of-scope source; human acceptance of physical-device experience is still outstanding. Follow-up PERF-04 from original user message: 3-second login freeze was an explicit preexisting requirement, not a new feature. Isolate only PBKDF2 computation; existing 600000 iterations, device protected verifier, recovery/biometric/session ownership remain identical; stable busy UI and exact-head tests added. Physical Android performance acceptance still mandatory.",
+  "human_scope_review": "User requested source-level remediation for severe Waffra app-wide jank after SMS import, a 1000-entry review queue, and accurate new-only SMS rescan. These bounded files only implement the SMS-related portion; profile/release real-device perf and security/finance Android QA remain mandatory. Auth/login/logout, PBKDF2 iteration strength, SQLCipher finance authority and existing user data must be retained. Manifest enforces exact changed file set and immutable out-of-scope source; human acceptance of physical-device experience is still outstanding. Follow-up PERF-04 from original user message: 3-second login freeze was an explicit preexisting requirement, not a new feature. Isolate only PBKDF2 computation; existing 600000 iterations, device protected verifier, recovery/biometric/session ownership remain identical; stable busy UI and exact-head tests added. Physical Android performance acceptance still mandatory. Additional existing native MethodChannel SMS enable/resume calls serialized on pre-existing SMS I/O executor instead of Android UI thread; callback result remains on UI thread, source tests confirm consent and owner guards. Sign-out untouched.",
   "user_requested_changes": [
     "2026-11-08: Remove severe animation and navigation stutter associated with repeated Android SMS history scans and expense/income saves; keep tested login and logout unchanged.",
     "Increase encrypted pending SMS review capacity from 500 to 1000 while keeping previous SMS owner, exclusions, confirmed finance anti-replay and history intact.",
@@ -94,6 +94,14 @@
       {
         "start": "                \"restartCompletedSmsHistory\" -> {",
         "end": "                \"importConsentMonthBankSms\" -> {"
+      },
+      {
+        "start": "                \"resumeAutoSmsAfterSignIn\" -> {",
+        "end": "                \"autoSmsNotificationsEnabled\" ->"
+      },
+      {
+        "start": "                \"setAutoSmsEnabled\" -> {",
+        "end": "                \"restartCompletedSmsHistory\" -> {"
       }
     ],
     "test/m429_sms_phone_integration_test.dart": [
@@ -136,6 +144,10 @@
       {
         "start": "    def test_logout_races_cannot_capture_or_hide_old_encrypted_data(self):",
         "end": "    def test_bridge_is_wired_to_native_with_no_os_reprompt_on_relogin(self):"
+      },
+      {
+        "start": "    def test_bridge_is_wired_to_native_with_no_os_reprompt_on_relogin(self):",
+        "end": "    def test_dashboard_does_not_hide_disabled_or_corrupt_queue_as_zero(self):"
       }
     ],
     "lib/waffra_local_phone_credentials.dart": [
