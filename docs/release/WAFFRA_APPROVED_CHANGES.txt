@@ -2946,3 +2946,10 @@ M597 – PR #505 / Seven Owner Feedback Items #498–#504 (2026-11-08, SOURCE PE
 - Protected mixed bank purchase/debit plus OTP SMS from automatic sender-exclusion learning and matching; OTP-only rules remain sender-scoped and number-free.
 - Updated outdated M594 assertion to require explicit fee mode, SAR halala validation, atomic SQLCipher transfer plus fee expense and SMS hash, and acknowledgment strictly after durable commit; added mixed OTP regression.
 - PR remains Draft until full same-head CI and physical Android/two-device proof pass; tests are not disabled.
+
+[M601 #506 P0 login button and auth latency — PR #507 / CANDIDATE, NOT RELEASE-CERTIFIED] 2026-11-08
+- The owner reproduced an EMPTY sign-in button after tapping on Android and 2–3-second lag during signing in/out and elsewhere, despite prior M547/M585 fixes.
+- Fix pending/disabled FilledButton explicitly to retain WHITE background and dark GREEN text, plus a green progress spinner and stable original button size during full-strength password verification. This addresses the observed visual disappearance, not yet the entire measured Android frame-latency issue.
+- Remove a redundant serial FlutterSecureStorage existence read in login; the same fail-closed owner/phone probe already establishes whether secure verifier exists. Preserve 600000-round isolate PBKDF2, legacy login migration, biometric recovery, verified profile save, SMS consent, encrypted finances, and unchanged Yes/No sign-out.
+- Add profile-only stage duration diagnostics without phone, password, account or transaction identifiers, plus Flutter real button/widget and source security tests in test/m601_auth_busy_contract_test.dart.
+- Source files scoped by M385, behavior contract and permanent requirement docs. Exact-HEAD Flutter analyzer, all CI, Android release/profile frame p95, skipped frame counts, touch-to-feedback, complete sign-in/out, first-launch Home, 1000 SMS review and save paths, and update-over-old-data two-device proof remain REQUIRED. Do not merge or claim a final lag fix until verified.
