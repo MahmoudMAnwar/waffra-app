@@ -8976,8 +8976,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   // Unknown original SMS timestamp requires an explicit calendar pick.
   final originalSmsDate=sms&&initialSms!=null?
    bankSmsDate(initialSms,referenceDate:DateTime.now()):null;
-  var smsDateConfirmed=smsEditorDraft?['dateConfirmed']==true||
-   originalSmsDate!=null;
+  var smsDateConfirmed=initial!=null||
+   smsEditorDraft?['dateConfirmed']==true||originalSmsDate!=null;
   DateTime date=(smsEditorDraft?['date'] as DateTime?)??
    initial?.date??scannedReceipt?.date??originalSmsDate??DateTime.now();
    String? suggestion,pendingHash,receiptPath=initial?.receiptPath;
@@ -9065,13 +9065,35 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        final d=await waffraPickDateWithToday(english:waffraIsEnglish,
         context:sheetContext,initialDate:date,
         firstDate:DateTime(2000),lastDate:DateTime.now());
-       if(d!=null&&sheetContext.mounted)update((){
-        date=d;
-        if(sms)smsDateConfirmed=true;
-       });
+       if(d==null||!sheetContext.mounted)return;
+       if(sms){
+        // Bank SMS corrections need deliberate date AND hour/minute;
+        // accepting only a calendar date would silently set midnight.
+        final time=await showTimePicker(
+         context:sheetContext,initialTime:TimeOfDay.fromDateTime(date));
+        if(time==null||!sheetContext.mounted)return;
+        final confirmed=DateTime(d.year,d.month,d.day,time.hour,time.minute);
+        if(confirmed.isAfter(DateTime.now())){
+         snack(sheetContext,waffraIsEnglish?
+          'Transaction date and time cannot be in the future.':
+          'تاريخ ووقت العملية لا يمكن أن يكونا في المستقبل.',isError:true);
+         return;
+        }
+        update((){
+         date=confirmed;
+         smsDateConfirmed=true;
+        });
+       }else{
+        update(()=>date=d);
+       }
       }),
       icon:const Icon(Icons.calendar_month,size:19),
-      label:WaffraText(dayText(date),maxLines:1));
+      label:WaffraText(sms&&!smsDateConfirmed?
+       (waffraIsEnglish?'Select date and time':'اختر التاريخ والوقت'):
+       sms?
+        dayText(date)+' '+date.hour.toString().padLeft(2,'0')+':'+
+         date.minute.toString().padLeft(2,'0'):
+        dayText(date),maxLines:1));
     Future<void> createAccountInsideEntryDropdown({required bool mainProvider,
       bool forTransfer=false,bool transferTarget=false})async{
      // #405/#416: Add inside either dropdown opens the account FORM directly,

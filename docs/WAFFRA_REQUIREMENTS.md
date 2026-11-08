@@ -831,3 +831,9 @@ M274 must also trigger on `docs/release/WAFFRA_APPROVED_CHANGES.txt` changes bec
 **PR:** #497. **Status:** Source and regression code ready; full exact-head CI / Android device acceptance pending.
 - First reviewed SMS for a new sender+four-digit bank identity offers choose existing or create new even if a separate account at the same institution already exists. Previously confirmed identical sender+four suppresses repeat prompt, account still verified under SQLCipher witness; never guess a mismatched four.
 - Test: test/qa/m576_first_distinct_bank_identity_test.py.
+
+
+## M578 — #495 correction of SMS original date and time (2026-11-08)
+**PR:** #497. **Status:** Code + regressions committed, exact-head CI & Android owner QA pending.
+- No/edit SMS when transaction timestamp missing: user chooses calendar date then exact hour/minute via clock picker. Cancelling either cannot satisfy confirmation; future timestamp refused. Display both before save, preserve existing historical transaction date during edit. No silent today/midnight financial posting.
+- Tests: test/qa/m566_sms_manual_date_confirmation_test.py and test/qa/m578_sms_time_confirmation_test.py.

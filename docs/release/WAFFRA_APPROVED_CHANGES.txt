@@ -2850,3 +2850,7 @@ M550 early CI proof (2026-11-08): First exact-HEAD M550 run audited 107 workflow
 
 [M576 first distinct bank account identities] 2026-11-08
 - The same bank may have several accounts. First new sender+last-four identity now explicitly offers choose existing / create bank account, rather than silently treating any other account of that bank as linked. Previously confirmed identity avoids prompts. Retains native SMS and SQLCipher source integrity. M576 regression, CI/device pending.
+
+
+[M578 explicit SMS date+time corrected review] 2026-11-08
+- Missing-source-date SMS review now requires both calendar date and time-of-day selection before encrypted saving. Cancellation leaves date unconfirmed; future time is refused, selected date/time displayed. Existing saved entries preserve their old date. Updated M566 and added M578 regressions; full CI and device QA pending.
