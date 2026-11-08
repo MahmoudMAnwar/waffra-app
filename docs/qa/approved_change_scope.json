@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "change_id": "M580-M598-SEVEN-FEEDBACK-SECURE-SMS-UX-PERFORMANCE-PR505",
+  "change_id": "M580-M599-SEVEN-FEEDBACK-SECURE-SMS-UX-PERFORMANCE-PR505",
   "human_scope_review": "Owner explicitly authorized implementing issues #498 through #504 on 2026-11-08 and prioritizing lag after every tap; preserve approved visual references, unchanged floating +, exact SQLCipher finance integrity, OTP masking, both device data, native sender-exclusion consent and all existing tests. This branch contains only early partial source changes plus true regression contracts, not approval to merge until exact-head CI and Android evidence.",
   "user_requested_changes": [
     "#498 Keep a stable visibly loading login button and preserve secure, responsive first registration with no double submission or weakened password controls.",
@@ -15,7 +15,8 @@
     "#498/#504 Smooth signup submit and prevent verified manual/SMS ledger display model mapping from monopolizing frames after confirmation.",
     "M595 #502: Existing bank SMS review must expose three real user-selectable Income / Expense / Transfer choices, and independent exclusion, with corrected type routed to a fully verified manual/SMS finance editor. Type chips cannot post money, ACK messages, guess bank identity or bypass the verified Yes account and date requirements.",
     "M597 #503: an SMS own-account transfer with an explicitly confirmed positive SAR fee must post two verified account movements, one separately attributed fee expense, and one immutable SMS fingerprint within the SAME SQLCipher transaction; rollback on stale source, category mismatch, duplicate, or incomplete insert. Sender/OTP proof, exact date/time and owner consent remain mandatory. Release is blocked until full exact-head automated and device tests.",
-    "M598 exact-head CI root repair: fail closed when extra bank-debit amount is nullable before dividing in Arabic/English fee dialog, and update M514 source/destination four-digit test to enforce the approved independently verified field-specific prefill. Refresh release notes after source in the same commit. Do not skip, relax, or rerun obsolete test logic."
+    "M598 exact-head CI root repair: fail closed when extra bank-debit amount is nullable before dividing in Arabic/English fee dialog, and update M514 source/destination four-digit test to enforce the approved independently verified field-specific prefill. Refresh release notes after source in the same commit. Do not skip, relax, or rerun obsolete test logic.",
+    "M599 exact-head CI repair: M385 fail-closed file-scope guard requires an explicit bounded M514 regression test region; the previously approved test strengthens source-specific sender+suffix behavior and is unchanged outside that region. M429 analyzer must reject unnecessary null branches and null assertions without changing bank SMS consent/date/amount safety. No other behavior or test is bypassed."
   ],
   "allowed_changed_files": [
     "docs/qa/approved_change_scope.json",
@@ -185,6 +186,12 @@
       {
         "start": " @override\n Future<bool> transfer({",
         "end": " /// One manual income/expense + its account association must share a"
+      }
+    ],
+    "test/m514_sms_review_regressions_test.dart": [
+      {
+        "start": " test('M514 source-specific account digits, actionable transfer and verified receipt edit',(){",
+        "end": " test('M516 native SMS identity determines transfer id, not body-only hash',(){"
       }
     ]
   }

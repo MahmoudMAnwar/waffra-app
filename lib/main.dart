@@ -5517,7 +5517,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     date=DateTime(pickedDay.year,pickedDay.month,pickedDay.day,
      pickedTime.hour,pickedTime.minute);
    }
-   if(date==null)return;
+   // Source timestamp or explicit picker has already established a date.
    final prefill=WaffraInternalTransferDraft(
     // Native fingerprint includes sender, body AND receivedAt; two distinct
     // identical-body SMS must not share a single SQLCipher transfer ID.
@@ -5927,8 +5927,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     try{
      final trial=MoneyEntry(
       id:newId(),title:parsed.title,category:proposedCategory,
-      amount:originalAmount!.amount,income:expectedIncome,
-      date:originalDate!,notes:body,sourceType:'sms');
+      amount:originalAmount.amount,income:expectedIncome,
+      date:originalDate,notes:body,sourceType:'sms');
      final picked=await reviewSmsAccountLinks([trial],smsSender:sender);
      final id=picked?.ids?.single;
      if(id==null||picked?.generation==null||!mounted)return;
