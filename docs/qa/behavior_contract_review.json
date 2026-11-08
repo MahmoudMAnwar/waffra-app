@@ -267,7 +267,7 @@
       "id": "M595-COMPACT-SMS-TYPE-CORRECTION-NO-SILENT-FINANCE",
       "issue": "Issue #502 / WAFFRA-NEW-025; owner explicitly requested completing the seven PR #505 feedback items",
       "previous_behavior": "Bank SMS dialog had no real first-class Income/Expense/Transfer selectors, only a previously inferred type and duplicated old review/no/edit controls.",
-      "approved_behavior": "Three selectable review type chips show message-local suggestion and allow explicit corrections. Each type change invalidates prior bank-account approval; Continue routes corrected income/expense to original owner-scoped SMS editor with source body and manual account selection. Corrected transfer uses a separate verified own-account transfer form and retains the original SMS for review, never guesses both endpoints or silently ACKs. Exclusion is an independent review action; OTP review remains fail-closed. Existing verified same-type SMS Yes path still requires consent, bank date, SAR, category, exact account and SQLCipher generation. Existing positive-fee transfers remain blocked until atomic separate fee post implemented.",
+      "approved_behavior": "Three selectable review type chips show message-local suggestion and allow explicit corrections. Each type change invalidates prior bank-account approval; Continue routes corrected income/expense to original owner-scoped SMS editor with source body and manual account selection. Corrected transfer uses a separate verified own-account transfer form and retains the original SMS for review, never guesses both endpoints or silently ACKs. Exclusion is an independent review action; OTP review remains fail-closed. Existing verified same-type SMS Yes path still requires consent, bank date, SAR, category, exact account and SQLCipher generation. Existing positive-fee transfers remain blocked until atomic separate fee post implemented. The owner's corrected kind takes precedence over a stale uncommitted SMS edit draft, without changing unrelated manual/receipt defaults. Choosing a transfer when the SMS did not independently verify two owner accounts now requires one more explicit dialog before opening a separate manual transfer; the source SMS stays pending and no finance ACK is made.",
       "source_paths": [
         "lib/main.dart"
       ],
@@ -286,7 +286,8 @@
         "No account, ledger money, SMS fingerprint or native pending message is changed by tapping a type choice.",
         "A corrected transfer from SMS with unverified source/destination never posts a fake two-sided bank transfer or implicitly removes original SMS.",
         "Final posting requires existing SQLCipher writer, chosen account, source-proven date and explicit user save, with original duplicate safeguards.",
-        "No legacy tests removed; full exact-head CI and Android visual/latency evidence required before release."
+        "No legacy tests removed; full exact-head CI and Android visual/latency evidence required before release.",
+        "A prior uncommitted draft cannot silently override the user's newly selected Income or Expense correction."
       ]
     }
   ]
