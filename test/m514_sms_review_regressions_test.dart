@@ -167,10 +167,18 @@ void main(){
   expect(history,contains('"date_sent"'));
   expect(history,contains('val senderTime = if (sentCol >= 0'));
   expect(history,contains('val identityAt = if (senderTime > 946684800000L'));
-  expect(history,contains('historical = true, receivedAt = at'));
+  // M547: a batch carries Android receipt time separately from the sender
+  // timestamp-based identity, and atomically advances only examined rows.
+  expect(history,contains('rows.add(HistoricalSmsRow(rowId, at, identityAt,'));
+  expect(history,contains('id(row.sender, row.body, row.identityAt)'));
+  expect(history,contains('.put("receivedAt", row.receivedAt)'));
   expect(history,contains('"date ASC, _id ASC"'));
-  expect(history,contains('lastAt = at'));
-  expect(history,contains('lastId = rowId'));
+  expect(history,contains('nextAt = row.receivedAt'));
+  expect(history,contains('nextId = row.rowId'));
+  expect(history,contains('.putLong(historyCursorAt, nextAt)'));
+  expect(history,contains('.putLong(historyCursorId, nextId)'));
+  expect(history,contains('editor.putString(queueName, seal(queue.toString()))'));
+  expect(history,contains('if (!editor.commit()) return@synchronized 0'));
   // No timestamp can justify coalescing different native SMS identities.
   final flutter=File('lib/waffra_auto_sms.dart').readAsStringSync();
   expect(flutter,contains('transferIdForMessage(String fingerprint)'));

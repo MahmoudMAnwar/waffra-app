@@ -50,11 +50,13 @@ object WaffraAutoSmsStore {
     // Hash of the verified signed-in account. No phone/email is saved here.
     private const val consentedOwnerName = "consented_account_sha256_v1"
     private const val suspendedAfterLogoutName = "suspended_after_logout_v1"
-    private const val maxCandidates = 500
+    private const val maxCandidates = 1000
     private const val activationMonth = "sms_activation_month_start"
     private const val historyCursorAt = "sms_history_cursor_at"
     private const val historyCursorId = "sms_history_cursor_id"
     private const val historyComplete = "sms_history_complete"
+    // Durable marker: distinguish an unfinished first historical pass from new-only scans.
+    private const val historyInitialCompleted = "sms_history_initial_completed_v1"
     private const val historyScannedCount = "sms_history_scanned_count_v1"
     private const val historyAddedCount = "sms_history_added_count_v1"
     private const val historySourceMonth = "sms_history_source_install_month_v2"
@@ -162,7 +164,8 @@ object WaffraAutoSmsStore {
             "added" to prefs.getLong(historyAddedCount, 0L),
             "pending" to waiting,
             "capacity" to maxCandidates,
-            "complete" to prefs.getBoolean(historyComplete, false)
+            "complete" to prefs.getBoolean(historyComplete, false),
+            "initialComplete" to prefs.getBoolean(historyInitialCompleted, false)
         )
     }
 
@@ -180,7 +183,7 @@ object WaffraAutoSmsStore {
             // Existing confirmed finance hashes are still deduplicated by UI.
             editor.remove(historyCursorAt).remove(historyCursorId)
                 .remove(historySourceMonth).remove(historyComplete)
-                .remove(historyScannedCount).remove(historyAddedCount)
+                .remove(historyInitialCompleted).remove(historyScannedCount).remove(historyAddedCount)
         }
         if (allow) {
             val owner = signedInOwnerHash(context)
@@ -201,7 +204,7 @@ object WaffraAutoSmsStore {
                 completedTransferCipherCache.clear()
                 editor.remove(queueName).remove(excludedSendersName).remove(historyCursorAt)
                     .remove(historyCursorId).remove(historySourceMonth)
-                    .remove(historyComplete)
+                    .remove(historyComplete).remove(historyInitialCompleted)
                     .remove(historyScannedCount).remove(historyAddedCount)
             }
             if (owner != null) editor.putString(consentedOwnerName, owner)
@@ -979,57 +982,71 @@ object WaffraAutoSmsStore {
             } catch (_: Exception) { false }
         }
 
-    /** Rescan the *entire* installed-month inbox only after a prior scan
-     * completed. An unfinished >2000-message scan always resumes its cursor
-     * instead of restarting the same first pages forever.
+    /**
+     * M547: a completed historical pass is a durable high-water mark.
+     * Never rewind to the first day of installation on a normal rescan:
+     * committed and excluded SMS must stay invisible and the user should
+     * see the number of *new* provider rows actually examined.
      */
     fun restartCompletedHistory(context: Context): Boolean = synchronized(mutex) {
-        if (!enabled(context)) return@synchronized false
-        val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
-        if (!prefs.getBoolean(historyComplete, false)) return@synchronized false
-        prefs.edit().remove(historyCursorAt).remove(historyCursorId)
-            .remove(historySourceMonth).remove(historyComplete)
-            .remove(historyScannedCount).remove(historyAddedCount).commit()
+        // Compatibility entry point for older Flutter callers. It is
+        // intentionally non-destructive: no cursor or owner data is erased.
+        enabled(context) &&
+            context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+                .getBoolean(historyComplete, false)
     }
 
-    /** Resumable history import: from day 1 of installation month through now.
-     * This native importer never posts money or contacts a cloud provider.
-     * An separately opted-in Flutter worker may stage sanitized cloud hints.
-     * The encrypted queue holds up to 500 and resumes after user review.
+    private data class HistoricalSmsRow(
+        val rowId: Long,
+        val receivedAt: Long,
+        val identityAt: Long,
+        val sender: String,
+        val body: String
+    )
+
+    /**
+     * Read a bounded cursor page and persist all candidates plus the cursor
+     * together in ONE encrypted preferences commit. The former per-row
+     * offer() read+decrypt+linear-search+encrypt+fsync path was quadratic.
+     * Live SMS broadcasts still use offer() for crash-safe single intake.
+     *
+     * If the queue fills, only rows actually inspected advance the cursor.
+     * On commit failure neither the queue nor cursor is advanced, allowing
+     * a safe replay without duplicate financial posting.
      */
     fun importConsentMonth(context: Context, maxRead: Int = 500): Int {
-        if (!enabled(context)) return 0
+        if (maxRead <= 0 || !enabled(context)) return 0
         val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
         val start = installationMonthStart(context)
         if (start <= 0L) return 0
-        // Do not mark the window permanently complete: next month's SMS
-        // must also be found by a later on-demand scan.
+        val ownerAtStart = signedInOwnerHash(context) ?: return 0
         val end = System.currentTimeMillis() + 1
-        var queued = try { synchronized(mutex) {
+        val originalCursor = synchronized(mutex) {
             if (!enabled(context)) return 0
-            read(context).length()
-        } } catch (_: Exception) { return 0 }
-        if (queued >= maxCandidates) return 0
-        // Bound the Android SMS provider query to the persisted cursor.
-        // Requerying the entire month on every 500-row page was O(N²) and
-        // blocked the UI; no date or message is silently marked as scanned.
-        val sameSource = prefs.getLong(historySourceMonth, 0L) == start
-        var lastAt = if (sameSource) prefs.getLong(historyCursorAt, start - 1) else start - 1
-        var lastId = if (sameSource) prefs.getLong(historyCursorId, -1) else -1
-        // Android inbox 'date' is receipt time; 'date_sent' tracks the original
-        // sender timestamp used by SmsMessage.timestampMillis in broadcasts.
-        // Cursor pagination must STILL order by inbox date and stable row _id.
+            val currentSize = try { read(context).length() }
+                catch (_: Exception) { return 0 }
+            if (currentSize >= maxCandidates) return 0
+            val sameSource = prefs.getLong(historySourceMonth, 0L) == start
+            Pair(
+                if (sameSource) prefs.getLong(historyCursorAt, start - 1) else start - 1,
+                if (sameSource) prefs.getLong(historyCursorId, -1L) else -1L
+            )
+        }
+
         val projection = arrayOf("_id", "address", "body", "date", "date_sent")
-        val cursor = try {
+        val providerCursor = try {
             context.contentResolver.query(Uri.parse("content://sms/inbox"),
                 projection, "(date > ? OR (date = ? AND _id > ?)) AND date < ?",
-                arrayOf(lastAt.toString(), lastAt.toString(),
-                    lastId.toString(), end.toString()), "date ASC, _id ASC")
+                arrayOf(originalCursor.first.toString(),
+                    originalCursor.first.toString(),
+                    originalCursor.second.toString(), end.toString()),
+                "date ASC, _id ASC")
         } catch (_: Exception) { null } ?: return 0
-        var checked = 0
-        var accepted = 0
-        var complete = true
-        cursor.use {
+
+        // The extra row determines whether more history remains without
+        // guessing from the size of the last page.
+        val rows = ArrayList<HistoricalSmsRow>(maxRead.coerceAtMost(1000) + 1)
+        providerCursor.use {
             val rowCol = it.getColumnIndex("_id")
             val senderCol = it.getColumnIndex("address")
             val bodyCol = it.getColumnIndex("body")
@@ -1037,49 +1054,102 @@ object WaffraAutoSmsStore {
             val sentCol = it.getColumnIndex("date_sent")
             if (rowCol < 0 || senderCol < 0 || bodyCol < 0 || dateCol < 0)
                 return 0
-            while (it.moveToNext()) {
+            while (rows.size <= maxRead && it.moveToNext()) {
                 val at = it.getLong(dateCol)
                 val rowId = it.getLong(rowCol)
-                if (at < lastAt || (at == lastAt && rowId <= lastId)) continue
-                if (queued >= maxCandidates || checked >= maxRead) {
-                    complete = false
-                    break
-                }
-                val sender = it.getString(senderCol) ?: ""
-                val body = it.getString(bodyCol) ?: ""
-                // offer() applies the excluded-sender policy before parsing,
-                // and its own qualification check (no duplicate regex work).
-                // M518: match the exact fingerprint from the live SMS receiver when
-                // Android supplied a usable sender timestamp. Fallback keeps
-                // preexisting inbox behavior on devices returning 0/invalid.
+                if (at < originalCursor.first ||
+                    (at == originalCursor.first && rowId <= originalCursor.second))
+                    continue
                 val senderTime = if (sentCol >= 0 && !it.isNull(sentCol))
                     it.getLong(sentCol) else 0L
                 val identityAt = if (senderTime > 946684800000L &&
                     senderTime <= end + 300000L) senderTime else at
-                if (offer(context, sender, body, identityAt,
-                        historical = true, receivedAt = at)) {
-                    queued++
-                    accepted++
-                }
-                checked++
-                lastAt = at
-                lastId = rowId
+                rows.add(HistoricalSmsRow(rowId, at, identityAt,
+                    it.getString(senderCol) ?: "", it.getString(bodyCol) ?: ""))
             }
         }
-        // Serialize cursor persistence with sign-out/owner change so a
-        // stale scanner cannot skip SMS for the next authenticated session.
-        synchronized(mutex) {
-            if (!enabled(context)) return accepted
-            prefs.edit().putLong(historyCursorAt, lastAt)
-                .putLong(historyCursorId, lastId)
-                .putLong(historySourceMonth, start)
-                .putLong(historyScannedCount,
-                    (if (sameSource) prefs.getLong(historyScannedCount, 0L) else 0L) + checked)
-                .putLong(historyAddedCount,
-                    (if (sameSource) prefs.getLong(historyAddedCount, 0L) else 0L) + accepted)
-                .putBoolean(historyComplete, complete).commit()
+
+        return synchronized(mutex) {
+            // A logout, new account or overlapping scan must not commit an
+            // old owner's candidate rows or leapfrog another cursor writer.
+            if (!enabled(context) ||
+                ownerAtStart != signedInOwnerHash(context)) return@synchronized 0
+            val stillSameMonth = prefs.getLong(historySourceMonth, 0L) == start
+            val currentAt = if (stillSameMonth)
+                prefs.getLong(historyCursorAt, start - 1) else start - 1
+            val currentId = if (stillSameMonth)
+                prefs.getLong(historyCursorId, -1L) else -1L
+            if (Pair(currentAt, currentId) != originalCursor)
+                return@synchronized 0
+            try {
+                val queue = read(context)
+                // Decrypt the excluded-sender list once per historical page.
+                val excluded = readExcluded(context)
+                val excludedNames = HashSet<String>(excluded.length() * 2 + 1)
+                for (i in 0 until excluded.length()) {
+                    excludedNames.add(normalizedSender(excluded.getString(i)))
+                }
+                val existingIds = HashSet<String>(queue.length() * 2 + 1)
+                for (i in 0 until queue.length()) {
+                    existingIds.add(queue.getJSONObject(i).getString("id"))
+                }
+                var examined = 0
+                var accepted = 0
+                var stoppedForCapacity = false
+                var nextAt = originalCursor.first
+                var nextId = originalCursor.second
+                for (row in rows.take(maxRead)) {
+                    if (queue.length() >= maxCandidates) {
+                        stoppedForCapacity = true
+                        break
+                    }
+                    if (!excludedNames.contains(normalizedSender(row.sender)) &&
+                        qualifies(row.sender, row.body)) {
+                        val fingerprint = id(row.sender, row.body, row.identityAt)
+                        if (!existingIds.contains(fingerprint) &&
+                            !isCommittedLocked(context, fingerprint) &&
+                            !isExcludedMessageLocked(context, fingerprint) &&
+                            !isCompletedTransferLocked(context, fingerprint)) {
+                            val sensitive = otp.containsMatchIn(row.body)
+                            val masked = if (sensitive)
+                                row.body.trim().replace(Regex("[0-9٠-٩۰-۹]+"), "••••")
+                                else row.body.trim()
+                            queue.put(JSONObject().put("id", fingerprint)
+                                .put("sender", row.sender.trim()).put("body", masked)
+                                .put("sensitiveOtp", sensitive)
+                                .put("receivedAt", row.receivedAt)
+                                .put("reviewNotified", true))
+                            existingIds.add(fingerprint)
+                            accepted++
+                        }
+                    }
+                    examined++
+                    nextAt = row.receivedAt
+                    nextId = row.rowId
+                }
+                val complete = !stoppedForCapacity &&
+                    rows.size <= maxRead && examined == rows.size
+                val previousExamined = if (stillSameMonth)
+                    prefs.getLong(historyScannedCount, 0L) else 0L
+                val previousAdded = if (stillSameMonth)
+                    prefs.getLong(historyAddedCount, 0L) else 0L
+                val editor = prefs.edit()
+                    .putLong(historyCursorAt, nextAt)
+                    .putLong(historyCursorId, nextId)
+                    .putLong(historySourceMonth, start)
+                    .putLong(historyScannedCount, previousExamined + examined)
+                    .putLong(historyAddedCount, previousAdded + accepted)
+                    .putBoolean(historyComplete, complete)
+                if (complete) editor.putBoolean(historyInitialCompleted, true)
+                if (accepted > 0)
+                    editor.putString(queueName, seal(queue.toString()))
+                if (!editor.commit()) return@synchronized 0
+                accepted
+            } catch (_: Exception) {
+                // Never overwrite earlier ciphertext or advance a failed scan.
+                0
+            }
         }
-        return accepted
     }
 
     /** Claim each review notification once; history never floods the shade. */

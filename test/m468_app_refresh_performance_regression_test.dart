@@ -24,7 +24,10 @@ void main(){
   expect(s,contains('WaffraExternalMediaSession.shouldSkipResumeBackgroundWork'));
   expect(s,contains('importMonth:!_autoSmsHistoryComplete'));
   expect(s,contains('unawaited(_syncWidgetTransactions());'));
-  expect(s,contains('unawaited(_refreshAutoSmsInbox(importMonth:!_autoSmsHistoryComplete));'));
+  final resume=s.split('void _m468OnResume(){')[1]
+   .split('@override void initState()')[0];
+  expect(resume,contains('unawaited(_refreshAutoSmsInbox());'));
+  expect(resume,isNot(contains('importMonth:')));
   expect(s,isNot(contains(
    'onResume:(){unawaited(_syncWidgetTransactions());unawaited(_refreshAutoSmsInbox(importMonth:true));}')));
  });

@@ -8,7 +8,7 @@ void main() {
   final native=File('native/WaffraAutoSmsStore.kt').readAsStringSync();
   final activity=File('native/WaffraMainActivity.kt').readAsStringSync();
   final bridge=File('lib/waffra_auto_sms.dart').readAsStringSync();
-  expect(native,contains('private const val maxCandidates = 500'));
+  expect(native,contains('private const val maxCandidates = 1000'));
   expect(native,contains('historyScannedCount'));
   expect(native,contains('historyAddedCount'));
   expect(native,contains('fun scanProgress(context: Context)'));

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:isolate';
 import 'dart:math';
 import 'package:crypto/crypto.dart' as legacy_crypto;
 import 'package:cryptography/cryptography.dart';
@@ -87,7 +88,16 @@ abstract final class WaffraLocalPhoneCredentials {
  static bool validPassword(String pass)=>utf8.encode(pass).length>=8&&
    utf8.encode(pass).length<=128&&!pass.contains('\u0000');
 
- static Future<List<int>> _derive(String password,List<int> salt) async {
+ // M547 PERF-04: PBKDF2 intentionally retains all 600000 rounds and the
+ // same verifier bytes. Its CPU work must never block Flutter's UI isolate.
+ // No storage plugins, user records or platform channels run in this isolate.
+ // Never cache, log or persist plaintext passwords or derived keys.
+ static Future<List<int>> _derive(String password,List<int> salt) =>
+  Isolate.run<List<int>>(
+   () => _deriveInBackground(password,salt),
+   debugName:'waffra-pbkdf2-verifier');
+
+ static Future<List<int>> _deriveInBackground(String password,List<int> salt)async{
   final key=await Pbkdf2(macAlgorithm:Hmac.sha256(),
    iterations:_iterations,bits:256).deriveKey(
     secretKey:SecretKey(utf8.encode(password)),nonce:salt);

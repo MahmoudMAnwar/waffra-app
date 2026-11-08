@@ -288,9 +288,20 @@ class MainActivity : FlutterFragmentActivity() {
                 "pauseAutoSmsForSignOut" ->
                     result.success(WaffraAutoSmsStore.suspendForSignOut(this))
                 "resumeAutoSmsAfterSignIn" -> {
-                    val resumed = WaffraAutoSmsStore.resumeForSameSignedInOwner(this)
-                    if (resumed) WaffraAutoSmsWorker.enqueue(this)
-                    result.success(resumed)
+                    // M547 PERF-04: never wait for the encrypted history
+                    // queue's mutex or synchronous preferences commits on
+                    // Android's main thread during verified login.
+                    val app = applicationContext
+                    smsHistoryExecutor.execute {
+                        try {
+                            val resumed = WaffraAutoSmsStore.resumeForSameSignedInOwner(app)
+                            if (resumed) WaffraAutoSmsWorker.enqueue(app)
+                            runOnUiThread { result.success(resumed) }
+                        } catch (_: Exception) {
+                            runOnUiThread { result.error("SMS_RESUME_UNAVAILABLE",
+                                "Unable to restore bank SMS consent", null) }
+                        }
+                    }
                 }
                 "autoSmsNotificationsEnabled" ->
                     result.success(WaffraAutoSmsNotifications.canNotify(this))
@@ -329,15 +340,24 @@ class MainActivity : FlutterFragmentActivity() {
                     }
                 }
                 "setAutoSmsEnabled" -> {
+                    // First-run permissions must not freeze biometric/Home
+                    // animations while AES or SharedPreferences takes a lock.
                     val allow = call.arguments as? Boolean ?: false
-                    val saved = WaffraAutoSmsStore.enable(this, allow)
-                    if (saved && allow) WaffraAutoSmsWorker.enqueue(this)
-                    result.success(saved)
+                    val app = applicationContext
+                    smsHistoryExecutor.execute {
+                        try {
+                            val saved = WaffraAutoSmsStore.enable(app, allow)
+                            if (saved && allow) WaffraAutoSmsWorker.enqueue(app)
+                            runOnUiThread { result.success(saved) }
+                        } catch (_: Exception) {
+                            runOnUiThread { result.error("SMS_CONSENT_UNAVAILABLE",
+                                "Unable to update bank SMS consent", null) }
+                        }
+                    }
                 }
                 "restartCompletedSmsHistory" -> {
-                    // Explicit Rescan rechecks previously filtered rows only
-                    // after the earlier cursor has reached the inbox end.
-                    // Do not re-read all first 2000 rows forever when incomplete.
+                    // Legacy compatibility method. New-only Rescan no longer
+                    // resets a completed or incomplete history cursor.
                     val app = applicationContext
                     smsHistoryExecutor.execute {
                         try {
