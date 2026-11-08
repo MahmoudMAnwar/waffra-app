@@ -2776,3 +2776,8 @@ M550 early CI proof (2026-11-08): First exact-HEAD M550 run audited 107 workflow
 - Consolidated Draft #490 (M548 review/signup latency, SMS exclusions and native integrity/Gradle/Kotlin CI repairs through M558) into the owner-approved screenshot UI PR #497. Its merge commit 9642395 has the exact latest #490 head as second parent; no CI fix, financial source, encrypted data or original positive test was dropped.
 - Re-targeted #497 directly to main and closed now-redundant #490 without deleting its code or branch. This release-note-only synchronize commit deliberately triggers main-targeted PR workflows to test the combined code at ONE new exact SHA; historical #490 green 75/0/1 does NOT prove this new head passes.
 - No main merge or APK release until mandatory exact-head CI plus physical Android performance and owner screenshot acceptance. Issue #495 first-time last-four link, original SMS transaction timestamp and one-tap yes/no confirmation remains incomplete.
+
+
+[M560 exact-main PR M385 positive scope repair] 2026-11-08
+- Full M174 source guard rejected a zero-width baseline section around newly inserted M549 three-card Home helper. The start anchor is now the single unique existing adjacent receipt action key rather than its final unchanged closing braces; end stays at `Widget dashboard(){`. Old + new are both uniquely bounded and nonempty. No app runtime, financial writer, tests, security guard or original data changed.
+- M550's independent reviewed notification source-to-test contract is retained; exact-head M385/M550/Flutter/Android still mandatory.
