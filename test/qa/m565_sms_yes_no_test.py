@@ -7,14 +7,15 @@ SOURCE=(Path(__file__).resolve().parents[2]/'lib/main.dart').read_text(encoding=
 class SmsYesNoTest(unittest.TestCase):
  def test_yes_no_with_preview_and_no_guessing(self):
   for value in ('هل العملية صحيحة؟',"Key('m565-sms-no-edit')",
-   "Key('m565-sms-yes-confirm')",'onPressed:canConfirm?',
+   "Key('m565-sms-yes-confirm')",'onPressed:canConfirm&&reviewedAccount?.ids?.single!=null&&',
    "decision=='yes'", "decision=='no'",'originalDate=bankSmsDate(body)',
    "originalAmount.currency=='SAR'",'previewLeaves=categories.where((c)=>',
    'previewLeaves.length==1&&', 'previewParents.length==1'):
    self.assertIn(value,SOURCE)
  def test_authoritative_commit(self):
   body=SOURCE.split('Future<void> _m565ConfirmSms(',1)[1].split('Future<void> _reviewAutoSmsCandidates(',1)[0]
-  for value in ('reviewSmsAccountLinks([reviewed],smsSender:sender)',
+  for value in ('required ({List<String?>? ids,int? generation}) selectedAccount',
+   'final chosen=selectedAccount;', 'selectedAccount.ids!.single',
    'reviewSmsBudgetLinks([record])','_financeAuthority.commitConfirmedSms(',
    'expectedAccountGeneration:chosen.generation','allowDuplicateHashes:false',
    'acknowledgeCommitted([id])','sourceType:\'sms\'',
