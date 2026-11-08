@@ -207,6 +207,11 @@ abstract final class WaffraLocalPhoneCredentials {
    // original phone+password cryptographic challenge below.
    final record=await deriveRecord(phone:phone,password:password);
    final encoded=jsonEncode(record);
+   // Recheck after the expensive derivation; an overlapping enrollment must
+   // never silently rotate a verifier that appeared while the worker ran.
+   if(await _readVerifier()!=null){
+    throw StateError('local_credentials_already_exist');
+   }
    await _store.write(key:_key,value:encoded);
    final persisted=await _store.read(key:_key);
    if(persisted==null||
