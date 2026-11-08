@@ -22,6 +22,10 @@ jobs:
         with:
           channel: stable
           cache: true
+      - name: Prefetch SHA256-verified official SQLite3MC native release assets
+        uses: ./.github/actions/prefetch-sqlite3mc
+        with:
+          github-token: ${{ github.token }}
       - run: flutter pub get
       - name: Analyze production authority and receipt test
         run: dart analyze lib/storage/waffra_verified_finance_authority.dart test/storage/m115_encrypted_receipt_authority_test.dart

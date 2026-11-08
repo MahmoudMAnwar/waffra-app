@@ -31,6 +31,10 @@ jobs:
         with:
           channel: stable
           cache: true
+      - name: Prefetch SHA256-verified official SQLite3MC native release assets
+        uses: ./.github/actions/prefetch-sqlite3mc
+        with:
+          github-token: ${{ github.token }}
       - run: flutter pub get
       - name: Verify new phone/password and no guest/social registration
         run: flutter test --reporter expanded test/m422_phone_only_auth_entry_test.dart test/m424_mandatory_biometrics_test.dart test/m426_local_phone_credentials_test.dart test/m428_local_account_migration_test.dart

@@ -45,6 +45,10 @@ jobs:
         with:
           channel: stable
           cache: true
+      - name: Prefetch SHA256-verified official SQLite3MC native release assets
+        uses: ./.github/actions/prefetch-sqlite3mc
+        with:
+          github-token: ${{ github.token }}
       - run: flutter pub get
       - name: Strict analyze actual widget and main route
         run: dart analyze lib/waffra_widget_capture.part.dart test/m108_home_widget_one_finance_writer_test.dart

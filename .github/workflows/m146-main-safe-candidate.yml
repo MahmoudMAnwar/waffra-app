@@ -76,6 +76,10 @@ jobs:
         with:
           channel: stable
           cache: true
+      - name: Prefetch SHA256-verified official SQLite3MC native release assets
+        uses: ./.github/actions/prefetch-sqlite3mc
+        with:
+          github-token: ${{ github.token }}
       - name: Resolve Flutter packages
         run: flutter pub get
       - name: Run approved UI and backup regression suites

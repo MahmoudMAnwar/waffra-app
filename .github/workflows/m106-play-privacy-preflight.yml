@@ -79,6 +79,10 @@ jobs:
         with:
           channel: stable
           cache: true
+      - name: Prefetch SHA256-verified official SQLite3MC native release assets
+        uses: ./.github/actions/prefetch-sqlite3mc
+        with:
+          github-token: ${{ github.token }}
       - run: flutter pub get
       - name: Strict analysis of diagnostic data boundary and tests
         run: dart analyze lib/diagnostics/waffra_private_release_diagnostics.dart test/m106_diagnostics_privacy_gate_test.dart
