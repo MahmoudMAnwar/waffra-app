@@ -125,7 +125,21 @@ class M442SmsConsentSessionRecovery(unittest.TestCase):
         self.assertIn('await WaffraAutoSms.resumeAfterSignIn();', home)
         self.assertIn('await _accountWriteAuthority.saveProfile(', home)
         self.assertIn('await _accountWriteAuthority.signOut();', home)
-        self.assertIn('if(Platform.isAndroid)await WaffraAutoSms.resumeAfterSignIn();', home)
+        # M603: verified SMS resume is now scheduled only after Home paint;
+        # no synchronous wait on the login/navigation critical path.
+        save_user = home[home.index(' Future<void> saveUser(Person u)async {'):
+                         home.index(' Future<void> setUiCountry(')]
+        self.assertIn('await _accountWriteAuthority.saveProfile(', save_user)
+        self.assertIn('if(Platform.isAndroid&&mounted){', save_user)
+        self.assertIn('WidgetsBinding.instance.addPostFrameCallback((_){', save_user)
+        self.assertIn('if(!mounted||profile==null||showLogin)return;', save_user)
+        self.assertIn('unawaited(()async{', save_user)
+        self.assertIn('final resumed=await WaffraAutoSms.resumeAfterSignIn();', save_user)
+        self.assertIn('if(resumed&&mounted&&!showLogin&&identical(profile,u)){', save_user)
+        self.assertLess(save_user.index('await _accountWriteAuthority.saveProfile('),
+                        save_user.index('WidgetsBinding.instance.addPostFrameCallback((_){'))
+        self.assertLess(save_user.index('WidgetsBinding.instance.addPostFrameCallback((_){'),
+                        save_user.index('final resumed=await WaffraAutoSms.resumeAfterSignIn();'))
         self.assertNotIn('requestAutoSmsPermission', home[home.index('Future<void> saveUser('):
                                                             home.index('Future<void> setUiCountry(')])
 
