@@ -1083,6 +1083,12 @@ object WaffraAutoSmsStore {
                 return@synchronized 0
             try {
                 val queue = read(context)
+                // Decrypt the excluded-sender list once per historical page.
+                val excluded = readExcluded(context)
+                val excludedNames = HashSet<String>(excluded.length() * 2 + 1)
+                for (i in 0 until excluded.length()) {
+                    excludedNames.add(normalizedSender(excluded.getString(i)))
+                }
                 val existingIds = HashSet<String>(queue.length() * 2 + 1)
                 for (i in 0 until queue.length()) {
                     existingIds.add(queue.getJSONObject(i).getString("id"))
@@ -1097,7 +1103,7 @@ object WaffraAutoSmsStore {
                         stoppedForCapacity = true
                         break
                     }
-                    if (!isExcludedLocked(context, row.sender) &&
+                    if (!excludedNames.contains(normalizedSender(row.sender)) &&
                         qualifies(row.sender, row.body)) {
                         val fingerprint = id(row.sender, row.body, row.identityAt)
                         if (!existingIds.contains(fingerprint) &&
