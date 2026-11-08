@@ -2919,3 +2919,11 @@ M550 early CI proof (2026-11-08): First exact-HEAD M550 run audited 107 workflow
 - On PR #505, after owner approval of seven feedback items #498-#504, hardened existing SMS fee fact parsing: an explicitly non-SAR fee (e.g. USD/AED), a malformed/negative fee, or an over-precision fee may not be interpreted as SAR or dropped while posting principal-only transfer. It remains pending, requiring explicit safe review; no ledger or SMS ACK on those errors.
 - Expanded synthetic fee regressions in test/m580_sms_security_navigation_performance_test.dart. Scope conforms to existing bounded M385 parser section and approved test-file list.
 - Remaining: independent atomic transfer + separate fee expense + source SMS fingerprint rollback and dedup (including 19.00+0.58, 1900.00+0.58), compact review parity, all latest-head CI and 2 real Android devices with existing data preserved. No successful CI or on-device performance proof claimed; Draft #505 must not be merged/released yet.
+
+
+M597 – PR #505 / Seven Owner Feedback Items #498–#504 (2026-11-08, SOURCE PENDING CERTIFICATION)
+- Added verified one-transaction own-account SMS transfer + separate SAR bank fee expense + native SMS SHA256 fingerprint, with typed SQL and authoritative SQLCipher snapshot parity checks, exactly-once semantics, user-confirmed inclusive/separate fee, strict stale witness and category rejection.
+- Added exact SMS date and time picker for ambiguous original transaction timestamps; received-at time is a hint, never silently posted as bank execution date.
+- Added fees 19.00+0.58, 1900.00+0.58, fractional halalah guard and source-contract test. Transfer principal remains outside budget spend and fee is a separate expense.
+- M385 declared new storage file scopes; M550 contract updated to match new behavior without weakening finance/security tests.
+- NOT YET CERTIFIED: every exact HEAD workflow, comprehensive actual SQLite/Drift rollback integration and both Android devices new install + update preserving existing financial history, UI frame metrics and owner final visual approval. Remain Draft; NO main merge/release claims.
