@@ -39,4 +39,24 @@ void main() {
   expect(button,contains('CircularProgressIndicator('));
   expect(button,contains("'جارٍ تسجيل الدخول'"));
  });
+
+ test('Android SMS re-enable and resume do not block main-thread login frames', () {
+  final source=File('native/WaffraMainActivity.kt').readAsStringSync();
+  final resumed=source.split('"resumeAutoSmsAfterSignIn" -> {')[1]
+   .split('"autoSmsNotificationsEnabled"')[0];
+  final consent=source.split('"setAutoSmsEnabled" -> {')[1]
+   .split('"restartCompletedSmsHistory"')[0];
+  for(final section in [resumed,consent]){
+   expect(section,contains('val app = applicationContext'));
+   expect(section,contains('smsHistoryExecutor.execute {'));
+   expect(section,contains('runOnUiThread { result.success('));
+   expect(section,contains('runOnUiThread { result.error('));
+  }
+  expect(resumed,contains('WaffraAutoSmsStore.resumeForSameSignedInOwner(app)'));
+  expect(consent,contains('WaffraAutoSmsStore.enable(app, allow)'));
+  // Never change the original confirmed signout method.
+  expect(source,contains(
+   'result.success(WaffraAutoSmsStore.suspendForSignOut(this))'));
+ });
+
 }
