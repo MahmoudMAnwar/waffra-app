@@ -11,9 +11,9 @@ runs:
       uses: actions/cache@v4
       with:
         path: ~/.gradle/wrapper/dists/gradle-9.3.1-all
-        key: waffra-verified-gradle-9.3.1-all-v554-\${{ runner.os }}-\${{ runner.arch }}
+        key: waffra-verified-gradle-9.3.1-all-v554-${{ runner.os }}-${{ runner.arch }}
     - name: SHA256-verify exact upstream Gradle ZIP and seed wrapper cache
       shell: bash
       env:
-        GH_TOKEN: \${{ inputs.github-token }}
+        GH_TOKEN: ${{ inputs.github-token }}
       run: bash scripts/qa/prefetch_verified_gradle.sh
