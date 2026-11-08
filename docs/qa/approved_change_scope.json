@@ -6,7 +6,8 @@
     "Issue #506: Fix the real Android post-tap disappearing/empty login CTA; pending/disabled progress and Arabic/English text must remain visible with no double-submit.",
     "Issue #506: Reduce redundant secure-storage calls in the phone login hot path without bypassing the OS verifier, 600000-round PBKDF2 off UI isolate, different-phone rejection, or biometric recovery.",
     "Issue #506: Capture profile-only sign-in stage timings without personal information and require real Android first-signin, logout and whole-app frame profiling before declaring a smooth release.",
-    "Issue #506: Add source plus actual Flutter widget regressions for disabled visual states and preserve existing signed-out Yes/No behavior."
+    "Issue #506: Add source plus actual Flutter widget regressions for disabled visual states and preserve existing signed-out Yes/No behavior.",
+    "Issue #506: Immediately after the existing Yes/No sign-out confirmation paint a guarded progress veil, block repeated buttons, and always remove it on safe success or failure."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -25,6 +26,10 @@
       {
         "start": "FilledButton(onPressed:WaffraHaptics.tap(signingIn?null:_signIn),",
         "end": "          key:const Key('m479-login-back-to-choice'),"
+      },
+      {
+        "start": " Future<void> logout()async {",
+        "end": " Future<void> setPin("
       }
     ]
   }
