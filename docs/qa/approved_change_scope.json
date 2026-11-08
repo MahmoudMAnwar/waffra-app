@@ -61,7 +61,8 @@
     "M571 #495: finance critical-source M340 gate must verify four, not three, live SQLCipher SMS writers after new owner-reviewed Yes confirmation. Require in new fourth route verified account picker/witness, optional budget, source timestamp/SAR, user consent, duplicate hash rejection and native ACK after save; negative mutation tests protect against a fake update. No bypass of source-finance critical gate.",
     "M572 fix M385 M340 protected-section anchor: start before unchanged unique production-gate path declaration, end at original for marker check, identical in baseline and head. Do not relax source financial security check.",
     "M573 #495: reviewed SMS No -> editable path forwards bank sender to verified account chooser, learns sender+masked-last-four only after successful encrypted SQLCipher commit, not preview/cancel. No new financial debit and exact account witness unchanged.",
-    "M574 #495: make one-tap SMS confirmation show original merchant/title, sender, income/expense, source SAR amount, main and leaf subcategory, masked bank last four, and full original transaction date+time; account remains explicitly chosen/verified before commit. Keep compact Home and existing + unchanged. Add exact-head regression."
+    "M574 #495: make one-tap SMS confirmation show original merchant/title, sender, income/expense, source SAR amount, main and leaf subcategory, masked bank last four, and full original transaction date+time; account remains explicitly chosen/verified before commit. Keep compact Home and existing + unchanged. Add exact-head regression.",
+    "M575 update M565 SMS positive regression to assert stronger main + valid subcategory membership after M574 detailed review preview, rather than obsolete same-line source text; checks retained and strengthened, no skip."
   ],
   "allowed_changed_files": [
     ".github/workflows/finance-full-regression.yml",

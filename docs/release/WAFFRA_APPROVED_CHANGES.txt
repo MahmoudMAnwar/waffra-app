@@ -2842,3 +2842,7 @@ M550 early CI proof (2026-11-08): First exact-HEAD M550 run audited 107 workflow
 
 [M574 #495 complete SMS pre-save review] 2026-11-08
 - Reviewed bank SMS Yes/No preview now shows parsed description, sender, type, SAR amount, main/leaf category, source masked account last four (or manual-account warning), and original bank date including hours and minutes. Account confirmation is separate and mandatory; one-tap source-authorized finance guard preserved. M574 regression, CI/Android pending.
+
+
+[M575 strengthened M565 test after M574 preview] 2026-11-08
+- Old M565 test searched for a now obsolete one-line categories.where expression; M574 intentionally split out a validated leaf and confirmed parent. Replace stale literal with three positive validations of the actual previewLeaves and previewParents gates. Preserve all other financial writer and duplicate checks, no skipping.

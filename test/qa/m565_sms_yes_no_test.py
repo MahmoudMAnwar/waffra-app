@@ -9,7 +9,8 @@ class SmsYesNoTest(unittest.TestCase):
   for value in ('هل العملية صحيحة؟',"Key('m565-sms-no-edit')",
    "Key('m565-sms-yes-confirm')",'onPressed:canConfirm?',
    "decision=='yes'", "decision=='no'",'originalDate=bankSmsDate(body)',
-   "originalAmount.currency=='SAR'",'categories.where((c)=>c.income==expectedIncome'):
+   "originalAmount.currency=='SAR'",'previewLeaves=categories.where((c)=>',
+   'previewLeaves.length==1&&', 'previewParents.length==1'):
    self.assertIn(value,SOURCE)
  def test_authoritative_commit(self):
   body=SOURCE.split('Future<void> _m565ConfirmSms(',1)[1].split('Future<void> _reviewAutoSmsCandidates(',1)[0]
