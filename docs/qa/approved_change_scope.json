@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "change_id": "M580-M591-SEVEN-FEEDBACK-SECURE-SMS-UX-PERFORMANCE-PR505",
+  "change_id": "M580-M593-SEVEN-FEEDBACK-PERFORMANCE-PR505",
   "human_scope_review": "Owner explicitly authorized implementing issues #498 through #504 on 2026-11-08 and prioritizing lag after every tap; preserve approved visual references, unchanged floating +, exact SQLCipher finance integrity, OTP masking, both device data, native sender-exclusion consent and all existing tests. This branch contains only early partial source changes plus true regression contracts, not approval to merge until exact-head CI and Android evidence.",
   "user_requested_changes": [
     "#498 Keep a stable visibly loading login button and preserve secure, responsive first registration with no double submission or weakened password controls.",
@@ -11,7 +11,8 @@
     "#503 Preserve verified account-to-account transfer writer and source account/fee checks while remaining three-choice UX work is tracked as incomplete.",
     "#504 Replace blank Home loading, remove unavoidable 1000-SMS rereads after cancel and clip-free currency circle in compact approved monthly summary; keep full financial source verification.",
     "#500/#501 Owner-approved Arabic naming for excluded rules/messages and shared conservative OTP/temporary-code handling across offline ML and bank parsers.",
-    "M591: update M340, M565 and M177 source contracts to require the owner-approved verified SMS account BEFORE Yes and fresh encrypted witness, rather than obsolete post-Yes picker. Preserve all finance-hash, account-generation and negative tests."
+    "M591: update M340, M565 and M177 source contracts to require the owner-approved verified SMS account BEFORE Yes and fresh encrypted witness, rather than obsolete post-Yes picker. Preserve all finance-hash, account-generation and negative tests.",
+    "#498/#504 Smooth signup submit and prevent verified manual/SMS ledger display model mapping from monopolizing frames after confirmation."
   ],
   "allowed_changed_files": [
     "docs/qa/approved_change_scope.json",
@@ -69,6 +70,10 @@
       {
         "start": "  body:_financeLoadFailure!=null?_financialRecoveryScreen():",
         "end": "   Stack(clipBehavior:Clip.none,children:[GestureDetector("
+      },
+      {
+        "start": " Future<void> entrySheet({MoneyEntry? initial,bool sms=false,String? initialSms,",
+        "end": " Future<void> showReceipt(String encoded,{int initialIndex=0,String? entryId})async {"
       }
     ],
     "lib/waffra_bank_sms_facts.dart": [
