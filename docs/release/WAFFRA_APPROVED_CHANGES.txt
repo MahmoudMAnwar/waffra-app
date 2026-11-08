@@ -2751,3 +2751,7 @@ M550 early CI proof (2026-11-08): First exact-HEAD M550 run audited 107 workflow
 
 [M555 Gradle repository API fix] 2026-11-08
 - M147 ARM64 log proved Gradle 9.3.1 compiled the initialization script but failed on nested `maven()` in `ExclusiveContentRepositorySpec`. Updated the CI-only beforeSettings script to create the pinned exact official Maven repository via `settings.dependencyResolutionManagement.repositories.maven` first, then use the supported `exclusiveContent { forRepositories(verifiedMaven) }` API, filtering exactly Kotlin compiler 2.2.21. No financial code, plugin versions, tests or Gradle strict policy changed. Verify on next exact SHA before merge.
+
+
+[M556 Kotlin compiler multi-version CI fix] 2026-11-08
+- M202 real Android emulator reached Kotlin compilation but firebase_core requested kotlin-compiler-embeddable:2.4.0 (SHA256 c2b25e8c1c93ec416ba4327f5e31eaec0f0c8847241b9353e294b8db9dce564f) while existing Flutter plugin build uses 2.2.21 (SHA256 9588fa...). Both original published JetBrains JAR/POM versions now prefetch and verify fail-closed via official Release API and Maven POM checks; exact-module settings repository lists ONLY both versions. Cache key changed to v556; app Kotlin/Gradle versions and finance tests unchanged. Requires fresh exact-head CI validation.

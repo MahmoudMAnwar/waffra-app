@@ -21,7 +21,7 @@ runs:
       uses: actions/cache@v4
       with:
         path: ~/.gradle/waffra-verified-maven
-        key: waffra-verified-jetbrains-kotlin-compiler-2.2.21-v555-${{ runner.os }}-${{ runner.arch }}
+        key: waffra-verified-jetbrains-kotlin-compiler-2.2.21-and-2.4.0-v556-${{ runner.os }}-${{ runner.arch }}
     - name: Install SHA256-pinned official Kotlin compiler artifact locally for Gradle
       shell: bash
       env:
