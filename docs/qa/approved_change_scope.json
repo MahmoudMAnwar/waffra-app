@@ -50,7 +50,8 @@
     "M561: fix actual M429 Flutter analyzer failure after user-approved removal of legacy Home SMS review card and old metric tiles. Keep the private legacy review widget for compatibility with a narrowly-scoped Dart unused_element ignore, and delete only now-unused dashboard income/expense local variables; preserve account-filter source and all financial logic. Test old/new M385 source boundaries without globally disabling lints.",
     "M562: fix real failed M278 macOS iOS simulator job. The official sqlite3mc prefetch script uses GNU-only `sha256sum --check --status`, but macOS runner has incompatible sha256sum shim and reports a false SHA mismatch before downloading. Use platform-compatible shasum -a 256 (or sha256sum fallback) and compare full expected pinned SHA256 exactly, retaining official release download and all native integrity gates. Do not skip iOS job.",
     "M563: update M552 regression to assert real cross-platform native pinned SHA256 verification (success, wrong hash rejection, tampered-file rejection) instead of obsolete GNU-only `sha256sum --check --status` source-string assertion, which incorrectly fails M174 after the macOS repair. Keep all five immutable official asset pins, official source, mandatory Flutter/Android/iOS jobs, and separate llama SHA tests.",
-    "M564 #495: refuse bank SMS verified finance posting when original message date is missing/ambiguous; preserve actual bank transaction timestamp rather than DateTime.now on both single and batch writer, add regression and tracker."
+    "M564 #495: refuse bank SMS verified finance posting when original message date is missing/ambiguous; preserve actual bank transaction timestamp rather than DateTime.now on both single and batch writer, add regression and tracker.",
+    "M564 exact timestamp correction scope: bounded bulkSmsSheet section only, containing original bank SMS date validation and source-authoritative writer; original data and unrelated app UI untouched."
   ],
   "allowed_changed_files": [
     ".github/workflows/finance-full-regression.yml",
@@ -244,6 +245,10 @@
       {
         "start": "     child:WaffraReceiptCornerAction(\n      key:Key('waffra-receipt-corner-home-'+entry.id),",
         "end": " Widget dashboard(){"
+      },
+      {
+        "start": " Future<void> bulkSmsSheet({String? initialText",
+        "end": " BuildContext? activeSmsContext;"
       }
     ],
     "lib/waffra_local_phone_credentials.dart": [

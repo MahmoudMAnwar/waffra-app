@@ -2798,3 +2798,7 @@ M550 early CI proof (2026-11-08): First exact-HEAD M550 run audited 107 workflow
 
 [M564 #495 original SMS date] 2026-11-08
 - Single and batch bank SMS verified financial saving now fail-closed on missing/ambiguous source date, rather than substituting today's timestamp. Exact parsed date retained on commit. Added test/qa/m564_sms_exact_date_guard_test.py and #495 requirements entry. Account linking and verified SQLCipher source unchanged. Not yet CI/device certified.
+
+
+[M564 source-bounded CI parity] 2026-11-08
+- Explicitly bound the #495 SMS batch finance-review function in M385 approved source scope. The exact old source outside reviewed functions must remain byte-identical. Existing tests remain required, no CI gate bypass.
