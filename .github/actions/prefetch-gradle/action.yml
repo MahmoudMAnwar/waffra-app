@@ -17,3 +17,13 @@ runs:
       env:
         GH_TOKEN: ${{ inputs.github-token }}
       run: bash scripts/qa/prefetch_verified_gradle.sh
+    - name: Restore official Kotlin compiler Maven artifact cache
+      uses: actions/cache@v4
+      with:
+        path: ~/.gradle/waffra-verified-maven
+        key: waffra-verified-jetbrains-kotlin-compiler-2.2.21-v555-${{ runner.os }}-${{ runner.arch }}
+    - name: Install SHA256-pinned official Kotlin compiler artifact locally for Gradle
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+      run: bash scripts/qa/prefetch_verified_kotlin.sh

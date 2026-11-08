@@ -783,3 +783,7 @@ M274 must also trigger on `docs/release/WAFFRA_APPROVED_CHANGES.txt` changes bec
 
 ### M554 — Android CI Gradle download integrity — 2026-11-08
 - In all Android compilation/emulator jobs affected by the intermittent GitHub 504, preseed the **original** Gradle 9.3.1-all ZIP via the official GitHub Release API, with official SHA256 pin; fail closed if any source is unavailable or the digest differs. Never change Gradle/SQLCipher app versions or skip Android security tests to make CI pass. Linked to PR #490.
+
+
+### M555 — Exact Kotlin compiler artifact recovery in Android CI — 2026-11-08
+- For HTTP 504 on `org.jetbrains.kotlin:kotlin-compiler-embeddable:2.2.21`, cache only JetBrains' official SHA256-pinned JAR plus validated original POM in an exact-module, CI-only Gradle local Maven source. Do not substitute Kotlin versions, modify project Gradle files, disable security, or skip emulator tests. Review real compile output and preserve source provenance. PR #490.

@@ -21,6 +21,14 @@ class VerifiedGradleCache(unittest.TestCase):
         action=(ROOT/'.github/actions/prefetch-gradle/action.yml').read_text()
         self.assertIn('uses: actions/cache@v4',action)
         self.assertIn('bash scripts/qa/prefetch_verified_gradle.sh',action)
+        kotlin=(ROOT/'scripts/qa/prefetch_verified_kotlin.sh').read_text()
+        self.assertIn("upstream='JetBrains/kotlin'",kotlin)
+        self.assertIn("release='v2.2.21'",kotlin)
+        self.assertIn("expected='9588fa696ac5507af764fd5660df6894185e12704ec1bc3f5cb772af4987f295'",kotlin)
+        self.assertIn('sha256sum --check --status',kotlin)
+        self.assertIn('sha1sum --check --status',kotlin)
+        self.assertIn("includeVersion('org.jetbrains.kotlin', 'kotlin-compiler-embeddable', '2.2.21')",kotlin)
+        self.assertIn('bash scripts/qa/prefetch_verified_kotlin.sh',action)
 
     def test_critical_android_jobs_prefetch_verified_gradle(self):
         critical={

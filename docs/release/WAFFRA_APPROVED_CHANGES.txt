@@ -2737,3 +2737,9 @@ M550 early CI proof (2026-11-08): First exact-HEAD M550 run audited 107 workflow
 
 [M553 follow-up] 2026-11-08 — Ensure native cache is staged AFTER dependency installation
 - Logs from M119 proved the official llamadart archive passed SHA256 but subsequent `flutter pub get` reinstalled its package root and discarded the preseeded archive, forcing a new failing download. The shared CI prefetch action now runs Flutter package resolution before archive-cache restore and official SHA256 prefetch; existing per-job pub get becomes idempotent and original test suites stay unchanged. Evidence requires a new exact-head CI run, no passing claim in advance.
+
+
+[M555: Gradle Kotlin compiler artifact / CI only] 2026-11-08
+- The complete Android compile matrix passed verified Gradle ZIP prefetch and then encountered the identical JetBrains Kotlin 2.2.21 compiler-embeddable JAR GitHub release redirect HTTP 504 in M417, M120, Android encrypted storage and M274. Kept the original Gradle and Kotlin version; no app changes.
+- Added SHA256-pinned official JetBrains v2.2.21 JAR prefetch (9588fa696ac5507af764fd5660df6894185e12704ec1bc3f5cb772af4987f295), retained original Maven Central POM validated against its SHA1 descriptor, and a Gradle CI-only exact-module repository initialized before project evaluation. No change to other Maven dependencies, Gradle test scopes, Android signing or SQLCipher.
+- Real Gradle compilation and original on-device test validation are still required; do not claim final release pass until exact-head CI succeeds.
