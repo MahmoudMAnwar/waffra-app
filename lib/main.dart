@@ -1360,7 +1360,32 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  Future<void> logout()async {
   if(_logoutInProgress)return;
   _logoutInProgress=true;
+  final logoutTiming=kProfileMode?(Stopwatch()..start()):null;
+  // The existing Yes/No dialog is the only user confirmation. On Yes,
+  // paint immediate feedback before slow OS/SQLCipher/native shutdown, and
+  // block new taps until the owner-bound finance session is safely signed out.
+  final overlay=_logoutNavigatorKey.currentState?.overlay;
+  if(overlay!=null){
+   final progress=OverlayEntry(builder:(context)=>Positioned.fill(
+    child:Stack(children:[
+     const ModalBarrier(dismissible:false,color:Color(0xB3073F31)),
+     Center(child:Material(color:Colors.transparent,
+      child:Column(mainAxisSize:MainAxisSize.min,children:[
+       const RepaintBoundary(child:SizedBox(width:32,height:32,
+        child:CircularProgressIndicator(strokeWidth:2.5,
+         valueColor:AlwaysStoppedAnimation<Color>(Colors.white)))),
+       const SizedBox(height:12),
+       WaffraText(waffraIsEnglish?'Signing out...':'جارٍ تسجيل الخروج',
+        style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold)),
+      ]))),
+    ])));
+   _logoutProgressEntry=progress;
+   overlay.insert(progress);
+  }
   try{
+   if(_logoutProgressEntry!=null){
+    await WidgetsBinding.instance.endOfFrame;
+   }
   // M545: Yes/No is the entire logout UX. NEVER open a recovery/password
   // dialog on sign-out. Existing secure credentials remain unchanged.
   // If an older APK missed the verifier, silently stage a one-time
@@ -1438,10 +1463,19 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     'تعذر تسجيل الخروج بأمان. بياناتك المالية لم تتغير؛ حاول مرة أخرى.',
     isError:true);
   }finally{
+   // Never strand a blocking veil after success OR a fail-closed error.
+   final progress=_logoutProgressEntry;
+   _logoutProgressEntry=null;
+   progress?.remove();
+   progress?.dispose();
    _logoutInProgress=false;
+   if(kProfileMode&&logoutTiming!=null){
+    debugPrint('WAFFRA_AUTH_PERF sign_out_ms=${logoutTiming.elapsedMilliseconds}');
+   }
   }
  }
  bool _logoutInProgress=false;
+ OverlayEntry? _logoutProgressEntry;
  final _logoutFeedbackKey=GlobalKey<ScaffoldMessengerState>();
  final _logoutNavigatorKey=GlobalKey<NavigatorState>();
  void _showLogoutFeedback(String message,{bool isError=false}){
