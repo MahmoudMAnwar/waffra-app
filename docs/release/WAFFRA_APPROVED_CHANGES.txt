@@ -2790,3 +2790,7 @@ M550 early CI proof (2026-11-08): First exact-HEAD M550 run audited 107 workflow
 
 [M562 macOS iOS simulator native SHA verification fix] 2026-11-08
 - Root cause of real failing M278 ios-simulator-build-check: macOS runner's sha256sum does not support GNU `--status`, producing usage text then falsely classifying official sqlite3mc as SHA mismatch. Use portable shasum -a 256 where available, fallback sha256sum and compare full lowercase digest against exact five hard-coded upstream pins. Both cached and downloaded assets remain fail-closed, and iOS build still runs. No iOS check skipped, no native digest weakened.
+
+
+[M563 M174 obsolete M552 assertion replacement] 2026-11-08
+- Exact-head M174 preflight failed solely because M552's old source-only test demanded literal GNU `sha256sum --check --status` in the sqlite3mc prefetch script, while M562 necessarily replaced it on macOS. New test asserts the portable verifier's trusted digest tools and exact equality, executes the real bash verifier against a correct hash, incorrect pin, and corrupted native-file fixture. All five upstream pins and all official download / native / iOS checks remain mandatory; the separate llamadart check is unchanged.
