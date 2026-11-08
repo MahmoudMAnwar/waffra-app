@@ -2743,3 +2743,7 @@ M550 early CI proof (2026-11-08): First exact-HEAD M550 run audited 107 workflow
 - The complete Android compile matrix passed verified Gradle ZIP prefetch and then encountered the identical JetBrains Kotlin 2.2.21 compiler-embeddable JAR GitHub release redirect HTTP 504 in M417, M120, Android encrypted storage and M274. Kept the original Gradle and Kotlin version; no app changes.
 - Added SHA256-pinned official JetBrains v2.2.21 JAR prefetch (9588fa696ac5507af764fd5660df6894185e12704ec1bc3f5cb772af4987f295), retained original Maven Central POM validated against its SHA1 descriptor, and a Gradle CI-only exact-module repository initialized before project evaluation. No change to other Maven dependencies, Gradle test scopes, Android signing or SQLCipher.
 - Real Gradle compilation and original on-device test validation are still required; do not claim final release pass until exact-head CI succeeds.
+
+
+[M555 regression correction] 2026-11-08
+- Exact-head M417 Kotlin compile proved original M555 init script mistakenly added a project-level repository, rejected by Flutter included Gradle build's FAIL_ON_PROJECT_REPOS policy. Corrected to Gradle `beforeSettings` and `dependencyResolutionManagement.repositories.exclusiveContent` for ONLY `org.jetbrains.kotlin:kotlin-compiler-embeddable:2.2.21` in the existing locally SHA-verified official Maven cache. Preserves strict repository policy and original Gradle/Flutter/Android tests. Requires exact-head CI proof.

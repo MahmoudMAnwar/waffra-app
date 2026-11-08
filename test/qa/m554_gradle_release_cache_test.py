@@ -29,6 +29,12 @@ class VerifiedGradleCache(unittest.TestCase):
         self.assertIn('sha1sum --check --status',kotlin)
         self.assertIn("includeVersion('org.jetbrains.kotlin', 'kotlin-compiler-embeddable', '2.2.21')",kotlin)
         self.assertIn('bash scripts/qa/prefetch_verified_kotlin.sh',action)
+        # Flutter's included Gradle build enforces FAIL_ON_PROJECT_REPOS.
+        # Only settings-level exact-module routing is allowed in the init hook.
+        self.assertIn('gradle.beforeSettings { settings ->',kotlin)
+        self.assertIn('settings.dependencyResolutionManagement.repositories.exclusiveContent',kotlin)
+        self.assertNotIn('gradle.beforeProject',kotlin)
+        self.assertNotIn('project.repositories.maven',kotlin)
 
     def test_critical_android_jobs_prefetch_verified_gradle(self):
         critical={

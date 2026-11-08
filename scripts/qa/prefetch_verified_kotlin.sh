@@ -37,15 +37,20 @@ printf '%s  %s\n' "$pinned_sha1" "$work/$pom" | sha1sum --check --status || {
   echo "FATAL: Kotlin official POM digest mismatch" >&2; exit 1
 }
 install -m 0644 "$work/$pom" "$root/$pom"
-# Before each Gradle project's normal repositories, expose ONLY this exact
-# official Kotlin compiler artifact from the SHA-verified local Maven cache.
-# Transitive dependencies are resolved against the unchanged official POM.
+# Gradle/Flutter included builds can enforce FAIL_ON_PROJECT_REPOS.
+# Do not mutate Project.repositories. Register this exact official, SHA-pinned
+# Maven module at SETTINGS initialization, before settings.gradle.kts is read.
+# All other modules still use their unchanged official upstream repositories.
 cat > "$home/init.d/waffra-verified-kotlin-2.2.21.gradle" <<'GROOVY'
-gradle.beforeProject { project ->
-    project.repositories.maven {
-        name = 'WaffraPinnedOfficialKotlinCompiler'
-        url = new File(gradle.gradleUserHomeDir, 'waffra-verified-maven').toURI()
-        content {
+gradle.beforeSettings { settings ->
+    settings.dependencyResolutionManagement.repositories.exclusiveContent {
+        forRepository {
+            maven {
+                name = 'WaffraPinnedOfficialKotlinCompiler'
+                url = new File(gradle.gradleUserHomeDir, 'waffra-verified-maven').toURI()
+            }
+        }
+        filter {
             includeVersion('org.jetbrains.kotlin', 'kotlin-compiler-embeddable', '2.2.21')
         }
     }
