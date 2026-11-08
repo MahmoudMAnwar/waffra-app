@@ -21,7 +21,8 @@
     "M550 preflight caught 11 positive obsolete M470 bulk-exclusion assertions in unchanged Flutter tests on the exact current PR HEAD. Replace M470's *old 1000 sender-dialog, removed counter and old batch indexes* with stronger tests of approved M549 two-phase owner confirmation, one dialog regardless of sender count, atomic native sender-block and bounded 100-ID per-message commits. Preserve independent excluded-sender restore, OTP and native worker safety tests.",
     "M550 M385 exact-base scope repair: retain the approved M470 #7/#10 test edits and use unchanged base/head neighboring source anchors to bound the edited test methods; never disable the M385 guard.",
     "Repair the obsolete M486 #417 exact-text bulk exclusion regression to assert the existing two-step messages-only vs sender-block choice, Back cancellation and failed batch retention, without bypassing financial/security behavior.",
-    "Repair exact-head CI failed native-asset SHA256 verification for the immutable sqlite3 3.7.0 Linux sqlite3mc release by pinning vetted newer sqlite3 3.7.1 with its own upstream asset checksums; retain native hash verification, SQLCipher support and full encrypted database regression. Never bypass digest enforcement."
+    "Repair exact-head CI failed native-asset SHA256 verification for the immutable sqlite3 3.7.0 Linux sqlite3mc release by pinning vetted newer sqlite3 3.7.1 with its own upstream asset checksums; retain native hash verification, SQLCipher support and full encrypted database regression. Never bypass digest enforcement.",
+    "Diagnose the consistent SHA256 bef140a1... download response across sqlite3 3.7.0 and 3.7.1 as native release-asset delivery/network failure, not a demonstrated library hash defect; revert the attempted SQLite native version bump to retain prior encrypted database compatibility, and keep checksum enforcement blocking unsafe artifacts."
   ],
   "allowed_changed_files": [
     ".github/workflows/finance-full-regression.yml",
@@ -56,8 +57,7 @@
     ".github/workflows/m550-behavior-contract-preflight.yml",
     "docs/qa/behavior_contract_review.json",
     "test/m470_sms_excluded_senders_test.dart",
-    "test/m486_sms_back_navigation_source_test.dart",
-    "pubspec.yaml"
+    "test/m486_sms_back_navigation_source_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -230,12 +230,6 @@
       {
         "start": " test('M494 #417 failed bulk exclusion retains the selected sender sheet',(){",
         "end": null
-      }
-    ],
-    "pubspec.yaml": [
-      {
-        "start": "  drift: ^2.32.0",
-        "end": "  flutter_secure_storage: ^9.2.4"
       }
     ]
   }
