@@ -262,6 +262,32 @@
         "Independent fee never appears as a successful principal-only transfer, never ACK an unposted SMS, and do not claim full #503 completion.",
         "Changes still require actual full exact-HEAD Flutter/native tests and physical Android clean install/upgrade evidence."
       ]
+    },
+    {
+      "id": "M595-COMPACT-SMS-TYPE-CORRECTION-NO-SILENT-FINANCE",
+      "issue": "Issue #502 / WAFFRA-NEW-025; owner explicitly requested completing the seven PR #505 feedback items",
+      "previous_behavior": "Bank SMS dialog had no real first-class Income/Expense/Transfer selectors, only a previously inferred type and duplicated old review/no/edit controls.",
+      "approved_behavior": "Three selectable review type chips show message-local suggestion and allow explicit corrections. Each type change invalidates prior bank-account approval; Continue routes corrected income/expense to original owner-scoped SMS editor with source body and manual account selection. Corrected transfer uses a separate verified own-account transfer form and retains the original SMS for review, never guesses both endpoints or silently ACKs. Exclusion is an independent review action; OTP review remains fail-closed. Existing verified same-type SMS Yes path still requires consent, bank date, SAR, category, exact account and SQLCipher generation. Existing positive-fee transfers remain blocked until atomic separate fee post implemented.",
+      "source_paths": [
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m580_sms_security_navigation_performance_test.dart",
+        "test/qa/m565_sms_yes_no_test.py",
+        "test/m549_approved_home_notifications_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m429-integration-smoke.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "No account, ledger money, SMS fingerprint or native pending message is changed by tapping a type choice.",
+        "A corrected transfer from SMS with unverified source/destination never posts a fake two-sided bank transfer or implicitly removes original SMS.",
+        "Final posting requires existing SQLCipher writer, chosen account, source-proven date and explicit user save, with original duplicate safeguards.",
+        "No legacy tests removed; full exact-head CI and Android visual/latency evidence required before release."
+      ]
     }
   ]
 }
