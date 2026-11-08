@@ -2755,3 +2755,7 @@ M550 early CI proof (2026-11-08): First exact-HEAD M550 run audited 107 workflow
 
 [M556 Kotlin compiler multi-version CI fix] 2026-11-08
 - M202 real Android emulator reached Kotlin compilation but firebase_core requested kotlin-compiler-embeddable:2.4.0 (SHA256 c2b25e8c1c93ec416ba4327f5e31eaec0f0c8847241b9353e294b8db9dce564f) while existing Flutter plugin build uses 2.2.21 (SHA256 9588fa...). Both original published JetBrains JAR/POM versions now prefetch and verify fail-closed via official Release API and Maven POM checks; exact-module settings repository lists ONLY both versions. Cache key changed to v556; app Kotlin/Gradle versions and finance tests unchanged. Requires fresh exact-head CI validation.
+
+
+[M557 Kotlin 2.4.0 resolution under Gradle repository policy] 2026-11-08
+- Exact-head Android encrypted storage and golden integration builds failed despite prefetch successfully SHA256 verifying official Kotlin 2.4.0: project-repository builds ignored settings-only local compiler repository, retried the poisoned GitHub URL and received HTTP 504. A CI-only settingsEvaluated policy check now installs the exact-module local verified Maven repo only for PREFER_PROJECT builds, while FAIL_ON_PROJECT_REPOS builds continue using settings exclusivity only. No repository policy is relaxed; no Kotlin/Gradle/plugin/SQLCipher/app version is changed. Existing Android and financial tests remain mandatory. Not certified until new exact-SHA CI passes.

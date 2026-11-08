@@ -53,6 +53,10 @@ done
 # Maven module at SETTINGS initialization, before settings.gradle.kts is read.
 # All other modules still use their unchanged official upstream repositories.
 cat > "$home/init.d/waffra-verified-kotlin-2.2.21.gradle" <<'GROOVY'
+// Kotlin's included Flutter Gradle build mandates FAIL_ON_PROJECT_REPOS,
+// whereas generated Android/Firebase builds may retain PREFER_PROJECT.
+// Never change a build's repository policy. Route only two SHA-verified
+// original Kotlin compiler artifacts through the policy it already uses.
 gradle.beforeSettings { settings ->
     def repos = settings.dependencyResolutionManagement.repositories
     def verifiedMaven = repos.maven {
@@ -64,6 +68,27 @@ gradle.beforeSettings { settings ->
         filter {
             includeVersion('org.jetbrains.kotlin', 'kotlin-compiler-embeddable', '2.2.21')
             includeVersion('org.jetbrains.kotlin', 'kotlin-compiler-embeddable', '2.4.0')
+        }
+    }
+}
+gradle.settingsEvaluated { settings ->
+    // Do not inject a project repository into settings-enforced builds.
+    // A PREFER_PROJECT build ignores settings-level dependency repositories,
+    // so give only that build an exact-module verified local repository.
+    if (settings.dependencyResolutionManagement.repositoriesMode.get().name() == 'PREFER_PROJECT') {
+        gradle.beforeProject { project ->
+            def projectRepos = project.repositories
+            def verifiedProjectMaven = projectRepos.maven {
+                name = 'WaffraPinnedOfficialKotlinCompilerForProject'
+                url = new File(gradle.gradleUserHomeDir, 'waffra-verified-maven').toURI()
+            }
+            projectRepos.exclusiveContent {
+                forRepositories(verifiedProjectMaven)
+                filter {
+                    includeVersion('org.jetbrains.kotlin', 'kotlin-compiler-embeddable', '2.2.21')
+                    includeVersion('org.jetbrains.kotlin', 'kotlin-compiler-embeddable', '2.4.0')
+                }
+            }
         }
     }
 }

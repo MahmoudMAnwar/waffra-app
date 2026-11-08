@@ -42,7 +42,14 @@ class VerifiedGradleCache(unittest.TestCase):
         self.assertIn('repos.exclusiveContent',kotlin)
         self.assertIn('forRepositories(verifiedMaven)',kotlin)
         self.assertNotIn('forRepository {',kotlin)
-        self.assertNotIn('gradle.beforeProject',kotlin)
+        # Only PREFER_PROJECT Gradle builds accept the project repository;
+        # FAIL_ON_PROJECT_REPOS settings policies remain untouched.
+        self.assertIn("repositoriesMode.get().name() == 'PREFER_PROJECT'",kotlin)
+        self.assertIn('gradle.settingsEvaluated { settings ->',kotlin)
+        self.assertIn('gradle.beforeProject { project ->',kotlin)
+        self.assertIn('projectRepos.exclusiveContent',kotlin)
+        self.assertIn('forRepositories(verifiedProjectMaven)',kotlin)
+        self.assertNotIn('repositoriesMode.set(',kotlin)
         self.assertNotIn('project.repositories.maven',kotlin)
 
     def test_critical_android_jobs_prefetch_verified_gradle(self):
