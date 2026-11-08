@@ -5801,8 +5801,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }else if(decision=='transfer'&&mounted){
     // Directly review verified accounts; save money before learning a rule.
     await _reviewSmsAccountTransfer(item:selected,facts:facts);
-   }else if(decision=='yes'&&mounted&&canConfirm&&
-    originalAmount!=null&&originalDate!=null){
+   }else if(decision=='yes'&&mounted&&canConfirm){
     await _m565ConfirmSms(id:id,body:body,sender:sender,
      category:proposedCategory,income:expectedIncome,
      value:originalAmount.amount,date:originalDate);

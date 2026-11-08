@@ -63,7 +63,8 @@
     "M573 #495: reviewed SMS No -> editable path forwards bank sender to verified account chooser, learns sender+masked-last-four only after successful encrypted SQLCipher commit, not preview/cancel. No new financial debit and exact account witness unchanged.",
     "M574 #495: make one-tap SMS confirmation show original merchant/title, sender, income/expense, source SAR amount, main and leaf subcategory, masked bank last four, and full original transaction date+time; account remains explicitly chosen/verified before commit. Keep compact Home and existing + unchanged. Add exact-head regression.",
     "M575 update M565 SMS positive regression to assert stronger main + valid subcategory membership after M574 detailed review preview, rather than obsolete same-line source text; checks retained and strengthened, no skip.",
-    "M576 issue #495: first NEW sender+last-four masked identity must offer create/choose bank account even if same bank has older account with different four. Previously confirmed exact sender+four reuses verified account without re-prompt; no sender-only automatic posting. One owner-bound learning read; regression added."
+    "M576 issue #495: first NEW sender+last-four masked identity must offer create/choose bank account even if same bank has older account with different four. Previously confirmed exact sender+four reuses verified account without re-prompt; no sender-only automatic posting. One owner-bound learning read; regression added.",
+    "M577: real M174 unique M340 M385 boundary and M429 redundant Dart null guard fix on current combined PR head; preserve real native/SQLCipher quality and entire original Yes eligibility."
   ],
   "allowed_changed_files": [
     ".github/workflows/finance-full-regression.yml",
@@ -1032,7 +1033,7 @@
     "scripts/qa/m340_financial_quality_gate.py": [
       {
         "start": "    production = \"lib/storage/waffra_production_cutover_release_gate.dart\"",
-        "end": "    for marker, reason in ("
+        "end": "    for marker, reason in (\n        (\"_financeAuthority.saveCaptured(\", \"manual save bypasses verified finance authority\"),"
       }
     ],
     "test/qa/test_m340_financial_quality_gate.py": [
