@@ -5480,6 +5480,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
   final verifiedMinor=sourceAmount==null?0:
    (waffraSarAmountMinor(sourceAmount.amount.toStringAsFixed(2))??0);
+  final feeTotalMinor=facts.fee==null?null:
+   WaffraBankSmsFactsParser.extraDebitMinor(
+    principalMinor:verifiedMinor,feeSar:facts.fee);
   // No confirmed principal means an EMPTY editable field, never the fee.
   // The verified form refuses zero amounts on submit.
   final bridge=_financeBinding?.accountsBridge;
@@ -5521,8 +5524,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       if(facts.fee!=null&&facts.fee!>0)
        Padding(padding:const EdgeInsets.symmetric(horizontal:12,vertical:6),
         child:WaffraText(
-         'رسوم التحويل منفصلة: ${facts.fee!.toStringAsFixed(2)} SAR. '
-         'لن تُسجّل تلقائيًا كمصروف إضافي.',
+         'المبلغ الأساسي: ${(verifiedMinor/100).toStringAsFixed(2)} ريال • '
+         'رسوم البنك: ${facts.fee!.toStringAsFixed(2)} ريال • '
+         'إجمالي الخصم عند احتساب الرسوم منفصلة: '+
+         (feeTotalMinor==null?'يحتاج مراجعة':
+          (feeTotalMinor/100).toStringAsFixed(2)+' ريال')+
+         '. لا يمكن اعتماد الرسوم كخصم منفصل قبل ضمان الحفظ الذري '
+         'للتحويل ورسومه معًا.',
          style:const TextStyle(color:emerald,fontSize:12))),
       Expanded(child:WaffraAccountTransactionForm(
        accounts:accounts,english:waffraIsEnglish,
@@ -5539,15 +5547,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            a.customSubtypeLabel!=null).map((a)=>a.customSubtypeLabel!)
            .toSet().toList()..sort(),
         };
-        // For a source-account creation, only propose the masked debit
-        // suffix from the SAME confirmed bank. The destination may belong
-        // to another person; never copy the source digits onto it.
+        // Each proposed suffix comes from its own source/destination field,
+        // never copied from the opposite side or inferred from a sender.
+        // This remains editable and requires an explicit owned-account save.
         final detectedBank=WaffraSmsAccountLearning.bankGroup(
          item['sender'] is String?item['sender'] as String:'');
         final suggestedBank=bank??(createProvider?detectedBank:null);
-        final proposedSuffix=!isDestination&&
+        final proposedSuffix=isDestination?
+         WaffraSmsAccountLearning.suffix4(facts.destinationSuffix):
          (bank==null||bank==detectedBank)?
-         WaffraSmsAccountLearning.suffix4(facts.sourceSuffix):null;
+          WaffraSmsAccountLearning.suffix4(facts.sourceSuffix):null;
         final choice=await showWaffraDialog<WaffraNewAccountDraft>(
          context:context,builder:(ctx)=>WaffraNewAccountDialog(
           english:waffraIsEnglish,suggestedProviderId:suggestedBank,
@@ -5573,6 +5582,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         return created.single;
        },
        onConfirmTransfer:(draft)async{
+        // The current transfer writer has no atomic separate fee expense.
+        // Never silently post a principal-only transfer when this SMS has
+        // a distinct source fee that would distort the confirmed balances.
+        if(facts.fee!=null&&facts.fee!>0){
+         if(mounted)snack(context,
+          'لا يمكن حفظ تحويل برسوم حتى تتوفر تسوية ذرية للرسوم '
+          'والتحويل في عملية واحدة؛ لن يُخصم أي مبلغ.',isError:true);
+         throw StateError('Transfer fee requires atomic finance writer');
+        }
         await api.transfer(id:draft.requestId,
          fromAccountId:draft.fromId,toAccountId:draft.toId,
          amountMinor:draft.amountMinor,occurredIso:draft.occurredIso,
