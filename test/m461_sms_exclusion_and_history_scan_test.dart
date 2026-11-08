@@ -39,8 +39,12 @@ void main() {
     expect(code,contains('historyCursorAt'));
     expect(code,contains('historyCursorId'));
     expect(code,contains('date ASC, _id ASC'));
-    expect(code,contains('if (queued >= maxCandidates || checked >= maxRead)'));
-    expect(code,contains('putBoolean(historyComplete, complete).commit()'));
+    expect(code,contains('if (queue.length() >= maxCandidates)'));
+    expect(code,contains('val queue = read(context)'));
+    expect(code,contains('rows.size <= maxRead'));
+    expect(code,contains('editor.putString(queueName, seal(queue.toString()))'));
+    expect(code,contains('.putBoolean(historyComplete, complete)'));
+    expect(code,contains('editor.commit()'));
   });
 
   test('native history scanning does not block Android UI thread',(){
