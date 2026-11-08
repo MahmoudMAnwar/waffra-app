@@ -5682,6 +5682,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     snack(context,'التحويل اتسجل لكن تأكيد إزالة الرسالة فشل. '
      'معرّف العملية يمنع الخصم مرتين.',isError:true);
    }
+   // M597: the SQLCipher fee entry and two account balances are committed.
+   // Refresh verified Home and Widget projections off the tap/route frame,
+   // never by recalculating an unverified optimistic balance on the UI thread.
+   unawaited(()async{
+    try{
+     await _refreshFromVerifiedFinance();
+     if(mounted)await _m467RefreshHomeAccounts();
+     await _refreshWidget();
+    }catch(e){
+     debugPrint('Post-transfer verified refresh: ${e.runtimeType}');
+    }
+   }());
    unawaited(_refreshAutoSmsInbox());
   }catch(_){
    if(mounted)snack(context,'تعذر تسجيل التحويل؛ الرسالة ما زالت للمراجعة.',
