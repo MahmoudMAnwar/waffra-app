@@ -112,7 +112,7 @@ void main(){
    .readAsStringSync();
   expect(ui,contains("Key('m580-sender-filters')"));
   expect(ui,isNot(contains('m549-notification-review-hero')));
-  expect(ui,contains("'excluded'=>widget.english?'Excluded • verification':'مستبعدة — رمز تحقق'"));
+  expect(ui,contains("'otpReview'=>widget.english?'Verification • review only':"));
   expect(ui,contains("key:Key('m549-notification-message-'+notice.id)"));
  });
 }
