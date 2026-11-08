@@ -5515,8 +5515,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  Future<void> _m565ConfirmSms({
   required String id,required String body,required String sender,
   required String category,required bool income,
-  required double value,required DateTime date})async{
+  required double value,required DateTime date,
+  required ({List<String?>? ids,int? generation}) selectedAccount})async{
   if(!mounted||_financeLoadFailure!=null)return;
+  // Account was explicitly reviewed BEFORE the final Yes, not in a second
+  // account dialog after it. The atomic writer rechecks the SQLCipher witness.
+  if(selectedAccount.ids?.length!=1||
+     selectedAccount.ids!.single==null||
+     selectedAccount.generation==null)return;
   final hash=bankSmsHash(body);
   final facts=WaffraBankSmsFactsParser.parse(body);
   final original=WaffraSmsCurrencies.originalAmount(body);
@@ -5543,8 +5549,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final budgets=await reviewSmsBudgetLinks([record]);
   if(budgets==null||!mounted)return;
   final reviewed=record.withBudget(budgets.single);
-  final chosen=await reviewSmsAccountLinks([reviewed],smsSender:sender);
-  if(chosen==null||chosen.ids?.single==null||!mounted)return;
+  final chosen=selectedAccount;
+  if(!mounted)return;
   try{
    final applied=await _saveProgress.track('m565-confirm-sms',()=>
     _financeAuthority.commitConfirmedSms(
@@ -5691,9 +5697,45 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     previewParents.length==1;
    final firstChoice=sensitive?'exclude':
     facts.kind==WaffraBankOperationKind.transfer?'transfer':
-    understood?'review':'manual';
+    understood?'no':'manual';
+   // Verified institution/sub-account selection must occur IN this review
+   // before enabling Yes. A second picker after Yes is prohibited.
+   ({List<String?>? ids,int? generation})? reviewedAccount;
+   String? reviewedAccountName;
+   bool choosingAccount=false;
+   Future<void> selectAccountBeforeYes(StateSetter redraw,BuildContext dialog)async{
+    if(!canConfirm||choosingAccount)return;
+    redraw(()=>choosingAccount=true);
+    try{
+     final trial=MoneyEntry(
+      id:newId(),title:parsed.title,category:proposedCategory,
+      amount:originalAmount!.amount,income:expectedIncome,
+      date:originalDate!,notes:body,sourceType:'sms');
+     final picked=await reviewSmsAccountLinks([trial],smsSender:sender);
+     final id=picked?.ids?.single;
+     if(id==null||picked?.generation==null||!mounted)return;
+     final bridge=_financeBinding?.accountsBridge;
+     if(bridge==null)return;
+     final fresh=await bridge.readVerifiedAccounts();
+     final active=fresh.balances.where((a)=>!a.archived&&a.id==id).toList();
+     if(active.length!=1||!dialog.mounted)return;
+     // The account generation checked at final commit comes from this
+     // latest read, so a changed account cannot be posted optimistically.
+     redraw((){
+      reviewedAccount=(ids:<String?>[id],generation:fresh.witness.generation);
+      reviewedAccountName=active.single.name;
+     });
+    }catch(e){
+     debugPrint('M590 pre-Yes account selection: ${e.runtimeType}');
+     if(mounted)snack(context,waffraIsEnglish?
+      'Could not verify this account; choose again.':
+      'تعذر التحقق من الحساب، اختاره مرة أخرى.',isError:true);
+    }finally{
+     if(dialog.mounted)redraw(()=>choosingAccount=false);
+    }
+   }
    final decision=await showWaffraDialog<String>(context:context,
-    builder:(dialog)=>AlertDialog(
+    builder:(dialog)=>StatefulBuilder(builder:(dialog,redraw)=>AlertDialog(
      title:WaffraText(waffraIsEnglish?
       'Review bank message':'مراجعة رسالة بنكية'),
      content:SingleChildScrollView(child:Column(
@@ -5745,11 +5787,27 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          (waffraIsEnglish?'Main / subcategory: ':'القسم الرئيسي / الفرعي: ')+
           previewMainName+' / '+proposedCategory+'\n'+
          (waffraIsEnglish?'Sender: ':'المرسل: ')+sender+'\n'+
-         previewAccountLabel+' • '+
-          (waffraIsEnglish?'Choose/verify before saving':'اختيار/تأكيد قبل الحفظ')+'\n'+
+         (reviewedAccountName??previewAccountLabel)+' • '+
+          (reviewedAccount!=null?
+           (waffraIsEnglish?'Account verified':'تم تأكيد الحساب'):
+           (waffraIsEnglish?'Choose/verify before saving':
+            'اختيار/تأكيد قبل الحفظ'))+'\n'+
          (waffraIsEnglish?'Bank transaction date/time: ':
           'تاريخ ووقت العملية الأصلي: ')+previewDateTime,
          style:const TextStyle(fontSize:12,height:1.5)),
+        const SizedBox(height:8),
+        OutlinedButton.icon(
+         key:const Key('m590-sms-choose-account-before-yes'),
+         onPressed:canConfirm&&!choosingAccount?
+          ()=>selectAccountBeforeYes(redraw,dialog):null,
+         icon:choosingAccount?
+          const SizedBox(width:17,height:17,
+           child:CircularProgressIndicator(strokeWidth:2)):
+          const Icon(Icons.account_balance_wallet_outlined),
+         label:WaffraText(reviewedAccountName??(waffraIsEnglish?
+          'Select verified money account':'اختار الحساب المالي قبل نعم')),
+        ),
+        const SizedBox(height:6),
         Row(children:[
          Expanded(child:OutlinedButton(
           key:const Key('m565-sms-no-edit'),
@@ -5758,7 +5816,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          const SizedBox(width:8),
          Expanded(child:FilledButton(
           key:const Key('m565-sms-yes-confirm'),
-          onPressed:canConfirm?()=>Navigator.pop(dialog,'yes'):null,
+          onPressed:canConfirm&&reviewedAccount?.ids?.single!=null&&
+           !choosingAccount?()=>Navigator.pop(dialog,'yes'):null,
           child:WaffraText(waffraIsEnglish?'Yes':'نعم'))),
         ]),
         if(!canConfirm)WaffraText(waffraIsEnglish?
@@ -5835,7 +5894,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           'Not a transaction':'ليست عملية مالية')),
         ],
        ),
-     ]));
+     ])));
    if(decision=='exclude'&&mounted){
     // Never mark user-excluded SMS as a financially committed transaction.
     final acknowledged=await WaffraAutoSms.excludeMessages([id]);
@@ -5877,10 +5936,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     if(mounted&&(kind=='income'||kind=='expense')){
      await entrySheet(scannedIncome:kind=='income');
     }
-   }else if(decision=='yes'&&mounted&&canConfirm){
+   }else if(decision=='yes'&&mounted&&canConfirm&&
+             reviewedAccount!=null){
     await _m565ConfirmSms(id:id,body:body,sender:sender,
      category:proposedCategory,income:expectedIncome,
-     value:originalAmount.amount,date:originalDate);
+     value:originalAmount.amount,date:originalDate,
+     selectedAccount:reviewedAccount!);
    }else if(decision=='no'&&mounted){
     await entrySheet(sms:true,initialSms:body,reviewedSender:sender);
     if(smsHashes.contains(bankSmsHash(body))){
