@@ -63,7 +63,13 @@ class M442SmsConsentSessionRecovery(unittest.TestCase):
         importer = store[store.index("fun importConsentMonth("):
                          store.index("fun claimReviewNotification(")]
         self.assertIn("synchronized(mutex) {", importer)
-        self.assertIn("if (!enabled(context)) return accepted", importer)
+        # M547 scans the provider outside the lock, but refuses to persist
+        # either owner-mismatched rows or their cursor once logout wins.
+        self.assertIn("ownerAtStart != signedInOwnerHash(context)", importer)
+        self.assertIn("return@synchronized 0", importer)
+        self.assertLess(importer.index("ownerAtStart != signedInOwnerHash(context)"),
+                        importer.index("val queue = read(context)"))
+        self.assertIn("if (!editor.commit()) return@synchronized 0", importer)
         self.assertIn("if (allow && !previouslyActive)", store)
         self.assertIn("editor.remove(historyCursorAt).remove(historyCursorId)", store)
         self.assertIn("if (canResume) editor.putString(consentedOwnerName, owner)", store)
