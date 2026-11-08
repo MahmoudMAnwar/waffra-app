@@ -55,9 +55,6 @@ hooks:
   user_defines:
     sqlite3:
       source: sqlite3mc
-      # Same official immutable asset, bypass stale 92-byte HTTP cache.
-      # Upstream package continues per-platform SHA256 verification.
-      url_pattern: "https://github.com/simolus3/sqlite3.dart/releases/download/$RELEASE_TAG/$FILENAME?waffra_verified_asset=20261108"
     llamadart:
       llamadart_native_runtimes: [llama_cpp]
 
