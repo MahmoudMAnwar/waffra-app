@@ -2759,3 +2759,7 @@ M550 early CI proof (2026-11-08): First exact-HEAD M550 run audited 107 workflow
 
 [M557 Kotlin 2.4.0 resolution under Gradle repository policy] 2026-11-08
 - Exact-head Android encrypted storage and golden integration builds failed despite prefetch successfully SHA256 verifying official Kotlin 2.4.0: project-repository builds ignored settings-only local compiler repository, retried the poisoned GitHub URL and received HTTP 504. A CI-only settingsEvaluated policy check now installs the exact-module local verified Maven repo only for PREFER_PROJECT builds, while FAIL_ON_PROJECT_REPOS builds continue using settings exclusivity only. No repository policy is relaxed; no Kotlin/Gradle/plugin/SQLCipher/app version is changed. Existing Android and financial tests remain mandatory. Not certified until new exact-SHA CI passes.
+
+
+[M558 Gradle build-job coverage] 2026-11-08
+- Last M160 same-commit finance regression proved 2,537 Flutter tests passing but its subsequent unsigned release APK compilation failed downloading original Gradle 9.3.1 from GitHub with HTTP 504. The existing official Gradle API/SHA256 prefetch was absent in M160 and M146 build jobs. Added that same verified action to both; extended the M554 CI QA to enumerate every Flutter APK/gradlew build job and fail if Gradle prefetch missing. No business or financial code changed; all original tests and build requirements remain enforced. Validation pending full exact-head CI.

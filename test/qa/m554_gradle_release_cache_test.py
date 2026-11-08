@@ -57,6 +57,8 @@ class VerifiedGradleCache(unittest.TestCase):
           'android.yml': 'build',
           'android-full-smoke.yml': 'build',
           'm147-final-main-review-gate.yml': 'android-arm64-compilation',
+          'm146-main-safe-candidate.yml': 'certify-main-safe-scope',
+          'm160-main-reconciliation.yml': 'reconcile-and-regress',
           'm202-android-sqlcipher-source-binder-dryrun.yml': 'android-source-binder-and-migration',
           'm417-auto-bank-sms.yml': 'android-sms-native-compile',
           'storage-android-integration.yml': 'android-encrypted-db',
@@ -70,6 +72,27 @@ class VerifiedGradleCache(unittest.TestCase):
             self.assertIn('uses: ./.github/actions/prefetch-gradle',block,file)
             self.assertLess(block.index('uses: ./.github/actions/prefetch-sqlite3mc'),
                             block.index('uses: ./.github/actions/prefetch-gradle'),file)
+
+    def test_all_flutter_apk_and_direct_gradle_jobs_have_pinned_distribution(self):
+        # Every APK compiler (including old release-safety jobs) must use the
+        # same official ZIP preflight; a new workflow cannot silently omit it.
+        import re
+        checked = 0
+        for workflow in sorted(WORKFLOWS.glob('*.yml')):
+            source = workflow.read_text(encoding='utf-8')
+            job_matches = list(re.finditer(r'^  ([A-Za-z0-9_-]+):.*$', source, re.M))
+            for index, match in enumerate(job_matches):
+                end = job_matches[index + 1].start() if index + 1 < len(job_matches) else len(source)
+                block = source[match.start():end]
+                if 'subosito/flutter-action@v2' not in block:
+                    continue
+                if not (re.search(r'flutter\s+build\s+apk\b', block)
+                        or re.search(r'(?:^|\s)(?:\./)?gradlew\s', block)):
+                    continue
+                checked += 1
+                self.assertIn('uses: ./.github/actions/prefetch-gradle', block,
+                              workflow.name + ' / ' + match.group(1))
+        self.assertGreaterEqual(checked, 6)
 
 if __name__=='__main__':
     unittest.main()
