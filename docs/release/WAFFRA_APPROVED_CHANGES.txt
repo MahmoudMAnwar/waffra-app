@@ -2822,3 +2822,7 @@ M550 early CI proof (2026-11-08): First exact-HEAD M550 run audited 107 workflow
 
 [M568 exact bank SMS sender+last four] 2026-11-08
 - Reuse first user-confirmed exact sender+four-digit account identity for subsequent verified SMS, with fresh SQLCipher account-witness and unchanged explicit transaction confirmation; remove sender-only automatic linking. Different/missing last-four prompts user. Updated old M464/M493 tests, added M550 explicit source contract. Exact-head CI/Android pending; no gates disabled.
+
+
+[M570 exact M385 account review anchor] 2026-11-08
+- Before CI, independent masked-source comparison spotted M568's original end anchor for reviewed account linking included a nonexistent leading space; the existing Dart source uses no leading space. Correct the anchor precisely for both main baseline and new head. No business logic or tests changed; M385 unchanged and mandatory.

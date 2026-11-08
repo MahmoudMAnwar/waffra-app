@@ -56,7 +56,8 @@
     "M566: editable SMS missing an original date may visually show today's default but cannot finance-post until the user explicitly chooses the correct calendar date. Persist confirmation with same per-SMS review draft. Manual and receipt dates untouched.",
     "M567 M385 scope fix for owner-approved M565: explicitly bound the bank SMS transfer/review functional span from existing transfer entry comment to the start of the unrelated _loadFinanceSafely function; only reviewed SMS source, Yes/No flow and verified financial commit may differ; leave all unrelated source byte-identical and guards on.",
     "M569: reconcile the exact M174/M147/M440 failures reported on 2026-11-08. Explicitly bound only the SMS single writer changed by M564, retain original main bytes elsewhere; replace two M206 stale device-clock positive assertions with original SMS date validation and negative fallback checks; update M447 required secure SMS commit count 3->4 and checked account/witness/hash gate with seven verified account reviews. Tests stay enabled.",
-    "M568 #495: after first explicit source-confirmed financial commit, reuse same exact sender+last-four account identity on next SMS without repeating initial link; never infer sender-only or changed suffix; recheck live verified SQLCipher account/witness. Replace obsolete M464/M493 expectations with positive and negative matching tests, retain all CI."
+    "M568 #495: after first explicit source-confirmed financial commit, reuse same exact sender+last-four account identity on next SMS without repeating initial link; never infer sender-only or changed suffix; recheck live verified SQLCipher account/witness. Replace obsolete M464/M493 expectations with positive and negative matching tests, retain all CI.",
+    "M570 precise M385 source-anchor correction after M568: matching unindented existing '/// Budget assignment is OPTIONAL' end anchor in main and baseline so the scoped account review logic can be audited byte-for-byte, with all other source protected."
   ],
   "allowed_changed_files": [
     ".github/workflows/finance-full-regression.yml",
@@ -276,7 +277,7 @@
       },
       {
         "start": " Future<({List<String?>? ids,int? generation})?> reviewSmsAccountLinks(",
-        "end": " /// Budget assignment is OPTIONAL"
+        "end": "/// Budget assignment is OPTIONAL"
       }
     ],
     "lib/waffra_local_phone_credentials.dart": [
