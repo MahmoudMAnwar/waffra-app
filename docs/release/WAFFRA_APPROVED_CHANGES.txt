@@ -2708,3 +2708,10 @@ M550 early CI proof (2026-11-08): First exact-HEAD M550 run audited 107 workflow
 ================================================================================================================
 - Following the attempted sqlite3 3.7.1 pin, exact-head CI still downloaded a file with precisely the same invalid SHA256 bef140a1... seen on sqlite3 3.7.0, although the expected version-specific checksums differed. That is strong evidence of a shared failed GitHub release-asset download or intermediary error, not verified proof of a corrupt SQLite library. The failed hash is also independently observed in unrelated release-download failures.
 - REVERT the proposed 3.7.1 version upgrade and RESTORE the prior approved sqlite3 3.7.0 pin to avoid unverified changes to existing user databases. Keep `source: sqlite3mc`, upstream SHA256 verification and fail-closed CI. Native artifact delivery must be restored or a verified mirror provisioned before this PR may merge. All failed CI and pending Android on-device checks remain blockers. No signed APK or new data migration is approved.
+
+
+[PR #490 M548 SQLite3MC native-asset cache fix] 2026-11-08
+===============================================
+- Root cause reproduced: original official GitHub URL returned a stale 92-byte error response, sha256 bef140a1..., whereas fresh-query and official gh release API downloads returned the correct 2,263,448-byte immutable sqlite3 3.7.0 SQLite3MC binary with sha256 3dfe8bcd00e34c705de14acd1c1a0d283b9fd7d20fbd49b0aa0196b85a1d7741.
+- Keep sqlite3 exactly 3.7.0 and source sqlite3mc. Add a fixed query key to the exact same official Github release URL as url_pattern. The package verifies its original signed release SHA-256 across all target architectures. No untrusted mirrors or alternative database engine.
+- Tighten positive pinned URL regression and run early fixed-key integrity probe. Full SHA-scoped CI, device upgrade, encrypted restore and APK acceptance must still pass; do not claim completed release readiness from this fix alone.
