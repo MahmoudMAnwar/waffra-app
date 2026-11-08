@@ -5825,6 +5825,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     (parsed.amount!-originalAmount.amount).abs()<0.00001&&
     parsed.income==expectedIncome&&previewLeaves.length==1&&
     previewParents.length==1;
+   // A type selection in compact review is only a requested correction;
+   // it must never ACK or post money until the verified ledger editor saves.
+   String? reviewType=sensitive?null:switch(facts.kind){
+    WaffraBankOperationKind.income=>'income',
+    WaffraBankOperationKind.expense=>'expense',
+    WaffraBankOperationKind.transfer=>'transfer',
+    _=>null,
+   };
    final firstChoice=sensitive?'exclude':
     facts.kind==WaffraBankOperationKind.transfer?'transfer':
     understood?'no':'manual';
@@ -5893,6 +5901,47 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           (localFacts['category']?.toString()??'')),
          if(cloudSummary.isNotEmpty)WaffraText(cloudSummary),
         ])),
+       if(!sensitive)...[
+        const SizedBox(height:11),
+        WaffraText(waffraIsEnglish?'Transaction type':'نوع العملية',
+         style:const TextStyle(fontWeight:FontWeight.w800,fontSize:13)),
+        const SizedBox(height:6),
+        Wrap(spacing:8,runSpacing:6,children:[
+         for(final option in const <String>['income','expense','transfer'])
+          ChoiceChip(
+           key:Key('m595-review-type-'+option),
+           showCheckmark:false,
+           selected:reviewType==option,
+           label:WaffraText(switch(option){
+            'income'=>waffraIsEnglish?'Income':'دخل',
+            'expense'=>waffraIsEnglish?'Expense':'مصروف',
+            _=>waffraIsEnglish?'Transfer':'تحويل',
+           }),
+           onSelected:(_)=>redraw((){
+            // A type change invalidates a previously reviewed money account.
+            reviewType=option;
+            reviewedAccount=null;
+            reviewedAccountName=null;
+           })),
+        ]),
+        const SizedBox(height:6),
+        if(reviewType!=null&&
+           !(reviewType==(expectedIncome?'income':'expense')&&understood)&&
+           !(reviewType=='transfer'&&facts.kind==WaffraBankOperationKind.transfer))
+         FilledButton(
+          key:const Key('m595-review-type-continue'),
+          onPressed:()=>Navigator.pop(dialog,'correct-type'),
+          child:WaffraText(waffraIsEnglish?'Continue to review':'متابعة المراجعة'),
+         ),
+        if(facts.kind!=WaffraBankOperationKind.transfer)
+         TextButton.icon(
+          key:const Key('m595-review-single-exclude'),
+          onPressed:()=>Navigator.pop(dialog,'exclude'),
+          icon:const Icon(Icons.block_outlined),
+          label:WaffraText(waffraIsEnglish?
+           'Exclude this message':'استبعاد الرسالة'),
+         ),
+       ],
        if(!sensitive)Padding(
         padding:const EdgeInsets.only(top:10),
         child:ExpansionTile(
@@ -5902,7 +5951,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          children:[Padding(padding:const EdgeInsets.all(12),
           child:SelectableText(body,textAlign:TextAlign.start))],
         )),
-       if(understood&&!sensitive)...[
+       if(understood&&!sensitive&&
+          reviewType==(expectedIncome?'income':'expense'))...[
         const SizedBox(height:10),
         WaffraText(waffraIsEnglish?'Is this transaction correct?':
          'هل العملية صحيحة؟',
@@ -5959,7 +6009,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         'Review the message. Safe rules update after confirmed actions.':
         'راجع الرسالة؛ وفرة يتعلم القواعد الآمنة بعد تأكيد العملية.'),
        const SizedBox(height:11),
-       if(facts.kind==WaffraBankOperationKind.transfer&&!sensitive)
+       if(facts.kind==WaffraBankOperationKind.transfer&&!sensitive&&
+          reviewType=='transfer')
         Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
          WaffraText(waffraIsEnglish?
           'A transfer is not automatically income or expense. '
@@ -5989,7 +6040,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           label:WaffraText(waffraIsEnglish?
            'Exclude this message':'استبعاد الرسالة')),
         ])
-       else Card(child:ListTile(
+       else if(sensitive)Card(child:ListTile(
         key:const Key('waffra-sms-understood-action'),
         leading:Icon(sensitive?Icons.shield_outlined:
          facts.kind==WaffraBankOperationKind.transfer?Icons.sync_alt_rounded:
@@ -6025,7 +6076,24 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         ],
        ),
      ])));
-   if(decision=='exclude'&&mounted){
+   if(decision=='correct-type'&&mounted&&reviewType!=null){
+    if(reviewType=='transfer'){
+     // An uncertain SMS never becomes an internal transfer automatically.
+     // Opening a manual form does not ACK or mark this SMS as committed.
+     await openVerifiedTransfer();
+    }else{
+     // Preserve source identity for manual correction; posting remains
+     // user-confirmed through the existing atomic SQLCipher SMS writer.
+     await entrySheet(sms:true,initialSms:body,
+      reviewedSender:sender,scannedIncome:reviewType=='income');
+     if(smsHashes.contains(bankSmsHash(body))){
+      final ack=await WaffraAutoSms.acknowledgeCommitted([id]);
+      if(ack&&mounted){
+       setState(()=>_autoSmsPending.removeWhere((r)=>r['id']==id));
+      }
+     }
+    }
+   }else if(decision=='exclude'&&mounted){
     // Never mark user-excluded SMS as a financially committed transaction.
     final acknowledged=await WaffraAutoSms.excludeMessages([id]);
     if(acknowledged&&mounted){
