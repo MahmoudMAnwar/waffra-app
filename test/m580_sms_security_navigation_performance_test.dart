@@ -159,7 +159,7 @@ void main(){
   expect(handler,contains('WaffraAutoSms.excludeSenders(senderNames)'));
   expect(handler,contains('WaffraAutoSms.excludeMessages(batch)'));
   expect(handler,contains('selected.every(pending.containsKey)'));
-  expect(handler,contains('final blockedIds=')==false,isTrue);
+  expect(handler,isNot(contains('final blockedIds=')));
   expect(handler,contains('final bySender='));
   expect(handler,isNot(contains('await WaffraAutoSms.acknowledgeCommitted(')));
   expect(handler,isNot(contains('deleteAndroidSms')));
