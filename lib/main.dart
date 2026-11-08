@@ -2846,6 +2846,7 @@ class _ProfileFormState extends State<ProfileForm> {
        WaffraText(waffraIsEnglish?'Passwords match':'كلمتا المرور متطابقتان')])),
      const SizedBox(height:22),
      FilledButton(key:const Key('waffra-register-submit'),
+      style:FilledButton.styleFrom(minimumSize:const Size.fromHeight(52)),
       onPressed:WaffraHaptics.tap(busy?null:save),
       child:busy?Row(mainAxisSize:MainAxisSize.min,children:[
        const SizedBox(width:18,height:18,child:CircularProgressIndicator(
@@ -5601,6 +5602,27 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     isError:true);
   }
  }
+ /// M593: even with JSON decoded on a worker isolate, creating thousands
+ /// of MoneyEntry models synchronously can stall the progress animation.
+ /// Convert bounded chunks and yield to the next Flutter event loop frame
+ /// without publishing partial/unverified ledger state to Home.
+ Future<List<MoneyEntry>> _m593BuildVerifiedEntries(List<dynamic> raw)async{
+  final items=<MoneyEntry>[];
+  const batchSize=32;
+  for(var at=0;at<raw.length;at+=batchSize){
+   final end=min(at+batchSize,raw.length);
+   for(var i=at;i<end;i++){
+    final row=raw[i];
+    if(row is! Map)throw const FormatException(
+     'Invalid verified financial record');
+    items.add(MoneyEntry.fromJson(Map<String,dynamic>.from(row)));
+   }
+   if(end<raw.length){
+    await Future<void>.delayed(const Duration(milliseconds:1));
+   }
+  }
+  return items;
+ }
  /// M565: a reviewed bank SMS posts only with a verified account, exact
  /// date and source SAR amount; the original hash is committed atomically.
  Future<void> _m565ConfirmSms({
@@ -5656,8 +5678,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }
    final decoded=await WaffraLargeJsonDecode.parse(applied.current.ledgerRaw??'[]');
    if(decoded is! List)throw StateError('Verified SMS ledger missing');
-   final updated=decoded.map((v)=>MoneyEntry.fromJson(
-    Map<String,dynamic>.from(v as Map))).toList();
+   final updated=await _m593BuildVerifiedEntries(decoded);
    if(!updated.any((v)=>v.id==reviewed.id))throw StateError('Missing committed SMS');
    if(!mounted)return;
    setState((){
@@ -10550,8 +10571,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         if(raw==null)throw StateError('Confirmed manual ledger missing.');
         final decoded=await WaffraLargeJsonDecode.parse(raw);
         if(decoded is! List)throw StateError('Confirmed manual ledger invalid.');
-        final verified=decoded.map((item)=>MoneyEntry.fromJson(
-          Map<String,dynamic>.from(item as Map))).toList();
+        final verified=await _m593BuildVerifiedEntries(decoded);
         if(!verified.any((item)=>item.id==result.id)){
          throw StateError('Confirmed manual entry absent from verified ledger.');
         }
