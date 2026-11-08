@@ -49,7 +49,8 @@
     "M560 M385 scope fix on the unified exact-main PR: compact Home helper insertion produced zero original characters between its old start and end anchors. Move the start anchor back only to the unique immediately adjacent receipt-corner key; the original guard now has nonempty base content, every other source path/test and positive financial/security gate remains unchanged.",
     "M561: fix actual M429 Flutter analyzer failure after user-approved removal of legacy Home SMS review card and old metric tiles. Keep the private legacy review widget for compatibility with a narrowly-scoped Dart unused_element ignore, and delete only now-unused dashboard income/expense local variables; preserve account-filter source and all financial logic. Test old/new M385 source boundaries without globally disabling lints.",
     "M562: fix real failed M278 macOS iOS simulator job. The official sqlite3mc prefetch script uses GNU-only `sha256sum --check --status`, but macOS runner has incompatible sha256sum shim and reports a false SHA mismatch before downloading. Use platform-compatible shasum -a 256 (or sha256sum fallback) and compare full expected pinned SHA256 exactly, retaining official release download and all native integrity gates. Do not skip iOS job.",
-    "M563: update M552 regression to assert real cross-platform native pinned SHA256 verification (success, wrong hash rejection, tampered-file rejection) instead of obsolete GNU-only `sha256sum --check --status` source-string assertion, which incorrectly fails M174 after the macOS repair. Keep all five immutable official asset pins, official source, mandatory Flutter/Android/iOS jobs, and separate llama SHA tests."
+    "M563: update M552 regression to assert real cross-platform native pinned SHA256 verification (success, wrong hash rejection, tampered-file rejection) instead of obsolete GNU-only `sha256sum --check --status` source-string assertion, which incorrectly fails M174 after the macOS repair. Keep all five immutable official asset pins, official source, mandatory Flutter/Android/iOS jobs, and separate llama SHA tests.",
+    "M564 #495: refuse bank SMS verified finance posting when original message date is missing/ambiguous; preserve actual bank transaction timestamp rather than DateTime.now on both single and batch writer, add regression and tracker."
   ],
   "allowed_changed_files": [
     ".github/workflows/finance-full-regression.yml",
@@ -183,7 +184,8 @@
     "test/m470_balance_header_account_picker_test.dart",
     "test/m549_approved_home_notifications_test.dart",
     "test/m467_account_header_test.dart",
-    "test/m495_pr402_ui_performance_regression_test.dart"
+    "test/m495_pr402_ui_performance_regression_test.dart",
+    "test/qa/m564_sms_exact_date_guard_test.py"
   ],
   "bounded_sections": {
     "lib/main.dart": [

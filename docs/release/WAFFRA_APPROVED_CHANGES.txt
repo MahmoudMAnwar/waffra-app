@@ -2794,3 +2794,7 @@ M550 early CI proof (2026-11-08): First exact-HEAD M550 run audited 107 workflow
 
 [M563 M174 obsolete M552 assertion replacement] 2026-11-08
 - Exact-head M174 preflight failed solely because M552's old source-only test demanded literal GNU `sha256sum --check --status` in the sqlite3mc prefetch script, while M562 necessarily replaced it on macOS. New test asserts the portable verifier's trusted digest tools and exact equality, executes the real bash verifier against a correct hash, incorrect pin, and corrupted native-file fixture. All five upstream pins and all official download / native / iOS checks remain mandatory; the separate llamadart check is unchanged.
+
+
+[M564 #495 original SMS date] 2026-11-08
+- Single and batch bank SMS verified financial saving now fail-closed on missing/ambiguous source date, rather than substituting today's timestamp. Exact parsed date retained on commit. Added test/qa/m564_sms_exact_date_guard_test.py and #495 requirements entry. Account linking and verified SQLCipher source unchanged. Not yet CI/device certified.

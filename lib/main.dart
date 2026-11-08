@@ -7133,7 +7133,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   if(found.length>100){update(()=>statusMessage=waffraIsEnglish?'Maximum 100 transactions per paste.':'الحد الأقصى 100 معاملة في كل عملية لصق.');return;}
   // A malformed or ambiguous source timestamp must not be silently booked
   // on today's date during a large finance import.
-  final invalidDates=found.where(bankSmsHasUnverifiedTimestamp).length;
+  final invalidDates=found.where((raw)=>
+   bankSmsDate(raw)==null||bankSmsHasUnverifiedTimestamp(raw)).length;
   if(invalidDates>0){
    update(()=>statusMessage=waffraIsEnglish?
     '$invalidDates bank message(s) have an ambiguous or invalid date. Review their dates before saving; nothing was posted.':
@@ -7334,9 +7335,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final categoryName=learnedCategory??plan!.categoryName;
    final merchant=waffraMerchantName(raw,income:result.income);
    final title=merchant==null?result.title:result.title+' — '+merchant;
+   final verifiedSmsDate=bankSmsDate(raw);
+   if(verifiedSmsDate==null){
+    preRejected[i]=WaffraSmsNotSavedReason.categoryUnresolved;
+    continue;
+   }
    additions.add(MoneyEntry(id:newId(),title:title,
     category:categoryName,amount:result.amount!,income:result.income,
-    date:bankSmsDate(raw)??DateTime.now(),notes:raw,sourceType:'sms',
+    date:verifiedSmsDate,notes:raw,sourceType:'sms',
     merchantKey:plan?.merchantKey??waffraMerchantKey(raw,income:result.income)??''));
    proposedHashes.add(bankSmsHash(raw));
    proposedSourceIndexes.add(i);
@@ -8073,10 +8079,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         if(yes!=true||!ctx.mounted)return;
         explicitlyApprovedDuplicate=true;
        }
+       final verifiedSmsDate=bankSmsDate(messages[index]);
+       if(verifiedSmsDate==null||bankSmsHasUnverifiedTimestamp(messages[index])){
+        update(()=>statusMessage=waffraIsEnglish?
+         'The original SMS transaction date is missing or ambiguous. Review and enter the correct date manually before saving.':
+         'تاريخ العملية الأصلي غير موجود أو غير واضح. راجع التاريخ وعدّله يدويًا قبل الحفظ.');
+        return;
+       }
        update(()=>busy=true);
-       final now=DateTime.now();
        var previous=0.0; // Selected budget is resolved after explicit review.
-       var entry=MoneyEntry(id:newId(),title:description.text.trim(),category:category,amount:n,income:income,date:now,notes:messages[index],sourceType:'sms');
+       var entry=MoneyEntry(id:newId(),title:description.text.trim(),category:category,amount:n,income:income,date:verifiedSmsDate,notes:messages[index],sourceType:'sms');
        final budgetSelection=await reviewSmsBudgetLinks([entry]);
        if(budgetSelection==null){if(ctx.mounted)update(()=>busy=false);return;}
        entry=entry.withBudget(budgetSelection.single);

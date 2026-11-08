@@ -787,3 +787,10 @@ M274 must also trigger on `docs/release/WAFFRA_APPROVED_CHANGES.txt` changes bec
 
 ### M555 — Exact Kotlin compiler artifact recovery in Android CI — 2026-11-08
 - For HTTP 504 on `org.jetbrains.kotlin:kotlin-compiler-embeddable:2.2.21`, cache only JetBrains' official SHA256-pinned JAR plus validated original POM in an exact-module, CI-only Gradle local Maven source. Do not substitute Kotlin versions, modify project Gradle files, disable security, or skip emulator tests. Review real compile output and preserve source provenance. PR #490.
+
+
+## M564 — Issue #495 verified SMS transaction-date integrity (2026-11-08)
+**Owner instruction:** implement immediately in PR #497. **Status:** Code ready, exact-head CI/device QA pending; remaining one-tap yes/no and editable review in progress.
+- Both bank-SMS financial save routes must use the date actually parsed from the original message. Missing or ambiguous original date blocks automatic posting; never substitute the phone's DateTime.now.
+- Keep source pending, mandatory verified account linking, budget optional, confirmed SQLCipher commit / dedup unchanged.
+- Regression: test/qa/m564_sms_exact_date_guard_test.py; M174/M429/Android required.
