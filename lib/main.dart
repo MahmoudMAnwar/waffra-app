@@ -5018,24 +5018,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           // No Android SMS or financial ledger entries are deleted.
           final ids=selectedIds.toList(growable:false);
           final idSet=ids.toSet();
-          final likelyFinancial=_autoSmsPending.where((item){
-           if(!idSet.contains(item['id'])||item['body'] is! String)return false;
-           final facts=WaffraBankSmsFactsParser.parse(item['body'] as String);
-           return facts.kind!=WaffraBankOperationKind.uncertain;
-          }).length;
+          // Selection is an explicit owner decision. Do not synchronously
+          // parse up to 1000 SMS on the UI isolate before painting the dialog.
+          // This removes an O(N) CPU-heavy path from every bulk exclusion tap.
           final confirmed=await showWaffraDialog<bool>(
            context:ctx,builder:(dialog)=>AlertDialog(
             title:WaffraText(waffraIsEnglish?
              'Exclude selected messages?':'استبعاد الرسائل المحددة؟'),
             content:WaffraText(waffraIsEnglish?
              'Remove ${ids.length} items from Waffra review only. '
-             'Your phone SMS and saved financial transactions are untouched.'+
-             (likelyFinancial>0?
-              ' WARNING: $likelyFinancial look financial; verify your selection.':''):
+             'Your phone SMS and saved financial transactions are untouched. '
+             'Some messages may describe finances; review your selection.':
              'سيتم استبعاد ${ids.length} رسالة من مراجعة وفرة فقط، '
-             'دون حذف رسائل الهاتف أو أي عمليات مالية محفوظة.'+
-             (likelyFinancial>0?
-              ' تنبيه: $likelyFinancial منها قد تكون معاملات مالية؛ راجع اختيارك.':'')),
+             'دون حذف رسائل الهاتف أو أي عمليات مالية محفوظة. '
+             'قد تتضمن الرسائل معاملات مالية؛ راجع اختيارك.'),
             actions:[
              TextButton(onPressed:()=>Navigator.pop(dialog,false),
               child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),

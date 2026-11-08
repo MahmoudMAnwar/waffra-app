@@ -58,6 +58,20 @@ void main() {
   expect(review,isNot(contains('for(final sender in List<String>.of(senders))')));
  });
 
+ test('M549 1000-message bulk confirm never parses SMS bodies on the UI isolate',(){
+  final main=File('lib/main.dart').readAsStringSync();
+  final begin=main.indexOf('waffra-sms-bulk-exclude-selected');
+  final end=main.indexOf('final confirmed=await showWaffraDialog<bool>',begin);
+  expect(begin,greaterThan(0));
+  expect(end,greaterThan(begin));
+  final preConfirm=main.substring(begin,end);
+  expect(preConfirm,contains('final ids=selectedIds.toList(growable:false);'));
+  expect(preConfirm,isNot(contains('WaffraBankSmsFactsParser.parse(')));
+  expect(preConfirm,isNot(contains('likelyFinancial')));
+  expect(main,contains('قد تتضمن الرسائل معاملات مالية؛ راجع اختيارك.'));
+  expect(main,contains('Your phone SMS and saved financial transactions are untouched.'));
+ });
+
  test('M549 completed rescan dims unless fresh provider rows or unfinished history',(){
   final native=File('native/WaffraAutoSmsStore.kt').readAsStringSync();
   expect(native,contains('private fun hasUnseenInboxRows('));

@@ -14,7 +14,8 @@
     "Fix recurring PR CI cancellations: exact-head SHA-scoped concurrency for seven critical full Flutter, Android emulator, financial integrity, backup and release approval workflows, while retaining safe M453 cleanup for genuinely superseded heads.",
     "Prevent six apparent CI workflow failures caused by old queued synchronize events canceling new PR HEAD jobs; test SHA isolation and keep all original positive finance and security checks active.",
     "M549 / issue #491: all SMS inbox senders in review instead of only financial-looking banks; remove 1000 selected Waffra SMS with one sender-choice dialog and durable exclusion, optional encrypted sender-only block purges queue and previous labelled SMS receipts; no Android SMS or finance deletion; dim Rescan unless new provider rows exist or history is unfinished with free capacity.",
-    "M549: repair the obsolete M417 source assertion which only allowed financial-looking bank SMS, now asserting all-sender review-only native intake plus committed/excluded anti-replay and no background finance/network access."
+    "M549: repair the obsolete M417 source assertion which only allowed financial-looking bank SMS, now asserting all-sender review-only native intake plus committed/excluded anti-replay and no background finance/network access.",
+    "2026-11-08 M549 follow-up: remove up to 1000 synchronous per-message bank-facts parsing in bulk exclusion confirmation; retain an immediate generic financial-caution text, same two-step explicit messages-only versus exclude-senders choice, no Android SMS or ledger deletion. Add no-parse regression."
   ],
   "allowed_changed_files": [
     ".github/workflows/finance-full-regression.yml",
