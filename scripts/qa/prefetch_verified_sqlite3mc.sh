@@ -15,11 +15,23 @@ assets=(
 )
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
+# macOS runners may provide a sha256sum shim without GNU --status support.
+# Compare the actual digest on both platforms; never weaken the pinned SHA256.
+verify_sha256() {
+  local expected="$1" file="$2" actual
+  if command -v shasum >/dev/null 2>&1; then
+    actual="$(shasum -a 256 "$file")" || return 1
+  else
+    actual="$(sha256sum "$file")" || return 1
+  fi
+  actual="${actual%% *}"
+  [[ "$actual" == "$expected" ]]
+}
 for spec in "${assets[@]}"; do
   asset="${spec%%:*}"
   expected="${spec#*:}"
   target="$root/download-${expected:0:8}/libsqlite3mc.so"
-  if [[ -f "$target" ]] && echo "$expected  $target" | sha256sum --check --status; then
+  if [[ -f "$target" ]] && verify_sha256 "$expected" "$target"; then
     echo "PASS cached $asset SHA256 $expected"
     continue
   fi
@@ -27,12 +39,12 @@ for spec in "${assets[@]}"; do
   gh release download "$release" --repo "$repo" --pattern "$asset" --dir "$work" --clobber
   source_file="$work/$asset"
   [[ -f "$source_file" ]] || { echo "FATAL: missing $asset" >&2; exit 1; }
-  echo "$expected  $source_file" | sha256sum --check --status || {
+  verify_sha256 "$expected" "$source_file" || {
     echo "FATAL: official sqlite3mc asset SHA256 mismatch: $asset" >&2
     exit 1
   }
   mkdir -p "$(dirname "$target")"
   install -m 0644 "$source_file" "$target"
-  echo "$expected  $target" | sha256sum --check --status || exit 1
+  verify_sha256 "$expected" "$target" || exit 1
   echo "PASS fetched $asset SHA256 $expected"
 done
