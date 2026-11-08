@@ -4117,7 +4117,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    if(_autoSmsRefreshInFlight!=null||
       (last!=null&&now.difference(last)<const Duration(seconds:20)))return;
    _m468LastResumeSmsScan=now;
-   unawaited(_refreshAutoSmsInbox(importMonth:!_autoSmsHistoryComplete));
+   // Real-time receiver already stages new SMS. A lifecycle resume must not
+   // launch a four-page historical scan while the UI unlock animation runs.
+   // The owner's explicit Rescan action continues any incomplete history.
+   unawaited(_refreshAutoSmsInbox());
   });
  }
  @override void initState(){super.initState();WaffraBackNavigation.onHomeBack=_registeredBackHandler;_dashboardScrollController.addListener(_handleDashboardScroll);_tourGlow=AnimationController(vsync:this,duration:waffraMotion(1150));waffraReturnHome.addListener(_returnToHome);waffraIncomingSms.addListener(_receiveSharedSms);waffraAutoSmsUpdates.addListener(_receiveAutoSmsNotice);waffraWidgetAction.addListener(_receiveWidgetAction);_widgetReloadListener=AppLifecycleListener(onResume:_m468OnResume);unawaited(_loadFinanceSafely());}
@@ -4309,18 +4312,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   if(_autoSmsRescanRunning||!mounted)return;
   setState(()=>_autoSmsRescanRunning=true);
   try{
-   // Never reset an unfinished 2000-row page stream. Otherwise repeat
-   // the first few pages forever. Once complete, explicit Rescan must
-   // revisit the entire installation-month inbox with the expanded M508
-   // Arabic/English detection library, even previously skipped senders.
+   // Do not rewind the durable month cursor after it has completed.
+   // Repeated explicit scans read only newly arrived provider rows; a
+   // partially completed first history pass continues from its last row.
    final active=_autoSmsRefreshInFlight;
    if(active!=null)await active;
-   final progress=await WaffraAutoSms.scanProgress();
-   if(progress?['complete']==true&&
-      !await WaffraAutoSms.restartCompletedHistory()){
-    throw StateError('Could not restart completed SMS history safely');
-   }
    final before=await WaffraAutoSms.scanProgress();
+   final continuingInitialHistory=before?['initialComplete']!=true;
    if(!mounted)return;
    await _refreshAutoSmsInbox(importMonth:true);
    if(!mounted)return;
@@ -4329,8 +4327,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     (before!['scanned'] as num).toInt():0;
    final nowScanned=after?['scanned'] is num?
     (after!['scanned'] as num).toInt():priorScanned;
-   // A completed cursor was reset BEFORE 'before'; an unfinished cursor
-   // kept its counters. Both yield a per-button delta.
+   // The native cursor never rewinds; counters are cumulative and this
+   // button reports only the difference observed during this invocation.
    final scanned=(nowScanned-priorScanned).clamp(0,2147483647);
    if(after!=null)setState((){
     _autoSmsProgress=after;
@@ -4344,16 +4342,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    if(_autoSmsStatusProblem!=null){
     snack(context,_autoSmsStatusProblem!,isError:true);
    }else if(after?['complete']!=true){
+    final continuation=continuingInitialHistory?
+     (waffraIsEnglish?'Continuing first history scan.':
+      'جارٍ استكمال الفحص الأول للرسائل السابقة.'):
+     (waffraIsEnglish?'More newly received messages remain to scan.':
+      'لسه فيه رسائل جديدة محتاجة استكمال الفحص.');
     snack(context,waffraIsEnglish?
-     'Scanned $scanned messages • $added new • '
-      '${_autoSmsPending.length} awaiting review. More history remains.':
-     'اتُفحص $scanned رسالة • $added جديدة • '
-      '${_autoSmsPending.length} بانتظار المراجعة. باقي رسائل لسه محتاجة فحص.');
+     'Examined $scanned new inbox rows • $added added • '
+      '${_autoSmsPending.length} awaiting review. $continuation':
+     'تم فحص $scanned رسالة من الدفعة الحالية • $added اتضافت للمراجعة • '
+      '${_autoSmsPending.length} بانتظار المراجعة. $continuation');
    }else{
     snackSuccess(context,waffraIsEnglish?
-     'Scan completed: $added new • $scanned scanned total • '
+     'Scan completed: $scanned newly examined • $added added for review • '
       '${_autoSmsPending.length} awaiting review.':
-     'اكتمل الفحص: $added جديدة • $scanned رسالة فُحصت إجمالًا • '
+     'اكتمل الفحص: $scanned رسالة جديدة فُحصت • $added اتضافت للمراجعة • '
       '${_autoSmsPending.length} بانتظار المراجعة.');
    }
   }catch(_){
@@ -4768,7 +4771,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    ));
  }
  Future<void> _openAutoSmsInbox()async{
-  await _refreshAutoSmsInbox(importMonth:true);
+  // Opening review does not also trigger four hidden historical provider pages.
+  // Explicit Rescan is the only user-facing action that requests that work.
+  await _refreshAutoSmsInbox();
   if(!mounted||_autoSmsPending.isEmpty)return;
   // Every bank sender gets one group. No guessed merchants or bank identities.
   final bySender=<String,List<Map<String,Object?>>>{};
@@ -8100,10 +8105,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          }
         }
        }
-       // Reclassify the remaining encrypted review queue without recording
-       // or acknowledging any of its messages. Native cursor may continue
-       // only when review has available space.
-       if(mounted)unawaited(_refreshAutoSmsInbox(importMonth:true));
+       // The SMS editor already acknowledges its confirmed message.
+       // Any remaining review-only classifications are refreshed on
+       // demand when review opens, not during the financial save animation.
+       // Do not launch native history scans from a finance write.
        unawaited(_refreshWidget());
        if(!ctx.mounted)return;
        await budgetAlert(entry,previous);
@@ -9931,9 +9936,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    // The expense/income learner applies only AFTER an authoritative commit,
    // and uses user-approved description/category, not the raw SMS body.
    try{await _learnManualCategoryPreference(result);}catch(_){}
-   // Immediately apply the updated local rules to every still-pending SMS.
-   // This is review-only; it never creates transactions or assigns accounts.
-   if(mounted)unawaited(_refreshAutoSmsInbox(importMonth:true));
+   // SMS classification must not compete with the next page's first
+   // frame after a verified money save. Review reads new rules on opening;
+   // native intake / exact confirmed ACK remains the source of truth.
    for(final staged in stagedReceiptCopies){
     try{final file=File(staged);if(await file.exists())await file.delete();}
     catch(_){}
@@ -10031,8 +10036,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      }
      // A preference failure cannot retry an already-committed debit.
      try{await _learnManualCategoryPreference(result);}catch(_){}
-     // Apply new non-posting hints to the encrypted SMS review queue.
-     if(mounted)unawaited(_refreshAutoSmsInbox());
+     // Don't decrypt and reclassify up to 1000 SMS while the manual
+     // finance confirmation is transitioning. Review refreshes on entry.
     }catch(error){
      // A write may have committed before a later source read failed. Never
      // claim 'previous data unchanged' or let a retry create a ghost debit.
