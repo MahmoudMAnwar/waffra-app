@@ -198,7 +198,13 @@ void main(){
    .split("else if(decision=='exclude'&&mounted)")[0];
   expect(corrected,contains('await openVerifiedTransfer()'));
   expect(corrected,contains('await entrySheet(sms:true,initialSms:body,'));
-  expect(corrected,contains("reviewedSender:sender,scannedIncome:reviewType=='income'"));
+  expect(corrected,contains("reviewedSender:sender,reviewedIncomeOverride:reviewType=='income'"));
+  expect(corrected,contains('if(approved==true&&mounted)await openVerifiedTransfer()'));
+  expect(corrected,contains('The message does not prove both accounts are yours'));
+  final editor=app.split(' Future<void> entrySheet({')[1]
+   .split(' Future<void> showReceipt(')[0];
+  expect(editor,contains('String? reviewedSender,bool? reviewedIncomeOverride,'));
+  expect(editor,contains("bool income=reviewedIncomeOverride??(smsEditorDraft?['income'] as bool?)"));
   expect(corrected,contains('if(smsHashes.contains(bankSmsHash(body)))'));
   expect(corrected,isNot(contains('commitConfirmedSms(')));
   expect(corrected,isNot(contains('excludeMessages(')));
