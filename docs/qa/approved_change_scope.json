@@ -53,7 +53,8 @@
     "M564 #495: refuse bank SMS verified finance posting when original message date is missing/ambiguous; preserve actual bank transaction timestamp rather than DateTime.now on both single and batch writer, add regression and tracker.",
     "M564 exact timestamp correction scope: bounded bulkSmsSheet section only, containing original bank SMS date validation and source-authoritative writer; original data and unrelated app UI untouched.",
     "M565 #495: real bank SMS review shows source amount/date/category and هل العملية صحيحة؟ Yes / No edit; yes only for verified local SAR, valid exact date/category/direction, explicit verified account and optional budget, one atomic SQLCipher SMS+hash commit with idempotency and ACK only after success; no opens source-preserving editable entry. Source regression remains required.",
-    "M566: editable SMS missing an original date may visually show today's default but cannot finance-post until the user explicitly chooses the correct calendar date. Persist confirmation with same per-SMS review draft. Manual and receipt dates untouched."
+    "M566: editable SMS missing an original date may visually show today's default but cannot finance-post until the user explicitly chooses the correct calendar date. Persist confirmation with same per-SMS review draft. Manual and receipt dates untouched.",
+    "M567 M385 scope fix for owner-approved M565: explicitly bound the bank SMS transfer/review functional span from existing transfer entry comment to the start of the unrelated _loadFinanceSafely function; only reviewed SMS source, Yes/No flow and verified financial commit may differ; leave all unrelated source byte-identical and guards on."
   ],
   "allowed_changed_files": [
     ".github/workflows/finance-full-regression.yml",
@@ -257,6 +258,10 @@
       {
         "start": " Future<void> entrySheet({MoneyEntry? initial,bool sms=false,String? initialSms,",
         "end": " Future<void> showReceipt(String encoded,{int initialIndex=0,String? entryId})async {"
+      },
+      {
+        "start": " /// Explicit, idempotent account-to-account transfer from reviewed bank SMS.",
+        "end": " Future<void> _loadFinanceSafely()async{"
       }
     ],
     "lib/waffra_local_phone_credentials.dart": [

@@ -2810,3 +2810,7 @@ M550 early CI proof (2026-11-08): First exact-HEAD M550 run audited 107 workflow
 
 [M566 manually confirmed SMS date] 2026-11-08
 - SMS editor with unknown source date now blocks save until explicit calendar date pick; stores confirmation in same SMS review draft across Back. No implicit today's-date finance posting. Existing manual and receipt date behavior unchanged. Python guard added; exact-head CI and Android pending.
+
+
+[M567 exact source scope for #495] 2026-11-08
+- M174 preflight correctly found the newly added M565 reviewed SMS confirmation flow was not yet bounded under M385. Add a single uniquely anchored transfer-to-review section (ending before _loadFinanceSafely) to the owner's approved scope. No runtime, finance, SQLCipher, data, test assertions or CI skip changed; M385 still checks all source bytes outside bounded sections.
