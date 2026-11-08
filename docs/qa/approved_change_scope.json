@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "change_id": "M580-M586-SEVEN-FEEDBACK-SECURE-SMS-UX-AND-RESPONSIVENESS-PR505",
+  "change_id": "M580-M591-SEVEN-FEEDBACK-SECURE-SMS-UX-PERFORMANCE-PR505",
   "human_scope_review": "Owner explicitly authorized implementing issues #498 through #504 on 2026-11-08 and prioritizing lag after every tap; preserve approved visual references, unchanged floating +, exact SQLCipher finance integrity, OTP masking, both device data, native sender-exclusion consent and all existing tests. This branch contains only early partial source changes plus true regression contracts, not approval to merge until exact-head CI and Android evidence.",
   "user_requested_changes": [
     "#498 Keep a stable visibly loading login button and preserve secure, responsive first registration with no double submission or weakened password controls.",
@@ -9,7 +9,8 @@
     "#501 Recognize Arabic temporary verification codes and English security messages offline and hold ambiguous financial directions for explicit owner review.",
     "#502 Use the approved compact sender-filtered notifications list without duplicate oversized hero or obsolete type tabs; keep real current sender data.",
     "#503 Preserve verified account-to-account transfer writer and source account/fee checks while remaining three-choice UX work is tracked as incomplete.",
-    "#504 Replace blank Home loading, remove unavoidable 1000-SMS rereads after cancel and clip-free currency circle in compact approved monthly summary; keep full financial source verification."
+    "#504 Replace blank Home loading, remove unavoidable 1000-SMS rereads after cancel and clip-free currency circle in compact approved monthly summary; keep full financial source verification.",
+    "#500/#501 Owner-approved Arabic naming for excluded rules/messages and shared conservative OTP/temporary-code handling across offline ML and bank parsers."
   ],
   "allowed_changed_files": [
     "docs/qa/approved_change_scope.json",
@@ -23,7 +24,9 @@
     "native/WaffraAutoSmsStore.kt",
     "native/WaffraMainActivity.kt",
     "test/m549_approved_home_notifications_test.dart",
-    "test/m580_sms_security_navigation_performance_test.dart"
+    "test/m580_sms_security_navigation_performance_test.dart",
+    "lib/waffra_sms_intelligence.dart",
+    "lib/waffra_sms_rule_settings_page.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -102,6 +105,30 @@
       {
         "start": "void main(){",
         "end": " test('M549 approved Home bell saturated at +999; FAB is unchanged',(){"
+      }
+    ],
+    "lib/waffra_sms_intelligence.dart": [
+      {
+        "start": "import 'waffra_sms_multicurrency_review.dart';",
+        "end": "/// Small no-cost, fully offline"
+      },
+      {
+        "start": "  static bool isPendingOrUnconfirmed(String raw) {",
+        "end": "  static WaffraSmsMlSuggestion classify(String raw) {"
+      }
+    ],
+    "lib/waffra_sms_rule_settings_page.dart": [
+      {
+        "start": "         for(final option in const <String>['income','expense','transfer','excluded'])",
+        "end": "           selected:kind==option,"
+      },
+      {
+        "start": " Widget _defaultRuleBucket(String kind) {",
+        "end": "  return Card(child:ExpansionTile("
+      },
+      {
+        "start": "      title:Text(switch(kind){",
+        "end": "       for(final rule in saved.where((r)=>r.resolvedKind==kind))"
       }
     ]
   }
