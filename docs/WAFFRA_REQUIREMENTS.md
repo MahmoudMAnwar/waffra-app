@@ -819,3 +819,9 @@ M274 must also trigger on `docs/release/WAFFRA_APPROVED_CHANGES.txt` changes bec
 **PR:** #497. **Status:** Code and regression written, latest exact-SHA CI and real device acceptance pending.
 - No → edit pathway now submits known bank SMS sender for verified account review and records confirmed sender+suffix association only after actual successful encrypted ledger+hash write. No guesses, no repeat debit and no learning from canceled SMS reviews.
 - Test: test/qa/m573_sms_edited_account_learning_test.py.
+
+
+## M574 — #495 full transaction details in bank-SMS Yes/No (2026-11-08)
+**PR:** #497. **Status:** Committed / full CI and device QA pending.
+- Before Yes/No, preview shows income/expense, bank amount/currency, parsed description, valid main/subcategory, sender, masked original account suffix or missing-identity notice, and bank message's original YYYY-MM-DD HH:mm timestamp. The account is still owner-selected/verified before SQLCipher saving, never guessed from Home's active filter.
+- Test: test/qa/m574_sms_confirmation_full_fields_test.py.

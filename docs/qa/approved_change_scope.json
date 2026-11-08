@@ -60,7 +60,8 @@
     "M570 precise M385 source-anchor correction after M568: matching unindented existing '/// Budget assignment is OPTIONAL' end anchor in main and baseline so the scoped account review logic can be audited byte-for-byte, with all other source protected.",
     "M571 #495: finance critical-source M340 gate must verify four, not three, live SQLCipher SMS writers after new owner-reviewed Yes confirmation. Require in new fourth route verified account picker/witness, optional budget, source timestamp/SAR, user consent, duplicate hash rejection and native ACK after save; negative mutation tests protect against a fake update. No bypass of source-finance critical gate.",
     "M572 fix M385 M340 protected-section anchor: start before unchanged unique production-gate path declaration, end at original for marker check, identical in baseline and head. Do not relax source financial security check.",
-    "M573 #495: reviewed SMS No -> editable path forwards bank sender to verified account chooser, learns sender+masked-last-four only after successful encrypted SQLCipher commit, not preview/cancel. No new financial debit and exact account witness unchanged."
+    "M573 #495: reviewed SMS No -> editable path forwards bank sender to verified account chooser, learns sender+masked-last-four only after successful encrypted SQLCipher commit, not preview/cancel. No new financial debit and exact account witness unchanged.",
+    "M574 #495: make one-tap SMS confirmation show original merchant/title, sender, income/expense, source SAR amount, main and leaf subcategory, masked bank last four, and full original transaction date+time; account remains explicitly chosen/verified before commit. Keep compact Home and existing + unchanged. Add exact-head regression."
   ],
   "allowed_changed_files": [
     ".github/workflows/finance-full-regression.yml",
@@ -205,7 +206,8 @@
     "test/m493_sms_account_matching_regression_test.dart",
     "scripts/qa/m340_financial_quality_gate.py",
     "test/qa/test_m340_financial_quality_gate.py",
-    "test/qa/m573_sms_edited_account_learning_test.py"
+    "test/qa/m573_sms_edited_account_learning_test.py",
+    "test/qa/m574_sms_confirmation_full_fields_test.py"
   ],
   "bounded_sections": {
     "lib/main.dart": [

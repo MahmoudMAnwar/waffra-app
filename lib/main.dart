@@ -5642,15 +5642,31 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final proposedCategory=localFacts?['category'] is String?
     localFacts!['category'] as String:parsed.category;
    final expectedIncome=facts.kind==WaffraBankOperationKind.income;
+   final previewLeaves=categories.where((c)=>
+    c.income==expectedIncome&&c.isSubcategory&&
+    c.name==proposedCategory&&
+    waffraCategoryAvailableForNewEntry(categories,c)).toList();
+   final previewParents=previewLeaves.length==1?
+    categories.where((c)=>!c.isSubcategory&&
+     c.id==previewLeaves.single.parentId).toList():<BudgetCategory>[];
+   final previewMainName=previewParents.length==1?
+    previewParents.single.displayName:
+    (waffraIsEnglish?'Choose main category':'يحتاج اختيار القسم الرئيسي');
+   final previewSuffix=WaffraSmsAccountLearning.suffix4(
+    expectedIncome?facts.destinationSuffix:facts.sourceSuffix);
+   final previewAccountLabel=previewSuffix==null?
+    (waffraIsEnglish?'Account needs confirmation':'الحساب يحتاج تأكيد'):
+    (waffraIsEnglish?'Account ••••':'الحساب ••••')+previewSuffix;
+   final previewDateTime=originalDate==null?
+    (waffraIsEnglish?'Date/time needs review':'التاريخ والوقت يحتاجان مراجعة'):
+    originalDate.toIso8601String().replaceFirst('T',' ').substring(0,16);
    final canConfirm=understood&&facts.canAutoPostAsIncomeExpense&&
     originalAmount!=null&&originalAmount.currency=='SAR'&&
     originalDate!=null&&!bankSmsHasUnverifiedTimestamp(body)&&
     parsed.amount!=null&&
     (parsed.amount!-originalAmount.amount).abs()<0.00001&&
-    parsed.income==expectedIncome&&
-    categories.where((c)=>c.income==expectedIncome&&c.isSubcategory&&
-     c.name==proposedCategory&&
-     waffraCategoryAvailableForNewEntry(categories,c)).length==1;
+    parsed.income==expectedIncome&&previewLeaves.length==1&&
+    previewParents.length==1;
    final firstChoice=sensitive?'exclude':
     facts.kind==WaffraBankOperationKind.transfer?'transfer':
     understood?'review':'manual';
@@ -5697,11 +5713,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         WaffraText(waffraIsEnglish?'Is this transaction correct?':
          'هل العملية صحيحة؟',
          style:const TextStyle(fontWeight:FontWeight.w800)),
-        WaffraText((expectedIncome?'دخل':'مصروف')+' • '+
-         (originalAmount==null?'—':originalAmount.amount.toStringAsFixed(2)+' '+
-          originalAmount.currency)+' • '+
-         (originalDate==null?'التاريخ يحتاج مراجعة':dayText(originalDate))+
-         ' • '+proposedCategory),
+        WaffraText(
+         (waffraIsEnglish?'Type: ':'نوع العملية: ')+
+          (expectedIncome?(waffraIsEnglish?'Income':'دخل'):
+           (waffraIsEnglish?'Expense':'مصروف'))+' • '+
+          (originalAmount==null?'—':originalAmount.amount.toStringAsFixed(2)+
+           ' '+originalAmount.currency)+'\n'+
+         (waffraIsEnglish?'Description: ':'الوصف: ')+parsed.title+'\n'+
+         (waffraIsEnglish?'Main / subcategory: ':'القسم الرئيسي / الفرعي: ')+
+          previewMainName+' / '+proposedCategory+'\n'+
+         (waffraIsEnglish?'Sender: ':'المرسل: ')+sender+'\n'+
+         previewAccountLabel+' • '+
+          (waffraIsEnglish?'Choose/verify before saving':'اختيار/تأكيد قبل الحفظ')+'\n'+
+         (waffraIsEnglish?'Bank transaction date/time: ':
+          'تاريخ ووقت العملية الأصلي: ')+previewDateTime,
+         style:const TextStyle(fontSize:12,height:1.5)),
         Row(children:[
          Expanded(child:OutlinedButton(
           key:const Key('m565-sms-no-edit'),

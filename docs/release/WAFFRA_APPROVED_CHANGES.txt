@@ -2838,3 +2838,7 @@ M550 early CI proof (2026-11-08): First exact-HEAD M550 run audited 107 workflow
 
 [M573 #495 sender+suffix learning parity in No/Edit] 2026-11-08
 - Verified reviewed SMS editor now forwards the original sender to account confirmation and learns that sender's last-four association after successful SQLCipher commit+hash. No preview/cancel learning, no additional financial commit. M573 regression. CI/device pending.
+
+
+[M574 #495 complete SMS pre-save review] 2026-11-08
+- Reviewed bank SMS Yes/No preview now shows parsed description, sender, type, SAR amount, main/leaf category, source masked account last four (or manual-account warning), and original bank date including hours and minutes. Account confirmation is separate and mandatory; one-tap source-authorized finance guard preserved. M574 regression, CI/Android pending.
