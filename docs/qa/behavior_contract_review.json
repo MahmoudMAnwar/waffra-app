@@ -84,6 +84,31 @@
         "Android first-month scan must still cover start-of-install month with persistent cursor.",
         "Must measure actual next APK frame timings before claiming lag-free."
       ]
+    },
+    {
+      "id": "M602-M603-HOME-FINANCE-SMS-AUTH-RESPONSIVENESS",
+      "issue": "Issues #508 and #509: normal logout/relogin biometric and whole-app jank",
+      "previous_behavior": "Normal logout then verified password login opened a second biometric gate; SMS resume could delay authenticated Home. Cold Home started heavy multi-page native SMS historical scanning alongside first render; finance save and widget reads could synchronously materialize thousands of records. Android SMS signout called encrypted queue suspension on main UI thread, stalling Flutter frames.",
+      "approved_behavior": "After explicit logout, correct verified phone/password returns to an unlocked fresh Home session without extra biometrics, while restored sessions and >60-second background remain protected. Defer owner-checked SMS resume and bounded month-import work until after Home first frame, preserving review-only SMS and original consent. Build large verified ledger projections in bounded asynchronous batches after SQLCipher commit, with no partial/unverified balance or duplicate transaction. Suspend native SMS for signout on the history executor rather than Android main thread, return success only after safe suspension, fail closed on error.",
+      "source_paths": [
+        "lib/main.dart",
+        "native/WaffraMainActivity.kt"
+      ],
+      "test_paths": [
+        "test/m603_app_wide_lag_source_regression_test.dart",
+        "test/m601_auth_busy_contract_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Preserve full-strength OS-bound password verifier and account-owner finance authority.",
+        "No automatic posting of SMS, no duplicate charge, no bypass of verified SQLCipher writes.",
+        "Keep native SMS signed-out suspension fail-closed and never expose financial data before authentication.",
+        "Do not claim smooth physical Android performance based on source tests alone."
+      ]
     }
   ]
 }
