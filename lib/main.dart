@@ -41,6 +41,7 @@ import 'waffra_external_media_session.dart';
 import 'waffra_sms_sender_brand.dart';
 import 'waffra_large_json_decode.dart';
 import 'waffra_home_accounts_sheet.dart';
+import 'waffra_approved_notifications.dart';
 import 'storage/waffra_account_context_read.dart';
 import 'waffra_mandatory_biometric_gate.dart';
 import 'waffra_idle_biometric_overlay.dart';
@@ -3540,21 +3541,22 @@ class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
  final bool english;
  final String? heading;
  final bool goalWallet;
+ final bool compact;
  final GlobalKey? focusKey;
  final double? monthlyChangePercent;
  final String? selectedAccountLabel;
  final VoidCallback? onAccountTap;
  final Future<void> Function() refreshVerifiedWidgetBalance;
  const WaffraBalanceHeader({
-  required this.balance,required this.english,this.focusKey,this.heading,this.goalWallet=false,
+  required this.balance,required this.english,this.focusKey,this.heading,this.goalWallet=false,this.compact=false,
   required this.refreshVerifiedWidgetBalance,this.monthlyChangePercent,
   this.selectedAccountLabel,this.onAccountTap,
  });
  // Reserve space for multiline account names rather than trimming them.
  int get _accountLabelExtraLines=>goalWallet||onAccountTap==null?0:
   (((selectedAccountLabel?.runes.length??0)-25).clamp(0,150)/25).ceil();
- @override double get minExtent=>goalWallet?130.0:164.0+20.0*_accountLabelExtraLines;
- @override double get maxExtent=>goalWallet?148.0:182.0+20.0*_accountLabelExtraLines;
+ @override double get minExtent=>goalWallet?130.0:(compact?127.0:164.0+20.0*_accountLabelExtraLines);
+ @override double get maxExtent=>goalWallet?148.0:(compact?138.0:182.0+20.0*_accountLabelExtraLines);
  @override Widget build(BuildContext context,double shrinkOffset,bool overlapsContent){
   final progress=(shrinkOffset/(maxExtent-minExtent)).clamp(0.0,1.0);
   final dark=Theme.of(context).brightness==Brightness.dark;
@@ -3610,30 +3612,15 @@ class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
          }),
          icon:Icon(hidden?Icons.visibility_off_outlined:Icons.visibility_outlined,
           size:22,color:const Color(0xFFE2FBEF))))),
-      // M476 #401: one account picker at the balance heading, with full text.
-      Positioned(left:47,right:14,top:9,
-       child:!goalWallet&&onAccountTap!=null
-        ?TextButton(
-         key:const Key('m470-balance-account-picker'),
-         onPressed:onAccountTap,
-         style:TextButton.styleFrom(
-          backgroundColor:const Color(0xFFF2FFF7),
-          foregroundColor:const Color(0xFF07563B),
-          padding:const EdgeInsets.symmetric(horizontal:10,vertical:7),
-          shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(12))),
-         child:Row(mainAxisSize:MainAxisSize.min,children:[
-          const Icon(Icons.keyboard_arrow_down_rounded,size:19),
-          const SizedBox(width:5),
-          Expanded(child:Text(selectedAccountLabel??'',
-           softWrap:true,textAlign:TextAlign.center,
-           style:const TextStyle(fontSize:13,fontWeight:FontWeight.w800))),
-         ]))
-        :Center(child:WaffraText(
-         heading??(english?'Available balance':'الرصيد المتاح للصرف'),
-         style:const TextStyle(fontSize:14,fontWeight:FontWeight.w600,
-          color:Color(0xFFD7F1E5))))),
+      // M549: account filtering has moved to the monthly summary card.
+      Positioned(left:47,right:14,top:8,
+       child:Center(child:WaffraText(
+        heading??(english?'Available balance':'الرصيد المتاح للصرف'),
+        style:const TextStyle(fontSize:14,fontWeight:FontWeight.w600,
+         color:Color(0xFFD7F1E5))))),
       Positioned(left:47,right:112,
-       top:goalWallet?38.0:52.0+20.0*_accountLabelExtraLines,bottom:44,
+       top:goalWallet?38.0:(compact?36.0:52.0+20.0*_accountLabelExtraLines),
+       bottom:compact?8:44,
        child:Center(child:FittedBox(
         alignment:Alignment.center,fit:BoxFit.scaleDown,
         child:WaffraCurrencyAmount(balance,fontSize:31-2*progress,
@@ -4799,6 +4786,43 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      ]))),
    ));
  }
+
+ /// Real notifications: SMS stay pending until the owner confirms a financial
+ /// save or exclusion; no mock notifications are ever presented as real.
+ List<WaffraReviewNotice> _m549ReviewNotices(){
+  return _autoSmsPending.where((row)=>row['id'] is String)
+   .map((row){
+    final id=row['id'] as String;
+    final sender=(row['sender'] as String?)?.trim()??'';
+    final sensitive=row['sensitiveOtp']==true;
+    final body=sensitive?'':(row['body'] as String? ?? '');
+    final snippet=sensitive?
+     (waffraIsEnglish?'Verification message':'رسالة تحقق'):
+     body.replaceAll(RegExp(r'\s+'),' ').trim();
+    final summary=snippet.length>108?snippet.substring(0,108)+'…':snippet;
+    final local=row['local'];
+    final localInfo=local is Map?local:null;
+    final income=localInfo?['income'];
+    final amount=localInfo?['amount'];
+    return WaffraReviewNotice(
+     id:id,sender:sender.isEmpty?(waffraIsEnglish?'Unknown sender':'مرسل غير محدد'):sender,
+     preview:summary.isEmpty?(waffraIsEnglish?'Bank message':'رسالة بنكية'):summary,
+     kind:sensitive?null:(income is bool?(income?'income':'expense'):null),
+     amount:sensitive?null:(amount is num?amount.toDouble():null));
+   }).toList(growable:false);
+ }
+ Future<void> _m549OpenNotifications()async{
+  if(!mounted||!ready)return;
+  await Navigator.of(context).push(MaterialPageRoute<void>(
+   builder:(route)=>WaffraApprovedNotificationsPage(
+    english:waffraIsEnglish,readPending:_m549ReviewNotices,
+    onReviewAll:_openAutoSmsInbox,
+    onReviewOne:(id)=>_reviewAutoSmsCandidates(targetId:id),
+    onRescan:_rescanAutoSmsInbox,
+    canRescan:()=>!_autoSmsRescanRunning&&
+     (_autoSmsStatusProblem!=null||_autoSmsProgress['rescanNeeded']==true),
+   )));
+ }
  Future<void> _openAutoSmsInbox()async{
   // The Home snapshot has already passed native owner/consent verification.
   // Re-reading/decrypting/reclassifying all 1000 SMS on every tap blocks
@@ -4849,7 +4873,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          Expanded(child:Column(mainAxisSize:MainAxisSize.min,
           crossAxisAlignment:CrossAxisAlignment.start,children:[
           WaffraText(selectedSender??(waffraIsEnglish?
-           'Messages to review':'رسائل للفرز'),maxLines:2,
+           'Messages to review':'مراجعة الرسائل البنكية'),maxLines:2,
            style:const TextStyle(fontSize:22,fontWeight:FontWeight.bold)),
           WaffraText(visibleIds().length.toString()+
            (waffraIsEnglish?' messages from ':' رسالة من ')+
@@ -12210,62 +12234,83 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     child:WaffraCurrencyAmount(amount,fontSize:16,color:emerald)),
   ]);
  Widget monthlySummaryCard(){
-  final today=DateTime.now();
-  final prev=DateTime(today.year,today.month-1,1);
-  final current=entries.where((e)=>!e.income&&
-   e.date.year==today.year&&e.date.month==today.month);
-  final lastMonth=entries.where((e)=>!e.income&&
-   e.date.year==prev.year&&e.date.month==prev.month);
-  final spent=sum(current,false),prior=sum(lastMonth,false);
-  final categoriesTotal=<String,double>{};
-  for(final item in current){
-   categoriesTotal[item.category]=(categoriesTotal[item.category]??0)+item.amount;
-  }
-  final ranked=categoriesTotal.entries.toList()..sort((a,b)=>b.value.compareTo(a.value));
-  final top=ranked.isEmpty?null:ranked.first;
-  final change=prior<=0?null:(spent-prior)/prior*100;
+  final now=DateTime.now();
+  final month=_m467ScopedEntries().where((e)=>
+   e.date.year==now.year&&e.date.month==now.month).toList();
+  final income=sum(month,true),spent=sum(month,false);
+  final difference=income-spent;
+  final ratio=income>0?(spent/income).clamp(0.0,1.0):0.0;
+  final dark=Theme.of(context).brightness==Brightness.dark;
   return Container(
-   padding:const EdgeInsets.all(15),
-   decoration:BoxDecoration(color:Theme.of(context).cardColor,
-    borderRadius:BorderRadius.circular(20),
-    border:Border.all(color:forest.withValues(alpha:0.10))),
-   child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+   key:const Key('m549-monthly-summary-compact'),
+   padding:const EdgeInsets.symmetric(horizontal:12,vertical:11),
+   decoration:BoxDecoration(
+    color:Theme.of(context).cardColor,
+    borderRadius:BorderRadius.circular(18),
+    border:Border.all(color:forest.withValues(alpha:.13))),
+   child:Column(children:[
     Row(children:[
-     const Icon(Icons.bar_chart_rounded,color:emerald),
-     const SizedBox(width:8),
-     Expanded(child:WaffraText(waffraIsEnglish?'Monthly summary':'ملخص الشهر',
-      style:const TextStyle(fontWeight:FontWeight.bold,fontSize:18))),
+     const Icon(Icons.bar_chart_rounded,color:emerald,size:20),
+     const SizedBox(width:5),
+     Expanded(child:WaffraText(waffraIsEnglish?
+      'This month summary':'ملخص هذا الشهر',
+      style:const TextStyle(fontSize:16,fontWeight:FontWeight.bold))),
+     OutlinedButton.icon(
+      key:const Key('m549-home-account-filter'),
+      onPressed:WaffraHaptics.tap(()=>unawaited(_m467PickHomeAccount())),
+      icon:const Icon(Icons.account_balance_outlined,size:17),
+      label:ConstrainedBox(constraints:const BoxConstraints(maxWidth:100),
+       child:Text(_m467AccountLabel,maxLines:1,
+        overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:11))),
+      style:OutlinedButton.styleFrom(
+       padding:const EdgeInsets.symmetric(horizontal:7,vertical:4),
+       minimumSize:const Size(0,36),
+       foregroundColor:dark?Colors.white:forest)),
     ]),
-    const SizedBox(height:10),
-    if(top==null)WaffraText(waffraIsEnglish?
-      'No expenses recorded this month.':
-      'لا توجد مصروفات مسجلة لهذا الشهر.',
-      style:const TextStyle(color:Colors.grey,fontSize:14))
-    else Container(
-     padding:const EdgeInsets.symmetric(horizontal:12,vertical:12),
-     decoration:BoxDecoration(color:emerald.withValues(alpha:0.08),
-      borderRadius:BorderRadius.circular(14)),
-     child:Row(children:[
-      const CircleAvatar(backgroundColor:Color(0xFFD8EDE0),
-       child:Icon(Icons.pie_chart_outline,color:emerald)),
-      const SizedBox(width:8),
-      Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-       WaffraText(waffraIsEnglish?'Highest spending category':
-        'أكثر قسم صرفت عليه',style:const TextStyle(fontSize:12)),
-       WaffraText(waffraTr(top.key),maxLines:2,
-        style:const TextStyle(fontWeight:FontWeight.bold,fontSize:16)),
-      ])),
-      const SizedBox(width:4),
-      FittedBox(fit:BoxFit.scaleDown,
-       child:WaffraCurrencyAmount(top.value,fontSize:16,color:emerald)),
+    const SizedBox(height:8),
+    Row(children:[
+     SizedBox(width:92,height:92,child:Stack(alignment:Alignment.center,children:[
+      SizedBox(width:82,height:82,child:CircularProgressIndicator(
+       value:ratio,strokeWidth:10,
+       color:emerald,backgroundColor:const Color(0xFFD6EEDF))),
+      Column(mainAxisSize:MainAxisSize.min,children:[
+       WaffraText(waffraIsEnglish?'Difference':'الفرق',
+        style:const TextStyle(fontSize:10)),
+       FittedBox(fit:BoxFit.scaleDown,
+        child:WaffraCurrencyAmount(difference,fontSize:16)),
+      ]),
      ])),
-    if(change!=null)Padding(padding:const EdgeInsets.only(top:9),
-     child:WaffraText((waffraIsEnglish?'Spending ':'المصروفات ')+
-      (change>=0?(waffraIsEnglish?'increased ':'زادت '):
-       (waffraIsEnglish?'decreased ':'قلت '))+
-      change.abs().toStringAsFixed(1)+'%'+
-      (waffraIsEnglish?' vs last month':' عن الشهر الماضي'),
-      style:const TextStyle(color:Colors.grey,fontSize:12))),
+     const SizedBox(width:12),
+     Expanded(child:Column(children:[
+      Container(
+       padding:const EdgeInsets.symmetric(horizontal:11,vertical:8),
+       decoration:BoxDecoration(color:dark?const Color(0xFF244C3A):
+        const Color(0xFFE4F4EB),borderRadius:BorderRadius.circular(12)),
+       child:Row(children:[
+        const Icon(Icons.south_west_rounded,color:emerald,size:17),
+        const SizedBox(width:6),
+        Expanded(child:WaffraText(waffraIsEnglish?'Income':'الدخل',
+         style:const TextStyle(fontWeight:FontWeight.bold,fontSize:12))),
+        WaffraCurrencyAmount(income,fontSize:13),
+       ])),
+      const SizedBox(height:6),
+      Container(
+       padding:const EdgeInsets.symmetric(horizontal:11,vertical:8),
+       decoration:BoxDecoration(color:dark?const Color(0xFF49302C):
+        const Color(0xFFFCECE8),borderRadius:BorderRadius.circular(12)),
+       child:Row(children:[
+        const Icon(Icons.north_east_rounded,color:Color(0xFFB94838),size:17),
+        const SizedBox(width:6),
+        Expanded(child:WaffraText(waffraIsEnglish?'Expenses':'المصروفات',
+         style:const TextStyle(fontWeight:FontWeight.bold,fontSize:12))),
+        WaffraCurrencyAmount(spent,fontSize:13),
+       ])),
+      const SizedBox(height:4),
+      Text(waffraIsEnglish?'Spending / income':
+       'نسبة المصروفات من الدخل: '+(income>0?(spent/income*100).toStringAsFixed(0):'0')+'%',
+       style:const TextStyle(fontSize:10,color:Color(0xFF718077))),
+     ])),
+    ]),
    ]));
  }
  Widget smartMoneyInsightsCard(){
@@ -12594,9 +12639,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        pinned:false,
        delegate:WaffraBalanceHeader(
          balance:_m467ShownBalance(),english:waffraIsEnglish,
-         heading:_m467SelectedAccount=='all'?null:_m467AccountLabel,
-         selectedAccountLabel:_m467AccountLabel,
-         onAccountTap:()=>unawaited(_m467PickHomeAccount()),
+         heading:waffraIsEnglish?'Total balance':'إجمالي الرصيد',
+         compact:true,
          focusKey:_tourKeys[0],
          monthlyChangePercent:_m467SelectedAccount=='all'&&
           _m467AccountContext==null?monthChange:null,
@@ -12611,7 +12655,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           homeSummaryCard(waffraIsEnglish?'Expenses':'المصروفات',
            exp,Icons.north_east,const Color(0xFFB94838),waffraExpenseBackground),
          ]),
-         const SizedBox(height:12),
+         const SizedBox(height:10),
+         monthlySummaryCard(),
+         const SizedBox(height:10),
          Container(
           decoration:BoxDecoration(
            color:Theme.of(context).cardColor,
@@ -12652,10 +12698,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                ]))
              :const SizedBox.shrink()),
           ])),
-         if(Platform.isAndroid)...[
-          const SizedBox(height:12),
-          _autoSmsReviewCard(),
-         ],
+         // M549: the SMS review queue now lives in Notifications.
          if(unverifiedFxEntries.isNotEmpty)...[
           const SizedBox(height:10),
           Container(
@@ -12673,10 +12716,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
              maxLines:3,style:const TextStyle(fontSize:12,fontWeight:FontWeight.w600))),
            ])),
          ],
-         const SizedBox(height:13),
-         monthlyBudgetCard(),
          const SizedBox(height:12),
-         monthlySummaryCard(),
+         monthlyBudgetCard(),
          const SizedBox(height:12),
 
          Container(
@@ -16948,6 +16989,29 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(15))),
       child:Text(waffraIsEnglish?'AR':'EN',
        style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold)))),
+    const SizedBox(width:7),
+    Tooltip(message:waffraIsEnglish?'Notifications':'الإشعارات',
+     child:Semantics(
+      button:true,label:waffraIsEnglish?'Open financial notifications':'فتح الإشعارات المالية',
+      child:InkWell(
+       key:const Key('m549-header-notification-bell'),
+       borderRadius:BorderRadius.circular(22),
+       onTap:WaffraHaptics.tap(()=>unawaited(_m549OpenNotifications())),
+       child:SizedBox(width:48,height:45,child:Stack(
+        clipBehavior:Clip.none,children:[
+        const Center(child:Icon(Icons.notifications_none_rounded,color:Colors.white,size:27)),
+        if(_autoSmsPending.isNotEmpty)PositionedDirectional(
+         end:0,top:0,child:Container(
+          key:const Key('m549-notification-count-badge'),
+          constraints:const BoxConstraints(minWidth:21,minHeight:17),
+          padding:const EdgeInsets.symmetric(horizontal:3),
+          decoration:BoxDecoration(color:const Color(0xFFE22F37),
+           borderRadius:BorderRadius.circular(12)),
+          child:Center(child:Text(
+           _autoSmsPending.length>999?'+999':_autoSmsPending.length.toString(),
+           style:const TextStyle(color:Colors.white,fontSize:10,fontWeight:FontWeight.bold))),
+         )),
+       ]))))),
     const SizedBox(width:7),
     Tooltip(message:waffraIsEnglish?'My account and settings':'حسابي والإعدادات',
      child:Semantics(label:waffraIsEnglish?'Open account settings':'فتح إعدادات الحساب',
