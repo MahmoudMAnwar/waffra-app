@@ -24,7 +24,8 @@
     "Repair exact-head CI failed native-asset SHA256 verification for the immutable sqlite3 3.7.0 Linux sqlite3mc release by pinning vetted newer sqlite3 3.7.1 with its own upstream asset checksums; retain native hash verification, SQLCipher support and full encrypted database regression. Never bypass digest enforcement.",
     "Diagnose the consistent SHA256 bef140a1... download response across sqlite3 3.7.0 and 3.7.1 as native release-asset delivery/network failure, not a demonstrated library hash defect; revert the attempted SQLite native version bump to retain prior encrypted database compatibility, and keep checksum enforcement blocking unsafe artifacts.",
     "Perform read-only CI-side integrity diagnosis of the authentic GitHub immutable sqlite3mc x64 Linux binary using direct and cache-busted release URLs plus official gh release download; print only length and SHA256, never disable upstream native hash validation or treat mismatched bytes as libraries.",
-    "Fix native asset CI delivery: direct GitHub release URL returned cached 92-byte error body, whereas the exact immutable sqlite3mc 3.7.0 release with a fresh URL query returned the official 2,263,448-byte file with correct sha256 3dfe8bcd. Configure only the official release URL with stable cache bypass, keep pinned sqlite3 3.7.0 and built-in SHA256 checks; extend CI regression without weakening data protection."
+    "Fix native asset CI delivery: direct GitHub release URL returned cached 92-byte error body, whereas the exact immutable sqlite3mc 3.7.0 release with a fresh URL query returned the official 2,263,448-byte file with correct sha256 3dfe8bcd. Configure only the official release URL with stable cache bypass, keep pinned sqlite3 3.7.0 and built-in SHA256 checks; extend CI regression without weakening data protection.",
+    "M552 certified native CI repair: pinned direct GitHub release URL is intermittently poisoned even with fixed cache key; instead leave sqlite3 3.7.0 and source sqlite3mc unchanged and prefetch all required immutable Linux/Android SQLite3MC assets from the official GitHub Release API, check official SHA256 for each, and stage into sqlite3 package standard native-hook cache before Flutter tests. Pilot the independent M174 workflow, then apply same gate to every Flutter job without disabling original tests or encrypted database checks."
   ],
   "allowed_changed_files": [
     ".github/workflows/finance-full-regression.yml",
@@ -60,8 +61,9 @@
     "docs/qa/behavior_contract_review.json",
     "test/m470_sms_excluded_senders_test.dart",
     "test/m486_sms_back_navigation_source_test.dart",
-    "pubspec.yaml",
-    "test/qa/m461_sqlite_native_artifact_pin_test.py"
+    "scripts/qa/prefetch_verified_sqlite3mc.sh",
+    ".github/actions/prefetch-sqlite3mc/action.yml",
+    ".github/workflows/m174-main-sha-postmerge.yml"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -236,10 +238,10 @@
         "end": null
       }
     ],
-    "test/qa/m461_sqlite_native_artifact_pin_test.py": [
+    ".github/workflows/m174-main-sha-postmerge.yml": [
       {
-        "start": "    def test_sqlite3mc_version_does_not_float_across_ci_runs(self):",
-        "end": "    def test_release_build_retains_signed_source_and_sqlcipher_security_gates(self):"
+        "start": "  pinned-no-go-preflight:",
+        "end": null
       }
     ]
   }
