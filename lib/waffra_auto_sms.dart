@@ -96,6 +96,143 @@ abstract final class WaffraAutoSms {
   }on MissingPluginException{return const [];}
    on PlatformException{return const [];}
  }
+ /// One encrypted queue item for an already-selected ID. The native bridge
+ /// remains owner-scoped and verifies permissions; no blanket queue transfer.
+ static Future<Map<String,Object?>?> pendingById(String id)async{
+  if(!Platform.isAndroid||!RegExp(r'^[a-f0-9]{64}
+ /// were not recognized as completed transactions. Never posts or uploads SMS.
+ static Future<List<Map<String,Object?>>> scanUnknownFinancialSms()async{
+  if(!Platform.isAndroid||!await enabled())return const [];
+  try{
+   final data=await channel.invokeMethod<List<dynamic>>(
+    'scanUnknownFinancialSms')??[];
+   return data.whereType<Map>().map(
+    (item)=>Map<String,Object?>.from(item)).toList(growable:false);
+  }on MissingPluginException{return const [];}
+   on PlatformException{return const [];}
+ }
+
+ static Future<bool> claimCloudAttempt(String id)async{
+  if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(id))return false;
+  return _boolCall('claimAutoBankSmsCloudAttempt',id);
+ }
+
+ static Future<bool> stageCloudAnalysis(
+  String id,Map<String,Object?> suggestion)async{
+  if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(id))return false;
+  return _boolCall('stageAutoBankSmsCloudAnalysis',
+   <String,Object?>{'id':id,'analysis':suggestion});
+ }
+ // Exclusions are stored as encrypted, owner-scoped native SMS policy.
+ // A missing native channel is UNKNOWN, not an empty list.
+ static Future<List<String>?> excludedSenders()async{
+  if(!Platform.isAndroid)return null;
+  try{
+   final values=await channel.invokeListMethod<String>('excludedAutoSmsSenders');
+   return values==null?null:List<String>.unmodifiable(values);
+  }on MissingPluginException{return null;}
+   on PlatformException{return null;}
+ }
+ /// Individually excluded SMS are encrypted natively, scoped to the owner.
+ /// Only opaque identity, sender label and receipt time cross this boundary.
+ /// A missing plugin or malformed payload is UNKNOWN, not an empty policy.
+ static Future<List<Map<String,Object?>>?> excludedMessages()async{
+  if(!Platform.isAndroid)return null;
+  try{
+   final items=await channel.invokeListMethod<dynamic>(
+    'excludedAutoSmsMessages');
+   if(items==null)return null;
+   return items.map((item){
+    if(item is! Map)throw const FormatException('Invalid excluded SMS item');
+    final id=item['id'],sender=item['sender'],receivedAt=item['receivedAt'];
+    if(id is! String||
+       !RegExp(r'^[a-f0-9]{64}$').hasMatch(id)||
+       sender is! String||
+       receivedAt is! int||receivedAt<0){
+     throw const FormatException('Invalid excluded SMS metadata');
+    }
+    return Map<String,Object?>.unmodifiable({
+     'id':id,'sender':sender,'receivedAt':receivedAt,
+    });
+   }).toList(growable:false);
+  }catch(_){return null;}
+ }
+ static Future<bool> restoreExcludedMessage(String id)async{
+  if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(id))return false;
+  return _boolCall('restoreExcludedAutoSmsMessage',id);
+ }
+ static Future<bool> excludeSender(String sender)async{
+  if(sender.trim().isEmpty)return false;
+  return _boolCall('excludeAutoSmsSender',sender.trim());
+ }
+ /// Atomic native sender exclusion for a large selected review group.
+ static Future<bool> excludeSenders(List<String> senders)async{
+  if(senders.isEmpty||senders.length>1000||
+     senders.any((name)=>name.trim().isEmpty||name.trim().length>100)){
+   return false;
+  }
+  return _boolCall('excludeAutoSmsSenders',senders);
+ }
+ static Future<bool> restoreExcludedSender(String sender)async{
+  if(sender.trim().isEmpty)return false;
+  return _boolCall('restoreExcludedAutoSmsSender',sender.trim());
+ }
+ // Only after verified financial hash is present in SQLCipher.
+ static Future<bool> acknowledgeCommitted(List<String> ids)async{
+  if(ids.isEmpty||ids.length>100||
+     ids.any((id)=>!RegExp(r'^[a-f0-9]{64}$').hasMatch(id)))return false;
+  return _boolCall('ackCommittedAutoBankSms',ids);
+ }
+
+ /// M514: an SMS explicitly excluded by the user must never be booked as
+ /// a completed income/expense. Native exclusion policy is independent.
+ static Future<bool> excludeMessages(List<String> ids)async{
+  if(ids.isEmpty||ids.length>100||
+     ids.any((id)=>!RegExp(r'^[a-f0-9]{64}$').hasMatch(id)))return false;
+  return _boolCall('excludeAutoBankSms',ids);
+ }
+ /// M516: the immutable native fingerprint contains sender, body and time.
+ /// It differs from historical body-only financial entry hashes.
+ static String transferIdForMessage(String fingerprint){
+  if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(fingerprint)){
+   throw ArgumentError.value(fingerprint,'fingerprint','Invalid SMS identity');
+  }
+  return 'sms-transfer-$fingerprint';
+ }
+ /// Durable completed-transfer ACK; only call after verified SQLCipher save.
+ static Future<bool> acknowledgeCompletedTransfer(List<String> ids)async{
+  if(ids.isEmpty||ids.length>100||
+     ids.any((id)=>!RegExp(r'^[a-f0-9]{64}$').hasMatch(id)))return false;
+  return _boolCall('ackCompletedTransferAutoBankSms',ids);
+ }
+ static Future<bool> acknowledge(List<String> ids)async{
+  if(ids.isEmpty||ids.length>100)return false;
+  return _boolCall('ackAutoBankSms',ids);
+ }
+ static Future<bool> notifyCommitted({
+  required String hash,required double amount,required bool income,
+  required bool linkedBudget,
+ })async{
+  if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(hash)||!amount.isFinite||amount<=0)
+   return false;
+  return _boolCall('notifyAutoSmsSaved',{
+   'hash':hash,'amount':amount.toStringAsFixed(2),
+   'income':income,'linkedBudget':linkedBudget,
+  });
+ }
+ static Future<bool> notifyReview(String hash)async{
+  if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(hash))return false;
+  return _boolCall('notifyAutoSmsNeedsReview',hash);
+ }
+}
+).hasMatch(id))return null;
+  try{
+   final row=await channel.invokeMapMethod<String,dynamic>(
+    'pendingAutoBankSmsById',id);
+   return row==null?null:Map<String,Object?>.from(row);
+  }on MissingPluginException{return null;}
+   on PlatformException{return null;}
+ }
  /// Read-only, on-demand scan for institutional financial notices that
  /// were not recognized as completed transactions. Never posts or uploads SMS.
  static Future<List<Map<String,Object?>>> scanUnknownFinancialSms()async{
