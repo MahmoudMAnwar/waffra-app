@@ -137,9 +137,11 @@ abstract final class WaffraBankSmsFactsParser {
    feeMatch.end+16<normalized.length?
     feeMatch.end+16:normalized.length);
   final unsupportedFeeCurrency=RegExp(
-   r'\b(?!SAR\b)[A-Z]{3}\b|'
-   r'دولار|درهم|دينار|يورو|جنيه',
-   caseSensitive:true).hasMatch(feeWindow);
+   r'\b(?:USD|EUR|GBP|AED|KWD|BHD|QAR|OMR|JPY|CAD|AUD|CHF|CNY)\b',
+   caseSensitive:false).hasMatch(feeWindow)||
+   RegExp(r'\b(?!SAR\b)[A-Z]{3}\b|'
+    r'دولار|درهم|دينار|يورو|جنيه',
+    caseSensitive:true).hasMatch(feeWindow);
   final malformedFeeNumber=feeMatch!=null&&
    feeMatch.end<normalized.length&&
    RegExp(r'^[0-9٠-٩.,%٪]').hasMatch(normalized.substring(feeMatch.end));
