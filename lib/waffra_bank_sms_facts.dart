@@ -56,16 +56,16 @@ abstract final class WaffraBankSmsFactsParser {
  /// Security/OTP evidence is never a completed debit. Built-in rules may
  /// suggest exclusion, but destructive queue removal still needs consent.
  static final _securityChallenge=RegExp(
-  r'\\b(?:otp|one[ -]?time[ -]?(?:password|code|passcode)|'
+  r'\b(?:otp|one[ -]?time[ -]?(?:password|code|passcode)|'
   r'verification[ -]?code|security[ -]?code|authorization[ -]?code|'
-  r'confirm(?:ation)?[ -]?code|temporary[ -]?(?:password|code))\\b|'
-  r'رمز\\s*(?:مؤقت|التحقق|تفعيل|التفعيل|الدخول|تأكيد|التأكيد|الامان|الأمان)|'
-  r'كلم[ةه]\\s*مرور\\s*مؤقت[ةه]?|'
-  r'رمز\\s*(?:إضافة|اضافة|تأكيد)\\s*المستفيد',
+  r'confirm(?:ation)?[ -]?code|temporary[ -]?(?:password|code))\b|'
+  r'رمز\s*(?:مؤقت|التحقق|تفعيل|التفعيل|الدخول|تأكيد|التأكيد|الامان|الأمان)|'
+  r'كلم[ةه]\s*مرور\s*مؤقت[ةه]?|'
+  r'رمز\s*(?:إضافة|اضافة|تأكيد)\s*المستفيد',
   caseSensitive:false);
  static bool isVerificationChallenge(String raw)=>
   _securityChallenge.hasMatch(raw.replaceAll(
-   RegExp(r'[\\u200e\\u200f\\u061c\\u064B-\\u065F]'),' '));
+   RegExp(r'[\u200e\u200f\u061c\u064B-\u065F]'),' '));
  static final _source=RegExp(
   r'(?:من\s+(?:محفظ[ةه]|حساب|بطاق[ةه])|'
   r'(?:from|source|account|card|wallet|acct)\s*(?:no\.?|ending)?\s*[:：]?)'
