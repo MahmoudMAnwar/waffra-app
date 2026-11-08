@@ -87,6 +87,7 @@ import 'waffra_bank_sms_facts.dart';
 import 'waffra_sms_cloud_service.dart';
 import 'waffra_sms_cloud_review_analyzer.dart';
 import 'waffra_sms_local_rules.dart';
+import 'waffra_sms_review_groups.dart';
 import 'waffra_sms_account_learning.dart';
 import 'waffra_sms_rule_settings_page.dart';
 import 'waffra_unknown_financial_sms_page.dart';
@@ -2700,6 +2701,7 @@ class _ProfileFormState extends State<ProfileForm> {
   }catch(e){if(mounted)snack(context,waffraIsEnglish?'Could not save photo':'تعذر حفظ الصورة');}
  }
  Future<void> save()async {
+  if(busy)return;
   setState(()=>profileAttempted=true);
   if(gender.isEmpty)return;
   if(waffraTextFieldError(name.text)!=null||
@@ -2711,6 +2713,9 @@ class _ProfileFormState extends State<ProfileForm> {
    waffraConfirmPasswordFieldError(confirmPassword.text,password.text)!=null))return;
   setState(()=>busy=true);
   try {
+   // Paint the disabled Save/registration progress UI before secure I/O.
+   await WidgetsBinding.instance.endOfFrame;
+   if(!mounted)return;
    if(widget.initial==null&&widget.provider=='Phone'){
     // A completed existing profile must use verified sign-in, never a
     // second registration that can overwrite the account's name or data.
@@ -2839,9 +2844,13 @@ class _ProfileFormState extends State<ProfileForm> {
      const SizedBox(height:22),
      FilledButton(key:const Key('waffra-register-submit'),
       onPressed:WaffraHaptics.tap(busy?null:save),
-      child:WaffraText(busy?
-       (waffraIsEnglish?'Saving...':'جارٍ الحفظ'):
-       (waffraIsEnglish?'Complete registration':'إكمال التسجيل'))),
+      child:busy?Row(mainAxisSize:MainAxisSize.min,children:[
+       const SizedBox(width:18,height:18,child:CircularProgressIndicator(
+        strokeWidth:2,color:Colors.white)),
+       const SizedBox(width:10),
+       WaffraText(waffraIsEnglish?'Saving...':'جارٍ الحفظ'),
+      ]):WaffraText(waffraIsEnglish?
+       'Complete registration':'إكمال التسجيل')),
     ])),
   );
  }
@@ -4482,10 +4491,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
   if(!mounted)return;
   final waiting=<Map<String,Object?>>[];
+  var classifiedSinceYield=0;
   final toAcknowledge=<String>[];
   final toAcknowledgeCommitted=<String>[];
   final toRestoreOnAckFailure=<Map<String,Object?>>[];
   for(final candidate in results){
+   // Yield between small CPU-heavy parser batches. Native AES and inbox I/O
+   // are already off-thread; this prevents 1000 Dart parses monopolizing
+   // Flutter frames on Home, navigation and SMS notice refresh.
+   if(++classifiedSinceYield>=16){
+    classifiedSinceYield=0;
+    await Future<void>.delayed(const Duration(milliseconds:1));
+    if(!mounted||!ready)return;
+   }
    final id=candidate['id'],body=candidate['body'];
    if(id is! String||body is! String)continue;
    if(smsHashes.contains(bankSmsHash(body))){
@@ -4782,30 +4800,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    ));
  }
  Future<void> _openAutoSmsInbox()async{
-  // Opening review does not also trigger four hidden historical provider pages.
-  // Explicit Rescan is the only user-facing action that requests that work.
-  await _refreshAutoSmsInbox();
-  if(!mounted||_autoSmsPending.isEmpty)return;
-  // Every bank sender gets one group. No guessed merchants or bank identities.
-  final bySender=<String,List<Map<String,Object?>>>{};
-  for(final candidate in _autoSmsPending){
-   final raw=candidate['sender'] is String?
-    (candidate['sender'] as String).trim():'';
-   final name=raw.isEmpty?
-    (waffraIsEnglish?'Unknown sender':'مرسل غير محدد'):raw;
-   final group=bySender.keys.firstWhere(
-    (key)=>key.toLowerCase()==name.toLowerCase(),orElse:()=>name);
-   bySender.putIfAbsent(group,()=> <Map<String,Object?>>[]).add(candidate);
+  // The Home snapshot has already passed native owner/consent verification.
+  // Re-reading/decrypting/reclassifying all 1000 SMS on every tap blocks
+  // navigation for no gain; initial/invalid/empty snapshots still refresh.
+  if(!_autoSmsStatusChecked||_autoSmsStatusProblem!=null||
+     _autoSmsPending.isEmpty){
+   await _refreshAutoSmsInbox();
   }
-  final senders=bySender.keys.toList()
-   ..sort((a,b)=>a.toLowerCase().compareTo(b.toLowerCase()));
-  for(final messages in bySender.values){
-   messages.sort((a,b){
-    final x=a['receivedAt'] is int?a['receivedAt'] as int:0;
-    final y=b['receivedAt'] is int?b['receivedAt'] as int:0;
-    return y.compareTo(x);
-   });
-  }
+  if(!mounted||!ready||_autoSmsStatusProblem!=null||
+     _autoSmsPending.isEmpty)return;
+  // O(N) case-insensitive grouping; preserve each original sender and date.
+  final grouped=WaffraSmsReviewGroups.from(_autoSmsPending,
+   unknownSender:waffraIsEnglish?'Unknown sender':'مرسل غير محدد');
+  final bySender=grouped.bySender;
+  final senders=grouped.senders;
   String? selectedSender,openingReviewId;
   final selectedIds=<String>{};
   var bulkBusy=false;
