@@ -59,11 +59,16 @@ class _WaffraApprovedNotificationsPageState
    'income'=>widget.english?'Income':'دخل',
    'expense'=>widget.english?'Expense':'مصروف',
    'transfer'=>widget.english?'Transfer':'تحويل',
-   'excluded'=>widget.english?'Excluded • verification':'مستبعدة — رمز تحقق',
+   'excluded'=>widget.english?'Excluded':'مستبعدة',
+   'otpReview'=>widget.english?'Verification • review only':
+    'رسالة تحقق — تحتاج مراجعة',
+   'excludeSuggestion'=>widget.english?'Suggested for exclusion':
+    'مقترحة للاستبعاد',
    _=>widget.english?'Needs review':'تحتاج مراجعة',
   };
   final color=notice.kind=='expense'?const Color(0xFFB94838):
-   notice.kind=='excluded'?const Color(0xFF6A6A60):emerald;
+   (notice.kind=='excluded'||notice.kind=='otpReview'||
+    notice.kind=='excludeSuggestion')?const Color(0xFF6A6A60):emerald;
   return Padding(
    padding:const EdgeInsets.symmetric(horizontal:12,vertical:4),
    child:Material(color:Colors.white,borderRadius:BorderRadius.circular(15),
