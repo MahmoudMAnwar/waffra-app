@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'waffra_sms_multicurrency_review.dart';
+import 'waffra_bank_sms_facts.dart';
 
 /// Small no-cost, fully offline, *trained* multinomial Bayes intent model.
 /// Its training examples are synthetic (never users' SMS); it is not a
@@ -140,6 +141,9 @@ abstract final class WaffraSmsIntelligence {
       .replaceAll('\u00a0', ' ');
 
   static bool isPendingOrUnconfirmed(String raw) {
+    // Shared OTP gate with bank facts and Notifications. Seed suggestions
+    // never silently drop a true financial message or bypass user approval.
+    if(WaffraBankSmsFactsParser.isVerificationChallenge(raw))return true;
     final s = normalize(raw);
     return RegExp(
       r'\b(?:otp|one.time.password|verification.code|authorization.hold|pre.?auth|declined|rejected|failed|pending|unsuccessful|cancelled|canceled)\b'
