@@ -2733,3 +2733,7 @@ M550 early CI proof (2026-11-08): First exact-HEAD M550 run audited 107 workflow
 ====================================================================
 - After the SQLite3MC/llamadart asset integrity gates, Android emulator CI revealed HTTP 504 downloading the original Gradle 9.3.1-all release ZIP through the normal GitHub redirect. Added an Android-job-only CI prefetch that downloads the immutable official Gradle distribution via GitHub Release API (verified fallback downloads.gradle.org) and checks the published SHA256 17f277867f6914d61b1aa02efab1ba7bb439ad652ca485cd8ca6842fccec6e43 before staging it to Gradle wrapper URL-hash cache paths.
 - This preserves the exact wrapper Gradle version, existing Android and finance assertions, source integrity, SQLCipher, Flutter and signing. Added a negative/positive regression contract to prevent accidentally skipping this step. Full exact-head CI and two-device upgrade validation pending; no merge or signed APK approval yet.
+
+
+[M553 follow-up] 2026-11-08 — Ensure native cache is staged AFTER dependency installation
+- Logs from M119 proved the official llamadart archive passed SHA256 but subsequent `flutter pub get` reinstalled its package root and discarded the preseeded archive, forcing a new failing download. The shared CI prefetch action now runs Flutter package resolution before archive-cache restore and official SHA256 prefetch; existing per-job pub get becomes idempotent and original test suites stay unchanged. Evidence requires a new exact-head CI run, no passing claim in advance.

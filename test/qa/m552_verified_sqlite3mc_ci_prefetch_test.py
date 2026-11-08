@@ -32,6 +32,9 @@ class VerifiedSqliteCiPrefetchTest(unittest.TestCase):
         self.assertIn('uses: actions/cache@v4', action)
         self.assertIn('run: bash scripts/qa/prefetch_verified_sqlite3mc.sh', action)
         self.assertIn('run: bash scripts/qa/prefetch_verified_llamadart.sh', action)
+        self.assertIn('run: flutter pub get',action)
+        self.assertLess(action.index('run: flutter pub get'),
+                        action.index('run: bash scripts/qa/prefetch_verified_llamadart.sh'))
         self.assertIn('llamadart-0.8.24/.dart_tool/llamadart/native_bundles/v0.4.1', action)
         llama = (ROOT / 'scripts/qa/prefetch_verified_llamadart.sh').read_text(encoding='utf-8')
         self.assertIn("upstream='leehack/llamadart-native'", llama)

@@ -7,6 +7,9 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Resolve Flutter dependencies before installing native binary cache
+      shell: bash
+      run: flutter pub get
     - name: Restore verified upstream native assets cache
       uses: actions/cache@v4
       with:
