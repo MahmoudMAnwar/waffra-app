@@ -2854,3 +2854,9 @@ M550 early CI proof (2026-11-08): First exact-HEAD M550 run audited 107 workflow
 
 [M578 explicit SMS date+time corrected review] 2026-11-08
 - Missing-source-date SMS review now requires both calendar date and time-of-day selection before encrypted saving. Cancellation leaves date unconfirmed; future time is refused, selected date/time displayed. Existing saved entries preserve their old date. Updated M566 and added M578 regressions; full CI and device QA pending.
+
+
+[M577 exact-head M174/M429 CI repairs — release record] 2026-11-08
+- Latest app source commit 5a0d9a1 removes two redundant nullable guards in the reviewed SMS Yes path after the immutable canConfirm predicate already proves original source amount and date. All source amount/date/category, verified bank-account confirmation, SQLCipher atomic writer and bank-SMS hash dedup remain mandatory.
+- M174 M385 protected-source manifest now uses the unique original M340 manual-writer quality check line as the bounded end anchor, resolving accidental duplicate `for marker, reason in (` references in the preceding release. The financial QA source, test set and security conditions were not bypassed.
+- M449 release-note ancestry failed on 5a0d9a1 because the app source edit was newer than the prior release-note entry. This release-note-only commit follows the app fix and provides the required main APK release evidence; all same-commit CI still must pass, no merge claimed.
