@@ -126,6 +126,54 @@ void main(){
   expect(writer,contains('expectedAccountGeneration:chosen.generation'));
  });
 
+ test('M594 separate fee totals are exact halalas, not guessed money',(){
+  expect(WaffraBankSmsFactsParser.extraDebitMinor(
+   principalMinor:1900,feeSar:0.58),1958);
+  expect(WaffraBankSmsFactsParser.extraDebitMinor(
+   principalMinor:190000,feeSar:0.58),190058);
+  expect(WaffraBankSmsFactsParser.extraDebitMinor(
+   principalMinor:1900,feeSar:0.0),1900);
+  expect(WaffraBankSmsFactsParser.extraDebitMinor(
+   principalMinor:1900,feeSar:null),isNull);
+  expect(WaffraBankSmsFactsParser.extraDebitMinor(
+   principalMinor:1900,feeSar:0.001),isNull);
+ });
+
+ test('M594 fee-carrying SMS cannot silently save principal-only transfer',(){
+  final src=File('lib/main.dart').readAsStringSync();
+  final review=src.split(' Future<void> _reviewSmsAccountTransfer({')[1]
+   .split(' /// M593: even with JSON decoded')[0];
+  expect(review,contains('feeTotalMinor'));
+  expect(review,contains("WaffraSmsAccountLearning.suffix4(facts.destinationSuffix)"));
+  expect(review,contains("WaffraSmsAccountLearning.suffix4(facts.sourceSuffix)"));
+  expect(review,contains("if(facts.fee!=null&&facts.fee!>0){"));
+  expect(review,contains("throw StateError('Transfer fee requires atomic finance writer')"));
+  expect(review,contains('WaffraAutoSms.acknowledgeCompletedTransfer([id])'));
+ });
+
+ test('M592 bulk review keeps Waffra native policy, not phone SMS deletion',(){
+  final main=File('lib/main.dart').readAsStringSync();
+  final handler=main.split(
+   ' Future<bool> _m592ExcludeNotificationSelection(')[1]
+   .split(' Future<void> _m549OpenNotifications()async{')[0];
+  expect(handler,contains('WaffraAutoSms.excludeSenders(senderNames)'));
+  expect(handler,contains('WaffraAutoSms.excludeMessages(batch)'));
+  expect(handler,contains('selected.every(pending.containsKey)'));
+  expect(handler,contains('final blockedIds=')==false,isTrue);
+  expect(handler,contains('final bySender='));
+  expect(handler,isNot(contains('await WaffraAutoSms.acknowledgeCommitted(')));
+  expect(handler,isNot(contains('deleteAndroidSms')));
+ });
+
+ test('M593 manual and reviewed-SMS verified ledger mapping yields frames',(){
+  final app=File('lib/main.dart').readAsStringSync();
+  expect(app,contains('Future<List<MoneyEntry>> _m593BuildVerifiedEntries('));
+  expect(app,contains('const batchSize=32;'));
+  expect(app,contains('await Future<void>.delayed(const Duration(milliseconds:1))'));
+  expect(app,contains('final verified=await _m593BuildVerifiedEntries(decoded);'));
+  expect(app,contains('final updated=await _m593BuildVerifiedEntries(decoded);'));
+ });
+
  test('M587 bank transfer shows exactly three non-posting choices',(){
   final main=File('lib/main.dart').readAsStringSync();
   final review=main.split(
