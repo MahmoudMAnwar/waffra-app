@@ -13,7 +13,8 @@
     "2026-11-08 prevent historical SMS reimport when saving local review rules or completing bulk exclusions; only explicit history/rescan action may page Android SMS while existing queue, exclusions and financial deduplication remain preserved.",
     "Fix recurring PR CI cancellations: exact-head SHA-scoped concurrency for seven critical full Flutter, Android emulator, financial integrity, backup and release approval workflows, while retaining safe M453 cleanup for genuinely superseded heads.",
     "Prevent six apparent CI workflow failures caused by old queued synchronize events canceling new PR HEAD jobs; test SHA isolation and keep all original positive finance and security checks active.",
-    "M549 / issue #491: all SMS inbox senders in review instead of only financial-looking banks; remove 1000 selected Waffra SMS with one sender-choice dialog and durable exclusion, optional encrypted sender-only block purges queue and previous labelled SMS receipts; no Android SMS or finance deletion; dim Rescan unless new provider rows exist or history is unfinished with free capacity."
+    "M549 / issue #491: all SMS inbox senders in review instead of only financial-looking banks; remove 1000 selected Waffra SMS with one sender-choice dialog and durable exclusion, optional encrypted sender-only block purges queue and previous labelled SMS receipts; no Android SMS or finance deletion; dim Rescan unless new provider rows exist or history is unfinished with free capacity.",
+    "M549: repair the obsolete M417 source assertion which only allowed financial-looking bank SMS, now asserting all-sender review-only native intake plus committed/excluded anti-replay and no background finance/network access."
   ],
   "allowed_changed_files": [
     ".github/workflows/finance-full-regression.yml",
@@ -41,7 +42,8 @@
     "native/WaffraMainActivity.kt",
     "lib/waffra_auto_sms.dart",
     "test/m549_sms_review_owner_scoped_test.dart",
-    "test/m464_sms_bulk_rescan_regression_test.dart"
+    "test/m464_sms_bulk_rescan_regression_test.dart",
+    "test/qa/m417_sms_permission_acceptance_test.py"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -188,6 +190,12 @@
       {
         "start": " test('M464 rescan signals active state and returns cumulative counts',(){",
         "end": " test('M464 review supports both sender and individual multi-selection',(){"
+      }
+    ],
+    "test/qa/m417_sms_permission_acceptance_test.py": [
+      {
+        "start": "    def test_background_cannot_post_finance_or_upload_sms(self):",
+        "end": "    def test_writes_only_from_existing_verified_sms_review(self):"
       }
     ]
   }
