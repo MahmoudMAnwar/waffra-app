@@ -174,6 +174,40 @@ void main(){
   expect(app,contains('final updated=await _m593BuildVerifiedEntries(decoded);'));
  });
 
+ test('M595 compact review has exact three selectable transaction types',(){
+  final app=File('lib/main.dart').readAsStringSync();
+  final review=app.split(
+   ' Future<void> _reviewAutoSmsCandidates({String? targetId})async {')[1]
+   .split(' void _receiveSharedSms(){')[0];
+  expect(review,contains("const <String>['income','expense','transfer']"));
+  expect(review,contains("Key('m595-review-type-'+option)"));
+  expect(review,contains("Key('m595-review-type-continue')"));
+  expect(review,contains("Key('m595-review-single-exclude')"));
+  expect(review,contains("reviewType=option;"));
+  expect(review,contains("reviewedAccount=null;"));
+  expect(review,contains("reviewedAccountName=null;"));
+  expect(review,contains("if(decision=='correct-type'&&mounted&&reviewType!=null)"));
+ });
+
+ test('M595 correction must not auto-post, guess a transfer, or auto ACK',(){
+  final app=File('lib/main.dart').readAsStringSync();
+  final review=app.split(
+   ' Future<void> _reviewAutoSmsCandidates({String? targetId})async {')[1]
+   .split(' void _receiveSharedSms(){')[0];
+  final corrected=review.split("if(decision=='correct-type'&&mounted&&reviewType!=null)")[1]
+   .split("else if(decision=='exclude'&&mounted)")[0];
+  expect(corrected,contains('await openVerifiedTransfer()'));
+  expect(corrected,contains('await entrySheet(sms:true,initialSms:body,'));
+  expect(corrected,contains("reviewedSender:sender,scannedIncome:reviewType=='income'"));
+  expect(corrected,contains('if(smsHashes.contains(bankSmsHash(body)))'));
+  expect(corrected,isNot(contains('commitConfirmedSms(')));
+  expect(corrected,isNot(contains('excludeMessages(')));
+  final buttons=review.split("if(!sensitive)...[")[1]
+   .split("if(!sensitive)Padding(")[0];
+  expect(buttons,isNot(contains("await _financeAuthority.commitConfirmedSms(")));
+  expect(buttons,isNot(contains("WaffraAutoSms.acknowledgeCommitted(")));
+ });
+
  test('M587 bank transfer shows exactly three non-posting choices',(){
   final main=File('lib/main.dart').readAsStringSync();
   final review=main.split(
