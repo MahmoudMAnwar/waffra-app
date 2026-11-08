@@ -200,7 +200,9 @@ void main() {
     expect('_financeAuthority.commitConfirmedSms('.allMatches(home).length, 4);
     final reviewedYes=home.split('Future<void> _m565ConfirmSms(')[1]
       .split('Future<void> _reviewAutoSmsCandidates(')[0];
-    expect(reviewedYes, contains('reviewSmsAccountLinks([reviewed],smsSender:sender)'));
+    expect(reviewedYes, contains('final chosen=selectedAccount;'));
+    expect(reviewedYes, contains('selectedAccount.ids!.single'));
+    expect(home, contains('reviewSmsAccountLinks([trial],smsSender:sender)'));
     expect(reviewedYes, contains('route:WaffraFinanceRoute.bulkSmsConfirmedSave'));
     expect(reviewedYes, contains('hashes:[hash],userConfirmed:true,allowDuplicateHashes:false'));
     expect(reviewedYes, contains('selectedAccountIds:chosen.ids'));
