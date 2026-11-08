@@ -76,7 +76,13 @@ void main() {
     expect(sheet,contains('final inferred=WaffraSmsLocalRules.resolve('));
     expect(sheet,contains('.read(_smsRuleOwnerKey)'));
     expect(sheet,contains('category=suggested??learned??'));
-    expect(sheet,contains('_refreshAutoSmsInbox(importMonth:true)'));
+    // The next/previous message must see recently learned rules. A finance
+    // save must NOT trigger four historical SMS pages on the UI transition.
+    final prepare=sheet.split('Future<void> prepare(int i,StateSetter update)async {')[1]
+     .split('// Kept for staged SMS migration;')[0];
+    expect(prepare,contains('.read(_smsRuleOwnerKey)'));
+    expect(prepare,contains('custom:refreshedRules'));
+    expect(sheet,isNot(contains('_refreshAutoSmsInbox(importMonth:true)')));
     // Do not auto-post inferred SMS: every next item still uses the
     // explicitly reviewed, verified source commit path.
     expect(sheet,contains('userConfirmed:true'));
