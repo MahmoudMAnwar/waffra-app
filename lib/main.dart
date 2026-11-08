@@ -2574,7 +2574,9 @@ class _LoginScreenState extends State<LoginScreen> {
             icon:Icon(showSignInPassword?Icons.visibility_off:Icons.visibility)))),
          const SizedBox(height:13),
          FilledButton(onPressed:WaffraHaptics.tap(signingIn?null:_signIn),
-          style:FilledButton.styleFrom(backgroundColor:Colors.white,foregroundColor:forest),
+          key:const Key('m585-login-submit-stable'),
+          style:FilledButton.styleFrom(backgroundColor:Colors.white,
+           foregroundColor:forest,minimumSize:const Size(218,48)),
           child:Row(mainAxisSize:MainAxisSize.min,children:[
            if(signingIn)...[
             const SizedBox(width:18,height:18,child:CircularProgressIndicator(
@@ -4501,6 +4503,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     continue;
    }
    final annotated=Map<String,Object?>.from(candidate);
+   // Parse security evidence once during bounded background-intake batching,
+   // not 1000 times in the notifications widget build path.
+   if(WaffraBankSmsFactsParser.isVerificationChallenge(body)){
+    annotated['sensitiveOtp']=true;
+   }
    final local=_localSmsClassification(annotated,customRules);
    if(local!=null){
     annotated['local']=local;
@@ -5621,7 +5628,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final sender=selected['sender'] is String?selected['sender'] as String:'';
    if(id is! String||body is! String)return;
    final facts=WaffraBankSmsFactsParser.parse(body);
-   final sensitive=selected['sensitiveOtp']==true;
+   final sensitive=selected['sensitiveOtp']==true||
+    WaffraBankSmsFactsParser.isVerificationChallenge(body);
    final operationName=switch(facts.kind){
     WaffraBankOperationKind.transfer=>waffraIsEnglish?'Bank transfer':'تحويل بنكي',
     WaffraBankOperationKind.cardSettlement=>waffraIsEnglish?'Card settlement':'سداد بطاقة',
@@ -17363,7 +17371,27 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   // Instant content swap avoids building/animating the previous heavy tab
   // alongside the next one (the recurring -> savings navigation hitch).
   body:_financeLoadFailure!=null?_financialRecoveryScreen():
-   !ready?const Center(child:CircularProgressIndicator()):
+   !ready?RepaintBoundary(
+    child:Center(child:ConstrainedBox(
+     constraints:const BoxConstraints(maxWidth:320),
+     child:Padding(padding:const EdgeInsets.symmetric(horizontal:24),
+      child:Column(mainAxisSize:MainAxisSize.min,children:[
+       const SizedBox(width:42,height:42,child:CircularProgressIndicator(
+        strokeWidth:3,color:emerald)),
+       const SizedBox(height:18),
+       WaffraText(waffraIsEnglish?'Preparing secure finances…':
+        'جارٍ تجهيز بياناتك المالية بأمان…',
+        textAlign:TextAlign.center,
+        style:const TextStyle(fontSize:14,fontWeight:FontWeight.w600)),
+       const SizedBox(height:16),
+       Container(height:54,decoration:BoxDecoration(
+        color:Theme.of(context).cardColor,
+        borderRadius:BorderRadius.circular(16))),
+       const SizedBox(height:10),
+       Container(height:36,decoration:BoxDecoration(
+        color:Theme.of(context).cardColor,
+        borderRadius:BorderRadius.circular(14))),
+      ]))))):
    Stack(clipBehavior:Clip.none,children:[GestureDetector(
     behavior:HitTestBehavior.translucent,
     onHorizontalDragStart:(_)=>_swipeTravel=0,
