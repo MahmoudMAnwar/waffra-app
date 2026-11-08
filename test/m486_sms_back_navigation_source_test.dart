@@ -110,11 +110,11 @@ void main(){
   expect(from,greaterThanOrEqualTo(0));
   expect(to,greaterThan(from));
   final bulk=src.substring(from,to);
-  expect(bulk,contains("if(choice==null||choice=='back'||!ctx.mounted)return;"));
+  // M548: the legacy 'choice' prompt was replaced by explicit messages\n  // confirmation + an optional separate sender-blocking decision. Back\n  // must cancel with the same sheet and pending selection intact.\n  expect(bulk,contains("if(confirmed!=true||!ctx.mounted)return;"));\n  expect(bulk,contains("if(senderChoice==null||senderChoice=='back'||!ctx.mounted)return;"));\n  expect(bulk,contains("Navigator.pop(dialog,'messages')"));\n  expect(bulk,contains("Navigator.pop(dialog,'senders')"));
   expect(bulk,contains('if(!failed&&ctx.mounted)Navigator.pop(ctx);'));
   expect(bulk,contains('selectedIds.removeAll(done);'));
   expect(bulk,contains('if(failed)snack(context,'));
-  expect(bulk,contains('senderBlockChoices.contains'));
+  expect(bulk,contains("final senderBlockChoices=senderChoice=='senders'?"));\n  expect(bulk,contains('if(senderBlockChoices.isNotEmpty)'));\n  expect(bulk,contains('blockedIds.contains(id)'));
  });
 
 }
