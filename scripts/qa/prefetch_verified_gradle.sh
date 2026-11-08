@@ -6,7 +6,7 @@ release='v9.3.1'
 upstream='gradle/gradle-distributions'
 asset='gradle-9.3.1-all.zip'
 expected='17f277867f6914d61b1aa02efab1ba7bb439ad652ca485cd8ca6842fccec6e43'
-base="\${GRADLE_USER_HOME:-$HOME/.gradle}/wrapper/dists/gradle-9.3.1-all"
+base="${GRADLE_USER_HOME:-$HOME/.gradle}/wrapper/dists/gradle-9.3.1-all"
 urls=(
   'https://services.gradle.org/distributions/gradle-9.3.1-all.zip'
   'https://downloads.gradle.org/distributions/gradle-9.3.1-all.zip'
@@ -26,7 +26,7 @@ print(s or '0')
 PY
 }
 all_good=true
-for url in "\${urls[@]}"; do
+for url in "${urls[@]}"; do
   key="$(key_for_url "$url")"
   target="$base/$key/$asset"
   if [[ ! -f "$target" ]] || ! printf '%s  %s\n' "$expected" "$target" | sha256sum --check --status; then
@@ -39,14 +39,19 @@ if [[ "$all_good" == true ]]; then
 fi
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
-gh release download "$release" --repo "$upstream" --pattern "$asset" --dir "$work" --clobber
+if ! gh release download "$release" --repo "$upstream" --pattern "$asset" --dir "$work" --clobber; then
+  echo "GitHub Release API unavailable; attempting original official Gradle CDN"
+  curl --fail --location --retry 2 --connect-timeout 15 --max-time 180 \
+    --output "$work/$asset" \
+    "https://downloads.gradle.org/distributions/$asset"
+fi
 archive="$work/$asset"
 [[ -f "$archive" ]] || { echo "FATAL: official Gradle ZIP missing" >&2; exit 1; }
 printf '%s  %s\n' "$expected" "$archive" | sha256sum --check --status || {
   echo "FATAL: official Gradle 9.3.1 distribution digest mismatch" >&2
   exit 1
 }
-for url in "\${urls[@]}"; do
+for url in "${urls[@]}"; do
   key="$(key_for_url "$url")"
   target="$base/$key/$asset"
   mkdir -p "$(dirname "$target")"
