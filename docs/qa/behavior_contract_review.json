@@ -226,6 +226,42 @@
         "Bank challenge OTP and pending/declined text are not suggested as settled income or expense, and SMS native inbox is never deleted.",
         "Old tests are strengthened to match approved behavior, not skipped, weakened or deleted; full exact-head CI remains required."
       ]
+    },
+    {
+      "id": "M590-M594-REVIEW-PREYES-ACCOUNT-OTP-BULK-EXCLUSION-FRAME-LAG-FEE-SAFETY",
+      "issue": "#498 #500 #501 #502 #503 #504, owner approval 2026-11-08",
+      "previous_behavior": "SMS Yes requested a redundant bank/account dialog after confirmation; separate local ML classifier could miss Arabic temporary codes; Notifications lacked current-filter inline multiselection and native sender-block binding; manual/SMS ledger model conversion was synchronous; transfer fee was not visible and current verified writer only supports fee-free principal transfer.",
+      "approved_behavior": "Choose exact owner-verified bank account inside first SMS review before enabling final Yes; pass one fresh SQLCipher generation to confirmed SMS writer without a second dialog. Share fail-closed OTP parser across local ML and bank facts, rename excluded UI consistently. Notifications select/deselect only current sender group; fully selected senders get one native encrypted sender block, partial selections get exact 100-ID anti-replay batches and single owner-scoped safe keyword write. Yield between 32 verified money models after actual write; keep registration CTA width. Show source principal, separate fee, calculated extra debit, and prefill source/destination last four independently. Fee-bearing internal transfers MUST be blocked until an atomic fee-aware SQLCipher writer exists: never silently post principal-only incomplete money or ACK SMS.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_bank_sms_facts.dart",
+        "lib/waffra_sms_intelligence.dart",
+        "lib/waffra_sms_rule_settings_page.dart",
+        "lib/waffra_approved_notifications.dart"
+      ],
+      "test_paths": [
+        "test/m549_approved_home_notifications_test.dart",
+        "test/m580_sms_security_navigation_performance_test.dart",
+        "test/m548_review_grouping_and_signup_perf_test.dart",
+        "test/m470_sms_excluded_senders_test.dart",
+        "test/qa/m565_sms_yes_no_test.py",
+        "test/m470_sms_first_sender_account_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m174-main-sha-postmerge.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m417-auto-bank-sms.yml",
+        ".github/workflows/m429-integration-smoke.yml"
+      ],
+      "safety_invariants": [
+        "No financial writer, user-selected account or SQLCipher generation bypass; one confirmed SMS hash journal and no double debit.",
+        "No SMS OTP digit/phone/account identifier or whole body stored in learned rules; built-ins never silently delete SMS.",
+        "Full sender blocking only after selecting all live sender IDs, with one explicit confirmation and future anti-replay, never Android inbox deletion.",
+        "Independent fee never appears as a successful principal-only transfer, never ACK an unposted SMS, and do not claim full #503 completion.",
+        "Changes still require actual full exact-HEAD Flutter/native tests and physical Android clean install/upgrade evidence."
+      ]
     }
   ]
 }
