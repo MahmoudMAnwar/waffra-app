@@ -65,7 +65,8 @@
     "M575 update M565 SMS positive regression to assert stronger main + valid subcategory membership after M574 detailed review preview, rather than obsolete same-line source text; checks retained and strengthened, no skip.",
     "M576 issue #495: first NEW sender+last-four masked identity must offer create/choose bank account even if same bank has older account with different four. Previously confirmed exact sender+four reuses verified account without re-prompt; no sender-only automatic posting. One owner-bound learning read; regression added.",
     "M577: real M174 unique M340 M385 boundary and M429 redundant Dart null guard fix on current combined PR head; preserve real native/SQLCipher quality and entire original Yes eligibility.",
-    "M578 issue #495: SMS editable review of absent original timestamp must require explicit DATE and TIME (hours/minutes); canceling time picker cannot authorize money commit; block future time. Preserve existing already saved date; display date/time together, strengthen M566 regression, add M578 regression."
+    "M578 issue #495: SMS editable review of absent original timestamp must require explicit DATE and TIME (hours/minutes); canceling time picker cannot authorize money commit; block future time. Preserve existing already saved date; display date/time together, strengthen M566 regression, add M578 regression.",
+    "M580: fix actual M340 sub-job M337 regression that searched obsolete bulk SMS date guard `found.where(bankSmsHasUnverifiedTimestamp)` after M564 added stricter unknown-date validation; retain positive proof that invalidDates bankSmsDate(raw)==null or ambiguous date is before verified finance commit, never skip. Bound only that existing test; no changes to finance code."
   ],
   "allowed_changed_files": [
     ".github/workflows/finance-full-regression.yml",
@@ -213,7 +214,8 @@
     "test/qa/m573_sms_edited_account_learning_test.py",
     "test/qa/m574_sms_confirmation_full_fields_test.py",
     "test/qa/m576_first_distinct_bank_identity_test.py",
-    "test/qa/m578_sms_time_confirmation_test.py"
+    "test/qa/m578_sms_time_confirmation_test.py",
+    "test/m337_bank_sms_timestamp_finance_safety_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -1042,6 +1044,12 @@
       {
         "start": "    def test_detects_finance_authority_bypass(self):",
         "end": "    def test_detects_fx_preview_ledger_write(self):"
+      }
+    ],
+    "test/m337_bank_sms_timestamp_finance_safety_test.dart": [
+      {
+        "start": " test('M337 bulk date gate is before parsing, category assignment and commit',(){",
+        "end": "\n });\n}"
       }
     ]
   }
