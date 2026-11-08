@@ -2806,3 +2806,7 @@ M550 early CI proof (2026-11-08): First exact-HEAD M550 run audited 107 workflow
 
 [M565 verified bank SMS confirmation UX] 2026-11-08
 - Reviewed income/expense SMS now presents source amount/date/category and explicit هل العملية صحيحة؟ Yes / No edit actions. Yes requires verified SAR direction/amount, exact original date and active category, then owner-reviewed bank account, optional budget and SQLCipher-backed atomic SMS+hash journal. Only committed message is acknowledged; no accidental duplicate money. No goes to editable SMS entry. Regression in test/qa/m565_sms_yes_no_test.py. CI and Android UX still pending.
+
+
+[M566 manually confirmed SMS date] 2026-11-08
+- SMS editor with unknown source date now blocks save until explicit calendar date pick; stores confirmation in same SMS review draft across Back. No implicit today's-date finance posting. Existing manual and receipt date behavior unchanged. Python guard added; exact-head CI and Android pending.

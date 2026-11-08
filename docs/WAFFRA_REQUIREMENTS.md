@@ -801,3 +801,9 @@ M274 must also trigger on `docs/release/WAFFRA_APPROVED_CHANGES.txt` changes bec
 - Display original SAR amount/date and suggested active leaf category next to “هل العملية صحيحة؟” Yes/No. No opens editable SMS review preserving source. Yes enabled only with verified source amount, direction, original transaction date and category.
 - Yes performs verified account selection (create if required), optional budget, then source-authorized atomic SQLCipher ledger+SMS hash write, accounts learning after actual successful commit and Android ACK. Duplicate hash is never posted twice. Unknown facts fail closed.
 - Test: test/qa/m565_sms_yes_no_test.py. M564 exact dates enforced independently for legacy single and bulk paths. Full flutter and native Android CI pending.
+
+
+## M566 — #495 explicit date for edited SMS (2026-11-08)
+**PR:** #497. **Status:** committed / exact-head CI and device acceptance pending.
+- If original bank SMS has no parsed timestamp, the editable review must explicitly confirm a date using the calendar before save. The edit's date confirmation persists in the same per-SMS Back draft. Defaults must never become a verified historical date without choice.
+- Test test/qa/m566_sms_manual_date_confirmation_test.py; date from M564 batch and single writers remains authoritative.

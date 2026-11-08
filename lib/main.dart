@@ -8914,11 +8914,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     chosenManualProvider=null;
    }
   }
+  // Unknown original SMS timestamp requires an explicit calendar pick.
+  final originalSmsDate=sms&&initialSms!=null?
+   bankSmsDate(initialSms,referenceDate:DateTime.now()):null;
+  var smsDateConfirmed=smsEditorDraft?['dateConfirmed']==true||
+   originalSmsDate!=null;
   DateTime date=(smsEditorDraft?['date'] as DateTime?)??
-   initial?.date??scannedReceipt?.date??
-   (sms&&initialSms!=null?
-    bankSmsDate(initialSms,referenceDate:DateTime.now()):null)??
-   DateTime.now();
+   initial?.date??scannedReceipt?.date??originalSmsDate??DateTime.now();
    String? suggestion,pendingHash,receiptPath=initial?.receiptPath;
    final stagedReceiptCopies=<String>[];
    // All three modes share the SAME manual bottom sheet. Transfers never
@@ -9004,7 +9006,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        final d=await waffraPickDateWithToday(english:waffraIsEnglish,
         context:sheetContext,initialDate:date,
         firstDate:DateTime(2000),lastDate:DateTime.now());
-       if(d!=null&&sheetContext.mounted)update(()=>date=d);
+       if(d!=null&&sheetContext.mounted)update((){
+        date=d;
+        if(sms)smsDateConfirmed=true;
+       });
       }),
       icon:const Icon(Icons.calendar_month,size:19),
       label:WaffraText(dayText(date),maxLines:1));
@@ -9908,6 +9913,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        }
        if(sms){
         if(message.text.trim().isEmpty)return;
+        if(!smsDateConfirmed){
+         if(sheetContext.mounted)snack(sheetContext,waffraIsEnglish?
+          'Choose the real bank transaction date from the calendar before saving.':
+          'اختار تاريخ العملية البنكية الصحيح من التقويم قبل الحفظ.',isError:true);
+         return;
+        }
         // The display-country setting cannot convert a bank SMS into SAR.
         // The durable finance record must never inherit an unverified
         // foreign amount from the manual SMS review screen.
@@ -9956,6 +9967,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     _m492SmsEditorDrafts.remove(_m492SmsEditorDrafts.keys.first);
    }
    _m492SmsEditorDrafts[smsEditorDraftKey]={
+    'dateConfirmed':smsDateConfirmed,
     'title':title.text,'notes':notes.text,'amount':value.text,
     'income':income,'parent':selectedParentId,'category':category,
     'budget':selectedBudgetId,'provider':chosenManualProvider,
