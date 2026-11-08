@@ -53,6 +53,19 @@ abstract final class WaffraBankSmsFactsParser {
   r'verification\s+code)\b|معلق[ةه]?|غير\s+مكتمل|مرفوض|'
   r'رمز\s+(?:التحقق|التفعيل)',
   caseSensitive:false);
+ /// Security/OTP evidence is never a completed debit. Built-in rules may
+ /// suggest exclusion, but destructive queue removal still needs consent.
+ static final _securityChallenge=RegExp(
+  r'\\b(?:otp|one[ -]?time[ -]?(?:password|code|passcode)|'
+  r'verification[ -]?code|security[ -]?code|authorization[ -]?code|'
+  r'confirm(?:ation)?[ -]?code|temporary[ -]?(?:password|code))\\b|'
+  r'رمز\\s*(?:مؤقت|التحقق|تفعيل|التفعيل|الدخول|تأكيد|التأكيد|الامان|الأمان)|'
+  r'كلم[ةه]\\s*مرور\\s*مؤقت[ةه]?|'
+  r'رمز\\s*(?:إضافة|اضافة|تأكيد)\\s*المستفيد',
+  caseSensitive:false);
+ static bool isVerificationChallenge(String raw)=>
+  _securityChallenge.hasMatch(raw.replaceAll(
+   RegExp(r'[\\u200e\\u200f\\u061c\\u064B-\\u065F]'),' '));
  static final _source=RegExp(
   r'(?:من\s+(?:محفظ[ةه]|حساب|بطاق[ةه])|'
   r'(?:from|source|account|card|wallet|acct)\s*(?:no\.?|ending)?\s*[:：]?)'
@@ -80,6 +93,7 @@ abstract final class WaffraBankSmsFactsParser {
  static WaffraBankSmsFacts parse(String raw){
   final normalized=raw.replaceAll(RegExp(r'[\u200e\u200f\u00a0]'),' ').trim();
   final header=normalized.split(RegExp(r'[\r\n]')).first;
+  final securityChallenge=isVerificationChallenge(normalized);
   final isTransfer=_transfer.hasMatch(header);
   final isCard=_card.hasMatch(normalized);
   final incoming=_income.hasMatch(header);
@@ -99,7 +113,8 @@ abstract final class WaffraBankSmsFactsParser {
    r'تحويل(?:\s+بنكي)?\s+صادر|'
    r'\boutgoing\s+(?:bank\s+)?transfer\b',
    caseSensitive:false).hasMatch(header);
-  final kind=isCard?WaffraBankOperationKind.cardSettlement:
+  final kind=securityChallenge?WaffraBankOperationKind.uncertain:
+   isCard?WaffraBankOperationKind.cardSettlement:
    explicitlyIncoming&&!explicitlyOutgoing?
     WaffraBankOperationKind.income:
    isTransfer?WaffraBankOperationKind.transfer:
@@ -121,7 +136,7 @@ abstract final class WaffraBankSmsFactsParser {
    fee:fee!=null&&fee.isFinite&&fee>=0?fee:null,
    reference:_ref.firstMatch(normalized)?.group(1),
    counterparty:_counterparty.firstMatch(normalized)?.group(1)?.trim(),
-   pending:_pending.hasMatch(normalized),
+   pending:securityChallenge||_pending.hasMatch(normalized),
   );
  }
 }
