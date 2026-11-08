@@ -5503,7 +5503,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final arrived=DateTime.fromMillisecondsSinceEpoch(
     item['receivedAt'] is int?item['receivedAt'] as int:
      DateTime.now().millisecondsSinceEpoch);
-   final date=bankSmsDate(body,referenceDate:arrived)??arrived;
+   // M597: received-at is only a picker hint, never a fabricated bank
+   // transaction timestamp. Unknown dates require an explicit day AND time.
+   DateTime? date=bankSmsDate(body,referenceDate:arrived);
+   if(date==null||bankSmsHasUnverifiedTimestamp(body)){
+    final pickedDay=await showDatePicker(context:context,
+     initialDate:arrived,firstDate:DateTime(2000),
+     lastDate:DateTime.now().add(const Duration(days:1)));
+    if(pickedDay==null||!mounted)return;
+    final pickedTime=await showTimePicker(context:context,
+     initialTime:TimeOfDay.fromDateTime(arrived));
+    if(pickedTime==null||!mounted)return;
+    date=DateTime(pickedDay.year,pickedDay.month,pickedDay.day,
+     pickedTime.hour,pickedTime.minute);
+   }
+   if(date==null)return;
    final prefill=WaffraInternalTransferDraft(
     // Native fingerprint includes sender, body AND receivedAt; two distinct
     // identical-body SMS must not share a single SQLCipher transfer ID.
@@ -5529,8 +5543,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          'إجمالي الخصم عند احتساب الرسوم منفصلة: '+
          (feeTotalMinor==null?'يحتاج مراجعة':
           (feeTotalMinor/100).toStringAsFixed(2)+' ريال')+
-         '. لا يمكن اعتماد الرسوم كخصم منفصل قبل ضمان الحفظ الذري '
-         'للتحويل ورسومه معًا.',
+         '. عند التأكيد ستختار هل الرسوم ضمن الخصم أو منفصلة؛ '
+         'التحويل والرسوم وبصمة الرسالة يُحفظوا معًا بأمان.',
          style:const TextStyle(color:emerald,fontSize:12))),
       Expanded(child:WaffraAccountTransactionForm(
        accounts:accounts,english:waffraIsEnglish,
@@ -5582,19 +5596,73 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         return created.single;
        },
        onConfirmTransfer:(draft)async{
-        // The current transfer writer has no atomic separate fee expense.
-        // Never silently post a principal-only transfer when this SMS has
-        // a distinct source fee that would distort the confirmed balances.
-        if(facts.fee!=null&&facts.fee!>0){
-         if(mounted)snack(context,
-          'لا يمكن حفظ تحويل برسوم حتى تتوفر تسوية ذرية للرسوم '
-          'والتحويل في عملية واحدة؛ لن يُخصم أي مبلغ.',isError:true);
-         throw StateError('Transfer fee requires atomic finance writer');
+        // M597: a positive source-bank fee is an independent expense.
+        // Do not post the principal first, or ACK the message before both
+        // the principal and fee survive one verified SQLCipher transaction.
+        final fee=facts.fee;
+        if(fee!=null&&fee>0){
+         final fullDebit=WaffraBankSmsFactsParser.extraDebitMinor(
+          principalMinor:draft.amountMinor,feeSar:fee);
+         final feeMinor=fullDebit==null?null:
+          fullDebit-draft.amountMinor;
+         if(feeMinor==null||feeMinor<=0||!mounted){
+          throw StateError('Ambiguous SAR bank fee must be reviewed.');
+         }
+         final selected=await showWaffraDialog<String>(
+          context:context,builder:(dialog)=>AlertDialog(
+           title:WaffraText(waffraIsEnglish?
+            'Confirm bank transfer fee':'تأكيد رسوم التحويل'),
+           content:WaffraText(waffraIsEnglish?
+            'Principal: ${(draft.amountMinor/100).toStringAsFixed(2)} SAR. '
+            'Bank fee: ${(feeMinor/100).toStringAsFixed(2)} SAR. '
+            'If separately charged, the source pays '
+            '${(fullDebit/100).toStringAsFixed(2)} SAR and the other '
+            'account receives the principal. If included in the shown '
+            'debit, the other account receives the principal less the fee. '
+            'Choose only what your statement confirms.':
+            'المبلغ: ${(draft.amountMinor/100).toStringAsFixed(2)} ريال، '
+            'والرسوم: ${(feeMinor/100).toStringAsFixed(2)} ريال. '
+            'لو الرسوم منفصلة، المصدر يُخصم منه '
+            '${(fullDebit/100).toStringAsFixed(2)} ريال والمستلم يستلم '
+            'المبلغ الأساسي. لو الرسوم ضمن المبلغ المخصوم، '
+            'المستلم يستلم المبلغ بعد خصم الرسوم. '
+            'اختار فقط الحالة اللي متأكد منها من كشف البنك.'),
+           actions:[
+            TextButton(onPressed:()=>Navigator.pop(dialog),
+             child:WaffraText(waffraIsEnglish?'Back':'عودة')),
+            OutlinedButton(
+             onPressed:()=>Navigator.pop(dialog,'included'),
+             child:WaffraText(waffraIsEnglish?
+              'Fee included':'الرسوم ضمن الخصم')),
+            FilledButton(
+             onPressed:()=>Navigator.pop(dialog,'separate'),
+             child:WaffraText(waffraIsEnglish?
+              'Separate charge':'الرسوم منفصلة')),
+           ]));
+         if(selected!='included'&&selected!='separate'){
+          throw StateError('Fee confirmation was not granted.');
+         }
+         // Re-observe the signed-in, activated SQLCipher accounts before
+         // submitting. The writer checks this generation under its lock.
+         final latest=await api.balances();
+         if(!latest.any((a)=>a.id==draft.fromId&&!a.archived)||
+            !latest.any((a)=>a.id==draft.toId&&!a.archived)){
+          throw StateError('Selected transfer accounts changed.');
+         }
+         await api.transferReviewedSmsWithFee(
+          transferId:draft.requestId,
+          fromAccountId:draft.fromId,toAccountId:draft.toId,
+          principalMinor:draft.amountMinor,feeMinor:feeMinor,
+          feeIncludedInDebit:selected=='included',
+          occurredIso:draft.occurredIso,messageHash:id,
+          feeCategory:'خدمات مالية / رسوم تحويل',
+          userConfirmed:true);
+        }else{
+         await api.transfer(id:draft.requestId,
+          fromAccountId:draft.fromId,toAccountId:draft.toId,
+          amountMinor:draft.amountMinor,occurredIso:draft.occurredIso,
+          note:draft.memo,userConfirmed:true);
         }
-        await api.transfer(id:draft.requestId,
-         fromAccountId:draft.fromId,toAccountId:draft.toId,
-         amountMinor:draft.amountMinor,occurredIso:draft.occurredIso,
-         note:draft.memo,userConfirmed:true);
         saved=true;
         // The transfer is already committed. Queue-only ACK would replay
         // this SMS on historical rescan; use a separate durable marker.
