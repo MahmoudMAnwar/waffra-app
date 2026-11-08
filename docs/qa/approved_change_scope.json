@@ -54,7 +54,8 @@
     "M564 exact timestamp correction scope: bounded bulkSmsSheet section only, containing original bank SMS date validation and source-authoritative writer; original data and unrelated app UI untouched.",
     "M565 #495: real bank SMS review shows source amount/date/category and هل العملية صحيحة؟ Yes / No edit; yes only for verified local SAR, valid exact date/category/direction, explicit verified account and optional budget, one atomic SQLCipher SMS+hash commit with idempotency and ACK only after success; no opens source-preserving editable entry. Source regression remains required.",
     "M566: editable SMS missing an original date may visually show today's default but cannot finance-post until the user explicitly chooses the correct calendar date. Persist confirmation with same per-SMS review draft. Manual and receipt dates untouched.",
-    "M567 M385 scope fix for owner-approved M565: explicitly bound the bank SMS transfer/review functional span from existing transfer entry comment to the start of the unrelated _loadFinanceSafely function; only reviewed SMS source, Yes/No flow and verified financial commit may differ; leave all unrelated source byte-identical and guards on."
+    "M567 M385 scope fix for owner-approved M565: explicitly bound the bank SMS transfer/review functional span from existing transfer entry comment to the start of the unrelated _loadFinanceSafely function; only reviewed SMS source, Yes/No flow and verified financial commit may differ; leave all unrelated source byte-identical and guards on.",
+    "M569: reconcile the exact M174/M147/M440 failures reported on 2026-11-08. Explicitly bound only the SMS single writer changed by M564, retain original main bytes elsewhere; replace two M206 stale device-clock positive assertions with original SMS date validation and negative fallback checks; update M447 required secure SMS commit count 3->4 and checked account/witness/hash gate with seven verified account reviews. Tests stay enabled."
   ],
   "allowed_changed_files": [
     ".github/workflows/finance-full-regression.yml",
@@ -191,7 +192,9 @@
     "test/m495_pr402_ui_performance_regression_test.dart",
     "test/qa/m564_sms_exact_date_guard_test.py",
     "test/qa/m565_sms_yes_no_test.py",
-    "test/qa/m566_sms_manual_date_confirmation_test.py"
+    "test/qa/m566_sms_manual_date_confirmation_test.py",
+    "test/qa/m447_verified_sms_account_linking_test.py",
+    "test/waffra_m206_day_theme_tour_sms_regression_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -262,6 +265,10 @@
       {
         "start": " /// Explicit, idempotent account-to-account transfer from reviewed bank SMS.",
         "end": " Future<void> _loadFinanceSafely()async{"
+      },
+      {
+        "start": "       final hash=bankSmsHash(messages[index]);",
+        "end": "       final budgetSelection=await reviewSmsBudgetLinks([entry]);"
       }
     ],
     "lib/waffra_local_phone_credentials.dart": [
@@ -966,6 +973,18 @@
       {
         "start": "void main(){",
         "end": " test('M495 #418 date fills row and budget is equally expanded when present',(){"
+      }
+    ],
+    "test/qa/m447_verified_sms_account_linking_test.py": [
+      {
+        "start": "    def test_every_home_sms_commit_reviews_accounts(self):",
+        "end": "    def test_manual_and_recurring_finance_account_selection(self):"
+      }
+    ],
+    "test/waffra_m206_day_theme_tour_sms_regression_test.dart": [
+      {
+        "start": "  test('SMS content remains in memory for encrypted source, legacy bridge redacts plaintext', () {",
+        "end": "  test('FAB launch waits for the menu collapse and suppresses double taps', () {"
       }
     ]
   }

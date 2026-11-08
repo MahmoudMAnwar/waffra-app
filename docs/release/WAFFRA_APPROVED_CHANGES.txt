@@ -2814,3 +2814,7 @@ M550 early CI proof (2026-11-08): First exact-HEAD M550 run audited 107 workflow
 
 [M567 exact source scope for #495] 2026-11-08
 - M174 preflight correctly found the newly added M565 reviewed SMS confirmation flow was not yet bounded under M385. Add a single uniquely anchored transfer-to-review section (ending before _loadFinanceSafely) to the owner's approved scope. No runtime, finance, SQLCipher, data, test assertions or CI skip changed; M385 still checks all source bytes outside bounded sections.
+
+
+[M569 exact-head M385/M550/M447 CI convergence] 2026-11-08
+- M174 root cause: M564 single SMS financial writer was outside original batch preflight bounds; add unique single-source start/end anchors, retaining strict old-source parity outside. M147 M550 spotted two obsolete M206 assertions requiring today fallback; replace with source timestamp assertions and explicit negative checks. M440 M447 added fourth verified SMS writer in M565; update positive count to 4, account reviews to 7, assert verified chosen account, source generation and no duplicate hashes. No tests skipped or disabled. Full exact HEAD CI mandatory.
