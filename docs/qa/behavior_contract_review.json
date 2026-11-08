@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "pr": 497,
-  "issue": "https://github.com/MahmoudMAnwar/waffra-app/issues/492",
+  "pr": 505,
+  "issue": "https://github.com/MahmoudMAnwar/waffra-app/issues/504",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main",
   "reviewed_at": "2026-11-08",
@@ -156,6 +156,42 @@
       "safety_invariants": [
         "Only post after explicit transaction confirmation and existing atomic encrypted SMS hash writer.",
         "Wrong bank, wrong suffix, archived account and sender-only identity must not automatically debit any account."
+      ]
+    },
+    {
+      "id": "M580-M586-SEVEN-FEEDBACK-START-SECURE-OTP-SENDER-PERFORMANCE",
+      "issue": "Owner approved #498–#504 (WAFFRA-NEW-021..027), draft PR #505",
+      "previous_behavior": "OTP security challenges (notably Arabic temporary code) could leak into money labels; a tapped notice marshalled the entire 1000-SMS encrypted queue, an unchanged Back reprocessed it all; notifications showed duplicate large CTA and old filters; cold Home spinner showed blank content and summary numerals overflowed; submit button visually shrank while secure sign-in ran.",
+      "approved_behavior": "Use source-only bilingual OTP verification safety, per-SMS type and redacted review, sender-based direct notification tap with a single verified selected-ID native lookup on the SMS executor, no unconditional 1000-item reread after cancel, live incremental refresh, stable sign-in CTA, a bounded isolated cold Home loading surface, and fitted full currency figures. No automatic SMS deletion or finance posting from preview. Transfer and double-confirm redesign remain pending.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_bank_sms_facts.dart",
+        "lib/waffra_approved_notifications.dart",
+        "lib/waffra_auto_sms.dart",
+        "native/WaffraAutoSmsStore.kt",
+        "native/WaffraMainActivity.kt"
+      ],
+      "test_paths": [
+        "test/m580_sms_security_navigation_performance_test.dart",
+        "test/m549_approved_home_notifications_test.dart",
+        "test/m547_login_isolate_performance_test.dart",
+        "test/m548_review_grouping_and_signup_perf_test.dart",
+        "test/m470_sms_excluded_senders_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m174-main-sha-postmerge.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m429-integration-smoke.yml",
+        ".github/workflows/m417-auto-bank-sms.yml"
+      ],
+      "safety_invariants": [
+        "No OTP/access-code or uncertain-bank message is a settled expense or income; never log real banking SMS or codes.",
+        "No user funds move on opening/canceling a notification; the native owner/session and SQLCipher finance writer/hash anti-replay remain fully enforced.",
+        "Sender-only assumptions cannot authorize a bank account; no source/destination fee posting from an unverified transfer.",
+        "Unmodified sender-bulk exclusion, existing finance records, pinned floating + layout, and spouse-device update/migration remain safe.",
+        "These changes need full exact-HEAD Android/Flutter/Python native tests and before/after device frame measurements, and do not claim seven features complete."
       ]
     }
   ]
