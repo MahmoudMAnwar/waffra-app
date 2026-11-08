@@ -6,6 +6,7 @@ import 'package:drift/drift.dart' show Variable;
 
 import 'legacy_snapshot_preflight.dart';
 import 'waffra_accounts_schema.dart';
+import 'waffra_accounts_repository.dart';
 import 'waffra_atomic_finance_snapshot.dart';
 import 'waffra_experimental_writer_gate.dart';
 import 'waffra_encrypted_receipt_vault.dart';
