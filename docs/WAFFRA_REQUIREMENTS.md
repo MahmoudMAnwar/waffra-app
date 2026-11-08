@@ -764,3 +764,11 @@ M274 must also trigger on `docs/release/WAFFRA_APPROVED_CHANGES.txt` changes bec
 
 #### M549 bulk-delete confirmation latency — user clarification (2026-11-08)
 - The owner explicitly rejected any synchronous 1000-SMS parsing just to show the exclude-confirmation dialog: the selected IDs alone authorize review-only exclusion after confirmation. Keep the generic financial-caution text without scanning any bodies, preserving the two separate explicit choices (messages-only vs also block senders). Source regression added; real-device timing pending.
+
+## M550 — Every-PR behavior-to-CI contract alignment (2026-11-08, Issue #492)
+
+**Source:** [Issue #492](https://github.com/MahmoudMAnwar/waffra-app/issues/492); extend existing [PR #490](https://github.com/MahmoudMAnwar/waffra-app/pull/490), not a new PR.
+
+**Approved requirement:** Audit all registered GitHub Actions workflows and Python/Dart tests for every behavior-changing PR against the **current approved behavior and proposed implementation before raising or updating the PR**; detect stale positive source assertions proactively. Record explicit before/after behavioral contract, impacted source, affected tests and jobs; make a fail-closed, exact-HEAD preflight with meaningful coverage; maintain full real tests (Flutter, Python, Android, finance, privacy, SQLCipher) and never fake green by skipping/deleting checks. Detect both obsolete expectations and actual code compilation failures. Update obsolete assertions only when user-approved behavior warrants it. Include source-based negative regressions proving old assertions are caught. Current M417 Android Kotlin compile error at `native/WaffraAutoSmsStore.kt:570` missing closing `)` must be fixed separately.
+
+**Status:** Requirements recorded; implementation and exact-head CI pending. The automated preflight is a *guard*, not proof of semantic equivalence or physical device quality.
