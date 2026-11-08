@@ -126,7 +126,15 @@ class _WaffraApprovedNotificationsPageState
      backgroundColor:green,foregroundColor:Colors.white,centerTitle:true,
      title:Text(widget.english?'Notifications':'الإشعارات',
       style:const TextStyle(fontWeight:FontWeight.bold,fontSize:19)),
-     actions:[IconButton(
+     actions:[
+     // Keep the already-verified select-all/sender-exclusion route reachable
+     // without bringing back the oversized duplicate review hero.
+     IconButton(
+      key:const Key('m589-open-bulk-sms-review'),
+      tooltip:widget.english?'Select or exclude messages':'تحديد أو استبعاد الرسائل',
+      onPressed:busy?null:()=>run(widget.onReviewAll),
+      icon:const Icon(Icons.fact_check_outlined)),
+     IconButton(
       tooltip:widget.english?'Refresh bank messages':'إعادة فحص الرسائل',
       onPressed:busy||!widget.canRescan()?null:()=>run(widget.onRescan),
       icon:busy?
