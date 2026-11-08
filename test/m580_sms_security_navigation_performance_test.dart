@@ -129,6 +129,7 @@ void main(){
  test('M596 foreign or malformed bank fees fail closed before money',(){
   for(final body in <String>[
    'تحويل بين حساباتي 19 ريال رسوم 0.58 USD',
+   'تحويل بين حساباتي 19 ريال رسوم 0.58 usd',
    'تحويل بين حساباتي 19 ريال رسوم 0.581 ريال',
    'تحويل بين حساباتي 19 ريال رسوم -0.58 ريال',
    'transfer sent SAR 19 fees 0.58 AED',
