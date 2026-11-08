@@ -10,20 +10,31 @@
     "Require source and 1000-item pure grouping tests, full Flutter CI, native exact-head validation, signed APK physical two-device acceptance and p95 frame profiles before saying app lag is resolved.",
     "Repair the M429 obsolete implementation-text assertion after moving its same sender-grouping behavior into a tested O(N) helper; keep real sender, selection, review and original provenance checks.",
     "2026-11-08 repeated PR failure: diagnose all six red full-Flutter CI workflows and repair the single shared M547 source-contract failure without deleting or skipping tests; forbid comment-delimited source guards that silently consume unrelated code.",
-    "2026-11-08 prevent historical SMS reimport when saving local review rules or completing bulk exclusions; only explicit history/rescan action may page Android SMS while existing queue, exclusions and financial deduplication remain preserved."
+    "2026-11-08 prevent historical SMS reimport when saving local review rules or completing bulk exclusions; only explicit history/rescan action may page Android SMS while existing queue, exclusions and financial deduplication remain preserved.",
+    "Fix recurring PR CI cancellations: exact-head SHA-scoped concurrency for seven critical full Flutter, Android emulator, financial integrity, backup and release approval workflows, while retaining safe M453 cleanup for genuinely superseded heads.",
+    "Prevent six apparent CI workflow failures caused by old queued synchronize events canceling new PR HEAD jobs; test SHA isolation and keep all original positive finance and security checks active."
   ],
   "allowed_changed_files": [
+    ".github/workflows/finance-full-regression.yml",
+    ".github/workflows/m103-same-sha-release-certification.yml",
+    ".github/workflows/m147-final-main-review-gate.yml",
+    ".github/workflows/m160-main-reconciliation.yml",
+    ".github/workflows/m274-production-ui-golden.yml",
+    ".github/workflows/m282-combined-candidate.yml",
+    ".github/workflows/m340-continuous-financial-quality.yml",
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
     "lib/waffra_local_phone_credentials.dart",
     "lib/waffra_sms_review_groups.dart",
+    "scripts/qa/test_m453_queue_hygiene.py",
     "test/m429_sms_phone_integration_test.dart",
     "test/m461_sms_exclusion_and_history_scan_test.dart",
     "test/m547_sms_incremental_jank_regression_test.dart",
     "test/m548_review_grouping_and_signup_perf_test.dart",
     "test/m548_source_method_boundary_guard_test.dart",
+    "test/qa/m548_ci_exact_sha_concurrency_test.py",
     "test/support/waffra_source_method_section.dart"
   ],
   "bounded_sections": {
@@ -79,6 +90,54 @@
       {
         "start": "  test('review refresh serializes work and batches durable exclusions',(){",
         "end": null
+      }
+    ],
+    ".github/workflows/finance-full-regression.yml": [
+      {
+        "start": "concurrency:\n",
+        "end": "jobs:\n"
+      }
+    ],
+    ".github/workflows/m103-same-sha-release-certification.yml": [
+      {
+        "start": "concurrency:\n",
+        "end": "jobs:\n"
+      }
+    ],
+    ".github/workflows/m147-final-main-review-gate.yml": [
+      {
+        "start": "concurrency:\n",
+        "end": "jobs:\n"
+      }
+    ],
+    ".github/workflows/m160-main-reconciliation.yml": [
+      {
+        "start": "concurrency:\n",
+        "end": "jobs:\n"
+      }
+    ],
+    ".github/workflows/m274-production-ui-golden.yml": [
+      {
+        "start": "concurrency:\n",
+        "end": "jobs:\n"
+      }
+    ],
+    ".github/workflows/m282-combined-candidate.yml": [
+      {
+        "start": "concurrency:\n",
+        "end": "jobs:\n"
+      }
+    ],
+    ".github/workflows/m340-continuous-financial-quality.yml": [
+      {
+        "start": "concurrency:\n",
+        "end": "env:\n  TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}"
+      }
+    ],
+    "scripts/qa/test_m453_queue_hygiene.py": [
+      {
+        "start": "    def test_exact_pr_concurrency_for_every_modified_workflow(self):",
+        "end": "    def test_cleanup_remains_trusted_and_scoped(self):"
       }
     ]
   }

@@ -81,6 +81,13 @@ class M453QueueSafetyTests(unittest.TestCase):
                     "group: waffra-pr-" + slug
                     + "-${{ github.event.pull_request.number || github.run_id }}"
                 )
+                # M548: older PR head must never cancel newer head.
+                if Path(path).name in {
+                    "finance-full-regression.yml",
+                    "m103-same-sha-release-certification.yml",
+                    "m160-main-reconciliation.yml",
+                }:
+                    expected_group += "-${{ github.event.pull_request.head.sha || github.sha }}"
                 self.assertIn(expected_group, raw)
                 self.assertIn(
                     "cancel-in-progress: ${{ github.event_name == 'pull_request' }}",
