@@ -837,3 +837,8 @@ M274 must also trigger on `docs/release/WAFFRA_APPROVED_CHANGES.txt` changes bec
 **PR:** #497. **Status:** Code + regressions committed, exact-head CI & Android owner QA pending.
 - No/edit SMS when transaction timestamp missing: user chooses calendar date then exact hour/minute via clock picker. Cancelling either cannot satisfy confirmation; future timestamp refused. Display both before save, preserve existing historical transaction date during edit. No silent today/midnight financial posting.
 - Tests: test/qa/m566_sms_manual_date_confirmation_test.py and test/qa/m578_sms_time_confirmation_test.py.
+
+
+## M580 — stale M177 encrypted storage smoke writer count (2026-11-08)
+**PR:** #497. **Status:** QA code repaired; exact-head encrypted storage smoke + M174/M340 rerun pending.
+- The M177 storage regression previously required exactly 3 atomic bank SMS finance writer call sites, obsolete after approved M565 added fourth verified Yes-confirm path. Preserve all four legitimate source-authorized writers. Require M565 itself to include verified account selection + generation, atomic SMS+fingerprint journal, no duplicates and only post-commit native ACK. Change only the bounded M177 positive test, not any money source or security gate.

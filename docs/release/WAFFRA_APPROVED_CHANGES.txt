@@ -2864,3 +2864,7 @@ M550 early CI proof (2026-11-08): First exact-HEAD M550 run audited 107 workflow
 
 [M580 date integrity regression parity] 2026-11-08
 - M340 financial quality gate's independent 155-case Flutter suite caught an obsolete M337 literal check for `found.where(bankSmsHasUnverifiedTimestamp)` while approved M564 upgraded the actual guard to reject both missing and ambiguous source timestamps. Update only that M337 positive source assertion to require the stronger `bankSmsDate(raw)==null||bankSmsHasUnverifiedTimestamp(raw)` before atomic finance commit, preserving the original negative / malformed date tests. Existing-test delta is bounded in M385. No finance behavior change and no test disabled.
+
+
+[M580 M177 encrypted storage source-contract parity] 2026-11-08
+- A real 1196-pass/1-fail encrypted storage smoke run failed because M177 still demanded exactly 3 finance-authorized SMS writers. M565 intentionally adds a fourth verified Yes-confirm path. Repair existing M177 positive regression to demand exactly 4 and independently assert verified account witness, atomic SMS+hash writer, duplicate safety and native ACK inside the new method. No financial source or test skipping, exact-head CI pending.
