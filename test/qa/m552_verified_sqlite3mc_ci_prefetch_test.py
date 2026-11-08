@@ -31,6 +31,13 @@ class VerifiedSqliteCiPrefetchTest(unittest.TestCase):
         action = (ROOT / '.github/actions/prefetch-sqlite3mc/action.yml').read_text(encoding='utf-8')
         self.assertIn('uses: actions/cache@v4', action)
         self.assertIn('run: bash scripts/qa/prefetch_verified_sqlite3mc.sh', action)
+        self.assertIn('run: bash scripts/qa/prefetch_verified_llamadart.sh', action)
+        self.assertIn('llamadart-0.8.24/.dart_tool/llamadart/native_bundles/v0.4.1', action)
+        llama = (ROOT / 'scripts/qa/prefetch_verified_llamadart.sh').read_text(encoding='utf-8')
+        self.assertIn("upstream='leehack/llamadart-native'", llama)
+        self.assertIn("tag='v0.4.1'", llama)
+        self.assertIn("d71b8a74b330275efbebd9bd345140645a6c3388cc51e4a6ad3f556d7b0f33c3", llama)
+        self.assertIn('sha256sum --check --status', llama)
 
     def test_every_flutter_setup_job_has_verified_prefetch(self):
         count = 0
