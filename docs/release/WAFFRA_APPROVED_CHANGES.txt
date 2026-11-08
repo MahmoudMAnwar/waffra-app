@@ -2749,5 +2749,24 @@ M550 early CI proof (2026-11-08): First exact-HEAD M550 run audited 107 workflow
 - Exact-head M417 Kotlin compile proved original M555 init script mistakenly added a project-level repository, rejected by Flutter included Gradle build's FAIL_ON_PROJECT_REPOS policy. Corrected to Gradle `beforeSettings` and `dependencyResolutionManagement.repositories.exclusiveContent` for ONLY `org.jetbrains.kotlin:kotlin-compiler-embeddable:2.2.21` in the existing locally SHA-verified official Maven cache. Preserves strict repository policy and original Gradle/Flutter/Android tests. Requires exact-head CI proof.
 
 
+[M555 Gradle repository API fix] 2026-11-08
+- M147 ARM64 log proved Gradle 9.3.1 compiled the initialization script but failed on nested `maven()` in `ExclusiveContentRepositorySpec`. Updated the CI-only beforeSettings script to create the pinned exact official Maven repository via `settings.dependencyResolutionManagement.repositories.maven` first, then use the supported `exclusiveContent { forRepositories(verifiedMaven) }` API, filtering exactly Kotlin compiler 2.2.21. No financial code, plugin versions, tests or Gradle strict policy changed. Verify on next exact SHA before merge.
+
+
+[M556 Kotlin compiler multi-version CI fix] 2026-11-08
+- M202 real Android emulator reached Kotlin compilation but firebase_core requested kotlin-compiler-embeddable:2.4.0 (SHA256 c2b25e8c1c93ec416ba4327f5e31eaec0f0c8847241b9353e294b8db9dce564f) while existing Flutter plugin build uses 2.2.21 (SHA256 9588fa...). Both original published JetBrains JAR/POM versions now prefetch and verify fail-closed via official Release API and Maven POM checks; exact-module settings repository lists ONLY both versions. Cache key changed to v556; app Kotlin/Gradle versions and finance tests unchanged. Requires fresh exact-head CI validation.
+
+
+[M557 Kotlin 2.4.0 resolution under Gradle repository policy] 2026-11-08
+- Exact-head Android encrypted storage and golden integration builds failed despite prefetch successfully SHA256 verifying official Kotlin 2.4.0: project-repository builds ignored settings-only local compiler repository, retried the poisoned GitHub URL and received HTTP 504. A CI-only settingsEvaluated policy check now installs the exact-module local verified Maven repo only for PREFER_PROJECT builds, while FAIL_ON_PROJECT_REPOS builds continue using settings exclusivity only. No repository policy is relaxed; no Kotlin/Gradle/plugin/SQLCipher/app version is changed. Existing Android and financial tests remain mandatory. Not certified until new exact-SHA CI passes.
+
+
+[M558 Gradle build-job coverage] 2026-11-08
+- Last M160 same-commit finance regression proved 2,537 Flutter tests passing but its subsequent unsigned release APK compilation failed downloading original Gradle 9.3.1 from GitHub with HTTP 504. The existing official Gradle API/SHA256 prefetch was absent in M160 and M146 build jobs. Added that same verified action to both; extended the M554 CI QA to enumerate every Flutter APK/gradlew build job and fail if Gradle prefetch missing. No business or financial code changed; all original tests and build requirements remain enforced. Validation pending full exact-head CI.
+
+[M558 follow-up: restore exact approved M160 concurrency scope] 2026-11-08
+- Exact-head M174 M385 safety guard caught that the M558 manifest update accidentally removed M160's previously approved bounded concurrency span, even though the unchanged PR still edits its exact-SHA cancellation guard. Restored ONLY the original M160 `concurrency:\n` to `jobs:\n` whitelist plus the existing jobs scope. Production logic, Android build steps and the M385 fail-closed scope checker remain unchanged. Exact-head M174 and complete CI must rerun successfully before merge.
+
+
 [M549 approved account filter regression alignment] 2026-11-08
 - Full UI/finance regression revealed exactly two obsolete assertions still expecting account selector inside balance (M467 and M495), contrary to owner-approved screenshot. Updated M467 to verify actual independent compact month filter and never pass viewing filter into finance commit, and M495 to verify small-screen balance has no dropdown but complete long account names remain accessible in the real account picker. No financial behavior or original unrelated tests were removed. CI and physical screenshots still required.

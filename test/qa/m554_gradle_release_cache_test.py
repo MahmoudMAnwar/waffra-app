@@ -23,8 +23,14 @@ class VerifiedGradleCache(unittest.TestCase):
         self.assertIn('bash scripts/qa/prefetch_verified_gradle.sh',action)
         kotlin=(ROOT/'scripts/qa/prefetch_verified_kotlin.sh').read_text()
         self.assertIn("upstream='JetBrains/kotlin'",kotlin)
-        self.assertIn("release='v2.2.21'",kotlin)
-        self.assertIn("expected='9588fa696ac5507af764fd5660df6894185e12704ec1bc3f5cb772af4987f295'",kotlin)
+        self.assertIn('release="v$version"',kotlin)
+        self.assertIn("'2.2.21:9588fa696ac5507af764fd5660df6894185e12704ec1bc3f5cb772af4987f295'",kotlin)
+        self.assertIn("'2.4.0:c2b25e8c1c93ec416ba4327f5e31eaec0f0c8847241b9353e294b8db9dce564f'",kotlin)
+        self.assertIn('for spec in "${versions[@]}"',kotlin)
+        self.assertIn('9588fa696ac5507af764fd5660df6894185e12704ec1bc3f5cb772af4987f295',kotlin)
+        self.assertIn('c2b25e8c1c93ec416ba4327f5e31eaec0f0c8847241b9353e294b8db9dce564f',kotlin)
+        self.assertIn("includeVersion('org.jetbrains.kotlin', 'kotlin-compiler-embeddable', '2.4.0')",kotlin)
+        self.assertIn('v556', action)
         self.assertIn('sha256sum --check --status',kotlin)
         self.assertIn('sha1sum --check --status',kotlin)
         self.assertIn("includeVersion('org.jetbrains.kotlin', 'kotlin-compiler-embeddable', '2.2.21')",kotlin)
@@ -32,8 +38,18 @@ class VerifiedGradleCache(unittest.TestCase):
         # Flutter's included Gradle build enforces FAIL_ON_PROJECT_REPOS.
         # Only settings-level exact-module routing is allowed in the init hook.
         self.assertIn('gradle.beforeSettings { settings ->',kotlin)
-        self.assertIn('settings.dependencyResolutionManagement.repositories.exclusiveContent',kotlin)
-        self.assertNotIn('gradle.beforeProject',kotlin)
+        self.assertIn('def repos = settings.dependencyResolutionManagement.repositories',kotlin)
+        self.assertIn('repos.exclusiveContent',kotlin)
+        self.assertIn('forRepositories(verifiedMaven)',kotlin)
+        self.assertNotIn('forRepository {',kotlin)
+        # Only PREFER_PROJECT Gradle builds accept the project repository;
+        # FAIL_ON_PROJECT_REPOS settings policies remain untouched.
+        self.assertIn("repositoriesMode.get().name() == 'PREFER_PROJECT'",kotlin)
+        self.assertIn('gradle.settingsEvaluated { settings ->',kotlin)
+        self.assertIn('gradle.beforeProject { project ->',kotlin)
+        self.assertIn('projectRepos.exclusiveContent',kotlin)
+        self.assertIn('forRepositories(verifiedProjectMaven)',kotlin)
+        self.assertNotIn('repositoriesMode.set(',kotlin)
         self.assertNotIn('project.repositories.maven',kotlin)
 
     def test_critical_android_jobs_prefetch_verified_gradle(self):
@@ -41,6 +57,8 @@ class VerifiedGradleCache(unittest.TestCase):
           'android.yml': 'build',
           'android-full-smoke.yml': 'build',
           'm147-final-main-review-gate.yml': 'android-arm64-compilation',
+          'm146-main-safe-candidate.yml': 'certify-main-safe-scope',
+          'm160-main-reconciliation.yml': 'reconcile-and-regress',
           'm202-android-sqlcipher-source-binder-dryrun.yml': 'android-source-binder-and-migration',
           'm417-auto-bank-sms.yml': 'android-sms-native-compile',
           'storage-android-integration.yml': 'android-encrypted-db',
@@ -54,6 +72,27 @@ class VerifiedGradleCache(unittest.TestCase):
             self.assertIn('uses: ./.github/actions/prefetch-gradle',block,file)
             self.assertLess(block.index('uses: ./.github/actions/prefetch-sqlite3mc'),
                             block.index('uses: ./.github/actions/prefetch-gradle'),file)
+
+    def test_all_flutter_apk_and_direct_gradle_jobs_have_pinned_distribution(self):
+        # Every APK compiler (including old release-safety jobs) must use the
+        # same official ZIP preflight; a new workflow cannot silently omit it.
+        import re
+        checked = 0
+        for workflow in sorted(WORKFLOWS.glob('*.yml')):
+            source = workflow.read_text(encoding='utf-8')
+            job_matches = list(re.finditer(r'^  ([A-Za-z0-9_-]+):.*$', source, re.M))
+            for index, match in enumerate(job_matches):
+                end = job_matches[index + 1].start() if index + 1 < len(job_matches) else len(source)
+                block = source[match.start():end]
+                if 'subosito/flutter-action@v2' not in block:
+                    continue
+                if not (re.search(r'flutter\s+build\s+apk\b', block)
+                        or re.search(r'(?:^|\s)(?:\./)?gradlew\s', block)):
+                    continue
+                checked += 1
+                self.assertIn('uses: ./.github/actions/prefetch-gradle', block,
+                              workflow.name + ' / ' + match.group(1))
+        self.assertGreaterEqual(checked, 6)
 
 if __name__=='__main__':
     unittest.main()
