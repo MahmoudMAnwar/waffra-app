@@ -6,7 +6,8 @@ class SmsDateReviewTest(unittest.TestCase):
  def test_date_consent_inside_editor(self):
   region=SOURCE.split('Future<void> entrySheet(',1)[1].split('Future<void> showReceipt(',1)[0]
   for marker in ('final originalSmsDate=sms&&initialSms!=null?', 'initial!=null||',
-   "var smsDateConfirmed=smsEditorDraft?['dateConfirmed']==true||",
+   "var smsDateConfirmed=initial!=null||",
+   "smsEditorDraft?['dateConfirmed']==true||originalSmsDate!=null;",
    'smsDateConfirmed=true;', 'showTimePicker(', 'if(!smsDateConfirmed){',
    "'dateConfirmed':smsDateConfirmed,", 'Choose the real bank transaction date'):
    self.assertIn(marker,region)
