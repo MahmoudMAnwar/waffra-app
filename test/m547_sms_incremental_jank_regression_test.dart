@@ -67,9 +67,11 @@ void main() {
   expect(ruleEditor,contains('unawaited(_refreshAutoSmsInbox());'));
   expect(ruleEditor,isNot(contains('importMonth:true')));
   expect(open,contains('unawaited(_refreshAutoSmsInbox());'));
-  final manual=main.split('// The expense/income learner applies only AFTER')[1]
-   .split('for(final staged in stagedReceiptCopies')[0];
-  expect(manual,isNot(contains('_refreshAutoSmsInbox(importMonth:true)')));
+  final transactionEditor=waffraSourceMethodSection(main,
+   start:' Future<void> entrySheet({MoneyEntry? initial,bool sms=false,String? initialSms,',
+   end:' Future<String?> chooseTransactionCategory(');
+  expect(transactionEditor,contains('_learnManualCategoryPreference(result)'));
+  expect(transactionEditor,isNot(contains('_refreshAutoSmsInbox(importMonth:true)')));
   expect(main,contains('void _receiveAutoSmsNotice()'));
   expect(main,contains('if(mounted&&ready)unawaited(_refreshAutoSmsInbox());'));
   expect(main,contains('smsHashes.contains(bankSmsHash(body))'));
