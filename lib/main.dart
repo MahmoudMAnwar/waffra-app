@@ -5910,9 +5910,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }
   }finally{
    _autoSmsReviewOpen=false;
-   if(mounted){
-    unawaited(_refreshAutoSmsInbox());
-   }
+   // A simple Back/Cancel only inspected an already loaded SMS. Reloading
+   // and reclassifying 1000 encrypted messages after every closed dialog
+   // caused avoidable jank. Successful exclusion, AI stage, transfer and
+   // finance-save paths already update the live queue or refresh explicitly.
+   // An unchanged review never posts, ACKs, or invalidates the snapshot.
   }
  }
  void _receiveSharedSms(){
