@@ -153,6 +153,24 @@ object WaffraAutoSmsStore {
         )
     }
 
+    /** Check whether the Android inbox has unseen rows without copying messages
+     * into Waffra or doing a full rescan. Executed on the SMS I/O executor.
+     */
+    private fun hasUnseenInboxRows(context: Context, prefs: android.content.SharedPreferences): Boolean {
+        val start = installationMonthStart(context)
+        if (start <= 0L) return true
+        val cursorAt = prefs.getLong(historyCursorAt, start - 1)
+        val cursorId = prefs.getLong(historyCursorId, -1L)
+        return try {
+            context.contentResolver.query(Uri.parse("content://sms/inbox"),
+                arrayOf("_id"),
+                "(date > ? OR (date = ? AND _id > ?)) AND date < ?",
+                arrayOf(cursorAt.toString(), cursorAt.toString(),
+                    cursorId.toString(), (System.currentTimeMillis() + 1).toString()),
+                "date ASC, _id ASC")?.use { it.moveToFirst() } ?: true
+        } catch (_: Exception) { true }
+    }
+
     /** Read-only progress counters, persisted alongside the resume cursor. */
     fun scanProgress(context: Context): Map<String, Any> = synchronized(mutex) {
         val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
@@ -165,7 +183,10 @@ object WaffraAutoSmsStore {
             "pending" to waiting,
             "capacity" to maxCandidates,
             "complete" to prefs.getBoolean(historyComplete, false),
-            "initialComplete" to prefs.getBoolean(historyInitialCompleted, false)
+            "initialComplete" to prefs.getBoolean(historyInitialCompleted, false),
+            "rescanNeeded" to (waiting in 0 until maxCandidates &&
+                (!prefs.getBoolean(historyComplete, false) ||
+                 hasUnseenInboxRows(context, prefs)))
         )
     }
 
@@ -471,34 +492,82 @@ object WaffraAutoSmsStore {
     /** Owner-confirmed sender exclusion. Queue removal and denial-list update
      * are one preferences commit; existing saved finance and phone SMS remain.
      */
-    fun excludeSender(context: Context, sender: String): Boolean = synchronized(mutex) {
-        val name = sender.trim()
-        if (!enabled(context) || !senderName.matches(name)) return@synchronized false
+    fun excludeSender(context: Context, sender: String): Boolean =
+        excludeSenders(context, listOf(sender))
+
+    /** Only encrypted blocked sender names survive this atomic operation.
+     * Queue SMS and old labelled per-message excluded fingerprints are purged.
+     * Completed financial/transfer receipt hashes and Android SMS are untouched.
+     */
+    fun excludeSenders(context: Context, senders: List<String>): Boolean = synchronized(mutex) {
+        val requested = senders.map { normalizedSender(it) }.toSet()
+        if (!enabled(context) || requested.isEmpty() || requested.size > 1000 ||
+            senders.any { it.isBlank() || it.trim().length > 100 })
+            return@synchronized false
         try {
             val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
             val previous = readExcluded(context)
-            if (isExcludedLocked(context, name)) return@synchronized true
             val entries = JSONArray()
-            for (i in 0 until previous.length()) entries.put(previous.getString(i))
-            entries.put(name)
+            val known = HashSet<String>()
+            for (i in 0 until previous.length()) {
+                val name = previous.getString(i)
+                entries.put(name)
+                known.add(normalizedSender(name))
+            }
+            for (sender in senders) {
+                val clean = sender.trim()
+                if (known.add(normalizedSender(clean))) entries.put(clean)
+            }
             val current = read(context)
             val remaining = JSONArray()
             for (i in 0 until current.length()) {
                 val row = current.getJSONObject(i)
-                if (normalizedSender(row.optString("sender")) != normalizedSender(name))
+                if (normalizedSender(row.optString("sender")) !in requested)
                     remaining.put(row)
             }
-            val success = prefs.edit()
+            val editor = prefs.edit()
                 .putString(excludedSendersName, seal(entries.toString()))
-                .putString(queueName, seal(remaining.toString())).commit()
-            if (success) Handler(Looper.getMainLooper()).post { onChanged?.invoke() }
-            success
+                .putString(queueName, seal(remaining.toString()))
+            // Sender policy supersedes individual exclusions. Old records
+            // lacking sender labels cannot be safely attributed and remain.
+            for (key in prefs.all.keys.filter {
+                it.startsWith(excludedMessageInfoBucketPrefix)
+            }) {
+                val shard = key.removePrefix(excludedMessageInfoBucketPrefix)
+                if (!Regex("^[a-f0-9]{2}$").matches(shard))
+                    throw IllegalStateException("Invalid excluded SMS shard")
+                val sampleId = shard + "0".repeat(62)
+                val labels = excludedMessageInfo(context, sampleId)
+                val discarded = labels.values.filter {
+                    normalizedSender(it.getString("sender")) in requested
+                }.map { it.getString("id") }.toSet()
+                if (discarded.isEmpty()) continue
+                val oldIds = excludedMessageBucket(context, sampleId)
+                if (!oldIds.containsAll(discarded))
+                    throw IllegalStateException("Excluded receipt mismatch")
+                val keptIds = oldIds.filterNot { it in discarded }
+                val keptLabels = labels.values.filterNot {
+                    it.getString("id") in discarded
+                }
+                if (keptIds.isEmpty())
+                    editor.remove(excludedMessageBucketPrefix + shard)
+                else editor.putString(excludedMessageBucketPrefix + shard,
+                    seal(JSONArray(keptIds).toString()))
+                if (keptLabels.isEmpty()) editor.remove(key)
+                else editor.putString(key, seal(JSONArray(keptLabels).toString()))
+            }
+            val saved = editor.commit()
+            if (saved) {
+                excludedMessageCipherCache.clear()
+                Handler(Looper.getMainLooper()).post { onChanged?.invoke() }
+            }
+            saved
         } catch (_: Exception) { false }
     }
 
     fun restoreExcludedSender(context: Context, sender: String): Boolean =
         synchronized(mutex) {
-            if (!enabled(context) || !senderName.matches(sender.trim()))
+            if (!enabled(context) || sender.isBlank() || sender.trim().length > 100)
                 return@synchronized false
             try {
                 val old = readExcluded(context)
@@ -546,6 +615,13 @@ object WaffraAutoSmsStore {
         "(?:bank|alinma|inma|rajhi|snb|sabb|riyad|bilad|anb|saib|" +
         "aljazira|jazeera|alahli|stcpay|stc.?bank|urpay|mobily.?pay|" +
         "alrajhi|albilad|الراجحي|الإنماء|الانماء|الأهلي|الاهلي|الرياض|البلاد)", RegexOption.IGNORE_CASE)
+
+    /** Any SMS inbox sender may enter review. This is NOT finance authority.
+     * Keep bounded ciphertext and mask OTP digits before it is persisted.
+     */
+    fun reviewEligible(sender: String, body: String): Boolean =
+        sender.isNotBlank() && sender.trim().length <= 100 &&
+        body.isNotBlank() && body.length <= 1600
 
     fun qualifies(sender: String, body: String): Boolean {
         val safe = body.trim()
@@ -678,7 +754,7 @@ object WaffraAutoSmsStore {
         try {
             if (synchronized(mutex) { isExcludedLocked(context, sender) }) return false
         } catch (_: Exception) { return false }
-        if (!qualifies(sender, body)) return false
+        if (!reviewEligible(sender, body)) return false
         val result = synchronized(mutex) {
             try {
                 // Recheck after entering the lock: logout may race the
@@ -1104,7 +1180,7 @@ object WaffraAutoSmsStore {
                         break
                     }
                     if (!excludedNames.contains(normalizedSender(row.sender)) &&
-                        qualifies(row.sender, row.body)) {
+                        reviewEligible(row.sender, row.body)) {
                         val fingerprint = id(row.sender, row.body, row.identityAt)
                         if (!existingIds.contains(fingerprint) &&
                             !isCommittedLocked(context, fingerprint) &&

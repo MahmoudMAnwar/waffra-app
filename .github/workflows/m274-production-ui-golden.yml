@@ -21,7 +21,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: m274-ui-${{ github.event.pull_request.number || github.ref }}
+  group: m274-ui-${{ github.event.pull_request.number || github.ref }}-${{ github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: true
 
 jobs:
@@ -61,6 +61,10 @@ jobs:
         with:
           channel: stable
           cache: true
+      - name: Prefetch SHA256-verified official SQLite3MC native release assets
+        uses: ./.github/actions/prefetch-sqlite3mc
+        with:
+          github-token: ${{ github.token }}
       - name: Restore dependencies
         run: |
           flutter pub get
@@ -110,6 +114,14 @@ jobs:
         with:
           channel: stable
           cache: true
+      - name: Prefetch SHA256-verified official SQLite3MC native release assets
+        uses: ./.github/actions/prefetch-sqlite3mc
+        with:
+          github-token: ${{ github.token }}
+      - name: Prefetch SHA256-verified Gradle wrapper distribution
+        uses: ./.github/actions/prefetch-gradle
+        with:
+          github-token: ${{ github.token }}
       - name: Install dependencies
         run: |
           flutter pub get

@@ -45,11 +45,31 @@ def audit_sources(sources: Mapping[str, str]) -> list[str]:
     encrypted = "lib/storage/waffra_verified_encrypted_finance_bridge.dart"
     production = "lib/storage/waffra_production_cutover_release_gate.dart"
 
-    # All three live SMS confirmation entry points must use the verified
-    # source authority; a single remaining instance is not enough.
+    # All four live SMS confirmations must use the verified encrypted
+    # authority. M565 adds the owner's first-pass Yes path: checking only the
+    # former three would incorrectly reject a *more* protected finance route.
+    # Independently demand its user-confirmed, account-witness and hash guards.
     home = sources.get(main, "")
-    if home.count("_financeAuthority.commitConfirmedSms(") != 3:
+    if home.count("_financeAuthority.commitConfirmedSms(") != 4:
         problems.append(f"{main}: a bank SMS confirmation path bypasses verified source authority")
+    start = home.find("Future<void> _m565ConfirmSms(")
+    end = home.find("Future<void> _reviewAutoSmsCandidates(", start)
+    if start == -1 or end <= start:
+        problems.append(f"{main}: owner-confirmed SMS review route missing")
+    else:
+        approved_sms = home[start:end]
+        for required in (
+            "reviewSmsAccountLinks([reviewed],smsSender:sender)",
+            "reviewSmsBudgetLinks([record])",
+            "allowDuplicateHashes:false",
+            "expectedAccountGeneration:chosen.generation",
+            "userConfirmed:true",
+            "bankSmsDate(body)==null",
+            "original.currency!='SAR'",
+            "WaffraAutoSms.acknowledgeCommitted([id])",
+        ):
+            if required not in approved_sms:
+                problems.append(f"{main}: quick SMS review bypasses required authority/approval: {required}")
 
     for marker, reason in (
         ("_financeAuthority.saveCaptured(", "manual save bypasses verified finance authority"),

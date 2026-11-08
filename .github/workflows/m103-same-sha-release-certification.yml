@@ -14,7 +14,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: waffra-pr-m103-same-sha-release-certification-${{ github.event.pull_request.number || github.run_id }}
+  group: waffra-pr-m103-same-sha-release-certification-${{ github.event.pull_request.number || github.run_id }}-${{ github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -28,6 +28,10 @@ jobs:
         with:
           channel: stable
           cache: true
+      - name: Prefetch SHA256-verified official SQLite3MC native release assets
+        uses: ./.github/actions/prefetch-sqlite3mc
+        with:
+          github-token: ${{ github.token }}
       - run: flutter pub get
       - name: Analyze actual Flutter app and storage
         run: flutter analyze --no-pub --no-fatal-infos --no-fatal-warnings

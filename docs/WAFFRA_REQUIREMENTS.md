@@ -725,3 +725,120 @@ M274 must also trigger on `docs/release/WAFFRA_APPROVED_CHANGES.txt` changes bec
 - M507 expected a native history rescan immediately after a reviewed SMS save; this contradicts the user-requested nonblocking navigation. Preserve `prepare()` re-reading fresh owner-bound rules for **each next** SMS; verify no full inbox/history scan runs on finance-save transition.
 - M518 expected old historical `offer(..., historical = true)` and `lastAt/lastId` names, replaced by an atomic batched queue+cursor commit. Verify `date_sent` selection, receiver `sms.timestampMillis`, receivedAt vs sender identityAt, canonical fingerprint `id(sender, body, identityAt)`, `nextAt/nextId` based on the examined Android provider row, and atomic persisted queue/cursor. Retain account-scoped exclusion/confirmed-transfer dedup and do not weaken security.
 - Update **only the three source-regression tests** and M385 exact bounded-scope manifest, then release notes as final commit; rerun full exact-head CI without skipping tests. Never merge on a red gate; profile/physical handset remains mandatory.
+
+### M548 — Full-app latency recurrence after M547 merge (2026-11-08)
+- **Issue [#489](https://github.com/MahmoudMAnwar/waffra-app/issues/489)**; related previous issues #419 and #487. **Branch:** `fix/m548-review-signup-and-navigation-jank-20261108`. User's Android screenshots: Home has 1000 SMS needing review (3 classified, 997 pending), review sheet opens extremely slowly and message list is nearly unresponsive; new phone signup sits about 3 seconds at `إكمال التسجيل / جارٍ الحفظ`; navigation, loading animations and app-wide tabs still stutter.
+- **PERF-05 — Review access:** Once Home has a verified, owner-bound and consent-checked in-memory SMS queue, opening review must not re-read/decrypt/classify all 1000. Cold/missing/error snapshots must still execute a verified refresh and never show a stale list after owner/security failure. Sender grouping must be linear-time with case-insensitive canonical labels, stable newest-first ordering, 1000 distinct or shared senders, preserved body/date, selections, exclusions, anti-replay, finance authority and Back behavior.
+- **PERF-06 — Background parser:** Yield between bounded local parse batches during native pending refresh so 1000 messages cannot monopolize the Flutter frame isolate. Never skip or auto-confirm reviews, nor erase a failed ACK. Existing native serialized SMS I/O and explicit historical-rescan cursor remain unchanged.
+- **PERF-07 — Registration:** Keep 600000 PBKDF2 iterations and secure-storage encrypted verifier. Fresh registration derives once, verifies byte-for-byte **complete secure-store read-back** of the generated version/phoneHash/salt/hash/iterations record instead of performing a second identical PBKDF2. Interrupted or existing registrations must still validate same phone + original password via full cryptographic challenge. Paint a stable busy spinner before the secure I/O and block repeat taps. Do not modify user-accepted Yes/No logout, biometric, backups or SQLCipher account money.
+- **PERF-08 — Device evidence required:** 0/100/1000 SMS, 1000 distinct senders, first registration, logout→login, permissions, both Samsung/second Android phone fresh install and data-preserving upgrade; release/profile frame p95, time-to-first-visible sheet, signup wall time. **Code candidate; CI and Android QA pending. Do not mark Done or merge solely from a source test.**
+
+#### M548 CI follow-up — M429 sender-grouping assertion
+- PR #490 first HEAD `b8abff4e`: M429 combined phone/SMS test failed because it asserted the removed *inline map implementation* even though the same case-insensitive sender behavior moved to the pure O(N) grouping helper. The existing M429 test is updated only inside the original sender-group test to validate the new helper, sender evidence, route IDs, original body/provenance, selection and retained review flow; new M548 pure tests check 1000 senders and chronological order. No login/logout/finance behavior changed for this test repair. New exact-head CI and signed device validation still pending.
+
+#### M548 CI repeated failures — root-cause confirmation (2026-11-08)
+- PR #490 exact head `fd216d0488a56907a257bb91b7b202ea55c1b6e0`: **33 successful / 6 failed GitHub workflows**. All six failed full-Flutter jobs ran 2526 passing tests and the **same one failing test**: `test/m547_sms_incremental_jank_regression_test.dart`, case `M547 only an explicit rescan fetches historical pages during UI interactions`. The M340 verdict also fails because its required full-Flutter job fails; that is downstream, not another code defect.
+- **Source-contract root cause:** the old test used `.split('// Every bank sender gets one group.')[0]` as a function boundary. M548 replaced that temporary comment with an O(N) helper, so the selector silently read from `_openAutoSmsInbox` to the end of `lib/main.dart` and found unrelated explicit rescans. This can create six repeated red workflows out of one stale assertion. A reusable fail-closed source-section helper now requires unique, stable method-declaration start/end anchors; it throws if missing/duplicated/reordered. A dedicated meta-test verifies that unrelated explicit rescans elsewhere cannot be mistaken for history paging inside Review.
+- **Real runtime follow-up:** inspection also found hidden `importMonth:true` after bulk exclusion inside the Review sheet and after saving local SMS rules. These can cause expensive background scanning while the user interacts, contradicting the adopted M547 explicit-Rescan/low-jank contract. Both paths now re-read and classify the existing authenticated pending queue only; the persistent month cursor and explicit Rescan are unchanged, and no messages/financial entries are silently removed. Updated original positive M461 exclusion test checks the real behavior and explicit history continuation instead of requiring the removed hidden scan.
+- **No test skip/bypass:** existing M547 and M461 test cases are strengthened; new M548 meta-test and fail-closed source helper added. M385 scope declares every touched existing test and protected source section. **Status: code candidate; latest exact-head CI and real-device frame performance still need verification.** No new PR; fixes remain in #490.
+
+#### M548 CI second-pass correction — durable exclusion test formatting (2026-11-08)
+- Exact head `55e3d5d40120e3c43487d52fa059024d2661daaa`: whole-Flutter jobs reported **2530 passing tests / 1 failing**. The **original repeated M547 test now passes**. Only `test/m461_sms_exclusion_and_history_scan_test.dart`, case `review refresh serializes work and batches durable exclusions`, failed because our new source assertion expected `setState(()=>_autoSmsPending.removeWhere` on one literal line while the verified existing code correctly wraps the setState callback and removal across two lines.
+- Corrected the test to assert **within the bounded Review method** both `if(mounted)setState(()=>` and `_autoSmsPending.removeWhere((row)=>done.contains(row['id']))` as independent positive requirements, as well as the non-historical owner-queue refresh and explicit rescan path. Checked these exact strings against the actual PR-head production source. No production code, finance source, exclusion behavior or security gate is weakened for this test correction. This extra source assertion is now whitespace/layout resilient. Original M547 and new M548 source-boundary tests remain untouched and passing in the prior whole-Flutter run.
+- The six CI workflows are duplicated whole-suite runners, **not six unrelated functional regressions**. New exact-head CI still required; do not consider green until all 39 relevant runs finish. Keep PR #490 in Draft.
+
+#### M548 seven critical CI groups — SHA-scoped concurrency (2026-11-08)
+- PR #490 exact-head `b10db93017b68f6d24e3149954f295bd49f4c1ba` had M274/M340 red dependent verdicts after required jobs were cancelled; M147 was cancelled before any job and GitHub refused retry (403). These were not failing app tests. The common workflow `concurrency.group` was keyed only by PR number, so a late older synchronize event could cancel a new commit's checks.
+- The seven observed full-suite/merge-critical workflows now append `${{ github.event.pull_request.head.sha || github.sha }}` to the concurrency group. This isolates different source SHAs while preserving same-head deduplication and the trusted M453 cleanup of truly superseded PR runs.
+- New `test/qa/m548_ci_exact_sha_concurrency_test.py` and retained M453 positive QA enforce this grouping and owner/SHA-safe cleanup. Workflow trigger paths, source checkout, gate semantics, Android tests, no-cutover protections, authentication and financial authority are unchanged. A single atomic PR commit is used to prevent another interleaved update burst.
+- This is a scoped fix for seven priority workflows, not an unverified claim that every GitHub workflow uses SHA separation; all actual same-SHA CI and Android device acceptance must still be run.
+
+
+## M549 — 1000 SMS review / sender-only exclusion / smart Rescan / all senders (2026-11-08)
+- **GitHub issue [#491](https://github.com/MahmoudMAnwar/waffra-app/issues/491)**; **implementation PR [#490](https://github.com/MahmoudMAnwar/waffra-app/pull/490)**. Status: **Code candidate / exact-head CI and physical Android device validation pending**.
+- 1000/1000 selectable: bulk exclude all review messages from **Waffra encrypted review queue** without deleting Android SMS or any committed finance data; prevent 1000 sequential sender confirmation dialogs; durable idempotent removal, explicit failures, and bounded CPU/IO.
+- When excluding **sender**, keep only its encrypted normalized sender name; purge all of that sender's pending Waffra SMS and previously stored per-message exclusion hashes/labels. Future live/history messages from that sender are ignored before persistence. Existing finance receipts untouched.
+- Rescan must neither re-add the 1000 already pending/previously confirmed/excluded nor restart a completed historical cursor. Dim when initial scan complete and no newly arrived SMS is known, re-enable on fresh SMS or when unfinished history with available capacity can progress. If 1 of 1000 gets confirmed, 999 remain; at most genuinely unseen SMS may fill the freed slot.
+- Remove bank-heuristic gating from native **review-only intake** and include all nonempty inbox SMS from **all senders** since installation-month start, respecting opt-in and blocked senders. Never auto-post or infer financial account from nonfinancial messages; do not retain plaintext OTP digits. Current native `qualifies` wrongly filters personal and nonfinancial messages.
+- Evidence: source/native+Flutter regressions for 0/999/1000 queues, blocked-sender storage purge/restart, historical cursor and dedup, 1000-item bulk selection, Rescan enabled state, all-sender eligibility and masked OTPs; full exact-head CI and physical Android smoothness tests still mandatory. Do not mark Done on code commit alone.
+
+#### M549 bulk-delete confirmation latency — user clarification (2026-11-08)
+- The owner explicitly rejected any synchronous 1000-SMS parsing just to show the exclude-confirmation dialog: the selected IDs alone authorize review-only exclusion after confirmation. Keep the generic financial-caution text without scanning any bodies, preserving the two separate explicit choices (messages-only vs also block senders). Source regression added; real-device timing pending.
+
+## M550 — Every-PR behavior-to-CI contract alignment (2026-11-08, Issue #492)
+
+**Source:** [Issue #492](https://github.com/MahmoudMAnwar/waffra-app/issues/492); extend existing [PR #490](https://github.com/MahmoudMAnwar/waffra-app/pull/490), not a new PR.
+
+**Approved requirement:** Audit all registered GitHub Actions workflows and Python/Dart tests for every behavior-changing PR against the **current approved behavior and proposed implementation before raising or updating the PR**; detect stale positive source assertions proactively. Record explicit before/after behavioral contract, impacted source, affected tests and jobs; make a fail-closed, exact-HEAD preflight with meaningful coverage; maintain full real tests (Flutter, Python, Android, finance, privacy, SQLCipher) and never fake green by skipping/deleting checks. Detect both obsolete expectations and actual code compilation failures. Update obsolete assertions only when user-approved behavior warrants it. Include source-based negative regressions proving old assertions are caught. Current M417 Android Kotlin compile error at `native/WaffraAutoSmsStore.kt:570` missing closing `)` must be fixed separately.
+
+**Status:** Candidate guard code and Kotlin syntax patch prepared for PR #490; full exact-head CI and device acceptance still pending. The automated preflight is a *guard*, not proof of semantic equivalence or physical device quality.
+
+**Permanent PR protocol:** (1) Write each proposed behavior change and its Issue in `docs/WAFFRA_REQUIREMENTS.md`; (2) update `docs/qa/approved_change_scope.json` and `docs/qa/behavior_contract_review.json` with old/new behavior, safety invariants, impacted tests and all production files; (3) run `python3 -m unittest discover -s test/qa -p 'm550_behavior_contract_preflight_test.py'` and `python3 scripts/qa/m550_behavior_contract_preflight.py --base <main-base-SHA> --head <actual-HEAD-SHA>` against exact committed HEAD; (4) correct legitimate stale expectations **only after** reviewing the actual approved implementation and never delete tests to force success; (5) full Flutter/Python/Kotlin/Android jobs and signed handset evidence remain required before main merge. Every workflow and QA test file is dynamically included in M550 inventory. The scanner specifically catches provably disappeared **positive literal source assertions**, not all semantic bugs; human QA review remains mandatory.
+
+
+### M552 — 2026-11-08 — Mandatory verified SQLite3MC artifact handling in CI
+- Issue #492 and PR #490: every Flutter-enabled GitHub Actions job must prefetch the same upstream immutable sqlite3 3.7.0 SQLite3MC binaries via the official GitHub Release API, validate per-platform SHA256, seed only the native-hook verified cache, then run every original Flutter/Android/finance/security test unchanged. Never weaken the SQLCipher native hook, enable system plaintext SQLite or accept a third-party mirror. Add whole-repo CI coverage so new workflows cannot skip this preflight.
+- First M174 isolated exact-head job has passed; do not merge or promise APK until all current-head workflows and physical-device upgrade tests pass.
+
+
+### M554 — Android CI Gradle download integrity — 2026-11-08
+- In all Android compilation/emulator jobs affected by the intermittent GitHub 504, preseed the **original** Gradle 9.3.1-all ZIP via the official GitHub Release API, with official SHA256 pin; fail closed if any source is unavailable or the digest differs. Never change Gradle/SQLCipher app versions or skip Android security tests to make CI pass. Linked to PR #490.
+
+
+### M555 — Exact Kotlin compiler artifact recovery in Android CI — 2026-11-08
+- For HTTP 504 on `org.jetbrains.kotlin:kotlin-compiler-embeddable:2.2.21`, cache only JetBrains' official SHA256-pinned JAR plus validated original POM in an exact-module, CI-only Gradle local Maven source. Do not substitute Kotlin versions, modify project Gradle files, disable security, or skip emulator tests. Review real compile output and preserve source provenance. PR #490.
+
+
+## M564 — Issue #495 verified SMS transaction-date integrity (2026-11-08)
+**Owner instruction:** implement immediately in PR #497. **Status:** Code ready, exact-head CI/device QA pending; remaining one-tap yes/no and editable review in progress.
+- Both bank-SMS financial save routes must use the date actually parsed from the original message. Missing or ambiguous original date blocks automatic posting; never substitute the phone's DateTime.now.
+- Keep source pending, mandatory verified account linking, budget optional, confirmed SQLCipher commit / dedup unchanged.
+- Regression: test/qa/m564_sms_exact_date_guard_test.py; M174/M429/Android required.
+
+
+## M565 — #495 bank SMS Yes/No and verified commit (2026-11-08)
+**PR:** #497. **Status:** Code and regression committed, exact-head CI and Android owner acceptance pending.
+- Display original SAR amount/date and suggested active leaf category next to “هل العملية صحيحة؟” Yes/No. No opens editable SMS review preserving source. Yes enabled only with verified source amount, direction, original transaction date and category.
+- Yes performs verified account selection (create if required), optional budget, then source-authorized atomic SQLCipher ledger+SMS hash write, accounts learning after actual successful commit and Android ACK. Duplicate hash is never posted twice. Unknown facts fail closed.
+- Test: test/qa/m565_sms_yes_no_test.py. M564 exact dates enforced independently for legacy single and bulk paths. Full flutter and native Android CI pending.
+
+
+## M566 — #495 explicit date for edited SMS (2026-11-08)
+**PR:** #497. **Status:** committed / exact-head CI and device acceptance pending.
+- If original bank SMS has no parsed timestamp, the editable review must explicitly confirm a date using the calendar before save. The edit's date confirmation persists in the same per-SMS Back draft. Defaults must never become a verified historical date without choice.
+- Test test/qa/m566_sms_manual_date_confirmation_test.py; date from M564 batch and single writers remains authoritative.
+
+
+## M568 — #495 exact bank SMS identity reuse (2026-11-08)
+**PR #497. Status: code/test committed; current-head full CI and physical Android acceptance pending.**
+- First verified owner-account choice following a successful SMS journal commit records sender + last four. Same sender+last four may reuse that specific active same-bank account, after re-reading fresh SQLCipher authority; no repeated account-link dialog. The finance action itself still needs Yes confirmation and atomic hash dedup.
+- Sender-only, absent suffix, changed suffix, archived account or wrong bank never auto-link and require new explicit selection. Update M464/M493 tests accordingly.
+
+
+## M573 — #495 Account learning after edited SMS (2026-11-08)
+**PR:** #497. **Status:** Code and regression written, latest exact-SHA CI and real device acceptance pending.
+- No → edit pathway now submits known bank SMS sender for verified account review and records confirmed sender+suffix association only after actual successful encrypted ledger+hash write. No guesses, no repeat debit and no learning from canceled SMS reviews.
+- Test: test/qa/m573_sms_edited_account_learning_test.py.
+
+
+## M574 — #495 full transaction details in bank-SMS Yes/No (2026-11-08)
+**PR:** #497. **Status:** Committed / full CI and device QA pending.
+- Before Yes/No, preview shows income/expense, bank amount/currency, parsed description, valid main/subcategory, sender, masked original account suffix or missing-identity notice, and bank message's original YYYY-MM-DD HH:mm timestamp. The account is still owner-selected/verified before SQLCipher saving, never guessed from Home's active filter.
+- Test: test/qa/m574_sms_confirmation_full_fields_test.py.
+
+
+## M576 — #495 distinct last-four identities under one bank (2026-11-08)
+**PR:** #497. **Status:** Source and regression code ready; full exact-head CI / Android device acceptance pending.
+- First reviewed SMS for a new sender+four-digit bank identity offers choose existing or create new even if a separate account at the same institution already exists. Previously confirmed identical sender+four suppresses repeat prompt, account still verified under SQLCipher witness; never guess a mismatched four.
+- Test: test/qa/m576_first_distinct_bank_identity_test.py.
+
+
+## M578 — #495 correction of SMS original date and time (2026-11-08)
+**PR:** #497. **Status:** Code + regressions committed, exact-head CI & Android owner QA pending.
+- No/edit SMS when transaction timestamp missing: user chooses calendar date then exact hour/minute via clock picker. Cancelling either cannot satisfy confirmation; future timestamp refused. Display both before save, preserve existing historical transaction date during edit. No silent today/midnight financial posting.
+- Tests: test/qa/m566_sms_manual_date_confirmation_test.py and test/qa/m578_sms_time_confirmation_test.py.
+
+
+## M580 — stale M177 encrypted storage smoke writer count (2026-11-08)
+**PR:** #497. **Status:** QA code repaired; exact-head encrypted storage smoke + M174/M340 rerun pending.
+- The M177 storage regression previously required exactly 3 atomic bank SMS finance writer call sites, obsolete after approved M565 added fourth verified Yes-confirm path. Preserve all four legitimate source-authorized writers. Require M565 itself to include verified account selection + generation, atomic SMS+fingerprint journal, no duplicates and only post-commit native ACK. Change only the bounded M177 positive test, not any money source or security gate.

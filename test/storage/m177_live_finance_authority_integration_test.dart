@@ -192,10 +192,21 @@ void main() {
     // writer; a legacy bypass or split hash/record save is still disallowed.
     expect(home, contains(
       "'commit-confirmed-bank-sms',()=>_financeAuthority.commitConfirmedSms("));
-    // Three pre-existing, authority-bound entry points are intentional:
-    // bulk pasted SMS, reviewed individual SMS, and single entry sheet SMS.
-    // M275 wraps confirmation UI but must not add a fourth write pathway.
-    expect('_financeAuthority.commitConfirmedSms('.allMatches(home).length, 3);
+    // Four owner-confirmed, source-authorized entry points are intentional:
+    // bulk pasted SMS, reviewed individual SMS, single entry sheet SMS, and
+    // M565 Yes-confirm after exact original date/SAR/category/account review.
+    // A new path is valid ONLY with verified account generation and atomic
+    // record+fingerprint duplicate protection (never a legacy split write).
+    expect('_financeAuthority.commitConfirmedSms('.allMatches(home).length, 4);
+    final reviewedYes=home.split('Future<void> _m565ConfirmSms(')[1]
+      .split('Future<void> _reviewAutoSmsCandidates(')[0];
+    expect(reviewedYes, contains('reviewSmsAccountLinks([reviewed],smsSender:sender)'));
+    expect(reviewedYes, contains('route:WaffraFinanceRoute.bulkSmsConfirmedSave'));
+    expect(reviewedYes, contains('hashes:[hash],userConfirmed:true,allowDuplicateHashes:false'));
+    expect(reviewedYes, contains('selectedAccountIds:chosen.ids'));
+    expect(reviewedYes, contains('expectedAccountGeneration:chosen.generation'));
+    expect(reviewedYes, contains('if(applied.saved!=1){'));
+    expect(reviewedYes, contains('await WaffraAutoSms.acknowledgeCommitted([id])'));
     // M506 stages receipt bytes separately and strips picker file paths from
     // the ledger record before the SAME verified atomic SMS+hash commit.
     // The previous inline result.toJson() expectation became stale after that

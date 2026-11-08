@@ -79,9 +79,16 @@ void main(){
   final inbox=main.substring(
    main.indexOf('Future<void> _openAutoSmsInbox()async{'),
    main.indexOf('Widget _autoSmsReviewCard(){'));
-  expect(inbox,contains("final bySender=<String,List<Map<String,Object?>>>{};"));
-  expect(inbox,contains("candidate['sender']"));
-  expect(inbox,contains('bySender.putIfAbsent('));
+  // The presentation-only grouping moved into a pure O(N) helper. Do not
+  // regress original sender identity, case-insensitive grouping or UI routes.
+  final groups=File('lib/waffra_sms_review_groups.dart').readAsStringSync();
+  expect(inbox,contains('WaffraSmsReviewGroups.from(_autoSmsPending'));
+  expect(inbox,contains('final bySender=grouped.bySender;'));
+  expect(inbox,contains('final senders=grouped.senders;'));
+  expect(groups,contains("message['sender']"));
+  expect(groups,contains('canonicalNames.putIfAbsent('));
+  expect(groups,contains('bySender.putIfAbsent('));
+  expect(groups,contains('rows.sort('));
   expect(inbox,contains("'waffra-sms-sender-list'"));
   expect(inbox,contains("'waffra-sms-sender-transactions'"));
   expect(inbox,contains("Key('waffra-sms-sender-group-'"));

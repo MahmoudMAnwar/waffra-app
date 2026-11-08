@@ -1,0 +1,29 @@
+name: Prefetch pinned Gradle wrapper distribution
+description: Verify original Gradle 9.3.1-all ZIP via official GitHub Release API before Android CI.
+inputs:
+  github-token:
+    description: Read-only token for official public Gradle release.
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Restore immutable Gradle wrapper ZIP cache
+      uses: actions/cache@v4
+      with:
+        path: ~/.gradle/wrapper/dists/gradle-9.3.1-all
+        key: waffra-verified-gradle-9.3.1-all-v554-${{ runner.os }}-${{ runner.arch }}
+    - name: SHA256-verify exact upstream Gradle ZIP and seed wrapper cache
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+      run: bash scripts/qa/prefetch_verified_gradle.sh
+    - name: Restore official Kotlin compiler Maven artifact cache
+      uses: actions/cache@v4
+      with:
+        path: ~/.gradle/waffra-verified-maven
+        key: waffra-verified-jetbrains-kotlin-compiler-2.2.21-and-2.4.0-v556-${{ runner.os }}-${{ runner.arch }}
+    - name: Install SHA256-pinned official Kotlin compiler artifact locally for Gradle
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+      run: bash scripts/qa/prefetch_verified_kotlin.sh

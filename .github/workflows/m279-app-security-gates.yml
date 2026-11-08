@@ -80,6 +80,10 @@ jobs:
         with:
           channel: stable
           cache: true
+      - name: Prefetch SHA256-verified official SQLite3MC native release assets
+        uses: ./.github/actions/prefetch-sqlite3mc
+        with:
+          github-token: ${{ github.token }}
       - run: flutter pub get
       - name: Dart static analysis for new security tests
         run: dart analyze test/m279_app_wide_security_regression_test.dart

@@ -2667,3 +2667,208 @@ M547 PERF-04 native Android login/first-run consent freeze follow-up (2026-11-08
 
 
 M547 CI seven-failed-jobs / six-failed-workflows follow-up (2026-11-08, Issue #487, Draft PR #488): Exact PR HEAD 6cae5d4 showed 33/39 successful workflow runs; six failed workflows represented seven failed jobs (M340's Flutter suite and verdict both red). All full Flutter regressions shared three obsolete M506/M507/M518 source-level assertions after the secure batched SMS importer and elimination of whole-inbox refresh on finance save. M506 now checks native 1000-pending capacity at queue start AND inside batch, and safe cursor persistence without skipping an unexamined row when full. M507 continues verifying each next reviewed SMS rereads owner-bound local rules and keeps verified manual confirmation, but rejects triggering a full native history scan from the finance-save transition; no live SMS classification or financial posting authority was changed. M518 now verifies Android sender timestamp is hashed as the identity, Android receipt time remains the UI receipt time, and the immutable date/_id cursor advances only for rows examined and is atomically committed with the encrypted pending queue; duplicate/committed/excluded transfer marker guards remain. M385 exact changed-file/section scope includes only these three test-case bodies, and original M547 requirements were logged before source test edits. Existing financial integrity, credentials, logout and SQLCipher authority unchanged by this follow-up. This correction is NOT proof of live Android or Flutter frame performance and is not ready to merge until all exact-head CI gates and device acceptance pass.
+
+M548 (2026-11-08, user-requested Android latency regression; Issue #489, performance candidate): Following successful M547 PR #488 main merge, the owner's physical Samsung APK still shows 1000 SMS review items (3 already classified, 997 still pending), extremely slow Review operations/opened list, a ~3s first-time registration wait, and janky navigation/animations across Waffra. M548 does NOT declare device performance solved. SMS Review now uses the Home's already verified, owner-scoped, consent-checked in-memory queue when it exists; the cold, empty, error/unverified case still rechecks secure native state rather than showing stale messages. The sender sheet uses O(N) case-insensitive grouping instead of comparing all prior sender keys per message, retaining original sender labels, newest-first ordering, original body/date, selection, Back, explicit exclusion and review-only controls. Native encrypted SMS scanning, 1000-slot cap, cursor, pending safety, finance authority, authenticated committed hashes and exclusions are not modified. Pending reclassification yields to Flutter frames after small batches of 16 to avoid keeping navigation/animations behind 1000 synchronous SMS parses. 
+For first-time Phone signup only, remove the redundant second full-strength PBKDF2 during immediate secure verifier write/read-back: derive the exact same version-2 phone-bound salted verifier with all 600000 PBKDF2-HMAC-SHA256 iterations, recheck no other verifier appeared before committing, and compare the full persisted secure record byte-for-byte with the generated record after the write. Existing credentials/interrupted registration and all subsequent logins STILL require the original phone + full 600000-round password challenge; no password bypass, no reset, no deletions, no biometrics or verified financial authority change. The fresh registration UI now paints a stable busy spinner before secure storage work and prevents double taps. 
+New tests exercise 1000 distinct senders, case-insensitive bank aliases, newest-first ordering, original queue preservation, cached review navigation and batched parsing, and exact verifier read-back/no second fresh PBKDF2 with original password security retained by existing M537/M546 tests. Source guard declares only these targeted changes. Exact-HEAD Flutter/Android CI and real-device performance traces, clean install/upgrade-with-data acceptance remain PENDING. No claim that a 3s cryptographic wall time disappears, no full app-wide performance certification; do not merge until owner's acceptance.
+
+M548 CI M429 source-contract follow-up (2026-11-08): The first exact-head M429 combined SMS/phone test was red because it expected the legacy inline bySender map construction text. The unchanged outward bank-sender review behavior is now implemented in the new linear-time WaffraSmsReviewGroups pure helper, tested directly with 1000 distinct senders/case aliases/newest-first ordering. Only the M429 positive sender-grouping test body was updated to check the actual helper and the still-present sender/message route keys, selection and original-source review actions; no production security, account authority or finance behavior was modified to make a test green. M385 scope/requirements updated for this bounded test. Latest exact-head CI and physical Android QA remain pending.
+
+M548 repeated six-workflow CI regression — FINAL SOURCE-CONTRACT FIX (2026-11-08; Issue #489 / PR #490): Exact prior candidate fd216d0 ran 2526 successful Flutter tests and exactly one failing original M547 test in each of the six full-Flutter workflows (and M340's downstream verdict): "M547 only an explicit rescan fetches historical pages during UI interactions". The original test sliced lib/main.dart from the Review method until the transient comment "// Every bank sender gets one group." that was replaced with the approved O(N) grouping helper. Because that comment was removed, its .split()[0] incorrectly captured all remaining application code and found another explicitly requested importMonth:true outside the method, making otherwise unrelated whole-app test suites red. M548 now has a reusable FAIL-CLOSED test/support/waffra_source_method_section.dart extractor that requires unique method-declaration start/end anchors, rejects removed/duplicate/reordered method boundaries, and never scans unrelated source on a missing comment. The original M547 guard now uses explicit method boundaries for Review, SMS rules and transaction editor rather than user-interface comments; test/m548_source_method_boundary_guard_test.dart proves the exact regression with an independent sample and blocks future comment slicing. This is NOT test skipping or a deletion of security checks: original M547 native atomic SMS cursor/queue and owner/finance safety assertions remain active.
+
+The review source audit additionally verified two real hidden Android historical-page requests after saving a local SMS rule or after bulk review exclusion. These are now ordinary owner-checked in-memory pending queue refreshes; historical SMS import occurs only when explicitly requested through Rescan/settings scan. Existing native historical cursor, 1000-slot queue capacity, encrypted exclusions, confirmed finance duplicate markers, SQLCipher authority, login/logout and biometrics are unchanged. Original M461 exclusion test now confirms durable exclusion, nonblocking refresh and explicit historical rescan; no runtime safety condition is relaxed. M385 exact scoped source guard/manual compare passed for each modified protected file. Exact-head full Flutter and emulator Android CI remain required and the owner's signed handset performance must still be measured; do not declare resolved/device proven until those results pass.
+
+M548 M461 full-suite follow-up (2026-11-08; final release note): The prior head 55e3d5d4 successfully passed the previously repeated M547 source-boundary test and 2530 additional Dart/Flutter tests, but the newly reinforced M461 exclusion test expected a protected setState/removeWhere call to exist on one literal line. Production already correctly splits the mounted-state guard and queue removal over two lines, so the assertion alone was too strict. The M461 check now asserts the bounded Review method independently contains the mounted state guard, ID-filtered pending-queue removal, a non-historical pending refresh and the separate explicit Rescan import path. All four exact runtime requirements are present in main.dart and were compared to source; finance, SQLCipher, credentials, SMS encrypted owner authority and callback behavior are unchanged. The new whole-suite exact-head CI is PENDING; preserve failed jobs and do not claim a merged build or real-device performance success until proven.
+
+M548 exact PR SHA CI-concurrency hardening (2026-11-08): On PR #490 the current HEAD b10db930 saw multiple required M274/M340 jobs automatically cancelled before executing and their dependent verdict jobs red, even though app checks were not failed. M147 was cancelled before any job, and GitHub API rejected the re-run with 403. Root cause confirmed in repository workflow source: seven critical full suite and readiness workflows used PR-only concurrency with cancel-in-progress, so out-of-order queued events of earlier commits could cancel newer exact-HEAD checks. Each critical workflow now appends the immutable PR head SHA (workflow_dispatch fallback github.sha) to the existing PR-scoped concurrency group. The protected M453 cleanup still cancels genuinely superseded queued work only after branch, PR linkage, owner and latest SHA guards. New M548 and updated M453 exact source guard tests require SHA isolation for all seven and maintain all original finance, security, backup, emulator and no-cutover steps. One atomic final PR commit; full latest-head CI and physical Android performance remain required and not certified by the source-only change.
+
+
+M549 / issue #491 / PR #490 (2026-11-08): Owner requests a full inbox all-sender review, reliable 1000-item exclusion, only encrypted sender names after sender blocking, and smart Rescan. Native owner-verified review intake now accepts bounded nonempty messages from all SMS inbox senders including personal numbers and short codes; no additional finance posting authority, OTP digits are masked and confirmed/excluded/transfer fingerprints still prevent replay. The 1000-item review exclusion flow uses one optional sender decision rather than 1000 dialogs, existing durable 100-ID per-message batches, and an atomic encrypted native sender-block batch that purges the blocked sender's queued text and prior labelled per-message exclusion hashes, without deleting Android SMS or financial ledger data. Owner-only automatically learned excluded-keyword rules for those senders are also cleared. Native scan progress checks for unseen inbox rows beyond the durable cursor; the Rescan button is dimmed after complete scans without new inbox messages or when full, and re-enables on new rows or unfinished history with free space. Source regressions added. Latest-head GitHub CI, 0/999/1000 Android hardware trials, and frame timing remain REQUIRED, no merge claim.
+
+M549 CI M417 contract correction (2026-11-08): Existing M417 Python QA test assumed native SMS intake must call financial-only qualifies(sender, body). This assertion contradicted the owner's approved all-sender review requirement, and failed exact-head M174 preflight despite 148 other Python QA tests passing. Test now positively verifies reviewEligible in live and historical intake, excludes/uncommitted dedupe and disallows direct native finance or network writes. No test skipped or financial-security bypass; fresh exact-SHA full CI still required.
+
+M549 bulk-exclusion UI performance follow-up (2026-11-08): Remove the 1000-item _autoSmsPending pre-confirmation bank-facts parse (the user already explicitly selected the IDs) and replace its counted warning with a static financial-selection caution. Both existing explicit confirmation windows, sender-only retention behavior, native 100-item atomic exclusion batches, actual phone SMS and financial ledger are unchanged. New M549 regression asserts there is no parser call prior to the bulk confirmation dialog; exact-head CI/device performance not yet certified.
+
+
+M550 Issue #492 / PR #490 — mandatory all-PR business behavior vs tests and GitHub Actions (2026-11-08): Implemented the source-only, fail-closed `scripts/qa/m550_behavior_contract_preflight.py` for an exact PR HEAD and BASE. Each run dynamically enumerates every registered workflow YAML and its job IDs plus every Dart/Python QA test; it scans constant positive source assertions in Python, Dart and in-workflow Python and detects assertions which were true in BASE but become false in HEAD due to changed production code, giving exact test path, line, source file and obsolete expected literal. It refuses behavior-changing PRs without an updated `docs/qa/behavior_contract_review.json` mapping all changed production paths to approved before/after behavior, actual test files, issue and safety invariants. A dedicated every-PR M550 workflow executes the scanner with its own regression tests before expensive builds; M147's existing merge-readiness job also invokes it on the exact SHA. M550 never auto-rewrites/skips security tests, never downgrades existing SQLCipher/financial authority checks, never claims a source assertion proves full business semantics, and does not replace real Flutter/Android/Python CI or physical handset validation. The same change corrects the independently verified Android Kotlin compile syntax error in WaffraAutoSmsStore.kt at the sender-restore guard (missing right parenthesis; originally reported by M417 on head 5b47854). Current PR source changes remain limited by M385 scope; final full exact-head CI and handset validation pending, no merge claim.
+
+
+M550 early CI proof (2026-11-08): First exact-HEAD M550 run audited 107 workflows, 180 jobs, 474 QA test files and 1203 source-bound positive assertions and caught ELEVEN obsolete checks in the previously unchanged `test/m470_sms_excluded_senders_test.dart`. All 11 assumed M470's former per-sender dialogue, old `clearedSenders` list, old 100-ID loop variable, and now-removed 1000-SMS pre-confirm bank-facts parse. These were directly contradicted by the user-approved M549 behavior. Both preserved M470 test cases were upgraded to verify the new two-step confirmation, Back/messages-only/block-senders choices, one native atomic owner-scoped sender block, bounded per-message batches, zero parsing before the first confirmation and unchanged native excluded sender restore and finance safety. None were deleted or disabled. This confirms the M550 guard detected exactly the stale behavior drift before the full Flutter jobs, as requested. Re-run whole exact-head CI and Kotlin compilation; no merge/handset result is claimed.
+
+
+[PR #490 M548 / M549] 2026-11-08 — Repair source review regression and Linux sqlite3mc asset integrity
+====================================================================================================
+- Updated the pre-existing M486 source assertion to match the approved two-step explicit bank-SMS exclusion flow (confirm selected messages, then optionally exclude sender), preserving messages-only, Back/cancel, owner-scoped anti-replay and partial failure handling. No finance or Android SMS deletion behavior changed.
+- Corrected the previously introduced escaped newline typo in that test and declared the approved bounded test modification under the still-enforced M385 scope guard.
+- Linux CI revealed a genuine SHA256 mismatch for the immutable sqlite3-3.7.0 / sqlite3mc x64 native binary (expected 3dfe8bcd..., actual bef140a1...). Updated the package pin to immutable sqlite3 3.7.1, preserving upstream SHA256 verification and sqlite3mc encryption configuration. Do not disable digest checks or add a custom unverified binary.
+- This sqlite3mc version upgrade requires successful fresh-install and upgrade-over-existing encrypted SQLCipher/SQLite3MC finance and restore testing on both owner phones. No main merge, signed APK approval, CI green or actual device acceptance is claimed until independently verified.
+
+
+[PR #490 M548 follow-up] 2026-11-08 — Native release-asset delivery remains BLOCKED; preserve encrypted database compatibility
+================================================================================================================
+- Following the attempted sqlite3 3.7.1 pin, exact-head CI still downloaded a file with precisely the same invalid SHA256 bef140a1... seen on sqlite3 3.7.0, although the expected version-specific checksums differed. That is strong evidence of a shared failed GitHub release-asset download or intermediary error, not verified proof of a corrupt SQLite library. The failed hash is also independently observed in unrelated release-download failures.
+- REVERT the proposed 3.7.1 version upgrade and RESTORE the prior approved sqlite3 3.7.0 pin to avoid unverified changes to existing user databases. Keep `source: sqlite3mc`, upstream SHA256 verification and fail-closed CI. Native artifact delivery must be restored or a verified mirror provisioned before this PR may merge. All failed CI and pending Android on-device checks remain blockers. No signed APK or new data migration is approved.
+
+
+[PR #490 M548 SQLite3MC native-asset cache fix] 2026-11-08
+===============================================
+- Root cause reproduced: original official GitHub URL returned a stale 92-byte error response, sha256 bef140a1..., whereas fresh-query and official gh release API downloads returned the correct 2,263,448-byte immutable sqlite3 3.7.0 SQLite3MC binary with sha256 3dfe8bcd00e34c705de14acd1c1a0d283b9fd7d20fbd49b0aa0196b85a1d7741.
+- Keep sqlite3 exactly 3.7.0 and source sqlite3mc. Add a fixed query key to the exact same official Github release URL as url_pattern. The package verifies its original signed release SHA-256 across all target architectures. No untrusted mirrors or alternative database engine.
+- Tighten positive pinned URL regression and run early fixed-key integrity probe. Full SHA-scoped CI, device upgrade, encrypted restore and APK acceptance must still pass; do not claim completed release readiness from this fix alone.
+
+
+[M552 ALL-CI FIX / PR #490] 2026-11-08 — Verified SQLite3MC artifact prefetch for all Flutter jobs
+==================================================================================================================
+- Diagnosed 92-byte poisoned GitHub release CDN responses with matching sha256 bef140a1... across releases; the same immutable sqlite3 3.7.0 GitHub Release API delivered intact x64 Linux 2,263,448-byte artifact with official SHA256 3dfe8bcd... and verified Android binaries. A static query URL was unreliable and has been reverted.
+- Added a shared CI-only action using the official authenticated GitHub release API, explicit SHA256 allowlist covering linux x64 and Android arm, arm64, ia32 and x64, and a checksum-verified native-hook cache. It fails closed if the official artifact is unavailable or differs from the pinned hashes; the Dart sqlite3 package retains its own second SHA256 check. No plaintext fallback and no changes to user databases.
+- M174 exact-SHA CI pilot confirmed: prefetch step SUCCESS, flutter pub get SUCCESS and SQLCipher cutover negative matrix SUCCESS. Applied the same additive prefetch step to 91 other Flutter workflow files (current and historical), with a repository-wide regression preventing future missing prefetch steps. The preexisting finance/security/test steps remain unchanged. The 91-workflow update and signed APK are NOT yet independently confirmed green; exact-head CI and physical two-phone validation remain required.
+
+
+[M553 / PR #490] 2026-11-08 — Fix repeat 504 failures of pinned llamadart runtime assets
+- GitHub Actions repeatedly returned HTTP 504 for the immutable leehack/llamadart-native v0.4.1 Linux x64 artifact after all original retries and curl fallback; those failures blocked Flutter tests after SQLite3MC was fixed.
+- Extended the shared immutable-asset prefetch action to get the exact upstream linux-x64, android-arm64, and android-x64 bundles through official GitHub Release API with published SHA256 pins, place archives in the upstream native-hook cache and keep original llamadart 0.8.24 / model behavior unchanged. Fail closed on digest mismatch. All workflows inherit the same shared action; exact-commit CI proof is still required.
+
+
+[M554 Gradle native distribution download repair / PR #490] 2026-11-08
+====================================================================
+- After the SQLite3MC/llamadart asset integrity gates, Android emulator CI revealed HTTP 504 downloading the original Gradle 9.3.1-all release ZIP through the normal GitHub redirect. Added an Android-job-only CI prefetch that downloads the immutable official Gradle distribution via GitHub Release API (verified fallback downloads.gradle.org) and checks the published SHA256 17f277867f6914d61b1aa02efab1ba7bb439ad652ca485cd8ca6842fccec6e43 before staging it to Gradle wrapper URL-hash cache paths.
+- This preserves the exact wrapper Gradle version, existing Android and finance assertions, source integrity, SQLCipher, Flutter and signing. Added a negative/positive regression contract to prevent accidentally skipping this step. Full exact-head CI and two-device upgrade validation pending; no merge or signed APK approval yet.
+
+
+[M553 follow-up] 2026-11-08 — Ensure native cache is staged AFTER dependency installation
+- Logs from M119 proved the official llamadart archive passed SHA256 but subsequent `flutter pub get` reinstalled its package root and discarded the preseeded archive, forcing a new failing download. The shared CI prefetch action now runs Flutter package resolution before archive-cache restore and official SHA256 prefetch; existing per-job pub get becomes idempotent and original test suites stay unchanged. Evidence requires a new exact-head CI run, no passing claim in advance.
+
+
+[M555: Gradle Kotlin compiler artifact / CI only] 2026-11-08
+- The complete Android compile matrix passed verified Gradle ZIP prefetch and then encountered the identical JetBrains Kotlin 2.2.21 compiler-embeddable JAR GitHub release redirect HTTP 504 in M417, M120, Android encrypted storage and M274. Kept the original Gradle and Kotlin version; no app changes.
+- Added SHA256-pinned official JetBrains v2.2.21 JAR prefetch (9588fa696ac5507af764fd5660df6894185e12704ec1bc3f5cb772af4987f295), retained original Maven Central POM validated against its SHA1 descriptor, and a Gradle CI-only exact-module repository initialized before project evaluation. No change to other Maven dependencies, Gradle test scopes, Android signing or SQLCipher.
+- Real Gradle compilation and original on-device test validation are still required; do not claim final release pass until exact-head CI succeeds.
+
+
+[M555 regression correction] 2026-11-08
+- Exact-head M417 Kotlin compile proved original M555 init script mistakenly added a project-level repository, rejected by Flutter included Gradle build's FAIL_ON_PROJECT_REPOS policy. Corrected to Gradle `beforeSettings` and `dependencyResolutionManagement.repositories.exclusiveContent` for ONLY `org.jetbrains.kotlin:kotlin-compiler-embeddable:2.2.21` in the existing locally SHA-verified official Maven cache. Preserves strict repository policy and original Gradle/Flutter/Android tests. Requires exact-head CI proof.
+
+
+[M555 Gradle repository API fix] 2026-11-08
+- M147 ARM64 log proved Gradle 9.3.1 compiled the initialization script but failed on nested `maven()` in `ExclusiveContentRepositorySpec`. Updated the CI-only beforeSettings script to create the pinned exact official Maven repository via `settings.dependencyResolutionManagement.repositories.maven` first, then use the supported `exclusiveContent { forRepositories(verifiedMaven) }` API, filtering exactly Kotlin compiler 2.2.21. No financial code, plugin versions, tests or Gradle strict policy changed. Verify on next exact SHA before merge.
+
+
+[M556 Kotlin compiler multi-version CI fix] 2026-11-08
+- M202 real Android emulator reached Kotlin compilation but firebase_core requested kotlin-compiler-embeddable:2.4.0 (SHA256 c2b25e8c1c93ec416ba4327f5e31eaec0f0c8847241b9353e294b8db9dce564f) while existing Flutter plugin build uses 2.2.21 (SHA256 9588fa...). Both original published JetBrains JAR/POM versions now prefetch and verify fail-closed via official Release API and Maven POM checks; exact-module settings repository lists ONLY both versions. Cache key changed to v556; app Kotlin/Gradle versions and finance tests unchanged. Requires fresh exact-head CI validation.
+
+
+[M557 Kotlin 2.4.0 resolution under Gradle repository policy] 2026-11-08
+- Exact-head Android encrypted storage and golden integration builds failed despite prefetch successfully SHA256 verifying official Kotlin 2.4.0: project-repository builds ignored settings-only local compiler repository, retried the poisoned GitHub URL and received HTTP 504. A CI-only settingsEvaluated policy check now installs the exact-module local verified Maven repo only for PREFER_PROJECT builds, while FAIL_ON_PROJECT_REPOS builds continue using settings exclusivity only. No repository policy is relaxed; no Kotlin/Gradle/plugin/SQLCipher/app version is changed. Existing Android and financial tests remain mandatory. Not certified until new exact-SHA CI passes.
+
+
+[M558 Gradle build-job coverage] 2026-11-08
+- Last M160 same-commit finance regression proved 2,537 Flutter tests passing but its subsequent unsigned release APK compilation failed downloading original Gradle 9.3.1 from GitHub with HTTP 504. The existing official Gradle API/SHA256 prefetch was absent in M160 and M146 build jobs. Added that same verified action to both; extended the M554 CI QA to enumerate every Flutter APK/gradlew build job and fail if Gradle prefetch missing. No business or financial code changed; all original tests and build requirements remain enforced. Validation pending full exact-head CI.
+
+[M558 follow-up: restore exact approved M160 concurrency scope] 2026-11-08
+- Exact-head M174 M385 safety guard caught that the M558 manifest update accidentally removed M160's previously approved bounded concurrency span, even though the unchanged PR still edits its exact-SHA cancellation guard. Restored ONLY the original M160 `concurrency:\n` to `jobs:\n` whitelist plus the existing jobs scope. Production logic, Android build steps and the M385 fail-closed scope checker remain unchanged. Exact-head M174 and complete CI must rerun successfully before merge.
+
+
+[M549 approved account filter regression alignment] 2026-11-08
+- Full UI/finance regression revealed exactly two obsolete assertions still expecting account selector inside balance (M467 and M495), contrary to owner-approved screenshot. Updated M467 to verify actual independent compact month filter and never pass viewing filter into finance commit, and M495 to verify small-screen balance has no dropdown but complete long account names remain accessible in the real account picker. No financial behavior or original unrelated tests were removed. CI and physical screenshots still required.
+
+
+[M559 unified main-target exact-head CI activation] 2026-11-08
+- Consolidated Draft #490 (M548 review/signup latency, SMS exclusions and native integrity/Gradle/Kotlin CI repairs through M558) into the owner-approved screenshot UI PR #497. Its merge commit 9642395 has the exact latest #490 head as second parent; no CI fix, financial source, encrypted data or original positive test was dropped.
+- Re-targeted #497 directly to main and closed now-redundant #490 without deleting its code or branch. This release-note-only synchronize commit deliberately triggers main-targeted PR workflows to test the combined code at ONE new exact SHA; historical #490 green 75/0/1 does NOT prove this new head passes.
+- No main merge or APK release until mandatory exact-head CI plus physical Android performance and owner screenshot acceptance. Issue #495 first-time last-four link, original SMS transaction timestamp and one-tap yes/no confirmation remains incomplete.
+
+
+[M560 exact-main PR M385 positive scope repair] 2026-11-08
+- Full M174 source guard rejected a zero-width baseline section around newly inserted M549 three-card Home helper. The start anchor is now the single unique existing adjacent receipt action key rather than its final unchanged closing braces; end stays at `Widget dashboard(){`. Old + new are both uniquely bounded and nonempty. No app runtime, financial writer, tests, security guard or original data changed.
+- M550's independent reviewed notification source-to-test contract is retained; exact-head M385/M550/Flutter/Android still mandatory.
+
+
+[M561 exact-head M429 Flutter analyzer correction] 2026-11-08
+- M429 combined-flutter analyzer reported 3 warnings from obsolete Home-only references after M549 approved layout: private old SMS review widget no longer called, unused `inc` and `exp` dashboard totals. Keep the old private helper without resurrecting its oversized Home card using a single-line `unused_element` suppression; remove only the two unused local computed metrics (no changes to real account-filter calculation, user funds or manual/transfer writer).
+- Adjust two adjacent M385 exact-source anchors to include the unique existing original sender-inbox closing comment so the one-line ignore is properly scope-guarded. Independently compare masked main.dart against the main base: byte-for-byte identical outside explicitly approved sections. No whole-file lint suppression, no tests disabled. Re-run full exact-head 76 CI workflows.
+
+
+[M562 macOS iOS simulator native SHA verification fix] 2026-11-08
+- Root cause of real failing M278 ios-simulator-build-check: macOS runner's sha256sum does not support GNU `--status`, producing usage text then falsely classifying official sqlite3mc as SHA mismatch. Use portable shasum -a 256 where available, fallback sha256sum and compare full lowercase digest against exact five hard-coded upstream pins. Both cached and downloaded assets remain fail-closed, and iOS build still runs. No iOS check skipped, no native digest weakened.
+
+
+[M563 M174 obsolete M552 assertion replacement] 2026-11-08
+- Exact-head M174 preflight failed solely because M552's old source-only test demanded literal GNU `sha256sum --check --status` in the sqlite3mc prefetch script, while M562 necessarily replaced it on macOS. New test asserts the portable verifier's trusted digest tools and exact equality, executes the real bash verifier against a correct hash, incorrect pin, and corrupted native-file fixture. All five upstream pins and all official download / native / iOS checks remain mandatory; the separate llamadart check is unchanged.
+
+
+[M564 #495 original SMS date] 2026-11-08
+- Single and batch bank SMS verified financial saving now fail-closed on missing/ambiguous source date, rather than substituting today's timestamp. Exact parsed date retained on commit. Added test/qa/m564_sms_exact_date_guard_test.py and #495 requirements entry. Account linking and verified SQLCipher source unchanged. Not yet CI/device certified.
+
+
+[M564 source-bounded CI parity] 2026-11-08
+- Explicitly bound the #495 SMS batch finance-review function in M385 approved source scope. The exact old source outside reviewed functions must remain byte-identical. Existing tests remain required, no CI gate bypass.
+
+
+[M565 verified bank SMS confirmation UX] 2026-11-08
+- Reviewed income/expense SMS now presents source amount/date/category and explicit هل العملية صحيحة؟ Yes / No edit actions. Yes requires verified SAR direction/amount, exact original date and active category, then owner-reviewed bank account, optional budget and SQLCipher-backed atomic SMS+hash journal. Only committed message is acknowledged; no accidental duplicate money. No goes to editable SMS entry. Regression in test/qa/m565_sms_yes_no_test.py. CI and Android UX still pending.
+
+
+[M566 manually confirmed SMS date] 2026-11-08
+- SMS editor with unknown source date now blocks save until explicit calendar date pick; stores confirmation in same SMS review draft across Back. No implicit today's-date finance posting. Existing manual and receipt date behavior unchanged. Python guard added; exact-head CI and Android pending.
+
+
+[M567 exact source scope for #495] 2026-11-08
+- M174 preflight correctly found the newly added M565 reviewed SMS confirmation flow was not yet bounded under M385. Add a single uniquely anchored transfer-to-review section (ending before _loadFinanceSafely) to the owner's approved scope. No runtime, finance, SQLCipher, data, test assertions or CI skip changed; M385 still checks all source bytes outside bounded sections.
+
+
+[M569 exact-head M385/M550/M447 CI convergence] 2026-11-08
+- M174 root cause: M564 single SMS financial writer was outside original batch preflight bounds; add unique single-source start/end anchors, retaining strict old-source parity outside. M147 M550 spotted two obsolete M206 assertions requiring today fallback; replace with source timestamp assertions and explicit negative checks. M440 M447 added fourth verified SMS writer in M565; update positive count to 4, account reviews to 7, assert verified chosen account, source generation and no duplicate hashes. No tests skipped or disabled. Full exact HEAD CI mandatory.
+
+
+[M568 exact bank SMS sender+last four] 2026-11-08
+- Reuse first user-confirmed exact sender+four-digit account identity for subsequent verified SMS, with fresh SQLCipher account-witness and unchanged explicit transaction confirmation; remove sender-only automatic linking. Different/missing last-four prompts user. Updated old M464/M493 tests, added M550 explicit source contract. Exact-head CI/Android pending; no gates disabled.
+
+
+[M570 exact M385 account review anchor] 2026-11-08
+- Before CI, independent masked-source comparison spotted M568's original end anchor for reviewed account linking included a nonexistent leading space; the existing Dart source uses no leading space. Correct the anchor precisely for both main baseline and new head. No business logic or tests changed; M385 unchanged and mandatory.
+
+
+[M571 M340 verified fourth SMS financial writer] 2026-11-08
+- M340 source preflight incorrectly hardcoded three bank SMS confirmation writers, failing when #495 added a genuine fourth trusted SQLCipher path. Update to four AND inspect that new owner's Yes path requires verified account, optional budget, source date/currency, SHA witness, userConfirmed true and no duplicate hashes. Add negative mutation QA for missing generation and duplicate bypass. No gate disabled; exact-head CI required.
+
+
+[M572 M385 stable M340 guard anchor] 2026-11-08
+- Correct M340 approved source bound to a unique baseline-and-head anchor preceding modified old/new finance quality preflight. Keep only that security source gate section approved, all other changes blocked. No tests disabled.
+
+
+[M573 #495 sender+suffix learning parity in No/Edit] 2026-11-08
+- Verified reviewed SMS editor now forwards the original sender to account confirmation and learns that sender's last-four association after successful SQLCipher commit+hash. No preview/cancel learning, no additional financial commit. M573 regression. CI/device pending.
+
+
+[M574 #495 complete SMS pre-save review] 2026-11-08
+- Reviewed bank SMS Yes/No preview now shows parsed description, sender, type, SAR amount, main/leaf category, source masked account last four (or manual-account warning), and original bank date including hours and minutes. Account confirmation is separate and mandatory; one-tap source-authorized finance guard preserved. M574 regression, CI/Android pending.
+
+
+[M575 strengthened M565 test after M574 preview] 2026-11-08
+- Old M565 test searched for a now obsolete one-line categories.where expression; M574 intentionally split out a validated leaf and confirmed parent. Replace stale literal with three positive validations of the actual previewLeaves and previewParents gates. Preserve all other financial writer and duplicate checks, no skipping.
+
+
+[M576 first distinct bank account identities] 2026-11-08
+- The same bank may have several accounts. First new sender+last-four identity now explicitly offers choose existing / create bank account, rather than silently treating any other account of that bank as linked. Previously confirmed identity avoids prompts. Retains native SMS and SQLCipher source integrity. M576 regression, CI/device pending.
+
+
+[M578 explicit SMS date+time corrected review] 2026-11-08
+- Missing-source-date SMS review now requires both calendar date and time-of-day selection before encrypted saving. Cancellation leaves date unconfirmed; future time is refused, selected date/time displayed. Existing saved entries preserve their old date. Updated M566 and added M578 regressions; full CI and device QA pending.
+
+
+[M577 exact-head M174/M429 CI repairs — release record] 2026-11-08
+- Latest app source commit 5a0d9a1 removes two redundant nullable guards in the reviewed SMS Yes path after the immutable canConfirm predicate already proves original source amount and date. All source amount/date/category, verified bank-account confirmation, SQLCipher atomic writer and bank-SMS hash dedup remain mandatory.
+- M174 M385 protected-source manifest now uses the unique original M340 manual-writer quality check line as the bounded end anchor, resolving accidental duplicate `for marker, reason in (` references in the preceding release. The financial QA source, test set and security conditions were not bypassed.
+- M449 release-note ancestry failed on 5a0d9a1 because the app source edit was newer than the prior release-note entry. This release-note-only commit follows the app fix and provides the required main APK release evidence; all same-commit CI still must pass, no merge claimed.
+
+
+[M580 date integrity regression parity] 2026-11-08
+- M340 financial quality gate's independent 155-case Flutter suite caught an obsolete M337 literal check for `found.where(bankSmsHasUnverifiedTimestamp)` while approved M564 upgraded the actual guard to reject both missing and ambiguous source timestamps. Update only that M337 positive source assertion to require the stronger `bankSmsDate(raw)==null||bankSmsHasUnverifiedTimestamp(raw)` before atomic finance commit, preserving the original negative / malformed date tests. Existing-test delta is bounded in M385. No finance behavior change and no test disabled.
+
+
+[M580 M177 encrypted storage source-contract parity] 2026-11-08
+- A real 1196-pass/1-fail encrypted storage smoke run failed because M177 still demanded exactly 3 finance-authorized SMS writers. M565 intentionally adds a fourth verified Yes-confirm path. Repair existing M177 positive regression to demand exactly 4 and independently assert verified account witness, atomic SMS+hash writer, duplicate safety and native ACK inside the new method. No financial source or test skipping, exact-head CI pending.
+
+
+[M581 sender+last-four verified account review regression] 2026-11-08
+- M103 full 2,539-test suite exposed a stale M470 literal asserting the old zero-SAR first-bank prompt. M576 now deliberately asks for a distinct account identity even when a separate account at the same institution already exists. The M470 test now enforces the stronger `needsNewIdentityChoice` and `(identitySuffix!=null&&verifiedIdentity==null)` guards, exact trusted sender+four lookup, `suggestedLastFour:proposedSuffix` and user-editable opening zero-balance wording. Existing widget tests for malicious sender labels, consent and owner confirmation unchanged. Scoped under M385 and not skipped.

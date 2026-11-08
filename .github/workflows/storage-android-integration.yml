@@ -40,6 +40,14 @@ jobs:
         with:
           channel: stable
           cache: true
+      - name: Prefetch SHA256-verified official SQLite3MC native release assets
+        uses: ./.github/actions/prefetch-sqlite3mc
+        with:
+          github-token: ${{ github.token }}
+      - name: Prefetch SHA256-verified Gradle wrapper distribution
+        uses: ./.github/actions/prefetch-gradle
+        with:
+          github-token: ${{ github.token }}
       - name: Generate Android project without clobbering user files
         run: flutter create --no-pub --platforms=android --project-name=waffra --org com.waffra .
       - name: Configure Java 8 core library desugaring

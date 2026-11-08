@@ -26,6 +26,10 @@ jobs:
         with:
           channel: stable
           cache: true
+      - name: Prefetch SHA256-verified official SQLite3MC native release assets
+        uses: ./.github/actions/prefetch-sqlite3mc
+        with:
+          github-token: ${{ github.token }}
       - run: flutter pub get
       - name: Analyze shared merchant parser and Widget code
         run: flutter analyze --no-fatal-infos --no-fatal-warnings lib/main.dart lib/waffra_merchant_rules.dart lib/waffra_widget_capture.part.dart test/waffra_merchant_rules_test.dart

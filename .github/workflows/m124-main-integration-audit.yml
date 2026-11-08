@@ -87,6 +87,10 @@ jobs:
         with:
           channel: stable
           cache: true
+      - name: Prefetch SHA256-verified official SQLite3MC native release assets
+        uses: ./.github/actions/prefetch-sqlite3mc
+        with:
+          github-token: ${{ github.token }}
       - run: flutter pub get
       - name: Analyze all encrypted source and receipt runtime
         run: dart analyze lib/storage test/storage
@@ -108,6 +112,10 @@ jobs:
         with:
           channel: stable
           cache: true
+      - name: Prefetch SHA256-verified official SQLite3MC native release assets
+        uses: ./.github/actions/prefetch-sqlite3mc
+        with:
+          github-token: ${{ github.token }}
       - run: flutter pub get
       - name: Test UI and source ownership independently
         run: >-

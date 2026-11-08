@@ -65,6 +65,22 @@ void main() {
     expect(app,isNot(contains('if(!await WaffraAutoSms.acknowledge(batch))')));
     expect(app,contains('toRestoreOnAckFailure'));
     expect(app,contains('setState(()=>_autoSmsPending.removeWhere'));
-    expect(app,contains('unawaited(_refreshAutoSmsInbox(importMonth:true))'));
+    // History is advanced only by the user's explicit Rescan. A bulk
+    // exclusion must keep finance/review state fresh without surprise paging.
+    final bulkStart=app.indexOf(' Future<void> _openAutoSmsInbox()async{');
+    final bulkEnd=app.indexOf(' Widget _autoSmsReviewCard(){',bulkStart);
+    expect(bulkStart,greaterThanOrEqualTo(0));
+    expect(bulkEnd,greaterThan(bulkStart));
+    final bulk=app.substring(bulkStart,bulkEnd);
+    // Assert the actual guarded removal without imposing a whitespace layout:
+    // this path intentionally wraps the setState callback across two lines.
+    expect(bulk,contains('if(mounted)setState(()=>'));
+    expect(bulk,contains('_autoSmsPending.removeWhere((row)=>done.contains(row[\'id\']))'));
+    expect(bulk,contains('unawaited(_refreshAutoSmsInbox());'));
+    expect(bulk,isNot(contains('importMonth:true')));
+    final explicitRescan=app.substring(
+      app.indexOf(' Future<void> _rescanAutoSmsInbox()async{'),
+      app.indexOf(' Future<void>? _autoSmsRefreshInFlight;'));
+    expect(explicitRescan,contains('_refreshAutoSmsInbox(importMonth:true)'));
   });
 }

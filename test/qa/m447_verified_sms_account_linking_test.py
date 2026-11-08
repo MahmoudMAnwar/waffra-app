@@ -8,10 +8,14 @@ ROOT = Path(__file__).resolve().parents[2]
 class VerifiedSmsAccountLinkingTest(unittest.TestCase):
     def test_every_home_sms_commit_reviews_accounts(self):
         home = (ROOT / "lib/main.dart").read_text(encoding="utf-8")
-        self.assertEqual(home.count("commitConfirmedSms("), 3)
+        self.assertEqual(home.count("commitConfirmedSms("), 4)
+        # M565 adds a real fourth verified, hash-atomic SMS yes-confirm path.
+        self.assertIn("selectedAccountIds:chosen.ids", home)
+        self.assertIn("expectedAccountGeneration:chosen.generation", home)
+        self.assertIn("allowDuplicateHashes:false", home)
         # The sixth verified review is the goal-due cash remainder; it must
         # be accounted for, not removed to satisfy an obsolete call count.
-        self.assertEqual(home.count("await reviewSmsAccountLinks("), 6)
+        self.assertEqual(home.count("await reviewSmsAccountLinks("), 7)
         self.assertIn("sourceType:'goal_due'", home)
         self.assertEqual(home.count("selectedAccountIds:reviewedAccounts.ids"), 1)
         self.assertEqual(home.count("selectedAccountIds:reviewedAccount.ids"), 2)

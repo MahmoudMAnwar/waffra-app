@@ -52,6 +52,10 @@ jobs:
         with:
           channel: stable
           cache: true
+      - name: Prefetch SHA256-verified official SQLite3MC native release assets
+        uses: ./.github/actions/prefetch-sqlite3mc
+        with:
+          github-token: ${{ github.token }}
       - run: flutter pub get
       - run: dart analyze test/m280_financial_integrity_fault_injection_test.dart
       - name: 100-record cent accuracy, concurrent app/widget, rollback and cold restart
@@ -76,6 +80,10 @@ jobs:
         with:
           channel: stable
           cache: true
+      - name: Prefetch SHA256-verified official SQLite3MC native release assets
+        uses: ./.github/actions/prefetch-sqlite3mc
+        with:
+          github-token: ${{ github.token }}
       - run: flutter pub get
       - run: dart analyze test/m280_sms_fuzz_and_boundary_test.dart
       - name: 100 SMS messages, malformed input and duplicate identity
@@ -99,6 +107,10 @@ jobs:
         with:
           channel: stable
           cache: true
+      - name: Prefetch SHA256-verified official SQLite3MC native release assets
+        uses: ./.github/actions/prefetch-sqlite3mc
+        with:
+          github-token: ${{ github.token }}
       - run: flutter pub get
       - name: Backup tampering, wrong keys, document boundary and encrypted profile
         run: |

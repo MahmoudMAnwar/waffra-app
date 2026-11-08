@@ -36,6 +36,16 @@ class FinancialQualityGateTest(unittest.TestCase):
             "_homeFinancePersistence.commitConfirmedLegacySms(",
             "SMS verified authority bypass")
 
+    def test_new_sms_confirmation_cannot_drop_account_witness_or_hash(self):
+        self.assert_detects_change(
+            "lib/main.dart",
+            "expectedAccountGeneration:chosen.generation",
+            "expectedAccountGeneration:null",
+            "quick SMS account-generation bypass")
+        self.assert_detects_change(
+            "lib/main.dart", "allowDuplicateHashes:false",
+            "allowDuplicateHashes:true", "duplicate bank debit bypass")
+
     def test_detects_foreign_currency_bypass(self):
         self.assert_detects_change(
             "lib/main.dart",

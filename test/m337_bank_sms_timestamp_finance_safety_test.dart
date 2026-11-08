@@ -32,7 +32,10 @@ void main() {
   final end=main.indexOf('Future<void> prepare(',from);
   final section=from>=0?main.substring(from):
     main.substring(main.indexOf('Future<void> bulkSmsSheet('));
-  final date=section.indexOf('found.where(bankSmsHasUnverifiedTimestamp)');
+  // M564 strengthens the same original-date gate: missing timestamps also
+  // require explicit review; testing obsolete source spelling is not a pass.
+  final date=section.indexOf('final invalidDates=found.where((raw)=>');
+  expect(section,contains('bankSmsDate(raw)==null||bankSmsHasUnverifiedTimestamp(raw)'));
   final commit=section.indexOf('_financeAuthority.commitConfirmedSms(');
   expect(date,greaterThan(0));
   expect(commit,greaterThan(date));

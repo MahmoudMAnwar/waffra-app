@@ -25,7 +25,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: waffra-pr-finance-full-regression-${{ github.event.pull_request.number || github.run_id }}
+  group: waffra-pr-finance-full-regression-${{ github.event.pull_request.number || github.run_id }}-${{ github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -40,6 +40,10 @@ jobs:
         with:
           channel: stable
           cache: true
+      - name: Prefetch SHA256-verified official SQLite3MC native release assets
+        uses: ./.github/actions/prefetch-sqlite3mc
+        with:
+          github-token: ${{ github.token }}
       - name: Resolve Flutter dependencies and SQLCipher native assets
         run: flutter pub get
       - name: Strict analysis for encrypted storage layer

@@ -24,7 +24,13 @@ class M417AutoSmsContractTest(unittest.TestCase):
         self.assertIn("SMS_RECEIVED_ACTION",receiver)
         self.assertIn("AndroidKeyStore",queue)
         self.assertIn("AES/GCM/NoPadding",queue)
-        self.assertIn("qualifies(sender, body)",queue)
+        # M549: every sender's SMS may enter the review-only queue. Bank
+        # heuristics no longer limit native intake; finance authority is
+        # still a separate user-confirmed, deduplicated SQLCipher write.
+        self.assertIn("if (!reviewEligible(sender, body)) return false",queue)
+        self.assertIn("reviewEligible(row.sender, row.body)",queue)
+        self.assertIn("isCommittedLocked(context, fingerprint)",queue)
+        self.assertIn("isExcludedMessageLocked(context, fingerprint)",queue)
         self.assertIn("otp.containsMatchIn(safe)",queue)
         self.assertIn("maxCandidates = 1000",queue)
         for forbidden in ("FirebaseFirestore", "HttpURLConnection", "OkHttpClient"):

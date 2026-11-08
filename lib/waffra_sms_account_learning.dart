@@ -51,9 +51,8 @@ abstract final class WaffraSmsAccountLearning {
   if(n.contains('stcpay')||n.contains('stcbank'))return 'stc';
   return null;
  }
- /// User must explicitly choose a verified existing account each time until
- /// the SAME association has been confirmed twice. A conflicting choice
- /// resets evidence instead of creating competing account rules.
+ /// One actual source-verified user confirmation permits exact sender+last4
+ /// reuse on subsequent messages; unverified sender-only never does.
  static List<WaffraSmsAccountEvidence> confirmed(
   Iterable<WaffraSmsAccountEvidence> previous,{
   required String sender,required String accountId,String? suffix,
@@ -91,16 +90,13 @@ abstract final class WaffraSmsAccountLearning {
   final four=suffix4(suffix);
   if(four!=null){
    final exact=evidence.where((item)=>item.sender==scoped&&
-    item.key=='suffix:$four'&&item.confirmations>=2&&
+    item.key=='suffix:$four'&&item.confirmations>=1&&
     activeAccountIds.contains(item.accountId)&&
     sameBankAccountIds.contains(item.accountId)).toList();
    return exact.length==1?exact.single.accountId:null;
   }
-  if(sameBankAccountIds.length!=1)return null;
-  final senderOnly=evidence.where((item)=>item.sender==scoped&&
-   item.key=='sender'&&item.confirmations>=2&&
-   sameBankAccountIds.contains(item.accountId)).toList();
-  return senderOnly.length==1?senderOnly.single.accountId:null;
+  // One bank sender may have many accounts; never suggest by sender alone.
+  return null;
  }
 }
 

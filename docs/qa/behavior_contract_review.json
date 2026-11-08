@@ -1,0 +1,162 @@
+{
+  "schema_version": 1,
+  "pr": 497,
+  "issue": "https://github.com/MahmoudMAnwar/waffra-app/issues/492",
+  "workflow_review_policy": "scan-all-registered-workflows",
+  "baseline": "main",
+  "reviewed_at": "2026-11-08",
+  "review_policy": "Review changed behavior against all GitHub Actions workflow scripts, all Dart and Python QA test files, and the original tests' protected security assertions; never edit tests merely to silence red jobs.",
+  "contracts": [
+    {
+      "id": "M548-1000-SMS-UI",
+      "issue": "Issue #489 (M548) and Issue #492 (M550)",
+      "previous_behavior": "Opening the 1000-message sheet reprocessed the entire owner-encrypted review queue and expensive sender grouping.",
+      "approved_behavior": "Open verified snapshot promptly, build stable sender grouping in a linear pass, preserve selection, user confirmation and all finance verification gates.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_sms_review_groups.dart"
+      ],
+      "test_paths": [
+        "test/m548_review_grouping_and_signup_perf_test.dart",
+        "test/m429_sms_phone_integration_test.dart",
+        "test/m549_sms_review_owner_scoped_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/m274-production-ui-golden.yml"
+      ],
+      "safety_invariants": [
+        "Never post income or expense from merely loading or grouping the review queue.",
+        "Keep original SMS IDs, encrypted owner consent, sender selection and data intact."
+      ]
+    },
+    {
+      "id": "M548-SIGNUP-AND-PERFORMANCE",
+      "issue": "Issue #489 (M548) and Issue #492 (M550)",
+      "previous_behavior": "Fresh-account enrollment duplicated an expensive password KDF verification and navigation waited on nonessential review refreshes.",
+      "approved_behavior": "Use authenticated one-pass fresh verifier persistence with existing signed-in password requirements unchanged; show progress immediately and avoid frame blocking.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_local_phone_credentials.dart"
+      ],
+      "test_paths": [
+        "test/m548_review_grouping_and_signup_perf_test.dart",
+        "test/m548_source_method_boundary_guard_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m103-same-sha-release-certification.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "Never permit login with an incorrect password or bypass biometric/session ownership.",
+        "Preserve existing SQLCipher protected user data and recovery credentials."
+      ]
+    },
+    {
+      "id": "M549-ALL-SENDERS-REVIEW-EXCLUSIONS",
+      "issue": "Issue #491 (M549) and Issue #492 (M550)",
+      "previous_behavior": "An older native financial-only SMS qualification filter excluded personal and unknown senders; repeated bulk exclusions re-parsed 1000 message bodies and asked a sender dialog for each group. Earlier M470 QA still demanded one sender dialog per group and old literal 100-ID loop variable names.",
+      "approved_behavior": "All eligible SMS inbox senders enter review only; 1000 selected messages can be excluded after one user choice; blocking senders keeps only encrypted names; durable cursor prevents replay; Rescan dims without unseen messages. Keep M470 tests aligned with one global sender choice, idempotent 100-ID batches for individual exclusions, and no pre-confirmation parse.",
+      "source_paths": [
+        "native/WaffraAutoSmsStore.kt",
+        "native/WaffraMainActivity.kt",
+        "lib/main.dart",
+        "lib/waffra_auto_sms.dart"
+      ],
+      "test_paths": [
+        "test/m549_sms_review_owner_scoped_test.dart",
+        "test/m464_sms_bulk_rescan_regression_test.dart",
+        "test/qa/m417_sms_permission_acceptance_test.py",
+        "test/m547_sms_incremental_jank_regression_test.dart",
+        "test/m470_sms_excluded_senders_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m417-auto-bank-sms.yml",
+        ".github/workflows/m429-integration-smoke.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "Never delete Android Messages inbox or confirmed SQLCipher finance entries.",
+        "OTP numbers must be masked; owner, committed, excluded and transfer fingerprints prevent replay and double charge.",
+        "No background SMS receiver gains financial ledger or cloud posting authority."
+      ]
+    },
+    {
+      "id": "M550-ALL-CI-EXPECTATIONS-AND-NATIVE-COMPILE",
+      "issue": "Issue #492 (M550) and existing PR #490",
+      "previous_behavior": "Obsolete source-text tests were discovered only after expensive Android/Flutter workflow failures; the new sender restore condition also missed a closing Kotlin parenthesis.",
+      "approved_behavior": "Mandatory early exact-head preflight inventories every workflow job and test, reports affected behavior and stale positive assertions, requires an updated human-reviewed contract for each changed production source, and corrects the Kotlin syntax independently.",
+      "source_paths": [
+        "native/WaffraAutoSmsStore.kt",
+        "native/WaffraMainActivity.kt",
+        "lib/main.dart",
+        "lib/waffra_auto_sms.dart",
+        "lib/waffra_sms_review_groups.dart",
+        "lib/waffra_local_phone_credentials.dart"
+      ],
+      "test_paths": [
+        "test/qa/m550_behavior_contract_preflight_test.py",
+        "test/qa/m417_sms_permission_acceptance_test.py",
+        "test/m549_sms_review_owner_scoped_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/m417-auto-bank-sms.yml"
+      ],
+      "safety_invariants": [
+        "Never skip or rewrite finance and security tests to force a green build.",
+        "Kotlin and Flutter compilation must still run on the exact PR commit.",
+        "A source-level audit is not proof of device performance or correct business semantics."
+      ]
+    },
+    {
+      "id": "M549-APPROVED-HOME-NOTIFICATIONS",
+      "issue": "Issues #493 and #494 (approved compact Home and native notification review)",
+      "previous_behavior": "Home displayed an oversized balance with account dropdown inside the card and separate redundant income/expense metric blocks plus a standalone SMS review card. Notification access did not directly expose the verified pending review queue.",
+      "approved_behavior": "Match the approved compact Arabic RTL Home: separate independently verified month account filter outside balance; preserve stationary floating Add button; three small finance actions go through original guarded income/expense/transfer flows; show a bell with only actual pending SMS (saturating at +999), and open a compact notification center whose review CTA leads to native owner-bound SMS review rather than auto-posting.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_approved_notifications.dart"
+      ],
+      "test_paths": [
+        "test/m549_approved_home_notifications_test.dart",
+        "test/m467_account_header_test.dart",
+        "test/m470_balance_header_account_picker_test.dart",
+        "test/m495_pr402_ui_performance_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m277-ux-accessibility.yml",
+        ".github/workflows/m274-production-ui-golden.yml"
+      ],
+      "safety_invariants": [
+        "Use actual Android/native pending messages only; never fabricate system alerts or silently post account money.",
+        "Keep existing floating + position/size/animation, preserve sender exclusion/OTP masking and SQLCipher account/ledger witness.",
+        "The separate #495 first-time last-four/transaction-date/one-tap finance feature remains incomplete; do not claim that this UI change implements it.",
+        "Preserve older active owner account balances and confirmation-only transfer/entry gate."
+      ]
+    },
+    {
+      "id": "M568-EXACT-SENDER-SUFFIX-REUSE",
+      "issue": "Issue #495: first-time bank account selection and repeat trusted identity",
+      "previous_behavior": "Old bank SMS learning required two confirmations and permitted sender-only shortcuts for unique-bank guesses, then asked for account picker repeatedly.",
+      "approved_behavior": "One successfully committed, owner-confirmed sender+exact-four-digit account identity can be reused after fresh encrypted account witness; no sender-only linking or guessing a mismatched suffix.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_sms_account_learning.dart"
+      ],
+      "test_paths": [
+        "test/m464_sms_account_learning_test.dart",
+        "test/m493_sms_account_matching_regression_test.dart",
+        "test/qa/m447_verified_sms_account_linking_test.py"
+      ],
+      "safety_invariants": [
+        "Only post after explicit transaction confirmation and existing atomic encrypted SMS hash writer.",
+        "Wrong bank, wrong suffix, archived account and sender-only identity must not automatically debit any account."
+      ]
+    }
+  ]
+}

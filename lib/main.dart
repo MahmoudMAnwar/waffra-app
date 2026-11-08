@@ -41,6 +41,7 @@ import 'waffra_external_media_session.dart';
 import 'waffra_sms_sender_brand.dart';
 import 'waffra_large_json_decode.dart';
 import 'waffra_home_accounts_sheet.dart';
+import 'waffra_approved_notifications.dart';
 import 'storage/waffra_account_context_read.dart';
 import 'waffra_mandatory_biometric_gate.dart';
 import 'waffra_idle_biometric_overlay.dart';
@@ -87,6 +88,7 @@ import 'waffra_bank_sms_facts.dart';
 import 'waffra_sms_cloud_service.dart';
 import 'waffra_sms_cloud_review_analyzer.dart';
 import 'waffra_sms_local_rules.dart';
+import 'waffra_sms_review_groups.dart';
 import 'waffra_sms_account_learning.dart';
 import 'waffra_sms_rule_settings_page.dart';
 import 'waffra_unknown_financial_sms_page.dart';
@@ -2700,6 +2702,7 @@ class _ProfileFormState extends State<ProfileForm> {
   }catch(e){if(mounted)snack(context,waffraIsEnglish?'Could not save photo':'تعذر حفظ الصورة');}
  }
  Future<void> save()async {
+  if(busy)return;
   setState(()=>profileAttempted=true);
   if(gender.isEmpty)return;
   if(waffraTextFieldError(name.text)!=null||
@@ -2711,6 +2714,9 @@ class _ProfileFormState extends State<ProfileForm> {
    waffraConfirmPasswordFieldError(confirmPassword.text,password.text)!=null))return;
   setState(()=>busy=true);
   try {
+   // Paint the disabled Save/registration progress UI before secure I/O.
+   await WidgetsBinding.instance.endOfFrame;
+   if(!mounted)return;
    if(widget.initial==null&&widget.provider=='Phone'){
     // A completed existing profile must use verified sign-in, never a
     // second registration that can overwrite the account's name or data.
@@ -2839,9 +2845,13 @@ class _ProfileFormState extends State<ProfileForm> {
      const SizedBox(height:22),
      FilledButton(key:const Key('waffra-register-submit'),
       onPressed:WaffraHaptics.tap(busy?null:save),
-      child:WaffraText(busy?
-       (waffraIsEnglish?'Saving...':'جارٍ الحفظ'):
-       (waffraIsEnglish?'Complete registration':'إكمال التسجيل'))),
+      child:busy?Row(mainAxisSize:MainAxisSize.min,children:[
+       const SizedBox(width:18,height:18,child:CircularProgressIndicator(
+        strokeWidth:2,color:Colors.white)),
+       const SizedBox(width:10),
+       WaffraText(waffraIsEnglish?'Saving...':'جارٍ الحفظ'),
+      ]):WaffraText(waffraIsEnglish?
+       'Complete registration':'إكمال التسجيل')),
     ])),
   );
  }
@@ -3531,21 +3541,22 @@ class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
  final bool english;
  final String? heading;
  final bool goalWallet;
+ final bool compact;
  final GlobalKey? focusKey;
  final double? monthlyChangePercent;
  final String? selectedAccountLabel;
  final VoidCallback? onAccountTap;
  final Future<void> Function() refreshVerifiedWidgetBalance;
  const WaffraBalanceHeader({
-  required this.balance,required this.english,this.focusKey,this.heading,this.goalWallet=false,
+  required this.balance,required this.english,this.focusKey,this.heading,this.goalWallet=false,this.compact=false,
   required this.refreshVerifiedWidgetBalance,this.monthlyChangePercent,
   this.selectedAccountLabel,this.onAccountTap,
  });
  // Reserve space for multiline account names rather than trimming them.
  int get _accountLabelExtraLines=>goalWallet||onAccountTap==null?0:
   (((selectedAccountLabel?.runes.length??0)-25).clamp(0,150)/25).ceil();
- @override double get minExtent=>goalWallet?130.0:164.0+20.0*_accountLabelExtraLines;
- @override double get maxExtent=>goalWallet?148.0:182.0+20.0*_accountLabelExtraLines;
+ @override double get minExtent=>goalWallet?130.0:(compact?127.0:164.0+20.0*_accountLabelExtraLines);
+ @override double get maxExtent=>goalWallet?148.0:(compact?138.0:182.0+20.0*_accountLabelExtraLines);
  @override Widget build(BuildContext context,double shrinkOffset,bool overlapsContent){
   final progress=(shrinkOffset/(maxExtent-minExtent)).clamp(0.0,1.0);
   final dark=Theme.of(context).brightness==Brightness.dark;
@@ -3601,30 +3612,15 @@ class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
          }),
          icon:Icon(hidden?Icons.visibility_off_outlined:Icons.visibility_outlined,
           size:22,color:const Color(0xFFE2FBEF))))),
-      // M476 #401: one account picker at the balance heading, with full text.
-      Positioned(left:47,right:14,top:9,
-       child:!goalWallet&&onAccountTap!=null
-        ?TextButton(
-         key:const Key('m470-balance-account-picker'),
-         onPressed:onAccountTap,
-         style:TextButton.styleFrom(
-          backgroundColor:const Color(0xFFF2FFF7),
-          foregroundColor:const Color(0xFF07563B),
-          padding:const EdgeInsets.symmetric(horizontal:10,vertical:7),
-          shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(12))),
-         child:Row(mainAxisSize:MainAxisSize.min,children:[
-          const Icon(Icons.keyboard_arrow_down_rounded,size:19),
-          const SizedBox(width:5),
-          Expanded(child:Text(selectedAccountLabel??'',
-           softWrap:true,textAlign:TextAlign.center,
-           style:const TextStyle(fontSize:13,fontWeight:FontWeight.w800))),
-         ]))
-        :Center(child:WaffraText(
-         heading??(english?'Available balance':'الرصيد المتاح للصرف'),
-         style:const TextStyle(fontSize:14,fontWeight:FontWeight.w600,
-          color:Color(0xFFD7F1E5))))),
+      // M549: account filtering has moved to the monthly summary card.
+      Positioned(left:47,right:14,top:8,
+       child:Center(child:WaffraText(
+        heading??(english?'Available balance':'الرصيد المتاح للصرف'),
+        style:const TextStyle(fontSize:14,fontWeight:FontWeight.w600,
+         color:Color(0xFFD7F1E5))))),
       Positioned(left:47,right:112,
-       top:goalWallet?38.0:52.0+20.0*_accountLabelExtraLines,bottom:44,
+       top:goalWallet?38.0:(compact?36.0:52.0+20.0*_accountLabelExtraLines),
+       bottom:compact?8:44,
        child:Center(child:FittedBox(
         alignment:Alignment.center,fit:BoxFit.scaleDown,
         child:WaffraCurrencyAmount(balance,fontSize:31-2*progress,
@@ -4201,10 +4197,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     seedMessage:seedMessage,
     onNotice:(message)=>snack(context,message),
    )));
-  // Back without saving must not trigger a full 500-SMS history rescan.
-  // A saved rule may release queue slots, so only then continue the cursor.
-  if(mounted&&ruleSaved==true)unawaited(
-   _refreshAutoSmsInbox(importMonth:true));
+  // Apply saved local rules to the already queued SMS only. Never perform
+  // hidden Android history paging during the rule editor's return animation.
+  // A partial original-month scan continues only on explicit Rescan.
+  if(mounted&&ruleSaved==true)unawaited(_refreshAutoSmsInbox());
  }
 
  Future<void> _recordConfirmedSmsAccountAssociation({
@@ -4482,10 +4478,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
   if(!mounted)return;
   final waiting=<Map<String,Object?>>[];
+  var classifiedSinceYield=0;
   final toAcknowledge=<String>[];
   final toAcknowledgeCommitted=<String>[];
   final toRestoreOnAckFailure=<Map<String,Object?>>[];
   for(final candidate in results){
+   // Yield between small CPU-heavy parser batches. Native AES and inbox I/O
+   // are already off-thread; this prevents 1000 Dart parses monopolizing
+   // Flutter frames on Home, navigation and SMS notice refresh.
+   if(++classifiedSinceYield>=16){
+    classifiedSinceYield=0;
+    await Future<void>.delayed(const Duration(milliseconds:1));
+    if(!mounted||!ready)return;
+   }
    final id=candidate['id'],body=candidate['body'];
    if(id is! String||body is! String)continue;
    if(smsHashes.contains(bankSmsHash(body))){
@@ -4781,31 +4786,58 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      ]))),
    ));
  }
+
+ /// Real notifications: SMS stay pending until the owner confirms a financial
+ /// save or exclusion; no mock notifications are ever presented as real.
+ List<WaffraReviewNotice> _m549ReviewNotices(){
+  return _autoSmsPending.where((row)=>row['id'] is String)
+   .map((row){
+    final id=row['id'] as String;
+    final sender=(row['sender'] as String?)?.trim()??'';
+    final sensitive=row['sensitiveOtp']==true;
+    final body=sensitive?'':(row['body'] as String? ?? '');
+    final snippet=sensitive?
+     (waffraIsEnglish?'Verification message':'رسالة تحقق'):
+     body.replaceAll(RegExp(r'\s+'),' ').trim();
+    final summary=snippet.length>108?snippet.substring(0,108)+'…':snippet;
+    final local=row['local'];
+    final localInfo=local is Map?local:null;
+    final income=localInfo?['income'];
+    final amount=localInfo?['amount'];
+    return WaffraReviewNotice(
+     id:id,sender:sender.isEmpty?(waffraIsEnglish?'Unknown sender':'مرسل غير محدد'):sender,
+     preview:summary.isEmpty?(waffraIsEnglish?'Bank message':'رسالة بنكية'):summary,
+     kind:sensitive?null:(income is bool?(income?'income':'expense'):null),
+     amount:sensitive?null:(amount is num?amount.toDouble():null));
+   }).toList(growable:false);
+ }
+ Future<void> _m549OpenNotifications()async{
+  if(!mounted||!ready)return;
+  await Navigator.of(context).push(MaterialPageRoute<void>(
+   builder:(route)=>WaffraApprovedNotificationsPage(
+    english:waffraIsEnglish,readPending:_m549ReviewNotices,
+    onReviewAll:_openAutoSmsInbox,
+    onReviewOne:(id)=>_reviewAutoSmsCandidates(targetId:id),
+    onRescan:_rescanAutoSmsInbox,
+    canRescan:()=>!_autoSmsRescanRunning&&
+     (_autoSmsStatusProblem!=null||_autoSmsProgress['rescanNeeded']==true),
+   )));
+ }
  Future<void> _openAutoSmsInbox()async{
-  // Opening review does not also trigger four hidden historical provider pages.
-  // Explicit Rescan is the only user-facing action that requests that work.
-  await _refreshAutoSmsInbox();
-  if(!mounted||_autoSmsPending.isEmpty)return;
-  // Every bank sender gets one group. No guessed merchants or bank identities.
-  final bySender=<String,List<Map<String,Object?>>>{};
-  for(final candidate in _autoSmsPending){
-   final raw=candidate['sender'] is String?
-    (candidate['sender'] as String).trim():'';
-   final name=raw.isEmpty?
-    (waffraIsEnglish?'Unknown sender':'مرسل غير محدد'):raw;
-   final group=bySender.keys.firstWhere(
-    (key)=>key.toLowerCase()==name.toLowerCase(),orElse:()=>name);
-   bySender.putIfAbsent(group,()=> <Map<String,Object?>>[]).add(candidate);
+  // The Home snapshot has already passed native owner/consent verification.
+  // Re-reading/decrypting/reclassifying all 1000 SMS on every tap blocks
+  // navigation for no gain; initial/invalid/empty snapshots still refresh.
+  if(!_autoSmsStatusChecked||_autoSmsStatusProblem!=null||
+     _autoSmsPending.isEmpty){
+   await _refreshAutoSmsInbox();
   }
-  final senders=bySender.keys.toList()
-   ..sort((a,b)=>a.toLowerCase().compareTo(b.toLowerCase()));
-  for(final messages in bySender.values){
-   messages.sort((a,b){
-    final x=a['receivedAt'] is int?a['receivedAt'] as int:0;
-    final y=b['receivedAt'] is int?b['receivedAt'] as int:0;
-    return y.compareTo(x);
-   });
-  }
+  if(!mounted||!ready||_autoSmsStatusProblem!=null||
+     _autoSmsPending.isEmpty)return;
+  // O(N) case-insensitive grouping; preserve each original sender and date.
+  final grouped=WaffraSmsReviewGroups.from(_autoSmsPending,
+   unknownSender:waffraIsEnglish?'Unknown sender':'مرسل غير محدد');
+  final bySender=grouped.bySender;
+  final senders=grouped.senders;
   String? selectedSender,openingReviewId;
   final selectedIds=<String>{};
   var bulkBusy=false;
@@ -4841,7 +4873,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          Expanded(child:Column(mainAxisSize:MainAxisSize.min,
           crossAxisAlignment:CrossAxisAlignment.start,children:[
           WaffraText(selectedSender??(waffraIsEnglish?
-           'Messages to review':'رسائل للفرز'),maxLines:2,
+           'Messages to review':'مراجعة الرسائل البنكية'),maxLines:2,
            style:const TextStyle(fontSize:22,fontWeight:FontWeight.bold)),
           WaffraText(visibleIds().length.toString()+
            (waffraIsEnglish?' messages from ':' رسالة من ')+
@@ -5010,24 +5042,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           // No Android SMS or financial ledger entries are deleted.
           final ids=selectedIds.toList(growable:false);
           final idSet=ids.toSet();
-          final likelyFinancial=_autoSmsPending.where((item){
-           if(!idSet.contains(item['id'])||item['body'] is! String)return false;
-           final facts=WaffraBankSmsFactsParser.parse(item['body'] as String);
-           return facts.kind!=WaffraBankOperationKind.uncertain;
-          }).length;
+          // Selection is an explicit owner decision. Do not synchronously
+          // parse up to 1000 SMS on the UI isolate before painting the dialog.
+          // This removes an O(N) CPU-heavy path from every bulk exclusion tap.
           final confirmed=await showWaffraDialog<bool>(
            context:ctx,builder:(dialog)=>AlertDialog(
             title:WaffraText(waffraIsEnglish?
              'Exclude selected messages?':'استبعاد الرسائل المحددة؟'),
             content:WaffraText(waffraIsEnglish?
              'Remove ${ids.length} items from Waffra review only. '
-             'Your phone SMS and saved financial transactions are untouched.'+
-             (likelyFinancial>0?
-              ' WARNING: $likelyFinancial look financial; verify your selection.':''):
+             'Your phone SMS and saved financial transactions are untouched. '
+             'Some messages may describe finances; review your selection.':
              'سيتم استبعاد ${ids.length} رسالة من مراجعة وفرة فقط، '
-             'دون حذف رسائل الهاتف أو أي عمليات مالية محفوظة.'+
-             (likelyFinancial>0?
-              ' تنبيه: $likelyFinancial منها قد تكون معاملات مالية؛ راجع اختيارك.':'')),
+             'دون حذف رسائل الهاتف أو أي عمليات مالية محفوظة. '
+             'قد تتضمن الرسائل معاملات مالية؛ راجع اختيارك.'),
             actions:[
              TextButton(onPressed:()=>Navigator.pop(dialog,false),
               child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
@@ -5038,49 +5066,60 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           // M479 / #417: no native message acknowledgement occurs until
           // both confirmations are settled. 'Back' preserves selected IDs
           // and returns to this still-open review rather than hiding SMS.
-          final senderBlockChoices=<String>{};
-          for(final sender in List<String>.of(senders)){
-           final senderIds=idsOf(bySender[sender]??const []);
-           if(senderIds.isEmpty||!senderIds.every(idSet.contains))continue;
-           if(!mounted||!ctx.mounted)return;
-           final choice=await showWaffraDialog<String>(
+          // One sender decision for the entire selection rather than one
+          // confirmation dialog PER SENDER (1000 dialogs were possible).
+          final fullySelectedSenders=senders.where((sender){
+           final groupIds=idsOf(bySender[sender]??const []);
+           return groupIds.isNotEmpty&&groupIds.every(idSet.contains);
+          }).toList(growable:false);
+          final senderChoice=fullySelectedSenders.isEmpty?'messages':
+           await showWaffraDialog<String>(
             context:context,builder:(dialog)=>AlertDialog(
              title:WaffraText(waffraIsEnglish?
-              'Exclude the sender too?':
-              'هل تريد استبعاد المرسل نفسه أيضًا؟'),
+              'Exclude these senders too?':'هل تريد استبعاد المرسلين أيضًا؟'),
              content:WaffraText(waffraIsEnglish?
-              'Exclude "$sender" from future SMS review? Back returns to '
-              'your message selection without excluding anything. You can '
-              'restore an excluded sender later from Excluded senders.':
-              'هل تريد استبعاد "$sender" من مراجعة رسائله القادمة؟ '
-              'العودة ترجع لاختيار الرسائل بدون تنفيذ الاستبعاد، '
-              'ويمكنك إلغاء الاستبعاد لاحقًا من «المستبعدون».'),
+              'Exclude selected messages only, or block the selected senders '
+              'from future reviews too? Sender blocking stores names only.':
+              'تستبعد الرسائل المحددة فقط، أو تستبعد المرسلين كمان '
+              'من المراجعات القادمة؟ عند استبعاد المرسل هنحتفظ باسمه فقط.'),
              actions:[
               TextButton(onPressed:()=>Navigator.pop(dialog,'back'),
                child:WaffraText(waffraIsEnglish?'Back':'العودة')),
-              TextButton(onPressed:()=>Navigator.pop(dialog,'no'),
-               child:WaffraText(waffraIsEnglish?'No':'لا')),
-              FilledButton(onPressed:()=>Navigator.pop(dialog,'exclude'),
-               child:WaffraText(waffraIsEnglish?'Exclude sender':
-                'استبعاد المرسل')),
+              TextButton(onPressed:()=>Navigator.pop(dialog,'messages'),
+               child:WaffraText(waffraIsEnglish?'Messages only':'الرسائل فقط')),
+              FilledButton(onPressed:()=>Navigator.pop(dialog,'senders'),
+               child:WaffraText(waffraIsEnglish?'Block senders':'استبعاد المرسلين')),
              ]));
-           if(choice==null||choice=='back'||!ctx.mounted)return;
-           if(choice=='exclude')senderBlockChoices.add(sender);
+          if(senderChoice==null||senderChoice=='back'||!ctx.mounted)return;
+          final senderBlockChoices=senderChoice=='senders'?
+           fullySelectedSenders.toSet():<String>{};
+          final blockedIds=<String>{};
+          for(final sender in senderBlockChoices){
+           blockedIds.addAll(idsOf(bySender[sender]??const []));
           }
           refresh(()=>bulkBusy=true);
           final done=<String>{};
           var failed=false;
           try{
-           // The native acknowledge bridge accepts up to 100 per atomic call.
-           // Stop at the first failed batch; never claim partial success.
-           for(var at=0;at<ids.length;at+=100){
-            final batch=ids.skip(at).take(100).toList(growable:false);
+           // One native encrypted commit blocks selected senders and purges
+           // their queued and previous individually excluded SMS metadata.
+           if(senderBlockChoices.isNotEmpty){
+            if(await WaffraAutoSms.excludeSenders(senderBlockChoices.toList())){
+             done.addAll(blockedIds);
+            }else{failed=true;}
+           }
+           // Unblocked individual SMS need durable anti-replay IDs. Native
+           // policy commits up to 100 IDs per batch and preserves failures.
+           final remainingMessageIds=ids.where((id)=>!blockedIds.contains(id))
+            .toList(growable:false);
+           if(!failed)for(var at=0;at<remainingMessageIds.length;at+=100){
+            final batch=remainingMessageIds.skip(at).take(100)
+             .toList(growable:false);
             if(!await WaffraAutoSms.excludeMessages(batch)){
              failed=true;break;
             }
             done.addAll(batch);
            }
-           final clearedSenders=<String>[];
            if(done.isNotEmpty){
             // Bulk and individual exclusions learn identical safe,
             // owner-encrypted review-only keywords after native success.
@@ -5092,7 +5131,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               for(final row in _autoSmsPending.where(
                   (row)=>done.contains(row['id']))){
                final body=row['body'],sender=row['sender'];
-               if(body is! String||sender is! String)continue;
+               if(body is! String||sender is! String||
+                  blockedIds.contains(row['id']))continue;
                final candidate=WaffraSmsLocalRules.suggestedRule(
                 body:body,sender:sender,kind:'excluded',
                 confidentOnly:true);
@@ -5101,6 +5141,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                  existing:next,candidate:candidate);
                }
               }
+              // Do not retain automatically learned exclusion keywords for
+              // sender-blocked messages. Keep explicit user-authored rules.
+              final blocked=senderBlockChoices.map(
+               WaffraSmsLocalRules.normalized).toSet();
+              final clean=next.where((rule)=>!(rule.id.startsWith('smart_')&&
+               rule.resolvedKind=='excluded'&&blocked.contains(
+                WaffraSmsLocalRules.normalized(rule.sender)))).toList();
+              if(clean.length!=next.length)next=clean;
               if(!identical(previous,next)){
                await store.write(_smsRuleOwnerKey,next);
               }
@@ -5108,12 +5156,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               if(mounted)snack(context,waffraIsEnglish?
                'Messages excluded; safe rule learning unavailable.':
                'تم الاستبعاد، لكن تعذر حفظ قاعدة تعلم آمنة.',isError:true);
-             }
-            }
-            for(final sender in senders){
-             final groupIds=idsOf(bySender[sender]??const []);
-             if(groupIds.isNotEmpty&&groupIds.every(done.contains)){
-              clearedSenders.add(sender);
              }
             }
             if(mounted)setState(()=>
@@ -5127,16 +5169,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            // On a partial native failure, keep the list mounted so the
            // unprocessed selection is still visible and safely retryable.
            if(!failed&&ctx.mounted)Navigator.pop(ctx);
-           // Apply only explicit sender decisions for groups whose selected
-           // messages were fully acknowledged. A partial native failure
-           // must not block the unprocessed sender's future messages.
-           for(final sender in clearedSenders.where(senderBlockChoices.contains)){
-            if(!mounted)break;
-            final saved=await WaffraAutoSms.excludeSender(sender);
-            if(mounted&&!saved)snack(context,waffraIsEnglish?
-             'Sender exclusion could not be saved.':
-             'تعذر حفظ استبعاد المرسل.',isError:true);
-           }
            if(mounted){
             if(failed)snack(context,waffraIsEnglish?
              'Only ${done.length} messages were excluded. Retry remaining items.':
@@ -5144,7 +5176,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             else snackSuccess(context,waffraIsEnglish?
              'Excluded ${done.length} messages from review.':
              'تم استبعاد ${done.length} رسالة من المراجعة.');
-            unawaited(_refreshAutoSmsInbox(importMonth:true));
+            // Keep the queue and counts synced without silently launching
+            // another historical import during the bulk-exclusion animation.
+            // The user can continue an incomplete history via Rescan.
+            unawaited(_refreshAutoSmsInbox());
            }
           }catch(_){
            if(mounted)snack(context,waffraIsEnglish?
@@ -5176,11 +5211,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   );
   // The sender inbox route remains beneath the message review.
  }
+ // ignore: unused_element
  Widget _autoSmsReviewCard(){
   final count=_autoSmsPending.length;
   final analyzed=_autoSmsPending.where((row)=>row['cloud'] is Map).length;
   final localCount=_autoSmsPending.where((row)=>row['local'] is Map).length;
   final ambiguous=count-localCount-analyzed;
+  final canRescan=!_autoSmsRescanRunning&&
+   (_autoSmsStatusProblem!=null||_autoSmsProgress['rescanNeeded']==true);
   return Container(
    key:const Key('waffra-auto-sms-review-card'),
    decoration:BoxDecoration(color:Theme.of(context).cardColor,
@@ -5257,7 +5295,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          child:CircularProgressIndicator(strokeWidth:2.4)),
         const SizedBox(width:9),
         Expanded(child:WaffraText(waffraIsEnglish?
-         'Scanning bank SMS now…':'جارٍ الآن فحص الرسائل البنكية…')),
+         'Scanning SMS now…':'جارٍ الآن فحص الرسائل…')),
        ]),
        const SizedBox(height:10),
       ],
@@ -5298,8 +5336,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        const SizedBox(width:8),
        OutlinedButton.icon(
         key:const Key('waffra-auto-sms-review-refresh'),
-        onPressed:_autoSmsRescanRunning?null:
-         WaffraHaptics.tap(()=>unawaited(_rescanAutoSmsInbox())),
+        onPressed:canRescan?
+         WaffraHaptics.tap(()=>unawaited(_rescanAutoSmsInbox())):null,
         icon:_autoSmsRescanRunning?
          const SizedBox(width:19,height:19,
           child:CircularProgressIndicator(strokeWidth:2)):
@@ -5455,6 +5493,93 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     isError:true);
   }
  }
+ /// M565: a reviewed bank SMS posts only with a verified account, exact
+ /// date and source SAR amount; the original hash is committed atomically.
+ Future<void> _m565ConfirmSms({
+  required String id,required String body,required String sender,
+  required String category,required bool income,
+  required double value,required DateTime date})async{
+  if(!mounted||_financeLoadFailure!=null)return;
+  final hash=bankSmsHash(body);
+  final facts=WaffraBankSmsFactsParser.parse(body);
+  final original=WaffraSmsCurrencies.originalAmount(body);
+  if(!facts.canAutoPostAsIncomeExpense||
+    (facts.kind==WaffraBankOperationKind.income)!=income||
+    original==null||original.currency!='SAR'||
+    (original.amount-value).abs()>0.00001||
+    bankSmsDate(body)==null||bankSmsHasUnverifiedTimestamp(body)){
+   if(mounted)snack(context,'راجع المبلغ والتاريخ والعملة من شاشة التعديل.',isError:true);
+   return;
+  }
+  if(smsHashes.contains(hash)){
+   final ack=await WaffraAutoSms.acknowledgeCommitted([id]);
+   if(ack&&mounted)setState(()=>_autoSmsPending.removeWhere((r)=>r['id']==id));
+   return;
+  }
+  final valid=categories.where((c)=>c.income==income&&c.isSubcategory&&
+   c.name==category&&waffraCategoryAvailableForNewEntry(categories,c)).toList();
+  if(valid.length!=1){if(mounted)snack(context,'راجع القسم الفرعي أولًا.',isError:true);return;}
+  final parsed=BankParser.parse(body);
+  final record=MoneyEntry(id:newId(),title:parsed.title,
+   category:category,amount:value,income:income,date:date,
+   notes:body,sourceType:'sms');
+  final budgets=await reviewSmsBudgetLinks([record]);
+  if(budgets==null||!mounted)return;
+  final reviewed=record.withBudget(budgets.single);
+  final chosen=await reviewSmsAccountLinks([reviewed],smsSender:sender);
+  if(chosen==null||chosen.ids?.single==null||!mounted)return;
+  try{
+   final applied=await _saveProgress.track('m565-confirm-sms',()=>
+    _financeAuthority.commitConfirmedSms(
+     route:WaffraFinanceRoute.bulkSmsConfirmedSave,
+     records:[Map<String,Object?>.from(reviewed.toJson())],
+     hashes:[hash],userConfirmed:true,allowDuplicateHashes:false,
+     selectedAccountIds:chosen.ids,
+     expectedAccountGeneration:chosen.generation));
+   if(applied.saved!=1){
+    if(mounted)snack(context,'العملية محفوظة سابقًا؛ لم يتم تكرارها.');
+    return;
+   }
+   final decoded=await WaffraLargeJsonDecode.parse(applied.current.ledgerRaw??'[]');
+   if(decoded is! List)throw StateError('Verified SMS ledger missing');
+   final updated=decoded.map((v)=>MoneyEntry.fromJson(
+    Map<String,dynamic>.from(v as Map))).toList();
+   if(!updated.any((v)=>v.id==reviewed.id))throw StateError('Missing committed SMS');
+   if(!mounted)return;
+   setState((){
+    entries..clear()..addAll(updated);
+    smsHashes..clear()..addAll(
+     applied.current.finance.getStringList('waffra_sms_hashes_v1')??
+     const <String>[]);
+    _lastFinanceAuthorityRead=applied.current;
+    _lastLedgerSavedRaw=applied.current.ledgerRaw;
+    _lastWidgetRevision=applied.current.widgetRevision;
+   });
+   if(sender.trim().isNotEmpty){
+    unawaited(_recordConfirmedSmsAccountAssociation(
+     record:reviewed,sender:sender,accountId:chosen.ids!.single));
+   }
+   try{await _learnManualCategoryPreference(reviewed);}catch(_){}
+   if(sender.trim().isNotEmpty){
+    try{await _learnSafeSmsRule(body:body,sender:sender,
+     kind:income?'income':'expense',category:category);}catch(_){}
+   }
+   unawaited(_refreshWidget());
+   final ack=await WaffraAutoSms.acknowledgeCommitted([id]);
+   if(ack&&mounted){
+    setState(()=>_autoSmsPending.removeWhere((r)=>r['id']==id));
+    snackSuccess(context,'تم تسجيل العملية المؤكدة.');
+   }else if(mounted){
+    snack(context,'تم الحفظ لكن تأكيد إزالة الرسالة لم يكتمل. لا يوجد خصم مكرر.',isError:true);
+   }
+  }catch(e){
+   debugPrint('M565 verified SMS save rejected: ${e.runtimeType}');
+   if(mounted){
+    await _refreshFromVerifiedFinance();
+    if(mounted)snack(context,'تعذر تأكيد حفظ العملية؛ أعد المراجعة.',isError:true);
+   }
+  }
+ }
  Future<void> _reviewAutoSmsCandidates({String? targetId})async {
   if(!mounted||!ready||_smsSheetOpen||_autoSmsReviewOpen||
      _financeLoadFailure!=null)return;
@@ -5511,6 +5636,37 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     cloudKind+(cloudAmount is num?' • '+cloudAmount.toStringAsFixed(2):''):'';
    final understood=facts.kind==WaffraBankOperationKind.income||
     facts.kind==WaffraBankOperationKind.expense;
+   final originalAmount=WaffraSmsCurrencies.originalAmount(body);
+   final originalDate=bankSmsDate(body);
+   final parsed=BankParser.parse(body);
+   final proposedCategory=localFacts?['category'] is String?
+    localFacts!['category'] as String:parsed.category;
+   final expectedIncome=facts.kind==WaffraBankOperationKind.income;
+   final previewLeaves=categories.where((c)=>
+    c.income==expectedIncome&&c.isSubcategory&&
+    c.name==proposedCategory&&
+    waffraCategoryAvailableForNewEntry(categories,c)).toList();
+   final previewParents=previewLeaves.length==1?
+    categories.where((c)=>!c.isSubcategory&&
+     c.id==previewLeaves.single.parentId).toList():<BudgetCategory>[];
+   final previewMainName=previewParents.length==1?
+    previewParents.single.displayName:
+    (waffraIsEnglish?'Choose main category':'يحتاج اختيار القسم الرئيسي');
+   final previewSuffix=WaffraSmsAccountLearning.suffix4(
+    expectedIncome?facts.destinationSuffix:facts.sourceSuffix);
+   final previewAccountLabel=previewSuffix==null?
+    (waffraIsEnglish?'Account needs confirmation':'الحساب يحتاج تأكيد'):
+    (waffraIsEnglish?'Account ••••':'الحساب ••••')+previewSuffix;
+   final previewDateTime=originalDate==null?
+    (waffraIsEnglish?'Date/time needs review':'التاريخ والوقت يحتاجان مراجعة'):
+    originalDate.toIso8601String().replaceFirst('T',' ').substring(0,16);
+   final canConfirm=understood&&facts.canAutoPostAsIncomeExpense&&
+    originalAmount!=null&&originalAmount.currency=='SAR'&&
+    originalDate!=null&&!bankSmsHasUnverifiedTimestamp(body)&&
+    parsed.amount!=null&&
+    (parsed.amount!-originalAmount.amount).abs()<0.00001&&
+    parsed.income==expectedIncome&&previewLeaves.length==1&&
+    previewParents.length==1;
    final firstChoice=sensitive?'exclude':
     facts.kind==WaffraBankOperationKind.transfer?'transfer':
     understood?'review':'manual';
@@ -5552,6 +5708,41 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          children:[Padding(padding:const EdgeInsets.all(12),
           child:SelectableText(body,textAlign:TextAlign.start))],
         )),
+       if(understood&&!sensitive)...[
+        const SizedBox(height:10),
+        WaffraText(waffraIsEnglish?'Is this transaction correct?':
+         'هل العملية صحيحة؟',
+         style:const TextStyle(fontWeight:FontWeight.w800)),
+        WaffraText(
+         (waffraIsEnglish?'Type: ':'نوع العملية: ')+
+          (expectedIncome?(waffraIsEnglish?'Income':'دخل'):
+           (waffraIsEnglish?'Expense':'مصروف'))+' • '+
+          (originalAmount==null?'—':originalAmount.amount.toStringAsFixed(2)+
+           ' '+originalAmount.currency)+'\n'+
+         (waffraIsEnglish?'Description: ':'الوصف: ')+parsed.title+'\n'+
+         (waffraIsEnglish?'Main / subcategory: ':'القسم الرئيسي / الفرعي: ')+
+          previewMainName+' / '+proposedCategory+'\n'+
+         (waffraIsEnglish?'Sender: ':'المرسل: ')+sender+'\n'+
+         previewAccountLabel+' • '+
+          (waffraIsEnglish?'Choose/verify before saving':'اختيار/تأكيد قبل الحفظ')+'\n'+
+         (waffraIsEnglish?'Bank transaction date/time: ':
+          'تاريخ ووقت العملية الأصلي: ')+previewDateTime,
+         style:const TextStyle(fontSize:12,height:1.5)),
+        Row(children:[
+         Expanded(child:OutlinedButton(
+          key:const Key('m565-sms-no-edit'),
+          onPressed:()=>Navigator.pop(dialog,'no'),
+          child:WaffraText(waffraIsEnglish?'No, edit':'لا، تعديل'))),
+         const SizedBox(width:8),
+         Expanded(child:FilledButton(
+          key:const Key('m565-sms-yes-confirm'),
+          onPressed:canConfirm?()=>Navigator.pop(dialog,'yes'):null,
+          child:WaffraText(waffraIsEnglish?'Yes':'نعم'))),
+        ]),
+        if(!canConfirm)WaffraText(waffraIsEnglish?
+         'Edit missing amount, date or category to continue.':
+         'راجع البيانات الناقصة من شاشة التعديل قبل الحفظ.'),
+       ],
        const SizedBox(height:12),
        WaffraText(waffraIsEnglish?
         'Review the message. Safe rules update after confirmed actions.':
@@ -5610,6 +5801,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }else if(decision=='transfer'&&mounted){
     // Directly review verified accounts; save money before learning a rule.
     await _reviewSmsAccountTransfer(item:selected,facts:facts);
+   }else if(decision=='yes'&&mounted&&canConfirm){
+    await _m565ConfirmSms(id:id,body:body,sender:sender,
+     category:proposedCategory,income:expectedIncome,
+     value:originalAmount.amount,date:originalDate);
+   }else if(decision=='no'&&mounted){
+    await entrySheet(sms:true,initialSms:body,reviewedSender:sender);
+    if(smsHashes.contains(bankSmsHash(body))){
+     final ack=await WaffraAutoSms.acknowledgeCommitted([id]);
+     if(ack&&mounted){
+      setState(()=>_autoSmsPending.removeWhere((r)=>r['id']==id));
+     }
+    }
    }else if(decision=='manual'&&mounted){
     // Keep the SMS's verified source/hash instead of replacing it with
     // a blank 'manual' record. Uncertain fields remain editable.
@@ -6634,6 +6837,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    if(!mounted)return null;
    var active=verified.balances.where((a)=>!a.archived).toList();
    String? createdFromSmsAccountId;
+   // One owner-bound evidence snapshot governs first-time prompt and exact reuse.
+   var learned=<WaffraSmsAccountEvidence>[];
+   if(smsSender.isNotEmpty&&_smsRuleOwnerKey.isNotEmpty){
+    try{learned=await const WaffraSmsAccountLearningStore()
+     .read(_smsRuleOwnerKey);}
+    catch(_){/* Missing evidence must never auto-select an account. */}
+   }
    // First *reviewed* SMS from a known bank with no existing verified
    // account for that institution can offer a NEW account. Neither sender
    // text nor a suggested bank automatically creates a financial account.
@@ -6643,11 +6853,33 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     candidates.single.notes.trim().isNotEmpty&&
     WaffraBankSmsFactsParser.parse(candidates.single.notes)
      .canAutoPostAsIncomeExpense;
-   final alreadyLinkedToBank=knownBank!=null&&active.any((a)=>
-    (a.kind=='bank'||a.kind=='wallet')&&
-    (a.providerId!=null?a.providerId==knownBank:
-     WaffraSmsAccountLearning.bankGroup(a.name)==knownBank));
-   if(firstSenderIncomeExpense&&!alreadyLinkedToBank&&
+   final sameBankIdsForOffer=<String>{
+    if(knownBank!=null)
+     for(final account in active)
+      if((account.kind=='bank'||account.kind=='wallet')&&
+       (account.providerId!=null?account.providerId==knownBank:
+        WaffraSmsAccountLearning.bankGroup(account.name)==knownBank))
+       account.id,
+   };
+   final alreadyLinkedToBank=sameBankIdsForOffer.isNotEmpty;
+   final firstSmsFacts=firstSenderIncomeExpense?
+    WaffraBankSmsFactsParser.parse(candidates.single.notes):null;
+   final identitySuffix=firstSmsFacts==null?null:
+    WaffraSmsAccountLearning.suffix4(
+     firstSmsFacts.kind==WaffraBankOperationKind.income?
+      firstSmsFacts.destinationSuffix:firstSmsFacts.sourceSuffix);
+   final verifiedIdentity=identitySuffix==null?null:
+    WaffraSmsAccountLearning.suggest(learned,sender:smsSender,
+     suffix:identitySuffix,
+     activeAccountIds:active.map((account)=>account.id).toSet(),
+     sameBankAccountIds:sameBankIdsForOffer);
+   // A second account at the SAME bank is a new identity with different
+   // last four. First time: choose an existing account or create a new one.
+   // A previously confirmed exact sender+four must not be prompted again.
+   final needsNewIdentityChoice=firstSenderIncomeExpense&&
+    (!alreadyLinkedToBank||
+     (identitySuffix!=null&&verifiedIdentity==null));
+   if(needsNewIdentityChoice&&
        (initialSelectedIds==null||initialSelectedIds.every((id)=>id==null))){
     final offered=await showWaffraDialog<bool>(
      context:context,builder:(dialog)=>AlertDialog(
@@ -6655,12 +6887,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        'Create an account for this bank?':
        'إنشاء حساب مالي لهذا البنك؟'),
       content:WaffraText(waffraIsEnglish?
-       'This is the first reviewed message without a linked account for '
-       '"$smsSender". Create an account named "$smsSender" with opening '
-       'balance 0 SAR (editable)? No transaction is posted without approval.':
-       'دي أول رسالة قيد المراجعة من "$smsSender" بدون حساب مرتبط. '
-       'هنقترح إنشاء حساب باسم المرسل نفسه ورصيد افتتاحي صفر ريال افتراضيًا '
-       'ويمكنك تغييره. العملية لن تتسجل من غير موافقتك.'),
+       'Bank identity "$smsSender"'+
+        (identitySuffix==null?'':' ••••$identitySuffix')+
+        ' needs account confirmation. Choose an existing bank account or '
+        'create a new one with an editable 0 SAR opening balance. '
+        'No transaction is posted without consent.':
+       'هوية البنك "$smsSender"'+
+        (identitySuffix==null?'':' ••••$identitySuffix')+
+        ' محتاجة ربط أول مرة. اختار حساب موجود أو أنشئ حساب بنكي جديد '
+        'برصيد افتتاحي صفر ريال قابل للتعديل. '
+        'لن تُسجل العملية من غير موافقتك.'),
       actions:[
        TextButton(onPressed:()=>Navigator.pop(dialog,false),
         child:WaffraText(waffraIsEnglish?'Choose existing':'اختيار حساب موجود')),
@@ -6747,13 +6983,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    // Sender-only learning needs two confirmations AND exactly one account
    // whose user-chosen bank name matches the sender. No sender guesses for
    // two accounts at the same bank; suffix evidence remains authoritative.
-   var learned=<WaffraSmsAccountEvidence>[];
-   if(smsSender.isNotEmpty&&_smsRuleOwnerKey.isNotEmpty){
-    try{
-     learned=await const WaffraSmsAccountLearningStore()
-      .read(_smsRuleOwnerKey);
-    }catch(_){/* Unavailable learning never blocks manual review. */}
-   }
+   // Reuse the evidence snapshot read before the first-identity prompt.
    final bankGroup=WaffraSmsAccountLearning.bankGroup(smsSender);
    final sameBankIds=<String>{
     if(bankGroup!=null)
@@ -6782,24 +7012,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     if(!facts.canAutoPostAsIncomeExpense||
        (facts.kind==WaffraBankOperationKind.income)!=item.income)continue;
     try{
+     final exactFour=WaffraSmsAccountLearning.suffix4(
+      item.income?facts.destinationSuffix:facts.sourceSuffix);
+     final previouslyConfirmed=exactFour==null?null:
+      WaffraSmsAccountLearning.suggest(learned,sender:smsSender,
+       suffix:exactFour,activeAccountIds:activeAccountIds,
+       sameBankAccountIds:sameBankIds);
+     if(previouslyConfirmed!=null){assigned[i]=previouslyConfirmed;continue;}
      final match=await accountEvidence.suggestSmsAccount(facts);
      if(match.confident&&match.accountId!=null&&
         bankGroup!=null&&sameBankIds.contains(match.accountId)&&
         active.any((a)=>a.id==match.accountId)){
       // A suffix by itself cannot prove the SMS belongs to this sender's bank.
       assigned[i]=match.accountId;
-     }else{
-      final suffix=item.income?
-       facts.destinationSuffix:facts.sourceSuffix;
-      // Missing/ambiguous four-digit evidence never overrides the verified
-      // source. Only truly suffix-free SMS may reuse sender-only learning.
-      if(WaffraSmsAccountLearning.suffix4(suffix)==null){
-       final learnedId=WaffraSmsAccountLearning.suggest(
-        learned,sender:smsSender,suffix:null,
-        activeAccountIds:activeAccountIds,
-        sameBankAccountIds:sameBankIds);
-       if(learnedId!=null)assigned[i]=learnedId;
-      }
      }
     }catch(_){
      // Suggestion failure must never guess or silently link an account.
@@ -6813,8 +7038,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     initialSelectedIds.every((id)=>id!=null);
    final newAccountConfirmed=createdFromSmsAccountId!=null&&
     candidates.length==1;
-   if((allEditorAccountsConfirmed||newAccountConfirmed)&&
-      assigned.every((id)=>id!=null)){
+   // Only a previously owner-confirmed, exact sender+four identity may
+   // bypass REPEATING account linking. The finance writer still requires
+   // the owner's transaction Yes and a fresh SQLCipher account witness.
+   final exactSmsIdentityConfirmed=candidates.length==1&&
+    assigned.single!=null&&candidates.single.sourceType=='sms'&&
+    WaffraSmsAccountLearning.suggest(learned,sender:smsSender,
+     suffix:WaffraSmsAccountLearning.suffix4(
+      candidates.single.income?
+       WaffraBankSmsFactsParser.parse(candidates.single.notes).destinationSuffix:
+       WaffraBankSmsFactsParser.parse(candidates.single.notes).sourceSuffix),
+     activeAccountIds:activeAccountIds,
+     sameBankAccountIds:sameBankIds)==assigned.single;
+   if((allEditorAccountsConfirmed||newAccountConfirmed||
+      exactSmsIdentityConfirmed)&&assigned.every((id)=>id!=null)){
     // Read a fresh SQLCipher account witness, not a stale picker snapshot.
     final latest=await bridge.readVerifiedAccounts();
     final liveIds=latest.balances.where((a)=>!a.archived)
@@ -7095,7 +7332,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   if(found.length>100){update(()=>statusMessage=waffraIsEnglish?'Maximum 100 transactions per paste.':'الحد الأقصى 100 معاملة في كل عملية لصق.');return;}
   // A malformed or ambiguous source timestamp must not be silently booked
   // on today's date during a large finance import.
-  final invalidDates=found.where(bankSmsHasUnverifiedTimestamp).length;
+  final invalidDates=found.where((raw)=>
+   bankSmsDate(raw)==null||bankSmsHasUnverifiedTimestamp(raw)).length;
   if(invalidDates>0){
    update(()=>statusMessage=waffraIsEnglish?
     '$invalidDates bank message(s) have an ambiguous or invalid date. Review their dates before saving; nothing was posted.':
@@ -7296,9 +7534,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final categoryName=learnedCategory??plan!.categoryName;
    final merchant=waffraMerchantName(raw,income:result.income);
    final title=merchant==null?result.title:result.title+' — '+merchant;
+   final verifiedSmsDate=bankSmsDate(raw);
+   if(verifiedSmsDate==null){
+    preRejected[i]=WaffraSmsNotSavedReason.categoryUnresolved;
+    continue;
+   }
    additions.add(MoneyEntry(id:newId(),title:title,
     category:categoryName,amount:result.amount!,income:result.income,
-    date:bankSmsDate(raw)??DateTime.now(),notes:raw,sourceType:'sms',
+    date:verifiedSmsDate,notes:raw,sourceType:'sms',
     merchantKey:plan?.merchantKey??waffraMerchantKey(raw,income:result.income)??''));
    proposedHashes.add(bankSmsHash(raw));
    proposedSourceIndexes.add(i);
@@ -8035,10 +8278,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         if(yes!=true||!ctx.mounted)return;
         explicitlyApprovedDuplicate=true;
        }
+       final verifiedSmsDate=bankSmsDate(messages[index]);
+       if(verifiedSmsDate==null||bankSmsHasUnverifiedTimestamp(messages[index])){
+        update(()=>statusMessage=waffraIsEnglish?
+         'The original SMS transaction date is missing or ambiguous. Review and enter the correct date manually before saving.':
+         'تاريخ العملية الأصلي غير موجود أو غير واضح. راجع التاريخ وعدّله يدويًا قبل الحفظ.');
+        return;
+       }
        update(()=>busy=true);
-       final now=DateTime.now();
        var previous=0.0; // Selected budget is resolved after explicit review.
-       var entry=MoneyEntry(id:newId(),title:description.text.trim(),category:category,amount:n,income:income,date:now,notes:messages[index],sourceType:'sms');
+       var entry=MoneyEntry(id:newId(),title:description.text.trim(),category:category,amount:n,income:income,date:verifiedSmsDate,notes:messages[index],sourceType:'sms');
        final budgetSelection=await reviewSmsBudgetLinks([entry]);
        if(budgetSelection==null){if(ctx.mounted)update(()=>busy=false);return;}
        entry=entry.withBudget(budgetSelection.single);
@@ -8724,11 +8973,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     chosenManualProvider=null;
    }
   }
+  // Unknown original SMS timestamp requires an explicit calendar pick.
+  final originalSmsDate=sms&&initialSms!=null?
+   bankSmsDate(initialSms,referenceDate:DateTime.now()):null;
+  var smsDateConfirmed=initial!=null||
+   smsEditorDraft?['dateConfirmed']==true||originalSmsDate!=null;
   DateTime date=(smsEditorDraft?['date'] as DateTime?)??
-   initial?.date??scannedReceipt?.date??
-   (sms&&initialSms!=null?
-    bankSmsDate(initialSms,referenceDate:DateTime.now()):null)??
-   DateTime.now();
+   initial?.date??scannedReceipt?.date??originalSmsDate??DateTime.now();
    String? suggestion,pendingHash,receiptPath=initial?.receiptPath;
    final stagedReceiptCopies=<String>[];
    // All three modes share the SAME manual bottom sheet. Transfers never
@@ -8814,10 +9065,35 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        final d=await waffraPickDateWithToday(english:waffraIsEnglish,
         context:sheetContext,initialDate:date,
         firstDate:DateTime(2000),lastDate:DateTime.now());
-       if(d!=null&&sheetContext.mounted)update(()=>date=d);
+       if(d==null||!sheetContext.mounted)return;
+       if(sms){
+        // Bank SMS corrections need deliberate date AND hour/minute;
+        // accepting only a calendar date would silently set midnight.
+        final time=await showTimePicker(
+         context:sheetContext,initialTime:TimeOfDay.fromDateTime(date));
+        if(time==null||!sheetContext.mounted)return;
+        final confirmed=DateTime(d.year,d.month,d.day,time.hour,time.minute);
+        if(confirmed.isAfter(DateTime.now())){
+         snack(sheetContext,waffraIsEnglish?
+          'Transaction date and time cannot be in the future.':
+          'تاريخ ووقت العملية لا يمكن أن يكونا في المستقبل.',isError:true);
+         return;
+        }
+        update((){
+         date=confirmed;
+         smsDateConfirmed=true;
+        });
+       }else{
+        update(()=>date=d);
+       }
       }),
       icon:const Icon(Icons.calendar_month,size:19),
-      label:WaffraText(dayText(date),maxLines:1));
+      label:WaffraText(sms&&!smsDateConfirmed?
+       (waffraIsEnglish?'Select date and time':'اختر التاريخ والوقت'):
+       sms?
+        dayText(date)+' '+date.hour.toString().padLeft(2,'0')+':'+
+         date.minute.toString().padLeft(2,'0'):
+        dayText(date),maxLines:1));
     Future<void> createAccountInsideEntryDropdown({required bool mainProvider,
       bool forTransfer=false,bool transferTarget=false})async{
      // #405/#416: Add inside either dropdown opens the account FORM directly,
@@ -9718,6 +9994,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        }
        if(sms){
         if(message.text.trim().isEmpty)return;
+        if(!smsDateConfirmed){
+         if(sheetContext.mounted)snack(sheetContext,waffraIsEnglish?
+          'Choose the real bank transaction date from the calendar before saving.':
+          'اختار تاريخ العملية البنكية الصحيح من التقويم قبل الحفظ.',isError:true);
+         return;
+        }
         // The display-country setting cannot convert a bank SMS into SAR.
         // The durable finance record must never inherit an unverified
         // foreign amount from the manual SMS review screen.
@@ -9766,6 +10048,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     _m492SmsEditorDrafts.remove(_m492SmsEditorDrafts.keys.first);
    }
    _m492SmsEditorDrafts[smsEditorDraftKey]={
+    'dateConfirmed':smsDateConfirmed,
     'title':title.text,'notes':notes.text,'amount':value.text,
     'income':income,'parent':selectedParentId,'category':category,
     'budget':selectedBudgetId,'provider':chosenManualProvider,
@@ -9894,6 +10177,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     entries.where((e)=>e.id!=result.id),categories,linkedBudget.single,result.date);
   if(pendingHash!=null&&initial==null){
    final reviewedAccount=await reviewSmsAccountLinks([result],
+     smsSender:reviewedSender??'',
      initialSelectedIds:chosenManualAccount==null?null:[chosenManualAccount]);
    if(reviewedAccount==null){
     for(final staged in stagedReceiptCopies){
@@ -9948,6 +10232,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     _lastWidgetRevision=applied.current.widgetRevision;
    });
    if(smsEditorDraftKey!=null)_m492SmsEditorDrafts.remove(smsEditorDraftKey);
+   // No -> edit learns a confirmed sender+last-four bank identity only
+   // after SQLCipher saved this exact reviewed SMS and its fingerprint.
+   // This learning is not a finance write and cannot debit an account.
+   if(reviewedSender!=null&&reviewedSender.trim().isNotEmpty){
+    unawaited(_recordConfirmedSmsAccountAssociation(
+     record:result,sender:reviewedSender,
+     accountId:reviewedAccount.ids?.single));
+   }
    // The expense/income learner applies only AFTER an authoritative commit,
    // and uses user-approved description/category, not the raw SMS body.
    try{await _learnManualCategoryPreference(result);}catch(_){}
@@ -12197,62 +12489,83 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     child:WaffraCurrencyAmount(amount,fontSize:16,color:emerald)),
   ]);
  Widget monthlySummaryCard(){
-  final today=DateTime.now();
-  final prev=DateTime(today.year,today.month-1,1);
-  final current=entries.where((e)=>!e.income&&
-   e.date.year==today.year&&e.date.month==today.month);
-  final lastMonth=entries.where((e)=>!e.income&&
-   e.date.year==prev.year&&e.date.month==prev.month);
-  final spent=sum(current,false),prior=sum(lastMonth,false);
-  final categoriesTotal=<String,double>{};
-  for(final item in current){
-   categoriesTotal[item.category]=(categoriesTotal[item.category]??0)+item.amount;
-  }
-  final ranked=categoriesTotal.entries.toList()..sort((a,b)=>b.value.compareTo(a.value));
-  final top=ranked.isEmpty?null:ranked.first;
-  final change=prior<=0?null:(spent-prior)/prior*100;
+  final now=DateTime.now();
+  final month=_m467ScopedEntries().where((e)=>
+   e.date.year==now.year&&e.date.month==now.month).toList();
+  final income=sum(month,true),spent=sum(month,false);
+  final difference=income-spent;
+  final ratio=income>0?(spent/income).clamp(0.0,1.0):0.0;
+  final dark=Theme.of(context).brightness==Brightness.dark;
   return Container(
-   padding:const EdgeInsets.all(15),
-   decoration:BoxDecoration(color:Theme.of(context).cardColor,
-    borderRadius:BorderRadius.circular(20),
-    border:Border.all(color:forest.withValues(alpha:0.10))),
-   child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+   key:const Key('m549-monthly-summary-compact'),
+   padding:const EdgeInsets.symmetric(horizontal:12,vertical:11),
+   decoration:BoxDecoration(
+    color:Theme.of(context).cardColor,
+    borderRadius:BorderRadius.circular(18),
+    border:Border.all(color:forest.withValues(alpha:.13))),
+   child:Column(children:[
     Row(children:[
-     const Icon(Icons.bar_chart_rounded,color:emerald),
-     const SizedBox(width:8),
-     Expanded(child:WaffraText(waffraIsEnglish?'Monthly summary':'ملخص الشهر',
-      style:const TextStyle(fontWeight:FontWeight.bold,fontSize:18))),
+     const Icon(Icons.bar_chart_rounded,color:emerald,size:20),
+     const SizedBox(width:5),
+     Expanded(child:WaffraText(waffraIsEnglish?
+      'This month summary':'ملخص هذا الشهر',
+      style:const TextStyle(fontSize:16,fontWeight:FontWeight.bold))),
+     OutlinedButton.icon(
+      key:const Key('m549-home-account-filter'),
+      onPressed:WaffraHaptics.tap(()=>unawaited(_m467PickHomeAccount())),
+      icon:const Icon(Icons.account_balance_outlined,size:17),
+      label:ConstrainedBox(constraints:const BoxConstraints(maxWidth:100),
+       child:Text(_m467AccountLabel,maxLines:1,
+        overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:11))),
+      style:OutlinedButton.styleFrom(
+       padding:const EdgeInsets.symmetric(horizontal:7,vertical:4),
+       minimumSize:const Size(0,36),
+       foregroundColor:dark?Colors.white:forest)),
     ]),
-    const SizedBox(height:10),
-    if(top==null)WaffraText(waffraIsEnglish?
-      'No expenses recorded this month.':
-      'لا توجد مصروفات مسجلة لهذا الشهر.',
-      style:const TextStyle(color:Colors.grey,fontSize:14))
-    else Container(
-     padding:const EdgeInsets.symmetric(horizontal:12,vertical:12),
-     decoration:BoxDecoration(color:emerald.withValues(alpha:0.08),
-      borderRadius:BorderRadius.circular(14)),
-     child:Row(children:[
-      const CircleAvatar(backgroundColor:Color(0xFFD8EDE0),
-       child:Icon(Icons.pie_chart_outline,color:emerald)),
-      const SizedBox(width:8),
-      Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-       WaffraText(waffraIsEnglish?'Highest spending category':
-        'أكثر قسم صرفت عليه',style:const TextStyle(fontSize:12)),
-       WaffraText(waffraTr(top.key),maxLines:2,
-        style:const TextStyle(fontWeight:FontWeight.bold,fontSize:16)),
-      ])),
-      const SizedBox(width:4),
-      FittedBox(fit:BoxFit.scaleDown,
-       child:WaffraCurrencyAmount(top.value,fontSize:16,color:emerald)),
+    const SizedBox(height:8),
+    Row(children:[
+     SizedBox(width:92,height:92,child:Stack(alignment:Alignment.center,children:[
+      SizedBox(width:82,height:82,child:CircularProgressIndicator(
+       value:ratio,strokeWidth:10,
+       color:emerald,backgroundColor:const Color(0xFFD6EEDF))),
+      Column(mainAxisSize:MainAxisSize.min,children:[
+       WaffraText(waffraIsEnglish?'Difference':'الفرق',
+        style:const TextStyle(fontSize:10)),
+       FittedBox(fit:BoxFit.scaleDown,
+        child:WaffraCurrencyAmount(difference,fontSize:16)),
+      ]),
      ])),
-    if(change!=null)Padding(padding:const EdgeInsets.only(top:9),
-     child:WaffraText((waffraIsEnglish?'Spending ':'المصروفات ')+
-      (change>=0?(waffraIsEnglish?'increased ':'زادت '):
-       (waffraIsEnglish?'decreased ':'قلت '))+
-      change.abs().toStringAsFixed(1)+'%'+
-      (waffraIsEnglish?' vs last month':' عن الشهر الماضي'),
-      style:const TextStyle(color:Colors.grey,fontSize:12))),
+     const SizedBox(width:12),
+     Expanded(child:Column(children:[
+      Container(
+       padding:const EdgeInsets.symmetric(horizontal:11,vertical:8),
+       decoration:BoxDecoration(color:dark?const Color(0xFF244C3A):
+        const Color(0xFFE4F4EB),borderRadius:BorderRadius.circular(12)),
+       child:Row(children:[
+        const Icon(Icons.south_west_rounded,color:emerald,size:17),
+        const SizedBox(width:6),
+        Expanded(child:WaffraText(waffraIsEnglish?'Income':'الدخل',
+         style:const TextStyle(fontWeight:FontWeight.bold,fontSize:12))),
+        WaffraCurrencyAmount(income,fontSize:13),
+       ])),
+      const SizedBox(height:6),
+      Container(
+       padding:const EdgeInsets.symmetric(horizontal:11,vertical:8),
+       decoration:BoxDecoration(color:dark?const Color(0xFF49302C):
+        const Color(0xFFFCECE8),borderRadius:BorderRadius.circular(12)),
+       child:Row(children:[
+        const Icon(Icons.north_east_rounded,color:Color(0xFFB94838),size:17),
+        const SizedBox(width:6),
+        Expanded(child:WaffraText(waffraIsEnglish?'Expenses':'المصروفات',
+         style:const TextStyle(fontWeight:FontWeight.bold,fontSize:12))),
+        WaffraCurrencyAmount(spent,fontSize:13),
+       ])),
+      const SizedBox(height:4),
+      Text(waffraIsEnglish?'Spending / income':
+       'نسبة المصروفات من الدخل: '+(income>0?(spent/income*100).toStringAsFixed(0):'0')+'%',
+       style:const TextStyle(fontSize:10,color:Color(0xFF718077))),
+     ])),
+    ]),
    ]));
  }
  Widget smartMoneyInsightsCard(){
@@ -12525,9 +12838,39 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       onTap:()=>showReceipt(entry.receiptPath!,entryId:entry.id))),
    ])));
  }
+ Widget _m549HomeFinanceAction({
+  required String title,required IconData icon,
+  required Color background,required Color iconColor,
+  required VoidCallback onTap,
+ }){
+  return Expanded(child:Material(
+   color:background,borderRadius:BorderRadius.circular(18),
+   child:InkWell(
+    borderRadius:BorderRadius.circular(18),
+    onTap:WaffraHaptics.tap(onTap),
+    child:Container(
+     key:Key('m549-home-action-'+(icon==Icons.swap_horiz_rounded?'transfer':
+      icon==Icons.north_east_rounded?'expense':'income')),
+     height:88,
+     decoration:BoxDecoration(
+      borderRadius:BorderRadius.circular(18),
+      border:Border.all(color:iconColor.withValues(alpha:.18))),
+     child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
+      Icon(icon,size:25,color:iconColor),
+      const SizedBox(height:7),
+      Padding(padding:const EdgeInsets.symmetric(horizontal:4),
+       child:WaffraText(title,textAlign:TextAlign.center,maxLines:2,
+        style:TextStyle(fontSize:11,fontWeight:FontWeight.w700,
+         color:Theme.of(context).brightness==Brightness.dark?
+          const Color(0xFF173D31):const Color(0xFF183C31)))),
+     ]),
+    ),
+   ),
+  ));
+ }
+
  Widget dashboard(){
   final scopedEntries=_m467ScopedEntries().toList();
-  final inc=sum(scopedEntries,true),exp=sum(scopedEntries,false);
   final unverifiedFxEntries=entries.where(waffraNeedsLegacyFxReview).toList();
   // Show the month comparison only when there are genuine prior-month
   // transactions and a positive comparison base. Never show a fake +12%.
@@ -12581,9 +12924,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        pinned:false,
        delegate:WaffraBalanceHeader(
          balance:_m467ShownBalance(),english:waffraIsEnglish,
-         heading:_m467SelectedAccount=='all'?null:_m467AccountLabel,
-         selectedAccountLabel:_m467AccountLabel,
-         onAccountTap:()=>unawaited(_m467PickHomeAccount()),
+         heading:waffraIsEnglish?'Total balance':'إجمالي الرصيد',
+         compact:true,
          focusKey:_tourKeys[0],
          monthlyChangePercent:_m467SelectedAccount=='all'&&
           _m467AccountContext==null?monthChange:null,
@@ -12591,14 +12933,34 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       SliverPadding(padding:const EdgeInsets.fromLTRB(14,10,14,96),
        sliver:SliverToBoxAdapter(child:Column(
         crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-         Row(children:[
-          homeSummaryCard(waffraIsEnglish?'Income':'الدخل',
-           inc,Icons.south_west,waffraIncomeTone(context),const Color(0xFFB2D5C2)),
-          const SizedBox(width:9),
-          homeSummaryCard(waffraIsEnglish?'Expenses':'المصروفات',
-           exp,Icons.north_east,const Color(0xFFB94838),waffraExpenseBackground),
+         // M549: user-approved screenshot: three compact, equal-width
+         // direct finance actions, no duplicated large income/expense tiles.
+         // This is NOT the floating + and never changes its geometry.
+         Row(key:const Key('m549-three-home-finance-actions'),children:[
+          _m549HomeFinanceAction(
+           title:waffraIsEnglish?'Income':'دخل',
+           icon:Icons.south_west_rounded,
+           background:const Color(0xFFE6F7EC),
+           iconColor:const Color(0xFF087A54),
+           onTap:()=>unawaited(entrySheet(scannedIncome:true))),
+          const SizedBox(width:7),
+          _m549HomeFinanceAction(
+           title:waffraIsEnglish?'Expense':'مصروف',
+           icon:Icons.north_east_rounded,
+           background:const Color(0xFFFCECE8),
+           iconColor:const Color(0xFFB94838),
+           onTap:()=>unawaited(entrySheet(scannedIncome:false))),
+          const SizedBox(width:7),
+          _m549HomeFinanceAction(
+           title:waffraIsEnglish?'Between my accounts':'تحويل بين حساباتي',
+           icon:Icons.swap_horiz_rounded,
+           background:const Color(0xFFFAF0DD),
+           iconColor:const Color(0xFF7F561C),
+           onTap:()=>unawaited(openVerifiedTransfer())),
          ]),
-         const SizedBox(height:12),
+         const SizedBox(height:10),
+         monthlySummaryCard(),
+         const SizedBox(height:10),
          Container(
           decoration:BoxDecoration(
            color:Theme.of(context).cardColor,
@@ -12639,10 +13001,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                ]))
              :const SizedBox.shrink()),
           ])),
-         if(Platform.isAndroid)...[
-          const SizedBox(height:12),
-          _autoSmsReviewCard(),
-         ],
+         // M549: the SMS review queue now lives in Notifications.
          if(unverifiedFxEntries.isNotEmpty)...[
           const SizedBox(height:10),
           Container(
@@ -12660,10 +13019,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
              maxLines:3,style:const TextStyle(fontSize:12,fontWeight:FontWeight.w600))),
            ])),
          ],
-         const SizedBox(height:13),
-         monthlyBudgetCard(),
          const SizedBox(height:12),
-         monthlySummaryCard(),
+         monthlyBudgetCard(),
          const SizedBox(height:12),
 
          Container(
@@ -16935,6 +17292,29 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(15))),
       child:Text(waffraIsEnglish?'AR':'EN',
        style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold)))),
+    const SizedBox(width:7),
+    Tooltip(message:waffraIsEnglish?'Notifications':'الإشعارات',
+     child:Semantics(
+      button:true,label:waffraIsEnglish?'Open financial notifications':'فتح الإشعارات المالية',
+      child:InkWell(
+       key:const Key('m549-header-notification-bell'),
+       borderRadius:BorderRadius.circular(22),
+       onTap:WaffraHaptics.tap(()=>unawaited(_m549OpenNotifications())),
+       child:SizedBox(width:48,height:45,child:Stack(
+        clipBehavior:Clip.none,children:[
+        const Center(child:Icon(Icons.notifications_none_rounded,color:Colors.white,size:27)),
+        if(_autoSmsPending.isNotEmpty)PositionedDirectional(
+         end:0,top:0,child:Container(
+          key:const Key('m549-notification-count-badge'),
+          constraints:const BoxConstraints(minWidth:21,minHeight:17),
+          padding:const EdgeInsets.symmetric(horizontal:3),
+          decoration:BoxDecoration(color:const Color(0xFFE22F37),
+           borderRadius:BorderRadius.circular(12)),
+          child:Center(child:Text(
+           _autoSmsPending.length>999?'+999':_autoSmsPending.length.toString(),
+           style:const TextStyle(color:Colors.white,fontSize:10,fontWeight:FontWeight.bold))),
+         )),
+       ]))))),
     const SizedBox(width:7),
     Tooltip(message:waffraIsEnglish?'My account and settings':'حسابي والإعدادات',
      child:Semantics(label:waffraIsEnglish?'Open account settings':'فتح إعدادات الحساب',

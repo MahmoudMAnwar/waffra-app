@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'support/waffra_source_method_section.dart';
 
 /// Source-level regression guards for the M547 migration. These tests cannot
 /// prove UI frame times or Android provider/Keystore performance; release/profile
@@ -50,15 +51,27 @@ void main() {
   final main=File('lib/main.dart').readAsStringSync();
   final resume=main.split('void _m468OnResume(){')[1]
    .split('@override void initState()')[0];
-  final open=main.split('Future<void> _openAutoSmsInbox()async{')[1]
-   .split('// Every bank sender gets one group.')[0];
+  final open=waffraSourceMethodSection(main,
+   start:' Future<void> _openAutoSmsInbox()async{',
+   end:' Widget _autoSmsReviewCard(){');
+  final ruleEditor=waffraSourceMethodSection(main,
+   start:' Future<void> _openSmsRules({',
+   end:' Future<void> _recordConfirmedSmsAccountAssociation({');
   expect(resume,contains('unawaited(_refreshAutoSmsInbox());'));
   expect(resume,isNot(contains('importMonth:')));
   expect(open,contains('await _refreshAutoSmsInbox();'));
   expect(open,isNot(contains('importMonth:true')));
-  final manual=main.split('// The expense/income learner applies only AFTER')[1]
-   .split('for(final staged in stagedReceiptCopies')[0];
-  expect(manual,isNot(contains('_refreshAutoSmsInbox(importMonth:true)')));
+  // Neither returning from rules nor excluding queued SMS may trigger
+  // historical paging. Existing pending SMS can refresh without import.
+  expect(ruleEditor,contains('if(mounted&&ruleSaved==true)'));
+  expect(ruleEditor,contains('unawaited(_refreshAutoSmsInbox());'));
+  expect(ruleEditor,isNot(contains('importMonth:true')));
+  expect(open,contains('unawaited(_refreshAutoSmsInbox());'));
+  final transactionEditor=waffraSourceMethodSection(main,
+   start:' Future<void> entrySheet({MoneyEntry? initial,bool sms=false,String? initialSms,',
+   end:' Future<String?> chooseTransactionCategory(');
+  expect(transactionEditor,contains('_learnManualCategoryPreference(result)'));
+  expect(transactionEditor,isNot(contains('_refreshAutoSmsInbox(importMonth:true)')));
   expect(main,contains('void _receiveAutoSmsNotice()'));
   expect(main,contains('if(mounted&&ready)unawaited(_refreshAutoSmsInbox());'));
   expect(main,contains('smsHashes.contains(bankSmsHash(body))'));

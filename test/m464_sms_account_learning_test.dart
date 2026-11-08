@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_sms_account_learning.dart';
 
 void main(){
- test('Sender account suggestion requires TWO matching confirmations',(){
+ test('First owner-confirmed sender+four mapping is reusable safely',(){
   final once=WaffraSmsAccountLearning.confirmed(
    const <WaffraSmsAccountEvidence>[],
    sender:'AlRajhiBank',accountId:'rajhi-1',suffix:'١٢٣٤');
@@ -10,12 +10,15 @@ void main(){
   expect(WaffraSmsAccountLearning.suggest(
    once,sender:'AlRajhiBank',suffix:null,
    activeAccountIds:{'rajhi-1'},sameBankAccountIds:{'rajhi-1'}),isNull);
+  expect(WaffraSmsAccountLearning.suggest(
+   once,sender:'AlRajhiBank',suffix:'1234',
+   activeAccountIds:{'rajhi-1'},sameBankAccountIds:{'rajhi-1'}),'rajhi-1');
   final twice=WaffraSmsAccountLearning.confirmed(
    once,sender:'AlRajhiBank',accountId:'rajhi-1',suffix:'1234');
   expect(WaffraSmsAccountLearning.suggest(
    twice,sender:'AlRajhiBank',suffix:null,
    activeAccountIds:{'rajhi-1','inma-1'},
-   sameBankAccountIds:{'rajhi-1'}),'rajhi-1');
+   sameBankAccountIds:{'rajhi-1'}),isNull);
   expect(WaffraSmsAccountLearning.suggest(
    twice,sender:'AlRajhiBank',suffix:'1234',
    activeAccountIds:{'rajhi-1','inma-1'},
@@ -56,7 +59,7 @@ void main(){
   expect(WaffraSmsAccountLearning.suggest(
    learned,sender:'AlRajhiBank',suffix:null,
    activeAccountIds:{'rajhi-1','rajhi-2'},
-   sameBankAccountIds:{'rajhi-2'}),'rajhi-2');
+   sameBankAccountIds:{'rajhi-2'}),isNull);
  });
 
  test('Unrecognized sender cannot create bank-account learning',(){

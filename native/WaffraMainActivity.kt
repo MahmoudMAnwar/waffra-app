@@ -438,6 +438,15 @@ class MainActivity : FlutterFragmentActivity() {
                         runOnUiThread { result.success(excluded) }
                     }
                 }
+                "excludeAutoSmsSenders" -> {
+                    val names = (call.arguments as? List<*>)
+                        ?.filterIsInstance<String>() ?: emptyList()
+                    val app = applicationContext
+                    smsHistoryExecutor.execute {
+                        val excluded = WaffraAutoSmsStore.excludeSenders(app, names)
+                        runOnUiThread { result.success(excluded) }
+                    }
+                }
                 "restoreExcludedAutoSmsSender" -> {
                     val sender = call.arguments as? String ?: ""
                     val app = applicationContext

@@ -48,8 +48,12 @@ void main() {
   test('SMS content remains in memory for encrypted source, legacy bridge redacts plaintext', () {
     final home = File('lib/main.dart').readAsStringSync();
     final widget = File('lib/waffra_widget_capture.part.dart').readAsStringSync();
-    expect(home, contains("date:bankSmsDate(raw)??DateTime.now(),notes:raw,sourceType:'sms'"));
-    expect(home, contains('date:now,notes:messages[index],sourceType:'));
+    expect(home, contains("date:verifiedSmsDate,notes:raw,sourceType:'sms'"));
+    expect(home, contains('final verifiedSmsDate=bankSmsDate(raw);'));
+    expect(home, isNot(contains('date:bankSmsDate(raw)??DateTime.now()')));
+    expect(home, contains('date:verifiedSmsDate,notes:messages[index],sourceType:'));
+    expect(home, contains('final verifiedSmsDate=bankSmsDate(messages[index]);'));
+    expect(home, isNot(contains('date:now,notes:messages[index],sourceType:')));
     expect(home, contains('notes:sms?message.text:'));
     expect(home, contains("personalNotes:sms||initial?.sourceType=='sms'?notes.text:''"));
     expect(widget, contains('notes:entry.raw,sourceType:'));

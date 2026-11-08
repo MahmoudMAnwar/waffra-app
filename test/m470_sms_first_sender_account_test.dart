@@ -67,7 +67,14 @@ void main(){
   expect(flow,contains('if(offered==true)'));
   expect(flow,contains('suggestedProviderId:knownBank'));
   expect(flow,contains('suggestedSenderName:smsSender'));
-  expect(flow,contains('رصيد افتتاحي صفر ريال افتراضيًا'));
+  // #495: a second distinct four-digit identity at the same bank must
+  // trigger first-time choose/create, while a confirmed exact identity can
+  // safely reuse its account under a fresh SQLCipher witness.
+  expect(flow,contains('final needsNewIdentityChoice=firstSenderIncomeExpense&&'));
+  expect(flow,contains('(identitySuffix!=null&&verifiedIdentity==null)'));
+  expect(flow,contains('WaffraSmsAccountLearning.suggest(learned,sender:smsSender,'));
+  expect(flow,contains('suggestedLastFour:proposedSuffix'));
+  expect(flow,contains('برصيد افتتاحي صفر ريال قابل للتعديل.'));
   expect(flow,contains("draft.kind!='bank'||draft.providerId!=knownBank"));
   expect(flow,contains('api.createTypedAccountWithIdentity('));
   // Verified suffix and user confirmation are both passed to the writer,
