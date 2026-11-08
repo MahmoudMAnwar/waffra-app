@@ -40,7 +40,8 @@
     "Rename the old SMS sorting sheet label from رسائل للفرز to مراجعة الرسائل البنكية while preserving review, exclusion/restore, owner privacy and safe financial acknowledgement.",
     "Update only the legacy account-in-balance test assertion; retain the existing generic-balance regression, and add a dedicated notification review UI test.",
     "First-time masked-four account matching, original SMS transaction timestamp and one-tap yes/no bank SMS finance capture remain tracked in Issue #495 and are not yet implemented in this UI-only PR.",
-    "M549 approved design changes legacy M467 and M495 account-picker expectations: assert independent Home filter outside compact balance and that long account names remain accessible in the real account-selection sheet on narrow Android; keep all other financial regression assertions and type validation unchanged."
+    "M549 approved design changes legacy M467 and M495 account-picker expectations: assert independent Home filter outside compact balance and that long account names remain accessible in the real account-selection sheet on narrow Android; keep all other financial regression assertions and type validation unchanged.",
+    "M549 screenshot parity: replace duplicate Home income/expense metric tiles with exactly three compact colored Income, Expense and Between My Accounts action tiles; manual income/expense preselect the existing editor type, and account transfers invoke the existing verified transfer API. Leave floating + untouched. New private Home helper adjacent to dashboard is tightly section-bounded."
   ],
   "allowed_changed_files": [
     ".github/workflows/finance-full-regression.yml",
@@ -229,6 +230,10 @@
       {
         "start": " @override Widget build(BuildContext context)=>PopScope(",
         "end": "  // Instant content swap avoids building/animating the previous heavy tab"
+      },
+      {
+        "start": "      onTap:()=>showReceipt(entry.receiptPath!,entryId:entry.id))),\n   ])));\n }\n",
+        "end": " Widget dashboard(){"
       }
     ],
     "lib/waffra_local_phone_credentials.dart": [
