@@ -12583,6 +12583,37 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       onTap:()=>showReceipt(entry.receiptPath!,entryId:entry.id))),
    ])));
  }
+ Widget _m549HomeFinanceAction({
+  required String title,required IconData icon,
+  required Color background,required Color iconColor,
+  required VoidCallback onTap,
+ }){
+  return Expanded(child:Material(
+   color:background,borderRadius:BorderRadius.circular(18),
+   child:InkWell(
+    borderRadius:BorderRadius.circular(18),
+    onTap:WaffraHaptics.tap(onTap),
+    child:Container(
+     key:Key('m549-home-action-'+(icon==Icons.swap_horiz_rounded?'transfer':
+      icon==Icons.north_east_rounded?'expense':'income')),
+     height:88,
+     decoration:BoxDecoration(
+      borderRadius:BorderRadius.circular(18),
+      border:Border.all(color:iconColor.withValues(alpha:.18))),
+     child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
+      Icon(icon,size:25,color:iconColor),
+      const SizedBox(height:7),
+      Padding(padding:const EdgeInsets.symmetric(horizontal:4),
+       child:WaffraText(title,textAlign:TextAlign.center,maxLines:2,
+        style:TextStyle(fontSize:11,fontWeight:FontWeight.w700,
+         color:Theme.of(context).brightness==Brightness.dark?
+          const Color(0xFF173D31):const Color(0xFF183C31)))),
+     ]),
+    ),
+   ),
+  ));
+ }
+
  Widget dashboard(){
   final scopedEntries=_m467ScopedEntries().toList();
   final inc=sum(scopedEntries,true),exp=sum(scopedEntries,false);
@@ -12648,12 +12679,30 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       SliverPadding(padding:const EdgeInsets.fromLTRB(14,10,14,96),
        sliver:SliverToBoxAdapter(child:Column(
         crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-         Row(children:[
-          homeSummaryCard(waffraIsEnglish?'Income':'الدخل',
-           inc,Icons.south_west,waffraIncomeTone(context),const Color(0xFFB2D5C2)),
-          const SizedBox(width:9),
-          homeSummaryCard(waffraIsEnglish?'Expenses':'المصروفات',
-           exp,Icons.north_east,const Color(0xFFB94838),waffraExpenseBackground),
+         // M549: user-approved screenshot: three compact, equal-width
+         // direct finance actions, no duplicated large income/expense tiles.
+         // This is NOT the floating + and never changes its geometry.
+         Row(key:const Key('m549-three-home-finance-actions'),children:[
+          _m549HomeFinanceAction(
+           title:waffraIsEnglish?'Income':'دخل',
+           icon:Icons.south_west_rounded,
+           background:const Color(0xFFE6F7EC),
+           iconColor:const Color(0xFF087A54),
+           onTap:()=>unawaited(entrySheet(scannedIncome:true))),
+          const SizedBox(width:7),
+          _m549HomeFinanceAction(
+           title:waffraIsEnglish?'Expense':'مصروف',
+           icon:Icons.north_east_rounded,
+           background:const Color(0xFFFCECE8),
+           iconColor:const Color(0xFFB94838),
+           onTap:()=>unawaited(entrySheet(scannedIncome:false))),
+          const SizedBox(width:7),
+          _m549HomeFinanceAction(
+           title:waffraIsEnglish?'Between my accounts':'تحويل بين حساباتي',
+           icon:Icons.swap_horiz_rounded,
+           background:const Color(0xFFFAF0DD),
+           iconColor:const Color(0xFF7F561C),
+           onTap:()=>unawaited(openVerifiedTransfer())),
          ]),
          const SizedBox(height:10),
          monthlySummaryCard(),
