@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_bank_sms_facts.dart';
+import 'package:waffra/waffra_sms_intelligence.dart';
 
 void main(){
  test('Arabic temporary code is security, not completed transfer or expense',(){
@@ -11,6 +12,24 @@ void main(){
   expect(facts.pending,isTrue);
   expect(facts.kind,WaffraBankOperationKind.uncertain);
   expect(facts.canAutoPostAsIncomeExpense,isFalse);
+ });
+
+ test('M591 all local classifiers agree on temporary Arabic verification',(){
+  const otp='رمز مؤقت 123456 لتأكيد تحويل لمستفيد جديد بقيمة 75 ريال';
+  expect(WaffraBankSmsFactsParser.isVerificationChallenge(otp),isTrue);
+  expect(WaffraSmsIntelligence.isPendingOrUnconfirmed(otp),isTrue);
+  final prediction=WaffraSmsIntelligence.classify(otp);
+  expect(prediction.intent,WaffraSmsIntent.uncertain);
+  expect(prediction.canAutoSuggestSar,isFalse);
+  final finance=WaffraBankSmsFactsParser.parse(otp);
+  expect(finance.canAutoPostAsIncomeExpense,isFalse);
+ });
+
+ test('M591 excluded labels are consistent across default and learned lists',(){
+  final settings=File('lib/waffra_sms_rule_settings_page.dart').readAsStringSync();
+  expect(settings,contains("'Excluded':'مستبعدة'"));
+  expect(settings,contains("'Excluded messages':'الرسائل المستبعدة'"));
+  expect(settings,isNot(contains("'Excluded':'مستثناة'")));
  });
 
  test('English one-time password does not create a financial suggestion',(){
