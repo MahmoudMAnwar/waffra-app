@@ -4210,10 +4210,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     seedMessage:seedMessage,
     onNotice:(message)=>snack(context,message),
    )));
-  // Back without saving must not trigger a full 500-SMS history rescan.
-  // A saved rule may release queue slots, so only then continue the cursor.
-  if(mounted&&ruleSaved==true)unawaited(
-   _refreshAutoSmsInbox(importMonth:true));
+  // Apply saved local rules to the already queued SMS only. Never perform
+  // hidden Android history paging during the rule editor's return animation.
+  // A partial original-month scan continues only on explicit Rescan.
+  if(mounted&&ruleSaved==true)unawaited(_refreshAutoSmsInbox());
  }
 
  Future<void> _recordConfirmedSmsAccountAssociation({
@@ -5152,7 +5152,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             else snackSuccess(context,waffraIsEnglish?
              'Excluded ${done.length} messages from review.':
              'تم استبعاد ${done.length} رسالة من المراجعة.');
-            unawaited(_refreshAutoSmsInbox(importMonth:true));
+            // Keep the queue and counts synced without silently launching
+            // another historical import during the bulk-exclusion animation.
+            // The user can continue an incomplete history via Rescan.
+            unawaited(_refreshAutoSmsInbox());
            }
           }catch(_){
            if(mounted)snack(context,waffraIsEnglish?
