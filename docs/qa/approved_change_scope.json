@@ -156,7 +156,7 @@
         "end": "import 'package:crypto/crypto.dart' as legacy_crypto;"
       },
       {
-        "start": " static Future<List<int>> _derive(",
+        "start": " static bool validPassword(String pass)=>",
         "end": " static bool _equal("
       }
     ]
