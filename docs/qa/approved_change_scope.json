@@ -80,6 +80,30 @@
         "start": "                \"pauseAutoSmsForSignOut\" ->",
         "end": "                \"resumeAutoSmsAfterSignIn\" ->"
       }
+    ],
+    "test/m424_mandatory_biometrics_test.dart": [
+      {
+        "start": "  test('M424: home route no longer exposes optional PIN settings', () {",
+        "end": null
+      }
+    ],
+    "test/m426_local_phone_credentials_test.dart": [
+      {
+        "start": "  expect(await WaffraLocalPhoneCredentials.verifyRecord(result,\n   phone:'0599999999',password:'CorrectP@ssword12'),false);",
+        "end": null
+      }
+    ],
+    "test/m468_large_ledger_decode_test.dart": [
+      {
+        "start": " test('M468 first install and pull use the same verified parsing contract',(){",
+        "end": null
+      }
+    ],
+    "test/m547_login_isolate_performance_test.dart": [
+      {
+        "start": " test('Android SMS re-enable and resume do not block main-thread login frames', () {",
+        "end": null
+      }
     ]
   }
 }
