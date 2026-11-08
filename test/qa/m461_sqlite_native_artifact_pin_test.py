@@ -18,7 +18,10 @@ class SqliteAssetPinTest(unittest.TestCase):
         self.assertIn("  sqlite3: 3.7.0", pub)
         self.assertNotIn("  sqlite3: ^", pub)
         self.assertIn("    sqlite3:\n      source: sqlite3mc", pub)
-        self.assertNotIn("url_pattern:", pub)
+        # Only the official immutable release URL with a stable cache key.
+        # The package SHA256 verification remains unchanged.
+        self.assertIn('url_pattern: "https://github.com/simolus3/sqlite3.dart/releases/download/$RELEASE_TAG/$FILENAME?waffra_verified_asset=20261108"', pub)
+        self.assertEqual(pub.count("url_pattern:"), 1)
         self.assertNotIn("source: system", pub)
 
     def test_release_build_retains_signed_source_and_sqlcipher_security_gates(self):
