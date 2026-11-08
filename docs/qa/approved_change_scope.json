@@ -57,7 +57,8 @@
     "M567 M385 scope fix for owner-approved M565: explicitly bound the bank SMS transfer/review functional span from existing transfer entry comment to the start of the unrelated _loadFinanceSafely function; only reviewed SMS source, Yes/No flow and verified financial commit may differ; leave all unrelated source byte-identical and guards on.",
     "M569: reconcile the exact M174/M147/M440 failures reported on 2026-11-08. Explicitly bound only the SMS single writer changed by M564, retain original main bytes elsewhere; replace two M206 stale device-clock positive assertions with original SMS date validation and negative fallback checks; update M447 required secure SMS commit count 3->4 and checked account/witness/hash gate with seven verified account reviews. Tests stay enabled.",
     "M568 #495: after first explicit source-confirmed financial commit, reuse same exact sender+last-four account identity on next SMS without repeating initial link; never infer sender-only or changed suffix; recheck live verified SQLCipher account/witness. Replace obsolete M464/M493 expectations with positive and negative matching tests, retain all CI.",
-    "M570 precise M385 source-anchor correction after M568: matching unindented existing '/// Budget assignment is OPTIONAL' end anchor in main and baseline so the scoped account review logic can be audited byte-for-byte, with all other source protected."
+    "M570 precise M385 source-anchor correction after M568: matching unindented existing '/// Budget assignment is OPTIONAL' end anchor in main and baseline so the scoped account review logic can be audited byte-for-byte, with all other source protected.",
+    "M571 #495: finance critical-source M340 gate must verify four, not three, live SQLCipher SMS writers after new owner-reviewed Yes confirmation. Require in new fourth route verified account picker/witness, optional budget, source timestamp/SAR, user consent, duplicate hash rejection and native ACK after save; negative mutation tests protect against a fake update. No bypass of source-finance critical gate."
   ],
   "allowed_changed_files": [
     ".github/workflows/finance-full-regression.yml",
@@ -199,7 +200,9 @@
     "test/waffra_m206_day_theme_tour_sms_regression_test.dart",
     "lib/waffra_sms_account_learning.dart",
     "test/m464_sms_account_learning_test.dart",
-    "test/m493_sms_account_matching_regression_test.dart"
+    "test/m493_sms_account_matching_regression_test.dart",
+    "scripts/qa/m340_financial_quality_gate.py",
+    "test/qa/test_m340_financial_quality_gate.py"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -1016,6 +1019,18 @@
       {
         "start": "void main(){",
         "end": null
+      }
+    ],
+    "scripts/qa/m340_financial_quality_gate.py": [
+      {
+        "start": "    # All three live SMS confirmation entry points must use the verified",
+        "end": "    for marker, reason in ("
+      }
+    ],
+    "test/qa/test_m340_financial_quality_gate.py": [
+      {
+        "start": "    def test_detects_finance_authority_bypass(self):",
+        "end": "    def test_detects_fx_preview_ledger_write(self):"
       }
     ]
   }

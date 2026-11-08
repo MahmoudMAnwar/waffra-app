@@ -2826,3 +2826,7 @@ M550 early CI proof (2026-11-08): First exact-HEAD M550 run audited 107 workflow
 
 [M570 exact M385 account review anchor] 2026-11-08
 - Before CI, independent masked-source comparison spotted M568's original end anchor for reviewed account linking included a nonexistent leading space; the existing Dart source uses no leading space. Correct the anchor precisely for both main baseline and new head. No business logic or tests changed; M385 unchanged and mandatory.
+
+
+[M571 M340 verified fourth SMS financial writer] 2026-11-08
+- M340 source preflight incorrectly hardcoded three bank SMS confirmation writers, failing when #495 added a genuine fourth trusted SQLCipher path. Update to four AND inspect that new owner's Yes path requires verified account, optional budget, source date/currency, SHA witness, userConfirmed true and no duplicate hashes. Add negative mutation QA for missing generation and duplicate bypass. No gate disabled; exact-head CI required.
