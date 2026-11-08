@@ -26,6 +26,35 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
+      - name: Diagnose verified upstream sqlite3mc Linux artifact delivery
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set +e
+          asset=libsqlite3mc.x64.linux.so
+          tag=sqlite3-3.7.0
+          expected=3dfe8bcd00e34c705de14acd1c1a0d283b9fd7d20fbd49b0aa0196b85a1d7741
+          url="https://github.com/simolus3/sqlite3.dart/releases/download/$tag/$asset"
+          for method in direct cachebust gh-api; do
+            target="$RUNNER_TEMP/sqlite3mc-${method}.so"
+            rm -f "$target"
+            if [[ "$method" == "gh-api" ]]; then
+              gh release download "$tag" --repo simolus3/sqlite3.dart --pattern "$asset" --dir "$RUNNER_TEMP" --clobber
+              cp "$RUNNER_TEMP/$asset" "$target" 2>/dev/null
+            elif [[ "$method" == "cachebust" ]]; then
+              curl --location --silent --show-error --max-time 35 --output "$target" "$url?sqlite3mc-ci-check=$GITHUB_RUN_ID"
+            else
+              curl --location --silent --show-error --max-time 35 --output "$target" "$url"
+            fi
+            [[ -f "$target" ]] || { echo "$method: download unavailable"; continue; }
+            echo "$method: $(wc -c < "$target") bytes SHA256 $(sha256sum "$target" | cut -d' ' -f1)"
+            if [[ "$(sha256sum "$target" | cut -d' ' -f1)" == "$expected" ]]; then
+              echo "VERIFIED_SQLITE3MC_DELIVERY=$method"
+            else
+              echo "$method: rejected unexpected artifact (expected $expected)"
+            fi
+          done
       - name: Test the M550 fail-closed stale-assertion scanner itself
         run: python3 -m unittest discover -s test/qa -p 'm550_behavior_contract_preflight_test.py' -v
       - name: Verify all registered workflows and impacted test contracts BEFORE expensive CI
