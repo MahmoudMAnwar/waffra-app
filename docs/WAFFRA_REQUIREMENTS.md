@@ -794,3 +794,10 @@ M274 must also trigger on `docs/release/WAFFRA_APPROVED_CHANGES.txt` changes bec
 - Both bank-SMS financial save routes must use the date actually parsed from the original message. Missing or ambiguous original date blocks automatic posting; never substitute the phone's DateTime.now.
 - Keep source pending, mandatory verified account linking, budget optional, confirmed SQLCipher commit / dedup unchanged.
 - Regression: test/qa/m564_sms_exact_date_guard_test.py; M174/M429/Android required.
+
+
+## M565 — #495 bank SMS Yes/No and verified commit (2026-11-08)
+**PR:** #497. **Status:** Code and regression committed, exact-head CI and Android owner acceptance pending.
+- Display original SAR amount/date and suggested active leaf category next to “هل العملية صحيحة؟” Yes/No. No opens editable SMS review preserving source. Yes enabled only with verified source amount, direction, original transaction date and category.
+- Yes performs verified account selection (create if required), optional budget, then source-authorized atomic SQLCipher ledger+SMS hash write, accounts learning after actual successful commit and Android ACK. Duplicate hash is never posted twice. Unknown facts fail closed.
+- Test: test/qa/m565_sms_yes_no_test.py. M564 exact dates enforced independently for legacy single and bulk paths. Full flutter and native Android CI pending.

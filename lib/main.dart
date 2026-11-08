@@ -5493,6 +5493,93 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     isError:true);
   }
  }
+ /// M565: a reviewed bank SMS posts only with a verified account, exact
+ /// date and source SAR amount; the original hash is committed atomically.
+ Future<void> _m565ConfirmSms({
+  required String id,required String body,required String sender,
+  required String category,required bool income,
+  required double value,required DateTime date})async{
+  if(!mounted||_financeLoadFailure!=null)return;
+  final hash=bankSmsHash(body);
+  final facts=WaffraBankSmsFactsParser.parse(body);
+  final original=WaffraSmsCurrencies.originalAmount(body);
+  if(!facts.canAutoPostAsIncomeExpense||
+    (facts.kind==WaffraBankOperationKind.income)!=income||
+    original==null||original.currency!='SAR'||
+    (original.amount-value).abs()>0.00001||
+    bankSmsDate(body)==null||bankSmsHasUnverifiedTimestamp(body)){
+   if(mounted)snack(context,'راجع المبلغ والتاريخ والعملة من شاشة التعديل.',isError:true);
+   return;
+  }
+  if(smsHashes.contains(hash)){
+   final ack=await WaffraAutoSms.acknowledgeCommitted([id]);
+   if(ack&&mounted)setState(()=>_autoSmsPending.removeWhere((r)=>r['id']==id));
+   return;
+  }
+  final valid=categories.where((c)=>c.income==income&&c.isSubcategory&&
+   c.name==category&&waffraCategoryAvailableForNewEntry(categories,c)).toList();
+  if(valid.length!=1){if(mounted)snack(context,'راجع القسم الفرعي أولًا.',isError:true);return;}
+  final parsed=BankParser.parse(body);
+  final record=MoneyEntry(id:newId(),title:parsed.title,
+   category:category,amount:value,income:income,date:date,
+   notes:body,sourceType:'sms');
+  final budgets=await reviewSmsBudgetLinks([record]);
+  if(budgets==null||!mounted)return;
+  final reviewed=record.withBudget(budgets.single);
+  final chosen=await reviewSmsAccountLinks([reviewed],smsSender:sender);
+  if(chosen==null||chosen.ids?.single==null||!mounted)return;
+  try{
+   final applied=await _saveProgress.track('m565-confirm-sms',()=>
+    _financeAuthority.commitConfirmedSms(
+     route:WaffraFinanceRoute.bulkSmsConfirmedSave,
+     records:[Map<String,Object?>.from(reviewed.toJson())],
+     hashes:[hash],userConfirmed:true,allowDuplicateHashes:false,
+     selectedAccountIds:chosen.ids,
+     expectedAccountGeneration:chosen.generation));
+   if(applied.saved!=1){
+    if(mounted)snack(context,'العملية محفوظة سابقًا؛ لم يتم تكرارها.');
+    return;
+   }
+   final decoded=await WaffraLargeJsonDecode.parse(applied.current.ledgerRaw??'[]');
+   if(decoded is! List)throw StateError('Verified SMS ledger missing');
+   final updated=decoded.map((v)=>MoneyEntry.fromJson(
+    Map<String,dynamic>.from(v as Map))).toList();
+   if(!updated.any((v)=>v.id==reviewed.id))throw StateError('Missing committed SMS');
+   if(!mounted)return;
+   setState((){
+    entries..clear()..addAll(updated);
+    smsHashes..clear()..addAll(
+     applied.current.finance.getStringList('waffra_sms_hashes_v1')??
+     const <String>[]);
+    _lastFinanceAuthorityRead=applied.current;
+    _lastLedgerSavedRaw=applied.current.ledgerRaw;
+    _lastWidgetRevision=applied.current.widgetRevision;
+   });
+   if(sender.trim().isNotEmpty){
+    unawaited(_recordConfirmedSmsAccountAssociation(
+     record:reviewed,sender:sender,accountId:chosen.ids!.single));
+   }
+   try{await _learnManualCategoryPreference(reviewed);}catch(_){}
+   if(sender.trim().isNotEmpty){
+    try{await _learnSafeSmsRule(body:body,sender:sender,
+     kind:income?'income':'expense',category:category);}catch(_){}
+   }
+   unawaited(_refreshWidget());
+   final ack=await WaffraAutoSms.acknowledgeCommitted([id]);
+   if(ack&&mounted){
+    setState(()=>_autoSmsPending.removeWhere((r)=>r['id']==id));
+    snackSuccess(context,'تم تسجيل العملية المؤكدة.');
+   }else if(mounted){
+    snack(context,'تم الحفظ لكن تأكيد إزالة الرسالة لم يكتمل. لا يوجد خصم مكرر.',isError:true);
+   }
+  }catch(e){
+   debugPrint('M565 verified SMS save rejected: ${e.runtimeType}');
+   if(mounted){
+    await _refreshFromVerifiedFinance();
+    if(mounted)snack(context,'تعذر تأكيد حفظ العملية؛ أعد المراجعة.',isError:true);
+   }
+  }
+ }
  Future<void> _reviewAutoSmsCandidates({String? targetId})async {
   if(!mounted||!ready||_smsSheetOpen||_autoSmsReviewOpen||
      _financeLoadFailure!=null)return;
@@ -5549,6 +5636,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     cloudKind+(cloudAmount is num?' • '+cloudAmount.toStringAsFixed(2):''):'';
    final understood=facts.kind==WaffraBankOperationKind.income||
     facts.kind==WaffraBankOperationKind.expense;
+   final originalAmount=WaffraSmsCurrencies.originalAmount(body);
+   final originalDate=bankSmsDate(body);
+   final parsed=BankParser.parse(body);
+   final proposedCategory=localFacts?['category'] is String?
+    localFacts!['category'] as String:parsed.category;
+   final expectedIncome=facts.kind==WaffraBankOperationKind.income;
+   final canConfirm=understood&&facts.canAutoPostAsIncomeExpense&&
+    originalAmount!=null&&originalAmount.currency=='SAR'&&
+    originalDate!=null&&!bankSmsHasUnverifiedTimestamp(body)&&
+    parsed.amount!=null&&
+    (parsed.amount!-originalAmount.amount).abs()<0.00001&&
+    parsed.income==expectedIncome&&
+    categories.where((c)=>c.income==expectedIncome&&c.isSubcategory&&
+     c.name==proposedCategory&&
+     waffraCategoryAvailableForNewEntry(categories,c)).length==1;
    final firstChoice=sensitive?'exclude':
     facts.kind==WaffraBankOperationKind.transfer?'transfer':
     understood?'review':'manual';
@@ -5590,6 +5692,31 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          children:[Padding(padding:const EdgeInsets.all(12),
           child:SelectableText(body,textAlign:TextAlign.start))],
         )),
+       if(understood&&!sensitive)...[
+        const SizedBox(height:10),
+        WaffraText(waffraIsEnglish?'Is this transaction correct?':
+         'هل العملية صحيحة؟',
+         style:const TextStyle(fontWeight:FontWeight.w800)),
+        WaffraText((expectedIncome?'دخل':'مصروف')+' • '+
+         (originalAmount==null?'—':originalAmount.amount.toStringAsFixed(2)+' '+
+          originalAmount.currency)+' • '+
+         (originalDate==null?'التاريخ يحتاج مراجعة':dayText(originalDate))+
+         ' • '+proposedCategory),
+        Row(children:[
+         Expanded(child:OutlinedButton(
+          key:const Key('m565-sms-no-edit'),
+          onPressed:()=>Navigator.pop(dialog,'no'),
+          child:WaffraText(waffraIsEnglish?'No, edit':'لا، تعديل'))),
+         const SizedBox(width:8),
+         Expanded(child:FilledButton(
+          key:const Key('m565-sms-yes-confirm'),
+          onPressed:canConfirm?()=>Navigator.pop(dialog,'yes'):null,
+          child:WaffraText(waffraIsEnglish?'Yes':'نعم'))),
+        ]),
+        if(!canConfirm)WaffraText(waffraIsEnglish?
+         'Edit missing amount, date or category to continue.':
+         'راجع البيانات الناقصة من شاشة التعديل قبل الحفظ.'),
+       ],
        const SizedBox(height:12),
        WaffraText(waffraIsEnglish?
         'Review the message. Safe rules update after confirmed actions.':
@@ -5648,6 +5775,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }else if(decision=='transfer'&&mounted){
     // Directly review verified accounts; save money before learning a rule.
     await _reviewSmsAccountTransfer(item:selected,facts:facts);
+   }else if(decision=='yes'&&mounted&&canConfirm&&
+    originalAmount!=null&&originalDate!=null){
+    await _m565ConfirmSms(id:id,body:body,sender:sender,
+     category:proposedCategory,income:expectedIncome,
+     value:originalAmount.amount,date:originalDate);
+   }else if(decision=='no'&&mounted){
+    await entrySheet(sms:true,initialSms:body,reviewedSender:sender);
+    if(smsHashes.contains(bankSmsHash(body))){
+     final ack=await WaffraAutoSms.acknowledgeCommitted([id]);
+     if(ack&&mounted){
+      setState(()=>_autoSmsPending.removeWhere((r)=>r['id']==id));
+     }
+    }
    }else if(decision=='manual'&&mounted){
     // Keep the SMS's verified source/hash instead of replacing it with
     // a blank 'manual' record. Uncertain fields remain editable.

@@ -51,7 +51,8 @@
     "M562: fix real failed M278 macOS iOS simulator job. The official sqlite3mc prefetch script uses GNU-only `sha256sum --check --status`, but macOS runner has incompatible sha256sum shim and reports a false SHA mismatch before downloading. Use platform-compatible shasum -a 256 (or sha256sum fallback) and compare full expected pinned SHA256 exactly, retaining official release download and all native integrity gates. Do not skip iOS job.",
     "M563: update M552 regression to assert real cross-platform native pinned SHA256 verification (success, wrong hash rejection, tampered-file rejection) instead of obsolete GNU-only `sha256sum --check --status` source-string assertion, which incorrectly fails M174 after the macOS repair. Keep all five immutable official asset pins, official source, mandatory Flutter/Android/iOS jobs, and separate llama SHA tests.",
     "M564 #495: refuse bank SMS verified finance posting when original message date is missing/ambiguous; preserve actual bank transaction timestamp rather than DateTime.now on both single and batch writer, add regression and tracker.",
-    "M564 exact timestamp correction scope: bounded bulkSmsSheet section only, containing original bank SMS date validation and source-authoritative writer; original data and unrelated app UI untouched."
+    "M564 exact timestamp correction scope: bounded bulkSmsSheet section only, containing original bank SMS date validation and source-authoritative writer; original data and unrelated app UI untouched.",
+    "M565 #495: real bank SMS review shows source amount/date/category and هل العملية صحيحة؟ Yes / No edit; yes only for verified local SAR, valid exact date/category/direction, explicit verified account and optional budget, one atomic SQLCipher SMS+hash commit with idempotency and ACK only after success; no opens source-preserving editable entry. Source regression remains required."
   ],
   "allowed_changed_files": [
     ".github/workflows/finance-full-regression.yml",
@@ -186,7 +187,8 @@
     "test/m549_approved_home_notifications_test.dart",
     "test/m467_account_header_test.dart",
     "test/m495_pr402_ui_performance_regression_test.dart",
-    "test/qa/m564_sms_exact_date_guard_test.py"
+    "test/qa/m564_sms_exact_date_guard_test.py",
+    "test/qa/m565_sms_yes_no_test.py"
   ],
   "bounded_sections": {
     "lib/main.dart": [
