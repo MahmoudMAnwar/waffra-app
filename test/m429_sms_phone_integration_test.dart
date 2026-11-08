@@ -36,10 +36,10 @@ void main(){
   final poster=File('lib/waffra_auto_sms_autopost.part.dart').readAsStringSync();
   expect(store,contains('fun importConsentMonth('));
   expect(store,contains('Calendar.DAY_OF_MONTH, 1'));
-  expect(store,contains('"date >= ? AND date < ?"'));
+  expect(store,contains('(date > ? OR (date = ? AND _id > ?)) AND date < ?'));
   expect(store,contains('history_cursor_at'));
-  expect(store,contains('historical = true'));
-  expect(store,contains('maxCandidates = 500'));
+  expect(store,contains('.put("reviewNotified", true)'));
+  expect(store,contains('maxCandidates = 1000'));
   expect(activity,contains('"importConsentMonthBankSms"'));
   expect(bridge,contains("channel.invokeMethod<int>('importConsentMonthBankSms')"));
   expect(poster,contains('static bool get reviewOnly => false;'));
