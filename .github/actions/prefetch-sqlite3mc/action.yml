@@ -1,0 +1,19 @@
+name: Prefetch exact pinned SQLite3MC native assets
+description: Fetch only the immutable upstream encrypted build via GitHub API; verify SHA256 before Flutter hooks.
+inputs:
+  github-token:
+    description: Read-only GitHub token for public upstream release download.
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Restore verified upstream native assets cache
+      uses: actions/cache@v4
+      with:
+        path: .dart_tool/hooks_runner/shared/sqlite3/build
+        key: waffra-sqlite3mc-3.7.0-immutable-v552-${{ runner.os }}-${{ runner.arch }}
+    - name: Validate or fetch all SQLite3MC Linux / Android official assets
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+      run: bash scripts/qa/prefetch_verified_sqlite3mc.sh
