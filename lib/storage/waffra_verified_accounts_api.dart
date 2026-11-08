@@ -139,6 +139,34 @@ class WaffraVerifiedAccountsApi implements WaffraAccountOperations {
     toAccountId:toAccountId,amountMinor:amountMinor,occurredIso:occurredIso,
     note:note,userConfirmed:true),userConfirmed:userConfirmed);
 
+ /// M597: never charge an SMS transfer and its bank fee in two writes.
+ /// The witnessed API rejects a stale picker and preserves hash/ledger parity.
+ Future<bool> transferReviewedSmsWithFee({
+  required String transferId,
+  required String fromAccountId,
+  required String toAccountId,
+  required int principalMinor,
+  required int feeMinor,
+  required bool feeIncludedInDebit,
+  required String occurredIso,
+  required String messageHash,
+  required String feeCategory,
+  required bool userConfirmed,
+ })async{
+  final displayed=_lastDisplayed;
+  if(displayed==null||!userConfirmed){
+   throw StateError('Reload accounts and confirm this SMS transfer.');
+  }
+  _lastDisplayed=null;
+  return bridge.commitReviewedSmsTransferWithFee(
+   baseline:displayed,transferId:transferId,
+   fromAccountId:fromAccountId,toAccountId:toAccountId,
+   principalMinor:principalMinor,feeMinor:feeMinor,
+   feeIncludedInDebit:feeIncludedInDebit,
+   occurredIso:occurredIso,messageHash:messageHash,
+   feeCategory:feeCategory,userConfirmed:true);
+ }
+
  /// One manual income/expense + its account association must share a
  /// single verified Home/Widget SQLCipher transaction. Budget/category
  /// approval remains the caller's responsibility; no SMS/OCR is auto-posted.
