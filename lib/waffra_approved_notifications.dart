@@ -229,9 +229,11 @@ class _WaffraApprovedNotificationsPageState
           // requires all of that sender's visible pending queue to be chosen.
           final ids=shown.where((r)=>selectedIds.contains(r.id))
            .map((r)=>r.id).toList(growable:false);
+          // Set lookups keep a 1000-message/sender Select All linear.
+          final idSet=ids.toSet();
           final fullKeys=senderGroups.keys.where((key)=>
            senderGroups[key]!.isNotEmpty&&
-           senderGroups[key]!.every((r)=>ids.contains(r.id))).toList();
+           senderGroups[key]!.every((r)=>idSet.contains(r.id))).toList();
           final senders=fullKeys.map((key)=>senderLabels[key]!)
            .toList(growable:false);
           if(ids.isEmpty)return;
