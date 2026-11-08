@@ -2868,3 +2868,7 @@ M550 early CI proof (2026-11-08): First exact-HEAD M550 run audited 107 workflow
 
 [M580 M177 encrypted storage source-contract parity] 2026-11-08
 - A real 1196-pass/1-fail encrypted storage smoke run failed because M177 still demanded exactly 3 finance-authorized SMS writers. M565 intentionally adds a fourth verified Yes-confirm path. Repair existing M177 positive regression to demand exactly 4 and independently assert verified account witness, atomic SMS+hash writer, duplicate safety and native ACK inside the new method. No financial source or test skipping, exact-head CI pending.
+
+
+[M581 sender+last-four verified account review regression] 2026-11-08
+- M103 full 2,539-test suite exposed a stale M470 literal asserting the old zero-SAR first-bank prompt. M576 now deliberately asks for a distinct account identity even when a separate account at the same institution already exists. The M470 test now enforces the stronger `needsNewIdentityChoice` and `(identitySuffix!=null&&verifiedIdentity==null)` guards, exact trusted sender+four lookup, `suggestedLastFour:proposedSuffix` and user-editable opening zero-balance wording. Existing widget tests for malicious sender labels, consent and owner confirmation unchanged. Scoped under M385 and not skipped.

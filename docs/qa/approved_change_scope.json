@@ -67,7 +67,8 @@
     "M577: real M174 unique M340 M385 boundary and M429 redundant Dart null guard fix on current combined PR head; preserve real native/SQLCipher quality and entire original Yes eligibility.",
     "M578 issue #495: SMS editable review of absent original timestamp must require explicit DATE and TIME (hours/minutes); canceling time picker cannot authorize money commit; block future time. Preserve existing already saved date; display date/time together, strengthen M566 regression, add M578 regression.",
     "M580: fix actual M340 sub-job M337 regression that searched obsolete bulk SMS date guard `found.where(bankSmsHasUnverifiedTimestamp)` after M564 added stricter unknown-date validation; retain positive proof that invalidDates bankSmsDate(raw)==null or ambiguous date is before verified finance commit, never skip. Bound only that existing test; no changes to finance code.",
-    "M580: fix real failed Waffra encrypted storage smoke M177 outdated exactly-three-SMS-authority-writer count after approved M565 fourth Yes-confirm source path. Require exactly four verified writers and inside M565 actual account witness, atomic record/hash, fail-closed duplicate and ACK. No skipped tests / production finance changes."
+    "M580: fix real failed Waffra encrypted storage smoke M177 outdated exactly-three-SMS-authority-writer count after approved M565 fourth Yes-confirm source path. Require exactly four verified writers and inside M565 actual account witness, atomic record/hash, fail-closed duplicate and ACK. No skipped tests / production finance changes.",
+    "M581: actual M103 all-flutter job M470 regression previously asserted obsolete Arabic bank account offer wording after the owner-approved distinct sender+last-four confirmation feature. Preserve original M470 negative/positive bank dialog widget tests and strict consent contract; update bounded source contract to require same-bank distinct suffix re-link, confirmed learned sender+four suggestion, last-four prefill and editable zero SAR wording. No production finance source edits."
   ],
   "allowed_changed_files": [
     ".github/workflows/finance-full-regression.yml",
@@ -217,7 +218,8 @@
     "test/qa/m576_first_distinct_bank_identity_test.py",
     "test/qa/m578_sms_time_confirmation_test.py",
     "test/m337_bank_sms_timestamp_finance_safety_test.dart",
-    "test/storage/m177_live_finance_authority_integration_test.dart"
+    "test/storage/m177_live_finance_authority_integration_test.dart",
+    "test/m470_sms_first_sender_account_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -1058,6 +1060,12 @@
       {
         "start": "  test('M177 no screen still directly uses a legacy finance write', () {",
         "end": "    // M506 stages receipt bytes separately and strips picker file paths from"
+      }
+    ],
+    "test/m470_sms_first_sender_account_test.dart": [
+      {
+        "start": " test('M470 #11 account suggestion only starts on confirmed bank SMS review',(){",
+        "end": " test('M470 #11 SMS posting remains a separate user approved atomic writer',(){"
       }
     ]
   }
