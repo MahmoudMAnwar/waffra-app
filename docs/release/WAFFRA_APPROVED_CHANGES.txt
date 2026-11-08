@@ -2830,3 +2830,7 @@ M550 early CI proof (2026-11-08): First exact-HEAD M550 run audited 107 workflow
 
 [M571 M340 verified fourth SMS financial writer] 2026-11-08
 - M340 source preflight incorrectly hardcoded three bank SMS confirmation writers, failing when #495 added a genuine fourth trusted SQLCipher path. Update to four AND inspect that new owner's Yes path requires verified account, optional budget, source date/currency, SHA witness, userConfirmed true and no duplicate hashes. Add negative mutation QA for missing generation and duplicate bypass. No gate disabled; exact-head CI required.
+
+
+[M572 M385 stable M340 guard anchor] 2026-11-08
+- Correct M340 approved source bound to a unique baseline-and-head anchor preceding modified old/new finance quality preflight. Keep only that security source gate section approved, all other changes blocked. No tests disabled.
