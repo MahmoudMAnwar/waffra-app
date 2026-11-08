@@ -44,5 +44,9 @@ void main(){
    main.indexOf(' Widget _currentTabContents(){'));
   expect(dashboard,isNot(contains('          _autoSmsReviewCard(),')));
   expect(dashboard,contains('monthlySummaryCard(),'));
+  final summary=main.substring(main.indexOf(' Widget monthlySummaryCard(){'),
+   main.indexOf(' Widget smartMoneyInsightsCard(){'));
+  expect(summary,contains("Key('m549-home-account-filter')"));
+  expect(summary,contains('_m467PickHomeAccount()'));
  });
 }
