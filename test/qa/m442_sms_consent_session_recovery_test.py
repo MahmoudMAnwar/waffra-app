@@ -97,7 +97,14 @@ class M442SmsConsentSessionRecovery(unittest.TestCase):
             self.assertIn(name, bridge)
             self.assertIn('"' + name + '"', activity)
         self.assertIn('WaffraAutoSmsStore.suspendForSignOut(this)', activity)
-        self.assertIn('WaffraAutoSmsStore.resumeForSameSignedInOwner(this)', activity)
+        self.assertIn('WaffraAutoSmsStore.resumeForSameSignedInOwner(app)', activity)
+        # M547: verified same-owner resume waits for SMS mutex/commits only
+        # on the serialized SMS executor, never the Android UI thread.
+        resume = activity.split('"resumeAutoSmsAfterSignIn" -> {', 1)[1].split(
+            '"autoSmsNotificationsEnabled"', 1)[0]
+        self.assertIn('val app = applicationContext', resume)
+        self.assertIn('smsHistoryExecutor.execute {', resume)
+        self.assertIn('runOnUiThread { result.success(resumed) }', resume)
         # The bounded native SMS pause must fail closed on timeout instead of
         # leaving logout apparently unresponsive; preserve native-first order.
         self.assertIn('WaffraAutoSms.suspendForSignOut().timeout(', home)
