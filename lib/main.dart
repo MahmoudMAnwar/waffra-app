@@ -5595,8 +5595,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      _financeLoadFailure!=null)return;
   _autoSmsReviewOpen=true;
   try{
-   // Cloud AI may suggest after separate opt-in. Financial posting is always manual.
-   final items=await WaffraAutoSms.pending();
+   // The tapped notification knows its exact native SMS ID: retrieve only
+   // that item, not a 1000-row encrypted queue on every tap. Native still
+   // verifies owner/session and never posts or acknowledges during lookup.
+   final direct=targetId==null?null:await WaffraAutoSms.pendingById(targetId);
+   final items=targetId==null?await WaffraAutoSms.pending():
+    direct==null?<Map<String,Object?>>[]:<Map<String,Object?>>[direct];
    if(!mounted||items.isEmpty)return;
    Map<String,Object?>? selected;
    for(final item in items){
