@@ -267,7 +267,7 @@
       "id": "M595-COMPACT-SMS-TYPE-CORRECTION-NO-SILENT-FINANCE",
       "issue": "Issue #502 / WAFFRA-NEW-025; owner explicitly requested completing the seven PR #505 feedback items",
       "previous_behavior": "Bank SMS dialog had no real first-class Income/Expense/Transfer selectors, only a previously inferred type and duplicated old review/no/edit controls.",
-      "approved_behavior": "Three selectable review type chips show message-local suggestion and allow explicit corrections. Each type change invalidates prior bank-account approval; Continue routes corrected income/expense to original owner-scoped SMS editor with source body and manual account selection. Corrected transfer uses a separate verified own-account transfer form and retains the original SMS for review, never guesses both endpoints or silently ACKs. Exclusion is an independent review action; OTP review remains fail-closed. Existing verified same-type SMS Yes path still requires consent, bank date, SAR, category, exact account and SQLCipher generation. Existing positive-fee transfers remain blocked until atomic separate fee post implemented. The owner's corrected kind takes precedence over a stale uncommitted SMS edit draft, without changing unrelated manual/receipt defaults. Choosing a transfer when the SMS did not independently verify two owner accounts now requires one more explicit dialog before opening a separate manual transfer; the source SMS stays pending and no finance ACK is made.",
+      "approved_behavior": "Three selectable review type chips show message-local suggestion and allow explicit corrections. Each type change invalidates prior bank-account approval; Continue routes corrected income/expense to original owner-scoped SMS editor with source body and manual account selection. Corrected transfer uses a separate verified own-account transfer form and retains the original SMS for review, never guesses both endpoints or silently ACKs. Exclusion is an independent review action; OTP review remains fail-closed. Existing verified same-type SMS Yes path still requires consent, bank date, SAR, category, exact account and SQLCipher generation. Positive-fee transfers use the new exact-SQLCipher M597 atomic transfer, fee and hash writer subject to exact-head CI and physical Android acceptance; incomplete/ambiguous cases still fail closed. The owner's corrected kind takes precedence over a stale uncommitted SMS edit draft, without changing unrelated manual/receipt defaults. Choosing a transfer when the SMS did not independently verify two owner accounts now requires one more explicit dialog before opening a separate manual transfer; the source SMS stays pending and no finance ACK is made.",
       "source_paths": [
         "lib/main.dart"
       ],
@@ -288,6 +288,36 @@
         "Final posting requires existing SQLCipher writer, chosen account, source-proven date and explicit user save, with original duplicate safeguards.",
         "No legacy tests removed; full exact-head CI and Android visual/latency evidence required before release.",
         "A prior uncommitted draft cannot silently override the user's newly selected Income or Expense correction."
+      ]
+    },
+    {
+      "id": "M597-ATOMIC-SMS-TRANSFER-WITH-SEPARATE-BANK-FEE",
+      "issue": "Issue #503 and #504 – WAFFRA-NEW-026/027",
+      "previous_behavior": "Reviewed SMS own-account transfer with separate positive fee could only display amounts and reject all postings because the finance transfer and fee/hash were not saved together.",
+      "approved_behavior": "Require explicitly confirmed source and destination owned accounts and original bank timestamp. Before save, explicitly classify whether SAR fee is within or additional to principal debit. Under one verified SQLCipher app/widget lock, transaction, source generation and canonical SQL parity check, commit the own-account transfer + separately categorized fee expense on source account + immutable native SMS fingerprint; verify both typed SQL and canonical ledger before ACK. Deduplicate each source exactly and block all ambiguous, stale, unsafe or incomplete approvals. Zero fee remains an exact-owner transfer with native durable ACK; do not infer account/date/currency or auto-post.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/storage/waffra_unified_finance_writer.dart",
+        "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
+        "lib/storage/waffra_verified_accounts_api.dart"
+      ],
+      "test_paths": [
+        "test/m580_sms_security_navigation_performance_test.dart",
+        "test/m514_sms_review_regressions_test.dart",
+        "test/m470_sms_transfer_fee_firsttap_category_test.dart",
+        "test/qa/m417_sms_permission_acceptance_test.py"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "Financial writer runs under exact source lock and single SQLCipher transaction; no partial fee/transfer/hash commit.",
+        "Transfer principal excluded from budget income/expense; separately booked source fee is one expense.",
+        "Unknown last-four, original date, fee currency or account owner fails closed rather than constructing invented bank entry.",
+        "Existing hashes, SMS dedupe, finance/SQLCipher migration and live Home/widget original source remain unchanged until verified commit.",
+        "All exact-head CI and both physical Android device upgrade/new-install tests required before release or merge."
       ]
     }
   ]
