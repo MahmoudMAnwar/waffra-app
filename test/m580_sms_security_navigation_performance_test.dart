@@ -126,6 +126,30 @@ void main(){
   expect(writer,contains('expectedAccountGeneration:chosen.generation'));
  });
 
+ test('M596 foreign or malformed bank fees fail closed before money',(){
+  for(final body in <String>[
+   'تحويل بين حساباتي 19 ريال رسوم 0.58 USD',
+   'تحويل بين حساباتي 19 ريال رسوم 0.581 ريال',
+   'تحويل بين حساباتي 19 ريال رسوم -0.58 ريال',
+   'transfer sent SAR 19 fees 0.58 AED',
+   'تحويل بين حساباتي 19 ريال رسوم 0.58%',
+  ]){
+   final facts=WaffraBankSmsFactsParser.parse(body);
+   expect(facts.pending,isTrue,reason:body);
+   expect(facts.fee,isNull,reason:body);
+   expect(facts.canAutoPostAsIncomeExpense,isFalse,reason:body);
+  }
+ });
+
+ test('M596 valid SAR fee stays explicit but is not auto-posted',(){
+  final facts=WaffraBankSmsFactsParser.parse(
+   'تحويل بين حسابات 19 ريال رسوم 0.58 ريال');
+  expect(facts.kind,WaffraBankOperationKind.transfer);
+  expect(facts.fee,0.58);
+  expect(facts.pending,isFalse);
+  expect(facts.canAutoPostAsIncomeExpense,isFalse);
+ });
+
  test('M594 separate fee totals are exact halalas, not guessed money',(){
   expect(WaffraBankSmsFactsParser.extraDebitMinor(
    principalMinor:1900,feeSar:0.58),1958);
