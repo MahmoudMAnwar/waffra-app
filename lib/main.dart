@@ -6553,9 +6553,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     if(parsed is! List)throw const FormatException('Invalid finance list.');
     return parsed.map((e)=>make(Map<String,dynamic>.from(e as Map))).toList();
    }
-   final nextEntries=ledger==null?<MoneyEntry>[]:
-    await _m593BuildVerifiedEntries(
-     (await WaffraLargeJsonDecode.parse(ledger)) as List);
+   // This verified refresh source always exposes its normalized ledger.
+   // Preserve fail-closed parsing and asynchronous bounded entry mapping.
+   final nextEntries=await _m593BuildVerifiedEntries(
+    (await WaffraLargeJsonDecode.parse(ledger)) as List);
    final nextCategories=catalog==null
     ?defaultCategories()
     :await readList<BudgetCategory>(catalog,BudgetCategory.fromJson);
