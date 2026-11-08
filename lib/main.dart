@@ -2291,6 +2291,11 @@ class _LoginScreenState extends State<LoginScreen> {
   if(waffraMobileFieldError(signInPhone.text)!=null||
      signInPassword.text.isEmpty)return;
   setState(()=>signingIn=true);
+  // Profile-only timings (never passwords, account IDs or financial data).
+  // These let a physical Android trace separate secure preflight, password
+  // derivation and verified profile activation from Flutter frame jank.
+  final signInTiming=kProfileMode?(Stopwatch()..start()):null;
+  int? preflightMs,verifiedMs;
   try{
    // Render the busy label/spinner before any secure-store/KDF work starts.
    // PBKDF2 itself runs off the Flutter frame isolate (M547 PERF-04).
@@ -2306,8 +2311,9 @@ class _LoginScreenState extends State<LoginScreen> {
    }
    final prefs=await SharedPreferences.getInstance();
    final storedPhone=WaffraSaudiMobile.inputFromStored(account.phone);
-   final hasSecureVerifier=
-    await WaffraLocalPhoneCredentials.hasRegisteredCredentials();
+   // One OS-keystore verifier read, not two identical secure-store reads.
+   // Probe reports missing/malformed/foreign distinctly, preserving the
+   // legacy fallback and fail-closed sign-in recovery semantics.
    var verifierStatus=await WaffraLocalPhoneCredentials.probeForPhone(
     enteredPhone);
    // Missing or malformed OS credentials are not equivalent to a wrong
@@ -2346,6 +2352,10 @@ class _LoginScreenState extends State<LoginScreen> {
      'سجل الدخول المشفّر مفقود أو غير صالح على الجهاز. لم تُحذف بياناتك. لا تمسح بيانات التطبيق.');
     return;
    }
+   // Derive existence from the same secure-store probe (including any
+   // verified biometric recovery). Never treat corrupt/foreign as missing.
+   final hasSecureVerifier=verifierStatus!=WaffraLocalCredentialProbe.missing;
+   preflightMs=signInTiming?.elapsedMilliseconds;
    // An older editable profile may contain a different display phone.
    // Only the OS-protected verifier may authenticate the entered number.
    // Without a secure verifier, legacy migration must keep its original phone.
@@ -2358,6 +2368,7 @@ class _LoginScreenState extends State<LoginScreen> {
     phone:enteredPhone,password:signInPassword.text,
     oldSalt:prefs.getString('waffra_local_password_salt'),
     oldHash:prefs.getString('waffra_local_password_hash'));
+   verifiedMs=signInTiming?.elapsedMilliseconds;
    if(!match){
     if(mounted)setState(()=>signInAuthError=waffraIsEnglish?
      'Incorrect mobile number or password':'رقم الجوال أو كلمة المرور غير صحيحة');
@@ -2375,6 +2386,10 @@ class _LoginScreenState extends State<LoginScreen> {
     'Local secure storage is unavailable. Unlock your device and retry.':
     'تعذر فتح التخزين الآمن على الجهاز. افتح قفل هاتفك وحاول مجددًا.');
   }finally{
+   if(kProfileMode&&signInTiming!=null){
+    debugPrint('WAFFRA_AUTH_PERF sign_in_ms=${signInTiming.elapsedMilliseconds} '
+     'preflight_ms=${preflightMs??-1} verifier_ms=${verifiedMs??-1}');
+   }
    if(mounted)setState(()=>signingIn=false);
   }
  }
@@ -2575,17 +2590,23 @@ class _LoginScreenState extends State<LoginScreen> {
          const SizedBox(height:13),
          FilledButton(onPressed:WaffraHaptics.tap(signingIn?null:_signIn),
           key:const Key('m585-login-submit-stable'),
+          // Disabled is the IN-PROGRESS state. Material3's default disabled
+          // colors previously made the button an empty dark rectangle.
           style:FilledButton.styleFrom(backgroundColor:Colors.white,
-           foregroundColor:forest,minimumSize:const Size(218,48)),
+           disabledBackgroundColor:Colors.white,
+           foregroundColor:forest,disabledForegroundColor:forest,
+           minimumSize:const Size(218,48)),
           child:Row(mainAxisSize:MainAxisSize.min,children:[
            if(signingIn)...[
-            const SizedBox(width:18,height:18,child:CircularProgressIndicator(
-             strokeWidth:2.1)),
+            const RepaintBoundary(child:SizedBox(width:18,height:18,
+             child:CircularProgressIndicator(strokeWidth:2.1,
+              valueColor:AlwaysStoppedAnimation<Color>(forest)))),
             const SizedBox(width:10),
            ],
            WaffraText(signingIn?
             (waffraIsEnglish?'Signing in...':'جارٍ تسجيل الدخول'):
-            (waffraIsEnglish?'Sign in':'تسجيل الدخول')),
+            (waffraIsEnglish?'Sign in':'تسجيل الدخول'),
+            style:const TextStyle(color:forest,fontWeight:FontWeight.bold)),
           ])),
          TextButton(
           key:const Key('m479-login-back-to-choice'),
