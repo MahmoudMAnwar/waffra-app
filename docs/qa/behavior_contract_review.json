@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "pr": 490,
+  "pr": 497,
   "issue": "https://github.com/MahmoudMAnwar/waffra-app/issues/492",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main",
@@ -109,6 +109,34 @@
         "Never skip or rewrite finance and security tests to force a green build.",
         "Kotlin and Flutter compilation must still run on the exact PR commit.",
         "A source-level audit is not proof of device performance or correct business semantics."
+      ]
+    },
+    {
+      "id": "M549-APPROVED-HOME-NOTIFICATIONS",
+      "issue": "Issues #493 and #494 (approved compact Home and native notification review)",
+      "previous_behavior": "Home displayed an oversized balance with account dropdown inside the card and separate redundant income/expense metric blocks plus a standalone SMS review card. Notification access did not directly expose the verified pending review queue.",
+      "approved_behavior": "Match the approved compact Arabic RTL Home: separate independently verified month account filter outside balance; preserve stationary floating Add button; three small finance actions go through original guarded income/expense/transfer flows; show a bell with only actual pending SMS (saturating at +999), and open a compact notification center whose review CTA leads to native owner-bound SMS review rather than auto-posting.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_approved_notifications.dart"
+      ],
+      "test_paths": [
+        "test/m549_approved_home_notifications_test.dart",
+        "test/m467_account_header_test.dart",
+        "test/m470_balance_header_account_picker_test.dart",
+        "test/m495_pr402_ui_performance_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m277-ux-accessibility.yml",
+        ".github/workflows/m274-production-ui-golden.yml"
+      ],
+      "safety_invariants": [
+        "Use actual Android/native pending messages only; never fabricate system alerts or silently post account money.",
+        "Keep existing floating + position/size/animation, preserve sender exclusion/OTP masking and SQLCipher account/ledger witness.",
+        "The separate #495 first-time last-four/transaction-date/one-tap finance feature remains incomplete; do not claim that this UI change implements it.",
+        "Preserve older active owner account balances and confirmation-only transfer/entry gate."
       ]
     }
   ]
