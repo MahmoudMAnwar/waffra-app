@@ -6894,7 +6894,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    verified.finance.requireIntegrity();
    final raw=verified.ledgerRaw;
    if(raw==null)throw StateError('Verified widget ledger is missing.');
-   final net=WaffraAuthoritativeWidgetBalance.netHalalas(raw);
+   // After authority validation, sum large ledgers on a worker isolate.
+   final net=raw.length>=WaffraLargeJsonDecode.isolateThreshold
+    ?await compute(WaffraAuthoritativeWidgetBalance.netHalalas,raw)
+    :WaffraAuthoritativeWidgetBalance.netHalalas(raw);
    await refreshWaffraHomeWidget(
     balance:hideWaffraAmounts.value?'***':WaffraDisplayCurrency.amount(net/100),
     negative:net<0,
