@@ -141,6 +141,14 @@ void main(){
   }
  });
 
+ test('M596 coffee is an expense item, not a bank fee',(){
+  const body='Coffee purchase debited 15 SAR from account **1234';
+  final facts=WaffraBankSmsFactsParser.parse(body);
+  expect(facts.kind,WaffraBankOperationKind.expense);
+  expect(facts.pending,isFalse);
+  expect(facts.fee,isNull);
+ });
+
  test('M596 valid SAR fee stays explicit but is not auto-posted',(){
   final facts=WaffraBankSmsFactsParser.parse(
    'تحويل بين حسابات 19 ريال رسوم 0.58 ريال');
