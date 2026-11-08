@@ -5211,6 +5211,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   );
   // The sender inbox route remains beneath the message review.
  }
+ // ignore: unused_element
  Widget _autoSmsReviewCard(){
   final count=_autoSmsPending.length;
   final analyzed=_autoSmsPending.where((row)=>row['cloud'] is Map).length;
@@ -12616,7 +12617,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
  Widget dashboard(){
   final scopedEntries=_m467ScopedEntries().toList();
-  final inc=sum(scopedEntries,true),exp=sum(scopedEntries,false);
   final unverifiedFxEntries=entries.where(waffraNeedsLegacyFxReview).toList();
   // Show the month comparison only when there are genuine prior-month
   // transactions and a positive comparison base. Never show a fake +12%.

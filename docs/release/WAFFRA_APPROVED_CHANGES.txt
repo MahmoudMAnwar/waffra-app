@@ -2781,3 +2781,8 @@ M550 early CI proof (2026-11-08): First exact-HEAD M550 run audited 107 workflow
 [M560 exact-main PR M385 positive scope repair] 2026-11-08
 - Full M174 source guard rejected a zero-width baseline section around newly inserted M549 three-card Home helper. The start anchor is now the single unique existing adjacent receipt action key rather than its final unchanged closing braces; end stays at `Widget dashboard(){`. Old + new are both uniquely bounded and nonempty. No app runtime, financial writer, tests, security guard or original data changed.
 - M550's independent reviewed notification source-to-test contract is retained; exact-head M385/M550/Flutter/Android still mandatory.
+
+
+[M561 exact-head M429 Flutter analyzer correction] 2026-11-08
+- M429 combined-flutter analyzer reported 3 warnings from obsolete Home-only references after M549 approved layout: private old SMS review widget no longer called, unused `inc` and `exp` dashboard totals. Keep the old private helper without resurrecting its oversized Home card using a single-line `unused_element` suppression; remove only the two unused local computed metrics (no changes to real account-filter calculation, user funds or manual/transfer writer).
+- Adjust two adjacent M385 exact-source anchors to include the unique existing original sender-inbox closing comment so the one-line ignore is properly scope-guarded. Independently compare masked main.dart against the main base: byte-for-byte identical outside explicitly approved sections. No whole-file lint suppression, no tests disabled. Re-run full exact-head 76 CI workflows.
