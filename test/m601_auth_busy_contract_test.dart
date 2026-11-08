@@ -96,4 +96,25 @@ void main() {
     expect(credentials, contains('static const _iterations=600000;'));
     expect(credentials, contains('Isolate.run<List<int>>('));
   });
+
+  test('M601 sign-out Yes paints progress, blocks extra taps, and always clears it',
+      () {
+    final source = File('lib/main.dart').readAsStringSync();
+    final signout = source.split(' Future<void> logout()async {')[1]
+        .split(' Future<void> setPin(')[0];
+    expect(signout, contains('if(_logoutInProgress)return;'));
+    expect(signout, contains('OverlayEntry(builder:(context)=>Positioned.fill('));
+    expect(signout, contains('ModalBarrier(dismissible:false'));
+    expect(signout, contains("'جارٍ تسجيل الخروج'"));
+    expect(signout, contains('await WidgetsBinding.instance.endOfFrame;'));
+    expect(signout, contains('await WaffraAutoSms.suspendForSignOut()'));
+    expect(signout, contains('await _accountWriteAuthority.signOut();'));
+    expect(signout, contains('progress?.remove();'));
+    expect(signout, contains('progress?.dispose();'));
+    expect(signout.indexOf('await _accountWriteAuthority.signOut();'),
+        lessThan(signout.indexOf('progress?.remove();')));
+    expect(signout, contains('if(kProfileMode&&logoutTiming!=null)'));
+    expect(signout, isNot(contains('showDialog(')));
+    expect(signout, isNot(contains('WaffraBiometrics.unlockMandatory()')));
+  });
 }
