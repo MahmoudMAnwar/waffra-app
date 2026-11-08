@@ -2290,6 +2290,10 @@ class _LoginScreenState extends State<LoginScreen> {
      signInPassword.text.isEmpty)return;
   setState(()=>signingIn=true);
   try{
+   // Render the busy label/spinner before any secure-store/KDF work starts.
+   // PBKDF2 itself runs off the Flutter frame isolate (M547 PERF-04).
+   await WidgetsBinding.instance.endOfFrame;
+   if(!mounted)return;
    final account=registered;
    final enteredPhone=signInPhone.text.trim();
    if(account==null){
@@ -2569,9 +2573,16 @@ class _LoginScreenState extends State<LoginScreen> {
          const SizedBox(height:13),
          FilledButton(onPressed:WaffraHaptics.tap(signingIn?null:_signIn),
           style:FilledButton.styleFrom(backgroundColor:Colors.white,foregroundColor:forest),
-          child:WaffraText(signingIn?
-           (waffraIsEnglish?'Signing in...':'جارٍ تسجيل الدخول'):
-           (waffraIsEnglish?'Sign in':'تسجيل الدخول'))),
+          child:Row(mainAxisSize:MainAxisSize.min,children:[
+           if(signingIn)...[
+            const SizedBox(width:18,height:18,child:CircularProgressIndicator(
+             strokeWidth:2.1)),
+            const SizedBox(width:10),
+           ],
+           WaffraText(signingIn?
+            (waffraIsEnglish?'Signing in...':'جارٍ تسجيل الدخول'):
+            (waffraIsEnglish?'Sign in':'تسجيل الدخول')),
+          ])),
          TextButton(
           key:const Key('m479-login-back-to-choice'),
           onPressed:WaffraHaptics.tap(()=>setState((){
