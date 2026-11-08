@@ -50,6 +50,68 @@ void main(){
   expect(bulkOpens,1);
  });
 
+ testWidgets('M592 Select All of one sender confirms exactly one sender block',
+ (tester)async{
+  final notices=<WaffraReviewNotice>[
+   const WaffraReviewNotice(id:'a1',sender:'SyntheticBank',
+    preview:'Purchase one',kind:'expense'),
+   const WaffraReviewNotice(id:'a2',sender:'SyntheticBank',
+    preview:'Purchase two',kind:'expense'),
+   const WaffraReviewNotice(id:'b1',sender:'OtherBank',
+    preview:'Income one',kind:'income')];
+  var savedIds=<String>[],blockedSenders=<String>[];
+  await tester.pumpWidget(MaterialApp(home:WaffraApprovedNotificationsPage(
+   english:false,readPending:()=>notices,
+   onReviewAll:()async{throw StateError('old duplicate selector route');},
+   onReviewOne:(id)async{},onRescan:()async{},canRescan:()=>true,
+   onBulkExclude:(ids,senders)async{
+    savedIds=ids;blockedSenders=senders;
+    notices.removeWhere((v)=>ids.contains(v.id));
+    return true;
+   })));
+  await tester.tap(find.byKey(const Key('m589-open-bulk-sms-review')));
+  await tester.pump();
+  await tester.tap(find.byKey(const Key(
+   'm580-notification-filter-sender:syntheticbank')));
+  await tester.pump();
+  await tester.tap(find.byKey(const Key('m592-select-all-visible')));
+  await tester.pump();
+  expect(find.text('المحدد: 2'),findsOneWidget);
+  await tester.tap(find.byKey(const Key('m592-confirm-bulk-exclude')));
+  await tester.pumpAndSettle();
+  expect(find.textContaining('استبعاد 1 مرسل كامل'),findsOneWidget);
+  await tester.tap(find.text('تأكيد'));
+  await tester.pumpAndSettle();
+  expect(savedIds,['a1','a2']);
+  expect(blockedSenders,['SyntheticBank']);
+  expect(notices.single.id,'b1');
+ });
+
+ testWidgets('M592 changing filters clears hidden-message selection',
+ (tester)async{
+  final notices=[
+   const WaffraReviewNotice(id:'a1',sender:'SyntheticBank',preview:'One'),
+   const WaffraReviewNotice(id:'b1',sender:'OtherBank',preview:'Two')];
+  await tester.pumpWidget(MaterialApp(home:WaffraApprovedNotificationsPage(
+   english:false,readPending:()=>notices,
+   onReviewAll:()async{},onReviewOne:(id)async{},
+   onRescan:()async{},canRescan:()=>true,
+   onBulkExclude:(ids,senders)async{return true;})));
+  await tester.tap(find.byKey(const Key('m589-open-bulk-sms-review')));
+  await tester.pump();
+  await tester.tap(find.byKey(const Key(
+   'm580-notification-filter-sender:syntheticbank')));
+  await tester.pump();
+  await tester.tap(find.byKey(const Key('m592-select-all-visible')));
+  await tester.pump();
+  expect(find.text('المحدد: 1'),findsOneWidget);
+  await tester.tap(find.byKey(const Key(
+   'm580-notification-filter-sender:otherbank')));
+  await tester.pump();
+  expect(find.text('المحدد: 0'),findsOneWidget);
+  expect(find.byKey(const Key('m592-confirm-bulk-exclude')),findsNothing);
+ });
+
  testWidgets('M581 empty sender list shows one helpful state',(tester)async{
   await tester.pumpWidget(MaterialApp(home:WaffraApprovedNotificationsPage(
    english:false,readPending:()=>[],
