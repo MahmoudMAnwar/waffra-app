@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
-  "change_id": "M548-REVIEW-SHEET-SIGNUP-FRAME-JANK-20261108",
-  "human_scope_review": "User's Android screenshots on 2026-11-08 show severe lag on opening 1000 pending SMS review, signup completion (~3s), and global navigation even after main merged #488. This is a narrow performance safety candidate; previous logout/login, SQLCipher, biometric and SMS financial authority must remain untouched. Requires full exact-head CI, Android profile/release frame evidence and owner signoff before merge. Owner explicitly requests issue #491's all-sender review and sender-only local storage retention with repeated-scan deduplication. Existing OTP masking and SQLCipher financial authority remain unchanged. Device and exact-SHA CI required. M550 Issue #492 additionally approves an all-job inventory, static current/approved behavior contract preflight, source-tests readback and M417 Kotlin syntax fix. Full Flutter, Android compilation, finance integrity and security tests remain required independently; human review is not automatically certified. M552 2026-11-08: User demanded a permanent fix for repeated failed CI. CI proved authentic official GitHub release asset downloads succeed with gh API and SHA verification while GitHub release CDN sometimes returns poisoned 92-byte responses. M174 proved the new same-SHA prefetch+native SQLCipher tests pass. Scope explicitly covers additive prefetch steps inside workflow jobs only, all 91 current/historical GitHub workflow files, without modifying financial source, OTP, biometrics, assertions or original job steps.",
+  "change_id": "M548-M555-VERIFIED-CI-PLUS-M549-APPROVED-COMPACT-HOME-NOTIFICATIONS",
+  "human_scope_review": "User's Android screenshots on 2026-11-08 show severe lag on opening 1000 pending SMS review, signup completion (~3s), and global navigation even after main merged #488. This is a narrow performance safety candidate; previous logout/login, SQLCipher, biometric and SMS financial authority must remain untouched. Requires full exact-head CI, Android profile/release frame evidence and owner signoff before merge. Owner explicitly requests issue #491's all-sender review and sender-only local storage retention with repeated-scan deduplication. Existing OTP masking and SQLCipher financial authority remain unchanged. Device and exact-SHA CI required. M550 Issue #492 additionally approves an all-job inventory, static current/approved behavior contract preflight, source-tests readback and M417 Kotlin syntax fix. Full Flutter, Android compilation, finance integrity and security tests remain required independently; human review is not automatically certified. M552 2026-11-08: User demanded a permanent fix for repeated failed CI. CI proved authentic official GitHub release asset downloads succeed with gh API and SHA verification while GitHub release CDN sometimes returns poisoned 92-byte responses. M174 proved the new same-SHA prefetch+native SQLCipher tests pass. Scope explicitly covers additive prefetch steps inside workflow jobs only, all 91 current/historical GitHub workflow files, without modifying financial source, OTP, biometrics, assertions or original job steps.\n2026-11-08 user explicitly approved exact composite screenshot for Home, Notifications and bank-SMS review, including compact emerald UI and unchanged bottom-left +. Follow-up branch stacked on #490; all #490 CI must pass before merge. This scope only covers compact Home, notification bell, independently filtered account summary and live SMS queue UI; financial SMS one-tap save requires separate verified implementation, do not claim it is done.\nUser-provided 2026-11-08 final approved composite screenshot is the visual source of truth. This M549 PR is stacked on exact current #490 SHA 69faaa7 and keeps all M548-M555 security/CI deltas, finance code, no shortcut merge.",
   "user_requested_changes": [
     "Open the already owner-verified in-memory bank SMS review snapshot immediately with 1000 pending messages; cold/error snapshots still refresh, with no auto-post or data loss.",
     "Make bank sender grouping linear-time and retain case-insensitive original sender naming, chronological order, exclusions, selection, Back and all financial review behavior.",
@@ -32,7 +32,14 @@
     "M552 full repository scan caught the single missed Flutter workflow m292-fx-consent-review.yml: wire the same immutable official native prefetch before Flutter setup without removing FX consent or encrypted finance assertions.",
     "M553 source-log regression: although checksum-verified llama archives were prefetched, Flutter pub get later installed llamadart 0.8.24 and removed the package-root hook cache, causing a new 504. In the shared CI action, resolve Dart/Flutter packages FIRST, restore official SHA256-verified binaries SECOND, then let the existing workflow run all original tests; no runtime, permissions or integrity checks changed.",
     "M555: all repeated Android Kotlin compilation 504 errors share a single upstream jar kotlin-compiler-embeddable 2.2.21 redirected via GitHub. Pre-fetch ORIGINAL JetBrains/Kotlin v2.2.21 jar via GitHub Releases API, verify official SHA256 9588fa..., fetch original Maven POM with Maven SHA1 validation, and configure exact-module Gradle init repository under CI home before Android build. No Kotlin/Gradle version downgrade, security bypass, or production code changes.",
-    "M555 exact-head regression fix: native Gradle plugin build rejects any Project.repositories additions under FAIL_ON_PROJECT_REPOS; route only the original SHA256-pinned Kotlin compiler 2.2.21 artifact via beforeSettings dependencyResolutionManagement.repositories.exclusiveContent, never weaken Gradle's strict repository policy, preserve plugin and original Android tests."
+    "M555 exact-head regression fix: native Gradle plugin build rejects any Project.repositories additions under FAIL_ON_PROJECT_REPOS; route only the original SHA256-pinned Kotlin compiler 2.2.21 artifact via beforeSettings dependencyResolutionManagement.repositories.exclusiveContent, never weaken Gradle's strict repository policy, preserve plugin and original Android tests.",
+    "Implement the approved screenshot's compact Arabic RTL home layout: lower visual density and keep the existing 58x58 stationary floating Add button in its exact bottom-left position.",
+    "Move the account selector out of the balance card into a small independent monthly summary account filter; keep verified per-account financial calculations.",
+    "Add a bell beside the user avatar with 1..999 live review notifications and +999 saturation above 999; no fabricated notifications.",
+    "Move home SMS operations-review card into a dedicated compact notifications center, preserving access to real native pending bank messages, per-message review and explicit user-initiated rescan.",
+    "Rename the old SMS sorting sheet label from رسائل للفرز to مراجعة الرسائل البنكية while preserving review, exclusion/restore, owner privacy and safe financial acknowledgement.",
+    "Update only the legacy account-in-balance test assertion; retain the existing generic-balance regression, and add a dedicated notification review UI test.",
+    "First-time masked-four account matching, original SMS transaction timestamp and one-tap yes/no bank SMS finance capture remain tracked in Issue #495 and are not yet implemented in this UI-only PR."
   ],
   "allowed_changed_files": [
     ".github/workflows/finance-full-regression.yml",
@@ -161,7 +168,10 @@
     ".github/actions/prefetch-gradle/action.yml",
     "test/qa/m554_gradle_release_cache_test.py",
     ".github/workflows/m292-fx-consent-review.yml",
-    "scripts/qa/prefetch_verified_kotlin.sh"
+    "scripts/qa/prefetch_verified_kotlin.sh",
+    "lib/waffra_approved_notifications.dart",
+    "test/m470_balance_header_account_picker_test.dart",
+    "test/m549_approved_home_notifications_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -192,6 +202,30 @@
       {
         "start": " Widget _autoSmsReviewCard(){",
         "end": " /// Explicit, idempotent account-to-account transfer from reviewed bank SMS."
+      },
+      {
+        "start": "import 'waffra_home_accounts_sheet.dart';",
+        "end": "import 'storage/waffra_account_context_read.dart';"
+      },
+      {
+        "start": "class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {",
+        "end": "/// A cancelled budget warning keeps the caller's editor/review stack intact."
+      },
+      {
+        "start": " Future<void> _openExcludedSenders()async{",
+        "end": " Future<void> _openAutoSmsInbox()async{"
+      },
+      {
+        "start": " Widget monthlySummaryCard(){",
+        "end": " Widget smartMoneyInsightsCard(){"
+      },
+      {
+        "start": " Widget dashboard(){",
+        "end": " List<MoneyEntry> get analysisEntries=>entries.where(("
+      },
+      {
+        "start": " @override Widget build(BuildContext context)=>PopScope(",
+        "end": "  // Instant content swap avoids building/animating the previous heavy tab"
       }
     ],
     "lib/waffra_local_phone_credentials.dart": [
@@ -874,6 +908,12 @@
       {
         "start": "jobs:\n",
         "end": null
+      }
+    ],
+    "test/m470_balance_header_account_picker_test.dart": [
+      {
+        "start": "void main(){",
+        "end": " testWidgets('M470 generic balance card has no account-switching action',(tester)async{"
       }
     ]
   }
