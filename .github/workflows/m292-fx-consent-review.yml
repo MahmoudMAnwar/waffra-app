@@ -41,14 +41,14 @@ jobs:
         env:
           EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
-      - name: Prefetch SHA256-verified official SQLite3MC native release assets
-        uses: ./.github/actions/prefetch-sqlite3mc
-        with:
-          github-token: ${{ github.token }}
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
+      - name: Prefetch SHA256-verified official SQLite3MC native release assets
+        uses: ./.github/actions/prefetch-sqlite3mc
+        with:
+          github-token: ${{ github.token }}
       - name: Resolve dependencies
         run: flutter pub get
       - name: Analyze reviewed FX preview and tests
