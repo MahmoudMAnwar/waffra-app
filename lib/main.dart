@@ -4814,8 +4814,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     // One message's own verified local suggestion is authoritative for its
     // badge. Never infer Expense from a sibling sender or an OTP notice.
     final localKind=localInfo?['kind'];
-    final noticeKind=sensitive?'excluded':
-     localKind=='excluded'?'excluded':
+    final noticeKind=sensitive?'otpReview':
+     localKind=='excluded'?'excludeSuggestion':
      localKind=='transfer'?'transfer':
      localKind=='income'?'income':
      localKind=='expense'?'expense':
