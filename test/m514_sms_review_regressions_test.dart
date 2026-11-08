@@ -70,7 +70,12 @@ void main(){
   expect(form,contains('onCreateSmsAccount'));
   expect(form,contains('isDestination'));
   expect(home,contains('suggestedLastFour:proposedSuffix'));
-  expect(home,contains('final proposedSuffix=!isDestination'));
+  // Destination digits must come only from the destination SMS field;
+  // source digits require independent sender-bank agreement.
+  expect(home,contains('final proposedSuffix=isDestination?'));
+  expect(home,contains('WaffraSmsAccountLearning.suffix4(facts.destinationSuffix):'));
+  expect(home,contains('(bank==null||bank==detectedBank)?'));
+  expect(home,contains('WaffraSmsAccountLearning.suffix4(facts.sourceSuffix):null;'));
   expect(home,contains("appBar:AppBar(title:const WaffraText('مراجعة حوالة بنكية'))"));
   expect(home,contains('final verifiedMinor=sourceAmount==null?0:'));
   expect(home,contains("'attach-verified-existing-receipt'"));

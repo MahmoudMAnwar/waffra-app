@@ -5605,7 +5605,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           principalMinor:draft.amountMinor,feeSar:fee);
          final feeMinor=fullDebit==null?null:
           fullDebit-draft.amountMinor;
-         if(feeMinor==null||feeMinor<=0||!mounted){
+         if(feeMinor==null||feeMinor<=0||fullDebit==null||!mounted){
           throw StateError('Ambiguous SAR bank fee must be reviewed.');
          }
          final selected=await showWaffraDialog<String>(

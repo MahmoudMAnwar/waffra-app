@@ -2927,3 +2927,9 @@ M597 – PR #505 / Seven Owner Feedback Items #498–#504 (2026-11-08, SOURCE PE
 - Added fees 19.00+0.58, 1900.00+0.58, fractional halalah guard and source-contract test. Transfer principal remains outside budget spend and fee is a separate expense.
 - M385 declared new storage file scopes; M550 contract updated to match new behavior without weakening finance/security tests.
 - NOT YET CERTIFIED: every exact HEAD workflow, comprehensive actual SQLite/Drift rollback integration and both Android devices new install + update preserving existing financial history, UI frame metrics and owner final visual approval. Remain Draft; NO main merge/release claims.
+
+
+[M598 PR #505 exact-head compile and source-contract repair] 2026-11-08
+- Fixed the real nullable bank-fee total compilation error in the reviewed SMS own-account transfer confirmation. Explicitly reject null `fullDebit` before formatting it in either Arabic or English; existing positive/SAR fee, consent, owner account witness, SQLCipher atomic commit and ACK gating remain mandatory and unchanged.
+- Reconciled one obsolete M514 four-digit SMS account prefill source assertion with approved source-versus-destination suffix separation, asserting both origin-specific digits and sender-bank match instead of obsolete `!isDestination` behavior. No test removed or disabled; updated M385 allowlist for this bounded regression-only test file.
+- Existing exact-head 8b35ff585528 CI: 21 workflow successes, 32 failures, including widespread analyzer/Flutter/Android failures caused by the two nullable interpolation errors, M550 stale assertion and M449 stale release notes. These are corrected in this one commit; no claim of passing new-head CI, verified Android screenshots, stable frame timings, APK publishing or release readiness. Preserve old device SQLCipher data, never merge until all checks and physical evidence pass.
