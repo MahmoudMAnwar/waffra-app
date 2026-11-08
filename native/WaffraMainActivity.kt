@@ -335,9 +335,8 @@ class MainActivity : FlutterFragmentActivity() {
                     result.success(saved)
                 }
                 "restartCompletedSmsHistory" -> {
-                    // Explicit Rescan rechecks previously filtered rows only
-                    // after the earlier cursor has reached the inbox end.
-                    // Do not re-read all first 2000 rows forever when incomplete.
+                    // Legacy compatibility method. New-only Rescan no longer
+                    // resets a completed or incomplete history cursor.
                     val app = applicationContext
                     smsHistoryExecutor.execute {
                         try {
