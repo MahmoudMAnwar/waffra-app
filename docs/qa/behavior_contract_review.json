@@ -195,6 +195,37 @@
         "Transfer Yes never commits before a second approved verified two-account editor confirmation; No never treats original SMS as posted income or expense, and Exclude never touches Android inbox.",
         "Notifications may never describe a pending SMS or suggested excluded rule as an already excluded message, and the original owner-verified bulk review remains accessible."
       ]
+    },
+    {
+      "id": "M590-M591-OTP-AND-EXACT-PREYES-FINANCE",
+      "issue": "Issues #498–#504, especially #500/#501 OTP and #504 initial bank account before Yes",
+      "previous_behavior": "SMS offline learning and dropdown labels could differ from bank OTP exclusion semantics, and M565 Yes used to request an account picker only AFTER the Yes dialog, while old M340/M565/M177 source QA demanded the obsolete sequence.",
+      "approved_behavior": "Same bilingual bank-facts OTP gate is used in SMS intelligence pending/suggestion path and rule editor labels consistently say excluded; first-time bank source account is chosen in the pre-Yes review via owner-bound exact sender+four and fresh encrypted witness, Yes is enabled only when verified, and finance commit receives that chosen witness without a second account picker. Existing optional budget/atomic hash writer remains required. M340, M565 and M177 positive tests now demand these stronger guards; negative finance tests unchanged.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_sms_intelligence.dart",
+        "lib/waffra_sms_rule_settings_page.dart"
+      ],
+      "test_paths": [
+        "test/m580_sms_security_navigation_performance_test.dart",
+        "test/qa/m565_sms_yes_no_test.py",
+        "test/storage/m177_live_finance_authority_integration_test.dart",
+        "test/qa/test_m340_financial_quality_gate.py",
+        "test/qa/m574_sms_confirmation_full_fields_test.py"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m340-continuous-financial-quality.yml",
+        ".github/workflows/m429-integration-smoke.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "No SMS is posted by choosing an account; user must explicitly confirm Yes after selection and bank source evidence verification.",
+        "All four verified encrypted SMS writers retain user consent, account generation freshness, source date, SAR original amount and duplicate fingerprint guards.",
+        "Bank challenge OTP and pending/declined text are not suggested as settled income or expense, and SMS native inbox is never deleted.",
+        "Old tests are strengthened to match approved behavior, not skipped, weakened or deleted; full exact-head CI remains required."
+      ]
     }
   ]
 }
