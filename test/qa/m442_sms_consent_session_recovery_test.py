@@ -96,7 +96,18 @@ class M442SmsConsentSessionRecovery(unittest.TestCase):
                      'resumeAutoSmsAfterSignIn'):
             self.assertIn(name, bridge)
             self.assertIn('"' + name + '"', activity)
-        self.assertIn('WaffraAutoSmsStore.suspendForSignOut(this)', activity)
+        # M603: encrypted SMS suspension must not block Android's UI thread.
+        # Preserve the signed-out safety barrier and return the real worker result.
+        pause = activity.split('"pauseAutoSmsForSignOut" -> {', 1)[1].split(
+            '"resumeAutoSmsAfterSignIn" -> {', 1)[0]
+        self.assertIn('val app = applicationContext', pause)
+        self.assertIn('smsHistoryExecutor.execute {', pause)
+        self.assertIn('WaffraAutoSmsStore.suspendForSignOut(app)', pause)
+        self.assertIn('runOnUiThread { result.success(paused) }', pause)
+        self.assertIn('result.error("SMS_SIGNOUT_UNAVAILABLE"', pause)
+        self.assertLess(pause.index('smsHistoryExecutor.execute {'),
+                        pause.index('WaffraAutoSmsStore.suspendForSignOut(app)'))
+        self.assertNotIn('WaffraAutoSmsStore.suspendForSignOut(this)', pause)
         self.assertIn('WaffraAutoSmsStore.resumeForSameSignedInOwner(app)', activity)
         # M547: verified same-owner resume waits for SMS mutex/commits only
         # on the serialized SMS executor, never the Android UI thread.

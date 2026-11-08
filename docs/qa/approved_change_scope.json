@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
   "change_id": "M601-M602-M603-P0-AUTH-BIOMETRIC-HOME-SMS-FINANCE-JANK-ISSUES506-508-509",
-  "human_scope_review": "Owner explicitly reported four days of app-wide post-tap jank and an empty login button on Android, and directed a fix for the next build on 2026-11-08. This scope covers the authentication CTA disabled-state visibility and avoiding a redundant OS-keystore verifier read, without weakening 600000-round PBKDF2, biometric/login recovery or verified finance state. Physical Android profile proof is required for any claim of final app-wide lag resolution. Owner subsequently directed immediate remediation of the three identified lag sources and the unwanted post-logout biometric; #508 #509 require additional bounded source, native Android and regression-test edits while protecting security and finance. Owner requested correcting four obsolete positive tests blocking PR #507 M550/M174/M147; this is test-only reconciliation with existing approved behavior and does not relax security, finance or biometric invariants.",
+  "human_scope_review": "Owner explicitly reported four days of app-wide post-tap jank and an empty login button on Android, and directed a fix for the next build on 2026-11-08. This scope covers the authentication CTA disabled-state visibility and avoiding a redundant OS-keystore verifier read, without weakening 600000-round PBKDF2, biometric/login recovery or verified finance state. Physical Android profile proof is required for any claim of final app-wide lag resolution. Owner subsequently directed immediate remediation of the three identified lag sources and the unwanted post-logout biometric; #508 #509 require additional bounded source, native Android and regression-test edits while protecting security and finance. Owner requested correcting five obsolete positive tests blocking PR #507 M550/M174/M147; this is test-only reconciliation with existing approved behavior and does not relax security, finance or biometric invariants.",
   "user_requested_changes": [
     "Issue #506: Fix the real Android post-tap disappearing/empty login CTA; pending/disabled progress and Arabic/English text must remain visible with no double-submit.",
     "Issue #506: Reduce redundant secure-storage calls in the phone login hot path without bypassing the OS verifier, 600000-round PBKDF2 off UI isolate, different-phone rejection, or biometric recovery.",
@@ -12,7 +12,8 @@
     "Issue #509: first Home paint before expensive month SMS scan; avoid multi-page native import burst on startup while preserving full initial-month review and exact consent.",
     "Issue #509: chunk expensive verified transaction remapping after finance/SMS saves and dashboard refreshes, never publish unverified partial data.",
     "Issue #509: remove synchronous Android UI-thread SMS stop during sign-out, and restore SMS only after verified Home has painted.",
-    "Issues #506/#508/#509: fix four stale exact-head positive QA assertions in M424/M426/M468/M547, preserving the stronger current behavioral and safety checks."
+    "Issues #506/#508/#509: fix four stale exact-head positive QA assertions in M424/M426/M468/M547, preserving the stronger current behavioral and safety checks.",
+    "Issue #509 / M174: reconcile the stale M442 native logout SMS consent assertion to demand off-Android-UI executor, same-owner protection, verified completion and fail-closed error callback rather than its former synchronous main-thread call; do not weaken SMS security."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -26,7 +27,8 @@
     "test/m424_mandatory_biometrics_test.dart",
     "test/m426_local_phone_credentials_test.dart",
     "test/m468_large_ledger_decode_test.dart",
-    "test/m547_login_isolate_performance_test.dart"
+    "test/m547_login_isolate_performance_test.dart",
+    "test/qa/m442_sms_consent_session_recovery_test.py"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -103,6 +105,12 @@
       {
         "start": " test('Android SMS re-enable and resume do not block main-thread login frames', () {",
         "end": null
+      }
+    ],
+    "test/qa/m442_sms_consent_session_recovery_test.py": [
+      {
+        "start": "    def test_bridge_is_wired_to_native_with_no_os_reprompt_on_relogin(self):",
+        "end": "    def test_dashboard_does_not_hide_disabled_or_corrupt_queue_as_zero(self):"
       }
     ]
   }

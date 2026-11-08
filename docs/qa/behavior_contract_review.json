@@ -117,8 +117,8 @@
     {
       "id": "M604-EXACT-HEAD-TEST-CONTRACT-RECONCILIATION",
       "issue": "Owner explicit direction to fix M550/M174/M147 on PR #507",
-      "previous_behavior": "Four stale positive tests required unconditional fresh-session biometric, synchronous verified-transaction mapping, and main-thread SMS sign-out suspension.",
-      "approved_behavior": "Test explicitly signed-out verified phone relogin without redundant biometric, while keeping initial, restored and 60s idle biometric gates; check 32-record yielded verified ledger remapping and actual native SMS suspension on worker with fail-closed callbacks.",
+      "previous_behavior": "Four stale positive tests required unconditional fresh-session biometric, synchronous verified-transaction mapping, and main-thread SMS sign-out suspension. One legacy M442 Python QA assertion still demanded synchronous main-thread SMS logout suspension.",
+      "approved_behavior": "Test explicitly signed-out verified phone relogin without redundant biometric, while keeping initial, restored and 60s idle biometric gates; check 32-record yielded verified ledger remapping and actual native SMS suspension on worker with fail-closed callbacks. M442 now asserts native SMS suspension and completion/error callbacks occur through the dedicated worker and UI result dispatcher, never synchronously on the UI thread.",
       "source_paths": [
         "lib/main.dart",
         "native/WaffraMainActivity.kt"
@@ -127,7 +127,8 @@
         "test/m424_mandatory_biometrics_test.dart",
         "test/m426_local_phone_credentials_test.dart",
         "test/m468_large_ledger_decode_test.dart",
-        "test/m547_login_isolate_performance_test.dart"
+        "test/m547_login_isolate_performance_test.dart",
+        "test/qa/m442_sms_consent_session_recovery_test.py"
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/m550-behavior-contract-preflight.yml",
