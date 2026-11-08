@@ -931,7 +931,7 @@
         "end": "import 'package:waffra/storage/waffra_accounts_repository.dart';"
       },
       {
-        "start": " testWidgets('M495 #401 long selected account label stays visible on narrow Android',",
+        "start": "void main(){",
         "end": " test('M495 #418 date fills row and budget is equally expanded when present',(){"
       }
     ]
