@@ -258,6 +258,10 @@
     ],
     ".github/workflows/m160-main-reconciliation.yml": [
       {
+        "start": "concurrency:\n",
+        "end": "jobs:\n"
+      },
+      {
         "start": "jobs:\n",
         "end": null
       }
