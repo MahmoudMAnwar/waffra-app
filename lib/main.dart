@@ -4827,6 +4827,13222 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      amount:sensitive?null:(amount is num?amount.toDouble():null));
    }).toList(growable:false);
  }
+ /// Native owner-encrypted exclusion: sender block for entire approved
+ /// group; otherwise exact per-message anti-replay fingerprints in 100-ID
+ /// batches. Nothing touches Android SMS or recorded finance transactions.
+ Future<bool> _m592ExcludeNotificationSelection(
+  List<String> ids,List<String> senderNames)async{
+  if(!mounted||!ready||_financeLoadFailure!=null||
+     ids.isEmpty||ids.length>1000)return false;
+  final selected=ids.toSet();
+  if(selected.length!=ids.length||
+    selected.any((id)=>!RegExp(r'^[a-f0-9]{64}
+  if(!mounted||!ready)return;
+  await Navigator.of(context).push(MaterialPageRoute<void>(
+   builder:(route)=>WaffraApprovedNotificationsPage(
+    english:waffraIsEnglish,readPending:_m549ReviewNotices,
+    onReviewAll:_openAutoSmsInbox,
+    onBulkExclude:_m592ExcludeNotificationSelection,
+    onReviewOne:(id)=>_reviewAutoSmsCandidates(targetId:id),
+    onRescan:_rescanAutoSmsInbox,
+    // A user refresh always checks the real incremental native cursor;
+    // a false rescanNeeded hint must not make the button inert.
+    canRescan:()=>!_autoSmsRescanRunning,
+   )));
+ }
+ Future<void> _openAutoSmsInbox()async{
+  // The Home snapshot has already passed native owner/consent verification.
+  // Re-reading/decrypting/reclassifying all 1000 SMS on every tap blocks
+  // navigation for no gain; initial/invalid/empty snapshots still refresh.
+  if(!_autoSmsStatusChecked||_autoSmsStatusProblem!=null||
+     _autoSmsPending.isEmpty){
+   await _refreshAutoSmsInbox();
+  }
+  if(!mounted||!ready||_autoSmsStatusProblem!=null||
+     _autoSmsPending.isEmpty)return;
+  // O(N) case-insensitive grouping; preserve each original sender and date.
+  final grouped=WaffraSmsReviewGroups.from(_autoSmsPending,
+   unknownSender:waffraIsEnglish?'Unknown sender':'مرسل غير محدد');
+  final bySender=grouped.bySender;
+  final senders=grouped.senders;
+  String? selectedSender,openingReviewId;
+  final selectedIds=<String>{};
+  var bulkBusy=false;
+  List<String> idsOf(Iterable<Map<String,Object?>> rows)=>
+   rows.map((row)=>row['id']).whereType<String>().toList(growable:false);
+  List<String> visibleIds()=>selectedSender==null?
+   idsOf(bySender.values.expand((rows)=>rows)):
+   idsOf(bySender[selectedSender]??const <Map<String,Object?>>[]);
+  await showModalBottomSheet<void>(
+   context:context,isScrollControlled:true,showDragHandle:true,
+   builder:(sheet)=>StatefulBuilder(
+    builder:(ctx,refresh)=>PopScope(
+     // Explicit SMS selection must bypass Back-to-senders guard.
+     canPop:selectedSender==null||openingReviewId!=null,
+     onPopInvokedWithResult:(didPop,result){
+      if(!didPop&&selectedSender!=null&&openingReviewId==null){
+       refresh(()=>selectedSender=null);
+      }
+     },
+     child:SafeArea(
+     child:SizedBox(height:selectedSender==null?
+       min(MediaQuery.sizeOf(ctx).height*.78,550.0):
+       MediaQuery.sizeOf(ctx).height*.84,
+      child:Column(children:[
+       Padding(padding:const EdgeInsets.fromLTRB(14,3,14,8),
+        child:Row(children:[
+         IconButton(key:const Key('waffra-sms-senders-back'),
+          icon:const Icon(Icons.arrow_back_rounded,color:forest),
+          onPressed:(){
+           if(selectedSender==null){Navigator.pop(ctx);}
+           else{refresh(()=>selectedSender=null);}
+          }),
+         Expanded(child:Column(mainAxisSize:MainAxisSize.min,
+          crossAxisAlignment:CrossAxisAlignment.start,children:[
+          WaffraText(selectedSender??(waffraIsEnglish?
+           'Messages to review':'مراجعة الرسائل البنكية'),maxLines:2,
+           style:const TextStyle(fontSize:22,fontWeight:FontWeight.bold)),
+          WaffraText(visibleIds().length.toString()+
+           (waffraIsEnglish?' messages from ':' رسالة من ')+
+           senders.length.toString()+
+           (waffraIsEnglish?' senders':' مرسلين'),
+           style:TextStyle(fontSize:12,
+            color:Theme.of(ctx).colorScheme.onSurfaceVariant)),
+         ])),
+        ])),
+       Padding(padding:const EdgeInsets.fromLTRB(12,1,12,6),
+        child:WaffraSmsReviewMetrics(
+         shown:visibleIds().length,selected:selectedIds.length,
+         senderCount:senders.length,english:waffraIsEnglish)),
+       Padding(padding:const EdgeInsets.fromLTRB(13,4,13,7),
+        child:Container(
+         decoration:BoxDecoration(
+          color:Theme.of(ctx).brightness==Brightness.dark?
+           const Color(0xFF193E31):const Color(0xFFF2F8F4),
+          borderRadius:BorderRadius.circular(15)),
+         child:Row(children:[
+          Checkbox(
+           key:const Key('waffra-sms-select-all-visible'),
+           value:visibleIds().isNotEmpty&&
+            visibleIds().every(selectedIds.contains),
+           onChanged:bulkBusy?null:(value)=>refresh((){
+            if(value==true){selectedIds.addAll(visibleIds());}
+            else{selectedIds.removeAll(visibleIds());}
+           })),
+          Expanded(child:WaffraText(waffraIsEnglish?
+           'Select all shown messages':'تحديد كل الرسائل المعروضة',
+           style:const TextStyle(fontSize:13,fontWeight:FontWeight.w600))),
+          WaffraText(selectedIds.length.toString()+
+           (waffraIsEnglish?' selected':' محددة'),
+           style:const TextStyle(fontSize:12,color:emerald)),
+          const SizedBox(width:12),
+         ]),
+        )),
+       Expanded(child:ListView.builder(
+        key:Key(selectedSender==null?'waffra-sms-sender-list':
+         'waffra-sms-sender-transactions'),
+        itemCount:selectedSender==null?senders.length:
+         (bySender[selectedSender]?.length??0),
+        itemBuilder:(rowContext,index){
+         if(selectedSender==null){
+          final sender=senders[index],count=bySender[sender]!.length;
+          return Card(
+           margin:const EdgeInsets.symmetric(horizontal:13,vertical:5),
+           elevation:0,
+           shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18),
+            side:BorderSide(color:forest.withValues(alpha:.14))),
+           child:ListTile(
+            key:Key('waffra-sms-sender-group-'+index.toString()),
+            contentPadding:const EdgeInsets.symmetric(horizontal:12,vertical:5),
+            leading:WaffraSmsSenderBrand(sender:sender),
+            title:WaffraText(sender,maxLines:2,
+             style:const TextStyle(fontWeight:FontWeight.bold,fontSize:15)),
+            subtitle:Directionality(
+             textDirection:waffraIsEnglish?TextDirection.ltr:TextDirection.rtl,
+             child:WaffraText(waffraIsEnglish?
+              '$count messages awaiting review':
+              '\u2068$count\u2069 رسائل بانتظار المراجعة',
+              style:const TextStyle(fontSize:12,color:emerald))),
+            trailing:Row(mainAxisSize:MainAxisSize.min,children:[
+             Checkbox(
+              key:Key('waffra-sms-select-sender-'+index.toString()),
+              value:idsOf(bySender[sender]!).isNotEmpty&&
+               idsOf(bySender[sender]!).every(selectedIds.contains),
+              onChanged:bulkBusy?null:(value)=>refresh((){
+               final ids=idsOf(bySender[sender]!);
+               if(value==true){selectedIds.addAll(ids);}
+               else{selectedIds.removeAll(ids);}
+              })),
+             const Icon(Icons.chevron_left_rounded,color:forest),
+            ]),
+            onTap:()=>refresh(()=>selectedSender=sender),
+           ));
+         }
+         final item=bySender[selectedSender]![index];
+         final id=item['id'],at=item['receivedAt'];
+         final date=at is int?DateTime.fromMillisecondsSinceEpoch(at)
+          .toLocal().toString().substring(0,16):'';
+         final proposal=item['cloud'];
+         final suggestion=proposal is Map?proposal:null;
+         final local=item['local'] is Map?item['local'] as Map:null;
+         final amount=suggestion?['amount'];
+         final currency=suggestion?['currency'];
+         final kind=suggestion?['kind'];
+         final suggestionLabel=kind=='income'?
+          (waffraIsEnglish?'Income':'دخل'):
+          kind=='expense'?(waffraIsEnglish?'Expense':'مصروف'):
+          (waffraIsEnglish?'Needs checking':'تحتاج تحقق');
+         return ListTile(
+          key:Key('waffra-sms-sender-message-'+index.toString()),
+          leading:const Icon(Icons.sms_outlined,color:emerald),
+          title:WaffraText(suggestion==null?
+           (local==null?
+            (waffraIsEnglish?'Needs review':
+             'عملية تحتاج مراجعة'):
+            (waffraIsEnglish?'Local rule • ':'قاعدة محلية • ')+
+             (local['kind']=='transfer'?
+              (waffraIsEnglish?'Transfer':'تحويل'):
+              local['kind']=='excluded'?
+              (waffraIsEnglish?'Excluded':'مستثناة'):
+              local['income']==true?
+               (waffraIsEnglish?'Income':'دخل'):
+               (waffraIsEnglish?'Expense':'مصروف'))):
+           (waffraIsEnglish?'AI suggestion • ':'اقتراح AI • ')+
+            suggestionLabel+
+            (amount is num?' • '+amount.toStringAsFixed(2):'')+
+            (currency is String?' '+currency:'')),
+          // Preserve the real original SMS text in the history review, with
+          // sender and date, while the cloud analysis remains a suggestion.
+          subtitle:WaffraText(
+           ((item['body'] as String?)??'')+'\n'+
+           (local!=null?"${local['category']} • ":'')+
+           (waffraIsEnglish?'Review amount, category and budget':
+            'راجع المبلغ والقسم والميزانية')+
+           (date.isEmpty?'':' • '+date),maxLines:5),
+          trailing:Row(mainAxisSize:MainAxisSize.min,children:[
+           Checkbox(
+            key:Key('waffra-sms-select-message-'+index.toString()),
+            value:id is String&&selectedIds.contains(id),
+            onChanged:bulkBusy||id is! String?null:(value)=>refresh((){
+             if(value==true){selectedIds.add(id);}
+             else{selectedIds.remove(id);}
+            })),
+           const Icon(Icons.chevron_left_rounded),
+          ]),
+          onTap:bulkBusy||openingReviewId!=null?null:(id is String)?()async{
+           // M486: keep the sender inbox underneath review/editor so Back
+           // returns one level and preserves the sender's selection.
+           refresh(()=>openingReviewId=id);
+           try{
+            await _reviewAutoSmsCandidates(targetId:id);
+           }finally{
+            if(ctx.mounted)refresh((){
+             openingReviewId=null;
+             if(!_autoSmsPending.any((row)=>row['id']==id)){
+              for(final group in bySender.values){
+               group.removeWhere((row)=>row['id']==id);
+              }
+              selectedIds.remove(id);
+              senders.removeWhere((name)=>bySender[name]?.isEmpty??true);
+              if(selectedSender!=null&&!senders.contains(selectedSender)){
+               selectedSender=null;
+              }
+             }
+            });
+           }
+          }:null,
+         );
+        })),
+       if(selectedIds.isNotEmpty)Padding(
+        padding:const EdgeInsets.fromLTRB(12,8,12,4),
+        child:SizedBox(width:double.infinity,child:FilledButton.icon(
+         key:const Key('waffra-sms-bulk-exclude-selected'),
+         icon:bulkBusy?
+          const SizedBox(width:18,height:18,
+           child:CircularProgressIndicator(strokeWidth:2)):
+          const Icon(Icons.delete_outline_rounded),
+         label:WaffraText(waffraIsEnglish?
+          'Exclude ${selectedIds.length} selected':
+          'استبعاد ${selectedIds.length} رسالة محددة'),
+         onPressed:bulkBusy?null:()async{
+          // Explicit queue removal first, followed by a SEPARATE sender opt-in.
+          // No Android SMS or financial ledger entries are deleted.
+          final ids=selectedIds.toList(growable:false);
+          final idSet=ids.toSet();
+          // Selection is an explicit owner decision. Do not synchronously
+          // parse up to 1000 SMS on the UI isolate before painting the dialog.
+          // This removes an O(N) CPU-heavy path from every bulk exclusion tap.
+          final confirmed=await showWaffraDialog<bool>(
+           context:ctx,builder:(dialog)=>AlertDialog(
+            title:WaffraText(waffraIsEnglish?
+             'Exclude selected messages?':'استبعاد الرسائل المحددة؟'),
+            content:WaffraText(waffraIsEnglish?
+             'Remove ${ids.length} items from Waffra review only. '
+             'Your phone SMS and saved financial transactions are untouched. '
+             'Some messages may describe finances; review your selection.':
+             'سيتم استبعاد ${ids.length} رسالة من مراجعة وفرة فقط، '
+             'دون حذف رسائل الهاتف أو أي عمليات مالية محفوظة. '
+             'قد تتضمن الرسائل معاملات مالية؛ راجع اختيارك.'),
+            actions:[
+             TextButton(onPressed:()=>Navigator.pop(dialog,false),
+              child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+             FilledButton(onPressed:()=>Navigator.pop(dialog,true),
+              child:WaffraText(waffraIsEnglish?'Exclude':'تأكيد الاستبعاد')),
+            ]));
+          if(confirmed!=true||!ctx.mounted)return;
+          // M479 / #417: no native message acknowledgement occurs until
+          // both confirmations are settled. 'Back' preserves selected IDs
+          // and returns to this still-open review rather than hiding SMS.
+          // One sender decision for the entire selection rather than one
+          // confirmation dialog PER SENDER (1000 dialogs were possible).
+          final fullySelectedSenders=senders.where((sender){
+           final groupIds=idsOf(bySender[sender]??const []);
+           return groupIds.isNotEmpty&&groupIds.every(idSet.contains);
+          }).toList(growable:false);
+          final senderChoice=fullySelectedSenders.isEmpty?'messages':
+           await showWaffraDialog<String>(
+            context:context,builder:(dialog)=>AlertDialog(
+             title:WaffraText(waffraIsEnglish?
+              'Exclude these senders too?':'هل تريد استبعاد المرسلين أيضًا؟'),
+             content:WaffraText(waffraIsEnglish?
+              'Exclude selected messages only, or block the selected senders '
+              'from future reviews too? Sender blocking stores names only.':
+              'تستبعد الرسائل المحددة فقط، أو تستبعد المرسلين كمان '
+              'من المراجعات القادمة؟ عند استبعاد المرسل هنحتفظ باسمه فقط.'),
+             actions:[
+              TextButton(onPressed:()=>Navigator.pop(dialog,'back'),
+               child:WaffraText(waffraIsEnglish?'Back':'العودة')),
+              TextButton(onPressed:()=>Navigator.pop(dialog,'messages'),
+               child:WaffraText(waffraIsEnglish?'Messages only':'الرسائل فقط')),
+              FilledButton(onPressed:()=>Navigator.pop(dialog,'senders'),
+               child:WaffraText(waffraIsEnglish?'Block senders':'استبعاد المرسلين')),
+             ]));
+          if(senderChoice==null||senderChoice=='back'||!ctx.mounted)return;
+          final senderBlockChoices=senderChoice=='senders'?
+           fullySelectedSenders.toSet():<String>{};
+          final blockedIds=<String>{};
+          for(final sender in senderBlockChoices){
+           blockedIds.addAll(idsOf(bySender[sender]??const []));
+          }
+          refresh(()=>bulkBusy=true);
+          final done=<String>{};
+          var failed=false;
+          try{
+           // One native encrypted commit blocks selected senders and purges
+           // their queued and previous individually excluded SMS metadata.
+           if(senderBlockChoices.isNotEmpty){
+            if(await WaffraAutoSms.excludeSenders(senderBlockChoices.toList())){
+             done.addAll(blockedIds);
+            }else{failed=true;}
+           }
+           // Unblocked individual SMS need durable anti-replay IDs. Native
+           // policy commits up to 100 IDs per batch and preserves failures.
+           final remainingMessageIds=ids.where((id)=>!blockedIds.contains(id))
+            .toList(growable:false);
+           if(!failed)for(var at=0;at<remainingMessageIds.length;at+=100){
+            final batch=remainingMessageIds.skip(at).take(100)
+             .toList(growable:false);
+            if(!await WaffraAutoSms.excludeMessages(batch)){
+             failed=true;break;
+            }
+            done.addAll(batch);
+           }
+           if(done.isNotEmpty){
+            // Bulk and individual exclusions learn identical safe,
+            // owner-encrypted review-only keywords after native success.
+            if(_smsRuleOwnerKey.isNotEmpty){
+             try{
+              final store=const WaffraSmsLocalRuleStore();
+              final previous=await store.read(_smsRuleOwnerKey);
+              var next=previous;
+              for(final row in _autoSmsPending.where(
+                  (row)=>done.contains(row['id']))){
+               final body=row['body'],sender=row['sender'];
+               if(body is! String||sender is! String||
+                  blockedIds.contains(row['id']))continue;
+               final candidate=WaffraSmsLocalRules.suggestedRule(
+                body:body,sender:sender,kind:'excluded',
+                confidentOnly:true);
+               if(candidate!=null){
+                next=WaffraSmsLocalRules.upsertLearned(
+                 existing:next,candidate:candidate);
+               }
+              }
+              // Do not retain automatically learned exclusion keywords for
+              // sender-blocked messages. Keep explicit user-authored rules.
+              final blocked=senderBlockChoices.map(
+               WaffraSmsLocalRules.normalized).toSet();
+              final clean=next.where((rule)=>!(rule.id.startsWith('smart_')&&
+               rule.resolvedKind=='excluded'&&blocked.contains(
+                WaffraSmsLocalRules.normalized(rule.sender)))).toList();
+              if(clean.length!=next.length)next=clean;
+              if(!identical(previous,next)){
+               await store.write(_smsRuleOwnerKey,next);
+              }
+             }catch(_){
+              if(mounted)snack(context,waffraIsEnglish?
+               'Messages excluded; safe rule learning unavailable.':
+               'تم الاستبعاد، لكن تعذر حفظ قاعدة تعلم آمنة.',isError:true);
+             }
+            }
+            if(mounted)setState(()=>
+             _autoSmsPending.removeWhere((row)=>done.contains(row['id'])));
+            for(final rows in bySender.values){
+             rows.removeWhere((row)=>done.contains(row['id']));
+            }
+            senders.removeWhere((sender)=>bySender[sender]!.isEmpty);
+            selectedIds.removeAll(done);
+           }
+           // On a partial native failure, keep the list mounted so the
+           // unprocessed selection is still visible and safely retryable.
+           if(!failed&&ctx.mounted)Navigator.pop(ctx);
+           if(mounted){
+            if(failed)snack(context,waffraIsEnglish?
+             'Only ${done.length} messages were excluded. Retry remaining items.':
+             'تم استبعاد ${done.length} فقط. أعد محاولة الباقي.',isError:true);
+            else snackSuccess(context,waffraIsEnglish?
+             'Excluded ${done.length} messages from review.':
+             'تم استبعاد ${done.length} رسالة من المراجعة.');
+            // Keep the queue and counts synced without silently launching
+            // another historical import during the bulk-exclusion animation.
+            // The user can continue an incomplete history via Rescan.
+            unawaited(_refreshAutoSmsInbox());
+           }
+          }catch(_){
+           if(mounted)snack(context,waffraIsEnglish?
+            'Bulk exclusion failed. Unconfirmed messages remain in review.':
+            'تعذر الاستبعاد الجماعي. الرسائل غير المؤكدة باقية للمراجعة.',
+            isError:true);
+          }finally{
+           if(ctx.mounted)refresh(()=>bulkBusy=false);
+          }
+         },
+        ))),
+       Padding(padding:const EdgeInsets.fromLTRB(13,8,13,14),
+        child:Container(padding:const EdgeInsets.all(12),
+         decoration:BoxDecoration(color:const Color(0xFFE8F4EB),
+          borderRadius:BorderRadius.circular(15)),
+         child:Row(children:[
+          const Icon(Icons.info_outline_rounded,color:forest,size:20),
+          const SizedBox(width:9),
+          Expanded(child:WaffraText(waffraIsEnglish?
+           'Nothing is recorded before your review and confirmation.':
+           'لن تُسجَّل أي عملية مالية إلا بعد مراجعتك وتأكيدك.',
+           style:const TextStyle(color:forest,fontSize:12),maxLines:3)),
+         ]))),
+      ]),
+     ),
+    ),
+    ),
+   ),
+  );
+  // The sender inbox route remains beneath the message review.
+ }
+ // ignore: unused_element
+ Widget _autoSmsReviewCard(){
+  final count=_autoSmsPending.length;
+  final analyzed=_autoSmsPending.where((row)=>row['cloud'] is Map).length;
+  final localCount=_autoSmsPending.where((row)=>row['local'] is Map).length;
+  final ambiguous=count-localCount-analyzed;
+  final canRescan=!_autoSmsRescanRunning&&
+   (_autoSmsStatusProblem!=null||_autoSmsProgress['rescanNeeded']==true);
+  return Container(
+   key:const Key('waffra-auto-sms-review-card'),
+   decoration:BoxDecoration(color:Theme.of(context).cardColor,
+    borderRadius:BorderRadius.circular(16),
+    border:Border.all(color:forest.withValues(alpha:.16))),
+   child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+    // Match Quick Actions: tap anywhere on the framed title to expand.
+    Semantics(
+     button:true,expanded:_autoSmsReviewExpanded,
+     label:waffraIsEnglish?'Transactions requiring review':
+      'عمليات تحتاج مراجعة',
+     child:InkWell(
+      key:const Key('waffra-auto-sms-review-expand'),
+      borderRadius:BorderRadius.circular(16),
+      onTap:WaffraHaptics.tap(
+       ()=>setState(()=>_autoSmsReviewExpanded=!_autoSmsReviewExpanded)),
+      child:Padding(padding:const EdgeInsets.all(14),child:Row(children:[
+       Icon(_autoSmsReviewExpanded?
+        Icons.keyboard_arrow_up_rounded:Icons.keyboard_arrow_down_rounded,
+        color:forest),
+       const SizedBox(width:8),
+       const Icon(Icons.fact_check_outlined,color:emerald),
+       const SizedBox(width:8),
+       Expanded(child:WaffraText(waffraIsEnglish?
+        'Transactions requiring review':'عمليات تحتاج مراجعة',
+        style:const TextStyle(fontSize:16,fontWeight:FontWeight.bold))),
+       Container(
+        key:const Key('waffra-auto-sms-review-count'),
+        padding:const EdgeInsets.symmetric(horizontal:10,vertical:5),
+        decoration:BoxDecoration(color:const Color(0xFFE4F4EB),
+         borderRadius:BorderRadius.circular(24)),
+        child:Text(!_autoSmsStatusChecked||_autoSmsStatusProblem!=null?
+         '—':count.toString(),
+         style:const TextStyle(color:forest,fontWeight:FontWeight.bold))),
+      ]))),
+    ),
+    if(_autoSmsReviewExpanded)Padding(
+     key:const Key('waffra-auto-sms-review-expanded-content'),
+     padding:const EdgeInsets.fromLTRB(14,0,14,14),
+     child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+      WaffraText(_autoSmsStatusProblem!=null?_autoSmsStatusProblem!:
+       !_autoSmsStatusChecked?
+        (waffraIsEnglish?'Checking SMS tracking status...':
+         'جارٍ التحقق من حالة الرسائل البنكية...'):
+       count==0?
+        (!_autoSmsHistoryComplete?
+         (waffraIsEnglish?'History scan incomplete. Tap refresh to continue.':
+          'فحص الرسائل السابقة غير مكتمل؛ اضغط تحديث للاستكمال.'):
+         (waffraIsEnglish?'No bank SMS awaiting review.':
+          'ما فيه رسائل بنكية بانتظار المراجعة.')):
+        (waffraIsEnglish?
+         'Bank SMS since the installation month await approval.':
+         'رسائل من بداية شهر تثبيت التطبيق بانتظار مراجعتك وتأكيدك.')),
+      if(count>0)...[
+       const SizedBox(height:5),
+       WaffraText(waffraIsEnglish?
+        '$localCount classified locally • ${ambiguous<0?0:ambiguous} need review':
+        '$localCount مصنفة محليًا • ${ambiguous<0?0:ambiguous} تحتاج مراجعة',
+        style:const TextStyle(color:emerald,fontSize:12,
+         fontWeight:FontWeight.w600)),
+      ],
+      if(analyzed>0)...[
+       const SizedBox(height:5),
+       WaffraText(waffraIsEnglish?
+        '$analyzed cloud AI suggestions ready for your review.':
+        '$analyzed اقتراحات من الذكاء الاصطناعي جاهزة لمراجعتك.',
+        style:const TextStyle(color:emerald,fontSize:12,
+         fontWeight:FontWeight.w600)),
+      ],
+      const SizedBox(height:12),
+      if(_autoSmsRescanRunning)...[
+       Row(children:[
+        const SizedBox(width:18,height:18,
+         child:CircularProgressIndicator(strokeWidth:2.4)),
+        const SizedBox(width:9),
+        Expanded(child:WaffraText(waffraIsEnglish?
+         'Scanning SMS now…':'جارٍ الآن فحص الرسائل…')),
+       ]),
+       const SizedBox(height:10),
+      ],
+      if(_autoSmsLastRescanScanned!=null)...[
+       WaffraText(waffraIsEnglish?
+        'Last rescan checked: $_autoSmsLastRescanScanned • Awaiting review: ${_autoSmsProgress['pending']}':
+        'آخر إعادة فحص: $_autoSmsLastRescanScanned رسالة • بانتظار المراجعة: ${_autoSmsProgress['pending']}',
+        style:const TextStyle(fontSize:12,color:emerald)),
+       if(_autoSmsLastChecked!=null)
+        WaffraText(waffraIsEnglish?
+         'Updated: ${dayText(_autoSmsLastChecked!)}':
+         'آخر تحديث: ${dayText(_autoSmsLastChecked!)}',
+         style:const TextStyle(fontSize:11,color:emerald)),
+       if(_autoSmsProgress['complete']==false)
+        Padding(padding:const EdgeInsets.only(top:6),child:WaffraText(
+         ((_autoSmsProgress['pending'] as num?)?.toInt()??0)>=
+           ((_autoSmsProgress['capacity'] as num?)?.toInt()??1000)?
+          (waffraIsEnglish?
+           'Review pending messages to continue scanning other senders.':
+           'قائمة المراجعة ممتلئة. راجع بعض الرسائل عشان نكمل فحص باقي المرسلين.'):
+          _autoSmsProgress['initialComplete']!=true?
+          (waffraIsEnglish?
+           'First history scan is unfinished. Tap Rescan to continue.':
+           'الفحص الأول للرسائل السابقة لسه ما اكتملش. اضغط إعادة الفحص للاستكمال.'):
+          (waffraIsEnglish?
+           'There are more new messages. Tap Rescan to continue.':
+           'فيه رسائل جديدة باقي فحصها. اضغط إعادة الفحص للاستكمال.'),
+         style:const TextStyle(fontSize:12,color:emerald))),
+       const SizedBox(height:8),
+      ],
+      Row(children:[
+       Expanded(child:FilledButton.icon(
+        key:const Key('waffra-auto-sms-review-open'),
+        onPressed:count==0||_autoSmsStatusProblem!=null?
+         null:WaffraHaptics.tap(_openAutoSmsInbox),
+        icon:const Icon(Icons.rate_review_outlined,size:18),
+        label:WaffraText(waffraIsEnglish?'Review messages':'مراجعة العمليات'))),
+       const SizedBox(width:8),
+       OutlinedButton.icon(
+        key:const Key('waffra-auto-sms-review-refresh'),
+        onPressed:canRescan?
+         WaffraHaptics.tap(()=>unawaited(_rescanAutoSmsInbox())):null,
+        icon:_autoSmsRescanRunning?
+         const SizedBox(width:19,height:19,
+          child:CircularProgressIndicator(strokeWidth:2)):
+         const Icon(Icons.refresh_rounded,size:19),
+        label:WaffraText(_autoSmsRescanRunning?
+         (waffraIsEnglish?'Scanning…':'جارٍ الفحص'):
+         (waffraIsEnglish?'Rescan':'إعادة الفحص'))),
+      ]),
+     ])),
+   ]),
+  );
+ }
+ /// Explicit, idempotent account-to-account transfer from reviewed bank SMS.
+ /// No SMS becomes income/expense or selects bank accounts by guessing.
+ Future<void> _reviewSmsAccountTransfer({
+  required Map<String,Object?> item,
+  required WaffraBankSmsFacts facts,
+ })async{
+  final id=item['id'],body=item['body'];
+  if(id is! String||body is! String||
+     facts.kind!=WaffraBankOperationKind.transfer||facts.pending)return;
+  // Verify the main transfer amount independently from fees/balances.
+  // Never use a fee's currency as proof of a SAR account transfer.
+  final sourceAmount=WaffraSmsCurrencies.originalAmount(body);
+  if((sourceAmount!=null&&sourceAmount.currency!='SAR')||
+     WaffraSmsCurrencies.requiresReviewForSarLedger(body)){
+   if(mounted)snack(context,
+    'مبلغ التحويل الأساسي أو عملته غير مؤكد من الرسالة. '
+    'لن تُسجّل الرسوم أو عملة مجهولة كتحويل.',isError:true);
+   return;
+  }
+  final verifiedMinor=sourceAmount==null?0:
+   (waffraSarAmountMinor(sourceAmount.amount.toStringAsFixed(2))??0);
+  // No confirmed principal means an EMPTY editable field, never the fee.
+  // The verified form refuses zero amounts on submit.
+  final bridge=_financeBinding?.accountsBridge;
+  if(bridge==null){
+   if(mounted)snack(context,'الحسابات الموثقة غير متاحة.',
+    isError:true);
+   return;
+  }
+  try{
+   final api=WaffraVerifiedAccountsApi(bridge:bridge);
+   final accounts=await api.balances();
+   if(!mounted)return;
+   if(accounts.where((a)=>!a.archived).length<2){
+    // The editor offers inline creation of a bank provider and child account.
+    // Previously returning here made the transfer CTA look unresponsive.
+    snack(context,'اختار أو أضف حسابين مختلفين داخل شاشة المراجعة.');
+   }
+   final arrived=DateTime.fromMillisecondsSinceEpoch(
+    item['receivedAt'] is int?item['receivedAt'] as int:
+     DateTime.now().millisecondsSinceEpoch);
+   final date=bankSmsDate(body,referenceDate:arrived)??arrived;
+   final prefill=WaffraInternalTransferDraft(
+    // Native fingerprint includes sender, body AND receivedAt; two distinct
+    // identical-body SMS must not share a single SQLCipher transfer ID.
+    requestId:WaffraAutoSms.transferIdForMessage(id),
+    fromId:'',toId:'',amountMinor:verifiedMinor,
+    occurredIso:date.toIso8601String(),memo:'تحويل من رسالة بنكية');
+   var saved=false,ack=false;
+   await Navigator.of(context).push<void>(MaterialPageRoute(
+    builder:(route)=>Scaffold(
+     appBar:AppBar(title:const WaffraText('مراجعة حوالة بنكية')),
+     body:Column(children:[
+      Padding(padding:const EdgeInsets.all(12),
+       child:WaffraText('من الحساب: '+
+        (facts.sourceSuffix==null?'غير معروف':'••••'+facts.sourceSuffix!)+
+        '  إلى الحساب: '+
+        (facts.destinationSuffix==null?'غير معروف':
+         '••••'+facts.destinationSuffix!))),
+      if(facts.fee!=null&&facts.fee!>0)
+       Padding(padding:const EdgeInsets.symmetric(horizontal:12,vertical:6),
+        child:WaffraText(
+         'رسوم التحويل منفصلة: ${facts.fee!.toStringAsFixed(2)} SAR. '
+         'لن تُسجّل تلقائيًا كمصروف إضافي.',
+         style:const TextStyle(color:emerald,fontSize:12))),
+      Expanded(child:WaffraAccountTransactionForm(
+       accounts:accounts,english:waffraIsEnglish,
+       initialSmsTransfer:prefill,
+       onCreateSmsAccount:(group,createProvider,isDestination)async{
+        // #416: never infer transfer source or destination from SMS sender.
+        final existing=await api.balances();
+        if(!mounted)return null;
+        final bank=RegExp(r'^bank:institution:(rajhi|inma|snb|riyad|bilad|stc)$')
+         .firstMatch(createProvider?'':group??'')?.group(1);
+        final custom=<String,List<String>>{
+         for(final kind in const ['bank','wallet'])
+          kind:existing.where((a)=>!a.archived&&a.kind==kind&&
+           a.customSubtypeLabel!=null).map((a)=>a.customSubtypeLabel!)
+           .toSet().toList()..sort(),
+        };
+        // For a source-account creation, only propose the masked debit
+        // suffix from the SAME confirmed bank. The destination may belong
+        // to another person; never copy the source digits onto it.
+        final detectedBank=WaffraSmsAccountLearning.bankGroup(
+         item['sender'] is String?item['sender'] as String:'');
+        final suggestedBank=bank??(createProvider?detectedBank:null);
+        final proposedSuffix=!isDestination&&
+         (bank==null||bank==detectedBank)?
+         WaffraSmsAccountLearning.suffix4(facts.sourceSuffix):null;
+        final choice=await showWaffraDialog<WaffraNewAccountDraft>(
+         context:context,builder:(ctx)=>WaffraNewAccountDialog(
+          english:waffraIsEnglish,suggestedProviderId:suggestedBank,
+          suggestedLastFour:proposedSuffix,
+          customSubtypeOptions:custom));
+        if(choice==null||!mounted)return null;
+        if(bank!=null&&(choice.kind!='bank'||choice.providerId!=bank)){
+         throw StateError('Child account changed bank group');
+        }
+        final createdId='m499-sms-transfer-'+
+         DateTime.now().microsecondsSinceEpoch.toString();
+        await api.createTypedAccountWithIdentity(
+         id:createdId,name:choice.name,kind:choice.kind,
+         providerId:choice.providerId??'none',
+         subtype:choice.subtype??'other',openingMinor:choice.openingMinor,
+         createdIso:DateTime.now().toUtc().toIso8601String(),
+         lastFour:choice.lastFour,customSubtypeLabel:choice.customSubtypeLabel,
+         userConfirmed:true);
+        final refreshed=await api.balances();
+        final created=refreshed.where((a)=>a.id==createdId&&!a.archived).toList();
+        if(created.length!=1)throw StateError('Created account not verified');
+        unawaited(_m467RefreshHomeAccounts());
+        return created.single;
+       },
+       onConfirmTransfer:(draft)async{
+        await api.transfer(id:draft.requestId,
+         fromAccountId:draft.fromId,toAccountId:draft.toId,
+         amountMinor:draft.amountMinor,occurredIso:draft.occurredIso,
+         note:draft.memo,userConfirmed:true);
+        saved=true;
+        // The transfer is already committed. Queue-only ACK would replay
+        // this SMS on historical rescan; use a separate durable marker.
+        ack=await WaffraAutoSms.acknowledgeCompletedTransfer([id]);
+        if(route.mounted)Navigator.of(route).pop();
+       })),
+     ]),
+    )));
+   if(!mounted||!saved)return;
+   try{await _learnSafeSmsRule(body:body,
+    sender:item['sender'] is String?item['sender'] as String:'',
+    kind:'transfer');}catch(_){}
+   if(ack){
+    setState(()=>_autoSmsPending.removeWhere((r)=>r['id']==id));
+    snackSuccess(context,'تم تسجيل التحويل بين الحسابات.');
+   }else{
+    snack(context,'التحويل اتسجل لكن تأكيد إزالة الرسالة فشل. '
+     'معرّف العملية يمنع الخصم مرتين.',isError:true);
+   }
+   unawaited(_refreshAutoSmsInbox());
+  }catch(_){
+   if(mounted)snack(context,'تعذر تسجيل التحويل؛ الرسالة ما زالت للمراجعة.',
+    isError:true);
+  }
+ }
+ /// M565: a reviewed bank SMS posts only with a verified account, exact
+ /// date and source SAR amount; the original hash is committed atomically.
+ Future<void> _m565ConfirmSms({
+  required String id,required String body,required String sender,
+  required String category,required bool income,
+  required double value,required DateTime date,
+  required ({List<String?>? ids,int? generation}) selectedAccount})async{
+  if(!mounted||_financeLoadFailure!=null)return;
+  // Account was explicitly reviewed BEFORE the final Yes, not in a second
+  // account dialog after it. The atomic writer rechecks the SQLCipher witness.
+  if(selectedAccount.ids?.length!=1||
+     selectedAccount.ids!.single==null||
+     selectedAccount.generation==null)return;
+  final hash=bankSmsHash(body);
+  final facts=WaffraBankSmsFactsParser.parse(body);
+  final original=WaffraSmsCurrencies.originalAmount(body);
+  if(!facts.canAutoPostAsIncomeExpense||
+    (facts.kind==WaffraBankOperationKind.income)!=income||
+    original==null||original.currency!='SAR'||
+    (original.amount-value).abs()>0.00001||
+    bankSmsDate(body)==null||bankSmsHasUnverifiedTimestamp(body)){
+   if(mounted)snack(context,'راجع المبلغ والتاريخ والعملة من شاشة التعديل.',isError:true);
+   return;
+  }
+  if(smsHashes.contains(hash)){
+   final ack=await WaffraAutoSms.acknowledgeCommitted([id]);
+   if(ack&&mounted)setState(()=>_autoSmsPending.removeWhere((r)=>r['id']==id));
+   return;
+  }
+  final valid=categories.where((c)=>c.income==income&&c.isSubcategory&&
+   c.name==category&&waffraCategoryAvailableForNewEntry(categories,c)).toList();
+  if(valid.length!=1){if(mounted)snack(context,'راجع القسم الفرعي أولًا.',isError:true);return;}
+  final parsed=BankParser.parse(body);
+  final record=MoneyEntry(id:newId(),title:parsed.title,
+   category:category,amount:value,income:income,date:date,
+   notes:body,sourceType:'sms');
+  final budgets=await reviewSmsBudgetLinks([record]);
+  if(budgets==null||!mounted)return;
+  final reviewed=record.withBudget(budgets.single);
+  final chosen=selectedAccount;
+  if(!mounted)return;
+  try{
+   final applied=await _saveProgress.track('m565-confirm-sms',()=>
+    _financeAuthority.commitConfirmedSms(
+     route:WaffraFinanceRoute.bulkSmsConfirmedSave,
+     records:[Map<String,Object?>.from(reviewed.toJson())],
+     hashes:[hash],userConfirmed:true,allowDuplicateHashes:false,
+     selectedAccountIds:chosen.ids,
+     expectedAccountGeneration:chosen.generation));
+   if(applied.saved!=1){
+    if(mounted)snack(context,'العملية محفوظة سابقًا؛ لم يتم تكرارها.');
+    return;
+   }
+   final decoded=await WaffraLargeJsonDecode.parse(applied.current.ledgerRaw??'[]');
+   if(decoded is! List)throw StateError('Verified SMS ledger missing');
+   final updated=decoded.map((v)=>MoneyEntry.fromJson(
+    Map<String,dynamic>.from(v as Map))).toList();
+   if(!updated.any((v)=>v.id==reviewed.id))throw StateError('Missing committed SMS');
+   if(!mounted)return;
+   setState((){
+    entries..clear()..addAll(updated);
+    smsHashes..clear()..addAll(
+     applied.current.finance.getStringList('waffra_sms_hashes_v1')??
+     const <String>[]);
+    _lastFinanceAuthorityRead=applied.current;
+    _lastLedgerSavedRaw=applied.current.ledgerRaw;
+    _lastWidgetRevision=applied.current.widgetRevision;
+   });
+   if(sender.trim().isNotEmpty){
+    unawaited(_recordConfirmedSmsAccountAssociation(
+     record:reviewed,sender:sender,accountId:chosen.ids!.single));
+   }
+   try{await _learnManualCategoryPreference(reviewed);}catch(_){}
+   if(sender.trim().isNotEmpty){
+    try{await _learnSafeSmsRule(body:body,sender:sender,
+     kind:income?'income':'expense',category:category);}catch(_){}
+   }
+   unawaited(_refreshWidget());
+   final ack=await WaffraAutoSms.acknowledgeCommitted([id]);
+   if(ack&&mounted){
+    setState(()=>_autoSmsPending.removeWhere((r)=>r['id']==id));
+    snackSuccess(context,'تم تسجيل العملية المؤكدة.');
+   }else if(mounted){
+    snack(context,'تم الحفظ لكن تأكيد إزالة الرسالة لم يكتمل. لا يوجد خصم مكرر.',isError:true);
+   }
+  }catch(e){
+   debugPrint('M565 verified SMS save rejected: ${e.runtimeType}');
+   if(mounted){
+    await _refreshFromVerifiedFinance();
+    if(mounted)snack(context,'تعذر تأكيد حفظ العملية؛ أعد المراجعة.',isError:true);
+   }
+  }
+ }
+ Future<void> _reviewAutoSmsCandidates({String? targetId})async {
+  if(!mounted||!ready||_smsSheetOpen||_autoSmsReviewOpen||
+     _financeLoadFailure!=null)return;
+  _autoSmsReviewOpen=true;
+  try{
+   // The tapped notification knows its exact native SMS ID: retrieve only
+   // that item, not a 1000-row encrypted queue on every tap. Native still
+   // verifies owner/session and never posts or acknowledges during lookup.
+   final direct=targetId==null?null:await WaffraAutoSms.pendingById(targetId);
+   final items=targetId==null?await WaffraAutoSms.pending():
+    direct==null?<Map<String,Object?>>[]:<Map<String,Object?>>[direct];
+   if(!mounted||items.isEmpty)return;
+   Map<String,Object?>? selected;
+   for(final item in items){
+    final id=item['id'],body=item['body'];
+    if(id is! String||body is! String||body.trim().isEmpty)continue;
+    if(targetId!=null&&id!=targetId)continue;
+    if(smsHashes.contains(bankSmsHash(body))){
+     final acknowledged=await WaffraAutoSms.acknowledgeCommitted([id]);
+     if(acknowledged&&mounted){
+      setState(()=>_autoSmsPending.removeWhere((row)=>row['id']==id));
+     }
+     continue;
+    }
+    selected=item;break;
+   }
+   if(!mounted||selected==null)return;
+   final id=selected['id'],body=selected['body'];
+   final sender=selected['sender'] is String?selected['sender'] as String:'';
+   if(id is! String||body is! String)return;
+   final facts=WaffraBankSmsFactsParser.parse(body);
+   final sensitive=selected['sensitiveOtp']==true||
+    WaffraBankSmsFactsParser.isVerificationChallenge(body);
+   final operationName=switch(facts.kind){
+    WaffraBankOperationKind.transfer=>waffraIsEnglish?'Bank transfer':'تحويل بنكي',
+    WaffraBankOperationKind.cardSettlement=>waffraIsEnglish?'Card settlement':'سداد بطاقة',
+    WaffraBankOperationKind.income=>waffraIsEnglish?'Income':'دخل',
+    WaffraBankOperationKind.expense=>waffraIsEnglish?'Expense':'مصروف',
+    WaffraBankOperationKind.uncertain=>waffraIsEnglish?'Unknown':'غير محدد',
+   };
+   final source=facts.sourceSuffix;
+   final destination=facts.destinationSuffix;
+   final summary=<String>[
+    (waffraIsEnglish?'Detected type: ':'نوع العملية: ')+operationName,
+    if(source!=null)(waffraIsEnglish?'From account: ':'من الحساب: ')+'••••'+source,
+    if(destination!=null)(waffraIsEnglish?'To account: ':'إلى الحساب: ')+'••••'+destination,
+    if(facts.fee!=null&&facts.fee!>0)
+     (waffraIsEnglish?'Separate fee: ':'رسوم مستقلة: ')+facts.fee!.toStringAsFixed(2)+' SAR',
+   ].join('\n');
+   final cloud=selected['cloud'];
+   final cloudFacts=cloud is Map ? cloud : null;
+   final localMatches=_autoSmsPending.where((row)=>row['id']==id);
+   final local=localMatches.isEmpty?null:localMatches.first['local'];
+   final localFacts=local is Map?local:null;
+   final cloudAmount=cloudFacts?['amount'];
+   final cloudKind=cloudFacts?['kind'];
+   final cloudSummary=cloudKind is String ?
+    '\n'+(waffraIsEnglish?'Cloud AI suggests: ':'اقتراح الذكاء الاصطناعي: ')+
+    cloudKind+(cloudAmount is num?' • '+cloudAmount.toStringAsFixed(2):''):'';
+   final understood=facts.kind==WaffraBankOperationKind.income||
+    facts.kind==WaffraBankOperationKind.expense;
+   final originalAmount=WaffraSmsCurrencies.originalAmount(body);
+   final originalDate=bankSmsDate(body);
+   final parsed=BankParser.parse(body);
+   final proposedCategory=localFacts?['category'] is String?
+    localFacts!['category'] as String:parsed.category;
+   final expectedIncome=facts.kind==WaffraBankOperationKind.income;
+   final previewLeaves=categories.where((c)=>
+    c.income==expectedIncome&&c.isSubcategory&&
+    c.name==proposedCategory&&
+    waffraCategoryAvailableForNewEntry(categories,c)).toList();
+   final previewParents=previewLeaves.length==1?
+    categories.where((c)=>!c.isSubcategory&&
+     c.id==previewLeaves.single.parentId).toList():<BudgetCategory>[];
+   final previewMainName=previewParents.length==1?
+    previewParents.single.displayName:
+    (waffraIsEnglish?'Choose main category':'يحتاج اختيار القسم الرئيسي');
+   final previewSuffix=WaffraSmsAccountLearning.suffix4(
+    expectedIncome?facts.destinationSuffix:facts.sourceSuffix);
+   final previewAccountLabel=previewSuffix==null?
+    (waffraIsEnglish?'Account needs confirmation':'الحساب يحتاج تأكيد'):
+    (waffraIsEnglish?'Account ••••':'الحساب ••••')+previewSuffix;
+   final previewDateTime=originalDate==null?
+    (waffraIsEnglish?'Date/time needs review':'التاريخ والوقت يحتاجان مراجعة'):
+    originalDate.toIso8601String().replaceFirst('T',' ').substring(0,16);
+   final canConfirm=understood&&facts.canAutoPostAsIncomeExpense&&
+    originalAmount!=null&&originalAmount.currency=='SAR'&&
+    originalDate!=null&&!bankSmsHasUnverifiedTimestamp(body)&&
+    parsed.amount!=null&&
+    (parsed.amount!-originalAmount.amount).abs()<0.00001&&
+    parsed.income==expectedIncome&&previewLeaves.length==1&&
+    previewParents.length==1;
+   final firstChoice=sensitive?'exclude':
+    facts.kind==WaffraBankOperationKind.transfer?'transfer':
+    understood?'no':'manual';
+   // Verified institution/sub-account selection must occur IN this review
+   // before enabling Yes. A second picker after Yes is prohibited.
+   ({List<String?>? ids,int? generation})? reviewedAccount;
+   String? reviewedAccountName;
+   bool choosingAccount=false;
+   Future<void> selectAccountBeforeYes(StateSetter redraw,BuildContext dialog)async{
+    if(!canConfirm||choosingAccount)return;
+    redraw(()=>choosingAccount=true);
+    try{
+     final trial=MoneyEntry(
+      id:newId(),title:parsed.title,category:proposedCategory,
+      amount:originalAmount!.amount,income:expectedIncome,
+      date:originalDate!,notes:body,sourceType:'sms');
+     final picked=await reviewSmsAccountLinks([trial],smsSender:sender);
+     final id=picked?.ids?.single;
+     if(id==null||picked?.generation==null||!mounted)return;
+     final bridge=_financeBinding?.accountsBridge;
+     if(bridge==null)return;
+     final fresh=await bridge.readVerifiedAccounts();
+     final active=fresh.balances.where((a)=>!a.archived&&a.id==id).toList();
+     if(active.length!=1||!dialog.mounted)return;
+     // The account generation checked at final commit comes from this
+     // latest read, so a changed account cannot be posted optimistically.
+     redraw((){
+      reviewedAccount=(ids:<String?>[id],generation:fresh.witness.generation);
+      reviewedAccountName=active.single.name;
+     });
+    }catch(e){
+     debugPrint('M590 pre-Yes account selection: ${e.runtimeType}');
+     if(mounted)snack(context,waffraIsEnglish?
+      'Could not verify this account; choose again.':
+      'تعذر التحقق من الحساب، اختاره مرة أخرى.',isError:true);
+    }finally{
+     if(dialog.mounted)redraw(()=>choosingAccount=false);
+    }
+   }
+   final decision=await showWaffraDialog<String>(context:context,
+    builder:(dialog)=>StatefulBuilder(builder:(dialog,redraw)=>AlertDialog(
+     title:WaffraText(waffraIsEnglish?
+      'Review bank message':'مراجعة رسالة بنكية'),
+     content:SingleChildScrollView(child:Column(
+      mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,
+      children:[
+       Container(
+        padding:const EdgeInsets.all(12),
+        decoration:BoxDecoration(borderRadius:BorderRadius.circular(14),
+         color:Theme.of(dialog).colorScheme.surfaceContainerLow),
+        child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+         Row(children:[
+          const Icon(Icons.account_balance_outlined,size:21),
+          const SizedBox(width:8),
+          Expanded(child:WaffraText(sender.isEmpty?
+           (waffraIsEnglish?'Bank sender not confirmed':'مرسل غير محدد'):sender)),
+         ]),
+         const SizedBox(height:8),
+         WaffraText(sensitive?
+          (waffraIsEnglish?
+           'Verification message. The private code is hidden for safety.':
+           'رسالة تحقق. رمز التحقق مخفي لحمايتك.'):
+          summary),
+         if(localFacts!=null)WaffraText(
+          (waffraIsEnglish?'Suggested category: ':'القسم المقترح: ')+
+          (localFacts['category']?.toString()??'')),
+         if(cloudSummary.isNotEmpty)WaffraText(cloudSummary),
+        ])),
+       if(!sensitive)Padding(
+        padding:const EdgeInsets.only(top:10),
+        child:ExpansionTile(
+         key:const Key('waffra-sms-original-expand'),
+         title:WaffraText(waffraIsEnglish?
+          'Read original bank message':'عرض نص الرسالة البنكية الأصلي'),
+         children:[Padding(padding:const EdgeInsets.all(12),
+          child:SelectableText(body,textAlign:TextAlign.start))],
+        )),
+       if(understood&&!sensitive)...[
+        const SizedBox(height:10),
+        WaffraText(waffraIsEnglish?'Is this transaction correct?':
+         'هل العملية صحيحة؟',
+         style:const TextStyle(fontWeight:FontWeight.w800)),
+        WaffraText(
+         (waffraIsEnglish?'Type: ':'نوع العملية: ')+
+          (expectedIncome?(waffraIsEnglish?'Income':'دخل'):
+           (waffraIsEnglish?'Expense':'مصروف'))+' • '+
+          (originalAmount==null?'—':originalAmount.amount.toStringAsFixed(2)+
+           ' '+originalAmount.currency)+'\n'+
+         (waffraIsEnglish?'Description: ':'الوصف: ')+parsed.title+'\n'+
+         (waffraIsEnglish?'Main / subcategory: ':'القسم الرئيسي / الفرعي: ')+
+          previewMainName+' / '+proposedCategory+'\n'+
+         (waffraIsEnglish?'Sender: ':'المرسل: ')+sender+'\n'+
+         (reviewedAccountName??previewAccountLabel)+' • '+
+          (reviewedAccount!=null?
+           (waffraIsEnglish?'Account verified':'تم تأكيد الحساب'):
+           (waffraIsEnglish?'Choose/verify before saving':
+            'اختيار/تأكيد قبل الحفظ'))+'\n'+
+         (waffraIsEnglish?'Bank transaction date/time: ':
+          'تاريخ ووقت العملية الأصلي: ')+previewDateTime,
+         style:const TextStyle(fontSize:12,height:1.5)),
+        const SizedBox(height:8),
+        OutlinedButton.icon(
+         key:const Key('m590-sms-choose-account-before-yes'),
+         onPressed:canConfirm&&!choosingAccount?
+          ()=>selectAccountBeforeYes(redraw,dialog):null,
+         icon:choosingAccount?
+          const SizedBox(width:17,height:17,
+           child:CircularProgressIndicator(strokeWidth:2)):
+          const Icon(Icons.account_balance_wallet_outlined),
+         label:WaffraText(reviewedAccountName??(waffraIsEnglish?
+          'Select verified money account':'اختار الحساب المالي قبل نعم')),
+        ),
+        const SizedBox(height:6),
+        Row(children:[
+         Expanded(child:OutlinedButton(
+          key:const Key('m565-sms-no-edit'),
+          onPressed:()=>Navigator.pop(dialog,'no'),
+          child:WaffraText(waffraIsEnglish?'No, edit':'لا، تعديل'))),
+         const SizedBox(width:8),
+         Expanded(child:FilledButton(
+          key:const Key('m565-sms-yes-confirm'),
+          onPressed:canConfirm&&reviewedAccount?.ids?.single!=null&&
+           !choosingAccount?()=>Navigator.pop(dialog,'yes'):null,
+          child:WaffraText(waffraIsEnglish?'Yes':'نعم'))),
+        ]),
+        if(!canConfirm)WaffraText(waffraIsEnglish?
+         'Edit missing amount, date or category to continue.':
+         'راجع البيانات الناقصة من شاشة التعديل قبل الحفظ.'),
+       ],
+       const SizedBox(height:12),
+       WaffraText(waffraIsEnglish?
+        'Review the message. Safe rules update after confirmed actions.':
+        'راجع الرسالة؛ وفرة يتعلم القواعد الآمنة بعد تأكيد العملية.'),
+       const SizedBox(height:11),
+       if(facts.kind==WaffraBankOperationKind.transfer&&!sensitive)
+        Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+         WaffraText(waffraIsEnglish?
+          'A transfer is not automatically income or expense. '
+          'Choose two verified accounts and confirm the principal amount. '
+          'Any transfer fee remains separate and unposted.':
+          'التحويل مش دخل أو مصروف تلقائيًا. اختار حسابين موثّقين '
+          'وراجع مبلغ التحويل الأساسي. أي رسوم تفضل منفصلة ولا تُخصم تلقائيًا.',
+          style:const TextStyle(fontSize:12,height:1.5)),
+         const SizedBox(height:9),
+         FilledButton.icon(
+          key:const Key('m587-sms-transfer-yes'),
+          onPressed:()=>Navigator.pop(dialog,'transfer'),
+          icon:const Icon(Icons.swap_horiz_rounded),
+          label:WaffraText(waffraIsEnglish?
+           'Confirm transfer details':'تأكيد التحويل')),
+         const SizedBox(height:6),
+         OutlinedButton(
+          key:const Key('m587-sms-transfer-no'),
+          onPressed:()=>Navigator.pop(dialog,'transfer-manual'),
+          child:WaffraText(waffraIsEnglish?
+           'No, add income or expense':'لا، إضافة دخل أو مصروف')),
+         const SizedBox(height:4),
+         TextButton.icon(
+          key:const Key('m587-sms-transfer-exclude'),
+          onPressed:()=>Navigator.pop(dialog,'exclude'),
+          icon:const Icon(Icons.block_outlined),
+          label:WaffraText(waffraIsEnglish?
+           'Exclude this message':'استبعاد الرسالة')),
+        ])
+       else Card(child:ListTile(
+        key:const Key('waffra-sms-understood-action'),
+        leading:Icon(sensitive?Icons.shield_outlined:
+         facts.kind==WaffraBankOperationKind.transfer?Icons.sync_alt_rounded:
+         understood?Icons.account_balance_wallet_outlined:Icons.edit_note_outlined),
+        title:WaffraText(sensitive?
+         (waffraIsEnglish?'Exclude verification SMS':'استبعاد رسالة التحقق'):
+         facts.kind==WaffraBankOperationKind.transfer?
+          (waffraIsEnglish?'Review bank transfer':'مراجعة حوالة بنكية'):
+         understood?(waffraIsEnglish?'I understand this transaction':'مراجعة العملية'):
+         (waffraIsEnglish?'Add a separate manual transaction':'إضافة عملية يدوية')),
+        subtitle:WaffraText(sensitive?
+         (waffraIsEnglish?'Exclude only this reviewed message':'استبعاد الرسالة دي فقط'):
+         (waffraIsEnglish?'Continue with verified transaction review':
+          'استكمال المراجعة قبل تسجيل أي مبلغ')),
+        onTap:()=>Navigator.pop(dialog,firstChoice),
+       )),
+      ])),
+     actions:[
+      if(facts.kind!=WaffraBankOperationKind.transfer)
+       TextButton(onPressed:()=>Navigator.pop(dialog),
+        child:WaffraText(waffraIsEnglish?'Later':'لاحقًا')),
+      if(!sensitive&&facts.kind!=WaffraBankOperationKind.transfer&&
+          localFacts==null&&cloudFacts==null)
+       PopupMenuButton<String>(
+        tooltip:waffraIsEnglish?'More options':'خيارات أخرى',
+        icon:const Icon(Icons.more_horiz),
+        onSelected:(value)=>Navigator.pop(dialog,value),
+        itemBuilder:(_)=>[
+         PopupMenuItem(value:'ai',child:WaffraText(waffraIsEnglish?
+          'Optional AI review':'تحليل اختياري بالذكاء الاصطناعي')),
+         PopupMenuItem(value:'exclude',child:WaffraText(waffraIsEnglish?
+          'Not a transaction':'ليست عملية مالية')),
+        ],
+       ),
+     ])));
+   if(decision=='exclude'&&mounted){
+    // Never mark user-excluded SMS as a financially committed transaction.
+    final acknowledged=await WaffraAutoSms.excludeMessages([id]);
+    if(acknowledged&&mounted){
+     setState(()=>_autoSmsPending.removeWhere((item)=>item['id']==id));
+     snackSuccess(context,waffraIsEnglish?
+      'Message excluded from review.':'تم استبعاد الرسالة من المراجعة.');
+     // Learn safe sender-scoped exclusion patterns only after acknowledgement.
+     try{await _learnSafeSmsRule(
+      body:body,sender:sender,kind:'excluded');}catch(_){}
+     unawaited(_refreshAutoSmsInbox());
+    }else if(mounted){
+     snack(context,waffraIsEnglish?
+      'Could not exclude the message safely. Try again.':
+      'تعذر استبعاد الرسالة بأمان. حاول تاني.',isError:true);
+    }
+   }else if(decision=='transfer'&&mounted){
+    // The transfer editor itself requires two different verified accounts,
+    // original principal amount, and an additional owner save confirmation.
+    await _reviewSmsAccountTransfer(item:selected,facts:facts);
+   }else if(decision=='transfer-manual'&&mounted){
+    final kind=await showWaffraDialog<String>(context:context,
+     builder:(dialog)=>AlertDialog(
+      title:WaffraText(waffraIsEnglish?
+       'Add a separate manual transaction':'إضافة عملية يدوية منفصلة'),
+      content:WaffraText(waffraIsEnglish?
+       'The bank transfer SMS will remain pending. Choose an independent '
+       'income or expense, enter its true amount, and confirm its own account.':
+       'رسالة التحويل هتفضل للمراجعة. اختار دخل أو مصروف منفصل، '
+       'واكتب مبلغه الحقيقي وأكّد الحساب المالي قبل الحفظ.'),
+      actions:[
+       TextButton(onPressed:()=>Navigator.pop(dialog),
+        child:WaffraText(waffraIsEnglish?'Back':'العودة')),
+       OutlinedButton(onPressed:()=>Navigator.pop(dialog,'expense'),
+        child:WaffraText(waffraIsEnglish?'Expense':'مصروف')),
+       FilledButton(onPressed:()=>Navigator.pop(dialog,'income'),
+        child:WaffraText(waffraIsEnglish?'Income':'دخل')),
+      ]));
+    if(mounted&&(kind=='income'||kind=='expense')){
+     await entrySheet(scannedIncome:kind=='income');
+    }
+   }else if(decision=='yes'&&mounted&&canConfirm&&
+             reviewedAccount!=null){
+    await _m565ConfirmSms(id:id,body:body,sender:sender,
+     category:proposedCategory,income:expectedIncome,
+     value:originalAmount.amount,date:originalDate,
+     selectedAccount:reviewedAccount!);
+   }else if(decision=='no'&&mounted){
+    await entrySheet(sms:true,initialSms:body,reviewedSender:sender);
+    if(smsHashes.contains(bankSmsHash(body))){
+     final ack=await WaffraAutoSms.acknowledgeCommitted([id]);
+     if(ack&&mounted){
+      setState(()=>_autoSmsPending.removeWhere((r)=>r['id']==id));
+     }
+    }
+   }else if(decision=='manual'&&mounted){
+    // Keep the SMS's verified source/hash instead of replacing it with
+    // a blank 'manual' record. Uncertain fields remain editable.
+    await entrySheet(sms:true,initialSms:body,reviewedSender:sender);
+    if(smsHashes.contains(bankSmsHash(body))){
+     final acknowledged=await WaffraAutoSms.acknowledgeCommitted([id]);
+     if(acknowledged&&mounted){
+      setState(()=>_autoSmsPending.removeWhere((row)=>row['id']==id));
+     }else if(mounted){
+      // The confirmed finance hash prevents a duplicate debit on retry.
+      // A failed Android acknowledgement must retain the review row.
+      snack(context,waffraIsEnglish?
+       'Saved transaction, but could not remove the SMS from review. Retry safely.':
+       'تم حفظ العملية، لكن تعذر إزالة الرسالة من المراجعة. أعد المحاولة بأمان.',
+       isError:true);
+     }
+    }
+   }else if(decision=='ai'&&mounted){
+    await _analyzeAmbiguousSmsOnDemand(selected);
+   }else if(decision=='review'&&mounted){
+    await bulkSmsSheet(initialText:body,initialSender:sender,
+     suggestedLocalCategory:localFacts?['category'] as String?,
+     suggestedLocalIncome:localFacts?['income'] as bool?);
+    if(smsHashes.contains(bankSmsHash(body))){
+     // M484 #411: remove from review only after an exact saved SMS hash
+     // and the native acknowledgement both succeed.
+     final acknowledged=await WaffraAutoSms.acknowledgeCommitted([id]);
+     if(acknowledged&&mounted){
+      setState(()=>_autoSmsPending.removeWhere((row)=>row['id']==id));
+     }else if(mounted){
+      snack(context,waffraIsEnglish?
+       'Saved transaction, but message removal failed. Retry safely.':
+       'تم حفظ العملية، لكن تعذر إزالة الرسالة من المراجعة. أعد المحاولة.',
+       isError:true);
+     }
+     if(acknowledged&&mounted&&_smsRuleOwnerKey.isNotEmpty){
+      // Once a confirmed entry is committed, learn only a specific and
+      // verified bank direction; generic/uncertain categories need review.
+      try{
+       // The user's FINAL saved category wins over pre-review guesses.
+       // Only use a record verified back from the encrypted ledger.
+       final confirmed=entries.where((entry)=>entry.sourceType=='sms'&&
+        entry.notes.isNotEmpty&&
+        bankSmsHash(entry.notes)==bankSmsHash(body)).toList();
+       final match=confirmed.length==1?confirmed.single:null;
+       final expectedIncome=facts.kind==WaffraBankOperationKind.income;
+       final specific=match!=null&&
+        (facts.kind==WaffraBankOperationKind.income||
+         facts.kind==WaffraBankOperationKind.expense)&&
+        match.income==expectedIncome&&
+        categories.any((c)=>c.name==match.category&&
+         c.income==match.income&&c.isSubcategory&&
+         waffraCategoryAvailableForNewEntry(categories,c));
+       final learned=specific?
+        await _learnSafeSmsRule(
+         body:body,sender:sender,
+         kind:expectedIncome?'income':'expense',
+         category:match.category):false;
+       // Unsafe keywords? Preserve the saved entry, no forced rule popup.
+       if(learned&&mounted){
+        snackSuccess(context,waffraIsEnglish?
+         'Matching SMS rule saved automatically.':
+         'اتحفظت قاعدة الرسائل المطابقة تلقائيًا.');
+       }
+      }catch(_){
+       if(mounted)snack(context,waffraIsEnglish?
+        'Could not securely save a rule; your confirmed transaction is unchanged.':
+        'تعذر حفظ قاعدة التصنيف بأمان. العملية المالية المؤكدة لم تتغير.',
+        isError:true);
+      }
+     }
+    }
+   }
+  }finally{
+   _autoSmsReviewOpen=false;
+   // A simple Back/Cancel only inspected an already loaded SMS. Reloading
+   // and reclassifying 1000 encrypted messages after every closed dialog
+   // caused avoidable jank. Successful exclusion, AI stage, transfer and
+   // finance-save paths already update the live queue or refresh explicitly.
+   // An unchanged review never posts, ACKs, or invalidates the snapshot.
+  }
+ }
+ void _receiveSharedSms(){
+  if(!mounted||!ready||_smsSheetOpen)return;
+  final text=waffraIncomingSms.value;
+  if(text==null||text.trim().isEmpty)return;
+  waffraIncomingSms.value=null;
+  setState((){tab=0;goalsOpened=false;addFabExpanded=false;});
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+   if(mounted)unawaited(bulkSmsSheet(initialText:text));
+  });
+ }
+ Future<void> _loadFinanceSafely()async{
+  if(!mounted)return;
+  setState((){ready=false;_financeLoadFailure=null;});
+  entries.clear();categories.clear();namedBudgets.clear();goals.clear();recurring.clear();challenges.clear();
+  deletedCategories.clear();deletedGoals.clear();deletedRecurring.clear();
+  recurringPostponed.clear();smsHashes.clear();learnedMerchantCategories.clear();
+  try{
+   await load();
+   unawaited(_m467RefreshHomeAccounts());
+   WidgetsBinding.instance.addPostFrameCallback((_) {
+    if(mounted)unawaited(_refreshAutoSmsInbox(
+     importMonth:!_autoSmsHistoryComplete));
+   });
+  }catch(e){
+   debugPrint('Financial startup integrity/recovery gate blocked access: $e');
+   if(mounted)setState((){
+    ready=false;
+    _financeLoadFailure=waffraIsEnglish?
+     'Could not verify your financial data. Nothing was deleted. Retry or restore a trusted backup.':
+     'تعذر التحقق من بياناتك. لم يُحذف شيء. حاول مجددًا أو استعد نسخة موثوقة.';
+   });
+  }
+ }
+ Widget _financialRecoveryScreen()=>Center(child:Padding(
+  padding:const EdgeInsets.all(24),
+  child:Column(mainAxisSize:MainAxisSize.min,children:[
+   const Icon(Icons.shield_outlined,size:50,color:emerald),
+   const SizedBox(height:14),
+   WaffraText(waffraIsEnglish?'Financial data protected':'بياناتك المالية محمية',
+    textAlign:TextAlign.center,style:const TextStyle(fontSize:20,fontWeight:FontWeight.bold)),
+   const SizedBox(height:9),
+   WaffraText(_financeLoadFailure??'',textAlign:TextAlign.center),
+   const SizedBox(height:18),
+   FilledButton.icon(
+    onPressed:WaffraHaptics.tap(()=>unawaited(_loadFinanceSafely())),
+    icon:const Icon(Icons.refresh),
+    label:WaffraText(waffraIsEnglish?'Retry safely':'إعادة المحاولة بأمان')),
+  ])));
+ @override void dispose(){if(identical(WaffraBackNavigation.onHomeBack,_registeredBackHandler))WaffraBackNavigation.onHomeBack=null;_dashboardScrollController.dispose();_categoryScrollController.dispose();_goalsScrollController.dispose();_recurringScrollController.dispose();_tourGlow.dispose();waffraReturnHome.removeListener(_returnToHome);waffraIncomingSms.removeListener(_receiveSharedSms);waffraAutoSmsUpdates.removeListener(_receiveAutoSmsNotice);waffraWidgetAction.removeListener(_receiveWidgetAction);_widgetReloadListener?.dispose();_saveProgress.dispose();final binding=_financeBinding;if(binding!=null)unawaited(_financialWriteQueue.drain().whenComplete(binding.close));super.dispose();}
+ Future<void> _syncWidgetTransactions()async{
+  if(!mounted||!ready)return;
+  try{
+   await _ensureFinanceBound();
+   final loadedFinance=await _financeAuthority.load(route:WaffraFinanceRoute.dashboardRead);
+   loadedFinance.finance.requireIntegrity();
+   final revision=loadedFinance.widgetRevision;
+   // A newer widget write invalidates the dashboard's previous baseline.
+   // Never carry a pre-widget snapshot into another finance save.
+   if(revision==null||revision==_lastWidgetRevision)return;
+   final raw=loadedFinance.ledgerRaw;
+   if(raw==null)return;
+   // Widget resume may follow a biometric/background transition. Decode
+   // large verified ledgers off Flutter's UI isolate to preserve tap/animation
+   // frames; this is read-only and keeps all finance integrity gates intact.
+   final parsed=await WaffraLargeJsonDecode.parse(raw);
+   if(parsed is! List)throw const FormatException(
+    'Widget finance ledger is not a list.');
+   final loaded=parsed
+    .map((item)=>MoneyEntry.fromJson(Map<String,dynamic>.from(item as Map))).toList();
+   if(!mounted)return;
+   setState((){
+    entries..clear()..addAll(loaded);
+    _lastWidgetRevision=revision;
+    _lastLedgerSavedRaw=raw;
+    _lastFinanceAuthorityRead=loadedFinance;
+   });
+   unawaited(_refreshWidget());
+  }catch(e){
+   debugPrint('Widget ledger sync failed safely: $e');
+   if(mounted)setState((){
+    ready=false;
+    _financeLoadFailure=waffraIsEnglish?
+     'Financial data could not be verified after widget activity. Retry safely.':
+     'تعذر التحقق من البيانات بعد إضافة عملية من الويدجت. أعد المحاولة بأمان.';
+   });
+  }
+ }
+ /// Refresh from the authoritative source, not an in-memory repaint.
+ /// A failed integrity check never replaces user money with zeroes.
+ // M474: coalesce overlapping user refresh gestures only. Internal verified
+ // finance reads/writes still run independently after each committed change.
+ Future<void>? _m474PullRefreshInFlight;
+ Future<void> _refreshAndSettle(ScrollController controller,int originalTab){
+  final pending=_m474PullRefreshInFlight;
+  if(pending!=null)return pending;
+  late final Future<void> tracked;
+  tracked=waffraRefreshAndRestoreScroll(
+   refresh:_refreshFromVerifiedFinance,
+   controller:controller,
+   isStillVisible:()=>mounted&&ready&&_financeLoadFailure==null&&
+    tab==originalTab&&(originalTab!=0||!goalsOpened))
+   .whenComplete((){
+    if(identical(_m474PullRefreshInFlight,tracked)){
+     _m474PullRefreshInFlight=null;
+    }
+   });
+  _m474PullRefreshInFlight=tracked;
+  return tracked;
+ }
+
+ Future<void> _refreshFromVerifiedFinance()async {
+  if(!mounted||!ready)return;
+  try {
+   await _financialWriteQueue.drain();
+   await _ensureFinanceBound();
+   final current=await _financeAuthority.load(
+    route:WaffraFinanceRoute.dashboardRead);
+   final view=current.finance;
+   view.requireIntegrity();
+   // A same-generation/same-digest SQLCipher read is verified but unchanged.
+   // Re-decoding the entire ledger and rebuilding every page on every swipe
+   // caused avoidable UI lag. Do not apply this shortcut to guarded legacy.
+   final previous=_lastFinanceAuthorityRead;
+   final encryptedCurrent=current.encryptedWitness?.snapshot;
+   final encryptedPrevious=previous?.encryptedWitness?.snapshot;
+   if(current.source==WaffraRuntimeFinanceBackend.verifiedEncrypted&&
+      previous?.source==current.source&&
+      encryptedCurrent!=null&&encryptedPrevious!=null&&
+      encryptedCurrent.generation==encryptedPrevious.generation&&
+      encryptedCurrent.digest==encryptedPrevious.digest&&
+      current.widgetRevision==previous?.widgetRevision){
+    return;
+   }
+   // Legacy first installs may omit their empty ledger or category catalog.
+   // Activated SQLCipher still fails closed if either required source is absent.
+   final refreshSource=WaffraVerifiedPullRefreshSource.fromAuthority(current);
+   final ledger=refreshSource.ledgerRaw;
+   final catalog=refreshSource.categoriesRaw;
+   Future<List<T>> readList<T>(String? raw,T Function(Map<String,dynamic>) make) async {
+    if(raw==null)return <T>[];
+    final parsed=await WaffraLargeJsonDecode.parse(raw);
+    if(parsed is! List)throw const FormatException('Invalid finance list.');
+    return parsed.map((e)=>make(Map<String,dynamic>.from(e as Map))).toList();
+   }
+   final nextEntries=await readList<MoneyEntry>(ledger,MoneyEntry.fromJson);
+   final nextCategories=catalog==null
+    ?defaultCategories()
+    :await readList<BudgetCategory>(catalog,BudgetCategory.fromJson);
+   if(current.source==WaffraRuntimeFinanceBackend.guardedLegacy){
+    if(nextCategories.isEmpty)nextCategories.addAll(defaultCategories());
+    for(final entry in nextEntries){
+     if(!nextCategories.any((c)=>c.name==entry.category&&c.income==entry.income)){
+      nextCategories.add(BudgetCategory(id:newId(),name:entry.category,
+       icon:'category',color:colors[7],income:entry.income));
+     }
+    }
+   }
+   final nextNamedBudgets=await readList<WaffraNamedBudget>(
+    view.getString('waffra_named_budgets_v1'),WaffraNamedBudget.fromJson);
+   for(final c in nextCategories.where((c)=>!c.income&&c.budget>0)){
+    if(!nextNamedBudgets.any((b)=>b.id==c.id)){
+     nextNamedBudgets.add(WaffraNamedBudget.fromLegacy(c));
+    }
+   }
+   // Legacy category caps remain in the source UNTIL a single verified
+   // finance batch commits BOTH new budget rows and cleared category caps.
+   // Never clear category caps during a catalog upgrade or read-only refresh.
+   final nextGoals=await readList<SavingGoal>(
+    view.getString('waffra_goals_v24'),SavingGoal.fromJson);
+   final nextRecurring=await readList<RecurringBill>(
+    view.getString('waffra_recurring_v24'),RecurringBill.fromJson);
+   final nextChallenges=await readList<SavingChallenge>(
+    view.getString('waffra_challenges_v1'),SavingChallenge.fromJson);
+   Future<List<Map<String,dynamic>>> readTrash(String key)=>readList<Map<String,dynamic>>(
+    view.getString(key),(row)=>row);
+   final nextCategoryTrash=await readTrash('waffra_deleted_categories_v1');
+   final nextGoalTrash=await readTrash('waffra_deleted_goals_v1');
+   final nextRecurringTrash=await readTrash('waffra_deleted_recurring_v1');
+   Map<String,String> readStringMap(String key) {
+    final raw=view.getString(key);
+    if(raw==null)return <String,String>{};
+    return (jsonDecode(raw) as Map).map((k,v)=>
+     MapEntry(k.toString(),v.toString()));
+   }
+   final nextPostponed=readStringMap('waffra_recurring_postponed_v1');
+   final nextLearned=readStringMap('waffra_learned_merchants_v1');
+   final nextHashes=view.getStringList('waffra_sms_hashes_v1')??<String>[];
+   final nextBudget=view.getDouble('waffra_monthly_budget_v1')??0;
+   final nextBudgetEnabled=view.getBool('waffra_monthly_budget_enabled_v1')
+    ??(nextBudget>0);
+   final nextReminders=view.getBool('waffra_recurring_reminders_enabled_v1')??false;
+   if(!mounted)return;
+   setState((){
+    entries..clear()..addAll(nextEntries);
+    categories..clear()..addAll(nextCategories);
+    namedBudgets..clear()..addAll(nextNamedBudgets);
+    goals..clear()..addAll(nextGoals);
+    recurring..clear()..addAll(nextRecurring);
+    challenges..clear()..addAll(nextChallenges);
+    deletedCategories..clear()..addAll(nextCategoryTrash);
+    deletedGoals..clear()..addAll(nextGoalTrash);
+    deletedRecurring..clear()..addAll(nextRecurringTrash);
+    recurringPostponed..clear()..addAll(nextPostponed);
+    learnedMerchantCategories..clear()..addAll(nextLearned);
+    smsHashes..clear()..addAll(nextHashes);
+    monthlyBudget=nextBudget;
+    monthlyBudgetEnabled=nextBudgetEnabled;
+    recurringRemindersEnabled=nextReminders;
+    _lastFinanceAuthorityRead=current;
+    _lastLedgerSavedRaw=ledger;
+    _lastWidgetRevision=current.widgetRevision;
+   });
+   // The verified pull read already includes the full authoritative ledger.
+   // Reusing it prevents a second SQLCipher decrypt for the Home widget.
+   unawaited(_publishVerifiedWidgetBalance(current));
+   unawaited(_m467RefreshHomeAccounts());
+  }catch(error) {
+   debugPrint('Verified pull refresh failed closed: $error');
+   if(mounted)setState((){
+    ready=false;
+    _financeLoadFailure=waffraIsEnglish?
+     'Refreshed financial data could not be verified. Nothing was erased. Retry safely.':
+     'تعذر التحقق من البيانات أثناء التحديث. لم تُحذف أي معاملات. أعد المحاولة بأمان.';
+   });
+  }
+ }
+ Future<void> load()async {
+  await _ensureFinanceBound();
+  final p=await SharedPreferences.getInstance();
+  // An authenticated fresh SQLCipher vault is born with an empty snapshot.
+  // Add only absent first-run ledger and category fields via the existing
+  // atomic SQLCipher writer before displaying Home; never use legacy fallback.
+  final loadedFinance=await WaffraFreshHomeCatalogRecovery.load(
+   authority:_financeAuthority,
+   defaultCategoriesJson:jsonEncode(
+    defaultCategories().map((category)=>category.toJson()).toList()),
+  );
+  _lastFinanceAuthorityRead=loadedFinance;
+  final financeView=loadedFinance.finance;
+  financeView.requireIntegrity();
+  final verifiedEncryptedStartup=
+   loadedFinance.source==WaffraRuntimeFinanceBackend.verifiedEncrypted;
+  if(verifiedEncryptedStartup&&
+     financeView.getString('waffra_categories_v24')==null){
+   throw StateError('Verified encrypted category source is incomplete.');
+  }
+  _lastWidgetRevision=loadedFinance.widgetRevision;
+  _lastLedgerSavedRaw=loadedFinance.ledgerRaw;
+  try{final raw=financeView.getString('entries');if(raw!=null)entries.addAll((await WaffraLargeJsonDecode.parse(raw) as List).map((x)=>MoneyEntry.fromJson(Map<String,dynamic>.from(x))));}catch(e){throw StateError('Saved transactions cannot be decoded safely: $e');}
+  try{final raw=financeView.getString('waffra_categories_v24');categories.addAll(raw==null?defaultCategories():(await WaffraLargeJsonDecode.parse(raw) as List).map((x)=>BudgetCategory.fromJson(Map<String,dynamic>.from(x))));}catch(e){throw StateError('Saved categories cannot be decoded safely: $e');}
+  try{
+   final raw=financeView.getString('waffra_named_budgets_v1');
+   if(raw!=null)namedBudgets.addAll((await WaffraLargeJsonDecode.parse(raw) as List).map(
+    (x)=>WaffraNamedBudget.fromJson(Map<String,dynamic>.from(x))));
+   for(final c in categories.where((c)=>!c.income&&c.budget>0)){
+    if(!namedBudgets.any((b)=>b.id==c.id)){
+     namedBudgets.add(WaffraNamedBudget.fromLegacy(c));
+    }
+   }
+  }catch(e){throw StateError('Saved independent budgets are invalid: $e');}
+  try{final raw=financeView.getString('waffra_goals_v24');if(raw!=null)goals.addAll((await WaffraLargeJsonDecode.parse(raw) as List).map((x)=>SavingGoal.fromJson(Map<String,dynamic>.from(x))));}catch(e){throw StateError('Saved goals cannot be decoded safely: $e');}
+  try{final raw=financeView.getString('waffra_recurring_v24');if(raw!=null)recurring.addAll((await WaffraLargeJsonDecode.parse(raw) as List).map((x)=>RecurringBill.fromJson(Map<String,dynamic>.from(x))));}catch(e){throw StateError('Saved recurring finance cannot be decoded safely: $e');}
+  try{final raw=financeView.getString('waffra_challenges_v1');if(raw!=null)challenges.addAll((await WaffraLargeJsonDecode.parse(raw) as List).map((e)=>SavingChallenge.fromJson(Map<String,dynamic>.from(e))));}catch(e){throw StateError('Saved challenges cannot be decoded safely: $e');}
+  try{
+   final raw=financeView.getString('waffra_deleted_categories_v1');
+   if(raw!=null)deletedCategories.addAll((await WaffraLargeJsonDecode.parse(raw) as List).map((x)=>Map<String,dynamic>.from(x as Map)));
+  }catch(e){throw StateError('Deleted categories cannot be decoded safely: $e');}
+  try{final raw=financeView.getString('waffra_deleted_goals_v1');if(raw!=null)deletedGoals.addAll((await WaffraLargeJsonDecode.parse(raw) as List).map((x)=>Map<String,dynamic>.from(x as Map)));}catch(e){throw StateError('Deleted goals cannot be decoded safely: $e');}
+  try{final raw=financeView.getString('waffra_deleted_recurring_v1');if(raw!=null)deletedRecurring.addAll((await WaffraLargeJsonDecode.parse(raw) as List).map((x)=>Map<String,dynamic>.from(x as Map)));}catch(e){throw StateError('Deleted recurring cannot be decoded safely: $e');}
+  try{final raw=financeView.getString('waffra_recurring_postponed_v1');if(raw!=null)recurringPostponed.addAll((await WaffraLargeJsonDecode.parse(raw) as Map).map((k,v)=>MapEntry(k.toString(),v.toString())));}catch(e){throw StateError('Recurring postponements cannot be decoded safely: $e');}
+  // The user's device clock cannot purge or hide encrypted SQL tombstones.
+  // Deletion/expiry requires independently verified encrypted retention.
+  final trashBefore=deletedCategories.length;
+  if(!verifiedEncryptedStartup){
+   deletedGoals.removeWhere((item){final date=DateTime.tryParse('${item['deletedAt']??''}');return date==null||!DateTime.now().isBefore(date.add(const Duration(days:30)));});
+   deletedRecurring.removeWhere((item){final date=DateTime.tryParse('${item['deletedAt']??''}');return date==null||!DateTime.now().isBefore(date.add(const Duration(days:30)));});
+   deletedCategories.removeWhere((item){
+    final when=DateTime.tryParse('${item['deletedAt']??''}');
+    return when==null||!DateTime.now().isBefore(when.add(const Duration(days:30)));
+   });
+  }
+  // Install catalog once without overwriting custom categories, saved budgets or trash.
+  if(!verifiedEncryptedStartup&&
+      !(p.getBool('waffra_category_catalog_v2_installed')??false)){
+   final discarded=<String>{};
+   for(final item in deletedCategories){
+    final data=item['category'];
+    if(data is Map){
+     discarded.add('${data['income']==true}|${data['name']}');
+     discarded.add('id|${data['id']}');
+    }
+   }
+   for(final suggestion in defaultCategories()){
+    if(discarded.contains('${suggestion.income}|${suggestion.name}')||
+       discarded.contains('id|${suggestion.id}'))continue;
+    if(categories.any((existing)=>existing.id==suggestion.id||
+      (existing.income==suggestion.income&&existing.name==suggestion.name)))continue;
+    categories.add(suggestion);
+   }
+   final committed=await _financeAuthority.installCategoryCatalog(
+    version:2,
+    expectedCatalogRaw:_lastFinanceAuthorityRead?.finance.getString('waffra_categories_v24'),
+    nextCatalogRaw:jsonEncode(categories.map((e)=>e.toJson()).toList()),
+    catalogChanged:true,
+   );
+   _lastFinanceAuthorityRead=committed;
+   _lastLedgerSavedRaw=committed.ledgerRaw;
+   _lastWidgetRevision=committed.widgetRevision;
+  }
+  // Incremental catalog update: retain existing user budgets, names and deletions.
+  // A subcategory is only added when its main category is present.
+  if(!verifiedEncryptedStartup&&
+      !(p.getBool('waffra_category_catalog_v3_installed')??false)){
+   final deletedIds=<String>{};
+   final deletedNames=<String>{};
+   for(final record in deletedCategories){
+    final raw=record['category'];
+    if(raw is Map){
+     deletedIds.add('${raw['id']}');
+     deletedNames.add('${raw['income']==true}|${raw['name']}');
+    }
+   }
+   var catalogChanged=false;
+   for(final suggestion in defaultCategories()){
+    if(deletedIds.contains(suggestion.id)||
+     deletedNames.contains('${suggestion.income}|${suggestion.name}'))continue;
+    if(categories.any((c)=>c.id==suggestion.id||
+     (c.income==suggestion.income&&c.name==suggestion.name)))continue;
+    if(suggestion.isSubcategory&&
+     !categories.any((c)=>c.id==suggestion.parentId))continue;
+    categories.add(suggestion);
+    catalogChanged=true;
+   }
+   final committed=await _financeAuthority.installCategoryCatalog(
+    version:3,
+    expectedCatalogRaw:_lastFinanceAuthorityRead?.finance.getString('waffra_categories_v24'),
+    nextCatalogRaw:jsonEncode(categories.map((e)=>e.toJson()).toList()),
+    catalogChanged:catalogChanged,
+   );
+   _lastFinanceAuthorityRead=committed;
+   _lastLedgerSavedRaw=committed.ledgerRaw;
+   _lastWidgetRevision=committed.widgetRevision;
+  }
+  // Catalog v4 installs only new leaves, preserving user budgets and trash.
+  if(!verifiedEncryptedStartup&&
+     !(p.getBool('waffra_category_catalog_v4_installed')??false)){
+   final removedIds=<String>{},removedNames=<String>{};
+   for(final record in deletedCategories){
+    final data=record['category'];
+    if(data is Map){
+     removedIds.add('${data['id']}');
+     removedNames.add('${data['income']==true}|${data['name']}');
+    }
+   }
+   var changed=false;
+   for(final suggestion in defaultCategories()){
+    if(removedIds.contains(suggestion.id)||
+       removedNames.contains('${suggestion.income}|${suggestion.name}'))continue;
+    if(categories.any((c)=>c.id==suggestion.id||
+      (c.income==suggestion.income&&c.name==suggestion.name)))continue;
+    if(suggestion.isSubcategory&&!categories.any(
+       (c)=>c.id==suggestion.parentId&&!c.isSubcategory))continue;
+    categories.add(suggestion);changed=true;
+   }
+   final committed=await _financeAuthority.installCategoryCatalog(
+    version:4,
+    expectedCatalogRaw:_lastFinanceAuthorityRead?.finance.getString('waffra_categories_v24'),
+    nextCatalogRaw:jsonEncode(categories.map((e)=>e.toJson()).toList()),
+    catalogChanged:changed,
+   );
+   _lastFinanceAuthorityRead=committed;
+   _lastLedgerSavedRaw=committed.ledgerRaw;
+   _lastWidgetRevision=committed.widgetRevision;
+  }
+    // Catalog v5 installs only new leaves, preserving user budgets and trash.
+  if(!verifiedEncryptedStartup&&
+     !(p.getBool('waffra_category_catalog_v5_installed')??false)){
+   final removedIds=<String>{},removedNames=<String>{};
+   for(final record in deletedCategories){
+    final data=record['category'];
+    if(data is Map){
+     removedIds.add('${data['id']}');
+     removedNames.add('${data['income']==true}|${data['name']}');
+    }
+   }
+   var changed=false;
+   for(final suggestion in defaultCategories()){
+    if(removedIds.contains(suggestion.id)||
+       removedNames.contains('${suggestion.income}|${suggestion.name}'))continue;
+    if(categories.any((c)=>c.id==suggestion.id||
+      (c.income==suggestion.income&&c.name==suggestion.name)))continue;
+    if(suggestion.isSubcategory&&!categories.any(
+       (c)=>c.id==suggestion.parentId&&!c.isSubcategory))continue;
+    categories.add(suggestion);changed=true;
+   }
+   final committed=await _financeAuthority.installCategoryCatalog(
+    version:5,
+    expectedCatalogRaw:_lastFinanceAuthorityRead?.finance.getString('waffra_categories_v24'),
+    nextCatalogRaw:jsonEncode(categories.map((e)=>e.toJson()).toList()),
+    catalogChanged:changed,
+   );
+   _lastFinanceAuthorityRead=committed;
+   _lastLedgerSavedRaw=committed.ledgerRaw;
+   _lastWidgetRevision=committed.widgetRevision;
+  }
+  smsHashes.addAll(financeView.getStringList('waffra_sms_hashes_v1')??const []);
+  monthlyBudget=financeView.getDouble('waffra_monthly_budget_v1')??0;
+  monthlyBudgetEnabled=financeView.getBool('waffra_monthly_budget_enabled_v1')??(monthlyBudget>0);
+  recurringRemindersEnabled=financeView.getBool('waffra_recurring_reminders_enabled_v1')??false;
+  lastBackupGeneratedAt=p.getString('waffra_backup_last_exported_v1');
+  lastBackupBytes=p.getInt('waffra_backup_last_size_v1');
+  protectRecentApps=p.getBool('waffra_protect_recents_v1')??true;
+  try{
+   final rawRules=financeView.getString('waffra_learned_merchants_v1');
+   if(rawRules!=null){
+    final data=await WaffraLargeJsonDecode.parse(rawRules);
+    if(data is Map){
+     learnedMerchantCategories.addAll(data.map((key,value)=>MapEntry(key.toString(),value.toString())));
+    }
+   }
+  }catch(e){throw StateError('Learned merchant rules cannot be decoded safely: $e');}
+  if(!verifiedEncryptedStartup&&categories.isEmpty){
+   categories.addAll(defaultCategories());
+  }
+  // Archived categories may still be referenced by historic entries.
+  // Never synthesize phantom active categories in SQLCipher.
+  if(!verifiedEncryptedStartup)for(final e in entries){
+   if(!categories.any((c)=>c.name==e.category&&c.income==e.income)){
+    categories.add(BudgetCategory(id:newId(),name:e.category,icon:'category',color:colors[7],income:e.income));
+   }
+  }
+  // Category display no longer shows caps. Keep the original category rows
+  // intact until the user-confirmed atomic migration commits BOTH collections.
+  if(!mounted)return;
+   setState(()=>ready=true);
+   // M486 #419: let Home's first interactive frame paint before competing
+   // asynchronous widget reads and incoming SMS callbacks begin.
+   WidgetsBinding.instance.addPostFrameCallback((_){
+    if(!mounted||!ready)return;
+    _receiveSharedSms();
+    _receiveWidgetAction();
+    unawaited(_refreshWidget());
+   });
+  // Home reloading an encrypted ledger must never silently post a due payment.
+  if(!verifiedEncryptedStartup){
+   WidgetsBinding.instance.addPostFrameCallback((_){
+    if(mounted)unawaited(applyRecurring());
+   });
+  }
+  if(recurringRemindersEnabled)unawaited(syncRecurringReminders());
+  // An explicit Google onboarding notification consent may be pending;
+  // enable reminder scheduling only through the verified finance authority.
+  // No reminder OS permission at startup; wait for explicit recurring toggle.
+  if(!verifiedEncryptedStartup&&trashBefore!=deletedCategories.length){
+   await persist(route:WaffraFinanceRoute.categoryCreateEditDeleteRestore);
+  }
+  if(!(p.getBool('waffra_in_app_tour_seen_v2')??false)&&mounted){
+   WidgetsBinding.instance.addPostFrameCallback((_){
+    if(mounted){setState((){tourActive=true;tourStep=0;tab=0;accountOpened=false;_headerCompact=false;goalsOpened=false;addFabExpanded=false;tourTargetReady=false;});if(waffraAnimationLevel.value!='off')_tourGlow.repeat(reverse:true);scheduleTourFocus();}
+   });
+  }
+ }
+ Future<void> _refreshWidget()async{
+  if(!Platform.isAndroid)return;
+  try{
+   await _ensureFinanceBound();
+   final verified=await _financeAuthority.load(
+    route:WaffraFinanceRoute.widgetBalanceRefresh);
+   await _publishVerifiedWidgetBalance(verified);
+  }catch(e){
+   debugPrint('Widget source unavailable: ${e.runtimeType}');
+   await refreshWaffraHomeWidget(
+    balance:'***',negative:false,hidden:true,
+    currency:WaffraDisplayCurrency.label(waffraIsEnglish));
+  }
+ }
+ Future<void> _publishVerifiedWidgetBalance(
+  WaffraFinanceAuthorityRead verified)async{
+  if(!Platform.isAndroid)return;
+  try{
+   verified.finance.requireIntegrity();
+   final raw=verified.ledgerRaw;
+   if(raw==null)throw StateError('Verified widget ledger is missing.');
+   final net=WaffraAuthoritativeWidgetBalance.netHalalas(raw);
+   await refreshWaffraHomeWidget(
+    balance:hideWaffraAmounts.value?'***':WaffraDisplayCurrency.amount(net/100),
+    negative:net<0,
+    hidden:hideWaffraAmounts.value,
+    currency:WaffraDisplayCurrency.label(waffraIsEnglish));
+  }catch(e){
+   debugPrint('Verified widget balance refresh unavailable: ${e.runtimeType}');
+   await refreshWaffraHomeWidget(
+    balance:'***',negative:false,hidden:true,
+    currency:WaffraDisplayCurrency.label(waffraIsEnglish));
+  }
+ }
+ Future<void> persist({
+  WaffraFinanceRoute route = WaffraFinanceRoute.transactionEdit,
+  bool userConfirmed = false,
+  String? selectedAccountId,
+ }) {
+  // Freeze a snapshot BEFORE any await. Previously Future.wait launched
+  // overlapping multi-key saves, so a slower old save could finish last.
+  // This protects in-app ordering, not cross-process widget writes or a crash
+  // in the middle of SharedPreferences' non-atomic multi-key update.
+  // Snapshot immutable final-field MoneyEntry references before ANY await.
+  // The expensive per-entry toJson conversion now runs after the spinner
+  // frame and off the UI isolate for large ledgers, without moving the
+  // source snapshot capture past another pending write.
+  final frozenEntries=List<MoneyEntry>.unmodifiable(entries);
+  final snapshot=<String,Object>{
+   'entries':'', // replaced by the exact frozen payload under the save overlay
+   // Migrate old category caps together with the independent budget list.
+   // Historic ledger budget IDs are kept unchanged.
+   'waffra_categories_v24':jsonEncode(categories.map((c)=>
+    route==WaffraFinanceRoute.challengeAndBudgetUpdate&&
+    c.budget>0&&namedBudgets.any((b)=>b.id==c.id)?
+     c.copy(budget:0,clearBudget:true).toJson():c.toJson()).toList()),
+   'waffra_named_budgets_v1':jsonEncode(
+    namedBudgets.map((b)=>b.toJson()).toList()),
+   'waffra_goals_v24':jsonEncode(goals.map((e)=>e.toJson()).toList()),
+   'waffra_recurring_v24':jsonEncode(recurring.map((e)=>e.toJson()).toList()),
+   'waffra_challenges_v1':jsonEncode(challenges.map((e)=>e.toJson()).toList()),
+   'waffra_deleted_categories_v1':jsonEncode(deletedCategories),
+   'waffra_deleted_goals_v1':jsonEncode(deletedGoals),
+   'waffra_deleted_recurring_v1':jsonEncode(deletedRecurring),
+   'waffra_recurring_postponed_v1':jsonEncode(recurringPostponed),
+   'waffra_monthly_budget_v1':monthlyBudget,
+   'waffra_monthly_budget_enabled_v1':monthlyBudgetEnabled,
+   'waffra_learned_merchants_v1':jsonEncode(learnedMerchantCategories),
+  };
+  final baseline=_lastFinanceAuthorityRead;
+  // Fresh verified SQLCipher vaults intentionally omit optional empty modules.
+  // A manual append may change ONLY the ledger; the authoritative writer
+  // still checks its exact witness and the one-entry append invariant.
+  final previousWrite=_m468PersistSequence;
+  final saving=_saveProgress.track<void>(
+   'persist-financial-change',() async {
+   // The frozen capture cannot overtake an earlier confirmed finance write.
+   await previousWrite;
+   // The overlay is on screen; move large JSON serialization off the UI
+   // isolate without changing a single byte or the source witness.
+   snapshot['entries']=frozenEntries.length>=
+     WaffraLargeJsonDecode.encodeRowThreshold
+      ?await compute(MoneyEntry.encodeFrozenSnapshot,frozenEntries)
+      :await WaffraLargeJsonDecode.encodeRecords(
+       frozenEntries.map((e)=>e.toJson()).toList(growable:false));
+   WaffraHomeTransactionCapture.narrowVerifiedManualAppend(
+    route:route,source:baseline?.source,snapshot:snapshot);
+   WaffraHomeTransactionCapture.narrowVerifiedModuleEdit(
+    route:route,source:baseline?.source,snapshot:snapshot,
+    witnessedValues:baseline?.encryptedWitness?.snapshot.values);
+   return _financialWriteQueue.submit(snapshot,(captured)async {
+   if(baseline==null){
+    throw StateError('Verified dashboard baseline is unavailable.');
+   }
+   // One source-aware write entry point for the entire Home finance capture.
+   // Every individual category/goal/recurring editor funnels through here.
+   // The selected SQLCipher source and witness are rechecked before writing.
+   await _ensureFinanceBound();
+   final committed=await _financeAuthority.saveCaptured(
+    route:route,
+    baseline:baseline,
+    captured:captured,
+    userConfirmed:userConfirmed,
+    selectedAccountId:selectedAccountId,
+   );
+   _lastFinanceAuthorityRead=committed;
+   _lastLedgerSavedRaw=committed.ledgerRaw;
+   _lastWidgetRevision=committed.widgetRevision;
+  }).then((_){unawaited(_refreshWidget());});
+  });
+  _m468PersistSequence=saving.then<void>(
+   (_){},onError:(Object error,StackTrace stack){});
+  return saving;
+ }
+
+ /// Optimistic UI updates must never masquerade as committed finance.
+ /// A failed verified writer may have left a newer authoritative state, so
+ /// read it back rather than blindly restoring a stale in-memory snapshot.
+ Future<bool> _persistModuleOrReload(
+   WaffraFinanceRoute route,{required String operation})async{
+  try{
+   await persist(route:route);
+   return true;
+  }catch(error){
+   debugPrint('Verified $operation write refused: $error');
+   if(mounted)await _refreshFromVerifiedFinance();
+   if(mounted)snack(context,waffraIsEnglish?
+    'Changes were not confirmed. Financial records were reloaded safely.':
+    'لم يتم تأكيد الحفظ. أعدنا تحميل بياناتك المالية بشكل آمن.');
+   return false;
+  }
+ }
+
+ Future<void> _persistSmsHashes(Set<String> hashesToSave)async {
+  // Home and Widget now merge only SHA-256 fingerprints through the same
+  // source selector. SQLCipher activation cannot fall back to preferences.
+  await _ensureFinanceBound();
+  final committed=await _financeAuthority.mergeSmsHashes(hashesToSave);
+  _lastFinanceAuthorityRead=committed;
+  _lastLedgerSavedRaw=committed.ledgerRaw;
+  _lastWidgetRevision=committed.widgetRevision;
+  smsHashes..clear()..addAll(
+   committed.finance.getStringList('waffra_sms_hashes_v1')??const <String>[]);
+ }
+
+ Future<void> syncRecurringReminders()async {
+  if(!recurringRemindersEnabled)return;
+  try {
+   await WaffraReminders.schedule(
+    recurring.where((r)=>r.active&&waffraCategoryNameAvailableForPosting(
+     categories,r.income,r.category)&&(r.linkedGoalId==null||
+      goals.any((g)=>g.id==r.linkedGoalId&&g.dueDate!=null)))
+     .map((r)=>WaffraReminder(id:r.id,title:r.title,day:r.day,
+      startAt:r.startAt,
+      oneTimeDueAt:r.linkedGoalId==null?null:r.startAt)).toList(),
+    english:waffraIsEnglish);
+  }catch(e){debugPrint('Reminder scheduling failed: $e');}
+ }
+ Future<void> toggleRecurringReminders(bool enabled,
+   {bool permissionAlreadyGranted=false})async {
+  if(enabled){
+   try {
+    final granted=permissionAlreadyGranted?
+     await WaffraReminders.alreadyPermitted():
+     await WaffraReminders.requestPermission();
+    if(!granted){
+     if(mounted)snack(context,waffraIsEnglish?
+      'Allow notifications in Android settings to enable reminders.':
+      'يرجى السماح بالإشعارات في إعدادات أندرويد لتفعيل التذكيرات.');
+     return;
+    }
+   }catch(e){
+    if(mounted)snack(context,waffraIsEnglish?'Could not activate reminders.':'تعذر تفعيل التذكيرات.');
+    return;
+   }
+  }
+  await _ensureFinanceBound();
+  final committed=await _financeAuthority.setRecurringReminderPreference(enabled);
+  _lastFinanceAuthorityRead=committed;
+  _lastLedgerSavedRaw=committed.ledgerRaw;
+  _lastWidgetRevision=committed.widgetRevision;
+  if(!mounted)return;
+  setState(()=>recurringRemindersEnabled=enabled);
+  try {
+   if(enabled)await syncRecurringReminders();
+   else await WaffraReminders.clear();
+  }catch(e){debugPrint('Reminder toggle failed: $e');}
+ }
+
+ // No recurring schedule may post money without a user's explicit confirmation.
+ Future<void> applyRecurring()async {
+  if(!mounted||!ready||_dueDialogShowing)return;
+  final today=DateTime.now();
+  for(final r in recurring){
+   if(!r.active||!waffraCategoryNameAvailableForPosting(
+    categories,r.income,r.category))continue;
+   // A goal is a one-time obligation. Its immutable original due month
+   // remains the same even when the user returns to the app much later.
+   final isGoalDue=r.linkedGoalId!=null;
+   final linkedGoals=isGoalDue?
+    goals.where((g)=>g.id==r.linkedGoalId&&g.dueDate!=null).toList():
+    <SavingGoal>[];
+   if(isGoalDue&&linkedGoals.length!=1)continue;
+   final due=isGoalDue?
+    DateTime(r.startAt.year,r.startAt.month,r.startAt.day):
+    WaffraRecurringPolicy.dueDate(today.year,today.month,r.day);
+   final goalPreview=isGoalDue?WaffraGoalDueAllocation.allocate(
+    dueAmount:r.amount,goalSaved:linkedGoals.single.saved):null;
+   final id=WaffraRecurringPolicy.entryId(r.id,due);
+   final postponed=DateTime.tryParse(recurringPostponed[id]??'');
+   if(!WaffraRecurringPolicy.isOutstanding(
+       due:due,today:today,startAt:r.startAt,
+       alreadyPaid:entries.any((e)=>e.id==id),postponedUntil:postponed))continue;
+   _dueDialogShowing=true;
+   try{
+    final action=await showWaffraDialog<String>(context:context,
+     builder:(ctx)=>AlertDialog(
+      title:Column(mainAxisSize:MainAxisSize.min,children:[
+       const Icon(Icons.event_repeat_rounded,color:emerald,size:34),
+       const SizedBox(height:8),
+       WaffraText(isGoalDue?
+        (waffraIsEnglish?'Savings goal payment due':'استحقاق هدف ادخار'):
+        (waffraIsEnglish?'Recurring payment due':'عملية متكررة مستحقة'),
+        textAlign:TextAlign.center,
+        style:const TextStyle(fontWeight:FontWeight.w800,fontSize:20)),
+      ]),
+      content:Column(mainAxisSize:MainAxisSize.min,
+       crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+       WaffraText(r.title,textAlign:TextAlign.center,
+        style:const TextStyle(fontSize:17,fontWeight:FontWeight.w700)),
+       const SizedBox(height:12),
+       Directionality(textDirection:TextDirection.ltr,
+        child:Center(child:WaffraText(cash(r.amount),
+         style:const TextStyle(fontSize:22,fontWeight:FontWeight.w900)))),
+       const SizedBox(height:12),
+       Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+        const Icon(Icons.calendar_today_outlined,size:17,color:emerald),
+        const SizedBox(width:7),
+        WaffraText(waffraIsEnglish?'Due: ':'تاريخ الاستحقاق: '),
+        Directionality(textDirection:TextDirection.ltr,
+         child:Text(dayText(postponed??due))),
+       ]),
+       const SizedBox(height:15),
+       if(goalPreview!=null)...[
+        const SizedBox(height:8),
+        WaffraText(waffraIsEnglish?
+         'Goal wallet: ${cash(goalPreview.fromGoalWallet)} • '
+         'Spendable cash: ${cash(goalPreview.fromCurrentBalance)}':
+         'من محفظة الهدف: ${cash(goalPreview.fromGoalWallet)} • '
+         'من الرصيد الحالي: ${cash(goalPreview.fromCurrentBalance)}',
+         textAlign:TextAlign.center,
+         style:const TextStyle(fontSize:12,color:emerald)),
+        const SizedBox(height:8),
+       ],
+       WaffraText(isGoalDue?
+        (waffraIsEnglish?
+         'Record this goal payment once, or postpone it?':
+         'هل تم دفع استحقاق الهدف؟ أكّد الخصم مرة واحدة أو أجّل الموعد.'):
+        (waffraIsEnglish?
+         'Have you paid, or would you like to postpone?':
+         'هل تم الدفع، أم ترغب في تأجيل الاستحقاق؟'),
+        textAlign:TextAlign.center),
+      ]),
+      actionsAlignment:MainAxisAlignment.center,
+      actionsPadding:const EdgeInsets.fromLTRB(12,0,12,16),
+      actions:[SizedBox(width:min(330.0,MediaQuery.sizeOf(ctx).width-80),
+       child:Row(children:[
+        Expanded(child:OutlinedButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,'later')),
+         child:WaffraText(waffraIsEnglish?'Not now':'ليس الآن',
+          maxLines:1,style:const TextStyle(fontSize:11.5)))),
+        const SizedBox(width:5),
+        Expanded(child:OutlinedButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,'postpone')),
+         child:WaffraText(waffraIsEnglish?'Postpone':'تأجيل',
+          maxLines:1,style:const TextStyle(fontSize:11.5)))),
+        const SizedBox(width:5),
+        Expanded(child:FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,'paid')),
+         child:WaffraText(waffraIsEnglish?'Paid':'تم الدفع',
+          maxLines:1,style:const TextStyle(fontSize:11.5)))),
+       ]))],
+     ));
+    if(!mounted)return;
+    if(action=='paid'){
+     if(isGoalDue){
+      if(_lastFinanceAuthorityRead?.source==
+        WaffraRuntimeFinanceBackend.verifiedEncrypted){
+       final cashMinor=WaffraRecurringPolicy.toHalalas(r.amount)-
+        goalPreview!.fromGoalMinor;
+       final chosen=cashMinor>0?await reviewSmsAccountLinks([
+        MoneyEntry(id:id,title:r.title,category:r.category,
+         amount:r.amount,income:false,date:DateTime.now(),
+         sourceType:'goal_due',goalWalletPaidMinor:goalPreview.fromGoalMinor)]):null;
+       if(cashMinor>0&&chosen==null)return;
+       final chosenId=chosen?.ids?.single;
+       if(chosenId!=null&&chosen!.generation!=
+          _lastFinanceAuthorityRead?.encryptedWitness?.generation){
+        if(mounted)await _loadFinanceSafely();
+        if(mounted)snack(context,waffraIsEnglish?
+         'Account changed; review the goal due again.':
+         'الحساب اتغير؛ راجع استحقاق الهدف مرة تانية.');
+        return;
+       }
+       try{
+        await _financialWriteQueue.drain();
+        final baseline=_lastFinanceAuthorityRead;
+        if(baseline==null||baseline.encryptedWitness==null){
+         throw StateError('Verified goal due witness unavailable.');
+        }
+        await _saveProgress.track('settle-verified-goal-due',()=>
+         _financeAuthority.settleLinkedGoalDue(
+          baseline:baseline,goalId:r.linkedGoalId!,recurringId:r.id,
+          dueKey:id,amountMinor:WaffraRecurringPolicy.toHalalas(r.amount),
+          confirmedAtIso:DateTime.now().toIso8601String(),
+          userConfirmed:true,selectedAccountId:chosenId));
+        if(mounted)await _loadFinanceSafely();
+        if(mounted)await syncRecurringReminders();
+       }catch(error){
+        debugPrint('Goal due SQLCipher commit rejected: $error');
+        if(mounted)await _loadFinanceSafely();
+        if(mounted)snack(context,waffraIsEnglish?
+         'Goal payment was not verified. Reload before retrying.':
+         'لم يتم تأكيد استحقاق الهدف؛ أعد تحميل البيانات قبل المحاولة.');
+       }
+       return;
+      }
+      // The same deterministic recurring ID cannot settle a goal twice.
+      if(entries.any((e)=>e.id==id))continue;
+      final currentGoal=goals.where((g)=>g.id==r.linkedGoalId).toList();
+      final currentSchedule=recurring.where((x)=>x.id==r.id&&x.active).toList();
+      if(currentGoal.length!=1||currentSchedule.length!=1){
+       snack(context,waffraIsEnglish?
+        'Goal or due date changed; refresh before paying.':
+        'الهدف أو موعده اتغير؛ حدّث البيانات قبل تسجيل الدفع.');
+       return;
+      }
+      final allocation=WaffraGoalDueAllocation.allocate(
+       dueAmount:r.amount,goalSaved:currentGoal.single.saved);
+      if(allocation.fromGoalMinor!=goalPreview!.fromGoalMinor||
+        currentSchedule.single.startAt!=r.startAt){
+       snack(context,waffraIsEnglish?
+        'Wallet allocation changed. Reopen and confirm the new split.':
+        'توزيع الدفع اتغير؛ افتح الاستحقاق وراجع المبالغ قبل التأكيد.');
+       return;
+      }
+      // A confirmed goal settlement changes ledger, goal and schedule in
+      // the guarded legacy batch. Encrypted mode is refused above until a
+      // separately audited atomic SQLCipher writer supports this exact delta.
+      setState((){
+       final goalIndex=goals.indexWhere((g)=>g.id==r.linkedGoalId);
+       final scheduleIndex=recurring.indexWhere((x)=>x.id==r.id);
+       goals[goalIndex]=currentGoal.single.copy(
+        saved:allocation.remainingGoalSavings);
+       recurring[scheduleIndex]=currentSchedule.single.copy(active:false);
+       recurringPostponed.remove(id);
+       entries.insert(0,MoneyEntry(
+        id:id,title:r.title,category:r.category,
+        amount:allocation.amount,income:false,date:DateTime.now(),
+        sourceType:'goal_due',goalWalletPaidMinor:allocation.fromGoalMinor,
+        notes:waffraIsEnglish?
+         'From goal wallet: ${cash(allocation.fromGoalWallet)}; '
+         'from current balance: ${cash(allocation.fromCurrentBalance)}':
+         'من محفظة الهدف: ${cash(allocation.fromGoalWallet)}؛ '
+         'من الرصيد الحالي: ${cash(allocation.fromCurrentBalance)}'));
+      });
+      try{
+       // The guarded source checks the loaded finance witness; a failed
+       // multi-module save is reloaded rather than assuming success.
+       await persist(route:WaffraFinanceRoute.transactionEdit,
+        userConfirmed:true);
+       if(mounted)await syncRecurringReminders();
+      }catch(error){
+       debugPrint('Goal due settlement could not be confirmed: $error');
+       if(mounted)await _loadFinanceSafely();
+       if(mounted)snack(context,waffraIsEnglish?
+        'Goal payment not confirmed. Records refreshed safely.':
+        'لم يتم تأكيد خصم استحقاق الهدف؛ أعدنا تحميل البيانات بأمان.');
+       return;
+      }
+     }else{
+      // Select the destination/source money account BEFORE changing the
+      // in-memory ledger. A cancellation does not post or clear postponement.
+      final chosen=await reviewSmsAccountLinks([MoneyEntry(
+       id:id,title:r.title,category:r.category,amount:r.amount,
+       income:r.income,date:DateTime.now(),sourceType:'recurring')],
+       recurringId:r.id);
+      if(chosen==null)return;
+      if(!entries.any((e)=>e.id==id)){
+       setState(()=>entries.insert(0,MoneyEntry(
+        id:id,title:r.title,category:r.category,amount:r.amount,
+        income:r.income,date:DateTime.now(),sourceType:'recurring')));
+      }
+      recurringPostponed.remove(id);
+      // SQLCipher commits the posted due, cleared postponement, and account
+      // link atomically; guarded legacy preserves its existing safe writer.
+      try{
+       await persist(route:WaffraFinanceRoute.recurringPostingAndPostponement,
+        userConfirmed:true,selectedAccountId:chosen.ids?.single);
+      }catch(error){
+       debugPrint('Recurring payment commit could not be confirmed: $error');
+       if(mounted)await _loadFinanceSafely();
+       if(mounted)snack(context,waffraIsEnglish?
+        'Payment not confirmed. Records refreshed; check before retrying.':
+        'لم يتم تأكيد الدفع. تم تحديث البيانات؛ تحقق منها قبل إعادة المحاولة.');
+       return;
+      }
+     }
+    }else if(action=='postpone'){
+     final selected=await waffraPickDateWithToday(english:waffraIsEnglish,context:context,initialDate:today.add(const Duration(days:1)),
+      firstDate:DateTime(today.year,today.month,today.day).add(const Duration(days:1)),
+      lastDate:DateTime(today.year+3,12,31));
+     if(selected!=null){
+      recurringPostponed[id]=selected.toIso8601String();
+      if(!await _persistModuleOrReload(
+       WaffraFinanceRoute.recurringPostingAndPostponement,
+       operation:'recurring-postpone'))return;
+     }
+    }else{return;}
+   }finally{_dueDialogShowing=false;}
+  }
+ }
+ double sum(Iterable<MoneyEntry> list,bool income)=>
+  list.where((e)=>e.income==income).fold<int>(0,(v,e)=>v+WaffraRecurringPolicy.toHalalas(e.amount))/100;
+ BudgetCategory categoryFor(String name,bool income) {
+  for(final c in categories){if(c.name==name&&c.income==income)return c;}
+  return BudgetCategory(id:'fallback',name:name,icon:'category',color:colors[7],income:income);
+ }
+ List<BudgetCategory> forType(bool income)=>categories.where((c)=>c.income==income).toList();
+ // Manual entries may only select leaf categories; stored parent references
+ // in older transactions remain unchanged until a user deliberately edits.
+ List<BudgetCategory> forManualTransactionType(bool income)=>
+  categories.where((c)=>c.income==income&&c.isSubcategory&&
+   waffraCategoryAvailableForNewEntry(categories,c)).toList();
+ // Used in NEW recurring selections. forType stays historical/complete.
+ List<BudgetCategory> forSelectableType(bool income)=>
+  forManualTransactionType(income);
+ Future<bool?> confirm(String title,String body)=>showWaffraDialog<bool>(
+  context:context,builder:(ctx)=>AlertDialog(title:WaffraText(title),content:WaffraText(body),
+  actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,false)),child:const WaffraText('إلغاء')),
+   FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,true)),child:const WaffraText('تأكيد'))]));
+ Future<bool?> confirmDeletion(String title,String body)=>showWaffraDialog<bool>(
+  context:context,builder:(ctx)=>AlertDialog(
+   title:WaffraText(title),content:WaffraText(body),
+   actionsPadding:const EdgeInsets.fromLTRB(14,6,14,14),
+   actions:[SizedBox(width:double.maxFinite,child:Row(children:[
+    Expanded(child:OutlinedButton(
+     onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,false)),
+     child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء',maxLines:2,
+      textAlign:TextAlign.center))),
+    const SizedBox(width:10),
+    Expanded(child:FilledButton(
+     style:FilledButton.styleFrom(backgroundColor:Colors.red),
+     onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,true)),
+     child:WaffraText(waffraIsEnglish?'Confirm delete':'تأكيد الحذف',
+      maxLines:2,textAlign:TextAlign.center))),
+   ]))]));
+ /// Read a single authoritative SQLCipher account witness immediately
+ /// before posting an explicitly reviewed bank SMS. Guarded legacy keeps the
+ /// existing SMS save behavior, without a shadow account database.
+ Future<({List<String?>? ids,int? generation})?> reviewSmsAccountLinks(
+  List<MoneyEntry> candidates,{String? recurringId,String smsSender='',
+   List<String?>? initialSelectedIds})async{
+  final manualRequiresAccount=candidates.any((c)=>c.sourceType=='manual');
+  // A confirmed due payment is a new finance entry, not an unassigned SMS.
+  final dueRequiresAccount=recurringId!=null||
+   candidates.any((c)=>c.sourceType=='goal_due');
+  // User-approved M470: no NEW posted income/expense, SMS, receipt or due
+  // can be saved without an active account. Old unassigned history is kept.
+  final mustSelectAccount=candidates.isNotEmpty;
+  assert(!mustSelectAccount||manualRequiresAccount||dueRequiresAccount||
+   candidates.isNotEmpty);
+  final bridge=_financeBinding?.accountsBridge;
+  if(bridge==null){
+   if(mustSelectAccount&&mounted)snack(context,waffraIsEnglish?
+    'Create a verified money account in My Accounts before adding income or expenses.':
+    'أنشئ حسابًا ماليًا موثّقًا من حساباتي قبل إضافة دخل أو مصروف.',isError:true);
+   return mustSelectAccount?null:(ids:null,generation:null);
+  }
+  if(candidates.isEmpty)return (ids:null,generation:null);
+  try{
+   var verified=await bridge.readVerifiedAccounts();
+   if(!mounted)return null;
+   var active=verified.balances.where((a)=>!a.archived).toList();
+   String? createdFromSmsAccountId;
+   // One owner-bound evidence snapshot governs first-time prompt and exact reuse.
+   var learned=<WaffraSmsAccountEvidence>[];
+   if(smsSender.isNotEmpty&&_smsRuleOwnerKey.isNotEmpty){
+    try{learned=await const WaffraSmsAccountLearningStore()
+     .read(_smsRuleOwnerKey);}
+    catch(_){/* Missing evidence must never auto-select an account. */}
+   }
+   // First *reviewed* SMS from a known bank with no existing verified
+   // account for that institution can offer a NEW account. Neither sender
+   // text nor a suggested bank automatically creates a financial account.
+   final knownBank=WaffraSmsAccountLearning.bankGroup(smsSender);
+   final firstSenderIncomeExpense=knownBank!=null&&candidates.length==1&&
+    candidates.single.sourceType=='sms'&&
+    candidates.single.notes.trim().isNotEmpty&&
+    WaffraBankSmsFactsParser.parse(candidates.single.notes)
+     .canAutoPostAsIncomeExpense;
+   final sameBankIdsForOffer=<String>{
+    if(knownBank!=null)
+     for(final account in active)
+      if((account.kind=='bank'||account.kind=='wallet')&&
+       (account.providerId!=null?account.providerId==knownBank:
+        WaffraSmsAccountLearning.bankGroup(account.name)==knownBank))
+       account.id,
+   };
+   final alreadyLinkedToBank=sameBankIdsForOffer.isNotEmpty;
+   final firstSmsFacts=firstSenderIncomeExpense?
+    WaffraBankSmsFactsParser.parse(candidates.single.notes):null;
+   final identitySuffix=firstSmsFacts==null?null:
+    WaffraSmsAccountLearning.suffix4(
+     firstSmsFacts.kind==WaffraBankOperationKind.income?
+      firstSmsFacts.destinationSuffix:firstSmsFacts.sourceSuffix);
+   final verifiedIdentity=identitySuffix==null?null:
+    WaffraSmsAccountLearning.suggest(learned,sender:smsSender,
+     suffix:identitySuffix,
+     activeAccountIds:active.map((account)=>account.id).toSet(),
+     sameBankAccountIds:sameBankIdsForOffer);
+   // A second account at the SAME bank is a new identity with different
+   // last four. First time: choose an existing account or create a new one.
+   // A previously confirmed exact sender+four must not be prompted again.
+   final needsNewIdentityChoice=firstSenderIncomeExpense&&
+    (!alreadyLinkedToBank||
+     (identitySuffix!=null&&verifiedIdentity==null));
+   if(needsNewIdentityChoice&&
+       (initialSelectedIds==null||initialSelectedIds.every((id)=>id==null))){
+    final offered=await showWaffraDialog<bool>(
+     context:context,builder:(dialog)=>AlertDialog(
+      title:WaffraText(waffraIsEnglish?
+       'Create an account for this bank?':
+       'إنشاء حساب مالي لهذا البنك؟'),
+      content:WaffraText(waffraIsEnglish?
+       'Bank identity "$smsSender"'+
+        (identitySuffix==null?'':' ••••$identitySuffix')+
+        ' needs account confirmation. Choose an existing bank account or '
+        'create a new one with an editable 0 SAR opening balance. '
+        'No transaction is posted without consent.':
+       'هوية البنك "$smsSender"'+
+        (identitySuffix==null?'':' ••••$identitySuffix')+
+        ' محتاجة ربط أول مرة. اختار حساب موجود أو أنشئ حساب بنكي جديد '
+        'برصيد افتتاحي صفر ريال قابل للتعديل. '
+        'لن تُسجل العملية من غير موافقتك.'),
+      actions:[
+       TextButton(onPressed:()=>Navigator.pop(dialog,false),
+        child:WaffraText(waffraIsEnglish?'Choose existing':'اختيار حساب موجود')),
+       FilledButton(onPressed:()=>Navigator.pop(dialog,true),
+        child:WaffraText(waffraIsEnglish?'Add account':'إضافة حساب')),
+      ],
+     ));
+    if(!mounted)return null;
+    if(offered==true){
+     // M483 / #407: prefill only the masked source for outgoing
+     // transactions or masked destination for incoming transactions.
+     // Nothing is linked or posted until the user explicitly confirms.
+     final verifiedFacts=WaffraBankSmsFactsParser.parse(
+      candidates.single.notes);
+     final reviewedIncome=verifiedFacts.kind==WaffraBankOperationKind.income;
+     final proposedSuffix=WaffraSmsAccountLearning.suffix4(
+      reviewedIncome?verifiedFacts.destinationSuffix:
+       verifiedFacts.sourceSuffix);
+     final savedCustomTypes=active.where((account)=>
+       account.kind=='bank'&&account.customSubtypeLabel!=null)
+       .map((account)=>account.customSubtypeLabel!).toSet().toList()..sort();
+     final draft=await showWaffraDialog<WaffraNewAccountDraft>(
+      context:context,builder:(dialog)=>WaffraNewAccountDialog(
+       english:waffraIsEnglish,suggestedProviderId:knownBank,
+       suggestedSenderName:smsSender,suggestedLastFour:proposedSuffix,
+       customSubtypeOptions:{'bank':savedCustomTypes}));
+     if(!mounted)return null;
+     if(draft!=null){
+      // Users may edit the form. Never silently approve a different bank
+      // than the reviewed sender or convert a bank SMS to a cash account.
+      if(draft.kind!='bank'||draft.providerId!=knownBank||
+         draft.subtype==null)throw StateError(
+        'New SMS account does not match verified sender institution.');
+      final id='m470-sms-'+DateTime.now().microsecondsSinceEpoch.toString();
+      final createdIso=DateTime.now().toUtc().toIso8601String();
+      final api=WaffraVerifiedAccountsApi(bridge:bridge);
+      await api.balances();
+      await api.createTypedAccountWithIdentity(
+       id:id,name:draft.name,kind:'bank',providerId:knownBank,
+       subtype:draft.subtype!,openingMinor:draft.openingMinor,
+       createdIso:createdIso,lastFour:draft.lastFour,
+       customSubtypeLabel:draft.customSubtypeLabel,userConfirmed:true);
+      // A bank account creation is one verified SQLCipher transaction.
+      // The later SMS posting is a SEPARATE user-confirmed transaction;
+      // failure cannot debit twice or erase the newly confirmed account.
+      await _refreshFromVerifiedFinance();
+      if(!mounted||_financeLoadFailure!=null)return null;
+      verified=await bridge.readVerifiedAccounts();
+      active=verified.balances.where((a)=>!a.archived).toList();
+      if(!active.any((a)=>a.id==id))throw StateError(
+       'Created SMS account was not verified after save.');
+      createdFromSmsAccountId=id;
+     }
+    }
+   }
+   if(active.isEmpty){
+    if(mustSelectAccount){
+     snack(context,waffraIsEnglish?
+      'Add at least one bank, cash, or wallet account in My Accounts first.':
+      'لازم تضيف حسابًا ماليًا واحدًا على الأقل من حساباتي أولًا.',isError:true);
+     return null;
+    }
+    return (
+     ids:List<String?>.filled(candidates.length,null),
+     generation:verified.witness.generation);
+   }
+   final assigned=List<String?>.filled(candidates.length,null);
+   if(createdFromSmsAccountId!=null){
+    assigned[0]=createdFromSmsAccountId;
+   }
+   if(initialSelectedIds!=null){
+    if(initialSelectedIds.length!=candidates.length)return null;
+    for(var index=0;index<assigned.length;index++){
+     final requested=initialSelectedIds[index];
+     if(requested==null)continue;
+     if(!active.any((a)=>a.id==requested))return null;
+     assigned[index]=requested;
+    }
+   }
+   // Only verified masked bank evidence can suggest a specific SMS account.
+   // Manual, recurring, goal-due and uncertain bank messages stay unassigned
+   // until the user makes an explicit choice; never inherit Home's header.
+   final accountEvidence=WaffraVerifiedAccountsApi(bridge:bridge);
+   // Sender-only learning needs two confirmations AND exactly one account
+   // whose user-chosen bank name matches the sender. No sender guesses for
+   // two accounts at the same bank; suffix evidence remains authoritative.
+   // Reuse the evidence snapshot read before the first-identity prompt.
+   final bankGroup=WaffraSmsAccountLearning.bankGroup(smsSender);
+   final sameBankIds=<String>{
+    if(bankGroup!=null)
+     for(final account in active)
+      if((account.kind=='bank'||account.kind=='wallet')&&
+         (account.providerId!=null?account.providerId==bankGroup:
+          WaffraSmsAccountLearning.bankGroup(account.name)==bankGroup))
+       account.id,
+   };
+   final activeAccountIds=active.map((account)=>account.id).toSet();
+   // A recurring template owns its default, not the active Home header.
+   // A change in this review applies to this payment only; users manage
+   // future defaults separately in Accounts -> Recurring defaults.
+   if(recurringId!=null&&candidates.length==1){
+    try{
+     final saved=await accountEvidence.recurringDefaultAccount(recurringId);
+     if(saved!=null&&active.any((a)=>a.id==saved))assigned[0]=saved;
+    }catch(_){
+     // Missing/unverified template means explicit choice or unassigned.
+    }
+   }
+   for(var i=0;i<candidates.length;i++){
+    final item=candidates[i];
+    if(assigned[i]!=null||item.sourceType!='sms'||item.notes.trim().isEmpty)continue;
+    final facts=WaffraBankSmsFactsParser.parse(item.notes);
+    if(!facts.canAutoPostAsIncomeExpense||
+       (facts.kind==WaffraBankOperationKind.income)!=item.income)continue;
+    try{
+     final exactFour=WaffraSmsAccountLearning.suffix4(
+      item.income?facts.destinationSuffix:facts.sourceSuffix);
+     final previouslyConfirmed=exactFour==null?null:
+      WaffraSmsAccountLearning.suggest(learned,sender:smsSender,
+       suffix:exactFour,activeAccountIds:activeAccountIds,
+       sameBankAccountIds:sameBankIds);
+     if(previouslyConfirmed!=null){assigned[i]=previouslyConfirmed;continue;}
+     final match=await accountEvidence.suggestSmsAccount(facts);
+     if(match.confident&&match.accountId!=null&&
+        bankGroup!=null&&sameBankIds.contains(match.accountId)&&
+        active.any((a)=>a.id==match.accountId)){
+      // A suffix by itself cannot prove the SMS belongs to this sender's bank.
+      assigned[i]=match.accountId;
+     }
+    }catch(_){
+     // Suggestion failure must never guess or silently link an account.
+    }
+   }
+   if(!mounted)return null;
+   // M475 #412: don't ask for the same money account twice after an
+   // explicit entry-editor choice or user-approved account creation.
+   final allEditorAccountsConfirmed=initialSelectedIds!=null&&
+    initialSelectedIds.length==assigned.length&&
+    initialSelectedIds.every((id)=>id!=null);
+   final newAccountConfirmed=createdFromSmsAccountId!=null&&
+    candidates.length==1;
+   // Only a previously owner-confirmed, exact sender+four identity may
+   // bypass REPEATING account linking. The finance writer still requires
+   // the owner's transaction Yes and a fresh SQLCipher account witness.
+   final exactSmsIdentityConfirmed=candidates.length==1&&
+    assigned.single!=null&&candidates.single.sourceType=='sms'&&
+    WaffraSmsAccountLearning.suggest(learned,sender:smsSender,
+     suffix:WaffraSmsAccountLearning.suffix4(
+      candidates.single.income?
+       WaffraBankSmsFactsParser.parse(candidates.single.notes).destinationSuffix:
+       WaffraBankSmsFactsParser.parse(candidates.single.notes).sourceSuffix),
+     activeAccountIds:activeAccountIds,
+     sameBankAccountIds:sameBankIds)==assigned.single;
+   if((allEditorAccountsConfirmed||newAccountConfirmed||
+      exactSmsIdentityConfirmed)&&assigned.every((id)=>id!=null)){
+    // Read a fresh SQLCipher account witness, not a stale picker snapshot.
+    final latest=await bridge.readVerifiedAccounts();
+    final liveIds=latest.balances.where((a)=>!a.archived)
+     .map((a)=>a.id).toSet();
+    if(!assigned.every((id)=>liveIds.contains(id))){
+     if(mounted)snack(context,waffraIsEnglish?
+      'Selected account changed; choose it again before saving.':
+      'الحساب المختار اتغير؛ اختاره مرة تانية قبل الحفظ.',isError:true);
+     return null;
+    }
+    return (ids:List<String?>.unmodifiable(assigned),
+     generation:latest.witness.generation);
+   }
+   final providerGroups=WaffraRecurringAccountGroups.fromAccounts(active);
+   final chosenProviders=List<String?>.generate(assigned.length,(index){
+    for(final group in providerGroups){
+     if(group.accounts.any((a)=>a.id==assigned[index]))return group.id;
+    }
+    return null;
+   });
+   final approved=await showWaffraDialog<bool>(context:context,
+    builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
+     title:WaffraText(mustSelectAccount?
+      (waffraIsEnglish?'Choose a money account':'اختار الحساب المالي للعملية'):
+      (waffraIsEnglish?
+       'Which account for each bank transaction?':
+       'تسجيل كل معاملة بنكية في أي حساب؟')),
+     content:SizedBox(width:double.maxFinite,
+      height:waffraKeyboardDialogListHeight(ctx,desired:500),
+      child:ListView(children:[
+       WaffraText(recurringId!=null
+        ?(waffraIsEnglish
+          ?'This selection is for this payment only. Change future defaults from Accounts.'
+          :'الاختيار لهذه الدفعة فقط. غيّر الحساب للدفعات القادمة من الحسابات.')
+        :manualRequiresAccount?
+         (waffraIsEnglish?
+          'Manual income and expenses must use an existing money account.':
+          'الدخل والمصروف اليدوي لازم يرتبطوا بحساب مالي موجود.')
+        :(waffraIsEnglish
+          ?'Choose a verified money account; new entries cannot be unassigned.'
+          :'اختار حسابًا ماليًا موثّقًا لكل عملية؛ الحفظ بدون حساب غير مسموح.')),
+       const SizedBox(height:12),
+       for(var n=0;n<candidates.length;n++)
+        Padding(padding:const EdgeInsets.only(bottom:12),
+         child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+          WaffraText(candidates[n].title+' · '+cash(candidates[n].amount),
+           maxLines:2,style:const TextStyle(fontWeight:FontWeight.bold)),
+          const SizedBox(height:5),
+          WaffraCenteredDropdownFormField<String>(
+           key:ValueKey('m470-review-provider-'+n.toString()+'-'+
+            (chosenProviders[n]??'none')),
+           initialValue:chosenProviders[n],isExpanded:true,
+           menuMaxHeight:min(340.0,MediaQuery.sizeOf(ctx).height*.48),
+           decoration:InputDecoration(
+            labelText:waffraIsEnglish?'Bank or provider':'الجهة أو البنك',
+            border:const OutlineInputBorder()),
+           items:providerGroups.map((group)=>DropdownMenuItem<String>(
+            value:group.id,child:WaffraText(waffraIsEnglish?
+             group.labelEn:group.labelAr,maxLines:1))).toList(),
+           onChanged:WaffraHaptics.selection((value)=>update((){
+            chosenProviders[n]=value;
+            assigned[n]=null; // Provider never silently approves an account.
+           })),
+          ),
+          const SizedBox(height:7),
+          WaffraCenteredDropdownFormField<String>(
+           key:ValueKey('waffra-sms-account-'+n.toString()+'-'+
+            (assigned[n]??'none')),
+           initialValue:mustSelectAccount?
+            assigned[n]:assigned[n]??'none',isExpanded:true,
+           menuMaxHeight:min(340.0,MediaQuery.sizeOf(ctx).height*.48),
+           decoration:InputDecoration(
+            labelText:waffraIsEnglish?'Money account':'الحساب المالي',
+            border:const OutlineInputBorder()),
+           items:providerGroups.where((p)=>p.id==chosenProviders[n])
+            .expand((p)=>p.accounts).map((a)=>DropdownMenuItem(
+             value:a.id,child:WaffraText(a.name,maxLines:1))).toList(),
+           onChanged:chosenProviders[n]==null?null:
+            WaffraHaptics.selection((value)=>update(
+             ()=>assigned[n]=value)),
+          ),
+         ])),
+      ])),
+     actions:[
+      TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,false)),
+       child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+      FilledButton(
+       onPressed:mustSelectAccount&&assigned.any((account)=>account==null)?
+        null:WaffraHaptics.tap(()=>Navigator.pop(ctx,true)),
+       child:WaffraText(waffraIsEnglish?'Confirm':'تأكيد')),
+     ],
+    )));
+   if(approved!=true)return null;
+   if(mustSelectAccount&&assigned.any((account)=>account==null))return null;
+   return (ids:List<String?>.unmodifiable(assigned),
+    generation:verified.witness.generation);
+  }catch(_){
+   if(mounted)snack(context,waffraIsEnglish?
+    'Accounts could not be verified. Open My accounts before saving.':
+    'تعذر التحقق من الحسابات. افتح حساباتي قبل حفظ العملية.');
+   return null;
+  }
+ }
+/// Budget assignment is OPTIONAL in every bank import: no assignment never blocks saving.
+ Future<List<String?>?> reviewSmsBudgetLinks(List<MoneyEntry> candidates)async{
+  final choices=namedBudgets.where((b)=>
+   !b.deleted&&b.budget>0&&b.budgetActive).toList();
+  final assigned=List<String?>.filled(candidates.length,null);
+  if(!candidates.any((e)=>!e.income)||choices.isEmpty)return assigned;
+  return showWaffraDialog<List<String?>>(context:context,
+   builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?'Choose budgets for expenses':'تسجيل كل مصروف في أي ميزانية؟'),
+    content:SizedBox(width:double.maxFinite,
+     height:waffraKeyboardDialogListHeight(ctx,desired:500),
+     child:ListView(children:[
+      WaffraText(waffraIsEnglish?
+       'Choose a budget for each expense, or leave it unlinked.':
+       'اختار ميزانية لكل مصروف، أو سيبه بدون ربط.'),
+      const SizedBox(height:12),
+      for(var n=0;n<candidates.length;n++)
+       if(!candidates[n].income)Padding(
+        padding:const EdgeInsets.only(bottom:12),
+        child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+         WaffraText(candidates[n].title+' · '+cash(candidates[n].amount),
+          style:const TextStyle(fontWeight:FontWeight.bold),maxLines:2),
+         const SizedBox(height:5),
+         WaffraCenteredDropdownFormField<String>(
+          key:ValueKey('waffra-sms-budget-'+n.toString()+'-'+(assigned[n]??'none')),
+          menuMaxHeight:min(340.0,MediaQuery.sizeOf(ctx).height*.48),
+          initialValue:assigned[n]??'none',isExpanded:true,
+          decoration:InputDecoration(labelText:waffraIsEnglish?'Budget':'الميزانية',
+           border:const OutlineInputBorder()),
+          items:[
+           DropdownMenuItem(value:'none',child:WaffraText(
+            waffraIsEnglish?'Without a budget':'بدون ميزانية',maxLines:1)),
+           ...choices.map((c)=>DropdownMenuItem(value:c.id,child:WaffraText(
+            c.budgetLabel??'ميزانية '+c.displayName,maxLines:1))),
+          ],
+          onChanged:WaffraHaptics.selection((value)=>update(
+           ()=>assigned[n]=value=='none'?null:value)),
+         ),
+         Align(alignment:AlignmentDirectional.centerStart,
+          child:TextButton.icon(
+           key:Key('waffra-sms-batch-create-budget-'+n.toString()),
+           icon:const Icon(Icons.add_circle_outline_rounded,size:17),
+           label:WaffraText(waffraIsEnglish?
+            'Create new budget':'إنشاء ميزانية جديدة'),
+           onPressed:WaffraHaptics.tap(()async{
+            final id=await chooseBudgetCategory();
+            if(id==null||!ctx.mounted)return;
+            final found=namedBudgets.where((b)=>b.id==id&&
+             b.budget>0&&b.budgetActive&&!b.deleted).toList();
+            if(found.length!=1)return;
+            update((){
+             choices
+              ..clear()
+              ..addAll(namedBudgets.where((b)=>
+               b.budget>0&&b.budgetActive&&!b.deleted));
+             assigned[n]=id;
+            });
+           }),
+          )),
+        ])),
+     ])),
+    actions:[
+     TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
+      child:WaffraText(waffraIsEnglish?'Cancel batch':'إلغاء')),
+     FilledButton(onPressed:WaffraHaptics.tap(()async{
+      final unlinked=List<int>.generate(candidates.length,(i)=>i)
+       .where((i)=>!candidates[i].income&&assigned[i]==null).length;
+      if(unlinked>0){
+       final confirmed=await waffraConfirmUnlinkedBudgetSave(
+        context:ctx,expenseCount:unlinked);
+       if(!confirmed||!ctx.mounted)return;
+      }
+      if(ctx.mounted)Navigator.pop(ctx,List<String?>.from(assigned));
+     }),
+      child:WaffraText(waffraIsEnglish?
+       'Continue saving':'متابعة الحفظ')),
+    ],
+   )));
+ }
+ Future<void> bulkSmsSheet({String? initialText,String initialSender='',
+  String? suggestedLocalCategory,bool? suggestedLocalIncome})async {
+  // Deterministic SMS review is available immediately and offline.
+  // Qwen remains optional for ambiguous messages; never block paste on a
+  // 484 MB model initialization just to read a supported bank template.
+  if(_smsSheetOpen||!mounted)return;
+  _smsSheetOpen=true;
+ final pasted=TextEditingController(text:initialText??'');
+ final description=TextEditingController();
+ final amount=TextEditingController();
+ var messages=<String>[];
+ var index=0;
+ var income=false;
+ var category='أخرى';
+ String? smsParentId;
+ var parsed=false;
+ var reviewing=false,reviewAttempted=false,pasteAttempted=false;
+ Timer? pasteTimer;
+ var pasteRevision=0;
+ var busy=false;
+ var analyzingPaste=false;
+ var savedCount=0;
+ var statusMessage='';
+ var rejectedMessages=<String>[];
+ String? noTransactionWarning(String text){
+  final parts=splitBankMessages(text.trim());
+  if(text.trim().isEmpty||parts.isEmpty)return null;
+  final hasTransaction=parts.any((message){
+   final result=BankParser.parse(message);
+   return result.amount!=null&&result.amount!>0;
+  });
+  if(!hasTransaction&&parts.any((message)=>
+    BankParser.parse(message).requiresCurrencyReview)){
+   return waffraIsEnglish
+    ?'Foreign currency detected. Non-SAR transactions are unsupported in this release.'
+    :'تم اكتشاف عملة أجنبية. العمليات بغير الريال السعودي غير مدعومة حاليًا.';
+  }
+  return hasTransaction?null:(waffraIsEnglish
+   ?'No confirmed supported-SAR transaction found. Review and retry.'
+   :'لم نجد معاملة مؤكدة بالريال يمكن حفظها تلقائيًا. راجع الرسالة وحاول مجددًا.');
+ }
+
+ bool sheetActive=true;
+ Future<void> prepare(int i,StateSetter update)async {
+  final result=BankParser.parse(messages[i]);
+  // Every next/previous message re-reads the latest LOCAL rules, including
+  // any pattern just learned from the previously confirmed transaction.
+  // No cloud request, no SMS acknowledgement and no financial write here.
+  var refreshedRules=<WaffraSmsLocalRule>[];
+  if(_smsRuleOwnerKey.isNotEmpty){
+   try{refreshedRules=await const WaffraSmsLocalRuleStore()
+     .read(_smsRuleOwnerKey);}catch(_){/* Manual review remains possible. */}
+  }
+  if(!sheetActive||!mounted)return;
+  final localKind=WaffraBankSmsFactsParser.parse(messages[i]).kind;
+  final inferred=WaffraSmsLocalRules.resolve(
+   body:messages[i],sender:initialSender,bankKind:localKind,
+   custom:refreshedRules);
+  update((){
+   reviewAttempted=false;index=i;income=result.income;
+   final suggested=messages.length==1&&i==0&&
+    suggestedLocalIncome==income&&suggestedLocalCategory!=null&&
+    categories.any((c)=>c.income==income&&c.isSubcategory&&
+     c.name==suggestedLocalCategory)?suggestedLocalCategory:null;
+   final learned=inferred!=null&&inferred.income==income&&
+    categories.any((c)=>c.income==income&&c.isSubcategory&&
+     c.name==inferred.category&&
+     waffraCategoryAvailableForNewEntry(categories,c))?
+      inferred.category:null;
+   category=suggested??learned??(categories.any((c)=>
+    c.income==income&&c.name==result.category)?result.category:
+    (forType(income).isNotEmpty?forType(income).first.name:'أخرى'));
+   final leaves=categories.where((c)=>c.income==income&&c.isSubcategory&&c.name==category).toList();
+   if(leaves.isNotEmpty){
+    smsParentId=leaves.first.parentId;
+   }else{
+    final parents=categories.where((c)=>c.income==income&&!c.isSubcategory&&c.name==category).toList();
+    smsParentId=parents.isEmpty?null:parents.first.id;
+    category='';
+   }
+   // M220: never paste the full bank SMS into the transaction TITLE.
+   // The original text is shown only in the ephemeral review field; the
+   // guarded legacy writer strips raw SMS notes until SQLCipher is certified.
+   description.text=result.title;
+   amount.text=result.amount==null?'':formatWaffraMoney(result.amount!);
+  });
+ }
+ // Kept for staged SMS migration; active path uses the verified batch writer.
+ // ignore: unused_element
+ Future<void> saveParsedMessages(BuildContext ctx,StateSetter update)async {
+  // Saving is governed by parsed amount, currency, category and encrypted
+  // writer checks, never by whether a language model is installed.
+  if(busy)return;
+  final found=splitBankMessages(pasted.text.trim());
+  if(found.isEmpty){update(()=>statusMessage=waffraIsEnglish?'No financial transactions found. Edit the message and retry.':'هذه الرسالة لا تحتوي على أي معاملات مالية. عدّلها لإعادة التحليل تلقائيًا.');return;}
+  if(found.length>100){update(()=>statusMessage=waffraIsEnglish?'Maximum 100 transactions per paste.':'الحد الأقصى 100 معاملة في كل عملية لصق.');return;}
+  // A malformed or ambiguous source timestamp must not be silently booked
+  // on today's date during a large finance import.
+  final invalidDates=found.where((raw)=>
+   bankSmsDate(raw)==null||bankSmsHasUnverifiedTimestamp(raw)).length;
+  if(invalidDates>0){
+   update(()=>statusMessage=waffraIsEnglish?
+    '$invalidDates bank message(s) have an ambiguous or invalid date. Review their dates before saving; nothing was posted.':
+    'توجد $invalidDates رسالة بتاريخ غير واضح أو غير صالح. راجع التواريخ قبل الحفظ؛ لم تُحفظ معاملات.');
+   return;
+  }
+  final currencyBatch=WaffraSmsCurrencies.summarize(found);
+  if(currencyBatch.needsCurrencyReview){
+   // No partial automatic commit for a mixed-currency paste.
+   update(()=>statusMessage=waffraIsEnglish
+    ?'Currency review required: '+currencyBatch.summary+
+      '. No transactions were saved. Separate SAR messages or review foreign transactions individually.'
+    :'تحتاج العملات إلى مراجعة: '+currencyBatch.summary+
+      '. لم يتم حفظ أي عملية. افصل رسائل الريال أو راجع العمليات الأجنبية يدويًا.');
+   return;
+  }
+  // Batch parsing of 20-100 messages must not freeze Android animations
+  // or block text/scroll interactions on the Flutter UI isolate.
+  final results=found.length>=20
+   ?await compute(waffraParseBankSmsBatchInIsolate,found)
+   :found.map(BankParser.parse).toList(growable:false);
+  if(!ctx.mounted)return;
+  final valid=<int>[],invalid=<int>[],duplicates=<int>[];
+  final preRejected=<int,WaffraSmsNotSavedReason>{};
+  // Income/expense ledger does not represent account-to-account transfers,
+  // card settlements or unconfirmed messages. Leave these for proper review.
+  var transferReviewCount=0;
+  var allowRepeatedSms=false;
+  final seen=<String>{};
+  for(var i=0;i<found.length;i++){
+   final facts=WaffraBankSmsFactsParser.parse(found[i]);
+   if(facts.kind==WaffraBankOperationKind.transfer||
+      facts.kind==WaffraBankOperationKind.cardSettlement||facts.pending){
+    transferReviewCount++;
+    invalid.add(i);
+    preRejected[i]=WaffraSmsNotSavedReason.categoryUnresolved;
+    continue;
+   }
+   if(results[i].amount==null||results[i].amount!<=0){
+    invalid.add(i);
+    preRejected[i]=WaffraSmsNotSavedReason.amountUnrecognized;
+    continue;
+   }
+   final hash=bankSmsHash(found[i]);
+   if(smsHashes.contains(hash)||!seen.add(hash)){
+    duplicates.add(i);
+    preRejected[i]=WaffraSmsNotSavedReason.alreadySaved;
+    continue;
+   }
+   valid.add(i);
+  }
+  if(duplicates.isNotEmpty){
+   final choice=await showWaffraDialog<String>(context:ctx,builder:(d)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?'Duplicate transactions detected':'تم اكتشاف معاملات مكررة'),
+    content:WaffraText(waffraIsEnglish
+     ?'${duplicates.length} transaction(s) are duplicates. You can safely skip those and save the new ones, or explicitly approve adding the duplicates.'
+     :'اكتُشفت ${duplicates.length} معاملة مكررة. تخطَّها أو أكّد إضافتها.'),
+    actions:[
+     TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(d,'cancel')),child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+     OutlinedButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(d,'skip')),child:WaffraText(waffraIsEnglish?'Skip duplicates':'تخطي المكررة')),
+     FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(d,'add')),child:WaffraText(waffraIsEnglish?'Add duplicates too':'إضافة المكررة أيضًا')),
+    ]));
+   if(!ctx.mounted||choice==null||choice=='cancel')return;
+   if(choice=='add'){
+    allowRepeatedSms=true;
+    for(final i in duplicates)preRejected.remove(i);
+    valid.addAll(duplicates);
+    valid.sort();
+   }
+  }
+  if(valid.isEmpty){update(() {statusMessage=transferReviewCount>0?
+    (waffraIsEnglish?'Transfers and card settlements require separate account review. No income/expense was posted.':
+     'التحويلات وسداد البطاقات تحتاج مراجعة منفصلة في الحسابات؛ لم نسجلها كدخل أو مصروف.'):
+    (waffraIsEnglish?'No new transactions can be saved. Review the messages below.':
+     'لا توجد معاملات جديدة قابلة للحفظ. راجع الرسائل أدناه.');
+    rejectedMessages=[for(final i in preRejected.keys)found[i]];});return;}
+  final incomes=valid.where((i)=>results[i].income).toList();
+  final expenses=valid.where((i)=>!results[i].income).toList();
+  final incomeTotal=incomes.fold<double>(0,(v,i)=>v+results[i].amount!);
+  final expenseTotal=expenses.fold<double>(0,(v,i)=>v+results[i].amount!);
+  final accepted=await showWaffraDialog<bool>(
+   context:ctx,barrierColor:Colors.black.withValues(alpha:.25),
+   builder:(dialogCtx)=>BackdropFilter(
+    filter:ui.ImageFilter.blur(sigmaX:7,sigmaY:7),
+    child:AlertDialog(
+     title:WaffraText(waffraIsEnglish?'Confirm transactions':'تأكيد إضافة المعاملات'),
+     content:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+      WaffraText(waffraIsEnglish?
+       'Detected ${valid.length} transactions from bank messages:':
+       'تم اكتشاف ${valid.length} معاملة من الرسائل البنكية:'),
+      const SizedBox(height:16),
+      Container(padding:const EdgeInsets.all(13),
+       decoration:BoxDecoration(color:const Color(0xFFEAF7EF),borderRadius:BorderRadius.circular(15)),
+       child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+        WaffraText(waffraIsEnglish?'Income transactions':'معاملات دخل',
+         style:const TextStyle(fontWeight:FontWeight.bold,color:Color(0xFF075B43))),
+        WaffraText(waffraIsEnglish?
+         '${incomes.length} transactions — SAR ${incomeTotal.toStringAsFixed(2)}':
+         '${incomes.length} معاملة — ${incomeTotal.toStringAsFixed(2)} ر.س',
+         style:const TextStyle(color:Color(0xFF075B43))),
+       ])),
+      const SizedBox(height:10),
+      Container(padding:const EdgeInsets.all(13),
+       decoration:BoxDecoration(color:const Color(0xFFFFF0E9),borderRadius:BorderRadius.circular(15)),
+       child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+        WaffraText(waffraIsEnglish?'Expense transactions':'معاملات مصروفات',
+         style:const TextStyle(fontWeight:FontWeight.bold,color:Color(0xFF9A4328))),
+        WaffraText(waffraIsEnglish?
+         '${expenses.length} transactions — SAR ${expenseTotal.toStringAsFixed(2)}':
+         '${expenses.length} معاملة — ${expenseTotal.toStringAsFixed(2)} ر.س',
+         style:const TextStyle(color:Color(0xFF9A4328))),
+       ])),
+      if(invalid.isNotEmpty)...[
+       const SizedBox(height:12),
+       WaffraText(waffraIsEnglish?
+        '${invalid.length} messages could not be analyzed.':
+        'تعذر تحليل ${invalid.length} رسالة.',
+        style:const TextStyle(color:Colors.deepOrange)),
+      ],
+      const SizedBox(height:12),
+      WaffraText(waffraIsEnglish?
+       'Confirm adding the detected transactions?':
+       'هل تريد تأكيد إضافة المعاملات المكتشفة؟'),
+     ]),
+     actions:[
+      TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialogCtx,false)),
+       child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+      FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialogCtx,true)),
+       child:WaffraText(waffraIsEnglish?'Confirm and add':'تأكيد وإضافة المعاملات')),
+     ],
+    )));
+  if(accepted!=true||!ctx.mounted)return;
+  update(() {busy=true;rejectedMessages=[];});
+  // Paint the confirmation feedback before preparing a large SMS batch.
+  await WidgetsBinding.instance.endOfFrame;
+  if(!ctx.mounted)return;
+  List<WaffraSmsLocalRule> learnedSmsRules=const [];
+  if(_smsRuleOwnerKey.isNotEmpty){
+   try{
+    learnedSmsRules=await const WaffraSmsLocalRuleStore()
+     .read(_smsRuleOwnerKey);
+   }catch(_){
+    if(ctx.mounted)update((){
+     busy=false;
+     statusMessage=waffraIsEnglish?
+      'Encrypted classification rules are unavailable. No SMS was saved. Retry after unlocking.':
+      'تعذر قراءة قواعد التصنيف المشفرة. لم تُحفظ أي رسالة؛ حاول مجددًا بعد فتح التطبيق.';
+    });
+    return;
+   }
+  }
+  if(!ctx.mounted)return;
+  final additions=<MoneyEntry>[];
+  final proposedSourceIndexes=<int>[];
+  final proposed=<BudgetCategory>[];
+  final proposedHashes=<String>[];
+  for(final i in valid){
+   final result=results[i];
+   final raw=found[i];
+   final existing=<WaffraM155Category>[
+    for(final c in [...categories,...proposed])
+     WaffraM155Category(id:c.id,name:c.name,income:c.income,parentId:c.parentId),
+   ];
+   final bankFacts=WaffraBankSmsFactsParser.parse(raw);
+   final learned=WaffraSmsLocalRules.resolve(
+    body:raw,sender:found.length==1?initialSender:'',
+    bankKind:bankFacts.kind,custom:learnedSmsRules);
+   // Generic built-in patterns should not supersede the existing planner.
+   final confirmedRule=learned!=null&&!learned.builtIn?learned:null;
+   final learnedCategory=confirmedRule!=null&&categories.any((c)=>
+     c.isSubcategory&&c.name==confirmedRule.category&&
+     c.income==result.income&&waffraCategoryAvailableForNewEntry(categories,c))
+      ?confirmedRule.category:null;
+   // Inactive learned categories must be reviewed instead of substituted.
+   if(confirmedRule!=null&&learnedCategory==null){
+    preRejected[i]=WaffraSmsNotSavedReason.categoryUnresolved;
+    continue;
+   }
+   final plan=WaffraM155CategoryPlan.propose(rawSms:raw,income:result.income,
+    existing:existing,learned:learnedMerchantCategories);
+   if(plan==null&&learnedCategory==null){
+    preRejected[i]=WaffraSmsNotSavedReason.categoryUnresolved;
+    continue;
+   }
+   if(learnedCategory==null&&plan?.newCategoryRequired==true){
+    final parentName=plan!.categoryName.split(' / ').first;
+    final roots=categories.where((c)=>c.income==result.income&&
+      !c.isSubcategory&&c.name==parentName).toList();
+    if(roots.length!=1){
+     preRejected[i]=WaffraSmsNotSavedReason.categoryUnresolved;
+     continue;
+    }
+    final parent=roots.single;
+    proposed.add(BudgetCategory(id:newId(),name:plan.categoryName,
+     parentId:parent.id,income:result.income,icon:parent.icon,
+     color:parent.color));
+   }
+   final categoryName=learnedCategory??plan!.categoryName;
+   final merchant=waffraMerchantName(raw,income:result.income);
+   final title=merchant==null?result.title:result.title+' — '+merchant;
+   final verifiedSmsDate=bankSmsDate(raw);
+   if(verifiedSmsDate==null){
+    preRejected[i]=WaffraSmsNotSavedReason.categoryUnresolved;
+    continue;
+   }
+   additions.add(MoneyEntry(id:newId(),title:title,
+    category:categoryName,amount:result.amount!,income:result.income,
+    date:verifiedSmsDate,notes:raw,sourceType:'sms',
+    merchantKey:plan?.merchantKey??waffraMerchantKey(raw,income:result.income)??''));
+   proposedHashes.add(bankSmsHash(raw));
+   proposedSourceIndexes.add(i);
+  }
+  if(additions.isEmpty){
+   update((){
+    busy=false;
+    rejectedMessages=[for(final i in preRejected.keys)found[i]];
+    statusMessage=waffraIsEnglish?
+     'No transactions were saved. Review and correct the messages below.':
+     'لم تُحفظ معاملات. راجع الرسائل أدناه وصحّح بياناتها.';
+   });
+   return;
+  }
+  final reviewedBudgets=await reviewSmsBudgetLinks(additions);
+  if(reviewedBudgets==null){if(ctx.mounted)update(()=>busy=false);return;}
+  // A paused budget may not receive a newly imported SMS charge.
+  // Refuse the batch if its previously confirmed selection became stale.
+  if(reviewedBudgets.any((id)=>id!=null&&
+     !namedBudgets.any((b)=>b.id==id&&b.budget>0&&b.budgetActive&&!b.deleted))){
+   if(ctx.mounted){
+    update(()=>busy=false);
+    snack(ctx,waffraIsEnglish?
+     'A selected budget was paused. Review the batch again.':
+     'تم إيقاف ميزانية مختارة. راجع العمليات من جديد.');
+   }
+   return;
+  }
+  for(var n=0;n<additions.length;n++){
+   additions[n]=additions[n].withBudget(reviewedBudgets[n]);
+  }
+  final reviewedAccounts=await reviewSmsAccountLinks(additions,smsSender:initialSender);
+  if(reviewedAccounts==null){if(ctx.mounted)update(()=>busy=false);return;}
+  try{
+   // The dashboard and standalone Android widget now use the SAME locked,
+   // crash-recoverable finance+SMS-hash journal on guarded legacy installs.
+   // Never claim a save until the durable journal confirms the actual rows.
+   final applied=await _saveProgress.track(
+    'commit-confirmed-bank-sms',()=>_financeAuthority.commitConfirmedSms(
+     route:WaffraFinanceRoute.bulkSmsConfirmedSave,
+    records:additions.map((e)=>e.toJson()).toList(growable:false),
+    hashes:proposedHashes,
+    proposedCategories:proposed.map((c)=>c.toJson()).toList(),
+    userConfirmed:true,
+    allowDuplicateHashes:allowRepeatedSms,
+    selectedAccountIds:reviewedAccounts.ids,
+    expectedAccountGeneration:reviewedAccounts.generation,
+   ));
+   if(!mounted)return;
+   // Large encrypted ledger decoding belongs off the UI isolate after
+   // commit. A blocked frame here caused the SMS success-screen stutter.
+   final persistedRaw=await WaffraLargeJsonDecode.parse(
+    applied.current.ledgerRaw??'[]');
+   if(persistedRaw is! List)throw StateError(
+    'Committed bank SMS ledger is invalid.');
+   final persisted=persistedRaw.map((e)=>MoneyEntry.fromJson(
+    Map<String,dynamic>.from(e as Map))).toList();
+   final recovery=WaffraSmsPartialSaveRecovery.reconcile(
+    discovered:found,
+    rejectedBeforeCommit:preRejected,
+    proposedSourceIndexes:proposedSourceIndexes,
+    proposedIds:[for(final e in additions)e.id],
+    persistedIds:{for(final e in persisted)e.id},
+   );
+   if(recovery.saved!=applied.saved){
+    throw StateError('SMS finance journal does not match persisted transaction IDs.');
+   }
+   if(initialSender.isNotEmpty&&reviewedAccounts.ids!=null){
+    final committedIds=persisted.map((entry)=>entry.id).toSet();
+    // Account-learning evidence shares one encrypted owner key. Serialize
+    // confirmations so two entries in the same approved batch cannot race,
+    // overwrite one another, or lose the second confirmation.
+    for(var n=0;n<additions.length;n++){
+     if(n>=reviewedAccounts.ids!.length||
+        !committedIds.contains(additions[n].id))continue;
+     await _recordConfirmedSmsAccountAssociation(
+      record:additions[n],sender:initialSender,
+      accountId:reviewedAccounts.ids![n]);
+    }
+   }
+   // M470 #20: learn only from the exact rows confirmed by the durable
+   // encrypted journal, never from pre-save predictions. One rule-store
+   // update for the entire SMS batch avoids 30 slow secure I/O writes.
+   if(initialSender.trim().isNotEmpty&&_smsRuleOwnerKey.isNotEmpty){
+    try{
+     final persistedById={for(final row in persisted)row.id:row};
+     final ruleStore=const WaffraSmsLocalRuleStore();
+     final originalRules=await ruleStore.read(_smsRuleOwnerKey);
+     var revisedRules=originalRules;
+     for(var n=0;n<additions.length;n++){
+      if(n>=proposedSourceIndexes.length)break;
+      final submitted=additions[n];
+      final confirmed=persistedById[submitted.id];
+      if(confirmed==null||confirmed.sourceType!='sms'||
+         confirmed.category!=submitted.category||
+         confirmed.income!=submitted.income||
+         (confirmed.amount-submitted.amount).abs()>0.00001)continue;
+      final raw=found[proposedSourceIndexes[n]];
+      final facts=WaffraBankSmsFactsParser.parse(raw);
+      final amount=WaffraSmsCurrencies.originalAmount(raw);
+      if(facts.pending||
+         (facts.kind!=WaffraBankOperationKind.income&&
+          facts.kind!=WaffraBankOperationKind.expense)||
+         (facts.kind==WaffraBankOperationKind.income)!=confirmed.income||
+         amount==null||amount.currency!='SAR'||
+         (amount.amount-confirmed.amount).abs()>0.00001)continue;
+      final candidate=WaffraSmsLocalRules.suggestedRule(
+       body:raw,sender:initialSender,
+       kind:confirmed.income?'income':'expense',
+       category:confirmed.category,confidentOnly:true);
+      if(candidate!=null)revisedRules=WaffraSmsLocalRules.upsertLearned(
+       existing:revisedRules,candidate:candidate);
+      // Bank SMS and manual inputs teach the SAME safe description hints.
+      // No sender/account is inferred by this review-only rule.
+      final descriptionRule=WaffraSmsLocalRules.manualCategoryPattern(
+       description:confirmed.title,category:confirmed.category,
+       income:confirmed.income);
+      if(descriptionRule!=null)revisedRules=WaffraSmsLocalRules.upsertLearned(
+       existing:revisedRules,candidate:descriptionRule);
+     }
+     if(!identical(originalRules,revisedRules)){
+      await ruleStore.write(_smsRuleOwnerKey,revisedRules);
+     }
+    }catch(error){
+     // Classification suggestions must never reverse or retry money.
+     debugPrint('M470 safe SMS learning skipped: $error');
+    }
+   }
+   // Decode any changed category snapshot before the frame update; a
+   // large parse inside setState made Flutter rebuilds visibly lag.
+   List<BudgetCategory>? verifiedCategories;
+   if(proposed.isNotEmpty){
+    final stored=applied.current.finance.getString('waffra_categories_v24');
+    if(stored!=null){
+     final decodedCategories=await WaffraLargeJsonDecode.parse(stored);
+     if(decodedCategories is! List)throw StateError(
+      'Committed bank SMS categories are invalid.');
+     verifiedCategories=decodedCategories.map((e)=>
+      BudgetCategory.fromJson(Map<String,dynamic>.from(e as Map))).toList();
+    }
+   }
+   if(!mounted)return;
+   setState((){
+    entries..clear()..addAll(persisted);
+    if(verifiedCategories!=null){
+     categories..clear()..addAll(verifiedCategories);
+    }
+    smsHashes..clear()..addAll(
+     applied.current.finance.getStringList('waffra_sms_hashes_v1')??const <String>[]);
+    _lastFinanceAuthorityRead=applied.current;
+    _lastLedgerSavedRaw=applied.current.ledgerRaw;
+    _lastWidgetRevision=applied.current.widgetRevision;
+   });
+   unawaited(_refreshWidget());
+   if(!ctx.mounted)return;
+   update((){
+    busy=false;
+    rejectedMessages=[for(final item in recovery.unsaved)item.message];
+   });
+   if(applied.saved==0){
+    update(()=>statusMessage=waffraIsEnglish
+     ?'No new transactions were saved. Review the unresolved messages below.'
+     :'لم تُحفظ أي معاملات جديدة. راجع الرسائل المتبقية أدناه.');
+    return;
+   }
+   if(!mounted)return;
+   final reviewMissing=await showWaffraDialog<bool>(context:context,
+    builder:(dialogCtx)=>AlertDialog(
+    title:Column(mainAxisSize:MainAxisSize.min,children:[
+     Icon(recovery.unsaved.isEmpty?Icons.check_circle_rounded:Icons.warning_amber_rounded,
+      color:recovery.unsaved.isEmpty?const Color(0xFF16805E):const Color(0xFFB56A00),size:54),
+     const SizedBox(height:16),
+     WaffraText(recovery.unsaved.isEmpty
+      ?(waffraIsEnglish?'Transactions added successfully':'تمت إضافة المعاملات بنجاح')
+      :(waffraIsEnglish?'Some transactions need review':'تم حفظ جزء من المعاملات'),
+      textAlign:TextAlign.center,style:const TextStyle(fontWeight:FontWeight.bold,fontSize:22)),
+    ]),
+    content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+     WaffraText(waffraIsEnglish?
+      'Saved ${applied.saved} transactions':'تم حفظ ${applied.saved} معاملة',
+      textAlign:TextAlign.center,style:const TextStyle(fontWeight:FontWeight.w600)),
+     const SizedBox(height:14),
+     Container(padding:const EdgeInsets.all(13),
+      decoration:BoxDecoration(color:const Color(0xFFE6F4EA),borderRadius:BorderRadius.circular(14)),
+      child:Row(children:[
+       const Icon(Icons.trending_up,color:Color(0xFF087B56)),
+       const SizedBox(width:10),
+       Expanded(child:WaffraText(waffraIsEnglish?'Income':'الدخل',
+        style:const TextStyle(fontWeight:FontWeight.bold,color:Color(0xFF087B56)))),
+       WaffraText('${applied.income} • ${(applied.incomeMinor/100).toStringAsFixed(2)}',
+        style:const TextStyle(fontWeight:FontWeight.bold,color:Color(0xFF087B56))),
+      ])),
+     const SizedBox(height:9),
+     Container(padding:const EdgeInsets.all(13),
+      decoration:BoxDecoration(color:const Color(0xFFFCECE8),borderRadius:BorderRadius.circular(14)),
+      child:Row(children:[
+       const Icon(Icons.trending_down,color:Color(0xFFD65A45)),
+       const SizedBox(width:10),
+       Expanded(child:WaffraText(waffraIsEnglish?'Expenses':'المصروفات',
+        style:const TextStyle(fontWeight:FontWeight.bold,color:Color(0xFFD65A45)))),
+       WaffraText('${applied.expenses} • ${(applied.expenseMinor/100).toStringAsFixed(2)}',
+        style:const TextStyle(fontWeight:FontWeight.bold,color:Color(0xFFD65A45))),
+      ])),
+     if(applied.originalSmsNotesOmittedOnLegacy)...[
+      const SizedBox(height:10),
+      WaffraText(waffraIsEnglish?
+       'Original bank SMS text was NOT stored because encrypted storage is not active. Transaction details were saved.':
+       'لم يُحفظ نص الرسالة البنكية الأصلي لأن التخزين المشفر غير مفعّل. تم حفظ بيانات المعاملة فقط.',
+       textAlign:TextAlign.center,
+       style:const TextStyle(color:Color(0xFFAC5700))),
+     ],
+     if(recovery.unsaved.isNotEmpty)...[
+      const SizedBox(height:12),
+      WaffraText(waffraIsEnglish?
+       'Not saved: ${recovery.unsaved.length} transactions':
+       'لم تُحفظ ${recovery.unsaved.length} معاملة',
+       textAlign:TextAlign.center,
+       style:const TextStyle(color:Colors.deepOrange,fontWeight:FontWeight.w700)),
+      if(recovery.unsaved.any((e)=>e.reason==WaffraSmsNotSavedReason.amountUnrecognized))
+       WaffraText(waffraIsEnglish
+        ?'Cannot read amount: ${recovery.unsaved.where((e)=>e.reason==WaffraSmsNotSavedReason.amountUnrecognized).length}'
+        :'المبلغ غير واضح: ${recovery.unsaved.where((e)=>e.reason==WaffraSmsNotSavedReason.amountUnrecognized).length}',
+        textAlign:TextAlign.center),
+      if(recovery.unsaved.any((e)=>e.reason==WaffraSmsNotSavedReason.categoryUnresolved))
+       WaffraText(waffraIsEnglish
+        ?'Category needs review: ${recovery.unsaved.where((e)=>e.reason==WaffraSmsNotSavedReason.categoryUnresolved).length}'
+        :'القسم يحتاج مراجعة: ${recovery.unsaved.where((e)=>e.reason==WaffraSmsNotSavedReason.categoryUnresolved).length}',
+        textAlign:TextAlign.center),
+      if(recovery.unsaved.any((e)=>e.reason==WaffraSmsNotSavedReason.alreadySaved))
+       WaffraText(waffraIsEnglish
+        ?'Duplicate or excluded by writer: ${recovery.unsaved.where((e)=>e.reason==WaffraSmsNotSavedReason.alreadySaved).length}'
+        :'مكررة أو استبعدها الحفظ: ${recovery.unsaved.where((e)=>e.reason==WaffraSmsNotSavedReason.alreadySaved).length}',
+        textAlign:TextAlign.center),
+     ],
+    ])),
+    actionsAlignment:MainAxisAlignment.center,
+    actionsPadding:const EdgeInsets.fromLTRB(24,0,24,18),
+    actions:[
+     TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialogCtx,false)),
+      child:WaffraText(waffraIsEnglish?'Done':'تم')),
+     if(recovery.unsaved.isNotEmpty)
+      FilledButton.icon(icon:const Icon(Icons.edit_note_rounded),
+       onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialogCtx,true)),
+       label:WaffraText(waffraIsEnglish
+        ?'Review ${recovery.unsaved.length} unsaved'
+        :'مراجعة ${recovery.unsaved.length} غير محفوظة')),
+    ]));
+   if(!ctx.mounted)return;
+   if(reviewMissing==true&&recovery.unsaved.isNotEmpty){
+    update((){
+     messages=[for(final item in recovery.unsaved)item.message];
+     reviewing=true;
+     parsed=true;
+     index=0;
+     savedCount=0;
+     rejectedMessages=[];
+     statusMessage='';
+    });
+    await prepare(0,update);
+   }else{
+    Navigator.pop(ctx);
+   }
+  }catch(e){
+   // A failed journal must be reconciled by the locked coordinator on next
+   // read; never mutate the dashboard as if the save had succeeded.
+   if(ctx.mounted){update(()=>busy=false);snack(ctx,waffraIsEnglish?'Saving could not be confirmed. Please retry safely.':'تعذر تأكيد الحفظ. أعد المحاولة بأمان.');}
+  }
+ }
+
+ // AI runs automatically on paste/share; it never saves money.
+ Future<void> analyzeBankSmsAutomatically(
+    BuildContext ctx,StateSetter update,String input,int revision)async{
+  if(!sheetActive||!ctx.mounted||pasteRevision!=revision||
+     pasted.text.trim()!=input)return;
+  final found=splitBankMessages(input);
+  if(found.isEmpty||found.length>100){
+   update((){
+    analyzingPaste=false;parsed=true;messages=found;
+    statusMessage=found.isEmpty?
+     (waffraIsEnglish?'No bank messages found.':'لم نجد رسائل بنكية.'):
+     (waffraIsEnglish?'Maximum 100 messages per paste.':
+      'الحد الأقصى 100 رسالة لكل لصق.');
+   });
+   return;
+  }
+  // Fast path: a single verified amount in each supported SAR message
+  // does not need 45 seconds of Qwen inference. Make drafts reviewable
+  // immediately, and do NOT commit the ledger without user confirmation.
+  final reliable=found.every((source){
+   final parsed=BankParser.parse(source);
+   final money=WaffraSmsCurrencies.originalAmount(source);
+   return parsed.amount!=null&&parsed.amount!>0&&
+     !parsed.requiresCurrencyReview&&money!=null&&money.currency=='SAR'&&
+     (money.amount-parsed.amount!).abs()<0.00001;
+  });
+  if(!WaffraSaudiRelease.qwenForBankSms||reliable||
+     !WaffraOnDeviceQwen.shared.isReady){
+   update((){
+    messages=found;parsed=true;analyzingPaste=false;
+    statusMessage=noTransactionWarning(input)??(waffraIsEnglish?
+     'Amounts extracted. Confirm each transaction before saving.':
+     'تم استخراج المبالغ. راجع نوع كل معاملة وقسمها قبل الحفظ.');
+   });
+   return;
+  }
+  final ai=await _reviewAiPastedBankMessages(ctx,input);
+  if(!sheetActive||!ctx.mounted||pasteRevision!=revision||
+     pasted.text.trim()!=input)return;
+  var verified=ai!=null&&ai.error==null&&ai.count==found.length;
+  if(verified){
+   for(var i=0;i<found.length;i++){
+    final draft=BankParser.parse(found[i]);
+    final item=ai.items[i];
+    final evidence=WaffraSmsCurrencies.originalAmount(found[i]);
+    final amount=item.amountText==null?null:
+      WaffraReceiptOcrParser.amountFromText(item.amountText!);
+    // Confirm that SAR amount is the transaction, not card ID or balance.
+    // A disagreement never authorizes automatic finance confirmation.
+    if(item.needsReview||item.currency!='SAR'||
+       evidence==null||evidence.currency!='SAR'||
+       !found[i].contains(item.quote)||
+       draft.amount==null||amount==null||
+       (evidence.amount-amount).abs()>0.00001||
+       (draft.amount!-evidence.amount).abs()>0.00001||
+       draft.income!=(item.direction==WaffraAiDirection.income)){
+     verified=false;
+     break;
+    }
+   }
+  }
+  update((){
+   messages=found;parsed=true;analyzingPaste=false;
+   statusMessage=noTransactionWarning(input)??'';
+   if(statusMessage.isEmpty&&!verified){
+    statusMessage=waffraIsEnglish?
+     'AI could not verify every message. Review before saving.':
+     'الذكاء لم يؤكد كل الرسائل. راجعها قبل الحفظ.';
+   }
+  });
+  // Qwen is a read-only suggestion engine. Never commit on paste, even
+  // when model output agrees with the deterministic SAR evidence.
+  if(verified&&statusMessage.isEmpty){
+   update(()=>statusMessage=waffraIsEnglish?
+    'Transactions verified. Review and confirm before saving.':
+    'تم التحقق من المعاملات. راجعها وأكّد حفظها.');
+  }
+ }
+ void scheduleBankSmsAnalysis(
+     BuildContext ctx,StateSetter update,String input){
+  pasteTimer?.cancel();
+  if(WaffraSaudiRelease.qwenForBankSms)
+   WaffraOnDeviceQwen.shared.cancelCurrentGeneration();
+  final revision=++pasteRevision;
+  update((){
+   parsed=false;analyzingPaste=input.trim().isNotEmpty;
+   messages=[];statusMessage='';reviewing=false;index=0;
+  });
+  if(input.trim().isEmpty)return;
+  pasteTimer=Timer(const Duration(milliseconds:650),(){
+   if(!sheetActive||!ctx.mounted||pasteRevision!=revision||
+      pasted.text.trim()!=input.trim())return;
+   unawaited(analyzeBankSmsAutomatically(ctx,update,input.trim(),revision));
+  });
+ }
+
+ void disposeLater(){
+  pasteTimer?.cancel();
+  if(WaffraSaudiRelease.qwenForBankSms)
+   WaffraOnDeviceQwen.shared.cancelCurrentGeneration();
+  Future<void>.delayed(const Duration(milliseconds:500),(){
+   pasted.dispose();description.dispose();amount.dispose();
+  });
+ }
+ BuildContext? activeSmsContext;
+ StateSetter? activeSmsUpdate;
+ bool awaitingMessagesApp=false;
+ bool initialParsed=false;
+ void analyzeSharedText(String text){
+  final ctx=activeSmsContext,update=activeSmsUpdate;
+  if(!sheetActive||ctx==null||!ctx.mounted||update==null||text.trim().isEmpty)return;
+  pasted.text=text.trim();
+  scheduleBankSmsAnalysis(ctx,update,text.trim());
+ }
+
+ void onSharedDuringSheet(){
+  final input=waffraIncomingSms.value;
+  if(input==null||input.trim().isEmpty)return;
+  waffraIncomingSms.value=null;
+  awaitingMessagesApp=false;
+  analyzeSharedText(input);
+ }
+ final smsLifecycle=AppLifecycleListener(onResume:(){
+  if(!awaitingMessagesApp||!sheetActive)return;
+  awaitingMessagesApp=false;
+  Future<void>(()async{
+   final data=await Clipboard.getData(Clipboard.kTextPlain);
+   final value=data?.text?.trim();
+   if(sheetActive&&value!=null&&value.isNotEmpty){
+    analyzeSharedText(value);
+   }
+  });
+ });
+ waffraIncomingSms.addListener(onSharedDuringSheet);
+ await showGeneralDialog<void>(context:context,barrierDismissible:true,barrierLabel:'Close',
+  barrierColor:Colors.black.withValues(alpha:.45),
+  pageBuilder:(dialogContext,animation,secondaryAnimation)=>BackdropFilter(
+   filter:ui.ImageFilter.blur(sigmaX:9,sigmaY:9),
+   child:Align(alignment:Alignment.bottomCenter,child:Material(
+    color:Theme.of(dialogContext).scaffoldBackgroundColor,
+    borderRadius:const BorderRadius.vertical(top:Radius.circular(28)),
+    clipBehavior:Clip.antiAlias,
+    child:SafeArea(top:false,child:StatefulBuilder(builder:(ctx,update){
+   activeSmsContext=ctx;
+   activeSmsUpdate=update;
+   if(!initialParsed&&initialText!=null&&initialText.trim().isNotEmpty){
+    initialParsed=true;
+    WidgetsBinding.instance.addPostFrameCallback((_){
+     if(ctx.mounted&&sheetActive)analyzeSharedText(initialText);
+    });
+   }
+   final available=forType(income);
+   final smsMainCategories=waffraManualCategoryParents(available,income);
+   final leafSelection=available.where((c)=>c.name==category).toList();
+   final activeSmsParent=smsParentId??(leafSelection.isEmpty?null:leafSelection.first.parentId);
+   final activeSmsMains=smsMainCategories.where((c)=>c.id==activeSmsParent).toList();
+   final smsSubcategories=waffraManualCategoryChildren(available,income,activeSmsParent);
+   final total=messages.fold<double>(0,(sum,s)=>sum+(BankParser.parse(s).amount??0));
+   final pasteSummary=waffraSummarizeBankPaste(pasted.text,smsHashes);
+   final currencyPreview=WaffraSmsCurrencies.summarize(messages);
+   final sourceTotals=WaffraSmsCurrencies.sourceTotals(messages);
+   final originalTotalsLabel=sourceTotals.totals.entries.map((entry)=>
+     entry.value.toStringAsFixed(
+       WaffraSmsCurrencies.minorDigits(entry.key))+' '+entry.key).join(' • ');
+   final sourceTotalsLabel=originalTotalsLabel.isEmpty?
+     (waffraIsEnglish?'Amount unverified':'المبلغ غير مؤكد'):
+     originalTotalsLabel+(sourceTotals.unresolved>0?
+       (waffraIsEnglish?' • Some amounts unverified':
+        ' • بعض المبالغ غير مؤكدة'):'');
+   return Padding(padding:EdgeInsets.fromLTRB(18,8,18,MediaQuery.of(ctx).viewInsets.bottom+24),
+    child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+     Row(children:[Expanded(child:WaffraText(waffraIsEnglish?'Add bank message':'إضافة رسالة بنكية',style:Theme.of(ctx).textTheme.titleLarge)),IconButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),icon:const Icon(Icons.close_rounded))]),
+     WaffraText(waffraIsEnglish?'Paste messages to analyze them automatically.':'الصق رسائلك البنكية ليتم تحليلها وتصنيفها تلقائيًا.'),
+     const SizedBox(height:12),
+     if(!reviewing)...[
+      TextField(controller:pasted,minLines:5,maxLines:9,onChanged:(text){
+       if(!sheetActive||!ctx.mounted)return;
+       scheduleBankSmsAnalysis(ctx,update,text);
+      },decoration:InputDecoration(labelText:waffraIsEnglish?'Bank SMS *':'الرسالة البنكية *',
+       errorText:pasteAttempted&&pasted.text.trim().isEmpty?waffraRequiredFieldMessage:null,errorMaxLines:3,
+       hintText:waffraIsEnglish?'Paste your bank message here. We’ll analyze it automatically.':'الصق رسالتك البنكية هنا، وبنحلّلها لك تلقائيًا.',hintStyle:const TextStyle(fontSize:13,color:Color(0xFF888F8A)),
+       suffixIcon:pasted.text.isNotEmpty?IconButton(tooltip:waffraIsEnglish?'Clear text':'مسح النص',icon:const Icon(Icons.clear_rounded,color:Colors.redAccent),onPressed:WaffraHaptics.tap((){pasteTimer?.cancel();if(WaffraSaudiRelease.qwenForBankSms)WaffraOnDeviceQwen.shared.cancelCurrentGeneration();++pasteRevision;pasted.clear();update((){parsed=false;analyzingPaste=false;messages=[];statusMessage='';});})):null,
+       border:OutlineInputBorder(borderRadius:BorderRadius.circular(18)))),
+      const SizedBox(height:12),
+     if(statusMessage.isNotEmpty&&pasted.text.trim().isNotEmpty)...[
+      Container(
+       key:const Key('waffra-sms-review-notice'),
+       padding:const EdgeInsets.all(11),
+       decoration:BoxDecoration(
+        color:Theme.of(ctx).colorScheme.surfaceContainerHighest,
+        borderRadius:BorderRadius.circular(12)),
+       child:WaffraText(statusMessage,maxLines:5)),
+      const SizedBox(height:8),
+     ],
+     LayoutBuilder(builder:(layoutContext,constraints){
+      final stack=constraints.maxWidth<318||
+       MediaQuery.textScalerOf(layoutContext).scale(14)>20;
+      final pasteAction=OutlinedButton.icon(
+       key:const Key('waffra-sms-paste-action'),
+       icon:const Icon(Icons.content_paste,size:18),
+       onPressed:WaffraHaptics.tap(busy?null:()async{
+        final data=await Clipboard.getData(Clipboard.kTextPlain);
+        if(!ctx.mounted)return;
+        final text=data?.text?.trim()??'';
+        if(text.isEmpty){
+         update((){pasteAttempted=true;statusMessage=waffraRequiredFieldMessage;});
+         return;
+        }
+        pasted.text=text;
+        scheduleBankSmsAnalysis(ctx,update,text);
+       }),
+       label:WaffraText(stack?
+        (waffraIsEnglish?'Paste copied SMS':'لصق آخر رسالة نسختها'):
+        (waffraIsEnglish?'Paste SMS':'لصق رسالة'),
+        maxLines:2,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w700)),
+      );
+      final messagesAction=OutlinedButton.icon(
+       key:const Key('waffra-sms-open-messages-action'),
+       icon:const Icon(Icons.message_outlined,size:18),
+       onPressed:WaffraHaptics.tap(busy?null:()async{
+        awaitingMessagesApp=true;
+        final launched=await openWaffraMessagesApp();
+        if(!launched&&ctx.mounted){
+         awaitingMessagesApp=false;
+         update(()=>statusMessage=waffraIsEnglish
+          ?'Could not open Messages. Copy a message and paste it here instead.'
+          :'تعذر فتح تطبيق الرسائل. انسخ الرسالة والصقها هنا بدلًا من ذلك.');
+        }
+       }),
+       label:WaffraText(stack?
+        (waffraIsEnglish?'Open phone messages':'فتح رسائل الهاتف'):
+        (waffraIsEnglish?'Messages app':'فتح الرسائل'),
+        maxLines:2,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w700)),
+      );
+      return stack?Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+       pasteAction,const SizedBox(height:8),messagesAction,
+      ]):Row(children:[
+       Expanded(child:pasteAction),const SizedBox(width:10),
+       Expanded(child:messagesAction),
+      ]);
+     }),
+      if(currencyPreview.needsCurrencyReview)...[
+       const SizedBox(height:8),
+       Container(
+        key:const Key('m291-bank-sms-currency-warning'),
+        padding:const EdgeInsets.all(11),
+        decoration:BoxDecoration(
+         color:Theme.of(ctx).colorScheme.errorContainer,
+         borderRadius:BorderRadius.circular(14)),
+        child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+         WaffraText(currencyPreview.hasMixedCurrencies?
+          (waffraIsEnglish?'Multiple currencies detected':'تم اكتشاف أكثر من عملة'):
+          (waffraIsEnglish?'Foreign currency detected':'تم اكتشاف عملة أجنبية'),
+          style:const TextStyle(fontWeight:FontWeight.bold)),
+         WaffraText(currencyPreview.summary),
+         if(messages.length==1&&WaffraSmsCurrencies.originalAmountPreview(messages.first)!=null)
+          WaffraText((waffraIsEnglish?
+           'Original transaction amount: ':'المبلغ الأصلي للعملية: ')+
+           WaffraSmsCurrencies.originalAmountPreview(messages.first)!,
+           style:const TextStyle(fontWeight:FontWeight.w700)),
+         WaffraText(waffraIsEnglish?
+          'Foreign currency is not stored as SAR without encrypted source/rate evidence. Balance is not a transaction.':
+          'المبلغ الأجنبي لا يُحفظ كريال بدون إثبات العملة والسعر مشفرًا. الرصيد ليس معاملة.'),
+         if(WaffraSaudiRelease.bankSmsForeignCurrencyPreview&&
+            messages.length==1&&WaffraSmsCurrencies.originalAmount(messages.first)!=null)
+          OutlinedButton.icon(
+           key:const Key('waffra-fx-quote-preview-action'),
+           onPressed:busy?null:()=>_previewForeignBankCurrency(messages.first),
+           icon:const Icon(Icons.currency_exchange),
+           label:WaffraText(waffraIsEnglish?
+            'View current exchange rate and source':'عرض سعر الصرف الحالي ومصدره')),
+        ])),
+      ],
+      // Bank currency vs selected APP display currency are separate concepts.
+      // Never mistake nominal label switching for an actual FX rate.
+      if(WaffraSaudiRelease.bankSmsForeignCurrencyPreview&&
+         messages.length==1&&!currencyPreview.needsCurrencyReview&&
+         WaffraSmsCurrencies.originalAmount(messages.first)!=null&&
+         WaffraSmsCurrencies.originalAmount(messages.first)!.currency!=
+          WaffraDisplayCurrency.country.code)...[
+       const SizedBox(height:8),
+       OutlinedButton.icon(
+        key:const Key('waffra-fx-any-currency-preview'),
+        onPressed:busy?null:()=>_previewForeignBankCurrency(messages.first),
+        icon:const Icon(Icons.currency_exchange),
+        label:WaffraText(waffraIsEnglish?
+         'Convert to app currency — rate & source':
+         'تحويل لعملة التطبيق — السعر والمصدر')),
+      ],
+       if(analyzingPaste)...[const SizedBox(height:12),const LinearProgressIndicator(),const SizedBox(height:6),WaffraText(waffraIsEnglish?'Analyzing bank messages locally…':'جاري تحليل الرسائل البنكية محليًا…')],
+      // Shared lightweight in-dialog progress while the batch is committed.
+      if(busy)Padding(
+       key:const Key('waffra-bank-sms-save-progress'),
+       padding:const EdgeInsets.symmetric(vertical:12),
+       child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+        const SizedBox(width:20,height:20,
+         child:CircularProgressIndicator(strokeWidth:2.5)),
+        const SizedBox(width:10),
+        WaffraText(waffraIsEnglish?'Saving confirmed transactions…':
+         'جارٍ حفظ المعاملات المؤكدة…',
+         style:const TextStyle(fontWeight:FontWeight.w700)),
+       ])),
+      
+      if(rejectedMessages.isNotEmpty)...[
+       const SizedBox(height:8),
+       WaffraText(waffraIsEnglish?'Unrecognized messages — edit and retry':'رسائل لم يتم تحليلها — راجعها وأعد المحاولة',style:const TextStyle(fontWeight:FontWeight.bold)),
+       ...rejectedMessages.asMap().entries.map((item)=>Card(child:ListTile(
+        title:WaffraText(waffraIsEnglish?'Message ${item.key+1}':'رسالة ${item.key+1}'),
+        subtitle:SelectableText(item.value,maxLines:4),
+        trailing:IconButton(icon:const Icon(Icons.edit_outlined),tooltip:waffraIsEnglish?'Review manually':'مراجعة يدويًا',onPressed:WaffraHaptics.tap((){
+         Navigator.pop(ctx);
+         entrySheet(sms:true,initialSms:item.value);
+        }))))),
+      ],
+     if(parsed&&messages.isNotEmpty&&statusMessage.isNotEmpty&&!reviewing)...[
+       const SizedBox(height:10),
+       FilledButton.icon(
+        key:const Key('waffra-sms-review-unverified'),
+        onPressed:busy?null:WaffraHaptics.tap(()async{
+         update(()=>reviewing=true);
+         await prepare(0,update);
+        }),
+        icon:const Icon(Icons.fact_check_outlined),
+        label:WaffraText(waffraIsEnglish?
+         'Review manually':'مراجعة الرسائل يدويًا')),
+      ],
+      if(parsed&&statusMessage.isEmpty)...[
+      const SizedBox(height:10),
+      Container(width:double.infinity,padding:const EdgeInsets.symmetric(horizontal:12,vertical:13),
+       decoration:BoxDecoration(color:Theme.of(ctx).brightness==Brightness.dark?const Color(0xFF123E32):const Color(0xFFE8F6EF),
+        border:Border.all(color:emerald.withValues(alpha:.25)),borderRadius:BorderRadius.circular(16)),
+       child:Row(children:[const Icon(Icons.check_circle_outline,color:emerald,size:19),const SizedBox(width:8),
+        Expanded(child:WaffraText(waffraIsEnglish
+         ?'Detected ${pasteSummary.detected} • New ${pasteSummary.fresh} • Duplicates ${pasteSummary.duplicates}'
+         :'تم اكتشاف ${pasteSummary.detected} معاملة • الجديدة ${pasteSummary.fresh} • المكررة ${pasteSummary.duplicates}',
+         maxLines:2,
+         style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)))])),
+     ],
+     ]else...[
+      TextButton.icon(onPressed:WaffraHaptics.tap(busy?null:()async{
+       final yes=await confirmDeletion(
+        waffraIsEnglish?'Clear pasted messages?':'حذف الرسائل الملصوقة',
+        waffraIsEnglish?'Discard the unsaved pasted text and start again?':'هل تريد حذف الرسائل غير المحفوظة والبدء من جديد؟');
+       if(yes!=true||!ctx.mounted)return;
+       pasteTimer?.cancel();
+       if(WaffraSaudiRelease.qwenForBankSms)
+        WaffraOnDeviceQwen.shared.cancelCurrentGeneration();
+       ++pasteRevision;
+       update((){reviewing=false;parsed=false;analyzingPaste=false;messages=[];index=0;pasted.clear();description.clear();amount.clear();});
+      }),icon:const Icon(Icons.delete_outline),label:const WaffraText('حذف النص بالكامل ولصق رسائل جديدة')),
+      WaffraText(currencyPreview.needsCurrencyReview?
+       (waffraIsEnglish?
+        'Transaction ${index+1} of ${messages.length} — Original amounts: $sourceTotalsLabel':
+        'المعاملة ${index+1} من ${messages.length} — المبالغ الأصلية: $sourceTotalsLabel'):
+       (waffraIsEnglish?
+        'Transaction ${index+1} of ${messages.length} — Total: ${cash(total)}':
+        'المعاملة ${index+1} من ${messages.length} — إجمالي المبالغ: ${cash(total)}'),
+       style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)),
+      const SizedBox(height:6),
+      WaffraText(waffraIsEnglish?'Saved $savedCount / ${messages.length}. Review remaining transactions before saving.':'تم حفظ $savedCount من ${messages.length} معاملات. راجع كل معاملة وحدد قسمها قبل الحفظ.'),
+      const SizedBox(height:12),
+      InputDecorator(decoration:InputDecoration(labelText:waffraTr('نص الرسالة الحالية'),border:OutlineInputBorder()),
+       child:SelectableText(messages[index])),
+      const SizedBox(height:12),
+      SegmentedButton<bool>(segments:const [ButtonSegment(value:true,label:WaffraText('دخل')),
+       ButtonSegment(value:false,label:WaffraText('مصروف'))],selected:{income},onSelectionChanged:WaffraHaptics.selection((v)=>update((){
+        income=v.first;category=forType(income).isNotEmpty?forType(income).first.name:'أخرى';
+        smsParentId=null;
+       }))),
+      const SizedBox(height:12),
+      TextField(controller:description,maxLines:2,onChanged:(_)=>update((){}),decoration:InputDecoration(labelText:waffraIsEnglish?'Description *':'وصف الرسالة *',errorText:reviewAttempted?waffraTextFieldError(description.text):null,border:OutlineInputBorder())),
+      const SizedBox(height:12),
+      TextField(controller:amount,keyboardType:const TextInputType.numberWithOptions(decimal:true),
+       inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],onChanged:(_)=>update((){}),
+       decoration:InputDecoration(labelText:waffraIsEnglish?'Amount *':'مبلغ هذه الرسالة بالريال *',errorText:reviewAttempted?waffraAmountFieldError(amount.text):null,border:OutlineInputBorder())),
+      if(WaffraSaudiRelease.bankSmsForeignCurrencyPreview&&
+         WaffraSmsCurrencies.originalAmount(messages[index])!=null&&
+         WaffraSmsCurrencies.originalAmount(messages[index])!.currency!=
+           WaffraDisplayCurrency.country.code)
+       OutlinedButton.icon(key:const Key('waffra-fx-transaction-preview'),
+        onPressed:busy?null:()=>_previewForeignBankCurrency(messages[index]),
+        icon:const Icon(Icons.currency_exchange),
+        label:WaffraText(waffraIsEnglish?
+         'Review current exchange rate':'راجع سعر الصرف الحالي')),
+      const SizedBox(height:12),
+      // Never display the entire catalog in one unbounded DropdownButton:
+      // select a main category first, then only its searchable child items.
+      InkWell(onTap:WaffraHaptics.tap(()async{
+       final picked=await chooseTransactionCategory(ctx,smsMainCategories,
+        activeSmsMains.isEmpty?'':activeSmsMains.first.name,
+        allowCreate:true,typeIncome:income,parentId:smsParentId);
+       if(picked==null||!ctx.mounted)return;
+       final root=categories.where((c)=>c.name==picked&&
+        c.income==income&&!c.isSubcategory).toList();
+       final leaf=categories.where((c)=>c.name==picked&&
+        c.income==income&&c.isSubcategory).toList();
+       if(root.length==1)update((){
+        smsParentId=root.single.id;
+        category='';
+       });
+       else if(leaf.length==1)update((){
+        smsParentId=leaf.single.parentId;
+        category=leaf.single.name;
+       });
+      }),child:InputDecorator(decoration:InputDecoration(
+        labelText:waffraIsEnglish?'Main category *':'القسم الرئيسي *',
+        errorText:reviewAttempted&&activeSmsMains.isEmpty?waffraRequiredFieldMessage:null,
+        border:const OutlineInputBorder(),
+        suffixIcon:const Icon(Icons.arrow_drop_down_rounded)),
+       child:WaffraText(activeSmsMains.isEmpty?
+        (waffraIsEnglish?'Choose main category':'اختر القسم الرئيسي'):
+        activeSmsMains.first.displayName,maxLines:1))),
+      const SizedBox(height:12),
+      InkWell(onTap:WaffraHaptics.tap(()async{
+       final picked=await chooseTransactionCategory(ctx,smsSubcategories,
+        category,leafLabels:true,allowCreate:true,
+        typeIncome:income,parentId:smsParentId);
+       if(picked==null||!ctx.mounted)return;
+       final root=categories.where((c)=>c.name==picked&&
+        c.income==income&&!c.isSubcategory).toList();
+       final leaf=categories.where((c)=>c.name==picked&&
+        c.income==income&&c.isSubcategory).toList();
+       if(root.length==1)update((){
+        smsParentId=root.single.id;
+        category='';
+       });
+       else if(leaf.length==1)update((){
+        smsParentId=leaf.single.parentId;
+        category=leaf.single.name;
+       });
+      }),child:InputDecorator(decoration:InputDecoration(
+        labelText:waffraIsEnglish?'Subcategory *':'القسم الفرعي *',
+        enabled:true,
+        errorText:reviewAttempted&&
+         !waffraCanAssignManualCategory(available,income,activeSmsParent,category)
+         ?waffraRequiredFieldMessage:null,
+        border:const OutlineInputBorder(),
+        suffixIcon:const Icon(Icons.arrow_drop_down_rounded)),
+       child:WaffraText(smsSubcategories.any((c)=>c.name==category)?
+        smsSubcategories.firstWhere((c)=>c.name==category).displayName:
+        (waffraIsEnglish?'Choose subcategory':'اختر القسم الفرعي'),maxLines:1))),
+      const SizedBox(height:12),
+      FilledButton(onPressed:WaffraHaptics.tap(busy?null:()async{
+       final n=amountOf(amount.text);
+       update(()=>reviewAttempted=true);
+        if(waffraTextFieldError(description.text)!=null||
+        waffraAmountFieldError(amount.text)!=null||n==null||
+        !waffraCanAssignManualCategory(available,income,activeSmsParent,category))return;
+       // Never allow a manually entered SAR value to bypass original
+       // currency checks in the batch review and atomic SMS writer.
+       if(WaffraSmsCurrencies.requiresReviewForSarLedger(messages[index])){
+        update(()=>statusMessage=waffraIsEnglish?
+         'Foreign bank currency cannot be saved as SAR. Review its rate; encrypted FX posting is not active.':
+         'لا يمكن حفظ العملة الأجنبية باعتبارها ريال. راجع السعر؛ تسجيل التحويل المشفر غير مفعّل.');
+        await _previewForeignBankCurrency(messages[index]);
+        return;
+       }
+       final hash=bankSmsHash(messages[index]);
+       var explicitlyApprovedDuplicate=false;
+       if(smsHashes.contains(hash)){
+        final yes=await showWaffraDialog<bool>(context:ctx,builder:(d)=>AlertDialog(
+         title:const WaffraText('⚠️ رسالة مكررة'),content:const WaffraText('هذي الرسالة سبق حفظها. ودّك تضيفها مرة ثانية؟'),
+         actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(d,false)),child:const WaffraText('إلغاء')),
+          FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(d,true)),child:const WaffraText('إضافة على أي حال'))]));
+        if(yes!=true||!ctx.mounted)return;
+        explicitlyApprovedDuplicate=true;
+       }
+       final verifiedSmsDate=bankSmsDate(messages[index]);
+       if(verifiedSmsDate==null||bankSmsHasUnverifiedTimestamp(messages[index])){
+        update(()=>statusMessage=waffraIsEnglish?
+         'The original SMS transaction date is missing or ambiguous. Review and enter the correct date manually before saving.':
+         'تاريخ العملية الأصلي غير موجود أو غير واضح. راجع التاريخ وعدّله يدويًا قبل الحفظ.');
+        return;
+       }
+       update(()=>busy=true);
+       var previous=0.0; // Selected budget is resolved after explicit review.
+       var entry=MoneyEntry(id:newId(),title:description.text.trim(),category:category,amount:n,income:income,date:verifiedSmsDate,notes:messages[index],sourceType:'sms');
+       final budgetSelection=await reviewSmsBudgetLinks([entry]);
+       if(budgetSelection==null){if(ctx.mounted)update(()=>busy=false);return;}
+       entry=entry.withBudget(budgetSelection.single);
+       final reviewedAccount=await reviewSmsAccountLinks([entry],smsSender:initialSender);
+       if(reviewedAccount==null){if(ctx.mounted)update(()=>busy=false);return;}
+       final selected=namedBudgets.where((b)=>b.id==entry.budgetId&&
+        b.budget>0&&!b.deleted).toList();
+       if(selected.length==1)previous=waffraNamedBudgetSpent(
+        entries,categories,selected.single,entry.date);
+       // A parsed SMS is not saved until both the transaction and its
+       // fingerprint are crash-journaled under the SAME Home/Widget lock.
+       // A stale dashboard must never overwrite a newer widget ledger.
+       final committed=await _financeAuthority.commitConfirmedSms(
+        route:WaffraFinanceRoute.bulkSmsConfirmedSave,
+        records:[Map<String,Object?>.from(entry.toJson())],
+        hashes:[hash],
+        userConfirmed:true,
+        allowDuplicateHashes:explicitlyApprovedDuplicate,
+        selectedAccountIds:reviewedAccount.ids,
+        expectedAccountGeneration:reviewedAccount.generation,
+       );
+       if(committed.saved!=1){
+        if(ctx.mounted)update((){
+         busy=false;
+         statusMessage=waffraIsEnglish
+          ?'This message was already saved. Review before trying again.'
+          :'تم حفظ هذه الرسالة من قبل. راجعها قبل إعادة المحاولة.';
+        });
+        return;
+       }
+       if(initialSender.isNotEmpty){
+        unawaited(_recordConfirmedSmsAccountAssociation(
+         record:entry,sender:initialSender,
+         accountId:reviewedAccount.ids?.single));
+       }
+       // A single reviewed SMS can still have a large existing ledger.
+       // Keep parsing off the Flutter UI isolate BEFORE publishing the
+       // confirmed SQLCipher state; this never starts a second finance write.
+       final verifiedRaw=await WaffraLargeJsonDecode.parse(
+        committed.current.ledgerRaw??'[]');
+       if(verifiedRaw is! List)throw StateError(
+        'Committed reviewed SMS ledger snapshot was not a list.');
+       final verified=verifiedRaw.map((item)=>MoneyEntry.fromJson(
+        Map<String,dynamic>.from(item as Map))).toList();
+       if(!mounted)return;
+       setState((){
+        entries..clear()..addAll(verified);
+        smsHashes..clear()..addAll(
+         committed.current.finance.getStringList('waffra_sms_hashes_v1')??const <String>[]);
+        _lastFinanceAuthorityRead=committed.current;
+        _lastLedgerSavedRaw=committed.current.ledgerRaw;
+        _lastWidgetRevision=committed.current.widgetRevision;
+       });
+       // M470 #20: also learn after a single reviewed SMS was committed,
+       // even if the original SMS text was omitted from legacy ledger notes.
+       // Any verified bank SMS (including pasted SMS without sender)
+       // teaches the confirmed description/category after the money commit.
+       // Sender-specific rules require a confirmed sender AND matching bank
+       // direction/amount; neither type grants permission to auto-post.
+       if(_smsRuleOwnerKey.isNotEmpty&&verified.any((row)=>
+          row.id==entry.id&&row.sourceType=='sms'&&
+          row.category==entry.category&&row.income==entry.income&&
+          (row.amount-entry.amount).abs()<0.00001)){
+        try{await _learnManualCategoryPreference(entry);}catch(_){}
+        if(initialSender.trim().isNotEmpty){
+         final reviewedText=messages[index];
+         final facts=WaffraBankSmsFactsParser.parse(reviewedText);
+         final original=WaffraSmsCurrencies.originalAmount(reviewedText);
+         if(!facts.pending&&
+            (facts.kind==WaffraBankOperationKind.income||
+             facts.kind==WaffraBankOperationKind.expense)&&
+            (facts.kind==WaffraBankOperationKind.income)==entry.income&&
+            original!=null&&original.currency=='SAR'&&
+            (original.amount-entry.amount).abs()<0.00001){
+          try{await _learnSafeSmsRule(
+           body:reviewedText,sender:initialSender,
+           kind:entry.income?'income':'expense',
+           category:entry.category);}catch(_){}
+         }
+        }
+       }
+       // The SMS editor already acknowledges its confirmed message.
+       // Any remaining review-only classifications are refreshed on
+       // demand when review opens, not during the financial save animation.
+       // Do not launch native history scans from a finance write.
+       unawaited(_refreshWidget());
+       if(!ctx.mounted)return;
+       await budgetAlert(entry,previous);
+       if(!ctx.mounted)return;
+       savedCount++;
+       if(index+1>=messages.length){
+        Navigator.pop(ctx);
+        if(mounted)snackSuccess(context,committed.originalSmsNotesOmittedOnLegacy?
+         (waffraIsEnglish?'Saved $savedCount transactions; original SMS text was not stored.':
+          'تم حفظ $savedCount عملية دون نص الرسالة البنكية الأصلي.'):
+         'تم حفظ $savedCount عملية بنجاح');
+       }
+       else{await prepare(index+1,update);update(()=>busy=false);}
+      }),child:WaffraText(index+1==messages.length?'إضافة المعاملة وحفظها':'إضافة المعاملة وحفظها ثم التالي')),
+      if(index+1<messages.length)TextButton(onPressed:WaffraHaptics.tap(busy?null:()=>prepare(index+1,update)),child:const WaffraText('تخطي هذه الرسالة')),
+      const SizedBox(height:8),
+      OutlinedButton.icon(onPressed:WaffraHaptics.tap(busy?null:()async{
+       final yes=await confirmDeletion(
+        waffraIsEnglish?'Clear pasted messages?':'حذف الرسائل الملصوقة',
+        waffraIsEnglish?'Discard all unsaved pasted text? Saved transactions will remain.':'هل تريد حذف النص غير المحفوظ؟ المعاملات المحفوظة ستظل موجودة.');
+       if(yes!=true||!ctx.mounted)return;
+       update((){reviewing=false;parsed=false;messages=[];index=0;savedCount=0;pasted.clear();description.clear();amount.clear();});
+      }),icon:const Icon(Icons.delete_forever_outlined),label:const WaffraText('حذف النص بالكامل وإضافة رسائل أخرى')),
+     ],
+    ])));
+  }))))));
+ sheetActive=false;
+ smsLifecycle.dispose();
+ waffraIncomingSms.removeListener(onSharedDuringSheet);
+ _smsSheetOpen=false;
+ disposeLater();
+ _receiveSharedSms();
+}
+
+ Future<void> _previewForeignBankCurrency(String raw)async {
+  if(!WaffraSaudiRelease.bankSmsForeignCurrencyPreview){
+   if(mounted)snack(context,waffraIsEnglish?
+    'Non-SAR transactions cannot be saved in this Saudi release.':
+    'العمليات بغير الريال غير مدعومة في النسخة السعودية الحالية.');
+   return;
+  }
+  // No bank message contents, personal identifiers, photos or notes are
+  // included in the FX network request: only original and target codes.
+  final source=WaffraSmsCurrencies.originalAmount(raw);
+  if(!mounted)return;
+  if(source==null){
+   snack(context,waffraIsEnglish?
+    'Original currency or amount is uncertain. Check the bank message first.':
+    'العملة أو المبلغ الأصلي غير مؤكد. راجع الرسالة البنكية أولًا.');
+   return;
+  }
+  final target=WaffraDisplayCurrency.country.code;
+  if(source.currency==target){
+   snack(context,waffraIsEnglish?
+    'Bank currency matches the app display currency. Encrypted foreign-currency saving is not enabled yet.':
+    'عملة الرسالة مطابقة لعملة العرض. حفظ العملات الأجنبية المشفر غير مفعل بعد.');
+   return;
+  }
+  snack(context,waffraIsEnglish?
+   'Retrieving the latest available exchange rate…':
+   'جاري جلب أحدث سعر صرف متاح…',isError:false);
+  final approved=await WaffraForeignCurrencyPreview.show(context,
+   originalAmount:source.amount,originalCurrency:source.currency,
+   targetCurrency:target,english:waffraIsEnglish);
+  if(approved!=null&&mounted){
+   // Do not write an FX amount to the guarded legacy ledger. We can only
+   // persist the conversion together with original currency + approved quote
+   // in the atomically encrypted FX finance source after cutover approval.
+   snack(context,waffraIsEnglish?
+    'Conversion preview approved. No amount was saved; encrypted FX posting is not active.':
+    'تمت الموافقة على معاينة التحويل فقط. لم يُحفظ أي مبلغ؛ تسجيل العملات المحوّلة ينتظر تفعيل التخزين المعتمد.');
+  }
+ }
+
+ Future<bool> _canReviewOcrAsLedgerTransaction(String raw)async {
+  if(!WaffraBankScreenshotParser.requiresForeignCurrencyReview(raw))return true;
+  if(!mounted)return false;
+  // A foreign OCR image has no verified FX provenance and must NEVER be
+  // relabeled as SAR by allowing manual numeric input in an SAR-only sheet.
+  final currencyCodes=WaffraSmsCurrencies.currenciesForMessage(raw);
+  final label=currencyCodes.isEmpty?
+   (waffraIsEnglish?'foreign currency':'عملة أجنبية'):
+   currencyCodes.join(' / ');
+  // Offer a verified, consented current-rate preview instead of a dead
+  // end, but keep the SAR ledger blocked until FX provenance is atomic.
+  final evidence=WaffraSmsCurrencies.originalAmount(raw);
+  if(evidence!=null){
+   await _previewForeignBankCurrency(raw);
+  }else{
+   await showWaffraDialog<void>(context:context,builder:(dialog)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?
+     'Foreign currency requires review':'عملة أجنبية تحتاج مراجعة'),
+    content:WaffraText(waffraIsEnglish?
+     'Detected $label but cannot verify the original amount. Nothing was saved.':
+     'اكتُشفت عملة $label ولكن المبلغ الأصلي غير واضح. لم تُحفظ المعاملة.'),
+    actions:[TextButton(onPressed:()=>Navigator.pop(dialog),
+     child:WaffraText(waffraIsEnglish?'OK':'حسنًا'))],
+   ));
+  }
+  return false;
+ }
+
+ /// Show visible, blocking feedback for local OCR/AI work. The overlay is
+ /// always removed on success, cancellation and exceptions; the task cannot
+ /// submit a finance write.
+ Future<T> _withAiWorkProgress<T>(String arabic,String english,
+     Future<T> Function() operation)async{
+  if(!mounted)throw StateError('ai_screen_unmounted');
+  final overlay=Overlay.of(context,rootOverlay:true);
+  final cancellation=Completer<T>();
+  var completed=false;
+  void cancelAnalysis(){
+   if(completed)return;
+   completed=true;
+   WaffraOnDeviceQwen.shared.cancelCurrentGeneration();
+   cancellation.completeError(StateError('ai_analysis_cancelled'));
+  }
+  final item=OverlayEntry(builder:(progressContext)=>Positioned.fill(
+   child:Material(
+    color:Colors.black54,
+    child:Center(child:Semantics(
+     liveRegion:true,label:waffraIsEnglish?english:arabic,
+     child:Card(child:Padding(
+      padding:const EdgeInsets.symmetric(horizontal:24,vertical:18),
+      child:Column(mainAxisSize:MainAxisSize.min,children:[
+       const CircularProgressIndicator(
+        key:Key('waffra-ai-analysis-progress')),
+       const SizedBox(height:16),
+       WaffraText(waffraIsEnglish?english:arabic,
+        textAlign:TextAlign.center),
+       const SizedBox(height:10),
+       TextButton(
+        key:const Key('waffra-ai-analysis-cancel'),
+        onPressed:cancelAnalysis,
+        child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+      ]))))))));
+  overlay.insert(item);
+  try{
+   // Register the cancel future before the first frame delay, so a fast
+   // user cancellation cannot produce an uncaught asynchronous error.
+   final work=(()async{
+    await Future<void>.delayed(const Duration(milliseconds:30));
+    if(completed)throw StateError('ai_analysis_cancelled');
+    return await operation();
+   })();
+   return await Future.any<T>([work,cancellation.future])
+       .timeout(const Duration(seconds:60),onTimeout:(){
+    WaffraOnDeviceQwen.shared.cancelCurrentGeneration();
+    throw TimeoutException('waffra_ai_analysis_timeout');
+   });
+  }finally{
+   completed=true;
+   item.remove();
+   item.dispose();
+  }
+ }
+
+ Future<WaffraAiResult?> _reviewAiPastedBankMessages(
+     BuildContext ctx,String source)async {
+  if(!WaffraSaudiRelease.qwenForBankSms||
+     !WaffraOnDeviceQwen.shared.isReady||source.trim().isEmpty)return null;
+  try{
+   return await _withAiWorkProgress(
+    'جاري الآن تحليل الرسائل بالذكاء الاصطناعي…',
+    'Analyzing bank messages with AI…',
+    ()=>WaffraAiFinanceBrain.bankSms(source,
+     generate:WaffraOnDeviceQwen.shared.textGenerator));
+  }on TimeoutException{
+   if(ctx.mounted)snack(ctx,waffraIsEnglish?
+    'AI timed out. Review the original messages manually.':
+    'انتهت مهلة التحليل. راجع الرسائل يدويًا.');
+  }on StateError catch(error){
+   if(error.message!='ai_analysis_cancelled'&&ctx.mounted){
+    snack(ctx,waffraIsEnglish?'AI analysis unavailable.':'التحليل غير متاح.');
+   }
+  }catch(_){
+   // Any unexpected native/model/overlay error must fall back to a
+   // reviewable SMS draft, not leave the paste spinner or an unhandled Future.
+   if(ctx.mounted)snack(ctx,waffraIsEnglish?
+    'AI analysis was interrupted. Review bank messages manually.':
+    'توقف تحليل الرسائل. راجع الرسائل البنكية يدويًا.');
+  }
+  return null;
+ }
+
+ /// Each image action remains a separate review row. This helper never
+ /// commits a record and cannot post foreign-currency AI output as SAR.
+ Future<bool> _reviewAiScannedTransactions(
+     String sourceText,XFile image)async{
+  if(!WaffraOnDeviceQwen.shared.isReady)return false;
+  // Cancellation or native timeout must return to the guarded OCR review
+  // path rather than escaping as an unhandled async error.
+  WaffraAiResult result;
+  try{
+   result=await _withAiWorkProgress(
+    'جاري تحليل بيانات الصورة بالذكاء الاصطناعي…',
+    'Analyzing image text with on-device AI…',
+    ()=>WaffraAiFinanceBrain.imageOcr(sourceText,
+     generate:WaffraOnDeviceQwen.shared.textGenerator));
+  }on TimeoutException{
+   if(mounted)snack(context,waffraIsEnglish?
+    'AI timed out. Review the extracted image transactions manually.':
+    'انتهت مهلة تحليل الصورة. راجع العمليات المستخرجة يدويًا.');
+   return false;
+  }on StateError catch(error){
+   if(error.message!='ai_analysis_cancelled'&&mounted){
+    snack(context,waffraIsEnglish?
+     'AI analysis was interrupted. Review the extracted transactions.':
+     'توقف تحليل الذكاء. راجع العمليات المستخرجة.');
+   }
+   return false;
+  }catch(_){
+   if(mounted)snack(context,waffraIsEnglish?
+    'AI analysis unavailable. Review the extracted transactions.':
+    'تعذر تحليل الصورة بالذكاء. راجع العمليات المستخرجة.');
+   return false;
+  }
+  if(!mounted)return false;
+  if(result.error!=null||result.count==0){
+   snack(context,waffraIsEnglish?
+    'AI analysis could not confirm transactions. Check the OCR results.':
+    'لم يتأكد تحليل الذكاء من العمليات. راجع نتائج قراءة الصورة.');
+   return false;
+  }
+  final bankImage=WaffraBankScreenshotParser.looksLikeBankScreenshot(sourceText);
+  if(bankImage&&
+     !WaffraAiFinanceBrain.matchesVerifiedImageActions(sourceText,result)){
+   if(mounted)snack(context,waffraIsEnglish?
+    'AI results do not match the image. Verify each OCR transaction.':
+    'نتائج الذكاء مش مطابقة للصورة. راجع كل عملية من النص المستخرج.');
+   return false;
+  }
+  // Product lines from one shop receipt must not be counted as independent
+  // finance transactions, even if a tiny model hallucinated separate actions.
+  if(!bankImage&&result.count>1)return false;
+  final selected=<int>{};
+  final indices=await showWaffraDialog<List<int>>(context:context,
+   builder:(dialog)=>StatefulBuilder(builder:(dialog,update)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?
+     'AI detected '+result.count.toString()+' transactions':
+     'AI اكتشف '+result.count.toString()+' معاملات'),
+    content:SizedBox(width:420,child:SingleChildScrollView(child:
+     Column(mainAxisSize:MainAxisSize.min,children:[
+      WaffraText(waffraIsEnglish?
+       'Review each proposed transaction. Unverified/foreign amounts '
+       'cannot be saved as Saudi Riyals.':
+       'راجع كل عملية. العمليات غير المؤكدة أو الأجنبية لا يمكن '
+       'حفظها باعتبارها ريالًا سعوديًا.'),
+      for(var i=0;i<result.items.length;i++)
+       CheckboxListTile(
+        value:selected.contains(i),
+        onChanged:result.items[i].needsReview?null:(value)=>update((){
+         if(value==true)selected.add(i);else selected.remove(i);
+        }),
+        title:WaffraText(
+         (i+1).toString()+'. '+
+         (result.items[i].amountText??'—')+' '+
+         (result.items[i].currency??'?')+' • '+
+         (result.items[i].direction==WaffraAiDirection.income?
+          (waffraIsEnglish?'Income':'دخل'):
+          (waffraIsEnglish?'Expense':'مصروف'))),
+        subtitle:WaffraText(result.items[i].needsReview?
+         (waffraIsEnglish?'Review required: ':'تحتاج مراجعة: ')+
+          result.items[i].reason:
+         (result.items[i].merchant??result.items[i].quote),
+         maxLines:3),
+       ),
+     ]))),
+    actions:[
+     TextButton(onPressed:()=>Navigator.pop(dialog),
+      child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+     FilledButton(onPressed:selected.isEmpty?null:()=>
+       Navigator.pop(dialog,selected.toList()..sort()),
+      child:WaffraText(waffraIsEnglish?'Review selected':'مراجعة المحدد')),
+    ],
+   )));
+  if(indices==null||!mounted)return true;
+  for(final index in indices){
+   if(!mounted)return true;
+   final item=result.items[index];
+   if(item.needsReview||item.currency!='SAR')continue;
+   final safeAmount=item.amountText==null?null:
+      WaffraReceiptOcrParser.amountFromText(item.amountText!);
+   await entrySheet(
+    scannedReceipt:WaffraReceiptOcrFields(
+     rawText:item.quote,
+     merchant:item.merchant!=null&&item.quote.contains(item.merchant!)?
+      item.merchant:null,
+     amount:safeAmount),
+    scannedIncome:item.direction==WaffraAiDirection.income,
+    scannedImage:image);
+  }
+  return true;
+ }
+
+ Future<void> scanAndAddReceipt()async {
+  if(!WaffraSaudiRelease.receiptImageTransactionImport){
+   if(mounted)snack(context,waffraIsEnglish?
+    'Receipt scanning is temporarily unavailable in this release.':
+    'استخراج العمليات من الصور والفواتير غير متاح حاليًا.');
+   return;
+  }
+  // Offline OCR itself needs its tiny Tesseract assets, not Qwen.
+  // A slow/removed GGUF must not block the camera and image review.
+  if(_receiptOcrAiOpening||!mounted)return;
+  _receiptOcrAiOpening=true;
+  // Ask only for the exact camera/gallery access the user selected.
+  final source=await showWaffraDialog<ImageSource>(context:context,builder:(dialog)=>AlertDialog(
+   title:WaffraText(waffraIsEnglish?'Add from receipt or image':'إضافة عملية من فاتورة أو صورة'),
+   content:WaffraText(waffraIsEnglish?
+    'Scan a receipt, transfer notice or bank screenshot. Review every amount and type before saving.':
+    'صوّر فاتورة أو اختر إيصال تحويل أو صورة رسائل بنكية. راجع كل مبلغ ونوع عملية قبل الحفظ.'),
+   actions:[
+    TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialog)),child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+    OutlinedButton.icon(icon:const Icon(Icons.photo_library_outlined),
+     onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialog,ImageSource.gallery)),
+     label:WaffraText(waffraIsEnglish?'Gallery':'المعرض')),
+    FilledButton.icon(icon:const Icon(Icons.camera_alt_outlined),
+     onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialog,ImageSource.camera)),
+     label:WaffraText(waffraIsEnglish?'Camera':'الكاميرا')),
+   ]));
+  if(source==null||!mounted){_receiptOcrAiOpening=false;return;}
+  try{
+   final picked=await WaffraExternalMediaSession.runPicker(()=>
+    ImagePicker().pickImage(source:source,imageQuality:95));
+   if(picked==null||!mounted)return;
+   final extracted=await _withAiWorkProgress(
+    'جاري قراءة الصورة واستخراج بيانات المعاملات…',
+    'Reading image and extracting transactions…',
+    ()=>WaffraReceiptOcr.scan(picked.path));
+   if(!mounted)return;
+   // Grounded OCR evidence takes priority over a slow 0.6B LLM.
+   // Invoke optional AI only when deterministic receipt and bank reading
+   // cannot produce any suggestions. All saves still need explicit review.
+   if(!extracted.hasSuggestions&&
+      WaffraBankScreenshotParser.reviewItems(extracted.rawText).isEmpty&&
+      WaffraOnDeviceQwen.shared.isReady&&
+      await _reviewAiScannedTransactions(extracted.rawText,picked))return;
+   if(!mounted)return;
+   final candidates=WaffraBankScreenshotParser.reviewItems(extracted.rawText);
+   if(candidates.isEmpty){
+    if(!await _canReviewOcrAsLedgerTransaction(extracted.rawText))return;
+    // Do not reuse speculative OCR merchant/amount for an SMS screenshot.
+    final suggestion=WaffraBankScreenshotParser.looksLikeBankScreenshot(extracted.rawText)?
+     WaffraReceiptOcrFields(rawText:extracted.rawText):extracted;
+    await entrySheet(scannedReceipt:suggestion,scannedImage:picked);
+    return;
+   }
+   if(candidates.length==1){
+    final one=candidates.single;
+    if(!await _canReviewOcrAsLedgerTransaction(one.sourceText))return;
+    await entrySheet(
+     scannedReceipt:WaffraReceiptOcrFields(rawText:one.sourceText,
+      merchant:one.merchant,amount:one.amount,date:one.date),
+     scannedIncome:one.income,scannedImage:picked,
+     scannedImagePosition:one.position,scannedImageTotal:candidates.length);
+    return;
+   }
+   // One screenshot may have independent transactions. Require explicit user
+   // selection, then full review of each via the existing finance entry gate.
+   final chosen=<int>{for(var i=0;i<candidates.length;i++)i};
+   final selected=await showWaffraDialog<List<int>>(context:context,
+    builder:(dialog)=>StatefulBuilder(builder:(dialog,update)=>AlertDialog(
+     title:WaffraText(waffraIsEnglish?'Detected '+candidates.length.toString()+' transactions':'تم اكتشاف '+candidates.length.toString()+' عمليات'),
+     content:SizedBox(width:420,child:SingleChildScrollView(child:Column(
+      mainAxisSize:MainAxisSize.min,children:[
+       WaffraText(waffraIsEnglish?
+        'Review selected entries in image order. Enter unclear amounts manually; nothing is saved automatically.':
+        'راجع العمليات بالترتيب. أدخل المبالغ غير الواضحة يدويًا؛ لا حفظ تلقائي.'),
+       for(var i=0;i<candidates.length;i++)
+        CheckboxListTile(
+         value:chosen.contains(i),
+         onChanged:WaffraHaptics.selection((value)=>update((){
+          if(value==true){chosen.add(i);}else{chosen.remove(i);}
+         })),
+         title:WaffraText((waffraIsEnglish?'Transaction ':'العملية ')+(i+1).toString()+(waffraIsEnglish?' of ':' من ')+candidates.length.toString()+' — '+(candidates[i].amount==null?(waffraIsEnglish?'Amount unclear':'المبلغ غير واضح'):candidates[i].amount!.toStringAsFixed(2)+' SAR')),
+         subtitle:WaffraText(candidates[i].merchant??(waffraIsEnglish?'Unconfirmed source':'اسم غير مؤكد')),
+        ),
+      ]))),
+     actions:[
+      TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialog)),child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+      FilledButton(onPressed:chosen.isEmpty?null:WaffraHaptics.tap(
+       ()=>Navigator.pop(dialog,chosen.toList()..sort())),
+       child:WaffraText(waffraIsEnglish?'Review selected':'مراجعة المحدد')),
+     ],
+    )));
+   if(selected==null||!mounted)return;
+   for(final index in selected){
+    if(!mounted)return;
+    final candidate=candidates[index];
+    if(!await _canReviewOcrAsLedgerTransaction(candidate.sourceText))continue;
+    await entrySheet(
+     scannedReceipt:WaffraReceiptOcrFields(rawText:candidate.sourceText,
+      merchant:candidate.merchant,amount:candidate.amount,date:candidate.date),
+     scannedIncome:candidate.income,scannedImage:picked,
+     scannedImagePosition:candidate.position,scannedImageTotal:candidates.length);
+   }
+  }on TimeoutException catch(_){
+   if(mounted)snack(context,waffraIsEnglish?
+    'Analysis took too long. Try a smaller image or add manually.':
+    'التحليل استغرق وقتًا طويلًا. جرّب صورة أصغر أو أضف يدويًا.');
+  }on StateError catch(error){
+   if(error.message=='ai_analysis_cancelled')return;
+   if(mounted)snack(context,waffraIsEnglish?
+    'Could not complete analysis. Try again or add manually.':
+    'تعذر إكمال التحليل. حاول مجددًا أو أضف يدويًا.');
+  }on WaffraReceiptOcrException catch(error){
+   if(mounted)snack(context,waffraIsEnglish?
+    'Image recognition is unavailable (${error.code}). You can add the transaction manually.':
+    'تعذر التعرف على الصورة (${error.code}). يمكنك إضافة العملية يدويًا.');
+  }catch(error){
+   debugPrint('Receipt import review failed without a finance write: $error');
+   if(mounted)snack(context,waffraIsEnglish?
+    'Could not read this image. Try a clearer image or add manually.':
+    'تعذر قراءة الصورة. جرّب صورة أوضح أو أضف العملية يدويًا.');
+  }finally{
+   _receiptOcrAiOpening=false;
+  }
+ }
+
+ Future<void> entrySheet({MoneyEntry? initial,bool sms=false,String? initialSms,
+  String? reviewedSender,
+  WaffraReceiptOcrFields? scannedReceipt,XFile? scannedImage,bool? scannedIncome,
+  int? scannedImagePosition,int? scannedImageTotal})async {
+  if(!WaffraSaudiRelease.receiptImageTransactionImport&&
+     (scannedReceipt!=null||scannedImage!=null)){
+   if(mounted)snack(context,waffraIsEnglish?
+    'Receipt/image transaction import is unavailable in this release.':
+    'إضافة عمليات من فاتورة أو صورة غير متاحة في النسخة الحالية.');
+   return;
+  }
+  // Bank SMS and OCR edit forms work offline without starting Qwen.
+  // Model-dependent finance advice remains gated separately.
+  // Last defense: every OCR entry must verify the currency *inside* the
+  // editor too, so future callers cannot bypass scanAndAddReceipt's gate.
+  if(scannedReceipt!=null &&
+      WaffraBankScreenshotParser.requiresForeignCurrencyReview(
+          scannedReceipt.rawText)) {
+    await _canReviewOcrAsLedgerTransaction(scannedReceipt.rawText);
+    return;
+  }
+  // Cold-start money selection needs a verified, non-Home-header account list.
+  if(!_m468VerifiedAccountsLoaded){
+   await _m467RefreshHomeAccounts();
+   if(!mounted)return;
+  }
+  // #420: a legacy-only entry is NOT treated as successfully migrated.
+  WaffraVerifiedAccountsApi? editAccountLinkApi;
+  bool canLinkExistingAccount=false;
+  String? originalLinkedAccountId;
+  if(initial!=null){
+   try{
+    await _ensureFinanceBound();
+    final bridge=_financeBinding?.accountsBridge;
+    if(bridge!=null){
+     final api=WaffraVerifiedAccountsApi(bridge:bridge);
+     final found=await api.readExistingEntryAccount(entryId:initial.id);
+     if(found.exists){
+      canLinkExistingAccount=true;
+      originalLinkedAccountId=found.accountId;
+      editAccountLinkApi=api;
+     }
+    }
+   }catch(error){
+    debugPrint('M500 edit-account read unavailable: ${error.runtimeType}');
+   }
+   if(!mounted)return;
+  }
+  // Restore an unfinished bank SMS editor after one-step Back. No money or
+  // SMS acknowledgement happens until a separate verified commit.
+  final smsEditorDraftKey=sms&&initial==null&&initialSms!=null?
+   bankSmsHash(initialSms):null;
+  final smsEditorDraft=smsEditorDraftKey==null?
+   null:_m492SmsEditorDrafts[smsEditorDraftKey];
+  // M485 / #403 #404: correction of a detected SMS is still a reviewed
+  // bank-SMS transaction, not a new unrelated manual entry. Use parsed
+  // values only when source amount, SAR, direction and status agree.
+  final parsedSms=sms&&initialSms!=null?BankParser.parse(initialSms):null;
+  final factsSms=sms&&initialSms!=null?
+   WaffraBankSmsFactsParser.parse(initialSms):null;
+  final sourceAmount=sms&&initialSms!=null?
+   WaffraSmsCurrencies.originalAmount(initialSms):null;
+  // Direct SMS corrections and native review use the same latest offline
+  // category rules. Never infer a money account or post without approval.
+  var editorRules=<WaffraSmsLocalRule>[];
+  if(sms&&initialSms!=null&&_smsRuleOwnerKey.isNotEmpty){
+   try{editorRules=await const WaffraSmsLocalRuleStore()
+    .read(_smsRuleOwnerKey);}catch(_){/* Editable review still available. */}
+  }
+  if(!mounted)return;
+  final editorMatchedRule=sms&&initialSms!=null&&factsSms!=null?
+   WaffraSmsLocalRules.resolve(body:initialSms,
+    sender:reviewedSender??'',bankKind:factsSms.kind,
+    custom:editorRules):null;
+  final editorLearnedCategory=editorMatchedRule!=null&&
+   categories.any((c)=>c.isSubcategory&&
+    c.income==editorMatchedRule.income&&
+    c.name==editorMatchedRule.category&&
+    waffraCategoryAvailableForNewEntry(categories,c))?
+     editorMatchedRule.category:null;
+  final trustedSms=parsedSms!=null&&factsSms!=null&&!factsSms.pending&&
+   (factsSms.kind==WaffraBankOperationKind.income||
+    factsSms.kind==WaffraBankOperationKind.expense)&&
+   parsedSms.amount!=null&&parsedSms.amount!>0&&
+   !parsedSms.requiresCurrencyReview&&
+   sourceAmount!=null&&sourceAmount.currency=='SAR'&&
+   (sourceAmount.amount-parsedSms.amount!).abs()<0.00001&&
+   parsedSms.income==(factsSms.kind==WaffraBankOperationKind.income);
+  final suggestedSmsTitle=trustedSms?
+   (RegExp(r'شحن\s*(?:جوال|هاتف|رصيد)|top[ -]?up',
+    caseSensitive:false).hasMatch(initialSms!)?
+     (waffraIsEnglish?'Mobile top-up':'شحن الجوال'):
+     parsedSms.title):'';
+  final title=TextEditingController(text:
+   (smsEditorDraft?['title'] as String?)??initial?.title??
+   scannedReceipt?.merchant??suggestedSmsTitle);
+  final notes=TextEditingController(text:
+   (smsEditorDraft?['notes'] as String?)??
+   (initial?.sourceType=='sms'?initial?.personalNotes:initial?.notes)??'');
+  final value=TextEditingController(text:
+   (smsEditorDraft?['amount'] as String?)??(initial!=null?
+   formatWaffraEditAmount(initial.amount):
+   scannedReceipt?.amount!=null?
+    formatWaffraEditAmount(scannedReceipt!.amount!):
+    trustedSms?formatWaffraMoney(parsedSms.amount??0):''));
+  final message=TextEditingController(text:initialSms??'');
+  bool income=(smsEditorDraft?['income'] as bool?)??initial?.income??scannedIncome??
+   (trustedSms?(parsedSms.income):false),
+   analyzing=false,hasParsed=initialSms!=null;
+  bool submitTapped=false;
+  String category=(smsEditorDraft?['category'] as String?)??
+   initial?.category??(trustedSms?
+    (editorLearnedCategory??parsedSms.category):'أخرى');
+  String? selectedParentId;
+  String? selectedBudgetId=(smsEditorDraft?['budget'] as String?)??initial?.budgetId;
+  var entryAccounts=_m467Accounts.where((a)=>!a.archived).toList();
+  var entryProviders=sms?
+   WaffraRecurringAccountGroups.withBankProviderChoices(entryAccounts):
+   WaffraRecurringAccountGroups.fromAccounts(entryAccounts);
+  String? chosenManualProvider=smsEditorDraft?['provider'] as String?;
+  String? chosenManualAccount=smsEditorDraft?['account'] as String?;
+  // The sender identifies a bank/provider only, NEVER a financial account.
+  // Prefer a matching existing bank/wallet group; otherwise show the bank
+  // catalog entry, allowing the user to create a linked account directly.
+  if(sms&&initial==null&&chosenManualProvider==null&&
+     reviewedSender!=null){
+   final bank=WaffraSmsAccountLearning.bankGroup(reviewedSender);
+   if(bank!=null){
+    final existing=entryProviders.where((group)=>
+     group.id.endsWith(':institution:$bank')&&
+     group.accounts.isNotEmpty).toList();
+    final catalog=entryProviders.where((group)=>
+     group.id=='bank:institution:$bank').toList();
+    if(existing.length==1)chosenManualProvider=existing.single.id;
+    else if(catalog.length==1)chosenManualProvider=catalog.single.id;
+   }
+  }
+  if(initial!=null&&canLinkExistingAccount&&originalLinkedAccountId!=null){
+   final matched=entryProviders.where((p)=>p.accounts.any(
+    (a)=>a.id==originalLinkedAccountId)).toList();
+   if(matched.length==1){
+    chosenManualProvider=matched.single.id;
+    chosenManualAccount=originalLinkedAccountId;
+   }
+  }
+  int budgetMenuRevision=0; // reset action-only dropdown selections
+  int accountProviderMenuRevision=0,accountChildMenuRevision=0;
+  int transferSourceProviderRevision=0,transferTargetProviderRevision=0;
+  int transferSourceChildRevision=0,transferTargetChildRevision=0;
+  {
+   // All reviewed transactions, including SMS, must use a real child category.
+   final matchingLeaf=categories.where((c)=>c.income==income&&
+    c.isSubcategory&&c.name==category).toList();
+   if(matchingLeaf.isNotEmpty&&categories.any((c)=>!c.isSubcategory&&
+      c.income==income&&c.id==matchingLeaf.first.parentId)){
+    selectedParentId=matchingLeaf.first.parentId;
+   }else{
+    final legacyParent=categories.where((c)=>c.income==income&&
+     !c.isSubcategory&&c.name==category).toList();
+    selectedParentId=legacyParent.isEmpty?null:legacyParent.first.id;
+    category='';
+   }
+  }
+  if(smsEditorDraft!=null){
+   final savedParent=smsEditorDraft['parent'] as String?;
+   final savedCategory=smsEditorDraft['category'] as String?;
+   if(savedParent!=null&&categories.any((c)=>c.id==savedParent&&
+      !c.isSubcategory&&c.income==income)){
+    selectedParentId=savedParent;
+    if(savedCategory!=null&&categories.any((c)=>c.isSubcategory&&
+       c.parentId==savedParent&&c.income==income&&c.name==savedCategory)){
+     category=savedCategory;
+    }
+   }
+   if(chosenManualAccount!=null&&
+       !entryAccounts.any((a)=>a.id==chosenManualAccount)){
+    chosenManualAccount=null;
+    chosenManualProvider=null;
+   }
+  }
+  // Unknown original SMS timestamp requires an explicit calendar pick.
+  final originalSmsDate=sms&&initialSms!=null?
+   bankSmsDate(initialSms,referenceDate:DateTime.now()):null;
+  var smsDateConfirmed=initial!=null||
+   smsEditorDraft?['dateConfirmed']==true||originalSmsDate!=null;
+  DateTime date=(smsEditorDraft?['date'] as DateTime?)??
+   initial?.date??scannedReceipt?.date??originalSmsDate??DateTime.now();
+   String? suggestion,pendingHash,receiptPath=initial?.receiptPath;
+   final stagedReceiptCopies=<String>[];
+   // All three modes share the SAME manual bottom sheet. Transfers never
+   // enter a categorized income/expense ledger or an attachment writer.
+   bool transferSelected=false,transferSaving=false,transferCommitted=false;
+   WaffraVerifiedAccountsApi? transferApi;
+   List<WaffraAccountBalance> transferAccounts=<WaffraAccountBalance>[];
+   String? transferSource,transferDestination,transferError;
+   String? transferSourceProvider,transferDestinationProvider;
+   DateTime transferDate=DateTime.now();
+   final transferAmount=TextEditingController();
+   final transferNote=TextEditingController();
+   final transferRequestId='m466-'+DateTime.now().microsecondsSinceEpoch.toString();
+   if(scannedImage!=null){
+    try{
+     final copy=await saveReceipt(scannedImage);
+     stagedReceiptCopies.add(copy);
+     receiptPath=waffraEncodeReceipts([...waffraReceiptPaths(receiptPath),copy]);
+    }catch(error){
+     debugPrint('Could not stage receipt before confirmed save: $error');
+     if(mounted)snack(context,waffraIsEnglish?'Could not attach the image. Please retry.':
+      'تعذر إرفاق الصورة، حاول مجددًا.');
+     disposeLater([title,value,notes,message]);return;
+    }
+   }
+   bool attempted=false;
+   bool explicitlyApprovedSmsDuplicate=false;
+  Timer? debounce;
+  final result=await showModalBottomSheet<MoneyEntry>(
+   context:context,isScrollControlled:true,showDragHandle:true,
+   useSafeArea:true,
+   builder:(sheetContext)=>StatefulBuilder(builder:(sheetContext,update){
+    void parseNow(String text) {
+     debounce?.cancel();
+      if(text.trim().isEmpty){update((){hasParsed=false;analyzing=false;suggestion=null;});return;}
+     update(()=>analyzing=true);
+     debounce=Timer(const Duration(milliseconds:300),(){
+      if(!sheetContext.mounted)return;
+      final p=BankParser.parse(text);
+      final merchant=waffraMerchantKey(text);
+      final learned=merchant==null?null:learnedMerchantCategories[merchant];
+      update((){
+       income=p.income;
+       category=learned!=null&&categories.any((c)=>c.income==p.income&&c.name==learned)
+        ?learned:p.suggestedCategory!=null&&categories.any((c)=>c.income==p.income&&c.name==p.suggestedCategory)
+        ?p.suggestedCategory!:p.category;
+       title.text=p.title;value.text=p.amount==null?'':formatWaffraMoney(p.amount!);
+       suggestion=p.suggestedCategory!=null&&!categories.any((c)=>c.income==p.income&&c.name==p.suggestedCategory)
+        ?p.suggestedCategory:null;
+       final matching=categories.where((c)=>c.income==income&&
+        c.isSubcategory&&c.name==category).toList();
+       if(matching.isNotEmpty){
+        selectedParentId=matching.first.parentId;
+       }else{
+        final parent=categories.where((c)=>c.income==income&&
+          !c.isSubcategory&&c.name==category).toList();
+        selectedParentId=parent.isEmpty?null:parent.first.id;
+        category='';
+       }
+       selectedBudgetId=null;
+       hasParsed=true;analyzing=false;
+      });
+     });
+    }
+    final available=forType(income);
+    final mainCategories=waffraManualCategoryParents(available,income);
+    final selectedMain=mainCategories.where((c)=>c.id==selectedParentId).toList();
+    final subcategories=waffraManualCategoryChildren(available,income,selectedParentId);
+    final selectedSub=subcategories.where((c)=>c.name==category).toList();
+    void assignBudgetInsideEditor(String? pickedId){
+     // Only child-category budgets may receive NEW allocations. An existing
+     // legacy parent budget is visible for history, never silently migrated.
+     if(pickedId==null){selectedBudgetId=null;return;}
+     final matches=namedBudgets.where((b)=>b.id==pickedId&&
+      b.budget>0&&b.budgetActive&&!b.deleted).toList();
+     if(matches.length!=1)return;
+     // Budget allocation is independent of the user's chosen category.
+     selectedBudgetId=pickedId;
+    }
+    Widget dateAction()=>OutlinedButton.icon(
+      key:const Key('waffra-entry-date-action'),
+      onPressed:WaffraHaptics.tap(()async {
+       final d=await waffraPickDateWithToday(english:waffraIsEnglish,
+        context:sheetContext,initialDate:date,
+        firstDate:DateTime(2000),lastDate:DateTime.now());
+       if(d==null||!sheetContext.mounted)return;
+       if(sms){
+        // Bank SMS corrections need deliberate date AND hour/minute;
+        // accepting only a calendar date would silently set midnight.
+        final time=await showTimePicker(
+         context:sheetContext,initialTime:TimeOfDay.fromDateTime(date));
+        if(time==null||!sheetContext.mounted)return;
+        final confirmed=DateTime(d.year,d.month,d.day,time.hour,time.minute);
+        if(confirmed.isAfter(DateTime.now())){
+         snack(sheetContext,waffraIsEnglish?
+          'Transaction date and time cannot be in the future.':
+          'تاريخ ووقت العملية لا يمكن أن يكونا في المستقبل.',isError:true);
+         return;
+        }
+        update((){
+         date=confirmed;
+         smsDateConfirmed=true;
+        });
+       }else{
+        update(()=>date=d);
+       }
+      }),
+      icon:const Icon(Icons.calendar_month,size:19),
+      label:WaffraText(sms&&!smsDateConfirmed?
+       (waffraIsEnglish?'Select date and time':'اختر التاريخ والوقت'):
+       sms?
+        dayText(date)+' '+date.hour.toString().padLeft(2,'0')+':'+
+         date.minute.toString().padLeft(2,'0'):
+        dayText(date),maxLines:1));
+    Future<void> createAccountInsideEntryDropdown({required bool mainProvider,
+      bool forTransfer=false,bool transferTarget=false})async{
+     // #405/#416: Add inside either dropdown opens the account FORM directly,
+     // not a second My Accounts page. No finance write occurs until Save.
+     final selectedProviderBefore=forTransfer?
+       (transferTarget?transferDestinationProvider:transferSourceProvider):
+       chosenManualProvider;
+     try{
+      await _ensureFinanceBound();
+      final bridge=_financeBinding?.accountsBridge;
+      if(bridge==null)throw StateError('Verified finance source unavailable');
+      final api=WaffraVerifiedAccountsApi(bridge:bridge);
+      final before=await api.balances(); // establish a fresh writer witness
+      if(!sheetContext.mounted)return;
+      final bankSelection=RegExp(
+       r'^bank:institution:(rajhi|inma|snb|riyad|bilad|stc)$')
+       .firstMatch(mainProvider?'':selectedProviderBefore??'');
+      final expectedBank=bankSelection?.group(1);
+      // A masked account suffix from an Android SMS is a suggestion ONLY
+      // when the reviewed sender's bank matches the selected provider.
+      // Never inherit a suffix from a different bank or an uncertain SMS.
+      final bankFromSender=WaffraSmsAccountLearning.bankGroup(
+       reviewedSender??'');
+      final bankFacts=initialSms!=null?
+       WaffraBankSmsFactsParser.parse(initialSms):null;
+      final proposedSuffix=trustedSms&&expectedBank!=null&&
+       expectedBank==bankFromSender&&bankFacts!=null&&
+       bankFacts.canAutoPostAsIncomeExpense?
+       WaffraSmsAccountLearning.suffix4(
+        bankFacts.kind==WaffraBankOperationKind.income?
+         bankFacts.destinationSuffix:bankFacts.sourceSuffix):null;
+      final customOptions=<String,List<String>>{
+       for(final kind in const ['bank','wallet'])
+        kind:before.where((a)=>!a.archived&&a.kind==kind&&
+         a.customSubtypeLabel!=null)
+         .map((a)=>a.customSubtypeLabel!).toSet().toList()..sort(),
+      };
+      final draft=await showWaffraDialog<WaffraNewAccountDraft>(
+       context:sheetContext,builder:(dialog)=>WaffraNewAccountDialog(
+        english:waffraIsEnglish,suggestedProviderId:expectedBank,
+        suggestedLastFour:proposedSuffix,
+        customSubtypeOptions:customOptions));
+      if(draft==null||!sheetContext.mounted)return;
+      // Bank child creation must stay under the selected real institution;
+      // never silently convert a specific bank group into another provider.
+      if(expectedBank!=null&&
+         (draft.kind!='bank'||draft.providerId!=expectedBank)){
+       snack(sheetContext,waffraIsEnglish?
+        'The linked account must belong to the selected bank.':
+        'الحساب التابع لازم يكون لنفس البنك المختار.',isError:true);
+       return;
+      }
+      final id='m492-inline-'+DateTime.now().microsecondsSinceEpoch.toString();
+      await api.createTypedAccountWithIdentity(
+       id:id,name:draft.name,kind:draft.kind,
+       providerId:draft.providerId??'none',
+       subtype:draft.subtype??'other',
+       openingMinor:draft.openingMinor,
+       createdIso:DateTime.now().toUtc().toIso8601String(),
+       lastFour:draft.lastFour,
+       customSubtypeLabel:draft.customSubtypeLabel,
+       userConfirmed:true);
+      await _m467RefreshHomeAccounts();
+      if(!sheetContext.mounted)return;
+      final refreshed=_m467Accounts.where((a)=>!a.archived).toList();
+      final created=refreshed.where((a)=>a.id==id).toList();
+      if(created.length!=1)throw StateError(
+       'Account creation has no verified refreshed balance');
+      final groups=WaffraRecurringAccountGroups.fromAccounts(refreshed);
+      // Account creation invalidates its old optimistic witness; refresh it
+      // before handing the same verified API back to the transfer editor.
+      if(forTransfer)await api.balances();
+      final related=groups.where((p)=>
+       p.accounts.any((a)=>a.id==id)).toList();
+      if(related.length!=1)throw StateError(
+       'New account group is not uniquely verified');
+      update((){
+       entryAccounts=refreshed;
+       entryProviders=sms?
+        WaffraRecurringAccountGroups.withBankProviderChoices(refreshed):groups;
+       if(forTransfer){
+        transferAccounts=refreshed;
+        transferApi=api;
+        if(transferTarget){
+         transferDestinationProvider=related.single.id;
+         transferDestination=mainProvider?null:id;
+        }else{
+         transferSourceProvider=related.single.id;
+         transferSource=mainProvider?null:id;
+        }
+        transferError=null;
+       }else if(mainProvider){
+        chosenManualProvider=related.single.id;
+        chosenManualAccount=null;
+       }else if(related.single.id==selectedProviderBefore){
+        chosenManualAccount=id;
+       }else{
+        chosenManualProvider=related.single.id;
+        chosenManualAccount=id;
+       }
+      });
+     }catch(error){
+      if(sheetContext.mounted)snack(sheetContext,waffraIsEnglish?
+       'Could not confirm account creation. Review the form and try again.':
+       'تعذر تأكيد إنشاء الحساب. راجع البيانات وأعد المحاولة.',
+       isError:true);
+     }
+    }
+    Widget operationPicker(){
+     if(initial!=null||sms||scannedReceipt!=null){
+      return SegmentedButton<bool>(
+       segments:const [
+        ButtonSegment(value:true,label:WaffraText('دخل')),
+        ButtonSegment(value:false,label:WaffraText('مصروف'))],
+       selected:{income},
+       onSelectionChanged:initial?.sourceType=='goal_due'?null:
+        WaffraHaptics.selection((v)=>update((){
+         income=v.first;selectedParentId=null;selectedBudgetId=null;
+         category='';suggestion=null;
+        })));
+     }
+     return SegmentedButton<WaffraAccountOperation>(
+      key:const Key('waffra-manual-three-modes'),
+      showSelectedIcon:false,
+      segments:[
+       ButtonSegment(value:WaffraAccountOperation.income,
+        label:WaffraText(waffraIsEnglish?'Income':'دخل')),
+       ButtonSegment(value:WaffraAccountOperation.expense,
+        label:WaffraText(waffraIsEnglish?'Expense':'مصروف')),
+       ButtonSegment(value:WaffraAccountOperation.transfer,
+        label:WaffraText(waffraIsEnglish?'Transfer':'تحويل'))],
+      selected:{transferSelected?WaffraAccountOperation.transfer:
+       income?WaffraAccountOperation.income:WaffraAccountOperation.expense},
+      onSelectionChanged:transferSaving?null:
+       WaffraHaptics.selection((choice)async{
+       final selected=choice.first;
+       if(selected!=WaffraAccountOperation.transfer){
+        update((){
+         transferSelected=false;
+         income=selected==WaffraAccountOperation.income;
+         selectedParentId=null;selectedBudgetId=null;category='';suggestion=null;
+        });
+        return;
+       }
+       update(()=>transferSelected=true);
+       if(transferApi!=null)return;
+       try{
+        await _ensureFinanceBound();
+        final bridge=_financeBinding?.accountsBridge;
+        if(bridge==null)throw StateError('Verified money accounts unavailable');
+        final api=WaffraVerifiedAccountsApi(bridge:bridge);
+        final accounts=await api.balances();
+        if(!sheetContext.mounted)return;
+        update((){
+         transferApi=api;
+         transferAccounts=accounts.where((a)=>!a.archived).toList();
+         transferError=transferAccounts.length<2?
+          (waffraIsEnglish?'Create two accounts before transferring.':
+           'لازم تضيف حسابين على الأقل قبل التحويل.'):null;
+        });
+       }catch(error){
+        if(sheetContext.mounted)update(()=>transferError=waffraIsEnglish?
+         'Verified accounts unavailable. Reopen My Accounts.':
+         'الحسابات الموثقة غير متاحة. راجع حساباتي.');
+       }
+      }));
+    }
+    if(transferSelected){
+     Widget accountChoice({required String label,required String? value,
+      required ValueChanged<String?> onChange,String? exclude,bool target=false}){
+      final providers=WaffraRecurringAccountGroups.withBankProviderChoices(transferAccounts);
+      String? group=target?transferDestinationProvider:transferSourceProvider;
+      if(group==null&&value!=null){
+       for(final provider in providers){
+        if(provider.accounts.any((a)=>a.id==value)){group=provider.id;break;}
+       }
+      }
+      final groups=providers.where((p)=>p.id==group).toList();
+      final options=groups.isEmpty?const <WaffraAccountBalance>[]:
+       groups.single.accounts.where((a)=>a.id!=exclude).toList();
+      final parentRevision=target?transferTargetProviderRevision:transferSourceProviderRevision;
+      final childRevision=target?transferTargetChildRevision:transferSourceChildRevision;
+      return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+       WaffraCenteredDropdownFormField<String>(
+        key:ValueKey('m470-home-transfer-'+(target?'target':'source')+
+         '-provider-'+(group??'none')+'-$parentRevision'),
+        isExpanded:true,initialValue:group,
+        decoration:InputDecoration(
+         labelText:waffraIsEnglish?'Bank or provider':'الجهة أو البنك',
+         border:const OutlineInputBorder()),
+        items:[
+         ...providers.map((p)=>DropdownMenuItem<String>(
+          value:p.id,child:WaffraText(waffraIsEnglish?p.labelEn:p.labelAr,
+           maxLines:1))),
+         DropdownMenuItem<String>(value:'__create_transfer_provider__',
+          child:WaffraText(waffraIsEnglish?'Add bank / provider':'إضافة جهة أو بنك')),
+        ],
+        onChanged:transferSaving?null:(v)async{
+         if(v=='__create_transfer_provider__'){
+          await createAccountInsideEntryDropdown(
+           mainProvider:true,forTransfer:true,transferTarget:target);
+          if(sheetContext.mounted)update((){
+           if(target)transferTargetProviderRevision++;
+           else transferSourceProviderRevision++;
+          });
+          return;
+         }
+         if(sheetContext.mounted)update((){
+          if(target){transferDestinationProvider=v;transferDestination=null;}
+          else{transferSourceProvider=v;transferSource=null;}
+          transferError=null;
+         });
+        },
+       ),
+       const SizedBox(height:9),
+       WaffraCenteredDropdownFormField<String>(
+        key:ValueKey('m470-home-transfer-'+(target?'target':'source')+
+         '-account-'+(group??'none')+'-$childRevision'),
+        isExpanded:true,
+        initialValue:options.any((a)=>a.id==value)?value:null,
+        decoration:InputDecoration(labelText:label,
+         border:const OutlineInputBorder()),
+        items:[
+         ...options.map((a)=>DropdownMenuItem<String>(value:a.id,
+          child:WaffraText(a.name,maxLines:1))),
+         if(group!=null)DropdownMenuItem<String>(
+          value:'__create_transfer_child__',
+          child:WaffraText(waffraIsEnglish?'Add linked account':'إضافة حساب تابع')),
+        ],
+        onChanged:transferSaving||group==null?null:(v)async{
+         if(v=='__create_transfer_child__'){
+          await createAccountInsideEntryDropdown(
+           mainProvider:false,forTransfer:true,transferTarget:target);
+          if(sheetContext.mounted)update((){
+           if(target)transferTargetChildRevision++;
+           else transferSourceChildRevision++;
+          });
+          return;
+         }
+         if(sheetContext.mounted)onChange(v);
+        }),
+      ]);
+     }
+     return WaffraEntrySheetSafeLayout(
+      form:SingleChildScrollView(
+       padding:const EdgeInsets.fromLTRB(18,10,18,8),
+       child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,
+        children:[
+         WaffraText(waffraIsEnglish?'Manual transaction':'عملية يدوية',
+          style:Theme.of(sheetContext).textTheme.titleLarge),
+         const SizedBox(height:12),
+         operationPicker(),
+         const SizedBox(height:18),
+         WaffraText(waffraIsEnglish?
+          'Moving money between your own accounts is not income or spending.':
+          'التحويل بين حساباتك لا يُحسب دخلًا ولا مصروفًا.',
+          style:const TextStyle(color:emerald)),
+         const SizedBox(height:14),
+         TextField(key:const Key('m466-transfer-amount'),controller:transferAmount,
+          keyboardType:const TextInputType.numberWithOptions(decimal:true),
+          inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],
+          decoration:InputDecoration(
+           labelText:waffraIsEnglish?'Amount (SAR)':'المبلغ (ر.س)',
+           border:const OutlineInputBorder())),
+         const SizedBox(height:12),
+         accountChoice(label:waffraIsEnglish?'From account':'من حساب',
+          value:transferSource,onChange:(v)=>update((){
+           transferSource=v;
+           if(transferDestination==v)transferDestination=null;
+           transferError=null;
+          })),
+         const SizedBox(height:12),
+         accountChoice(label:waffraIsEnglish?'To account':'إلى حساب',
+          value:transferDestination,exclude:transferSource,target:true,
+          onChange:(v)=>update((){
+           transferDestination=v;transferError=null;
+          })),
+         const SizedBox(height:12),
+         OutlinedButton.icon(
+          key:const Key('m506-transfer-date'),
+          onPressed:transferSaving?null:WaffraHaptics.tap(()async{
+           final picked=await waffraPickDateWithToday(
+            english:waffraIsEnglish,context:sheetContext,
+            initialDate:transferDate,firstDate:DateTime(2000),
+            lastDate:DateTime.now());
+           if(picked!=null&&sheetContext.mounted){
+            update(()=>transferDate=picked);
+           }
+          }),
+          icon:const Icon(Icons.calendar_month_outlined),
+          label:WaffraText(waffraIsEnglish?
+           'Transfer date: ${dayText(transferDate)}':
+           'تاريخ التحويل: ${dayText(transferDate)}')),
+         const SizedBox(height:12),
+         TextField(key:const Key('m466-transfer-note'),controller:transferNote,
+          maxLength:2000,maxLines:3,minLines:1,
+          decoration:InputDecoration(
+           labelText:waffraIsEnglish?'Transfer note':'ملاحظة التحويل',
+           border:const OutlineInputBorder())),
+         if(transferError!=null)
+          WaffraText(transferError!,style:TextStyle(
+           color:Theme.of(sheetContext).colorScheme.error)),
+        ])),
+      footer:FilledButton(
+       key:const Key('m466-confirm-transfer'),
+       onPressed:transferSaving||transferApi==null||
+        transferAccounts.length<2?null:WaffraHaptics.tap(()async{
+        final amount=waffraSarAmountMinor(transferAmount.text);
+        if(amount==null||transferSource==null||
+           transferDestination==null||
+           transferSource==transferDestination){
+         update(()=>transferError=waffraIsEnglish?
+          'Enter a valid amount and two different accounts.':
+          'أدخل مبلغًا صحيحًا وحسابَي مصدر ووجهة مختلفين.');
+         return;
+        }
+        update((){transferSaving=true;transferError=null;});
+        try{
+         // Inline account creation, another widget writer or a previously
+         // attempted transfer can invalidate the optimistic witness. Read a
+         // FRESH verified snapshot before user-confirmed posting, and refuse
+         // to infer any missing account from provider labels.
+         final latest=await transferApi!.balances();
+         if(!latest.any((a)=>a.id==transferSource&&!a.archived)||
+            !latest.any((a)=>a.id==transferDestination&&!a.archived)){
+          throw StateError('m506_transfer_account_missing_or_archived');
+         }
+         if(sheetContext.mounted)update(()=>transferAccounts=latest);
+         final committed=await transferApi!.transfer(
+          id:transferRequestId,fromAccountId:transferSource!,
+          toAccountId:transferDestination!,amountMinor:amount,
+          occurredIso:transferDate.toIso8601String(),
+          note:transferNote.text.trim(),userConfirmed:true);
+         if(!committed)throw StateError('m506_transfer_not_committed');
+         transferCommitted=true;
+         try{await _learnManualTransferPreference();}catch(_){}
+         if(sheetContext.mounted)Navigator.pop(sheetContext);
+        }catch(error){
+         debugPrint('M506 transfer rejected: ${error.runtimeType}');
+         if(sheetContext.mounted)update(()=>transferError=waffraIsEnglish?
+          'Transfer was not confirmed. Check both accounts and retry.':
+          'لم يتأكد التحويل. راجع حسابَي المصدر والوجهة وحاول تاني.');
+        }finally{
+         if(sheetContext.mounted)update(()=>transferSaving=false);
+        }
+       }),
+       child:WaffraText(transferSaving?
+        (waffraIsEnglish?'Saving…':'جارٍ الحفظ…'):
+        (waffraIsEnglish?'Confirm transfer':'تأكيد التحويل'))),
+     );
+    }
+     // Keep save above Android navigation controls and the keyboard.
+     // Fields scroll independently while the confirmation remains visible.
+     return WaffraEntrySheetSafeLayout(
+      form:SingleChildScrollView(
+       key:const Key('waffra-entry-form-scroll'),
+       padding:const EdgeInsets.fromLTRB(18,10,18,8),
+       child:Column(mainAxisSize:MainAxisSize.min,
+        crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+      WaffraText(initial!=null?'تعديل العملية':sms?'إضافة رسالة بنكية':
+        scannedReceipt!=null?(waffraIsEnglish?'Review image transaction':'مراجعة عملية من صورة'):'إضافة عملية',
+       style:Theme.of(sheetContext).textTheme.titleLarge),
+      if(initial!=null)...[
+       const SizedBox(height:9),
+       Container(
+        key:const Key('waffra-entry-edit-source'),
+        padding:const EdgeInsets.symmetric(horizontal:12,vertical:10),
+        decoration:BoxDecoration(
+         color:Theme.of(sheetContext).colorScheme.surfaceContainerHighest,
+         borderRadius:BorderRadius.circular(12)),
+        child:Row(children:[
+         Icon(initial.sourceType=='sms'?Icons.sms_outlined:
+          Icons.edit_note_outlined,color:emerald,size:19),
+         const SizedBox(width:9),
+         Expanded(child:WaffraText(
+          WaffraTransactionDetailsDialog.sourceLabel(
+           initial.sourceType,waffraIsEnglish),
+          style:const TextStyle(fontWeight:FontWeight.bold))),
+        ])),
+       if(initial.sourceType=='manual')Padding(
+        padding:const EdgeInsets.only(top:7),
+        child:WaffraText(waffraIsEnglish?
+         'Added manually. No original SMS exists.':
+         'أُضيفت العملية يدويًا ولا توجد لها رسالة SMS أصلية.',
+         style:const TextStyle(fontSize:12))),
+       if(initial.sourceType=='sms')Padding(
+        padding:const EdgeInsets.only(top:7),
+        child:WaffraText(waffraIsEnglish?
+         'The protected original SMS is in transaction details.':
+         'الرسالة البنكية الأصلية المحمية موجودة في تفاصيل المعاملة.',
+         style:const TextStyle(fontSize:12))),
+      ],
+      if(scannedImagePosition!=null&&scannedImageTotal!=null)
+       Padding(padding:const EdgeInsets.only(top:6),child:WaffraText(
+        waffraIsEnglish?
+         'Transaction $scannedImagePosition of $scannedImageTotal in image':
+         'العملية $scannedImagePosition من $scannedImageTotal في الصورة',
+        style:const TextStyle(fontWeight:FontWeight.w600,color:emerald))),
+      const SizedBox(height:12),
+      if(scannedReceipt!=null)...[
+       WaffraText(waffraIsEnglish?
+        'OCR suggestions are unverified. Confirm the income/expense type, amount, source and date before saving. The image is attached only after confirmation.':
+        'بيانات الصورة مقترحات غير مؤكدة. راجع الدخل أو المصروف والمبلغ والاسم والتاريخ قبل الحفظ. الصورة تُرفق بعد التأكيد فقط.',
+        style:const TextStyle(color:emerald,fontSize:12)),
+       const SizedBox(height:12),
+      ],
+      if(sms&&initialSms==null)...[
+       TextField(controller:message,minLines:3,maxLines:6,
+        // Reviewed Android SMS provenance must remain byte-for-byte original.
+        // Users correct amount/category/title, not the source message itself.
+        readOnly:initialSms!=null,
+        onChanged:(v){parseNow(v);update((){});},
+        decoration:InputDecoration(labelText:waffraIsEnglish?'Bank SMS *':'الرسالة البنكية *',
+         hintText:waffraTr('أول ما تلصقها نحلّلها تلقائيًا'),
+         errorText:attempted&&message.text.trim().isEmpty?waffraRequiredFieldMessage:null,
+         border:OutlineInputBorder())),
+       const SizedBox(height:8),
+       if(analyzing)const LinearProgressIndicator(),
+       if(hasParsed)WaffraText(
+        BankParser.parse(message.text).requiresCurrencyReview
+         ?(waffraIsEnglish?
+          'Foreign currency: check the original amount and enter a verified SAR value manually. No automatic FX conversion.':
+          'عملة أجنبية: راجع المبلغ وأدخل قيمته المؤكدة بالريال يدويًا. لا يوجد تحويل تلقائي.')
+         :value.text.isEmpty?
+          (waffraIsEnglish?'Amount unclear: enter it manually.':'المبلغ غير واضح؛ أدخله يدويًا.')
+         :(waffraIsEnglish?'Smart analysis suggested fields. Review before saving.':
+          'التحليل الذكي اقترح بيانات. راجعها قبل الحفظ.'),
+        style:const TextStyle(color:emerald)),
+       const SizedBox(height:12),
+      ],
+      operationPicker(),
+      const SizedBox(height:12),
+      if(initial==null||canLinkExistingAccount)...[
+       if(initial!=null)Padding(
+        padding:const EdgeInsets.only(bottom:9),
+        child:WaffraText(originalLinkedAccountId!=null?
+         (waffraIsEnglish?
+          'Already linked; editing details cannot move it to another account.':
+          'العملية مربوطة بحساب بالفعل، وتعديل التفاصيل مش هينقلها لحساب آخر.'):
+         (waffraIsEnglish?
+          'Link this older transaction without posting a second income or expense.':
+          'اربط العملية القديمة بحساب دون إضافة دخل أو مصروف مرة ثانية.'),
+         style:const TextStyle(fontSize:12,color:emerald))),
+       WaffraCenteredDropdownFormField<String>(
+        key:ValueKey('m470-home-manual-provider-'+(chosenManualProvider??'none')+
+         '-$accountProviderMenuRevision'),
+        isExpanded:true,initialValue:chosenManualProvider,
+        decoration:InputDecoration(labelText:waffraIsEnglish?
+         'Bank or provider *':'الجهة أو البنك *',border:const OutlineInputBorder()),
+        items:[
+         ...entryProviders.map((p)=>DropdownMenuItem<String>(
+          value:p.id,child:WaffraText(waffraIsEnglish?p.labelEn:p.labelAr,
+           maxLines:1))),
+         DropdownMenuItem<String>(value:'__create_provider__',
+          child:Row(children:[
+           const Icon(Icons.add_circle_outline,color:emerald,size:19),
+           const SizedBox(width:8),
+           Expanded(child:WaffraText(waffraIsEnglish?
+            'Add bank / provider':'إضافة جهة أو بنك',maxLines:1)),
+          ])),
+        ],
+        onChanged:initial!=null&&originalLinkedAccountId!=null?null:(provider)async{
+         if(provider=='__create_provider__'){
+          await createAccountInsideEntryDropdown(mainProvider:true);
+          // Synthetic Add must not replace a chosen provider on cancel.
+          if(sheetContext.mounted)update(()=>accountProviderMenuRevision++);
+          return;
+         }
+         if(sheetContext.mounted)update((){
+          chosenManualProvider=provider;
+          chosenManualAccount=null; // A parent alone is not a money account.
+         });
+        },
+       ),
+       const SizedBox(height:10),
+       WaffraCenteredDropdownFormField<String>(
+        key:ValueKey('m470-home-manual-account-'+(chosenManualProvider??'none')+
+         '-'+(chosenManualAccount??'none')+'-$accountChildMenuRevision'),
+        isExpanded:true,initialValue:chosenManualAccount,
+        decoration:InputDecoration(labelText:waffraIsEnglish?
+         'Linked money account *':'الحساب المالي التابع *',
+         border:const OutlineInputBorder()),
+        items:[
+         ...entryProviders.where((p)=>p.id==chosenManualProvider)
+          .expand((p)=>p.accounts).map((account)=>DropdownMenuItem<String>(
+           value:account.id,child:WaffraText(account.name,maxLines:1))),
+         if(chosenManualProvider!=null)
+          DropdownMenuItem<String>(value:'__create_child__',
+           child:Row(children:[
+            const Icon(Icons.add_circle_outline,color:emerald,size:19),
+            const SizedBox(width:8),
+            Expanded(child:WaffraText(waffraIsEnglish?
+             'Add linked account':'إضافة حساب تابع',maxLines:1)),
+           ])),
+        ],
+        onChanged:chosenManualProvider==null||
+         (initial!=null&&originalLinkedAccountId!=null)?null:(id)async{
+         if(id=='__create_child__'){
+          await createAccountInsideEntryDropdown(mainProvider:false);
+          if(sheetContext.mounted)update(()=>accountChildMenuRevision++);
+          return;
+         }
+         if(sheetContext.mounted)update(()=>chosenManualAccount=id);
+        },
+       ),
+       const SizedBox(height:12),
+      ],
+      TextField(controller:title,onChanged:(_)=>update((){}),minLines:1,maxLines:5,
+       decoration:InputDecoration(labelText:waffraIsEnglish?'Transaction name *':'اسم العملية *',
+        errorText:attempted&&!waffraTransactionTitleAllowed(title.text,
+         oldTitle:initial?.title)
+         ?(title.text.trim().isEmpty?waffraRequiredFieldMessage:
+           (waffraIsEnglish?'Maximum 250 characters for a new name.':
+            'اسم العملية الجديد لا يزيد عن 250 حرفًا.')):null,
+        border:OutlineInputBorder())),
+      const SizedBox(height:10),
+      if(!sms)...[
+       TextField(controller:notes,onChanged:(_)=>update((){}),minLines:1,maxLines:4,
+        decoration:InputDecoration(labelText:waffraIsEnglish?'Notes':'ملاحظات',
+         errorText:attempted&&!waffraTransactionNotesAllowed(notes.text,oldNotes:initial?.notes)
+          ?(waffraIsEnglish?'Notes cannot exceed 2,000 characters.':
+            'الملاحظات لا تتجاوز 2000 حرف.'):null,
+         border:const OutlineInputBorder())),
+       const SizedBox(height:12),
+      ]else ...[
+       WaffraText(waffraIsEnglish?
+        'The original bank message is stored separately from your notes.':
+        'نص الرسالة البنكية الأصلية يُحفظ منفصلًا عن ملاحظاتك.',
+        style:const TextStyle(fontSize:12,color:emerald)),
+       const SizedBox(height:7),
+       // #409: readable, read-only original SMS while editing; verification
+       // and pending SMS remain hidden to avoid exposing private codes.
+       ExpansionTile(
+        key:const Key('waffra-entry-original-sms-expand'),
+        tilePadding:const EdgeInsets.symmetric(horizontal:9),
+        title:WaffraText(waffraIsEnglish?
+         'View original bank SMS':'عرض الرسالة البنكية الأصلية'),
+        children:[Padding(
+         padding:const EdgeInsets.fromLTRB(12,4,12,12),
+         child:WaffraBankSmsFactsParser.parse(initialSms??message.text).pending?
+          WaffraText(waffraIsEnglish?
+           'Verification or pending message content is hidden.':
+           'محتوى رسالة التحقق أو العملية المعلقة مخفي لحمايتك.'):
+          SelectableText(initialSms??message.text,
+           key:const Key('waffra-entry-original-sms-text'),
+           textDirection:Directionality.of(sheetContext),
+           textAlign:TextAlign.start),
+        )],
+       ),
+       const SizedBox(height:12),
+       TextField(
+        key:const Key('m506-sms-personal-notes'),
+        controller:notes,minLines:1,maxLines:3,
+        decoration:InputDecoration(
+         labelText:waffraIsEnglish?'Your notes (optional)':
+          'ملاحظاتك الشخصية (اختياري)',
+         helperText:waffraIsEnglish?
+          'Original bank SMS is stored separately.':
+          'الرسالة البنكية الأصلية منفصلة عن ملاحظاتك.',
+         border:const OutlineInputBorder())),
+       const SizedBox(height:12),
+      ],
+      TextField(controller:value,readOnly:initial?.sourceType=='goal_due',
+       keyboardType:const TextInputType.numberWithOptions(decimal:true),
+       inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],
+       onChanged:(_)=>update((){}),
+       decoration:InputDecoration(labelText:waffraIsEnglish?'Amount *':'المبلغ *',
+        errorText:attempted?waffraAmountFieldError(value.text):null,
+        border:OutlineInputBorder())),
+      const SizedBox(height:12),
+      ...[
+       InkWell(onTap:WaffraHaptics.tap(()async{
+        final picked=await chooseTransactionCategory(
+         sheetContext,mainCategories,
+         selectedMain.isEmpty?'':selectedMain.first.name,
+         allowCreate:true,typeIncome:income,parentId:selectedParentId,
+         suggested:suggestion);
+        if(picked==null||!sheetContext.mounted)return;
+        final roots=categories.where((c)=>c.income==income&&
+         !c.isSubcategory&&c.name==picked).toList();
+        final leaves=categories.where((c)=>c.income==income&&
+         c.isSubcategory&&c.name==picked).toList();
+        if(roots.length==1){
+         update((){
+          if(selectedParentId!=roots.single.id){
+           selectedParentId=roots.single.id;
+           category='';
+           selectedBudgetId=null;
+          }
+         });
+        }else if(leaves.length==1){
+         update((){
+          selectedParentId=leaves.single.parentId;
+          category=leaves.single.name;
+          selectedBudgetId=null;
+          suggestion=null;
+         });
+        }
+       }),child:InputDecorator(decoration:InputDecoration(
+        labelText:waffraIsEnglish?'Main category *':'القسم الرئيسي *',
+        errorText:attempted&&selectedMain.isEmpty?waffraRequiredFieldMessage:null,
+        border:const OutlineInputBorder(),
+        suffixIcon:const Icon(Icons.arrow_drop_down_rounded)),
+        child:WaffraText(selectedMain.isEmpty?
+         (waffraIsEnglish?'Choose a main category':'اختر القسم الرئيسي'):
+         selectedMain.first.displayName,maxLines:2))),
+       const SizedBox(height:10),
+       InkWell(key:const Key('m470-entry-subcategory-picker'),onTap:WaffraHaptics.tap(()async{
+        final selectedParentAtTap=selectedParentId;
+        if(selectedParentAtTap==null){
+         snack(sheetContext,waffraIsEnglish?
+          'Choose a main category first.':'اختر القسم الرئيسي أولًا.');
+         return;
+        }
+        // After Back or refresh, use current parent-scoped children instead
+        // of an old list captured by a former sheet build.
+        final picked=await chooseTransactionCategory(
+         sheetContext,
+         waffraManualCategoryChildren(categories,income,selectedParentAtTap),
+         selectedSub.isEmpty?'':selectedSub.first.name,
+         leafLabels:true,allowCreate:true,typeIncome:income,
+         parentId:selectedParentAtTap,suggested:suggestion);
+        if(picked==null||!sheetContext.mounted||
+           selectedParentId!=selectedParentAtTap)return;
+        final leaves=waffraManualCategoryChildren(
+         categories,income,selectedParentAtTap)
+         .where((c)=>c.name==picked).toList();
+        if(leaves.length==1){
+         update((){
+          category=leaves.single.name;
+          selectedParentId=leaves.single.parentId;
+          selectedBudgetId=null;
+          suggestion=null;
+         });
+        }
+       }),child:InputDecorator(decoration:InputDecoration(
+        labelText:waffraIsEnglish?'Subcategory *':'القسم الفرعي *',
+        errorText:attempted&&selectedSub.isEmpty?waffraRequiredFieldMessage:null,
+        border:const OutlineInputBorder(),
+        suffixIcon:const Icon(Icons.arrow_drop_down_rounded)),
+        child:WaffraText(selectedSub.isEmpty?
+         (waffraIsEnglish?'Choose or create a subcategory':'اختر أو أضف قسمًا فرعيًا'):
+         selectedSub.first.displayName,maxLines:2))),
+       if(selectedMain.isNotEmpty&&subcategories.isEmpty)
+        Padding(padding:const EdgeInsets.only(top:7),child:WaffraText(
+         waffraIsEnglish?
+          'No subcategories yet. Open the list to add one.':
+          'لا توجد أقسام فرعية؛ افتح القائمة لإضافة قسم.',
+         style:const TextStyle(color:Colors.deepOrange,fontSize:12))),
+      ],
+      Padding(padding:const EdgeInsets.symmetric(vertical:12),
+       child:Row(children:[
+        // M478 #418: date uses 100% width without an optional budget.
+        Expanded(child:dateAction()),
+        if(!income&&waffraHasSelectableBudget(namedBudgets))...[
+         const SizedBox(width:8),
+         // If a budget is displayed, it shares the row 50/50 with date.
+         Expanded(child:WaffraCenteredDropdownFormField<String>(
+         key:ValueKey('waffra-entry-budget-'+(selectedBudgetId??'unlinked')+'-$budgetMenuRevision'),
+         menuMaxHeight:min(340.0,MediaQuery.sizeOf(sheetContext).height*.48),
+         initialValue:namedBudgets.any((b)=>b.budget>0&&
+          !b.deleted&&(b.budgetActive||
+           (initial!=null&&initial.budgetId==b.id))&&
+          b.id==selectedBudgetId)?selectedBudgetId:'unlinked',
+         isExpanded:true,
+         decoration:InputDecoration(
+          labelText:waffraIsEnglish?'Transaction budget':'ميزانية العملية',
+          border:const OutlineInputBorder()),
+         items:[
+          DropdownMenuItem(value:'unlinked',child:WaffraText(
+           waffraIsEnglish?'Without a budget':'بدون ميزانية',maxLines:1)),
+          ...namedBudgets.where((b)=>b.budget>0&&b.budgetActive&&!b.deleted)
+           .map((c)=>DropdownMenuItem(value:c.id,child:WaffraText(
+            c.budgetLabel??'ميزانية '+c.displayName,maxLines:1))),
+          if(initial?.budgetId!=null)
+           ...namedBudgets.where((b)=>b.id==initial!.budgetId&&
+            (b.deleted||!b.budgetActive)).map(
+             (c)=>DropdownMenuItem(value:c.id,enabled:false,
+              child:WaffraText(
+               (c.budgetLabel??'ميزانية '+c.displayName)+
+               (waffraIsEnglish?' (previous)':' (ارتباط قديم)'),maxLines:1))),
+          DropdownMenuItem(value:'__create_budget__',
+           child:Row(children:[
+            const Icon(Icons.add_circle_outline_rounded,color:emerald,size:19),
+            const SizedBox(width:8),
+            Expanded(child:WaffraText(waffraIsEnglish?
+             'Create a new budget':'إنشاء ميزانية جديدة',maxLines:1)),
+           ])),
+          DropdownMenuItem(value:'__manage_budgets__',
+           child:Row(children:[
+            const Icon(Icons.settings_outlined,color:emerald,size:19),
+            const SizedBox(width:8),
+            Expanded(child:WaffraText(waffraIsEnglish?
+             'Manage / delete budgets':'إدارة / حذف الميزانيات',maxLines:1)),
+           ])),
+         ],
+         onChanged:WaffraHaptics.selection((v)async{
+          if(v=='__create_budget__'){
+           final id=await chooseBudgetCategory();
+           if(!sheetContext.mounted)return;
+           final b=namedBudgets.where((x)=>x.id==id&&
+            x.budgetActive&&!x.deleted).toList();
+           update((){
+            budgetMenuRevision++;
+            if(b.length==1)assignBudgetInsideEditor(b.single.id);
+           });
+           return;
+          }
+          if(v=='__manage_budgets__'){
+           await showBudgetsDirectorySheet();
+           if(sheetContext.mounted)update(()=>budgetMenuRevision++);
+           return;
+          }
+          if(sheetContext.mounted)update(
+           ()=>assignBudgetInsideEditor(v=='unlinked'?null:v));
+         }),
+       
+         )),
+        ],
+       ])),
+      const SizedBox(height:12),
+      Row(children:[
+       Expanded(child:OutlinedButton.icon(onPressed:WaffraHaptics.tap(()async{
+        // The native camera permission is requested only when this action
+        // launches the OS camera; never request it during login or startup.
+        try{
+         final draft=(title:title.text,amount:value.text,notes:notes.text,
+          category:category,parent:selectedParentId,budget:selectedBudgetId,
+          income:income);
+         final file=await WaffraExternalMediaSession.runPicker(()=>
+          ImagePicker().pickImage(source:ImageSource.camera,imageQuality:80));
+         if(file==null)return;
+         final path=await saveReceipt(file);
+         stagedReceiptCopies.add(path);
+         if(sheetContext.mounted)update((){
+          title.text=draft.title;value.text=draft.amount;notes.text=draft.notes;
+          category=draft.category;selectedParentId=draft.parent;
+          selectedBudgetId=draft.budget;income=draft.income;
+          receiptPath=waffraEncodeReceipts(
+           [...waffraReceiptPaths(receiptPath),path]);
+         });
+        }catch(_){
+         if(sheetContext.mounted)snack(sheetContext,waffraIsEnglish?
+          'Camera unavailable or permission denied. Review camera access in Settings.':
+          'تعذر فتح الكاميرا أو تم رفض الإذن. راجع إذن الكاميرا من إعدادات الهاتف.');
+        }
+       }),icon:const Icon(Icons.camera_alt_outlined),label:const WaffraText('تصوير فاتورة'))),
+       const SizedBox(width:8),
+       Expanded(child:OutlinedButton.icon(onPressed:WaffraHaptics.tap(()async{
+        // Use OS limited-photo access only after the user taps Attach.
+        try{
+         final draft=(title:title.text,amount:value.text,notes:notes.text,
+          category:category,parent:selectedParentId,budget:selectedBudgetId,
+          income:income);
+         final files=await WaffraExternalMediaSession.runPicker(()=>
+          ImagePicker().pickMultiImage(imageQuality:80));
+         if(files.isEmpty)return;
+         final paths=<String>[...waffraReceiptPaths(receiptPath)];
+         for(final file in files){
+          final copied=await saveReceipt(file);
+          stagedReceiptCopies.add(copied);paths.add(copied);
+         }
+         if(sheetContext.mounted)update((){
+          title.text=draft.title;value.text=draft.amount;notes.text=draft.notes;
+          category=draft.category;selectedParentId=draft.parent;
+          selectedBudgetId=draft.budget;income=draft.income;
+          receiptPath=waffraEncodeReceipts(paths);
+         });
+        }catch(_){
+         if(sheetContext.mounted)snack(sheetContext,waffraIsEnglish?
+          'Could not open photos. Please check photo selection access.':
+          'تعذر اختيار الصور. راجع صلاحية الوصول للصور المختارة.');
+        }
+       }),icon:const Icon(Icons.attach_file),label:const WaffraText('إرفاق صورة'))),
+      ]),
+      Padding(padding:const EdgeInsets.only(top:5),
+       child:WaffraText(waffraIsEnglish?
+        'Camera and photo access is requested only when you choose to use it.':
+        'نطلب صلاحية الكاميرا أو اختيار الصور وقت استخدامها فقط.',
+        style:const TextStyle(fontSize:11,color:emerald))),
+      if(waffraReceiptPaths(receiptPath).isNotEmpty)...[
+       for(final path in waffraReceiptPaths(receiptPath))
+        ListTile(dense:true,
+         title:WaffraText(WaffraReceiptFilename.displayName(path),maxLines:2),
+         leading:const Icon(Icons.image,color:emerald),
+         trailing:Row(mainAxisSize:MainAxisSize.min,children:[
+          IconButton(
+           key:Key('waffra-attachment-rename-'+waffraReceiptPaths(receiptPath).indexOf(path).toString()),
+           tooltip:waffraIsEnglish?'Rename attachment':'تعديل اسم المرفق',
+           icon:const Icon(Icons.drive_file_rename_outline,color:emerald),
+           onPressed:WaffraHaptics.tap(()async{
+            final name=await _promptReceiptLabel(sheetContext,path);
+            if(name==null||!sheetContext.mounted)return;
+            try{
+             final directory=Directory(
+              '${(await getApplicationDocumentsDirectory()).path}/receipts');
+             final renamed=await WaffraReceiptFilename.stageCopyWithName(
+              sourcePath:path,appReceiptsDirectory:directory.path,
+              proposedLabel:name);
+             stagedReceiptCopies.add(renamed);
+             if(!sheetContext.mounted)return;
+             update((){
+              final paths=waffraReceiptPaths(receiptPath);
+              final index=paths.indexOf(path);
+              if(index>=0)paths[index]=renamed;
+              receiptPath=waffraEncodeReceipts(paths);
+             });
+            }catch(_){
+             if(sheetContext.mounted)snack(sheetContext,waffraIsEnglish?
+              'Could not rename attachment. The original image is unchanged.':
+              'تعذر تغيير اسم المرفق. الصورة الأصلية لم تتغير.');
+            }
+           })),
+          IconButton(
+           tooltip:waffraIsEnglish?'Remove attachment':'إزالة المرفق',
+           icon:const Icon(Icons.close),
+           onPressed:WaffraHaptics.tap(()=>update((){
+            receiptPath=waffraEncodeReceipts([...waffraReceiptPaths(receiptPath)]..remove(path));
+           }))),
+         ]),
+         onTap:WaffraHaptics.tap(()=>showReceipt(receiptPath!,initialIndex:waffraReceiptPaths(receiptPath).indexOf(path),entryId:initial?.id))),
+      ],
+       ])),
+      footer:FilledButton(
+       key:const Key('waffra-entry-confirm-save'),
+       onPressed:WaffraHaptics.tap(analyzing||submitTapped?null:()async {
+       if(submitTapped)return;
+       update(()=>attempted=true);
+       final n=sms?amountOf(value.text):amountOfDisplay(value.text);
+       if(!waffraTransactionTitleAllowed(title.text,oldTitle:initial?.title)||
+        !waffraTransactionNotesAllowed(notes.text,oldNotes:
+         initial?.sourceType=='sms'?initial?.personalNotes:initial?.notes)||
+        waffraAmountFieldError(value.text)!=null||n==null)return;
+       // A settled goal payment is coupled to a debited earmark. Edits
+       // may change its category/budget/notes, but not the money or type.
+       if(initial?.sourceType=='goal_due'&&
+        (WaffraRecurringPolicy.toHalalas(n)!=
+         WaffraRecurringPolicy.toHalalas(initial!.amount)||
+         income!=initial.income)){
+        snack(sheetContext,waffraIsEnglish?
+         'Goal payment amount/type cannot be changed without reversing the wallet.':
+         'مبلغ ونوع استحقاق الهدف ثابتان لحماية رصيد محفظة الهدف.');
+        return;
+       }
+       if(!waffraCanAssignManualCategory(categories,
+        income,selectedParentId,category))return;
+       if(!income&&selectedBudgetId!=null&&
+          !namedBudgets.any((b)=>b.id==selectedBudgetId&&
+            b.budget>0&&!b.deleted&&
+            (b.budgetActive||(initial!=null&&initial.budgetId==b.id)))){
+        if(sheetContext.mounted)snack(sheetContext,waffraIsEnglish?
+         'This budget is currently paused. Pick another budget or choose Unassigned.':
+         'الميزانية دي متوقفة حاليًا. اختار ميزانية مفعّلة أو خلّي العملية بدون ربط.');
+        return;
+       }
+       if(initial!=null&&canLinkExistingAccount&&
+          originalLinkedAccountId==null&&chosenManualAccount!=null&&
+          !entryProviders.any((p)=>p.id==chosenManualProvider&&
+           p.accounts.any((a)=>a.id==chosenManualAccount))){
+        snack(sheetContext,waffraIsEnglish?
+         'Choose a verified child account of the selected bank.':
+         'اختار حسابًا موثقًا تابعًا للجهة المختارة.',isError:true);
+        return;
+       }
+       if(initial==null&&!sms&&
+          (chosenManualAccount==null||
+           !entryAccounts.any((a)=>a.id==chosenManualAccount))){
+        snack(sheetContext,waffraIsEnglish?
+         'Choose the bank and its linked money account before saving.':
+         'اختار الجهة والحساب المالي التابع لها قبل الحفظ.',isError:true);
+        return;
+       }
+       // Historical entries can predate creation of their money account.
+       // Confirm the balance impact instead of silently treating an opening
+       // balance entered today as a pre-history opening balance.
+       if(initial!=null&&canLinkExistingAccount&&
+          originalLinkedAccountId==null&&chosenManualAccount!=null){
+        final approved=await showWaffraDialog<bool>(
+         context:sheetContext,builder:(dialog)=>AlertDialog(
+         title:WaffraText(waffraIsEnglish?
+          'Confirm historical account link':'تأكيد ربط العملية القديمة'),
+         content:WaffraText(waffraIsEnglish?
+          'This will attribute the existing transaction to the selected account and affect its calculated balance. If the opening balance already represents today’s balance, review that opening balance first to avoid counting old money twice. The original transaction will not be added again.':
+          'ربط العملية القديمة هيؤثر على رصيد الحساب المحسوب. لو الرصيد الافتتاحي اللي أدخلته هو رصيدك الحالي، راجعه الأول عشان العمليات القديمة ما تتحسبش مرتين. مش هنضيف عملية جديدة.'),
+         actions:[
+          TextButton(onPressed:()=>Navigator.pop(dialog,false),
+           child:WaffraText(waffraIsEnglish?'Back':'العودة')),
+          FilledButton(onPressed:()=>Navigator.pop(dialog,true),
+           child:WaffraText(waffraIsEnglish?'Confirm link':'تأكيد الربط')),
+         ]));
+        if(approved!=true||!sheetContext.mounted)return;
+       }
+       if(!income&&selectedBudgetId==null&&
+          waffraHasSelectableBudget(namedBudgets)){
+        final confirmed=await waffraConfirmUnlinkedBudgetSave(
+         context:sheetContext);
+        if(!confirmed||!sheetContext.mounted)return;
+       }
+       if(sms){
+        if(message.text.trim().isEmpty)return;
+        if(!smsDateConfirmed){
+         if(sheetContext.mounted)snack(sheetContext,waffraIsEnglish?
+          'Choose the real bank transaction date from the calendar before saving.':
+          'اختار تاريخ العملية البنكية الصحيح من التقويم قبل الحفظ.',isError:true);
+         return;
+        }
+        // The display-country setting cannot convert a bank SMS into SAR.
+        // The durable finance record must never inherit an unverified
+        // foreign amount from the manual SMS review screen.
+        if(WaffraSmsCurrencies.requiresReviewForSarLedger(message.text)){
+         if(sheetContext.mounted)snack(sheetContext,waffraIsEnglish?
+          'Foreign or unknown currency: no transaction was saved as SAR. Verify the source amount and FX first.':
+          'عملة الرسالة أجنبية أو غير مؤكدة؛ لم نحفظ العملية بالريال. يلزم التحقق من المبلغ وسعر الصرف أولًا.');
+         return;
+        }
+        final h=sha256.convert(utf8.encode(digits(message.text).replaceAll(RegExp(r'\s+'),' ').trim().toLowerCase())).toString();
+        if(smsHashes.contains(h)){
+         final proceed=await showWaffraDialog<bool>(context:sheetContext,builder:(dialogContext)=>AlertDialog(
+          title:const WaffraText('⚠️ الرسالة مكررة'),
+          content:const WaffraText('هذي الرسالة البنكية أضفتها قبل كذا. ودّك تضيفها مرة ثانية؟'),
+          actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialogContext,false)),child:const WaffraText('إلغاء')),
+           FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialogContext,true)),child:const WaffraText('إضافة على أي حال'))]));
+         if(proceed!=true||!sheetContext.mounted)return;
+         explicitlyApprovedSmsDuplicate=true;
+        }
+        pendingHash=h;
+       }
+       submitTapped=true; // Synchronous gate: rapid taps cannot post twice.
+       Navigator.pop(sheetContext,MoneyEntry(id:initial?.id??newId(),
+        title:title.text.trim(),
+        notes:sms?message.text:
+         initial?.sourceType=='sms'?initial!.notes:notes.text,
+        personalNotes:sms||initial?.sourceType=='sms'?notes.text:'',
+        category:category,amount:n,
+        income:income,date:date,receiptPath:receiptPath,
+        sourceType:initial?.sourceType??(sms?'sms':scannedReceipt!=null?'receipt':'manual'),
+        merchantKey:initial?.merchantKey??
+         (sms?(waffraMerchantKey(message.text)??''):''),
+        goalWalletPaidMinor:initial?.goalWalletPaidMinor??0,
+        budgetId:income?null:(namedBudgets.any((b)=>b.id==selectedBudgetId&&
+         !b.deleted&&b.budget>0&&
+         (b.budgetActive||(initial!=null&&initial.budgetId==b.id)))
+          ?selectedBudgetId:null)));
+      }),child:const WaffraText('تأكيد وحفظ العملية')),
+     );
+   }));
+  // Capture before disposing controllers. Dismissing this sheet by Android
+  // Back, swipe or Later must retain a user-edited form for the SAME SMS.
+  if(smsEditorDraftKey!=null&&mounted){
+   if(!_m492SmsEditorDrafts.containsKey(smsEditorDraftKey)&&
+      _m492SmsEditorDrafts.length>=8){
+    _m492SmsEditorDrafts.remove(_m492SmsEditorDrafts.keys.first);
+   }
+   _m492SmsEditorDrafts[smsEditorDraftKey]={
+    'dateConfirmed':smsDateConfirmed,
+    'title':title.text,'notes':notes.text,'amount':value.text,
+    'income':income,'parent':selectedParentId,'category':category,
+    'budget':selectedBudgetId,'provider':chosenManualProvider,
+    'account':chosenManualAccount,'date':date,
+   };
+  }
+  debounce?.cancel();disposeLater([title,value,notes,message,transferAmount,transferNote]);
+  if(result==null||!mounted){
+   if(transferCommitted&&mounted){
+    unawaited(_m467RefreshHomeAccounts());
+    snackSuccess(context,waffraIsEnglish?
+     'Transfer recorded in verified accounts.':
+     'تم تسجيل التحويل بين الحسابات.');
+   }
+   for(final copy in stagedReceiptCopies){
+    try{final file=File(copy);if(await file.exists())await file.delete();}catch(_){}
+   }
+   return;
+  }
+  // Compare OCR, manual and SMS entries across source types before commit.
+  // This is an advisory warning: same-day equal purchases are legitimate.
+  if(initial==null&&entries.any((e)=>
+    WaffraCrossSourceDuplicateReview.mightBeSame(
+      candidateTitle:result.title,candidateCategory:result.category,
+      candidateMerchantKey:result.merchantKey,
+      candidateAmount:result.amount,candidateIncome:result.income,
+      candidateDate:result.date,existingTitle:e.title,
+      existingCategory:e.category,existingMerchantKey:e.merchantKey,
+      existingAmount:e.amount,existingIncome:e.income,
+      existingDate:e.date))){
+   final proceed=await showWaffraDialog<bool>(context:context,builder:(ctx)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?'⚠️ Possible duplicate':'⚠️ عملية مكررة'),
+    content:WaffraText(waffraIsEnglish?
+     'A similar ${result.income?'income':'expense'} was recorded on the same day for the same amount. Add it again?':
+     'يبدو إنك أضفت نفس ${result.income?'الدخل':'المصروف'} من قبل. ودّك تضيفه مرة ثانية؟'),
+    actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,false)),
+     child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+     FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,true)),
+      child:WaffraText(waffraIsEnglish?'Add anyway':'إضافة على أي حال'))]));
+   if(proceed!=true||!mounted){
+    // The duplicate was refused *before* any finance write. Remove only
+    // image copies staged in this sheet; never the original user image.
+    for(final copy in stagedReceiptCopies){
+     try{final file=File(copy);if(await file.exists())await file.delete();}catch(_){}
+    }
+    return;
+   }
+   // The writer still verifies the bank SMS hash under the source lock.
+   // Confirmation here only permits the user's explicitly reviewed overlap.
+   if(pendingHash!=null)explicitlyApprovedSmsDuplicate=true;
+  }
+  // M514 #451: editing an EXISTING reviewed SMS with its FIRST receipt
+  // must not use the legacy whole-ledger optimistic editor. That path
+  // cannot atomically attach encrypted image bytes to the typed SQL row.
+  // This dedicated verified writer only adds receipts; it never posts again.
+  if(initial!=null&&
+     (initial.sourceType=='sms'||initial.sourceType=='manual')&&
+     waffraReceiptPaths(initial.receiptPath).isEmpty&&
+     stagedReceiptCopies.isNotEmpty){
+   Future<void> discardStagedReceipts()async{
+    for(final staged in stagedReceiptCopies){
+     try{final file=File(staged);if(await file.exists())await file.delete();}
+     catch(_){}
+    }
+   }
+   final beforeEdit=Map<String,Object?>.from(initial.toJson())
+    ..remove('receiptPath');
+   final afterEdit=Map<String,Object?>.from(result.toJson())
+    ..remove('receiptPath');
+   if(jsonEncode(beforeEdit)!=jsonEncode(afterEdit)){
+    if(mounted)snack(context,waffraIsEnglish?
+     'Please attach the receipt separately from other changes to this entry.':
+     'أضف المرفق وحده أولًا؛ تعديل بيانات العملية يحتاج حفظًا منفصلًا.',
+     isError:true);
+    await discardStagedReceipts();
+    return;
+   }
+   try{
+    final images=<Uint8List>[];
+    for(final path in waffraReceiptPaths(result.receiptPath)){
+     images.add(await File(path).readAsBytes());
+    }
+    if(images.isEmpty)throw StateError('No verified receipt bytes.');
+    final current=await _saveProgress.track(
+     'attach-verified-existing-receipt',
+     ()=>_financeAuthority.attachReceiptsToExisting(
+      entryId:initial.id,expectedOriginal:initial.toJson(),
+      images:images,userConfirmed:true));
+    final raw=await WaffraLargeJsonDecode.parse(current.ledgerRaw??'[]');
+    if(raw is! List)throw StateError('Verified receipt edit ledger missing.');
+    final verified=raw.map((item)=>MoneyEntry.fromJson(
+     Map<String,dynamic>.from(item as Map))).toList();
+    if(!verified.any((item)=>item.id==initial.id&&
+      waffraReceiptPaths(item.receiptPath).length==images.length)){
+     throw StateError('Verified receipt was not associated with entry.');
+    }
+    if(mounted)setState((){
+     entries..clear()..addAll(verified);
+     _lastFinanceAuthorityRead=current;
+     _lastLedgerSavedRaw=current.ledgerRaw;
+     _lastWidgetRevision=current.widgetRevision;
+    });
+    if(smsEditorDraftKey!=null)_m492SmsEditorDrafts.remove(smsEditorDraftKey);
+    await discardStagedReceipts();
+    if(mounted){
+     snackSuccess(context,waffraIsEnglish?
+      'Receipt attached without recording the transaction again.':
+      'تم حفظ المرفق دون تسجيل العملية أو الخصم مرة تانية.');
+     unawaited(_refreshWidget());
+    }
+   }catch(error){
+    debugPrint('M514 verified existing receipt rejected: ${error.runtimeType}');
+    await discardStagedReceipts();
+    if(mounted){
+     await _refreshFromVerifiedFinance();
+     if(mounted)snack(context,waffraIsEnglish?
+      'Receipt not saved. Your financial transaction is unchanged.':
+      'تعذر حفظ المرفق؛ العملية المالية الأصلية لم تتغير.',
+      isError:true);
+    }
+   }
+   return;
+  }
+  final linkedBudget=namedBudgets.where((b)=>b.id==result.budgetId&&!b.deleted).toList();
+  final previousSpent=linkedBudget.isEmpty?0.0:waffraNamedBudgetSpent(
+    entries.where((e)=>e.id!=result.id),categories,linkedBudget.single,result.date);
+  if(pendingHash!=null&&initial==null){
+   final reviewedAccount=await reviewSmsAccountLinks([result],
+     smsSender:reviewedSender??'',
+     initialSelectedIds:chosenManualAccount==null?null:[chosenManualAccount]);
+   if(reviewedAccount==null){
+    for(final staged in stagedReceiptCopies){
+     try{final file=File(staged);if(await file.exists())await file.delete();}
+     catch(_){}
+    }
+    return;
+   }
+   try{
+   // Preserve attachments only as bytes inside the same SQLCipher
+   // transaction as the reviewed SMS and its deduplication fingerprint.
+   final smsReceiptImages=<Uint8List>[];
+   for(final attachment in waffraReceiptPaths(result.receiptPath)){
+    smsReceiptImages.add(await File(attachment).readAsBytes());
+   }
+   final smsRecord=Map<String,Object?>.from(result.toJson());
+   smsRecord['receiptPath']=null;
+   // A single reviewed bank SMS must commit both its transaction and
+   // fingerprint atomically under the same Home/Widget source and journal.
+   // The writer independently checks duplicates again after taking the lock.
+   final applied=await _saveProgress.track(
+    'commit-confirmed-bank-sms',()=>_financeAuthority.commitConfirmedSms(
+     route:WaffraFinanceRoute.bulkSmsConfirmedSave,
+    records:[smsRecord],
+    hashes:[pendingHash!],
+    reviewedSmsReceiptImages:smsReceiptImages.isEmpty?
+     null:smsReceiptImages,
+    userConfirmed:true,
+    allowDuplicateHashes:explicitlyApprovedSmsDuplicate,
+    selectedAccountIds:reviewedAccount.ids,
+    expectedAccountGeneration:reviewedAccount.generation,
+   ));
+   if(applied.saved!=1){
+    if(mounted)snack(context,waffraIsEnglish?
+     'This bank transaction was already saved. Review before retrying.':
+     'العملية البنكية محفوظة بالفعل. راجعها قبل المحاولة مجددًا.');
+    return;
+   }
+   final parsedLedger=await WaffraLargeJsonDecode.parse(
+    applied.current.ledgerRaw??'[]');
+   if(parsedLedger is! List)throw StateError(
+    'Confirmed bank SMS ledger is invalid.');
+   final verified=parsedLedger.map((item)=>MoneyEntry.fromJson(
+    Map<String,dynamic>.from(item as Map))).toList();
+   if(!mounted)return;
+   setState((){
+    entries..clear()..addAll(verified);
+    smsHashes..clear()..addAll(
+     applied.current.finance.getStringList('waffra_sms_hashes_v1')??const <String>[]);
+    _lastFinanceAuthorityRead=applied.current;
+    _lastLedgerSavedRaw=applied.current.ledgerRaw;
+    _lastWidgetRevision=applied.current.widgetRevision;
+   });
+   if(smsEditorDraftKey!=null)_m492SmsEditorDrafts.remove(smsEditorDraftKey);
+   // No -> edit learns a confirmed sender+last-four bank identity only
+   // after SQLCipher saved this exact reviewed SMS and its fingerprint.
+   // This learning is not a finance write and cannot debit an account.
+   if(reviewedSender!=null&&reviewedSender.trim().isNotEmpty){
+    unawaited(_recordConfirmedSmsAccountAssociation(
+     record:result,sender:reviewedSender,
+     accountId:reviewedAccount.ids?.single));
+   }
+   // The expense/income learner applies only AFTER an authoritative commit,
+   // and uses user-approved description/category, not the raw SMS body.
+   try{await _learnManualCategoryPreference(result);}catch(_){}
+   // SMS classification must not compete with the next page's first
+   // frame after a verified money save. Review reads new rules on opening;
+   // native intake / exact confirmed ACK remains the source of truth.
+   for(final staged in stagedReceiptCopies){
+    try{final file=File(staged);if(await file.exists())await file.delete();}
+    catch(_){}
+   }
+   unawaited(_refreshWidget());
+   if(applied.originalSmsNotesOmittedOnLegacy&&mounted){
+    snack(context,waffraIsEnglish?
+     'Transaction saved; original bank SMS text was NOT stored.':
+     'تم حفظ بيانات العملية دون نص الرسالة البنكية الأصلي.',isError:false);
+   }
+   }catch(e){
+    debugPrint('M506 confirmed SMS save rejected: ${e.runtimeType}');
+    for(final staged in stagedReceiptCopies){
+     try{final file=File(staged);if(await file.exists())await file.delete();}
+     catch(_){}
+    }
+    // One rejected source-authorized bank commit must never leave the
+    // user looking at a success screen or an unhandled Flutter exception.
+    if(mounted)snack(context,waffraIsEnglish?
+     'Could not confirm bank transaction save. Review before retrying.':
+     'تعذر تأكيد حفظ المعاملة البنكية. راجعها قبل إعادة المحاولة.');
+    return;
+   }
+  }else{
+   // An account is selected from the same verified source only for a NEW
+   // manually posted entry. Editing an existing entry never silently moves
+   // that entry to a different financial account.
+   final chosenManual=initial==null
+    ?await reviewSmsAccountLinks([result],
+      initialSelectedIds:chosenManualAccount==null?null:[chosenManualAccount]):null;
+   if(initial==null&&chosenManual==null){
+    for(final copy in stagedReceiptCopies){
+     try{final staged=File(copy);if(await staged.exists())await staged.delete();}
+     catch(_){}
+    }
+    return;
+   }
+   // M457: confirmed manual additions use the same atomic Home/Widget
+   // SQLCipher append writer as reviewed bank SMS. Do NOT reserialize or
+   // replace pre-existing ledger rows from a cached Home screen.
+   // The same source writer handles manual money WITH or WITHOUT photos.
+   // The source is reverified under lock; guarded legacy cannot fabricate
+   // an account or silently fall back to a whole-ledger optimistic rewrite.
+   if(initial==null&&result.sourceType=='manual'){
+    try{
+     await _saveProgress.track<void>(
+      'commit-confirmed-manual',()=>_financialWriteQueue.submit(
+       <String,Object>{'record':jsonEncode(result.toJson()),
+        'receiptPaths':List<String>.of(waffraReceiptPaths(result.receiptPath))},
+       (captured)async{
+        // Read staged picker paths before committing; only bytes enter SQLCipher.
+        // Invalid/missing files must abort BEFORE any money is posted.
+        final paths=List<String>.from(captured['receiptPaths'] as List);
+        final images=<Uint8List>[];
+        for(final path in paths){
+         images.add(await File(path).readAsBytes());
+        }
+        await _ensureFinanceBound();
+        final safeRecord=Map<String,Object?>.from(
+         jsonDecode(captured['record'] as String) as Map);
+        safeRecord['receiptPath']=null;
+        final committed=await _financeAuthority.commitConfirmedManual(
+         route:WaffraFinanceRoute.manualTransactionSave,
+         record:safeRecord,
+         userConfirmed:true,
+         manualReceiptImages:images.isEmpty?null:images,
+         selectedAccountId:chosenManual?.ids?.single,
+         expectedAccountGeneration:chosenManual?.ids?.single==null?
+          null:chosenManual?.generation,
+        );
+        final raw=committed.ledgerRaw;
+        if(raw==null)throw StateError('Confirmed manual ledger missing.');
+        final decoded=await WaffraLargeJsonDecode.parse(raw);
+        if(decoded is! List)throw StateError('Confirmed manual ledger invalid.');
+        final verified=decoded.map((item)=>MoneyEntry.fromJson(
+          Map<String,dynamic>.from(item as Map))).toList();
+        if(!verified.any((item)=>item.id==result.id)){
+         throw StateError('Confirmed manual entry absent from verified ledger.');
+        }
+        _lastFinanceAuthorityRead=committed;
+        _lastLedgerSavedRaw=raw;
+        _lastWidgetRevision=committed.widgetRevision;
+        if(mounted){
+         setState((){entries..clear()..addAll(verified);});
+         unawaited(_refreshWidget());
+        }
+       },
+      ),
+     );
+     // Once encrypted storage has the bytes, remove only images staged by
+     // this editor. Never delete originals or existing transaction receipts.
+     for(final copy in stagedReceiptCopies){
+      try{final staged=File(copy);if(await staged.exists())await staged.delete();}
+      catch(_){}
+     }
+     // A preference failure cannot retry an already-committed debit.
+     try{await _learnManualCategoryPreference(result);}catch(_){}
+     // Don't decrypt and reclassify up to 1000 SMS while the manual
+     // finance confirmation is transitioning. Review refreshes on entry.
+    }catch(error){
+     // A write may have committed before a later source read failed. Never
+     // claim 'previous data unchanged' or let a retry create a ghost debit.
+     debugPrint('M457 manual commit rejected: ${error.runtimeType}');
+     if(mounted){
+      await _refreshFromVerifiedFinance();
+      if(mounted)snack(context,waffraIsEnglish?
+       'Manual save could not be confirmed. Verified records were refreshed before retry. (M457)':
+       'لم يتأكد حفظ العملية اليدوية. تم تحديث البيانات المحفوظة قبل إعادة المحاولة. (M457)');
+     }
+     for(final copy in stagedReceiptCopies){
+      try{final file=File(copy);if(await file.exists())await file.delete();}
+      catch(_){}
+     }
+     return;
+    }
+   }else{
+   // Optimistic in-memory edits must roll back if durable save is rejected.
+   // A spinner is NOT proof of a completed financial write.
+   final previousEntries=List<MoneyEntry>.of(entries);
+   final previousLearned=Map<String,String>.of(learnedMerchantCategories);
+   setState((){
+    final i=entries.indexWhere((e)=>e.id==result.id);
+    if(i>=0)entries[i]=result;else entries.insert(0,result);
+    // Learn only explicit corrections made by the user, not assumptions
+    // generated by bank message parsing.
+    if(initial!=null&&initial.category!=result.category){
+     final merchant=initial.merchantKey.isNotEmpty?
+      initial.merchantKey:waffraMerchantKey(initial.title,income:initial.income);
+     if(merchant!=null&&merchant.isNotEmpty){
+      learnedMerchantCategories[merchant]=result.category;
+     }
+    }
+   });
+   try{
+    // No success message or persisted balance is claimed before the
+    // source-aware writer has acknowledged the commit.
+    await persist(route:initial==null
+     ?WaffraFinanceRoute.manualTransactionSave
+     :WaffraFinanceRoute.transactionEdit,
+     userConfirmed:initial==null,
+     selectedAccountId:initial==null?chosenManual?.ids?.single:null);
+    if(initial==null&&result.sourceType=='manual'){
+     try{await _learnManualCategoryPreference(result);}catch(_){}
+    }
+   }catch(e){
+    if(mounted){
+     setState((){
+      entries..clear()..addAll(previousEntries);
+      learnedMerchantCategories..clear()..addAll(previousLearned);
+     });
+     snack(context,waffraIsEnglish?
+      'Could not save the transaction. Your previous data is unchanged.':
+      'تعذر حفظ المعاملة. بياناتك السابقة لم تتغير.');
+    }
+    // Cleanup must also run if the route disposed while persistence awaited.
+    // These files were created by this editor; never delete original photos.
+    for(final copy in stagedReceiptCopies){
+     try{
+      final staged=File(copy);
+      if(await staged.exists())await staged.delete();
+     }catch(error){
+      debugPrint('Could not clean staged receipt after finance rejection: $error');
+     }
+    }
+    return;
+   }
+   if(pendingHash!=null){
+    // Existing transaction edits still need independent receipt/SMS review.
+    try{await _persistSmsHashes({pendingHash!});}
+    catch(e){
+     if(mounted)snack(context,waffraIsEnglish?
+      'Transaction saved, but the SMS fingerprint needs verification.':
+      'تم حفظ المعاملة، لكن بصمة الرسالة تحتاج مراجعة.');
+     return;
+    }
+   }
+   }
+  }
+  bool linkedHistoricalAccountInThisEdit=false;
+  // #420: witnessed idempotent association for the existing entry;
+  // never append another income or expense.
+  if(initial!=null&&canLinkExistingAccount&&
+     originalLinkedAccountId==null&&chosenManualAccount!=null){
+   try{
+    final api=editAccountLinkApi;
+    if(api==null)throw StateError('Verified entry link API unavailable');
+    await api.balances();
+    await api.linkUnassignedEntry(entryId:initial.id,
+     accountId:chosenManualAccount!,userConfirmed:true);
+    linkedHistoricalAccountInThisEdit=true;
+    if(mounted)await _m467RefreshHomeAccounts();
+   }catch(error){
+    debugPrint('M500 historical link failed: ${error.runtimeType}');
+    if(mounted)snack(context,waffraIsEnglish?
+     'Details may be saved, but account linking was not confirmed. Check Unassigned transactions.':
+     'قد يكون تعديل العملية اتحفظ، لكن ربط الحساب لم يتأكد. راجع عمليات بدون حساب.',isError:true);
+    return;
+   }
+  }
+  if(mounted)await budgetAlert(result,previousSpent);
+  if(mounted)unawaited(_m467RefreshHomeAccounts());
+  if(initial!=null&&mounted){
+   snack(context,linkedHistoricalAccountInThisEdit?
+     (waffraIsEnglish?'Transaction updated and linked to account':'تم تعديل العملية وربطها بالحساب'):
+     (waffraIsEnglish?'Transaction updated':'تم تعديل المعاملة'),
+    isError:false,duration:const Duration(seconds:5),
+    // Existing legacy Undo reverts only metadata, not a confirmed bank link.
+    // Do not offer a misleading Undo after money attribution is committed.
+    actionLabel:linkedHistoricalAccountInThisEdit?null:(waffraIsEnglish?'Undo':'تراجع'),
+    onAction:linkedHistoricalAccountInThisEdit?null:()async{
+     if(!mounted)return;
+     final index=entries.indexWhere((e)=>e.id==initial.id);
+     if(index<0)return;
+     setState(()=>entries[index]=initial);
+     if(!await _persistModuleOrReload(
+      WaffraFinanceRoute.transactionEdit,
+      operation:'transaction-edit-undo'))return;
+     if(mounted)snackSuccess(context,waffraIsEnglish?
+      'Transaction change reverted':'تم التراجع عن تعديل المعاملة');
+    });
+  }
+ }
+ Future<String?> chooseTransactionCategory(
+  BuildContext ctx,List<BudgetCategory> options,String selected,{
+  bool leafLabels=false,bool allowCreate=false,bool typeIncome=false,
+  String? parentId,String? suggested,
+ })async{
+  var query='';
+  const createMain='__waffra_category_picker_new_main__';
+  const createSub='__waffra_category_picker_new_sub__';
+  final picked=await showWaffraDialog<String>(
+   context:ctx,builder:(dialogCtx)=>StatefulBuilder(
+    builder:(dialogCtx,refresh){
+     final filtered=options.where((item){
+      final label=leafLabels?item.displayName:item.name;
+      return waffraSearchAny([label,waffraTr(label),waffraTr(item.name)],query);
+     }).toList();
+     return AlertDialog(
+      title:WaffraText(waffraIsEnglish?'Search categories':'بحث في الأقسام'),
+      content:SizedBox(
+       width:360,height:waffraKeyboardDialogListHeight(dialogCtx),
+       child:Column(children:[
+        TextField(onChanged:(v)=>refresh(()=>query=v),
+         decoration:InputDecoration(
+          prefixIcon:const Icon(Icons.search),
+          hintText:waffraIsEnglish?'Search…':'اكتب اسم القسم',
+          border:const OutlineInputBorder())),
+        if(allowCreate&&!leafLabels)...[
+         const SizedBox(height:6),
+         ListTile(
+          key:const Key('waffra-inline-create-main-category'),
+          dense:true,
+          leading:const Icon(Icons.create_new_folder_outlined,color:emerald),
+          title:WaffraText(waffraIsEnglish?
+           'New main category':'إضافة قسم رئيسي جديد'),
+          onTap:WaffraHaptics.tap(()=>
+           Navigator.pop(dialogCtx,createMain))),
+        ],
+        if(allowCreate&&leafLabels)...[
+         const SizedBox(height:6),
+         ListTile(
+          key:const Key('waffra-inline-create-subcategory'),
+          dense:true,
+          leading:const Icon(Icons.account_tree_outlined,color:emerald),
+          title:WaffraText(waffraIsEnglish?
+           'New subcategory':'إضافة قسم فرعي جديد'),
+          onTap:WaffraHaptics.tap(()=>
+           Navigator.pop(dialogCtx,createSub))),
+         const Divider(height:8),
+        ],
+        Expanded(child:filtered.isEmpty?
+         Center(child:WaffraText(waffraIsEnglish?
+          'No matching categories':'لا توجد أقسام مطابقة')):
+         ListView.builder(itemCount:filtered.length,itemBuilder:(ctx,i){
+          final item=filtered[i];
+          return ListTile(
+           selected:selected==item.name,
+           leading:Icon(categoryIcon(item.icon),color:Color(item.color)),
+           title:WaffraText(waffraTr(leafLabels?
+            item.displayName:item.name),maxLines:3),
+           onTap:WaffraHaptics.tap(()=>
+            Navigator.pop(dialogCtx,item.name)));
+         })),
+       ])),
+      actions:[TextButton(
+       onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialogCtx)),
+       child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))],
+     );
+    }));
+  if(picked==null||!mounted||!ctx.mounted)return null;
+  if(picked!=createMain&&picked!=createSub)return picked;
+  var categoryParentId='';
+  if(picked==createSub){
+   final root=categories.where((c)=>c.id==parentId&&
+    !c.isSubcategory&&c.income==typeIncome).toList();
+   if(root.isNotEmpty){
+    categoryParentId=root.single.id;
+   }else{
+    final parents=categories.where((c)=>
+     !c.isSubcategory&&c.income==typeIncome).toList();
+    if(parents.isEmpty){
+     snack(ctx,waffraIsEnglish?
+      'Create a main category first':'أضف قسمًا رئيسيًا أولًا');
+     return null;
+    }
+    final selectedParent=await chooseTransactionCategory(ctx,parents,'');
+    if(selectedParent==null||!mounted||!ctx.mounted)return null;
+    final chosen=parents.where((c)=>c.name==selectedParent).toList();
+    if(chosen.length!=1)return null;
+    categoryParentId=chosen.single.id;
+   }
+  }
+  // The exact same icon/color/name dialog used by Categories handles both
+  // new main and new child categories. No parallel incomplete form exists.
+  final created=await categoryDialog(
+   income:typeIncome,parentId:categoryParentId,
+   suggested:picked==createSub?suggested:null);
+  if(created==null||!mounted||!ctx.mounted)return null;
+  if(WaffraValidators.uniqueCategory(created.name,
+    categories.where((c)=>c.income==created.income).map((c)=>c.name))
+    !=null){
+   snack(ctx,waffraIsEnglish?
+    'Category name already exists':'اسم القسم موجود بالفعل');
+   return null;
+  }
+  setState(()=>categories.add(created));
+  if(!await _persistModuleOrReload(
+   WaffraFinanceRoute.categoryCreateEditDeleteRestore,
+   operation:'transaction-category-picker-create'))return null;
+  return created.name;
+ }
+ Future<String?> _promptReceiptLabel(BuildContext context,String path)async {
+  final name=TextEditingController(text:WaffraReceiptFilename.displayName(path));
+  String? error;
+  try{
+   return await showWaffraDialog<String>(context:context,
+    builder:(dialogContext)=>StatefulBuilder(builder:(dialogContext,setDialogState)=>
+     AlertDialog(
+      title:WaffraText(waffraIsEnglish?'Rename attachment':'تعديل اسم المرفق'),
+      content:TextField(
+       key:const Key('waffra-attachment-name-input'),
+       controller:name,maxLength:WaffraReceiptFilename.maxLabelCharacters,
+       autofocus:true,
+       decoration:InputDecoration(
+        labelText:waffraIsEnglish?'Attachment name *':'اسم المرفق *',
+        errorText:error,border:const OutlineInputBorder()),
+       onChanged:(_)=>setDialogState(()=>error=null)),
+      actions:[
+       TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialogContext)),
+        child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+       FilledButton(onPressed:WaffraHaptics.tap((){
+        final validation=WaffraReceiptFilename.validateLabel(name.text);
+        if(validation!=null){
+         setDialogState(()=>error=waffraIsEnglish?
+          'Enter a valid name (1-80 characters, no slashes).':
+          'اكتب اسمًا من 1 إلى 80 حرفًا بدون شرطات مسار.');
+         return;
+        }
+        final normalized=WaffraReceiptFilename.normalizedLabel(name.text)!;
+        Navigator.pop(dialogContext,
+         normalized==WaffraReceiptFilename.displayName(path)?null:normalized);
+       }),child:WaffraText(waffraIsEnglish?'Save name':'حفظ الاسم')),
+      ],
+     )));
+  }finally{name.dispose();}
+ }
+ Future<String> saveReceipt(XFile picked)async {
+  final directory=Directory('${(await getApplicationDocumentsDirectory()).path}/receipts');
+  if(!await directory.exists())await directory.create(recursive:true);
+  final original=picked.name.replaceAll(RegExp(r'[^a-zA-Z0-9_\-.\u0600-\u06FF ]'),'_');
+  final target='${directory.path}/${newId()}__$original';
+  await File(picked.path).copy(target);
+  return target;
+ }
+ Future<void> showReceipt(String encoded,{int initialIndex=0,String? entryId})async {
+  final paths=waffraReceiptPaths(encoded);
+  final encrypted=paths.isNotEmpty&&
+   paths.every((p)=>p.startsWith('waffra-receipt://'));
+  final available=<String>[];
+  final encryptedBytes=<Uint8List>[];
+  if(encrypted){
+   // The tokens are opaque and owner-bound; never treat them as file paths.
+   if(entryId==null||!List.generate(paths.length,
+      (i)=>WaffraEncryptedReceiptReference.matches(
+       paths[i],entryId,i)).every((matched)=>matched)){
+    if(mounted)snack(context,waffraIsEnglish?
+     'Encrypted receipt owner could not be verified.':
+     'تعذر التحقق من ارتباط الصورة بالعملية.',isError:true);
+    return;
+   }
+   try{
+    encryptedBytes.addAll(await _financeAuthority.loadEncryptedReceiptImages(
+     route:WaffraFinanceRoute.receiptView,entryId:entryId));
+    if(encryptedBytes.length!=paths.length){
+     throw StateError('Encrypted receipt count mismatch');
+    }
+    available.addAll(paths);
+   }catch(error){
+    if(mounted)snack(context,waffraIsEnglish?
+     'Could not verify encrypted attachments.':
+     'تعذر التحقق من المرفقات المشفرة.',isError:true);
+    return;
+   }
+  }else{
+   if(paths.any((p)=>p.startsWith('waffra-receipt://'))){
+    if(mounted)snack(context,waffraIsEnglish?
+     'Mixed receipt references were rejected.':
+     'تم رفض مراجع مرفقات غير متطابقة.',isError:true);
+    return;
+   }
+   for(final path in paths){if(await File(path).exists())available.add(path);}
+  }
+  if(available.isEmpty){if(mounted)snack(context,waffraIsEnglish?
+   'Images not found on this device':'ما لقينا الصور على الجهاز');return;}
+  if(!mounted)return;
+  final controller=PageController(initialPage:initialIndex.clamp(0,available.length-1));
+  int current=initialIndex.clamp(0,available.length-1);
+  try{
+   await showWaffraDialog<void>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,update){
+    final isDark=Theme.of(ctx).brightness==Brightness.dark;
+    final accent=isDark?const Color(0xFF74D8A9):emerald;
+    final surface=isDark?const Color(0xFF102A23):const Color(0xFF073F31);
+    final count='${current+1} / ${available.length}';
+    return Dialog(
+     backgroundColor:Colors.transparent,elevation:0,
+     insetPadding:const EdgeInsets.symmetric(horizontal:22,vertical:45),
+     child:Container(
+      constraints:BoxConstraints(maxHeight:MediaQuery.sizeOf(ctx).height*.74),
+      decoration:BoxDecoration(color:surface,borderRadius:BorderRadius.circular(24),
+       border:Border.all(color:accent.withValues(alpha:.85),width:1.2)),
+      clipBehavior:Clip.antiAlias,
+      child:Column(mainAxisSize:MainAxisSize.min,children:[
+       SizedBox(height:54,child:Stack(alignment:Alignment.center,children:[
+        PositionedDirectional(end:7,child:IconButton(
+         tooltip:waffraIsEnglish?'Close':'إغلاق',
+         onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
+         icon:const Icon(Icons.close_rounded,color:Colors.white))),
+       ])),
+       Flexible(child:Container(color:Colors.black,
+        child:PageView.builder(controller:controller,itemCount:available.length,
+         onPageChanged:(index)=>update(()=>current=index),
+         itemBuilder:(ctx,index)=>InteractiveViewer(
+          minScale:.8,maxScale:5,
+          child:Center(child:encrypted?
+           Image.memory(encryptedBytes[index],fit:BoxFit.contain):
+           Image.file(File(available[index]),fit:BoxFit.contain)))))),
+       Padding(padding:const EdgeInsets.symmetric(horizontal:12,vertical:4),
+        child:WaffraText(encrypted?
+         (waffraIsEnglish?'Attachment ${current+1}':'مرفق ${current+1}'):
+         WaffraReceiptFilename.displayName(available[current]),
+         maxLines:2,textAlign:TextAlign.center,
+         style:const TextStyle(color:Colors.white,fontSize:13,fontWeight:FontWeight.w700))),
+       SizedBox(height:58,child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+        IconButton(
+         tooltip:waffraIsEnglish?'Previous image':'الصورة السابقة',
+         onPressed:WaffraHaptics.tap(current>0?()=>controller.previousPage(
+          duration:waffraMotion(220),curve:Curves.easeInOut):null),
+         icon:Icon(Icons.chevron_left_rounded,color:current>0?Colors.white:Colors.white38)),
+        Text(count,textDirection:TextDirection.ltr,
+         style:const TextStyle(color:Colors.white,fontSize:15,fontWeight:FontWeight.bold)),
+        IconButton(
+         tooltip:waffraIsEnglish?'Next image':'الصورة التالية',
+         onPressed:WaffraHaptics.tap(current<available.length-1?()=>controller.nextPage(
+          duration:const Duration(milliseconds:220),curve:Curves.easeInOut):null),
+         icon:Icon(Icons.chevron_right_rounded,
+          color:current<available.length-1?Colors.white:Colors.white38)),
+       ])),
+      ])));
+   }));
+  }finally{controller.dispose();}
+ }
+ Future<void> _requestPercentageAlertPermission()async{
+  try{
+   final granted=await WaffraReminders.requestPermission();
+   if(!granted&&mounted)snack(context,waffraIsEnglish?
+    'In-app alerts are on; allow notifications in Android Settings for lock-screen alerts.':
+    'تنبيهات التطبيق مفعلة. فعّل إشعارات وفرة من إعدادات أندرويد عشان توصلك خارج التطبيق.');
+  }catch(error){
+   debugPrint('Optional percentage notification permission unavailable: $error');
+  }
+ }
+ Future<void> budgetAlert(MoneyEntry entry,double previousSpent)async {
+  if(entry.income)return;
+  final budgets=namedBudgets.where((b)=>b.budget>0&&
+    b.budgetActive&&b.alertsEnabled&&!b.deleted&&b.id==entry.budgetId).toList();
+  if(budgets.length!=1)return;
+  final category=budgets.single;
+  final spent=waffraNamedBudgetSpent(entries,categories,category,entry.date);
+  final stages=<int>{category.alertPercent,100}.toList()..sort();
+  final crossedStages=stages.where((stage)=>
+   previousSpent<category.budget*stage/100&&
+   spent>=category.budget*stage/100).toList();
+  if(crossedStages.isEmpty||!mounted)return;
+  // Only non-financial hashed alert markers are stored locally. A later edit
+  // that reduces spend must not re-alert for a threshold already shown.
+  final newlyCrossed=await WaffraBudgetAlertOnce.claim(
+   owner:'${widget.profile.provider}|${widget.profile.phone}|${widget.profile.email}',
+   budgetId:category.id,month:entry.date,crossedStages:crossedStages);
+  if(!newlyCrossed||!mounted)return;
+  final crossed=crossedStages.last;
+  try{await WaffraReminders.showBudgetThreshold(
+   budgetId:category.id,stage:crossed,english:waffraIsEnglish);}
+  catch(error){debugPrint('Budget notification unavailable: $error');}
+  if(!mounted)return;
+  await showWaffraDialog<void>(context:context,builder:(ctx)=>AlertDialog(
+   title:WaffraText(waffraIsEnglish?'Budget alert':'⚠️ تنبيه الميزانية'),
+   content:WaffraText(waffraIsEnglish?
+    '${category.name} has reached ${(spent/category.budget*100).round()}% of the budget (crossed $crossed%). Spent ${cash(spent)} out of ${cash(category.budget)}.':
+    'صرف «${category.name}» ${(spent/category.budget*100).round()}٪ (حد التنبيه $crossed٪). ${cash(spent)} من ${cash(category.budget)}.'),
+   actions:[FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
+    child:WaffraText(waffraIsEnglish?'OK':'حسنًا'))]));
+ }
+ /// Draw the same category-colored donut shown on Smart Analysis.
+ String expensePieSvg(Map<String,double> totals){
+  final positive=totals.entries.where((e)=>e.value>0).toList();
+  final total=positive.fold<double>(0,(n,e)=>n+e.value);
+  final out=StringBuffer('<svg xmlns="http://www.w3.org/2000/svg" '
+   'width="200" height="200" viewBox="0 0 200 200">');
+  if(total<=0)return '$out</svg>';
+  var angle=-pi/2;
+  for(final category in positive){
+   final sweep=2*pi*category.value/total;
+   final points=<String>['100,100'];
+   final steps=max(12,(sweep*70).ceil());
+   for(var j=0;j<=steps;j++){
+    final theta=angle+sweep*j/steps;
+    points.add('${(100+87*cos(theta)).toStringAsFixed(2)},'
+     '${(100+87*sin(theta)).toStringAsFixed(2)}');
+   }
+   final hex=(categoryFor(category.key,false).color&0xFFFFFF)
+    .toRadixString(16).padLeft(6,'0');
+   out.write('<polygon points="${points.join(' ')}" '
+    'fill="#$hex" stroke="#FFFFFF" stroke-width=".8"/>');
+   angle+=sweep;
+  }
+  out.write('<circle cx="100" cy="100" r="45" fill="#FFFFFF"/>');
+  out.write('</svg>');
+  return out.toString();
+ }
+ /// Same four weekly expense points and green curve as Flutter analysis.
+ String weeklySpendSvg(List<double> amounts){
+  final maximum=amounts.fold<double>(1,(a,b)=>max(a,b));
+  final points=List.generate(amounts.length,(i)=>
+   (32.0+i*168,117.0-94*amounts[i]/maximum));
+  final out=StringBuffer('<svg xmlns="http://www.w3.org/2000/svg" '
+   'width="600" height="150" viewBox="0 0 600 150">');
+  for(var i=0;i<4;i++){
+   final y=23+i*31;
+   out.write('<line x1="30" x2="550" y1="$y" y2="$y" '
+    'stroke="#E5EEEA" stroke-width="1"/>');
+  }
+  final path=StringBuffer();
+  if(points.isNotEmpty){
+   path.write('M ${points[0].$1.toStringAsFixed(1)} ${points[0].$2.toStringAsFixed(1)}');
+   for(var i=1;i<points.length;i++){
+    final prev=points[i-1],next=points[i],cx=(prev.$1+next.$1)/2;
+    path.write(' C ${cx.toStringAsFixed(1)} ${prev.$2.toStringAsFixed(1)}'
+     ' ${cx.toStringAsFixed(1)} ${next.$2.toStringAsFixed(1)}'
+     ' ${next.$1.toStringAsFixed(1)} ${next.$2.toStringAsFixed(1)}');
+   }
+  }
+  out.write('<path d="$path" fill="none" stroke="#0C7957" stroke-width="4"/>');
+  for(final point in points){
+   out.write('<circle cx="${point.$1.toStringAsFixed(1)}" '
+    'cy="${point.$2.toStringAsFixed(1)}" r="5" '
+    'fill="#0C7957" stroke="#FFFFFF" stroke-width="2"/>');
+  }
+  out.write('</svg>');
+  return out.toString();
+ }
+ /// Five weekly or twelve monthly grouped bars match the Analytics tab.
+ String pairedBarChartSvg(List<(double,double)> values){
+  final maximum=values.fold<double>(1,(v,p)=>max(v,max(p.$1,p.$2)));
+  final count=values.length,width=max(520,count*56);
+  final out=StringBuffer('<svg xmlns="http://www.w3.org/2000/svg" '
+   'width="$width" height="160" viewBox="0 0 $width 160">');
+  for(var i=0;i<4;i++){
+   final y=20+i*36;
+   out.write('<line x1="20" x2="${width-12}" y1="$y" y2="$y" '
+    'stroke="#E4EBE7" stroke-width="1"/>');
+  }
+  for(var i=0;i<count;i++){
+   final center=33+(width-60)*(i+.5)/count;
+   for(var j=0;j<2;j++){
+    final amount=j==0?values[i].$1:values[i].$2;
+    final height=(amount/maximum*117).clamp(0.0,117.0);
+    final x=center+(j==0?-13:2);
+    out.write('<rect x="${x.toStringAsFixed(1)}" '
+     'y="${(138-height).toStringAsFixed(1)}" '
+     'width="11" height="${height.toStringAsFixed(1)}" rx="3" '
+     'fill="${j==0?'#075C40':'#FF5722'}"/>');
+   }
+  }
+  out.write('</svg>');
+  return out.toString();
+ }
+ Future<void> exportEntriesPdf(List<MoneyEntry> items,String title,{bool analytics=false})async {
+  if(items.isEmpty){
+   if(mounted)snack(context,analytics
+    ?(waffraIsEnglish?'Cannot export the analytics report. Add an income or expense transaction first.':'لا يمكن تصدير تقرير التحليلات. أضف عملية دخل أو مصروف أولاً.')
+    :(waffraIsEnglish?'Cannot export the report. Add an income or expense transaction first.':'لا يمكن تصدير التقرير. يجب إضافة عملية دخل أو مصروف أولاً.'));
+   return;
+  }
+  bool exportDialogOpen=false;
+  final exportNavigator=Navigator.of(context,rootNavigator:true);
+  try{
+   exportDialogOpen=true;
+   unawaited(showWaffraDialog<void>(context:context,useRootNavigator:true,barrierDismissible:false,
+    barrierColor:Colors.black.withValues(alpha:.22),
+    builder:(dialogContext)=>PopScope(canPop:false,child:BackdropFilter(
+     filter:ui.ImageFilter.blur(sigmaX:9,sigmaY:9),
+     child:Center(child:Material(color:Colors.transparent,child:Container(
+      width:MediaQuery.of(dialogContext).size.width*.82,
+      padding:const EdgeInsets.all(28),
+      decoration:BoxDecoration(color:Theme.of(dialogContext).cardColor,
+       borderRadius:BorderRadius.circular(26),
+       border:Border.fromBorderSide(waffraDialogOutline(Theme.of(dialogContext).brightness))),
+      child:Column(mainAxisSize:MainAxisSize.min,children:[
+       const SizedBox(height:8),
+       const Icon(Icons.picture_as_pdf_rounded,size:63,color:emerald),
+       const SizedBox(height:18),
+       const SizedBox(width:48,height:48,child:CircularProgressIndicator(strokeWidth:4.5,color:emerald)),
+       const SizedBox(height:22),
+       WaffraText(waffraIsEnglish?'Exporting PDF report...':'يتم الآن تصدير التقرير إلى PDF',
+        textAlign:TextAlign.center,style:const TextStyle(fontSize:19,fontWeight:FontWeight.bold)),
+       const SizedBox(height:9),
+       WaffraText(waffraIsEnglish?'Please wait while your report is prepared.':
+        'يرجى الانتظار أثناء تجهيز التقرير.',textAlign:TextAlign.center),
+      ]),
+     )))),
+    )));
+   await Future<void>.delayed(const Duration(milliseconds:350));
+   // Embed a full Arabic Unicode fallback; Tajawal stays the primary typeface.
+   final font=pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal-Regular.ttf'));
+   final bold=pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal-Bold.ttf'));
+   final english=waffraIsEnglish;
+   // Capture a single VERIFIED conversion for the entire PDF.
+   // Never relabel stored SAR as EGP/USD when no exchange rate exists.
+   final pdfQuote=WaffraDisplayCurrency.active.value;
+   if(!pdfQuote.verified){
+    throw StateError('Verified display FX rate required for PDF export.');
+   }
+   final pdfCurrency=pdfQuote.code;
+   final pdfCurrencyAr=waffraCountry(pdfCurrency).symbolAr;
+   // Embed the exact approved PNG, rather than using a PDF font glyph
+   // that can become an unsupported square in generated reports.
+   final pdfRiyalIcon=pw.MemoryImage(
+    (await rootBundle.load(waffraRiyalAsset)).buffer.asUint8List());
+   pw.Widget pdfCurrencyMark({double size=9,PdfColor color=PdfColors.teal900}) {
+    if(!english&&pdfCurrency=='SAR')return pw.Image(pdfRiyalIcon,
+     width:size,height:size,fit:pw.BoxFit.contain);
+    return pw.Text(english?pdfCurrency:pdfCurrencyAr,
+     style:pw.TextStyle(font:bold,fontSize:size*.8,color:color));
+   }
+   pw.Widget pdfMoney(String text,{double size=9,
+      PdfColor color=PdfColors.teal900})=>pw.Row(
+    mainAxisSize:pw.MainAxisSize.min,
+    mainAxisAlignment:pw.MainAxisAlignment.center,children:[
+     pw.Text(text,style:pw.TextStyle(font:bold,fontSize:size,color:color)),
+     pw.SizedBox(width:3),pdfCurrencyMark(size:size,color:color),
+    ]);
+   pw.Widget pdfMoneyHeader(String header,{double size=9,
+      PdfColor color=PdfColors.white}){
+    if(english||pdfCurrency!='SAR')return pw.Text(header,
+     textAlign:pw.TextAlign.center,
+     style:pw.TextStyle(font:bold,fontSize:size,color:color));
+    final label=header.replaceAll('($pdfCurrencyAr)','').trim();
+    if(label==header)return pw.Text(header,
+     textAlign:pw.TextAlign.center,
+     style:pw.TextStyle(font:bold,fontSize:size,color:color));
+    return pw.Row(mainAxisSize:pw.MainAxisSize.min,
+     mainAxisAlignment:pw.MainAxisAlignment.center,children:[
+      pw.Text(label,style:pw.TextStyle(font:bold,fontSize:size,color:color)),
+      pw.SizedBox(width:3),pw.Container(
+       padding:const pw.EdgeInsets.all(1),color:PdfColors.white,
+       child:pdfCurrencyMark(size:size)),
+     ]);
+   }
+   double pdfAmount(num sar){
+    final result=pdfQuote.fromSar(sar);
+    if(result==null||!result.isFinite){
+     throw StateError('Unverified PDF currency conversion refused.');
+    }
+    return result;
+   }
+   final exportedAt=DateTime.now();
+   // Keep stored descriptions unchanged; sanitize only the exported PDF copy.
+   String pdfClean(String input)=>sanitizeWaffraPdfText(input);
+      String fmt(num number){
+    final n=pdfAmount(number);
+    if(n==n.roundToDouble())return n.toStringAsFixed(0);
+    return n.toStringAsFixed(2);
+   }
+   // Keep the approved two-page PDF as the canonical, bundled design asset.
+   // The generated export below still supplies live financial values.
+   // Rasterize the branded PDF template once, then draw it as the
+   // background of every exported report page. Financial data stays dynamic.
+   final templateData=await rootBundle.load('assets/Waffra_Riyadh_Report_Template.pdf');
+   if(templateData.lengthInBytes==0)throw StateError('Waffra PDF template is empty');
+   pw.MemoryImage? reportBackground;
+   await for(final raster in Printing.raster(
+     templateData.buffer.asUint8List(),pages:[0],dpi:120)){
+    reportBackground=pw.MemoryImage(await raster.toPng());
+    break;
+   }
+   if(reportBackground==null)throw StateError('Unable to render Waffra PDF template');
+   final brandedBackground=reportBackground;
+   final doc=pw.Document();
+   final totalIncome=sum(items,true),totalExpenses=sum(items,false);
+   final categoryTotals=<String,double>{};
+   for(final e in items.where((e)=>!e.income)){categoryTotals[e.category]=(categoryTotals[e.category]??0)+e.amount;}
+   pw.Widget summary(String label,double value,PdfColor bg)=>pw.Expanded(child:pw.Container(
+    padding:const pw.EdgeInsets.all(10),decoration:pw.BoxDecoration(color:bg,borderRadius:pw.BorderRadius.circular(7)),
+    child:pw.Column(crossAxisAlignment:pw.CrossAxisAlignment.start,children:[
+     pw.Text(waffraTr(label),style:pw.TextStyle(font:bold,fontSize:10,color:PdfColors.teal900)),
+     pw.SizedBox(height:5),pdfMoney(fmt(value),size:15),
+    ])));
+   // Explicit script direction prevents mixed Arabic/Latin SMS text from
+   // overlapping or reversing adjacent numbers in the PDF viewer.
+   pw.Widget pdfCell(String raw,{bool rtl=false,bool center=false,
+      bool monetary=false})=>
+    pw.Padding(padding:const pw.EdgeInsets.symmetric(horizontal:5,vertical:7),
+     child:monetary?pdfMoney(pdfClean(raw),size:9,color:PdfColors.black):
+     pw.Text(pdfClean(raw),
+      textDirection:rtl?pw.TextDirection.rtl:pw.TextDirection.ltr,
+      textAlign:center?pw.TextAlign.center:(rtl?pw.TextAlign.right:pw.TextAlign.left),
+      style:pw.TextStyle(font:font,fontSize:9,color:PdfColors.black)));
+   // Split SMS into readable script-specific lines. Long mixed Arabic/Latin
+   // descriptions must wrap inside the description column, never overflow.
+   // Flutter/Skia shapes mixed Arabic, English and numbers reliably.
+   // The pdf package can create unsupported-glyph boxes for these same runs.
+   // Rasterize ONLY the transaction description text at 2x resolution with
+   // the app's Tajawal font, leaving dates, categories and amounts as PDF text.
+   Future<(pw.MemoryImage,double)> pdfDescriptionArtwork(String raw)async {
+    const scale=2.0,logicalWidth=460.0;
+    final description=pdfClean(raw);
+    final painter=TextPainter(
+     text:TextSpan(text:description.isEmpty?'—':description,
+      style:const TextStyle(fontFamily:'Tajawal',fontSize:18,
+       height:1.38,color:Colors.black)),
+     textDirection:english?TextDirection.ltr:TextDirection.rtl,
+     textAlign:english?TextAlign.left:TextAlign.right,
+     maxLines:8,ellipsis:'...',
+    );
+    // TextPainter otherwise shrinks to its longest run, so TextAlign.right
+    // has no spare horizontal space to align against. Force the whole
+    // raster canvas width (including mixed Arabic/Latin bank SMS).
+    painter.layout(minWidth:logicalWidth,maxWidth:logicalWidth);
+    final recorder=ui.PictureRecorder();
+    final canvas=Canvas(recorder);
+    canvas.scale(scale,scale);
+    painter.paint(canvas,Offset.zero);
+    final picture=recorder.endRecording();
+    final raster=await picture.toImage(
+     (logicalWidth*scale).ceil(),max(1,(painter.height*scale).ceil()));
+    final bytes=await raster.toByteData(format:ui.ImageByteFormat.png);
+    final height=max(12.0,painter.height/scale);
+    painter.dispose();
+    raster.dispose();
+    picture.dispose();
+    if(bytes==null)throw StateError('Unable to rasterize bank SMS description');
+    return (pw.MemoryImage(bytes.buffer.asUint8List()),height);
+   }
+   // The approved branded template remains unchanged; only its content layout is improved.
+   final pageTheme=pw.PageTheme(
+    pageFormat:const PdfPageFormat(900,600),
+    margin:const pw.EdgeInsets.fromLTRB(36,115,36,90),
+    buildBackground:(ctx)=>pw.FullPage(ignoreMargins:true,
+     child:pw.Image(brandedBackground,fit:pw.BoxFit.fill)),
+    theme:pw.ThemeData.withFont(base:font,bold:bold),
+    textDirection:english?pw.TextDirection.ltr:pw.TextDirection.rtl,
+   );
+   pw.Widget heading(String ar,String en)=>pw.Padding(
+    padding:const pw.EdgeInsets.only(bottom:10),
+    child:pw.Text(english?en:ar,style:pw.TextStyle(font:bold,fontSize:15,color:PdfColors.teal900)));
+   if(!analytics){
+    final ordered=items.toList()..sort((a,b)=>b.date.compareTo(a.date));
+    final descriptions=<(pw.MemoryImage,double)>[];
+    for(final e in ordered){descriptions.add(await pdfDescriptionArtwork(e.title));}
+    doc.addPage(pw.MultiPage(
+     pageTheme:pageTheme,
+     footer:(ctx)=>pw.Align(alignment:pw.Alignment.centerRight,
+      child:pw.Text('${ctx.pageNumber} / ${ctx.pagesCount}',style:pw.TextStyle(font:font,fontSize:9,color:PdfColors.teal900))),
+     build:(ctx)=>[
+      heading('تقرير الدخل والمصروفات','Income & Expenses Report'),
+      pw.Row(children:[summary('إجمالي الدخل',totalIncome,PdfColors.green50),pw.SizedBox(width:8),
+       summary('إجمالي المصروفات',totalExpenses,PdfColors.red50),pw.SizedBox(width:8),
+       summary('الصافي',totalIncome-totalExpenses,PdfColors.amber50)]),
+      pw.SizedBox(height:14),
+      heading('تفاصيل العمليات','Transactions'),
+      pw.Table(
+       border:pw.TableBorder.all(color:PdfColors.grey400,width:0.4),
+       columnWidths:english?
+        {0:const pw.FixedColumnWidth(54),1:const pw.FixedColumnWidth(81),
+         2:const pw.FixedColumnWidth(61),3:const pw.FixedColumnWidth(90),
+         4:const pw.FlexColumnWidth(3),5:const pw.FixedColumnWidth(83)}:
+        {0:const pw.FixedColumnWidth(83),1:const pw.FlexColumnWidth(3),
+         2:const pw.FixedColumnWidth(90),3:const pw.FixedColumnWidth(61),
+         4:const pw.FixedColumnWidth(81),5:const pw.FixedColumnWidth(54)},
+       children:[
+        pw.TableRow(decoration:const pw.BoxDecoration(color:PdfColors.teal800),
+         children:(english?['No.','Date','Type','Category','Description','Amount ($pdfCurrency)']:
+          ['المبلغ ($pdfCurrencyAr)','الوصف','القسم','النوع','التاريخ','رقم المعاملة'])
+          .map((h)=>pw.Padding(padding:const pw.EdgeInsets.all(6),
+           child:pdfMoneyHeader(h,size:10))).toList()),
+        ...ordered.asMap().entries.map((row){
+         final e=row.value,art=descriptions[row.key];
+         final orderedCells=<pw.Widget>[
+          pdfCell('${row.key+1}',center:true),
+          pdfCell(dayText(e.date),center:true),
+          pdfCell(english?(e.income?'Income':'Expense'):(e.income?'دخل':'مصروف'),rtl:!english),
+          pdfCell(waffraTr(e.category),rtl:!english),
+          pw.Container(
+           alignment:english?pw.Alignment.centerLeft:pw.Alignment.centerRight,
+           padding:const pw.EdgeInsets.symmetric(horizontal:6,vertical:7),
+           child:pw.Directionality(
+            textDirection:english?pw.TextDirection.ltr:pw.TextDirection.rtl,
+            child:pw.Align(
+             alignment:english?pw.Alignment.centerLeft:pw.Alignment.centerRight,
+             child:pw.Image(art.$1,height:art.$2,fit:pw.BoxFit.scaleDown)))),
+          pdfCell('${e.income?'+':'-'}${fmt(e.amount)}',center:true,monetary:true),
+         ];
+         return pw.TableRow(
+          decoration:pw.BoxDecoration(color:PdfColor.fromInt(e.income?
+           waffraIncomeBackground.toARGB32():waffraExpenseBackground.toARGB32())),
+          children:english?orderedCells:orderedCells.reversed.toList(),
+         );
+        }),
+       ],
+      ),
+     ]));
+   }else{
+    // "Financial Analytics" and "Smart Analysis" now render the very
+    // same chart datasets shown by their respective Flutter screens.
+    final smart=title.contains('آخر 90 يوم')||title.contains('Last 90 days');
+    final yearly=title.contains('سنوي');
+    final smartData=smart?waffraSmartChartData(items,exportedAt):null;
+    final buckets=smart?smartData!.periods:List<(double,double)>.generate(
+     yearly?12:5,(i){
+      final slice=items.where((e)=>yearly?
+       e.date.month==i+1:((e.date.day-1)~/7)==i);
+      return (sum(slice,true),sum(slice,false));
+     });
+    final maximum=buckets.fold<double>(1,(n,p)=>max(n,max(p.$1,p.$2)));
+    final top=(categoryTotals.entries.toList()
+     ..sort((a,b)=>b.value.compareTo(a.value))).take(5).toList();
+    final chartSlices=Map<String,double>.fromEntries(top);
+    pw.Widget legend()=>pw.Row(mainAxisAlignment:pw.MainAxisAlignment.center,
+     children:[
+      pw.Container(width:10,height:10,color:PdfColors.teal800),
+      pw.SizedBox(width:5),
+      pw.Text(english?'Income':'دخل',
+       style:pw.TextStyle(font:font,fontSize:10)),
+      pw.SizedBox(width:18),
+      pw.Container(width:10,height:10,color:PdfColors.deepOrange),
+      pw.SizedBox(width:5),
+      pw.Text(english?'Expenses':'مصروفات',
+       style:pw.TextStyle(font:font,fontSize:10)),
+     ]);
+    pw.Widget progressBar(double value,PdfColor color)=>pw.Expanded(
+     child:pw.Row(children:[
+      pw.Expanded(flex:max(1,(value/maximum*100).round()),
+       child:pw.Container(height:12,color:color)),
+      pw.Expanded(flex:max(1,100-(value/maximum*100).round()),
+       child:pw.SizedBox(height:12)),
+     ]));
+    pw.Widget panel(String ar,String en,List<pw.Widget> widgets)=>pw.Container(
+     margin:const pw.EdgeInsets.only(bottom:10),
+     padding:const pw.EdgeInsets.all(12),
+     decoration:pw.BoxDecoration(
+      border:pw.Border.all(color:PdfColors.grey400,width:.6),
+      borderRadius:pw.BorderRadius.circular(8)),
+     child:pw.Column(crossAxisAlignment:pw.CrossAxisAlignment.stretch,
+      children:[heading(ar,en),...widgets]));
+    // Source-value tables are populated from the same buckets as the charts.
+    pw.Widget miniTable(List<String> labels,List<List<String>> rows){
+     bool isMoneyColumn(String label)=>[
+      'Income','Expenses','Amount','الدخل','المصروفات','المبلغ',
+     ].any(label.contains);
+     pw.Widget cell(String v,{bool header=false,bool monetary=false})=>pw.Padding(
+      padding:const pw.EdgeInsets.symmetric(horizontal:5,vertical:4),
+      child:header?pdfMoneyHeader(v,size:8):
+       monetary?pdfMoney(pdfClean(v),size:8):
+       pw.Text(pdfClean(v),
+        textDirection:english?pw.TextDirection.ltr:pw.TextDirection.rtl,
+        textAlign:pw.TextAlign.center,
+        style:pw.TextStyle(font:font,fontSize:8,
+         color:PdfColors.teal900)));
+     return pw.Table(border:pw.TableBorder.all(color:PdfColors.grey300,width:.4),
+      children:[
+       pw.TableRow(decoration:const pw.BoxDecoration(color:PdfColors.teal800),
+        children:(english?labels.asMap().entries:
+           labels.asMap().entries.toList().reversed)
+         .map((e)=>cell(e.value,header:true,
+          monetary:isMoneyColumn(e.value))).toList()),
+       ...rows.map((row)=>pw.TableRow(
+        children:(english?row.asMap().entries:
+           row.asMap().entries.toList().reversed).map((e)=>cell(e.value,
+         monetary:isMoneyColumn(labels[e.key]))).toList())),
+      ]);
+    }
+    pw.Widget dataTable(List<String> labels,List<List<String>> rows)=>
+     rows.length<=6?miniTable(labels,rows):
+      pw.Row(crossAxisAlignment:pw.CrossAxisAlignment.start,children:[
+       pw.Expanded(child:miniTable(labels,rows.take(6).toList())),
+       pw.SizedBox(width:8),
+       pw.Expanded(child:miniTable(labels,rows.skip(6).toList())),
+      ]);
+    final valueHeaders=english?
+     ['Period','Income ($pdfCurrency)','Expenses ($pdfCurrency)']:
+     ['الفترة','الدخل ($pdfCurrencyAr)','المصروفات ($pdfCurrencyAr)'];
+    final periodValues=List<List<String>>.generate(buckets.length,(i)=>[
+     (english?(yearly?'Month ':'Period '):(yearly?'شهر ':'فترة '))+(i+1).toString(),
+     fmt(buckets[i].$1),fmt(buckets[i].$2),
+    ]);
+    final parts=<pw.Widget>[
+     heading('تقرير الرسومات والتحليلات المالية','Financial Charts Report'),
+     if(smart)...[
+      panel('اتجاه الدخل والمصروفات - آخر 90 يوم',
+       'Income vs Expenses - Last 90 Days',[
+       ...List.generate(3,(i)=>pw.Padding(
+        padding:const pw.EdgeInsets.symmetric(vertical:5),
+        child:pw.Row(children:[
+         pw.SizedBox(width:72,child:pw.Text(
+          english?'Period ${i+1}':'فترة ${i+1}',
+          style:pw.TextStyle(font:font,fontSize:10))),
+         pw.Expanded(child:pw.Column(children:[
+          pw.Row(children:[
+           pw.SizedBox(width:40,child:pw.Text(english?'Income':'دخل',
+            style:pw.TextStyle(font:font,fontSize:8))),
+           progressBar(buckets[i].$1,PdfColors.teal800),
+           pw.SizedBox(width:61,child:pdfMoney(fmt(buckets[i].$1),size:9))]),
+          pw.SizedBox(height:4),
+          pw.Row(children:[
+           pw.SizedBox(width:40,child:pw.Text(english?'Expense':'مصروف',
+            style:pw.TextStyle(font:font,fontSize:8))),
+           progressBar(buckets[i].$2,PdfColors.deepOrange),
+           pw.SizedBox(width:61,child:pdfMoney(fmt(buckets[i].$2),size:9))]),
+         ])),
+        ]))),
+       pw.SizedBox(height:5),legend(),
+       pw.SizedBox(height:8),dataTable(valueHeaders,periodValues),
+      ]),
+      panel('اتجاه المصروفات الأسبوعية','Weekly Spending Trend',[
+       pw.Center(child:pw.SvgImage(
+        svg:weeklySpendSvg(smartData!.weeklySpend.map(pdfAmount).toList()),width:620,height:130)),
+       pw.Center(child:pw.Text(english?
+        'Four weeks: oldest to newest':'أربعة أسابيع من الأقدم إلى الأحدث',
+        style:pw.TextStyle(font:font,fontSize:10))),
+       pw.SizedBox(height:8),
+       dataTable(english?['Week','Expenses ($pdfCurrency)']:
+        ['الأسبوع','المصروفات ($pdfCurrencyAr)'],
+        List<List<String>>.generate(smartData.weeklySpend.length,(i)=>[
+         (english?'Week ':'الأسبوع ')+(i+1).toString(),
+         fmt(smartData.weeklySpend[i]),
+        ])),
+      ]),
+     ]else...[
+      panel(yearly?'الدخل والمصروفات حسب الشهر':'الدخل والمصروفات حسب الأسبوع',
+       yearly?'Income vs Expenses by Month':'Income vs Expenses by Week',[
+       pw.Center(child:pw.SvgImage(
+        svg:pairedBarChartSvg(buckets.map((p)=>(pdfAmount(p.$1),pdfAmount(p.$2))).toList()),width:680,height:155)),
+       pw.Row(mainAxisAlignment:pw.MainAxisAlignment.spaceEvenly,
+        children:List.generate(buckets.length,(i)=>pw.Expanded(
+         child:pw.Text(
+          english?(yearly?'M${i+1}':'W${i+1}'):
+           (yearly?'ش${i+1}':'أ${i+1}'),
+          textAlign:pw.TextAlign.center,
+          style:pw.TextStyle(font:font,fontSize:9))))),
+       pw.SizedBox(height:8),legend(),
+       pw.SizedBox(height:8),dataTable(valueHeaders,periodValues),
+      ]),
+     ],
+     if(top.isNotEmpty)panel(
+      'توزيع المصروفات حسب الأقسام','Expenses by Category',[
+      pw.Row(crossAxisAlignment:pw.CrossAxisAlignment.center,children:[
+       pw.SizedBox(width:190,height:160,
+        child:pw.SvgImage(svg:expensePieSvg(chartSlices),width:160,height:160)),
+       pw.SizedBox(width:20),
+       pw.Expanded(child:pw.Column(
+        crossAxisAlignment:pw.CrossAxisAlignment.stretch,
+        children:top.map((entry){
+         final color=PdfColor.fromInt(categoryFor(entry.key,false).color);
+         return pw.Padding(padding:const pw.EdgeInsets.only(bottom:10),
+          child:pw.Row(children:[
+           pw.Container(width:10,height:10,color:color),
+           pw.SizedBox(width:6),
+           pw.Expanded(child:pw.Text(pdfClean(waffraTr(entry.key)),
+            maxLines:2,style:pw.TextStyle(font:font,fontSize:9))),
+           pw.SizedBox(width:7),
+           pw.Text('${(entry.value/totalExpenses*100).toStringAsFixed(1)}%',
+            style:pw.TextStyle(font:bold,fontSize:9)),
+          ]));
+        }).toList())),
+      ]),
+       pw.SizedBox(height:8),
+       dataTable(english?['Category','Amount ($pdfCurrency)','Share']:
+        ['القسم','المبلغ ($pdfCurrencyAr)','النسبة'],
+        top.map((e)=><String>[
+         waffraTr(e.key),fmt(e.value),
+         (e.value/totalExpenses*100).toStringAsFixed(1)+'%',
+        ]).toList()),
+     ]),
+    ];
+    // MultiPage split the chart header and artwork into separate pages,
+    // displaying a framed but apparently empty chart on the previous page.
+    // A chart, its caption and its populated source table are inseparable.
+    final chartPanels=parts.skip(1).toList(growable:false);
+    for(var i=0;i<chartPanels.length;i++){
+     final index=i+1;
+     doc.addPage(pw.Page(pageTheme:pageTheme,
+      build:(ctx)=>pw.Column(
+       crossAxisAlignment:pw.CrossAxisAlignment.stretch,
+       children:[
+        heading('تقرير الرسومات والتحليلات المالية','Financial Charts Report'),
+        chartPanels[i],
+        pw.Spacer(),
+        pw.Align(alignment:pw.Alignment.centerRight,
+         child:pw.Text(index.toString()+' / '+chartPanels.length.toString(),
+          style:pw.TextStyle(font:font,fontSize:9,color:PdfColors.teal900))),
+       ],
+      )));
+    }
+   }
+   final bytes=await doc.save();
+   if(exportDialogOpen&&exportNavigator.mounted){exportNavigator.pop();exportDialogOpen=false;}
+   if(!mounted)return;
+   final fileName=analytics?'waffra_analytics.pdf':'waffra_income_expenses.pdf';
+   await showWaffraDialog<void>(context:context,builder:(dialogContext)=>AlertDialog(
+    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(24),
+     side:waffraDialogOutline(Theme.of(dialogContext).brightness)),
+    title:Column(children:[
+     const Icon(Icons.check_circle_rounded,color:emerald,size:58),
+     const SizedBox(height:12),
+     WaffraText(waffraIsEnglish?'Report ready':'تم تجهيز التقرير بنجاح',
+      textAlign:TextAlign.center),
+    ]),
+    content:Column(mainAxisSize:MainAxisSize.min,children:[
+     const Icon(Icons.picture_as_pdf,color:Colors.red,size:38),
+     const SizedBox(height:8),
+     WaffraText(analytics?(waffraIsEnglish?'Analytics report':'تقرير التحليلات'):
+      (waffraIsEnglish?'Income and expenses report':'تقرير الدخل والمصروفات'),
+      textAlign:TextAlign.center),
+     const SizedBox(height:4),
+     WaffraText('${(bytes.length/1024).toStringAsFixed(1)} KB',
+      textAlign:TextAlign.center,style:const TextStyle(fontSize:12)),
+    ]),
+    actionsPadding:const EdgeInsets.fromLTRB(16,0,16,16),
+    actions:[
+     LayoutBuilder(builder:(buttonsContext,limits){
+      Widget openButton()=>FilledButton.icon(
+       key:const Key('waffra-report-open'),
+       onPressed:WaffraHaptics.tap((){
+        Navigator.of(dialogContext).pop();
+        Navigator.of(context).push(MaterialPageRoute(builder:(_)=>
+         WaffraPdfReader(bytes:bytes,fileName:fileName,english:waffraIsEnglish)));
+       }),
+       icon:const Icon(Icons.visibility_outlined,size:18),
+       style:FilledButton.styleFrom(
+        minimumSize:const Size(0,48),
+        padding:const EdgeInsets.symmetric(horizontal:10),
+        shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(12))),
+       label:WaffraText(
+        waffraIsEnglish?'Open report':'فتح التقرير',
+        maxLines:2,textAlign:TextAlign.center));
+      Widget shareButton()=>OutlinedButton.icon(
+       key:const Key('waffra-report-share'),
+       onPressed:WaffraHaptics.tap(()async{
+        Navigator.of(dialogContext).pop();
+        try{
+         await Printing.sharePdf(bytes:bytes,filename:fileName);
+        }catch(e){
+         if(mounted)snack(context,waffraIsEnglish?
+          'Could not share the report. Try again.':
+          'تعذرت مشاركة التقرير. حاول مرة أخرى.');
+        }
+       }),
+       icon:const Icon(Icons.share_outlined,size:18),
+       style:OutlinedButton.styleFrom(
+        minimumSize:const Size(0,48),
+        padding:const EdgeInsets.symmetric(horizontal:10),
+        shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(12))),
+       label:WaffraText(
+        waffraIsEnglish?'Share report':'مشاركة التقرير',
+        maxLines:2,textAlign:TextAlign.center));
+      // Buttons stay on one row when the dialog has room. Below 300dp
+      // they stack without clipping a translated label or Android insets.
+      if(limits.maxWidth<300)return Column(
+       mainAxisSize:MainAxisSize.min,children:[
+        SizedBox(width:double.infinity,child:openButton()),
+        const SizedBox(height:8),
+        SizedBox(width:double.infinity,child:shareButton()),
+       ]);
+      return Row(children:[
+       Expanded(child:openButton()),const SizedBox(width:8),
+       Expanded(child:shareButton()),
+      ]);
+     }),
+    ],
+   ));
+  }catch(e,st){
+   debugPrint('PDF export error: $e\n$st');
+   if(exportDialogOpen&&exportNavigator.mounted){exportNavigator.pop();exportDialogOpen=false;}
+   if(mounted)snack(context,waffraIsEnglish?'Could not export the PDF report. Please try again.':'تعذر تصدير تقرير PDF. حاول مرة أخرى.');
+  }
+ }
+ /// Only the independently selected SQLCipher source may use the encrypted
+ /// 30-day trash. A successful delete/undo MUST be reread from the verified
+ /// authority before any balance or transaction tile changes on screen.
+ void _publishVerifiedTransactionLedger(WaffraFinanceAuthorityRead committed){
+  if(committed.source!=WaffraRuntimeFinanceBackend.verifiedEncrypted){
+   throw StateError('Encrypted transaction UI received a legacy source.');
+  }
+  committed.finance.requireIntegrity();
+  final loaded=WaffraVerifiedTransactionUiGuard.decodeLedger(committed.ledgerRaw)
+   .map((json)=>MoneyEntry.fromJson(json)).toList(growable:false);
+  final hashes=committed.finance.getStringList('waffra_sms_hashes_v1')??const <String>[];
+  if(!mounted)return;
+  setState((){
+   entries..clear()..addAll(loaded);
+   smsHashes..clear()..addAll(hashes);
+   _lastFinanceAuthorityRead=committed;
+   _lastLedgerSavedRaw=committed.ledgerRaw;
+   _lastWidgetRevision=committed.widgetRevision;
+  });
+  unawaited(_refreshWidget());
+ }
+
+ Future<void> _deleteVerifiedEntry(MoneyEntry entry)async {
+  try {
+   await _financialWriteQueue.drain();
+   final baseline=await _financeAuthority.load(
+    route:WaffraFinanceRoute.transactionDeleteAndUndo);
+   if(baseline.source!=WaffraRuntimeFinanceBackend.verifiedEncrypted||
+      baseline.encryptedWitness==null){
+    throw StateError('Verified encrypted transaction source is missing.');
+   }
+   // Reject a stale tile, including an edited receipt reference or amount.
+   WaffraVerifiedTransactionUiGuard.requireUnchangedSelected(
+    ledgerRaw:baseline.ledgerRaw,selected:entry.toJson());
+   // A changed receipt image does not increment the finance generation.
+   // The screen must capture every actual BLOB digest BEFORE asking consent.
+   final screen=await _financeAuthority.loadVerifiedReceiptScreen(
+    route:WaffraFinanceRoute.receiptView,entryId:entry.id);
+   if(screen.entryId!=entry.id||
+      screen.generation!=baseline.encryptedWitness!.generation||
+      screen.isInRecycleBin){
+    throw StateError('Receipt and finance screen witnesses disagree.');
+   }
+   if(!mounted)return;
+   final approved=await confirmDeletion(
+    waffraIsEnglish?'Move transaction to recently deleted':
+     'نقل المعاملة إلى المحذوفات',
+    waffraIsEnglish?
+     'Move «${entry.title}» and its attached invoices to encrypted Recently Deleted for 30 days?':
+     'هل تريد نقل المعاملة «${entry.title}» وفواتيرها إلى المحذوفات لمدة 30 يومًا؟');
+   if(approved!=true||!mounted)return;
+   await _financialWriteQueue.submit(<String,Object>{'id':entry.id},(_)async{
+    final committed=await _financeAuthority.deleteVerifiedTransactionToRecycle(
+     baseline:baseline,entryId:entry.id,
+     expectedImageHashes:screen.imageSha256,
+     userConfirmed:true,now:DateTime.now().toUtc());
+    _publishVerifiedTransactionLedger(committed);
+   });
+   if(!mounted)return;
+   snack(context,waffraIsEnglish?
+    'Transaction saved in encrypted Recently Deleted for 30 days.':
+    'تم نقل المعاملة إلى المحذوفات لمدة 30 يومًا.',
+    isError:false,duration:const Duration(seconds:6),
+    actionLabel:waffraIsEnglish?'Undo':'تراجع',
+    onAction:(){if(mounted)unawaited(_undoVerifiedDeletedEntry(entry.id));});
+  }catch(error){
+   debugPrint('Verified encrypted transaction delete refused: $error');
+   if(mounted){
+    snack(context,waffraIsEnglish?
+     'Deletion could not be verified. Your saved financial data was not reset. Reload before retrying.':
+     'تعذر التحقق من الحذف. لم يتم تصفير بياناتك المالية. أعد تحميل المعاملات قبل المحاولة.');
+    unawaited(_loadFinanceSafely());
+   }
+  }
+ }
+
+ Future<void> _undoVerifiedDeletedEntry(String entryId)async {
+  try {
+   await _financialWriteQueue.submit(<String,Object>{'id':entryId},(_)async{
+    // Reopen the CURRENT source instead of restoring over a stale Home or
+    // Widget snapshot. The SQL recycle enforces its 30-day clock and IDs.
+    final baseline=await _financeAuthority.load(
+     route:WaffraFinanceRoute.transactionDeleteAndUndo);
+    if(baseline.source!=WaffraRuntimeFinanceBackend.verifiedEncrypted){
+     throw StateError('Encrypted undo source is not available.');
+    }
+    final committed=await _financeAuthority.restoreVerifiedDeletedTransaction(
+     baseline:baseline,entryId:entryId,now:DateTime.now().toUtc());
+    _publishVerifiedTransactionLedger(committed);
+   });
+   if(mounted)snackSuccess(context,waffraIsEnglish?
+    'Transaction and invoices restored':'تم استرجاع المعاملة وفواتيرها');
+  }catch(error){
+   debugPrint('Encrypted transaction undo blocked safely: $error');
+   if(mounted){
+    snack(context,waffraIsEnglish?
+     'Could not restore safely. Reload Recently Deleted and try again.':
+     'تعذر الاسترجاع الآمن. أعد فتح المحذوفات وحاول مجددًا.');
+    unawaited(_loadFinanceSafely());
+   }
+  }
+ }
+
+ Future<void> _showVerifiedDeletedTransactions()async {
+  if(_lastFinanceAuthorityRead?.source!=
+     WaffraRuntimeFinanceBackend.verifiedEncrypted)return;
+  try {
+   final deleted=await _financeAuthority.listVerifiedDeletedTransactions();
+   if(!mounted)return;
+   if(deleted.isEmpty){
+    await showWaffraDialog<void>(context:context,builder:(ctx)=>AlertDialog(
+     title:WaffraText(waffraIsEnglish?'Recently deleted transactions':
+      'المعاملات المحذوفة'),
+     content:WaffraText(waffraIsEnglish?
+      'There are no encrypted transactions to restore.':
+      'لا توجد معاملات لاسترجاعها.'),
+     actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
+      child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))]));
+    return;
+   }
+   final selection=await showWaffraDialog<String>(
+    context:context,builder:(ctx)=>AlertDialog(
+     title:WaffraText(waffraIsEnglish?'Recently deleted (30 days)':
+      'المعاملات المحذوفة (30 يومًا)'),
+     content:SizedBox(width:360,
+      height:min(360.0,deleted.length*82.0+16.0),
+      child:ListView.builder(itemCount:deleted.length,
+       itemBuilder:(ctx,index){
+        final item=deleted.entries.elementAt(index);
+        final expires=DateTime.fromMillisecondsSinceEpoch(
+         item.value,isUtc:true).toLocal();
+        return ListTile(
+         leading:const Icon(Icons.restore,color:emerald),
+         title:WaffraText(item.key,maxLines:1),
+         subtitle:WaffraText(waffraIsEnglish?
+          'Recover until ${dayText(expires)}':
+          'الاسترجاع متاح حتى ${dayText(expires)}',maxLines:2),
+         onTap:WaffraHaptics.tap(()=>Navigator.pop(ctx,item.key)));
+       })),
+     actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
+      child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء'))]));
+   if(selection!=null&&mounted)await _undoVerifiedDeletedEntry(selection);
+  }catch(error){
+   debugPrint('Encrypted transaction trash cannot be verified: $error');
+   if(mounted)snack(context,waffraIsEnglish?
+    'Recently Deleted is unavailable until encrypted source verification succeeds.':
+    'المحذوفات غير متاحة حتى ينجح التحقق من المصدر المشفر.');
+  }
+ }
+
+ Future<void> deleteEntry(MoneyEntry e)async {
+  // Deleting a confirmed goal debit without also reversing its goal-wallet
+  // earmark would silently increase spendable cash. No unverified rollback.
+  if(e.sourceType=='goal_due'){
+   snack(context,waffraIsEnglish?
+    'Goal payments need a verified wallet reversal before deletion. '
+    'No money was changed.':
+    'حذف استحقاق الهدف يحتاج عكس الخصم من محفظة الهدف بأمان؛ '
+    'لم يتم تغيير أي مبلغ.');
+   return;
+  }
+  if(_lastFinanceAuthorityRead?.source==
+     WaffraRuntimeFinanceBackend.verifiedEncrypted){
+   await _deleteVerifiedEntry(e);
+   return;
+  }
+  final yes=await confirmDeletion(waffraIsEnglish?'Delete transaction':'حذف العملية',
+   waffraIsEnglish?'Delete «'+e.title+'»? You can undo for 6 seconds after deletion.':'هل تريد حذف المعاملة «'+e.title+'»؟ يمكنك التراجع خلال 6 ثوانٍ بعد الحذف.');
+  if(yes!=true||!mounted)return;
+  // A tentative removal is never success until the source acknowledges it.
+  setState(()=>entries.removeWhere((x)=>x.id==e.id));
+  if(!await _persistModuleOrReload(
+   WaffraFinanceRoute.transactionDeleteAndUndo,
+   operation:'transaction-delete'))return;
+  if(!mounted)return;
+  snack(context,waffraIsEnglish?'Transaction deleted':'تم حذف العملية',
+   isError:false,duration:const Duration(seconds:5),
+   actionLabel:waffraIsEnglish?'Undo':'تراجع',
+   onAction:()async{
+    if(!mounted||entries.any((x)=>x.id==e.id))return;
+    setState(()=>entries.insert(0,e));
+    if(!await _persistModuleOrReload(
+     WaffraFinanceRoute.transactionDeleteAndUndo,
+     operation:'transaction-undo'))return;
+    if(mounted)snackSuccess(context,waffraIsEnglish?
+     'Transaction restored':'تم استرجاع المعاملة');
+   });
+ }
+ Widget stat(String label,double value,IconData icon,Color color)=>Expanded(
+  child:Card(child:Padding(padding:const EdgeInsets.all(12),
+   child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+    Icon(icon,color:color),const SizedBox(height:8),WaffraText(label),const SizedBox(height:6),
+    FittedBox(child:RiyalAmount(value,style:const TextStyle(fontWeight:FontWeight.bold,fontSize:16))),
+   ]))));
+ Future<void> transactionActions(MoneyEntry entry)async {
+  final action=await showWaffraDialog<String>(context:context,builder:(ctx)=>AlertDialog(
+   insetPadding:const EdgeInsets.symmetric(horizontal:26,vertical:24),
+   shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(24)),
+   title:WaffraText(entry.title,maxLines:2,
+    style:const TextStyle(fontSize:16,fontWeight:FontWeight.bold),textAlign:TextAlign.center),
+   content:SizedBox(width:340,child:Column(mainAxisSize:MainAxisSize.min,children:[
+    GridView.count(shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),
+     crossAxisCount:2,mainAxisSpacing:10,crossAxisSpacing:10,childAspectRatio:1.55,
+     children:[
+      _transactionActionTile(ctx,'open',Icons.open_in_new_rounded,
+       waffraIsEnglish?'View details':'عرض التفاصيل',emerald),
+      _transactionActionTile(ctx,'edit',Icons.edit_outlined,
+       waffraIsEnglish?'Edit':'تعديل',emerald),
+      _transactionActionTile(ctx,'delete',Icons.delete_outline_rounded,
+       waffraIsEnglish?'Delete':'حذف',Colors.red),
+      _transactionActionTile(ctx,'cancel',Icons.close_rounded,
+       waffraIsEnglish?'Cancel':'إلغاء',Theme.of(ctx).colorScheme.onSurface),
+     ]),
+
+   ])),
+  ));
+  if(!mounted)return;
+  switch(action){
+   case 'open':await transactionDetails(entry);break;
+   case 'edit':await entrySheet(initial:entry);break;
+   case 'delete':await deleteEntry(entry);break;
+  }
+ }
+ Widget _transactionActionTile(BuildContext dialogContext,String value,
+  IconData icon,String label,Color color)=>Material(
+   color:color.withValues(alpha:.08),
+   borderRadius:BorderRadius.circular(16),
+   child:InkWell(
+    borderRadius:BorderRadius.circular(16),
+    onTap:WaffraHaptics.tap(()=>Navigator.pop(dialogContext,value)),
+    child:Padding(padding:const EdgeInsets.symmetric(horizontal:6,vertical:10),
+     child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
+      Icon(icon,color:color,size:24),
+      const SizedBox(height:6),
+      Flexible(child:WaffraText(label,maxLines:2,textAlign:TextAlign.center,
+       style:TextStyle(color:color,fontWeight:FontWeight.w600,fontSize:13))),
+     ])),
+   ),
+  );
+ Future<void> transactionDetails(MoneyEntry entry)async {
+  // Only after confirming this ID is in the authoritative SMS ledger may
+  // a full original message be loaded from its separate SQLCipher note vault.
+  // The decrypted text remains in this dialog's memory, never preferences.
+  String? originalBankSms;
+  // Fetch on EVERY SMS detail open, including after user notes are edited.
+  // The vault verifies the saved SMS ID and authorization independently.
+  if(entry.sourceType=='sms'){
+   try{
+    originalBankSms=await _financeAuthority.readProtectedOriginalSms(entry.id);
+   }catch(_){
+    if(mounted)snack(context,waffraIsEnglish?
+     'Encrypted bank message cannot be opened. Your transaction is unchanged.':
+     'تعذر فتح الرسالة البنكية المشفّرة. بيانات المعاملة لم تتغير.');
+    return;
+   }
+  }
+  if(!mounted)return;
+  await showWaffraDialog<void>(
+   context:context,
+   builder:(ctx)=>WaffraTransactionDetailsDialog(
+    entry:entry,
+    protectedOriginalSms:originalBankSms,
+    linkedBudgetName:namedBudgets.where((b)=>b.id==entry.budgetId)
+      .map((b)=>b.name).firstOrNull,
+    linkedBudgetPaused:namedBudgets.any((b)=>b.id==entry.budgetId&&
+      (!b.budgetActive||b.deleted)),
+    showBudgetInfo:entry.budgetId!=null||waffraHasSelectableBudget(namedBudgets),
+    onLinkBudget:entry.income||entry.budgetId!=null||
+      !waffraHasSelectableBudget(namedBudgets)?null:(){
+      Navigator.pop(ctx);
+      unawaited(assignExistingExpenseToBudget(entry));
+    },
+    onClose:()=>Navigator.pop(ctx),
+    onViewReceipt:waffraReceiptPaths(entry.receiptPath).isNotEmpty
+      ?(){Navigator.pop(ctx);showReceipt(entry.receiptPath!,entryId:entry.id);}
+      :null,
+   ),
+  );
+ }
+
+ Widget tile(MoneyEntry e){
+  final c=categoryFor(e.category,e.income);
+  // Restored M384 corner count uses persisted receipt references only.
+  // Never migrate, move or modify existing receipt files during rendering.
+  final attachmentCount=waffraReceiptPaths(e.receiptPath).length;
+  return Card(color:e.income?waffraIncomeBackground:waffraExpenseBackground,
+   clipBehavior:Clip.antiAlias,child:Stack(children:[
+    Padding(padding:EdgeInsets.only(top:attachmentCount>0?16:0),child:ListTile(
+   textColor:waffraInk,iconColor:forest,
+   leading:CircleAvatar(backgroundColor:Color(c.color).withValues(alpha:.15),
+      child:Icon(categoryIcon(c.icon),color:Color(c.color))),
+   title:WaffraText(e.title,style:const TextStyle(color:waffraInk,fontWeight:FontWeight.w600)),subtitle:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
+    WaffraText('${e.category} • ${dayText(e.date)}',style:const TextStyle(color:waffraInk)),
+    WaffraText(WaffraTransactionDetailsDialog.sourceLabel(
+     e.sourceType,waffraIsEnglish),
+     style:const TextStyle(fontSize:11,color:waffraInk)),
+
+   ]),
+   trailing:Row(mainAxisSize:MainAxisSize.min,children:[
+    Column(mainAxisSize:MainAxisSize.min,children:[
+     Text('${e.income?'+':'-'}${cash(e.amount)}',style:TextStyle(fontFamily:'Tajawal',fontSize:18,fontWeight:FontWeight.w800,color:e.income?const Color(0xFF075C40):waffraInk)),
+     WaffraText(WaffraDisplayCurrency.label(waffraIsEnglish),style:TextStyle(fontSize:13,fontWeight:FontWeight.bold,color:e.income?const Color(0xFF075C40):waffraInk)),
+    ]),
+    IconButton(tooltip:waffraIsEnglish?'Transaction options':'خيارات المعاملة',
+     onPressed:WaffraHaptics.tap(()=>transactionActions(e)),icon:const Icon(Icons.more_vert,color:forest)),
+   ]))),
+    if(attachmentCount>0)PositionedDirectional(top:0,start:0,
+     child:WaffraReceiptCornerAction(
+      key:Key('waffra-receipt-corner-list-'+e.id),
+      count:attachmentCount,english:waffraIsEnglish,
+      onTap:()=>showReceipt(e.receiptPath!,entryId:e.id))),
+   ]));
+ }
+ String get greeting=>WaffraSaudiGreetings.compose(
+  name:widget.profile.name,gender:widget.profile.gender,
+  english:waffraIsEnglish,greetingIndex:widget.greetingIndex,
+  countryIso:WaffraRegionalCopy.countryIso.value);
+ Future<void> confirmDeleteAllEntries() async {
+  if(entries.isEmpty){snack(context,waffraIsEnglish?'No transactions to delete':'لا توجد معاملات لحذفها');return;}
+  final confirmed=await confirmDeletion(
+   waffraIsEnglish?'Delete all transactions?':'حذف كل المعاملات؟',
+   waffraIsEnglish?'Delete all ${entries.length} recorded transactions permanently? This cannot be undone.':'سيُحذف ${entries.length} معاملة نهائيًا. لا يمكن التراجع.');
+  if(confirmed!=true||!mounted)return;
+  // Crash journal BOTH the ledger and duplicate hashes as one recoverable
+  // intent. Do not clear in-memory finance until durable storage confirms it.
+  final clear=<String,Object>{
+   'entries':'[]',
+   'waffra_sms_hashes_v1':<String>[],
+  };
+  try{
+   final baseline=_lastFinanceAuthorityRead;
+   await _financialWriteQueue.submit(clear,(captured)async{
+    if(baseline==null)throw StateError('Finance source baseline unavailable.');
+    final committed=await _financeAuthority.saveCaptured(
+     route:WaffraFinanceRoute.deleteAllTransactions,
+     baseline:baseline,captured:captured,userConfirmed:true,
+    );
+    _lastFinanceAuthorityRead=committed;
+    _lastLedgerSavedRaw=committed.ledgerRaw;
+    _lastWidgetRevision=committed.widgetRevision;
+   });
+   if(!mounted)return;
+   setState((){entries.clear();smsHashes.clear();});
+   unawaited(_refreshWidget());
+   snackSuccess(context,waffraIsEnglish?'All transactions deleted':'تم حذف جميع المعاملات');
+  }catch(e){
+   debugPrint('Confirmed transaction deletion could not be verified: $e');
+   if(mounted)snack(context,waffraIsEnglish?
+    'Deletion could not be confirmed. Reload before retrying.':
+    'تعذر تأكيد الحذف. أعد تحميل المعاملات قبل المحاولة مجددًا.');
+  }
+ }
+ Future<void> editMonthlyBudget()async {
+  final amount=TextEditingController(text:monthlyBudget>0?formatWaffraEditAmount(monthlyBudget):'');
+  bool enabled=monthlyBudgetEnabled;
+  String? validation;
+  try{
+   final next=await showWaffraDialog<({bool enabled,double amount})>(
+    context:context,builder:(ctx)=>BackdropFilter(filter:ui.ImageFilter.blur(sigmaX:7,sigmaY:7),child:StatefulBuilder(builder:(ctx,update)=>AlertDialog(
+     title:WaffraText(waffraIsEnglish?'Monthly budget':'الميزانية الشهرية'),
+     content:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+      SwitchListTile.adaptive(
+       contentPadding:EdgeInsets.zero,
+       title:WaffraText(waffraIsEnglish?'Enable monthly budget':'تفعيل الميزانية الشهرية',
+        style:const TextStyle(fontWeight:FontWeight.bold)),
+       value:enabled,activeTrackColor:emerald,
+       onChanged:WaffraHaptics.selection((value)=>update((){enabled=value;validation=null;})),
+      ),
+      const SizedBox(height:8),
+      WaffraText(enabled?
+       (waffraIsEnglish?'Set the amount allocated for monthly spending.':'حدد المبلغ الذي ترغب في تخصيصه لمصروفاتك الشهرية.'):
+       (waffraIsEnglish?'Monthly spending limit tracking is paused.':'تم إيقاف متابعة حد المصروفات الشهرية.')),
+      const SizedBox(height:16),
+      TextField(controller:amount,autofocus:false,
+       onChanged:(_){if(validation!=null)update(()=>validation=null);},
+       style:TextStyle(fontSize:20,fontWeight:FontWeight.bold,color:Theme.of(ctx).colorScheme.onSurface),
+       keyboardType:const TextInputType.numberWithOptions(decimal:true),
+       inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],
+       decoration:InputDecoration(
+        labelText:(waffraIsEnglish?'Spending limit':'حد المصروفات')+' ('+WaffraDisplayCurrency.label(waffraIsEnglish)+') *',
+        hintText:waffraIsEnglish?'Example: 3000':'مثال: 3000',
+        errorText:validation,
+        border:OutlineInputBorder(borderRadius:BorderRadius.circular(15)),
+        filled:true,fillColor:Theme.of(ctx).brightness==Brightness.dark?
+         const Color(0xFF1E3A31):Colors.white)),
+     ]),
+     actionsPadding:const EdgeInsets.fromLTRB(16,4,16,14),
+     actions:[SizedBox(width:double.maxFinite,child:Row(children:[
+      Expanded(child:OutlinedButton(
+       onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
+       child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء',maxLines:1))),
+      const SizedBox(width:12),
+      Expanded(child:FilledButton(onPressed:WaffraHaptics.tap((){
+       final v=amountOfDisplay(amount.text);
+       final fieldError=waffraMonthlyBudgetSaveError(amount.text);
+       if(fieldError!=null||v==null||!v.isFinite||v<=0){
+        update(()=>validation=fieldError??(waffraIsEnglish?
+         'Enter an amount greater than zero':'أدخل مبلغًا صحيحًا أكبر من صفر'));
+        return;
+       }
+       Navigator.pop(ctx,(enabled:enabled,amount:v));
+      }),child:WaffraText(waffraIsEnglish?'Save':'حفظ',maxLines:1))),
+     ]))],
+    ))));
+   if(next!=null&&mounted){
+    setState((){monthlyBudgetEnabled=next.enabled;monthlyBudget=next.amount;});
+    if(!await _persistModuleOrReload(
+     WaffraFinanceRoute.challengeAndBudgetUpdate,
+     operation:'monthly-budget-save'))return;
+    if(mounted)snackSuccess(context,waffraIsEnglish?'Monthly budget settings saved':'تم حفظ إعدادات الميزانية الشهرية');
+   }
+  }finally{disposeLater([amount]);}
+ }
+ Future<void> editTransactionFilters()async {
+  final min=TextEditingController(text:minTransactionAmount==null?'':formatWaffraEditAmount(minTransactionAmount!));
+  final max=TextEditingController(text:maxTransactionAmount==null?'':formatWaffraEditAmount(maxTransactionAmount!));
+  String? minError,maxError;
+  DateTimeRange? chosen=transactionsDateRange;
+  try{
+   await showWaffraDialog<void>(context:context,builder:(ctx)=>StatefulBuilder(
+    builder:(ctx,update)=>AlertDialog(
+     title:WaffraText(waffraIsEnglish?'Advanced filters':'فلترة بالتاريخ والمبلغ'),
+     content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
+      TextField(controller:min,keyboardType:const TextInputType.numberWithOptions(decimal:true),
+       onChanged:(_)=>update(()=>minError=null),
+       inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],
+       decoration:InputDecoration(
+        labelText:waffraIsEnglish?'Minimum amount':'أقل مبلغ',
+        errorText:minError,
+        border:const OutlineInputBorder())),
+      const SizedBox(height:10),
+      TextField(controller:max,keyboardType:const TextInputType.numberWithOptions(decimal:true),
+       onChanged:(_)=>update(()=>maxError=null),
+       inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],
+       decoration:InputDecoration(
+        labelText:waffraIsEnglish?'Maximum amount':'أعلى مبلغ',
+        errorText:maxError,
+        border:const OutlineInputBorder())),
+      const SizedBox(height:12),
+      OutlinedButton.icon(onPressed:WaffraHaptics.tap(()async{
+       final range=await showDateRangePicker(context:ctx,
+        firstDate:DateTime(2000),lastDate:DateTime.now(),
+        initialDateRange:chosen);
+       if(range!=null)update(()=>chosen=range);
+      }),icon:const Icon(Icons.date_range),
+       label:WaffraText(chosen==null
+        ?(waffraIsEnglish?'Choose date range':'حدد فترة زمنية')
+        :dayText(chosen!.start)+' - '+dayText(chosen!.end))),
+     ])),
+     actions:[
+      TextButton(onPressed:WaffraHaptics.tap((){
+       setState((){
+        transactionsDateRange=null;minTransactionAmount=null;maxTransactionAmount=null;
+       });
+       Navigator.pop(ctx);
+      }),child:WaffraText(waffraIsEnglish?'Clear':'مسح الفلاتر')),
+      FilledButton(onPressed:WaffraHaptics.tap((){
+       final lo=min.text.trim().isEmpty?null:amountOfDisplay(min.text.trim());
+       final hi=max.text.trim().isEmpty?null:amountOfDisplay(max.text.trim());
+       if((min.text.trim().isNotEmpty&&lo==null)||
+          (max.text.trim().isNotEmpty&&hi==null)||
+          (lo!=null&&(!lo.isFinite||lo<0))||
+          (hi!=null&&(!hi.isFinite||hi<0))||
+          (lo!=null&&hi!=null&&lo>hi)){
+        update((){
+         minError=min.text.trim().isNotEmpty&&(lo==null||!lo.isFinite||lo<0)?(waffraIsEnglish?'Enter a valid amount':'أدخل مبلغًا صحيحًا'):null;
+         maxError=max.text.trim().isNotEmpty&&(hi==null||!hi.isFinite||hi<0)?(waffraIsEnglish?'Enter a valid amount':'أدخل مبلغًا صحيحًا'):null;
+         if(lo!=null&&hi!=null&&lo>hi)maxError=waffraIsEnglish?'Maximum must not be less than minimum':'الحد الأعلى يجب ألا يقل عن الحد الأدنى';
+        });
+        return;
+       }
+       setState((){
+        transactionsDateRange=chosen;minTransactionAmount=lo;maxTransactionAmount=hi;
+       });
+       Navigator.pop(ctx);
+      }),child:WaffraText(waffraIsEnglish?'Apply':'تطبيق')),
+     ])));
+  }finally{disposeLater([min,max]);}
+ }
+ /// Edit only budget fields; the category name and transaction history must
+ /// never be mutated by the budget editor.
+ /// Ask before assigning historical unbudgeted purchases.
+ /// Never infer a historic budget link from the transaction category.
+ Future<void> offerHistoricBudgetLink(BudgetCategory budget)async{
+  if(!mounted||budget.budget<=0||!budget.budgetActive)return;
+  if(entries.any((e)=>!e.income&&e.budgetId==null)){
+   snack(context,waffraIsEnglish?
+    'Older unassigned expenses may be linked individually under My Budgets.':
+    'في عمليات قديمة غير مرتبطة؛ تقدر تراجعها وتربطها يدويًا من ميزانياتي.',
+    isError:false);
+  }
+ }
+
+ /// User-approved historic linking. This does NOT invent a ledger entry.
+ Future<void> reviewUnlinkedHistoricalExpenses()async{
+  if(!mounted)return;
+  final pending=entries.where((e)=>!e.income&&e.budgetId==null)
+   .toList(growable:false);
+  if(pending.isEmpty){
+   snack(context,waffraIsEnglish?'No unassigned expenses.':
+    'ما فيه مصروفات غير مرتبطة تحتاج مراجعة.');
+   return;
+  }
+  String entryQuery='';
+  final old=await showWaffraDialog<MoneyEntry>(context:context,
+   builder:(ctx)=>StatefulBuilder(builder:(ctx,refresh){
+    final visible=pending.where((e)=>waffraSearchAny(
+     [e.title,e.category,e.notes,cash(e.amount),dayText(e.date)],
+      entryQuery)).toList(growable:false);
+    return AlertDialog(
+    title:WaffraText(waffraIsEnglish?'Review saved expenses':
+     'مراجعة المصروفات القديمة غير المرتبطة'),
+    content:SizedBox(width:430,height:370,child:Column(children:[
+     WaffraText(waffraIsEnglish?
+      pending.length.toString()+' saved expense(s) need optional budget review.':
+      'عندك '+pending.length.toString()+' عملية مصروف محفوظة بدون ميزانية. '
+      'الربط اختياري ومش هنغيّر المبالغ ولا التواريخ.',
+      style:const TextStyle(fontSize:13)),
+     const SizedBox(height:9),
+     TextField(
+      key:const Key('waffra-historical-expense-search'),
+      onChanged:(text)=>refresh(()=>entryQuery=text),
+      decoration:InputDecoration(
+       prefixIcon:const Icon(Icons.search_rounded),
+       hintText:waffraIsEnglish?'Search saved expenses':'ابحث في العمليات المحفوظة',
+       border:const OutlineInputBorder())),
+     const SizedBox(height:8),
+     Expanded(child:visible.isEmpty?
+      Center(child:WaffraText(waffraIsEnglish?
+       'No matching expenses':'ما فيه عمليات مطابقة')):
+      ListView.builder(itemCount:visible.length,
+      itemBuilder:(_,i){
+       final item=visible[i];
+       return ListTile(
+        key:Key('waffra-retro-unlinked-'+item.id),
+        dense:true,title:WaffraText(item.title,maxLines:1),
+        subtitle:WaffraText(item.category,maxLines:1),
+        trailing:WaffraText(cash(item.amount)),
+        onTap:WaffraHaptics.tap(()=>Navigator.pop(ctx,item)),
+       );
+      })),
+    ])),
+    actions:[TextButton(
+     onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
+     child:WaffraText(waffraIsEnglish?'Not now':'مش دلوقتي'))]);
+   }));
+  if(old==null||!mounted)return;
+  await assignExistingExpenseToBudget(old);
+ }
+
+ Future<void> assignExistingExpenseToBudget(MoneyEntry old)async{
+  if(!mounted)return;
+  final original=entries.where((e)=>e.id==old.id).toList(growable:false);
+  if(original.length!=1||original.single.income||
+     original.single.budgetId!=null){
+   snack(context,waffraIsEnglish?'Refresh before reviewing this record.':
+    'العملية اتغيرت أو معرفها مكرر. حدّث الصفحة قبل المراجعة.');
+   return;
+  }
+  final budgets=namedBudgets.where((b)=>b.budget>0&&b.budgetActive&&!b.deleted)
+   .toList(growable:false);
+  if(budgets.isEmpty){
+   snack(context,waffraIsEnglish?'Create a budget first.':
+    'ضيف ميزانية الأول، وبعدها اربط العملية لو حابب.');
+   return;
+  }
+  String budgetQuery='';
+  final selected=await showWaffraDialog<BudgetCategory>(context:context,
+   builder:(ctx)=>StatefulBuilder(builder:(ctx,refresh){
+    final visible=budgets.where((b)=>waffraSearchAny(
+     [b.name,b.budgetLabel??'',b.displayName],budgetQuery))
+     .toList(growable:false);
+    return AlertDialog(
+    title:WaffraText(waffraIsEnglish?'Choose a budget':'اختار الميزانية'),
+    content:SizedBox(width:430,height:360,child:Column(children:[
+     TextField(
+      key:const Key('waffra-budget-link-search'),
+      onChanged:(text)=>refresh(()=>budgetQuery=text),
+      decoration:InputDecoration(
+       prefixIcon:const Icon(Icons.search_rounded),
+       hintText:waffraIsEnglish?'Search active budgets':'ابحث في الميزانيات المفعّلة',
+       border:const OutlineInputBorder())),
+     const SizedBox(height:8),
+     Expanded(child:visible.isEmpty?
+      Center(child:WaffraText(waffraIsEnglish?
+       'No matching budgets':'ما فيه ميزانيات مطابقة')):
+      ListView.builder(
+     itemCount:visible.length,itemBuilder:(_,i){
+      final b=visible[i];
+      return _borderedMenuChoice(
+       key:Key('waffra-retro-budget-option-'+b.id),
+       title:WaffraText(b.budgetLabel??b.name,maxLines:2),
+       subtitle:WaffraText(waffraIsEnglish?
+        'Monthly limit: '+cash(b.budget):'حد الميزانية: '+cash(b.budget)),
+       onTap:WaffraHaptics.tap(()=>Navigator.pop(ctx,b)),
+      );
+     })),])),
+    actions:[TextButton(
+     onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
+     child:WaffraText(waffraIsEnglish?'Leave unassigned':'بدون ربط'))]);
+   }));
+  if(selected==null||!mounted)return;
+  final ok=await showWaffraDialog<bool>(context:context,
+   builder:(ctx)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?'Confirm link':'تأكيد الربط'),
+    content:WaffraText(waffraIsEnglish?
+     'Link the saved '+cash(original.single.amount)+' expense to '+
+       (selected.budgetLabel??selected.name)+
+       '? No new expense will be created or amount changed.':
+     'ربط مصروف '+cash(original.single.amount)+' بميزانية «'+
+       (selected.budgetLabel??selected.name)+
+       '» فقط؟ المبلغ والتاريخ والقسم والملاحظات هيفضلوا زي ما هم.'),
+    actions:[
+     TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,false)),
+      child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+     FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,true)),
+      child:WaffraText(waffraIsEnglish?'Link only':'ربط فقط')),
+    ]));
+  if(ok!=true||!mounted)return;
+  // Dialogs are asynchronous: never rely on stale selection after await.
+  final latest=entries.where((e)=>e.id==old.id).toList(growable:false);
+  if(latest.length!=1||latest.single.income||
+     latest.single.budgetId!=null||
+     latest.single.amount!=old.amount||
+     latest.single.date!=old.date||
+     latest.single.category!=old.category||
+     latest.single.title!=old.title||
+     latest.single.notes!=old.notes||
+     latest.single.receiptPath!=old.receiptPath||
+     latest.single.sourceType!=old.sourceType||
+     !namedBudgets.any((b)=>b.id==selected.id&&b.budget>0&&
+      b.budgetActive&&!b.deleted)){
+   snack(context,waffraIsEnglish?'Record changed; nothing saved.':
+    'العملية أو الميزانية اتغيرت. لم يتم حفظ أي ربط.');
+   return;
+  }
+  setState((){
+   final index=entries.indexWhere((e)=>e.id==old.id);
+   if(index>=0)entries[index]=entries[index].withBudget(selected.id);
+  });
+  await _persistModuleOrReload(WaffraFinanceRoute.transactionEdit,
+   operation:'retroactive-opt-in-budget-link');
+ }
+
+ Future<void> deleteNamedBudget(BudgetCategory selected)async{
+  final active=namedBudgets.where((b)=>b.id==selected.id&&!b.deleted).toList();
+  if(active.length!=1)return;
+  final affected=entries.where((e)=>e.budgetId==selected.id).length;
+  final ok=await confirmDeletion(
+   waffraIsEnglish?'Delete budget?':'حذف الميزانية',
+   waffraIsEnglish?
+    'Archive this budget? $affected historical allocation(s) stay intact and no financial transactions will be deleted.':
+    'أرشفة الميزانية؟ هنحتفظ بارتباط $affected عملية تاريخية بدون حذف أي معاملة مالية.');
+  if(ok!=true||!mounted)return;
+  final current=namedBudgets.where((b)=>b.id==selected.id&&!b.deleted).toList();
+  if(current.length!=1)return;
+  setState((){
+   final i=namedBudgets.indexWhere((b)=>b.id==selected.id);
+   namedBudgets[i]=namedBudgets[i].copy(budgetActive:false,deleted:true);
+   if(selectedNamedBudgetCategoryId==selected.id)selectedNamedBudgetCategoryId=null;
+  });
+  await _persistModuleOrReload(
+   WaffraFinanceRoute.challengeAndBudgetUpdate,
+   operation:'standalone-budget-soft-delete');
+ }
+
+ Future<void> setNamedBudgetActive(BudgetCategory selected,bool enabled)async{
+  final current=namedBudgets.where((b)=>b.id==selected.id&&!b.deleted).toList();
+  if(current.length!=1||current.single.budgetActive==enabled)return;
+  final ok=await showWaffraDialog<bool>(context:context,
+   builder:(ctx)=>AlertDialog(
+    title:WaffraText(enabled?
+     (waffraIsEnglish?'Resume budget?':'إعادة تفعيل الميزانية؟'):
+     (waffraIsEnglish?'Pause budget?':'إيقاف الميزانية؟')),
+    content:WaffraText(waffraIsEnglish?
+     'Existing allocations stay unchanged. Expenses saved while paused will not be linked automatically.':
+     'كل الروابط القديمة محفوظة. العمليات وقت الإيقاف مش هترتبط تلقائيًا.'),
+    actions:[
+     TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,false)),
+      child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+     FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,true)),
+      child:WaffraText(enabled?
+       (waffraIsEnglish?'Resume':'تفعيل'):
+       (waffraIsEnglish?'Pause':'إيقاف'))),
+    ]));
+  if(ok!=true||!mounted)return;
+  final live=namedBudgets.where((b)=>b.id==selected.id&&!b.deleted).toList();
+  if(live.length!=1||live.single.budgetActive==enabled)return;
+  setState((){
+   final index=namedBudgets.indexWhere((b)=>b.id==selected.id);
+   namedBudgets[index]=namedBudgets[index].copy(budgetActive:enabled);
+   if(selectedNamedBudgetCategoryId==selected.id)selectedNamedBudgetCategoryId=null;
+  });
+  await _persistModuleOrReload(
+   WaffraFinanceRoute.challengeAndBudgetUpdate,
+   operation:'standalone-budget-toggle');
+ }
+
+ Future<void> editBudgetForCategory(BudgetCategory selected,{String? suggestedName})async{
+  final name=TextEditingController(text:selected.budgetLabel??selected.name);
+  final amount=TextEditingController(text:selected.budget>0?
+   formatWaffraEditAmount(selected.budget):'');
+  var alert=selected.alertPercent;
+  var alertsEnabled=selected is WaffraNamedBudget?selected.alertsEnabled:true;
+  String? budgetSource=selected is WaffraNamedBudget?
+   selected.assignedAccountId:null;
+  final verifiedBudgetAccounts=_m467Accounts.where((a)=>!a.archived).toList();
+  String? nameError,amountError;
+  try{
+   final edited=await showWaffraDialog<({String label,double amount,int alert,bool alertsEnabled,String? accountId})>(
+    context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
+     title:WaffraText(waffraIsEnglish?'Set named budget':'تحديد ميزانية باسم'),
+     scrollable:true,
+     content:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+      WaffraText(waffraIsEnglish?'Independent of categories':'مستقلة عن الأقسام',style:const TextStyle(fontWeight:FontWeight.w700)),
+      const SizedBox(height:12),
+      TextField(controller:name,maxLength:80,
+       onChanged:(_)=>update(()=>nameError=null),
+       decoration:InputDecoration(labelText:waffraIsEnglish?'Budget name *':'اسم الميزانية *',
+        errorText:nameError,border:const OutlineInputBorder())),
+      const SizedBox(height:12),
+      TextField(controller:amount,
+       keyboardType:const TextInputType.numberWithOptions(decimal:true),
+       inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],
+       onChanged:(_)=>update(()=>amountError=null),
+       decoration:InputDecoration(labelText:waffraIsEnglish?'Monthly limit *':'الحد الشهري *',
+        errorText:amountError,border:const OutlineInputBorder())),
+      const SizedBox(height:12),
+      WaffraCenteredDropdownFormField<String>(
+       key:const Key('m470-budget-edit-account'),
+       initialValue:budgetSource??'shared',isExpanded:true,
+       decoration:InputDecoration(labelText:waffraIsEnglish?
+        'Monthly budget for account':'الميزانية الشهرية للحساب',
+        border:const OutlineInputBorder()),
+       items:[
+        DropdownMenuItem(value:'shared',child:WaffraText(waffraIsEnglish?
+         'Shared budget (all accounts only)':'ميزانية مشتركة (كل الحسابات)')),
+        ...verifiedBudgetAccounts.map((a)=>DropdownMenuItem<String>(
+         value:a.id,child:WaffraText(a.name,maxLines:1))),
+       ],
+       onChanged:(value)=>update(()=>budgetSource=value=='shared'?null:value)),
+      const SizedBox(height:12),
+      waffraBudgetAlertControls(
+       enabled:alertsEnabled,percent:alert,english:waffraIsEnglish,
+       onEnabled:(value)=>update(()=>alertsEnabled=value),
+       onPercent:(value)=>update(()=>alert=value)),
+     ]),
+     actionsPadding:const EdgeInsets.fromLTRB(16,4,16,14),
+     actions:[SizedBox(width:double.maxFinite,child:Row(children:[
+      Expanded(child:OutlinedButton(
+       onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
+       child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء',maxLines:1))),
+      const SizedBox(width:12),
+      Expanded(child:FilledButton(onPressed:WaffraHaptics.tap((){
+       final label=name.text.trim(),value=amountOfDisplay(amount.text);
+       update((){
+        nameError=label.isEmpty?waffraRequiredFieldMessage:
+         namedBudgets.any((c)=>c.id!=selected.id&&!c.deleted&&
+           c.name.trim().toLowerCase()==label.toLowerCase())?
+          (waffraIsEnglish?'A budget with this name already exists':
+           'اسم الميزانية مستخدم بالفعل'):null;
+        amountError=waffraAmountFieldError(amount.text);
+       });
+       if(nameError!=null||amountError!=null||value==null||value<=0)return;
+       Navigator.pop(ctx,(label:label,amount:value,alert:alert,
+        alertsEnabled:alertsEnabled,accountId:budgetSource));
+      }),child:WaffraText(waffraIsEnglish?'Save budget':'حفظ الميزانية',
+       maxLines:1))),
+     ]))],
+    )));
+   if(edited==null||!mounted)return;
+   if(edited.alertsEnabled&&!(selected is WaffraNamedBudget&&selected.alertsEnabled)){
+    await _requestPercentageAlertPermission();
+   }
+   if(!mounted)return;
+   final live=namedBudgets.where((b)=>b.id==selected.id&&!b.deleted).toList();
+   if(live.length!=1)return;
+   setState((){
+    final index=namedBudgets.indexWhere((b)=>b.id==selected.id);
+    namedBudgets[index]=namedBudgets[index].copy(
+     name:edited.label,budget:edited.amount,alertPercent:edited.alert,
+     alertsEnabled:edited.alertsEnabled,
+     assignedAccountId:edited.accountId,
+     clearAssignedAccount:edited.accountId==null);
+    selectedNamedBudgetCategoryId=selected.id;
+   });
+   await _persistModuleOrReload(WaffraFinanceRoute.challengeAndBudgetUpdate,
+    operation:'standalone-budget-edit');
+  }finally{disposeLater([name,amount]);}
+ }
+ /// No category selection: a budget is a standalone financial envelope.
+ Future<String?> chooseBudgetCategory({String? suggestedName,
+  String? suggestedParentId,String? suggestedSubcategory})async{
+  final name=TextEditingController(text:suggestedName??'');
+  final amount=TextEditingController();
+  var alert=80;
+  var alertsEnabled=true;
+  String? budgetSource;
+  final verifiedBudgetAccounts=_m467Accounts.where((a)=>!a.archived).toList();
+  String? nameError,amountError;
+  try{
+   final selected=await showWaffraDialog<({String name,double cap,int alert,bool alertsEnabled,String? accountId})>(
+    context:context,builder:(ctx)=>StatefulBuilder(
+     builder:(ctx,update)=>AlertDialog(
+      key:const Key('waffra-independent-budget-create'),
+      scrollable:true,
+      title:WaffraText(waffraIsEnglish?'New budget':'إنشاء ميزانية جديدة'),
+      content:Column(mainAxisSize:MainAxisSize.min,children:[
+       TextField(controller:name,maxLength:80,
+        onChanged:(_)=>update(()=>nameError=null),
+        decoration:InputDecoration(
+         labelText:waffraIsEnglish?'Budget name *':'اسم الميزانية *',
+         errorText:nameError,border:const OutlineInputBorder())),
+       const SizedBox(height:12),
+       TextField(controller:amount,
+        keyboardType:const TextInputType.numberWithOptions(decimal:true),
+        inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],
+        onChanged:(_)=>update(()=>amountError=null),
+        decoration:InputDecoration(
+         labelText:waffraIsEnglish?'Monthly amount *':'الحد الشهري *',
+         errorText:amountError,border:const OutlineInputBorder())),
+       const SizedBox(height:12),
+       WaffraCenteredDropdownFormField<String>(
+        key:const Key('m470-budget-create-account'),
+        initialValue:budgetSource??'shared',isExpanded:true,
+        decoration:InputDecoration(labelText:waffraIsEnglish?
+         'Monthly budget for account':'الميزانية الشهرية للحساب',
+         border:const OutlineInputBorder()),
+        items:[
+         DropdownMenuItem(value:'shared',child:WaffraText(waffraIsEnglish?
+          'Shared budget (all accounts only)':'ميزانية مشتركة (كل الحسابات)')),
+         ...verifiedBudgetAccounts.map((a)=>DropdownMenuItem<String>(
+          value:a.id,child:WaffraText(a.name,maxLines:1))),
+        ],
+        onChanged:(value)=>update(()=>budgetSource=value=='shared'?null:value)),
+       const SizedBox(height:12),
+       waffraBudgetAlertControls(
+        enabled:alertsEnabled,percent:alert,english:waffraIsEnglish,
+        onEnabled:(value)=>update(()=>alertsEnabled=value),
+        onPercent:(value)=>update(()=>alert=value)),
+      ]),
+      actions:[
+       TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
+        child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+       FilledButton(onPressed:WaffraHaptics.tap((){
+        final text=name.text.trim(),cap=amountOfDisplay(amount.text);
+        update((){
+         nameError=text.isEmpty?waffraRequiredFieldMessage:
+          namedBudgets.any((b)=>!b.deleted&&
+           b.name.trim().toLowerCase()==text.toLowerCase())?
+           (waffraIsEnglish?'Budget name already exists':
+            'اسم الميزانية مستخدم بالفعل'):null;
+         amountError=waffraAmountFieldError(amount.text);
+        });
+        if(nameError!=null||amountError!=null||cap==null||cap<=0)return;
+        Navigator.pop(ctx,(name:text,cap:cap,alert:alert,
+         alertsEnabled:alertsEnabled,accountId:budgetSource));
+       }),child:WaffraText(waffraIsEnglish?'Save budget':'حفظ الميزانية')),
+      ],
+     )));
+   if(selected==null||!mounted)return null;
+   if(selected.alertsEnabled){
+    await _requestPercentageAlertPermission();
+   }
+   if(!mounted)return null;
+   // Dialogs may be open while another budget operation finishes.
+   if(namedBudgets.any((b)=>!b.deleted&&b.name.toLowerCase()==
+      selected.name.toLowerCase()))return null;
+   final id='budget:'+newId();
+   if(selected.accountId!=null&&
+      !verifiedBudgetAccounts.any((a)=>a.id==selected.accountId))return null;
+   setState(()=>namedBudgets.add(WaffraNamedBudget(
+    id:id,name:selected.name,budget:selected.cap,alertPercent:selected.alert,
+    alertsEnabled:selected.alertsEnabled,
+    assignedAccountId:selected.accountId)));
+   final saved=await _persistModuleOrReload(
+    WaffraFinanceRoute.challengeAndBudgetUpdate,
+    operation:'standalone-budget-create');
+   if(!saved||!mounted)return null;
+   setState(()=>selectedNamedBudgetCategoryId=id);
+   return id;
+  }finally{disposeLater([name,amount]);}
+ }
+ // Cross-screen refresh stays inside State, not the budgets extension.
+ void refreshFromBudgetDirectory(){if(mounted)setState((){});}
+ Widget monthlyBudgetCard(){
+  final today=DateTime.now();
+  final viewedMonth=DateTime(budgetViewedMonth.year,budgetViewedMonth.month,1);
+  final viewingToday=viewedMonth.year==today.year&&viewedMonth.month==today.month;
+  final selectedFinancialAccount=_m467SelectedAccount;
+  final relevantEntries=selectedFinancialAccount=='all'?
+   entries:_m467ScopedEntries();
+  final monthEntries=relevantEntries.where((e)=>
+   e.date.year==viewedMonth.year&&e.date.month==viewedMonth.month);
+  // A shared legacy budget belongs to All only until its owner explicitly
+  // assigns an account. One budget ID is counted once, never once per bank.
+  final allBudgets=namedBudgets.where((b)=>b.budget>0&&!b.deleted&&
+   (selectedFinancialAccount=='all'||
+    b.assignedAccountId==selectedFinancialAccount)).toList();
+  // Overall monthly budget is a projection, not an additional saved cap.
+  // Paused budgets remain part of the total the user has created.
+  final overallLimit=allBudgets.fold<double>(0,(total,c)=>total+c.budget);
+  final linkedIds=allBudgets.map((c)=>c.id).toSet();
+  final overallSpent=monthEntries.where((e)=>!e.income&&
+   e.budgetId!=null&&linkedIds.contains(e.budgetId))
+   .fold<double>(0,(total,e)=>total+e.amount);
+  final named=allBudgets.where((c)=>
+   budgetStatusFilter=='all'||(budgetStatusFilter=='active'?
+    c.budgetActive:!c.budgetActive)).toList();
+  final selectedRows=named.where((c)=>c.id==selectedNamedBudgetCategoryId).toList();
+  final selected=selectedRows.isEmpty?null:selectedRows.single;
+  final limit=selected?.budget??overallLimit;
+  // Selecting a paused budget must never show it as active or start
+  // charging it again; its former limit and historical links remain.
+  final spent=selected==null?overallSpent:
+   waffraNamedBudgetSpent(relevantEntries.toList(),categories,selected,viewedMonth);
+  final used=limit>0?(spent/limit).clamp(0.0,1.0):0.0;
+  // Read-only projection. Missing/invalid source amounts must never be
+  // converted or rewritten just to display a forecast.
+  WaffraBudgetPace? pace;
+  if(limit>0&&viewingToday){
+   try{
+    pace=WaffraBudgetPace(
+     spentMinor:waffraSarMinorChecked(spent),
+     limitMinor:waffraSarMinorChecked(limit),
+     dayOfPeriod:today.day,
+     daysInPeriod:DateTime(today.year,today.month+1,0).day);
+   }catch(_){/* Hide unverified forecast; ledger is unchanged. */}
+  }
+  final alertAt=selected?.alertPercent??80;
+  return Container(
+   padding:const EdgeInsets.all(15),
+   decoration:BoxDecoration(color:Theme.of(context).cardColor,
+    borderRadius:BorderRadius.circular(20),
+    border:Border.all(color:forest.withValues(alpha:0.10)),
+    boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:0.04),
+     blurRadius:8,offset:const Offset(0,3))]),
+   child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+    InkWell(
+     key:const Key('waffra-month-budget-expand-toggle'),
+     borderRadius:BorderRadius.circular(12),
+     onTap:WaffraHaptics.tap(()=>setState(()=>(monthlyBudgetDetailsOpen=!monthlyBudgetDetailsOpen))),
+     child:Padding(padding:const EdgeInsets.symmetric(vertical:6),child:Row(children:[
+      const Icon(Icons.donut_large,color:emerald,size:23),
+      const SizedBox(width:9),
+      Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+       WaffraText(waffraIsEnglish?'Monthly budgets':'الميزانيات الشهرية',
+        style:const TextStyle(fontWeight:FontWeight.bold,fontSize:17)),
+       const SizedBox(height:3),
+       WaffraText(waffraIsEnglish?
+        '${allBudgets.length} saved budgets':'${allBudgets.length} ميزانية مضافة',
+        maxLines:2,style:const TextStyle(fontSize:12,color:Colors.grey)),
+      ])),
+      Icon(monthlyBudgetDetailsOpen?
+       Icons.keyboard_arrow_up_rounded:Icons.keyboard_arrow_down_rounded,
+       color:emerald,size:26),
+     ]))),
+    if(monthlyBudgetDetailsOpen)...[
+    const SizedBox(height:12),
+    Container(
+     key:const Key('waffra-budget-month-control'),
+     padding:const EdgeInsets.symmetric(horizontal:5,vertical:4),
+     decoration:BoxDecoration(
+      color:emerald.withValues(alpha:.065),
+      borderRadius:BorderRadius.circular(16),
+      border:Border.all(color:emerald.withValues(alpha:.19))),
+     child:Row(children:[
+      IconButton(
+       key:const Key('waffra-budget-month-prev'),
+       tooltip:waffraIsEnglish?'Previous month':'الشهر السابق',
+       style:IconButton.styleFrom(
+        minimumSize:const Size(40,42),
+        padding:const EdgeInsets.all(6)),
+       icon:const Icon(Icons.chevron_left_rounded,color:emerald,size:23),
+       onPressed:WaffraHaptics.tap(()=>setState(()=>
+        budgetViewedMonth=DateTime(viewedMonth.year,viewedMonth.month-1,1)))),
+      Expanded(child:Semantics(
+       label:waffraIsEnglish?'Viewing budget month':'شهر الميزانية المعروض',
+       value:MaterialLocalizations.of(context).formatMonthYear(viewedMonth),
+       child:Center(child:WaffraText(
+        MaterialLocalizations.of(context).formatMonthYear(viewedMonth),
+        key:const Key('waffra-budget-month-label'),
+        maxLines:1,textAlign:TextAlign.center,
+        style:const TextStyle(fontWeight:FontWeight.w800,fontSize:16))))),
+      IconButton(
+       key:const Key('waffra-budget-month-next'),
+       tooltip:waffraIsEnglish?'Next month':'الشهر التالي',
+       style:IconButton.styleFrom(
+        minimumSize:const Size(40,42),
+        padding:const EdgeInsets.all(6)),
+       icon:const Icon(Icons.chevron_right_rounded,color:emerald,size:23),
+       onPressed:WaffraHaptics.tap(()=>setState(()=>
+        budgetViewedMonth=DateTime(viewedMonth.year,viewedMonth.month+1,1)))),
+      const SizedBox(width:5),
+      OutlinedButton(
+       key:const Key('waffra-budget-month-today'),
+       onPressed:viewingToday?null:WaffraHaptics.tap(()=>setState(()=>
+        budgetViewedMonth=DateTime(today.year,today.month,1))),
+       style:OutlinedButton.styleFrom(
+        minimumSize:const Size(53,40),
+        padding:const EdgeInsets.symmetric(horizontal:8,vertical:4),
+        backgroundColor:Theme.of(context).cardColor,
+        shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(12))),
+       child:WaffraText(waffraIsEnglish?'Today':'اليوم',
+        maxLines:1,style:const TextStyle(fontSize:12,fontWeight:FontWeight.w700))),
+     ]),
+    ),
+    const SizedBox(height:12),
+    LayoutBuilder(builder:(context,box){
+     final compact=box.maxWidth<290||
+      MediaQuery.textScalerOf(context).scale(16)>22;
+     final label=WaffraText(
+      waffraIsEnglish?'Budget overview':'متابعة الميزانيات',
+      maxLines:2,style:const TextStyle(
+       fontWeight:FontWeight.bold,fontSize:16));
+     final add=TextButton.icon(
+      key:const Key('waffra-budget-create-action'),
+      style:TextButton.styleFrom(minimumSize:const Size(0,48),
+       padding:const EdgeInsets.symmetric(horizontal:8,vertical:8),
+       tapTargetSize:MaterialTapTargetSize.padded),
+      onPressed:WaffraHaptics.tap(()=>chooseBudgetCategory()),
+      icon:const Icon(Icons.add_rounded,size:18),
+      label:WaffraText(waffraIsEnglish?'Add budget':'إضافة ميزانية',
+       maxLines:2,style:const TextStyle(fontSize:13)));
+     return compact?
+      Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+       label,const SizedBox(height:6),
+       Align(alignment:AlignmentDirectional.centerStart,child:add),
+      ]):
+      Row(children:[
+       Expanded(child:label),const SizedBox(width:8),add,
+      ]);
+    }),
+    const SizedBox(height:8),
+    WaffraCenteredDropdownFormField<String>(
+     key:ValueKey('waffra-budget-status-filter-'+budgetStatusFilter),
+     initialValue:budgetStatusFilter,
+     isExpanded:true,
+     decoration:InputDecoration(
+      labelText:waffraIsEnglish?'Budget status':'حالة الميزانيات',
+      border:const OutlineInputBorder(),
+      contentPadding:const EdgeInsets.symmetric(horizontal:12,vertical:12)),
+     items:[
+      DropdownMenuItem(value:'all',
+       child:WaffraText(waffraIsEnglish?'All budgets':'كل الميزانيات')),
+      DropdownMenuItem(value:'active',
+       child:WaffraText(waffraIsEnglish?'Active budgets':'الميزانيات الفعّالة')),
+      DropdownMenuItem(value:'inactive',
+       child:WaffraText(waffraIsEnglish?'Paused budgets':'الميزانيات غير الفعّالة')),
+     ],
+     onChanged:WaffraHaptics.selection((status){
+      if(status==null)return;
+      setState((){
+       budgetStatusFilter=status;
+       selectedNamedBudgetCategoryId=null;
+      });
+     }),
+    ),
+    const SizedBox(height:14),
+    WaffraCenteredDropdownFormField<String>(
+     key:ValueKey('waffra-budget-picker-'+(selected?.id??'all')),
+     menuMaxHeight:min(340.0,MediaQuery.sizeOf(context).height*.48),
+     initialValue:selected?.id??'all',isExpanded:true,
+     decoration:InputDecoration(labelText:waffraIsEnglish?'Choose budget':'اختر الميزانية',
+      border:const OutlineInputBorder(),
+      contentPadding:const EdgeInsets.symmetric(horizontal:12,vertical:8)),
+     items:[
+      DropdownMenuItem(value:'all',child:WaffraText(waffraIsEnglish?
+       'Overall monthly budget':'الميزانية الشهرية العامة')),
+      ...named.map((c)=>DropdownMenuItem(value:c.id,
+       child:WaffraText((c.budgetLabel??'ميزانية '+c.displayName)+
+        (c.budgetActive?'':(waffraIsEnglish?' (paused)':' (متوقفة)')),
+        maxLines:1))),
+     ],
+     onChanged:WaffraHaptics.selection((v)=>setState(
+       ()=>selectedNamedBudgetCategoryId=v=='all'?null:v)),
+    ),
+    if(selected!=null&&!selected.budgetActive)
+     Padding(padding:const EdgeInsets.symmetric(vertical:9),
+      child:WaffraText(waffraIsEnglish?
+       'Paused budget — manage it under Categories > My Budgets.':
+       'الميزانية متوقفة — تقدر تديرها من الأقسام ← ميزانياتي.',
+       style:const TextStyle(fontSize:12,color:Colors.deepOrange))),
+    const SizedBox(height:7),
+    if(limit>0)...[
+     WaffraText(waffraIsEnglish?
+      'Used '+(used*100).toStringAsFixed(0)+'% of your budget':
+      'تم إنفاق '+(used*100).toStringAsFixed(0)+'٪ من ميزانيتك',
+      style:const TextStyle(fontSize:13)),
+     const SizedBox(height:8),
+     ClipRRect(borderRadius:BorderRadius.circular(12),
+      child:LinearProgressIndicator(value:used,minHeight:9,
+       backgroundColor:emerald.withValues(alpha:0.10),
+       valueColor:AlwaysStoppedAnimation<Color>(
+        spent>=limit?Colors.deepOrange:emerald))),
+     const SizedBox(height:14),
+     Row(children:[
+      Expanded(child:_budgetFigure(waffraIsEnglish?'Budget':'الميزانية',limit)),
+      Expanded(child:_budgetFigure(waffraIsEnglish?'Spent':'المصروف',spent)),
+      Expanded(child:_budgetFigure(spent>limit?(waffraIsEnglish?'Over budget':'التجاوز'):(waffraIsEnglish?'Remaining':'المتبقي'),
+       (limit-spent).abs())), 
+     ]),
+     if(selected!=null&&selected.budgetActive&&selected.alertsEnabled&&
+       spent>=limit*alertAt/100)Padding(
+      padding:const EdgeInsets.only(top:10),
+      child:WaffraText(waffraIsEnglish?
+       (spent>limit?'Monthly budget exceeded by ${cash(spent-limit)}.':spent==limit?'Monthly budget fully used.':'Budget warning: ${alertAt}% threshold reached.'):
+       (spent>limit?'تجاوزت الميزانية الشهرية بمبلغ ${cash(spent-limit)}.':spent==limit?'استهلكت الميزانية الشهرية بالكامل.':'تنبيه الميزانية: وصلت إلى حد ${alertAt}٪.'),
+       style:const TextStyle(color:Colors.deepOrange,fontSize:13))),
+     if(pace?.projectedOverBudget==true && spent<limit&&
+        (selected==null||(selected.budgetActive&&selected.alertsEnabled)))
+      Padding(padding:const EdgeInsets.only(top:6),
+       child:WaffraText(waffraIsEnglish?
+         'At the current spending pace, this month may exceed the limit.':
+         'حسب متوسط الصرف الحالي، ممكن تتجاوز الميزانية قبل نهاية الشهر.',
+         style:const TextStyle(fontSize:12,color:Colors.deepOrange))),
+    ]else Padding(padding:const EdgeInsets.symmetric(vertical:7),
+     child:WaffraText(selected!=null&&!selected.budgetActive?
+       (waffraIsEnglish?
+        'This named budget is paused; its original amount and historical links are preserved.':
+        'الميزانية متوقفة؛ حدّها وروابط العمليات القديمة محفوظة.'):
+       (waffraIsEnglish?
+        'Set your monthly budget to track spending here.':
+        'حدّد ميزانية شهرية عشان تتابع مصروفاتك والمتبقي منها.'),
+      style:const TextStyle(fontSize:14,color:Colors.grey))),
+    ],
+   ]));
+ }
+ Widget _budgetFigure(String label,double amount)=>Column(
+  mainAxisSize:MainAxisSize.min,children:[
+   WaffraText(label,textAlign:TextAlign.center,
+    style:const TextStyle(color:Colors.grey,fontSize:12)),
+   const SizedBox(height:5),
+   FittedBox(fit:BoxFit.scaleDown,
+    child:WaffraCurrencyAmount(amount,fontSize:16,color:emerald)),
+  ]);
+ Widget monthlySummaryCard(){
+  final now=DateTime.now();
+  final month=_m467ScopedEntries().where((e)=>
+   e.date.year==now.year&&e.date.month==now.month).toList();
+  final income=sum(month,true),spent=sum(month,false);
+  final difference=income-spent;
+  final ratio=income>0?(spent/income).clamp(0.0,1.0):0.0;
+  final dark=Theme.of(context).brightness==Brightness.dark;
+  return Container(
+   key:const Key('m549-monthly-summary-compact'),
+   padding:const EdgeInsets.symmetric(horizontal:12,vertical:11),
+   decoration:BoxDecoration(
+    color:Theme.of(context).cardColor,
+    borderRadius:BorderRadius.circular(18),
+    border:Border.all(color:forest.withValues(alpha:.13))),
+   child:Column(children:[
+    Row(children:[
+     const Icon(Icons.bar_chart_rounded,color:emerald,size:20),
+     const SizedBox(width:5),
+     Expanded(child:WaffraText(waffraIsEnglish?
+      'This month summary':'ملخص هذا الشهر',
+      style:const TextStyle(fontSize:16,fontWeight:FontWeight.bold))),
+     OutlinedButton.icon(
+      key:const Key('m549-home-account-filter'),
+      onPressed:WaffraHaptics.tap(()=>unawaited(_m467PickHomeAccount())),
+      icon:const Icon(Icons.account_balance_outlined,size:17),
+      label:ConstrainedBox(constraints:const BoxConstraints(maxWidth:100),
+       child:Text(_m467AccountLabel,maxLines:1,
+        overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:11))),
+      style:OutlinedButton.styleFrom(
+       padding:const EdgeInsets.symmetric(horizontal:7,vertical:4),
+       minimumSize:const Size(0,36),
+       foregroundColor:dark?Colors.white:forest)),
+    ]),
+    const SizedBox(height:8),
+    Row(children:[
+     SizedBox(width:92,height:92,child:Stack(alignment:Alignment.center,children:[
+      SizedBox(width:82,height:82,child:CircularProgressIndicator(
+       value:ratio,strokeWidth:10,
+       color:emerald,backgroundColor:const Color(0xFFD6EEDF))),
+      Column(mainAxisSize:MainAxisSize.min,children:[
+       WaffraText(waffraIsEnglish?'Difference':'الفرق',
+        style:const TextStyle(fontSize:10)),
+       // Bound the actual currency glyphs, not just the outer circle.
+       // The old unbounded Column child never gave FittedBox a width to
+       // scale against, clipping long RTL values on narrow Android screens.
+       SizedBox(key:const Key('m584-monthly-summary-circle-value'),
+        width:74,height:27,
+        child:FittedBox(fit:BoxFit.scaleDown,
+         alignment:Alignment.center,
+         child:Directionality(textDirection:TextDirection.ltr,
+          child:WaffraCurrencyAmount(difference,fontSize:16)))),
+      ]),
+     ])),
+     const SizedBox(width:12),
+     Expanded(child:Column(children:[
+      Container(
+       padding:const EdgeInsets.symmetric(horizontal:11,vertical:8),
+       decoration:BoxDecoration(color:dark?const Color(0xFF244C3A):
+        const Color(0xFFE4F4EB),borderRadius:BorderRadius.circular(12)),
+       child:Row(children:[
+        const Icon(Icons.south_west_rounded,color:emerald,size:17),
+        const SizedBox(width:6),
+        Expanded(child:WaffraText(waffraIsEnglish?'Income':'الدخل',
+         style:const TextStyle(fontWeight:FontWeight.bold,fontSize:12))),
+        WaffraCurrencyAmount(income,fontSize:13),
+       ])),
+      const SizedBox(height:6),
+      Container(
+       padding:const EdgeInsets.symmetric(horizontal:11,vertical:8),
+       decoration:BoxDecoration(color:dark?const Color(0xFF49302C):
+        const Color(0xFFFCECE8),borderRadius:BorderRadius.circular(12)),
+       child:Row(children:[
+        const Icon(Icons.north_east_rounded,color:Color(0xFFB94838),size:17),
+        const SizedBox(width:6),
+        Expanded(child:WaffraText(waffraIsEnglish?'Expenses':'المصروفات',
+         style:const TextStyle(fontWeight:FontWeight.bold,fontSize:12))),
+        WaffraCurrencyAmount(spent,fontSize:13),
+       ])),
+      const SizedBox(height:4),
+      Text(waffraIsEnglish?'Spending / income':
+       'نسبة المصروفات من الدخل: '+(income>0?(spent/income*100).toStringAsFixed(0):'0')+'%',
+       style:const TextStyle(fontSize:10,color:Color(0xFF718077))),
+     ])),
+    ]),
+   ]));
+ }
+ Widget smartMoneyInsightsCard(){
+  final now=DateTime.now();
+  final monthExpenses=entries.where((e)=>!e.income&&e.date.year==now.year&&e.date.month==now.month);
+  final spent=sum(monthExpenses,false);
+  final variableSpent=sum(monthExpenses.where((e)=>!e.id.startsWith('rec_')),false);
+  final remaining=DateTime(now.year,now.month+1,0).day-now.day;
+  final pending=recurring.where((r){
+   if(!r.active)return false;
+   final due=r.linkedGoalId==null
+    ?WaffraRecurringPolicy.dueDate(now.year,now.month,r.day)
+    :DateTime(r.startAt.year,r.startAt.month,r.startAt.day);
+   return WaffraFinancialInsights.pendingCurrentMonth(
+    now:now,startAt:r.startAt,day:r.day,
+    goalLinked:r.linkedGoalId!=null,
+    alreadyPaid:entries.any((e)=>
+     e.id==WaffraRecurringPolicy.entryId(r.id,due)));
+  });
+  final pendingIncome=pending.where((r)=>r.income).fold<double>(0,(v,r)=>v+r.amount);
+  final pendingExpense=pending.where((r)=>!r.income).fold<double>(0,(v,r)=>v+r.amount);
+  final balance=waffraAvailableCash(entries,goals);
+  final projection=WaffraFinancialInsights.projectedEndBalance(
+   currentBalance:balance,variableExpensesSoFar:variableSpent,daysElapsed:now.day,
+   daysInMonth:DateTime(now.year,now.month+1,0).day,
+   pendingRecurringIncome:pendingIncome,pendingRecurringExpense:pendingExpense);
+  // The old separately-entered monthly cap is legacy-only. Daily allowance
+  // follows the active user-created budgets and their explicitly linked spend.
+  final activeBudgets=namedBudgets.where((b)=>
+   b.budget>0&&b.budgetActive&&!b.deleted).toList();
+  final activeCap=activeBudgets.fold<double>(0,(v,c)=>v+c.budget);
+  final activeIds=activeBudgets.map((c)=>c.id).toSet();
+  final activeBudgetSpent=monthExpenses.where((e)=>
+   e.budgetId!=null&&activeIds.contains(e.budgetId))
+   .fold<double>(0,(v,e)=>v+e.amount);
+  final daily=WaffraFinancialInsights.dailyAllowance(
+   monthlyBudget:activeCap,spent:activeBudgetSpent,daysRemaining:remaining+1);
+  final prev=DateTime(now.year,now.month-1);
+  final prevTotal=sum(entries.where((e)=>!e.income&&e.date.year==prev.year&&e.date.month==prev.month),false);
+  final delta=WaffraFinancialInsights.comparisonPercent(spent,prevTotal);
+  final warnings=namedBudgets.where((b)=>!b.deleted&&b.budget>0&&b.budgetActive&&b.alertsEnabled&&
+   WaffraFinancialInsights.reachedBudgetThreshold(
+    spent:waffraNamedBudgetSpent(entries,categories,b,now),
+    budget:b.budget,alertPercent:b.alertPercent)).toList();
+  return Card(
+   elevation:1.0,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(21)),
+   child:Padding(padding:const EdgeInsets.all(15),child:Column(
+    crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+    Row(children:[
+     const Icon(Icons.auto_graph,color:emerald),const SizedBox(width:7),
+     Expanded(child:WaffraText(waffraIsEnglish?'Your smart financial snapshot':'نظرتك المالية الذكية',
+      style:const TextStyle(fontWeight:FontWeight.bold,fontSize:17))),
+    ]),
+    const SizedBox(height:12),
+    Row(children:[
+     Expanded(child:_summaryBox(waffraIsEnglish?'End-of-month estimate':'الرصيد المتوقع آخر الشهر',
+      cash(projection),Icons.trending_up,emerald)),
+     const SizedBox(width:8),
+     Expanded(child:_summaryBox(waffraIsEnglish?'Daily spending limit':'الحد اليومي المقترح',
+      activeCap>0?cash(daily):(waffraIsEnglish?'Set a budget':'حدد ميزانية'),
+      Icons.today_outlined,Colors.deepOrange)),
+    ]),
+    const SizedBox(height:9),
+    if(delta!=null)WaffraText(waffraIsEnglish?
+     'Monthly comparison: spending ${delta>=0?'up':'down'} ${delta.abs().toStringAsFixed(1)}%':
+     'مقارنة بالشهر السابق: المصروفات ${delta>=0?'زادت':'قلت'} ${delta.abs().toStringAsFixed(1)}٪',
+     style:const TextStyle(fontSize:12)),
+    if(warnings.isNotEmpty)Padding(padding:const EdgeInsets.only(top:9),
+     child:WaffraText(waffraIsEnglish?
+      'Budget warning: ${warnings.map((c)=>c.name).join('، ')}':
+      'تنبيه: اقتربت ميزانية ${warnings.map((c)=>c.name).join('، ')} من النفاد',
+      style:const TextStyle(color:Colors.deepOrange,fontWeight:FontWeight.bold,fontSize:12))),
+    const SizedBox(height:9),
+    WaffraText(waffraIsEnglish?
+     'Estimate based on recorded spending and upcoming recurring transactions, not a guaranteed balance.':
+     'التوقع تقديري بناءً على الصرف المسجل والعمليات المتكررة القادمة، وليس رصيدًا مضمونًا.',
+     style:TextStyle(fontSize:11,color:Theme.of(context).hintColor)),
+   ])));
+ }
+ Future<void> showSummaryTransactions(bool income)async {
+  final items=_m467ScopedEntries().where((e)=>e.income==income).toList()
+   ..sort((a,b)=>b.date.compareTo(a.date));
+  if(items.isEmpty){
+   if(!mounted)return;
+   await showWaffraDialog<void>(context:context,builder:(ctx){
+    final dark=Theme.of(ctx).brightness==Brightness.dark;
+    final accent=income?emerald:const Color(0xFFE57373);
+    return AlertDialog(
+     backgroundColor:dark?const Color(0xFF171D1B):const Color(0xFFF9FDFB),
+     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(24)),
+     contentPadding:const EdgeInsets.fromLTRB(22,25,22,10),
+     content:Column(mainAxisSize:MainAxisSize.min,children:[
+      CircleAvatar(radius:32,backgroundColor:accent.withValues(alpha:.12),
+       child:Icon(income?Icons.account_balance_wallet_outlined:Icons.wallet_outlined,
+        color:accent,size:32)),
+      const SizedBox(height:16),
+      WaffraText(waffraIsEnglish?'No transactions yet':'لا توجد معاملات حالية',
+       textAlign:TextAlign.center,
+       style:Theme.of(ctx).textTheme.titleLarge?.copyWith(fontWeight:FontWeight.bold)),
+      const SizedBox(height:10),
+      WaffraText(income?
+       (waffraIsEnglish?'No income transactions recorded yet. You can add a new income transaction.':'لا توجد عمليات دخل مسجلة حاليًا. يمكنك إضافة معاملة دخل جديدة.'):
+       (waffraIsEnglish?'No expense transactions recorded yet. You can add a new expense transaction.':'لا توجد عمليات مصروف مسجلة حاليًا. يمكنك إضافة معاملة مصروف جديدة.'),
+       textAlign:TextAlign.center),
+      const SizedBox(height:18),
+      SizedBox(width:double.infinity,child:FilledButton(
+       onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
+       child:WaffraText(waffraIsEnglish?'OK':'حسنًا'))),
+     ]),
+    );
+   });
+   return;
+  }
+  await showModalBottomSheet<void>(
+   context:context,isScrollControlled:true,showDragHandle:true,
+   useSafeArea:true,builder:(ctx)=>DraggableScrollableSheet(
+    expand:false,initialChildSize:.58,minChildSize:.32,maxChildSize:.90,
+    builder:(ctx,scroll)=>Column(children:[
+     Padding(padding:const EdgeInsets.fromLTRB(18,4,18,12),
+      child:Row(children:[
+       Icon(income?Icons.trending_up:Icons.trending_down,
+        color:income?waffraIncomeTone(context):Colors.deepOrange),
+       const SizedBox(width:9),
+       Expanded(child:WaffraText(income?
+        (waffraIsEnglish?'Income transactions':'عمليات الدخل'):
+        (waffraIsEnglish?'Expense transactions':'عمليات المصروفات'),
+        style:Theme.of(ctx).textTheme.titleLarge)),
+       IconButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),icon:const Icon(Icons.close)),
+      ])),
+     if(items.isNotEmpty)...[
+      Container(
+       margin:const EdgeInsets.symmetric(horizontal:16),
+       padding:const EdgeInsets.all(16),width:double.infinity,
+       decoration:BoxDecoration(color:(income?emerald:Colors.deepOrange).withValues(alpha:.10),
+        borderRadius:BorderRadius.circular(18)),
+       child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+        Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[
+         WaffraText(waffraIsEnglish?'Number of transactions':'عدد العمليات'),
+         WaffraText(waffraIsEnglish?'${items.length} transactions':'${items.length} عملية',
+          style:const TextStyle(fontWeight:FontWeight.bold)),
+        ]),
+        const Divider(height:22),
+        Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[
+         WaffraText(income?(waffraIsEnglish?'Total income':'إجمالي الدخل'):
+          (waffraIsEnglish?'Total expenses':'إجمالي المصروفات')),
+         Flexible(child:WaffraText(cash(sum(items,income)),
+          textAlign:TextAlign.end,style:const TextStyle(fontSize:20,fontWeight:FontWeight.bold))),
+        ]),
+       ])),
+      const SizedBox(height:10),
+     ],
+     Expanded(child:items.isEmpty?Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
+      Icon(income?Icons.account_balance_wallet_outlined:Icons.receipt_long_outlined,
+       size:66,color:emerald.withValues(alpha:.6)),
+      const SizedBox(height:10),
+      WaffraText(waffraIsEnglish?'No transactions yet':'لا توجد عمليات حتى الآن'),
+     ])):ListView.separated(controller:scroll,padding:const EdgeInsets.fromLTRB(16,4,16,24),
+      itemCount:items.length,separatorBuilder:(_,__)=>const Divider(height:1),
+      itemBuilder:(_,index){
+       final e=items[index],cat=categoryFor(e.category,e.income);
+       return ListTile(
+        leading:CircleAvatar(backgroundColor:Color(cat.color).withValues(alpha:.13),
+         child:Icon(categoryIcon(cat.icon),color:Color(cat.color))),
+        title:WaffraText(e.title,maxLines:2,overflow:TextOverflow.ellipsis),
+        subtitle:WaffraText('${e.category} • ${dayText(e.date)}',style:const TextStyle(fontSize:12)),
+        trailing:WaffraText(cash(e.amount),
+         style:TextStyle(fontWeight:FontWeight.bold,color:income?waffraIncomeTone(context):Colors.deepOrange)));
+      })),
+    ])));
+ }
+ Widget _dashboardShortcut(String title,IconData icon,VoidCallback onTap){
+  final dark=Theme.of(context).brightness==Brightness.dark;
+  return Expanded(child:Material(
+   color:Theme.of(context).cardColor,
+   shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18),
+    side:BorderSide(color:dark?const Color(0xFF354B3E):const Color(0xFFDCEAE1))),
+   child:InkWell(
+    onTap:WaffraHaptics.tap(onTap),borderRadius:BorderRadius.circular(18),
+    child:Padding(padding:const EdgeInsets.symmetric(horizontal:5,vertical:12),
+     child:Column(mainAxisSize:MainAxisSize.min,children:[
+      Container(width:34,height:34,
+       decoration:BoxDecoration(color:dark?const Color(0xFF214E37):waffraMint,
+        borderRadius:BorderRadius.circular(12)),
+       child:Icon(icon,color:dark?const Color(0xFFA2E4C1):forest,size:21)),
+      const SizedBox(height:6),
+      WaffraText(title,maxLines:2,textAlign:TextAlign.center,
+       style:const TextStyle(fontSize:11,fontWeight:FontWeight.bold)),
+     ])),
+   ),
+  ));
+ }
+ Widget homeSummaryCard(String label,double value,IconData symbol,Color color,Color tint)=>
+  Expanded(child:InkWell(
+   onTap:WaffraHaptics.tap(()=>showSummaryTransactions(label=='الدخل'||label=='Income')),
+   borderRadius:BorderRadius.circular(19),
+   child:Container(
+    padding:const EdgeInsets.symmetric(horizontal:11,vertical:9),
+    decoration:BoxDecoration(
+     color:Theme.of(context).brightness==Brightness.dark?
+      (label=='الدخل'||label=='Income'?const Color(0xFF244C3A):const Color(0xFF49302C)):tint,
+     borderRadius:BorderRadius.circular(19),
+     border:Border.all(color:color.withValues(alpha:0.13)),
+     boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:0.04),
+      blurRadius:7,offset:const Offset(0,3))]),
+    child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+     Row(textDirection:TextDirection.rtl,children:[
+      Expanded(child:WaffraText(label,textAlign:TextAlign.right,
+       style:const TextStyle(fontSize:14,fontWeight:FontWeight.bold))),
+      const SizedBox(width:6),
+      CircleAvatar(backgroundColor:color.withValues(alpha:0.12),
+       radius:16,child:Icon(symbol,color:color,size:19)),
+     ]),
+     const SizedBox(height:5),
+     Align(alignment:Alignment.centerRight,
+      child:FittedBox(fit:BoxFit.scaleDown,
+       child:WaffraCurrencyAmount(value,fontSize:17))),
+    ]))));
+ Widget compactTransaction(MoneyEntry entry){
+  final cat=categoryFor(entry.category,entry.income);
+  final attachmentCount=waffraReceiptPaths(entry.receiptPath).length;
+  final valueColor=entry.income?waffraIncomeTone(context):Colors.deepOrange;
+  final darkMode=Theme.of(context).brightness==Brightness.dark;
+  final rowColor=entry.income?(darkMode?const Color(0xFF244C3A):const Color(0xFFB2D5C2)):
+   (darkMode?const Color(0xFF49302C):const Color(0xFFFCECE8));
+  return Padding(padding:const EdgeInsets.symmetric(vertical:5),child:Container(
+   decoration:BoxDecoration(color:rowColor,borderRadius:BorderRadius.circular(17),
+    border:Border.all(color:forest.withValues(alpha:darkMode ? 0.18 : 0.08))),
+   clipBehavior:Clip.antiAlias,child:Stack(children:[
+    Padding(padding:EdgeInsets.fromLTRB(11,attachmentCount>0?23:12,11,12),child:Row(children:[
+     CircleAvatar(radius:18,
+      backgroundColor:Color(cat.color).withValues(alpha:0.13),
+      child:WaffraIllustration(topic:cat.icon,size:36)),
+     const SizedBox(width:8),
+     Expanded(child:InkWell(onTap:WaffraHaptics.tap(()=>transactionDetails(entry)),
+      child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+       Tooltip(message:entry.title,child:WaffraText(entry.title,maxLines:3,
+        style:const TextStyle(fontSize:13,fontWeight:FontWeight.w600))),
+       if(entry.title.startsWith('معاملة بعملة تحتاج'))
+        Padding(padding:const EdgeInsets.only(top:2,bottom:2),
+         child:WaffraText(waffraIsEnglish?'Review source currency':
+          'راجع عملة المعاملة قبل اعتماد قيمتها',
+          maxLines:2,style:const TextStyle(
+           fontSize:10,color:Colors.deepOrange,fontWeight:FontWeight.w600))),
+       const SizedBox(height:2),
+       WaffraText(waffraTr(entry.category)+' • '+dayText(entry.date),
+        maxLines:1,style:const TextStyle(fontSize:11,color:Colors.grey)),
+        const SizedBox(height:2),
+        Row(children:[
+         Icon(entry.sourceType=='sms'?Icons.sms_outlined:
+          Icons.edit_note_outlined,size:13,color:Colors.grey),
+         const SizedBox(width:4),
+         Expanded(child:WaffraText(
+          WaffraTransactionDetailsDialog.sourceLabel(
+           entry.sourceType,waffraIsEnglish),
+          maxLines:1,style:const TextStyle(fontSize:11,color:Colors.grey))),
+        ]),
+      ]))),
+     const SizedBox(width:5),
+     ConstrainedBox(constraints:const BoxConstraints(maxWidth:119),
+      child:FittedBox(fit:BoxFit.scaleDown,
+       child:WaffraCurrencyAmount(entry.income?entry.amount:-entry.amount,
+        fontSize:15,color:valueColor))),
+     IconButton(tooltip:waffraIsEnglish?'Transaction options':'خيارات المعاملة',
+      onPressed:WaffraHaptics.tap(()=>transactionActions(entry)),icon:const Icon(Icons.more_vert,size:18)),
+    ])),
+    if(attachmentCount>0)PositionedDirectional(top:0,start:0,
+     child:WaffraReceiptCornerAction(
+      key:Key('waffra-receipt-corner-home-'+entry.id),
+      count:attachmentCount,english:waffraIsEnglish,
+      onTap:()=>showReceipt(entry.receiptPath!,entryId:entry.id))),
+   ])));
+ }
+ Widget _m549HomeFinanceAction({
+  required String title,required IconData icon,
+  required Color background,required Color iconColor,
+  required VoidCallback onTap,
+ }){
+  return Expanded(child:Material(
+   color:background,borderRadius:BorderRadius.circular(18),
+   child:InkWell(
+    borderRadius:BorderRadius.circular(18),
+    onTap:WaffraHaptics.tap(onTap),
+    child:Container(
+     key:Key('m549-home-action-'+(icon==Icons.swap_horiz_rounded?'transfer':
+      icon==Icons.north_east_rounded?'expense':'income')),
+     height:88,
+     decoration:BoxDecoration(
+      borderRadius:BorderRadius.circular(18),
+      border:Border.all(color:iconColor.withValues(alpha:.18))),
+     child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
+      Icon(icon,size:25,color:iconColor),
+      const SizedBox(height:7),
+      Padding(padding:const EdgeInsets.symmetric(horizontal:4),
+       child:WaffraText(title,textAlign:TextAlign.center,maxLines:2,
+        style:TextStyle(fontSize:11,fontWeight:FontWeight.w700,
+         color:Theme.of(context).brightness==Brightness.dark?
+          const Color(0xFF173D31):const Color(0xFF183C31)))),
+     ]),
+    ),
+   ),
+  ));
+ }
+
+ Widget dashboard(){
+  final scopedEntries=_m467ScopedEntries().toList();
+  final unverifiedFxEntries=entries.where(waffraNeedsLegacyFxReview).toList();
+  // Show the month comparison only when there are genuine prior-month
+  // transactions and a positive comparison base. Never show a fake +12%.
+  final nowBalanceDate=DateTime.now();
+  final monthStart=DateTime(nowBalanceDate.year,nowBalanceDate.month);
+  final priorMonthStart=DateTime(nowBalanceDate.year,nowBalanceDate.month-1);
+  final hasPreviousMonthEntries=entries.any((e)=>
+   !e.date.isBefore(priorMonthStart)&&e.date.isBefore(monthStart));
+  final previousClosingBalance=waffraAvailableCash(
+   entries.where((e)=>e.date.isBefore(monthStart)),goals);
+  final monthChange=hasPreviousMonthEntries&&previousClosingBalance>0
+   ?((waffraAvailableCash(entries,goals)-previousClosingBalance)/previousClosingBalance)*100:null;
+  final visible=scopedEntries.where((e){
+   final q=search.trim();
+   return(waffraSearchAny([e.title,e.category,waffraTr(e.category)],q))&&
+    (transactionsDateRange==null||(e.date.isAfter(transactionsDateRange!.start.subtract(const Duration(days:1)))&&e.date.isBefore(transactionsDateRange!.end.add(const Duration(days:1)))))&&
+    (minTransactionAmount==null||e.amount>=minTransactionAmount!)&&
+    (maxTransactionAmount==null||e.amount<=maxTransactionAmount!)&&
+    (typeFilter=='الكل'||(typeFilter=='الدخل'&&e.income)||(typeFilter=='المصروفات'&&!e.income))&&
+    (categoryFilter=='الكل'||categoryFilter==e.category);
+  }).toList()..sort((a,b)=>b.date.compareTo(a.date));
+  final filterCats=<String>{'الكل',...scopedEntries.where((e)=>typeFilter=='الكل'||
+   (typeFilter=='الدخل'&&e.income)||(typeFilter=='المصروفات'&&!e.income)).map((e)=>e.category)}.toList();
+  final selected=filterCats.contains(categoryFilter)?categoryFilter:'الكل';
+  final shown=visible.take(waffraDashboardTransactionDisplayCount(
+   visible.length,expanded:showAllTransactions)).toList();
+  return RefreshIndicator(
+   onRefresh:()=>_refreshAndSettle(_dashboardScrollController,0),
+   child:NotificationListener<ScrollStartNotification>(
+    onNotification:(notification){
+     if(addFabExpanded){
+      WidgetsBinding.instance.addPostFrameCallback((_){
+       if(mounted&&addFabExpanded)setState(()=>addFabExpanded=false);
+      });
+     }
+     return false;
+    },
+    child:CustomScrollView(
+     controller:_dashboardScrollController,
+     physics:const ClampingScrollPhysics(parent:AlwaysScrollableScrollPhysics()),
+     slivers:[
+      SliverToBoxAdapter(child:Padding(
+       padding:const EdgeInsets.fromLTRB(14,14,14,4),
+       child:WaffraPageHero(
+        title:greeting,
+        subtitle:waffraIsEnglish?'Your finances at a glance':
+         'تابع رصيدك ومعاملاتك وخططك المالية بسهولة.',
+        icon:Icons.spa_outlined))),
+      // Not pinned: the shrinking balance scrolls away without covering data.
+      SliverPersistentHeader(
+       pinned:false,
+       delegate:WaffraBalanceHeader(
+         balance:_m467ShownBalance(),english:waffraIsEnglish,
+         heading:waffraIsEnglish?'Total balance':'إجمالي الرصيد',
+         compact:true,
+         focusKey:_tourKeys[0],
+         monthlyChangePercent:_m467SelectedAccount=='all'&&
+          _m467AccountContext==null?monthChange:null,
+         refreshVerifiedWidgetBalance:_refreshWidget)),
+      SliverPadding(padding:const EdgeInsets.fromLTRB(14,10,14,96),
+       sliver:SliverToBoxAdapter(child:Column(
+        crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+         // M549: user-approved screenshot: three compact, equal-width
+         // direct finance actions, no duplicated large income/expense tiles.
+         // This is NOT the floating + and never changes its geometry.
+         Row(key:const Key('m549-three-home-finance-actions'),children:[
+          _m549HomeFinanceAction(
+           title:waffraIsEnglish?'Income':'دخل',
+           icon:Icons.south_west_rounded,
+           background:const Color(0xFFE6F7EC),
+           iconColor:const Color(0xFF087A54),
+           onTap:()=>unawaited(entrySheet(scannedIncome:true))),
+          const SizedBox(width:7),
+          _m549HomeFinanceAction(
+           title:waffraIsEnglish?'Expense':'مصروف',
+           icon:Icons.north_east_rounded,
+           background:const Color(0xFFFCECE8),
+           iconColor:const Color(0xFFB94838),
+           onTap:()=>unawaited(entrySheet(scannedIncome:false))),
+          const SizedBox(width:7),
+          _m549HomeFinanceAction(
+           title:waffraIsEnglish?'Between my accounts':'تحويل بين حساباتي',
+           icon:Icons.swap_horiz_rounded,
+           background:const Color(0xFFFAF0DD),
+           iconColor:const Color(0xFF7F561C),
+           onTap:()=>unawaited(openVerifiedTransfer())),
+         ]),
+         const SizedBox(height:10),
+         monthlySummaryCard(),
+         const SizedBox(height:10),
+         Container(
+          decoration:BoxDecoration(
+           color:Theme.of(context).cardColor,
+           borderRadius:BorderRadius.circular(16),
+           border:Border.all(color:Theme.of(context).brightness==Brightness.dark
+            ?const Color(0xFF506A5A):const Color(0xFFD3E3D9))),
+          child:Column(mainAxisSize:MainAxisSize.min,children:[
+           Semantics(button:true,toggled:quickActionsExpanded,
+            child:InkWell(
+             key:const Key('waffra-quick-actions-toggle'),
+             borderRadius:BorderRadius.circular(16),
+             onTap:WaffraHaptics.tap(
+              ()=>setState(()=>quickActionsExpanded=!quickActionsExpanded)),
+             child:Padding(
+              padding:const EdgeInsets.symmetric(horizontal:13,vertical:12),
+              child:Row(children:[
+               const Icon(Icons.bolt_rounded,color:emerald,size:20),
+               const SizedBox(width:7),
+               Expanded(child:WaffraText(waffraIsEnglish?'Quick actions':'إجراءات سريعة',
+                style:const TextStyle(fontSize:15,fontWeight:FontWeight.bold))),
+               AnimatedRotation(
+                turns:quickActionsExpanded ? 0.5 : 0.0,
+                duration:waffraMotion(180),
+                child:const Icon(Icons.keyboard_arrow_down_rounded,size:23)),
+              ]))),
+            ),
+           AnimatedSize(
+            duration:waffraMotion(200),alignment:Alignment.topCenter,
+            curve:Curves.easeOutCubic,
+            child:quickActionsExpanded
+             ?Padding(padding:const EdgeInsets.fromLTRB(10,0,10,10),
+               child:Row(children:[
+                _dashboardShortcut(waffraIsEnglish?'Export report':'تصدير تقرير',
+                 Icons.analytics_outlined,()=>exportEntriesPdf(entries,'تقرير عمليات وفرة')),
+                const SizedBox(width:10),
+                _dashboardShortcut(waffraIsEnglish?'Financial calendar':'التقويم المالي',
+                 Icons.calendar_month_outlined,openFinancialCalendar),
+               ]))
+             :const SizedBox.shrink()),
+          ])),
+         // M549: the SMS review queue now lives in Notifications.
+         if(unverifiedFxEntries.isNotEmpty)...[
+          const SizedBox(height:10),
+          Container(
+           key:const Key('waffra-legacy-foreign-currency-review-warning'),
+           padding:const EdgeInsets.all(12),
+           decoration:BoxDecoration(
+            color:Theme.of(context).colorScheme.errorContainer,
+            borderRadius:BorderRadius.circular(12)),
+           child:Row(children:[
+            const Icon(Icons.warning_amber_rounded,size:21),
+            const SizedBox(width:9),
+            Expanded(child:WaffraText(waffraIsEnglish?
+             '${unverifiedFxEntries.length} imported bank transaction(s) need currency review. Current totals may include unverified amounts.':
+             'تحتاج ${unverifiedFxEntries.length} معاملة بنكية قديمة مراجعة العملة. قد تشمل الإجماليات مبالغ غير مؤكدة.',
+             maxLines:3,style:const TextStyle(fontSize:12,fontWeight:FontWeight.w600))),
+           ])),
+         ],
+         const SizedBox(height:12),
+         monthlyBudgetCard(),
+         const SizedBox(height:12),
+
+         Container(
+          padding:const EdgeInsets.all(12),
+          decoration:BoxDecoration(
+           color:Theme.of(context).cardColor,
+           borderRadius:BorderRadius.circular(20),
+           border:Border.all(color:forest.withValues(alpha:0.10))),
+          child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+           Row(children:[
+            const Icon(Icons.receipt_long_outlined,color:emerald),
+            const SizedBox(width:7),
+            Expanded(child:WaffraText(waffraIsEnglish?
+             'Your transactions':'عملياتك المالية',
+             style:const TextStyle(fontSize:19,fontWeight:FontWeight.bold))),
+            if(waffraCanExpandDashboardTransactions(visible.length))
+             TextButton(
+              key:const Key('waffra-dashboard-transactions-expand'),
+              onPressed:WaffraHaptics.tap(
+               ()=>setState(()=>showAllTransactions=!showAllTransactions)),
+              child:WaffraText(showAllTransactions?
+               (waffraIsEnglish?'Show less':'عرض أقل'):
+               (waffraIsEnglish?'Show more':'عرض أكثر'))),
+           ]),
+           const SizedBox(height:9),
+           Row(children:[
+            Expanded(child:Container(
+             padding:const EdgeInsets.all(12),
+             decoration:BoxDecoration(
+              color:Theme.of(context).brightness==Brightness.dark?
+               const Color(0xFF244C3A):const Color(0xFFE4F4EB),
+              borderRadius:BorderRadius.circular(15)),
+             child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+              WaffraText(waffraIsEnglish?'Income':'الدخل',
+               style:TextStyle(color:Theme.of(context).brightness==Brightness.dark?const Color(0xFFA8E8C7):const Color(0xFF075B43),fontWeight:FontWeight.bold)),
+              const SizedBox(height:5),
+              FittedBox(fit:BoxFit.scaleDown,child:WaffraCurrencyAmount(
+               sum(visible.where((e)=>e.income),true),fontSize:18,
+               color:Theme.of(context).brightness==Brightness.dark?const Color(0xFFA8E8C7):const Color(0xFF075B43))),
+             ]))),
+            const SizedBox(width:9),
+            Expanded(child:Container(
+             padding:const EdgeInsets.all(12),
+             decoration:BoxDecoration(
+              color:Theme.of(context).brightness==Brightness.dark?
+               const Color(0xFF49302C):const Color(0xFFFCECE8),
+              borderRadius:BorderRadius.circular(15)),
+             child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+              WaffraText(waffraIsEnglish?'Expenses':'المصروفات',
+               style:TextStyle(color:Theme.of(context).brightness==Brightness.dark?const Color(0xFFFFBAB0):const Color(0xFFB34E3C),fontWeight:FontWeight.bold)),
+              const SizedBox(height:5),
+              FittedBox(fit:BoxFit.scaleDown,child:WaffraCurrencyAmount(
+               sum(visible.where((e)=>!e.income),false),fontSize:18,
+               color:Theme.of(context).brightness==Brightness.dark?const Color(0xFFFFBAB0):const Color(0xFFB34E3C))),
+             ]))),
+           ]),
+           const SizedBox(height:10),
+           Row(children:['الكل','الدخل','المصروفات'].map((choice)=>
+            Expanded(child:Padding(padding:const EdgeInsets.symmetric(horizontal:2),
+             child:ChoiceChip(
+              label:Center(child:WaffraText(waffraIsEnglish?
+               (choice=='الكل'?'All':choice=='الدخل'?'Income':'Expenses'):choice,
+               style:TextStyle(fontSize:12,color:typeFilter==choice?Colors.white:null))),
+              selected:typeFilter==choice,
+              selectedColor:emerald,
+              showCheckmark:false,
+              onSelected:WaffraHaptics.selection((_)=>setState((){
+               typeFilter=choice;categoryFilter='الكل';
+              })),
+             )))).toList()),
+           const SizedBox(height:7),
+           Divider(color:forest.withValues(alpha:0.10)),
+           Row(children:[
+            IconButton(
+             tooltip:waffraIsEnglish?'Filter':'فلترة',
+             onPressed:WaffraHaptics.tap(()=>setState(()=>showTransactionFilters=!showTransactionFilters)),
+             icon:Icon(showTransactionFilters?
+              Icons.filter_alt:Icons.filter_alt_outlined,color:emerald)),
+            IconButton(
+             tooltip:waffraIsEnglish?'Search':'بحث',
+             onPressed:WaffraHaptics.tap(()=>setState((){
+              showTransactionSearch=!showTransactionSearch;
+              if(!showTransactionSearch)search='';
+             })),icon:const Icon(Icons.search)),
+            if(showTransactionSearch)Expanded(child:TextField(
+             onChanged:(v)=>setState(()=>search=v),
+             decoration:InputDecoration(isDense:true,
+              hintText:waffraIsEnglish?'Search':'ابحث عن عملية',
+              border:const OutlineInputBorder()))),
+            if(!showTransactionSearch)const Spacer(),
+            PopupMenuButton<String>(
+             tooltip:waffraIsEnglish?'More actions':'المزيد من الخيارات',
+             icon:const Icon(Icons.more_vert),
+             onSelected:WaffraHaptics.selection((action){
+              if(action=='delete-all')confirmDeleteAllEntries();
+              if(action=='restore-transactions')_showVerifiedDeletedTransactions();
+              if(action=='pdf')exportEntriesPdf(visible,'تقرير عمليات وفرة');
+             }),
+             itemBuilder:(ctx)=>[
+              if(_lastFinanceAuthorityRead?.source==
+                 WaffraRuntimeFinanceBackend.verifiedEncrypted)
+               PopupMenuItem(value:'restore-transactions',child:Row(children:[
+                const Icon(Icons.restore_rounded,color:emerald),
+                const SizedBox(width:8),
+                WaffraText(waffraIsEnglish?
+                 'Recently deleted (30 days)':'المعاملات المحذوفة (30 يومًا)'),
+               ])),
+              PopupMenuItem(value:'pdf',child:Row(children:[
+               const Icon(Icons.picture_as_pdf_outlined,color:emerald),
+               const SizedBox(width:8),
+               WaffraText(waffraIsEnglish?'Export PDF':'تصدير PDF'),
+              ])),
+              PopupMenuItem(value:'delete-all',enabled:entries.isNotEmpty,
+               child:Row(children:[
+                const Icon(Icons.delete_outline,color:Colors.red),
+                const SizedBox(width:8),
+                WaffraText(waffraIsEnglish?'Delete all transactions':'حذف كل المعاملات',
+                 style:const TextStyle(color:Colors.red)),
+               ])),
+             ],
+            ),
+           ]),
+           if(showTransactionFilters)...[
+            const SizedBox(height:8),
+            Wrap(spacing:6,runSpacing:6,
+             children:['الكل','الدخل','المصروفات'].map((choice)=>ChoiceChip(
+              selected:typeFilter==choice,
+              label:WaffraText(waffraIsEnglish?
+               (choice=='الكل'?'All':choice=='الدخل'?'Income':'Expenses'):choice),
+              onSelected:WaffraHaptics.selection((_)=>setState((){
+               typeFilter=choice;categoryFilter='الكل';
+              })))).toList()),
+            WaffraCenteredDropdownFormField<String>(
+             key:ValueKey(typeFilter+'-'+selected),initialValue:selected,
+             decoration:InputDecoration(labelText:waffraIsEnglish?
+              'Category':'تصفية حسب القسم'),
+             items:filterCats.map((value)=>DropdownMenuItem(
+              value:value,child:WaffraText(waffraTr(value)))).toList(),
+             onChanged:WaffraHaptics.selection((value)=>setState(()=>categoryFilter=value??'الكل'))),
+            Align(alignment:AlignmentDirectional.centerStart,
+             child:TextButton.icon(onPressed:WaffraHaptics.tap(editTransactionFilters),
+              icon:const Icon(Icons.date_range),
+              label:WaffraText(waffraIsEnglish?
+               'Date and amount filters':'فلترة بالتاريخ والمبلغ'))),
+           ],
+           const SizedBox(height:6),
+           if(visible.isEmpty)Padding(
+            padding:const EdgeInsets.symmetric(vertical:26),
+            child:Center(child:WaffraText(waffraIsEnglish?
+             'No matching transactions':'ما عندك عمليات مطابقة'))),
+           ...shown.map(compactTransaction),
+           if(visible.isNotEmpty)Padding(
+            padding:const EdgeInsets.only(top:7),
+            child:Row(children:[
+             WaffraText(waffraIsEnglish?'Transactions: '+visible.length.toString():
+              'عدد العمليات: '+visible.length.toString(),
+              style:const TextStyle(color:Colors.grey,fontSize:12)),
+             const Spacer(),
+             TextButton.icon(onPressed:WaffraHaptics.tap(()=>exportEntriesPdf(visible,'تقرير عمليات وفرة')),
+              icon:const Icon(Icons.picture_as_pdf_outlined,size:18),
+              label:WaffraText(waffraIsEnglish?'Export PDF':'تصدير PDF')),
+            ])),
+          ])),
+        ]))),
+     ],
+    )));
+ }
+ List<MoneyEntry> get analysisEntries=>entries.where((e)=>e.date.year==year&&
+  (period=='سنوي'||e.date.month==month)).toList();
+
+ Widget nextMonthForecast(){
+  final now=DateTime.now();
+  final months=List.generate(3,(i)=>DateTime(now.year,now.month-i));
+  final used=months.where((m)=>entries.any((e)=>e.date.year==m.year&&e.date.month==m.month)).toList();
+  final history=entries.where((e)=>used.any((m)=>m.year==e.date.year&&m.month==e.date.month)).toList();
+  final divisor=max(1,used.length);
+  final nextIncome=sum(history,true)/divisor,nextExpenses=sum(history,false)/divisor;
+  final current=entries.where((e)=>e.date.year==now.year&&e.date.month==now.month).toList();
+  final thisIncome=sum(current,true),thisExpenses=sum(current,false);
+  final next=DateTime(now.year,now.month+1);
+  final categoryAmounts=<String,double>{};
+  for(final e in history.where((e)=>!e.income)){
+   categoryAmounts[e.category]=(categoryAmounts[e.category]??0)+e.amount/divisor;
+  }
+  final ranked=categoryAmounts.entries.toList()..sort((a,b)=>b.value.compareTo(a.value));
+  final top=ranked.take(5).toList();
+  final chosen=top.any((e)=>e.key==forecastCategory)?forecastCategory:(top.isEmpty?null:top.first.key);
+  final saving=(categoryAmounts[chosen]??0)*forecastReduction/100;
+  String compare(double future,double previous){
+   if(previous<=0)return waffraIsEnglish?'Not enough data':'بيانات المقارنة غير كافية';
+   final p=(future-previous)/previous*100;
+   return '${p>=0?'+':''}${p.toStringAsFixed(1)}%';
+  }
+  Widget tile(String label,double amount,Color color,IconData icon,String delta)=>Expanded(
+   child:Container(padding:const EdgeInsets.all(12),decoration:BoxDecoration(
+    borderRadius:BorderRadius.circular(17),border:Border.all(color:color.withValues(alpha:.6)),
+    color:color.withValues(alpha:.10)),
+    child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+     Icon(icon,color:color),const SizedBox(height:7),
+     WaffraText(label,style:const TextStyle(fontSize:12)),
+     FittedBox(fit:BoxFit.scaleDown,child:WaffraText(cash(amount),
+      style:const TextStyle(fontWeight:FontWeight.bold,fontSize:17))),
+     WaffraText(delta,style:const TextStyle(fontSize:11)),
+    ])));
+  return Card(shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(22)),
+   child:Padding(padding:const EdgeInsets.all(15),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+    Row(children:[const Icon(Icons.auto_awesome,color:emerald),
+     const SizedBox(width:8),Expanded(child:WaffraText(waffraIsEnglish?
+      'Your smart financial forecast':'توقعاتك المالية الذكية',
+      style:const TextStyle(fontWeight:FontWeight.bold,fontSize:17)))]),
+    const SizedBox(height:6),
+    WaffraText(waffraIsEnglish?'Next month: ${next.month}/${next.year}':'الشهر القادم: ${next.month}/${next.year}',
+     style:const TextStyle(fontSize:12)),
+    const SizedBox(height:12),
+    Row(children:[
+     tile(waffraIsEnglish?'Expected income':'الدخل المتوقع',nextIncome,emerald,Icons.south_west,compare(nextIncome,thisIncome)),
+     const SizedBox(width:8),
+     tile(waffraIsEnglish?'Expected expenses':'المصروفات المتوقعة',nextExpenses,Colors.deepOrange,Icons.north_east,compare(nextExpenses,thisExpenses)),
+    ]),
+    const SizedBox(height:10),
+    Row(children:[const Icon(Icons.account_balance_wallet_outlined,color:emerald),
+     const SizedBox(width:8),Expanded(child:WaffraText(waffraIsEnglish?'Expected balance':'الرصيد المتوقع')),
+     WaffraText(cash(waffraAvailableCash(entries,goals)+nextIncome-nextExpenses),
+      style:const TextStyle(fontWeight:FontWeight.bold))]),
+    const SizedBox(height:12),
+    WaffraText(waffraIsEnglish?'Current month vs forecast':'مقارنة الشهر الحالي بالشهر القادم',
+     style:const TextStyle(fontWeight:FontWeight.bold)),
+    const SizedBox(height:8),
+    FinanceChart(points:[
+     ChartPoint(waffraIsEnglish?'Current':'الحالي',thisIncome,thisExpenses),
+     ChartPoint(waffraIsEnglish?'Forecast':'المتوقع',nextIncome,nextExpenses),
+    ]),
+    const SizedBox(height:14),
+    WaffraText(waffraIsEnglish?'Forecast by category':'توقعات المصروفات حسب الأقسام',
+     style:const TextStyle(fontWeight:FontWeight.bold)),
+    if(top.isEmpty)Padding(padding:const EdgeInsets.all(12),
+     child:WaffraText(waffraIsEnglish?'Record transactions to see forecasts.':'سجل معاملات لعرض التوقعات.')),
+    ...top.map((item)=>Padding(padding:const EdgeInsets.only(top:8),child:Row(children:[
+     Expanded(child:WaffraText(item.key)),WaffraText(cash(item.value)),
+     const SizedBox(width:8),WaffraText(nextExpenses>0?
+      '${(item.value/nextExpenses*100).toStringAsFixed(0)}%':'0%',
+      style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)),
+    ]))),
+    if(chosen!=null)...[
+     const SizedBox(height:15),
+     Row(children:[const Icon(Icons.tune,color:emerald),const SizedBox(width:8),
+      WaffraText(waffraIsEnglish?'What if?':'ماذا لو؟',
+       style:const TextStyle(fontWeight:FontWeight.bold,fontSize:16))]),
+     WaffraCenteredDropdownFormField<String>(initialValue:chosen,
+      decoration:InputDecoration(labelText:waffraIsEnglish?'Reduce category expenses':'تقليل مصروفات قسم'),
+      items:top.map((e)=>DropdownMenuItem(value:e.key,child:WaffraText(e.key))).toList(),
+      onChanged:WaffraHaptics.selection((v)=>setState((){forecastCategory=v;forecastReduction=20;}))),
+     Row(children:[Expanded(child:Slider(value:forecastReduction.toDouble(),min:0,max:50,divisions:10,
+      onChanged:(v)=>setState(()=>forecastReduction=v.round()))),WaffraText('${forecastReduction}%')]),
+     WaffraText(waffraIsEnglish?'Adjusted expenses: ${cash(nextExpenses-saving)} • Save ${cash(saving)}':
+      'المصروفات بعد التخفيض: ${cash(nextExpenses-saving)} • التوفير ${cash(saving)}',
+      style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)),
+    ],
+    const SizedBox(height:12),
+    WaffraText(waffraIsEnglish?'Estimates use up to 3 months of locally recorded transactions. Actual results may differ.':
+     'تقديرات من معاملات آخر 3 أشهر المسجلة محليًا، وقد تختلف النتائج الفعلية.',
+     style:const TextStyle(fontSize:11)),
+   ])));
+ }
+
+
+ Future<void> showAiAnalysis()async {
+  final now=DateTime.now();
+  final recent=entries.where((e)=>e.date.isAfter(now.subtract(const Duration(days:90)))&&!e.date.isAfter(now)).toList();
+  // A clear next step is more helpful than displaying empty charts.
+  if(recent.isEmpty){
+   if(!mounted)return;
+   final add=await showWaffraDialog<bool>(context:context,builder:(ctx)=>AlertDialog(
+    title:Row(children:[
+     const Icon(Icons.insights_rounded,color:emerald,size:25),
+     const SizedBox(width:8),
+     Expanded(child:WaffraText(
+      waffraIsEnglish?'No transactions to analyze yet':'لا توجد معاملات لتحليلها بعد',
+      style:const TextStyle(fontWeight:FontWeight.bold,fontSize:18))),
+    ]),
+    content:WaffraText(waffraIsEnglish?
+     'Add an income or expense transaction first, then Waffra can show you your financial insights.':
+     'أضف أول عملية دخل أو مصروف، وبعدها تقدر تشوف تحليلك المالي وتتابع مصروفاتك بوضوح.',
+     textAlign:TextAlign.start),
+    actions:[
+     TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.of(ctx).pop(false)),
+      child:WaffraText(waffraIsEnglish?'Later':'لاحقًا')),
+     FilledButton.icon(onPressed:WaffraHaptics.tap(()=>Navigator.of(ctx).pop(true)),
+      icon:const Icon(Icons.add_circle_outline),
+      label:WaffraText(waffraIsEnglish?'Add transaction':'إضافة معاملة')),
+    ],
+   ));
+   if(add==true&&mounted)await entrySheet();
+   return;
+  }
+  final income=sum(recent,true),spending=sum(recent,false);
+  final hasEnoughData=recent.length>=3&&income>0;
+  final ratio=income>0?(income-spending)/income:0.0;
+  final score=hasEnoughData?((ratio+1)*50).clamp(0.0,100.0).round():null;
+  final smartCharts=waffraSmartChartData(recent,now);
+  final top=smartCharts.topCategories;
+  final monthStart=DateTime(now.year,now.month);
+  final priorStart=DateTime(now.year,now.month-1);
+  final currentExpense=sum(entries.where((e)=>!e.income&&!e.date.isBefore(monthStart)&&!e.date.isAfter(now)),false);
+  final priorExpense=sum(entries.where((e)=>!e.income&&!e.date.isBefore(priorStart)&&e.date.isBefore(monthStart)),false);
+  final hasPrior=entries.any((e)=>!e.date.isBefore(priorStart)&&e.date.isBefore(monthStart));
+  final thisMonthCount=entries.where((e)=>!e.date.isBefore(monthStart)&&!e.date.isAfter(now)).length;
+  final monthDays=DateTime(now.year,now.month+1,0).day;
+  final upcoming=recurring.where((r)=>r.active&&!r.income&&r.day>now.day&&r.day<=monthDays).fold<double>(0,(v,r)=>v+r.amount);
+  final forecast=now.day>=5&&thisMonthCount>=3?(currentExpense/now.day*monthDays+upcoming):null;
+  final weeklySpend=smartCharts.weeklySpend;
+  if(!mounted)return;
+  // M526: the local financial results have already been computed.
+  // Open the existing results route immediately; do not show a timed
+  // 1.5-second blocking animation that performs no work.
+  await showGeneralDialog<void>(
+   context:context,
+   barrierDismissible:true,
+   barrierLabel:waffraIsEnglish?'Close analysis':'إغلاق التحليل',
+   barrierColor:Colors.black.withValues(alpha:.24),
+   transitionDuration:waffraMotion(300),
+   transitionBuilder:(ctx,animation,secondary,child)=>BackdropFilter(
+    filter:ui.ImageFilter.blur(sigmaX:7*animation.value,sigmaY:7*animation.value),
+    child:SlideTransition(
+     position:Tween<Offset>(begin:const Offset(0,1),end:Offset.zero)
+      .animate(CurvedAnimation(parent:animation,curve:Curves.easeOutCubic)),
+     child:child)),
+   pageBuilder:(ctx,animation,secondary){
+
+   final deficit=spending-income;
+   final accent=score==null?Colors.grey:score<45?Colors.red:score<70?Colors.orange:emerald;
+   final periods=smartCharts.periods;
+   final highest=periods.fold<double>(1,(v,p)=>max(v,max(p.$1,p.$2)));
+   return Align(alignment:Alignment.bottomCenter,child:FractionallySizedBox(
+    heightFactor:.90,
+    child:Material(
+     color:Theme.of(ctx).scaffoldBackgroundColor,
+     clipBehavior:Clip.antiAlias,
+     shape:const RoundedRectangleBorder(borderRadius:BorderRadius.vertical(top:Radius.circular(28))),
+     child:SafeArea(top:false,child:Column(children:[
+      const SizedBox(height:12),
+      Center(child:Container(width:48,height:5,decoration:BoxDecoration(
+       color:emerald.withValues(alpha:.28),borderRadius:BorderRadius.circular(12)))),
+      Padding(padding:const EdgeInsets.symmetric(horizontal:18,vertical:14),child:Row(children:[
+       Container(padding:const EdgeInsets.all(10),decoration:BoxDecoration(
+        color:emerald.withValues(alpha:.1),borderRadius:BorderRadius.circular(14)),
+        child:const Icon(Icons.insights_rounded,color:emerald)),
+       const SizedBox(width:10),
+       Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        WaffraText(waffraIsEnglish?'Financial insights':'التحليل المالي التفصيلي',
+         style:const TextStyle(fontSize:19,fontWeight:FontWeight.bold)),
+        WaffraText(waffraIsEnglish?'Your last 90 days at a glance':'نظرة شاملة على آخر 90 يوم',
+         style:const TextStyle(fontSize:12)),
+       ])),
+       IconButton(tooltip:waffraIsEnglish?'Close':'إغلاق',icon:const Icon(Icons.close_rounded),
+        onPressed:WaffraHaptics.tap(()=>Navigator.of(ctx).pop())),
+      ])),
+      const Divider(height:1),
+      Expanded(child:ListView(padding:const EdgeInsets.all(16),children:[
+     Container(padding:const EdgeInsets.all(20),decoration:BoxDecoration(
+      color:Theme.of(ctx).cardColor,
+      border:Border.all(color:emerald.withValues(alpha:.18)),
+      boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:.04),blurRadius:14,offset:const Offset(0,5))],
+      borderRadius:BorderRadius.circular(22)),
+      child:Column(children:[
+       WaffraText(waffraIsEnglish?'Income & expense balance indicator':'مؤشر توازن الدخل والمصروفات',
+        style:const TextStyle(fontWeight:FontWeight.bold,fontSize:17),textAlign:TextAlign.center),
+       const SizedBox(height:12),
+       WaffraText(score==null?'— / 100':'$score / 100',
+        style:TextStyle(color:accent,fontWeight:FontWeight.bold,fontSize:34)),
+       const SizedBox(height:10),
+       LinearProgressIndicator(value:(score??0)/100,minHeight:9,color:accent,
+        borderRadius:BorderRadius.circular(10)),
+       const SizedBox(height:10),
+       WaffraText(score==null?(waffraIsEnglish?'Not enough data':'البيانات غير كافية'):
+        deficit>0?(waffraIsEnglish?'Expenses exceed income. Review your spending.':
+         'مصروفاتك أعلى من دخلك. راجع مصروفاتك لإعادة التوازن.'):
+        (waffraIsEnglish?'Keep tracking your spending to maintain balance.':
+         'واصل متابعة مصروفاتك للحفاظ على التوازن.'),
+        textAlign:TextAlign.center),
+       const SizedBox(height:6),
+       WaffraText(waffraIsEnglish?'Indicative cash-flow measure, not a credit score.':
+        'مؤشر إرشادي مبني على العمليات المسجلة، وليس تصنيفًا ائتمانيًا.',
+        style:const TextStyle(fontSize:11),textAlign:TextAlign.center),
+      ])),
+     const SizedBox(height:22),
+     WaffraText(waffraIsEnglish?'Last 90 days':'ملخص آخر 90 يوم',
+      style:const TextStyle(fontSize:18,fontWeight:FontWeight.bold)),
+     const SizedBox(height:12),
+     Wrap(spacing:8,runSpacing:8,children:[
+      _analysisStat(waffraIsEnglish?'Income':'الدخل',income,emerald),
+      _analysisStat(waffraIsEnglish?'Expenses':'المصروفات',spending,Colors.deepOrange),
+      _analysisStat(deficit>0?(waffraIsEnglish?'Deficit':'العجز'):(waffraIsEnglish?'Surplus':'الفائض'),
+       deficit.abs(),deficit>0?Colors.red:emerald),
+     ]),
+     const SizedBox(height:24),
+     Card(child:Padding(padding:const EdgeInsets.all(15),child:Column(
+      crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+       WaffraText(waffraIsEnglish?'Compared with last month':'مقارنة بالشهر السابق',
+        style:const TextStyle(fontSize:16,fontWeight:FontWeight.bold)),
+       const SizedBox(height:8),
+       WaffraText(!hasPrior?
+        (waffraIsEnglish?'Not enough previous-month data for comparison.':'لا توجد بيانات كافية للشهر السابق للمقارنة.'):
+        priorExpense==0?(waffraIsEnglish?'No expenses last month.':'لم يتم تسجيل مصروفات في الشهر السابق.'):
+        (waffraIsEnglish?'Expenses ${currentExpense<=priorExpense?'decreased':'increased'} by ${((currentExpense-priorExpense).abs()/priorExpense*100).toStringAsFixed(1)}%.':
+         'المصروفات ${currentExpense<=priorExpense?'انخفضت':'ارتفعت'} بنسبة ${((currentExpense-priorExpense).abs()/priorExpense*100).toStringAsFixed(1)}%.')),
+       const SizedBox(height:12),
+       WaffraText(waffraIsEnglish?'Estimated month-end spending':'توقع المصروفات بنهاية الشهر',
+        style:const TextStyle(fontWeight:FontWeight.bold)),
+       WaffraText(forecast==null?
+        (waffraIsEnglish?'At least three transactions and five elapsed days are needed.':'يلزم تسجيل ثلاث معاملات ومرور خمسة أيام على الأقل من الشهر.'):
+        (waffraIsEnglish?'Approximately ${cash(forecast)} at the current pace.':
+         'حوالي ${cash(forecast)} إذا استمر معدل الإنفاق الحالي.')),
+       WaffraText(waffraIsEnglish?'Estimate from recorded transactions and upcoming recurring expenses, not a guarantee.':
+        'تقدير مبني على معاملاتك والعمليات المتكررة القادمة، وليس مبلغًا مؤكدًا.',
+        style:const TextStyle(fontSize:11)),
+      ]))),
+     const SizedBox(height:24),
+     WaffraText(waffraIsEnglish?'Income vs expenses':'اتجاه الدخل والمصروفات',
+      style:const TextStyle(fontSize:18,fontWeight:FontWeight.bold)),
+     const SizedBox(height:12),
+     ...List.generate(3,(i)=>Padding(padding:const EdgeInsets.symmetric(vertical:8),
+      child:Row(children:[
+       SizedBox(width:65,child:WaffraText(waffraIsEnglish?'Period ${i+1}':'فترة ${i+1}')),
+       Expanded(child:Column(children:[
+        LinearProgressIndicator(value:periods[i].$1/highest,minHeight:10,color:emerald,
+         backgroundColor:emerald.withValues(alpha:.08)),
+        const SizedBox(height:5),
+        LinearProgressIndicator(value:periods[i].$2/highest,minHeight:10,color:Colors.deepOrange,
+         backgroundColor:Colors.deepOrange.withValues(alpha:.08)),
+       ])),
+      ]))),
+     Row(children:[
+      const Icon(Icons.circle,color:emerald,size:12),const SizedBox(width:5),
+      WaffraText(waffraIsEnglish?'Income':'الدخل'),
+      const SizedBox(width:15),const Icon(Icons.circle,color:Colors.deepOrange,size:12),
+      const SizedBox(width:5),WaffraText(waffraIsEnglish?'Expenses':'المصروفات'),
+     ]),
+     const SizedBox(height:24),
+     WaffraText(waffraIsEnglish?'Weekly spending trend':'اتجاه المصروفات الأسبوعية',
+      style:const TextStyle(fontSize:18,fontWeight:FontWeight.bold)),
+     const SizedBox(height:8),
+     Card(child:Padding(padding:const EdgeInsets.all(16),child:SizedBox(height:170,
+      child:LineChart(LineChartData(minY:0,
+       gridData:const FlGridData(show:true,drawVerticalLine:false),
+       titlesData:const FlTitlesData(show:false),borderData:FlBorderData(show:false),
+       lineBarsData:[LineChartBarData(
+        spots:List.generate(weeklySpend.length,(i)=>FlSpot(i.toDouble(),weeklySpend[i])),
+        isCurved:true,color:emerald,barWidth:3,dotData:const FlDotData(show:true),
+        belowBarData:BarAreaData(show:true,color:emerald.withValues(alpha:.10))),
+       ]))))),
+     const SizedBox(height:10),
+     WaffraText(waffraIsEnglish?'Four weeks from oldest to newest.':'آخر أربعة أسابيع من الأقدم للأحدث.',style:const TextStyle(fontSize:12)),
+     const SizedBox(height:24),
+     WaffraText(waffraIsEnglish?'Top spending categories':'أعلى أقسام المصروفات',
+      style:const TextStyle(fontSize:18,fontWeight:FontWeight.bold)),
+     const SizedBox(height:10),
+     if(top.isEmpty)WaffraText(waffraIsEnglish?'No expenses recorded.':'لا توجد مصروفات مسجلة.'),
+     ...top.take(5).map((e)=>Padding(padding:const EdgeInsets.symmetric(vertical:7),
+      child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+       Row(children:[Expanded(child:WaffraText(waffraTr(e.key))),
+        WaffraText(cash(e.value),style:const TextStyle(fontWeight:FontWeight.bold))]),
+       const SizedBox(height:5),
+       LinearProgressIndicator(value:spending>0?e.value/spending:0,minHeight:7,
+        color:Colors.deepOrange,borderRadius:BorderRadius.circular(8)),
+      ]))),
+     const SizedBox(height:24),
+     WaffraText(waffraIsEnglish?'Spending distribution chart':'الرسم البياني لتوزيع المصروفات',
+      style:const TextStyle(fontSize:18,fontWeight:FontWeight.bold)),
+     const SizedBox(height:12),
+     if(top.isNotEmpty)Card(child:Padding(padding:const EdgeInsets.all(16),
+      child:SizedBox(height:240,child:PieChart(PieChartData(
+       centerSpaceRadius:40,
+       sections:top.map((e){
+        final c=categoryFor(e.key,false);
+        return PieChartSectionData(value:e.value,color:Color(c.color),radius:77,
+         title:'${(e.value/spending*100).toStringAsFixed(0)}%',
+         titleStyle:const TextStyle(fontSize:12,color:Colors.white,fontWeight:FontWeight.bold));
+       }).toList(),
+      ))))),
+     const SizedBox(height:16),
+     OutlinedButton.icon(
+      onPressed:WaffraHaptics.tap(recent.isEmpty?null:()=>exportEntriesPdf(recent,
+       waffraIsEnglish?'Waffra analytics - Last 90 days':'تحليلات وفرة - آخر 90 يوم',
+       analytics:true)),
+      icon:const Icon(Icons.picture_as_pdf_outlined),
+      label:WaffraText(waffraIsEnglish?'Export analytics PDF':'تصدير التحليلات إلى PDF')),
+     const SizedBox(height:24),
+     ExpansionTile(leading:const Icon(Icons.info_outline,color:emerald),
+      title:WaffraText(waffraIsEnglish?'Why this result?':'ليه النتيجة دي؟'),
+      children:[Padding(padding:const EdgeInsets.all(14),
+       child:WaffraText(waffraIsEnglish?
+        'Last 90 days (${recent.length} transactions): income ${cash(income)}, expenses ${cash(spending)}. Indicative score.':
+        'آخر 90 يومًا: ${recent.length} معاملة، دخل ${cash(income)}، مصروف ${cash(spending)}. مؤشر تقريبي.'))]),
+     const SizedBox(height:20),
+     WaffraText(waffraIsEnglish?'Tips for you':'نصائح مخصصة لك',
+      style:const TextStyle(fontSize:18,fontWeight:FontWeight.bold)),
+     const SizedBox(height:10),
+     ListTile(leading:const Icon(Icons.lightbulb_outline,color:emerald),
+      title:WaffraText(deficit>0?
+       (waffraIsEnglish?'Reduce optional spending to close the gap.':'قلّل المصروفات الاختيارية لتقليل العجز.'):
+       (waffraIsEnglish?'Keep your expenses below your income.':'حافظ على مصروفات أقل من دخلك.'))),
+     if(top.isNotEmpty)ListTile(leading:const Icon(Icons.category_outlined,color:emerald),
+      title:WaffraText(waffraIsEnglish?
+       'Reduce spending on ${waffraTr(top.first.key)} by 15% to save roughly ${cash(top.first.value*.15)} over this period.':
+       'تقليل مصروفات «${waffraTr(top.first.key)}» بنسبة 15% قد يوفر حوالي ${cash(top.first.value*.15)} خلال فترة التحليل.')),
+     if(goals.isNotEmpty&&income>spending)ListTile(
+      leading:const Icon(Icons.savings_outlined,color:emerald),
+      title:WaffraText(waffraIsEnglish?
+       'You could allocate part of your surplus to ${goals.first.name}; nothing is moved automatically.':
+       'ممكن تخصص جزءًا من الفائض لهدف «${goals.first.name}»، ولن نضيف أي مبالغ تلقائيًا.')),
+     ListTile(leading:const Icon(Icons.track_changes_outlined,color:emerald),
+      title:WaffraText(waffraIsEnglish?'Set monthly budgets for your categories.':
+       'حدد ميزانية شهرية لكل قسم للتحكم في الإنفاق.')),
+     const SizedBox(height:24),
+    ])),
+    ]))),
+   ));
+  });
+ }
+ Widget _analysisStat(String label,double value,Color color)=>Container(
+  width:MediaQuery.of(context).size.width/3-18,
+  padding:const EdgeInsets.symmetric(horizontal:7,vertical:15),
+  decoration:BoxDecoration(color:color.withValues(alpha:.09),borderRadius:BorderRadius.circular(15)),
+  child:Column(children:[
+   WaffraText(label,style:const TextStyle(fontSize:12),textAlign:TextAlign.center),
+   const SizedBox(height:7),
+   FittedBox(fit:BoxFit.scaleDown,child:WaffraText(cash(value),
+    style:TextStyle(color:color,fontWeight:FontWeight.bold,fontSize:15))),
+  ]),
+ );
+ Widget analytics(){
+  final data=analysisEntries,inc=sum(data,true),exp=sum(data,false);
+  final years=<int>{DateTime.now().year,year,...entries.map((e)=>e.date.year)}.toList()..sort((a,b)=>b.compareTo(a));
+  final points=period=='شهري'?List.generate(5,(i){
+   final v=data.where((e)=>(e.date.day-1)~/7==i);
+   return ChartPoint(waffraIsEnglish?'Week ${i+1}':'الأسبوع ${i+1}',sum(v,true),sum(v,false));
+  }):List.generate(12,(i){
+   final v=data.where((e)=>e.date.month==i+1);
+   return ChartPoint(waffraIsEnglish?'Month ${i+1}':'شهر ${i+1}',sum(v,true),sum(v,false));
+  });
+  final breakdown=<String,double>{};
+  for(final e in data.where((e)=>!e.income)){breakdown[e.category]=(breakdown[e.category]??0)+e.amount;}
+  return ListView(padding:const EdgeInsets.all(16),children:[
+   Row(children:[
+    Expanded(child:WaffraText(waffraIsEnglish?'Your financial analytics':'تحليلاتك المالية',style:Theme.of(context).textTheme.titleLarge)),
+   ]),
+   const SizedBox(height:12),
+   SegmentedButton<String>(segments:const [ButtonSegment(value:'شهري',label:WaffraText('شهري')),
+    ButtonSegment(value:'سنوي',label:WaffraText('سنوي'))],
+    selected:{period},onSelectionChanged:WaffraHaptics.selection((v)=>setState(()=>period=v.first))),
+   const SizedBox(height:12),
+   Row(children:[
+    Expanded(child:WaffraCenteredDropdownFormField<int>(initialValue:year,
+     decoration:InputDecoration(labelText:waffraTr('السنة')),
+     items:years.map((x)=>DropdownMenuItem(value:x,child:WaffraText('$x'))).toList(),
+     onChanged:WaffraHaptics.selection((v){if(v!=null)setState(()=>year=v);}))),
+    if(period=='شهري')Expanded(child:WaffraCenteredDropdownFormField<int>(initialValue:month,
+     decoration:InputDecoration(labelText:waffraTr('الشهر')),
+     items:List.generate(12,(i)=>DropdownMenuItem(value:i+1,child:WaffraText('شهر ${i+1}'))),
+     onChanged:WaffraHaptics.selection((v){if(v!=null)setState(()=>month=v);}))),
+   ]),
+   const SizedBox(height:12),
+   nextMonthForecast(),
+   const SizedBox(height:12),
+   Row(children:[stat('الدخل',inc,Icons.south_west,waffraIncomeTone(context)),stat('المصروفات',exp,Icons.north_east,Colors.deepOrange)]),
+   Card(child:Padding(padding:const EdgeInsets.all(15),child:Column(children:[
+    const WaffraText('الدخل مقابل المصروفات',style:TextStyle(fontWeight:FontWeight.bold)),
+    const SizedBox(height:16),FinanceChart(points:points),
+   ]))),
+   const SizedBox(height:16),
+   OutlinedButton.icon(onPressed:WaffraHaptics.tap(()=>exportEntriesPdf(data,'تحليلات وفرة - $period ${period=='شهري'?'$month/':''}$year',analytics:true)),
+    icon:const Icon(Icons.picture_as_pdf_outlined),label:const WaffraText('تصدير التحليلات إلى PDF')),
+   const SizedBox(height:12),
+   Card(child:Padding(padding:const EdgeInsets.all(16),
+    child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+     WaffraText(waffraIsEnglish?'Horizontal income and expense comparison':
+      'مقارنة الدخل والمصروفات بأشرطة أفقية',
+      style:const TextStyle(fontWeight:FontWeight.bold)),
+     const SizedBox(height:6),
+     WaffraText(waffraIsEnglish?'Bar length = amount in SAR.':
+      'طول الشريط يوضح المبلغ بالريال.',
+      style:const TextStyle(fontSize:11)),
+     const SizedBox(height:13),
+     Row(children:[
+      Expanded(child:WaffraText(waffraIsEnglish?'Income':'الدخل')),
+      WaffraText(cash(inc),style:TextStyle(fontWeight:FontWeight.bold,color:waffraIncomeTone(context))),
+     ]),
+     const SizedBox(height:6),
+     LinearProgressIndicator(value:(inc/max(1.0,max(inc,exp))).clamp(0.0,1.0),
+      minHeight:15,borderRadius:BorderRadius.circular(8),color:waffraIncomeTone(context)),
+     const SizedBox(height:14),
+     Row(children:[
+      Expanded(child:WaffraText(waffraIsEnglish?'Expenses':'المصروفات')),
+      WaffraText(cash(exp),style:const TextStyle(fontWeight:FontWeight.bold,color:Colors.deepOrange)),
+     ]),
+     const SizedBox(height:6),
+     LinearProgressIndicator(value:(exp/max(1.0,max(inc,exp))).clamp(0.0,1.0),
+      minHeight:15,borderRadius:BorderRadius.circular(8),color:Colors.deepOrange),
+    ]))),
+   if(breakdown.isNotEmpty)Card(child:Padding(padding:const EdgeInsets.all(16),child:Column(children:[
+    const WaffraText('توزيع المصروفات - دائري',style:TextStyle(fontWeight:FontWeight.bold)),
+    const SizedBox(height:14),
+    SizedBox(height:210,child:PieChart(PieChartData(centerSpaceRadius:32,sections:breakdown.entries.map((e){
+     final c=categoryFor(e.key,false);
+     return PieChartSectionData(value:e.value,color:Color(c.color),radius:70,
+      title:'${(e.value/exp*100).toStringAsFixed(0)}٪',titleStyle:const TextStyle(color:Colors.white,fontSize:11,fontWeight:FontWeight.bold));
+    }).toList()))),
+   ]))),
+   const SizedBox(height:16),
+   WaffraText('توزيع مصروفاتك',style:Theme.of(context).textTheme.titleMedium),
+   ...breakdown.entries.map((x){
+    final c=categoryFor(x.key,false);
+    return Card(child:Padding(padding:const EdgeInsets.all(12),child:Column(children:[
+     Row(children:[Icon(categoryIcon(c.icon),color:Color(c.color)),const SizedBox(width:8),
+      Expanded(child:WaffraText(x.key)),RiyalAmount(x.value)]),
+     const SizedBox(height:10),
+     LinearProgressIndicator(value:exp==0?0:x.value/exp,color:Color(c.color),minHeight:8,borderRadius:BorderRadius.circular(8)),
+    ])));
+   }),
+   if(breakdown.isEmpty)const Padding(padding:EdgeInsets.all(20),child:WaffraText('ما فيه مصروفات في هالفترة')),
+   const SizedBox(height:80),
+  ]);
+ }
+
+ Future<BudgetCategory?> categoryDialog({BudgetCategory? initial,bool income=false,String? suggested,String parentId=''})async {
+  final name=TextEditingController(text:initial?.displayName??suggested??'');
+  final effectiveParentId=initial?.parentId??parentId;
+  String fullName(){
+   final text=name.text.trim();
+   if(effectiveParentId.isEmpty)return text;
+   final parent=categories.where((c)=>c.id==effectiveParentId).toList();
+   return parent.isEmpty?text:'${parent.first.name} / $text';
+  }
+  // Category appearance and hierarchy are independent of budget setup.
+  // Existing legacy limits/labels must survive editing this category.
+  String icon=initial?.icon??'category';int color=initial?.color??colors[0];
+  bool attempted=false;
+  final result=await showWaffraDialog<BudgetCategory>(context:context,
+   builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
+    scrollable:true,
+    insetPadding:const EdgeInsets.symmetric(horizontal:20,vertical:16),
+    title:WaffraText(initial!=null?'تعديل القسم':effectiveParentId.isNotEmpty?'قسم فرعي جديد':'قسم رئيسي جديد'),
+    content:Column(mainAxisSize:MainAxisSize.min,children:[
+     TextField(controller:name,onChanged:(_)=>update((){}),decoration:InputDecoration(
+      labelText:waffraIsEnglish?'Category name *':'اسم القسم *',
+      errorText:attempted?(
+       WaffraValidators.requiredText(name.text)!=null?waffraTextFieldError(name.text):
+       WaffraValidators.uniqueCategory(fullName(),categories.where((c)=>c.id!=initial?.id&&c.income==(initial?.income??income)).map((c)=>c.name))!=null?(waffraIsEnglish?'Category already exists':'اسم القسم مستخدم بالفعل'):null):null)),
+     const SizedBox(height:12),const WaffraText('اختر أيقونة'),
+     Wrap(spacing:8,runSpacing:9,alignment:WrapAlignment.center,children:iconNames.map((x)=>IconButton(
+      style:IconButton.styleFrom(backgroundColor:icon==x?emerald.withValues(alpha:.2):null),
+      onPressed:WaffraHaptics.tap(()=>update(()=>icon=x)),icon:Icon(categoryIcon(x),color:icon==x?emerald:null))).toList()),
+     const WaffraText('اختر لون'),
+     const SizedBox(height:12),
+     Wrap(spacing:12,runSpacing:12,alignment:WrapAlignment.center,children:colors.map((x)=>InkWell(
+      onTap:WaffraHaptics.tap(()=>update(()=>color=x)),
+      child:CircleAvatar(radius:15,backgroundColor:Color(x),
+       child:color==x?const Icon(Icons.check,color:Colors.white,size:17):null))).toList()),
+    ]),
+    actions:[
+     TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),child:const WaffraText('إلغاء')),
+     FilledButton(onPressed:WaffraHaptics.tap((){
+      final n=name.text.trim();update(()=>attempted=true);
+      if(WaffraValidators.requiredText(n)!=null||
+       WaffraValidators.uniqueCategory(fullName(),
+        categories.where((c)=>c.id!=initial?.id&&
+         c.income==(initial?.income??income)).map((c)=>c.name))!=null)return;
+      Navigator.pop(ctx,BudgetCategory(id:initial?.id??newId(),name:fullName(),icon:icon,color:color,
+       income:initial?.income??income,parentId:effectiveParentId,
+       budget:initial?.budget??0,alertPercent:initial?.alertPercent??80,
+       budgetActive:initial?.budgetActive??true,
+       categoryActive:initial?.categoryActive??true,
+       origin:initial?.origin??'user',budgetLabel:initial?.budgetLabel));
+     }),child:const WaffraText('حفظ')),
+    ])));
+  disposeLater([name]);return result;
+ }
+ Future<void> chooseCategoryLevel({required bool income})async{
+  final parents=categories.where((c)=>!c.isSubcategory&&c.income==income).toList();
+  final choice=await showWaffraDialog<String>(context:context,
+   builder:(ctx)=>AlertDialog(
+    title:WaffraText(income
+     ?(waffraIsEnglish?'Add income category':'إضافة قسم دخل')
+     :(waffraIsEnglish?'Add expense category':'إضافة قسم مصروفات')),
+    content:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+     ListTile(leading:const Icon(Icons.create_new_folder_outlined,color:emerald),
+      title:WaffraText(waffraIsEnglish?'New main category':'إضافة قسم رئيسي'),
+      onTap:WaffraHaptics.tap(()=>Navigator.pop(ctx,'main'))),
+     ListTile(leading:const Icon(Icons.account_tree_outlined,color:emerald),
+      title:WaffraText(waffraIsEnglish?'New subcategory':'إضافة قسم فرعي'),
+      onTap:WaffraHaptics.tap(()=>Navigator.pop(ctx,'sub'))),
+    ]),
+   ));
+  if(!mounted||choice==null)return;
+  if(choice=='main'){await addCategory(income:income);return;}
+  if(parents.isEmpty){
+   snack(context,waffraIsEnglish?'Create a main category first':'يجب إضافة قسم رئيسي أولًا');
+   return;
+  }
+  final parentId=await showWaffraDialog<String>(context:context,
+   builder:(ctx)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?'Choose main category':'اختر القسم الرئيسي'),
+    content:SizedBox(width:double.maxFinite,height:waffraKeyboardDialogListHeight(ctx,desired:360),
+     child:ListView.builder(itemCount:parents.length,itemBuilder:(ctx,index){
+      final parent=parents[index];
+      return ListTile(
+       leading:Icon(categoryIcon(parent.icon),color:Color(parent.color)),
+       title:WaffraText(parent.name),
+       onTap:WaffraHaptics.tap(()=>Navigator.pop(ctx,parent.id)));
+     })),
+   ));
+  if(!mounted||parentId==null)return;
+  await addCategory(income:income,parentId:parentId);
+ }
+ /// Category actions are reversible and never rewrite ledger, budgets, goal
+ /// funds or historical references. Only new-category eligibility changes.
+ Future<void> setCategoryActive(BudgetCategory selected,bool enabled)async{
+  final current=categories.where((c)=>c.id==selected.id).toList();
+  if(current.length!=1||current.single.categoryActive==enabled)return;
+  if(!enabled){
+   final affected=selected.isSubcategory?0:
+    categories.where((c)=>c.parentId==selected.id).length;
+   final approved=await showWaffraDialog<bool>(
+    context:context,builder:(ctx)=>AlertDialog(
+     title:WaffraText(waffraIsEnglish?'Pause category?':'إيقاف القسم مؤقتًا؟'),
+     content:WaffraText(waffraIsEnglish?
+      'The category and ${affected>0?'its $affected subcategories ':''}will no longer be selectable for new transactions. Existing transactions, recurring references and budgets are kept unchanged.':
+      'القسم ${affected>0?'وعدد $affected قسم فرعي تابع له ':''}لن يكون متاحًا للعمليات الجديدة. معاملاتك القديمة والعمليات المتكررة والميزانيات محفوظة بدون تغيير.'),
+     actions:[
+      TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,false)),
+       child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+      FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,true)),
+       child:WaffraText(waffraIsEnglish?'Pause':'إيقاف')),
+     ],
+    ));
+   if(approved!=true||!mounted)return;
+  }
+  final live=categories.where((c)=>c.id==selected.id).toList();
+  if(live.length!=1||live.single.categoryActive==enabled)return;
+  setState((){
+   final index=categories.indexWhere((c)=>c.id==selected.id);
+   categories[index]=categories[index].copy(categoryActive:enabled);
+  });
+  final saved=await _persistModuleOrReload(
+   WaffraFinanceRoute.categoryCreateEditDeleteRestore,
+   operation:'category-availability-toggle');
+  if(saved&&mounted){
+   await syncRecurringReminders();
+   if(mounted)snackSuccess(context,waffraIsEnglish?
+    (enabled?'Category enabled':'Category paused'):
+    (enabled?'تم تفعيل القسم':'تم إيقاف القسم مؤقتًا'));
+  }
+ }
+ Future<void> addCategory({bool income=false,String parentId=''})async {
+  if(parentId.isNotEmpty&&!categories.any((c)=>
+   c.id==parentId&&!c.isSubcategory&&c.categoryActive)){
+   snack(context,waffraIsEnglish?
+    'Enable the main category before adding a subcategory.':
+    'فعّل القسم الرئيسي قبل إضافة قسم فرعي.');
+   return;
+  }
+  final c=await categoryDialog(income:income,parentId:parentId);
+  if(c==null||!mounted)return;
+  if(WaffraValidators.uniqueCategory(c.name,
+    categories.where((x)=>x.income==c.income).map((x)=>x.name))=='duplicate'){
+   snack(context,'القسم موجود بالفعل');return;
+  }
+  setState(()=>categories.add(c));
+  await _persistModuleOrReload(WaffraFinanceRoute.categoryCreateEditDeleteRestore,
+   operation:'category-create');
+ }
+ Future<void> updateCategory(BudgetCategory c)async {
+  final revised=await categoryDialog(initial:c);
+  if(revised==null||!mounted)return;
+  if(WaffraValidators.uniqueCategory(revised.name,
+    categories.where((x)=>x.id!=c.id&&x.income==c.income).map((x)=>x.name))=='duplicate'){
+   snack(context,waffraIsEnglish?'Category already exists':'القسم موجود بالفعل');return;
+  }
+  final renames=<String,String>{c.name:revised.name};
+  if(!c.isSubcategory&&c.name!=revised.name){
+   for(final child in categories.where((x)=>x.parentId==c.id)){
+    renames[child.name]='${revised.name} / ${child.displayName}';
+   }
+  }
+  setState((){
+   final i=categories.indexWhere((x)=>x.id==c.id);
+   if(i>=0)categories[i]=revised;
+   for(var j=0;j<categories.length;j++){
+    final child=categories[j];
+    if(child.parentId==c.id&&renames.containsKey(child.name)){
+     categories[j]=child.copy(name:renames[child.name]);
+    }
+   }
+   for(var j=0;j<entries.length;j++){
+    final old=entries[j];
+    final renamed=renames[old.category];
+    if(renamed!=null&&old.income==c.income){
+     entries[j]=old.withCategory(renamed);
+    }
+   }
+   for(var j=0;j<recurring.length;j++){
+    final old=recurring[j];
+    final renamed=renames[old.category];
+    if(renamed!=null&&old.income==c.income){
+     recurring[j]=old.withCategory(renamed);
+    }
+   }
+  });
+  try{
+   await persist(route:WaffraFinanceRoute.categoryCreateEditDeleteRestore);
+  }catch(error){
+   debugPrint('Category edit not committed by verified finance source: $error');
+   if(mounted)await _loadFinanceSafely();
+   if(mounted)snack(context,waffraIsEnglish?
+    'Category edit was not saved. Financial data was reloaded safely.':
+    'لم يتم حفظ تعديل القسم. أعدنا تحميل بياناتك المالية بشكل آمن.');
+  }
+ }
+ WaffraFinanceRoute _moduleMutationRoute(WaffraFinanceModule module)=>
+  switch(module){
+   WaffraFinanceModule.categories=>WaffraFinanceRoute.categoryCreateEditDeleteRestore,
+   WaffraFinanceModule.goals=>WaffraFinanceRoute.goalCreateEditDeleteRestore,
+   WaffraFinanceModule.recurring=>WaffraFinanceRoute.recurringCreateEditDeleteRestore,
+  };
+
+ Future<void> _deleteVerifiedModule({
+  required WaffraFinanceModule module,
+  required Map<String,dynamic> displayed,
+ })async{
+  try{
+   await _financialWriteQueue.drain();
+   final baseline=await _financeAuthority.load(route:_moduleMutationRoute(module));
+   if(baseline.source!=WaffraRuntimeFinanceBackend.verifiedEncrypted||
+      baseline.encryptedWitness==null){
+    throw StateError('Verified encrypted finance source is unavailable.');
+   }
+   WaffraVerifiedModuleUiGuard.requireUnchanged(
+    activeRaw:baseline.finance.getString(
+     WaffraVerifiedModuleUiGuard.activeKey(module)),
+    selected:displayed,
+   );
+   final id=displayed['id'] as String;
+   await _financialWriteQueue.submit(<String,Object>{'id':id},(_)async{
+    // No optimistic mutation to goals/categories/recurring; only the typed
+    // SQLCipher tombstone writer may remove the source entity.
+    await _financeAuthority.deleteVerifiedModuleToRecycle(
+     baseline:baseline,module:module,entityId:id,
+     now:DateTime.now().toUtc(),userConfirmed:true);
+   });
+   if(!mounted)return;
+   await _loadFinanceSafely();
+   if(module==WaffraFinanceModule.recurring)await syncRecurringReminders();
+   if(mounted&&ready)snackSuccess(context,waffraIsEnglish?
+    'Moved to encrypted Recently Deleted for 30 days':
+    'تم النقل إلى المحذوفات لمدة 30 يومًا');
+  }catch(error){
+   debugPrint('Encrypted module delete refused: $error');
+   if(mounted){
+    snack(context,waffraIsEnglish?
+     'Cannot verify deletion. Your financial data was not reset. Reload and retry.':
+     'تعذر التحقق من الحذف. لم يتم تصفير البيانات المالية. أعد التحميل وحاول مجددًا.');
+    unawaited(_loadFinanceSafely());
+   }
+  }
+ }
+
+ Future<void> _restoreVerifiedModule({
+  required WaffraFinanceModule module,
+  required String entityId,
+ })async{
+  try{
+   await _financialWriteQueue.drain();
+   await _financialWriteQueue.submit(<String,Object>{'id':entityId},(_)async{
+    final baseline=await _financeAuthority.load(route:_moduleMutationRoute(module));
+    if(baseline.source!=WaffraRuntimeFinanceBackend.verifiedEncrypted||
+       baseline.encryptedWitness==null){
+     throw StateError('Verified encrypted module restore source is missing.');
+    }
+    await _financeAuthority.restoreVerifiedDeletedModule(
+     baseline:baseline,module:module,entityId:entityId,
+     now:DateTime.now().toUtc());
+   });
+   if(!mounted)return;
+   await _loadFinanceSafely();
+   if(module==WaffraFinanceModule.recurring)await syncRecurringReminders();
+   if(mounted&&ready)snackSuccess(context,waffraIsEnglish?
+    'Item restored':'تم استرجاع العنصر');
+  }catch(error){
+   debugPrint('Encrypted finance module restoration blocked safely: $error');
+   if(mounted){
+    snack(context,waffraIsEnglish?
+     'Restore was not verified. Restore the deleted parent first or retry safely.':
+     'تعذر التحقق من الاسترجاع. استرجع القسم الرئيسي أولًا أو حاول مجددًا.');
+    unawaited(_loadFinanceSafely());
+   }
+  }
+ }
+
+ Future<void> _showVerifiedModuleTrash(WaffraFinanceModule module)async{
+  try{
+   final route=_moduleMutationRoute(module);
+   final baseline=await _financeAuthority.load(route:route);
+   if(baseline.source!=WaffraRuntimeFinanceBackend.verifiedEncrypted){
+    throw StateError('Encrypted module trash source was not selected.');
+   }
+   final expiries=await _financeAuthority.listVerifiedDeletedModules(module);
+   final items=WaffraVerifiedModuleUiGuard.verifiedTrash(
+    module:module,
+    trashRaw:baseline.finance.getString(
+     WaffraVerifiedModuleUiGuard.trashKey(module)),
+    encryptedExpiries:expiries,
+   );
+   if(!mounted)return;
+   final labels=module==WaffraFinanceModule.categories
+    ?<String>['Categories','الأقسام']
+    :module==WaffraFinanceModule.goals
+     ?<String>['Savings goals','الأهداف']
+     :<String>['Recurring','المتكررة'];
+   final choice=await showWaffraDialog<String>(
+    context:context,builder:(ctx)=>AlertDialog(
+     title:WaffraText(waffraIsEnglish?
+      'Encrypted Recently Deleted — ${labels[0]}':
+      'المحذوفات — ${labels[1]}'),
+     content:SizedBox(
+      width:double.maxFinite,
+      height:min(365.0,items.length*78.0+35.0),
+      child:items.isEmpty
+       ?Center(child:WaffraText(waffraIsEnglish?
+        'No items available to restore':'لا توجد عناصر قابلة للاسترجاع'))
+       :ListView.builder(itemCount:items.length,itemBuilder:(ctx,index){
+        final item=items[index];
+        final body=item[WaffraVerifiedModuleUiGuard.trashPayloadKey(module)]
+          as Map<String,dynamic>;
+        final id=body['id'] as String;
+        final until=expiries[id]!;
+        final expired=DateTime.now().toUtc().millisecondsSinceEpoch>=until;
+        return ListTile(
+         leading:Icon(Icons.restore_rounded,
+          color:expired?Colors.grey:emerald),
+         title:WaffraText('${body['name']??body['title']??id}',maxLines:1),
+         subtitle:WaffraText(expired
+          ?(waffraIsEnglish?'Recovery expired':'انتهت مدة الاسترجاع')
+          :(waffraIsEnglish
+           ?'Restore until ${dayText(DateTime.fromMillisecondsSinceEpoch(until,isUtc:true).toLocal())}'
+           :'الاسترجاع حتى ${dayText(DateTime.fromMillisecondsSinceEpoch(until,isUtc:true).toLocal())}')),
+         enabled:!expired,
+         onTap:WaffraHaptics.tap(expired?null:()=>Navigator.pop(ctx,id)),
+        );
+       })),
+     actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
+      child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))]));
+   if(choice!=null&&mounted)await _restoreVerifiedModule(
+    module:module,entityId:choice);
+  }catch(error){
+   debugPrint('Encrypted module trash could not be verified: $error');
+   if(mounted)snack(context,waffraIsEnglish?
+    'Encrypted Recently Deleted is unavailable until source verification succeeds.':
+    'المحذوفات المشفرة غير متاحة حتى ينجح التحقق من المصدر.');
+  }
+ }
+
+ Future<void> deleteCategory(BudgetCategory c)async {
+  final children=categories.where((item)=>item.parentId==c.id).toList();
+  if(children.isNotEmpty){
+   await showWaffraDialog<void>(context:context,builder:(ctx)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?'Delete subcategories first':'احذف الأقسام الفرعية أولاً'),
+    content:WaffraText(waffraIsEnglish?'This category has ${children.length} subcategories. Delete or move them first to protect your categorization.':'القسم يحتوي على ${children.length} قسم فرعي. احذف الأقسام الفرعية أولاً للحفاظ على تصنيف المعاملات.'),
+    actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),child:WaffraText(waffraIsEnglish?'OK':'حسنًا'))]));
+   return;
+  }
+  final linkedEntries=entries.where((e)=>e.category==c.name&&e.income==c.income).length;
+  final linkedRecurring=recurring.where((e)=>e.category==c.name&&e.income==c.income).length;
+  if(linkedEntries>0||linkedRecurring>0){
+   if(!mounted)return;
+   await showWaffraDialog<void>(context:context,builder:(ctx)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?'Category cannot be deleted':'لا يمكن حذف القسم'),
+    content:WaffraText(waffraIsEnglish
+     ?'This category has $linkedEntries transactions and $linkedRecurring recurring items. Remove linked items first.'
+     :'القسم مرتبط بـ$linkedEntries معاملة و$linkedRecurring عملية متكررة. احذف العناصر المرتبطة أولًا.'),
+    actions:[
+     TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),child:const WaffraText('حسنًا')),
+     if(linkedEntries>0)TextButton(onPressed:WaffraHaptics.tap((){
+      Navigator.pop(ctx);
+      setState((){
+       tab=0;addFabExpanded=false;showAllTransactions=true;
+       showTransactionFilters=true;categoryFilter=c.name;
+       typeFilter=c.income?'الدخل':'المصروفات';
+       search='';transactionsDateRange=null;
+       minTransactionAmount=null;maxTransactionAmount=null;
+      });
+     }),child:WaffraText(waffraIsEnglish?'View transactions':'عرض المعاملات المرتبطة'))
+     else TextButton(onPressed:WaffraHaptics.tap((){
+      Navigator.pop(ctx);setState((){tab=4;goalsOpened=false;addFabExpanded=false;});
+     }),child:WaffraText(waffraIsEnglish?'View recurring':'عرض العمليات المتكررة')),
+    ]));
+   return;
+  }
+  final yes=await confirmDeletion(
+   waffraIsEnglish?'Delete category?':'حذف القسم',
+   waffraIsEnglish
+    ?'Delete «${c.name}» for 30 days? Restore is possible, but its budget resets to zero.'
+    :'هل تريد نقل القسم «${c.name}» إلى المحذوفات لمدة 30 يومًا؟ عند استرجاعه سيعود بميزانية صفر.');
+  if(yes!=true||!mounted)return;
+  if(_lastFinanceAuthorityRead?.source==
+     WaffraRuntimeFinanceBackend.verifiedEncrypted){
+   await _deleteVerifiedModule(
+    module:WaffraFinanceModule.categories,displayed:c.toJson());
+   return;
+  }
+  setState((){
+   categories.removeWhere((e)=>e.id==c.id);
+   deletedCategories.add({'category':c.toJson(),'deletedAt':DateTime.now().toIso8601String()});
+  });
+  await persist(route:WaffraFinanceRoute.categoryCreateEditDeleteRestore);
+  if(mounted)snackSuccess(context,waffraIsEnglish?'Category moved to Recently Deleted for 30 days':'تم نقل القسم للمحذوفات لمدة 30 يومًا');
+ }
+ Future<void> showCategoryTrash()async {
+  if(_lastFinanceAuthorityRead?.source==
+     WaffraRuntimeFinanceBackend.verifiedEncrypted){
+   await _showVerifiedModuleTrash(WaffraFinanceModule.categories);
+   return;
+  }
+  final before=deletedCategories.length;
+  deletedCategories.removeWhere((item){
+   final when=DateTime.tryParse('${item['deletedAt']??''}');
+   return when==null||!DateTime.now().isBefore(when.add(const Duration(days:30)));
+  });
+  if(before!=deletedCategories.length)await persist(route:WaffraFinanceRoute.categoryCreateEditDeleteRestore);
+  if(!mounted)return;
+  await showWaffraDialog<void>(context:context,builder:(dialogCtx)=>StatefulBuilder(
+   builder:(dialogCtx,refresh)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?'Recently deleted categories':'الأقسام المحذوفة'),
+    content:SizedBox(width:double.maxFinite,height:waffraDeletedListHeight(dialogCtx,deletedCategories.length),
+     child:deletedCategories.isEmpty
+      ?Center(child:WaffraText(waffraIsEnglish?'No deleted categories':'لا توجد أقسام محذوفة'))
+      :ListView(children:deletedCategories.map((item){
+        final original=BudgetCategory.fromJson(Map<String,dynamic>.from(item['category'] as Map));
+        final deletedAt=DateTime.parse(item['deletedAt'] as String);
+        final daysLeft=max(0,(deletedAt.add(const Duration(days:30))
+         .difference(DateTime.now()).inHours/24).ceil());
+        return waffraDeletedItemCard(
+         context:dialogCtx,
+         icon:categoryIcon(original.icon),
+         iconColor:Color(original.color),
+         title:original.name,
+         subtitle:waffraIsEnglish
+          ?'${original.income?'Income':'Expense'} • $daysLeft days remaining'
+          :'${original.income?'دخل':'مصروفات'} • متبقي $daysLeft يوم',
+         onRestore:()async{
+             if(WaffraValidators.uniqueCategory(original.name,
+               categories.where((c)=>c.income==original.income).map((c)=>c.name))=='duplicate'){
+              snack(dialogCtx,waffraIsEnglish?'A category with this name already exists':'يوجد قسم نشط بنفس الاسم بالفعل');return;
+             }
+             BudgetCategory? restoreParent;
+             if(original.isSubcategory&&
+              !categories.any((c)=>c.id==original.parentId)){
+              final deletedParent=deletedCategories.where((record){
+               final raw=record['category'];
+               return raw is Map&&raw['id']==original.parentId;
+              }).toList();
+              if(deletedParent.isEmpty){
+               snack(dialogCtx,waffraIsEnglish
+                ?'Restore the main category first. It is no longer in Recently Deleted.'
+                :'يجب استرجاع القسم الرئيسي أولًا؛ لأنه غير موجود في الأقسام المحذوفة.');
+               return;
+              }
+              restoreParent=BudgetCategory.fromJson(
+               Map<String,dynamic>.from(deletedParent.first['category'] as Map));
+              if(categories.any((c)=>c.income==restoreParent!.income&&c.name==restoreParent.name)){
+               snack(dialogCtx,waffraIsEnglish
+                ?'Cannot restore the parent: another category has the same name.'
+                :'لا يمكن استرجاع القسم الرئيسي لوجود قسم آخر بنفس الاسم.');
+               return;
+              }
+              final approved=await showWaffraDialog<bool>(context:dialogCtx,
+               builder:(confirmCtx)=>AlertDialog(
+                title:WaffraText(waffraIsEnglish?'Restore main category too?':'استرجاع القسم الرئيسي أيضًا؟'),
+                content:WaffraText(waffraIsEnglish
+                 ?'Restoring also restores «${restoreParent!.name}». Both budgets reset to zero. Continue?'
+                 :'سيُسترجع أيضًا القسم الرئيسي «${restoreParent!.name}»، وتُصفّر الميزانيتان. متابعة؟'),
+                actions:[
+                 TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(confirmCtx,false)),
+                  child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+                 FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(confirmCtx,true)),
+                  child:WaffraText(waffraIsEnglish?'Restore both':'استرجاع الاثنين')),
+                ]));
+              if(approved!=true||!dialogCtx.mounted)return;
+             }
+             final restored=original.copy(budget:0);
+             setState((){
+              if(restoreParent!=null){
+               categories.add(restoreParent.copy(budget:0));
+               deletedCategories.removeWhere((record){
+                final raw=record['category'];
+                return raw is Map&&raw['id']==restoreParent!.id;
+               });
+              }
+              categories.add(restored);
+              deletedCategories.remove(item);
+             });
+             await persist(route:WaffraFinanceRoute.categoryCreateEditDeleteRestore);
+             if(!dialogCtx.mounted)return;
+             Navigator.pop(dialogCtx);
+             if(mounted)snackSuccess(context,waffraIsEnglish
+              ?'Category restored with zero budget. Past transactions are unchanged.'
+              :'تم استرجاع القسم بميزانية صفر. معاملاتك القديمة محفوظة.');
+            },
+         onDeleteForever:()async{
+             final yes=await confirmDeletion(
+              waffraIsEnglish?'Permanently delete category?':'حذف القسم نهائيًا',
+              waffraIsEnglish?'Delete «${original.name}» forever? You cannot restore it.'
+               :'هل تريد حذف القسم «${original.name}» نهائيًا؟ لا يمكن استرجاعه بعد ذلك.');
+             if(yes==true&&mounted){
+              setState(()=>deletedCategories.remove(item));
+              refresh((){});
+              await persist(route:WaffraFinanceRoute.categoryCreateEditDeleteRestore);
+             }
+            },
+        );
+       }).toList())),
+    actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialogCtx)),
+     child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))],
+   )));
+ }
+ Widget categoriesPage()=>categoriesPageV2();
+ Widget _recurringBenefit(String label,IconData icon)=>Container(
+  padding:const EdgeInsets.symmetric(horizontal:6,vertical:14),
+  decoration:BoxDecoration(color:emerald.withValues(alpha:.08),borderRadius:BorderRadius.circular(18)),
+  child:Column(mainAxisSize:MainAxisSize.min,children:[
+   Icon(icon,color:emerald,size:25),const SizedBox(height:9),
+   WaffraText(label,textAlign:TextAlign.center,style:const TextStyle(fontSize:12,fontWeight:FontWeight.w600)),
+  ]));
+ Widget _summaryBox(String heading,String number,IconData icon,Color color)=>Container(
+  padding:const EdgeInsets.all(12),
+  decoration:BoxDecoration(
+   color:Theme.of(context).cardColor,
+   borderRadius:BorderRadius.circular(18),
+   border:Border.all(color:color.withValues(alpha:.16))),
+  child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+   Row(children:[Icon(icon,color:color,size:20),const SizedBox(width:7),
+    Expanded(child:WaffraText(heading,style:const TextStyle(fontSize:12)))]),
+   const SizedBox(height:8),
+   FittedBox(fit:BoxFit.scaleDown,alignment:AlignmentDirectional.centerStart,
+    child:WaffraText(number,style:const TextStyle(fontSize:17,fontWeight:FontWeight.bold))),
+  ]));
+ Widget _filterChip(String label,bool selected,VoidCallback onTap)=>
+  ChoiceChip(label:WaffraText(label),selected:selected,onSelected:WaffraHaptics.selection((_)=>onTap()),
+   showCheckmark:selected,
+   side:WaffraSubtleSelection.border(selected,Theme.of(context).brightness),
+   selectedColor:Theme.of(context).brightness==Brightness.dark
+    ?const Color(0xFF28533C):waffraMint,
+   labelStyle:TextStyle(
+    color:selected?(Theme.of(context).brightness==Brightness.dark
+     ?const Color(0xFFD9FFE9):forest):null,
+    fontWeight:selected?FontWeight.bold:FontWeight.normal));
+ Future<void> goalDialog({SavingGoal? duplicate,bool openEnded=false})async {
+  await _ensureFinanceBound();
+  final name=TextEditingController(text:duplicate==null?'':(waffraIsEnglish?'Copy of ':'نسخة من ')+duplicate.name),
+   target=TextEditingController(text:duplicate==null||duplicate.target<=0?'':formatWaffraEditAmount(duplicate.target));
+  DateTime? selectedDeadline=duplicate?.dueDate!=null&&duplicate!.dueDate!.isAfter(DateTime.now())?duplicate.dueDate:null;
+  final customGoals=await _financeAuthority.loadCustomGoalSuggestions();
+  if(!mounted){name.dispose();target.dispose();return;}
+  final defaults=waffraDefaultGoalNames(waffraIsEnglish);
+  final allDefaultNames={
+   ...waffraDefaultGoalNames(false).map(waffraNormalizeGoal),
+   ...waffraDefaultGoalNames(true).map(waffraNormalizeGoal),
+  };
+  final suggested=<String>[];
+  final seen=<String>{};
+  for(final entry in [...defaults,...customGoals]){
+   final key=waffraNormalizeGoal(entry);
+   if(key.isNotEmpty&&seen.add(key))suggested.add(entry.trim());
+  }
+  const otherGoal='__other_goal__';
+  String selectedGoal=duplicate==null?'':'__other_goal__';
+  bool attempted=false;
+  bool noTarget=openEnded||(duplicate!=null&&duplicate.target<=0);
+  bool goalAlertsEnabled=duplicate?.progressAlertsEnabled??false;
+  int goalAlertPercent=duplicate?.progressAlertPercent??80;
+  String? validateGoalName(){
+   final issue=waffraGoalNameIssue(name.text,goals.map((g)=>g.name));
+   if(issue=='required'||issue=='too_long')return waffraTextFieldError(name.text);
+   if(issue=='duplicate')return waffraIsEnglish?'A goal with this name already exists':'يوجد هدف بنفس الاسم بالفعل';
+   if(selectedGoal==otherGoal&&suggested.any(
+    (v)=>waffraNormalizeGoal(v)==waffraNormalizeGoal(name.text))){
+    return waffraIsEnglish?'Already suggested. Please choose it from the list.':'هذا الهدف ضمن الاقتراحات. اختره من القائمة.';
+   }
+   return null;
+  }
+  final g=await showWaffraSmoothDialog<SavingGoal>(context:context,
+   builder:(ctx)=>StatefulBuilder(builder:(ctx,updateGoal)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?'Add savings goal':'إضافة هدف ادخار'),
+    scrollable:true,
+    content:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+     InkWell(
+      borderRadius:BorderRadius.circular(14),
+      onTap:WaffraHaptics.tap(()async{
+       final picked=await showWaffraDialog<String>(context:ctx,
+        builder:(pickCtx){
+         String query='';
+         return StatefulBuilder(builder:(pickCtx,refresh){
+          final matches=suggested.where(
+           (item)=>waffraSearchMatches(item,query)).toList();
+          return AlertDialog(
+           title:WaffraText(waffraIsEnglish?'Choose savings goal':'اختر هدف الادخار'),
+           content:SizedBox(
+            width:double.maxFinite,
+            height:min(450.0,MediaQuery.sizeOf(pickCtx).height*.60),
+            child:Column(children:[
+             TextField(autofocus:true,onChanged:(value)=>refresh(()=>query=value),
+              decoration:InputDecoration(
+               prefixIcon:const Icon(Icons.search_rounded),
+               hintText:waffraIsEnglish?'Search among suggested goals…':'ابحث بين الأهداف المقترحة…',
+               border:OutlineInputBorder(borderRadius:BorderRadius.circular(14)))),
+             const SizedBox(height:8),
+             ListTile(
+              dense:true,
+              leading:const Icon(Icons.add_circle_outline_rounded,color:emerald),
+              title:WaffraText(waffraIsEnglish?'Other goal (custom name)':'هدف آخر (اسم مخصص)'),
+              onTap:WaffraHaptics.tap(()=>Navigator.pop(pickCtx,otherGoal))),
+             const Divider(height:10),
+             Expanded(child:matches.isEmpty
+              ?Center(child:WaffraText(waffraIsEnglish?'No matching goals':'لا توجد أهداف مطابقة'))
+              :ListView.builder(itemCount:matches.length,itemBuilder:(pickCtx,index)=>
+               ListTile(
+                dense:true,
+                title:WaffraText(matches[index],maxLines:2),
+                onTap:WaffraHaptics.tap(()=>Navigator.pop(pickCtx,matches[index]))))),
+            ]),
+           ),
+          );
+         });
+        });
+       if(picked!=null&&ctx.mounted)updateGoal((){
+        selectedGoal=picked;
+        name.text=picked==otherGoal?'':picked;
+       });
+      }),
+      child:InputDecorator(
+       decoration:InputDecoration(
+        labelText:waffraIsEnglish?'Savings goal *':'اختر هدف الادخار *',
+        errorText:attempted&&selectedGoal.isEmpty?waffraRequiredFieldMessage:
+         attempted&&selectedGoal!=otherGoal?validateGoalName():null,
+        errorMaxLines:2,
+        suffixIcon:const Icon(Icons.search_rounded),
+        border:OutlineInputBorder(borderRadius:BorderRadius.circular(14))),
+       child:Row(children:[
+        Expanded(child:WaffraText(
+         selectedGoal==otherGoal?(waffraIsEnglish?'Other goal':'هدف آخر'):
+         selectedGoal.isEmpty?(waffraIsEnglish?'Select a goal':'اختر هدفًا'):selectedGoal,
+         maxLines:2,
+         style:TextStyle(fontSize:14,color:selectedGoal.isEmpty?Theme.of(ctx).hintColor:null))),
+        const Icon(Icons.arrow_drop_down_rounded,size:20),
+       ]),
+      ),
+     ),
+     if(selectedGoal==otherGoal)...[
+      const SizedBox(height:12),
+      TextField(controller:name,textInputAction:TextInputAction.next,
+       maxLength:100,onChanged:(_)=>updateGoal((){}),
+       decoration:InputDecoration(
+        labelText:waffraIsEnglish?'Other goal name *':'اسم الهدف الآخر *',
+        hintText:waffraIsEnglish?'e.g. Home renovation':'مثال: تجديد المنزل',
+        errorText:attempted?validateGoalName():null,
+        errorMaxLines:2,
+        border:const OutlineInputBorder())),
+     ],
+     const SizedBox(height:12),
+     OutlinedButton.icon(onPressed:WaffraHaptics.tap(()async{
+      final date=await waffraPickDateWithToday(english:waffraIsEnglish,context:ctx,
+       initialDate:selectedDeadline??DateTime.now().add(const Duration(days:1)),
+       firstDate:DateTime.now(),lastDate:DateTime(DateTime.now().year+10));
+      if(date!=null&&ctx.mounted)updateGoal(()=>selectedDeadline=date);
+     }),icon:const Icon(Icons.calendar_month_outlined),
+     label:WaffraText(selectedDeadline==null?
+      (waffraIsEnglish?'Due date':'تاريخ الاستحقاق'):
+      dayText(selectedDeadline!))),
+     const SizedBox(height:12),
+     SwitchListTile.adaptive(
+      contentPadding:EdgeInsets.zero,
+      title:WaffraText(waffraIsEnglish?'Open-ended savings':'ادخار مفتوح بدون مبلغ مستهدف'),
+      subtitle:WaffraText(waffraIsEnglish?'Save any amount, without a target or completion percentage':'ادّخر براحتك من غير حدّ أو رقم مستهدف'),
+      value:noTarget,activeTrackColor:emerald,
+      onChanged:WaffraHaptics.selection((value)=>updateGoal(()=>noTarget=value))),
+     if(!noTarget)TextField(controller:target,
+      keyboardType:const TextInputType.numberWithOptions(decimal:true),
+      inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],
+      onChanged:(_)=>updateGoal((){}),
+      decoration:InputDecoration(
+       labelText:waffraIsEnglish?'Target amount *':'المبلغ المستهدف *',
+       hintText:waffraIsEnglish?'e.g. 25000':'مثال: 25000',
+       errorText:attempted?waffraAmountFieldError(target.text):null,
+       border:const OutlineInputBorder())),
+     if(!noTarget)...[
+      const SizedBox(height:12),
+      waffraBudgetAlertControls(
+       enabled:goalAlertsEnabled,percent:goalAlertPercent,
+       english:waffraIsEnglish,goal:true,
+       onEnabled:(value)=>updateGoal(()=>goalAlertsEnabled=value),
+       onPercent:(value)=>updateGoal(()=>goalAlertPercent=value)),
+     ],
+    ]),
+    actions:[
+     TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
+      child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+     FilledButton(onPressed:WaffraHaptics.tap((){
+      updateGoal(()=>attempted=true);
+      final n=amountOfDisplay(target.text);
+      if(selectedGoal.isEmpty||validateGoalName()!=null||
+       (!noTarget&&(WaffraValidators.positiveAmount(target.text)!=null||n==null)))return;
+      Navigator.pop(ctx,SavingGoal(id:newId(),name:name.text.trim(),
+       target:noTarget?0.0:n!,saved:0,dueDate:selectedDeadline,
+       progressAlertsEnabled:!noTarget&&goalAlertsEnabled,
+       progressAlertPercent:goalAlertPercent));
+     }),child:WaffraText(waffraIsEnglish?'Add goal':'إضافة الهدف')),
+    ],
+   )));
+  disposeLater([name,target]);
+  if(g!=null&&mounted){
+   if(g.progressAlertsEnabled)await _requestPercentageAlertPermission();
+   if(!mounted)return;
+   if(selectedGoal==otherGoal){
+    final key=waffraNormalizeGoal(g.name);
+    if(!allDefaultNames.contains(key)&&
+       !customGoals.any((x)=>waffraNormalizeGoal(x)==key)){
+     await _financeAuthority.addCustomGoalSuggestion(g.name);
+    }
+   }
+   if(!mounted)return;
+   // Approval BEFORE write: goal and linked recurring due use one atomic
+   // SQLCipher snapshot+relational projection commit, or both roll back.
+   final linkNew=g.dueDate!=null&&g.target>0&&g.active&&
+    await _confirmGoalDueRecurringLink(g);
+   if(!mounted)return;
+   final saved=await this._saveGoalAndLinkedDueAtomically(g,
+    creating:true,linkNew:linkNew,operation:'goal-create-and-due');
+   if(!saved||!mounted)return;
+   snackSuccess(context,linkNew?
+    (waffraIsEnglish?'Goal and due saved together.':
+     'تم حفظ الهدف والاستحقاق المرتبط معًا.'):
+    (waffraIsEnglish?'Savings goal added successfully':
+     'تمت إضافة الهدف بنجاح'));
+  }
+ }
+ /// Release an earmark back to spendable cash. The eventual expense is
+ /// recorded once using the normal finance entry editor, not in this transfer.
+ Future<void> releaseGoalFunds(SavingGoal goal)async{
+  if(goal.saved<=0)return;
+  await _ensureFinanceBound();
+  final bridge=_financeBinding?.accountsBridge;
+  var possible=<WaffraAccountBalance>[];
+  if(bridge!=null){
+   try{
+    possible=(await WaffraVerifiedAccountsApi(
+     bridge:bridge).balances()).where((a)=>!a.archived).toList();
+   }catch(error){
+    debugPrint('Verified goal release accounts unavailable: $error');
+    if(mounted)snack(context,waffraIsEnglish?
+     'Cannot verify the receiving account; reload first.':
+     'تعذر التحقق من الحساب المستلم؛ حدّث الصفحة أولًا.');
+    return;
+   }
+  }
+  if(!mounted)return;
+  var chosen='none';
+  final ctl=TextEditingController(text:formatWaffraEditAmount(goal.saved));
+  try{
+   final choice=await showWaffraDialog<({double amount,String? accountId})>(
+    context:context,builder:(ctx)=>StatefulBuilder(
+     builder:(ctx,refresh)=>AlertDialog(
+      title:WaffraText(waffraIsEnglish?
+       'Release goal savings':'سحب من محفظة الهدف'),
+      content:SingleChildScrollView(child:Column(
+       mainAxisSize:MainAxisSize.min,
+       crossAxisAlignment:CrossAxisAlignment.stretch,
+       children:[
+        WaffraText(waffraIsEnglish?
+         'Move savings out of the separate goal wallet. This is not income and never creates a second expense.':
+         'السحب من محفظة الهدف المستقلة ليس دخلًا جديدًا ولا يسجّل مصروفًا ثانيًا.'),
+        const SizedBox(height:12),
+        TextField(controller:ctl,
+         keyboardType:const TextInputType.numberWithOptions(decimal:true),
+         inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],
+         decoration:InputDecoration(
+          labelText:waffraIsEnglish?'Amount to release':'مبلغ السحب',
+          border:const OutlineInputBorder())),
+        if(bridge!=null)...[
+         const SizedBox(height:12),
+         WaffraCenteredDropdownFormField<String>(
+          key:const Key('waffra-goal-release-destination-account'),
+          isExpanded:true,initialValue:chosen,
+          decoration:InputDecoration(
+           labelText:waffraIsEnglish?
+            'Receive savings in account':'الحساب المستلم للادخار',
+           border:const OutlineInputBorder()),
+          items:[
+           DropdownMenuItem<String>(value:'none',
+            child:WaffraText(waffraIsEnglish?
+             'No linked account':'بدون حساب')),
+           ...possible.map((a)=>DropdownMenuItem<String>(
+            value:a.id,child:WaffraText(a.name,maxLines:1))),
+          ],
+          onChanged:(value)=>refresh(()=>chosen=value??'none'),
+         ),
+         const SizedBox(height:6),
+         WaffraText(waffraIsEnglish?
+          'A selected SAR account is credited exactly once; no account means no bank balance change.':
+          'الحساب المختار يُضاف له المبلغ مرة واحدة؛ بدون حساب لا يتغير أي رصيد بنكي.',
+          style:const TextStyle(fontSize:12)),
+        ],
+       ])),
+      actions:[
+       TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
+        child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+       FilledButton(onPressed:WaffraHaptics.tap((){
+        final value=amountOfDisplay(ctl.text);
+        if(value==null||value<=0||value>goal.saved)return;
+        Navigator.pop(ctx,(amount:value,
+         accountId:chosen=='none'?null:chosen));
+       }),child:WaffraText(waffraIsEnglish?'Confirm release':'تأكيد السحب')),
+      ],
+     ),
+    ),
+   );
+   if(choice==null||!mounted)return;
+   final matching=goals.where((g)=>g.id==goal.id).toList();
+   if(matching.length!=1||matching.single.saved<choice.amount){
+    snack(context,waffraIsEnglish?
+     'Goal balance changed; reload before release.':
+     'رصيد الهدف اتغير؛ حدّث الصفحة قبل السحب.');
+    return;
+   }
+   if(bridge!=null){
+    try{
+     await _financialWriteQueue.drain();
+     final baseline=await _financeAuthority.load(
+      route:WaffraFinanceRoute.goalCreateEditDeleteRestore);
+     if(baseline.source!=WaffraRuntimeFinanceBackend.verifiedEncrypted||
+        baseline.encryptedWitness==null){
+      throw StateError('Verified goal release source changed.');
+     }
+     await bridge.fundVerifiedGoal(
+      baseline:baseline.encryptedWitness!,goalId:goal.id,
+      amountMinor:(choice.amount*100).round(),
+      movementId:'goal-release:${newId()}',
+      occurredIso:DateTime.now().toUtc().toIso8601String(),
+      sourceAccountId:choice.accountId,userConfirmed:true,release:true,
+     );
+     if(mounted)await _loadFinanceSafely();
+     if(mounted)unawaited(_refreshWidget());
+    }catch(error){
+     debugPrint('Verified savings release rejected: $error');
+     if(mounted)await _loadFinanceSafely();
+     if(mounted)snack(context,waffraIsEnglish?
+      'Release was not confirmed. Balances were safely refreshed.':
+      'لم يتأكد السحب. تم تحديث الأرصدة بأمان.');
+    }
+   }else{
+    // Existing guarded legacy data has no verified bank-account ledger.
+    setState((){
+     final idx=goals.indexWhere((g)=>g.id==goal.id);
+     if(idx>=0)goals[idx]=matching.single.copy(
+      saved:matching.single.saved-choice.amount);
+    });
+    await _persistModuleOrReload(WaffraFinanceRoute.goalCreateEditDeleteRestore,
+     operation:'release-goal-earmark');
+   }
+  }finally{disposeLater([ctl]);}
+ }
+ Future<void> fundGoal(SavingGoal g)async {
+  // Source accounts are offered ONLY for a previously verified SQLCipher
+  // vault. Legacy/unknown sources cannot invent a bank debit.
+  await _ensureFinanceBound();
+  final fundingBridge=_financeBinding?.accountsBridge;
+  var fundingAccounts=<WaffraAccountBalance>[];
+  if(fundingBridge!=null){
+   try{
+    fundingAccounts=(await WaffraVerifiedAccountsApi(
+     bridge:fundingBridge).balances()).where((a)=>!a.archived).toList();
+   }catch(error){
+    debugPrint('Verified savings accounts unavailable: $error');
+    if(mounted)snack(context,waffraIsEnglish?
+     'Accounts could not be verified. Refresh and try again.':
+     'تعذر التحقق من الحسابات. حدّث الصفحة وحاول مرة أخرى.');
+    return;
+   }
+  }
+  if(!mounted)return;
+  String chosenSource='none';
+  final amount=TextEditingController();
+  bool attempted=false;
+  final funding=await showWaffraDialog<({double amount,String? sourceAccountId})>(
+   context:context,builder:(dialogCtx)=>StatefulBuilder(
+    builder:(dialogCtx,update){
+     final theme=Theme.of(dialogCtx);
+     final dark=theme.brightness==Brightness.dark;
+     final accent=dark?const Color(0xFF82E2B4):emerald;
+     final currentProgress=g.target<=0?0.0:(g.saved/g.target).clamp(0.0,1.0);
+     void addQuickAmount(double increment){
+      final current=amountOf(amount.text)??0;
+      amount.text=formatWaffraMoney(current+increment);
+      amount.selection=TextSelection.collapsed(offset:amount.text.length);
+      update((){});
+     }
+     return AlertDialog(
+      title:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+       WaffraText(waffraIsEnglish?'Add savings':'إضافة ادخار',
+        style:const TextStyle(fontSize:22,fontWeight:FontWeight.bold)),
+       const SizedBox(height:3),
+       WaffraText(waffraIsEnglish?'To ${g.name}':'إلى هدف ${g.name}',
+        maxLines:2,style:TextStyle(fontSize:14,color:theme.hintColor)),
+      ]),
+      content:SingleChildScrollView(child:Column(
+       mainAxisSize:MainAxisSize.min,
+       crossAxisAlignment:CrossAxisAlignment.stretch,
+       children:[
+        Container(
+         padding:const EdgeInsets.symmetric(horizontal:13,vertical:14),
+         decoration:BoxDecoration(
+          color:accent.withValues(alpha:dark ? 0.12 : 0.06),
+          borderRadius:BorderRadius.circular(20),
+          border:Border.all(color:accent.withValues(alpha:.14))),
+         child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+          Row(children:[
+           CircleAvatar(radius:20,backgroundColor:accent.withValues(alpha:.15),
+            child:Icon(goalIcon(g.name),color:accent,size:21)),
+           const SizedBox(width:9),
+           Expanded(child:WaffraText(g.name,maxLines:2,
+            style:const TextStyle(fontWeight:FontWeight.bold,fontSize:14))),
+          ]),
+          const SizedBox(height:9),
+          WaffraText(g.target<=0?(waffraIsEnglish?'Saved '+cash(g.saved)+' · Open-ended':'المدخر '+cash(g.saved)+' · ادخار مفتوح'):(waffraIsEnglish
+           ?'${WaffraDisplayCurrency.money(g.saved,english:true)} of ${WaffraDisplayCurrency.money(g.target,english:true)}'
+           :'${WaffraDisplayCurrency.money(g.saved,english:false)} من ${WaffraDisplayCurrency.money(g.target,english:false)}'),
+           textAlign:TextAlign.center,style:const TextStyle(fontSize:13)),
+          const SizedBox(height:9),
+          if(g.target>0)LinearProgressIndicator(value:currentProgress,minHeight:8,
+           color:accent,backgroundColor:accent.withValues(alpha:.14),
+           borderRadius:BorderRadius.circular(12)),
+          const SizedBox(height:7),
+          if(g.target>0)WaffraText('${(currentProgress*100).round()}%',
+           textAlign:TextAlign.start,
+           style:TextStyle(fontWeight:FontWeight.bold,fontSize:12,color:accent)),
+         ])),
+        const SizedBox(height:17),
+        WaffraText(waffraIsEnglish?'Amount to add *':'المبلغ المراد إضافته *',
+         style:const TextStyle(fontWeight:FontWeight.bold,fontSize:14)),
+        const SizedBox(height:8),
+        TextField(
+         controller:amount,
+         keyboardType:const TextInputType.numberWithOptions(decimal:true),
+         inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],
+         onChanged:(_)=>update((){}),
+         decoration:InputDecoration(
+          hintText:'0.00',
+          suffixText:WaffraDisplayCurrency.label(waffraIsEnglish),
+          errorText:attempted?waffraAmountFieldError(amount.text):null,
+          errorMaxLines:2,
+          enabledBorder:OutlineInputBorder(
+           borderRadius:BorderRadius.circular(15),
+           borderSide:BorderSide(color:accent,width:1.5)),
+          focusedBorder:OutlineInputBorder(
+           borderRadius:BorderRadius.circular(15),
+           borderSide:BorderSide(color:accent,width:2)),
+          border:OutlineInputBorder(borderRadius:BorderRadius.circular(15)),
+         )),
+        if(fundingBridge!=null)...[
+         const SizedBox(height:12),
+         WaffraCenteredDropdownFormField<String>(
+          key:const Key('waffra-goal-funding-source-account'),
+          isExpanded:true,initialValue:chosenSource,
+          decoration:InputDecoration(
+           labelText:waffraIsEnglish?'Transfer savings from':'مصدر مبلغ الادخار',
+           border:const OutlineInputBorder()),
+          items:[
+           DropdownMenuItem(value:'none',
+            child:WaffraText(waffraIsEnglish?'Unassigned':'بدون حساب')),
+           ...fundingAccounts.map((a)=>DropdownMenuItem(
+            value:a.id,child:WaffraText(a.name,maxLines:1))),
+          ],
+          onChanged:(v){if(v!=null)update(()=>chosenSource=v);},
+         ),
+         const SizedBox(height:7),
+         WaffraText(waffraIsEnglish
+          ?'Choose a bank or cash account for this deposit only. An unassigned deposit does not change any account balance.'
+          :'اختار حساب مصدر الدفعة فقط. تركها بدون حساب لا يغيّر رصيد أي حساب.',
+          style:const TextStyle(fontSize:12)),
+        ],
+        const SizedBox(height:10),
+        Row(children:[
+         for(final quick in [500.0,1000.0,2000.0])...[
+          Expanded(child:TextButton(
+           style:TextButton.styleFrom(
+            backgroundColor:accent.withValues(alpha:.08),
+            padding:const EdgeInsets.symmetric(vertical:10,horizontal:2),
+            shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(12))),
+           onPressed:WaffraHaptics.tap(()=>addQuickAmount(quick)),
+           child:WaffraText('+${quick.toInt()}',
+            style:TextStyle(fontWeight:FontWeight.bold,fontSize:12,color:accent)))),
+          if(quick!=2000.0)const SizedBox(width:7),
+         ],
+        ]),
+        const SizedBox(height:13),
+        Container(
+         padding:const EdgeInsets.all(11),
+         decoration:BoxDecoration(color:accent.withValues(alpha:.09),
+          borderRadius:BorderRadius.circular(15)),
+         child:Row(children:[
+          Icon(Icons.info_outline_rounded,size:19,color:accent),
+          const SizedBox(width:8),
+          Expanded(child:WaffraText(waffraIsEnglish
+           ?'This is a separate savings-wallet movement, not an expense. A verified funding account is debited once, if selected.'
+           :'هذه حركة في محفظة الادخار المستقلة وليست مصروفًا. الحساب المحدد كمصدر يُخصم منه مرة واحدة فقط.',
+           style:const TextStyle(fontSize:12))),
+         ])),
+       ],
+      )),
+      actionsPadding:const EdgeInsets.fromLTRB(16,0,16,16),
+      actions:[SizedBox(width:double.infinity,
+       child:Column(children:[
+        SizedBox(width:double.infinity,child:FilledButton(
+         onPressed:WaffraHaptics.tap((){
+          update(()=>attempted=true);
+          if(waffraAmountFieldError(amount.text)!=null)return;
+          final value=amountOfDisplay(amount.text);
+          if(value==null||value<=0)return;
+          Navigator.pop(dialogCtx,(amount:value,
+           sourceAccountId:chosenSource=='none'?null:chosenSource));
+         }),
+         child:WaffraText(waffraIsEnglish?'Add amount':'إضافة'))),
+        const SizedBox(height:7),
+        SizedBox(width:double.infinity,child:OutlinedButton(
+         onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialogCtx)),
+         child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء'))),
+       ]))],
+     );
+    },
+   ),
+  );
+  disposeLater([amount]);
+  if(funding!=null&&mounted){
+   final n=funding.amount;
+   final available=waffraAvailableCash(entries,goals);
+   if(n>available){
+    final acknowledged=await showWaffraDialog<bool>(
+     context:context,builder:(dialog)=>AlertDialog(
+      title:WaffraText(waffraIsEnglish?
+       'Savings exceed available balance':'تنبيه: مبلغ الادخار أكبر من الرصيد المتاح'),
+      content:WaffraText(waffraIsEnglish?
+       'Available: ${cash(available)}. Requested: ${cash(n)}. '
+       'The goals wallet is separate. This saving will not deduct money '
+       'from your current balance. This is an informational warning only.':
+       'الرصيد الحالي: ${cash(available)}، والادخار المطلوب: ${cash(n)}. '
+       'محفظة الأهداف منفصلة؛ إضافة الادخار لن تخصم أي مبلغ من الرصيد الحالي. '
+       'هذا تنبيه توضيحي فقط.'),
+      actions:[SizedBox(width:double.maxFinite,child:Row(children:[
+       Expanded(child:OutlinedButton(
+        onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialog,false)),
+        child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء',maxLines:2))),
+       const SizedBox(width:8),
+       Expanded(child:FilledButton(
+        onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialog,true)),
+        child:WaffraText(waffraIsEnglish?'Continue':'متابعة',maxLines:2))),
+      ]))],
+     ));
+    if(acknowledged!=true||!mounted)return;
+   }
+   // Never overwrite concurrent edits to this goal after a warning dialog.
+   final matching=goals.where((x)=>x.id==g.id).toList();
+   if(matching.length!=1){
+    snack(context,waffraIsEnglish?
+     'Goal changed; refresh and try again.':
+     'بيانات الهدف اتغيرت؛ حدّث الصفحة وحاول تاني.');
+    return;
+   }
+   final current=matching.single;
+   final achieved=current.saved<current.target&&
+    current.saved+n>=current.target;
+   if(fundingBridge!=null){
+    // One trusted writer handles the goal-wallet movement, funding account
+    // attribution and canonical snapshot in one SQLCipher transaction.
+    try{
+     await _financialWriteQueue.drain();
+     final baseline=await _financeAuthority.load(
+      route:WaffraFinanceRoute.goalCreateEditDeleteRestore);
+     if(baseline.source!=WaffraRuntimeFinanceBackend.verifiedEncrypted||
+        baseline.encryptedWitness==null){
+      throw StateError('Verified goal source changed.');
+     }
+     await fundingBridge.fundVerifiedGoal(
+      baseline:baseline.encryptedWitness!,
+      goalId:g.id,amountMinor:(n*100).round(),
+      movementId:'goal-fund:${newId()}',
+      occurredIso:DateTime.now().toUtc().toIso8601String(),
+      sourceAccountId:funding.sourceAccountId,userConfirmed:true,
+     );
+     if(mounted)await _loadFinanceSafely();
+    }catch(error){
+     debugPrint('Atomic goal funding was not confirmed: $error');
+     if(mounted)await _loadFinanceSafely();
+     if(mounted)snack(context,waffraIsEnglish?
+      'Savings transfer was not confirmed. Financial balances were reloaded.':
+      'لم تتأكد حركة الادخار. أعدنا تحميل الأرصدة بدون خصم غير مؤكد.');
+     return;
+    }
+   }else{
+    // The legacy wallet has no verified bank-account ledger. Preserve its
+    // original independent wallet-only behavior; do not invent a debit.
+    setState((){
+     final i=goals.indexWhere((x)=>x.id==g.id);
+     if(i>=0)goals[i]=current.copy(saved:current.saved+n);
+    });
+    if(!await _persistModuleOrReload(
+       WaffraFinanceRoute.goalCreateEditDeleteRestore,
+       operation:'goal-funding'))return;
+   }
+   final progressCrossed=WaffraFinancialInsights.crossedBudgetThreshold(
+    previousSpent:current.saved,spent:current.saved+n,
+    limit:current.target,alertPercent:current.progressAlertPercent,
+    enabled:current.active&&current.progressAlertsEnabled);
+   if(progressCrossed!=0){
+    try{await WaffraReminders.showGoalProgress(
+     goalId:current.id,stage:progressCrossed,english:waffraIsEnglish);}
+    catch(error){debugPrint('Goal progress notification unavailable: $error');}
+   }
+   if(achieved&&mounted){
+    await showWaffraDialog<void>(context:context,builder:(ctx)=>AlertDialog(
+     title:WaffraText(waffraIsEnglish?'🎉 Goal achieved!':'🎉 مبروك!'),
+     content:WaffraText(waffraIsEnglish
+      ?'You achieved your savings goal “${g.name}”!'
+      :'تم تحقيق هدف الادخار «${g.name}» بنجاح!'),
+     actions:[FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
+      child:WaffraText(waffraIsEnglish?'Great':'رائع'))]));
+   }else if(progressCrossed!=0&&mounted){
+    await showWaffraDialog<void>(context:context,builder:(ctx)=>AlertDialog(
+     title:WaffraText(waffraIsEnglish?'Savings progress':'تنبيه تقدّم الادخار'),
+     content:WaffraText(waffraIsEnglish?
+      'Your savings reached $progressCrossed% of the target.':
+      'مدخراتك وصلت إلى $progressCrossed٪ من المبلغ المستهدف.'),
+     actions:[FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
+      child:WaffraText(waffraIsEnglish?'OK':'حسنًا'))]));
+   }
+  }
+ }
+ IconData goalIcon(String name){
+  final x=name.toLowerCase();
+  if(RegExp(r'سيار|عرب|car').hasMatch(x))return Icons.directions_car;
+  if(RegExp(r'بيت|منزل|شقة|home').hasMatch(x))return Icons.home;
+  if(RegExp(r'سفر|رحل|عمرة|حج|travel').hasMatch(x))return Icons.flight_takeoff;
+  if(RegExp(r'زواج|عرس|فرح').hasMatch(x))return Icons.favorite;
+  if(RegExp(r'دراس|تعليم|جامعة|school').hasMatch(x))return Icons.school;
+  if(RegExp(r'جوال|هاتف|موبايل').hasMatch(x))return Icons.smartphone;
+  if(RegExp(r'مشروع|تجارة').hasMatch(x))return Icons.storefront;
+  return Icons.account_balance_wallet;
+ }
+
+ Future<void> createSavingChallenge()async {
+  final name=TextEditingController(),amount=TextEditingController();
+  var attempted=false,days=30;
+  final challenge=await showWaffraDialog<SavingChallenge>(
+   context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?'New savings challenge':'تحدي ادخار جديد'),
+    content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
+     TextField(controller:name,onChanged:(_)=>update((){}),decoration:InputDecoration(
+      labelText:waffraIsEnglish?'Challenge name *':'اسم التحدي *',
+      errorText:attempted?waffraTextFieldError(name.text):null)),
+     const SizedBox(height:12),
+     TextField(controller:amount,onChanged:(_)=>update((){}),
+      keyboardType:const TextInputType.numberWithOptions(decimal:true),
+      inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],decoration:InputDecoration(
+       labelText:waffraIsEnglish?'Daily amount *':'الادخار اليومي *',
+       errorText:attempted?waffraAmountFieldError(amount.text):null)),
+     const SizedBox(height:12),
+     WaffraCenteredDropdownFormField<int>(initialValue:days,
+      decoration:InputDecoration(labelText:waffraIsEnglish?'Duration *':'مدة التحدي *'),
+      items:[7,14,30].map((n)=>DropdownMenuItem<int>(value:n,
+       child:WaffraText(waffraIsEnglish?'$n days':'$n يوم'))).toList(),
+      onChanged:WaffraHaptics.selection((n){if(n!=null)update(()=>days=n);})),
+     const SizedBox(height:12),
+     WaffraText(waffraIsEnglish?
+      'This tracks your habit manually and never deducts money.':
+      'التحدي لتتبّع عادتك يدويًا، ولن يخصم أو يحوّل أموالًا تلقائيًا.',
+      style:const TextStyle(color:Colors.grey,fontSize:12)),
+    ])),
+    actions:[
+     TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+     FilledButton(onPressed:WaffraHaptics.tap((){
+      update(()=>attempted=true);
+      if(WaffraValidators.requiredText(name.text)!=null||
+       WaffraValidators.positiveAmount(amount.text)!=null)return;
+      final value=amountOfDisplay(amount.text);
+      if(value==null)return;
+      Navigator.pop(ctx,SavingChallenge(id:newId(),title:name.text.trim(),
+       dailyAmount:value,days:days));
+     }),child:WaffraText(waffraIsEnglish?'Save challenge':'إضافة التحدي')),
+    ])));
+  disposeLater([name,amount]);
+  if(challenge==null||!mounted)return;
+  setState(()=>challenges.add(challenge));
+  await persist(route:WaffraFinanceRoute.challengeAndBudgetUpdate);
+ }
+ Widget savingsChallengesSection()=>Card(
+  margin:const EdgeInsets.symmetric(vertical:12),elevation:1,
+  shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(20)),
+  child:ExpansionTile(
+   initiallyExpanded:challenges.isNotEmpty,
+   leading:const Icon(Icons.emoji_events_outlined,color:emerald),
+   title:WaffraText(waffraIsEnglish?'Savings challenges':'تحديات الادخار',
+    style:const TextStyle(fontWeight:FontWeight.bold)),
+   subtitle:WaffraText(waffraIsEnglish?'Build your saving habit':'حوّل التوفير إلى عادة يومية'),
+   children:[
+    if(challenges.isEmpty)Padding(padding:const EdgeInsets.all(14),
+     child:WaffraText(waffraIsEnglish?'Try a daily savings challenge':
+      'ابدأ تحديًا بسيطًا ووفّر مبلغًا كل يوم.',textAlign:TextAlign.center)),
+    ...challenges.map((c){
+     final completed=c.completedDays>=c.days,allowed=c.canComplete(DateTime.now());
+     return Padding(padding:const EdgeInsets.fromLTRB(14,7,14,12),
+      child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+       Row(children:[
+        Expanded(child:WaffraText(c.title,style:const TextStyle(fontWeight:FontWeight.bold))),
+        IconButton(icon:const Icon(Icons.delete_outline,size:20),
+         tooltip:waffraIsEnglish?'Delete challenge':'حذف التحدي',
+         onPressed:WaffraHaptics.tap(()async{
+          final ok=await confirmDeletion(waffraIsEnglish?'Delete challenge?':'حذف التحدي',
+           waffraIsEnglish?'Progress cannot be recovered.':
+            'هل أنت متأكد من حذف هذا التحدي؟ سيتم حذف التحدي نهائيًا، ولن تتمكن من استعادته لاحقًا.');
+          if(ok==true&&mounted){
+           setState(()=>challenges.removeWhere((x)=>x.id==c.id));await persist(route:WaffraFinanceRoute.challengeAndBudgetUpdate);
+          }
+         })),
+       ]),
+       WaffraText(waffraIsEnglish?
+        'Daily: ${cash(c.dailyAmount)} • Target: ${cash(c.days*c.dailyAmount)}':
+        'يوميًا: ${cash(c.dailyAmount)} • المستهدف: ${cash(c.days*c.dailyAmount)}',
+        style:const TextStyle(fontSize:12)),
+       const SizedBox(height:7),
+       LinearProgressIndicator(value:(c.completedDays/c.days).clamp(0.0,1.0),
+        minHeight:8,borderRadius:BorderRadius.circular(8)),
+       const SizedBox(height:8),
+       Row(children:[
+        Expanded(child:WaffraText(waffraIsEnglish?
+         '${c.completedDays} of ${c.days} days':
+         '${c.completedDays} من ${c.days} يوم',
+         style:const TextStyle(fontSize:12))),
+        TextButton.icon(onPressed:WaffraHaptics.tap(allowed?()async{
+          final i=challenges.indexWhere((x)=>x.id==c.id);
+          if(i<0||!challenges[i].canComplete(DateTime.now()))return;
+          setState(()=>challenges[i]=challenges[i].complete());
+          await persist(route:WaffraFinanceRoute.challengeAndBudgetUpdate);
+         }:null),icon:Icon(completed?Icons.check_circle_outline:Icons.check,size:18),
+         label:WaffraText(completed?(waffraIsEnglish?'Complete':'مكتمل'):
+          allowed?(waffraIsEnglish?'Saved today':'وفّرت اليوم'):
+          (waffraIsEnglish?'Marked today':'تم اليوم'))),
+       ]),
+      ]));
+    }),
+    Padding(padding:const EdgeInsets.fromLTRB(14,0,14,14),
+     child:OutlinedButton.icon(onPressed:WaffraHaptics.tap(createSavingChallenge),
+      icon:const Icon(Icons.add),
+      label:WaffraText(waffraIsEnglish?'New challenge':'تحدي جديد'))),
+   ],
+  ));
+
+ Widget savingsBenefit(String name,IconData icon){
+  final color=Theme.of(context).brightness==Brightness.dark?
+   const Color(0xFF72DCAC):emerald;
+  return Expanded(child:Container(
+   padding:const EdgeInsets.symmetric(vertical:13,horizontal:5),
+   decoration:BoxDecoration(color:color.withValues(alpha:.10),
+    border:Border.all(color:color.withValues(alpha:.18)),borderRadius:BorderRadius.circular(18)),
+   child:Column(mainAxisSize:MainAxisSize.min,children:[
+    Icon(icon,color:color,size:23),const SizedBox(height:10),
+    Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+     Flexible(child:FittedBox(fit:BoxFit.scaleDown,child:WaffraText(name,
+      style:const TextStyle(fontSize:12,fontWeight:FontWeight.bold)))),
+    ]),
+   ]),
+  ));
+ }
+ String waffraGoalDeleteWarning(String name,bool linked,bool english)=>english
+  ?'Move “$name” to Deleted Goals for 30 days. ${linked?'This goal has saved amounts or linked transactions; financial history will stay untouched.':''} Restored goals restart with zero saved balance.'
+  :'نقل «$name» إلى الأهداف المحذوفة لمدة 30 يومًا. ${linked?'هذا الهدف مرتبط بمبالغ ادخار أو معاملات مالية؛ ستبقى المعاملات محفوظة.':''} عند الاسترجاع يبدأ رصيد الادخار من صفر.';
+ Future<void> deletedGoalsDialog()async{
+  if(_lastFinanceAuthorityRead?.source==
+     WaffraRuntimeFinanceBackend.verifiedEncrypted){
+   await _showVerifiedModuleTrash(WaffraFinanceModule.goals);
+   return;
+  }
+  final before=deletedGoals.length;
+  deletedGoals.removeWhere((item){
+   final date=DateTime.tryParse('${item['deletedAt']??''}');
+   return date==null||!DateTime.now().isBefore(date.add(const Duration(days:30)));
+  });
+  if(before!=deletedGoals.length)await persist(route:WaffraFinanceRoute.goalCreateEditDeleteRestore);
+  if(!mounted)return;
+  await showWaffraDialog<void>(context:context,builder:(ctx)=>
+   StatefulBuilder(builder:(ctx,refresh)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?'Deleted goals':'الأهداف المحذوفة'),
+    content:SizedBox(width:double.maxFinite,
+     height:waffraDeletedListHeight(ctx,deletedGoals.length),
+     child:deletedGoals.isEmpty
+      ?Center(child:WaffraText(waffraIsEnglish?'No deleted goals':'لا توجد أهداف محذوفة'))
+      :ListView(children:deletedGoals.map((item){
+       final goal=SavingGoal.fromJson(Map<String,dynamic>.from(item['goal'] as Map));
+       final deletedAt=DateTime.tryParse('${item['deletedAt']??''}')??DateTime.now();
+       final left=max(0,(deletedAt.add(const Duration(days:30))
+        .difference(DateTime.now()).inHours/24).ceil());
+       return waffraDeletedItemCard(
+        context:ctx,
+        icon:goalIcon(goal.name),
+        iconColor:emerald,
+        title:goal.name,
+        subtitle:waffraIsEnglish?'Savings goal • $left days remaining':
+         'هدف ادخاري • متبقي $left يوم',
+        onRestore:()async{
+         if(goals.any((g)=>g.id==goal.id||g.name==goal.name)){
+          snack(ctx,waffraIsEnglish?'Goal already exists':'الهدف موجود بالفعل');
+          return;
+         }
+         setState((){
+          goals.add(goal.copy(saved:0));
+          deletedGoals.remove(item);
+         });
+         await persist(route:WaffraFinanceRoute.goalCreateEditDeleteRestore);
+         if(!ctx.mounted)return;
+         Navigator.pop(ctx);
+         if(mounted)snackSuccess(context,waffraIsEnglish
+          ?'Goal restored with zero savings. Past transactions are unchanged.'
+          :'تم استرجاع الهدف بمدخرات صفر. جميع المعاملات القديمة المرتبطة به محفوظة في السجل المالي.');
+        },
+        onDeleteForever:()async{
+         final yes=await confirmDeletion(
+          waffraIsEnglish?'Permanently delete goal?':'حذف الهدف نهائيًا',
+          waffraIsEnglish
+           ?'Permanently delete “${goal.name}”? Cannot undo. Transactions stay saved.'
+           :'حذف الهدف «${goal.name}» نهائيًا؟ لا يمكن التراجع. معاملاتك محفوظة.');
+         if(yes!=true||!mounted)return;
+         setState(()=>deletedGoals.remove(item));
+         await persist(route:WaffraFinanceRoute.goalCreateEditDeleteRestore);
+         if(ctx.mounted)refresh((){});
+        },
+       );
+      }).toList())),
+    actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
+     child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))],
+   )));
+ }
+ Future<void> _handleGoalCardAction(SavingGoal g,String v)async{
+        if(v=='edit'){await this.editGoal(g);return;}
+        if(v=='release'){await releaseGoalFunds(g);return;}
+         if(v=='delete'){
+         final linked=g.saved>0||entries.any((e)=>e.category==g.name);
+         final yes=await confirmDeletion(waffraIsEnglish?'Delete savings goal?':'حذف هدف الادخار',
+          waffraGoalDeleteWarning(g.name,linked,waffraIsEnglish));
+         if(yes==true&&mounted){
+          if(_lastFinanceAuthorityRead?.source==
+             WaffraRuntimeFinanceBackend.verifiedEncrypted){
+           await _deleteVerifiedModule(
+            module:WaffraFinanceModule.goals,displayed:g.toJson());
+          }else{
+           setState((){deletedGoals.add({'goal':g.toJson(),'deletedAt':DateTime.now().toIso8601String()});goals.removeWhere((x)=>x.id==g.id);});
+           await persist(route:WaffraFinanceRoute.goalCreateEditDeleteRestore);
+          }
+         }
+        }
+
+ }
+ Widget goalsPage(){
+  final target=goals.fold<double>(0,(v,g)=>v+g.target);
+  final saved=goals.fold<double>(0,(v,g)=>v+g.saved);
+  final savedTowardsTargets=goals.where((g)=>g.target>0).fold<double>(0,(v,g)=>v+g.saved);
+  final pct=target==0?0.0:(savedTowardsTargets/target).clamp(0.0,1.0);
+  final filtered=goals.where((g)=>
+   (goalDisplay=='all'||
+    (goalDisplay=='done'?(g.target>0&&g.saved>=g.target):
+      (g.target<=0||g.saved<g.target)))&&
+   waffraSearchAny([g.name,waffraTr(g.name)],goalSearch)).toList();
+  return Scrollbar(
+   controller:_goalsScrollController,thumbVisibility:true,
+   thickness:3,radius:const Radius.circular(8),
+   child:ListView(controller:_goalsScrollController,
+   physics:const ClampingScrollPhysics(parent:AlwaysScrollableScrollPhysics()),
+   padding:const EdgeInsets.fromLTRB(16,14,16,28),children:[
+   WaffraPageHero(
+    title:waffraIsEnglish?'Savings goals':'أهداف الادخار',
+    subtitle:waffraIsEnglish?'Plan your future and follow every milestone':
+     'حوّل أحلامك إلى أهداف وتابع تقدّمك خطوة بخطوة.',
+    icon:Icons.flag_outlined,titleKey:_tourKeys[6]),
+   const SizedBox(height:10),
+   TextField(
+    key:const Key('waffra-goals-search'),
+    onChanged:(query)=>setState(()=>goalSearch=query),
+    decoration:InputDecoration(
+     hintText:waffraIsEnglish?'Search savings goals':'ابحث في أهداف الادخار',
+     prefixIcon:const Icon(Icons.search_rounded),
+     border:OutlineInputBorder(borderRadius:BorderRadius.circular(14))),
+   ),
+   const SizedBox(height:12),
+   SizedBox(height:148,
+    child:WaffraBalanceHeader(
+     balance:waffraGoalWalletBalance(goals),
+     english:waffraIsEnglish,goalWallet:true,
+     heading:waffraIsEnglish?'Goals wallet':'محفظة الأهداف',
+     refreshVerifiedWidgetBalance:_refreshWidget).build(context,0,false)),
+   Padding(padding:const EdgeInsets.symmetric(horizontal:14,vertical:7),
+    child:WaffraText(waffraIsEnglish?
+     'Your goals wallet is independent from current balance. Saving progress does not spend cash automatically.':
+     'محفظة الأهداف مستقلة عن الرصيد الحالي؛ إضافة الادخار لا تخصم منه تلقائيًا.',
+     textAlign:TextAlign.center,style:const TextStyle(fontSize:12,color:emerald))),
+   const SizedBox(height:13),
+   if(goals.isNotEmpty)...[
+    Row(children:[
+     Expanded(child:_summaryBox(waffraIsEnglish?'Total target':'إجمالي المستهدف',cash(target),Icons.flag_outlined,emerald)),
+     const SizedBox(width:8),
+     Expanded(child:_summaryBox(waffraIsEnglish?'Saved':'إجمالي المدخرات',cash(saved),Icons.account_balance_wallet_outlined,emerald)),
+     const SizedBox(width:8),
+     Expanded(child:Container(padding:const EdgeInsets.all(8),
+      decoration:BoxDecoration(color:emerald.withValues(alpha:.08),borderRadius:BorderRadius.circular(18)),
+      child:Column(children:[
+       SizedBox(width:48,height:48,child:Stack(alignment:Alignment.center,children:[
+        CircularProgressIndicator(value:pct,strokeWidth:6,backgroundColor:emerald.withValues(alpha:.13)),
+        WaffraText(target<=0?'—':'${(pct*100).round()}%',style:const TextStyle(fontWeight:FontWeight.bold,fontSize:12))])),
+       const SizedBox(height:7),
+       WaffraText(target<=0?(waffraIsEnglish?'Open savings':'ادخار مفتوح'):(waffraIsEnglish?'Progress':'الإنجاز'),style:const TextStyle(fontSize:11)),
+      ]))),
+    ]),
+    const SizedBox(height:14),
+   ],
+   Row(children:[
+    Expanded(flex:3,child:WaffraOutlinedItemsCount(
+     label:waffraIsEnglish?'Current goals':'عدد الأهداف الحالية',count:goals.length)),
+    const SizedBox(width:9),
+    Flexible(flex:2,fit:FlexFit.loose,child:WaffraDeletedItemsButton(
+     onPressed:WaffraHaptics.tapRequired(deletedGoalsDialog),
+     label:waffraIsEnglish?'Deleted (${deletedGoals.length})'
+      :'المحذوفة (${deletedGoals.length})')),
+   ]),
+   const SizedBox(height:12),
+
+   // Savings additions use the same physical-left circular +.
+   const SizedBox(height:14),
+   if(goals.isNotEmpty)...[
+    Wrap(spacing:7,runSpacing:6,children:[
+     _filterChip(waffraIsEnglish?'All':'الكل',goalDisplay=='all',()=>setState(()=>goalDisplay='all')),
+     _filterChip(waffraIsEnglish?'In progress':'قيد التنفيذ',goalDisplay=='active',()=>setState(()=>goalDisplay='active')),
+     _filterChip(waffraIsEnglish?'Completed':'مكتملة',goalDisplay=='done',()=>setState(()=>goalDisplay='done')),
+    ]),
+    const SizedBox(height:10),
+   ],
+   ...filtered.map((g){
+    int? monthlyRequired;
+    bool overdue=false;
+    if(g.dueDate!=null&&g.target>0){
+      try{
+       final forecast=WaffraGoalPlan(
+        targetMinor:waffraSarMinorChecked(g.target),
+        savedMinor:waffraSarMinorChecked(g.saved),
+        today:DateTime.now(),dueDate:g.dueDate!);
+       monthlyRequired=forecast.monthlyRequiredMinor;
+       overdue=forecast.overdue;
+      }catch(_){/* Show no invented target guidance. */}
+    }
+    final percent=g.target<=0?0.0:(g.saved/g.target).clamp(0.0,1.0);
+    final shade=goalIcon(g.name)==Icons.flight_takeoff?const Color(0xFF9C56B8):
+     goalIcon(g.name)==Icons.directions_car?const Color(0xFF3867D6):emerald;
+    return Card(
+     margin:const EdgeInsets.only(bottom:11),
+     color:Theme.of(context).cardColor,
+     elevation:0,
+     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(22),
+      side:const BorderSide(color:Color(0xFFCFDFD5),width:1)),
+     child:Padding(padding:const EdgeInsets.all(15),child:Column(children:[
+      Row(children:[
+       WaffraIllustration(topic:g.name,size:44),
+       const SizedBox(width:10),
+       Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        WaffraText(g.name,style:const TextStyle(fontWeight:FontWeight.bold,fontSize:16)),
+        WaffraText(g.target<=0?(waffraIsEnglish?'Open-ended savings':'ادخار مفتوح'):(waffraIsEnglish?'Target: ${cash(g.target)}':'المستهدف: ${cash(g.target)}'),
+         style:const TextStyle(fontSize:12)),
+       ])),
+       const SizedBox(width:1),
+      ]),
+      Container(
+       decoration:BoxDecoration(
+        border:Border.all(color:emerald.withValues(alpha:.4)),
+        borderRadius:BorderRadius.circular(15)),
+       clipBehavior:Clip.antiAlias,
+       child:ExpansionTile(
+       key:PageStorageKey<String>('waffra-goal-quick-actions-'+g.id),
+       initiallyExpanded:false,
+       tilePadding:EdgeInsets.zero,
+       childrenPadding:const EdgeInsets.only(bottom:8),
+       leading:const Icon(Icons.bolt_outlined,color:emerald,size:20),
+       title:WaffraText(waffraIsEnglish?'Quick actions':'إجراءات سريعة',
+        style:const TextStyle(fontSize:13,fontWeight:FontWeight.w700)),
+       children:[
+        Wrap(spacing:8,runSpacing:8,alignment:WrapAlignment.start,children:[
+         OutlinedButton.icon(
+          onPressed:WaffraHaptics.tap(()=>unawaited(_handleGoalCardAction(g,'edit'))),
+          icon:const Icon(Icons.edit_outlined,size:17),
+          label:WaffraText(waffraIsEnglish?'Edit':'تعديل')),
+         if(g.saved>0)OutlinedButton.icon(
+          onPressed:WaffraHaptics.tap(()=>unawaited(_handleGoalCardAction(g,'release'))),
+          icon:const Icon(Icons.savings_outlined,size:17),
+          label:WaffraText(waffraIsEnglish?'Release savings':'سحب المدخرات')),
+         OutlinedButton.icon(
+          onPressed:WaffraHaptics.tap(()=>unawaited(_handleGoalCardAction(g,'delete'))),
+          icon:const Icon(Icons.delete_outline_rounded,color:Colors.deepOrange,size:17),
+          label:WaffraText(waffraIsEnglish?'Delete':'حذف')),
+        ]),
+        SwitchListTile.adaptive(
+         key:Key('waffra-goal-active-switch-'+g.id),
+         contentPadding:EdgeInsets.zero,
+         title:WaffraText(
+          (waffraIsEnglish?'Goal enabled':'تفعيل الهدف')+'  •  '+
+          (g.active?(waffraIsEnglish?'Active':'مفعّل'):
+           (waffraIsEnglish?'Paused':'متوقف')),
+          maxLines:1,style:const TextStyle(fontSize:13,fontWeight:FontWeight.w600)),
+         activeTrackColor:emerald,
+         value:g.active,
+         onChanged:WaffraHaptics.selection((enabled)=>
+          unawaited(setGoalActive(g,enabled)))),
+       ],
+      )),
+      if(g.dueDate!=null)Padding(padding:const EdgeInsets.only(top:8),
+       child:Row(children:[
+        const Icon(Icons.event_outlined,size:16,color:emerald),
+        const SizedBox(width:5),
+        Expanded(child:WaffraText(
+         (waffraIsEnglish?'Due date: ':'تاريخ الاستحقاق: ')+dayText(g.dueDate!),
+         style:const TextStyle(fontSize:12,color:emerald))),
+       ])),
+      if(monthlyRequired!=null&&monthlyRequired>0)
+       Padding(padding:const EdgeInsets.only(top:7),
+        child:WaffraText(waffraIsEnglish?
+         'To reach your goal on time, plan to save ${cash(monthlyRequired/100)} monthly.':
+         'علشان تحقق هدفك في معاده، خطط لادخار ${cash(monthlyRequired/100)} شهريًا.',
+         style:const TextStyle(fontSize:12,color:emerald))),
+      if(overdue)
+       Padding(padding:const EdgeInsets.only(top:7),
+        child:WaffraText(waffraIsEnglish?
+         'The goal due date has passed. Update it to get a new monthly plan.':
+         'موعد الهدف فات. عدّل التاريخ علشان تحصل على خطة ادخار جديدة.',
+         style:const TextStyle(fontSize:12,color:Colors.deepOrange))),
+      const SizedBox(height:11),
+      if(g.target>0)Row(children:[
+       WaffraText('${(percent*100).round()}%',style:TextStyle(fontWeight:FontWeight.bold,color:shade)),
+       const SizedBox(width:10),
+       Expanded(child:LinearProgressIndicator(value:percent,minHeight:9,
+        color:shade,backgroundColor:shade.withValues(alpha:.12),
+        borderRadius:BorderRadius.circular(9))),
+      ]),
+      const SizedBox(height:12),
+      Row(children:[
+       Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        WaffraText(waffraIsEnglish?'Saved':'المدّخر',style:const TextStyle(fontSize:11)),
+        WaffraText(cash(g.saved),style:const TextStyle(fontWeight:FontWeight.bold))])),
+       if(g.target>0)Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        WaffraText(waffraIsEnglish?'Remaining':'المتبقي',style:const TextStyle(fontSize:11)),
+        WaffraText(cash(max(0,g.target-g.saved)),style:const TextStyle(fontWeight:FontWeight.bold))])),
+       if(g.target<=0||g.saved<g.target)TextButton.icon(onPressed:WaffraHaptics.tap(()=>fundGoal(g)),
+        icon:const Icon(Icons.add,size:18),label:WaffraText(waffraIsEnglish?'Add amount':'إضافة مبلغ')),
+      ]),
+      if(g.target>0&&g.saved>=g.target)WaffraText(waffraIsEnglish?'Goal achieved!':'🎉 تم تحقيق الهدف!',
+       style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)),
+     ])),
+    );
+   }),
+   if(goals.isEmpty)Padding(padding:const EdgeInsets.only(top:18,bottom:14),
+    child:Column(children:[
+     Container(width:105,height:105,decoration:BoxDecoration(
+      color:emerald.withValues(alpha:.10),borderRadius:BorderRadius.circular(54)),
+      child:const WaffraIllustration(topic:'wallet',size:94)),
+     const SizedBox(height:13),
+     WaffraText(waffraIsEnglish?'No savings goals yet':'ما أضفت أي هدف ادخاري بعد',
+      style:Theme.of(context).textTheme.titleLarge,textAlign:TextAlign.center),
+     const SizedBox(height:10),
+     WaffraText(waffraIsEnglish?'Set your first savings goal and track your progress':
+      'ابدأ أول هدف ادخاري لك وحدد المبلغ المستهدف وتابع تقدّمك خطوة بخطوة.',
+      textAlign:TextAlign.center),
+     const SizedBox(height:22),
+     Row(children:[
+      savingsBenefit(waffraIsEnglish?'Plan ahead':'خطط لمستقبلك',Icons.wallet_outlined),
+      const SizedBox(width:8),
+      savingsBenefit(waffraIsEnglish?'Stay motivated':'حقق أهدافك',Icons.track_changes_outlined),
+      const SizedBox(width:8),
+      savingsBenefit(waffraIsEnglish?'Track progress':'تابع تقدمك',Icons.bar_chart_outlined),
+     ]),
+    ])),
+   if(goals.isNotEmpty&&filtered.isEmpty)Padding(padding:const EdgeInsets.all(34),
+    child:WaffraText(waffraIsEnglish?'No goals in this filter':'لا توجد أهداف في هذا التصنيف',textAlign:TextAlign.center)),
+   savingsChallengesSection(),
+   const SizedBox(height:30),
+  ]));
+ }
+ Future<void> recurringDialog({String? suggestedTitle,double? suggestedAmount,RecurringBill? initial,RecurringBill? duplicate})async {
+  // The original recurring editor must pick an actual account at creation,
+  // not rely on the account display filter or a later settings-only write.
+  List<WaffraAccountBalance> liveAccounts;
+  String? selectedRecurringAccount;
+  try{
+   await _ensureFinanceBound();
+   final bridge=_financeBinding?.accountsBridge;
+   if(bridge==null)throw StateError('Verified recurring account source unavailable.');
+   final snapshot=await bridge.readVerifiedAccounts();
+   liveAccounts=snapshot.balances.where((a)=>!a.archived).toList();
+   if(initial!=null){
+    selectedRecurringAccount=await WaffraVerifiedAccountsApi(bridge:bridge)
+     .recurringDefaultAccount(initial.id);
+   }
+  }catch(error){
+   if(mounted)snack(context,waffraIsEnglish?
+    'Verified accounts are unavailable. Open My Accounts before creating recurring payments.':
+    'الحسابات الموثقة غير متاحة. افتح حساباتي قبل إنشاء عملية متكررة.',
+    isError:true);
+   return;
+  }
+  if(!mounted)return;
+  if(liveAccounts.isEmpty){
+   snack(context,waffraIsEnglish?
+    'Create a bank or cash account before adding a recurring payment.':
+    'أضف حسابًا ماليًا قبل إنشاء عملية متكررة.',isError:true);
+   return;
+  }
+  final recurringProviders=WaffraRecurringAccountGroups.fromAccounts(liveAccounts);
+  selectedRecurringAccount ??= initial?.accountId??duplicate?.accountId;
+  if(!liveAccounts.any((a)=>a.id==selectedRecurringAccount)){
+   selectedRecurringAccount=null;
+  }
+  String? selectedRecurringProvider;
+  for(final group in recurringProviders){
+   if(group.accounts.any((a)=>a.id==selectedRecurringAccount)){
+    selectedRecurringProvider=group.id;break;
+   }
+  }
+  final title=TextEditingController(text:initial?.title??duplicate?.title??suggestedTitle??''),
+   amount=TextEditingController(text:initial!=null?formatWaffraEditAmount(initial.amount):duplicate!=null?formatWaffraEditAmount(duplicate.amount):suggestedAmount==null?'':formatWaffraEditAmount(suggestedAmount)),
+   day=TextEditingController(text:(initial?.day??duplicate?.day??1).toString());
+  bool income=initial?.income??duplicate?.income??false;String category=initial?.category??duplicate?.category??(forSelectableType(false).isNotEmpty?
+    forSelectableType(false).first.name:'');bool attempted=false;
+  DateTime startAt=initial?.startAt??(duplicate!=null&&duplicate.startAt.isAfter(DateTime.now())?duplicate.startAt:DateTime.now());
+  final r=await showWaffraDialog<RecurringBill>(context:context,
+   builder:(ctx)=>StatefulBuilder(builder:(ctx,update){
+    final options=forSelectableType(income);
+    // An old recurring schedule may refer to a now-paused category.
+    // Editing its title/date must not silently reassign it to another leaf.
+    // New or duplicated schedules must explicitly select an active leaf.
+    final historicalSelected=initial!=null&&initial.income==income&&
+     initial.category==category;
+    final selected=options.any((x)=>x.name==category)||historicalSelected
+     ?category:'';
+    final validNames=[
+     ...options.map((c)=>c.name),
+     if(historicalSelected)initial.category,
+    ];
+    return AlertDialog(title:WaffraText(initial==null?(waffraIsEnglish?'New recurring item':'عملية شهرية متكررة'):(waffraIsEnglish?'Edit recurring item':'تعديل العملية المتكررة')),
+     content:SizedBox(width:340,child:SingleChildScrollView(child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,mainAxisSize:MainAxisSize.min,children:[
+      const SizedBox(height:12),
+      TextField(controller:title,onChanged:(_)=>update((){}),decoration:InputDecoration(labelText:waffraIsEnglish?'Description *':'الوصف *',
+       errorText:attempted?waffraTextFieldError(title.text):null)),
+      if(initial?.linkedGoalId!=null)WaffraText(waffraIsEnglish?
+       'Edit target and due date from the linked goal in Goals.':
+       'تعديل المبلغ والاستحقاق يكون من الهدف المرتبط في الأهداف.',
+       style:const TextStyle(fontSize:12,color:emerald)),
+      const SizedBox(height:12),
+      TextField(controller:amount,readOnly:initial?.linkedGoalId!=null,keyboardType:const TextInputType.numberWithOptions(decimal:true),
+       inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],onChanged:(_)=>update((){}),
+       decoration:InputDecoration(labelText:waffraIsEnglish?'Amount *':'المبلغ *',
+        errorText:attempted?waffraAmountFieldError(amount.text):null)),
+      const SizedBox(height:12),
+      WaffraCenteredDropdownFormField<String>(
+       key:ValueKey('m470-recurring-create-provider-'+(selectedRecurringProvider??'none')),
+       initialValue:selectedRecurringProvider,isExpanded:true,
+       decoration:InputDecoration(
+        labelText:waffraIsEnglish?'Bank or provider *':'الجهة أو البنك *',
+        border:const OutlineInputBorder()),
+       items:recurringProviders.map((group)=>DropdownMenuItem<String>(
+        value:group.id,child:WaffraText(waffraIsEnglish?
+         group.labelEn:group.labelAr,maxLines:1))).toList(),
+       onChanged:(v)=>update((){
+        selectedRecurringProvider=v;
+        selectedRecurringAccount=null;
+       }),
+      ),
+      const SizedBox(height:12),
+      WaffraCenteredDropdownFormField<String>(
+       key:ValueKey('m470-recurring-create-account-'+(selectedRecurringProvider??'none')),
+       initialValue:selectedRecurringAccount,isExpanded:true,
+       decoration:InputDecoration(
+        labelText:waffraIsEnglish?'Linked account *':'الحساب المرتبط *',
+        border:const OutlineInputBorder()),
+       items:recurringProviders.where((g)=>g.id==selectedRecurringProvider)
+        .expand((g)=>g.accounts).map((a)=>DropdownMenuItem<String>(
+         value:a.id,child:WaffraText(a.name,maxLines:1))).toList(),
+       onChanged:selectedRecurringProvider==null?null:(v)=>
+        update(()=>selectedRecurringAccount=v),
+      ),
+      const SizedBox(height:12),
+      WaffraCenteredDropdownFormField<bool>(initialValue:income,
+       items:const [DropdownMenuItem(value:true,child:WaffraText('دخل')),
+        DropdownMenuItem(value:false,child:WaffraText('مصروف'))],
+       onChanged:initial?.linkedGoalId!=null?null:WaffraHaptics.selection((v){if(v!=null)update((){
+         income=v;category=forSelectableType(v).isNotEmpty?forSelectableType(v).first.name:'';
+        });})),
+      const SizedBox(height:12),
+      InkWell(
+       borderRadius:BorderRadius.circular(14),
+       onTap:WaffraHaptics.tap(()async{
+        final picked=await showWaffraDialog<String>(context:ctx,
+         builder:(searchCtx){
+          String query='';
+          return StatefulBuilder(builder:(searchCtx,refresh){
+           final filtered=options.where((c)=>
+            waffraSearchAny([c.name,waffraTr(c.name)],query)).toList();
+           return AlertDialog(
+            title:WaffraText(waffraIsEnglish?'Search categories':'البحث عن قسم'),
+            content:SizedBox(
+             width:double.maxFinite,
+             height:min(430.0,MediaQuery.sizeOf(searchCtx).height*.58),
+             child:Column(children:[
+              TextField(
+               autofocus:true,
+               onChanged:(value)=>refresh(()=>query=value),
+               decoration:InputDecoration(
+                prefixIcon:const Icon(Icons.search_rounded),
+                hintText:waffraIsEnglish?'Type a category name…':'اكتب اسم القسم للبحث…',
+                border:OutlineInputBorder(borderRadius:BorderRadius.circular(14))),
+              ),
+              const SizedBox(height:10),
+              Expanded(child:filtered.isEmpty
+               ?Center(child:WaffraText(waffraIsEnglish?'No matching categories':'لا توجد أقسام مطابقة'))
+               :ListView.builder(
+                itemCount:filtered.length,
+                itemBuilder:(searchCtx,index){
+                 final option=filtered[index];
+                 return ListTile(
+                  dense:true,
+                  selected:option.name==selected,
+                  leading:Icon(categoryIcon(option.icon),color:Color(option.color),size:21),
+                  title:WaffraText(option.name,maxLines:3),
+                  onTap:WaffraHaptics.tap(()=>Navigator.pop(searchCtx,option.name)));
+                })),
+             ]),
+            ),
+           );
+          });
+         });
+        if(picked!=null&&ctx.mounted)update(()=>category=picked);
+       }),
+       child:InputDecorator(
+        decoration:InputDecoration(
+         labelText:waffraIsEnglish?'Category *':'القسم *',
+         errorText:attempted&&WaffraValidators.requiredCategory(
+          selected,validNames)!=null?waffraRequiredFieldMessage:null,
+         suffixIcon:const Icon(Icons.search_rounded),
+         border:OutlineInputBorder(borderRadius:BorderRadius.circular(14)),
+         contentPadding:const EdgeInsets.symmetric(horizontal:13,vertical:15)),
+        child:Row(children:[
+         Expanded(child:WaffraText(selected.isEmpty?
+          (waffraIsEnglish?'Choose a category':'اختر قسمًا'):selected,maxLines:2,
+          style:const TextStyle(fontSize:14,fontWeight:FontWeight.w600))),
+         const SizedBox(width:8),
+         const Icon(Icons.arrow_drop_down_rounded,size:20),
+        ]),
+       ),
+      ),
+      const SizedBox(height:12),
+      OutlinedButton.icon(onPressed:initial?.linkedGoalId!=null?null:WaffraHaptics.tap(()async{
+       final picked=await waffraPickDateWithToday(english:waffraIsEnglish,context:ctx,initialDate:startAt.isBefore(DateTime.now())?
+         DateTime.now():startAt,firstDate:DateTime.now().subtract(const Duration(days:1)),lastDate:DateTime(DateTime.now().year+5));
+       if(picked!=null)update((){startAt=picked;day.text=picked.day.toString();});
+      }),icon:const Icon(Icons.calendar_month_outlined),label:WaffraText(waffraIsEnglish?'First due: ${dayText(startAt)}':'أول استحقاق: ${dayText(startAt)}')),
+      const SizedBox(height:8),
+      TextField(controller:day,readOnly:initial?.linkedGoalId!=null,keyboardType:TextInputType.number,onChanged:(_)=>update((){}),
+       decoration:InputDecoration(labelText:waffraIsEnglish?'Day of month *':'يوم الشهر *',helperText:waffraIsEnglish?'1–31':'من 1 إلى 31',
+       errorText:attempted?waffraDayFieldError(day.text):null)),
+     ]))),
+     actions:[
+      TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),child:const WaffraText('إلغاء')),
+      FilledButton(onPressed:WaffraHaptics.tap((){
+       final n=amountOfDisplay(amount.text),d=int.tryParse(digits(day.text));update(()=>attempted=true);
+       if(WaffraValidators.requiredText(title.text)==null&&
+        WaffraValidators.positiveAmount(amount.text)==null&&
+        WaffraValidators.dayOfMonth(day.text)==null&&
+        WaffraValidators.requiredCategory(selected,validNames)==null&&
+        selectedRecurringAccount!=null&&
+        liveAccounts.any((a)=>a.id==selectedRecurringAccount)&&
+        n!=null&&d!=null){
+        Navigator.pop(ctx,RecurringBill(id:initial?.id??newId(),title:title.text.trim(),category:selected,
+         amount:initial?.linkedGoalId!=null?initial!.amount:n,income:income,
+         day:initial?.linkedGoalId!=null?initial!.day:d,
+         startAt:initial?.linkedGoalId!=null?initial!.startAt:startAt,
+         active:initial?.active??duplicate?.active??true,linkedGoalId:initial?.linkedGoalId,
+         accountId:selectedRecurringAccount));
+       }
+      }),child:const WaffraText('حفظ')),
+     ]);
+   }));
+  disposeLater([title,amount,day]);
+  if(r!=null&&mounted){
+   setState((){
+    if(initial==null){recurring.add(r);}else{
+     final index=recurring.indexWhere((e)=>e.id==initial.id);
+     if(index>=0)recurring[index]=r;
+    }
+   });
+   if(!await _persistModuleOrReload(WaffraFinanceRoute.recurringCreateEditDeleteRestore,
+     operation:initial==null?'recurring-create':'recurring-edit'))return;
+   await applyRecurring();
+   await syncRecurringReminders();
+  }
+ }
+ DateTime nextRecurringDue(RecurringBill r) {
+  if(r.linkedGoalId!=null){
+   final once=DateTime(r.startAt.year,r.startAt.month,r.startAt.day);
+   final stableId=WaffraRecurringPolicy.entryId(r.id,once);
+   final postponed=DateTime.tryParse(recurringPostponed[stableId]??'');
+   return postponed!=null&&postponed.isAfter(once)?postponed:once;
+  }
+  final today=DateTime.now();
+  final monthlyDue=WaffraRecurringPolicy.dueDate(today.year,today.month,r.day);
+  final monthId=WaffraRecurringPolicy.entryId(r.id,monthlyDue);
+  return WaffraRecurringPolicy.nextActionableDue(
+   today:today,startAt:r.startAt,day:r.day,
+   currentMonthPaid:entries.any((entry)=>entry.id==monthId),
+   postponedUntil:DateTime.tryParse(recurringPostponed[monthId]??''));
+ }
+ Future<void> _setRecurringActiveFromCard(RecurringBill r,bool enabled)async{
+       final index=recurring.indexWhere((item)=>item.id==r.id);
+       if(index<0)return;
+       if(enabled){
+        final chosen=await waffraPickDateWithToday(english:waffraIsEnglish,context:context,initialDate:DateTime.now().add(const Duration(days:1)),
+         firstDate:DateTime.now(),lastDate:DateTime(DateTime.now().year+5));
+        if(chosen==null||!mounted)return;
+        setState(()=>recurring[index]=r.copy(active:true,startAt:chosen,day:chosen.day));
+       }else{
+        setState(()=>recurring[index]=r.copy(active:false));
+       }
+       if(!await _persistModuleOrReload(
+        WaffraFinanceRoute.recurringCreateEditDeleteRestore,
+        operation:'recurring-active-toggle'))return;
+       if(enabled)await applyRecurring();
+       await syncRecurringReminders();
+
+ }
+ Future<void> _handleRecurringCardAction(RecurringBill r,String v)async{
+       if(v=='edit'){await recurringDialog(initial:r);return;}
+       if(v!='delete')return;
+       final hasHistory=entries.any((e)=>e.id.startsWith('rec_${r.id}_'));
+       final ok=await confirmDeletion(waffraIsEnglish?'Delete recurring transaction?':'حذف العملية المتكررة',
+        waffraRecurringDeleteWarning(r.title,hasHistory,waffraIsEnglish));
+       if(ok==true&&mounted){
+        if(_lastFinanceAuthorityRead?.source==
+           WaffraRuntimeFinanceBackend.verifiedEncrypted){
+         await _deleteVerifiedModule(
+          module:WaffraFinanceModule.recurring,displayed:r.toJson());
+         return;
+        }
+        setState((){
+         deletedRecurring.add({'recurring':r.toJson(),'deletedAt':DateTime.now().toIso8601String()});
+         recurring.removeWhere((e)=>e.id==r.id);
+         recurringPostponed.removeWhere((key,value)=>key.startsWith('rec_${r.id}_'));
+        });
+        if(!await _persistModuleOrReload(
+         WaffraFinanceRoute.recurringCreateEditDeleteRestore,
+         operation:'recurring-delete'))return;
+        await syncRecurringReminders();
+       }
+
+ }
+ Widget recurringPage(){
+  final active=recurring.where((r)=>r.active).toList();
+  final orderedActive=active.toList()..sort((a,b)=>
+   nextRecurringDue(a).compareTo(nextRecurringDue(b)));
+  final nextBill=orderedActive.isEmpty?null:orderedActive.first;
+  final lastOfCurrentMonth=DateTime(DateTime.now().year,DateTime.now().month+1,0);
+  // Linked goals are one-time obligations, not repeating monthly bills.
+  final monthly=active.where((r)=>!r.income&&
+   !r.startAt.isAfter(lastOfCurrentMonth)&&
+   (r.linkedGoalId==null||
+    (r.startAt.year==lastOfCurrentMonth.year&&
+     r.startAt.month==lastOfCurrentMonth.month)))
+   .fold<double>(0,(v,r)=>v+r.amount);
+  final shown=recurring.where((r)=>
+   (recurringDisplay=='all'||
+    (recurringDisplay=='active'?r.active:!r.active))&&
+   waffraSearchAny([r.title,r.category,waffraTr(r.category)],recurringSearch)).toList();
+  final upcoming=active.where((r){
+   final days=nextRecurringDue(r).difference(DateTime(DateTime.now().year,DateTime.now().month,DateTime.now().day)).inDays;
+   return days>=0&&days<=3;
+  }).length;
+  return Scrollbar(
+   controller:_recurringScrollController,thumbVisibility:true,
+   thickness:3,radius:const Radius.circular(8),
+   child:ListView(controller:_recurringScrollController,
+   physics:const ClampingScrollPhysics(parent:AlwaysScrollableScrollPhysics()),
+   padding:const EdgeInsets.fromLTRB(16,14,16,28),children:[
+   WaffraPageHero(
+    title:waffraIsEnglish?'Recurring transactions':'العمليات المتكررة',
+    subtitle:waffraIsEnglish?'Track recurring payments and due dates':
+     'نظّم عملياتك الشهرية ومواعيد استحقاقها بسهولة.',
+    icon:Icons.event_repeat_rounded,titleKey:_tourKeys[4]),
+   const SizedBox(height:10),
+   TextField(
+    key:const Key('waffra-recurring-search'),
+    onChanged:(query)=>setState(()=>recurringSearch=query),
+    decoration:InputDecoration(
+     hintText:waffraIsEnglish?'Search recurring transactions':'ابحث في العمليات المتكررة',
+     prefixIcon:const Icon(Icons.search_rounded),
+     border:OutlineInputBorder(borderRadius:BorderRadius.circular(14))),
+   ),
+   const SizedBox(height:9),
+   Row(children:[
+    Expanded(child:OutlinedButton.icon(
+     onPressed:WaffraHaptics.tap(showWaffraFinancialCalendar),
+     style:OutlinedButton.styleFrom(minimumSize:WaffraActionLayout.minimumSize,
+      padding:const EdgeInsets.symmetric(horizontal:9,vertical:12),
+      side:BorderSide(color:Theme.of(context).colorScheme.primary,width:1.2),
+      shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(15))),
+     icon:const Icon(Icons.calendar_month,size:18),
+     label:WaffraText(waffraIsEnglish?'Financial calendar':'التقويم المالي',
+      maxLines:2,textAlign:TextAlign.center,
+      style:const TextStyle(fontSize:11.5,fontWeight:FontWeight.bold)))),
+    const SizedBox(width:9),
+    Flexible(fit:FlexFit.loose,child:WaffraDeletedItemsButton(
+     onPressed:WaffraHaptics.tapRequired(deletedRecurringDialog),
+     label:waffraIsEnglish?'Deleted recurring (${deletedRecurring.length})':
+      'المتكررة المحذوفة (${deletedRecurring.length})')),
+   ]),
+   const SizedBox(height:10),
+   Row(children:[
+    Expanded(child:WaffraOutlinedItemsCount(
+     key:const Key('waffra-recurring-count-badge'),
+     label:waffraIsEnglish?'Recurring count':'عدد العمليات المتكررة',
+     count:recurring.length)),
+    const SizedBox(width:9),
+    Expanded(child:Container(
+     padding:const EdgeInsets.symmetric(horizontal:7,vertical:7),
+     decoration:BoxDecoration(
+      color:Theme.of(context).cardColor,
+      border:Border.all(color:Theme.of(context).dividerColor.withValues(alpha:.5)),
+      borderRadius:BorderRadius.circular(16)),
+     child:Row(children:[
+      Expanded(child:Column(mainAxisSize:MainAxisSize.min,
+       crossAxisAlignment:CrossAxisAlignment.start,children:[
+       WaffraText(waffraIsEnglish?'Reminders':'التذكير',
+        maxLines:1,style:const TextStyle(fontSize:12,fontWeight:FontWeight.bold)),
+       WaffraText(waffraIsEnglish?'1 day before • 9 AM':'قبل الموعد بيوم',
+        maxLines:2,style:const TextStyle(fontSize:10)),
+      ])),
+      Transform.scale(scale:.82,child:Switch.adaptive(value:recurringRemindersEnabled,
+       onChanged:WaffraHaptics.selection(toggleRecurringReminders))),
+     ]))),
+   ]),
+   const SizedBox(height:9),
+   if(nextBill!=null)...[
+    const SizedBox(height:9),
+    Card(child:ListTile(
+     dense:true,
+     leading:const Icon(Icons.event_available_rounded,color:emerald),
+     title:WaffraText(waffraIsEnglish?'Next due date':'أقرب استحقاق',
+      style:const TextStyle(fontWeight:FontWeight.bold)),
+     subtitle:WaffraText('${nextBill.title} • ${dayText(nextRecurringDue(nextBill))}',
+      maxLines:2),
+     trailing:WaffraText(cash(nextBill.amount),
+      style:const TextStyle(fontWeight:FontWeight.bold)),
+    )),
+   ],
+   const SizedBox(height:9),
+   if(recurring.isNotEmpty)...[
+    Row(children:[
+     Expanded(child:_summaryBox(waffraIsEnglish?'Transactions':'عدد العمليات',
+      recurring.length.toString(),Icons.calendar_month,emerald)),
+     const SizedBox(width:8),
+     Expanded(child:_summaryBox(waffraIsEnglish?'Monthly expenses':'المبلغ الشهري',
+      cash(monthly),Icons.payments_outlined,emerald)),
+     const SizedBox(width:8),
+     Expanded(child:_summaryBox(waffraIsEnglish?'Active':'النشطة',
+      '${active.length}/${recurring.length}',Icons.donut_large,emerald)),
+    ]),
+    if(upcoming>0)Padding(padding:const EdgeInsets.only(top:10),
+     child:Card(color:Colors.amber.withValues(alpha:.13),child:ListTile(
+      leading:const Icon(Icons.notifications_active_outlined,color:Colors.orange),
+      title:WaffraText(waffraIsEnglish?'Upcoming obligations':'التزامات قريبة'),
+      subtitle:WaffraText(waffraIsEnglish?'$upcoming due within 3 days':
+       '$upcoming عملية مستحقة خلال 3 أيام'),
+     ))),
+    const SizedBox(height:12),
+   ],
+
+   // Recurring additions use the same physical-left circular +.
+   const SizedBox(height:13),
+   if(recurring.isNotEmpty)...[
+    Wrap(spacing:8,runSpacing:6,children:[
+     _filterChip(waffraIsEnglish?'All':'الكل',recurringDisplay=='all',()=>setState(()=>recurringDisplay='all')),
+     _filterChip(waffraIsEnglish?'Active':'نشطة',recurringDisplay=='active',()=>setState(()=>recurringDisplay='active')),
+     _filterChip(waffraIsEnglish?'Paused':'متوقفة',recurringDisplay=='paused',()=>setState(()=>recurringDisplay='paused')),
+    ]),
+    const SizedBox(height:11),
+   ],
+   ...shown.map((r){
+    final linked=goals.where((g)=>g.id==r.linkedGoalId).toList();
+    final goal=linked.isEmpty?null:linked.single;
+    final color=Color(categoryFor(r.category,r.income).color);
+    final when=nextRecurringDue(r);
+    return Card(elevation:0,margin:const EdgeInsets.only(bottom:11),
+     color:Theme.of(context).brightness==Brightness.dark?Theme.of(context).cardColor:
+      (r.income?const Color(0xFFEAF6EF):const Color(0xFFFFF0ED)),
+     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(21),
+      side:BorderSide(color:r.income?const Color(0xFFBBDCC9):const Color(0xFFF3DCD7))),
+     child:Padding(padding:const EdgeInsets.symmetric(horizontal:12,vertical:13),child:Column(children:[
+     Row(children:[
+      CircleAvatar(backgroundColor:color.withValues(alpha:.13),
+       child:Icon(categoryIcon(categoryFor(r.category,r.income).icon),color:color)),
+      const SizedBox(width:10),
+      Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+       WaffraText(r.title,style:const TextStyle(fontSize:15,fontWeight:FontWeight.bold)),
+       WaffraText(cash(r.amount),style:const TextStyle(fontSize:14)),
+       if(goal!=null)...[
+        const SizedBox(height:7),
+        if(goal.target>0)LinearProgressIndicator(
+         value:goal.target<=0?0:(goal.saved/goal.target).clamp(0.0,1.0),
+         minHeight:6,borderRadius:BorderRadius.circular(8),
+         color:emerald,backgroundColor:emerald.withValues(alpha:.12)),
+        const SizedBox(height:4),
+        WaffraText(goal.target<=0?(waffraIsEnglish?'Saved '+cash(goal.saved)+' · Open-ended':'ادخرت '+cash(goal.saved)+' · ادخار مفتوح'):(waffraIsEnglish?
+         'Saved '+cash(goal.saved)+' of '+cash(goal.target)+
+         ' • Remaining '+cash(max(0,goal.target-goal.saved)):
+         'ادخرت '+cash(goal.saved)+' من '+cash(goal.target)+
+         ' • المتبقي '+cash(max(0,goal.target-goal.saved))),
+         style:const TextStyle(fontSize:11,color:emerald)),
+       ],
+       const SizedBox(height:3),
+       WaffraText(r.active?
+        (waffraIsEnglish?'Next due: ${dayText(when)}':'الاستحقاق القادم: ${dayText(when)}'):
+        (waffraIsEnglish?'Paused':'متوقفة'),
+        style:TextStyle(fontSize:11,color:r.active?Theme.of(context).hintColor:Colors.deepOrange)),
+      ])),
+     ]),
+     Container(
+      decoration:BoxDecoration(
+       border:Border.all(color:emerald.withValues(alpha:.4)),
+       borderRadius:BorderRadius.circular(15)),
+      clipBehavior:Clip.antiAlias,
+      child:ExpansionTile(
+      key:PageStorageKey<String>('waffra-recurring-quick-actions-'+r.id),
+      initiallyExpanded:false,
+      tilePadding:EdgeInsets.zero,
+      childrenPadding:const EdgeInsets.only(bottom:8),
+      leading:const Icon(Icons.bolt_outlined,color:emerald,size:20),
+      title:WaffraText(waffraIsEnglish?'Quick actions':'إجراءات سريعة',
+       style:const TextStyle(fontSize:13,fontWeight:FontWeight.w700)),
+      children:[
+       Row(children:[
+        Expanded(child:OutlinedButton.icon(
+         onPressed:WaffraHaptics.tap(()=>unawaited(_handleRecurringCardAction(r,'edit'))),
+         icon:const Icon(Icons.edit_outlined,size:17),
+         label:WaffraText(waffraIsEnglish?'Edit':'تعديل',maxLines:1))),
+        const SizedBox(width:7),
+        Expanded(child:OutlinedButton.icon(
+         onPressed:WaffraHaptics.tap(()=>unawaited(_handleRecurringCardAction(r,'delete'))),
+         icon:const Icon(Icons.delete_outline_rounded,color:Colors.deepOrange,size:17),
+         label:WaffraText(waffraIsEnglish?'Delete':'حذف',maxLines:1))),
+        const SizedBox(width:6),
+        Tooltip(message:r.active?
+         (waffraIsEnglish?'Pause recurring':'إيقاف العملية المتكررة'):
+         (waffraIsEnglish?'Enable recurring':'تفعيل العملية المتكررة'),
+         child:Semantics(label:waffraIsEnglish?'Recurring enabled':'تفعيل المتكررة',
+          child:Switch.adaptive(
+           key:Key('waffra-recurring-active-switch-'+r.id),
+           activeTrackColor:emerald,value:r.active,
+           onChanged:WaffraHaptics.selection((value)=>
+            unawaited(_setRecurringActiveFromCard(r,value)))))),
+       ]),
+      ],
+     )),
+     ])));
+   }),
+   if(recurring.isEmpty)Padding(padding:const EdgeInsets.only(top:18),
+    child:Column(children:[
+     Container(width:105,height:105,decoration:BoxDecoration(
+      borderRadius:BorderRadius.circular(54),color:emerald.withValues(alpha:.10)),
+      child:const Icon(Icons.event_repeat_rounded,size:56,color:emerald)),
+     const SizedBox(height:12),
+     WaffraText(waffraIsEnglish?'No recurring transactions yet':'ما عندك عمليات متكررة',
+      style:Theme.of(context).textTheme.titleLarge,textAlign:TextAlign.center),
+     const SizedBox(height:12),
+     WaffraText(waffraIsEnglish?'Add a recurring transaction to organize monthly finances':
+      'أضف عملية متكررة لتنظيم مصروفاتك الشهرية ومتابعتها بسهولة.',
+      textAlign:TextAlign.center),
+     const SizedBox(height:19),
+
+     // Empty state keeps the shared left + available.
+     const SizedBox(height:22),
+     Row(children:[
+      Expanded(child:_recurringBenefit(waffraIsEnglish?'Save time':'توفير الوقت',Icons.bolt)),
+      const SizedBox(width:8),
+      Expanded(child:_recurringBenefit(waffraIsEnglish?'Stay organized':'تنظيم أفضل',Icons.analytics)),
+      const SizedBox(width:8),
+      Expanded(child:_recurringBenefit(waffraIsEnglish?'Due reminders':'تذكير بالمواعيد',Icons.notifications_none)),
+     ]),
+    ])),
+   if(recurring.isNotEmpty&&shown.isEmpty)Padding(padding:const EdgeInsets.all(32),
+    child:WaffraText(waffraIsEnglish?'No items match this filter':'لا توجد عمليات في هذا التصنيف',
+     textAlign:TextAlign.center)),
+   const SizedBox(height:20),
+  ]));
+ }
+ Future<void> showWaffraFinancialCalendar()async{
+  DateTime selected=DateTime.now();
+  await showWaffraDialog<void>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,refresh){
+   final monthEvents=recurring.where((r)=>r.active&&
+    !WaffraRecurringPolicy.dueDate(selected.year,selected.month,r.day).isBefore(DateTime(r.startAt.year,r.startAt.month,r.startAt.day))).toList();
+   return AlertDialog(title:WaffraText(waffraIsEnglish?'Financial calendar':'التقويم المالي'),
+    content:SizedBox(width:380,height:waffraKeyboardDialogListHeight(ctx,desired:460),child:Column(children:[
+     CalendarDatePicker(key:ValueKey('recurring-calendar-'+selected.toIso8601String()),initialDate:selected,firstDate:DateTime(2020),lastDate:DateTime(2100),
+      onDateChanged:(date)=>refresh(()=>selected=date)),
+     if(!waffraCalendarIsToday(selected))
+      Align(alignment:AlignmentDirectional.centerEnd,child:TextButton.icon(
+       key:const Key('waffra-recurring-calendar-today'),
+       onPressed:WaffraHaptics.tap(()=>refresh(()=>selected=DateUtils.dateOnly(DateTime.now()))),
+       icon:const Icon(Icons.today_rounded,size:17),
+       label:WaffraText(waffraIsEnglish?'Today':'اليوم'))),
+     const Divider(),
+     Expanded(child:ListView(children:monthEvents.map((r){
+      final due=WaffraRecurringPolicy.dueDate(selected.year,selected.month,r.day);
+      final id=WaffraRecurringPolicy.entryId(r.id,due);
+      final paid=entries.any((e)=>e.id==id);
+      final postponed=DateTime.tryParse(recurringPostponed[id]??'');
+      return ListTile(dense:true,leading:Icon(paid?Icons.check_circle:Icons.schedule,color:paid?emerald:Colors.orange),
+       title:WaffraText(r.title),subtitle:WaffraText('${dayText(postponed??due)} • ${paid?(waffraIsEnglish?'Paid':'مدفوعة'):(waffraIsEnglish?'Pending':'معلقة')}'),trailing:WaffraText(cash(r.amount)));
+     }).toList()))])),
+    actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))]);
+  }));
+ }
+ String exportBackup({WaffraFinanceAuthorityRead? fromSource}) {
+  // A real backup must reflect a single immutable, verified finance source,
+  // not a cached Home list after a simultaneous Android widget save.
+  final finance=fromSource?.finance;
+  Object listValue(String key,Object fallback)=>
+   finance==null?fallback:jsonDecode(finance.getString(key)??'[]');
+  Object mapValue(String key,Object fallback)=>
+   finance==null?fallback:jsonDecode(finance.getString(key)??'{}');
+  final sourceBudget=finance?.getDouble('waffra_monthly_budget_v1')??0;
+  final payload={
+   'format':'waffra-backup','version':24,
+   'exportedAt':DateTime.now().toIso8601String(),
+   'entries':listValue('entries',entries.map((e)=>e.toJson()).toList()),
+   'categories':listValue('waffra_categories_v24',categories.map((e)=>e.toJson()).toList()),
+   'namedBudgets':listValue('waffra_named_budgets_v1',
+    namedBudgets.map((b)=>b.toJson()).toList()),
+   'goals':listValue('waffra_goals_v24',goals.map((e)=>e.toJson()).toList()),
+   'recurring':listValue('waffra_recurring_v24',recurring.map((e)=>e.toJson()).toList()),
+   'challenges':listValue('waffra_challenges_v1',challenges.map((e)=>e.toJson()).toList()),
+   'deletedCategories':listValue('waffra_deleted_categories_v1',deletedCategories),
+   'deletedGoals':listValue('waffra_deleted_goals_v1',deletedGoals),
+   'deletedRecurring':listValue('waffra_deleted_recurring_v1',deletedRecurring),
+   'recurringPostponed':mapValue('waffra_recurring_postponed_v1',recurringPostponed),
+   'monthlyBudget':finance==null?monthlyBudget:sourceBudget,
+   'monthlyBudgetEnabled':finance==null?monthlyBudgetEnabled:
+    (finance.getBool('waffra_monthly_budget_enabled_v1')??(sourceBudget>0)),
+   'learnedMerchants':mapValue('waffra_learned_merchants_v1',learnedMerchantCategories),
+   'smsHashes':(List<String>.from(
+    finance?.getStringList('waffra_sms_hashes_v1')??smsHashes.toList())..sort()),
+   'profile':widget.profile.toJson(),
+  };
+  return const JsonEncoder.withIndent('  ').convert(payload);
+ }
+ Future<bool> _authorizeSensitiveAction(String operation)async{
+  if(!await WaffraBiometrics.isAvailable()){
+   if(mounted)await showWaffraDialog<void>(context:context,builder:(ctx)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?'Fingerprint required':'بصمة الجهاز مطلوبة'),
+    content:WaffraText(waffraIsEnglish?'Enable fingerprint in phone settings before $operation. App PIN cannot replace it.':'يجب تسجيل بصمة على هاتفك أولاً لحماية هذه العملية. لن يسمح وفرة باستخدام رمز التطبيق بدلاً منها.'),
+    actions:[OutlinedButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),child:WaffraText(waffraIsEnglish?'OK':'حسنًا'))]));
+   return false;
+  }
+  final allowed=await WaffraBiometrics.unlock();
+  if(!allowed&&mounted)snack(context,waffraIsEnglish?'Biometric verification required to continue':'يلزم التحقق ببصمة الجهاز للمتابعة');
+  return allowed;
+ }
+ Future<void> _setRecentAppProtection(bool enabled)async{
+  final p=await SharedPreferences.getInstance();
+  await p.setBool('waffra_protect_recents_v1',enabled);
+  if(mounted)setState(()=>protectRecentApps=enabled);
+  if(Platform.isAndroid){
+   try{await _privacyChannel.invokeMethod<void>('setProtectRecents',enabled);}
+   on PlatformException catch(e){debugPrint('Recents privacy: $e');}
+  }
+ }
+ Future<void> backupDialog()async {
+  if(!await _authorizeSensitiveAction('backing up or restoring data')||!mounted)return;
+  await _ensureFinanceBound();
+  final secret=TextEditingController(),restoreSecret=TextEditingController();
+  String? stagedBackup,backupError,restoreError,restorePasswordError;
+  var attempted=false,restoring=false,exporting=false;
+  int? mode;
+  bool advanced=false;
+  await showWaffraDialog<void>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
+   title:WaffraText(waffraIsEnglish?'Secure backup':'نسختك الاحتياطية الآمنة',
+    style:const TextStyle(fontWeight:FontWeight.bold)),
+   content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,
+    crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+    WaffraText(waffraIsEnglish?'Your data. Your password.':
+     'بياناتك محفوظة بتشفير قوي. أنت وحدك تملك كلمة المرور.',
+      textAlign:TextAlign.center),
+    const SizedBox(height:15),
+    if(mode==null)...[
+     OutlinedButton.icon(key:const Key('waffra-backup-choose-export'),
+      onPressed:WaffraHaptics.tap(()=>update(()=>mode=0)),
+      icon:const Icon(Icons.file_download_rounded),
+      label:WaffraText(waffraIsEnglish?'Save encrypted backup':'حفظ نسخة مشفّرة')),
+     const SizedBox(height:10),
+     OutlinedButton.icon(key:const Key('waffra-backup-choose-restore'),
+      onPressed:WaffraHaptics.tap(()=>update(()=>mode=1)),
+      icon:const Icon(Icons.restore_page_outlined),
+      label:WaffraText(waffraIsEnglish?'Restore from my device':'استعادة من الجهاز')),
+     const SizedBox(height:8),
+     Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+      const Icon(Icons.lock_outline,color:Colors.grey,size:15),
+      const SizedBox(width:5),
+      Flexible(child:WaffraText(waffraIsEnglish?'Encrypted • No bank connection':
+       'مشفّرة • بدون ربط بالحسابات البنكية',style:const TextStyle(fontSize:11))),
+     ]),
+    ]else ...[
+     TextButton.icon(onPressed:WaffraHaptics.tap(()=>update(()=>mode=null)),
+      icon:const Icon(Icons.arrow_back_ios_new_rounded,size:14),
+      label:WaffraText(waffraIsEnglish?'Back':'رجوع')),
+    ],
+    if(mode==0)...[
+    const SizedBox(height:10),
+    TextField(key:const Key('waffra-new-backup-password'),controller:secret,obscureText:true,
+     inputFormatters:[LengthLimitingTextInputFormatter(256)],
+     decoration:InputDecoration(
+      labelText:waffraIsEnglish?'Backup password (12+ characters) *':'كلمة مرور النسخة (12 حرفًا على الأقل) *',
+      errorText:backupError,errorMaxLines:3,border:const OutlineInputBorder())),
+    const SizedBox(height:10),
+    FilledButton.icon(onPressed:WaffraHaptics.tap(exporting?null:()async {
+     if(!WaffraSecureBackup.isValidNewPassword(secret.text)){
+      update(()=>backupError=waffraIsEnglish?'Use 12 to 256 characters for your backup password.':
+       'استخدم كلمة مرور من 12 إلى 256 حرفًا للنسخة الاحتياطية.');return;
+     }
+     update(()=>exporting=true);
+     try{
+      // Drain in-process saves, then snapshot the latest authoritative
+      // finance after any standalone Widget commit under the shared lock.
+      await _financialWriteQueue.drain();
+      final current=await _financeAuthority.load(
+       route:WaffraFinanceRoute.backupExport);
+      final String encrypted;
+      if(current.encryptedWitness!=null){
+       final bridge=_financeBinding?.accountsBridge;
+       if(bridge==null)throw StateError('Encrypted backup source unavailable.');
+       encrypted=await bridge.exportPortableBackup(secret.text);
+      }else{
+       final authoritativePayload=exportBackup(fromSource:current);
+       encrypted=await compute(waffraEncryptBackupInIsolate,<String,String>{
+        'payload':authoritativePayload,'password':secret.text,
+       });
+      }
+      // Persist the encrypted archive only after system document picker confirms.
+      // Never copy it to the system clipboard on export.
+      final saved=await WaffraBackupFiles.saveEncryptedArchive(encrypted);
+      if(!saved)return;
+      final generatedAt=DateTime.now().toIso8601String();
+      final prefs=await SharedPreferences.getInstance();
+      await prefs.setString('waffra_backup_last_exported_v1',generatedAt);
+      await prefs.setInt('waffra_backup_last_size_v1',utf8.encode(encrypted).length);
+      if(mounted)setState((){lastBackupGeneratedAt=generatedAt;lastBackupBytes=utf8.encode(encrypted).length;});
+      if(ctx.mounted)snackSuccess(ctx,waffraIsEnglish?
+       'Encrypted .waffra backup file saved. Keep its password safe.':
+       'تم حفظ ملف .waffra المشفّر بنجاح. احتفظ بكلمة المرور بأمان.');
+     }catch(_){
+      if(ctx.mounted)update(()=>backupError=waffraIsEnglish?
+       'Could not save encrypted backup file. Please retry.':
+       'تعذر حفظ ملف النسخة الاحتياطية المشفّر. حاول مرة أخرى.');
+     }finally{
+      if(ctx.mounted)update(()=>exporting=false);
+     }
+    }),icon:const Icon(Icons.file_download_outlined),label:WaffraText(waffraIsEnglish?
+      'Save encrypted .waffra file':'حفظ ملف .waffra المشفّر')),
+    ],
+    if(mode==1)...[
+    const SizedBox(height:10),
+    WaffraText(waffraIsEnglish?'Select a Waffra file, then enter its password.':
+     'اختر ملف وفرة، ثم أدخل كلمة مروره.',textAlign:TextAlign.center),
+    const SizedBox(height:10),
+    WaffraText(waffraIsEnglish?'Restore an encrypted backup file':'استعادة ملف نسخة احتياطية مشفّر',
+     style:const TextStyle(fontWeight:FontWeight.bold)),
+    const SizedBox(height:10),
+    TextField(controller:restoreSecret,key:const Key('waffra-existing-backup-password'),
+     obscureText:true,
+     inputFormatters:[LengthLimitingTextInputFormatter(256)],
+     onChanged:(_)=>update(()=>restorePasswordError=null),
+     decoration:InputDecoration(
+      labelText:waffraIsEnglish?'Backup password *':'كلمة مرور النسخة *',
+      errorText:restorePasswordError,errorMaxLines:3,
+      border:const OutlineInputBorder())),
+    const SizedBox(height:10),
+    // Select previously exported archives with Android's SAF document picker.
+    // Contents remain hidden and are never copied to the clipboard on export.
+    OutlinedButton.icon(key:const Key('waffra-open-backup-file'),
+     onPressed:WaffraHaptics.tap(restoring?null:()async{
+      try{
+       final selected=await WaffraBackupFiles.openArchive();
+       if(!ctx.mounted||selected==null)return;
+       update((){
+        stagedBackup=selected;
+        restoreError=null;
+        attempted=false;
+       });
+      }catch(_){
+       if(ctx.mounted)update(()=>restoreError=waffraIsEnglish?
+        'File verification failed. Please choose a valid Waffra backup.':
+        'فشل التحقق من صحة الملف. يرجى اختيار نسخة احتياطية صحيحة من وفرة والمحاولة مرة أخرى.');
+      }
+     }),icon:const Icon(Icons.file_open_outlined),
+     label:WaffraText(waffraIsEnglish?'Choose .waffra file':'اختيار ملف .waffra من الجهاز')),
+    // Backward compatibility ONLY: opt-in reading of previously exported
+    // clipboard-only text. New exports never put archive data on clipboard.
+    TextButton.icon(onPressed:WaffraHaptics.tap(()=>update(()=>advanced=!advanced)),
+     icon:Icon(advanced?Icons.expand_less:Icons.expand_more),
+     label:WaffraText(waffraIsEnglish?'Advanced options':'خيارات متقدمة')),
+    if(advanced)TextButton.icon(key:const Key('waffra-import-legacy-text'),
+     onPressed:WaffraHaptics.tap(restoring?null:()async{
+      final old=await Clipboard.getData(Clipboard.kTextPlain);
+      if(!ctx.mounted)return;
+      final text=old?.text?.trim()??'';
+      if(text.isEmpty||text.length>WaffraBackupFiles.maxArchiveBytes){
+       update(()=>restoreError=waffraIsEnglish?
+        'No valid older backup text in clipboard.':
+        'لا يوجد نص نسخة احتياطية قديمة صالح في الحافظة.');
+       return;
+      }
+      update((){
+       stagedBackup=text;
+       restoreError=null;
+       attempted=false;
+      });
+     }),icon:const Icon(Icons.history_outlined,size:18),
+     label:WaffraText(waffraIsEnglish?
+      'Import older copied backup (legacy)':'استيراد نسخة نصية قديمة (للتوافق فقط)')),
+    if(stagedBackup!=null)...[
+     const SizedBox(height:8),
+     ListTile(dense:true,leading:const Icon(Icons.check_circle_outline,color:Colors.green),
+      title:WaffraText(waffraIsEnglish?'Backup file loaded. Ready to verify.':'تم تحميل النسخة الاحتياطية وجاهزة للتحقق.'),
+      trailing:IconButton(icon:const Icon(Icons.close),
+       tooltip:waffraIsEnglish?'Clear backup':'إزالة النسخة الملصوقة',
+       onPressed:WaffraHaptics.tap(restoring?null:()=>update((){
+        stagedBackup=null;restoreError=null;attempted=false;
+       })))),
+    ],
+    if(attempted&&stagedBackup==null)
+     WaffraText(restoreError??(waffraIsEnglish?'Choose a backup file first.':'اختر ملف نسخة احتياطية أولًا.'),
+      style:const TextStyle(color:Colors.red)),
+    if(restoreError!=null&&stagedBackup!=null)
+     WaffraText(restoreError!,style:const TextStyle(color:Colors.red)),
+    if(restoring)const LinearProgressIndicator(),
+    ],
+   ])),
+   actions:[
+    TextButton(onPressed:WaffraHaptics.tap(restoring?null:()=>Navigator.pop(ctx)),child:WaffraText(waffraIsEnglish?'Close':'إغلاق')),
+    if(mode==1)FilledButton(key:const Key('waffra-confirm-backup-restore'),
+     onPressed:WaffraHaptics.tap(restoring?null:()async {
+     update(()=>attempted=true);
+     if(restoreSecret.text.isEmpty){
+      update(()=>restorePasswordError=waffraIsEnglish?
+       'Enter the original backup password.':'أدخل كلمة مرور النسخة الأصلية.');
+      return;
+     }
+     if(stagedBackup==null||stagedBackup!.isEmpty)return;
+     update(()=>restoring=true);
+     try{
+      final raw=await compute(waffraDecodeBackupInIsolate,<String,String>{
+       'payload':stagedBackup!,'password':restoreSecret.text,
+      });
+      if(raw['format']==WaffraAccountsPortableBackupV3.format){
+       final source=await _financeAuthority.load(route:WaffraFinanceRoute.backupRestore);
+       if(source.encryptedWitness==null){
+        if(ctx.mounted)update(()=>restoreError=waffraIsEnglish?
+         'This file requires an active SQLCipher vault.':
+         'استعادة هذا الملف تتطلب تفعيل قاعدة SQLCipher.');
+        return;
+       }
+       final result=await WaffraVerifiedActiveRestorePreflight(
+        authority:_financeAuthority,experimentalEnabled:true,
+       ).inspect(selectedSource:source,encryptedArchive:stagedBackup!,
+        password:restoreSecret.text,userConfirmed:true,accountArchive:true);
+       if(!ctx.mounted||!mounted)return;
+       final approved=await confirm(
+        waffraIsEnglish?'Replace encrypted finance?':'استبدال البيانات المالية؟',
+        waffraIsEnglish
+         ?'Verified ${result.transactionCount} transactions and ${result.receiptCount} receipt images. This will replace your current accounts, transfers, goals, budgets and transaction history. First you MUST save an encrypted rescue copy of your current data outside Waffra. Continue?'
+         :'تم التحقق من ${result.transactionCount} معاملة و${result.receiptCount} مرفق. سيتم استبدال الحسابات والتحويلات والأهداف والميزانيات والعمليات الحالية بالكامل. يجب أولًا حفظ نسخة أمان مشفرة لبياناتك الحالية خارج وفرة. هل تريد المتابعة؟');
+       if(approved!=true||!mounted||!ctx.mounted)return;
+       if(!await _authorizeSensitiveAction('replacing encrypted finance')||
+          !mounted||!ctx.mounted)return;
+       // Neither the file chooser nor the biometric prompt holds the native
+       // writer lock; the final commit compares the preflight source witness.
+       await _financialWriteQueue.drain();
+       final bridge=_financeBinding?.accountsBridge;
+       if(bridge==null)throw StateError('Active finance source is unavailable.');
+       final rescue=await bridge.exportPortableBackup(restoreSecret.text);
+       final rescueSaved=await WaffraBackupFiles.saveEncryptedArchive(rescue,
+        name:'Waffra_Rescue_Before_Restore_${DateTime.now().millisecondsSinceEpoch}.waffra');
+       if(!rescueSaved){
+        if(ctx.mounted)update(()=>restoreError=waffraIsEnglish?
+         'Restore cancelled: save the current encrypted rescue file first.':
+         'تم إلغاء الاستعادة: احفظ نسخة أمان مشفرة لبياناتك الحالية أولًا.');
+        return;
+       }
+       final applied=await bridge.applyVerifiedV3Restore(
+        baseline:source.encryptedWitness!,
+        encryptedArchive:stagedBackup!,password:restoreSecret.text,
+        savedRescueArchive:rescue,rescuePassword:restoreSecret.text,
+        preflightChecksum:result.archiveChecksum,
+        userConfirmed:true,externallySavedRescueConfirmed:true);
+       if(!mounted)return;
+       // The authoritative encrypted snapshot, not a decoded backup in
+       // memory, becomes the source for Home and widget after one commit.
+       await _loadFinanceSafely();
+       if(mounted)await _refreshWidget();
+       if(mounted)await syncRecurringReminders();
+       if(ctx.mounted)Navigator.pop(ctx);
+       if(mounted)snackSuccess(context,waffraIsEnglish
+        ?'Encrypted restore verified: ${applied.transactionCount} transactions and ${applied.receiptCount} receipts. Your previous encrypted backup was saved separately.'
+        :'اكتملت الاستعادة المشفرة لـ${applied.transactionCount} معاملة و${applied.receiptCount} مرفق. احتفظ بنسخة الأمان السابقة خارج التطبيق.');
+       return;
+      }
+      if(raw['format']!='waffra-backup'||raw['entries'] is! List||
+        raw['categories'] is! List||raw['goals'] is! List||raw['recurring'] is! List){
+       throw const FormatException('Invalid backup');
+      }
+      final newEntries=(raw['entries'] as List).map((x)=>MoneyEntry.fromJson(Map<String,dynamic>.from(x))).toList();
+      final newCategories=(raw['categories'] as List).map((x)=>BudgetCategory.fromJson(Map<String,dynamic>.from(x))).toList();
+      if(raw.containsKey('namedBudgets')&&raw['namedBudgets'] is! List){
+       throw const FormatException('Invalid independent budget backup.');
+      }
+      final newNamedBudgets=(raw['namedBudgets'] as List? ??const [])
+       .map((x)=>WaffraNamedBudget.fromJson(Map<String,dynamic>.from(x)))
+       .toList();
+      // V24 archives without namedBudgets are intentionally supported.
+      for(final c in newCategories.where((c)=>!c.income&&c.budget>0)){
+       if(!newNamedBudgets.any((b)=>b.id==c.id)){
+        newNamedBudgets.add(WaffraNamedBudget.fromLegacy(c));
+       }
+      }
+      final newGoals=(raw['goals'] as List).map((x)=>SavingGoal.fromJson(Map<String,dynamic>.from(x))).toList();
+      final newRecurring=(raw['recurring'] as List).map((x)=>RecurringBill.fromJson(Map<String,dynamic>.from(x))).toList();
+      final newChallenges=raw['challenges'] is List?(raw['challenges'] as List).map((x)=>SavingChallenge.fromJson(Map<String,dynamic>.from(x))).toList():<SavingChallenge>[];
+      final newDeletedRecurring=raw['deletedRecurring'] is List?(raw['deletedRecurring'] as List).map((x)=>Map<String,dynamic>.from(x as Map)).toList():<Map<String,dynamic>>[];
+      final newDeletedGoals=raw['deletedGoals'] is List?(raw['deletedGoals'] as List).map((x)=>Map<String,dynamic>.from(x as Map)).toList():<Map<String,dynamic>>[];
+      final newPostponed=raw['recurringPostponed'] is Map?(raw['recurringPostponed'] as Map).map((k,v)=>MapEntry(k.toString(),v.toString())):<String,String>{};
+      final newTrash=raw['deletedCategories'] is List?
+       (raw['deletedCategories'] as List).map((x)=>Map<String,dynamic>.from(x as Map)).toList():<Map<String,dynamic>>[];
+      if(newCategories.isEmpty)throw const FormatException('Empty categories');
+      final restoredBudget=raw['monthlyBudget'] is num?
+       (raw['monthlyBudget'] as num).toDouble():monthlyBudget;
+      final restoredRules=<String,String>{};
+      if(raw['learnedMerchants'] is Map){
+       final rules=raw['learnedMerchants'] as Map;
+       restoredRules.addAll(rules.map((key,value)=>MapEntry(key.toString(),value.toString())));
+      }
+      if(!mounted)return;
+      final ok=await confirm(
+       waffraIsEnglish?'Confirm backup restore':'تأكيد الاستعادة',
+       waffraIsEnglish?'This will replace all current transactions, categories, savings goals and recurring items with the backup. Make a backup of current data first. Continue?':'سيتم استبدال جميع المعاملات والأقسام وأهداف الادخار والعمليات المتكررة الحالية بمحتويات النسخة الاحتياطية. احفظ نسخة من بياناتك الحالية قبل المتابعة. هل تريد الاستمرار؟');
+      if(ok!=true||!mounted)return;
+      if(!await _authorizeSensitiveAction('restoring data')||!mounted)return;
+      // Build the complete restored finance image without mutating Home
+      // state. A rejected source witness or interrupted writer must NOT
+      // show transactions that were never durably committed.
+      final hashesPayload=raw['smsHashes'];
+      if(hashesPayload!=null&&(hashesPayload is! List||
+        hashesPayload.length>100000||
+        hashesPayload.any((value)=>value is! String||
+          !RegExp(r'^[0-9a-f]{64}$').hasMatch(value)))){
+       throw const FormatException('Invalid restored SMS fingerprints');
+      }
+      final restoredHashes=<String>{...?((hashesPayload as List?)?.cast<String>())};
+      final restoredBudgetEnabled=raw['monthlyBudgetEnabled'] is bool?
+       raw['monthlyBudgetEnabled'] as bool:restoredBudget>0;
+      final restoreSnapshot=<String,Object>{
+       'entries':jsonEncode(newEntries.map((e)=>e.toJson()).toList()),
+       'waffra_categories_v24':jsonEncode(newCategories.map((c)=>
+        c.budget>0&&newNamedBudgets.any((b)=>b.id==c.id)?
+         c.copy(budget:0,clearBudget:true).toJson():c.toJson()).toList()),
+       'waffra_named_budgets_v1':jsonEncode(
+        newNamedBudgets.map((b)=>b.toJson()).toList()),
+       'waffra_goals_v24':jsonEncode(newGoals.map((e)=>e.toJson()).toList()),
+       'waffra_recurring_v24':jsonEncode(newRecurring.map((e)=>e.toJson()).toList()),
+       'waffra_challenges_v1':jsonEncode(newChallenges.map((e)=>e.toJson()).toList()),
+       'waffra_deleted_categories_v1':jsonEncode(newTrash),
+       'waffra_deleted_goals_v1':jsonEncode(newDeletedGoals),
+       'waffra_deleted_recurring_v1':jsonEncode(newDeletedRecurring),
+       'waffra_recurring_postponed_v1':jsonEncode(newPostponed),
+       'waffra_monthly_budget_v1':restoredBudget,
+       'waffra_monthly_budget_enabled_v1':restoredBudgetEnabled,
+       'waffra_learned_merchants_v1':jsonEncode(restoredRules),
+       'waffra_sms_hashes_v1':restoredHashes.toList()..sort(),
+      };
+      // Re-read the latest authority inside the Home write queue. Both
+      // backends MUST pass source selection before a single journaled
+      // legacy batch / verified SQLCipher transaction is accepted.
+      // The SQLCipher bridge currently rejects backupRestore rather than
+      // falling back to plaintext until encrypted restore is certified.
+      await _financialWriteQueue.submit(restoreSnapshot,(captured)async{
+       final baseline=await _financeAuthority.load(
+        route:WaffraFinanceRoute.backupRestore);
+       final committed=await _financeAuthority.saveCaptured(
+        route:WaffraFinanceRoute.backupRestore,
+        baseline:baseline,captured:captured);
+       _lastFinanceAuthorityRead=committed;
+       _lastLedgerSavedRaw=committed.ledgerRaw;
+       _lastWidgetRevision=committed.widgetRevision;
+      });
+      if(!mounted)return;
+      // Only publish the restored view after the source reports a durable
+      // commit. Never optimistically replace in-memory money on error.
+      setState((){
+       entries..clear()..addAll(newEntries);
+       categories..clear()..addAll(newCategories);
+       namedBudgets..clear()..addAll(newNamedBudgets);
+       goals..clear()..addAll(newGoals);
+       recurring..clear()..addAll(newRecurring);
+       challenges..clear()..addAll(newChallenges);
+       deletedCategories..clear()..addAll(newTrash);
+       deletedGoals..clear()..addAll(newDeletedGoals);
+       deletedRecurring..clear()..addAll(newDeletedRecurring);
+       recurringPostponed..clear()..addAll(newPostponed);
+       monthlyBudget=restoredBudget;
+       monthlyBudgetEnabled=restoredBudgetEnabled;
+       learnedMerchantCategories..clear()..addAll(restoredRules);
+       smsHashes..clear()..addAll(restoredHashes);
+      });
+      unawaited(_refreshWidget());
+      await syncRecurringReminders();
+      if(ctx.mounted)Navigator.pop(ctx);
+      if(mounted)snackSuccess(context,'تمت استعادة البيانات بنجاح');
+     }catch(e){
+      if(ctx.mounted)update(()=>restoreError=waffraIsEnglish?
+       'Restore failed. Check the original password and complete backup.':
+       'فشلت الاستعادة. تأكد من كلمة المرور الأصلية واكتمال النسخة.');
+     }finally{
+      if(ctx.mounted)update(()=>restoring=false);
+     }
+    }),child:WaffraText(waffraIsEnglish?'Restore':'استعادة')),
+   ])));
+  disposeLater([secret,restoreSecret]);
+ }
+ // System credentials are never saved in plain text. A new PIN must be
+ // entered twice; keep support for checking older 4-8-digit PINs on disable.
+ Future<String?> _askForPin({
+  required String title,required String fieldLabel,bool existing=false,
+  bool autoAdvance=false,bool Function(String)? verify,String? verifyError,
+ })async{
+  final input=TextEditingController();
+  var attempted=false;String? fieldError;
+  try{
+   return await showWaffraDialog<String>(context:context,
+    builder:(dialogContext)=>StatefulBuilder(builder:(dialogContext,update)=>
+     Theme(data:Theme.of(dialogContext).copyWith(brightness:Brightness.dark,
+      colorScheme:ColorScheme.fromSeed(seedColor:emerald,brightness:Brightness.dark)),
+      child:AlertDialog(
+       backgroundColor:forest,
+       shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(26),
+        side:waffraDialogOutline(Brightness.dark)),
+       title:Column(mainAxisSize:MainAxisSize.min,children:[
+        const CircleAvatar(radius:26,backgroundColor:emerald,
+         child:Icon(Icons.lock_outline,color:Colors.white,size:28)),
+        const SizedBox(height:12),
+        WaffraText(title,textAlign:TextAlign.center,
+         style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold)),
+       ]),
+       content:SingleChildScrollView(child:Column(
+        mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,
+        children:[
+         WaffraText(fieldLabel,textAlign:TextAlign.center,
+          style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w600)),
+         const SizedBox(height:12),
+         // In-app digits-only keypad avoids Samsung's punctuation keyboard.
+         TextField(key:const Key('waffra-pin-input'),controller:input,
+          autofocus:false,readOnly:true,showCursor:false,
+          enableInteractiveSelection:false,
+          textDirection:TextDirection.ltr,textAlign:TextAlign.center,
+          keyboardType:TextInputType.number,
+          inputFormatters:[FilteringTextInputFormatter.digitsOnly,
+           LengthLimitingTextInputFormatter(existing?8:4)],
+          obscureText:true,
+          style:const TextStyle(color:Color(0xFF12382D),fontWeight:FontWeight.bold),
+          decoration:InputDecoration(
+           filled:true,fillColor:Colors.white,
+           hintText:'••••',hintStyle:const TextStyle(color:Colors.black38),
+           errorText:fieldError??
+            (attempted?waffraPinFieldError(input.text,existing:existing):null),
+           errorMaxLines:3,
+           border:const OutlineInputBorder())),
+         const SizedBox(height:10),
+         for(final keys in const <List<String>>[
+          ['1','2','3'],['4','5','6'],['7','8','9'],['','0','back']
+         ])Padding(padding:const EdgeInsets.only(bottom:5),child:Row(textDirection:TextDirection.ltr,
+          children:[for(final digit in keys)Expanded(child:Padding(
+           padding:const EdgeInsets.symmetric(horizontal:3),
+           child:digit.isEmpty?const SizedBox(height:42):OutlinedButton(
+            key:Key('waffra-pin-key-$digit'),
+            style:OutlinedButton.styleFrom(
+             minimumSize:const Size(0,42),
+             padding:EdgeInsets.zero,foregroundColor:Colors.white,
+             side:BorderSide(color:Colors.white.withValues(alpha:.23)),
+             shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(10))),
+            onPressed:WaffraHaptics.tap((){
+             if(digit=='back'){
+              if(input.text.isEmpty)return;
+              input.text=input.text.substring(0,input.text.length-1);
+              update(()=>fieldError=null);
+              return;
+             }
+             if(input.text.length>=(existing?8:4))return;
+             final value=input.text+digit;
+             input.text=value;
+             update(()=>fieldError=null);
+             if(autoAdvance&&value.length==4&&waffraPinFieldError(value)==null){
+              WidgetsBinding.instance.addPostFrameCallback((_){
+               if(dialogContext.mounted&&input.text==value){
+                Navigator.pop(dialogContext,value);
+               }
+              });
+             }
+            }),
+            child:digit=='back'
+             ?const Icon(Icons.backspace_outlined,size:20)
+             :Text(digit,style:const TextStyle(fontFamily:'Tajawal',
+               fontSize:19,fontWeight:FontWeight.bold))),
+          ))])),
+        ])),
+       actions:[
+        TextButton(
+         style:TextButton.styleFrom(foregroundColor:Colors.white,
+          backgroundColor:Colors.white.withValues(alpha:.12)),
+         onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialogContext)),
+         child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء',
+          style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold))),
+        if(!autoAdvance)FilledButton(
+         style:FilledButton.styleFrom(backgroundColor:emerald,
+          foregroundColor:Colors.white),
+         onPressed:WaffraHaptics.tap((){
+          final code=input.text.trim();
+          update(()=>attempted=true);
+          if(waffraPinFieldError(code,existing:existing)!=null)return;
+          if(verify!=null&&!verify(code)){
+           update(()=>fieldError=verifyError??
+            (waffraIsEnglish?'Incorrect PIN':'رمز القفل غير صحيح'));
+           return;
+          }
+          Navigator.pop(dialogContext,code);
+         }),
+         child:WaffraText(waffraIsEnglish?'Confirm':'تأكيد',
+          style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold))),
+       ],
+      ))));
+  }finally{disposeLater([input]);}
+ }
+ Future<void> configurePin()async {
+  if(widget.pinEnabled){
+   final prefs=await SharedPreferences.getInstance();
+   final hash=prefs.getString('waffra_pin_sha256');
+   final oldPin=await _askForPin(
+    title:waffraIsEnglish?'Disable app lock':'إلغاء رمز القفل',
+    fieldLabel:waffraIsEnglish?'Current PIN':'أدخل الرمز الحالي',
+    existing:true,verify:(code)=>sha256.convert(utf8.encode(code)).toString()==hash,
+    verifyError:waffraIsEnglish?'Incorrect PIN':'رمز القفل غير صحيح');
+   if(oldPin==null||!mounted)return;
+   await widget.onSetPin(null);
+   if(mounted)snackSuccess(context,waffraIsEnglish?'App lock disabled':'تم إلغاء القفل');
+   return;
+  }
+  final firstPin=await _askForPin(
+   title:waffraIsEnglish?'Create a new PIN':'إنشاء رمز قفل',
+   fieldLabel:waffraIsEnglish?'Enter a 4-digit PIN':'أدخل رمز القفل من 4 أرقام',
+    autoAdvance:true);
+  if(firstPin==null||!mounted)return;
+  while(mounted){
+   final repeated=await _askForPin(
+    title:waffraIsEnglish?'Confirm PIN':'تأكيد رمز القفل',
+    fieldLabel:waffraIsEnglish?'Re-enter the same 4 digits':'أدخل رمز القفل المكوّن من 4 أرقام مرة ثانية',
+    verify:(code)=>code==firstPin,
+    verifyError:waffraIsEnglish?'PINs do not match':'رمزا PIN غير متطابقين');
+   if(repeated==null||!mounted)return;
+   if(firstPin==repeated){
+    // The existing onSetPin stores only SHA-256 of the confirmed PIN.
+    await widget.onSetPin(firstPin);
+    if(mounted)snackSuccess(context,waffraIsEnglish?'App lock enabled':'تم تفعيل قفل التطبيق');
+    return;
+   }
+  }
+ }
+ void scheduleTourFocus(){
+  final expectedStep=tourStep,expectedTab=tab;
+  WidgetsBinding.instance.addPostFrameCallback((_)async {
+   if(!mounted||!tourActive||tourStep!=expectedStep||tab!=expectedTab)return;
+   // Reset lazily built list pages before focusing a possibly recycled
+   // sliver header (e.g. Home balance after scrolling down).
+   final ScrollController? pageScroll=switch(expectedTab){
+    0=>_dashboardScrollController,
+    1=>_categoryScrollController,
+    3=>_goalsScrollController,
+    4=>_recurringScrollController,
+    _=>null,
+   };
+   if(pageScroll!=null&&pageScroll.hasClients&&pageScroll.offset!=0){
+    pageScroll.jumpTo(0);
+   }
+   BuildContext? focus=tourTargetKeys[expectedStep]<0?null:
+    _tourKeys[tourTargetKeys[expectedStep]].currentContext;
+   // The selected tab is built lazily, so allow the next animation frame
+   // to mount its heading before calculating the coach-mark target.
+   if(focus==null&&expectedStep>0){
+    await Future<void>.delayed(waffraMotion(120));
+    if(!mounted||!tourActive||tourStep!=expectedStep||tab!=expectedTab)return;
+    focus=_tourKeys[tourTargetKeys[expectedStep]].currentContext;
+   }
+   if(focus!=null){
+    try{await Scrollable.ensureVisible(focus,
+     duration:waffraMotion(250),alignment:.16,
+     curve:Curves.easeOutCubic);}catch(e){debugPrint('Tour focus: $e');}
+   }
+   await Future<void>.delayed(waffraMotion(120));
+   if(mounted&&tourActive&&tourStep==expectedStep&&tab==expectedTab){
+    // Keep controls accessible even if a lazy child is momentarily absent.
+    setState(()=>tourTargetReady=true);
+   }
+  });
+ }
+ Future<void> completeTour()async {
+  _tourGlow.stop();
+  if(mounted)setState((){_tabBackStack.clear();tourActive=false;tourTargetReady=false;addFabExpanded=false;tab=0;goalsOpened=false;});
+  final p=await SharedPreferences.getInstance();
+  await p.setBool('waffra_in_app_tour_seen_v2',true);
+ }
+ void beginTour(){
+  setState((){_tabBackStack.clear();tourStep=0;tourActive=true;tourTargetReady=false;tab=0;accountOpened=false;_headerCompact=false;goalsOpened=false;addFabExpanded=false;});
+  if(waffraAnimationLevel.value!='off')_tourGlow.repeat(reverse:true);
+  scheduleTourFocus();
+ }
+ void advanceTour(){
+  if(tourStep>=tourTabs.length-1){completeTour();return;}
+  setState((){tourStep++;tab=tourTabs[tourStep];tourTargetReady=false;addFabExpanded=false;});
+  scheduleTourFocus();
+ }
+ void previousTour(){
+  if(tourStep<=0)return;
+  setState((){tourStep--;tab=tourTabs[tourStep];tourTargetReady=false;addFabExpanded=false;});
+  scheduleTourFocus();
+ }
+ Widget tourOverlay()=>LayoutBuilder(builder:(overlayCtx,area){
+  const ar=WaffraTourPlan.titlesAr;
+  const en=WaffraTourPlan.titlesEn;
+  const arHelp=WaffraTourPlan.helpAr;
+  const enHelp=WaffraTourPlan.helpEn;
+  final element=tourTargetKeys[tourStep]<0?null:_tourKeys[tourTargetKeys[tourStep]].currentContext?.findRenderObject();
+  final layer=overlayCtx.findRenderObject();
+  // Intro doesn't spotlight the header; its first card is centered.
+   Rect target=tourStep==0?Rect.fromLTWH(-40,-40,1,1):
+    Rect.fromLTWH(16,12,area.maxWidth-32,65);
+  if(element is RenderBox&&layer is RenderBox&&element.hasSize){
+   final offset=element.localToGlobal(Offset.zero)-layer.localToGlobal(Offset.zero);
+   target=Rect.fromLTWH(offset.dx,offset.dy,element.size.width,element.size.height).inflate(5);
+   target=Rect.fromLTRB(
+    target.left.clamp(4.0,area.maxWidth-4).toDouble(),
+    target.top.clamp(4.0,area.maxHeight-4).toDouble(),
+    target.right.clamp(4.0,area.maxWidth-4).toDouble(),
+    target.bottom.clamp(4.0,area.maxHeight-4).toDouble());
+  }
+  // Headings use intrinsic text bounds rather than a full-width row.
+  // Other tour steps retain their actual button/icon target.
+  final headingFocus=tourStep>=3;
+  final headingText=tourStep==3?(waffraIsEnglish?'Categories & budgets':'أقسامك وميزانياتك'):(waffraIsEnglish?en[tourStep]:ar[tourStep]);
+  if(headingFocus){
+   final style=Theme.of(context).textTheme.titleLarge??const TextStyle(fontSize:23);
+   final painter=TextPainter(text:TextSpan(text:headingText,style:style.copyWith(fontWeight:FontWeight.bold)),
+    textDirection:waffraIsEnglish?TextDirection.ltr:TextDirection.rtl,maxLines:1)..layout(maxWidth:area.maxWidth-40);
+   final desiredWidth=(painter.width+30).clamp(90.0,area.maxWidth-24).toDouble();
+   final right=waffraIsEnglish?target.left+desiredWidth:target.right;
+   target=Rect.fromLTWH((right-desiredWidth).clamp(8.0,area.maxWidth-desiredWidth-8).toDouble(),
+    target.top,desiredWidth,target.height);
+  }
+  final width=min(340.0,area.maxWidth-24);
+   final popupHeight=tourStep==0?min(250.0,max(160.0,area.maxHeight*.46)):
+    min(225.0,max(130.0,area.maxHeight*.56));
+   final spaceBelow=area.maxHeight-target.bottom-12;
+   final spaceAbove=target.top-12;
+   final below=spaceBelow>=popupHeight||(spaceBelow>=spaceAbove&&spaceAbove<popupHeight);
+   final suggestedTop=tourStep==0?(area.maxHeight-popupHeight)*.44:
+    (below?target.bottom+12:target.top-popupHeight-12);
+   final top=suggestedTop.clamp(12.0,max(12.0,area.maxHeight-popupHeight-12)).toDouble();
+   final suggestedLeft=tourStep==0?(area.maxWidth-width)/2:target.center.dx-width/2;
+   final left=suggestedLeft.clamp(12.0,max(12.0,area.maxWidth-width-12)).toDouble();
+  return Stack(children:[
+   Positioned.fill(child:AnimatedBuilder(animation:_tourGlow,
+    builder:(ctx,_)=>CustomPaint(painter:WaffraTourShade(target,glow:_tourGlow.value)))),
+   if(headingFocus)Positioned.fromRect(rect:target,child:IgnorePointer(child:
+    AnimatedBuilder(animation:_tourGlow,builder:(ctx,_){
+     final zoom=waffraAnimationLevel.value=='off'?1.0:1.0+.09*_tourGlow.value;
+     return Center(child:Transform.scale(scale:zoom,child:Container(
+      padding:const EdgeInsets.symmetric(horizontal:12,vertical:6),
+      decoration:BoxDecoration(color:const Color(0xFFF7FFF9),
+       borderRadius:BorderRadius.circular(18),border:Border.all(color:const Color(0xFF7EDAB0),width:1.4),
+       boxShadow:[BoxShadow(color:const Color(0xFF66DDA3).withValues(alpha:.24+.20*_tourGlow.value),
+        blurRadius:15+10*_tourGlow.value)]),
+      child:FittedBox(fit:BoxFit.scaleDown,child:WaffraText(headingText,
+       style:const TextStyle(fontSize:22,fontWeight:FontWeight.bold,color:forest))))));
+    }))),
+   AnimatedPositioned(
+    duration:waffraMotion(250),
+    curve:Curves.easeInOutCubic,top:top,left:left,width:width,
+    child:Material(elevation:12,color:Theme.of(context).cardColor,
+     borderRadius:BorderRadius.circular(18),
+     child:ConstrainedBox(constraints:BoxConstraints(maxHeight:popupHeight),
+      child:SingleChildScrollView(padding:const EdgeInsets.all(12),child:Column(
+      mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+       Row(children:[
+        const Icon(Icons.lightbulb_outline,color:emerald,size:18),
+        const SizedBox(width:5),
+        Expanded(child:AnimatedSwitcher(duration:waffraMotion(250),
+         transitionBuilder:(child,animation)=>FadeTransition(opacity:animation,
+          child:SlideTransition(position:Tween<Offset>(begin:const Offset(0,.18),end:Offset.zero).animate(animation),child:child)),
+         child:WaffraText(waffraIsEnglish?en[tourStep]:ar[tourStep],key:ValueKey(tourStep),
+          style:const TextStyle(fontSize:15,fontWeight:FontWeight.bold)))),
+        WaffraText('${tourStep+1}/${tourTabs.length}',style:const TextStyle(color:emerald,fontSize:11)),
+       ]),
+       const SizedBox(height:6),
+       WaffraText(waffraIsEnglish?enHelp[tourStep]:arHelp[tourStep],
+        style:const TextStyle(fontSize:12)),
+       const SizedBox(height:8),
+       Wrap(alignment:WrapAlignment.spaceBetween,spacing:5,runSpacing:6,children:[
+        TextButton(onPressed:WaffraHaptics.tap(completeTour),child:WaffraText(waffraIsEnglish?'Skip':'تخطي')),
+        if(tourStep>0)TextButton(onPressed:WaffraHaptics.tap(previousTour),
+         child:WaffraText(waffraIsEnglish?'Back':'السابق')),
+        FilledButton(onPressed:WaffraHaptics.tap(advanceTour),
+         child:WaffraText(tourStep==tourTabs.length-1?
+          (waffraIsEnglish?'Finish':'إنهاء'):(waffraIsEnglish?'Next':'التالي'))),
+       ]),
+      ])))),
+   ),
+  ]);
+ });
+ Future<void> changePin()async {
+  if(!widget.pinEnabled)return;
+  final p=await SharedPreferences.getInstance();
+  final hash=p.getString('waffra_pin_sha256');
+  final previous=await _askForPin(title:waffraIsEnglish?'Current PIN':'رمز القفل الحالي',
+   fieldLabel:waffraIsEnglish?'Enter PIN':'أدخل رمز القفل',existing:true,
+   verify:(code)=>sha256.convert(utf8.encode(code)).toString()==hash,
+   verifyError:waffraIsEnglish?'Incorrect PIN':'رمز القفل غير صحيح');
+  if(previous==null||!mounted)return;
+  final next=await _askForPin(title:waffraIsEnglish?'New PIN':'رمز جديد',
+   fieldLabel:waffraIsEnglish?'4 digits':'أربعة أرقام');
+  if(next==null||!mounted)return;
+  final again=await _askForPin(title:waffraIsEnglish?'Confirm PIN':'تأكيد الرمز',
+   fieldLabel:waffraIsEnglish?'Repeat PIN':'أعد إدخال الرمز',
+   verify:(code)=>code==next,
+   verifyError:waffraIsEnglish?'PINs do not match':'الرمزان غير متطابقين');
+  if(again==null||!mounted)return;
+  await widget.onSetPin(next);
+  if(mounted)snackSuccess(context,waffraIsEnglish?'PIN changed':'تم تغيير الرمز بنجاح');
+ }
+ Future<void> deleteAiModel()async {
+  final model=WaffraOnDeviceQwen.shared;
+  final installed=await model.downloadedOnDisk();
+  if(!mounted)return;
+  if(!installed&&!model.isReady){
+   snack(context,waffraIsEnglish?
+    'The AI model is not downloaded. No files need deleting.':
+    'نموذج الذكاء الاصطناعي غير منزّل حاليًا.');
+   return;
+  }
+  // Warn BEFORE requesting the operating-system biometric prompt.
+  final approved=await confirmDeletion(
+   waffraIsEnglish?'Delete the AI model from this phone?':
+    'حذف نموذج الذكاء الاصطناعي من الجهاز؟',
+   waffraIsEnglish?
+    'This will delete the downloaded model (about 484 MB). You will lose '
+    'Bank-message importing and image OCR scanning, Ask Waffra, AI financial '
+    'analysis and AI saving suggestions until you download it again. '
+    'Your saved transactions, invoices, backups and regular tools will NOT be deleted.':
+    'سيتم حذف نموذج الذكاء الاصطناعي الذي تم تنزيله (حوالي 484 ميجابايت). '
+    'بعد الحذف مش هتقدر تستخدم الرسائل البنكية أو OCR للفواتير والصور، '
+    'واسأل وفرة، والتحليل المالي الذكي واقتراحات التوفير، لحد ما تنزّله تاني. '
+    'معاملاتك وفواتيرك ونسخك الاحتياطية والأدوات العادية مش هتتحذف.');
+  if(approved!=true||!mounted)return;
+  // No PIN shortcut; a failed, missing or cancelled phone biometric
+  // confirmation always refuses model-file deletion.
+  final biometric=await WaffraBiometrics.confirmAiModelRemoval(
+   english:waffraIsEnglish);
+  if(!mounted)return;
+  if(!biometric){
+   snack(context,waffraIsEnglish?
+    'Biometric confirmation was not completed. The AI model was not deleted.':
+    'لم يتم تأكيد البصمة. نموذج الذكاء الاصطناعي لم يُحذف.');
+   return;
+  }
+  try{
+   await model.deleteDownloadedModel();
+   if(!mounted)return;
+   setState((){
+    _m528ModelDiskRevision=null;
+    _m528ModelDiskFuture=null;
+   });
+   snackSuccess(context,waffraIsEnglish?
+    'AI model deleted. Standard Waffra and your finance data are unchanged.':
+    'تم حذف نموذج الذكاء الاصطناعي. بياناتك المالية والأدوات العادية كما هي.');
+  }catch(error){
+   debugPrint('Local AI model removal could not be verified: $error');
+   if(mounted)snack(context,waffraIsEnglish?
+    'Could not confirm model removal. Please retry from My Account.':
+    'تعذر التأكد من حذف النموذج. حاول مرة أخرى من حسابي.');
+  }
+ }
+
+ Future<void> eraseFinancialData()async {
+  if(!await _authorizeSensitiveAction('deleting financial data')||!mounted)return;
+  final ok=await confirmDeletion(
+   waffraIsEnglish?'Permanently delete financial data?':'حذف البيانات المالية نهائيًا',
+   waffraIsEnglish?'This deletes transactions, categories, budgets, goals and recurring schedules. It cannot be undone. Your profile and app settings stay.':
+    'سيتم حذف المعاملات والأقسام والميزانيات والأهداف والجدولة المتكررة نهائيًا. لا يمكن التراجع. سيبقى الملف الشخصي وإعدادات التطبيق.');
+  if(ok!=true||!mounted)return;
+  final cleanCategories=defaultCategories();
+  // Every recognized financial field is reset through ONE crash-recoverable
+  // journal. SMS hashes must NOT be cleared independently before finance
+  // persistence, and non-finance profile/app settings must remain intact.
+  final clean=<String,Object>{
+   'entries':'[]',
+   'waffra_categories_v24':jsonEncode(cleanCategories.map((e)=>e.toJson()).toList()),
+   'waffra_named_budgets_v1':'[]',
+   'waffra_goals_v24':'[]',
+   'waffra_recurring_v24':'[]',
+   'waffra_challenges_v1':'[]',
+   'waffra_deleted_categories_v1':'[]',
+   'waffra_deleted_goals_v1':'[]',
+   'waffra_deleted_recurring_v1':'[]',
+   'waffra_recurring_postponed_v1':'{}',
+   'waffra_monthly_budget_v1':0.0,
+   'waffra_monthly_budget_enabled_v1':false,
+   'waffra_learned_merchants_v1':'{}',
+   'waffra_sms_hashes_v1':<String>[],
+   'waffra_recurring_reminders_enabled_v1':false,
+  };
+  try{
+   final baseline=_lastFinanceAuthorityRead;
+   await _financialWriteQueue.submit(clean,(captured)async{
+    if(baseline==null)throw StateError('Finance reset source baseline unavailable.');
+    final committed=await _financeAuthority.saveCaptured(
+     route:WaffraFinanceRoute.fullFinanceReset,
+     baseline:baseline,captured:captured,
+    );
+    _lastFinanceAuthorityRead=committed;
+    _lastLedgerSavedRaw=committed.ledgerRaw;
+    _lastWidgetRevision=committed.widgetRevision;
+   });
+   if(!mounted)return;
+   setState((){
+    entries.clear();
+    categories..clear()..addAll(cleanCategories);
+    namedBudgets.clear();
+    goals.clear();challenges.clear();recurring.clear();
+    deletedCategories.clear();deletedGoals.clear();deletedRecurring.clear();
+    recurringPostponed.clear();smsHashes.clear();learnedMerchantCategories.clear();
+    monthlyBudget=0;monthlyBudgetEnabled=false;recurringRemindersEnabled=false;
+   });
+   unawaited(_refreshWidget());
+   try{await WaffraReminders.clear();}catch(e){
+    debugPrint('Could not clear old recurring reminders: $e');
+   }
+   if(mounted)snackSuccess(context,waffraIsEnglish?'Financial data deleted':'تم حذف البيانات المالية');
+  }catch(e){
+   debugPrint('Financial erase was not fully confirmed: $e');
+   if(mounted)snack(context,waffraIsEnglish?
+    'Deletion could not be verified. Reload before retrying.':
+    'تعذر تأكيد حذف البيانات. أعد التحميل قبل المحاولة مجددًا.');
+  }
+ }
+ Widget _accountTile(String label,String subtitle,IconData icon,{VoidCallback? onTap,Widget? trailing,Color tint=emerald})=>
+  ListTile(
+   leading:CircleAvatar(backgroundColor:tint.withValues(alpha:.12),child:Icon(icon,color:tint,size:21)),
+   title:WaffraText(label,style:const TextStyle(fontWeight:FontWeight.bold)),
+   subtitle:WaffraText(subtitle,maxLines:2,overflow:TextOverflow.ellipsis),
+   trailing:trailing??(onTap==null?null:const Icon(Icons.chevron_left)),onTap:WaffraHaptics.tap(onTap));
+ Widget _accountSection(String heading,IconData icon,List<Widget> children) {
+  final q=accountSearch.trim().toLowerCase();
+  if(q.isNotEmpty&&_accountOpenSection!=heading)return const SizedBox.shrink();
+  final opened=_accountOpenSection==heading;
+  final dim=Theme.of(context).brightness==Brightness.dark;
+  return Card(margin:const EdgeInsets.only(bottom:10),shape:RoundedRectangleBorder(
+   borderRadius:BorderRadius.circular(20),
+   side:BorderSide(color:dim?const Color(0xFF456855):const Color(0xFFDCEAE1))),
+   child:Column(children:[
+    InkWell(onTap:WaffraHaptics.tap(()=>setState(()=>_accountOpenSection=opened?null:heading)),
+     borderRadius:BorderRadius.circular(20),
+     child:Padding(padding:const EdgeInsets.all(15),child:Row(children:[
+      CircleAvatar(radius:20,backgroundColor:emerald.withValues(alpha:.12),child:Icon(icon,color:emerald,size:21)),
+      const SizedBox(width:10),Expanded(child:WaffraText(heading,style:const TextStyle(fontSize:16,fontWeight:FontWeight.bold))),
+      AnimatedRotation(turns:opened?0.5:0.0,duration:waffraMotion(200),child:const Icon(Icons.keyboard_arrow_down_rounded)),
+     ]))),
+    AnimatedSize(duration:waffraMotion(220),curve:Curves.easeInOutCubic,
+     child:opened?Column(children:[
+      const Divider(height:1),for(var i=0;i<children.length;i++)...[
+       children[i],if(i<children.length-1)const Divider(height:1,indent:14,endIndent:14),
+      ],
+     ]):const SizedBox(width:double.infinity,height:0)),
+   ]));
+ }
+ List<WaffraCalendarItem> get financialCalendarItems=>[
+  ...entries.map((e)=>WaffraCalendarItem(e.date,e.title,e.amount,e.income)),
+  ...recurring.where((r)=>r.active).map((r)=>WaffraCalendarItem(
+   DateTime(DateTime.now().year,DateTime.now().month,r.day.clamp(1,28).toInt()),
+   r.title,r.amount,r.income,scheduled:true)),
+ ];
+ // The third footer tab owns the tool accordion. Finance is read-only:
+ // freeze verified snapshots and never read original SMS or modify the ledger.
+ Widget _smartToolsTab(){
+  if(!ready||_financeBinding==null||_lastFinanceAuthorityRead==null){
+   return Center(child:WaffraText(waffraIsEnglish?
+    'Financial source not ready':'مصدر البيانات المالية غير جاهز'));
+  }
+  // Budget linking is explicit, never inferred from category labels.
+  final liveBudgetIds=namedBudgets.where((b)=>!b.deleted).map((b)=>b.id).toSet();
+  return WaffraSmartFeaturesPage(
+   key:const Key('waffra-m268-footer-page'),
+   tourHeadingKey:_tourKeys[3],
+   embedded:true,english:waffraIsEnglish,
+   onNotice:(message)=>snack(context,message),
+   analysisBuilder:(_)=>Column(crossAxisAlignment:CrossAxisAlignment.stretch,
+    children:[smartAnalysisEntryCard(),const SizedBox(height:10),smartMoneyInsightsCard()]),
+   entries:List<WaffraSmartEntry>.unmodifiable(entries.map((e)=>WaffraSmartEntry(
+    id:e.id,title:e.title,category:e.category,amount:e.amount,
+    income:e.income,date:e.date,notes:e.notes,
+    hasAttachment:e.receiptPath?.isNotEmpty??false,
+    unassignedNamedBudget:!e.income&&e.budgetId==null,
+    orphanBudgetLink:e.budgetId!=null&&!liveBudgetIds.contains(e.budgetId)))),
+   goals:List<WaffraSmartGoal>.unmodifiable(goals.map((g)=>
+    WaffraSmartGoal(g.name,g.target,g.saved))),
+   budgets:List<WaffraSmartBudget>.unmodifiable(
+    namedBudgets.where((b)=>!b.deleted&&b.budget>0).map((b)=>
+     WaffraSmartBudget(b.id,b.budgetLabel??b.name,b.budget,
+      waffraNamedBudgetSpent(entries,categories,b,DateTime.now()),b.budgetActive))),
+   recurring:List<WaffraSmartRecurring>.unmodifiable(recurring.where((r)=>r.active).map((r)=>
+    WaffraSmartRecurring(r.title,r.amount,r.day,r.income))),
+  );
+ }
+ void openSmartFeatures(){
+  if(!ready||_financeBinding==null||_lastFinanceAuthorityRead==null){
+   snack(context,waffraIsEnglish?'Financial source not ready':'مصدر البيانات المالية غير جاهز');
+   return;
+  }
+  unawaited(selectFooter(2));
+ }
+ void openFinancialCalendar()=>Navigator.push<void>(context,MaterialPageRoute(
+  builder:(_)=>WaffraFinancialCalendar(items:financialCalendarItems,english:waffraIsEnglish)));
+ void openSubscriptionInsights()=>Navigator.push<void>(context,MaterialPageRoute(
+  builder:(_)=>WaffraSubscriptionScreen(
+   items:financialCalendarItems,english:waffraIsEnglish,
+   onAddRecurring:(candidate)=>recurringDialog(
+    suggestedTitle:candidate.title,suggestedAmount:candidate.estimatedMonthly))));
+ Future<void> chooseAppCurrency()async{
+  if(!WaffraSaudiRelease.userCurrencyChoice)return;
+  final searchController=TextEditingController();
+  String query='';
+  try{
+   final chosen=await showWaffraDialog<String>(
+    context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,update){
+     final visible=waffraCountryCurrencies.where((country)=>
+      waffraSearchAny([country.countryAr,country.countryEn,country.nameAr,
+       country.nameEn,country.code],query)).toList();
+     return AlertDialog(
+      title:WaffraText(waffraIsEnglish?'Application currency':'العملة الأساسية للتطبيق'),
+      content:SizedBox(width:420,height:410,child:Column(children:[
+       TextField(key:const Key('waffra-country-currency-search'),
+        controller:searchController,autofocus:true,
+        decoration:InputDecoration(prefixIcon:const Icon(Icons.search),
+         hintText:waffraIsEnglish?'Find country or currency':'ابحث عن دولة أو عملة'),
+        onChanged:(v)=>update(()=>query=v)),
+       const SizedBox(height:9),
+       Expanded(child:ListView.builder(itemCount:visible.length,
+        itemBuilder:(context,index){
+         final option=visible[index];
+         return ListTile(
+          key:Key('waffra-country-currency-${option.code}'),
+          selected:WaffraDisplayCurrency.country.code==option.code,
+          leading:Text(waffraCurrencyFlag(option.code),
+           style:const TextStyle(fontSize:27)),
+          title:WaffraText(option.label(waffraIsEnglish)),
+          trailing:WaffraDisplayCurrency.country.code==option.code?
+           const Icon(Icons.check_circle,color:emerald):null,
+          onTap:WaffraHaptics.tap(()=>Navigator.pop(ctx,option.code)));
+        })),
+      ])),
+      actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),
+       child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء'))],
+     );
+    }));
+   if(chosen==null||!mounted)return;
+   try{
+    await WaffraDisplayCurrency.setCurrency(chosen);
+    if(!mounted)return;
+    setState((){});
+    await _refreshWidget();
+    if(mounted)snackSuccess(context,waffraIsEnglish?
+      'Display currency changed; numbers stay exactly the same.':
+      'تم تغيير عملة العرض مع الحفاظ على قيمة الأرقام كما هي.');
+   }catch(error){
+    debugPrint('App country currency rejected safely: $error');
+    if(mounted)snack(context,waffraIsEnglish?
+      'Could not save display currency; no financial amount was modified.':
+      'تعذّر حفظ عملة العرض، ولم يتم تعديل أي مبلغ مالي.');
+   }
+  }finally{searchController.dispose();}
+ }
+ Widget profilePage(){
+  final p=widget.profile;
+  final provider=p.provider.toLowerCase().trim();
+  final isGuest=(provider=='محلي'||provider=='local'||provider=='guest')&&
+   p.email.trim().isEmpty&&p.phone.trim().isEmpty;
+  void edit(){Navigator.push<void>(context,MaterialPageRoute(
+   builder:(_)=>ProfileForm(provider:p.provider,initial:p,onSave:widget.onProfile)));}
+  return ListView(padding:const EdgeInsets.fromLTRB(16,14,16,28),children:[
+   WaffraPageHero(
+    title:waffraIsEnglish?'My account':'حسابي',
+    subtitle:waffraIsEnglish?'Your profile, preferences and security':
+     'بياناتك وإعداداتك وخصوصيتك في مكان واحد.',
+    icon:Icons.person_outline_rounded),
+   Container(padding:const EdgeInsets.fromLTRB(16,17,16,17),
+    decoration:BoxDecoration(
+     color:Theme.of(context).cardColor,
+     borderRadius:BorderRadius.circular(22),
+     border:Border.all(color:Theme.of(context).brightness==Brightness.dark?
+      const Color(0xFF375C4A):const Color(0xFFDCEBE2))),
+    child:Column(children:[
+     InkWell(onTap:WaffraHaptics.tap(edit),child:Stack(alignment:Alignment.bottomRight,children:[
+      waffraAvatar(p.gender,p.avatar,radius:42),
+      const CircleAvatar(radius:14,backgroundColor:forest,
+       child:Icon(Icons.camera_alt,size:16,color:Colors.white)),
+     ])),
+     const SizedBox(height:12),
+     WaffraText(p.name.trim().isEmpty?(waffraIsEnglish?'My account':'حسابي'):p.name,
+      textAlign:TextAlign.center,
+      style:const TextStyle(fontSize:18,fontWeight:FontWeight.bold)),
+     if(p.email.trim().isNotEmpty)...[
+      const SizedBox(height:5),
+      WaffraText(p.email,textAlign:TextAlign.center),
+     ],
+     const SizedBox(height:15),
+   OutlinedButton.icon(onPressed:WaffraHaptics.tap(edit),icon:const Icon(Icons.edit_outlined),
+    label:WaffraText(waffraIsEnglish?'Edit profile':'تعديل حسابي')),
+    ])),
+   const SizedBox(height:13),
+   if(provider=='google'||provider=='apple')...[
+    Card(child:Padding(padding:const EdgeInsets.all(13),
+     child:Column(children:[
+      WaffraText(waffraIsEnglish?
+       'Keep your data and switch to mobile + password':
+       'احتفظ ببياناتك وانقل الدخول إلى الجوال وكلمة المرور'),
+      const SizedBox(height:10),
+      FilledButton.icon(
+       onPressed:WaffraHaptics.tap(()async{
+        await Navigator.push<void>(context,MaterialPageRoute(
+         builder:(_)=>WaffraLocalAccountMigration(
+          english:waffraIsEnglish,
+          onConfirm:(number,password)async{
+           // Complete local migration without changing Firebase UID,
+           // historical finance, backups or any encrypted receipt.
+           final already=await WaffraLocalPhoneCredentials.verify(
+            phone:number,password:password);
+           if(!already){
+            await WaffraLocalPhoneCredentials.register(
+             phone:number,password:password);
+           }
+           await widget.onProfile(Person(
+            name:p.name,email:p.email,phone:number,provider:'Phone',
+            gender:p.gender,avatar:p.avatar,birthday:p.birthday));
+          },
+         )));
+       }),
+       icon:const Icon(Icons.phonelink_lock),
+       label:WaffraText(waffraIsEnglish?
+        'Migrate local login':'نقل تسجيل الدخول للجوال')),
+     ]))),
+    const SizedBox(height:13),
+   ],
+   TextField(key:const Key('waffra-account-settings-search'),onChanged:(value){
+    final q=value.trim();
+    final groups=<String,String>{
+     waffraIsEnglish?'App settings':'إعدادات التطبيق':'language theme appearance system dark light currency exchange بلد دولة عملة جنيه مصري مصر SAR EGP المظهر اللغة الحركة animation',
+     waffraIsEnglish?'Security & privacy':'الأمان والخصوصية':'privacy biometric fingerprint حماية بصمة قفل إخفاء PIN screenshots المعاينة',
+     waffraIsEnglish?'Bank SMS':'رسائل SMS البنكية':'SMS bank banking الرسائل البنكية السابقة القديمة فحص رسائل غير معروفة إشعارات مديونية اعتماد',
+     waffraIsEnglish?'Backup & data':'النسخ الاحتياطي والبيانات':'backup restore delete نسخ احتياطي استعادة حذف بيانات',
+     waffraIsEnglish?'Financial tools':'الأدوات المالية':'calendar subscriptions currency tools التقويم الاشتراكات الأدوات المالية',
+     waffraIsEnglish?'AI model':'نموذج الذكاء الاصطناعي':'Qwen AI download remove delete model fingerprint biometric نموذج مكتبة الذكاء الاصطناعي بصمة تنزيل تحميل حذف',
+     waffraIsEnglish?'Help & about':'المساعدة وعن وفرة':'tour help about وفرة الجولة المساعدة',
+    };
+    String? match;
+    if(q.isNotEmpty){for(final item in groups.entries){if(waffraSearchAny([item.key,item.value],q)){match=item.key;break;}}}
+    setState((){accountSearch=q;_accountOpenSection=match;});
+   },decoration:InputDecoration(prefixIcon:const Icon(Icons.search,color:emerald),
+    hintText:waffraIsEnglish?'Find a setting':'ابحث داخل إعدادات حسابي')),
+   const SizedBox(height:12),
+   _accountSection(waffraIsEnglish?'App settings':'إعدادات التطبيق',Icons.settings_outlined,[
+    if(WaffraSaudiRelease.userCurrencyChoice)ListTile(
+     key:const Key('waffra-app-base-currency-setting'),
+     leading:const CircleAvatar(child:Icon(Icons.public_rounded,color:emerald)),
+     title:WaffraText(waffraIsEnglish?'App currency by country':'عملة التطبيق حسب الدولة'),
+     subtitle:WaffraText(WaffraDisplayCurrency.country.label(waffraIsEnglish)),
+     trailing:const Icon(Icons.search_rounded),
+     onTap:WaffraHaptics.tap(chooseAppCurrency)),
+
+    ListTile(
+     leading:const CircleAvatar(child:Icon(Icons.auto_awesome_outlined,color:emerald)),
+     title:WaffraText(waffraIsEnglish?'Animations & effects':'الحركة والتأثيرات',style:const TextStyle(fontWeight:FontWeight.bold)),
+     subtitle:WaffraText(waffraIsEnglish?'Choose motion intensity':'اختر مستوى الحركة في التطبيق'),
+     trailing:DropdownButton<String>(value:waffraAnimationLevel.value,underline:const SizedBox.shrink(),
+      onChanged:WaffraHaptics.selection((v){if(v!=null)setAnimationLevel(v);}),items:[
+       DropdownMenuItem(value:'full',child:WaffraText(waffraIsEnglish?'Full':'كاملة')),
+       DropdownMenuItem(value:'balanced',child:WaffraText(waffraIsEnglish?'Balanced':'متوازنة')),
+       DropdownMenuItem(value:'reduced',child:WaffraText(waffraIsEnglish?'Reduced':'خفيفة')),
+       DropdownMenuItem(value:'off',child:WaffraText(waffraIsEnglish?'Off':'بدون حركة')),
+      ])),
+    _accountTile(waffraIsEnglish?'App language':'لغة التطبيق',
+     waffraIsEnglish?'English':'العربية',Icons.language,
+     trailing:SegmentedButton<String>(segments:const [
+      ButtonSegment(value:'ar',label:Text('AR')),ButtonSegment(value:'en',label:Text('EN')),
+     ],selected:{waffraLanguage.value},showSelectedIcon:false,
+     onSelectionChanged:WaffraHaptics.selection((v)async{setState(()=>tab=0);await widget.onLanguage(v.first);}))),
+    if(WaffraSaudiRelease.userCountryChoice)ListTile(
+     key:const Key('waffra-regional-arabic-setting'),
+     leading:const Icon(Icons.public_outlined,color:emerald),
+     title:WaffraText(waffraIsEnglish?'Country / Arabic wording':'البلد واللهجة العربية'),
+     subtitle:WaffraText(waffraIsEnglish?
+      'Country only changes Arabic wording, not your app language or currency.':
+      'اختيار البلد يحدد اللهجة العربية فقط، ولا يغيّر لغة التطبيق أو عملته.'),
+     trailing:SizedBox(width:145,child:DropdownButton<String>(
+      key:const Key('waffra-region-choice'),
+      value:WaffraRegionalCopy.countryIso.value,isExpanded:true,
+      underline:const SizedBox.shrink(),
+      items:WaffraRegionalCopy.supportedRegions.entries.map((item)=>
+       DropdownMenuItem<String>(value:item.key,
+        child:Text(WaffraRegionalCopy.regionLabel(
+          item.key,english:waffraIsEnglish),
+          maxLines:1,overflow:TextOverflow.ellipsis))).toList(),
+      onChanged:WaffraHaptics.selection((v)async{
+       if(v==null)return;
+       try{
+        await WaffraRegionalCopy.setCountry(v);
+        if(mounted)setState((){});
+       }catch(_){
+        if(mounted)snack(context,waffraIsEnglish?
+          'Could not save country preference. Please retry.':
+          'ما قدرنا نحفظ اختيار البلد. جرّب مرة ثانية.');
+       }
+      }),
+     )),
+    ),
+    ListTile(leading:const Icon(Icons.palette_outlined,color:emerald),
+     title:WaffraText(waffraIsEnglish?'Appearance':'المظهر'),
+     subtitle:WaffraText(widget.appearance=='system'?(waffraIsEnglish?'System default':'حسب إعدادات الجهاز'):
+      widget.appearance=='dark'?(waffraIsEnglish?'Dark':'داكن'):(waffraIsEnglish?'Light':'فاتح')),
+     trailing:DropdownButton<String>(value:widget.appearance,underline:const SizedBox.shrink(),
+      onChanged:WaffraHaptics.selection((value){if(value!=null)widget.onAppearance(value);}),
+      items:[
+       DropdownMenuItem(value:'system',child:WaffraText(waffraIsEnglish?'System default':'حسب الجهاز')),
+       DropdownMenuItem(value:'light',child:WaffraText(waffraIsEnglish?'Light':'فاتح')),
+       DropdownMenuItem(value:'dark',child:WaffraText(waffraIsEnglish?'Dark':'داكن')),
+      ])),
+   ]),
+   if(Platform.isAndroid)_accountSection(
+    waffraIsEnglish?'Bank SMS':'رسائل SMS البنكية',
+    Icons.sms_outlined,[
+    _accountTile(
+     waffraIsEnglish?'Classification rules':'قواعد تحليل الرسائل',
+     waffraIsEnglish?
+      'Built-in income/expense rules and custom keyword rules.':
+      'قواعد جاهزة للدخل والمصروف وإضافة قواعد بكلمات مفتاحية.',
+     Icons.rule_rounded,
+     onTap:()=>unawaited(_openSmsRules())),
+    _accountTile(
+     waffraIsEnglish?'Excluded senders':'المستبعدون',
+     waffraIsEnglish?
+      'Manage blocked SMS senders and restore them.':
+      'إدارة المرسلين المستبعدين وإلغاء الاستبعاد عند الحاجة.',
+     Icons.block_rounded,
+     onTap:()=>unawaited(_openExcludedSenders())),
+    _accountTile(
+     waffraIsEnglish?'Scan previous SMS':'فحص رسائل SMS السابقة',
+     waffraIsEnglish?
+      'Review bank SMS from the first day of the month Waffra was installed.':
+      'فحص الرسائل من أول يوم في شهر تثبيت وفرة وحتى الآن.',
+     Icons.history_rounded,
+     onTap:()=>unawaited(_scanPreviousBankSmsFromSettings())),
+    _accountTile(
+     waffraIsEnglish?'Unrecognized SMS':'رسائل SMS غير معروفة',
+     waffraIsEnglish?
+      'Read financial notices that could not be verified as transactions.':
+      'عرض الإشعارات المالية التي لم تتأكد كمعاملات.',
+     Icons.help_outline_rounded,
+     onTap:()=>unawaited(_openUnknownSmsFromSettings())),
+   ]),
+   _accountSection(waffraIsEnglish?'Security & privacy':'الأمان والخصوصية',Icons.shield_outlined,[
+    if(Platform.isAndroid)FutureBuilder<bool>(
+     future:_m528SmsEnabled(),builder:(context,snapshot)=>SwitchListTile(
+      secondary:const Icon(Icons.sms_outlined,color:emerald),
+      title:WaffraText(waffraIsEnglish?
+       'Automatic bank SMS tracking':'تسجيل الرسائل البنكية تلقائيًا'),
+      subtitle:WaffraText(waffraIsEnglish?
+       'Save verified SMS transactions and notify you; uncertain messages need review.':
+       'تسجيل العمليات المؤكدة وإشعارك بعد الحفظ؛ الرسائل التي تحتاج مراجعة لا تُسجَّل تلقائيًا.'),
+      value:snapshot.data==true,
+      onChanged:WaffraHaptics.selection((enabled)async{
+       if(enabled){
+        await Navigator.push<void>(context,MaterialPageRoute(
+         builder:(_)=>WaffraAutoSmsConsentPage(
+          english:waffraIsEnglish,
+          onComplete:()async{if(context.mounted)Navigator.pop(context);},
+         )));
+       }else{
+        await WaffraAutoSms.disable();
+       }
+       if(mounted)setState((){
+        _m528SmsEnabledFuture=WaffraAutoSms.enabled();
+       });
+      }),
+     )),
+    if(Platform.isAndroid)FutureBuilder<bool>(
+     future:_m528CloudConsent(),
+     builder:(context,snapshot)=>SwitchListTile(
+      secondary:const Icon(Icons.cloud_outlined,color:emerald),
+      title:WaffraText(waffraIsEnglish?
+       'AI analysis of bank SMS (cloud)':'تحليل الرسائل البنكية بالذكاء الاصطناعي السحابي'),
+      subtitle:WaffraText(waffraIsEnglish?
+       'Optional. Sends redacted financial SMS to a third-party AI provider.':
+       'اختياري. يرسل النص المالي بعد حجب المعرفات لخدمة ذكاء اصطناعي خارجية.'),
+      value:snapshot.data==true,
+      onChanged:WaffraHaptics.selection((enabled)async{
+       if(enabled){
+        final accepted=await showWaffraDialog<bool>(context:context,
+         builder:(dialog)=>AlertDialog(
+          title:WaffraText(waffraIsEnglish?
+           'Enable cloud bank SMS analysis?':'تفعيل تحليل الرسائل البنكية السحابي؟'),
+          content:WaffraText(waffraIsEnglish?
+           'Bank SMS that match financial activity will be redacted locally, then processed by a third-party model through OpenRouter. Some processing may take place outside Saudi Arabia. This is separate from permission to read SMS. You can decline and keep local analysis.':
+           'سيتم حجب المعرفات الشخصية من الرسائل البنكية المطابقة محليًا، ثم إرسال البيانات المالية لخدمة ذكاء اصطناعي خارجية عبر OpenRouter. قد تتم المعالجة خارج السعودية. هذه موافقة منفصلة عن صلاحية قراءة الرسائل، ويمكنك رفضها والاستمرار بالتحليل المحلي.'),
+          actions:[
+           TextButton(onPressed:()=>Navigator.pop(dialog,false),
+            child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+           FilledButton(onPressed:()=>Navigator.pop(dialog,true),
+            child:WaffraText(waffraIsEnglish?'I agree':'أوافق')),
+          ]));
+        if(accepted!=true)return;
+       }
+       final completed=await WaffraSmsCloudService.setConsent(enabled);
+       if(!completed&&mounted){
+        snack(context,waffraIsEnglish?
+         'Cloud analysis or App Check is unavailable. No SMS was uploaded.':
+         'التحليل السحابي أو حماية التطبيق غير متاحة. لم يتم رفع أي رسالة.',
+         isError:true);
+       }
+       if(mounted)setState((){
+        _m528CloudConsentFuture=WaffraSmsCloudService.hasConsent();
+       });
+      }),
+     )),
+    // Mandatory biometrics: optional PIN settings removed.
+    SwitchListTile(secondary:const Icon(Icons.preview_outlined,color:emerald),
+     title:WaffraText(waffraIsEnglish?'Protect Recent Apps preview':'حماية معاينة التطبيقات الأخيرة'),
+     value:protectRecentApps,onChanged:WaffraHaptics.selection(_setRecentAppProtection)),
+    ValueListenableBuilder<bool>(valueListenable:allowWaffraScreenshots,
+     builder:(context,allowed,_)=>SwitchListTile(
+      secondary:const Icon(Icons.screenshot_outlined,color:emerald),
+      title:WaffraText(waffraIsEnglish?'Allow screenshots':'السماح بلقطات الشاشة'),
+      subtitle:WaffraText(allowed?(waffraIsEnglish?'Allowed':'مسموح'):(waffraIsEnglish?'Blocked':'ممنوع')),
+      value:allowed,onChanged:WaffraHaptics.selection((v)async{await setWaffraScreenshotsAllowed(v);if(mounted)setState((){});}))),
+     ValueListenableBuilder<bool>(
+      valueListenable:WaffraCrashlyticsOptIn.consent,
+      builder:(context,allowed,_)=>SwitchListTile(
+       secondary:const Icon(Icons.bug_report_outlined,color:emerald),
+       title:WaffraText(waffraIsEnglish?'Share anonymous crash diagnostics':'مشاركة بيانات الأعطال'),
+       subtitle:WaffraText(!waffraCrashlyticsReviewed
+        ?(waffraIsEnglish?'Available after privacy and release verification':'ستتوفر بعد التحقق من الأمان والخصوصية')
+        :(waffraIsEnglish?'Optional and disabled until you agree':'اختياري ولن يعمل إلا بموافقتك')),
+       value:allowed&&waffraCrashlyticsReviewed,
+       onChanged:WaffraHaptics.selection(waffraCrashlyticsReviewed?(v)async{
+        await WaffraCrashlyticsOptIn.setConsent(v);
+       }:null))),
+   ]),
+   _accountSection(waffraIsEnglish?'Financial tools':'الأدوات المالية',Icons.account_balance_wallet_outlined,[
+    _accountTile(waffraIsEnglish?'My money accounts':'حساباتي',
+      waffraIsEnglish?'Cash, bank accounts and internal transfers':'النقد والحسابات البنكية والتحويلات الداخلية',
+      Icons.account_balance_outlined,onTap:WaffraHaptics.tap(openVerifiedAccounts)),
+    _accountTile(waffraIsEnglish?'Financial calendar':'التقويم المالي',
+     waffraIsEnglish?'Transactions and recurring dates':'المعاملات ومواعيد العمليات المتكررة',
+     Icons.calendar_month_outlined,onTap:WaffraHaptics.tap(openFinancialCalendar)),
+    _accountTile(waffraIsEnglish?'Subscription insights':'كشف الاشتراكات',
+     waffraIsEnglish?'Recurring costs and possible subscriptions':'المدفوعات الدورية والاشتراكات المحتملة',
+     Icons.subscriptions_outlined,onTap:WaffraHaptics.tap(openSubscriptionInsights)),
+   ]),
+   _accountSection(waffraIsEnglish?'AI model':'نموذج الذكاء الاصطناعي',
+    Icons.psychology_outlined,[
+    ValueListenableBuilder<int>(
+     valueListenable:WaffraOnDeviceQwen.shared.revision,
+     builder:(context,revision,_)=>FutureBuilder<bool>(
+      future:_m528ModelDiskStatus(revision),
+      builder:(context,installed){
+       final present=installed.data==true||
+        WaffraOnDeviceQwen.shared.isReady;
+       return _accountTile(
+        waffraIsEnglish?'Delete AI model':'حذف نموذج الذكاء الاصطناعي',
+        present?
+         (waffraIsEnglish?
+          'Remove downloaded AI (~484 MB) after fingerprint/Face ID verification. '
+          'Bank messages, OCR and AI analysis will stop until re-download.':
+          'حذف النموذج (~484 ميجابايت) بعد تأكيد بصمة الجهاز. '
+          'هتتوقف الرسائل البنكية وOCR وميزات AI لحد إعادة التنزيل.'):
+         (waffraIsEnglish?
+          'Not downloaded. You can install it again from any AI feature.':
+          'النموذج غير منزّل. يمكن تنزيله عند فتح أي ميزة AI.'),
+        Icons.delete_outline_rounded,
+        tint:present?Colors.red:Colors.grey,
+        onTap:present?WaffraHaptics.tap(deleteAiModel):null);
+      })),
+   ]),
+   _accountSection(waffraIsEnglish?'Backup & data':'النسخ الاحتياطي والبيانات',Icons.cloud_outlined,[
+    _accountTile(waffraIsEnglish?'Encrypted backup & restore':'النسخ الاحتياطي المشفر والاستعادة',
+     lastBackupGeneratedAt==null?(waffraIsEnglish?'No encrypted backup generated yet':'لم يتم إنشاء نسخة مشفرة بعد'):
+      (waffraIsEnglish?'Last encrypted copy: ':'آخر نسخة مشفرة: ')+dayText(DateTime.tryParse(lastBackupGeneratedAt!)?.toLocal()??DateTime.now())+
+       ' • ${((lastBackupBytes??0)/1024).toStringAsFixed(1)} KB',
+     Icons.backup_outlined,onTap:WaffraHaptics.tap(backupDialog)),
+    _accountTile(waffraIsEnglish?'Delete financial data':'حذف البيانات المالية',
+     waffraIsEnglish?'Fingerprint verification and final confirmation required':'يتطلب البصمة وتأكيد الحذف النهائي',
+     Icons.delete_forever,tint:Colors.red,onTap:WaffraHaptics.tap(eraseFinancialData)),
+    _accountTile(waffraIsEnglish?'Delete account & cloud data':'حذف الحساب وبيانات السحابة',
+     waffraAccountDeletionReleased
+      ?(waffraIsEnglish?'Fresh Google verification required':'يتطلب إعادة التحقق من Google')
+      :(waffraIsEnglish?'Available after deletion verification':'متاح بعد اجتياز اختبارات الحذف الآمن'),
+     Icons.person_remove_outlined,tint:Colors.red,
+     onTap:WaffraHaptics.tap(()=>Navigator.push<void>(context,MaterialPageRoute(
+      builder:(_)=>WaffraAccountDeletionPage(
+       english:waffraIsEnglish,onAccountDeleted:widget.onLogout))))),
+   ]),
+   _accountSection(waffraIsEnglish?'Help & about':'المساعدة وعن وفرة',Icons.help_outline_rounded,[
+    _accountTile(waffraIsEnglish?'Replay app tour':'إعادة الجولة التعريفية',
+     waffraIsEnglish?'Learn Waffra features':'تعرف على خصائص وفرة',
+     Icons.help_outline,onTap:WaffraHaptics.tap(beginTour)),
+    _accountTile(waffraIsEnglish?'About Waffra':'عن وفرة',
+     waffraIsEnglish?'On-device financial management':'إدارة مالية تحفظ بياناتك محليًا',
+     Icons.info_outline,onTap:WaffraHaptics.tap(()=>showAboutDialog(context:context,applicationName:'وفرة | Waffra',
+      children:[WaffraText(waffraIsEnglish?'No bank account integration. Your data stays on your device.':
+       'لا يوجد ربط بالحسابات البنكية؛ بياناتك محفوظة على جهازك.')])))
+   ]),
+   const SizedBox(height:15),
+   OutlinedButton.icon(style:OutlinedButton.styleFrom(
+    foregroundColor:(isGuest)?emerald:Colors.red,
+    side:BorderSide(color:(isGuest)?emerald:Colors.red)),
+    onPressed:WaffraHaptics.tap(()async{
+     if(isGuest){await widget.onLogout();return;}
+     // One ordinary confirmation: no password or biometric repair wizard.
+     final ok=await showWaffraDialog<bool>(
+      context:context,barrierDismissible:false,builder:(dialogCtx)=>
+       AlertDialog(
+        key:const Key('m513-home-signout-confirmation'),
+        title:WaffraText(waffraIsEnglish?
+         'Are you sure you want to sign out?':
+         'هل أنت متأكد من تسجيل الخروج؟'),
+        actions:[
+         TextButton(
+          key:const Key('m513-home-signout-no'),
+          onPressed:()=>Navigator.pop(dialogCtx,false),
+          child:WaffraText(waffraIsEnglish?'No':'لا')),
+         FilledButton(
+          key:const Key('m513-home-signout-yes'),
+          onPressed:()=>Navigator.pop(dialogCtx,true),
+          child:WaffraText(waffraIsEnglish?'Yes':'نعم')),
+        ]));
+     if(ok==true&&mounted)await widget.onLogout();
+    }),
+    icon:Icon((isGuest)?Icons.login:Icons.logout),
+    label:WaffraText((isGuest)?
+     (waffraIsEnglish?'Sign in':'تسجيل الدخول'):(waffraIsEnglish?'Sign out':'تسجيل الخروج'))),
+   const SizedBox(height:13),
+   WaffraText(waffraIsEnglish?
+    'Your data stays on this device. Make a backup before changing phones or deleting the app.':
+    'بياناتك محفوظة على جهازك. احفظ نسخة احتياطية قبل تغيير الجوال أو حذف التطبيق. ما فيه ربط بالحسابات البنكية.',
+    textAlign:TextAlign.center,style:const TextStyle(fontSize:11)),
+   const SizedBox(height:20),
+  ]);
+ }
+// Build only the selected tab; constructing all six tabs on every frame
+ // caused avoidable work and visible transition lag on Android.
+ Widget _addMenuOption({
+  required IconData icon,required String label,required VoidCallback onTap,
+ })=>Material(
+  color:Theme.of(context).brightness==Brightness.dark?const Color(0xFF087A54):Colors.white,
+  elevation:7,shadowColor:Colors.black12,
+  shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(25),side:BorderSide(color:Theme.of(context).brightness==Brightness.dark?const Color(0xFF89E0BB):forest,width:1.2)),
+  child:InkWell(
+   onTap:WaffraHaptics.tap(onTap),
+   borderRadius:BorderRadius.circular(25),
+   child:Padding(padding:const EdgeInsets.symmetric(horizontal:15,vertical:11),
+    child:Row(mainAxisSize:MainAxisSize.min,children:[
+     Icon(icon,color:Theme.of(context).brightness==Brightness.dark?Colors.white:forest,size:21),
+     const SizedBox(width:10),
+     WaffraText(label,style:TextStyle(
+      fontSize:15,fontWeight:FontWeight.bold,color:Theme.of(context).brightness==Brightness.dark?Colors.white:forest)),
+    ]))));
+ Widget _borderedMenuChoice({
+  Key? key,required Widget title,Widget? subtitle,Widget? leading,
+  required VoidCallback? onTap,
+ })=>Padding(
+  key:key,padding:const EdgeInsets.symmetric(vertical:5),
+  child:Material(
+   color:Theme.of(context).cardColor,
+   shape:RoundedRectangleBorder(
+    borderRadius:BorderRadius.circular(14),
+    side:BorderSide(color:emerald.withValues(alpha:.35))),
+   clipBehavior:Clip.antiAlias,
+   child:ListTile(
+    title:title,subtitle:subtitle,leading:leading,
+    onTap:onTap,contentPadding:const EdgeInsets.symmetric(
+     horizontal:12,vertical:7))));
+ Future<void> _duplicateGoalFromMenu()async {
+  if(goals.isEmpty)return;
+  final chosen=await showWaffraDialog<SavingGoal>(
+   context:context,builder:(dialogCtx)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?'Choose a goal to duplicate':'اختر هدفًا لتكراره'),
+    content:SizedBox(width:350,height:min(420,MediaQuery.sizeOf(dialogCtx).height*.55),
+     child:ListView.builder(itemCount:goals.length,itemBuilder:(ctx,index){
+      final item=goals[index];
+      return _borderedMenuChoice(
+       leading:const Icon(Icons.copy_all_outlined,color:emerald),
+       title:WaffraText(item.name),
+       subtitle:WaffraText(item.target<=0
+        ?(waffraIsEnglish?'Open-ended savings':'ادخار مفتوح')
+        :cash(item.target)),
+       onTap:WaffraHaptics.tap(()=>Navigator.pop(dialogCtx,item)));
+     })),
+    actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialogCtx)),
+     child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء'))],
+   ));
+  if(chosen!=null&&mounted)await goalDialog(duplicate:chosen);
+ }
+ Future<void> _duplicateRecurringFromMenu()async {
+  if(recurring.isEmpty)return;
+  // Existing linked goal bills are *not* re-linked to the original goal.
+  // A duplicate always gets its own new ID and editable finance fields.
+  final chosen=await showWaffraDialog<RecurringBill>(
+   context:context,builder:(dialogCtx)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?'Choose a recurring transaction':'اختر عملية متكررة لتكرارها'),
+    content:SizedBox(width:350,height:min(420,MediaQuery.sizeOf(dialogCtx).height*.55),
+     child:ListView.builder(itemCount:recurring.length,itemBuilder:(ctx,index){
+      final item=recurring[index];
+      return _borderedMenuChoice(
+       leading:const Icon(Icons.copy_all_outlined,color:emerald),
+       title:WaffraText(item.title),
+       subtitle:WaffraText(cash(item.amount)),
+       onTap:WaffraHaptics.tap(()=>Navigator.pop(dialogCtx,item)));
+     })),
+    actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialogCtx)),
+     child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء'))],
+   ));
+  if(chosen!=null&&mounted)await recurringDialog(duplicate:chosen);
+ }
+ Widget currentTab(){
+  if(accountOpened)return profilePage();
+  if(tab==1||tab==3||tab==4){
+   return RefreshIndicator(
+    onRefresh:()=>_refreshAndSettle(
+     tab==1?_categoryScrollController:
+     tab==3?_goalsScrollController:_recurringScrollController,tab),
+    child:ScrollConfiguration(
+     behavior:ScrollConfiguration.of(context).copyWith(
+      physics:const ClampingScrollPhysics(parent:AlwaysScrollableScrollPhysics()),
+      overscroll:false),
+     child:_currentTabContents()));
+  }
+  return _currentTabContents();
+ }
+ Widget _currentTabContents(){
+  switch(tab){
+   case 0:return goalsOpened?goalsPage():dashboard();
+   case 1:return categoriesPage();
+   case 2:return _smartToolsTab();
+   case 3:return goalsPage();
+   case 4:return recurringPage();
+   default:return dashboard();
+  }
+ }
+ void _swipeBetweenSections(DragEndDetails details){
+  if(!ready||goalsOpened||accountOpened||tourActive)return;
+  final velocity=details.primaryVelocity??0;
+  final dx=_swipeTravel.abs()>50?_swipeTravel:velocity/10;
+  if(dx.abs()<65)return;
+  final forward=waffraIsEnglish?dx>0:dx<0;
+  final target=(tab+(forward?1:-1)).clamp(0,WaffraFooterNavigation.itemCount-1);
+  if(target!=tab)unawaited(selectFooter(target));
+ }
+ Future<void> selectFooter(int target)async {
+  if(target<0||target>=WaffraFooterNavigation.itemCount||!mounted||
+    (target==tab&&!accountOpened&&!goalsOpened&&!addFabExpanded))return;
+  setState((){
+   if(target!=tab){
+    _tabBackStack.add(tab);
+    if(_tabBackStack.length>20)_tabBackStack.removeAt(0);
+   }
+   tab=target;accountOpened=false;goalsOpened=false;
+   addFabExpanded=false;_headerCompact=false;
+  });
+ }
+ bool _consumeHomeBack(){
+  if(!mounted)return false;
+  // Go back one UI layer at a time, without rebuilding earlier forms.
+  if(addFabExpanded){setState(()=>addFabExpanded=false);return true;}
+  if(accountOpened){
+   // Existing product rule: Account back always returns to Home.
+   setState((){
+    accountOpened=false;goalsOpened=false;tab=0;
+    _tabBackStack.clear();_headerCompact=false;
+   });
+   return true;
+  }
+  if(goalsOpened){setState(()=>goalsOpened=false);return true;}
+  if(tab!=0){
+   setState((){
+    tab=_tabBackStack.isNotEmpty?_tabBackStack.removeLast():0;
+    _headerCompact=false;
+   });
+   return true;
+  }
+  return false;
+ }
+ @override Widget build(BuildContext context)=>PopScope(
+  // Let the root back policy route account/tabs before double-back exit.
+  canPop:true,
+  child:Stack(children:[Scaffold(
+  appBar:AppBar(
+   toolbarHeight:_headerCompact?52:64,
+   flexibleSpace:const ColoredBox(color:forest),
+   leading:accountOpened?IconButton(
+    key:const Key('waffra-account-header-back'),
+    tooltip:waffraIsEnglish?'Back to home':'العودة للرئيسية',
+    icon:const Icon(Icons.arrow_back_rounded),
+    onPressed:WaffraHaptics.tap(_consumeHomeBack)):
+    goalsOpened?IconButton(tooltip:waffraIsEnglish?'Back to home':'العودة للرئيسية',
+    icon:const Icon(Icons.arrow_back),onPressed:WaffraHaptics.tap(()=>setState(()=>goalsOpened=false))):null,
+   titleSpacing:12,
+   title:Row(mainAxisSize:MainAxisSize.min,children:[
+    const Icon(Icons.spa_rounded,color:Colors.white,size:26),
+    const SizedBox(width:7),
+    Flexible(child:WaffraText(waffraIsEnglish?'Waffra':'وفرة',
+     maxLines:1,style:TextStyle(color:Colors.white,
+      fontWeight:FontWeight.bold,fontSize:_headerCompact?19:22))),
+   ]),
+   actions:[
+    Tooltip(message:waffraIsEnglish?'Switch to Arabic':'Switch to English',
+     child:TextButton(
+      onPressed:WaffraHaptics.tap((){
+       if(addFabExpanded||_fabPressed)setState((){addFabExpanded=false;_fabPressed=false;});
+       widget.onLanguage(waffraIsEnglish?'ar':'en');
+      }),
+      style:TextButton.styleFrom(
+       foregroundColor:Colors.white,minimumSize:const Size(43,37),
+       padding:const EdgeInsets.symmetric(horizontal:8),
+       backgroundColor:Colors.white.withValues(alpha:.11),
+       shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(15))),
+      child:Text(waffraIsEnglish?'AR':'EN',
+       style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold)))),
+    const SizedBox(width:7),
+    Tooltip(message:waffraIsEnglish?'Notifications':'الإشعارات',
+     child:Semantics(
+      button:true,label:waffraIsEnglish?'Open financial notifications':'فتح الإشعارات المالية',
+      child:InkWell(
+       key:const Key('m549-header-notification-bell'),
+       borderRadius:BorderRadius.circular(22),
+       onTap:WaffraHaptics.tap(()=>unawaited(_m549OpenNotifications())),
+       child:SizedBox(width:48,height:45,child:Stack(
+        clipBehavior:Clip.none,children:[
+        const Center(child:Icon(Icons.notifications_none_rounded,color:Colors.white,size:27)),
+        if(_autoSmsPending.isNotEmpty)PositionedDirectional(
+         end:0,top:0,child:Container(
+          key:const Key('m549-notification-count-badge'),
+          constraints:const BoxConstraints(minWidth:21,minHeight:17),
+          padding:const EdgeInsets.symmetric(horizontal:3),
+          decoration:BoxDecoration(color:const Color(0xFFE22F37),
+           borderRadius:BorderRadius.circular(12)),
+          child:Center(child:Text(
+           _autoSmsPending.length>999?'+999':_autoSmsPending.length.toString(),
+           style:const TextStyle(color:Colors.white,fontSize:10,fontWeight:FontWeight.bold))),
+         )),
+       ]))))),
+    const SizedBox(width:7),
+    Tooltip(message:waffraIsEnglish?'My account and settings':'حسابي والإعدادات',
+     child:Semantics(label:waffraIsEnglish?'Open account settings':'فتح إعدادات الحساب',
+      button:true,child:InkWell(
+       key:const Key('waffra-header-account-entry'),
+       onTap:WaffraHaptics.tap(()=>setState((){
+        // Device settings might have changed since the previous visit.
+        _m528SmsEnabledFuture=null;
+        _m528CloudConsentFuture=null;
+        _m528ModelDiskRevision=null;
+        _m528ModelDiskFuture=null;
+        addFabExpanded=false;goalsOpened=false;accountOpened=true;_headerCompact=false;
+       })),
+       borderRadius:BorderRadius.circular(30),
+       child:AnimatedContainer(duration:waffraMotion(260),
+        curve:Curves.easeOutCubic,padding:const EdgeInsets.all(3),
+        decoration:BoxDecoration(shape:BoxShape.circle,
+         border:Border.all(color:accountOpened?const Color(0xFF65E5AD):Colors.transparent,
+          width:2),
+         color:accountOpened?Colors.white.withValues(alpha:.13):Colors.transparent),
+        child:KeyedSubtree(key:_tourKeys[5],
+         child:waffraAvatar(widget.profile.gender,widget.profile.avatar,radius:18)))))),
+    const SizedBox(width:7),
+   ]),
+  // Instant content swap avoids building/animating the previous heavy tab
+  // alongside the next one (the recurring -> savings navigation hitch).
+  body:_financeLoadFailure!=null?_financialRecoveryScreen():
+   !ready?RepaintBoundary(
+    child:Center(child:ConstrainedBox(
+     constraints:const BoxConstraints(maxWidth:320),
+     child:Padding(padding:const EdgeInsets.symmetric(horizontal:24),
+      child:Column(mainAxisSize:MainAxisSize.min,children:[
+       const SizedBox(width:42,height:42,child:CircularProgressIndicator(
+        strokeWidth:3,color:emerald)),
+       const SizedBox(height:18),
+       WaffraText(waffraIsEnglish?'Preparing secure finances…':
+        'جارٍ تجهيز بياناتك المالية بأمان…',
+        textAlign:TextAlign.center,
+        style:const TextStyle(fontSize:14,fontWeight:FontWeight.w600)),
+       const SizedBox(height:16),
+       Container(height:54,decoration:BoxDecoration(
+        color:Theme.of(context).cardColor,
+        borderRadius:BorderRadius.circular(16))),
+       const SizedBox(height:10),
+       Container(height:36,decoration:BoxDecoration(
+        color:Theme.of(context).cardColor,
+        borderRadius:BorderRadius.circular(14))),
+      ]))))):
+   Stack(clipBehavior:Clip.none,children:[GestureDetector(
+    behavior:HitTestBehavior.translucent,
+    onHorizontalDragStart:(_)=>_swipeTravel=0,
+    onHorizontalDragUpdate:(details)=>_swipeTravel+=details.delta.dx,
+    onHorizontalDragEnd:_swipeBetweenSections,
+    child:ValueListenableBuilder<bool>(
+     valueListenable:hideWaffraAmounts,
+     builder:(context,hidden,_)=>TweenAnimationBuilder<double>(
+      key:ValueKey(accountOpened?'waffra-page-account':'waffra-page-$tab'),
+      tween:Tween<double>(begin:0,end:1),
+      duration:waffraMotion(accountOpened?340:240),curve:Curves.easeOutCubic,
+      builder:(ctx,progress,child)=>Opacity(opacity:progress,
+       child:Transform.translate(offset:Offset((1-progress)*(waffraIsEnglish?26:-26),0),
+        child:Transform.scale(scale:accountOpened?0.985+0.015*progress:1,child:child))),
+      child:currentTab()))),
+   ]),
+  // A fixed 58x58 FAB: pop-up menu is an independent body overlay.
+  // Never allow a menu width to change Scaffold's floating geometry.
+  floatingActionButtonLocation:WaffraDirectionalFabLocation(english:waffraIsEnglish),
+  floatingActionButtonAnimator:const WaffraStationaryFabAnimator(),
+  floatingActionButton:!ready||accountOpened||tab==2?null:CompositedTransformTarget(
+   link:_fabOverlayAnchor,child:SizedBox(
+   width:58,height:58,
+   child:
+    Material(
+      key:_tourKeys[1],
+      color:forest,elevation:7,
+     shadowColor:Colors.black26,
+     shape:const CircleBorder(),
+     child:InkWell(
+      customBorder:const CircleBorder(),
+      onTap:(){
+     if(!_acceptFabTap())return;
+     HapticFeedback.lightImpact();
+     // M474: open immediately, with no 275ms artificial delay.
+     setState(()=>addFabExpanded=!addFabExpanded);
+    },
+    splashFactory:NoSplash.splashFactory,
+    highlightColor:Colors.transparent,
+    child:AnimatedScale(
+     scale:_fabPressed?0.96:1.0,
+     duration:waffraMotion(220),
+     curve:Curves.easeOutCubic,
+     child:SizedBox(width:58,height:58,
+      child:AnimatedRotation(
+       duration:waffraMotion(320),
+       curve:Curves.easeInOutCubic,
+       turns:addFabExpanded?0.125:0,
+       child:const Icon(Icons.add,color:Colors.white,size:28)))),
+     )),
+   )),
+  // The notice reserves real layout height above the bottom footer.
+  // The transaction list and the floating + reposition instead of being
+  // covered by an overlay. The expanded + menu closes on feedback.
+  bottomNavigationBar:accountOpened?null:Column(mainAxisSize:MainAxisSize.min,children:[
+   WaffraFooterNoticeHost(onNoticePresented:(){
+    if(mounted&&addFabExpanded)setState(()=>addFabExpanded=false);
+   }),
+   WaffraFooterNavigation(
+    selectedIndex:tab,
+    english:waffraIsEnglish,
+    onSelected:WaffraHaptics.selectionRequired((selected){
+     waffraDismissFooterNotice();
+     unawaited(selectFooter(selected));
+    }),
+   ),
+  ])),
+  if(addFabExpanded&&!accountOpened&&!tourActive)...[
+   Positioned.fill(
+    key:const Key('waffra-fullscreen-fab-blur'),
+    child:GestureDetector(
+      behavior:HitTestBehavior.opaque,
+      onTap:WaffraHaptics.tap(()=>setState(()=>addFabExpanded=false)),
+      // M474: dim scrim avoids repeatedly blurring every dashboard frame.
+      child:ColoredBox(color:Colors.black.withValues(alpha:.30))),
+   ),
+    if(addFabExpanded&&!accountOpened&&(tab==0||tab==1||tab==3||tab==4||goalsOpened))
+     WaffraFabMenuAnchor(
+      english:waffraIsEnglish,
+      expanded:addFabExpanded,
+      link:_fabOverlayAnchor,
+      menu:Column(mainAxisSize:MainAxisSize.min,
+       crossAxisAlignment:waffraIsEnglish?CrossAxisAlignment.end:CrossAxisAlignment.start,
+       children:[
+        if(tab==0&&!goalsOpened)...[
+        _addMenuOption(
+         icon:Icons.edit_note_rounded,
+         label:waffraIsEnglish?'Manual transaction':'عملية يدوية',
+         onTap:WaffraHaptics.tapRequired((){
+          unawaited(_launchAddAction(()=>entrySheet(),fromMenu:true));
+         })),
+        const SizedBox(height:7),
+        _addMenuOption(
+         icon:Icons.sms_outlined,
+         label:waffraIsEnglish?'Bank message':'رسالة بنكية',
+         onTap:WaffraHaptics.tapRequired((){
+          unawaited(_launchAddAction(()=>bulkSmsSheet(),fromMenu:true));
+         })),
+        const SizedBox(height:7),
+        if(WaffraSaudiRelease.receiptImageTransactionImport)_addMenuOption(
+         icon:Icons.document_scanner_outlined,
+         label:waffraIsEnglish?'Scan receipt / image':'تصوير / استخراج فاتورة',
+         onTap:WaffraHaptics.tapRequired((){
+          unawaited(_launchAddAction(scanAndAddReceipt,fromMenu:true));
+         })),
+        ]else if(goalsOpened||tab==3)...[
+         _addMenuOption(icon:Icons.add_circle_outline_rounded,
+          label:waffraIsEnglish?'New savings goal':'إضافة هدف جديد',
+          onTap:WaffraHaptics.tapRequired((){
+           unawaited(_launchAddAction(()=>goalDialog(),fromMenu:true));
+          })),
+         if(goals.isNotEmpty)...[
+          const SizedBox(height:7),
+          _addMenuOption(icon:Icons.copy_all_outlined,
+           label:waffraIsEnglish?'Duplicate an existing goal':'تكرار هدف موجود',
+           onTap:WaffraHaptics.tapRequired((){
+            unawaited(_launchAddAction(_duplicateGoalFromMenu,fromMenu:true));
+           })),
+         ],
+        ]else if(tab==4)...[
+         _addMenuOption(icon:Icons.event_repeat_rounded,
+          label:waffraIsEnglish?'New recurring transaction':'إضافة عملية متكررة',
+          onTap:WaffraHaptics.tapRequired((){
+           unawaited(_launchAddAction(()=>recurringDialog(),fromMenu:true));
+          })),
+         if(recurring.isNotEmpty)...[
+          const SizedBox(height:7),
+          _addMenuOption(icon:Icons.copy_all_outlined,
+           label:waffraIsEnglish?'Duplicate recurring transaction':'تكرار عملية متكررة موجودة',
+           onTap:WaffraHaptics.tapRequired((){
+            unawaited(_launchAddAction(_duplicateRecurringFromMenu,fromMenu:true));
+           })),
+         ],
+        ]else...[
+         _addMenuOption(icon:Icons.trending_up,
+          label:waffraIsEnglish?'Income category':'إضافة قسم دخل',
+          onTap:WaffraHaptics.tapRequired((){unawaited(_launchAddAction(()=>chooseCategoryLevel(income:true),fromMenu:true));})),
+         const SizedBox(height:7),
+         _addMenuOption(icon:Icons.trending_down,
+          label:waffraIsEnglish?'Expense category':'إضافة قسم مصروفات',
+          onTap:WaffraHaptics.tapRequired((){unawaited(_launchAddAction(()=>chooseCategoryLevel(income:false),fromMenu:true));})),
+        ]
+       ]),
+     ),
+   Positioned.fill(
+    child:Align(alignment:Alignment.topLeft,
+     child:CompositedTransformFollower(
+      link:_fabOverlayAnchor,showWhenUnlinked:false,
+      targetAnchor:Alignment.topLeft,followerAnchor:Alignment.topLeft,
+      child:Material(color:forest,elevation:7,shape:const CircleBorder(),
+       child:InkWell(key:const Key('waffra-fab-menu-close'),
+        onTap:WaffraHaptics.tap(()=>setState(()=>addFabExpanded=false)),
+        customBorder:const CircleBorder(),
+        child:const SizedBox(width:58,height:58,
+         child:Icon(Icons.close_rounded,color:Colors.white,size:28)))))),
+   ),
+  ],
+  if(tourActive&&tourTargetReady)Positioned.fill(child:tourOverlay()),
+  // Outside Scaffold so the loading status never rebuilds the finance list.
+  Positioned.fill(child:WaffraSmoothConfirmationOverlay(
+   controller:_saveProgress,english:waffraIsEnglish)),
+  ]));
+}
+/// Tour focus remains tied to the same floating add button across both locales.
+/// A coach-mark scrim with a transparent focus over the current page.
+class WaffraTourShade extends CustomPainter {
+ final Rect focus;
+ final double glow;
+ const WaffraTourShade(this.focus,{this.glow=0});
+ @override void paint(Canvas canvas,Size size){
+  final border=RRect.fromRectAndRadius(focus,const Radius.circular(20));
+  final shade=Path()..fillType=PathFillType.evenOdd
+   ..addRect(Offset.zero & size)..addRRect(border);
+  canvas.drawPath(shade,Paint()..color=Colors.black.withValues(alpha:.61));
+  canvas.drawRRect(border,Paint()..color=const Color(0xFF65E5AD).withValues(alpha:.15+.30*glow)
+   ..style=PaintingStyle.stroke..strokeWidth=7+5*glow..maskFilter=const MaskFilter.blur(BlurStyle.normal,7));
+  canvas.drawRRect(border,Paint()..color=Colors.white..style=PaintingStyle.stroke..strokeWidth=2+glow);
+ }
+ @override bool shouldRepaint(covariant WaffraTourShade old)=>old.focus!=focus||old.glow!=glow;
+}
+class WaffraDeletedItemsButton extends StatelessWidget {
+ final VoidCallback onPressed;
+ final String label;
+ const WaffraDeletedItemsButton({super.key,required this.onPressed,required this.label});
+ @override Widget build(BuildContext context){
+  final dark=Theme.of(context).brightness==Brightness.dark;
+  final red=dark?const Color(0xFFFF9090):const Color(0xFFB42332);
+  return OutlinedButton(
+   onPressed:WaffraHaptics.tap(onPressed),
+   style:OutlinedButton.styleFrom(
+    foregroundColor:red,backgroundColor:dark?const Color(0xFF3C242A):const Color(0xFFFFF4F4),
+    side:BorderSide(color:red,width:1.4),
+    minimumSize:WaffraActionLayout.minimumSize,
+    padding:const EdgeInsets.symmetric(horizontal:10,vertical:12),
+    shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(15))),
+   child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+    Icon(Icons.delete_outline,size:19,color:red),
+    const SizedBox(width:5),
+    Flexible(child:WaffraText(label,maxLines:2,textAlign:TextAlign.center,
+     style:TextStyle(color:red,fontSize:11.5,fontWeight:FontWeight.bold))),
+   ]));
+ }
+}
+/// Independently anchored menu: its width cannot move the 58px FAB.
+/// The menu follows the same *physical* side, regardless of text direction.
+class WaffraFabMenuAnchor extends StatelessWidget {
+ const WaffraFabMenuAnchor({
+  super.key,required this.english,required this.expanded,required this.menu,
+  required this.link,
+ });
+ final bool english,expanded;
+ final Widget menu;
+ final LayerLink link;
+ /// Follow the actual FAB's position, including the footer and system inset.
+ @override Widget build(BuildContext context)=>Positioned.fill(
+  child:Align(alignment:Alignment.topLeft,
+   child:CompositedTransformFollower(
+    link:link,showWhenUnlinked:false,
+    targetAnchor:english?Alignment.topRight:Alignment.topLeft,
+    followerAnchor:english?Alignment.bottomRight:Alignment.bottomLeft,
+    offset:const Offset(0,-12),
+    child:IgnorePointer(
+     ignoring:!expanded,
+     child:AnimatedSwitcher(
+      duration:waffraMotion(280),
+      reverseDuration:waffraMotion(220),
+      switchInCurve:Curves.easeOutCubic,
+      switchOutCurve:Curves.easeInCubic,
+      child:expanded?
+       KeyedSubtree(key:const ValueKey('waffra-fab-menu-open'),child:menu):
+       const SizedBox(key:ValueKey('waffra-fab-menu-closed')),
+     )),
+   )),
+ );
+}
+
+/// Avoid Scaffold's default size/translation animation when tabs or locale
+/// change. Only the plus icon itself animates on an explicit user tap.
+class WaffraStationaryFabAnimator extends FloatingActionButtonAnimator {
+ const WaffraStationaryFabAnimator();
+ @override Offset getOffset({
+  required Offset begin,required Offset end,required double progress,
+ })=>end;
+ @override Animation<double> getScaleAnimation({required Animation<double> parent})=>
+  const AlwaysStoppedAnimation<double>(1);
+ @override Animation<double> getRotationAnimation({required Animation<double> parent})=>
+  const AlwaysStoppedAnimation<double>(1);
+}
+
+/// Physically left for Arabic, physically right for English on every tab.
+class WaffraDirectionalFabLocation extends FloatingActionButtonLocation {
+ const WaffraDirectionalFabLocation({required this.english});
+ final bool english;
+
+ static double horizontalOffset({
+  required bool english,
+  required double scaffoldWidth,
+  required double fabWidth,
+  required double leftInset,
+  required double rightInset,
+ }) => english
+   ? max(0.0,scaffoldWidth-fabWidth-rightInset-16)
+   : 16+leftInset;
+
+ @override Offset getOffset(ScaffoldPrelayoutGeometry geometry) {
+  final bottom=geometry.contentBottom;
+  return Offset(
+   horizontalOffset(
+    english:english,
+    scaffoldWidth:geometry.scaffoldSize.width,
+    fabWidth:geometry.floatingActionButtonSize.width,
+    leftInset:geometry.minInsets.left,
+    rightInset:geometry.minInsets.right,
+   ),
+   max(16.0,bottom-geometry.floatingActionButtonSize.height-16),
+  );
+ }
+}
+/// Accessible 48×48 tap target that keeps the approved 36×30 badge artwork.
+/// Uses the existing receipt viewer and never reads or rewrites saved files.
+class WaffraReceiptCornerAction extends StatelessWidget {
+ const WaffraReceiptCornerAction({
+  super.key,required this.count,required this.english,required this.onTap,
+ });
+ final int count;
+ final bool english;
+ final VoidCallback onTap;
+ @override Widget build(BuildContext context)=>Semantics(
+  button:true,
+  label:english?'View $count attachments':'عرض $count مرفقات',
+  child:Tooltip(
+   message:english?'View attachments':'عرض المرفقات',
+   child:Material(type:MaterialType.transparency,
+    child:InkWell(
+     onTap:WaffraHaptics.tap(onTap),
+     child:SizedBox(width:48,height:48,
+      child:Align(alignment:AlignmentDirectional.topStart,
+       child:WaffraReceiptCornerBadge(count:count,english:english))),
+    ))));
+}
+/// Approved Design 9: a compact folded triangular attachment corner.
+/// RTL uses the top-right corner; LTR mirrors it to top-left.
+class WaffraReceiptCornerBadge extends StatelessWidget {
+ const WaffraReceiptCornerBadge({
+  super.key,required this.count,required this.english,
+ });
+ final int count;
+ final bool english;
+ @override Widget build(BuildContext context){
+  return ClipPath(
+   clipper:WaffraReceiptCornerClipper(english:english),
+   child:Container(
+    width:36,height:30,color:forest,
+    alignment:english?Alignment.topLeft:Alignment.topRight,
+    padding:EdgeInsets.only(top:3,left:english?2:0,right:english?0:2),
+    child:Row(mainAxisSize:MainAxisSize.min,children:[
+     const Icon(Icons.attach_file_rounded,size:10,color:Colors.white),
+     const SizedBox(width:1),
+     Text('$count',style:const TextStyle(
+      fontFamily:'Tajawal',fontSize:11,color:Colors.white,
+      fontWeight:FontWeight.bold,height:1.1)),
+    ]),
+   ),
+  );
+ }
+}
+class WaffraReceiptCornerClipper extends CustomClipper<Path> {
+ const WaffraReceiptCornerClipper({required this.english});
+ final bool english;
+ @override Path getClip(Size size){
+  final path=Path();
+  if(english){
+   path.moveTo(0,0);
+   path.lineTo(size.width,0);
+   path.lineTo(0,size.height);
+  }else{
+   path.moveTo(0,0);
+   path.lineTo(size.width,0);
+   path.lineTo(size.width,size.height);
+  }
+  return path..close();
+ }
+ @override bool shouldReclip(covariant WaffraReceiptCornerClipper oldClipper)=>
+  oldClipper.english!=english;
+}
+/// The Smart Analysis screen and its PDF export use one mathematical model.
+/// It is independent of language, rendering and finance persistence.
+class WaffraSmartChartData {
+ const WaffraSmartChartData({
+  required this.periods,required this.weeklySpend,required this.topCategories,
+ });
+ final List<(double,double)> periods;
+ final List<double> weeklySpend;
+ final List<MapEntry<String,double>> topCategories;
+}
+WaffraSmartChartData waffraSmartChartData(List<MoneyEntry> items,DateTime now){
+ final valid=items.where((e)=>!e.date.isAfter(now)&&
+   e.date.isAfter(now.subtract(const Duration(days:90)))).toList();
+ double total(Iterable<MoneyEntry> rows,bool income)=>rows
+   .where((e)=>e.income==income).fold<double>(0,(a,e)=>a+e.amount);
+ final periods=List<(double,double)>.generate(3,(i){
+  final from=now.subtract(Duration(days:(3-i)*30));
+  final to=now.subtract(Duration(days:(2-i)*30));
+  final rows=valid.where((e)=>!e.date.isBefore(from)&&e.date.isBefore(to));
+  return (total(rows,true),total(rows,false));
+ });
+ final weekly=List<double>.generate(4,(i){
+  final from=now.subtract(Duration(days:(4-i)*7));
+  final to=now.subtract(Duration(days:(3-i)*7));
+  return total(valid.where((e)=>!e.date.isBefore(from)&&e.date.isBefore(to)),false);
+ });
+ final byCategory=<String,double>{};
+ for(final e in valid.where((e)=>!e.income)){
+  byCategory[e.category]=(byCategory[e.category]??0)+e.amount;
+ }
+ final top=byCategory.entries.toList()
+  ..sort((a,b)=>b.value.compareTo(a.value));
+ return WaffraSmartChartData(
+  periods:periods,weeklySpend:weekly,topCategories:top);
+}
+
+class ChartPoint {
+ final String label;final double income,expense;
+ ChartPoint(this.label,this.income,this.expense);
+}
+class FinanceChart extends StatelessWidget {
+ final List<ChartPoint> points;
+ const FinanceChart({super.key,required this.points});
+ @override Widget build(BuildContext context){
+  var maximum=1.0;
+  for(final p in points){
+   maximum=max(maximum,max(p.income,p.expense));
+  }
+  final step=max(1.0,(maximum/4).ceilToDouble());
+  final textColor=Theme.of(context).colorScheme.onSurface;
+  final chartWidth=max(MediaQuery.sizeOf(context).width-95.0,points.length*70.0);
+  return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+   Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+    Icon(Icons.square,color:waffraIncomeTone(context),size:15),
+    WaffraText(waffraIsEnglish?' Income  ':' دخل  '),
+    const Icon(Icons.square,color:Colors.deepOrange,size:15),
+    WaffraText(waffraIsEnglish?' Expenses':' مصروفات'),
+   ]),
+   const SizedBox(height:5),
+   WaffraText(waffraIsEnglish?'Y-axis: amount (SAR)  •  X-axis: time period':
+    'المحور الرأسي: المبلغ (ريال)  •  المحور الأفقي: الفترة الزمنية',
+    textAlign:TextAlign.center,style:const TextStyle(fontSize:10)),
+   const SizedBox(height:13),
+   SingleChildScrollView(scrollDirection:Axis.horizontal,
+    child:SizedBox(width:chartWidth,height:240,child:BarChart(BarChartData(
+     alignment:BarChartAlignment.spaceAround,
+     minY:0,maxY:step*4.5,
+     gridData:FlGridData(show:true,drawVerticalLine:false,horizontalInterval:step),
+     borderData:FlBorderData(show:true,border:Border(
+      left:BorderSide(color:textColor.withValues(alpha:.4)),
+      bottom:BorderSide(color:textColor.withValues(alpha:.4)))),
+     barTouchData:BarTouchData(enabled:true),
+     titlesData:FlTitlesData(
+      topTitles:const AxisTitles(sideTitles:SideTitles(showTitles:false)),
+      rightTitles:const AxisTitles(sideTitles:SideTitles(showTitles:false)),
+      leftTitles:AxisTitles(sideTitles:SideTitles(showTitles:true,
+       reservedSize:46,interval:step,
+       getTitlesWidget:(value,meta)=>Padding(
+        padding:const EdgeInsets.only(right:4),
+        child:Text(value.toStringAsFixed(0),style:TextStyle(color:textColor,fontSize:10))))),
+      bottomTitles:AxisTitles(sideTitles:SideTitles(showTitles:true,
+       reservedSize:40,
+       getTitlesWidget:(value,meta){
+        final i=value.toInt();
+        if(i<0||i>=points.length||i.toDouble()!=value)return const SizedBox.shrink();
+        return Padding(padding:const EdgeInsets.only(top:9),
+         child:Text(points[i].label,style:TextStyle(color:textColor,fontSize:10),
+          textAlign:TextAlign.center,maxLines:2));
+       })),
+     ),
+     barGroups:List.generate(points.length,(i)=>BarChartGroupData(x:i,
+      barsSpace:3,barRods:[
+       BarChartRodData(toY:points[i].income,color:waffraIncomeTone(context),width:13,
+        borderRadius:const BorderRadius.vertical(top:Radius.circular(5))),
+       BarChartRodData(toY:points[i].expense,color:Colors.deepOrange,width:13,
+        borderRadius:const BorderRadius.vertical(top:Radius.circular(5))),
+      ])),
+    )))),
+  ]);
+ }
+}).hasMatch(id)))return false;
+  final current=<String,Map<String,Object?>>{
+   for(final row in _autoSmsPending)
+    if(row['id'] is String)row['id'] as String:row};
+  if(!selected.every(current.containsKey))return false;
+  String norm(String sender)=>sender.trim().toLowerCase();
+  final groups=senderNames.map(norm).toSet();
+  if(groups.length!=senderNames.length||
+     senderNames.any((name)=>name.trim().isEmpty||name.length>100))
+   return false;
+  for(final group in groups){
+   final rows=_autoSmsPending.where((row)=>
+    norm(row['sender'] is String?row['sender'] as String:'')==group);
+   if(rows.isEmpty||rows.any((row)=>!selected.contains(row['id'])))
+    return false;
+  }
+  final blockedIds=selected.where((id)=>groups.contains(
+   norm((current[id]!['sender'] as String?)??''))).toSet();
+  final singles=ids.where((id)=>!blockedIds.contains(id)).toList();
+  final done=<String>{};
+  var failed=false;
+  try{
+   if(senderNames.isNotEmpty){
+    if(await WaffraAutoSms.excludeSenders(senderNames)){
+     done.addAll(blockedIds);
+    }else{failed=true;}
+   }
+   if(!failed){
+    for(var i=0;i<singles.length;i+=100){
+     final batch=singles.skip(i).take(100).toList();
+     if(!await WaffraAutoSms.excludeMessages(batch)){
+      failed=true;break;
+     }
+     done.addAll(batch);
+    }
+   }
+   if(mounted&&done.isNotEmpty){
+    setState(()=>_autoSmsPending.removeWhere(
+     (row)=>done.contains(row['id'])));
+   }
+   if(done.isNotEmpty&&_smsRuleOwnerKey.isNotEmpty){
+    try{
+     final store=const WaffraSmsLocalRuleStore();
+     var rules=await store.read(_smsRuleOwnerKey);
+     var changed=false, processed=0;
+     for(final id in singles){
+      if(!done.contains(id))continue;
+      final row=current[id],body=row?['body'],sender=row?['sender'];
+      if(body is! String||sender is! String)continue;
+      if(++processed%16==0){
+       await Future<void>.delayed(const Duration(milliseconds:1));
+      }
+      final candidate=WaffraSmsLocalRules.suggestedRule(
+       body:body,sender:sender,kind:'excluded',confidentOnly:true);
+      if(candidate==null)continue;
+      final next=WaffraSmsLocalRules.upsertLearned(
+       existing:rules,candidate:candidate);
+      if(!identical(next,rules)){rules=next;changed=true;}
+     }
+     if(changed)await store.write(_smsRuleOwnerKey,rules);
+    }catch(_){
+     // Native exclusion wins if learning cannot be verified.
+    }
+   }
+  }catch(e){
+   failed=true;
+   debugPrint('M592 native exclusion failed: ${e.runtimeType}');
+  }
+  if(!mounted)return false;
+  if(failed||done.length!=selected.length){
+   snack(context,waffraIsEnglish?
+    'Some selected messages remain for review.':
+    'بعض الرسائل المحددة ما زالت للمراجعة.',isError:true);
+   return false;
+  }
+  snackSuccess(context,waffraIsEnglish?
+   'Selected messages excluded.':'تم استبعاد الرسائل المحددة.');
+  return true;
+ }
  Future<void> _m549OpenNotifications()async{
   if(!mounted||!ready)return;
   await Navigator.of(context).push(MaterialPageRoute<void>(
