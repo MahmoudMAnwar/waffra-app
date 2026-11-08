@@ -779,3 +779,7 @@ M274 must also trigger on `docs/release/WAFFRA_APPROVED_CHANGES.txt` changes bec
 ### M552 — 2026-11-08 — Mandatory verified SQLite3MC artifact handling in CI
 - Issue #492 and PR #490: every Flutter-enabled GitHub Actions job must prefetch the same upstream immutable sqlite3 3.7.0 SQLite3MC binaries via the official GitHub Release API, validate per-platform SHA256, seed only the native-hook verified cache, then run every original Flutter/Android/finance/security test unchanged. Never weaken the SQLCipher native hook, enable system plaintext SQLite or accept a third-party mirror. Add whole-repo CI coverage so new workflows cannot skip this preflight.
 - First M174 isolated exact-head job has passed; do not merge or promise APK until all current-head workflows and physical-device upgrade tests pass.
+
+
+### M554 — Android CI Gradle download integrity — 2026-11-08
+- In all Android compilation/emulator jobs affected by the intermittent GitHub 504, preseed the **original** Gradle 9.3.1-all ZIP via the official GitHub Release API, with official SHA256 pin; fail closed if any source is unavailable or the digest differs. Never change Gradle/SQLCipher app versions or skip Android security tests to make CI pass. Linked to PR #490.

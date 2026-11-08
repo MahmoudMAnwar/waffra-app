@@ -27,7 +27,8 @@
     "Fix native asset CI delivery: direct GitHub release URL returned cached 92-byte error body, whereas the exact immutable sqlite3mc 3.7.0 release with a fresh URL query returned the official 2,263,448-byte file with correct sha256 3dfe8bcd. Configure only the official release URL with stable cache bypass, keep pinned sqlite3 3.7.0 and built-in SHA256 checks; extend CI regression without weakening data protection.",
     "M552 certified native CI repair: pinned direct GitHub release URL is intermittently poisoned even with fixed cache key; instead leave sqlite3 3.7.0 and source sqlite3mc unchanged and prefetch all required immutable Linux/Android SQLite3MC assets from the official GitHub Release API, check official SHA256 for each, and stage into sqlite3 package standard native-hook cache before Flutter tests. Pilot the independent M174 workflow, then apply same gate to every Flutter job without disabling original tests or encrypted database checks.",
     "M552 extend one shared security-fail-closed GitHub API prefetch action across ALL 91 Flutter-using current and historical workflow files plus existing M174 pilot; each job retains its complete original Flutter/Android/security assertions and CI requirements. SHA-256 pin 3.7.0 Linux x64 and 4 Android architectures, only official GitHub release, shared cache revalidates digests, no source:system or URL mirrors. New independent dynamic regression fails when any future workflow with Flutter setup omits the prefetch.",
-    "M553 repair GitHub 504 native runtime delivery in the already-shared action used by all Flutter workflow jobs. Pin the existing llamadart 0.8.24 and leehack/llamadart-native v0.4.1, use the official GitHub Release API plus published SHA256 digests to cache the original linux-x64, android-arm64 and android-x64 artifacts at their upstream hook paths. Do not change or disable AI runtime or weaken SQLite3MC/security tests."
+    "M553 repair GitHub 504 native runtime delivery in the already-shared action used by all Flutter workflow jobs. Pin the existing llamadart 0.8.24 and leehack/llamadart-native v0.4.1, use the official GitHub Release API plus published SHA256 digests to cache the original linux-x64, android-arm64 and android-x64 artifacts at their upstream hook paths. Do not change or disable AI runtime or weaken SQLite3MC/security tests.",
+    "M554: resolve Android CI 504 when Gradle 9.3.1-all official wrapper ZIP is fetched via unreliable GitHub redirect. Preseed exact official Gradle v9.3.1 ALL distribution into hash-specific Gradle wrapper cache via official GitHub Release API (fallback to downloads.gradle.org), and enforce official SHA256 17f27786... before use. Scope includes only additive Gradle prefetch in 15 real Android compilation/emulator jobs, no Gradle version/build flags/test skip or code change; QA test protects source hash and Android job integration."
   ],
   "allowed_changed_files": [
     ".github/workflows/finance-full-regression.yml",
@@ -151,7 +152,10 @@
     ".github/workflows/storage-preflight.yml",
     ".github/workflows/unified-finance-cloud-release-evidence.yml",
     "test/qa/m552_verified_sqlite3mc_ci_prefetch_test.py",
-    "scripts/qa/prefetch_verified_llamadart.sh"
+    "scripts/qa/prefetch_verified_llamadart.sh",
+    "scripts/qa/prefetch_verified_gradle.sh",
+    ".github/actions/prefetch-gradle/action.yml",
+    "test/qa/m554_gradle_release_cache_test.py"
   ],
   "bounded_sections": {
     "lib/main.dart": [
