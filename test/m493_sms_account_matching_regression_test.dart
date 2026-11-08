@@ -2,13 +2,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_sms_account_learning.dart';
 
 void main(){
- test('M493 #408 never trusts sender or suffix before two confirmations',(){
+ test('M568 exact confirmed last-four reusable after first owner-confirmed save',(){
   var rows=<WaffraSmsAccountEvidence>[];
   rows=WaffraSmsAccountLearning.confirmed(rows,
    sender:'AlinmaPay',accountId:'inma-current',suffix:'٨٣٠٨');
   expect(WaffraSmsAccountLearning.suggest(rows,sender:'AlinmaPay',
    suffix:'8308',activeAccountIds:{'inma-current'},
-   sameBankAccountIds:{'inma-current'}),isNull);
+   sameBankAccountIds:{'inma-current'}),'inma-current');
   rows=WaffraSmsAccountLearning.confirmed(rows,
    sender:'AlinmaPay',accountId:'inma-current',suffix:'8308');
   expect(WaffraSmsAccountLearning.suggest(rows,sender:'AlinmaPay',
@@ -40,11 +40,11 @@ void main(){
   expect(WaffraSmsAccountLearning.suggest(rows,sender:'AlinmaPay',
    suffix:'8308',activeAccountIds:{'inma-current','inma-savings'},
    sameBankAccountIds:{'inma-current','inma-savings'}),'inma-current');
-  // A conflicting user choice resets learning; no account guess.
+  // A new explicitly confirmed choice replaces the exact suffix mapping.
   rows=WaffraSmsAccountLearning.confirmed(rows,
    sender:'AlinmaPay',accountId:'inma-savings',suffix:'8308');
   expect(WaffraSmsAccountLearning.suggest(rows,sender:'AlinmaPay',
    suffix:'8308',activeAccountIds:{'inma-current','inma-savings'},
-   sameBankAccountIds:{'inma-current','inma-savings'}),isNull);
+   sameBankAccountIds:{'inma-current','inma-savings'}),'inma-savings');
  });
 }

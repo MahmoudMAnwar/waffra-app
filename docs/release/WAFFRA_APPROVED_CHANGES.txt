@@ -2818,3 +2818,7 @@ M550 early CI proof (2026-11-08): First exact-HEAD M550 run audited 107 workflow
 
 [M569 exact-head M385/M550/M447 CI convergence] 2026-11-08
 - M174 root cause: M564 single SMS financial writer was outside original batch preflight bounds; add unique single-source start/end anchors, retaining strict old-source parity outside. M147 M550 spotted two obsolete M206 assertions requiring today fallback; replace with source timestamp assertions and explicit negative checks. M440 M447 added fourth verified SMS writer in M565; update positive count to 4, account reviews to 7, assert verified chosen account, source generation and no duplicate hashes. No tests skipped or disabled. Full exact HEAD CI mandatory.
+
+
+[M568 exact bank SMS sender+last four] 2026-11-08
+- Reuse first user-confirmed exact sender+four-digit account identity for subsequent verified SMS, with fresh SQLCipher account-witness and unchanged explicit transaction confirmation; remove sender-only automatic linking. Different/missing last-four prompts user. Updated old M464/M493 tests, added M550 explicit source contract. Exact-head CI/Android pending; no gates disabled.

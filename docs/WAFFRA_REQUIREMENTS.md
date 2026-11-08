@@ -807,3 +807,9 @@ M274 must also trigger on `docs/release/WAFFRA_APPROVED_CHANGES.txt` changes bec
 **PR:** #497. **Status:** committed / exact-head CI and device acceptance pending.
 - If original bank SMS has no parsed timestamp, the editable review must explicitly confirm a date using the calendar before save. The edit's date confirmation persists in the same per-SMS Back draft. Defaults must never become a verified historical date without choice.
 - Test test/qa/m566_sms_manual_date_confirmation_test.py; date from M564 batch and single writers remains authoritative.
+
+
+## M568 — #495 exact bank SMS identity reuse (2026-11-08)
+**PR #497. Status: code/test committed; current-head full CI and physical Android acceptance pending.**
+- First verified owner-account choice following a successful SMS journal commit records sender + last four. Same sender+last four may reuse that specific active same-bank account, after re-reading fresh SQLCipher authority; no repeated account-link dialog. The finance action itself still needs Yes confirmation and atomic hash dedup.
+- Sender-only, absent suffix, changed suffix, archived account or wrong bank never auto-link and require new explicit selection. Update M464/M493 tests accordingly.

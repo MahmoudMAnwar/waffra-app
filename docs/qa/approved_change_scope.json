@@ -55,7 +55,8 @@
     "M565 #495: real bank SMS review shows source amount/date/category and هل العملية صحيحة؟ Yes / No edit; yes only for verified local SAR, valid exact date/category/direction, explicit verified account and optional budget, one atomic SQLCipher SMS+hash commit with idempotency and ACK only after success; no opens source-preserving editable entry. Source regression remains required.",
     "M566: editable SMS missing an original date may visually show today's default but cannot finance-post until the user explicitly chooses the correct calendar date. Persist confirmation with same per-SMS review draft. Manual and receipt dates untouched.",
     "M567 M385 scope fix for owner-approved M565: explicitly bound the bank SMS transfer/review functional span from existing transfer entry comment to the start of the unrelated _loadFinanceSafely function; only reviewed SMS source, Yes/No flow and verified financial commit may differ; leave all unrelated source byte-identical and guards on.",
-    "M569: reconcile the exact M174/M147/M440 failures reported on 2026-11-08. Explicitly bound only the SMS single writer changed by M564, retain original main bytes elsewhere; replace two M206 stale device-clock positive assertions with original SMS date validation and negative fallback checks; update M447 required secure SMS commit count 3->4 and checked account/witness/hash gate with seven verified account reviews. Tests stay enabled."
+    "M569: reconcile the exact M174/M147/M440 failures reported on 2026-11-08. Explicitly bound only the SMS single writer changed by M564, retain original main bytes elsewhere; replace two M206 stale device-clock positive assertions with original SMS date validation and negative fallback checks; update M447 required secure SMS commit count 3->4 and checked account/witness/hash gate with seven verified account reviews. Tests stay enabled.",
+    "M568 #495: after first explicit source-confirmed financial commit, reuse same exact sender+last-four account identity on next SMS without repeating initial link; never infer sender-only or changed suffix; recheck live verified SQLCipher account/witness. Replace obsolete M464/M493 expectations with positive and negative matching tests, retain all CI."
   ],
   "allowed_changed_files": [
     ".github/workflows/finance-full-regression.yml",
@@ -194,7 +195,10 @@
     "test/qa/m565_sms_yes_no_test.py",
     "test/qa/m566_sms_manual_date_confirmation_test.py",
     "test/qa/m447_verified_sms_account_linking_test.py",
-    "test/waffra_m206_day_theme_tour_sms_regression_test.dart"
+    "test/waffra_m206_day_theme_tour_sms_regression_test.dart",
+    "lib/waffra_sms_account_learning.dart",
+    "test/m464_sms_account_learning_test.dart",
+    "test/m493_sms_account_matching_regression_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -269,6 +273,10 @@
       {
         "start": "       final hash=bankSmsHash(messages[index]);",
         "end": "       final budgetSelection=await reviewSmsBudgetLinks([entry]);"
+      },
+      {
+        "start": " Future<({List<String?>? ids,int? generation})?> reviewSmsAccountLinks(",
+        "end": " /// Budget assignment is OPTIONAL"
       }
     ],
     "lib/waffra_local_phone_credentials.dart": [
@@ -985,6 +993,28 @@
       {
         "start": "  test('SMS content remains in memory for encrypted source, legacy bridge redacts plaintext', () {",
         "end": "  test('FAB launch waits for the menu collapse and suppresses double taps', () {"
+      }
+    ],
+    "lib/waffra_sms_account_learning.dart": [
+      {
+        "start": "abstract final class WaffraSmsAccountLearning {",
+        "end": "class WaffraSmsAccountLearningStore {"
+      }
+    ],
+    "test/m464_sms_account_learning_test.dart": [
+      {
+        "start": "void main(){",
+        "end": " test('Two accounts at the same bank NEVER resolve sender only',(){"
+      },
+      {
+        "start": " test('Conflicting account selection resets confidence',(){",
+        "end": " test('Unrecognized sender cannot create bank-account learning',(){"
+      }
+    ],
+    "test/m493_sms_account_matching_regression_test.dart": [
+      {
+        "start": "void main(){",
+        "end": null
       }
     ]
   }

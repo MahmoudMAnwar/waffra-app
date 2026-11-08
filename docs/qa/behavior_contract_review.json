@@ -138,6 +138,25 @@
         "The separate #495 first-time last-four/transaction-date/one-tap finance feature remains incomplete; do not claim that this UI change implements it.",
         "Preserve older active owner account balances and confirmation-only transfer/entry gate."
       ]
+    },
+    {
+      "id": "M568-EXACT-SENDER-SUFFIX-REUSE",
+      "issue": "Issue #495: first-time bank account selection and repeat trusted identity",
+      "previous_behavior": "Old bank SMS learning required two confirmations and permitted sender-only shortcuts for unique-bank guesses, then asked for account picker repeatedly.",
+      "approved_behavior": "One successfully committed, owner-confirmed sender+exact-four-digit account identity can be reused after fresh encrypted account witness; no sender-only linking or guessing a mismatched suffix.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_sms_account_learning.dart"
+      ],
+      "test_paths": [
+        "test/m464_sms_account_learning_test.dart",
+        "test/m493_sms_account_matching_regression_test.dart",
+        "test/qa/m447_verified_sms_account_linking_test.py"
+      ],
+      "safety_invariants": [
+        "Only post after explicit transaction confirmation and existing atomic encrypted SMS hash writer.",
+        "Wrong bank, wrong suffix, archived account and sender-only identity must not automatically debit any account."
+      ]
     }
   ]
 }

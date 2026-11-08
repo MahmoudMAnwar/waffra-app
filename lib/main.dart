@@ -6960,24 +6960,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     if(!facts.canAutoPostAsIncomeExpense||
        (facts.kind==WaffraBankOperationKind.income)!=item.income)continue;
     try{
+     final exactFour=WaffraSmsAccountLearning.suffix4(
+      item.income?facts.destinationSuffix:facts.sourceSuffix);
+     final previouslyConfirmed=exactFour==null?null:
+      WaffraSmsAccountLearning.suggest(learned,sender:smsSender,
+       suffix:exactFour,activeAccountIds:activeAccountIds,
+       sameBankAccountIds:sameBankIds);
+     if(previouslyConfirmed!=null){assigned[i]=previouslyConfirmed;continue;}
      final match=await accountEvidence.suggestSmsAccount(facts);
      if(match.confident&&match.accountId!=null&&
         bankGroup!=null&&sameBankIds.contains(match.accountId)&&
         active.any((a)=>a.id==match.accountId)){
       // A suffix by itself cannot prove the SMS belongs to this sender's bank.
       assigned[i]=match.accountId;
-     }else{
-      final suffix=item.income?
-       facts.destinationSuffix:facts.sourceSuffix;
-      // Missing/ambiguous four-digit evidence never overrides the verified
-      // source. Only truly suffix-free SMS may reuse sender-only learning.
-      if(WaffraSmsAccountLearning.suffix4(suffix)==null){
-       final learnedId=WaffraSmsAccountLearning.suggest(
-        learned,sender:smsSender,suffix:null,
-        activeAccountIds:activeAccountIds,
-        sameBankAccountIds:sameBankIds);
-       if(learnedId!=null)assigned[i]=learnedId;
-      }
      }
     }catch(_){
      // Suggestion failure must never guess or silently link an account.
@@ -6991,8 +6986,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     initialSelectedIds.every((id)=>id!=null);
    final newAccountConfirmed=createdFromSmsAccountId!=null&&
     candidates.length==1;
-   if((allEditorAccountsConfirmed||newAccountConfirmed)&&
-      assigned.every((id)=>id!=null)){
+   // Only a previously owner-confirmed, exact sender+four identity may
+   // bypass REPEATING account linking. The finance writer still requires
+   // the owner's transaction Yes and a fresh SQLCipher account witness.
+   final exactSmsIdentityConfirmed=candidates.length==1&&
+    assigned.single!=null&&candidates.single.sourceType=='sms'&&
+    WaffraSmsAccountLearning.suggest(learned,sender:smsSender,
+     suffix:WaffraSmsAccountLearning.suffix4(
+      candidates.single.income?
+       WaffraBankSmsFactsParser.parse(candidates.single.notes).destinationSuffix:
+       WaffraBankSmsFactsParser.parse(candidates.single.notes).sourceSuffix),
+     activeAccountIds:activeAccountIds,
+     sameBankAccountIds:sameBankIds)==assigned.single;
+   if((allEditorAccountsConfirmed||newAccountConfirmed||
+      exactSmsIdentityConfirmed)&&assigned.every((id)=>id!=null)){
     // Read a fresh SQLCipher account witness, not a stale picker snapshot.
     final latest=await bridge.readVerifiedAccounts();
     final liveIds=latest.balances.where((a)=>!a.archived)
