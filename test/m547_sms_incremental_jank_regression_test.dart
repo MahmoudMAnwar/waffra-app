@@ -57,7 +57,7 @@ void main() {
   expect(open,contains('await _refreshAutoSmsInbox();'));
   expect(open,isNot(contains('importMonth:true')));
   final manual=main.split('// The expense/income learner applies only AFTER')[1]
-   .split('for(final stagedReceiptCopies')[0];
+   .split('for(final staged in stagedReceiptCopies')[0];
   expect(manual,isNot(contains('_refreshAutoSmsInbox(importMonth:true)')));
   expect(main,contains('void _receiveAutoSmsNotice()'));
   expect(main,contains('if(mounted&&ready)unawaited(_refreshAutoSmsInbox());'));
