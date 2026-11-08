@@ -26,6 +26,14 @@
   "bounded_sections": {
     "lib/main.dart": [
       {
+        "start": " Future<void> saveUser(Person u)async {",
+        "end": " Future<void> setUiCountry("
+      },
+      {
+        "start": " Future<void> logout()async {",
+        "end": " Future<void> setPin("
+      },
+      {
         "start": " Future<void> _signIn()async{",
         "end": " String get maskedLastPhone{"
       },
@@ -34,40 +42,32 @@
         "end": "          key:const Key('m479-login-back-to-choice'),"
       },
       {
-        "start": " Future<void> logout()async {",
-        "end": " Future<void> setPin("
-      },
-      {
-        "start": " Future<void> saveUser(Person u)async {",
-        "end": " Future<void> setUiCountry("
-      },
-      {
-        "start": "  void _m468OnResume(){",
-        "end": " @override void initState(){super.initState();WaffraBackNavigation.onHomeBack="
-      },
-      {
-        "start": "  Future<void> _runAutoSmsRefresh({bool importMonth=false})async{",
+        "start": " Future<void> _runAutoSmsRefresh({bool importMonth=false})async{",
         "end": " Future<void> _analyzeAmbiguousSmsOnDemand("
       },
       {
-        "start": "  Future<void> _loadFinanceSafely()async{",
-        "end": "  Widget _financialRecoveryScreen()"
+        "start": " Future<void> _loadFinanceSafely()async{",
+        "end": " Widget _financialRecoveryScreen()"
       },
       {
-        "start": "  Future<void> _syncWidgetTransactions()async{",
-        "end": "  /// Refresh from the authoritative source"
+        "start": " Future<void> _syncWidgetTransactions()async{",
+        "end": " /// Refresh from the authoritative source"
       },
       {
-        "start": "  Future<void> _refreshFromVerifiedFinance()async {",
-        "end": "  Future<void> load()async{"
+        "start": " Future<void> _refreshFromVerifiedFinance()async {",
+        "end": " Future<void> load()async {\n  await _ensureFinanceBound();"
       },
       {
-        "start": "  Future<void> load()async{",
-        "end": "  Future<void> _refreshWidget()async{"
+        "start": " Future<void> load()async {\n  await _ensureFinanceBound();",
+        "end": " Future<void> _refreshWidget()async{"
       },
       {
-        "start": "        final verifiedRaw=await WaffraLargeJsonDecode.parse(",
-        "end": "        if(!mounted)return;\n        setState((){"
+        "start": " Future<void> _publishVerifiedWidgetBalance(",
+        "end": " Future<void> persist("
+      },
+      {
+        "start": "       final verifiedRaw=await WaffraLargeJsonDecode.parse(",
+        "end": "       if(!mounted)return;\n       setState((){"
       }
     ],
     "native/WaffraMainActivity.kt": [
