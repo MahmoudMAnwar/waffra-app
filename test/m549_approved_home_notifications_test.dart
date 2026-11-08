@@ -35,6 +35,21 @@ void main(){
   expect(opened,['sms2']);
  });
 
+ testWidgets('M589 compact bulk action opens the verified select/exclude route',(tester)async{
+  var bulkOpens=0;
+  await tester.pumpWidget(MaterialApp(home:WaffraApprovedNotificationsPage(
+   english:false,readPending:()=>[const WaffraReviewNotice(
+    id:'sms1',sender:'Bank',preview:'review')],
+   onReviewAll:()async{bulkOpens++;},
+   onReviewOne:(id)async{},
+   onRescan:()async{},canRescan:()=>true)));
+  expect(find.byKey(const Key('m549-notification-review-hero')),findsNothing);
+  await tester.tap(find.byKey(const Key('m589-open-bulk-sms-review')));
+  await tester.pump();
+  await tester.pump();
+  expect(bulkOpens,1);
+ });
+
  testWidgets('M581 empty sender list shows one helpful state',(tester)async{
   await tester.pumpWidget(MaterialApp(home:WaffraApprovedNotificationsPage(
    english:false,readPending:()=>[],
