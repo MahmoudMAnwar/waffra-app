@@ -21,7 +21,8 @@
     "test/m468_app_refresh_performance_regression_test.dart",
     "test/m509_all_sender_sms_rescan_dedup_test.dart",
     "test/m547_sms_incremental_jank_regression_test.dart",
-    "test/qa/m417_sms_permission_acceptance_test.py"
+    "test/qa/m417_sms_permission_acceptance_test.py",
+    "test/qa/m442_sms_consent_session_recovery_test.py"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -118,6 +119,12 @@
       {
         "start": "    def test_background_cannot_post_finance_or_upload_sms(self):",
         "end": "    def test_writes_only_from_existing_verified_sms_review(self):"
+      }
+    ],
+    "test/qa/m442_sms_consent_session_recovery_test.py": [
+      {
+        "start": "    def test_logout_races_cannot_capture_or_hide_old_encrypted_data(self):",
+        "end": "    def test_bridge_is_wired_to_native_with_no_os_reprompt_on_relogin(self):"
       }
     ]
   }
