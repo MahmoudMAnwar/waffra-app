@@ -955,3 +955,19 @@ M274 must also trigger on `docs/release/WAFFRA_APPROVED_CHANGES.txt` changes bec
 **Acceptance/tests:** source+Flutter widgets and native Android/SQLCipher finance regressions for first home/startup spinner, account Yes with verified vs missing/new identity, reviewed SMS and manual save-to-Home performance, summary badge fit Arabic/English/accessibility. Capture real physical-device release/profile before/after tap response, first Home ready, p95 frame build/raster and save commit/list update latencies; full latest-exact-head CI, clean-install and upgrade preserve existing device data. Maintain adopted compact design and all previous improvements.
 
 **Sequence:** 7th feedback batch group after #498/#499/#500/#501/#502/#503. **Documentation now only; owner will say when full list is finished and to begin in order.**
+
+
+## 2026-11-08 — M580–M586 seven-feedback implementation started (PR #505)
+
+**Owner authorization:** on 2026-11-08 the owner explicitly instructed implementing all seven previously collected feedback groups in order, with extra priority to app-wide frame jank after each tap. Scope: #498–#504 / WAFFRA-NEW-021…027. No approved Home design changes or movement of floating `+`.
+
+**Branch/PR:** `fix/m580-seven-feedback-performance-20261108` → [draft #505](https://github.com/MahmoudMAnwar/waffra-app/pull/505), based on `main` after #497. Source commits and tests exist; **the seven issues are NOT all complete**.
+
+- **#498 sign-in:** stable minimum-width on-screen submit CTA/spinner plus preserved secure isolate and no duplicate submissions; actual first-time latency root cause and two-device profile traces pending.
+- **#499 selected SMS direct review:** tapped notice goes straight to the existing selected-ID review route; native fetch returns just the exact selected record instead of a 1000-item queue. Approved compact review, Back/draft and full UI acceptance pending.
+- **#500/#501 OTP and exclusions:** parse Arabic `رمز مؤقت` and English challenge language as pending, uncertain (never posted), apply safety flag once per review batching and redact detail; per-notice label supports excluded/transfer/review. Verify all native intake/security mixed-message cases, restore behavior and exact existing rules at device level before Done.
+- **#502 notifications:** replaced obsolete category chips and redundant review hero with all+sender chips and per-message badges, refresh spinner; existing bulk-select/block sender, safe learn and complete compact modal still require implementation.
+- **#503 transfer UX/account suffix+fees:** Not implemented in this PR yet; safe existing verified transfer writer not weakened or removed. Three transfer actions, separate bank fee and source/destination account proof still required.
+- **#504 Home/save/perf/summary:** replaced cold Home blank spinner surface with bounded isolated loading skeleton, removed redundant re-decrypt/reclassification of up to 1000 SMS after *canceling* review, used native single-ID lookup, bounded month-summary currency circle. Duplicate account Yes picker, manual/SMS commit-to-list and actual frame traces still require work.
+
+**QA:** updated existing M549 widget test; added synthetic OTP/pending, source/bridge, stable sign-in, Home and bounded-cancel source regression tests in `test/m580_sms_security_navigation_performance_test.dart`. M385 scope and M550 behavior contracts updated in same PR. Release note must be newer than all app-source changes. **Every same-head CI workflow + both Android devices and SQLCipher update-over-existing-data test remain mandatory before merge; do not claim DONE without proof.**
