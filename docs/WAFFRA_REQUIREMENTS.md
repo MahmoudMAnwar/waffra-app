@@ -855,3 +855,16 @@ M274 must also trigger on `docs/release/WAFFRA_APPROVED_CHANGES.txt` changes bec
 **Acceptance:** Record before/after tap-to-feedback and tap-to-interactive timings, UI/raster frames and auth/storage/route spans; separately cover fresh install → registration completion, logout → login-again, repeated sign-in, warm/cold start, both physical Android devices and upgrade with preserved records. No transient blank CTA, no blocked UI, no duplicate login, correct failures for invalid credentials. Add targeted Flutter widget/integration regressions and pass full exact-head CI + owner Android QA. Do not claim Done until device evidence and owner acceptance.
 
 **Sequence:** First item of the new owner-reported performance/suggestion batch. **Record now; begin all implementations only when owner confirms the complete batch and asks to start in order.**
+
+
+## WAFFRA-NEW-022 — Direct review navigation for already selected SMS (2026-11-08)
+
+**Issue:** [#499](https://github.com/MahmoudMAnwar/waffra-app/issues/499) · **Related:** [#403](https://github.com/MahmoudMAnwar/waffra-app/issues/403), [#410](https://github.com/MahmoudMAnwar/waffra-app/issues/410), [#495](https://github.com/MahmoudMAnwar/waffra-app/issues/495) · **PR:** Unassigned · **Status:** **Recorded / Not implemented** (owner explicitly deferred coding until the complete batch is collected).
+
+**Actual:** When the user taps an existing, app-detected bank SMS/operation in the SMS list to review it, Waffra first opens the «إضافة رسالة بنكية» paste/add sheet and demands an unnecessary second tap on «مراجعة الرسائل يدوياً» to reach the transaction review template. Private banking screenshot supplied; do not copy its sensitive text into repo/tests.
+
+**Expected:** Tapping the already-listed SMS launches the existing transaction review template **immediately**, bound to the **exact chosen SMS** with source and safe parsed details retained. **No intermediate «إضافة رسالة بنكية»** sheet or second manual-review tap for already-detected messages. The standalone user-initiated **manual add/paste SMS** action must remain available and unchanged. Back/cancel returns to the originating list/sender/scroll context, does not remove/acknowledge/commit the message and preserves draft where appropriate. All original transaction date/time, verified account binding, user correction, SQLCipher atomic commit, anti-replay/dedup and SMS provenance rules must remain intact.
+
+**Tests:** Flutter navigation regression for direct review with correct item, back/cancel and repeat; separate manual paste path still works; missing parsed fields routed to editable review; no early acknowledgment or duplicated finance posting. Full exact-head CI and physical Android review needed. Maintain prior UX responsiveness.
+
+**Sequence:** Second item of the owner feedback batch (first item #498 / WAFFRA-NEW-021). **Documentation only now; implement in submission order when owner finishes list and explicitly authorizes start.**
