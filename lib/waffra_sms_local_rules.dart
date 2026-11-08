@@ -109,6 +109,12 @@ abstract final class WaffraSmsLocalRules {
   return rule.matchAll?rule.keywords.every(has):rule.keywords.any(has);
  }
 
+ /// OTP plus a completed purchase/debit must remain in financial review.
+ static bool _hasCompletedFinanceCue(String body)=>RegExp(
+  r'\b(?:purchase|debited|credited|withdrawal|payment|paid|pos)\b|'
+  r'شراء|خصم|سحب|دفع|إيداع|ايداع|راتب',
+  caseSensitive:false).hasMatch(body);
+
  /// Transfers cannot create ledger income/expense entries; exclude rules
  /// only operate on unconfirmed, non-financial messages.
  static WaffraSmsLocalRule? resolveSpecial({
@@ -116,6 +122,9 @@ abstract final class WaffraSmsLocalRules {
   required WaffraBankOperationKind bankKind,
   Iterable<WaffraSmsLocalRule> custom=const <WaffraSmsLocalRule>[],
  }) {
+  if(bankKind==WaffraBankOperationKind.uncertain&&
+     WaffraBankSmsFactsParser.isVerificationChallenge(body)&&
+     _hasCompletedFinanceCue(body))return null;
   final eligible=<WaffraSmsLocalRule>[
    ...custom,
    ...waffraSaudiSpecialSeedRules,
@@ -260,8 +269,10 @@ abstract final class WaffraSmsLocalRules {
      (facts.pending||facts.kind!=(isIncome?
       WaffraBankOperationKind.income:WaffraBankOperationKind.expense)))
    return null;
-  if(kind=='excluded'&&facts.kind!=WaffraBankOperationKind.uncertain)
-   return null;
+  if(kind=='excluded'&&
+     (facts.kind!=WaffraBankOperationKind.uncertain||
+      (WaffraBankSmsFactsParser.isVerificationChallenge(body)&&
+       _hasCompletedFinanceCue(body))))return null;
   if(kind=='transfer'&&facts.kind!=WaffraBankOperationKind.transfer)
    return null;
   if((isIncome||isExpense)&&(

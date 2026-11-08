@@ -319,6 +319,32 @@
         "Existing hashes, SMS dedupe, finance/SQLCipher migration and live Home/widget original source remain unchanged until verified commit.",
         "All exact-head CI and both physical Android device upgrade/new-install tests required before release or merge."
       ]
+    },
+    {
+      "id": "M600-PR505-M385-M462-M594-CI-ROOT-FIX",
+      "issue": "User-approved repair of PR #505 CI failures, issues #495 #500 #501 #503",
+      "previous_behavior": "M574 nested Future helper truncated test; M385 missed bounded edit. Mixed payment OTP was learned as excluded. M594 asserted obsolete fee rejection.",
+      "approved_behavior": "Keep entire M574 preview assertion contract, block mixed purchase+OTP sender exclusions, assert verified fee mode user approval and atomic SQLCipher transfer/fee/hash plus ACK after commit.",
+      "source_paths": [
+        "lib/waffra_sms_local_rules.dart",
+        "lib/main.dart",
+        "lib/storage/waffra_unified_finance_writer.dart"
+      ],
+      "test_paths": [
+        "test/qa/m574_sms_confirmation_full_fields_test.py",
+        "test/m462_smart_sms_rule_review_test.dart",
+        "test/m580_sms_security_navigation_performance_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m174-postmerge-sqlcipher-regression.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "No OTP digits persisted in exclusion rules.",
+        "Unconfirmed mixed finance/OTP never disappears from review.",
+        "No principal-only save or early SMS ACK when bank fee exists.",
+        "No prior required QA/security tests are skipped."
+      ]
     }
   ]
 }

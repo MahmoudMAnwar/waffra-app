@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_bank_sms_facts.dart';
 import 'package:waffra/waffra_sms_intelligence.dart';
+import 'package:waffra/waffra_sms_local_rules.dart';
 
 void main(){
  test('Arabic temporary code is security, not completed transfer or expense',(){
@@ -172,16 +173,46 @@ void main(){
    principalMinor:1900,feeSar:0.001),isNull);
  });
 
- test('M594 fee-carrying SMS cannot silently save principal-only transfer',(){
+ test('M594 fee and transfer save together, with review before ACK',(){
   final src=File('lib/main.dart').readAsStringSync();
   final review=src.split(' Future<void> _reviewSmsAccountTransfer({')[1]
    .split(' /// M593: even with JSON decoded')[0];
   expect(review,contains('feeTotalMinor'));
   expect(review,contains("WaffraSmsAccountLearning.suffix4(facts.destinationSuffix)"));
   expect(review,contains("WaffraSmsAccountLearning.suffix4(facts.sourceSuffix)"));
-  expect(review,contains("if(facts.fee!=null&&facts.fee!>0){"));
-  expect(review,contains("throw StateError('Transfer fee requires atomic finance writer')"));
-  expect(review,contains('WaffraAutoSms.acknowledgeCompletedTransfer([id])'));
+  expect(review,contains('if(fee!=null&&fee>0){'));
+  expect(review,contains('WaffraBankSmsFactsParser.extraDebitMinor('));
+  expect(review,contains('if(feeMinor==null||feeMinor<=0||fullDebit==null||!mounted){'));
+  expect(review,contains("throw StateError('Ambiguous SAR bank fee must be reviewed.')"));
+  expect(review,contains("if(selected!='included'&&selected!='separate'){"));
+  expect(review,contains("throw StateError('Fee confirmation was not granted.')"));
+  expect(review,contains('await api.transferReviewedSmsWithFee('));
+  expect(review,contains("feeIncludedInDebit:selected=='included'"));
+  expect(review,contains('messageHash:id'));
+  expect(review,contains('await api.transfer(id:draft.requestId,'));
+  expect(review,contains('ack=await WaffraAutoSms.acknowledgeCompletedTransfer([id])'));
+  expect(review.indexOf('await api.transferReviewedSmsWithFee('),
+   lessThan(review.indexOf('ack=await WaffraAutoSms.acknowledgeCompletedTransfer([id])')));
+ });
+
+ test('M600 mixed financial purchase and OTP is never a learned exclusion',(){
+  const mixed='Card Purchase SAR 75.00 رمز التفعيل 482913';
+  final facts=WaffraBankSmsFactsParser.parse(mixed);
+  expect(facts.kind,WaffraBankOperationKind.uncertain);
+  expect(facts.pending,isTrue);
+  expect(WaffraSmsLocalRules.suggestedRule(
+   body:mixed,sender:'AlRajhiBank',kind:'excluded',confidentOnly:true),isNull);
+  const existing=WaffraSmsLocalRule(
+   id:'otp_rule',name:'OTP',kind:'excluded',income:false,
+   category:'',sender:'AlRajhiBank',
+   keywords:['رمز التفعيل'],matchAll:false);
+  expect(WaffraSmsLocalRules.resolveSpecial(
+   body:mixed,sender:'AlRajhiBank',bankKind:facts.kind,custom:[existing]),isNull);
+  const onlyOtp='رمز التفعيل الخاص بك هو 482913، لا تشارك الرمز';
+  final safe=WaffraSmsLocalRules.suggestedRule(
+   body:onlyOtp,sender:'AlRajhiBank',kind:'excluded',confidentOnly:true);
+  expect(safe,isNotNull);
+  expect(safe!.toJson().toString(),isNot(contains('482913')));
  });
 
  test('M592 bulk review keeps Waffra native policy, not phone SMS deletion',(){

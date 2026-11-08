@@ -2939,3 +2939,10 @@ M597 – PR #505 / Seven Owner Feedback Items #498–#504 (2026-11-08, SOURCE PE
 - M174/M385 protected-source guard requires an explicit bounded edit for `test/m514_sms_review_regressions_test.dart`. Added unique M514-to-M516 anchors and checked that old and new test content outside this one block remains identical. No source guard bypass and no weakened test.
 - M429's Flutter login/SMS/biometric tests passed (42 cases) but strict analyzer found three unnecessary null checks in approved `lib/main.dart`. Removed only provably redundant `date==null` guard following original-date or explicit picker path and two unnecessary `!` assertions on amount/date, preserving the mandatory consent/finance safeguards.
 - Revision remains on Draft PR #505; exact-head CI, Android real-device smoothness and two-device preservation evidence still required before release.
+
+
+[M600 root CI repairs for PR #505] 2026-11-08
+- Fixed M174 M385 guard manifest: declared the existing M574 test import/body edits in two bounded sections without bypassing old SMS fields/Yes-No checks.
+- Protected mixed bank purchase/debit plus OTP SMS from automatic sender-exclusion learning and matching; OTP-only rules remain sender-scoped and number-free.
+- Updated outdated M594 assertion to require explicit fee mode, SAR halala validation, atomic SQLCipher transfer plus fee expense and SMS hash, and acknowledgment strictly after durable commit; added mixed OTP regression.
+- PR remains Draft until full same-head CI and physical Android/two-device proof pass; tests are not disabled.

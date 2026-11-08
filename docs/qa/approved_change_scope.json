@@ -16,7 +16,8 @@
     "M595 #502: Existing bank SMS review must expose three real user-selectable Income / Expense / Transfer choices, and independent exclusion, with corrected type routed to a fully verified manual/SMS finance editor. Type chips cannot post money, ACK messages, guess bank identity or bypass the verified Yes account and date requirements.",
     "M597 #503: an SMS own-account transfer with an explicitly confirmed positive SAR fee must post two verified account movements, one separately attributed fee expense, and one immutable SMS fingerprint within the SAME SQLCipher transaction; rollback on stale source, category mismatch, duplicate, or incomplete insert. Sender/OTP proof, exact date/time and owner consent remain mandatory. Release is blocked until full exact-head automated and device tests.",
     "M598 exact-head CI root repair: fail closed when extra bank-debit amount is nullable before dividing in Arabic/English fee dialog, and update M514 source/destination four-digit test to enforce the approved independently verified field-specific prefill. Refresh release notes after source in the same commit. Do not skip, relax, or rerun obsolete test logic.",
-    "M599 exact-head CI repair: M385 fail-closed file-scope guard requires an explicit bounded M514 regression test region; the previously approved test strengthens source-specific sender+suffix behavior and is unchanged outside that region. M429 analyzer must reject unnecessary null branches and null assertions without changing bank SMS consent/date/amount safety. No other behavior or test is bypassed."
+    "M599 exact-head CI repair: M385 fail-closed file-scope guard requires an explicit bounded M514 regression test region; the previously approved test strengthens source-specific sender+suffix behavior and is unchanged outside that region. M429 analyzer must reject unnecessary null branches and null assertions without changing bank SMS consent/date/amount safety. No other behavior or test is bypassed.",
+    "M600 user-approved CI repairs: M385 existing M574 preview test correction is limited to two bounded ranges without weakening SMS Yes/No fields. Reject rule-based auto-exclusion of OTP plus a completed purchase/debit. Assert confirmed and validated SAR fees commit atomically with transfer and message hash, before acknowledgment; keep every former QA/security gate."
   ],
   "allowed_changed_files": [
     "docs/qa/approved_change_scope.json",
@@ -39,7 +40,9 @@
     "test/storage/m177_live_finance_authority_integration_test.dart",
     "lib/storage/waffra_unified_finance_writer.dart",
     "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
-    "lib/storage/waffra_verified_accounts_api.dart"
+    "lib/storage/waffra_verified_accounts_api.dart",
+    "lib/waffra_sms_local_rules.dart",
+    "test/qa/m574_sms_confirmation_full_fields_test.py"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -192,6 +195,26 @@
       {
         "start": " test('M514 source-specific account digits, actionable transfer and verified receipt edit',(){",
         "end": " test('M516 native SMS identity determines transfer id, not body-only hash',(){"
+      }
+    ],
+    "test/qa/m574_sms_confirmation_full_fields_test.py": [
+      {
+        "start": "from pathlib import Path",
+        "end": "SRC=(Path(__file__).resolve().parents[2]/'lib/main.dart').read_text(encoding='utf-8')"
+      },
+      {
+        "start": "class FullSmsPreviewTest(unittest.TestCase):",
+        "end": "if __name__=='__main__':unittest.main()"
+      }
+    ],
+    "lib/waffra_sms_local_rules.dart": [
+      {
+        "start": " static bool matches(WaffraSmsLocalRule rule,String body",
+        "end": " /// Keep a single safe auto-learned bucket per direction and sender while"
+      },
+      {
+        "start": " static WaffraSmsLocalRule? suggestedRule({",
+        "end": " /// Conservative, sender-agnostic keyword hints from a confirmed"
       }
     ]
   }
