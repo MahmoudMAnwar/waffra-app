@@ -10,8 +10,8 @@
     {
       "id": "M601-AUTH-PENDING-BUTTON-AND-VERIFIER-LATENCY",
       "issue": "Issue #506 P0 owner-reported Android sign-in disappearing CTA and app-wide jank",
-      "previous_behavior": "On tap, the sign-in FilledButton was disabled by its request guard but no explicit disabled background/foreground was set; Material3 selected a low-contrast dark disabled surface so login and progress became visually empty. Sign-in also issued an extra OS-keystore hasRegisteredCredentials read before the already-required phone probe and real full-strength challenge, increasing serialized storage latency.",
-      "approved_behavior": "Keep the login CTA visibly white with dark high-contrast Arabic/English pending text and isolated green progress during disabled authentication; one accepted tap only, progress before secure work, no wrong-password success. Derive verifier existence from the same fail-closed probe, including after verified biometric recovery; preserve all recovery, old salt/hash migration, authenticated account save, SMS consent and Yes/No signout. Log only profile-mode stage durations without personal data. Do not equate source tests with physical Android whole-app latency success.",
+      "previous_behavior": "On tap, the sign-in FilledButton was disabled by its request guard but no explicit disabled background/foreground was set; Material3 selected a low-contrast dark disabled surface so login and progress became visually empty. Sign-in also issued an extra OS-keystore hasRegisteredCredentials read before the already-required phone probe and real full-strength challenge, increasing serialized storage latency. After sign-out Yes the app waits for credential, SMS suspension, AI teardown and account authority writes without visible in-progress feedback, so users perceive a frozen signout.",
+      "approved_behavior": "Keep the login CTA visibly white with dark high-contrast Arabic/English pending text and isolated green progress during disabled authentication; one accepted tap only, progress before secure work, no wrong-password success. Derive verifier existence from the same fail-closed probe, including after verified biometric recovery; preserve all recovery, old salt/hash migration, authenticated account save, SMS consent and Yes/No signout. Log only profile-mode stage durations without personal data. Do not equate source tests with physical Android whole-app latency success. After Yes show a real blocking Material progress veil, first paint before secure I/O, and unconditionally remove it on success/error; keep the original Yes/No confirmation and all fail-closed operations.",
       "source_paths": [
         "lib/main.dart"
       ],
@@ -33,7 +33,8 @@
         "Do not overwrite missing/foreign/malformed OS verifiers, fail open, or bypass biometric sign-in recovery.",
         "Preserve verified SQLCipher/account finance authority and owner-bound SMS consent.",
         "Sign-out remains Yes/No and must not erase financial records or credentials.",
-        "Only a real profile APK trace can prove no dropped frames, tap-to-feedback and login/logout completion on Android."
+        "Only a real profile APK trace can prove no dropped frames, tap-to-feedback and login/logout completion on Android.",
+        "Always remove the signout progress overlay on failure as well as success; never begin another logout concurrently."
       ]
     }
   ]
