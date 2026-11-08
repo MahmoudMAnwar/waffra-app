@@ -2966,3 +2966,11 @@ M597 – PR #505 / Seven Owner Feedback Items #498–#504 (2026-11-08, SOURCE PE
 - Reuse M593's bounded 32-row asynchronous verified MoneyEntry remapping on initial Home, pull-to-refresh, widget sync and confirmed SMS save to avoid long event-loop stalls. Large verified widget ledger sums use isolate compute.
 - Android's native sign-out SMS suspension runs on the SMS executor; signed-out state changes only after confirmed native pause and safe finance authority shutdown.
 - test/m603_app_wide_lag_source_regression_test.dart protects source contracts. CI, signed APK and physical Android frame measurements are not yet confirmed. Do not call this permanently lag-free or ready for merge without objective proof.
+
+
+[M602/M603 #508/#509 WHOLE-APP JANK SOURCE REMEDIATION – PR #507 / PENDING DEVICE ACCEPTANCE] 2026-11-08
+- First authenticated Home frame is painted before bounded, deferred first-month bank SMS scan; keep scan progress, user consent and review-only queue without posting money automatically.
+- Verified manual/reviewed SMS transaction and Widget/Home refresh remap large ledgers in bounded batches with short event-loop yields; publish only fully verified SQLCipher committed snapshots, no duplicate balance entries.
+- Native Android pauseAutoSmsForSignOut runs encrypted-store suspension on SMS executor off the UI thread and reports actual result; no silent signout while SMS capture remains enabled.
+- Normal explicit sign-out followed by verified phone/password opens a fresh unlocked Home session without a redundant biometric challenge; protected restored sessions and over-60-second background lock remain enforced.
+- Added M603 regression contracts plus explicit native behavior review. These source optimizations do not certify absence of frame jank: exact-head CI and physical profile Android dropped-frame and p95 build/raster proof remain required.
