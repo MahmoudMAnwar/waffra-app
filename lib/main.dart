@@ -6078,14 +6078,34 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      ])));
    if(decision=='correct-type'&&mounted&&reviewType!=null){
     if(reviewType=='transfer'){
-     // An uncertain SMS never becomes an internal transfer automatically.
-     // Opening a manual form does not ACK or mark this SMS as committed.
-     await openVerifiedTransfer();
+     // A correction from unknown/income/expense to internal transfer cannot
+     // infer ownership of the source or destination from SMS wording.
+     // It opens a SEPARATE manual transfer with fresh account confirmation.
+     // The original SMS remains pending and can still be excluded/reviewed.
+     final approved=await showWaffraDialog<bool>(context:context,
+      builder:(ctx)=>AlertDialog(
+       title:WaffraText(waffraIsEnglish?
+        'Confirm separate internal transfer':'تأكيد تحويل منفصل بين حساباتي'),
+       content:WaffraText(waffraIsEnglish?
+        'The message does not prove both accounts are yours. Continue only '
+        'to a new manual transfer with two verified accounts. The bank SMS '
+        'will stay pending, and nothing is saved by this choice alone.':
+        'الرسالة لا تثبت أن الحسابين ملكك. المتابعة هتفتح تحويلًا يدويًا '
+        'بحسابين موثّقين، والرسالة الأصلية هتفضل للمراجعة. '
+        'الاختيار وحده مش هيسجل أي مبلغ.'),
+       actions:[
+        TextButton(onPressed:()=>Navigator.pop(ctx,false),
+         child:WaffraText(waffraIsEnglish?'Back':'عودة')),
+        FilledButton(onPressed:()=>Navigator.pop(ctx,true),
+         child:WaffraText(waffraIsEnglish?'Continue':'متابعة')),
+       ],
+      ));
+     if(approved==true&&mounted)await openVerifiedTransfer();
     }else{
      // Preserve source identity for manual correction; posting remains
      // user-confirmed through the existing atomic SQLCipher SMS writer.
      await entrySheet(sms:true,initialSms:body,
-      reviewedSender:sender,scannedIncome:reviewType=='income');
+      reviewedSender:sender,reviewedIncomeOverride:reviewType=='income');
      if(smsHashes.contains(bankSmsHash(body))){
       final ack=await WaffraAutoSms.acknowledgeCommitted([id]);
       if(ack&&mounted){
@@ -9131,7 +9151,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
 
  Future<void> entrySheet({MoneyEntry? initial,bool sms=false,String? initialSms,
-  String? reviewedSender,
+  String? reviewedSender,bool? reviewedIncomeOverride,
   WaffraReceiptOcrFields? scannedReceipt,XFile? scannedImage,bool? scannedIncome,
   int? scannedImagePosition,int? scannedImageTotal})async {
   if(!WaffraSaudiRelease.receiptImageTransactionImport&&
@@ -9236,7 +9256,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     formatWaffraEditAmount(scannedReceipt!.amount!):
     trustedSms?formatWaffraMoney(parsedSms.amount??0):''));
   final message=TextEditingController(text:initialSms??'');
-  bool income=(smsEditorDraft?['income'] as bool?)??initial?.income??scannedIncome??
+  // Explicit compact correction outranks an OLD uncommitted SMS draft.
+  // Ordinary manual/receipt editing still preserves previous precedence.
+  bool income=reviewedIncomeOverride??(smsEditorDraft?['income'] as bool?)??
+   initial?.income??scannedIncome??
    (trustedSms?(parsedSms.income):false),
    analyzing=false,hasParsed=initialSms!=null;
   bool submitTapped=false;
