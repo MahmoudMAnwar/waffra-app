@@ -127,7 +127,25 @@ abstract final class WaffraBankSmsFactsParser {
    .replaceAll('٦','6').replaceAll('٧','7').replaceAll('٨','8')
    .replaceAll('٩','9');
   final feeMatch=_fee.firstMatch(normalized);
-  final fee=feeMatch==null?null:
+  // M596: foreign, unparseable, or sub-halalah fees cannot become SAR.
+  // Keep the SMS unposted if fee evidence is ambiguous.
+  final feeMentioned=RegExp(
+   r'الرسوم|رسوم|fees?|commission',caseSensitive:false)
+    .hasMatch(normalized);
+  final feeWindow=feeMatch==null?'':normalized.substring(
+   feeMatch.start>8?feeMatch.start-8:0,
+   feeMatch.end+16<normalized.length?
+    feeMatch.end+16:normalized.length);
+  final unsupportedFeeCurrency=RegExp(
+   r'\b(?!SAR\b)[A-Z]{3}\b|'
+   r'دولار|درهم|دينار|يورو|جنيه',
+   caseSensitive:true).hasMatch(feeWindow);
+  final malformedFeeNumber=feeMatch!=null&&
+   feeMatch.end<normalized.length&&
+   RegExp(r'^[0-9٠-٩.,%٪]').hasMatch(normalized.substring(feeMatch.end));
+  final feeRequiresReview=feeMentioned&&
+   (feeMatch==null||unsupportedFeeCurrency||malformedFeeNumber);
+  final fee=feeMatch==null||feeRequiresReview?null:
    double.tryParse(normalizeSuffix(feeMatch.group(1))!.replaceAll(',',''));
   return WaffraBankSmsFacts(
    kind:kind,
@@ -136,7 +154,7 @@ abstract final class WaffraBankSmsFactsParser {
    fee:fee!=null&&fee.isFinite&&fee>=0?fee:null,
    reference:_ref.firstMatch(normalized)?.group(1),
    counterparty:_counterparty.firstMatch(normalized)?.group(1)?.trim(),
-   pending:securityChallenge||_pending.hasMatch(normalized),
+   pending:securityChallenge||_pending.hasMatch(normalized)||feeRequiresReview,
   );
  }
  /// Display-only accounting preview. A fee never modifies an internal
