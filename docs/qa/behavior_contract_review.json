@@ -56,8 +56,8 @@
     {
       "id": "M549-ALL-SENDERS-REVIEW-EXCLUSIONS",
       "issue": "Issue #491 (M549) and Issue #492 (M550)",
-      "previous_behavior": "An older native financial-only SMS qualification filter excluded personal and unknown senders; repeated bulk exclusions re-parsed 1000 message bodies and asked a sender dialog for each group.",
-      "approved_behavior": "All eligible SMS inbox senders enter review only; 1000 selected messages can be excluded after one user choice; blocking senders keeps only encrypted names; durable cursor prevents replay; Rescan dims without unseen messages.",
+      "previous_behavior": "An older native financial-only SMS qualification filter excluded personal and unknown senders; repeated bulk exclusions re-parsed 1000 message bodies and asked a sender dialog for each group. Earlier M470 QA still demanded one sender dialog per group and old literal 100-ID loop variable names.",
+      "approved_behavior": "All eligible SMS inbox senders enter review only; 1000 selected messages can be excluded after one user choice; blocking senders keeps only encrypted names; durable cursor prevents replay; Rescan dims without unseen messages. Keep M470 tests aligned with one global sender choice, idempotent 100-ID batches for individual exclusions, and no pre-confirmation parse.",
       "source_paths": [
         "native/WaffraAutoSmsStore.kt",
         "native/WaffraMainActivity.kt",
@@ -68,7 +68,8 @@
         "test/m549_sms_review_owner_scoped_test.dart",
         "test/m464_sms_bulk_rescan_regression_test.dart",
         "test/qa/m417_sms_permission_acceptance_test.py",
-        "test/m547_sms_incremental_jank_regression_test.dart"
+        "test/m547_sms_incremental_jank_regression_test.dart",
+        "test/m470_sms_excluded_senders_test.dart"
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/m417-auto-bank-sms.yml",

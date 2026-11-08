@@ -17,7 +17,8 @@
     "M549: repair the obsolete M417 source assertion which only allowed financial-looking bank SMS, now asserting all-sender review-only native intake plus committed/excluded anti-replay and no background finance/network access.",
     "2026-11-08 M549 follow-up: remove up to 1000 synchronous per-message bank-facts parsing in bulk exclusion confirmation; retain an immediate generic financial-caution text, same two-step explicit messages-only versus exclude-senders choice, no Android SMS or ledger deletion. Add no-parse regression.",
     "M550 (#492) require per-PR exact-SHA review of *all* GitHub Actions workflow jobs and all Dart/Python QA source-contract assertions against approved current behavior, before costly CI. Add a fail-closed, tested scanner, a new PR workflow and blocking M147 invocation, and updated behavior-review evidence; never skip finance/security tests to get green.",
-    "Fix the actual (non-stale-assertion) M417 Android Kotlin compile failure at WaffraAutoSmsStore.kt:570: missing closing parenthesis in sender-restore condition, preserving owner binding and business rules."
+    "Fix the actual (non-stale-assertion) M417 Android Kotlin compile failure at WaffraAutoSmsStore.kt:570: missing closing parenthesis in sender-restore condition, preserving owner binding and business rules.",
+    "M550 preflight caught 11 positive obsolete M470 bulk-exclusion assertions in unchanged Flutter tests on the exact current PR HEAD. Replace M470's *old 1000 sender-dialog, removed counter and old batch indexes* with stronger tests of approved M549 two-phase owner confirmation, one dialog regardless of sender count, atomic native sender-block and bounded 100-ID per-message commits. Preserve independent excluded-sender restore, OTP and native worker safety tests."
   ],
   "allowed_changed_files": [
     ".github/workflows/finance-full-regression.yml",
@@ -50,7 +51,8 @@
     "scripts/qa/m550_behavior_contract_preflight.py",
     "test/qa/m550_behavior_contract_preflight_test.py",
     ".github/workflows/m550-behavior-contract-preflight.yml",
-    "docs/qa/behavior_contract_review.json"
+    "docs/qa/behavior_contract_review.json",
+    "test/m470_sms_excluded_senders_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -207,6 +209,16 @@
       {
         "start": "    def test_background_cannot_post_finance_or_upload_sms(self):",
         "end": "    def test_writes_only_from_existing_verified_sms_review(self):"
+      }
+    ],
+    "test/m470_sms_excluded_senders_test.dart": [
+      {
+        "start": " test('M470 #7: excluding an entire sender explicitly asks about the sender',(){",
+        "end": " test('M470 #8: excluded senders have a dedicated restore control',(){"
+      },
+      {
+        "start": " test('M470 #10: selecting 500 SMS uses set lookups and bounded acknowledgements',(){",
+        "end": " test('M470 #3/#10 review queue 500-SMS decode never blocks Android UI',(){"
       }
     ]
   }

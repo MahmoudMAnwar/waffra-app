@@ -2,22 +2,31 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main(){
- test('M470 #7: excluding an entire sender explicitly asks about the sender',(){
+ test('M470 #7: owner chooses between excluding messages and senders',(){
   final home=File('lib/main.dart').readAsStringSync();
-  expect(home,contains('final clearedSenders=<String>[];'));
-  expect(home,contains('groupIds.every(done.contains)'));
-  expect(home,contains('هل تريد استبعاد المرسل نفسه أيضًا؟'));
-  // #417: explicit Back, No and Exclude choices. Only Exclude persists.
-  expect(home,contains("Navigator.pop(dialog,'back')"));
-  expect(home,contains("Navigator.pop(dialog,'no')"));
-  expect(home,contains("Navigator.pop(dialog,'exclude')"));
-  expect(home,contains("if(choice==null||choice=='back'||!ctx.mounted)return;"));
-  expect(home,contains("if(choice=='exclude')senderBlockChoices.add(sender);"));
-  expect(home,contains('WaffraAutoSms.excludeSender(sender)'));
-  // The opt-in follows queue acknowledgement, not a bulk-select tap.
-  expect(home,contains('if(!await WaffraAutoSms.excludeMessages(batch))'));
-  expect(home.indexOf('for(final sender in clearedSenders.where(senderBlockChoices.contains))'),
-   greaterThan(home.indexOf('if(!await WaffraAutoSms.excludeMessages(batch))')));
+  final start=home.indexOf("key:const Key('waffra-sms-bulk-exclude-selected')");
+  final end=home.indexOf(' Widget _autoSmsReviewCard(){',start);
+  expect(start,greaterThan(0));
+  expect(end,greaterThan(start));
+  final review=home.substring(start,end);
+  // First explicit owner acknowledgement: never delete phone SMS/finance.
+  expect(review,contains("final confirmed=await showWaffraDialog<bool>("));
+  expect(review,contains('if(confirmed!=true||!ctx.mounted)return;'));
+  expect(review,contains('Your phone SMS and saved financial transactions are untouched.'));
+  // Exactly one extra decision per bulk selection, not a dialog per sender.
+  expect(review,contains("final senderChoice=fullySelectedSenders.isEmpty?'messages':"));
+  expect(review,contains('هل تريد استبعاد المرسلين أيضًا؟'));
+  expect(review,contains("Navigator.pop(dialog,'back')"));
+  expect(review,contains("Navigator.pop(dialog,'messages')"));
+  expect(review,contains("Navigator.pop(dialog,'senders')"));
+  expect(review,contains("if(senderChoice==null||senderChoice=='back'||!ctx.mounted)return;"));
+  expect(review,contains("final senderBlockChoices=senderChoice=='senders'?"));
+  // An explicit sender block uses one owner-bound native atomic commit.
+  expect(review,contains('WaffraAutoSms.excludeSenders(senderBlockChoices.toList())'));
+  expect(review,contains('if(senderBlockChoices.isNotEmpty){'));
+  expect(review,contains('if(!await WaffraAutoSms.excludeMessages(batch))'));
+  expect(review,contains('if(!failed)for(var at=0;at<remainingMessageIds.length;at+=100)'));
+  expect(review,isNot(contains('for(final sender in List<String>.of(senders))')));
  });
 
  test('M470 #8: excluded senders have a dedicated restore control',(){
@@ -65,14 +74,21 @@ void main(){
   expect(block,isNot(contains('WaffraProductionFinanceAuthorityBinding')));
  });
 
- test('M470 #10: selecting 500 SMS uses set lookups and bounded acknowledgements',(){
+ test('M470 #10: 1000 SMS selection uses ID sets and bounded exclusion commits',(){
   final home=File('lib/main.dart').readAsStringSync();
   expect(home,contains('final idSet=ids.toSet();'));
-  expect(home,contains('if(!idSet.contains(item[\'id\'])'));
-  expect(home,contains('for(var at=0;at<ids.length;at+=100)'));
-  expect(home,contains('ids.skip(at).take(100)'));
-  expect(home,contains('ListView.builder('));
   expect(home,contains('final selectedIds=<String>{};'));
+  expect(home,contains('ListView.builder('));
+  expect(home,contains('final blockedIds=<String>{};'));
+  expect(home,contains('final remainingMessageIds=ids.where((id)=>!blockedIds.contains(id))'));
+  expect(home,contains('if(!failed)for(var at=0;at<remainingMessageIds.length;at+=100)'));
+  expect(home,contains('remainingMessageIds.skip(at).take(100)'));
+  // No 1000-message bank-facts parsing just to show a confirmation dialog.
+  final review=home.substring(home.indexOf("key:const Key('waffra-sms-bulk-exclude-selected')"),
+    home.indexOf(' Widget _autoSmsReviewCard(){'));
+  final beforeConfirmation=review.split('final confirmed=await showWaffraDialog<bool>(').first;
+  expect(beforeConfirmation,isNot(contains('WaffraBankSmsFactsParser.parse(')));
+  expect(review,contains('WaffraAutoSms.excludeMessages(batch)'));
  });
 
  test('M470 #3/#10 review queue 500-SMS decode never blocks Android UI',(){
