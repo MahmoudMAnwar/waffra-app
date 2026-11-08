@@ -96,6 +96,16 @@ abstract final class WaffraAutoSms {
   }on MissingPluginException{return const [];}
    on PlatformException{return const [];}
  }
+ /// Return exactly one owner-verified pending SMS, never 1000 rows per tap.
+ static Future<Map<String,Object?>?> pendingById(String id)async{
+  if(!Platform.isAndroid||!RegExp(r'^[a-f0-9]{64}$').hasMatch(id))return null;
+  try{
+   final row=await channel.invokeMapMethod<String,dynamic>(
+    'pendingAutoBankSmsById',id);
+   return row==null?null:Map<String,Object?>.from(row);
+  }on MissingPluginException{return null;}
+   on PlatformException{return null;}
+ }
  /// Read-only, on-demand scan for institutional financial notices that
  /// were not recognized as completed transactions. Never posts or uploads SMS.
  static Future<List<Map<String,Object?>>> scanUnknownFinancialSms()async{

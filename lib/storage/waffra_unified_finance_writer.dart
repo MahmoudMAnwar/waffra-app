@@ -6,6 +6,7 @@ import 'package:drift/drift.dart' show Variable;
 
 import 'legacy_snapshot_preflight.dart';
 import 'waffra_accounts_schema.dart';
+import 'waffra_accounts_repository.dart';
 import 'waffra_atomic_finance_snapshot.dart';
 import 'waffra_experimental_writer_gate.dart';
 import 'waffra_encrypted_receipt_vault.dart';
@@ -57,6 +58,198 @@ class WaffraUnifiedFinanceWriter {
   /// app/widget native lock, before reading or changing finance. Never use
   /// an unchecked writer in an activated installation.
   final Future<void> Function()? verifySourceUnderLock;
+
+  /// M597: verified two-account SMS transfer, separately booked source fee
+  /// and durable source hash MUST be one SQLCipher/app-widget transaction.
+  /// No caller can commit a fee with a different writer or an ACK first.
+  Future<bool> appendReviewedSmsTransferWithFee({
+    required int expectedGeneration,
+    required String transferId,
+    required String fromAccountId,
+    required String toAccountId,
+    required int principalMinor,
+    required int feeMinor,
+    required bool feeIncludedInDebit,
+    required String occurredIso,
+    required String messageHash,
+    required String feeCategory,
+    required bool userConfirmed,
+  }) async {
+    if (!experimentalEnabled || !userConfirmed ||
+        !RegExp(r'^[a-f0-9]{64}$').hasMatch(messageHash) ||
+        !RegExp(r'^[a-zA-Z0-9_-]{1,100}$').hasMatch(transferId) ||
+        fromAccountId == toAccountId ||
+        fromAccountId.trim().isEmpty || toAccountId.trim().isEmpty ||
+        principalMinor <= 0 || feeMinor <= 0 ||
+        principalMinor > 9007199254740991 - feeMinor ||
+        (feeIncludedInDebit && principalMinor <= feeMinor) ||
+        feeCategory != 'خدمات مالية / رسوم تحويل' ||
+        DateTime.tryParse(occurredIso) == null) {
+      throw StateError('Unverified SMS transfer or fee; nothing was posted.');
+    }
+    // When bank states that the fee is INCLUDED, the recipient is credited
+    // only principal minus fee. Otherwise it receives the full principal.
+    final creditedMinor =
+        feeIncludedInDebit ? principalMinor - feeMinor : principalMinor;
+    final entryId = '$transferId-fee';
+    final gate = WaffraExperimentalWriterGate(
+      disposableDirectory: writerDirectory, experimentalEnabled: true);
+    return gate.withExclusiveAccess(() async {
+      await verifySourceUnderLock?.call();
+      return snapshot.store.transaction(() async {
+        final current = await snapshot.read();
+        if (current.generation != expectedGeneration) {
+          throw StateError('Finance changed after transfer review; reload.');
+        }
+        await WaffraAccountsSchema.requireReady(snapshot.store);
+        final categoriesRaw = current.values['waffra_categories_v24'];
+        final ledgerRaw = current.values['entries'];
+        if (categoriesRaw is! String || ledgerRaw is! String) {
+          throw StateError('Authoritative finance data is incomplete.');
+        }
+        final categoriesDecoded = jsonDecode(categoriesRaw);
+        final ledgerDecoded = jsonDecode(ledgerRaw);
+        if (categoriesDecoded is! List || ledgerDecoded is! List ||
+            categoriesDecoded.any((c) => c is! Map) ||
+            ledgerDecoded.any((e) => e is! Map)) {
+          throw StateError('Invalid canonical finance data.');
+        }
+        final categories = categoriesDecoded.map((c) =>
+          Map<String, Object?>.from(c as Map)).toList();
+        final ledger = ledgerDecoded.map((e) =>
+          Map<String, Object?>.from(e as Map)).toList();
+        // Existing ID sets and category source JSON must match typed SQL.
+        final typedEntries = await snapshot.store.customSelect(
+          'SELECT entry_id FROM fresh_finance_entries').get();
+        final entryIds = ledger.map((e) => e['id']).toSet();
+        if (entryIds.length != ledger.length ||
+            typedEntries.length != ledger.length ||
+            typedEntries.map((r) => r.read<String>('entry_id')).toSet()
+                .difference(entryIds).isNotEmpty) {
+          throw StateError('SQLCipher ledger parity failed.');
+        }
+        final typedCategories = await snapshot.store.customSelect(
+          'SELECT category_id,source_json FROM fresh_finance_categories').get();
+        final categoryById = {
+          for (final r in typedCategories)
+            r.read<String>('category_id'):r.read<String>('source_json'),
+        };
+        if (categoryById.length != categories.length ||
+            categories.any((c) => categoryById[c['id']] != jsonEncode(c))) {
+          throw StateError('SQLCipher category parity failed.');
+        }
+        final eligible = categories.where((c) =>
+          c['name'] == feeCategory && c['income'] == false &&
+          c['parentId'] is String &&
+          (c['parentId'] as String).isNotEmpty &&
+          c['categoryActive'] != false).toList();
+        if (eligible.length != 1 ||
+            !categories.any((c) => c['id'] == eligible.single['parentId'] &&
+              c['income'] == false &&
+              (c['parentId'] == null || c['parentId'] == '') &&
+              c['categoryActive'] != false)) {
+          throw StateError('Transfer-fee category is unavailable.');
+        }
+        final rawHashes = current.values['waffra_sms_hashes_v1'];
+        if (rawHashes != null && rawHashes is! List<String>) {
+          throw StateError('Invalid canonical SMS fingerprint list.');
+        }
+        final listHashes = rawHashes as List<String>? ?? const <String>[];
+        final hashes = listHashes.toSet();
+        final typedHashes = await snapshot.store.customSelect(
+          'SELECT message_hash FROM fresh_finance_sms_hashes').get();
+        final sqlHashes = typedHashes
+            .map((r) => r.read<String>('message_hash')).toSet();
+        if (hashes.length != listHashes.length ||
+            sqlHashes.length != typedHashes.length ||
+            sqlHashes.length != hashes.length ||
+            !sqlHashes.containsAll(hashes)) {
+          throw StateError('SMS fingerprint SQL parity failed.');
+        }
+        final transferRows = await snapshot.store.customSelect(
+          'SELECT from_account_id,to_account_id,amount_minor,occurred_iso '
+          'FROM fresh_finance_internal_transfers WHERE transfer_id=?',
+          variables: [Variable.withString(transferId)]).get();
+        if (hashes.contains(messageHash)) {
+          // A replay is only safe to acknowledge if the same transfer AND
+          // separately charged fee exist. Never turn partial legacy saves
+          // into a new charge or pretend they are complete.
+          final existingFee = ledger.where((e) => e['id'] == entryId).toList();
+          if (transferRows.length != 1 || existingFee.length != 1 ||
+              transferRows.single.read<String>('from_account_id') != fromAccountId ||
+              transferRows.single.read<String>('to_account_id') != toAccountId ||
+              transferRows.single.read<int>('amount_minor') != creditedMinor ||
+              transferRows.single.read<String>('occurred_iso') != occurredIso ||
+              existingFee.single['amount'] != feeMinor / 100 ||
+              existingFee.single['category'] != feeCategory) {
+            throw StateError('Existing SMS is not this confirmed transfer.');
+          }
+          return false;
+        }
+        if (transferRows.isNotEmpty || entryIds.contains(entryId)) {
+          throw StateError('Existing transfer must never be double charged.');
+        }
+        final accounts = WaffraAccountsRepository(
+          db: snapshot.store, experimentalEnabled: true);
+        final inserted = await accounts.transfer(
+          id: transferId, fromAccountId: fromAccountId,
+          toAccountId: toAccountId, amountMinor: creditedMinor,
+          occurredIso: occurredIso, note: 'تحويل مؤكد من رسالة بنكية',
+          userConfirmed: true);
+        if (!inserted) {
+          throw StateError('SMS transfer had already been posted.');
+        }
+        final fee = <String, Object?>{
+          'id': entryId, 'title': 'رسوم تحويل بنكي',
+          'category': feeCategory, 'amount': feeMinor / 100,
+          'income': false, 'date': occurredIso, 'receiptPath': null,
+          'notes': '', 'personalNotes': '', 'sourceType': 'sms',
+          'merchantKey': '',
+        };
+        await snapshot.store.customStatement(
+          'INSERT INTO fresh_finance_entries '
+          '(entry_id,title,category_snapshot,amount_minor,is_income,'
+          'occurred_iso,receipt_count,source_json) VALUES (?,?,?,?,?,?,0,?)',
+          [entryId, 'رسوم تحويل بنكي', feeCategory, feeMinor, 0,
+           occurredIso, jsonEncode(fee)]);
+        await snapshot.store.customStatement(
+          'INSERT INTO fresh_finance_account_entry_links '
+          '(entry_id,account_id,confirmed_iso) VALUES (?,?,?)',
+          [entryId, fromAccountId, occurredIso]);
+        await snapshot.store.customStatement(
+          'INSERT INTO fresh_finance_sms_hashes (message_hash) VALUES (?)',
+          [messageHash]);
+        ledger.add(fee);
+        hashes.add(messageHash);
+        final next = Map<String, Object?>.from(current.values)
+          ..['entries'] = jsonEncode(ledger)
+          ..['waffra_sms_hashes_v1'] = (hashes.toList()..sort());
+        final saved = await snapshot.commit(
+          expectedGeneration: current.generation, fullFinanceSnapshot: next);
+        // Verify every consequence before allowing the SQL transaction to
+        // commit. If even one assertion fails, Drift rolls all inserts back.
+        final transferCheck = await snapshot.store.customSelect(
+          'SELECT amount_minor FROM fresh_finance_internal_transfers '
+          'WHERE transfer_id=?',
+          variables: [Variable.withString(transferId)]).get();
+        final feeCheck = await snapshot.store.customSelect(
+          'SELECT amount_minor,source_json FROM fresh_finance_entries '
+          'WHERE entry_id=?',
+          variables: [Variable.withString(entryId)]).get();
+        if (transferCheck.length != 1 ||
+            transferCheck.single.read<int>('amount_minor') != creditedMinor ||
+            feeCheck.length != 1 ||
+            feeCheck.single.read<int>('amount_minor') != feeMinor ||
+            feeCheck.single.read<String>('source_json') != jsonEncode(fee) ||
+            saved.values['entries'] != jsonEncode(ledger) ||
+            (saved.values['waffra_sms_hashes_v1'] as List<String>)
+                .contains(messageHash) != true) {
+          throw StateError('Atomic transfer/fee/hash verification failed.');
+        }
+        return true;
+      });
+    });
+  }
 
   /// Called AFTER explicit confirmation for bank SMS, or on a manual save.
   /// Hashes align one-to-one with entries, and may be null for manual entries.

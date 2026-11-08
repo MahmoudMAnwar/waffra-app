@@ -1,235 +1,54 @@
 {
   "contract_version": 1,
-  "change_id": "M548-M555-VERIFIED-CI-PLUS-M549-APPROVED-COMPACT-HOME-NOTIFICATIONS",
-  "human_scope_review": "User's Android screenshots on 2026-11-08 show severe lag on opening 1000 pending SMS review, signup completion (~3s), and global navigation even after main merged #488. This is a narrow performance safety candidate; previous logout/login, SQLCipher, biometric and SMS financial authority must remain untouched. Requires full exact-head CI, Android profile/release frame evidence and owner signoff before merge. Owner explicitly requests issue #491's all-sender review and sender-only local storage retention with repeated-scan deduplication. Existing OTP masking and SQLCipher financial authority remain unchanged. Device and exact-SHA CI required. M550 Issue #492 additionally approves an all-job inventory, static current/approved behavior contract preflight, source-tests readback and M417 Kotlin syntax fix. Full Flutter, Android compilation, finance integrity and security tests remain required independently; human review is not automatically certified. M552 2026-11-08: User demanded a permanent fix for repeated failed CI. CI proved authentic official GitHub release asset downloads succeed with gh API and SHA verification while GitHub release CDN sometimes returns poisoned 92-byte responses. M174 proved the new same-SHA prefetch+native SQLCipher tests pass. Scope explicitly covers additive prefetch steps inside workflow jobs only, all 91 current/historical GitHub workflow files, without modifying financial source, OTP, biometrics, assertions or original job steps.\n2026-11-08 user explicitly approved exact composite screenshot for Home, Notifications and bank-SMS review, including compact emerald UI and unchanged bottom-left +. Follow-up branch stacked on #490; all #490 CI must pass before merge. This scope only covers compact Home, notification bell, independently filtered account summary and live SMS queue UI; financial SMS one-tap save requires separate verified implementation, do not claim it is done.\nUser-provided 2026-11-08 final approved composite screenshot is the visual source of truth. This M549 PR is stacked on exact current #490 SHA 69faaa7 and keeps all M548-M555 security/CI deltas, finance code, no shortcut merge.",
+  "change_id": "M580-M599-SEVEN-FEEDBACK-SECURE-SMS-UX-PERFORMANCE-PR505",
+  "human_scope_review": "Owner explicitly authorized implementing issues #498 through #504 on 2026-11-08 and prioritizing lag after every tap; preserve approved visual references, unchanged floating +, exact SQLCipher finance integrity, OTP masking, both device data, native sender-exclusion consent and all existing tests. This branch contains only early partial source changes plus true regression contracts, not approval to merge until exact-head CI and Android evidence.",
   "user_requested_changes": [
-    "Open the already owner-verified in-memory bank SMS review snapshot immediately with 1000 pending messages; cold/error snapshots still refresh, with no auto-post or data loss.",
-    "Make bank sender grouping linear-time and retain case-insensitive original sender naming, chronological order, exclusions, selection, Back and all financial review behavior.",
-    "Yield between short SMS parser batches to restore smooth Flutter app-wide frames during encrypted queue refresh after navigation and background SMS notices.",
-    "Keep signup secure while avoiding a second redundant 600000-round PBKDF2 verification after fresh exact secure-store readback; display painted progress, prevent duplicate taps, preserve existing-verifier real password checks.",
-    "Require source and 1000-item pure grouping tests, full Flutter CI, native exact-head validation, signed APK physical two-device acceptance and p95 frame profiles before saying app lag is resolved.",
-    "Repair the M429 obsolete implementation-text assertion after moving its same sender-grouping behavior into a tested O(N) helper; keep real sender, selection, review and original provenance checks.",
-    "2026-11-08 repeated PR failure: diagnose all six red full-Flutter CI workflows and repair the single shared M547 source-contract failure without deleting or skipping tests; forbid comment-delimited source guards that silently consume unrelated code.",
-    "2026-11-08 prevent historical SMS reimport when saving local review rules or completing bulk exclusions; only explicit history/rescan action may page Android SMS while existing queue, exclusions and financial deduplication remain preserved.",
-    "Fix recurring PR CI cancellations: exact-head SHA-scoped concurrency for seven critical full Flutter, Android emulator, financial integrity, backup and release approval workflows, while retaining safe M453 cleanup for genuinely superseded heads.",
-    "Prevent six apparent CI workflow failures caused by old queued synchronize events canceling new PR HEAD jobs; test SHA isolation and keep all original positive finance and security checks active.",
-    "M549 / issue #491: all SMS inbox senders in review instead of only financial-looking banks; remove 1000 selected Waffra SMS with one sender-choice dialog and durable exclusion, optional encrypted sender-only block purges queue and previous labelled SMS receipts; no Android SMS or finance deletion; dim Rescan unless new provider rows exist or history is unfinished with free capacity.",
-    "M549: repair the obsolete M417 source assertion which only allowed financial-looking bank SMS, now asserting all-sender review-only native intake plus committed/excluded anti-replay and no background finance/network access.",
-    "2026-11-08 M549 follow-up: remove up to 1000 synchronous per-message bank-facts parsing in bulk exclusion confirmation; retain an immediate generic financial-caution text, same two-step explicit messages-only versus exclude-senders choice, no Android SMS or ledger deletion. Add no-parse regression.",
-    "M550 (#492) require per-PR exact-SHA review of *all* GitHub Actions workflow jobs and all Dart/Python QA source-contract assertions against approved current behavior, before costly CI. Add a fail-closed, tested scanner, a new PR workflow and blocking M147 invocation, and updated behavior-review evidence; never skip finance/security tests to get green.",
-    "Fix the actual (non-stale-assertion) M417 Android Kotlin compile failure at WaffraAutoSmsStore.kt:570: missing closing parenthesis in sender-restore condition, preserving owner binding and business rules.",
-    "M550 preflight caught 11 positive obsolete M470 bulk-exclusion assertions in unchanged Flutter tests on the exact current PR HEAD. Replace M470's *old 1000 sender-dialog, removed counter and old batch indexes* with stronger tests of approved M549 two-phase owner confirmation, one dialog regardless of sender count, atomic native sender-block and bounded 100-ID per-message commits. Preserve independent excluded-sender restore, OTP and native worker safety tests.",
-    "M550 M385 exact-base scope repair: retain the approved M470 #7/#10 test edits and use unchanged base/head neighboring source anchors to bound the edited test methods; never disable the M385 guard.",
-    "Repair the obsolete M486 #417 exact-text bulk exclusion regression to assert the existing two-step messages-only vs sender-block choice, Back cancellation and failed batch retention, without bypassing financial/security behavior.",
-    "Repair exact-head CI failed native-asset SHA256 verification for the immutable sqlite3 3.7.0 Linux sqlite3mc release by pinning vetted newer sqlite3 3.7.1 with its own upstream asset checksums; retain native hash verification, SQLCipher support and full encrypted database regression. Never bypass digest enforcement.",
-    "Diagnose the consistent SHA256 bef140a1... download response across sqlite3 3.7.0 and 3.7.1 as native release-asset delivery/network failure, not a demonstrated library hash defect; revert the attempted SQLite native version bump to retain prior encrypted database compatibility, and keep checksum enforcement blocking unsafe artifacts.",
-    "Perform read-only CI-side integrity diagnosis of the authentic GitHub immutable sqlite3mc x64 Linux binary using direct and cache-busted release URLs plus official gh release download; print only length and SHA256, never disable upstream native hash validation or treat mismatched bytes as libraries.",
-    "Fix native asset CI delivery: direct GitHub release URL returned cached 92-byte error body, whereas the exact immutable sqlite3mc 3.7.0 release with a fresh URL query returned the official 2,263,448-byte file with correct sha256 3dfe8bcd. Configure only the official release URL with stable cache bypass, keep pinned sqlite3 3.7.0 and built-in SHA256 checks; extend CI regression without weakening data protection.",
-    "M552 certified native CI repair: pinned direct GitHub release URL is intermittently poisoned even with fixed cache key; instead leave sqlite3 3.7.0 and source sqlite3mc unchanged and prefetch all required immutable Linux/Android SQLite3MC assets from the official GitHub Release API, check official SHA256 for each, and stage into sqlite3 package standard native-hook cache before Flutter tests. Pilot the independent M174 workflow, then apply same gate to every Flutter job without disabling original tests or encrypted database checks.",
-    "M552 extend one shared security-fail-closed GitHub API prefetch action across ALL 91 Flutter-using current and historical workflow files plus existing M174 pilot; each job retains its complete original Flutter/Android/security assertions and CI requirements. SHA-256 pin 3.7.0 Linux x64 and 4 Android architectures, only official GitHub release, shared cache revalidates digests, no source:system or URL mirrors. New independent dynamic regression fails when any future workflow with Flutter setup omits the prefetch.",
-    "M553 repair GitHub 504 native runtime delivery in the already-shared action used by all Flutter workflow jobs. Pin the existing llamadart 0.8.24 and leehack/llamadart-native v0.4.1, use the official GitHub Release API plus published SHA256 digests to cache the original linux-x64, android-arm64 and android-x64 artifacts at their upstream hook paths. Do not change or disable AI runtime or weaken SQLite3MC/security tests.",
-    "M554: resolve Android CI 504 when Gradle 9.3.1-all official wrapper ZIP is fetched via unreliable GitHub redirect. Preseed exact official Gradle v9.3.1 ALL distribution into hash-specific Gradle wrapper cache via official GitHub Release API (fallback to downloads.gradle.org), and enforce official SHA256 17f27786... before use. Scope includes only additive Gradle prefetch in 15 real Android compilation/emulator jobs, no Gradle version/build flags/test skip or code change; QA test protects source hash and Android job integration.",
-    "M552 full repository scan caught the single missed Flutter workflow m292-fx-consent-review.yml: wire the same immutable official native prefetch before Flutter setup without removing FX consent or encrypted finance assertions.",
-    "M553 source-log regression: although checksum-verified llama archives were prefetched, Flutter pub get later installed llamadart 0.8.24 and removed the package-root hook cache, causing a new 504. In the shared CI action, resolve Dart/Flutter packages FIRST, restore official SHA256-verified binaries SECOND, then let the existing workflow run all original tests; no runtime, permissions or integrity checks changed.",
-    "M555: all repeated Android Kotlin compilation 504 errors share a single upstream jar kotlin-compiler-embeddable 2.2.21 redirected via GitHub. Pre-fetch ORIGINAL JetBrains/Kotlin v2.2.21 jar via GitHub Releases API, verify official SHA256 9588fa..., fetch original Maven POM with Maven SHA1 validation, and configure exact-module Gradle init repository under CI home before Android build. No Kotlin/Gradle version downgrade, security bypass, or production code changes.",
-    "M555 exact-head regression fix: native Gradle plugin build rejects any Project.repositories additions under FAIL_ON_PROJECT_REPOS; route only the original SHA256-pinned Kotlin compiler 2.2.21 artifact via beforeSettings dependencyResolutionManagement.repositories.exclusiveContent, never weaken Gradle's strict repository policy, preserve plugin and original Android tests.",
-    "M555 compile regression: Gradle Groovy ExclusiveContentRepositorySpec does not expose nested maven() directly; define the SHA-verified, exact-module Maven repository through the settings RepositoryHandler first, then pass that repository with supported ExclusiveContentRepository.forRepositories(ArtifactRepository...). Keep beforeSettings and strict FAIL_ON_PROJECT_REPOS, never relax original compiler, test or SHA checks.",
-    "M556: Real emulator M202 proved firebase_core Kotlin compiler build requires original JetBrains 2.4.0 in addition to Flutter's Kotlin 2.2.21. Prefetch BOTH immutable official Maven compiler JARs and SHA1-validated POMs via official GitHub Release API, with published individual SHA256 pins; exclusive settings repository allows exactly both original versions, no plugin/library version changes, no bypass of Gradle strict repository security, Android finance/SQLCipher tests must pass.",
-    "M557 Gradle repository policy fix after verified Kotlin 2.4.0 prefetch: PREFER_PROJECT Android/Firebase builds do not use beforeSettings dependencyResolutionManagement repositories; keep the existing settings exclusiveContent for strict FAIL_ON_PROJECT_REPOS builds, and ONLY when settingsEvaluated reports PREFER_PROJECT add exact-version SHA256-verified local Maven module to project repositories with exclusiveContent. Never change repositoriesMode, Kotlin versions, official POMs, Gradle or financial/security tests.",
-    "M558: The exact-head M160 release APK regression failed on GitHub Gradle distribution CDN HTTP 504; missed M160 and M146 release compilation jobs didn't use already verified Gradle ZIP prefetch. Insert the same official SHA256-pinned Gradle action after native prefetch in both, and add whole-repo regression enforcing it in every Flutter APK or gradlew job; preserve the unchanged release validation, finance tests, signing and SQLCipher.",
-    "Implement the approved screenshot's compact Arabic RTL home layout: lower visual density and keep the existing 58x58 stationary floating Add button in its exact bottom-left position.",
-    "Move the account selector out of the balance card into a small independent monthly summary account filter; keep verified per-account financial calculations.",
-    "Add a bell beside the user avatar with 1..999 live review notifications and +999 saturation above 999; no fabricated notifications.",
-    "Move home SMS operations-review card into a dedicated compact notifications center, preserving access to real native pending bank messages, per-message review and explicit user-initiated rescan.",
-    "Rename the old SMS sorting sheet label from رسائل للفرز to مراجعة الرسائل البنكية while preserving review, exclusion/restore, owner privacy and safe financial acknowledgement.",
-    "Update only the legacy account-in-balance test assertion; retain the existing generic-balance regression, and add a dedicated notification review UI test.",
-    "First-time masked-four account matching, original SMS transaction timestamp and one-tap yes/no bank SMS finance capture remain tracked in Issue #495 and are not yet implemented in this UI-only PR.",
-    "M549 approved design changes legacy M467 and M495 account-picker expectations: assert independent Home filter outside compact balance and that long account names remain accessible in the real account-selection sheet on narrow Android; keep all other financial regression assertions and type validation unchanged.",
-    "M549 screenshot parity: replace duplicate Home income/expense metric tiles with exactly three compact colored Income, Expense and Between My Accounts action tiles; manual income/expense preselect the existing editor type, and account transfers invoke the existing verified transfer API. Leave floating + untouched. New private Home helper adjacent to dashboard is tightly section-bounded.",
-    "M560 M385 scope fix on the unified exact-main PR: compact Home helper insertion produced zero original characters between its old start and end anchors. Move the start anchor back only to the unique immediately adjacent receipt-corner key; the original guard now has nonempty base content, every other source path/test and positive financial/security gate remains unchanged.",
-    "M561: fix actual M429 Flutter analyzer failure after user-approved removal of legacy Home SMS review card and old metric tiles. Keep the private legacy review widget for compatibility with a narrowly-scoped Dart unused_element ignore, and delete only now-unused dashboard income/expense local variables; preserve account-filter source and all financial logic. Test old/new M385 source boundaries without globally disabling lints.",
-    "M562: fix real failed M278 macOS iOS simulator job. The official sqlite3mc prefetch script uses GNU-only `sha256sum --check --status`, but macOS runner has incompatible sha256sum shim and reports a false SHA mismatch before downloading. Use platform-compatible shasum -a 256 (or sha256sum fallback) and compare full expected pinned SHA256 exactly, retaining official release download and all native integrity gates. Do not skip iOS job.",
-    "M563: update M552 regression to assert real cross-platform native pinned SHA256 verification (success, wrong hash rejection, tampered-file rejection) instead of obsolete GNU-only `sha256sum --check --status` source-string assertion, which incorrectly fails M174 after the macOS repair. Keep all five immutable official asset pins, official source, mandatory Flutter/Android/iOS jobs, and separate llama SHA tests.",
-    "M564 #495: refuse bank SMS verified finance posting when original message date is missing/ambiguous; preserve actual bank transaction timestamp rather than DateTime.now on both single and batch writer, add regression and tracker.",
-    "M564 exact timestamp correction scope: bounded bulkSmsSheet section only, containing original bank SMS date validation and source-authoritative writer; original data and unrelated app UI untouched.",
-    "M565 #495: real bank SMS review shows source amount/date/category and هل العملية صحيحة؟ Yes / No edit; yes only for verified local SAR, valid exact date/category/direction, explicit verified account and optional budget, one atomic SQLCipher SMS+hash commit with idempotency and ACK only after success; no opens source-preserving editable entry. Source regression remains required.",
-    "M566: editable SMS missing an original date may visually show today's default but cannot finance-post until the user explicitly chooses the correct calendar date. Persist confirmation with same per-SMS review draft. Manual and receipt dates untouched.",
-    "M567 M385 scope fix for owner-approved M565: explicitly bound the bank SMS transfer/review functional span from existing transfer entry comment to the start of the unrelated _loadFinanceSafely function; only reviewed SMS source, Yes/No flow and verified financial commit may differ; leave all unrelated source byte-identical and guards on.",
-    "M569: reconcile the exact M174/M147/M440 failures reported on 2026-11-08. Explicitly bound only the SMS single writer changed by M564, retain original main bytes elsewhere; replace two M206 stale device-clock positive assertions with original SMS date validation and negative fallback checks; update M447 required secure SMS commit count 3->4 and checked account/witness/hash gate with seven verified account reviews. Tests stay enabled.",
-    "M568 #495: after first explicit source-confirmed financial commit, reuse same exact sender+last-four account identity on next SMS without repeating initial link; never infer sender-only or changed suffix; recheck live verified SQLCipher account/witness. Replace obsolete M464/M493 expectations with positive and negative matching tests, retain all CI.",
-    "M570 precise M385 source-anchor correction after M568: matching unindented existing '/// Budget assignment is OPTIONAL' end anchor in main and baseline so the scoped account review logic can be audited byte-for-byte, with all other source protected.",
-    "M571 #495: finance critical-source M340 gate must verify four, not three, live SQLCipher SMS writers after new owner-reviewed Yes confirmation. Require in new fourth route verified account picker/witness, optional budget, source timestamp/SAR, user consent, duplicate hash rejection and native ACK after save; negative mutation tests protect against a fake update. No bypass of source-finance critical gate.",
-    "M572 fix M385 M340 protected-section anchor: start before unchanged unique production-gate path declaration, end at original for marker check, identical in baseline and head. Do not relax source financial security check.",
-    "M573 #495: reviewed SMS No -> editable path forwards bank sender to verified account chooser, learns sender+masked-last-four only after successful encrypted SQLCipher commit, not preview/cancel. No new financial debit and exact account witness unchanged.",
-    "M574 #495: make one-tap SMS confirmation show original merchant/title, sender, income/expense, source SAR amount, main and leaf subcategory, masked bank last four, and full original transaction date+time; account remains explicitly chosen/verified before commit. Keep compact Home and existing + unchanged. Add exact-head regression.",
-    "M575 update M565 SMS positive regression to assert stronger main + valid subcategory membership after M574 detailed review preview, rather than obsolete same-line source text; checks retained and strengthened, no skip.",
-    "M576 issue #495: first NEW sender+last-four masked identity must offer create/choose bank account even if same bank has older account with different four. Previously confirmed exact sender+four reuses verified account without re-prompt; no sender-only automatic posting. One owner-bound learning read; regression added.",
-    "M577: real M174 unique M340 M385 boundary and M429 redundant Dart null guard fix on current combined PR head; preserve real native/SQLCipher quality and entire original Yes eligibility.",
-    "M578 issue #495: SMS editable review of absent original timestamp must require explicit DATE and TIME (hours/minutes); canceling time picker cannot authorize money commit; block future time. Preserve existing already saved date; display date/time together, strengthen M566 regression, add M578 regression.",
-    "M580: fix actual M340 sub-job M337 regression that searched obsolete bulk SMS date guard `found.where(bankSmsHasUnverifiedTimestamp)` after M564 added stricter unknown-date validation; retain positive proof that invalidDates bankSmsDate(raw)==null or ambiguous date is before verified finance commit, never skip. Bound only that existing test; no changes to finance code.",
-    "M580: fix real failed Waffra encrypted storage smoke M177 outdated exactly-three-SMS-authority-writer count after approved M565 fourth Yes-confirm source path. Require exactly four verified writers and inside M565 actual account witness, atomic record/hash, fail-closed duplicate and ACK. No skipped tests / production finance changes.",
-    "M581: actual M103 all-flutter job M470 regression previously asserted obsolete Arabic bank account offer wording after the owner-approved distinct sender+last-four confirmation feature. Preserve original M470 negative/positive bank dialog widget tests and strict consent contract; update bounded source contract to require same-bank distinct suffix re-link, confirmed learned sender+four suggestion, last-four prefill and editable zero SAR wording. No production finance source edits."
+    "#498 Keep a stable visibly loading login button and preserve secure, responsive first registration with no double submission or weakened password controls.",
+    "#499 Tap an existing bank-SMS notice to open that exact message directly and return without repeatedly transferring the entire encrypted inbox.",
+    "#500 Correct per-message labels and redaction; OTP and pending verification never masquerade as financial expense or silently record money.",
+    "#501 Recognize Arabic temporary verification codes and English security messages offline and hold ambiguous financial directions for explicit owner review.",
+    "#502 Use the approved compact sender-filtered notifications list without duplicate oversized hero or obsolete type tabs; keep real current sender data.",
+    "#503 Preserve verified account-to-account transfer writer and source account/fee checks while remaining three-choice UX work is tracked as incomplete.",
+    "#504 Replace blank Home loading, remove unavoidable 1000-SMS rereads after cancel and clip-free currency circle in compact approved monthly summary; keep full financial source verification.",
+    "#500/#501 Owner-approved Arabic naming for excluded rules/messages and shared conservative OTP/temporary-code handling across offline ML and bank parsers.",
+    "M591: update M340, M565 and M177 source contracts to require the owner-approved verified SMS account BEFORE Yes and fresh encrypted witness, rather than obsolete post-Yes picker. Preserve all finance-hash, account-generation and negative tests.",
+    "#498/#504 Smooth signup submit and prevent verified manual/SMS ledger display model mapping from monopolizing frames after confirmation.",
+    "M595 #502: Existing bank SMS review must expose three real user-selectable Income / Expense / Transfer choices, and independent exclusion, with corrected type routed to a fully verified manual/SMS finance editor. Type chips cannot post money, ACK messages, guess bank identity or bypass the verified Yes account and date requirements.",
+    "M597 #503: an SMS own-account transfer with an explicitly confirmed positive SAR fee must post two verified account movements, one separately attributed fee expense, and one immutable SMS fingerprint within the SAME SQLCipher transaction; rollback on stale source, category mismatch, duplicate, or incomplete insert. Sender/OTP proof, exact date/time and owner consent remain mandatory. Release is blocked until full exact-head automated and device tests.",
+    "M598 exact-head CI root repair: fail closed when extra bank-debit amount is nullable before dividing in Arabic/English fee dialog, and update M514 source/destination four-digit test to enforce the approved independently verified field-specific prefill. Refresh release notes after source in the same commit. Do not skip, relax, or rerun obsolete test logic.",
+    "M599 exact-head CI repair: M385 fail-closed file-scope guard requires an explicit bounded M514 regression test region; the previously approved test strengthens source-specific sender+suffix behavior and is unchanged outside that region. M429 analyzer must reject unnecessary null branches and null assertions without changing bank SMS consent/date/amount safety. No other behavior or test is bypassed.",
+    "M600 user-approved CI repairs: M385 existing M574 preview test correction is limited to two bounded ranges without weakening SMS Yes/No fields. Reject rule-based auto-exclusion of OTP plus a completed purchase/debit. Assert confirmed and validated SAR fees commit atomically with transfer and message hash, before acknowledgment; keep every former QA/security gate."
   ],
   "allowed_changed_files": [
-    ".github/workflows/finance-full-regression.yml",
-    ".github/workflows/m103-same-sha-release-certification.yml",
-    ".github/workflows/m147-final-main-review-gate.yml",
-    ".github/workflows/m160-main-reconciliation.yml",
-    ".github/workflows/m274-production-ui-golden.yml",
-    ".github/workflows/m282-combined-candidate.yml",
-    ".github/workflows/m340-continuous-financial-quality.yml",
-    "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
+    "docs/qa/behavior_contract_review.json",
+    "docs/WAFFRA_REQUIREMENTS.md",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
-    "lib/waffra_local_phone_credentials.dart",
-    "lib/waffra_sms_review_groups.dart",
-    "scripts/qa/test_m453_queue_hygiene.py",
-    "test/m429_sms_phone_integration_test.dart",
-    "test/m461_sms_exclusion_and_history_scan_test.dart",
-    "test/m547_sms_incremental_jank_regression_test.dart",
-    "test/m548_review_grouping_and_signup_perf_test.dart",
-    "test/m548_source_method_boundary_guard_test.dart",
-    "test/qa/m548_ci_exact_sha_concurrency_test.py",
-    "test/support/waffra_source_method_section.dart",
+    "lib/waffra_bank_sms_facts.dart",
+    "lib/waffra_approved_notifications.dart",
+    "lib/waffra_auto_sms.dart",
     "native/WaffraAutoSmsStore.kt",
     "native/WaffraMainActivity.kt",
-    "lib/waffra_auto_sms.dart",
-    "test/m549_sms_review_owner_scoped_test.dart",
-    "test/m464_sms_bulk_rescan_regression_test.dart",
-    "test/qa/m417_sms_permission_acceptance_test.py",
-    "scripts/qa/m550_behavior_contract_preflight.py",
-    "test/qa/m550_behavior_contract_preflight_test.py",
-    ".github/workflows/m550-behavior-contract-preflight.yml",
-    "docs/qa/behavior_contract_review.json",
-    "test/m470_sms_excluded_senders_test.dart",
-    "test/m486_sms_back_navigation_source_test.dart",
-    "scripts/qa/prefetch_verified_sqlite3mc.sh",
-    ".github/actions/prefetch-sqlite3mc/action.yml",
-    ".github/workflows/m174-main-sha-postmerge.yml",
-    ".github/workflows/android-full-smoke.yml",
-    ".github/workflows/android.yml",
-    ".github/workflows/finance-android-migration-rehearsal.yml",
-    ".github/workflows/legacy-write-smoke.yml",
-    ".github/workflows/m100-independent-runtime-gate.yml",
-    ".github/workflows/m101-independent-runtime-gate.yml",
-    ".github/workflows/m102-independent-runtime-gate.yml",
-    ".github/workflows/m106-play-privacy-preflight.yml",
-    ".github/workflows/m107-account-deletion-crash-privacy.yml",
-    ".github/workflows/m108-home-widget-one-finance-commit.yml",
-    ".github/workflows/m109-verified-finance-authority.yml",
-    ".github/workflows/m110-home-writer-source-authority.yml",
-    ".github/workflows/m111-finance-negative-acceptance.yml",
-    ".github/workflows/m112-source-witness-acceptance.yml",
-    ".github/workflows/m113-recovery-rollback-regression.yml",
-    ".github/workflows/m114-sqlcipher-projected-editor.yml",
-    ".github/workflows/m115-encrypted-receipt-authority.yml",
-    ".github/workflows/m116-encrypted-receipt-replacement.yml",
-    ".github/workflows/m117-receipt-retention-contract.yml",
-    ".github/workflows/m118-encrypted-receipt-recycle.yml",
-    ".github/workflows/m119-verified-receipt-screen-gateway.yml",
-    ".github/workflows/m120-android-receipt-cold-reopen.yml",
-    ".github/workflows/m121-atomic-receipt-screen-witness.yml",
-    ".github/workflows/m122-receipt-expiry-clock-guard.yml",
-    ".github/workflows/m123-production-cutover-release-gate.yml",
-    ".github/workflows/m124-main-integration-audit.yml",
-    ".github/workflows/m131-backup-security-regression.yml",
-    ".github/workflows/m132-backup-corruption-recovery.yml",
-    ".github/workflows/m140-backup-integrity.yml",
-    ".github/workflows/m141-sqlcipher-atomic-rollback.yml",
-    ".github/workflows/m142-stale-screen-writer-gate.yml",
-    ".github/workflows/m143-confirmed-input-freeze.yml",
-    ".github/workflows/m144-writer-gate-hostile-path-qa.yml",
-    ".github/workflows/m145-sibling-integration-audit.yml",
-    ".github/workflows/m146-main-safe-candidate.yml",
-    ".github/workflows/m154-sqlcipher-stage-acceptance.yml",
-    ".github/workflows/m155-approved-features-finance-reconcile.yml",
-    ".github/workflows/m157-freeze-confirmed-merchant-category-acceptance.yml",
-    ".github/workflows/m158-widget-sms-title-privacy.yml",
-    ".github/workflows/m165-sqlcipher-no-cutover.yml",
-    ".github/workflows/m167-fresh-finance-backup-qa.yml",
-    ".github/workflows/m170-crashlytics-privacy-qa.yml",
-    ".github/workflows/m172-rtl-accessibility-performance-qa.yml",
-    ".github/workflows/m173-production-cutover-evidence-qa.yml",
-    ".github/workflows/m174-main-arm64-compile.yml",
-    ".github/workflows/m201-sqlcipher-finance-acceptance.yml",
-    ".github/workflows/m202-android-sqlcipher-source-binder-dryrun.yml",
-    ".github/workflows/m266-sqlcipher-precutover-qa.yml",
-    ".github/workflows/m268-smart-features.yml",
-    ".github/workflows/m276-finance-performance.yml",
-    ".github/workflows/m277-ux-accessibility.yml",
-    ".github/workflows/m278-mobile-system-insets.yml",
-    ".github/workflows/m279-app-security-gates.yml",
-    ".github/workflows/m280-finance-quality-matrix.yml",
-    ".github/workflows/m281-practical-tools.yml",
-    ".github/workflows/m283-compact-layout-tools-back-greetings.yml",
-    ".github/workflows/m287-receipt-ocr.yml",
-    ".github/workflows/m290-country-reminders-multicurrency.yml",
-    ".github/workflows/m295-compact-selection-ui.yml",
-    ".github/workflows/m297-receipt-to-entry.yml",
-    ".github/workflows/m298-finance-validation.yml",
-    ".github/workflows/m302-cross-feature-input-qa.yml",
-    ".github/workflows/m303-m306-production-hardening.yml",
-    ".github/workflows/m317-ondevice-ai-brain.yml",
-    ".github/workflows/m367-sqlcipher-schema-stage1.yml",
-    ".github/workflows/m368-sqlcipher-stage-ci.yml",
-    ".github/workflows/m369-sqlcipher-stage-ci.yml",
-    ".github/workflows/m370-sqlcipher-stage-ci.yml",
-    ".github/workflows/m371-goal-wallet-budget-android-regression.yml",
-    ".github/workflows/m417-auto-bank-sms.yml",
-    ".github/workflows/m422-phone-only-auth-ui.yml",
-    ".github/workflows/m429-integration-smoke.yml",
-    ".github/workflows/m440-account-ledger-and-backup-ci.yml",
-    ".github/workflows/m448-account-context-ci.yml",
-    ".github/workflows/m80-parallel-independent-acceptance.yml",
-    ".github/workflows/m89-integrated-m79-m88-acceptance.yml",
-    ".github/workflows/m96-runtime-finance-cloud-integration.yml",
-    ".github/workflows/m97-parallel-crash-and-ui-freeze.yml",
-    ".github/workflows/m98-encrypted-recovery-inventory.yml",
-    ".github/workflows/m99-manifest-last-cloud-sync.yml",
-    ".github/workflows/storage-android-emulator.yml",
-    ".github/workflows/storage-android-integration.yml",
-    ".github/workflows/storage-preflight.yml",
-    ".github/workflows/unified-finance-cloud-release-evidence.yml",
-    "test/qa/m552_verified_sqlite3mc_ci_prefetch_test.py",
-    "scripts/qa/prefetch_verified_llamadart.sh",
-    "scripts/qa/prefetch_verified_gradle.sh",
-    ".github/actions/prefetch-gradle/action.yml",
-    "test/qa/m554_gradle_release_cache_test.py",
-    ".github/workflows/m292-fx-consent-review.yml",
-    "scripts/qa/prefetch_verified_kotlin.sh",
-    "lib/waffra_approved_notifications.dart",
-    "test/m470_balance_header_account_picker_test.dart",
     "test/m549_approved_home_notifications_test.dart",
-    "test/m467_account_header_test.dart",
-    "test/m495_pr402_ui_performance_regression_test.dart",
-    "test/qa/m564_sms_exact_date_guard_test.py",
-    "test/qa/m565_sms_yes_no_test.py",
-    "test/qa/m566_sms_manual_date_confirmation_test.py",
-    "test/qa/m447_verified_sms_account_linking_test.py",
-    "test/waffra_m206_day_theme_tour_sms_regression_test.dart",
-    "lib/waffra_sms_account_learning.dart",
-    "test/m464_sms_account_learning_test.dart",
-    "test/m493_sms_account_matching_regression_test.dart",
+    "test/m580_sms_security_navigation_performance_test.dart",
+    "test/m514_sms_review_regressions_test.dart",
+    "lib/waffra_sms_intelligence.dart",
+    "lib/waffra_sms_rule_settings_page.dart",
     "scripts/qa/m340_financial_quality_gate.py",
-    "test/qa/test_m340_financial_quality_gate.py",
-    "test/qa/m573_sms_edited_account_learning_test.py",
-    "test/qa/m574_sms_confirmation_full_fields_test.py",
-    "test/qa/m576_first_distinct_bank_identity_test.py",
-    "test/qa/m578_sms_time_confirmation_test.py",
-    "test/m337_bank_sms_timestamp_finance_safety_test.dart",
+    "test/qa/m565_sms_yes_no_test.py",
     "test/storage/m177_live_finance_authority_integration_test.dart",
-    "test/m470_sms_first_sender_account_test.dart"
+    "lib/storage/waffra_unified_finance_writer.dart",
+    "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
+    "lib/storage/waffra_verified_accounts_api.dart",
+    "lib/waffra_sms_local_rules.dart",
+    "test/qa/m574_sms_confirmation_full_fields_test.py"
   ],
   "bounded_sections": {
     "lib/main.dart": [
       {
-        "start": "import 'waffra_sms_local_rules.dart';",
-        "end": "import 'waffra_sms_account_learning.dart';"
-      },
-      {
-        "start": " Future<void> save()async {",
-        "end": " Widget _phoneRegistrationForm(){"
+        "start": "FilledButton(onPressed:WaffraHaptics.tap(signingIn?null:_signIn),",
+        "end": "          key:const Key('m479-login-back-to-choice'),"
       },
       {
         "start": " Widget _phoneRegistrationForm(){",
@@ -240,832 +59,162 @@
         "end": " Future<void> _analyzeAmbiguousSmsOnDemand("
       },
       {
-        "start": " Future<void> _openAutoSmsInbox()async{",
-        "end": "  // The sender inbox route remains beneath the message review."
+        "start": " Future<void> _openExcludedSenders()async{",
+        "end": " Future<void> _openAutoSmsInbox()async{"
       },
       {
-        "start": " Future<void> _openSmsRules({String? seedMessage,String? seedKind,",
-        "end": " Future<void> _recordConfirmedSmsAccountAssociation({"
+        "start": " Future<void> _openAutoSmsInbox()async{",
+        "end": "  // The sender inbox route remains beneath the message review."
       },
       {
         "start": "  // The sender inbox route remains beneath the message review.",
         "end": " /// Explicit, idempotent account-to-account transfer from reviewed bank SMS."
       },
       {
-        "start": "import 'waffra_home_accounts_sheet.dart';",
-        "end": "import 'storage/waffra_account_context_read.dart';"
-      },
-      {
-        "start": "class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {",
-        "end": "/// A cancelled budget warning keeps the caller's editor/review stack intact."
-      },
-      {
-        "start": " Future<void> _openExcludedSenders()async{",
-        "end": " Future<void> _openAutoSmsInbox()async{"
+        "start": " /// Explicit, idempotent account-to-account transfer from reviewed bank SMS.",
+        "end": " Future<void> _loadFinanceSafely()async{"
       },
       {
         "start": " Widget monthlySummaryCard(){",
         "end": " Widget smartMoneyInsightsCard(){"
       },
       {
-        "start": " Widget dashboard(){",
-        "end": " List<MoneyEntry> get analysisEntries=>entries.where(("
-      },
-      {
-        "start": " @override Widget build(BuildContext context)=>PopScope(",
-        "end": "  // Instant content swap avoids building/animating the previous heavy tab"
-      },
-      {
-        "start": "     child:WaffraReceiptCornerAction(\n      key:Key('waffra-receipt-corner-home-'+entry.id),",
-        "end": " Widget dashboard(){"
-      },
-      {
-        "start": " Future<void> bulkSmsSheet({String? initialText",
-        "end": " BuildContext? activeSmsContext;"
+        "start": "  body:_financeLoadFailure!=null?_financialRecoveryScreen():",
+        "end": "   Stack(clipBehavior:Clip.none,children:[GestureDetector("
       },
       {
         "start": " Future<void> entrySheet({MoneyEntry? initial,bool sms=false,String? initialSms,",
         "end": " Future<void> showReceipt(String encoded,{int initialIndex=0,String? entryId})async {"
-      },
-      {
-        "start": " /// Explicit, idempotent account-to-account transfer from reviewed bank SMS.",
-        "end": " Future<void> _loadFinanceSafely()async{"
-      },
-      {
-        "start": "       final hash=bankSmsHash(messages[index]);",
-        "end": "       final budgetSelection=await reviewSmsBudgetLinks([entry]);"
-      },
-      {
-        "start": " Future<({List<String?>? ids,int? generation})?> reviewSmsAccountLinks(",
-        "end": "/// Budget assignment is OPTIONAL"
       }
     ],
-    "lib/waffra_local_phone_credentials.dart": [
+    "lib/waffra_bank_sms_facts.dart": [
       {
-        "start": " static Future<void> registerOrResume({",
-        "end": " /// Decode and challenge a pre-existing verifier"
-      }
-    ],
-    "test/m429_sms_phone_integration_test.dart": [
-      {
-        "start": " test('M434 encrypted SMS inbox groups real sender and displays count',(){",
-        "end": " test('M434 saved transactions preserve genuine SMS versus manual origin',(){"
-      }
-    ],
-    "test/m547_sms_incremental_jank_regression_test.dart": [
-      {
-        "start": "import 'package:flutter_test/flutter_test.dart';",
-        "end": "/// Source-level regression guards for the M547 migration."
+        "start": " static final _pending=RegExp(",
+        "end": " static final _source=RegExp("
       },
       {
-        "start": " test('M547 only an explicit rescan fetches historical pages during UI interactions', () {",
+        "start": " static WaffraBankSmsFacts parse(String raw){",
         "end": null
       }
     ],
-    "test/m461_sms_exclusion_and_history_scan_test.dart": [
+    "lib/waffra_approved_notifications.dart": [
       {
-        "start": "  test('review refresh serializes work and batches durable exclusions',(){",
+        "start": "import 'package:flutter/material.dart';",
         "end": null
-      }
-    ],
-    ".github/workflows/finance-full-regression.yml": [
-      {
-        "start": "concurrency:\n",
-        "end": "jobs:\n"
-      },
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m103-same-sha-release-certification.yml": [
-      {
-        "start": "concurrency:\n",
-        "end": "jobs:\n"
-      },
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m147-final-main-review-gate.yml": [
-      {
-        "start": "concurrency:\n",
-        "end": "jobs:\n"
-      },
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m160-main-reconciliation.yml": [
-      {
-        "start": "concurrency:\n",
-        "end": "jobs:\n"
-      },
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m274-production-ui-golden.yml": [
-      {
-        "start": "concurrency:\n",
-        "end": "jobs:\n"
-      },
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m282-combined-candidate.yml": [
-      {
-        "start": "concurrency:\n",
-        "end": "jobs:\n"
-      },
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m340-continuous-financial-quality.yml": [
-      {
-        "start": "concurrency:\n",
-        "end": "env:\n  TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}"
-      },
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    "scripts/qa/test_m453_queue_hygiene.py": [
-      {
-        "start": "    def test_exact_pr_concurrency_for_every_modified_workflow(self):",
-        "end": "    def test_cleanup_remains_trusted_and_scoped(self):"
-      }
-    ],
-    "native/WaffraAutoSmsStore.kt": [
-      {
-        "start": "    fun trackingStatus(context: Context): Map<String, Boolean> {",
-        "end": "    // Explicit opt-out must never auto-resume after a future login."
-      },
-      {
-        "start": "    fun excludeSender(context: Context, sender: String): Boolean",
-        "end": "    private val otp = Regex("
-      },
-      {
-        "start": "    private val brand = Regex(",
-        "end": "    // M437: Unknown-finance lookup is strictly ON-DEMAND"
-      },
-      {
-        "start": "    fun offer(context: Context, sender: String, body: String, at: Long,",
-        "end": "    fun pending(context: Context):"
-      },
-      {
-        "start": "    fun importConsentMonth(context: Context, maxRead: Int = 500): Int",
-        "end": "    /** Claim each review notification once"
-      }
-    ],
-    "native/WaffraMainActivity.kt": [
-      {
-        "start": "                \"excludeAutoSmsSender\" -> {",
-        "end": "                \"restoreExcludedAutoSmsSender\" -> {"
       }
     ],
     "lib/waffra_auto_sms.dart": [
       {
-        "start": " static Future<bool> excludeSender(String sender)async{",
-        "end": " // Only after verified financial hash is present in SQLCipher."
+        "start": " // Unlike pending(), this method distinguishes an empty inbox from a",
+        "end": " /// Read-only, on-demand scan for institutional financial notices that"
       }
     ],
-    "test/m464_sms_bulk_rescan_regression_test.dart": [
+    "native/WaffraAutoSmsStore.kt": [
       {
-        "start": " test('M464 rescan signals active state and returns cumulative counts',(){",
-        "end": " test('M464 review supports both sender and individual multi-selection',(){"
+        "start": "    fun pending(context: Context): List<Map<String, Any>> = synchronized(mutex) {",
+        "end": "    /** Atomic per-SMS request claim shared by foreground and WorkManager."
       }
     ],
-    "test/qa/m417_sms_permission_acceptance_test.py": [
+    "native/WaffraMainActivity.kt": [
       {
-        "start": "    def test_background_cannot_post_finance_or_upload_sms(self):",
-        "end": "    def test_writes_only_from_existing_verified_sms_review(self):"
+        "start": "                \"pendingAutoBankSms\" -> {",
+        "end": "                \"claimAutoBankSmsCloudAttempt\" -> result.success("
       }
     ],
-    "test/m470_sms_excluded_senders_test.dart": [
+    "test/m549_approved_home_notifications_test.dart": [
       {
         "start": "void main(){",
-        "end": " test('M470 #8: excluded senders have a dedicated restore control',(){"
+        "end": " test('M549 approved Home bell saturated at +999; FAB is unchanged',(){"
+      }
+    ],
+    "lib/waffra_sms_intelligence.dart": [
+      {
+        "start": "import 'waffra_sms_multicurrency_review.dart';",
+        "end": "/// Small no-cost, fully offline"
       },
       {
-        "start": " test('M470 #9: encrypted, owner-scoped native block stops future SMS',(){",
-        "end": " test('M470 #3/#10 review queue 500-SMS decode never blocks Android UI',(){"
+        "start": "  static bool isPendingOrUnconfirmed(String raw) {",
+        "end": "  static WaffraSmsMlSuggestion classify(String raw) {"
       }
     ],
-    "test/m486_sms_back_navigation_source_test.dart": [
+    "lib/waffra_sms_rule_settings_page.dart": [
       {
-        "start": " test('M494 #417 failed bulk exclusion retains the selected sender sheet',(){",
-        "end": null
-      }
-    ],
-    ".github/workflows/m174-main-sha-postmerge.yml": [
-      {
-        "start": "  pinned-no-go-preflight:",
-        "end": null
-      }
-    ],
-    ".github/workflows/android-full-smoke.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/android.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/finance-android-migration-rehearsal.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/legacy-write-smoke.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m100-independent-runtime-gate.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m101-independent-runtime-gate.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m102-independent-runtime-gate.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m106-play-privacy-preflight.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m107-account-deletion-crash-privacy.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m108-home-widget-one-finance-commit.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m109-verified-finance-authority.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m110-home-writer-source-authority.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m111-finance-negative-acceptance.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m112-source-witness-acceptance.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m113-recovery-rollback-regression.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m114-sqlcipher-projected-editor.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m115-encrypted-receipt-authority.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m116-encrypted-receipt-replacement.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m117-receipt-retention-contract.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m118-encrypted-receipt-recycle.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m119-verified-receipt-screen-gateway.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m120-android-receipt-cold-reopen.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m121-atomic-receipt-screen-witness.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m122-receipt-expiry-clock-guard.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m123-production-cutover-release-gate.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m124-main-integration-audit.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m131-backup-security-regression.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m132-backup-corruption-recovery.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m140-backup-integrity.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m141-sqlcipher-atomic-rollback.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m142-stale-screen-writer-gate.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m143-confirmed-input-freeze.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m144-writer-gate-hostile-path-qa.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m145-sibling-integration-audit.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m146-main-safe-candidate.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m154-sqlcipher-stage-acceptance.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m155-approved-features-finance-reconcile.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m157-freeze-confirmed-merchant-category-acceptance.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m158-widget-sms-title-privacy.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m165-sqlcipher-no-cutover.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m167-fresh-finance-backup-qa.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m170-crashlytics-privacy-qa.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m172-rtl-accessibility-performance-qa.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m173-production-cutover-evidence-qa.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m174-main-arm64-compile.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m201-sqlcipher-finance-acceptance.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m202-android-sqlcipher-source-binder-dryrun.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m266-sqlcipher-precutover-qa.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m268-smart-features.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m276-finance-performance.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m277-ux-accessibility.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m278-mobile-system-insets.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m279-app-security-gates.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m280-finance-quality-matrix.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m281-practical-tools.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m283-compact-layout-tools-back-greetings.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m287-receipt-ocr.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m290-country-reminders-multicurrency.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m295-compact-selection-ui.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m297-receipt-to-entry.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m298-finance-validation.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m302-cross-feature-input-qa.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m303-m306-production-hardening.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m317-ondevice-ai-brain.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m367-sqlcipher-schema-stage1.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m368-sqlcipher-stage-ci.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m369-sqlcipher-stage-ci.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m370-sqlcipher-stage-ci.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m371-goal-wallet-budget-android-regression.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m417-auto-bank-sms.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m422-phone-only-auth-ui.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m429-integration-smoke.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m440-account-ledger-and-backup-ci.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m448-account-context-ci.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m80-parallel-independent-acceptance.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m89-integrated-m79-m88-acceptance.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m96-runtime-finance-cloud-integration.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m97-parallel-crash-and-ui-freeze.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m98-encrypted-recovery-inventory.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m99-manifest-last-cloud-sync.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/storage-android-emulator.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/storage-android-integration.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/storage-preflight.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/unified-finance-cloud-release-evidence.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    ".github/workflows/m292-fx-consent-review.yml": [
-      {
-        "start": "jobs:\n",
-        "end": null
-      }
-    ],
-    "test/m470_balance_header_account_picker_test.dart": [
-      {
-        "start": "void main(){",
-        "end": " testWidgets('M470 generic balance card has no account-switching action',(tester)async{"
-      }
-    ],
-    "test/m467_account_header_test.dart": [
-      {
-        "start": " test('M467 Home header scope is verified and never passed into finance commits',(){",
-        "end": null
-      }
-    ],
-    "test/m495_pr402_ui_performance_regression_test.dart": [
-      {
-        "start": "import 'package:waffra/waffra_account_transaction_form.dart';",
-        "end": "import 'package:waffra/storage/waffra_accounts_repository.dart';"
+        "start": "         for(final option in const <String>['income','expense','transfer','excluded'])",
+        "end": "           selected:kind==option,"
       },
       {
-        "start": "void main(){",
-        "end": " test('M495 #418 date fills row and budget is equally expanded when present',(){"
-      }
-    ],
-    "test/qa/m447_verified_sms_account_linking_test.py": [
-      {
-        "start": "    def test_every_home_sms_commit_reviews_accounts(self):",
-        "end": "    def test_manual_and_recurring_finance_account_selection(self):"
-      }
-    ],
-    "test/waffra_m206_day_theme_tour_sms_regression_test.dart": [
-      {
-        "start": "  test('SMS content remains in memory for encrypted source, legacy bridge redacts plaintext', () {",
-        "end": "  test('FAB launch waits for the menu collapse and suppresses double taps', () {"
-      }
-    ],
-    "lib/waffra_sms_account_learning.dart": [
-      {
-        "start": "abstract final class WaffraSmsAccountLearning {",
-        "end": "class WaffraSmsAccountLearningStore {"
-      }
-    ],
-    "test/m464_sms_account_learning_test.dart": [
-      {
-        "start": "void main(){",
-        "end": " test('Two accounts at the same bank NEVER resolve sender only',(){"
+        "start": " Widget _defaultRuleBucket(String kind) {",
+        "end": "  return Card(child:ExpansionTile("
       },
       {
-        "start": " test('Conflicting account selection resets confidence',(){",
-        "end": " test('Unrecognized sender cannot create bank-account learning',(){"
-      }
-    ],
-    "test/m493_sms_account_matching_regression_test.dart": [
-      {
-        "start": "void main(){",
-        "end": null
+        "start": "      title:Text(switch(kind){",
+        "end": "       for(final rule in saved.where((r)=>r.resolvedKind==kind))"
       }
     ],
     "scripts/qa/m340_financial_quality_gate.py": [
       {
-        "start": "    production = \"lib/storage/waffra_production_cutover_release_gate.dart\"",
-        "end": "    for marker, reason in (\n        (\"_financeAuthority.saveCaptured(\", \"manual save bypasses verified finance authority\"),"
+        "start": "    start = home.find(\"Future<void> _m565ConfirmSms(\")",
+        "end": "    for marker, reason in (\n        (\"_financeAuthority.saveCaptured(\""
       }
     ],
-    "test/qa/test_m340_financial_quality_gate.py": [
+    "test/qa/m565_sms_yes_no_test.py": [
       {
-        "start": "    def test_detects_finance_authority_bypass(self):",
-        "end": "    def test_detects_fx_preview_ledger_write(self):"
-      }
-    ],
-    "test/m337_bank_sms_timestamp_finance_safety_test.dart": [
-      {
-        "start": " test('M337 bulk date gate is before parsing, category assignment and commit',(){",
-        "end": "\n });\n}"
+        "start": "class SmsYesNoTest(unittest.TestCase):",
+        "end": "if __name__=='__main__':unittest.main()"
       }
     ],
     "test/storage/m177_live_finance_authority_integration_test.dart": [
       {
-        "start": "  test('M177 no screen still directly uses a legacy finance write', () {",
-        "end": "    // M506 stages receipt bytes separately and strips picker file paths from"
+        "start": "    final reviewedYes=home.split('Future<void> _m565ConfirmSms(')[1]",
+        "end": "    // M506 stages receipt bytes separately"
       }
     ],
-    "test/m470_sms_first_sender_account_test.dart": [
+    "lib/storage/waffra_unified_finance_writer.dart": [
       {
-        "start": " test('M470 #11 account suggestion only starts on confirmed bank SMS review',(){",
-        "end": " test('M470 #11 SMS posting remains a separate user approved atomic writer',(){"
+        "start": "import 'waffra_accounts_schema.dart';",
+        "end": "import 'waffra_atomic_finance_snapshot.dart';"
+      },
+      {
+        "start": "  /// Optional runtime source verification.",
+        "end": "  /// Called AFTER explicit confirmation for bank SMS, or on a manual save."
+      }
+    ],
+    "lib/storage/waffra_verified_encrypted_finance_bridge.dart": [
+      {
+        "start": "  Future<WaffraFinanceSnapshotState> attachReceiptsToExisting({",
+        "end": "  /// Receives explicitly confirmed SMS/manual transaction JSON from either"
+      }
+    ],
+    "lib/storage/waffra_verified_accounts_api.dart": [
+      {
+        "start": " @override\n Future<bool> transfer({",
+        "end": " /// One manual income/expense + its account association must share a"
+      }
+    ],
+    "test/m514_sms_review_regressions_test.dart": [
+      {
+        "start": " test('M514 source-specific account digits, actionable transfer and verified receipt edit',(){",
+        "end": " test('M516 native SMS identity determines transfer id, not body-only hash',(){"
+      }
+    ],
+    "test/qa/m574_sms_confirmation_full_fields_test.py": [
+      {
+        "start": "from pathlib import Path",
+        "end": "SRC=(Path(__file__).resolve().parents[2]/'lib/main.dart').read_text(encoding='utf-8')"
+      },
+      {
+        "start": "class FullSmsPreviewTest(unittest.TestCase):",
+        "end": "if __name__=='__main__':unittest.main()"
+      }
+    ],
+    "lib/waffra_sms_local_rules.dart": [
+      {
+        "start": " static bool matches(WaffraSmsLocalRule rule,String body",
+        "end": " /// Keep a single safe auto-learned bucket per direction and sender while"
+      },
+      {
+        "start": " static WaffraSmsLocalRule? suggestedRule({",
+        "end": " /// Conservative, sender-agnostic keyword hints from a confirmed"
       }
     ]
   }

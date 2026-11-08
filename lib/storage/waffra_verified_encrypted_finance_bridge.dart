@@ -923,6 +923,44 @@ class WaffraVerifiedEncryptedFinanceBridge {
     });
   }
 
+  /// M597: one witnessed SQLCipher commit for reviewed internal transfer,
+  /// a separately booked source-account fee and the native SMS fingerprint.
+  Future<bool> commitReviewedSmsTransferWithFee({
+    required WaffraEncryptedHomeWitness baseline,
+    required String transferId,
+    required String fromAccountId,
+    required String toAccountId,
+    required int principalMinor,
+    required int feeMinor,
+    required bool feeIncludedInDebit,
+    required String occurredIso,
+    required String messageHash,
+    required String feeCategory,
+    required bool userConfirmed,
+  }) {
+    if (!experimentalEnabled || !userConfirmed) {
+      throw StateError('Verified SMS transfer requires user confirmation.');
+    }
+    return WaffraUnifiedFinanceWriter(
+      writerDirectory: writerDirectory,
+      snapshot: snapshot,
+      experimentalEnabled: true,
+      verifySourceUnderLock: _requireActivatedUnderLock,
+    ).appendReviewedSmsTransferWithFee(
+      expectedGeneration: baseline.generation,
+      transferId: transferId,
+      fromAccountId: fromAccountId,
+      toAccountId: toAccountId,
+      principalMinor: principalMinor,
+      feeMinor: feeMinor,
+      feeIncludedInDebit: feeIncludedInDebit,
+      occurredIso: occurredIso,
+      messageHash: messageHash,
+      feeCategory: feeCategory,
+      userConfirmed: true,
+    );
+  }
+
   /// Receives explicitly confirmed SMS/manual transaction JSON from either
   /// engine. Dedupe and ledger update commit together under ONE source lock.
   Future<WaffraUnifiedWriteResult> appendConfirmedTransactions({

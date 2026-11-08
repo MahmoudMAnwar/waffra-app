@@ -186,7 +186,7 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
            label:Text(option=='income'?(widget.english?'Income':'دخل'):
             option=='expense'?(widget.english?'Expense':'مصروف'):
             option=='transfer'?(widget.english?'Transfer':'تحويل'):
-            (widget.english?'Excluded':'مستثناة')),
+            (widget.english?'Excluded':'مستبعدة')),
            selected:kind==option,
            onSelected:(_)=>refresh((){
             kind=option;income=option=='income';
@@ -425,7 +425,7 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
    'income'=>widget.english?'Income':'دخل',
    'expense'=>widget.english?'Expenses':'مصروف',
    'transfer'=>widget.english?'Transfers':'تحويلات',
-   _=>widget.english?'Excluded':'مستثناة',
+   _=>widget.english?'Excluded':'مستبعدة',
   };
   return Card(child:ExpansionTile(
    key:Key('waffra-sms-default-rule-bucket-$kind'),
@@ -489,7 +489,7 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
        'income'=>widget.english?'Income':'دخل',
        'expense'=>widget.english?'Expenses':'مصروف',
        'transfer'=>widget.english?'Transfers':'تحويل',
-       _=>widget.english?'Excluded messages':'رسائل مستثناة',
+       _=>widget.english?'Excluded messages':'الرسائل المستبعدة',
       }),
       subtitle:Text(widget.english?
        '${saved.where((r)=>r.resolvedKind==kind).length} saved patterns':

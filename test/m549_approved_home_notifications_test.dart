@@ -4,34 +4,122 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_approved_notifications.dart';
 
 void main(){
- testWidgets('M549 notifications show only real pending messages and review CTA',(tester)async{
-  var reviews=0;
+ testWidgets('M581 notification filters use exact per-message sender and no duplicate hero',(tester)async{
+  final opened=<String>[];
   final notices=[const WaffraReviewNotice(
-   id:'sms1',sender:'AlRajhiBank',preview:'عملية شراء',
-   kind:'expense',amount:120)];
+   id:'sms1',sender:'SyntheticBank',preview:'Purchase completed',
+   kind:'expense',amount:120),
+   const WaffraReviewNotice(
+   id:'sms2',sender:'OtherBank',preview:'Verification message',
+   kind:'otpReview'),
+   const WaffraReviewNotice(
+   id:'sms3',sender:'SyntheticBank',preview:'Incoming transfer',
+   kind:'income',amount:250)];
   await tester.pumpWidget(MaterialApp(home:WaffraApprovedNotificationsPage(
    english:false,readPending:()=>notices,
-   onReviewAll:()async{reviews++;},
-   onReviewOne:(id)async{reviews++;},
-   onRescan:()async{},canRescan:()=>false)));
-  expect(find.byKey(const Key('m549-notification-review-hero')),findsOneWidget);
-  expect(find.text('عملية شراء'),findsOneWidget);
-  expect(find.text('1 رسالة بنكية تنتظر التصنيف والتأكيد'),findsOneWidget);
-  await tester.tap(find.byKey(const Key('m549-open-all-sms-review')));
+   onReviewAll:()async{throw StateError('obsolete review hero');},
+   onReviewOne:(id)async{opened.add(id);},
+   onRescan:()async{},canRescan:()=>true)));
+  expect(find.byKey(const Key('m549-notification-review-hero')),findsNothing);
+  expect(find.text('Purchase completed'),findsOneWidget);
+  expect(find.text('رسالة تحقق — تحتاج مراجعة'),findsOneWidget);
+  expect(find.byKey(const Key('m580-sender-filters')),findsOneWidget);
+  await tester.tap(find.byKey(
+   const Key('m580-notification-filter-sender:otherbank')));
   await tester.pump();
-  expect(reviews,1);
+  expect(find.text('Verification message'),findsOneWidget);
+  expect(find.text('Purchase completed'),findsNothing);
+  await tester.tap(find.byKey(const Key('m549-notification-message-sms2')));
+  await tester.pump();
+  await tester.pump();
+  expect(opened,['sms2']);
  });
 
- testWidgets('M549 empty App tab never invents updates',(tester)async{
+ testWidgets('M589 compact bulk action opens the verified select/exclude route',(tester)async{
+  var bulkOpens=0;
+  await tester.pumpWidget(MaterialApp(home:WaffraApprovedNotificationsPage(
+   english:false,readPending:()=>[const WaffraReviewNotice(
+    id:'sms1',sender:'Bank',preview:'review')],
+   onReviewAll:()async{bulkOpens++;},
+   onReviewOne:(id)async{},
+   onRescan:()async{},canRescan:()=>true)));
+  expect(find.byKey(const Key('m549-notification-review-hero')),findsNothing);
+  await tester.tap(find.byKey(const Key('m589-open-bulk-sms-review')));
+  await tester.pump();
+  await tester.pump();
+  expect(bulkOpens,1);
+ });
+
+ testWidgets('M592 Select All of one sender confirms exactly one sender block',
+ (tester)async{
+  final notices=<WaffraReviewNotice>[
+   const WaffraReviewNotice(id:'a1',sender:'SyntheticBank',
+    preview:'Purchase one',kind:'expense'),
+   const WaffraReviewNotice(id:'a2',sender:'SyntheticBank',
+    preview:'Purchase two',kind:'expense'),
+   const WaffraReviewNotice(id:'b1',sender:'OtherBank',
+    preview:'Income one',kind:'income')];
+  var savedIds=<String>[],blockedSenders=<String>[];
+  await tester.pumpWidget(MaterialApp(home:WaffraApprovedNotificationsPage(
+   english:false,readPending:()=>notices,
+   onReviewAll:()async{throw StateError('old duplicate selector route');},
+   onReviewOne:(id)async{},onRescan:()async{},canRescan:()=>true,
+   onBulkExclude:(ids,senders)async{
+    savedIds=ids;blockedSenders=senders;
+    notices.removeWhere((v)=>ids.contains(v.id));
+    return true;
+   })));
+  await tester.tap(find.byKey(const Key('m589-open-bulk-sms-review')));
+  await tester.pump();
+  await tester.tap(find.byKey(const Key(
+   'm580-notification-filter-sender:syntheticbank')));
+  await tester.pump();
+  await tester.tap(find.byKey(const Key('m592-select-all-visible')));
+  await tester.pump();
+  expect(find.text('المحدد: 2'),findsOneWidget);
+  await tester.tap(find.byKey(const Key('m592-confirm-bulk-exclude')));
+  await tester.pumpAndSettle();
+  expect(find.textContaining('استبعاد 1 مرسل كامل'),findsOneWidget);
+  await tester.tap(find.text('تأكيد'));
+  await tester.pumpAndSettle();
+  expect(savedIds,['a1','a2']);
+  expect(blockedSenders,['SyntheticBank']);
+  expect(notices.single.id,'b1');
+ });
+
+ testWidgets('M592 changing filters clears hidden-message selection',
+ (tester)async{
+  final notices=[
+   const WaffraReviewNotice(id:'a1',sender:'SyntheticBank',preview:'One'),
+   const WaffraReviewNotice(id:'b1',sender:'OtherBank',preview:'Two')];
+  await tester.pumpWidget(MaterialApp(home:WaffraApprovedNotificationsPage(
+   english:false,readPending:()=>notices,
+   onReviewAll:()async{},onReviewOne:(id)async{},
+   onRescan:()async{},canRescan:()=>true,
+   onBulkExclude:(ids,senders)async{return true;})));
+  await tester.tap(find.byKey(const Key('m589-open-bulk-sms-review')));
+  await tester.pump();
+  await tester.tap(find.byKey(const Key(
+   'm580-notification-filter-sender:syntheticbank')));
+  await tester.pump();
+  await tester.tap(find.byKey(const Key('m592-select-all-visible')));
+  await tester.pump();
+  expect(find.text('المحدد: 1'),findsOneWidget);
+  await tester.tap(find.byKey(const Key(
+   'm580-notification-filter-sender:otherbank')));
+  await tester.pump();
+  expect(find.text('المحدد: 0'),findsOneWidget);
+  expect(find.byKey(const Key('m592-confirm-bulk-exclude')),findsNothing);
+ });
+
+ testWidgets('M581 empty sender list shows one helpful state',(tester)async{
   await tester.pumpWidget(MaterialApp(home:WaffraApprovedNotificationsPage(
    english:false,readPending:()=>[],
    onReviewAll:()async{},onReviewOne:(id)async{},
    onRescan:()async{},canRescan:()=>false)));
-  expect(find.byKey(const Key('m549-open-all-sms-review')),findsOneWidget);
-  await tester.tap(find.byKey(const Key('m549-notification-filter-updates')));
-  await tester.pump();
-  expect(find.text('لا توجد إشعارات في هذا القسم'),findsOneWidget);
+  expect(find.text('لا توجد رسائل تحتاج للمراجعة'),findsOneWidget);
   expect(find.byKey(const Key('m549-notification-review-hero')),findsNothing);
+  expect(find.byKey(const Key('m580-notification-filter-all')),findsOneWidget);
  });
 
  test('M549 approved Home bell saturated at +999; FAB is unchanged',(){

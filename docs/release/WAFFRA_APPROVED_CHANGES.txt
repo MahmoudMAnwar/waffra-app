@@ -2872,3 +2872,77 @@ M550 early CI proof (2026-11-08): First exact-HEAD M550 run audited 107 workflow
 
 [M581 sender+last-four verified account review regression] 2026-11-08
 - M103 full 2,539-test suite exposed a stale M470 literal asserting the old zero-SAR first-bank prompt. M576 now deliberately asks for a distinct account identity even when a separate account at the same institution already exists. The M470 test now enforces the stronger `needsNewIdentityChoice` and `(identitySuffix!=null&&verifiedIdentity==null)` guards, exact trusted sender+four lookup, `suggestedLastFour:proposedSuffix` and user-editable opening zero-balance wording. Existing widget tests for malicious sender labels, consent and owner confirmation unchanged. Scoped under M385 and not skipped.
+
+
+[M580–M586 owner-feedback UX and responsiveness (DRAFT)] 2026-11-08
+- User authorized starting all seven issue #498–#504 fixes. First source-only candidate in PR #505, NOT a certified complete release: remaining two-account transfer UX, redundant verified-account Yes popup, direct compact review/draft, native OTP parity and physical Android performance evidence remain open.
+- Fail-closed on Arabic temporary verification tokens and English OTP/security challenges before classifying any settled debit, with no automatic financial entry or unapproved message deletion. Native-review detail redacts detected challenge codes; encrypted review intake caches challenge evidence per batch, never scans 1000 bodies each notification repaint.
+- Approved compact Notifications: filter by All or actual sender, remove obsolete category chips and extra large review hero; display each message's verified income/expense/transfer/exclusion/needs-review label. Tapped notification requests only its own hash ID from the owner-scoped native encrypted review queue on a background executor; untouched Back/Cancel no longer unconditionally reloads/reclassifies up to 1000 messages.
+- Retain existing safe registration/password PBKDF2 isolate, add minimum-width always-visible login submit spinner and stable disabled feedback; cold Home displays repaint-isolated safe data-preparation skeleton instead of blank progress wheel; bound monthly-summary currency glyphs inside circle without rounding or truncating funds.
+- Updated M549 notification tests, added synthetic OTP and targeted bridge/loader/preview source regressions in M580 test. Human-approved M385 exact file/function diff and M550 every-source/CI contract updated. All existing finance/SQLCipher/Kotlin/Gradle/Flutter/QA checks remain mandatory on exact PR head; no main merge or APK certification until real Android profile/upgrade tests on both devices and all jobs succeed.
+
+
+[M587–M588 PR #505 transfer-choice and real compiler-failure follow-up] 2026-11-08
+- Owner request #503: an actual bank-transfer review now offers exactly three actions: Confirm transfer opens original verified two-distinct-account editor, No launches a distinct income/expense manual transaction (not an automatic reinterpretation of the original SMS), and Exclude removes only the selected review queue item. Existing SQLCipher transfer writer and unique transaction ID/ACK remain authoritative; no fee silently debited.
+- M429 combined Flutter and Full Offline Finance analyzer on earlier exact PR head showed a REAL broken Dart string at lib/waffra_auto_sms.dart:102 from first targeted-SMS bridge insertion. M588 restored the original main-file bridge plus a single safely injected native ID call. Earlier red jobs are not green; require full exact final SHA Dart analyzer/regressions/Android Kotlin/SQLCipher tests and physical performance evidence.
+- Seven requirement groups, M385 exact file/function scope and M550 reviewed test contracts updated after real code changes; this note follows app source changes. PR is still Draft, NO main merge or APK release.
+
+
+[M589–M590 owner-scoped bulk review restored and OTP status corrected] 2026-11-08
+- A compact select/exclude action in the approved Notifications AppBar now invokes the EXISTING native owner-verified encrypted sender/bulk review route. Removing the prior oversized review hero must not strand multi-select/exclude-all; source and widget tests confirm the direct callback.
+- Pending OTP/bundled exclusion suggestions are labeled verification requiring review or proposed exclusion, never falsely as a completed excluded SMS. No change to bank financial commit, exclusion durable ACK or Android SMS inbox. Updated widget and source tests.
+- M449 release-note record follows every current application source change. Exact-HEAD same-commit Flutter/Android/Kotlin/SQLCipher/QA and both-device performance/UX evidence are mandatory before any merge; PR #505 remains Draft.
+
+
+[M590–M594 seven owner-feedback implementation follow-up — DRAFT] 2026-11-08
+- #504: confirmed SMS account is selected, source-witness verified and displayed in the Yes review BEFORE save; final Yes directly calls existing one-shot SQLCipher record+hash writer, no repeated picker after Yes.
+- #500/#501: both on-device ML and bank SMS parsing now use one conservative OTP challenge gate; excluded-rule labels and excluded messages are named consistently in Arabic.
+- #502: sender-filtered Notifications inline select/deselect, per-row selection, one count/sender-confirmation, owner-verified full-sender native exclusion or exact 100-ID message exclusion, bounded encrypted safe local keyword learning. Existing Android inbox and confirmed money untouched.
+- #498/#504: fixed registration CTA size, large verified manual and SMS financial ledger model transformation yields between 32-item batches to keep UI responsive after the SOURCE-authenticated commit. Does not claim device p95 or elimination of first-start lag.
+- #503: fee math in integer SAR halalas supports 19.00+0.58=19.58 and 1900.00+0.58=1900.58; source and destination masked four digits proposed only from respective evidence. Existing internal transfer writer lacks atomic separate fee accounting, so fee-bearing source SMS cannot post a principal-only/incorrect ledger transfer, and cannot ACK; pending fee-specific atomic writer and device acceptance still blocks release.
+- Earlier accidentally oversized Dart source injection was repaired from intact known blob BEFORE this follow-up; analyzer/native/Flutter/SQLCipher and exact-head M385/M550 must all pass. No tests skipped, no main merge, no physical Android evidence yet.
+
+
+[M595 compact owner-reviewed SMS type choices — NOT fee-atomic release] 2026-11-08
+- Owner authorized closing seven feedback issues #498-#504. M595 addresses the still-missing code for #502: three genuine Income/Expense/Transfer ChoiceChips in exact SMS review (per-message suggested kind selected initially); every change revokes stale account approval. Corrected type opens guarded existing SMS editor/verified own-account transfer editor. A bank SMS tap/choice alone does NOT post finance, ACK native SMS or learn rules; original remains pending until real committed hash. Independent exclude action retained; built-in OTP never auto-deletes.
+- Existing trusted SMS Yes still demands fresh owner-approved SQLCipher account generation, original SAR amount/date/category and duplicate hash enforcement. No bank sender-only guess, no unverified destination credit, no release allowance for positive-fee transfer without atomic fee accounting.
+- Existing M549/M580 Dart tests extended; exact protected main.dart section scope and M550 code-to-test CI contracts updated with no disabled existing tests. Full latest-head Flutter/native/SQLCipher/Android and real device performance/upgrade checks still mandatory. PR #505 remains Draft; no main merge or APK sign-off.
+
+
+[M595 follow-up corrected SMS draft and manual transfer consent] 2026-11-08
+- After user selects a different income/expense type in compact SMS review, the explicit approved type now overrides only a prior uncommitted SMS draft's kind. Full original SMS identity remains attached; the true ledger commit still needs explicit account/date/category confirmation and atomic source-hash protection. Manual, receipt, recurring entry priority unchanged.
+- If user corrects an unverified bank message to internal transfer, an additional explicit consent screen makes it clear no two account owners are proven; only then does the independent verified manual transfer form open. This review action never ACKs or auto-posts the original SMS.
+- M595 new source behavior is covered by updated Dart source/behavior regressions and M550 contract. Exact-SHA native/Flutter/finance CI and two-device on-phone visual and measured lag checks remain outstanding. PR #505 Draft; fee-bearing bank transfer saves still blocked, never principal-only posted.
+
+
+[M596 SAR fee-source fail-closed parser — PARTIAL #503 / NOT RELEASE-READY] 2026-11-08
+- On PR #505, after owner approval of seven feedback items #498-#504, hardened existing SMS fee fact parsing: an explicitly non-SAR fee (e.g. USD/AED), a malformed/negative fee, or an over-precision fee may not be interpreted as SAR or dropped while posting principal-only transfer. It remains pending, requiring explicit safe review; no ledger or SMS ACK on those errors.
+- Expanded synthetic fee regressions in test/m580_sms_security_navigation_performance_test.dart. Scope conforms to existing bounded M385 parser section and approved test-file list.
+- Remaining: independent atomic transfer + separate fee expense + source SMS fingerprint rollback and dedup (including 19.00+0.58, 1900.00+0.58), compact review parity, all latest-head CI and 2 real Android devices with existing data preserved. No successful CI or on-device performance proof claimed; Draft #505 must not be merged/released yet.
+
+
+M597 – PR #505 / Seven Owner Feedback Items #498–#504 (2026-11-08, SOURCE PENDING CERTIFICATION)
+- Added verified one-transaction own-account SMS transfer + separate SAR bank fee expense + native SMS SHA256 fingerprint, with typed SQL and authoritative SQLCipher snapshot parity checks, exactly-once semantics, user-confirmed inclusive/separate fee, strict stale witness and category rejection.
+- Added exact SMS date and time picker for ambiguous original transaction timestamps; received-at time is a hint, never silently posted as bank execution date.
+- Added fees 19.00+0.58, 1900.00+0.58, fractional halalah guard and source-contract test. Transfer principal remains outside budget spend and fee is a separate expense.
+- M385 declared new storage file scopes; M550 contract updated to match new behavior without weakening finance/security tests.
+- NOT YET CERTIFIED: every exact HEAD workflow, comprehensive actual SQLite/Drift rollback integration and both Android devices new install + update preserving existing financial history, UI frame metrics and owner final visual approval. Remain Draft; NO main merge/release claims.
+
+
+[M598 PR #505 exact-head compile and source-contract repair] 2026-11-08
+- Fixed the real nullable bank-fee total compilation error in the reviewed SMS own-account transfer confirmation. Explicitly reject null `fullDebit` before formatting it in either Arabic or English; existing positive/SAR fee, consent, owner account witness, SQLCipher atomic commit and ACK gating remain mandatory and unchanged.
+- Reconciled one obsolete M514 four-digit SMS account prefill source assertion with approved source-versus-destination suffix separation, asserting both origin-specific digits and sender-bank match instead of obsolete `!isDestination` behavior. No test removed or disabled; updated M385 allowlist for this bounded regression-only test file.
+- Existing exact-head 8b35ff585528 CI: 21 workflow successes, 32 failures, including widespread analyzer/Flutter/Android failures caused by the two nullable interpolation errors, M550 stale assertion and M449 stale release notes. These are corrected in this one commit; no claim of passing new-head CI, verified Android screenshots, stable frame timings, APK publishing or release readiness. Preserve old device SQLCipher data, never merge until all checks and physical evidence pass.
+
+
+[M599 M385 bounded test scope and M429 analyzer exact-head correction] 2026-11-08
+- M174/M385 protected-source guard requires an explicit bounded edit for `test/m514_sms_review_regressions_test.dart`. Added unique M514-to-M516 anchors and checked that old and new test content outside this one block remains identical. No source guard bypass and no weakened test.
+- M429's Flutter login/SMS/biometric tests passed (42 cases) but strict analyzer found three unnecessary null checks in approved `lib/main.dart`. Removed only provably redundant `date==null` guard following original-date or explicit picker path and two unnecessary `!` assertions on amount/date, preserving the mandatory consent/finance safeguards.
+- Revision remains on Draft PR #505; exact-head CI, Android real-device smoothness and two-device preservation evidence still required before release.
+
+
+[M600 root CI repairs for PR #505] 2026-11-08
+- Fixed M174 M385 guard manifest: declared the existing M574 test import/body edits in two bounded sections without bypassing old SMS fields/Yes-No checks.
+- Protected mixed bank purchase/debit plus OTP SMS from automatic sender-exclusion learning and matching; OTP-only rules remain sender-scoped and number-free.
+- Updated outdated M594 assertion to require explicit fee mode, SAR halala validation, atomic SQLCipher transfer plus fee expense and SMS hash, and acknowledgment strictly after durable commit; added mixed OTP regression.
+- PR remains Draft until full same-head CI and physical Android/two-device proof pass; tests are not disabled.

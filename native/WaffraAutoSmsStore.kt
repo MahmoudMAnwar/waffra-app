@@ -829,6 +829,46 @@ object WaffraAutoSmsStore {
         }
     }
 
+    /** A single already-known SMS for a tapped notification.
+     * This avoids marshalling all 1000 encrypted review items across the
+     * platform channel on every item tap. It never posts or ACKs anything.
+     */
+    fun pendingById(context: Context, id: String): Map<String, Any>? =
+        synchronized(mutex) {
+            if (!enabled(context) || !Regex("^[a-f0-9]{64}$").matches(id))
+                return@synchronized null
+            try {
+                val queue = read(context)
+                for (index in 0 until queue.length()) {
+                    val row = queue.getJSONObject(index)
+                    if (row.optString("id") != id) continue
+                    val fields = mutableMapOf<String, Any>(
+                        "id" to row.getString("id"),
+                        "sender" to row.getString("sender"),
+                        "body" to row.getString("body"),
+                        "receivedAt" to row.getLong("receivedAt"),
+                        "sensitiveOtp" to row.optBoolean("sensitiveOtp", false))
+                    row.optJSONObject("cloud")?.let { proof ->
+                        val analysis = mutableMapOf<String, Any>()
+                        for (key in arrayOf("kind", "currency", "merchant")) {
+                            if (!proof.isNull(key)) analysis[key] = proof.optString(key)
+                        }
+                        for (key in arrayOf("amount", "fee")) {
+                            if (!proof.isNull(key)) analysis[key] = proof.optDouble(key)
+                        }
+                        analysis["requiresReview"] =
+                            proof.optBoolean("requiresReview", true)
+                        fields["cloud"] = analysis
+                    }
+                    return@synchronized fields
+                }
+                null
+            } catch (failure: Exception) {
+                throw IllegalStateException(
+                    "Encrypted SMS review queue unreadable", failure)
+            }
+        }
+
     /** Atomic per-SMS request claim shared by foreground and WorkManager.
      * A failed cloud request cannot be retried repeatedly on every resume.
      * No financial writer is reachable through this review-only record.
