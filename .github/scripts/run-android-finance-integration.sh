@@ -59,15 +59,43 @@ preflight_android() {
   return 1
 }
 
-# Prioritize problematic bridge & new encrypted receipts after Gradle warmup.
-run_android_test storage_encryption_android_test.dart 720
-run_android_test verified_encrypted_finance_bridge_android_test.dart 240
-run_android_test portable_encrypted_receipts_android_test.dart 240
-run_android_test finance_cloud_final_release_android_test.dart 300
-run_android_test m78_parallel_combined_android_test.dart 300
-run_android_test offline_restore_android_test.dart 240
-run_android_test copied_receipt_ledger_android_test.dart 240
-run_android_test fresh_vault_first_run_android_test.dart 240
-run_android_test offline_finance_e2e_android_test.dart 240
-run_android_test finance_release_regressions_android_test.dart 240
-run_android_test live_finance_migration_receipts_android_test.dart 240
+# M626: four isolated GitHub Actions emulator jobs; preserve original per-test
+# timeouts and FULL coverage. Explicit 'all' keeps manual/legacy runner working.
+case "${ANDROID_FINANCE_SHARD:-all}" in
+  vault)
+    run_android_test storage_encryption_android_test.dart 720
+    run_android_test verified_encrypted_finance_bridge_android_test.dart 240
+    run_android_test portable_encrypted_receipts_android_test.dart 240
+    ;;
+  cloud)
+    run_android_test finance_cloud_final_release_android_test.dart 300
+    run_android_test m78_parallel_combined_android_test.dart 300
+    run_android_test offline_restore_android_test.dart 240
+    ;;
+  receipts)
+    run_android_test copied_receipt_ledger_android_test.dart 240
+    run_android_test fresh_vault_first_run_android_test.dart 240
+    run_android_test offline_finance_e2e_android_test.dart 240
+    ;;
+  release)
+    run_android_test finance_release_regressions_android_test.dart 240
+    run_android_test live_finance_migration_receipts_android_test.dart 240
+    ;;
+  all)
+    run_android_test storage_encryption_android_test.dart 720
+    run_android_test verified_encrypted_finance_bridge_android_test.dart 240
+    run_android_test portable_encrypted_receipts_android_test.dart 240
+    run_android_test finance_cloud_final_release_android_test.dart 300
+    run_android_test m78_parallel_combined_android_test.dart 300
+    run_android_test offline_restore_android_test.dart 240
+    run_android_test copied_receipt_ledger_android_test.dart 240
+    run_android_test fresh_vault_first_run_android_test.dart 240
+    run_android_test offline_finance_e2e_android_test.dart 240
+    run_android_test finance_release_regressions_android_test.dart 240
+    run_android_test live_finance_migration_receipts_android_test.dart 240
+    ;;
+  *)
+    echo "::error title=Invalid Android finance shard::Unknown ANDROID_FINANCE_SHARD=${ANDROID_FINANCE_SHARD}"
+    exit 64
+    ;;
+esac

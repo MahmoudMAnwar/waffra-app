@@ -1,3 +1,10 @@
+[PR #534 M626 — PARALLEL MANDATORY ANDROID ENCRYPTED FINANCE CI, ISSUE #535 — 2026-11-09]
+==========================================================================================
+- Verified PR wall-time bottleneck: 11 mandatory independent Android SQLCipher finance tests execute sequentially inside one opaque emulator step (up to 75 minutes total), even when no test fails. In-progress logs were unavailable; an emulator hang has not been proven.
+- Split all original 11 tests, keeping their exact file names and individual 720/300/240s limits, across four isolated concurrently scheduled emulators: vault, cloud, receipts and release. All original native SQLCipher runtime/source protections, startup checks, preflights, crash logs and test assertions remain intact. Failed primary shard alone retries on clean API 35 emulator.
+- Preserve former required check name android-encrypted-db with a fail-closed aggregate depending on every shard; disable matrix fail-fast for full diagnostics. QA test enforces 11/11 coverage and no duplicate/omitted integration file. Requirement M626 and Issue #535 documented before code.
+- Status PARTIAL: exact-head four-shard CI, 11 real Android tests and measured reduction of wall time not yet confirmed; user-device login performance remains independently unproven. No data/biometric/SQLCipher application behavior changed.
+
 [PR #524 M615 SAFE FULL-FIELD LEGACY QA RECONCILIATION — 2026-11-09]
 ===============================================================================
 - Kept M574 SMS confirmation Python regression active and exact, replacing stale assumptions of one long multiline preview with checks of all eight separate owner-approved detail rows: transaction type, amount, description, parent/subcategory, sender, verified linked account, and original bank date/time. Existing secure account/amount/source suffix and Yes/No validations still run.

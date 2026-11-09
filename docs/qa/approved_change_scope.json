@@ -1,12 +1,13 @@
 {
   "contract_version": 1,
-  "change_id": "M625-SINGLE-VERIFIED-SQLCIPHER-HOME-READ-ISSUE533-PR534-20261109",
-  "human_scope_review": "Owner explicitly requests no freeze on first biometric Home and on logout→relogin, asks for exact source flow after code edit. Limit changes to eliminating one redundant full SQLCipher bind-time read before the mandatory Home dashboard read, profile-mode handoff time measurement, source-preserving tests, requirements/scope/release/behavior documentation. Keep authenticated owner, SQLCipher activation/source witnesses, first complete actual finance Home, 600000-round password check, first-run mandatory biometric, no relogin re-prompt, existing 900ms post-frame native SMS ordering. This manifest records requested scope; formal human approval/physical-device performance acceptance remain pending.",
+  "change_id": "M625-M626-SINGLE-READ-AND-PARALLEL-ANDROID-CI-ISSUES533-535-PR534-20261109",
+  "human_scope_review": "Owner explicitly requests no freeze on first biometric Home and on logout→relogin, asks for exact source flow after code edit. Limit changes to eliminating one redundant full SQLCipher bind-time read before the mandatory Home dashboard read, profile-mode handoff time measurement, source-preserving tests, requirements/scope/release/behavior documentation. Keep authenticated owner, SQLCipher activation/source witnesses, first complete actual finance Home, 600000-round password check, first-run mandatory biometric, no relogin re-prompt, existing 900ms post-frame native SMS ordering. This manifest records requested scope; formal human approval/physical-device performance acceptance remain pending. Owner also explicitly rejects an hour for every PR/build. CI-only M626 optimization authorized: use four independent emulator matrix shards retaining all mandatory security tests and aggregate gate; actual CI time/approval remain unverified.",
   "user_requested_changes": [
     "M625 / Issue #533: remove the duplicate encrypted finance full read at installed Android Home binding; dashboardRead still verifies actual encrypted snapshot, integrity, category and account balance before Home readiness.",
     "Measure first-Home-frame profile-mode timings separately after biometric and after verified password re-login, without logging any user identity, password or financial values.",
     "Keep password and biometric security gates, sign-out native capture suspension, no extra relogin biometric, original complete Home first visible, and post-first-frame SMS resume/scan untouched.",
-    "Add new negative/source regression tests for installed Home-only deferred read, protected Widget/root paths and both authenticated navigation routes; update requirements, release notes and every-workflow behavior review."
+    "Add new negative/source regression tests for installed Home-only deferred read, protected Widget/root paths and both authenticated navigation routes; update requirements, release notes and every-workflow behavior review.",
+    "M626 Issue #535: shorten excessive sequential Android encrypted-database CI wall time by parallelizing exactly 11 existing finance integration test files in four emulator shards, preserving every original timeout, fallback retry and a mandatory all-shards gate."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -15,7 +16,10 @@
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
     "lib/storage/waffra_production_finance_authority_binding.dart",
-    "test/m625_single_verified_home_read_login_handoff_test.dart"
+    "test/m625_single_verified_home_read_login_handoff_test.dart",
+    ".github/workflows/storage-android-integration.yml",
+    ".github/scripts/run-android-finance-integration.sh",
+    "scripts/qa/test_m626_parallel_android_matrix.py"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -36,6 +40,18 @@
       {
         "start": "      final authority = WaffraVerifiedFinanceAuthority(",
         "end": "    } catch (_) {\n      await store.close();"
+      }
+    ],
+    ".github/workflows/storage-android-integration.yml": [
+      {
+        "start": "jobs:\n  android-encrypted-db:",
+        "end": null
+      }
+    ],
+    ".github/scripts/run-android-finance-integration.sh": [
+      {
+        "start": "# Prioritize problematic bridge & new encrypted receipts after Gradle warmup.",
+        "end": null
       }
     ]
   }

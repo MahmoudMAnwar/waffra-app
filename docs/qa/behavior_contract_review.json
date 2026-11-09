@@ -722,6 +722,31 @@
         "Existing first-session OS biometric and one-minute idle lock remain, while ordinary explicit signout followed by correct password skips a redundant fingerprint.",
         "Only signed Android APK profile/release device runs can certify user-visible freeze is resolved; CI source checks are not physical performance evidence."
       ]
+    },
+    {
+      "id": "M626-PARALLEL-ENCRYPTED-ANDROID-CI-RETAIN-EVERY-FINANCE-TEST",
+      "issue": "Issue #535 — owner rejects serial 75-minute mandatory encrypted Android CI wait",
+      "previous_behavior": "One Android emulator job ran 11 independent encrypted finance Flutter integration tests serially with test-specific timeout periods and then potentially retried all files on a new emulator; a healthy PR could wait up to 75 minutes without per-file GitHub status visibility.",
+      "approved_behavior": "Run four bounded independent emulator matrix shards concurrently, cover all 11 original Android finance integration test files exactly once per attempt with the same timeout per test, preserve ADB boot preflight, SHA verification and API 35 failed-shard retry. A separate original-name android-encrypted-db required aggregate must fail if any shard fails, cancels or times out.",
+      "source_paths": [
+        ".github/workflows/storage-android-integration.yml",
+        ".github/scripts/run-android-finance-integration.sh"
+      ],
+      "test_paths": [
+        "scripts/qa/test_m626_parallel_android_matrix.py"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/storage-android-integration.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "All 11 original SQLCipher and finance Android integration tests remain mandatory with unchanged individual timeouts, coverage and native encryption verification.",
+        "Exact PR head SHA checkout and approved SQLite3MC and Gradle asset integrity checks are mandatory.",
+        "The original android-encrypted-db aggregate job fails closed unless all parallel emulator shards report success; no green-on-skipped or dummy tests.",
+        "Legacy app finance, biometric, owner scope, SQLCipher data protection and previous successful checks are untouched.",
+        "Real device measurement is required to claim login freeze fixed; CI parallelism only affects build/PR wait."
+      ]
     }
   ]
 }
