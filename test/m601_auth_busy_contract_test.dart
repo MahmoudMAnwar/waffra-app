@@ -74,7 +74,7 @@ void main() {
     expect(login, isNot(contains('await WaffraLocalPhoneCredentials.hasRegisteredCredentials();')));
     expect(login, contains('verifierStatus!=WaffraLocalCredentialProbe.missing'));
     expect(login, contains('await WaffraLocalPhoneCredentials.verify('));
-    expect(login, contains('await widget.onSave(verifiedAccount);'));
+    expect(login, contains('await widget.onVerifiedPasswordSave(verifiedAccount);'));
     expect(login, contains('if(kProfileMode&&signInTiming!=null)'));
   });
 
