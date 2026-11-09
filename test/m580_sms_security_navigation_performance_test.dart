@@ -272,8 +272,13 @@ void main(){
   expect(corrected,contains('if(smsHashes.contains(bankSmsHash(body)))'));
   expect(corrected,isNot(contains('commitConfirmedSms(')));
   expect(corrected,isNot(contains('excludeMessages(')));
-  final buttons=review.split("if(!sensitive)...[")[1]
-   .split("if(!sensitive)Padding(")[0];
+  // M615 guarded actions now live in a summary card, not the old layout.
+  final buttons=review.split('if(understood&&!sensitive&&')[1]
+   .split('if(facts.kind==WaffraBankOperationKind.transfer&&!sensitive&&')[0];
+  expect(buttons,contains("Key('m565-sms-yes-confirm')"));
+  expect(buttons,contains("Key('m565-sms-no-edit')"));
+  expect(buttons,contains("Key('m595-review-single-exclude')"));
+  expect(buttons,contains('reviewedAccount?.ids?.single!=null'));
   expect(buttons,isNot(contains("await _financeAuthority.commitConfirmedSms(")));
   expect(buttons,isNot(contains("WaffraAutoSms.acknowledgeCommitted(")));
  });

@@ -476,6 +476,35 @@
         "No income/expense/transfer is created by changing type without its final verified editor save.",
         "No user SMS or SQLCipher financial record is deleted by exclusion."
       ]
+    },
+    {
+      "id": "M619-SIX-RED-WORKFLOWS-THREE-LEGACY-ASSERTIONS",
+      "issue": "#522/#520/#523 via PR #524",
+      "previous_behavior": "Six full-suite jobs on SHA 2f334943 share three failures: M469/M441 require deprecated widget.onSave, and M580 indexes the removed pre-M615 if(!sensitive)...[ marker.",
+      "approved_behavior": "Keep all three original tests and their negatives enabled. Require verified PBKDF2 password match and if(!match) before onVerifiedPasswordSave; explicitly forbid old onSave. Inspect real M615 Yes/No/Exclude guarded card requiring verified account, preserve no direct financial commit or automatic SMS ACK.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_approved_notifications.dart"
+      ],
+      "test_paths": [
+        "test/m469_phone_logout_login_integrity_regression_test.dart",
+        "test/m441_auth_sms_copy_regression_test.dart",
+        "test/m580_sms_security_navigation_performance_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        "M160 Main Reconciliation and Backup Regression",
+        "M282 Combined QA + Features Exact-SHA Acceptance",
+        "Waffra M103 Same-SHA Whole-App Release Certification",
+        "M340 Continuous Financial Quality Gate",
+        "Waffra Full Offline Finance and UI Regression",
+        "M147 Final Main-Safe Merge Readiness Review"
+      ],
+      "safety_invariants": [
+        "No test skipped/disabled.",
+        "Wrong or missing phone/password cannot save profile, PBKDF2 stays unchanged.",
+        "No SMS auto-post, auto-ACK or account bypass.",
+        "Exact-new-head CI plus Android QA must precede merge."
+      ]
     }
   ]
 }

@@ -12,7 +12,8 @@
     "Shorten unwelcoming initial Home loading copy while protecting verified SQLCipher startup, and skip only demonstrably redundant second OS password verifier probe using exact verified login object identity after secure PBKDF2, never on registration or edits.",
     "Update old assertions and run new source/widget regression. Physical Android login latency and storage expiry verification remain required.",
     "M617 CI anti-regression: old tests preserve the secure PBKDF2 rejection and post-match profile commit ordering while changing old onSave assertions to verified-password-only callback; update constructor fixture without disabling tests.",
-    "M615 Python M574 audit of required original bank SMS fields remains mandatory; its exact asserted presentation changes only from a joined paragraph to separate labeled and verified rows."
+    "M615 Python M574 audit of required original bank SMS fields remains mandatory; its exact asserted presentation changes only from a joined paragraph to separate labeled and verified rows.",
+    "M619: six full-suite CI job failures traced to M469/M441 obsolete authentication callback and M580 obsolete review layout; preserve negative security/no-auto-post assertions while matching the actual verified-login and Yes/No/exclude code."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -33,7 +34,9 @@
     "test/m604_fast_login_first_frame_test.dart",
     "test/m613_foreground_lock_and_m614_finance_timing_contract_test.dart",
     "test/m615_m618_sms_review_retention_perf_contract_test.dart",
-    "test/qa/m574_sms_confirmation_full_fields_test.py"
+    "test/qa/m574_sms_confirmation_full_fields_test.py",
+    "test/m469_phone_logout_login_integrity_regression_test.dart",
+    "test/m441_auth_sms_copy_regression_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -130,6 +133,10 @@
       {
         "start": " test('cold Home never shows a completely blank spinner-only body',(){",
         "end": " test('canceling SMS review never triggers a redundant full encrypted SMS reread',(){"
+      },
+      {
+        "start": " test('M595 correction must not auto-post, guess a transfer, or auto ACK',(){",
+        "end": " test('M587 bank transfer shows exactly three non-posting choices',(){"
       }
     ],
     "test/m601_auth_busy_contract_test.dart": [
@@ -158,6 +165,18 @@
       {
         "start": " def test_review_preview_displays_all_495_fields(self):",
         "end": "if __name__=='__main__':unittest.main()"
+      }
+    ],
+    "test/m469_phone_logout_login_integrity_regression_test.dart": [
+      {
+        "start": "  test('M469 login differentiates missing verifier without bypassing password',(){",
+        "end": null
+      }
+    ],
+    "test/m441_auth_sms_copy_regression_test.dart": [
+      {
+        "start": "  test('M441: verified phone, not editable display profile, owns login', () {",
+        "end": "  test('M459: Saudi account registration is a single page', () {"
       }
     ]
   }
