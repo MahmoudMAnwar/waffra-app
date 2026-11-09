@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
   "change_id": "M609-CODEX-UI-ISOLATES-PLUS-M610-WIDGET-TEST-TIMEOUT-20261109-PR511",
-  "human_scope_review": "2026-11-09 owner explicitly requested continuing Codex's supplied screenshots exactly: isolate heavy SQLCipher open/verification, encrypted finance preflight and duplicate immutable finance reads from Flutter UI. No UI redesign, finance source switch or user-data change. Real Android proof and human merge review remain pending. The same screenshots explicitly mention a contended 10-second first-install SQLite BEGIN IMMEDIATE lock; M609 includes moving only this reservation to the database worker while retaining all receipt and data-preservation tests. M610: owner explicitly ordered fixing the two failed CI cases. Logs show both stale FakeAsync widget waits after M609 compute isolate, so only isolated widget-test completion signals and existing test wait behavior are updated on this PR, linked to Issue #512; no security or financial behavior changes. Owner/device acceptance remains separate.",
+  "human_scope_review": "2026-11-09 owner explicitly requested continuing Codex's supplied screenshots exactly: isolate heavy SQLCipher open/verification, encrypted finance preflight and duplicate immutable finance reads from Flutter UI. No UI redesign, finance source switch or user-data change. Real Android proof and human merge review remain pending. The same screenshots explicitly mention a contended 10-second first-install SQLite BEGIN IMMEDIATE lock; M609 includes moving only this reservation to the database worker while retaining all receipt and data-preservation tests. M610: owner explicitly ordered fixing the two failed CI cases. Logs show both stale FakeAsync widget waits after M609 compute isolate, so only isolated widget-test completion signals and existing test wait behavior are updated on this PR, linked to Issue #512; no security or financial behavior changes. Owner/device acceptance remains separate. Full-suite M610 retry confirmed an actual 20-second timeout waiting for `compute` inside FakeAsync; a dedicated test-only subclass now calls the unchanged canonical `requireIntegrity()` synchronously on the same saved finance read-view. Production still awaits real isolate verification.",
   "user_requested_changes": [
     "Run native SQLCipher 4 database open, key validation and financial queries outside Flutter's rendering isolate, keeping the same encryption and fail-closed checks.",
     "Offload encrypted snapshot checksum, canonical encoding, preflight and finance commit preparation to Dart isolates; preserve identical generation CAS, relational SQL and rollback.",
@@ -119,6 +119,10 @@
       {
         "start": " Future<void> _commitWidgetSms()async{",
         "end": " @override void dispose(){"
+      },
+      {
+        "start": " WaffraVerifiedFinanceAuthority get _financeAuthority {",
+        "end": " @override void initState(){"
       }
     ],
     "test/waffra_widget_quick_capture_test.dart": [
