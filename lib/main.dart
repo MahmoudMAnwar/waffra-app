@@ -1177,6 +1177,28 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  // complete owner-verified Home can paint. Never replace its wait with black.
  bool _m623HomeReady=false;
  String? _m623RetainedStage;
+ // Resume SMS only after the genuine first verified Home frame.
+ int _m624AuthGeneration=0;
+ int _m624SmsResumeIssuedGeneration=-1;
+ void _m624ResumeSmsAfterVerifiedHome(Person expectedOwner){
+  if(!Platform.isAndroid||!mounted||!_m623HomeReady||
+     showLogin||locked||autoSmsConsentPending||_logoutInProgress||
+     !identical(profile,expectedOwner)||
+     _m624SmsResumeIssuedGeneration==_m624AuthGeneration)return;
+  final generation=_m624AuthGeneration;
+  _m624SmsResumeIssuedGeneration=generation;
+  unawaited(()async{
+   try{
+    final resumed=await WaffraAutoSms.resumeAfterSignIn();
+    if(!resumed||!mounted||generation!=_m624AuthGeneration||
+       showLogin||locked||autoSmsConsentPending||_logoutInProgress||
+       !_m623HomeReady||!identical(profile,expectedOwner))return;
+    waffraAutoSmsUpdates.value++;
+   }catch(error){
+    debugPrint('Deferred native SMS resume failed: ${error.runtimeType}');
+   }
+  }());
+ }
  void _m623HomeLoaded(Person expectedOwner){
   final current=profile;
   if(!mounted||current==null||showLogin||locked||
@@ -1276,6 +1298,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     if(!{'light','dark','system'}.contains(appearance))appearance='light';
     dark=appearance=='dark'||(appearance=='system'&&WidgetsBinding.instance.platformDispatcher.platformBrightness==Brightness.dark);
     profile=u;
+    if(u!=null)_m624AuthGeneration++;
     googleFirstRunSetup=WaffraSaudiRelease.locationCountryOnboarding&&
      waffraGoogleProfileReadyForCountrySetup(u)&&
       !(p.getBool(waffraCountrySetupKey(u!))??false);
@@ -1388,26 +1411,12 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    profile=u;showLogin=false;googleFirstRunSetup=needsGoogleSetup;
    if(freshSession)locked=!ordinaryPhoneRelogin;
    if(freshSession){
+    _m624AuthGeneration++;
     _m623HomeReady=false;
     _m623RetainedStage=locked?'biometric':'login';
    }
   });
-  if(Platform.isAndroid&&mounted){
-   WidgetsBinding.instance.addPostFrameCallback((_){
-    if(!mounted||profile==null||showLogin)return;
-    unawaited(()async{
-     try{
-      final resumed=await WaffraAutoSms.resumeAfterSignIn();
-      // Ignore a late resume when the owner signed out meanwhile.
-      if(resumed&&mounted&&!showLogin&&identical(profile,u)){
-       waffraAutoSmsUpdates.value++;
-      }
-     }catch(error){
-      debugPrint('Deferred SMS restore failed: ${error.runtimeType}');
-     }
-    }());
-   });
-  }
+  // The verified Home's painted-frame callback resumes SMS, not sign-in.
  }
  Future<void> setUiCountry(String? iso)async{
   await WaffraRegionalCopy.setCountry(iso);
@@ -1524,6 +1533,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   if(mounted)_logoutFeedbackKey.currentState?.clearSnackBars();
   if(mounted)setState((){
    profile=null;showLogin=true;locked=false;googleFirstRunSetup=false;
+   _m624AuthGeneration++;
    _m623HomeReady=false;_m623RetainedStage=null;
   });
   }catch(error){
@@ -1656,6 +1666,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
       key:const ValueKey('waffra-verified-session-home'),
       profile:account,
       onVerifiedReady:()=>_m623HomeLoaded(account),
+      onVerifiedHomePainted:()=>_m624ResumeSmsAfterVerifiedHome(account),
       dark:appearance=='dark'||(appearance=='system'&&
        MediaQuery.platformBrightnessOf(rootContext)==Brightness.dark),
       appearance:appearance,onAppearance:setAppearance,onTheme:theme,
@@ -3681,6 +3692,7 @@ class HomeScreen extends StatefulWidget {
  final Person profile;final bool dark,pinEnabled;final String appearance;
  final int greetingIndex;
  final VoidCallback? onVerifiedReady;
+ final VoidCallback? onVerifiedHomePainted;
  final Future<void> Function(String) onAppearance;
  final Future<void> Function(String?) onSetPin;
  final VoidCallback onTheme;
@@ -3690,7 +3702,8 @@ class HomeScreen extends StatefulWidget {
  const HomeScreen({super.key,required this.profile,required this.dark,required this.pinEnabled,
   required this.onSetPin,required this.onTheme,required this.onLanguage,required this.onLogout,required this.onProfile,
    required this.appearance,required this.onAppearance,
-   required this.greetingIndex,this.onVerifiedReady});
+   required this.greetingIndex,this.onVerifiedReady,
+   this.onVerifiedHomePainted});
  @override State<HomeScreen> createState()=>_HomeScreenState();
 }
 // Scroll-linked, pinned balance summary. Shrinks with the user's gesture;
@@ -6633,6 +6646,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }
    // Account balances were verified before ready=true; no second startup read.
    WidgetsBinding.instance.addPostFrameCallback((_) {
+    // M624: the recovery view never resumes native SMS; no stale owner callbacks.
+    if(mounted&&ready&&_financeLoadFailure==null){
+     widget.onVerifiedHomePainted?.call();
+    }
     if(kProfileMode&&startupClock!=null){
      debugPrint('WAFFRA_FINANCE_PERF first_home_frame_ms='
       '${startupClock.elapsedMilliseconds}');
