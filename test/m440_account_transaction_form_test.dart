@@ -16,7 +16,24 @@ void main() {
   expect(waffraSarAmountMinor('0.01'),1);
   expect(waffraSarAmountMinor('١٠٠٠٫٥٠'),100050);
   expect(waffraSarAmountMinor('۱۲.۵۰'),1250);
-  for(final bad in ['','0','0.00','-1','1.234','12SAR','1e3','1,000']){
+  // M611: the money formatter prints grouped thousands. Valid grouping is
+  // an accepted SAR amount, never a foreign-currency conversion.
+  for(final good in <String,int>{
+   '1,000':100000,
+   '1,000.50':100050,
+   '١٬٠٠٠٫٥٠':100050,
+   '۱٬۰۰۰٫۵۰':100050,
+   '12,345.67':1234567,
+  }.entries){
+   expect(waffraSarAmountMinor(good.key),good.value,reason:good.key);
+  }
+  // Preserve the original fail-closed checks, plus malformed grouping and
+  // excess precision. A comma cannot silently become a decimal separator.
+  for(final bad in [
+   '','0','0.00','-1','1.234','12SAR','1e3',
+   '1,00','10,00','100,00','1,000,00','1,000.123',
+   ',1000','1000,','1,,000','1,00,000','-1,000','1,000SAR',
+  ]){
    expect(waffraSarAmountMinor(bad),isNull,reason:bad);
   }
  });
