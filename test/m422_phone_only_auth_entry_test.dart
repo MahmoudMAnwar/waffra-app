@@ -9,7 +9,9 @@ void main(){
   expect(main, isNot(contains("Start now — no sign in")));
   expect(main, isNot(contains("ابدأ الآن بدون تسجيل دخول")));
   expect(main, isNot(contains('Future<void> quickStart()async {')));
-  expect(main, contains("profile!.provider.toLowerCase().contains('guest')"));
+  expect(main, contains("account.provider.toLowerCase().contains('guest')"));
+  expect(main, contains("account.provider.toLowerCase().contains('demo')"));
+  expect(main, contains("final needsLogin=account==null||showLogin||"));
  });
 
  test('M422 registration uses phone only, no social identity chooser',(){
