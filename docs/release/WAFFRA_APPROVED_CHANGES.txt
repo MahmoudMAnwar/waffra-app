@@ -3130,3 +3130,23 @@ The owner reported that the unwanted Home startup spinner had merely become a bl
 - This note is intentionally committed after the last application source
   change, to satisfy the original M449 release-note ancestry check. This is
   not physical Android performance or signed APK release certification.
+
+================================================================================
+[M624 VERIFIED FIRST HOME / POST-FRAME SMS — ISSUE #530 PR #532 — 2026-11-09]
+================================================================================
+- Keep the existing complete genuine first Home with verified SQLCipher
+  transactions, authentic account balances and category cards. No new loader,
+  fake zero/masked amounts, black interim frame or biometric bypass.
+- Do not resume Android bank SMS native capture in the password/login save
+  frame. Defer it until AFTER verified Home paints and its 900ms settle.
+- Serially complete native resume BEFORE the first encrypted inbox scan;
+  confirm same signed-in owner, no pending consent, biometric lock or logout.
+- Logout waits for any in-flight native SMS resume before suspending native
+  capture, preventing a stale callback from re-enabling signed-out SMS.
+- Regression: test/m624_deferred_sms_after_verified_home_test.dart.
+- Reconciled the older M442 Python and M603 Flutter source regressions that
+  incorrectly required resuming SMS inside saveUser. Both now assert same-owner
+  native capture only after the verified Home first frame and logout race
+  serialization; no security or Android-native regression checks were skipped.
+- Physical signed APK startup, re-login and I/O profiling are still pending;
+  source-only verification does not certify frame latency or full smoothness.

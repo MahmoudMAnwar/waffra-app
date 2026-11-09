@@ -125,23 +125,34 @@ class M442SmsConsentSessionRecovery(unittest.TestCase):
         self.assertIn('await WaffraAutoSms.resumeAfterSignIn();', home)
         self.assertIn('await _accountWriteAuthority.saveProfile(', home)
         self.assertIn('await _accountWriteAuthority.signOut();', home)
-        # M603: verified SMS resume is now scheduled only after Home paint;
-        # no synchronous wait on the login/navigation critical path.
+        # M624: no native capture work competes with the first true Home frame.
         save_user = home[home.index(' Future<void> saveUser(Person u)async {'):
                          home.index(' Future<void> setUiCountry(')]
         self.assertIn('await _accountWriteAuthority.saveProfile(', save_user)
-        self.assertIn('if(Platform.isAndroid&&mounted){', save_user)
-        self.assertIn('WidgetsBinding.instance.addPostFrameCallback((_){', save_user)
-        self.assertIn('if(!mounted||profile==null||showLogin)return;', save_user)
-        self.assertIn('unawaited(()async{', save_user)
-        self.assertIn('final resumed=await WaffraAutoSms.resumeAfterSignIn();', save_user)
-        self.assertIn('if(resumed&&mounted&&!showLogin&&identical(profile,u)){', save_user)
-        self.assertLess(save_user.index('await _accountWriteAuthority.saveProfile('),
-                        save_user.index('WidgetsBinding.instance.addPostFrameCallback((_){'))
-        self.assertLess(save_user.index('WidgetsBinding.instance.addPostFrameCallback((_){'),
-                        save_user.index('final resumed=await WaffraAutoSms.resumeAfterSignIn();'))
-        self.assertNotIn('requestAutoSmsPermission', home[home.index('Future<void> saveUser('):
-                                                            home.index('Future<void> setUiCountry(')])
+        self.assertNotIn('WaffraAutoSms.resumeAfterSignIn()', save_user)
+        self.assertNotIn('requestAutoSmsPermission', save_user)
+        first_home = home[home.index(' Future<void> _loadFinanceSafely()async{'):
+                          home.index(' Widget _financialRecoveryScreen()')]
+        root = home[home.index(' Widget _m623RootContent(BuildContext rootContext){'):
+                    home.index(' @override Widget build(BuildContext context)=>MaterialApp(')]
+        owner_resume = home[home.index(
+            ' Future<bool> _m624ResumeSmsAfterRealHome(Person expectedOwner)async{'):
+            home.index(' void _m623HomeLoaded(')]
+        self.assertIn('onVerifiedHomeSmsResume:()=>_m624ResumeSmsAfterRealHome(account)', root)
+        self.assertIn('identical(profile,expectedOwner)', owner_resume)
+        self.assertIn('!showLogin&&!locked&&!autoSmsConsentPending', owner_resume)
+        self.assertIn('!_logoutInProgress&&_m623HomeReady', owner_resume)
+        self.assertIn('final resumed=await WaffraAutoSms.resumeAfterSignIn();', owner_resume)
+        self.assertIn('if(resumed&&ownerIsActive())waffraAutoSmsUpdates.value++;',
+                      owner_resume)
+        self.assertLess(first_home.index('WidgetsBinding.instance.addPostFrameCallback'),
+                        first_home.index('widget.onVerifiedHomeSmsResume?.call()'))
+        self.assertLess(first_home.index('widget.onVerifiedHomeSmsResume?.call()'),
+                        first_home.index('await _refreshAutoSmsInbox(importMonth:'))
+        logout = home[home.index(' Future<void> logout()async {'):
+                      home.index(' bool _logoutInProgress=false;')]
+        self.assertLess(logout.index('if(pendingSmsResume!=null)await pendingSmsResume;'),
+                        logout.index('WaffraAutoSms.suspendForSignOut().timeout('))
 
     def test_dashboard_does_not_hide_disabled_or_corrupt_queue_as_zero(self):
         store = read("native/WaffraAutoSmsStore.kt")

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "pr": 529,
-  "issue": "Owner 2026-11-09 M623 PR #529: fix the NEW black/blank screen that appeared after the formerly unwanted Home spinner was removed. Preserve prior authenticated page until genuine full Home is owner-verified, without another loading UI.",
+  "pr": "https://github.com/MahmoudMAnwar/waffra-app/pull/532",
+  "issue": "https://github.com/MahmoudMAnwar/waffra-app/issues/530",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main",
   "reviewed_at": "2026-11-09",
@@ -656,6 +656,40 @@
         "A device physical cold/warm screenshot and performance trace remain required to establish that no black frame persists; static tests alone do not certify smoothness.",
         "M290 still checks country setup consent and ability to skip; M424 and M443 still enforce biometric and logout safeguards. Reconcile exactly four obsolete static source checks, not actual runtime coverage.",
         "M422 still refuses anonymous guest and demo onboarding; authenticated profile identification is checked in the updated root helper."
+      ]
+    },
+    {
+      "id": "M624-VERIFIED-HOME-FIRST-POSTFRAME-SMS",
+      "issue": "Issue #530 / PR #532",
+      "previous_behavior": "M623 kept the previous login or biometric page noninteractive while finance verified in Offstage, but saveUser still scheduled native SMS resume in the next frame, before the authenticated Home; competing I/O increased perceived freeze. The Home's separately deferred inbox scan could overlap native SMS resume.",
+      "approved_behavior": "No new loading page, fake account sums or bypass of password/biometric/SQLCipher. Once real Home has finished verifying and visibly paints, launch Android native SMS resume AFTER that frame and before the first background inbox scan. Cancel stale/signed-out/locked owner work, await any in-flight resume before safely suspending SMS on logout, and maintain exact owner-bound finance state and first-run consent.",
+      "source_paths": [
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m624_deferred_sms_after_verified_home_test.dart",
+        "test/m604_fast_login_first_frame_test.dart",
+        "test/m622_immediate_home_without_loader_test.dart",
+        "test/m623_verified_home_handoff_no_black_frame_test.dart",
+        "test/m424_mandatory_biometrics_test.dart",
+        "test/m426_local_phone_credentials_test.dart",
+        "test/m580_sms_security_navigation_performance_test.dart",
+        "test/qa/m442_sms_consent_session_recovery_test.py",
+        "test/m603_app_wide_lag_source_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m174-main-post-merge-sqlcipher.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/android.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "Always verify encrypted owner-specific ledger and account balances before revealing any genuine finance Home values.",
+        "Never spawn SMS native resume before Home first frame or when owner signed out, locked, consent pending, or logout in progress.",
+        "If logout begins during native resume, wait for its completion before suspending capture; never re-enable signed-out SMS.",
+        "No UI loader, placeholder fake amount, masked artificial sum or bypass of biometrics, account controls, or SQLCipher.",
+        "Static CI alone cannot prove real Android frame latency; require signed phone profiling before Done."
       ]
     }
   ]

@@ -44,16 +44,25 @@ void main() {
   });
 
   test('verified sign-in paints first and only then restores owner SMS', () {
-    final section = mainSource.split(' Future<void> saveUser(Person u)async {')[1]
+    final saved = mainSource.split(' Future<void> saveUser(Person u)async {')[1]
         .split(' Future<void> setUiCountry(')[0];
-    final displayed = section.indexOf('if(mounted)setState((){');
-    final deferred = section.indexOf('WidgetsBinding.instance.addPostFrameCallback');
-    final resume = section.indexOf('await WaffraAutoSms.resumeAfterSignIn()');
-    expect(displayed, greaterThan(0));
-    expect(deferred, greaterThan(displayed));
-    expect(resume, greaterThan(deferred));
-    expect(section, contains('identical(profile,u)'));
-    expect(section, contains('waffraAutoSmsUpdates.value++'));
+    final root = mainSource.split(' Widget _m623RootContent(BuildContext rootContext){')[1]
+        .split(' @override Widget build(BuildContext context)=>MaterialApp(')[0];
+    final resume = mainSource.split(
+        ' Future<bool> _m624ResumeSmsAfterRealHome(Person expectedOwner)async{')[1]
+        .split(' void _m623HomeLoaded(')[0];
+    final home = mainSource.split(' Future<void> _loadFinanceSafely()async{')[1]
+        .split(' Widget _financialRecoveryScreen()')[0];
+    expect(saved, contains('if(mounted)setState((){'));
+    expect(saved, isNot(contains('WaffraAutoSms.resumeAfterSignIn()')));
+    expect(root, contains('onVerifiedHomeSmsResume:()=>_m624ResumeSmsAfterRealHome(account)'));
+    expect(resume, contains('identical(profile,expectedOwner)'));
+    expect(resume, contains('!_logoutInProgress&&_m623HomeReady'));
+    expect(resume, contains('if(resumed&&ownerIsActive())waffraAutoSmsUpdates.value++;'));
+    expect(home.indexOf('WidgetsBinding.instance.addPostFrameCallback'),
+        lessThan(home.indexOf('widget.onVerifiedHomeSmsResume?.call()')));
+    expect(home.indexOf('widget.onVerifiedHomeSmsResume?.call()'),
+        lessThan(home.indexOf('await _refreshAutoSmsInbox(importMonth:')));
   });
 
   test('Home first frame precedes four-page month SMS scan', () {

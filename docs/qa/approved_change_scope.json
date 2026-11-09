@@ -1,8 +1,12 @@
 {
   "contract_version": 1,
-  "change_id": "M623-RETAIN-AUTHENTICATED-SCREEN-UNTIL-REAL-HOME-FIRST-FRAME-PR529-20261109",
-  "human_scope_review": "Owner explicitly reported a NEW blank/black screen after earlier Home spinner removal and ordered an actual fix, not another replacement loader. This repair keeps the current login/biometric/permission page visible while the authorized encrypted ledger and account balances are verified, then reveals the genuine full Home together. Avoid new screens, spinners, fake masked balance or artificial data. Preserve SQLCipher, biometric check, existing SMS behavior, data safety and all previous tests. Owner explicitly requested fixing repeated CI errors on PR #529; include the narrowly bounded macOS/Linux SHA256 helper repair and matching M552 regression update in the same reviewed scope. M550/M147 source verification exposed four obsolete tests / workflow assertions; their assertions are replaced by equivalent controls in the approved M623 route while preserving the actual integration tests.",
+  "change_id": "M624-DEFER-SMS-AFTER-VERIFIED-HOME-ISSUE530-20261109",
+  "human_scope_review": "Owner explicitly requests instant-feeling Home after first login/biometrics and logout/relogin; no frozen auth page. Approved Issue #530 specifies removing competing pre-Home native SMS resume, retaining fully verified original Home and no fake/partial data. Defer SMS resume and scan sequentially until after genuine Home first frame; serialize native resume with signout to protect privacy. Preserve all account/SQLCipher/biometric and previous static and runtime guards. M429 revealed stale inherited M623 entries in the M385 allowlist: remove exactly the eleven files unchanged relative to the PR #532 main base, preserving all bounded checks for M624 edited production and test files.",
   "user_requested_changes": [
+    "M624 CI correction: carry over no unrelated M623 changed-file allowances. M385 must enforce exactly the changed files against PR #532 base, with protected source region boundaries intact.",
+    "Reconcile M442's obsolete positive assertion requiring native SMS resume from saveUser: keep verified Android bridge and capture/logout guarantees while requiring post-verified-Home resume and owner checks.",
+    "M624 / Issue #530: update M603 positive regression to assert native SMS resume only after the first verified Home frame and never inside saveUser, preserving owner and logout guards.",
+    "Issue #530/M624: Avoid competing Android SMS native work during owner-verified Home startup; resume SMS and scan only after the real first Home frame and never on a stale/signing-out owner session.",
     "Fix the failing M174 Python M552 regression by replacing the obsolete GNU-only command expectation with checks for unchanged pins, portable digest computation, and explicit reject-on-tamper behavior.",
     "Repair repeat CI failures on the approved M623 branch: retain exact pinned SHA256 digests while replacing GNU-only hash checking with macOS/Linux portable verification.",
     "Eliminate the black/blank frame introduced by replacing the Home spinner with SizedBox.shrink, without adding a substitute loading screen or fake financial placeholders.",
@@ -15,36 +19,16 @@
     "Keep the M422 no-guest/no-demo/no quick-start login test active against the new account-scoped Home root, without allowing anonymous access to private financial data."
   ],
   "allowed_changed_files": [
-    ".github/workflows/m290-country-reminders-multicurrency.yml",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
-    "scripts/qa/prefetch_verified_llamadart.sh",
-    "test/qa/m552_verified_sqlite3mc_ci_prefetch_test.py",
-    "test/m290_google_country_reminders_test.dart",
-    "test/m422_phone_only_auth_entry_test.dart",
-    "test/m424_mandatory_biometrics_test.dart",
-    "test/m426_local_phone_credentials_test.dart",
-    "test/m429_sms_phone_integration_test.dart",
-    "test/m443_merchant_screenshot_regression_test.dart",
-    "test/m463_auth_first_one_page_test.dart",
     "test/m603_app_wide_lag_source_regression_test.dart",
-    "test/m623_verified_home_handoff_no_black_frame_test.dart"
+    "docs/WAFFRA_REQUIREMENTS.md",
+    "test/m624_deferred_sms_after_verified_home_test.dart",
+    "test/qa/m442_sms_consent_session_recovery_test.py"
   ],
   "bounded_sections": {
-    "test/qa/m552_verified_sqlite3mc_ci_prefetch_test.py": [
-      {
-        "start": "    def test_official_api_sha256_pins_every_supported_ci_abi(self):",
-        "end": "    def test_pinned_sha256_check_succeeds_only_for_matching_bytes(self):"
-      }
-    ],
-    "scripts/qa/prefetch_verified_llamadart.sh": [
-      {
-        "start": "work=\"$(mktemp -d)\"",
-        "end": null
-      }
-    ],
     "lib/main.dart": [
       {
         "start": "class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {",
@@ -59,58 +43,20 @@
         "end": " Widget _financialRecoveryScreen()"
       }
     ],
-    "test/m424_mandatory_biometrics_test.dart": [
-      {
-        "start": "  test('M424: home route no longer exposes optional PIN settings', () {",
-        "end": null
-      }
-    ],
-    "test/m426_local_phone_credentials_test.dart": [
-      {
-        "start": "  expect(main,contains('if(freshSession)locked=!ordinaryPhoneRelogin;'));",
-        "end": "  expect(main,isNot(contains('WaffraPhoneSecureAuth')));"
-      }
-    ],
-    "test/m429_sms_phone_integration_test.dart": [
-      {
-        "start": " test('M429 integrates single SMS opt-in, phone login and OS biometrics',(){",
-        "end": "  expect(src,contains('WaffraLocalPhoneCredentials.verify('));"
-      }
-    ],
-    "test/m463_auth_first_one_page_test.dart": [
-      {
-        "start": " testWidgets('M463 signup presents all mandatory controls on one screen',",
-        "end": " test('M463 first clean install has only one account creation form',(){"
-      }
-    ],
     "test/m603_app_wide_lag_source_regression_test.dart": [
       {
         "start": "    expect(mainSource, contains('locked=u!=null;startupError=null;loading=false;'));",
         "end": "    final overlay = File('lib/waffra_idle_biometric_overlay.dart').readAsStringSync();"
+      },
+      {
+        "start": "  test('verified sign-in paints first and only then restores owner SMS', () {",
+        "end": "  test('Home first frame precedes four-page month SMS scan', () {"
       }
     ],
-    ".github/workflows/m290-country-reminders-multicurrency.yml": [
+    "test/qa/m442_sms_consent_session_recovery_test.py": [
       {
-        "start": "          verify=Path('lib/waffra_sms_multicurrency_review.dart').read_text()",
-        "end": "          assert \"googleFirstRunSetup=WaffraSaudiRelease.locationCountryOnboarding&&\" in app"
-      }
-    ],
-    "test/m290_google_country_reminders_test.dart": [
-      {
-        "start": "  test('M290 permissions are triggered only by the relevant user action', () {",
-        "end": null
-      }
-    ],
-    "test/m443_merchant_screenshot_regression_test.dart": [
-      {
-        "start": "  test('M443 Home retains biometric lock on actual background only', () {",
-        "end": "  test('M443 no merchant selection, brand logos or remote logo assets in active UI', () {"
-      }
-    ],
-    "test/m422_phone_only_auth_entry_test.dart": [
-      {
-        "start": " test('M422 blocks all guest onboarding and hidden quick start',(){",
-        "end": " test('M422 registration uses phone only, no social identity chooser',(){"
+        "start": "    def test_bridge_is_wired_to_native_with_no_os_reprompt_on_relogin(self):",
+        "end": "    def test_dashboard_does_not_hide_disabled_or_corrupt_queue_as_zero(self):"
       }
     ]
   }

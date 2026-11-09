@@ -1177,6 +1177,37 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  // complete owner-verified Home can paint. Never replace its wait with black.
  bool _m623HomeReady=false;
  String? _m623RetainedStage;
+ // M624: native SMS must never compete with owner-verified first Home paint.
+ // Logout awaits an already running resume before disabling SMS capture.
+ Future<bool>? _m624SmsResumeInFlight;
+ Future<bool> _m624ResumeSmsAfterRealHome(Person expectedOwner)async{
+  bool ownerIsActive()=>mounted&&identical(profile,expectedOwner)&&
+   !showLogin&&!locked&&!autoSmsConsentPending&&
+   !_logoutInProgress&&_m623HomeReady;
+  if(!Platform.isAndroid||!ownerIsActive())return false;
+  final previous=_m624SmsResumeInFlight;
+  if(previous!=null){
+   await previous;
+   return ownerIsActive();
+  }
+  final running=()async{
+   try{
+    final resumed=await WaffraAutoSms.resumeAfterSignIn();
+    if(resumed&&ownerIsActive())waffraAutoSmsUpdates.value++;
+   }catch(error){
+    debugPrint('Post-Home native SMS resume failed: ${error.runtimeType}');
+   }
+   // Inbox review is independent of native resume result, but not of owner.
+   return ownerIsActive();
+  }();
+  _m624SmsResumeInFlight=running;
+  try{return await running;}
+  finally{
+   if(identical(_m624SmsResumeInFlight,running)){
+    _m624SmsResumeInFlight=null;
+   }
+  }
+ }
  void _m623HomeLoaded(Person expectedOwner){
   final current=profile;
   if(!mounted||current==null||showLogin||locked||
@@ -1392,22 +1423,9 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     _m623RetainedStage=locked?'biometric':'login';
    }
   });
-  if(Platform.isAndroid&&mounted){
-   WidgetsBinding.instance.addPostFrameCallback((_){
-    if(!mounted||profile==null||showLogin)return;
-    unawaited(()async{
-     try{
-      final resumed=await WaffraAutoSms.resumeAfterSignIn();
-      // Ignore a late resume when the owner signed out meanwhile.
-      if(resumed&&mounted&&!showLogin&&identical(profile,u)){
-       waffraAutoSmsUpdates.value++;
-      }
-     }catch(error){
-      debugPrint('Deferred SMS restore failed: ${error.runtimeType}');
-     }
-    }());
-   });
-  }
+  // M624: do not start native SMS I/O on the login/biometric handoff.
+  // Verified Home resumes capture after its first real painted frame
+  // and BEFORE the initial encrypted inbox review.
  }
  Future<void> setUiCountry(String? iso)async{
   await WaffraRegionalCopy.setCountry(iso);
@@ -1504,6 +1522,10 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     }
    }
   }
+  // M624: a scheduled or in-flight Home SMS resume cannot overtake
+  // native capture suspension and re-enable banking SMS after sign-out.
+  final pendingSmsResume=_m624SmsResumeInFlight;
+  if(pendingSmsResume!=null)await pendingSmsResume;
   // Stop capture BEFORE removing profile. Keep this account's encrypted
   // pending review. If the new native bridge is unavailable, fail closed by
   // using explicit disable; never silently sign out with collection enabled.
@@ -1656,6 +1678,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
       key:const ValueKey('waffra-verified-session-home'),
       profile:account,
       onVerifiedReady:()=>_m623HomeLoaded(account),
+      onVerifiedHomeSmsResume:()=>_m624ResumeSmsAfterRealHome(account),
       dark:appearance=='dark'||(appearance=='system'&&
        MediaQuery.platformBrightnessOf(rootContext)==Brightness.dark),
       appearance:appearance,onAppearance:setAppearance,onTheme:theme,
@@ -3681,6 +3704,7 @@ class HomeScreen extends StatefulWidget {
  final Person profile;final bool dark,pinEnabled;final String appearance;
  final int greetingIndex;
  final VoidCallback? onVerifiedReady;
+ final Future<bool> Function()? onVerifiedHomeSmsResume;
  final Future<void> Function(String) onAppearance;
  final Future<void> Function(String?) onSetPin;
  final VoidCallback onTheme;
@@ -3690,7 +3714,8 @@ class HomeScreen extends StatefulWidget {
  const HomeScreen({super.key,required this.profile,required this.dark,required this.pinEnabled,
   required this.onSetPin,required this.onTheme,required this.onLanguage,required this.onLogout,required this.onProfile,
    required this.appearance,required this.onAppearance,
-   required this.greetingIndex,this.onVerifiedReady});
+   required this.greetingIndex,this.onVerifiedReady,
+   this.onVerifiedHomeSmsResume});
  @override State<HomeScreen> createState()=>_HomeScreenState();
 }
 // Scroll-linked, pinned balance summary. Shrinks with the user's gesture;
@@ -6642,6 +6667,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     unawaited(()async{
      await Future<void>.delayed(const Duration(milliseconds:900));
      if(!mounted||!ready||_financeLoadFailure!=null)return;
+     // M624: native SMS resume and encrypted inbox scan are sequential,
+     // only after the first fully verified Home frame has painted.
+     final activeOwner=(await widget.onVerifiedHomeSmsResume?.call())??true;
+     if(!activeOwner||!mounted||!ready||_financeLoadFailure!=null)return;
      await _refreshAutoSmsInbox(importMonth:!_autoSmsHistoryComplete);
     }());
    });
