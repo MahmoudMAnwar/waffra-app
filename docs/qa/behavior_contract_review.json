@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "pr": 517,
-  "issue": "Owner 2026-11-09 fixes #513 #514 #515 #516: manual validation and transfer thousand separators, compact read-only Home history tiles and complete account label; 2026-11-09 M613 #518 background-only biometric and M614 #519 measured auth/finance startup latency",
+  "pr": 524,
+  "issue": "Owner 2026-11-09 M615–M618 #520 #521 #522 #523: approved bank SMS review redesign, 30-day reversible excluded metadata and permanent deny hashes, cross-sender notifications selection and verified login repeated-probe optimization",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main",
   "reviewed_at": "2026-11-09",
@@ -368,6 +368,110 @@
         "No finance data/user identifiers in timing traces; only profile mode logs.",
         "Keep encrypted startup/upgrade recovery and Widget source validation unchanged.",
         "Do not claim latency fixed without Android profile/release measurements."
+      ]
+    },
+    {
+      "id": "M615-APPROVED-BANK-SMS-REVIEW-DIALOG",
+      "issue": "#520 PR #524",
+      "previous_behavior": "Unstructured SMS preview, multilines over left-side scrollbar and promotional safe-rule-learning copy.",
+      "approved_behavior": "Owner-approved original SMS expandable card plus structured financial details, separate Yes/No then exclusion, left RTL gutter and no user-visible safe-rule marketing. Maintain readable i18n, OTP and verified account controls.",
+      "source_paths": [
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m615_m618_sms_review_retention_perf_contract_test.dart",
+        "test/m580_sms_security_navigation_performance_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m174-main-sha-regression.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Bank SMS text is never uploaded to repo or logs.",
+        "No finance post without verified account, currency, owner confirmation.",
+        "Safe local rules can still learn after actual committed transactions."
+      ]
+    },
+    {
+      "id": "M616-EXCLUDED-SMS-THIRTY-DAY-LABEL-RETENTION",
+      "issue": "#521 PR #524",
+      "previous_behavior": "Encrypted excluded SMS denial hashes and optional safe sender/date labels had no time-bounded retention.",
+      "approved_behavior": "Record exclusionAt on explicit user exclusion. Prune recoverable encrypted labels 30 days later on native scan/list access, rather than aging SMS by original received date. Older labels without a trustworthy exclusion timestamp get 30 days from first safe migrated cleanup. Preserve owner-bound encrypted fingerprint denial to stop historical rescan reappearance. Restore is only available within 30-day window.",
+      "source_paths": [
+        "native/WaffraAutoSmsStore.kt",
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m615_m618_sms_review_retention_perf_contract_test.dart",
+        "test/m514_sms_review_regressions_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m174-main-sha-regression.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Do not delete Android SMS, user financial ledger, completed transfer or committed hashes.",
+        "No raw excluded SMS body is retained in Waffra.",
+        "Full original bank SMS only remains inside Android SMS provider if still present.",
+        "Expired reversible metadata must not become eligible for rescan.",
+        "A corrupt encrypted shard must not be treated as missing consent or safe removal."
+      ]
+    },
+    {
+      "id": "M617-RELOGIN-FINANCE-LOAD-SAFE-FAST-PATH",
+      "issue": "#522 PR #524",
+      "previous_behavior": "Correct password verified with OS phone-bound verifier, then profile save performed a second redundant secure-storage probe. Startup copy was long and suggested finance had to be downloaded.",
+      "approved_behavior": "After one valid PBKDF2 password check, pass exact ephemeral Person identity to verified save callback, avoiding just the duplicate OS probe. Registration, profile edits, legacy recovery, profile persistence and SQLCipher verified finance binding remain fully checked. Show concise 'بنفتح الرئيسية…' while actually verifying encrypted source. No 2-second improvement claim before Android release profile evidence.",
+      "source_paths": [
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m601_auth_busy_contract_test.dart",
+        "test/m604_fast_login_first_frame_test.dart",
+        "test/m547_login_isolate_performance_test.dart",
+        "test/m613_foreground_lock_and_m614_finance_timing_contract_test.dart",
+        "test/m463_auth_first_one_page_test.dart",
+        "test/m615_m618_sms_review_retention_perf_contract_test.dart",
+        "test/m580_sms_security_navigation_performance_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m174-main-sha-regression.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "No KDF reduction or passwordless login.",
+        "No failed password reaches verified save hook.",
+        "No OS verifier skipped on registration, profile edit or recovery.",
+        "No fake zero balances or unverified finance data on screen.",
+        "Measure p50/p95 physical Android login times before claiming speedup."
+      ]
+    },
+    {
+      "id": "M618-NOTIFICATION-CROSS-SENDER-SELECTION-AND-CORRECTION",
+      "issue": "#523 PR #524",
+      "previous_behavior": "Notifications cleared selected IDs on sender chip change and applied bulk exclusion to currently visible sender only; SMS No/Edit immediately opened one template without asking alternative type.",
+      "approved_behavior": "Selection persists by owner pending SMS ID while filters change, count and actions aggregate all still-pending selected messages. Blocking senders is a separate explicit opt-in. For recognised Expense No/Edit offer exactly Income and Transfer alternative buttons leading to the correct verified template; vice versa for recognised income. Exclusion below Yes/No confirms 30-day reversible Excluded folder.",
+      "source_paths": [
+        "lib/waffra_approved_notifications.dart",
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m549_approved_home_notifications_test.dart",
+        "test/m615_m618_sms_review_retention_perf_contract_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m174-main-sha-regression.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "No auto-banning future sender SMS unless user explicitly chooses sender block.",
+        "No selected ID from another owner or stale pending queue can be committed to exclusion.",
+        "No income/expense/transfer is created by changing type without its final verified editor save.",
+        "No user SMS or SQLCipher financial record is deleted by exclusion."
       ]
     }
   ]
