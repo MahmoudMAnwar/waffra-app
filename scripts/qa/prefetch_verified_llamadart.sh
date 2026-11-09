@@ -15,12 +15,27 @@ items=(
 )
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
+# macOS runners may have BSD sha256sum, which rejects GNU --check/--status.
+# Both platforms must still match the pinned official SHA256 or fail closed.
+verify_sha256() {
+  local expected="$1" file="$2" actual
+  if command -v shasum >/dev/null 2>&1; then
+    actual="$(shasum -a 256 "$file")" || return 1
+  elif command -v sha256sum >/dev/null 2>&1; then
+    actual="$(sha256sum "$file")" || return 1
+  else
+    echo "FATAL: no SHA256 verification tool available" >&2
+    return 1
+  fi
+  actual="${actual%% *}"
+  [[ "$actual" == "$expected" ]]
+}
 for spec in "${items[@]}"; do
   bundle="${spec%%:*}"
   digest="${spec#*:}"
   asset="llamadart-native-$bundle-$tag.tar.gz"
   target="$root/$bundle/$asset"
-  if [[ -f "$target" ]] && printf '%s  %s\n' "$digest" "$target" | sha256sum --check --status; then
+  if [[ -f "$target" ]] && verify_sha256 "$digest" "$target"; then
     echo "PASS cached $asset (official SHA256)"
     continue
   fi
@@ -29,12 +44,12 @@ for spec in "${items[@]}"; do
   gh release download "$tag" --repo "$upstream" --pattern "$asset" --dir "$work" --clobber
   original="$work/$asset"
   [[ -f "$original" ]] || { echo "FATAL: official artifact missing: $asset" >&2; exit 1; }
-  printf '%s  %s\n' "$digest" "$original" | sha256sum --check --status || {
+  verify_sha256 "$digest" "$original" || {
     echo "FATAL: official artifact SHA256 mismatch: $asset" >&2
     exit 1
   }
   mkdir -p "$(dirname "$target")"
   mv "$original" "$target"
-  printf '%s  %s\n' "$digest" "$target" | sha256sum --check --status || exit 1
+  verify_sha256 "$digest" "$target" || exit 1
   echo "PASS retrieved $asset (official SHA256)"
 done
