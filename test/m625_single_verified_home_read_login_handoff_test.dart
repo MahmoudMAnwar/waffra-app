@@ -35,7 +35,6 @@ void main() {
     final app=File('lib/main.dart').readAsStringSync();
     final binding=app.split(' Future<void> _bindFinanceSource()async{')[1]
         .split(' // Account filters are presentation-only;')[0];
-    final load=app.split(' Future<void> load()async {',2);
     expect(binding,contains('installedApp:true,'));
     expect(binding,contains('deferInitialDashboardRead:true,'));
     expect(binding,contains('startupRoute:WaffraFinanceRoute.appStartup,'));
