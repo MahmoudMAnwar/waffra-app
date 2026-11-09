@@ -124,7 +124,13 @@ void main() {
   test('M424: home route no longer exposes optional PIN settings', () {
     final source = File('lib/main.dart').readAsStringSync();
     expect(source, contains('locked?WaffraMandatoryBiometricGate('));
-    expect(source, contains('if(freshSession)locked=true;'));
+    // M602: explicit signout followed by verified phone/password must not
+    // prompt twice; registration, restored and idle sessions stay protected.
+    expect(source, contains("prefs.getBool('waffra_signed_out_explicitly')"));
+    expect(source, contains("u.provider.toLowerCase().trim()=='phone'"));
+    expect(source, contains('if(freshSession)locked=!ordinaryPhoneRelogin;'));
+    expect(File('lib/waffra_idle_biometric_overlay.dart').readAsStringSync(),
+      contains('this.timeout=const Duration(seconds:60)'));
     expect(source, contains('locked=u!=null;'));
     expect(source, contains('WaffraBiometricSessionGuard.mustLockOn(state)'));
     expect(source, isNot(contains(

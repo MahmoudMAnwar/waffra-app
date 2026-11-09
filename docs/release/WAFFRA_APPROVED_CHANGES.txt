@@ -2946,3 +2946,38 @@ M597 – PR #505 / Seven Owner Feedback Items #498–#504 (2026-11-08, SOURCE PE
 - Protected mixed bank purchase/debit plus OTP SMS from automatic sender-exclusion learning and matching; OTP-only rules remain sender-scoped and number-free.
 - Updated outdated M594 assertion to require explicit fee mode, SAR halala validation, atomic SQLCipher transfer plus fee expense and SMS hash, and acknowledgment strictly after durable commit; added mixed OTP regression.
 - PR remains Draft until full same-head CI and physical Android/two-device proof pass; tests are not disabled.
+
+[M601 #506 P0 login button and auth latency — PR #507 / CANDIDATE, NOT RELEASE-CERTIFIED] 2026-11-08
+- The owner reproduced an EMPTY sign-in button after tapping on Android and 2–3-second lag during signing in/out and elsewhere, despite prior M547/M585 fixes.
+- Fix pending/disabled FilledButton explicitly to retain WHITE background and dark GREEN text, plus a green progress spinner and stable original button size during full-strength password verification. This addresses the observed visual disappearance, not yet the entire measured Android frame-latency issue.
+- Remove a redundant serial FlutterSecureStorage existence read in login; the same fail-closed owner/phone probe already establishes whether secure verifier exists. Preserve 600000-round isolate PBKDF2, legacy login migration, biometric recovery, verified profile save, SMS consent, encrypted finances, and unchanged Yes/No sign-out.
+- Add profile-only stage duration diagnostics without phone, password, account or transaction identifiers, plus Flutter real button/widget and source security tests in test/m601_auth_busy_contract_test.dart.
+- Source files scoped by M385, behavior contract and permanent requirement docs. Exact-HEAD Flutter analyzer, all CI, Android release/profile frame p95, skipped frame counts, touch-to-feedback, complete sign-in/out, first-launch Home, 1000 SMS review and save paths, and update-over-old-data two-device proof remain REQUIRED. Do not merge or claim a final lag fix until verified.
+
+[M601 PR #507 P0 SIGN-OUT FEEDBACK FOLLOW-UP — NOT DEVICE-CERTIFIED] 2026-11-08
+- After Yes on the unchanged sign-out Yes/No dialog, render a stable high-contrast blocking progress veil before native SMS and OS/verified account shutdown I/O. Always remove the veil after success or failure; no password prompt, no signout bypass, no ledger or password deletion. Profile-mode logout stage emits duration only, no personal data. test/m601_auth_busy_contract_test.dart guards the safety/cleanup path. Does not prove real-device lag is eliminated; exact SHA CI and physical Android frames remain blocking.
+
+
+[M602 PR #507 NORMAL RE-LOGIN BIOMETRIC GATE — CI/DEVICE PENDING] 2026-11-08
+- Issue #508: A fresh phone/password re-login after explicit Yes sign-out should open Home without a second biometric prompt. First registration, process-restored protected sessions, 60-second idle lock and true missing-verifier biometric recovery remain protected. Regression source test added; physical Android three-cycle QA pending.
+
+[M603 PR #507 PERFORMANCE ROOT PATHS — CI/DEVICE PENDING] 2026-11-08
+- Issue #509: After Home has rendered, delay first-month encrypted SMS backlog scan briefly; yield between original four import cursor pages (no lost review records, auto-posting or consent change). Post verified login, native SMS resume no longer blocks navigation.
+- Reuse M593's bounded 32-row asynchronous verified MoneyEntry remapping on initial Home, pull-to-refresh, widget sync and confirmed SMS save to avoid long event-loop stalls. Large verified widget ledger sums use isolate compute.
+- Android's native sign-out SMS suspension runs on the SMS executor; signed-out state changes only after confirmed native pause and safe finance authority shutdown.
+- test/m603_app_wide_lag_source_regression_test.dart protects source contracts. CI, signed APK and physical Android frame measurements are not yet confirmed. Do not call this permanently lag-free or ready for merge without objective proof.
+
+
+[M602/M603 #508/#509 WHOLE-APP JANK SOURCE REMEDIATION – PR #507 / PENDING DEVICE ACCEPTANCE] 2026-11-08
+- First authenticated Home frame is painted before bounded, deferred first-month bank SMS scan; keep scan progress, user consent and review-only queue without posting money automatically.
+- Verified manual/reviewed SMS transaction and Widget/Home refresh remap large ledgers in bounded batches with short event-loop yields; publish only fully verified SQLCipher committed snapshots, no duplicate balance entries.
+- Native Android pauseAutoSmsForSignOut runs encrypted-store suspension on SMS executor off the UI thread and reports actual result; no silent signout while SMS capture remains enabled.
+- Normal explicit sign-out followed by verified phone/password opens a fresh unlocked Home session without a redundant biometric challenge; protected restored sessions and over-60-second background lock remain enforced.
+- Added M603 regression contracts plus explicit native behavior review. These source optimizations do not certify absence of frame jank: exact-head CI and physical profile Android dropped-frame and p95 build/raster proof remain required.
+
+[M604–M608 PR #507 EXACT-HEAD CI RECONCILIATION — NOT DEVICE-CERTIFIED] 2026-11-08
+- Updated four obsolete source assertions in M424, M426, M468 and M547 for protected restored sessions, explicitly signed-out authenticated password re-login, yielded verified ledger processing and native SMS worker-thread behavior. Security, account-owner and SQLCipher protections remain mandatory; tests not disabled.
+- M550/M174 originally failed a stale M442 check for a synchronous native SMS pause and then for synchronous SMS resume during password login. M605/M606 now require fail-closed SMS suspension on its worker and deferred owner-bound post-frame SMS resume rather than a UI-thread/blocking path. M174/M550 passed after this test correction on SHA 40c3e077.
+- M607 fixed an M429 Flutter analyzer unnecessary-null-comparison warning: a verified finance refresh ledger is non-null by source contract. Removed only the unreachable empty-ledger ternary; retained strict decode, verified SQLCipher authority and asynchronous bounded entry projection. M429/M550 passed on SHA e99fa0d.
+- M449 release-notes ancestry requires this latest review to be committed AFTER every application code change before a main APK can publish; no workflow guard bypass.
+- This PR remains Draft. Exact-head all-workflow green CI, protected finance tests, real profile Android dropped-frame/p95/tap-to-feedback traces and clean-install/upgrade verification are still required. Do NOT assert a guaranteed lag-free APK or merge/release readiness from source-level CI alone.

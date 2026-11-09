@@ -1,349 +1,169 @@
 {
   "schema_version": 1,
-  "pr": 505,
-  "issue": "https://github.com/MahmoudMAnwar/waffra-app/issues/504",
+  "pr": 507,
+  "issue": "https://github.com/MahmoudMAnwar/waffra-app/issues/506",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main",
   "reviewed_at": "2026-11-08",
   "review_policy": "Review changed behavior against all GitHub Actions workflow scripts, all Dart and Python QA test files, and the original tests' protected security assertions; never edit tests merely to silence red jobs.",
   "contracts": [
     {
-      "id": "M548-1000-SMS-UI",
-      "issue": "Issue #489 (M548) and Issue #492 (M550)",
-      "previous_behavior": "Opening the 1000-message sheet reprocessed the entire owner-encrypted review queue and expensive sender grouping.",
-      "approved_behavior": "Open verified snapshot promptly, build stable sender grouping in a linear pass, preserve selection, user confirmation and all finance verification gates.",
-      "source_paths": [
-        "lib/main.dart",
-        "lib/waffra_sms_review_groups.dart"
-      ],
-      "test_paths": [
-        "test/m548_review_grouping_and_signup_perf_test.dart",
-        "test/m429_sms_phone_integration_test.dart",
-        "test/m549_sms_review_owner_scoped_test.dart"
-      ],
-      "ci_workflows_to_watch": [
-        ".github/workflows/finance-full-regression.yml",
-        ".github/workflows/m147-final-main-review-gate.yml",
-        ".github/workflows/m274-production-ui-golden.yml"
-      ],
-      "safety_invariants": [
-        "Never post income or expense from merely loading or grouping the review queue.",
-        "Keep original SMS IDs, encrypted owner consent, sender selection and data intact."
-      ]
-    },
-    {
-      "id": "M548-SIGNUP-AND-PERFORMANCE",
-      "issue": "Issue #489 (M548) and Issue #492 (M550)",
-      "previous_behavior": "Fresh-account enrollment duplicated an expensive password KDF verification and navigation waited on nonessential review refreshes.",
-      "approved_behavior": "Use authenticated one-pass fresh verifier persistence with existing signed-in password requirements unchanged; show progress immediately and avoid frame blocking.",
-      "source_paths": [
-        "lib/main.dart",
-        "lib/waffra_local_phone_credentials.dart"
-      ],
-      "test_paths": [
-        "test/m548_review_grouping_and_signup_perf_test.dart",
-        "test/m548_source_method_boundary_guard_test.dart"
-      ],
-      "ci_workflows_to_watch": [
-        ".github/workflows/m103-same-sha-release-certification.yml",
-        ".github/workflows/m147-final-main-review-gate.yml"
-      ],
-      "safety_invariants": [
-        "Never permit login with an incorrect password or bypass biometric/session ownership.",
-        "Preserve existing SQLCipher protected user data and recovery credentials."
-      ]
-    },
-    {
-      "id": "M549-ALL-SENDERS-REVIEW-EXCLUSIONS",
-      "issue": "Issue #491 (M549) and Issue #492 (M550)",
-      "previous_behavior": "An older native financial-only SMS qualification filter excluded personal and unknown senders; repeated bulk exclusions re-parsed 1000 message bodies and asked a sender dialog for each group. Earlier M470 QA still demanded one sender dialog per group and old literal 100-ID loop variable names.",
-      "approved_behavior": "All eligible SMS inbox senders enter review only; 1000 selected messages can be excluded after one user choice; blocking senders keeps only encrypted names; durable cursor prevents replay; Rescan dims without unseen messages. Keep M470 tests aligned with one global sender choice, idempotent 100-ID batches for individual exclusions, and no pre-confirmation parse.",
-      "source_paths": [
-        "native/WaffraAutoSmsStore.kt",
-        "native/WaffraMainActivity.kt",
-        "lib/main.dart",
-        "lib/waffra_auto_sms.dart"
-      ],
-      "test_paths": [
-        "test/m549_sms_review_owner_scoped_test.dart",
-        "test/m464_sms_bulk_rescan_regression_test.dart",
-        "test/qa/m417_sms_permission_acceptance_test.py",
-        "test/m547_sms_incremental_jank_regression_test.dart",
-        "test/m470_sms_excluded_senders_test.dart"
-      ],
-      "ci_workflows_to_watch": [
-        ".github/workflows/m417-auto-bank-sms.yml",
-        ".github/workflows/m429-integration-smoke.yml",
-        ".github/workflows/m147-final-main-review-gate.yml"
-      ],
-      "safety_invariants": [
-        "Never delete Android Messages inbox or confirmed SQLCipher finance entries.",
-        "OTP numbers must be masked; owner, committed, excluded and transfer fingerprints prevent replay and double charge.",
-        "No background SMS receiver gains financial ledger or cloud posting authority."
-      ]
-    },
-    {
-      "id": "M550-ALL-CI-EXPECTATIONS-AND-NATIVE-COMPILE",
-      "issue": "Issue #492 (M550) and existing PR #490",
-      "previous_behavior": "Obsolete source-text tests were discovered only after expensive Android/Flutter workflow failures; the new sender restore condition also missed a closing Kotlin parenthesis.",
-      "approved_behavior": "Mandatory early exact-head preflight inventories every workflow job and test, reports affected behavior and stale positive assertions, requires an updated human-reviewed contract for each changed production source, and corrects the Kotlin syntax independently.",
-      "source_paths": [
-        "native/WaffraAutoSmsStore.kt",
-        "native/WaffraMainActivity.kt",
-        "lib/main.dart",
-        "lib/waffra_auto_sms.dart",
-        "lib/waffra_sms_review_groups.dart",
-        "lib/waffra_local_phone_credentials.dart"
-      ],
-      "test_paths": [
-        "test/qa/m550_behavior_contract_preflight_test.py",
-        "test/qa/m417_sms_permission_acceptance_test.py",
-        "test/m549_sms_review_owner_scoped_test.dart"
-      ],
-      "ci_workflows_to_watch": [
-        ".github/workflows/m550-behavior-contract-preflight.yml",
-        ".github/workflows/m147-final-main-review-gate.yml",
-        ".github/workflows/m417-auto-bank-sms.yml"
-      ],
-      "safety_invariants": [
-        "Never skip or rewrite finance and security tests to force a green build.",
-        "Kotlin and Flutter compilation must still run on the exact PR commit.",
-        "A source-level audit is not proof of device performance or correct business semantics."
-      ]
-    },
-    {
-      "id": "M549-APPROVED-HOME-NOTIFICATIONS",
-      "issue": "Issues #493 and #494 (approved compact Home and native notification review)",
-      "previous_behavior": "Home displayed an oversized balance with account dropdown inside the card and separate redundant income/expense metric blocks plus a standalone SMS review card. Notification access did not directly expose the verified pending review queue.",
-      "approved_behavior": "Match the approved compact Arabic RTL Home: separate independently verified month account filter outside balance; preserve stationary floating Add button; three small finance actions go through original guarded income/expense/transfer flows; show a bell with only actual pending SMS (saturating at +999), and open a compact notification center whose review CTA leads to native owner-bound SMS review rather than auto-posting.",
-      "source_paths": [
-        "lib/main.dart",
-        "lib/waffra_approved_notifications.dart"
-      ],
-      "test_paths": [
-        "test/m549_approved_home_notifications_test.dart",
-        "test/m467_account_header_test.dart",
-        "test/m470_balance_header_account_picker_test.dart",
-        "test/m495_pr402_ui_performance_regression_test.dart"
-      ],
-      "ci_workflows_to_watch": [
-        ".github/workflows/m147-final-main-review-gate.yml",
-        ".github/workflows/finance-full-regression.yml",
-        ".github/workflows/m277-ux-accessibility.yml",
-        ".github/workflows/m274-production-ui-golden.yml"
-      ],
-      "safety_invariants": [
-        "Use actual Android/native pending messages only; never fabricate system alerts or silently post account money.",
-        "Keep existing floating + position/size/animation, preserve sender exclusion/OTP masking and SQLCipher account/ledger witness.",
-        "The separate #495 first-time last-four/transaction-date/one-tap finance feature remains incomplete; do not claim that this UI change implements it.",
-        "Preserve older active owner account balances and confirmation-only transfer/entry gate."
-      ]
-    },
-    {
-      "id": "M568-EXACT-SENDER-SUFFIX-REUSE",
-      "issue": "Issue #495: first-time bank account selection and repeat trusted identity",
-      "previous_behavior": "Old bank SMS learning required two confirmations and permitted sender-only shortcuts for unique-bank guesses, then asked for account picker repeatedly.",
-      "approved_behavior": "One successfully committed, owner-confirmed sender+exact-four-digit account identity can be reused after fresh encrypted account witness; no sender-only linking or guessing a mismatched suffix.",
-      "source_paths": [
-        "lib/main.dart",
-        "lib/waffra_sms_account_learning.dart"
-      ],
-      "test_paths": [
-        "test/m464_sms_account_learning_test.dart",
-        "test/m493_sms_account_matching_regression_test.dart",
-        "test/qa/m447_verified_sms_account_linking_test.py"
-      ],
-      "safety_invariants": [
-        "Only post after explicit transaction confirmation and existing atomic encrypted SMS hash writer.",
-        "Wrong bank, wrong suffix, archived account and sender-only identity must not automatically debit any account."
-      ]
-    },
-    {
-      "id": "M580-M590-SEVEN-FEEDBACK-SECURE-SMS-RESPONSIVE-UI",
-      "issue": "Owner approved #498–#504 (WAFFRA-NEW-021..027), draft PR #505",
-      "previous_behavior": "OTP security challenges (notably Arabic temporary code) could leak into money labels; a tapped notice marshalled the entire 1000-SMS encrypted queue, an unchanged Back reprocessed it all; notifications showed duplicate large CTA and old filters; cold Home spinner showed blank content and summary numerals overflowed; submit button visually shrank while secure sign-in ran.",
-      "approved_behavior": "Use source-only bilingual OTP verification safety, per-SMS type and redacted review, sender-based direct notification tap with a single verified selected-ID native lookup on the SMS executor, no unconditional 1000-item reread after cancel, live incremental refresh, stable sign-in CTA, a bounded isolated cold Home loading surface, and fitted full currency figures. No automatic SMS deletion or finance posting from preview. Transfer and double-confirm redesign remain pending. M587 presents three explicit transfer preview actions: open guarded confirmed two-account form, add a separately confirmed independent income/expense, or exclude only this SMS. M588 restores the exact main Dart bridge after a real compiler-reported malformed regex insertion; new single-ID fetch retained. M589 keeps compact verified multi-select/bulk exclusions accessible via AppBar action without the redundant hero. M590 labels pending OTP and suggested exclusions as requiring review; only a durably excluded SMS may be described as excluded.",
-      "source_paths": [
-        "lib/main.dart",
-        "lib/waffra_bank_sms_facts.dart",
-        "lib/waffra_approved_notifications.dart",
-        "lib/waffra_auto_sms.dart",
-        "native/WaffraAutoSmsStore.kt",
-        "native/WaffraMainActivity.kt"
-      ],
-      "test_paths": [
-        "test/m580_sms_security_navigation_performance_test.dart",
-        "test/m549_approved_home_notifications_test.dart",
-        "test/m547_login_isolate_performance_test.dart",
-        "test/m548_review_grouping_and_signup_perf_test.dart",
-        "test/m470_sms_excluded_senders_test.dart"
-      ],
-      "ci_workflows_to_watch": [
-        ".github/workflows/m550-behavior-contract-preflight.yml",
-        ".github/workflows/m174-main-sha-postmerge.yml",
-        ".github/workflows/m147-final-main-review-gate.yml",
-        ".github/workflows/finance-full-regression.yml",
-        ".github/workflows/m429-integration-smoke.yml",
-        ".github/workflows/m417-auto-bank-sms.yml"
-      ],
-      "safety_invariants": [
-        "No OTP/access-code or uncertain-bank message is a settled expense or income; never log real banking SMS or codes.",
-        "No user funds move on opening/canceling a notification; the native owner/session and SQLCipher finance writer/hash anti-replay remain fully enforced.",
-        "Sender-only assumptions cannot authorize a bank account; no source/destination fee posting from an unverified transfer.",
-        "Unmodified sender-bulk exclusion, existing finance records, pinned floating + layout, and spouse-device update/migration remain safe.",
-        "These changes need full exact-HEAD Android/Flutter/Python native tests and before/after device frame measurements, and do not claim seven features complete.",
-        "Transfer Yes never commits before a second approved verified two-account editor confirmation; No never treats original SMS as posted income or expense, and Exclude never touches Android inbox.",
-        "Notifications may never describe a pending SMS or suggested excluded rule as an already excluded message, and the original owner-verified bulk review remains accessible."
-      ]
-    },
-    {
-      "id": "M590-M591-OTP-AND-EXACT-PREYES-FINANCE",
-      "issue": "Issues #498–#504, especially #500/#501 OTP and #504 initial bank account before Yes",
-      "previous_behavior": "SMS offline learning and dropdown labels could differ from bank OTP exclusion semantics, and M565 Yes used to request an account picker only AFTER the Yes dialog, while old M340/M565/M177 source QA demanded the obsolete sequence.",
-      "approved_behavior": "Same bilingual bank-facts OTP gate is used in SMS intelligence pending/suggestion path and rule editor labels consistently say excluded; first-time bank source account is chosen in the pre-Yes review via owner-bound exact sender+four and fresh encrypted witness, Yes is enabled only when verified, and finance commit receives that chosen witness without a second account picker. Existing optional budget/atomic hash writer remains required. M340, M565 and M177 positive tests now demand these stronger guards; negative finance tests unchanged.",
-      "source_paths": [
-        "lib/main.dart",
-        "lib/waffra_sms_intelligence.dart",
-        "lib/waffra_sms_rule_settings_page.dart"
-      ],
-      "test_paths": [
-        "test/m580_sms_security_navigation_performance_test.dart",
-        "test/qa/m565_sms_yes_no_test.py",
-        "test/storage/m177_live_finance_authority_integration_test.dart",
-        "test/qa/test_m340_financial_quality_gate.py",
-        "test/qa/m574_sms_confirmation_full_fields_test.py"
-      ],
-      "ci_workflows_to_watch": [
-        ".github/workflows/m550-behavior-contract-preflight.yml",
-        ".github/workflows/m340-continuous-financial-quality.yml",
-        ".github/workflows/m429-integration-smoke.yml",
-        ".github/workflows/finance-full-regression.yml",
-        ".github/workflows/m147-final-main-review-gate.yml"
-      ],
-      "safety_invariants": [
-        "No SMS is posted by choosing an account; user must explicitly confirm Yes after selection and bank source evidence verification.",
-        "All four verified encrypted SMS writers retain user consent, account generation freshness, source date, SAR original amount and duplicate fingerprint guards.",
-        "Bank challenge OTP and pending/declined text are not suggested as settled income or expense, and SMS native inbox is never deleted.",
-        "Old tests are strengthened to match approved behavior, not skipped, weakened or deleted; full exact-head CI remains required."
-      ]
-    },
-    {
-      "id": "M590-M594-REVIEW-PREYES-ACCOUNT-OTP-BULK-EXCLUSION-FRAME-LAG-FEE-SAFETY",
-      "issue": "#498 #500 #501 #502 #503 #504, owner approval 2026-11-08",
-      "previous_behavior": "SMS Yes requested a redundant bank/account dialog after confirmation; separate local ML classifier could miss Arabic temporary codes; Notifications lacked current-filter inline multiselection and native sender-block binding; manual/SMS ledger model conversion was synchronous; transfer fee was not visible and current verified writer only supports fee-free principal transfer.",
-      "approved_behavior": "Choose exact owner-verified bank account inside first SMS review before enabling final Yes; pass one fresh SQLCipher generation to confirmed SMS writer without a second dialog. Share fail-closed OTP parser across local ML and bank facts, rename excluded UI consistently. Notifications select/deselect only current sender group; fully selected senders get one native encrypted sender block, partial selections get exact 100-ID anti-replay batches and single owner-scoped safe keyword write. Yield between 32 verified money models after actual write; keep registration CTA width. Show source principal, separate fee, calculated extra debit, and prefill source/destination last four independently. Fee-bearing internal transfers MUST be blocked until an atomic fee-aware SQLCipher writer exists: never silently post principal-only incomplete money or ACK SMS.",
-      "source_paths": [
-        "lib/main.dart",
-        "lib/waffra_bank_sms_facts.dart",
-        "lib/waffra_sms_intelligence.dart",
-        "lib/waffra_sms_rule_settings_page.dart",
-        "lib/waffra_approved_notifications.dart"
-      ],
-      "test_paths": [
-        "test/m549_approved_home_notifications_test.dart",
-        "test/m580_sms_security_navigation_performance_test.dart",
-        "test/m548_review_grouping_and_signup_perf_test.dart",
-        "test/m470_sms_excluded_senders_test.dart",
-        "test/qa/m565_sms_yes_no_test.py",
-        "test/m470_sms_first_sender_account_test.dart"
-      ],
-      "ci_workflows_to_watch": [
-        ".github/workflows/m550-behavior-contract-preflight.yml",
-        ".github/workflows/m174-main-sha-postmerge.yml",
-        ".github/workflows/m147-final-main-review-gate.yml",
-        ".github/workflows/finance-full-regression.yml",
-        ".github/workflows/m417-auto-bank-sms.yml",
-        ".github/workflows/m429-integration-smoke.yml"
-      ],
-      "safety_invariants": [
-        "No financial writer, user-selected account or SQLCipher generation bypass; one confirmed SMS hash journal and no double debit.",
-        "No SMS OTP digit/phone/account identifier or whole body stored in learned rules; built-ins never silently delete SMS.",
-        "Full sender blocking only after selecting all live sender IDs, with one explicit confirmation and future anti-replay, never Android inbox deletion.",
-        "Independent fee never appears as a successful principal-only transfer, never ACK an unposted SMS, and do not claim full #503 completion.",
-        "Changes still require actual full exact-HEAD Flutter/native tests and physical Android clean install/upgrade evidence."
-      ]
-    },
-    {
-      "id": "M595-COMPACT-SMS-TYPE-CORRECTION-NO-SILENT-FINANCE",
-      "issue": "Issue #502 / WAFFRA-NEW-025; owner explicitly requested completing the seven PR #505 feedback items",
-      "previous_behavior": "Bank SMS dialog had no real first-class Income/Expense/Transfer selectors, only a previously inferred type and duplicated old review/no/edit controls.",
-      "approved_behavior": "Three selectable review type chips show message-local suggestion and allow explicit corrections. Each type change invalidates prior bank-account approval; Continue routes corrected income/expense to original owner-scoped SMS editor with source body and manual account selection. Corrected transfer uses a separate verified own-account transfer form and retains the original SMS for review, never guesses both endpoints or silently ACKs. Exclusion is an independent review action; OTP review remains fail-closed. Existing verified same-type SMS Yes path still requires consent, bank date, SAR, category, exact account and SQLCipher generation. Positive-fee transfers use the new exact-SQLCipher M597 atomic transfer, fee and hash writer subject to exact-head CI and physical Android acceptance; incomplete/ambiguous cases still fail closed. The owner's corrected kind takes precedence over a stale uncommitted SMS edit draft, without changing unrelated manual/receipt defaults. Choosing a transfer when the SMS did not independently verify two owner accounts now requires one more explicit dialog before opening a separate manual transfer; the source SMS stays pending and no finance ACK is made.",
+      "id": "M601-AUTH-PENDING-BUTTON-AND-VERIFIER-LATENCY",
+      "issue": "Issue #506 P0 owner-reported Android sign-in disappearing CTA and app-wide jank",
+      "previous_behavior": "On tap, the sign-in FilledButton was disabled by its request guard but no explicit disabled background/foreground was set; Material3 selected a low-contrast dark disabled surface so login and progress became visually empty. Sign-in also issued an extra OS-keystore hasRegisteredCredentials read before the already-required phone probe and real full-strength challenge, increasing serialized storage latency. After sign-out Yes the app waits for credential, SMS suspension, AI teardown and account authority writes without visible in-progress feedback, so users perceive a frozen signout.",
+      "approved_behavior": "Keep the login CTA visibly white with dark high-contrast Arabic/English pending text and isolated green progress during disabled authentication; one accepted tap only, progress before secure work, no wrong-password success. Derive verifier existence from the same fail-closed probe, including after verified biometric recovery; preserve all recovery, old salt/hash migration, authenticated account save, SMS consent and Yes/No signout. Log only profile-mode stage durations without personal data. Do not equate source tests with physical Android whole-app latency success. After Yes show a real blocking Material progress veil, first paint before secure I/O, and unconditionally remove it on success/error; keep the original Yes/No confirmation and all fail-closed operations.",
       "source_paths": [
         "lib/main.dart"
       ],
       "test_paths": [
-        "test/m580_sms_security_navigation_performance_test.dart",
-        "test/qa/m565_sms_yes_no_test.py",
-        "test/m549_approved_home_notifications_test.dart"
-      ],
-      "ci_workflows_to_watch": [
-        ".github/workflows/m550-behavior-contract-preflight.yml",
-        ".github/workflows/finance-full-regression.yml",
-        ".github/workflows/m429-integration-smoke.yml",
-        ".github/workflows/m147-final-main-review-gate.yml"
-      ],
-      "safety_invariants": [
-        "No account, ledger money, SMS fingerprint or native pending message is changed by tapping a type choice.",
-        "A corrected transfer from SMS with unverified source/destination never posts a fake two-sided bank transfer or implicitly removes original SMS.",
-        "Final posting requires existing SQLCipher writer, chosen account, source-proven date and explicit user save, with original duplicate safeguards.",
-        "No legacy tests removed; full exact-head CI and Android visual/latency evidence required before release.",
-        "A prior uncommitted draft cannot silently override the user's newly selected Income or Expense correction."
-      ]
-    },
-    {
-      "id": "M597-ATOMIC-SMS-TRANSFER-WITH-SEPARATE-BANK-FEE",
-      "issue": "Issue #503 and #504 – WAFFRA-NEW-026/027",
-      "previous_behavior": "Reviewed SMS own-account transfer with separate positive fee could only display amounts and reject all postings because the finance transfer and fee/hash were not saved together.",
-      "approved_behavior": "Require explicitly confirmed source and destination owned accounts and original bank timestamp. Before save, explicitly classify whether SAR fee is within or additional to principal debit. Under one verified SQLCipher app/widget lock, transaction, source generation and canonical SQL parity check, commit the own-account transfer + separately categorized fee expense on source account + immutable native SMS fingerprint; verify both typed SQL and canonical ledger before ACK. Deduplicate each source exactly and block all ambiguous, stale, unsafe or incomplete approvals. Zero fee remains an exact-owner transfer with native durable ACK; do not infer account/date/currency or auto-post.",
-      "source_paths": [
-        "lib/main.dart",
-        "lib/storage/waffra_unified_finance_writer.dart",
-        "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
-        "lib/storage/waffra_verified_accounts_api.dart"
-      ],
-      "test_paths": [
-        "test/m580_sms_security_navigation_performance_test.dart",
-        "test/m514_sms_review_regressions_test.dart",
-        "test/m470_sms_transfer_fee_firsttap_category_test.dart",
-        "test/qa/m417_sms_permission_acceptance_test.py"
-      ],
-      "ci_workflows_to_watch": [
-        ".github/workflows/m550-behavior-contract-preflight.yml",
-        ".github/workflows/finance-full-regression.yml",
-        ".github/workflows/m147-final-main-review-gate.yml"
-      ],
-      "safety_invariants": [
-        "Financial writer runs under exact source lock and single SQLCipher transaction; no partial fee/transfer/hash commit.",
-        "Transfer principal excluded from budget income/expense; separately booked source fee is one expense.",
-        "Unknown last-four, original date, fee currency or account owner fails closed rather than constructing invented bank entry.",
-        "Existing hashes, SMS dedupe, finance/SQLCipher migration and live Home/widget original source remain unchanged until verified commit.",
-        "All exact-head CI and both physical Android device upgrade/new-install tests required before release or merge."
-      ]
-    },
-    {
-      "id": "M600-PR505-M385-M462-M594-CI-ROOT-FIX",
-      "issue": "User-approved repair of PR #505 CI failures, issues #495 #500 #501 #503",
-      "previous_behavior": "M574 nested Future helper truncated test; M385 missed bounded edit. Mixed payment OTP was learned as excluded. M594 asserted obsolete fee rejection.",
-      "approved_behavior": "Keep entire M574 preview assertion contract, block mixed purchase+OTP sender exclusions, assert verified fee mode user approval and atomic SQLCipher transfer/fee/hash plus ACK after commit.",
-      "source_paths": [
-        "lib/waffra_sms_local_rules.dart",
-        "lib/main.dart",
-        "lib/storage/waffra_unified_finance_writer.dart"
-      ],
-      "test_paths": [
-        "test/qa/m574_sms_confirmation_full_fields_test.py",
-        "test/m462_smart_sms_rule_review_test.dart",
+        "test/m601_auth_busy_contract_test.dart",
+        "test/m547_login_isolate_performance_test.dart",
+        "test/m479_login_logout_and_back_test.dart",
+        "test/m463_auth_first_one_page_test.dart",
         "test/m580_sms_security_navigation_performance_test.dart"
       ],
       "ci_workflows_to_watch": [
-        ".github/workflows/m174-postmerge-sqlcipher-regression.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/m429-integration-smoke.yml",
         ".github/workflows/finance-full-regression.yml"
       ],
       "safety_invariants": [
-        "No OTP digits persisted in exclusion rules.",
-        "Unconfirmed mixed finance/OTP never disappears from review.",
-        "No principal-only save or early SMS ACK when bank fee exists.",
-        "No prior required QA/security tests are skipped."
+        "Do not lower 600000-round PBKDF2 strength or move it to the Flutter rendering isolate.",
+        "Do not overwrite missing/foreign/malformed OS verifiers, fail open, or bypass biometric sign-in recovery.",
+        "Preserve verified SQLCipher/account finance authority and owner-bound SMS consent.",
+        "Sign-out remains Yes/No and must not erase financial records or credentials.",
+        "Only a real profile APK trace can prove no dropped frames, tap-to-feedback and login/logout completion on Android.",
+        "Always remove the signout progress overlay on failure as well as success; never begin another logout concurrently."
+      ]
+    },
+    {
+      "id": "M602-PHONE-PASSWORD-RELOGIN-DOES-NOT-RELOCK",
+      "issue": "Issue #508, explicit owner requirement",
+      "previous_behavior": "Every new profile saved from the signed-out phone login set locked=true and presented a mandatory fingerprint even after a correct password. First-registration and process-restored profile also required biometric.",
+      "approved_behavior": "Observe explicit sign-out before verified profile save, and only then skip the redundant immediate fingerprint on successful registered phone-password re-login. Preserve first registration and process-restored mandatory biometric, 60-second background idle gate, fail-closed old credential recovery and SQLCipher binding.",
+      "source_paths": [
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m603_app_wide_lag_source_regression_test.dart",
+        "test/m479_login_logout_and_back_test.dart",
+        "test/m424_mandatory_biometrics_test.dart",
+        "test/m426_local_phone_credentials_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m429-integration-smoke.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "Never let unverified phone/password bypass mandatory recovery biometric.",
+        "Never unlock an existing restored protected session without biometric.",
+        "Encrypted finance/account owner invariant is unchanged."
+      ]
+    },
+    {
+      "id": "M603-SMS-HOME-FINANCE-SAVE-AND-LOGOUT-THREAD",
+      "issue": "Issue #509, owner requires eliminating three Android jank sources",
+      "previous_behavior": "Home began four-page native SMS import immediately after first rendered frame; large verified ledger conversion was synchronous during Home/widget/SMS review; Android pauseAutoSmsForSignOut held queue mutex and committed preferences on main thread; login awaited SMS restart before navigation.",
+      "approved_behavior": "Complete profile transition before native SMS restart; defer history work 900ms after Home interactive frame, yield between import cursor pages without dropping any; use existing 32-row async verified MoneyEntry mapper during startup, refresh, widget sync and reviewed SMS save; for large widget balance sums use compute(); execute native SMS suspension on SMS executor and deliver result on UI thread. Maintain owner-scoped encrypted records, full month scan, review-only SMS and verified ledger save.",
+      "source_paths": [
+        "lib/main.dart",
+        "native/WaffraMainActivity.kt"
+      ],
+      "test_paths": [
+        "test/m603_app_wide_lag_source_regression_test.dart",
+        "test/m580_sms_security_navigation_performance_test.dart",
+        "test/m601_auth_busy_contract_test.dart",
+        "test/m468_large_ledger_decode_test.dart",
+        "test/m547_login_isolate_performance_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/android.yml",
+        ".github/workflows/m429-integration-smoke.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "Never fake SMS consent or financial commits; queue remains review-only.",
+        "Android first-month scan must still cover start-of-install month with persistent cursor.",
+        "Must measure actual next APK frame timings before claiming lag-free."
+      ]
+    },
+    {
+      "id": "M602-M603-HOME-FINANCE-SMS-AUTH-RESPONSIVENESS",
+      "issue": "Issues #508 and #509: normal logout/relogin biometric and whole-app jank",
+      "previous_behavior": "Normal logout then verified password login opened a second biometric gate; SMS resume could delay authenticated Home. Cold Home started heavy multi-page native SMS historical scanning alongside first render; finance save and widget reads could synchronously materialize thousands of records. Android SMS signout called encrypted queue suspension on main UI thread, stalling Flutter frames.",
+      "approved_behavior": "After explicit logout, correct verified phone/password returns to an unlocked fresh Home session without extra biometrics, while restored sessions and >60-second background remain protected. Defer owner-checked SMS resume and bounded month-import work until after Home first frame, preserving review-only SMS and original consent. Build large verified ledger projections in bounded asynchronous batches after SQLCipher commit, with no partial/unverified balance or duplicate transaction. Suspend native SMS for signout on the history executor rather than Android main thread, return success only after safe suspension, fail closed on error.",
+      "source_paths": [
+        "lib/main.dart",
+        "native/WaffraMainActivity.kt"
+      ],
+      "test_paths": [
+        "test/m603_app_wide_lag_source_regression_test.dart",
+        "test/m601_auth_busy_contract_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Preserve full-strength OS-bound password verifier and account-owner finance authority.",
+        "No automatic posting of SMS, no duplicate charge, no bypass of verified SQLCipher writes.",
+        "Keep native SMS signed-out suspension fail-closed and never expose financial data before authentication.",
+        "Do not claim smooth physical Android performance based on source tests alone."
+      ]
+    },
+    {
+      "id": "M604-EXACT-HEAD-TEST-CONTRACT-RECONCILIATION",
+      "issue": "Owner explicit direction to fix M550/M174/M147 on PR #507",
+      "previous_behavior": "Four stale positive tests required unconditional fresh-session biometric, synchronous verified-transaction mapping, and main-thread SMS sign-out suspension. One legacy M442 Python QA assertion still demanded synchronous main-thread SMS logout suspension.",
+      "approved_behavior": "Test explicitly signed-out verified phone relogin without redundant biometric, while keeping initial, restored and 60s idle biometric gates; check 32-record yielded verified ledger remapping and actual native SMS suspension on worker with fail-closed callbacks. M442 now asserts native SMS suspension and completion/error callbacks occur through the dedicated worker and UI result dispatcher, never synchronously on the UI thread.",
+      "source_paths": [
+        "lib/main.dart",
+        "native/WaffraMainActivity.kt"
+      ],
+      "test_paths": [
+        "test/m424_mandatory_biometrics_test.dart",
+        "test/m426_local_phone_credentials_test.dart",
+        "test/m468_large_ledger_decode_test.dart",
+        "test/m547_login_isolate_performance_test.dart",
+        "test/qa/m442_sms_consent_session_recovery_test.py"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "Keep biometric enrollment, restored lock and one-minute idle protection.",
+        "Keep 600000 round password derivation, fail-closed credential recovery and verified SQLCipher financial state.",
+        "Do not certify Android frame performance before real device measurements."
+      ]
+    },
+    {
+      "id": "M609-FOUR-OBSOLETE-FULL-SUITE-ASSERTIONS",
+      "issue": "Issues #506 #508 #509 / owner immediate all-CI repair for PR #507",
+      "previous_behavior": "Full-suite M441 expected a second OS secure-store existence read; M463 demanded fingerprint after every password login; M468 demanded a non-null authority ledger to be replaced with [] on impossible null; M470 expected obsolete synchronous MoneyEntry parser call after unchanged-source shortcut.",
+      "approved_behavior": "A single fail-closed OS credential probe still rejects missing/malformed/wrong-phone, uses biometric recovery only if eligible and protected. Initial/restored/60s-lock sessions remain protected, while explicit signout+verified password relogin skips redundant biometric. Verified pull refresh rejects invalid snapshots, avoids unchanged re-decode and uses bounded async M593 materialization of all verified transactions; no silent empty-ledger fallback.",
+      "source_paths": [
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m441_auth_sms_copy_regression_test.dart",
+        "test/m463_auth_first_one_page_test.dart",
+        "test/m468_large_ledger_decode_test.dart",
+        "test/m470_logout_and_refresh_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m429-integration-smoke.yml"
+      ],
+      "safety_invariants": [
+        "Existing owner-bound phone verification, password KDF, missing/foreign/malformed recovery and restored/idle biometric gates remain mandatory.",
+        "No dropping finance records or accepting unverified encrypted ledger bytes.",
+        "Tests are not removed or skipped; only obsolete assertions are updated to inspect the approved current implementation."
       ]
     }
   ]

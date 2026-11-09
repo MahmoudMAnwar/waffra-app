@@ -22,7 +22,14 @@ void main() {
     final main=File('lib/main.dart').readAsStringSync();
     final login=main.substring(main.indexOf('Future<void> _signIn()async{'),
       main.indexOf('String get maskedLastPhone{'));
-    expect(login,contains('hasRegisteredCredentials()'));
+    // M609: the single OS-backed verifier probe replaces a duplicate
+    // secure-store existence read, and still fails closed on corrupt records.
+    expect(login,contains('var verifierStatus=await WaffraLocalPhoneCredentials.probeForPhone('));
+    expect(login,contains('verifierStatus==WaffraLocalCredentialProbe.malformed'));
+    expect(login,contains('final hasSecureVerifier=verifierStatus!=WaffraLocalCredentialProbe.missing;'));
+    expect(login,contains('WaffraLocalPhoneCredentials.hasSignOutRecoveryGrant(enteredPhone)'));
+    expect(login,contains('await WaffraBiometrics.unlockMandatory();'));
+    expect(login,isNot(contains('await WaffraLocalPhoneCredentials.hasRegisteredCredentials()')));
     expect(login,contains('if(!hasSecureVerifier&&storedPhone!=enteredPhone)'));
     expect(login,contains('phone:enteredPhone,password:signInPassword.text'));
     expect(login,contains('if(!match){'));

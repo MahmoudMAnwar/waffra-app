@@ -96,7 +96,18 @@ class M442SmsConsentSessionRecovery(unittest.TestCase):
                      'resumeAutoSmsAfterSignIn'):
             self.assertIn(name, bridge)
             self.assertIn('"' + name + '"', activity)
-        self.assertIn('WaffraAutoSmsStore.suspendForSignOut(this)', activity)
+        # M603: encrypted SMS suspension must not block Android's UI thread.
+        # Preserve the signed-out safety barrier and return the real worker result.
+        pause = activity.split('"pauseAutoSmsForSignOut" -> {', 1)[1].split(
+            '"resumeAutoSmsAfterSignIn" -> {', 1)[0]
+        self.assertIn('val app = applicationContext', pause)
+        self.assertIn('smsHistoryExecutor.execute {', pause)
+        self.assertIn('WaffraAutoSmsStore.suspendForSignOut(app)', pause)
+        self.assertIn('runOnUiThread { result.success(paused) }', pause)
+        self.assertIn('result.error("SMS_SIGNOUT_UNAVAILABLE"', pause)
+        self.assertLess(pause.index('smsHistoryExecutor.execute {'),
+                        pause.index('WaffraAutoSmsStore.suspendForSignOut(app)'))
+        self.assertNotIn('WaffraAutoSmsStore.suspendForSignOut(this)', pause)
         self.assertIn('WaffraAutoSmsStore.resumeForSameSignedInOwner(app)', activity)
         # M547: verified same-owner resume waits for SMS mutex/commits only
         # on the serialized SMS executor, never the Android UI thread.
@@ -114,7 +125,21 @@ class M442SmsConsentSessionRecovery(unittest.TestCase):
         self.assertIn('await WaffraAutoSms.resumeAfterSignIn();', home)
         self.assertIn('await _accountWriteAuthority.saveProfile(', home)
         self.assertIn('await _accountWriteAuthority.signOut();', home)
-        self.assertIn('if(Platform.isAndroid)await WaffraAutoSms.resumeAfterSignIn();', home)
+        # M603: verified SMS resume is now scheduled only after Home paint;
+        # no synchronous wait on the login/navigation critical path.
+        save_user = home[home.index(' Future<void> saveUser(Person u)async {'):
+                         home.index(' Future<void> setUiCountry(')]
+        self.assertIn('await _accountWriteAuthority.saveProfile(', save_user)
+        self.assertIn('if(Platform.isAndroid&&mounted){', save_user)
+        self.assertIn('WidgetsBinding.instance.addPostFrameCallback((_){', save_user)
+        self.assertIn('if(!mounted||profile==null||showLogin)return;', save_user)
+        self.assertIn('unawaited(()async{', save_user)
+        self.assertIn('final resumed=await WaffraAutoSms.resumeAfterSignIn();', save_user)
+        self.assertIn('if(resumed&&mounted&&!showLogin&&identical(profile,u)){', save_user)
+        self.assertLess(save_user.index('await _accountWriteAuthority.saveProfile('),
+                        save_user.index('WidgetsBinding.instance.addPostFrameCallback((_){'))
+        self.assertLess(save_user.index('WidgetsBinding.instance.addPostFrameCallback((_){'),
+                        save_user.index('final resumed=await WaffraAutoSms.resumeAfterSignIn();'))
         self.assertNotIn('requestAutoSmsPermission', home[home.index('Future<void> saveUser('):
                                                             home.index('Future<void> setUiCountry(')])
 

@@ -37,7 +37,10 @@ void main(){
   expect(refresh,contains('encryptedCurrent.digest==encryptedPrevious.digest'));
   expect(refresh,contains('current.widgetRevision==previous?.widgetRevision'));
   expect(refresh.indexOf('encryptedCurrent.generation==encryptedPrevious.generation'),
-    lessThan(refresh.indexOf('await readList<MoneyEntry>(')));
+    lessThan(refresh.indexOf('await _m593BuildVerifiedEntries(')));
+  expect(refresh,contains('final refreshSource=WaffraVerifiedPullRefreshSource.fromAuthority(current);'));
+  expect(refresh,contains('final nextEntries=await _m593BuildVerifiedEntries('));
+  expect(refresh,contains('(await WaffraLargeJsonDecode.parse(ledger)) as List)'));
   expect(refresh,contains('if(current.source==WaffraRuntimeFinanceBackend.guardedLegacy)'));
   expect(refresh,contains('setState((){'));
  });

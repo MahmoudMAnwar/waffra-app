@@ -1,220 +1,138 @@
 {
   "contract_version": 1,
-  "change_id": "M580-M599-SEVEN-FEEDBACK-SECURE-SMS-UX-PERFORMANCE-PR505",
-  "human_scope_review": "Owner explicitly authorized implementing issues #498 through #504 on 2026-11-08 and prioritizing lag after every tap; preserve approved visual references, unchanged floating +, exact SQLCipher finance integrity, OTP masking, both device data, native sender-exclusion consent and all existing tests. This branch contains only early partial source changes plus true regression contracts, not approval to merge until exact-head CI and Android evidence.",
+  "change_id": "M601-M602-M603-P0-AUTH-BIOMETRIC-HOME-SMS-FINANCE-JANK-ISSUES506-508-509",
+  "human_scope_review": "Owner explicitly reported four days of app-wide post-tap jank and an empty login button on Android, and directed a fix for the next build on 2026-11-08. This scope covers the authentication CTA disabled-state visibility and avoiding a redundant OS-keystore verifier read, without weakening 600000-round PBKDF2, biometric/login recovery or verified finance state. Physical Android profile proof is required for any claim of final app-wide lag resolution. Owner subsequently directed immediate remediation of the three identified lag sources and the unwanted post-logout biometric; #508 #509 require additional bounded source, native Android and regression-test edits while protecting security and finance. Owner requested correcting five obsolete positive tests blocking PR #507 M550/M174/M147; this is test-only reconciliation with existing approved behavior and does not relax security, finance or biometric invariants. M609 explicitly reconciles four obsolete, positive, complete-suite test literals (M441, M463, M468, M470) against owner-approved secure phone probe, normal signout/relogin biometric behavior and bounded verified ledger refresh, without disabling guards or altering app source.",
   "user_requested_changes": [
-    "#498 Keep a stable visibly loading login button and preserve secure, responsive first registration with no double submission or weakened password controls.",
-    "#499 Tap an existing bank-SMS notice to open that exact message directly and return without repeatedly transferring the entire encrypted inbox.",
-    "#500 Correct per-message labels and redaction; OTP and pending verification never masquerade as financial expense or silently record money.",
-    "#501 Recognize Arabic temporary verification codes and English security messages offline and hold ambiguous financial directions for explicit owner review.",
-    "#502 Use the approved compact sender-filtered notifications list without duplicate oversized hero or obsolete type tabs; keep real current sender data.",
-    "#503 Preserve verified account-to-account transfer writer and source account/fee checks while remaining three-choice UX work is tracked as incomplete.",
-    "#504 Replace blank Home loading, remove unavoidable 1000-SMS rereads after cancel and clip-free currency circle in compact approved monthly summary; keep full financial source verification.",
-    "#500/#501 Owner-approved Arabic naming for excluded rules/messages and shared conservative OTP/temporary-code handling across offline ML and bank parsers.",
-    "M591: update M340, M565 and M177 source contracts to require the owner-approved verified SMS account BEFORE Yes and fresh encrypted witness, rather than obsolete post-Yes picker. Preserve all finance-hash, account-generation and negative tests.",
-    "#498/#504 Smooth signup submit and prevent verified manual/SMS ledger display model mapping from monopolizing frames after confirmation.",
-    "M595 #502: Existing bank SMS review must expose three real user-selectable Income / Expense / Transfer choices, and independent exclusion, with corrected type routed to a fully verified manual/SMS finance editor. Type chips cannot post money, ACK messages, guess bank identity or bypass the verified Yes account and date requirements.",
-    "M597 #503: an SMS own-account transfer with an explicitly confirmed positive SAR fee must post two verified account movements, one separately attributed fee expense, and one immutable SMS fingerprint within the SAME SQLCipher transaction; rollback on stale source, category mismatch, duplicate, or incomplete insert. Sender/OTP proof, exact date/time and owner consent remain mandatory. Release is blocked until full exact-head automated and device tests.",
-    "M598 exact-head CI root repair: fail closed when extra bank-debit amount is nullable before dividing in Arabic/English fee dialog, and update M514 source/destination four-digit test to enforce the approved independently verified field-specific prefill. Refresh release notes after source in the same commit. Do not skip, relax, or rerun obsolete test logic.",
-    "M599 exact-head CI repair: M385 fail-closed file-scope guard requires an explicit bounded M514 regression test region; the previously approved test strengthens source-specific sender+suffix behavior and is unchanged outside that region. M429 analyzer must reject unnecessary null branches and null assertions without changing bank SMS consent/date/amount safety. No other behavior or test is bypassed.",
-    "M600 user-approved CI repairs: M385 existing M574 preview test correction is limited to two bounded ranges without weakening SMS Yes/No fields. Reject rule-based auto-exclusion of OTP plus a completed purchase/debit. Assert confirmed and validated SAR fees commit atomically with transfer and message hash, before acknowledgment; keep every former QA/security gate."
+    "Issue #506: Fix the real Android post-tap disappearing/empty login CTA; pending/disabled progress and Arabic/English text must remain visible with no double-submit.",
+    "Issue #506: Reduce redundant secure-storage calls in the phone login hot path without bypassing the OS verifier, 600000-round PBKDF2 off UI isolate, different-phone rejection, or biometric recovery.",
+    "Issue #506: Capture profile-only sign-in stage timings without personal information and require real Android first-signin, logout and whole-app frame profiling before declaring a smooth release.",
+    "Issue #506: Add source plus actual Flutter widget regressions for disabled visual states and preserve existing signed-out Yes/No behavior.",
+    "Issue #506: Immediately after the existing Yes/No sign-out confirmation paint a guarded progress veil, block repeated buttons, and always remove it on safe success or failure.",
+    "Issue #508: normal explicitly signed-out verified phone-password re-login opens Home without a second biometric; onboarding and restored/60-second protected sessions remain protected.",
+    "Issue #509: first Home paint before expensive month SMS scan; avoid multi-page native import burst on startup while preserving full initial-month review and exact consent.",
+    "Issue #509: chunk expensive verified transaction remapping after finance/SMS saves and dashboard refreshes, never publish unverified partial data.",
+    "Issue #509: remove synchronous Android UI-thread SMS stop during sign-out, and restore SMS only after verified Home has painted.",
+    "Issues #506/#508/#509: fix four stale exact-head positive QA assertions in M424/M426/M468/M547, preserving the stronger current behavioral and safety checks.",
+    "Issue #509 / M174: reconcile the stale M442 native logout SMS consent assertion to demand off-Android-UI executor, same-owner protection, verified completion and fail-closed error callback rather than its former synchronous main-thread call; do not weaken SMS security.",
+    "Issue #506/#508/#509 M609: reconcile four stale full-suite test literals M441/M463/M468/M470 to require fail-closed single OS verifier probe, mandatory first/restored/idle biometric, normal password relogin without repeat prompt, and same-witness short-circuit before verified batched ledger remapping; no relaxed protected checks."
   ],
   "allowed_changed_files": [
+    "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
-    "docs/WAFFRA_REQUIREMENTS.md",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
-    "lib/waffra_bank_sms_facts.dart",
-    "lib/waffra_approved_notifications.dart",
-    "lib/waffra_auto_sms.dart",
-    "native/WaffraAutoSmsStore.kt",
+    "test/m601_auth_busy_contract_test.dart",
     "native/WaffraMainActivity.kt",
-    "test/m549_approved_home_notifications_test.dart",
-    "test/m580_sms_security_navigation_performance_test.dart",
-    "test/m514_sms_review_regressions_test.dart",
-    "lib/waffra_sms_intelligence.dart",
-    "lib/waffra_sms_rule_settings_page.dart",
-    "scripts/qa/m340_financial_quality_gate.py",
-    "test/qa/m565_sms_yes_no_test.py",
-    "test/storage/m177_live_finance_authority_integration_test.dart",
-    "lib/storage/waffra_unified_finance_writer.dart",
-    "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
-    "lib/storage/waffra_verified_accounts_api.dart",
-    "lib/waffra_sms_local_rules.dart",
-    "test/qa/m574_sms_confirmation_full_fields_test.py"
+    "test/m603_app_wide_lag_source_regression_test.dart",
+    "test/m424_mandatory_biometrics_test.dart",
+    "test/m426_local_phone_credentials_test.dart",
+    "test/m468_large_ledger_decode_test.dart",
+    "test/m547_login_isolate_performance_test.dart",
+    "test/qa/m442_sms_consent_session_recovery_test.py",
+    "test/m441_auth_sms_copy_regression_test.dart",
+    "test/m463_auth_first_one_page_test.dart",
+    "test/m470_logout_and_refresh_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
       {
-        "start": "FilledButton(onPressed:WaffraHaptics.tap(signingIn?null:_signIn),",
-        "end": "          key:const Key('m479-login-back-to-choice'),"
+        "start": " Future<void> saveUser(Person u)async {",
+        "end": " Future<void> setUiCountry("
       },
       {
-        "start": " Widget _phoneRegistrationForm(){",
-        "end": " @override Widget build(BuildContext context){\n  if(widget.initial==null&&widget.provider=='Phone')return _phoneRegistrationForm();"
+        "start": " Future<void> logout()async {",
+        "end": " Future<void> setPin("
+      },
+      {
+        "start": " Future<void> _signIn()async{",
+        "end": " String get maskedLastPhone{"
+      },
+      {
+        "start": "FilledButton(onPressed:WaffraHaptics.tap(signingIn?null:_signIn),",
+        "end": "          key:const Key('m479-login-back-to-choice'),"
       },
       {
         "start": " Future<void> _runAutoSmsRefresh({bool importMonth=false})async{",
         "end": " Future<void> _analyzeAmbiguousSmsOnDemand("
       },
       {
-        "start": " Future<void> _openExcludedSenders()async{",
-        "end": " Future<void> _openAutoSmsInbox()async{"
+        "start": " Future<void> _loadFinanceSafely()async{",
+        "end": " Widget _financialRecoveryScreen()"
       },
       {
-        "start": " Future<void> _openAutoSmsInbox()async{",
-        "end": "  // The sender inbox route remains beneath the message review."
+        "start": " Future<void> _syncWidgetTransactions()async{",
+        "end": " /// Refresh from the authoritative source"
       },
       {
-        "start": "  // The sender inbox route remains beneath the message review.",
-        "end": " /// Explicit, idempotent account-to-account transfer from reviewed bank SMS."
+        "start": " Future<void> _refreshFromVerifiedFinance()async {",
+        "end": " Future<void> load()async {\n  await _ensureFinanceBound();"
       },
       {
-        "start": " /// Explicit, idempotent account-to-account transfer from reviewed bank SMS.",
-        "end": " Future<void> _loadFinanceSafely()async{"
+        "start": " Future<void> load()async {\n  await _ensureFinanceBound();",
+        "end": " Future<void> _refreshWidget()async{"
       },
       {
-        "start": " Widget monthlySummaryCard(){",
-        "end": " Widget smartMoneyInsightsCard(){"
+        "start": " Future<void> _publishVerifiedWidgetBalance(",
+        "end": " Future<void> persist("
       },
       {
-        "start": "  body:_financeLoadFailure!=null?_financialRecoveryScreen():",
-        "end": "   Stack(clipBehavior:Clip.none,children:[GestureDetector("
-      },
-      {
-        "start": " Future<void> entrySheet({MoneyEntry? initial,bool sms=false,String? initialSms,",
-        "end": " Future<void> showReceipt(String encoded,{int initialIndex=0,String? entryId})async {"
-      }
-    ],
-    "lib/waffra_bank_sms_facts.dart": [
-      {
-        "start": " static final _pending=RegExp(",
-        "end": " static final _source=RegExp("
-      },
-      {
-        "start": " static WaffraBankSmsFacts parse(String raw){",
-        "end": null
-      }
-    ],
-    "lib/waffra_approved_notifications.dart": [
-      {
-        "start": "import 'package:flutter/material.dart';",
-        "end": null
-      }
-    ],
-    "lib/waffra_auto_sms.dart": [
-      {
-        "start": " // Unlike pending(), this method distinguishes an empty inbox from a",
-        "end": " /// Read-only, on-demand scan for institutional financial notices that"
-      }
-    ],
-    "native/WaffraAutoSmsStore.kt": [
-      {
-        "start": "    fun pending(context: Context): List<Map<String, Any>> = synchronized(mutex) {",
-        "end": "    /** Atomic per-SMS request claim shared by foreground and WorkManager."
+        "start": "       final verifiedRaw=await WaffraLargeJsonDecode.parse(",
+        "end": "       if(!mounted)return;\n       setState((){"
       }
     ],
     "native/WaffraMainActivity.kt": [
       {
-        "start": "                \"pendingAutoBankSms\" -> {",
-        "end": "                \"claimAutoBankSmsCloudAttempt\" -> result.success("
+        "start": "                \"pauseAutoSmsForSignOut\" ->",
+        "end": "                \"resumeAutoSmsAfterSignIn\" ->"
       }
     ],
-    "test/m549_approved_home_notifications_test.dart": [
+    "test/m424_mandatory_biometrics_test.dart": [
       {
-        "start": "void main(){",
-        "end": " test('M549 approved Home bell saturated at +999; FAB is unchanged',(){"
+        "start": "  test('M424: home route no longer exposes optional PIN settings', () {",
+        "end": null
       }
     ],
-    "lib/waffra_sms_intelligence.dart": [
+    "test/m426_local_phone_credentials_test.dart": [
       {
-        "start": "import 'waffra_sms_multicurrency_review.dart';",
-        "end": "/// Small no-cost, fully offline"
-      },
-      {
-        "start": "  static bool isPendingOrUnconfirmed(String raw) {",
-        "end": "  static WaffraSmsMlSuggestion classify(String raw) {"
+        "start": "  expect(await WaffraLocalPhoneCredentials.verifyRecord(result,\n   phone:'0599999999',password:'CorrectP@ssword12'),false);",
+        "end": null
       }
     ],
-    "lib/waffra_sms_rule_settings_page.dart": [
+    "test/m468_large_ledger_decode_test.dart": [
       {
-        "start": "         for(final option in const <String>['income','expense','transfer','excluded'])",
-        "end": "           selected:kind==option,"
-      },
-      {
-        "start": " Widget _defaultRuleBucket(String kind) {",
-        "end": "  return Card(child:ExpansionTile("
-      },
-      {
-        "start": "      title:Text(switch(kind){",
-        "end": "       for(final rule in saved.where((r)=>r.resolvedKind==kind))"
+        "start": " test('M468 first install and pull use the same verified parsing contract',(){",
+        "end": null
       }
     ],
-    "scripts/qa/m340_financial_quality_gate.py": [
+    "test/m547_login_isolate_performance_test.dart": [
       {
-        "start": "    start = home.find(\"Future<void> _m565ConfirmSms(\")",
-        "end": "    for marker, reason in (\n        (\"_financeAuthority.saveCaptured(\""
+        "start": " test('Android SMS re-enable and resume do not block main-thread login frames', () {",
+        "end": null
       }
     ],
-    "test/qa/m565_sms_yes_no_test.py": [
+    "test/qa/m442_sms_consent_session_recovery_test.py": [
       {
-        "start": "class SmsYesNoTest(unittest.TestCase):",
-        "end": "if __name__=='__main__':unittest.main()"
+        "start": "    def test_bridge_is_wired_to_native_with_no_os_reprompt_on_relogin(self):",
+        "end": "    def test_dashboard_does_not_hide_disabled_or_corrupt_queue_as_zero(self):"
       }
     ],
-    "test/storage/m177_live_finance_authority_integration_test.dart": [
+    "test/m441_auth_sms_copy_regression_test.dart": [
       {
-        "start": "    final reviewedYes=home.split('Future<void> _m565ConfirmSms(')[1]",
-        "end": "    // M506 stages receipt bytes separately"
+        "start": "  test('M441: verified phone, not editable display profile, owns login', () {",
+        "end": "  test('M459: Saudi account registration is a single page', () {"
       }
     ],
-    "lib/storage/waffra_unified_finance_writer.dart": [
+    "test/m463_auth_first_one_page_test.dart": [
       {
-        "start": "import 'waffra_accounts_schema.dart';",
-        "end": "import 'waffra_atomic_finance_snapshot.dart';"
-      },
-      {
-        "start": "  /// Optional runtime source verification.",
-        "end": "  /// Called AFTER explicit confirmation for bank SMS, or on a manual save."
+        "start": " test('M463 registration/login success precedes SMS prompt and OS biometrics',(){",
+        "end": " test('M463 Android SMS then notifications remains one-time, no AI opt in',(){"
       }
     ],
-    "lib/storage/waffra_verified_encrypted_finance_bridge.dart": [
+    "test/m470_logout_and_refresh_test.dart": [
       {
-        "start": "  Future<WaffraFinanceSnapshotState> attachReceiptsToExisting({",
-        "end": "  /// Receives explicitly confirmed SMS/manual transaction JSON from either"
-      }
-    ],
-    "lib/storage/waffra_verified_accounts_api.dart": [
-      {
-        "start": " @override\n Future<bool> transfer({",
-        "end": " /// One manual income/expense + its account association must share a"
-      }
-    ],
-    "test/m514_sms_review_regressions_test.dart": [
-      {
-        "start": " test('M514 source-specific account digits, actionable transfer and verified receipt edit',(){",
-        "end": " test('M516 native SMS identity determines transfer id, not body-only hash',(){"
-      }
-    ],
-    "test/qa/m574_sms_confirmation_full_fields_test.py": [
-      {
-        "start": "from pathlib import Path",
-        "end": "SRC=(Path(__file__).resolve().parents[2]/'lib/main.dart').read_text(encoding='utf-8')"
-      },
-      {
-        "start": "class FullSmsPreviewTest(unittest.TestCase):",
-        "end": "if __name__=='__main__':unittest.main()"
-      }
-    ],
-    "lib/waffra_sms_local_rules.dart": [
-      {
-        "start": " static bool matches(WaffraSmsLocalRule rule,String body",
-        "end": " /// Keep a single safe auto-learned bucket per direction and sender while"
-      },
-      {
-        "start": " static WaffraSmsLocalRule? suggestedRule({",
-        "end": " /// Conservative, sender-agnostic keyword hints from a confirmed"
+        "start": " test('M470 #2 unchanged verified refresh avoids reconstructing whole ledger',(){",
+        "end": null
       }
     ]
   }

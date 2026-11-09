@@ -285,8 +285,20 @@ class MainActivity : FlutterFragmentActivity() {
                         }
                     }
                 }
-                "pauseAutoSmsForSignOut" ->
-                    result.success(WaffraAutoSmsStore.suspendForSignOut(this))
+                "pauseAutoSmsForSignOut" -> {
+                    // The encrypted queue mutex and SharedPreferences commit can
+                    // block Android's main thread and freeze the sign-out spinner.
+                    val app = applicationContext
+                    smsHistoryExecutor.execute {
+                        try {
+                            val paused = WaffraAutoSmsStore.suspendForSignOut(app)
+                            runOnUiThread { result.success(paused) }
+                        } catch (_: Exception) {
+                            runOnUiThread { result.error("SMS_SIGNOUT_UNAVAILABLE",
+                                "Could not safely suspend SMS capture", null) }
+                        }
+                    }
+                }
                 "resumeAutoSmsAfterSignIn" -> {
                     // M547 PERF-04: never wait for the encrypted history
                     // queue's mutex or synchronous preferences commits on

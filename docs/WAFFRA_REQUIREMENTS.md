@@ -1016,3 +1016,25 @@ On PR #505 SHA b2c8588f, M174 rejected the approved small M514 test update becau
 
 ### M600 — exact-head CI failure root fixes (2026-11-08)
 M385 now explicitly bounds the existing M574 SMS preview parser-test change; all original required labels and account/date/Yes/No assertions remain mandatory. M462 must reject sender-exclusion learning and existing exclusion matching for a message with completed purchase/debit and temporary OTP evidence, without saving OTP code digits. M594 must validate the approved M597 verified atomic user-confirmed bank fee transfer+fee expense+SMS fingerprint and native ACK after commit rather than obsolete temporary fee rejection. Same-head CI, exact ledger regression and two-device QA remain mandatory; no merge of Draft PR #505 on source assertions alone.
+
+
+### WAFFRA-NEW-028 / M601 — P0 auth button vanishing + whole-app latency (2026-11-08)
+- **Issue:** [#506](https://github.com/MahmoudMAnwar/waffra-app/issues/506). **Branch:** `fix/m601-p0-auth-ui-lag-20261108`. **Status:** IN PROGRESS — not yet verified on actual Android or accepted as permanently fixed.
+- **Owner repro:** four days of repeated 2–3 s jank on Android after tapping sign in, sign out and many app buttons; the primary login button becomes visually EMPTY while the password is being checked (screenshot). Previous M547/M585 and seven-feedback PRs merged but did not resolve the device symptom.
+- **Acceptance:** non-disappearing, high-contrast enabled **and disabled/pending** submit CTA with stable label and spinner, first-frame feedback, no double submit; secure login once per tap, full 600,000-round PBKDF2 off Flutter isolate, preserve exact stored verifier and legacy identity migration and original owner. Avoid redundant secure-storage probes in hot login path. Never weaken existing finance, SQLCipher, account-lock, SMS consent or sign-out Yes/No. Preserve logout safety before changing signed-in state.
+- **Performance proof:** collect **real profile/release Android** trace of tap-to-feedback, operation completion, dropped frames / build/raster p95 for cold/warm login, sign-out, first registration, Home load, SMS review with 1,000, footer navigation and manual/SMS saves; no fabricated numbers. Investigate remaining UI-isolate blocking separately and gate next-release readiness on measured regressions. Unit/source-only test passing does **not** prove a jank-free APK.
+
+- **M601 sign-out addition on PR #507:** the unchanged Yes/No confirmation now shows an immediate, blocking progress veil after Yes until native SMS suspension, model shutdown and verified account sign-out complete; the veil is removed on both success and failure and profile-mode timing logs have no financial data. This is visible feedback, not proof that underlying Android I/O latency has been eliminated. Device testing still required.
+
+
+### WAFFRA-NEW-029 / M602 — fingerprint only after first-run or protected-session timeout (2026-11-08)
+- **Issue:** [#508](https://github.com/MahmoudMAnwar/waffra-app/issues/508). **PR:** [#507](https://github.com/MahmoudMAnwar/waffra-app/pull/507). **Status:** IN PROGRESS; Android acceptance and current-head CI pending.
+- **Owner contract:** after explicit sign out and correct phone/password sign in, go directly to Home without fingerprint; initial biometric setup is first-run only. Preserve mandatory biometric on restored protected session and after >60s app background. Do not turn corrupt/missing password verifier recovery into password-only login. Preserve Yes/No-only sign-out and SQLCipher ownership.
+- **Test:** repeat 3 logout/login cycles, 59/60/61-second background threshold, failed/cancelled biometric cannot expose money, first registration and legacy recovery retained.
+
+### WAFFRA-NEW-030 / M603 — app-wide jank sources (2026-11-08)
+- **Issue:** [#509](https://github.com/MahmoudMAnwar/waffra-app/issues/509). **PR:** [#507](https://github.com/MahmoudMAnwar/waffra-app/pull/507). **Status:** IN PROGRESS; device performance acceptance pending.
+- **Home + SMS:** initial page must paint before encrypted history import; avoid 4 pages per Home startup and repeated background scans; keep same start-of-month cursor, review-only queue, consent and retry guarantees.
+- **Manual/SMS save:** never synchronously materialize a large confirmed ledger on UI isolate after a tap. Existing verified finance commits, SMS hash and account selections must remain atomic, and saved entry must appear exactly once.
+- **Auth/logout:** don't await noncritical SMS restart before Home; native sign-out SMS store access must not run on Android UI thread; no false success on failure. Preserve credentials and data.
+- **Test gate:** no 'fully fixed' until real profile/release APK p95 build/raster and dropped-frame traces for cold/warm launch, 1,000-SMS Home/review, manual/SMS transaction and auth/logout are captured with both upgrade and clean install.

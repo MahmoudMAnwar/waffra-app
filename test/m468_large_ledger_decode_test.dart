@@ -48,7 +48,18 @@ void main(){
  test('M468 first install and pull use the same verified parsing contract',(){
   final src=File('lib/main.dart').readAsStringSync();
   expect(src,contains('await WaffraLargeJsonDecode.parse(raw)'));
-  expect(src,contains('await readList<MoneyEntry>(ledger,MoneyEntry.fromJson)'));
+  // M603: verified ledger projection yields after bounded mapping,
+  // retaining all rows, their order and source integrity checks.
+  // M607: normalized authority ledger is non-null; never silently replace
+  // invalid verified ciphertext with an empty financial history.
+  expect(src,contains('final refreshSource=WaffraVerifiedPullRefreshSource.fromAuthority(current);'));
+  expect(src,contains('final nextEntries=await _m593BuildVerifiedEntries('));
+  expect(src,contains('(await WaffraLargeJsonDecode.parse(ledger)) as List)'));
+  expect(src,isNot(contains('final nextEntries=ledger==null?<MoneyEntry>[]:')));
+  expect(src,contains('await _m593BuildVerifiedEntries('));
+  expect(src,contains('const batchSize=32;'));
+  expect(src,contains('MoneyEntry.fromJson(Map<String,dynamic>.from(row))'));
+  expect(src,contains('await Future<void>.delayed(const Duration(milliseconds:1))'));
   expect(src,contains('await readList<BudgetCategory>(catalog,BudgetCategory.fromJson)'));
   expect(src,contains('financeView.requireIntegrity();'));
   expect(src,contains('view.requireIntegrity();'));

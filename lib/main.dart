@@ -1313,6 +1313,11 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
      u.provider.toLowerCase()=='phone'&&profile!.phone!=u.phone){
    throw StateError('Changing a sign-in phone requires verified account migration');
   }
+  // Capture signed-out state before profile write clears it.
+  final prefs=await SharedPreferences.getInstance();
+  final ordinaryPhoneRelogin=profile==null&&showLogin&&
+   u.provider.toLowerCase().trim()=='phone'&&
+   (prefs.getBool('waffra_signed_out_explicitly')??false);
   await _accountWriteAuthority.saveProfile(
    profileJson:jsonEncode(u.toJson()),
    registeredProfileJson:u.phone.trim().isNotEmpty?jsonEncode(u.toJson()):null,
@@ -1322,10 +1327,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    email:u.email.trim().isNotEmpty?u.email.trim():null,
    phone:u.phone.trim().isNotEmpty?u.phone.trim():null,
   );
-  // Restore standing SMS consent only for the verified same account. Never
-  // re-request Android SMS permissions after ordinary re-login.
-  if(Platform.isAndroid)await WaffraAutoSms.resumeAfterSignIn();
-  final prefs=await SharedPreferences.getInstance();
+  // Resume native SMS after the verified authenticated frame, not here.
   final needsGoogleSetup=WaffraSaudiRelease.locationCountryOnboarding&&
    waffraGoogleProfileReadyForCountrySetup(u)&&
     !(prefs.getBool(waffraCountrySetupKey(u))??false);
@@ -1336,12 +1338,28 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    // Once the account has been verified, first-run permissions precede
    // the biometric gate. This does NOT apply to a restored, locked session.
    _smsConsentAfterVerifiedSignIn=needsSmsAccessAfterRegistration;
-   // First phone/password login and new registration require biometrics.
-   // Editing a profile in an already-unlocked session does not re-lock.
+   // First-run and restored protected sessions retain biometrics; an
+   // ordinary verified password re-login must not prompt for it again.
    final freshSession=profile==null||showLogin;
    profile=u;showLogin=false;googleFirstRunSetup=needsGoogleSetup;
-   if(freshSession)locked=true;
+   if(freshSession)locked=!ordinaryPhoneRelogin;
   });
+  if(Platform.isAndroid&&mounted){
+   WidgetsBinding.instance.addPostFrameCallback((_){
+    if(!mounted||profile==null||showLogin)return;
+    unawaited(()async{
+     try{
+      final resumed=await WaffraAutoSms.resumeAfterSignIn();
+      // Ignore a late resume when the owner signed out meanwhile.
+      if(resumed&&mounted&&!showLogin&&identical(profile,u)){
+       waffraAutoSmsUpdates.value++;
+      }
+     }catch(error){
+      debugPrint('Deferred SMS restore failed: ${error.runtimeType}');
+     }
+    }());
+   });
+  }
  }
  Future<void> setUiCountry(String? iso)async{
   await WaffraRegionalCopy.setCountry(iso);
@@ -1360,7 +1378,32 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  Future<void> logout()async {
   if(_logoutInProgress)return;
   _logoutInProgress=true;
+  final logoutTiming=kProfileMode?(Stopwatch()..start()):null;
+  // The existing Yes/No dialog is the only user confirmation. On Yes,
+  // paint immediate feedback before slow OS/SQLCipher/native shutdown, and
+  // block new taps until the owner-bound finance session is safely signed out.
+  final overlay=_logoutNavigatorKey.currentState?.overlay;
+  if(overlay!=null){
+   final progress=OverlayEntry(builder:(context)=>Positioned.fill(
+    child:Stack(children:[
+     const ModalBarrier(dismissible:false,color:Color(0xB3073F31)),
+     Center(child:Material(color:Colors.transparent,
+      child:Column(mainAxisSize:MainAxisSize.min,children:[
+       const RepaintBoundary(child:SizedBox(width:32,height:32,
+        child:CircularProgressIndicator(strokeWidth:2.5,
+         valueColor:AlwaysStoppedAnimation<Color>(Colors.white)))),
+       const SizedBox(height:12),
+       WaffraText(waffraIsEnglish?'Signing out...':'جارٍ تسجيل الخروج',
+        style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold)),
+      ]))),
+    ])));
+   _logoutProgressEntry=progress;
+   overlay.insert(progress);
+  }
   try{
+   if(_logoutProgressEntry!=null){
+    await WidgetsBinding.instance.endOfFrame;
+   }
   // M545: Yes/No is the entire logout UX. NEVER open a recovery/password
   // dialog on sign-out. Existing secure credentials remain unchanged.
   // If an older APK missed the verifier, silently stage a one-time
@@ -1438,10 +1481,19 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     'تعذر تسجيل الخروج بأمان. بياناتك المالية لم تتغير؛ حاول مرة أخرى.',
     isError:true);
   }finally{
+   // Never strand a blocking veil after success OR a fail-closed error.
+   final progress=_logoutProgressEntry;
+   _logoutProgressEntry=null;
+   progress?.remove();
+   progress?.dispose();
    _logoutInProgress=false;
+   if(kProfileMode&&logoutTiming!=null){
+    debugPrint('WAFFRA_AUTH_PERF sign_out_ms=${logoutTiming.elapsedMilliseconds}');
+   }
   }
  }
  bool _logoutInProgress=false;
+ OverlayEntry? _logoutProgressEntry;
  final _logoutFeedbackKey=GlobalKey<ScaffoldMessengerState>();
  final _logoutNavigatorKey=GlobalKey<NavigatorState>();
  void _showLogoutFeedback(String message,{bool isError=false}){
@@ -2291,6 +2343,11 @@ class _LoginScreenState extends State<LoginScreen> {
   if(waffraMobileFieldError(signInPhone.text)!=null||
      signInPassword.text.isEmpty)return;
   setState(()=>signingIn=true);
+  // Profile-only timings (never passwords, account IDs or financial data).
+  // These let a physical Android trace separate secure preflight, password
+  // derivation and verified profile activation from Flutter frame jank.
+  final signInTiming=kProfileMode?(Stopwatch()..start()):null;
+  int? preflightMs,verifiedMs;
   try{
    // Render the busy label/spinner before any secure-store/KDF work starts.
    // PBKDF2 itself runs off the Flutter frame isolate (M547 PERF-04).
@@ -2306,8 +2363,9 @@ class _LoginScreenState extends State<LoginScreen> {
    }
    final prefs=await SharedPreferences.getInstance();
    final storedPhone=WaffraSaudiMobile.inputFromStored(account.phone);
-   final hasSecureVerifier=
-    await WaffraLocalPhoneCredentials.hasRegisteredCredentials();
+   // One OS-keystore verifier read, not two identical secure-store reads.
+   // Probe reports missing/malformed/foreign distinctly, preserving the
+   // legacy fallback and fail-closed sign-in recovery semantics.
    var verifierStatus=await WaffraLocalPhoneCredentials.probeForPhone(
     enteredPhone);
    // Missing or malformed OS credentials are not equivalent to a wrong
@@ -2346,6 +2404,10 @@ class _LoginScreenState extends State<LoginScreen> {
      'سجل الدخول المشفّر مفقود أو غير صالح على الجهاز. لم تُحذف بياناتك. لا تمسح بيانات التطبيق.');
     return;
    }
+   // Derive existence from the same secure-store probe (including any
+   // verified biometric recovery). Never treat corrupt/foreign as missing.
+   final hasSecureVerifier=verifierStatus!=WaffraLocalCredentialProbe.missing;
+   preflightMs=signInTiming?.elapsedMilliseconds;
    // An older editable profile may contain a different display phone.
    // Only the OS-protected verifier may authenticate the entered number.
    // Without a secure verifier, legacy migration must keep its original phone.
@@ -2358,6 +2420,7 @@ class _LoginScreenState extends State<LoginScreen> {
     phone:enteredPhone,password:signInPassword.text,
     oldSalt:prefs.getString('waffra_local_password_salt'),
     oldHash:prefs.getString('waffra_local_password_hash'));
+   verifiedMs=signInTiming?.elapsedMilliseconds;
    if(!match){
     if(mounted)setState(()=>signInAuthError=waffraIsEnglish?
      'Incorrect mobile number or password':'رقم الجوال أو كلمة المرور غير صحيحة');
@@ -2375,6 +2438,10 @@ class _LoginScreenState extends State<LoginScreen> {
     'Local secure storage is unavailable. Unlock your device and retry.':
     'تعذر فتح التخزين الآمن على الجهاز. افتح قفل هاتفك وحاول مجددًا.');
   }finally{
+   if(kProfileMode&&signInTiming!=null){
+    debugPrint('WAFFRA_AUTH_PERF sign_in_ms=${signInTiming.elapsedMilliseconds} '
+     'preflight_ms=${preflightMs??-1} verifier_ms=${verifiedMs??-1}');
+   }
    if(mounted)setState(()=>signingIn=false);
   }
  }
@@ -2575,17 +2642,23 @@ class _LoginScreenState extends State<LoginScreen> {
          const SizedBox(height:13),
          FilledButton(onPressed:WaffraHaptics.tap(signingIn?null:_signIn),
           key:const Key('m585-login-submit-stable'),
+          // Disabled is the IN-PROGRESS state. Material3's default disabled
+          // colors previously made the button an empty dark rectangle.
           style:FilledButton.styleFrom(backgroundColor:Colors.white,
-           foregroundColor:forest,minimumSize:const Size(218,48)),
+           disabledBackgroundColor:Colors.white,
+           foregroundColor:forest,disabledForegroundColor:forest,
+           minimumSize:const Size(218,48)),
           child:Row(mainAxisSize:MainAxisSize.min,children:[
            if(signingIn)...[
-            const SizedBox(width:18,height:18,child:CircularProgressIndicator(
-             strokeWidth:2.1)),
+            const RepaintBoundary(child:SizedBox(width:18,height:18,
+             child:CircularProgressIndicator(strokeWidth:2.1,
+              valueColor:AlwaysStoppedAnimation<Color>(forest)))),
             const SizedBox(width:10),
            ],
            WaffraText(signingIn?
             (waffraIsEnglish?'Signing in...':'جارٍ تسجيل الدخول'):
-            (waffraIsEnglish?'Sign in':'تسجيل الدخول')),
+            (waffraIsEnglish?'Sign in':'تسجيل الدخول'),
+            style:const TextStyle(color:forest,fontWeight:FontWeight.bold)),
           ])),
          TextButton(
           key:const Key('m479-login-back-to-choice'),
@@ -4430,6 +4503,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    // Stop if the encrypted review queue is full until the user reviews items.
    try{
     for(var page=0;page<4;page++){
+     // Preserve complete month scan but avoid uninterrupted native I/O.
+     if(page>0)await Future<void>.delayed(const Duration(milliseconds:500));
+     if(!mounted||!ready)return;
      final imported=await WaffraAutoSms.importConsentMonthChecked();
      final snapshot=await WaffraAutoSms.scanProgress();
      if(mounted&&snapshot!=null)setState(()=>_autoSmsProgress=snapshot);
@@ -6350,8 +6426,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    await load();
    unawaited(_m467RefreshHomeAccounts());
    WidgetsBinding.instance.addPostFrameCallback((_) {
-    if(mounted)unawaited(_refreshAutoSmsInbox(
-     importMonth:!_autoSmsHistoryComplete));
+    // Home first: encrypted SMS scan starts only after initial layout settles.
+    unawaited(()async{
+     await Future<void>.delayed(const Duration(milliseconds:900));
+     if(!mounted||!ready||_financeLoadFailure!=null)return;
+     await _refreshAutoSmsInbox(importMonth:!_autoSmsHistoryComplete);
+    }());
    });
   }catch(e){
    debugPrint('Financial startup integrity/recovery gate blocked access: $e');
@@ -6397,8 +6477,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final parsed=await WaffraLargeJsonDecode.parse(raw);
    if(parsed is! List)throw const FormatException(
     'Widget finance ledger is not a list.');
-   final loaded=parsed
-    .map((item)=>MoneyEntry.fromJson(Map<String,dynamic>.from(item as Map))).toList();
+   final loaded=await _m593BuildVerifiedEntries(parsed);
    if(!mounted)return;
    setState((){
     entries..clear()..addAll(loaded);
@@ -6474,7 +6553,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     if(parsed is! List)throw const FormatException('Invalid finance list.');
     return parsed.map((e)=>make(Map<String,dynamic>.from(e as Map))).toList();
    }
-   final nextEntries=await readList<MoneyEntry>(ledger,MoneyEntry.fromJson);
+   // This verified refresh source always exposes its normalized ledger.
+   // Preserve fail-closed parsing and asynchronous bounded entry mapping.
+   final nextEntries=await _m593BuildVerifiedEntries(
+    (await WaffraLargeJsonDecode.parse(ledger)) as List);
    final nextCategories=catalog==null
     ?defaultCategories()
     :await readList<BudgetCategory>(catalog,BudgetCategory.fromJson);
@@ -6578,7 +6660,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
   _lastWidgetRevision=loadedFinance.widgetRevision;
   _lastLedgerSavedRaw=loadedFinance.ledgerRaw;
-  try{final raw=financeView.getString('entries');if(raw!=null)entries.addAll((await WaffraLargeJsonDecode.parse(raw) as List).map((x)=>MoneyEntry.fromJson(Map<String,dynamic>.from(x))));}catch(e){throw StateError('Saved transactions cannot be decoded safely: $e');}
+  try{final raw=financeView.getString('entries');if(raw!=null)entries.addAll(await _m593BuildVerifiedEntries((await WaffraLargeJsonDecode.parse(raw)) as List));}catch(e){throw StateError('Saved transactions cannot be decoded safely: $e');}
   try{final raw=financeView.getString('waffra_categories_v24');categories.addAll(raw==null?defaultCategories():(await WaffraLargeJsonDecode.parse(raw) as List).map((x)=>BudgetCategory.fromJson(Map<String,dynamic>.from(x))));}catch(e){throw StateError('Saved categories cannot be decoded safely: $e');}
   try{
    final raw=financeView.getString('waffra_named_budgets_v1');
@@ -6813,7 +6895,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    verified.finance.requireIntegrity();
    final raw=verified.ledgerRaw;
    if(raw==null)throw StateError('Verified widget ledger is missing.');
-   final net=WaffraAuthoritativeWidgetBalance.netHalalas(raw);
+   // After authority validation, sum large ledgers on a worker isolate.
+   final net=raw.length>=WaffraLargeJsonDecode.isolateThreshold
+    ?await compute(WaffraAuthoritativeWidgetBalance.netHalalas,raw)
+    :WaffraAuthoritativeWidgetBalance.netHalalas(raw);
    await refreshWaffraHomeWidget(
     balance:hideWaffraAmounts.value?'***':WaffraDisplayCurrency.amount(net/100),
     negative:net<0,
@@ -8767,8 +8852,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         committed.current.ledgerRaw??'[]');
        if(verifiedRaw is! List)throw StateError(
         'Committed reviewed SMS ledger snapshot was not a list.');
-       final verified=verifiedRaw.map((item)=>MoneyEntry.fromJson(
-        Map<String,dynamic>.from(item as Map))).toList();
+       final verified=await _m593BuildVerifiedEntries(verifiedRaw);
        if(!mounted)return;
        setState((){
         entries..clear()..addAll(verified);
