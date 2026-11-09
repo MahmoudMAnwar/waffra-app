@@ -13557,14 +13557,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            icon:Icons.south_west_rounded,
            background:const Color(0xFFE6F7EC),
            iconColor:const Color(0xFF087A54),
-           onTap:()=>unawaited(showSummaryTransactions(true)),
+           onTap:()=>unawaited(showSummaryTransactions(true))),
           const SizedBox(width:7),
           _m549HomeFinanceAction(
            title:waffraIsEnglish?'Expense':'مصروف',
            icon:Icons.north_east_rounded,
            background:const Color(0xFFFCECE8),
            iconColor:const Color(0xFFB94838),
-           onTap:()=>unawaited(showSummaryTransactions(false)),
+           onTap:()=>unawaited(showSummaryTransactions(false))),
           const SizedBox(width:7),
           _m549HomeFinanceAction(
            title:waffraIsEnglish?'Between my accounts':'تحويل بين حساباتي',
