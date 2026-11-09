@@ -4219,6 +4219,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  final Map<String,Map<String,Object?>> _m492SmsEditorDrafts={};
  bool _m486ResumeQueued=false;
  void _m468OnResume(){
+  _m621OnFinanceNoticeTap();
   if(!mounted||!ready||
      WaffraExternalMediaSession.shouldSkipResumeBackgroundWork)return;
   // M486 #419: biometrics/OS resume must render a frame before expensive
@@ -4249,7 +4250,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    unawaited(_refreshAutoSmsInbox());
   });
  }
- @override void initState(){super.initState();WaffraBackNavigation.onHomeBack=_registeredBackHandler;_dashboardScrollController.addListener(_handleDashboardScroll);_tourGlow=AnimationController(vsync:this,duration:waffraMotion(1150));waffraReturnHome.addListener(_returnToHome);waffraIncomingSms.addListener(_receiveSharedSms);waffraAutoSmsUpdates.addListener(_receiveAutoSmsNotice);waffraWidgetAction.addListener(_receiveWidgetAction);_widgetReloadListener=AppLifecycleListener(onResume:_m468OnResume);unawaited(_loadFinanceSafely());}
+ @override void initState(){super.initState();WaffraBackNavigation.onHomeBack=_registeredBackHandler;_dashboardScrollController.addListener(_handleDashboardScroll);_tourGlow=AnimationController(vsync:this,duration:waffraMotion(1150));waffraReturnHome.addListener(_returnToHome);waffraIncomingSms.addListener(_receiveSharedSms);waffraAutoSmsUpdates.addListener(_receiveAutoSmsNotice);waffraFinanceNoticeTap.addListener(_m621OnFinanceNoticeTap);waffraWidgetAction.addListener(_receiveWidgetAction);_widgetReloadListener=AppLifecycleListener(onResume:_m468OnResume);unawaited(_loadFinanceSafely());}
  void _returnToHome(){if(mounted)setState((){_tabBackStack.clear();tab=0;accountOpened=false;goalsOpened=false;addFabExpanded=false;});}
  void _receiveWidgetAction(){
   if(!mounted||!ready||waffraWidgetAction.value!='add')return;
@@ -6560,6 +6561,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      debugPrint('WAFFRA_FINANCE_PERF first_home_frame_ms='
       '${startupClock.elapsedMilliseconds}');
     }
+    _m621OnFinanceNoticeTap();
     // Home first: encrypted SMS scan starts only after initial layout settles.
     unawaited(()async{
      await Future<void>.delayed(const Duration(milliseconds:900));
@@ -6592,7 +6594,48 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     icon:const Icon(Icons.refresh),
     label:WaffraText(waffraIsEnglish?'Retry safely':'إعادة المحاولة بأمان')),
   ])));
- @override void dispose(){if(identical(WaffraBackNavigation.onHomeBack,_registeredBackHandler))WaffraBackNavigation.onHomeBack=null;_dashboardScrollController.dispose();_categoryScrollController.dispose();_goalsScrollController.dispose();_recurringScrollController.dispose();_tourGlow.dispose();waffraReturnHome.removeListener(_returnToHome);waffraIncomingSms.removeListener(_receiveSharedSms);waffraAutoSmsUpdates.removeListener(_receiveAutoSmsNotice);waffraWidgetAction.removeListener(_receiveWidgetAction);_widgetReloadListener?.dispose();_saveProgress.dispose();final binding=_financeBinding;if(binding!=null)unawaited(_financialWriteQueue.drain().whenComplete(binding.close));super.dispose();}
+ // M621: a notification is a navigation request, NOT permission to write
+ // money. Deferred across cold start and biometric/credential verification.
+ bool _m621NoticeOpening=false;
+ void _m621OnFinanceNoticeTap(){
+  if(!mounted||!ready||_financeLoadFailure!=null||
+     _m621NoticeOpening||_autoSmsReviewOpen||_smsSheetOpen)return;
+  final target=waffraFinanceNoticeTap.value;
+  if(target==null)return;
+  final lifecycle=WidgetsBinding.instance.lifecycleState;
+  if(lifecycle!=null&&lifecycle!=AppLifecycleState.resumed)return;
+  _m621NoticeOpening=true;
+  waffraFinanceNoticeTap.value=null;
+  WidgetsBinding.instance.addPostFrameCallback((_)async{
+   try{
+    if(!mounted||!ready||_financeLoadFailure!=null)return;
+    if(target.destination=='review'){
+     // The existing targeted review performs an owner-verified pendingById.
+     // An excluded/stale/committed SMS cannot be posted twice from a tap.
+     await _reviewAutoSmsCandidates(targetId:target.id);
+    }else if(target.destination=='saved'){
+     // Only records from the CURRENT verified finance ledger can open.
+     final matching=entries.where((record)=>
+      record.id==target.entryId&&record.sourceType=='sms').toList();
+     if(matching.length==1){
+      await transactionDetails(matching.single);
+     }else if(mounted){
+      snack(context,waffraIsEnglish?
+       'This saved transaction is not available in the current account.':
+       'العملية المحفوظة غير موجودة في الحساب الحالي.');
+     }
+    }
+   }catch(error){
+    debugPrint('Finance notification route refused: ${error.runtimeType}');
+   }finally{
+    _m621NoticeOpening=false;
+    if(mounted&&waffraFinanceNoticeTap.value!=null){
+     _m621OnFinanceNoticeTap();
+    }
+   }
+  });
+ }
+ @override void dispose(){if(identical(WaffraBackNavigation.onHomeBack,_registeredBackHandler))WaffraBackNavigation.onHomeBack=null;_dashboardScrollController.dispose();_categoryScrollController.dispose();_goalsScrollController.dispose();_recurringScrollController.dispose();_tourGlow.dispose();waffraReturnHome.removeListener(_returnToHome);waffraIncomingSms.removeListener(_receiveSharedSms);waffraAutoSmsUpdates.removeListener(_receiveAutoSmsNotice);waffraFinanceNoticeTap.removeListener(_m621OnFinanceNoticeTap);waffraWidgetAction.removeListener(_receiveWidgetAction);_widgetReloadListener?.dispose();_saveProgress.dispose();final binding=_financeBinding;if(binding!=null)unawaited(_financialWriteQueue.drain().whenComplete(binding.close));super.dispose();}
  Future<void> _syncWidgetTransactions()async{
   if(!mounted||!ready)return;
   try{
