@@ -7,7 +7,8 @@ void main(){
  test('M622 never renders fake balance or loading screen while verifying vault',(){
   final scaffold=source.split(' @override Widget build(BuildContext context)=>PopScope(')[1]
    .split('  // A fixed 58x58 FAB:')[0];
-  expect(scaffold,contains('!ready?const SizedBox.shrink():'));
+  expect(scaffold,contains('child:!ready&&_financeLoadFailure==null?'));
+  expect(scaffold,contains('const SizedBox.shrink():Stack(children:[Scaffold('));
   expect(scaffold,contains('Stack(clipBehavior:Clip.none,children:[GestureDetector('));
   expect(source,isNot(contains('Widget _m622ImmediateHomeSurface()=>')));
   expect(source,isNot(contains("'بنفتح الرئيسية…'")));
