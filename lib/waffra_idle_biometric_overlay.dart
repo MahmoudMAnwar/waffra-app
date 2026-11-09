@@ -1,11 +1,9 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'waffra_mandatory_biometric_gate.dart';
 
-/// M470: an inactivity lock ABOVE MaterialApp's Navigator, including open
-/// dialogs, bottom sheets and dropdown routes. The underlying Navigator is
-/// never disposed when the idle timer expires, so form drafts survive.
+/// M613: lock after a genuine 60-second background absence, NEVER while
+/// Waffra remains visible in the foreground (even with no touch input).
+/// Stays ABOVE MaterialApp's Navigator to preserve open drafts and dialogs.
 class WaffraIdleBiometricOverlay extends StatefulWidget {
  const WaffraIdleBiometricOverlay({
   super.key,required this.child,required this.enabled,
@@ -25,36 +23,13 @@ class WaffraIdleBiometricOverlay extends StatefulWidget {
 
 class _WaffraIdleBiometricOverlayState
     extends State<WaffraIdleBiometricOverlay> with WidgetsBindingObserver {
- Timer? _timer;
  bool _idleLocked=false;
  bool _verifiedAwaitingResume=false,_backgroundShield=false;
- DateTime? _lastActivity,_backgroundAt;
+ DateTime? _backgroundAt;
 
  bool get _foreground{
   final state=WidgetsBinding.instance.lifecycleState;
   return state==null||state==AppLifecycleState.resumed;
- }
-
- void _arm(){
-  _timer?.cancel();
-  _timer=null;
-  if(!mounted||!widget.enabled||_idleLocked||!_foreground)return;
-  _timer=Timer(widget.timeout,(){
-   if(!mounted||!widget.enabled||_idleLocked||!_foreground)return;
-   // Do not continue editing the underlying form using an IME while locked.
-   // Unfocusing does not remove the draft or change the current route.
-   FocusManager.instance.primaryFocus?.unfocus();
-   setState(()=>_idleLocked=true);
-  });
- }
-
- void _onActivity(){
-  if(!widget.enabled||_idleLocked)return;
-  final now=widget.now();
-  if(_lastActivity!=null&&
-     now.difference(_lastActivity!)<const Duration(milliseconds:300))return;
-  _lastActivity=now;
-  _arm();
  }
 
  void _verified(){
@@ -62,8 +37,7 @@ class _WaffraIdleBiometricOverlayState
   if(_foreground){
    _verifiedAwaitingResume=false;
    setState(()=>_idleLocked=false);
-   _lastActivity=null;
-   _arm();
+
   }else if(WidgetsBinding.instance.lifecycleState==AppLifecycleState.inactive){
    // The native OS prompt may succeed just before Flutter resumes.
    _verifiedAwaitingResume=true;
@@ -73,18 +47,14 @@ class _WaffraIdleBiometricOverlayState
  @override void initState(){
   super.initState();
   WidgetsBinding.instance.addObserver(this);
-  _arm();
  }
 
  @override void didUpdateWidget(covariant WaffraIdleBiometricOverlay old){
   super.didUpdateWidget(old);
   if(!widget.enabled){
-   _timer?.cancel();_timer=null;
    _verifiedAwaitingResume=false;
    if(_idleLocked)_idleLocked=false;
-   _lastActivity=null;_backgroundAt=null;_backgroundShield=false;
-  }else if(!old.enabled||old.timeout!=widget.timeout){
-   _arm();
+   _backgroundAt=null;_backgroundShield=false;
   }
  }
 
@@ -103,13 +73,10 @@ class _WaffraIdleBiometricOverlayState
    }
    if(_verifiedAwaitingResume&&_idleLocked&&widget.enabled){
     _verified();
-   }else if(!_idleLocked){
-    _lastActivity=null;_arm();
    }
   }else if(state==AppLifecycleState.hidden||
            state==AppLifecycleState.paused||
            state==AppLifecycleState.detached){
-   _timer?.cancel();_timer=null;
    _verifiedAwaitingResume=false;
    if(widget.enabled){
     _backgroundAt??=widget.now();
@@ -121,18 +88,12 @@ class _WaffraIdleBiometricOverlayState
  }
 
  @override void dispose(){
-  _timer?.cancel();
   WidgetsBinding.instance.removeObserver(this);
   super.dispose();
  }
 
- @override Widget build(BuildContext context)=>Listener(
-  behavior:HitTestBehavior.translucent,
-  // A new user tap always restarts the countdown, even in a fast gesture.
-  onPointerDown:(_)=>_arm(),
-  onPointerMove:(_)=>_onActivity(),
-  onPointerSignal:(_)=>_onActivity(),
-  child:Stack(fit:StackFit.expand,children:[
+ @override Widget build(BuildContext context)=>Stack(
+  fit:StackFit.expand,children:[
    widget.child,
    if(_backgroundShield&&!_idleLocked)
     const Positioned.fill(child:BlockSemantics(
@@ -149,6 +110,5 @@ class _WaffraIdleBiometricOverlayState
       onSignOut:widget.onSignOut,
      ),
     )),
-  ]),
- );
+  ]); 
 }
