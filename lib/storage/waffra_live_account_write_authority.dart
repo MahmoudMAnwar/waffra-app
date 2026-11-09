@@ -73,17 +73,27 @@ class WaffraLiveAccountWriteAuthority {
       throw StateError('Account login hint exceeds approved limits.');
     }
     return _withVerifiedAccountPreferences((prefs) async {
-      await prefs.setString('waffra_profile', profileJson);
-      if (registeredProfileJson != null) {
+      // A verified repeat login restores the signed-out profile, but does not
+      // need to write four unchanged registration/hint preferences again.
+      // Keep the full source lease and witness validation on every attempt.
+      if (prefs.getString('waffra_profile') != profileJson) {
+        await prefs.setString('waffra_profile', profileJson);
+      }
+      if (registeredProfileJson != null &&
+          prefs.getString('waffra_registered_profile') != registeredProfileJson) {
         await prefs.setString(
           'waffra_registered_profile', registeredProfileJson,
         );
       }
-      await prefs.setString('waffra_last_login_method', loginMethod);
-      if (email != null && email.isNotEmpty) {
+      if (prefs.getString('waffra_last_login_method') != loginMethod) {
+        await prefs.setString('waffra_last_login_method', loginMethod);
+      }
+      if (email != null && email.isNotEmpty &&
+          prefs.getString('waffra_last_login_email') != email) {
         await prefs.setString('waffra_last_login_email', email);
       }
-      if (phone != null && phone.isNotEmpty) {
+      if (phone != null && phone.isNotEmpty &&
+          prefs.getString('waffra_last_login_phone') != phone) {
         await prefs.setString('waffra_last_login_phone', phone);
       }
     });
