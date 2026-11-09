@@ -7,7 +7,8 @@
     "Measure first-Home-frame profile-mode timings separately after biometric and after verified password re-login, without logging any user identity, password or financial values.",
     "Keep password and biometric security gates, sign-out native capture suspension, no extra relogin biometric, original complete Home first visible, and post-first-frame SMS resume/scan untouched.",
     "Add new negative/source regression tests for installed Home-only deferred read, protected Widget/root paths and both authenticated navigation routes; update requirements, release notes and every-workflow behavior review.",
-    "M626 Issue #535: shorten excessive sequential Android encrypted-database CI wall time by parallelizing exactly 11 existing finance integration test files in four emulator shards, preserving every original timeout, fallback retry and a mandatory all-shards gate."
+    "M626 Issue #535: shorten excessive sequential Android encrypted-database CI wall time by parallelizing exactly 11 existing finance integration test files in four emulator shards, preserving every original timeout, fallback retry and a mandatory all-shards gate.",
+    "M626 exact-head regression: reconcile M554 official pinned Gradle/SQLite3MC prefetch QA to assert each four-way emulator shard prefetches verified assets and the preserved all-shards aggregate fails closed; keep every original other critical Android job assertion unchanged."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -19,7 +20,8 @@
     "test/m625_single_verified_home_read_login_handoff_test.dart",
     ".github/workflows/storage-android-integration.yml",
     ".github/scripts/run-android-finance-integration.sh",
-    "scripts/qa/test_m626_parallel_android_matrix.py"
+    "scripts/qa/test_m626_parallel_android_matrix.py",
+    "test/qa/m554_gradle_release_cache_test.py"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -52,6 +54,12 @@
       {
         "start": "# Prioritize problematic bridge & new encrypted receipts after Gradle warmup.",
         "end": null
+      }
+    ],
+    "test/qa/m554_gradle_release_cache_test.py": [
+      {
+        "start": "    def test_critical_android_jobs_prefetch_verified_gradle(self):",
+        "end": "    def test_all_flutter_apk_and_direct_gradle_jobs_have_pinned_distribution(self):"
       }
     ]
   }

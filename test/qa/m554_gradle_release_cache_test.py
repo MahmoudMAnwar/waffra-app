@@ -61,7 +61,6 @@ class VerifiedGradleCache(unittest.TestCase):
           'm160-main-reconciliation.yml': 'reconcile-and-regress',
           'm202-android-sqlcipher-source-binder-dryrun.yml': 'android-source-binder-and-migration',
           'm417-auto-bank-sms.yml': 'android-sms-native-compile',
-          'storage-android-integration.yml': 'android-encrypted-db',
           'storage-android-emulator.yml': 'encrypted-storage-device',
         }
         for file,job in critical.items():
@@ -72,6 +71,26 @@ class VerifiedGradleCache(unittest.TestCase):
             self.assertIn('uses: ./.github/actions/prefetch-gradle',block,file)
             self.assertLess(block.index('uses: ./.github/actions/prefetch-sqlite3mc'),
                             block.index('uses: ./.github/actions/prefetch-gradle'),file)
+
+        # M626: the expensive Android suite is now a four-way matrix.
+        # The original-name android-encrypted-db is a strict aggregate gate;
+        # official Gradle/SQLite3MC prefetch belongs to EACH emulator shard.
+        workflow=(WORKFLOWS/'storage-android-integration.yml').read_text()
+        self.assertIn('  android-encrypted-db-shard:',workflow)
+        self.assertIn('  android-encrypted-db:',workflow)
+        shard=workflow.split('  android-encrypted-db-shard:',1)[1].split('  android-encrypted-db:',1)[0]
+        gate=workflow.split('  android-encrypted-db:',1)[1]
+        self.assertIn('uses: ./.github/actions/prefetch-sqlite3mc',shard)
+        self.assertIn('uses: ./.github/actions/prefetch-gradle',shard)
+        self.assertLess(shard.index('uses: ./.github/actions/prefetch-sqlite3mc'),
+                        shard.index('uses: ./.github/actions/prefetch-gradle'))
+        self.assertIn('shard: [vault, cloud, receipts, release]',shard)
+        self.assertIn('max-parallel: 4',shard)
+        self.assertIn('fail-fast: false',shard)
+        self.assertIn('name: android-encrypted-db',gate)
+        self.assertIn('needs: android-encrypted-db-shard',gate)
+        self.assertIn('if: always()',gate)
+        self.assertIn('if [[ "$SHARDS_RESULT" != "success" ]]; then',gate)
 
     def test_all_flutter_apk_and_direct_gradle_jobs_have_pinned_distribution(self):
         # Every APK compiler (including old release-safety jobs) must use the

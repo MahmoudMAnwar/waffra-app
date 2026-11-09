@@ -1,3 +1,8 @@
+[PR #534 M626 EXACT-HEAD M554 PRE-FLIGHT TEST ALIGNMENT — 2026-11-09]
+- Fixed a single stale QA structural assumption in M174: old M554 asserted native SQLite3MC and official pinned Gradle prefetch steps lived in job android-encrypted-db. After approved four-way matrix, that name is intentionally the required aggregate gate; each Android emulator shard performs both prefetches in the same verified order.
+- Strengthened original M554 guard to positively check both prefetched native and Gradle distributions on each matrix runner, the four shards, fail-fast=false and strict dependent aggregate. Every other critical Android job guard remains enabled. No application code, financial security or tested Android files changed.
+- M385 bounded edit scope, M550 test mapping and requirements updated. Status Partial, exact-head preflight and Android matrix remain pending.
+
 [PR #534 M626 — PARALLEL MANDATORY ANDROID ENCRYPTED FINANCE CI, ISSUE #535 — 2026-11-09]
 ==========================================================================================
 - Verified PR wall-time bottleneck: 11 mandatory independent Android SQLCipher finance tests execute sequentially inside one opaque emulator step (up to 75 minutes total), even when no test fails. In-progress logs were unavailable; an emulator hang has not been proven.

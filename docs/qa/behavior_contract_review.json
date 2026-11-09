@@ -726,14 +726,15 @@
     {
       "id": "M626-PARALLEL-ENCRYPTED-ANDROID-CI-RETAIN-EVERY-FINANCE-TEST",
       "issue": "Issue #535 — owner rejects serial 75-minute mandatory encrypted Android CI wait",
-      "previous_behavior": "One Android emulator job ran 11 independent encrypted finance Flutter integration tests serially with test-specific timeout periods and then potentially retried all files on a new emulator; a healthy PR could wait up to 75 minutes without per-file GitHub status visibility.",
-      "approved_behavior": "Run four bounded independent emulator matrix shards concurrently, cover all 11 original Android finance integration test files exactly once per attempt with the same timeout per test, preserve ADB boot preflight, SHA verification and API 35 failed-shard retry. A separate original-name android-encrypted-db required aggregate must fail if any shard fails, cancels or times out.",
+      "previous_behavior": "One Android emulator job ran 11 independent encrypted finance Flutter integration tests serially with test-specific timeout periods and then potentially retried all files on a new emulator; a healthy PR could wait up to 75 minutes without per-file GitHub status visibility. Existing M554 QA assumed every pinned native/Gradle prefetch lived inside one original job named android-encrypted-db; matrix promotion of that name to a required aggregate moved real prefetch into each shard, triggering a stale-structure failure despite retaining actual prefetch.",
+      "approved_behavior": "Run four bounded independent emulator matrix shards concurrently, cover all 11 original Android finance integration test files exactly once per attempt with the same timeout per test, preserve ADB boot preflight, SHA verification and API 35 failed-shard retry. A separate original-name android-encrypted-db required aggregate must fail if any shard fails, cancels or times out. M554 QA must assert official SHA-verified native/Gradle prefetch occurs in every matrix worker and a distinct all-shards required aggregate depends on them; preserve all other critical Android job prefetch guards.",
       "source_paths": [
         ".github/workflows/storage-android-integration.yml",
         ".github/scripts/run-android-finance-integration.sh"
       ],
       "test_paths": [
-        "scripts/qa/test_m626_parallel_android_matrix.py"
+        "scripts/qa/test_m626_parallel_android_matrix.py",
+        "test/qa/m554_gradle_release_cache_test.py"
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/storage-android-integration.yml",
