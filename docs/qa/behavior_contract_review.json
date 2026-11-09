@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "pr": 511,
-  "issue": "2026-11-09 owner request to finish Codex M609 encrypted finance UI isolation",
+  "pr": 517,
+  "issue": "Owner 2026-11-09 fixes #513 #514 #515 #516: manual validation and transfer thousand separators, compact read-only Home history tiles and complete account label",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main",
   "reviewed_at": "2026-11-09",
@@ -277,6 +277,37 @@
         "Keep SQLCipher/source/key witnesses, native inter-engine lock, owner data and bank SMS SHA duplicate prevention fully unchanged.",
         "Do not claim device validation or green exact-head workflow gates until they are independently observed.",
         "FakeAsync synchronous canonical preflight executes all original checks rather than skipping validation; production still uses background compute on Home and Widget."
+      ]
+    },
+    {
+      "id": "M611-MANUAL-SAR-HOME-VERIFIED-TRANSFER-HISTORY",
+      "issue": "GitHub #513 #514 #515 #516 / PR #517 direct owner Android feedback",
+      "previous_behavior": "Manual transfer SAR parser rejected valid displayed 1,000 grouping; manual bank provider selection left child blank without inline required marker; Home big finance tiles opened add forms; monthly account filter cropped names to 100 pixels and 1 line.",
+      "approved_behavior": "Explicit child selection remains mandatory and now appears as a required field error; grouped SAR parser accepts only well-formed grouping. Three compact finance Home overview tiles display actual owner-account-scoped income, expense and verified internal transfer histories, not add forms; existing fixed floating + adds transactions. Home monthly summary account label wraps fully.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/storage/waffra_account_context_repository.dart",
+        "lib/storage/waffra_verified_accounts_api.dart",
+        "lib/waffra_account_transaction_form.dart"
+      ],
+      "test_paths": [
+        "test/m611_manual_home_finance_regression_test.dart",
+        "test/m549_approved_home_notifications_test.dart",
+        "test/m470_account_scope_and_transfer_date_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m174-main-sha-regression.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "No new manual income or expense without one explicitly selected, active and provider-linked verified account.",
+        "No internal transfer without two distinct active SAR accounts and explicit user confirmation.",
+        "No transfer or fake income/expense ledger is posted when tapping Home summary tiles.",
+        "Read transfer history only through the existing authenticated encrypted Home/Widget source-witness lock.",
+        "Money and SQLCipher restore preserve old users, owners, ledger integrity and deduplication.",
+        "Maintain the fixed add button, all existing auth/biometrics, SMS review and upgrade-data safety.",
+        "Owner Android finance save and remaining 1–2s delay are not certified by these source tests."
       ]
     }
   ]
