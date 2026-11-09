@@ -218,17 +218,20 @@ abstract final class WaffraAutoSms {
  }
  static Future<bool> notifyCommitted({
   required String hash,required double amount,required bool income,
-  required bool linkedBudget,
+  required bool linkedBudget,required String entryId,
  })async{
-  if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(hash)||!amount.isFinite||amount<=0)
-   return false;
+  if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(hash)||!amount.isFinite||
+     amount<=0||entryId.isEmpty||entryId.length>200)return false;
   return _boolCall('notifyAutoSmsSaved',{
    'hash':hash,'amount':amount.toStringAsFixed(2),
-   'income':income,'linkedBudget':linkedBudget,
+   'income':income,'linkedBudget':linkedBudget,'entryId':entryId,
   });
  }
- static Future<bool> notifyReview(String hash)async{
+ static Future<bool> notifyReview(String hash,{String kind='uncertain'})async{
   if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(hash))return false;
-  return _boolCall('notifyAutoSmsNeedsReview',hash);
+  if(!{'income','expense','transfer','uncertain'}.contains(kind)){
+   kind='uncertain';
+  }
+  return _boolCall('notifyAutoSmsNeedsReview',{'hash':hash,'kind':kind});
  }
 }
