@@ -3150,3 +3150,12 @@ The owner reported that the unwanted Home startup spinner had merely become a bl
   serialization; no security or Android-native regression checks were skipped.
 - Physical signed APK startup, re-login and I/O profiling are still pending;
   source-only verification does not certify frame latency or full smoothness.
+
+[M625 SINGLE VERIFIED HOME READ — ISSUE #533 PR #534 — 2026-11-09]
+===============================================================================
+- On installed Android Home only, finance binder now skips its duplicate full encrypted appStartup snapshot read. The required immediately subsequent WaffraFreshHomeCatalogRecovery.load still calls authenticated dashboardRead and independently verifies real SQLCipher ledger/integrity, category defaults, fresh-install activation and real account balances BEFORE Home ready=true. Root startup, other callers and Android Widget retain full bind verification.
+- Password and biometric handling is unchanged. First installation still requires OS biometric where applicable, and normal explicit signout followed by correct phone/password avoids a second fingerprint. No page loader, black frame replacement, fake zero/masked funds, or partial dashboard.
+- Native SMS resume and history review still start after the verified first Home frame (900ms delayed) and never permit signed-out owner work. Actual SQLCipher disk I/O cannot be promised to take zero time.
+- Profile-mode first frame metrics now identify biometric_to_home_first_frame_ms and relogin_to_home_first_frame_ms without logging identities/finances.
+- Requirements, M385 scoped files and M550 all-workflow behavior review updated; new M625 test protects negative binder scopes, full verified Home, and both login routes; analyzer typo corrected without muting tests.
+- Source-only change; full same-head CI, signed Android physical first-login/fingerprint/logout/relogin profiling and user-visible responsiveness acceptance are still necessary before marking this PR Done or merging.
