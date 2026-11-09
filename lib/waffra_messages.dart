@@ -84,5 +84,6 @@ Future<bool> openWaffraMessagesApp()async{
   return false;
  }on PlatformException catch(error){
   debugPrint('Could not open messages: ${error.code}');
+  return false;
  }
 }
