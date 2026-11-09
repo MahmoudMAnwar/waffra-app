@@ -1,7 +1,6 @@
 import 'dart:convert';
-import 'dart:isolate';
-
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 
 import 'legacy_snapshot_preflight.dart';
 import 'waffra_encrypted_store.dart';
@@ -147,14 +146,13 @@ CREATE TABLE IF NOT EXISTS $_table(
     final generation = row.read<int>('generation');
     // Preserve *all* digest, schema and canonical-encoding checks, but keep
     // JSON decoding / finance preflight off the UI isolate.
-    return Isolate.run(() => WaffraAtomicFinanceSnapshot._decodeRead(
-          raw, digest, generation,
-        ));
+    return compute(_decodeRead, (raw, digest, generation));
   }
 
   static WaffraFinanceSnapshotState _decodeRead(
-    String raw, String digest, int generation,
+    (String, String, int) input,
   ) {
+    final (raw, digest, generation) = input;
     if (_digest(raw) != digest) {
       throw StateError('Encrypted financial snapshot checksum mismatch.');
     }
@@ -187,6 +185,16 @@ CREATE TABLE IF NOT EXISTS $_table(
     );
   }
 
+  // Named static callback receives only plain immutable finance inputs.
+  // No Dart isolate may capture a Drift database/transaction context.
+  static (String, String) _prepareCommit(
+    Map<String, Object?> fullFinanceSnapshot,
+  ) {
+    final captured = _validate(fullFinanceSnapshot);
+    final json = _jsonOf(captured);
+    return (json, _digest(json));
+  }
+
   /// Caller must hold the same writer gate as the dashboard/Android widget.
   /// Stale snapshots fail: never overwrite a later save with old UI state.
   Future<WaffraFinanceSnapshotState> commit({
@@ -199,12 +207,9 @@ CREATE TABLE IF NOT EXISTS $_table(
     }
     // A large ledger's validation, canonical encoding and digest are pure
     // computations. Keep the source generation CAS inside the SQL transaction.
-    final (json, digest) = await Isolate.run(() {
-      final captured =
-          WaffraAtomicFinanceSnapshot._validate(fullFinanceSnapshot);
-      final json = WaffraAtomicFinanceSnapshot._jsonOf(captured);
-      return (json, WaffraAtomicFinanceSnapshot._digest(json));
-    });
+    final (json, digest) = await compute(
+      _prepareCommit, fullFinanceSnapshot,
+    );
     return store.transaction(() async {
       await _requireReady();
       final before = await _readUnsafe();

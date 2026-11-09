@@ -1,5 +1,5 @@
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:isolate';
+import 'package:flutter/foundation.dart';
 
 import 'legacy_snapshot_preflight.dart';
 import 'waffra_atomic_finance_snapshot.dart';
@@ -75,11 +75,12 @@ class WaffraFinanceReadView {
     });
   }
 
+  static bool _inspectFinanceSource(Map<String, Object?> values) =>
+      WaffraLegacyPreflight.inspect(values).canStage;
+
   Future<void> _checkIntegrityInBackground() async {
     final immutableValues = _values;
-    final valid = await Isolate.run(
-      () => WaffraLegacyPreflight.inspect(immutableValues).canStage,
-    );
+    final valid = await compute(_inspectFinanceSource, immutableValues);
     if (!valid) {
       throw StateError(
         'Financial source failed integrity validation; recovery is required.',
