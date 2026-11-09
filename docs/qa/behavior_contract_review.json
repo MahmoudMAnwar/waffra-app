@@ -673,7 +673,9 @@
         "test/m623_verified_home_handoff_no_black_frame_test.dart",
         "test/m424_mandatory_biometrics_test.dart",
         "test/m426_local_phone_credentials_test.dart",
-        "test/m580_sms_security_navigation_performance_test.dart"
+        "test/m580_sms_security_navigation_performance_test.dart",
+        "test/qa/m442_sms_consent_session_recovery_test.py",
+        "test/m603_app_wide_lag_source_regression_test.dart"
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/m550-behavior-contract-preflight.yml",
