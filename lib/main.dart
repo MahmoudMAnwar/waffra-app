@@ -5912,6 +5912,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }
   }
  }
+ // M615: consistent, responsive detail rows with clear RTL text margins.
+ Widget _m615ReviewDetail(String label,String value,IconData symbol)=>
+  Padding(padding:const EdgeInsets.symmetric(vertical:6),
+   child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
+    Icon(symbol,size:17,color:emerald),
+    const SizedBox(width:7),
+    Expanded(flex:4,child:WaffraText(label,
+     style:const TextStyle(fontSize:12,fontWeight:FontWeight.w700))),
+    const SizedBox(width:8),
+    Expanded(flex:5,child:WaffraText(value,
+     textAlign:TextAlign.start,style:const TextStyle(fontSize:12))),
+   ]));
+
  Future<void> _reviewAutoSmsCandidates({String? targetId})async {
   if(!mounted||!ready||_smsSheetOpen||_autoSmsReviewOpen||
      _financeLoadFailure!=null)return;
@@ -6052,7 +6065,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     }
    }
    final reviewScroll=ScrollController();
-   final decision=await showWaffraDialog<String>(context:context,
+   var decision=await showWaffraDialog<String>(context:context,
     builder:(dialog)=>StatefulBuilder(builder:(dialog,redraw)=>AlertDialog(
      title:WaffraText(waffraIsEnglish?
       'Review bank message':'مراجعة رسالة بنكية'),
@@ -6135,27 +6148,41 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        if(understood&&!sensitive&&
           reviewType==(expectedIncome?'income':'expense'))...[
         const SizedBox(height:10),
-        WaffraText(waffraIsEnglish?'Is this transaction correct?':
-         'هل العملية صحيحة؟',
-         style:const TextStyle(fontWeight:FontWeight.w800)),
-        WaffraText(
-         (waffraIsEnglish?'Type: ':'نوع العملية: ')+
-          (expectedIncome?(waffraIsEnglish?'Income':'دخل'):
-           (waffraIsEnglish?'Expense':'مصروف'))+' • '+
-          (originalAmount==null?'—':originalAmount.amount.toStringAsFixed(2)+
-           ' '+originalAmount.currency)+'\n'+
-         (waffraIsEnglish?'Description: ':'الوصف: ')+parsed.title+'\n'+
-         (waffraIsEnglish?'Main / subcategory: ':'القسم الرئيسي / الفرعي: ')+
-          previewMainName+' / '+proposedCategory+'\n'+
-         (waffraIsEnglish?'Sender: ':'المرسل: ')+sender+'\n'+
-         (reviewedAccountName??previewAccountLabel)+' • '+
-          (reviewedAccount!=null?
-           (waffraIsEnglish?'Account verified':'تم تأكيد الحساب'):
-           (waffraIsEnglish?'Choose/verify before saving':
-            'اختيار/تأكيد قبل الحفظ'))+'\n'+
-         (waffraIsEnglish?'Bank transaction date/time: ':
-          'تاريخ ووقت العملية الأصلي: ')+previewDateTime,
-         style:const TextStyle(fontSize:12,height:1.5)),
+        Card(color:Theme.of(dialog).colorScheme.surfaceContainerLow,
+         child:Padding(padding:const EdgeInsets.all(12),
+          child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+           Row(children:[
+            const Icon(Icons.check_circle_outline_rounded,color:emerald),
+            const SizedBox(width:8),
+            Expanded(child:WaffraText(waffraIsEnglish?
+             'Is this transaction correct?':'هل العملية صحيحة؟',
+             style:const TextStyle(fontWeight:FontWeight.bold,fontSize:16))),
+           ]),
+           const Divider(height:18),
+           _m615ReviewDetail(waffraIsEnglish?'Type':'نوع العملية',
+            expectedIncome?(waffraIsEnglish?'Income':'دخل'):
+             (waffraIsEnglish?'Expense':'مصروف'),Icons.category_outlined),
+           _m615ReviewDetail(waffraIsEnglish?'Amount':'المبلغ',
+            originalAmount==null?'—':
+             '${originalAmount.amount.toStringAsFixed(2)} ${originalAmount.currency}',
+            Icons.payments_outlined),
+           _m615ReviewDetail(waffraIsEnglish?'Description':'الوصف',
+            parsed.title,Icons.edit_note_outlined),
+           _m615ReviewDetail(waffraIsEnglish?'Main category':'القسم الرئيسي',
+            previewMainName,Icons.grid_view_outlined),
+           _m615ReviewDetail(waffraIsEnglish?'Subcategory':'القسم الفرعي',
+            proposedCategory,Icons.list_alt_outlined),
+           _m615ReviewDetail(waffraIsEnglish?'Sender':'المرسل',
+            sender,Icons.account_balance_outlined),
+           _m615ReviewDetail(waffraIsEnglish?'Money account':'الحساب المالي',
+            (reviewedAccountName??previewAccountLabel)+' • '+
+            (reviewedAccount!=null?
+             (waffraIsEnglish?'Verified':'تم تأكيد الحساب'):
+             (waffraIsEnglish?'Choose before saving':'اختار الحساب قبل الحفظ')),
+            Icons.account_balance_wallet_outlined),
+           _m615ReviewDetail(waffraIsEnglish?'Original date/time':'تاريخ ووقت العملية',
+            previewDateTime,Icons.calendar_month_outlined),
+          ]))),
         const SizedBox(height:8),
         OutlinedButton.icon(
          key:const Key('m590-sms-choose-account-before-yes'),
@@ -6265,6 +6292,39 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        ),
      ])));
    reviewScroll.dispose();
+   if(decision=='no'&&understood&&!sensitive&&
+      facts.kind!=WaffraBankOperationKind.transfer&&mounted){
+    // For suggested Expense, only Income / Transfer are alternative types.
+    final alternatives=expectedIncome?
+     const <String>['expense','transfer']:
+     const <String>['income','transfer'];
+    final corrected=await showWaffraDialog<String>(context:context,
+     builder:(pick)=>AlertDialog(
+      title:Row(children:[
+       Expanded(child:WaffraText(waffraIsEnglish?
+        'Choose the correct transaction type':'اختار نوع العملية الصحيح')),
+       IconButton(icon:const Icon(Icons.close),
+        onPressed:()=>Navigator.pop(pick)),
+      ]),
+      content:Column(mainAxisSize:MainAxisSize.min,
+       crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+        for(final kind in alternatives)Padding(
+         padding:const EdgeInsets.only(bottom:8),
+         child:OutlinedButton.icon(
+          key:Key('m618-correct-to-'+kind),
+          onPressed:()=>Navigator.pop(pick,kind),
+          icon:Icon(kind=='transfer'?Icons.swap_horiz_rounded:
+           kind=='income'?Icons.south_west_rounded:Icons.north_east_rounded),
+          label:WaffraText(switch(kind){
+           'income'=>waffraIsEnglish?'Income':'دخل',
+           'expense'=>waffraIsEnglish?'Expense':'مصروف',
+           _=>waffraIsEnglish?'Transfer':'تحويل',
+          }))),
+       ]),
+     ));
+    if(corrected!=null){reviewType=corrected;decision='correct-type';}
+    else decision=null;
+   }
    if(decision=='correct-type'&&mounted&&reviewType!=null){
     if(reviewType=='transfer'){
      // A correction from unknown/income/expense to internal transfer cannot
