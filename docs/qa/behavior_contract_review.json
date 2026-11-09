@@ -293,7 +293,8 @@
       "test_paths": [
         "test/m611_manual_home_finance_regression_test.dart",
         "test/m549_approved_home_notifications_test.dart",
-        "test/m470_account_scope_and_transfer_date_test.dart"
+        "test/m470_account_scope_and_transfer_date_test.dart",
+        "test/storage/m611_verified_transfer_history_test.dart"
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/m550-behavior-contract-preflight.yml",
