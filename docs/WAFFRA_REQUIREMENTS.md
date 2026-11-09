@@ -1142,7 +1142,7 @@ M385 now explicitly bounds the existing M574 SMS preview parser-test change; all
 
 ## 2026-11-09 — M624: Verified Home should not be blocked by premature SMS resume
 
-**Issue:** [#530](https://github.com/MahmoudMAnwar/waffra-app/issues/530) · **PR:** pending · **Status:** Partial — source correction and CI/device verification pending.
+**Issue:** [#530](https://github.com/MahmoudMAnwar/waffra-app/issues/530) · **PR:** [#531](https://github.com/MahmoudMAnwar/waffra-app/pull/531) · **Status:** Partial — source correction and CI/device verification pending.
 
 **Owner request:** First password registration followed by OS biometric, and verified password re-login after logout, must show the complete original Home as quickly as possible, with no frozen previous screen, black frame, loading spinner, masking or fictitious zero balances. No new onboarding or artificial delay.
 
