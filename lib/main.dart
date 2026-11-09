@@ -6561,7 +6561,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     debugPrint('WAFFRA_FINANCE_PERF source_to_ready_ms='
      '${startupClock.elapsedMilliseconds}');
    }
-   unawaited(_m467RefreshHomeAccounts());
+   // Account balances were verified before ready=true; no second startup read.
    WidgetsBinding.instance.addPostFrameCallback((_) {
     if(kProfileMode&&startupClock!=null){
      debugPrint('WAFFRA_FINANCE_PERF first_home_frame_ms='
@@ -6844,6 +6844,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      financeView.getString('waffra_categories_v24')==null){
    throw StateError('Verified encrypted category source is incomplete.');
   }
+  // M622: verified accounts can read while immutable source JSON decodes.
+  // Legacy category migration must finish before its account projection.
+  final Future<void>? accountsLoading=verifiedEncryptedStartup?
+   _m467RefreshHomeAccounts():null;
   _lastWidgetRevision=loadedFinance.widgetRevision;
   _lastLedgerSavedRaw=loadedFinance.ledgerRaw;
   try{final raw=financeView.getString('entries');if(raw!=null)entries.addAll(await _m593BuildVerifiedEntries((await WaffraLargeJsonDecode.parse(raw)) as List));}catch(e){throw StateError('Saved transactions cannot be decoded safely: $e');}
@@ -7038,6 +7042,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     'verified_catalog_ms=${verifiedSourceMs??-1} '
     'decoded_ready_ms=${financeClock.elapsedMilliseconds}');
   }
+   // Previously Home painted transaction sums and only afterwards loaded
+   // verified bank account balances. Never flash a provisional amount.
+   await (accountsLoading??_m467RefreshHomeAccounts());
+   if(!mounted)return;
+   if(!_m468VerifiedAccountsLoaded){
+    throw StateError('Verified financial account balances are unavailable.');
+   }
    setState(()=>ready=true);
    // M486 #419: let Home's first interactive frame paint before competing
    // asynchronous widget reads and incoming SMS callbacks begin.
