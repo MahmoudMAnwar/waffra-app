@@ -28,10 +28,10 @@ void main(){
   final signin=main.substring(main.indexOf('Future<void> _signIn()async{'),
     main.indexOf('String get maskedLastPhone{'));
   expect(signin,contains('WaffraLocalPhoneCredentials.verify('));
-  expect(signin,contains('await widget.onSave(verifiedAccount)'));
+  expect(signin,contains('await widget.onVerifiedPasswordSave(verifiedAccount)'));
   expect(signin,contains('if(!match){'));
   expect(signin,contains('phone:enteredPhone,password:signInPassword.text'));
-  expect(signin.indexOf('await widget.onSave(verifiedAccount)'),
+  expect(signin.indexOf('await widget.onVerifiedPasswordSave(verifiedAccount)'),
     greaterThan(signin.indexOf('if(!match){')));
   expect(main,contains('WaffraMandatoryBiometricGate('));
   expect(main,contains('locked=u!=null;'));
