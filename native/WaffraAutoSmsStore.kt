@@ -178,7 +178,12 @@ object WaffraAutoSmsStore {
     fun scanProgress(context: Context): Map<String, Any> = synchronized(mutex) {
         val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
         val waiting = try {
-            if (enabled(context)) read(context).length() else -1
+            if (enabled(context)) {
+                // App/open scan progress runs on SMS I/O executor, not Flutter UI.
+                // At most one verified retention sweep per day.
+                pruneExcludedLabelsLocked(context, force = false)
+                read(context).length()
+            } else -1
         } catch (_: Exception) { -1 }
         mapOf(
             "scanned" to prefs.getLong(historyScannedCount, 0L),
@@ -391,7 +396,7 @@ object WaffraAutoSmsStore {
         val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
         val now = System.currentTimeMillis()
         val last = prefs.getLong(excludedInfoCleanupAt, 0L)
-        if (!force && last in 1..now &&
+        if (!force && last > 0L && last <= now &&
             now - last < excludedCleanupCadenceMs) return
         val editor = prefs.edit()
         for (key in prefs.all.keys.filter {
@@ -402,20 +407,23 @@ object WaffraAutoSmsStore {
                 throw IllegalStateException("Invalid excluded label shard")
             val labels = excludedMessageInfo(context, shard + "0".repeat(62))
             val active = mutableListOf<JSONObject>()
+            var changed = false
             for (record in labels.values) {
                 val excludedAt = record.optLong("excludedAt", 0L)
                 if (excludedAt == 0L) {
                     record.put("excludedAt", now)
                     active.add(record)
+                    changed = true
                 } else if (excludedAt > now ||
                     now - excludedAt < excludedLabelRetentionMs) {
                     active.add(record)
-                }
+                } else changed = true
                 // All old expired labels are physically erased; the separate
                 // encrypted fingerprint denial-list is never removed here.
             }
-            if (active.isEmpty()) editor.remove(key)
-            else editor.putString(key, seal(JSONArray(active).toString()))
+            if (changed && active.isEmpty()) editor.remove(key)
+            else if (changed) editor.putString(key,
+                seal(JSONArray(active).toString()))
         }
         editor.putLong(excludedInfoCleanupAt, now)
         if (!editor.commit())
