@@ -50,13 +50,13 @@ class ParallelAndroidFinanceCIContract(unittest.TestCase):
         for shard in SHARDS:
             match = re.search(
                 r"(?m)^  " + re.escape(shard) +
-                r"\\)\\n\\s*run_android_test (\\S+) (\\d+)$",
+                r"\)\n\s*run_android_test (\S+) (\d+)$",
                 script,
             )
             self.assertIsNotNone(match, f"missing first test for {shard}")
             expected_first[shard] = match.group(1)
         mapping = dict(re.findall(
-            r"(?m)^  (vault|cloud|receipts|release)\\) first_test=(\\S+) ;;$",
+            r"(?m)^  (vault|cloud|receipts|release)\) first_test=(\S+) ;;$",
             prebuild,
         ))
         self.assertEqual(mapping, expected_first)
