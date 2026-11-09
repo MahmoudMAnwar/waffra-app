@@ -80,7 +80,7 @@
       },
       {
         "start": " @override Widget build(BuildContext context)=>PopScope(",
-        "end": "  appBar:AppBar("
+        "end": "  appBar:AppBar(\n   toolbarHeight:_headerCompact?52:64,"
       }
     ],
     "lib/waffra_auto_sms.dart": [
