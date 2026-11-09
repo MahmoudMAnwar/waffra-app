@@ -11,7 +11,8 @@
     "Remove all visible Waffra learns safe rules language, retain local rules behavior and financial validation.",
     "Shorten unwelcoming initial Home loading copy while protecting verified SQLCipher startup, and skip only demonstrably redundant second OS password verifier probe using exact verified login object identity after secure PBKDF2, never on registration or edits.",
     "Update old assertions and run new source/widget regression. Physical Android login latency and storage expiry verification remain required.",
-    "M617 CI anti-regression: old tests preserve the secure PBKDF2 rejection and post-match profile commit ordering while changing old onSave assertions to verified-password-only callback; update constructor fixture without disabling tests."
+    "M617 CI anti-regression: old tests preserve the secure PBKDF2 rejection and post-match profile commit ordering while changing old onSave assertions to verified-password-only callback; update constructor fixture without disabling tests.",
+    "M615 Python M574 audit of required original bank SMS fields remains mandatory; its exact asserted presentation changes only from a joined paragraph to separate labeled and verified rows."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -31,7 +32,8 @@
     "test/m601_auth_busy_contract_test.dart",
     "test/m604_fast_login_first_frame_test.dart",
     "test/m613_foreground_lock_and_m614_finance_timing_contract_test.dart",
-    "test/m615_m618_sms_review_retention_perf_contract_test.dart"
+    "test/m615_m618_sms_review_retention_perf_contract_test.dart",
+    "test/qa/m574_sms_confirmation_full_fields_test.py"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -150,6 +152,12 @@
       {
         "start": " test('M614 profile-mode spans distinguish secure login from verified financial first frame', () {",
         "end": null
+      }
+    ],
+    "test/qa/m574_sms_confirmation_full_fields_test.py": [
+      {
+        "start": " def test_review_preview_displays_all_495_fields(self):",
+        "end": "if __name__=='__main__':unittest.main()"
       }
     ]
   }
