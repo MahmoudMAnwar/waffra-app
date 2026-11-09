@@ -4,7 +4,7 @@ void main(){
  test('M429 integrates single SMS opt-in, phone login and OS biometrics',(){
   final src=File('lib/main.dart').readAsStringSync();
   expect(src,contains('autoSmsConsentPending?WaffraAutoSmsConsentPage'));
-  expect(src,contains('locked?WaffraMandatoryBiometricGate'));
+  expect(src,contains('child:WaffraMandatoryBiometricGate'));
   expect(src,contains('WaffraLocalPhoneCredentials.verify('));
   expect(src,contains('WaffraLocalAccountMigration('));
   expect(src,contains('WaffraSmsCloudService.setConsent(enabled)'));
