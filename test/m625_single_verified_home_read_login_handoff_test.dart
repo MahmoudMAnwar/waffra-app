@@ -79,6 +79,6 @@ void main() {
     expect(homeLoader,contains('await _refreshAutoSmsInbox(importMonth:'));
     expect(logout.indexOf('await WaffraAutoSms.suspendForSignOut()'),
         lessThan(logout.indexOf('profile=null;showLogin=true;')));
-    expect(app,contains('WAFFRA_AUTH_PERF ${origin}_to_home_first_frame_ms='));
+    expect(app,contains(r'WAFFRA_AUTH_PERF ${origin}_to_home_first_frame_ms='));
   });
 }
