@@ -1,3 +1,9 @@
+[PR #524 M615 SAFE FULL-FIELD LEGACY QA RECONCILIATION — 2026-11-09]
+===============================================================================
+- Kept M574 SMS confirmation Python regression active and exact, replacing stale assumptions of one long multiline preview with checks of all eight separate owner-approved detail rows: transaction type, amount, description, parent/subcategory, sender, verified linked account, and original bank date/time. Existing secure account/amount/source suffix and Yes/No validations still run.
+- M385 protects only the original M574 test function and does not permit broad edits. M550 behavior contract includes it; no security regression was disabled. Tests for M422/M426 password verification handoff and M601 login widget were also reconciled with the secure verified-only save callback.
+- Same Draft PR; latest-commit CI and Android SMS UI/expiry/performance acceptance remain pending. Financial data integrity, OS password verifier and on-device SMS remain unchanged.
+
 [PR #524 M615–M618 CI CONTRACT REPAIR — 2026-11-09]
 =======================================================================
 - Kept every requested SMS review, 30-day safe exclusion retention, cross-sender Select All, and measured-only login optimization in the same Draft PR.
