@@ -55,6 +55,10 @@
       {
         "start": "  body:_financeLoadFailure!=null?_financialRecoveryScreen():",
         "end": "  Stack(clipBehavior:Clip.none,children:[GestureDetector("
+      },
+      {
+        "start": "   profile==null||showLogin||((profile!.phone.trim().isEmpty)&&",
+        "end": "   (autoSmsConsentPending&&_smsConsentAfterVerifiedSignIn)?"
       }
     ],
     "lib/waffra_approved_notifications.dart": [
