@@ -20,6 +20,7 @@
     "lib/storage/waffra_account_context_repository.dart",
     "lib/storage/waffra_verified_accounts_api.dart",
     "lib/waffra_account_transaction_form.dart",
+    "test/m440_account_transaction_form_test.dart",
     "test/m549_approved_home_notifications_test.dart",
     "test/m611_manual_home_finance_regression_test.dart",
     "test/storage/m611_verified_transfer_history_test.dart"
@@ -77,6 +78,12 @@
       {
         "start": " test('M549 approved Home bell saturated at +999; FAB is unchanged',(){",
         "end": null
+      }
+    ],
+    "test/m440_account_transaction_form_test.dart": [
+      {
+        "start": " test('M440 SAR parser requires positive integer halalas, no FX relabel',(){",
+        "end": " test('M440 new account opening balances accept Saudi zero in Arabic and English',(){"
       }
     ]
   }
