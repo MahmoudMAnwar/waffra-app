@@ -1,3 +1,10 @@
+[PR #511 M609 startup reservation] 2026-11-09 — Keep concurrent first-install SQL lock off Flutter UI
+==============================================================================================================
+- The owner-supplied Codex screenshots explicitly identify a SQLite BEGIN IMMEDIATE reservation with busy_timeout=10000 that could block the UI isolate during first-install or re-login source preparation.
+- Keep the same cross-engine POSIX writer lock AND the same plain SQLite installation mutex with BEGIN IMMEDIATE, held across all original key, receipt, vault and installation source integrity steps. Host only the lock database on Drift's single background native SQLite connection and close it to release the reservation (no early unlock, alternative installation, source switch or finance changes).
+- Expand the existing M440 concurrency tests with an external SQLite mutex holding BEGIN IMMEDIATE while the first-install UI event-loop timer must still tick. Verify source identity after the lock releases. Preserve and rerun existing encrypted storage and rollback tests.
+- The added scope and behavior review are recorded in M385/M550. Performance on a physical Android phone and latest CI suite remain unverified; no release/merge claim.
+
 [PR #511 M609 exact-head correction] 2026-11-09 — Isolate callback must not capture SQLCipher database
 =============================================================================================================
 - Full existing receipt, merchant and concurrency tests found a real M609 regression: an anonymous Isolate.run callback closed over Drift's unsendable database/transaction, failing before saving. Do not hide or skip this error.

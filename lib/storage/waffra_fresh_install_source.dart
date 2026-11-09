@@ -3,7 +3,7 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:crypto/crypto.dart';
-import 'package:sqlite3/sqlite3.dart';
+import 'package:drift/native.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -50,14 +50,20 @@ class WaffraFreshInstallSource {
   }) => WaffraExperimentalWriterGate(disposableDirectory:directory,experimentalEnabled:true)
       .withExclusiveAccess(() async {
     // POSIX advisory file locks may be shared by Flutter engines in the
-    // same process. A SQLite write reservation also serializes those engines.
-    final mutex = sqlite3.open('${directory.path}/waffra-install-lock.sqlite');
+    // same process. Retain the exact BEGIN IMMEDIATE SQLite write reservation
+    // while moving its 10-second busy wait off Flutter's rendering isolate.
+    // The native connection stays open for every awaited installation step;
+    // closing it releases the transaction as the previous sqlite3 lock did.
+    final mutex = NativeDatabase.createInBackground(
+      File('${directory.path}/waffra-install-lock.sqlite'),
+      readPool: 0,
+      setup: (db) => db.execute('PRAGMA busy_timeout=10000'),
+    );
     try {
-      mutex.execute('PRAGMA busy_timeout=10000');
-      mutex.execute('BEGIN IMMEDIATE');
+      await mutex.runCustom('BEGIN IMMEDIATE');
       return await _prepareLocked(directory,readKey,writeKey);
     } finally {
-      mutex.close();
+      await mutex.close();
     }
   });
 

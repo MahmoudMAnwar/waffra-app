@@ -1,13 +1,14 @@
 {
   "contract_version": 1,
   "change_id": "M609-OWNER-CODEX-SQLCIPHER-ISOLATE-UI-LAG-20261109-PR511",
-  "human_scope_review": "2026-11-09 owner explicitly requested continuing Codex's supplied screenshots exactly: isolate heavy SQLCipher open/verification, encrypted finance preflight and duplicate immutable finance reads from Flutter UI. No UI redesign, finance source switch or user-data change. Real Android proof and human merge review remain pending.",
+  "human_scope_review": "2026-11-09 owner explicitly requested continuing Codex's supplied screenshots exactly: isolate heavy SQLCipher open/verification, encrypted finance preflight and duplicate immutable finance reads from Flutter UI. No UI redesign, finance source switch or user-data change. Real Android proof and human merge review remain pending. The same screenshots explicitly mention a contended 10-second first-install SQLite BEGIN IMMEDIATE lock; M609 includes moving only this reservation to the database worker while retaining all receipt and data-preservation tests.",
   "user_requested_changes": [
     "Run native SQLCipher 4 database open, key validation and financial queries outside Flutter's rendering isolate, keeping the same encryption and fail-closed checks.",
     "Offload encrypted snapshot checksum, canonical encoding, preflight and finance commit preparation to Dart isolates; preserve identical generation CAS, relational SQL and rollback.",
     "Coalesce and cache successful finance source preflight within a single immutable verified view only, never caching failures or different source snapshots.",
     "Preserve existing user vaults and migration safeguards, biometric gate, transactional storage, Home and Widget source witness and bank SMS consent.",
-    "Add storage integrity and UI event-loop tests, run full exact-head CI and measure real Android frame responsiveness before merge."
+    "Add storage integrity and UI event-loop tests, run full exact-head CI and measure real Android frame responsiveness before merge.",
+    "Preserve BEGIN IMMEDIATE cross-engine install serialization but move its up-to-ten-second SQLite busy-lock wait to background worker; add explicit concurrent-initialization UI-loop test."
   ],
   "allowed_changed_files": [
     "docs/qa/approved_change_scope.json",
@@ -17,10 +18,12 @@
     "lib/storage/waffra_encrypted_store.dart",
     "lib/storage/waffra_finance_read_view.dart",
     "lib/storage/waffra_fresh_home_catalog_recovery.dart",
+    "lib/storage/waffra_fresh_install_source.dart",
     "lib/storage/waffra_production_finance_authority_binding.dart",
     "lib/storage/waffra_verified_finance_authority.dart",
     "test/storage/encrypted_store_test.dart",
-    "test/storage/finance_read_view_test.dart"
+    "test/storage/finance_read_view_test.dart",
+    "test/storage/m440_fresh_install_source_test.dart"
   ],
   "bounded_sections": {
     "lib/storage/waffra_encrypted_store.dart": [
@@ -74,6 +77,26 @@
       }
     ],
     "test/storage/encrypted_store_test.dart": [
+      {
+        "start": "void main() {",
+        "end": null
+      }
+    ],
+    "lib/storage/waffra_fresh_install_source.dart": [
+      {
+        "start": "import 'package:crypto/crypto.dart';",
+        "end": "import 'package:flutter_secure_storage/flutter_secure_storage.dart';"
+      },
+      {
+        "start": "    // POSIX advisory file locks may be shared by Flutter engines in the",
+        "end": "  static Future<WaffraFreshInstallSource?> _prepareLocked("
+      }
+    ],
+    "test/storage/m440_fresh_install_source_test.dart": [
+      {
+        "start": "import 'package:flutter_test/flutter_test.dart';",
+        "end": "import 'package:waffra/storage/waffra_encrypted_store.dart';"
+      },
       {
         "start": "void main() {",
         "end": null
