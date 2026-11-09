@@ -126,4 +126,28 @@ void main() {
     expect(await store.stagedRowCount('vault-a'), first.recordCount);
     await store.close();
   });
+  test('large encrypted SQL read does not block Flutter event loop', () async {
+    final file = File('${temp.path}/background.sqlite');
+    final store = WaffraEncryptedStore.openAt(file, key: secret);
+    try {
+      // Open and authenticate the encrypted vault before timing the query.
+      await store.stageSnapshot('vault-background', snapshot());
+      var finished = false;
+      final expensive = store.customSelect(
+        'WITH RECURSIVE numbers(n) AS (SELECT 0 UNION ALL '
+        'SELECT n + 1 FROM numbers WHERE n < 2000000) '
+        'SELECT max(n) AS result FROM numbers',
+      ).getSingle().then((row) {
+        finished = true;
+        return row.read<int>('result');
+      });
+      await Future<void>.delayed(const Duration(milliseconds: 15));
+      expect(finished, isFalse,
+          reason: 'SQL should run on its own isolate, not stall input frames.');
+      expect(await expensive, 2000000);
+    } finally {
+      await store.close();
+    }
+  });
+
 }

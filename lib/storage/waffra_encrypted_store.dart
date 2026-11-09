@@ -81,9 +81,12 @@ class WaffraEncryptedStore extends GeneratedDatabase {
   /// This is not a production key source. Never hard-code a real user key.
   static WaffraEncryptedStore openAt(File file, {required String key}) {
     if (key.length < 24) throw ArgumentError.value(key.length, 'key.length');
-    return WaffraEncryptedStore._(NativeDatabase(
+    // Keep the existing SQLCipher setup, key checks and single-connection
+    // semantics; only move synchronous SQLite work off Flutter's UI isolate.
+    return WaffraEncryptedStore._(NativeDatabase.createInBackground(
       file,
       logStatements: false,
+      readPool: 0,
       setup: (db) {
         // Fail closed in EVERY build, not only debug/assert.
         // Ordinary SQLite ignores this pragma and returns no result.

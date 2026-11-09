@@ -82,4 +82,35 @@ void main() {
       ),
     ), throwsA(isA<StateError>()));
   });
+  test('background integrity validates once and preserves immutable values',
+      () async {
+    final view = WaffraFinanceReadView.fromEncrypted(
+      const WaffraFinanceSnapshotState(
+        generation: 1,
+        digest: 'test-only',
+        values: {'entries': '[]', 'waffra_goals_v24': '[]'},
+      ),
+    );
+    await Future.wait([
+      view.requireIntegrityInBackground(),
+      view.requireIntegrityInBackground(),
+    ]);
+    view.requireIntegrity();
+    expect(view.getString('entries'), '[]');
+  });
+
+  test('background integrity fails closed on malformed finance', () async {
+    final view = WaffraFinanceReadView.fromEncrypted(
+      const WaffraFinanceSnapshotState(
+        generation: 1,
+        digest: 'test-only',
+        values: {'entries': 'invalid-json'},
+      ),
+    );
+    await expectLater(
+      view.requireIntegrityInBackground(), throwsA(isA<StateError>()),
+    );
+    expect(() => view.requireIntegrity(), throwsA(isA<StateError>()));
+  });
+
 }

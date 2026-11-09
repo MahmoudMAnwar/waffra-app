@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:isolate';
 
 import 'package:crypto/crypto.dart';
 
@@ -143,6 +144,17 @@ CREATE TABLE IF NOT EXISTS $_table(
     final row = rows.single;
     final raw = row.read<String>('snapshot_json');
     final digest = row.read<String>('digest');
+    final generation = row.read<int>('generation');
+    // Preserve *all* digest, schema and canonical-encoding checks, but keep
+    // JSON decoding / finance preflight off the UI isolate.
+    return Isolate.run(() => WaffraAtomicFinanceSnapshot._decodeRead(
+          raw, digest, generation,
+        ));
+  }
+
+  static WaffraFinanceSnapshotState _decodeRead(
+    String raw, String digest, int generation,
+  ) {
     if (_digest(raw) != digest) {
       throw StateError('Encrypted financial snapshot checksum mismatch.');
     }
@@ -169,7 +181,7 @@ CREATE TABLE IF NOT EXISTS $_table(
       throw StateError('Finance snapshot encoding is not canonical.');
     }
     return WaffraFinanceSnapshotState(
-      generation: row.read<int>('generation'),
+      generation: generation,
       digest: digest,
       values: valid,
     );
@@ -185,9 +197,14 @@ CREATE TABLE IF NOT EXISTS $_table(
         expectedGeneration >= 9223372036854775806) {
       throw ArgumentError.value(expectedGeneration, 'expectedGeneration');
     }
-    final captured = _validate(fullFinanceSnapshot);
-    final json = _jsonOf(captured);
-    final digest = _digest(json);
+    // A large ledger's validation, canonical encoding and digest are pure
+    // computations. Keep the source generation CAS inside the SQL transaction.
+    final (json, digest) = await Isolate.run(() {
+      final captured =
+          WaffraAtomicFinanceSnapshot._validate(fullFinanceSnapshot);
+      final json = WaffraAtomicFinanceSnapshot._jsonOf(captured);
+      return (json, WaffraAtomicFinanceSnapshot._digest(json));
+    });
     return store.transaction(() async {
       await _requireReady();
       final before = await _readUnsafe();
