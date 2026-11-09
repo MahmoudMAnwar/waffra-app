@@ -46,6 +46,29 @@ class MainActivity : FlutterFragmentActivity() {
     private var pendingWidgetAction: String? = null
     private var messageChannel: MethodChannel? = null
     private var pendingShare: String? = null
+    // M621: only opaque source IDs are staged until verified Flutter Home.
+    // No SMS text, bank account or monetary detail crosses the launch intent.
+    private var pendingFinanceNotification: Map<String, String>? = null
+
+    private fun receiveFinanceNotification(received: Intent?) {
+        if (received?.action != WaffraAutoSmsNotifications.OPEN_ACTION) return
+        val destination = received.getStringExtra(
+            WaffraAutoSmsNotifications.EXTRA_DESTINATION) ?: return
+        val id = received.getStringExtra(
+            WaffraAutoSmsNotifications.EXTRA_SMS_ID) ?: return
+        if (destination != "review" && destination != "saved") return
+        if (!Regex("^[a-f0-9]{64}$").matches(id)) return
+        val payload = mutableMapOf("destination" to destination, "id" to id)
+        if (destination == "saved") {
+            val entry = received.getStringExtra(
+                WaffraAutoSmsNotifications.EXTRA_ENTRY_ID) ?: return
+            if (entry.isBlank() || entry.length > 200 ||
+                entry.any { it.isISOControl() }) return
+            payload["entryId"] = entry
+        }
+        pendingFinanceNotification = payload
+        messageChannel?.invokeMethod("financeNotificationTap", payload)
+    }
     private var screenshotsAllowed: Boolean = true
     private var protectRecents: Boolean = true
 
@@ -154,6 +177,7 @@ class MainActivity : FlutterFragmentActivity() {
         applyScreenshotSetting(prefs.getBoolean("flutter.waffra_allow_screenshots", true))
         receiveSharedText(intent)
         receiveWidgetAction(intent)
+        receiveFinanceNotification(intent)
     }
 
     private fun receiveWidgetAction(intent: Intent?) {
@@ -168,6 +192,7 @@ class MainActivity : FlutterFragmentActivity() {
         setIntent(intent)
         receiveSharedText(intent)
         receiveWidgetAction(intent)
+        receiveFinanceNotification(intent)
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -259,6 +284,11 @@ class MainActivity : FlutterFragmentActivity() {
                     val text = pendingShare
                     pendingShare = null
                     result.success(text)
+                }
+                "takeFinanceNotificationTap" -> {
+                    val target = pendingFinanceNotification
+                    pendingFinanceNotification = null
+                    result.success(target)
                 }
                 "autoSmsPermissionState" -> result.success(WaffraAutoSmsStore.permissionGranted(this))
                 // Encrypted queue counters and authenticated owner checks
