@@ -1186,7 +1186,10 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   // Keep the launch animation visible but avoid a fixed three-second
   // delay when finance initialization is already ready. Actual loading
   // and mandatory biometric gates still independently block unsafe entry.
-  await Future<void>.delayed(const Duration(milliseconds:1750));
+  // Do not hold the launch screen for an arbitrary minimum duration.
+  // Render one frame, while the independent finance authority still blocks
+  // access to protected Home data until its actual verification completes.
+  await WidgetsBinding.instance.endOfFrame;
   if(mounted)setState(()=>introDone=true);
  }
  @override void didChangeAppLifecycleState(AppLifecycleState state){
@@ -2366,8 +2369,9 @@ class _LoginScreenState extends State<LoginScreen> {
    // One OS-keystore verifier read, not two identical secure-store reads.
    // Probe reports missing/malformed/foreign distinctly, preserving the
    // legacy fallback and fail-closed sign-in recovery semantics.
+   var inspection=await WaffraLocalPhoneCredentials.readForSignIn();
    var verifierStatus=await WaffraLocalPhoneCredentials.probeForPhone(
-    enteredPhone);
+    enteredPhone,inspection:inspection);
    // Missing or malformed OS credentials are not equivalent to a wrong
    // password. Never replace the existing identity or financial data.
    final hasLegacy=prefs.getString('waffra_local_password_salt')!=null&&
@@ -2395,7 +2399,10 @@ class _LoginScreenState extends State<LoginScreen> {
       'تعذر استعادة تسجيل الدخول بأمان، بياناتك المالية محفوظة.');
      return;
     }
-    verifierStatus=await WaffraLocalPhoneCredentials.probeForPhone(enteredPhone);
+    // A successful recovery may have enrolled a new verifier.
+    inspection=await WaffraLocalPhoneCredentials.readForSignIn();
+    verifierStatus=await WaffraLocalPhoneCredentials.probeForPhone(
+     enteredPhone,inspection:inspection);
    }
    if(!hasLegacy&&(verifierStatus==WaffraLocalCredentialProbe.missing||
       verifierStatus==WaffraLocalCredentialProbe.malformed)){
@@ -2418,6 +2425,7 @@ class _LoginScreenState extends State<LoginScreen> {
    }
    final match=await WaffraLocalPhoneCredentials.verify(
     phone:enteredPhone,password:signInPassword.text,
+    inspection:inspection,
     oldSalt:prefs.getString('waffra_local_password_salt'),
     oldHash:prefs.getString('waffra_local_password_hash'));
    verifiedMs=signInTiming?.elapsedMilliseconds;
@@ -2432,7 +2440,12 @@ class _LoginScreenState extends State<LoginScreen> {
     name:account.name,email:account.email,provider:'Phone',
     gender:account.gender,avatar:account.avatar,
     birthday:account.birthday,phone:enteredPhone);
+   final activationTiming=kProfileMode?(Stopwatch()..start()):null;
    await widget.onSave(verifiedAccount);
+   if(kProfileMode&&activationTiming!=null){
+    debugPrint('WAFFRA_AUTH_PERF verified_profile_activation_ms='
+     '${activationTiming.elapsedMilliseconds}');
+   }
   }catch(_){
    if(mounted)setState(()=>signInAuthError=waffraIsEnglish?
     'Local secure storage is unavailable. Unlock your device and retry.':

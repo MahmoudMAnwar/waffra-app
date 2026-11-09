@@ -1,3 +1,12 @@
+[PR #510 M604] 2026-11-09 — Owner-requested repeat login / empty Home startup latency reduction
+==================================================================================================
+- Removed the cosmetic 1750ms fixed splash hold. The launch intro paints one real Flutter frame, but encrypted source/owner checks and the mandatory protected startup gates remain required before financial data can appear.
+- One attempt-local, unpersisted OS-protected password verifier snapshot now supplies both the phone integrity probe and the real 600000-round PBKDF2 challenge. A successful biometric-backed recovery re-reads its NEW verifier. Wrong phone, bad password, missing/malformed record and original legacy fallback still fail closed.
+- Verified profile activation still obtains its source witness and shared Home/Widget lease; unchanged registered profile and login-hint fields no longer incur redundant storage writes. Added profile-build verified-activation duration timing without account/finance details.
+- Existing 900ms post-first-Home-frame bank SMS history review remains, as does owner consent, encrypted journal, no automatic financial posting, and the prior same-source Home account balance refresh.
+- New M604 full verifier/first-frame/source tests plus a bounded update to the M441 obsolete positive source assertion (single secure-inspection request, unchanged fail-closed phone challenge); updated M385 scope, M550 behavior review and recorded requirements. No release security guard or mandatory job was disabled.
+- This PR is a DRAFT and is NOT a claim of real Android p95 frame performance, total app-wide lag elimination, or a signed main APK. Exact-head full CI, clean install and preservation when updating an existing-device installation remain pending.
+
 [PR #402 M497] 2026-11-06 — Show the saved custom subtype in My Accounts (#406)
 ================================================================================================
 - A custom bank/wallet account subtype label approved by the user is now displayed directly beneath that account's name, next to its independently verified SAR balance. This makes the user-defined subtype visible after creation and after reopening My Accounts.
