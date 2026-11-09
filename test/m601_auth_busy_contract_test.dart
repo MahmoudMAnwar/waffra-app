@@ -28,7 +28,7 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(MaterialApp(home: LoginScreen(onSave: (_) async {})));
+    await tester.pumpWidget(MaterialApp(home: LoginScreen(onSave: (_) async {},onVerifiedPasswordSave: (_) async {})));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
     final buttonFinder = find.byKey(const Key('m585-login-submit-stable'));
