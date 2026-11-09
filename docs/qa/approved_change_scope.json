@@ -13,7 +13,8 @@
     "Keep actual SMS analysis and notification sync asynchronous after first verified Home frame; never force new financial IO or classification into the render path.",
     "M621 M417 standalone Kotlin compile must install exactly the same monochrome drawable and namespace as packaged Android build so the R resource resolves.",
     "M622 final implementation: async verified account balances were previously fetched only after the ledger marked Home ready; combine accounts and ledger before first genuine Home paint, overlapping immutable SQLCipher decode and account projection only on already-verified encrypted startup, never racing legacy catalog writes.",
-    "Owner final M622 simultaneous full-screen requirement: gate the complete Home scaffold, not only its body; header, footer, genuine account balances, cards and transactions appear in one frame AFTER the complete encrypted ledger and account read, never staged placeholders."
+    "Owner final M622 simultaneous full-screen requirement: gate the complete Home scaffold, not only its body; header, footer, genuine account balances, cards and transactions appear in one frame AFTER the complete encrypted ledger and account read, never staged placeholders.",
+    "M622 Issue #528 QA-only repair: legacy M604 regression must assert awaited owner-verified account balances before ready=true and forbid the previous deferred second account repaint; keep all unchanged security and first-frame SMS guards. No production code change."
   ],
   "allowed_changed_files": [
     ".github/workflows/android-full-smoke.yml",
@@ -32,6 +33,7 @@
     "native/WaffraMainActivity.kt",
     "native/waffra_notification_wallet.xml",
     "test/m580_sms_security_navigation_performance_test.dart",
+    "test/m604_fast_login_first_frame_test.dart",
     "test/m615_m618_sms_review_retention_perf_contract_test.dart",
     "test/m620_m621_finance_notification_routing_test.dart",
     "test/m622_immediate_home_without_loader_test.dart"
@@ -151,6 +153,12 @@
       {
         "start": " test('M617 verified login removes only the second OS probe and never skips secure KDF'",
         "end": null
+      }
+    ],
+    "test/m604_fast_login_first_frame_test.dart": [
+      {
+        "start": "  test('login preserves source guards and removes only redundant IO/delay',(){",
+        "end": "  test('relogin avoids redundant preference writes but keeps source lease',(){"
       }
     ]
   }
