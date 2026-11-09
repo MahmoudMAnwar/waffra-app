@@ -148,10 +148,13 @@ void main(){
   expect(native,contains('excludedMessageInfoBucketPrefix'));
   expect(native,contains('excludedMessageBucketPrefix'));
   expect(native,contains('result.sortedWith('));
-  // Backward compatibility: old hash-only markers must appear even
-  // without the newly introduced encrypted sender/time metadata.
-  expect(native,contains('val info = labels[id]'));
-  expect(native,contains('info?.optString("sender") ?: ""'));
+  // M616: expired labels are deleted while owner-bound fingerprint policy
+  // remains encrypted, preventing previously excluded SMS reappearing.
+  expect(native,contains('val info = labels[id] ?: continue'));
+  expect(native,contains('pruneExcludedLabelsLocked(context, force = true)'));
+  expect(native,contains('excludedLabelRetentionMs'));
+  expect(native,contains('info.optString("sender")'));
+  expect(native,contains('System.currentTimeMillis()'));
   // An exclusion restoration must never manipulate completed finance hashes.
   final restore=native.split('fun restoreExcludedMessage(context: Context, id: String)').last
    .split('// Explicit user sender exclusion').first;

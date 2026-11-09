@@ -83,8 +83,8 @@ void main(){
 
  test('cold Home never shows a completely blank spinner-only body',(){
   final main=File('lib/main.dart').readAsStringSync();
-  expect(main,contains("WaffraText(waffraIsEnglish?'Preparing secure finances…'"));
-  expect(main,contains("'جارٍ تجهيز بياناتك المالية بأمان…'"));
+  expect(main,contains("WaffraText(waffraIsEnglish?'Opening your dashboard…'"));
+  expect(main,contains("'بنفتح الرئيسية…'"));
   expect(main,contains(" !ready?RepaintBoundary("));
   expect(main,isNot(contains("!ready?const Center(child:CircularProgressIndicator())")));
  });
@@ -272,10 +272,20 @@ void main(){
   expect(corrected,contains('if(smsHashes.contains(bankSmsHash(body)))'));
   expect(corrected,isNot(contains('commitConfirmedSms(')));
   expect(corrected,isNot(contains('excludeMessages(')));
-  final buttons=review.split("if(!sensitive)...[")[1]
-   .split("if(!sensitive)Padding(")[0];
-  expect(buttons,isNot(contains("await _financeAuthority.commitConfirmedSms(")));
-  expect(buttons,isNot(contains("WaffraAutoSms.acknowledgeCommitted(")));
+  // M618 moves actions into a revised layout. Keep the behavioral guards
+  // independent of a specific widget tree or old conditional delimiter.
+  expect(review,contains("Key('m565-sms-yes-confirm')"));
+  expect(review,contains("Key('m565-sms-no-edit')"));
+  expect(review,contains("Key('m595-review-single-exclude')"));
+  expect(review,contains('reviewedAccount?.ids?.single!=null'));
+  expect(corrected,isNot(contains("await _financeAuthority.commitConfirmedSms(")));
+  // A corrected SMS may be ACKed only AFTER the verified SQLCipher writer
+  // has recorded its exact source hash; choosing a different type alone
+  // never ACKs or posts a transaction.
+  expect(corrected,contains('if(smsHashes.contains(bankSmsHash(body)))'));
+  expect(corrected,contains('await WaffraAutoSms.acknowledgeCommitted([id])'));
+  expect(corrected.indexOf('if(smsHashes.contains(bankSmsHash(body)))'),
+    lessThan(corrected.indexOf('await WaffraAutoSms.acknowledgeCommitted([id])')));
  });
 
  test('M587 bank transfer shows exactly three non-posting choices',(){

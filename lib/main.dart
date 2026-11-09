@@ -1296,12 +1296,29 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  // held by Home and the independent Android Widget finance engine.
  final WaffraLiveAccountWriteAuthority _accountWriteAuthority=
      const WaffraLiveAccountWriteAuthority();
+ // Verified-login proof is the exact non-shared Person instance returned
+ // after a successful phone-bound OS + PBKDF2 password check.
+ Person? _verifiedPhoneLoginProof;
+ Future<void> _saveVerifiedPhoneLogin(Person u)async{
+  if(u.provider.toLowerCase().trim()!='phone'||
+     _verifiedPhoneLoginProof!=null){
+   throw StateError('Invalid verified phone login handoff');
+  }
+  _verifiedPhoneLoginProof=u;
+  try{await saveUser(u);}
+  finally{
+   if(identical(_verifiedPhoneLoginProof,u))_verifiedPhoneLoginProof=null;
+  }
+ }
  Future<void> saveUser(Person u)async {
   final profileCommitClock=kProfileMode?(Stopwatch()..start()):null;
   // M513: refuse to declare a new phone profile successfully registered if
   // Android never retained a verifier for that exact account. Keeping the
   // existing login password usable is part of successful account creation.
-  if(u.provider.toLowerCase().trim()=='phone'){
+  if(u.provider.toLowerCase().trim()=='phone'&&
+     !identical(_verifiedPhoneLoginProof,u)){
+   // M617: onboarding and profile edits still check fresh OS keystore.
+   // Password sign-in just passed the exact phone-bound OS+PBKDF2 verifier.
    final phone=WaffraSaudiMobile.inputFromStored(u.phone);
    final integrity=await WaffraLocalPhoneCredentials.probeForPhone(phone);
    if(integrity!=WaffraLocalCredentialProbe.ready){
@@ -1791,7 +1808,8 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     (profile!.provider.toLowerCase().contains('local')||
      profile!.provider.contains('محلي')||
      profile!.provider.toLowerCase().contains('guest')||
-     profile!.provider.toLowerCase().contains('demo')))?LoginScreen(onSave:saveUser):
+     profile!.provider.toLowerCase().contains('demo')))?LoginScreen(onSave:saveUser,
+     onVerifiedPasswordSave:_saveVerifiedPhoneLogin):
    (autoSmsConsentPending&&_smsConsentAfterVerifiedSignIn)?
     WaffraAutoSmsConsentPage(
      english:language=='en',onComplete:finishSmsPermissionChoice):
@@ -2286,7 +2304,9 @@ class _IntroScreenState extends State<IntroScreen> {
 
 class LoginScreen extends StatefulWidget {
  final Future<void> Function(Person) onSave;
- const LoginScreen({super.key,required this.onSave});
+ final Future<void> Function(Person) onVerifiedPasswordSave;
+ const LoginScreen({super.key,required this.onSave,
+  required this.onVerifiedPasswordSave});
  @override State<LoginScreen> createState()=>_LoginScreenState();
 }
 class _LoginScreenState extends State<LoginScreen> {
@@ -2450,7 +2470,8 @@ class _LoginScreenState extends State<LoginScreen> {
     gender:account.gender,avatar:account.avatar,
     birthday:account.birthday,phone:enteredPhone);
    final activationTiming=kProfileMode?(Stopwatch()..start()):null;
-   await widget.onSave(verifiedAccount);
+   // Only the previously successful real password check reaches this hook.
+   await widget.onVerifiedPasswordSave(verifiedAccount);
    if(kProfileMode&&activationTiming!=null){
     debugPrint('WAFFRA_AUTH_PERF verified_profile_activation_ms='
      '${activationTiming.elapsedMilliseconds}');
@@ -4803,8 +4824,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         'Restoring an individual message allows it on the next manual rescan; '
         'blocked senders remain blocked. Financial records are unchanged.':
         '${messages.length} رسالة مستبعدة • ${senders.length} مرسل مستبعد. '
-        'إلغاء استبعاد رسالة يسمح بمراجعتها عند إعادة الفحص، '
-        'ولا يلغي استبعاد المرسل نفسه. بياناتك المالية لا تتغير.',
+        'تقدر ترجع الرسالة خلال 30 يوم من الاستبعاد، وبعدها بيتحذف وصفها '
+        'تلقائيًا مع استمرار منع ظهورها تاني في الفحص. '
+        'استبعاد المرسل منفصل والعمليات المالية لا تتغير.',
         style:Theme.of(ctx).textTheme.bodySmall)),
       Expanded(child:messages.isEmpty&&senders.isEmpty?
        Center(child:WaffraText(waffraIsEnglish?
@@ -4825,6 +4847,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           final id=message['id'] as String;
           final sender=message['sender'] as String? ?? '';
           final receivedAt=message['receivedAt'] as int? ?? 0;
+          final excludedAt=message['excludedAt'] as int? ?? 0;
+          final expiresAt=excludedAt>0?
+           DateTime.fromMillisecondsSinceEpoch(excludedAt).add(
+            const Duration(days:30)):null;
+          final remaining=expiresAt==null?null:
+           (expiresAt.difference(DateTime.now()).inHours/24).ceil().clamp(0,30);
+          final expiryNote=remaining==null?'':waffraIsEnglish?
+           ' • ${remaining}d to restore':' • متبقي ${remaining} يوم للاسترجاع';
           final date=receivedAt>0?
            DateTime.fromMillisecondsSinceEpoch(receivedAt):null;
           final dateLabel=date==null?'':
@@ -4836,7 +4866,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            title:WaffraText(sender.isNotEmpty?sender:
             (waffraIsEnglish?'Excluded message':'رسالة مستبعدة')),
            subtitle:WaffraText(
-            '$labelPrefix••••${id.substring(id.length-8)}',
+            '$labelPrefix••••${id.substring(id.length-8)}$expiryNote',
             style:Theme.of(ctx).textTheme.bodySmall),
            trailing:TextButton(
             onPressed:busy?null:()async{
@@ -5013,7 +5043,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    return false;
   }
   snackSuccess(context,waffraIsEnglish?
-   'Messages excluded safely.':'تم استبعاد الرسائل المحددة بأمان.');
+   'Messages moved to Excluded for 30 days. Restore them there.':
+   'الرسائل بقت في قائمة المستبعدة لمدة 30 يوم، وتقدر ترجعها من هناك.');
   return true;
  }
  Future<void> _m549OpenNotifications()async{
@@ -5911,6 +5942,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }
   }
  }
+ // M615: consistent, responsive detail rows with clear RTL text margins.
+ Widget _m615ReviewDetail(String label,String value,IconData symbol)=>
+  Padding(padding:const EdgeInsets.symmetric(vertical:6),
+   child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
+    Icon(symbol,size:17,color:emerald),
+    const SizedBox(width:7),
+    Expanded(flex:4,child:WaffraText(label,
+     style:const TextStyle(fontSize:12,fontWeight:FontWeight.w700))),
+    const SizedBox(width:8),
+    Expanded(flex:5,child:WaffraText(value,
+     textAlign:TextAlign.start,style:const TextStyle(fontSize:12))),
+   ]));
+
  Future<void> _reviewAutoSmsCandidates({String? targetId})async {
   if(!mounted||!ready||_smsSheetOpen||_autoSmsReviewOpen||
      _financeLoadFailure!=null)return;
@@ -6050,11 +6094,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      if(dialog.mounted)redraw(()=>choosingAccount=false);
     }
    }
-   final decision=await showWaffraDialog<String>(context:context,
+   final reviewScroll=ScrollController();
+   var decision=await showWaffraDialog<String>(context:context,
     builder:(dialog)=>StatefulBuilder(builder:(dialog,redraw)=>AlertDialog(
      title:WaffraText(waffraIsEnglish?
       'Review bank message':'مراجعة رسالة بنكية'),
-     content:SingleChildScrollView(child:Column(
+     content:Scrollbar(controller:reviewScroll,thumbVisibility:true,
+      thickness:4,radius:const Radius.circular(8),
+      child:SingleChildScrollView(controller:reviewScroll,
+       child:Padding(
+        // End in RTL is the left edge: never let scrollbar cover text.
+        padding:const EdgeInsetsDirectional.only(start:6,end:24),
+        child:Column(
       mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,
       children:[
        Container(
@@ -6079,7 +6130,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           (localFacts['category']?.toString()??'')),
          if(cloudSummary.isNotEmpty)WaffraText(cloudSummary),
         ])),
-       if(!sensitive)...[
+       if(!sensitive&&!understood)...[
         const SizedBox(height:11),
         WaffraText(waffraIsEnglish?'Transaction type':'نوع العملية',
          style:const TextStyle(fontWeight:FontWeight.w800,fontSize:13)),
@@ -6111,48 +6162,57 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           onPressed:()=>Navigator.pop(dialog,'correct-type'),
           child:WaffraText(waffraIsEnglish?'Continue to review':'متابعة المراجعة'),
          ),
-        if(facts.kind!=WaffraBankOperationKind.transfer)
-         TextButton.icon(
-          key:const Key('m595-review-single-exclude'),
-          onPressed:()=>Navigator.pop(dialog,'exclude'),
-          icon:const Icon(Icons.block_outlined),
-          label:WaffraText(waffraIsEnglish?
-           'Exclude this message':'استبعاد الرسالة'),
-         ),
        ],
        if(!sensitive)Padding(
         padding:const EdgeInsets.only(top:10),
-        child:ExpansionTile(
+        child:Card(
+         color:Theme.of(dialog).colorScheme.surfaceContainerLow,
+         child:ExpansionTile(
          key:const Key('waffra-sms-original-expand'),
+         initiallyExpanded:true,
          title:WaffraText(waffraIsEnglish?
           'Read original bank message':'عرض نص الرسالة البنكية الأصلي'),
-         children:[Padding(padding:const EdgeInsets.all(12),
+         children:[Padding(padding:const EdgeInsets.all(14),
           child:SelectableText(body,textAlign:TextAlign.start))],
-        )),
+        ))),
        if(understood&&!sensitive&&
           reviewType==(expectedIncome?'income':'expense'))...[
         const SizedBox(height:10),
-        WaffraText(waffraIsEnglish?'Is this transaction correct?':
-         'هل العملية صحيحة؟',
-         style:const TextStyle(fontWeight:FontWeight.w800)),
-        WaffraText(
-         (waffraIsEnglish?'Type: ':'نوع العملية: ')+
-          (expectedIncome?(waffraIsEnglish?'Income':'دخل'):
-           (waffraIsEnglish?'Expense':'مصروف'))+' • '+
-          (originalAmount==null?'—':originalAmount.amount.toStringAsFixed(2)+
-           ' '+originalAmount.currency)+'\n'+
-         (waffraIsEnglish?'Description: ':'الوصف: ')+parsed.title+'\n'+
-         (waffraIsEnglish?'Main / subcategory: ':'القسم الرئيسي / الفرعي: ')+
-          previewMainName+' / '+proposedCategory+'\n'+
-         (waffraIsEnglish?'Sender: ':'المرسل: ')+sender+'\n'+
-         (reviewedAccountName??previewAccountLabel)+' • '+
-          (reviewedAccount!=null?
-           (waffraIsEnglish?'Account verified':'تم تأكيد الحساب'):
-           (waffraIsEnglish?'Choose/verify before saving':
-            'اختيار/تأكيد قبل الحفظ'))+'\n'+
-         (waffraIsEnglish?'Bank transaction date/time: ':
-          'تاريخ ووقت العملية الأصلي: ')+previewDateTime,
-         style:const TextStyle(fontSize:12,height:1.5)),
+        Card(color:Theme.of(dialog).colorScheme.surfaceContainerLow,
+         child:Padding(padding:const EdgeInsets.all(12),
+          child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+           Row(children:[
+            const Icon(Icons.check_circle_outline_rounded,color:emerald),
+            const SizedBox(width:8),
+            Expanded(child:WaffraText(waffraIsEnglish?
+             'Is this transaction correct?':'هل العملية صحيحة؟',
+             style:const TextStyle(fontWeight:FontWeight.bold,fontSize:16))),
+           ]),
+           const Divider(height:18),
+           _m615ReviewDetail(waffraIsEnglish?'Type':'نوع العملية',
+            expectedIncome?(waffraIsEnglish?'Income':'دخل'):
+             (waffraIsEnglish?'Expense':'مصروف'),Icons.category_outlined),
+           _m615ReviewDetail(waffraIsEnglish?'Amount':'المبلغ',
+            originalAmount==null?'—':
+             '${originalAmount.amount.toStringAsFixed(2)} ${originalAmount.currency}',
+            Icons.payments_outlined),
+           _m615ReviewDetail(waffraIsEnglish?'Description':'الوصف',
+            parsed.title,Icons.edit_note_outlined),
+           _m615ReviewDetail(waffraIsEnglish?'Main category':'القسم الرئيسي',
+            previewMainName,Icons.grid_view_outlined),
+           _m615ReviewDetail(waffraIsEnglish?'Subcategory':'القسم الفرعي',
+            proposedCategory,Icons.list_alt_outlined),
+           _m615ReviewDetail(waffraIsEnglish?'Sender':'المرسل',
+            sender,Icons.account_balance_outlined),
+           _m615ReviewDetail(waffraIsEnglish?'Money account':'الحساب المالي',
+            (reviewedAccountName??previewAccountLabel)+' • '+
+            (reviewedAccount!=null?
+             (waffraIsEnglish?'Verified':'تم تأكيد الحساب'):
+             (waffraIsEnglish?'Choose before saving':'اختار الحساب قبل الحفظ')),
+            Icons.account_balance_wallet_outlined),
+           _m615ReviewDetail(waffraIsEnglish?'Original date/time':'تاريخ ووقت العملية',
+            previewDateTime,Icons.calendar_month_outlined),
+          ]))),
         const SizedBox(height:8),
         OutlinedButton.icon(
          key:const Key('m590-sms-choose-account-before-yes'),
@@ -6182,11 +6242,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          'Edit missing amount, date or category to continue.':
          'راجع البيانات الناقصة من شاشة التعديل قبل الحفظ.'),
        ],
+       // Exclude is a separate, reversible action BELOW Yes/No.
+       if(!sensitive&&facts.kind!=WaffraBankOperationKind.transfer)
+        Padding(padding:const EdgeInsets.only(top:9),
+         child:OutlinedButton.icon(
+          key:const Key('m595-review-single-exclude'),
+          onPressed:()=>Navigator.pop(dialog,'exclude'),
+          icon:const Icon(Icons.block_outlined),
+          label:WaffraText(waffraIsEnglish?
+           'Exclude this message':'استبعاد الرسالة'))),
+
        const SizedBox(height:12),
-       WaffraText(waffraIsEnglish?
-        'Review the message. Safe rules update after confirmed actions.':
-        'راجع الرسالة؛ وفرة يتعلم القواعد الآمنة بعد تأكيد العملية.'),
-       const SizedBox(height:11),
+       const SizedBox(height:8),
        if(facts.kind==WaffraBankOperationKind.transfer&&!sensitive&&
           reviewType=='transfer')
         Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
@@ -6235,7 +6302,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           'استكمال المراجعة قبل تسجيل أي مبلغ')),
         onTap:()=>Navigator.pop(dialog,firstChoice),
        )),
-      ])),
+      ])))),
      actions:[
       if(facts.kind!=WaffraBankOperationKind.transfer)
        TextButton(onPressed:()=>Navigator.pop(dialog),
@@ -6254,6 +6321,40 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         ],
        ),
      ])));
+   reviewScroll.dispose();
+   if(decision=='no'&&understood&&!sensitive&&
+      facts.kind!=WaffraBankOperationKind.transfer&&mounted){
+    // For suggested Expense, only Income / Transfer are alternative types.
+    final alternatives=expectedIncome?
+     const <String>['expense','transfer']:
+     const <String>['income','transfer'];
+    final corrected=await showWaffraDialog<String>(context:context,
+     builder:(pick)=>AlertDialog(
+      title:Row(children:[
+       Expanded(child:WaffraText(waffraIsEnglish?
+        'Choose the correct transaction type':'اختار نوع العملية الصحيح')),
+       IconButton(icon:const Icon(Icons.close),
+        onPressed:()=>Navigator.pop(pick)),
+      ]),
+      content:Column(mainAxisSize:MainAxisSize.min,
+       crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+        for(final kind in alternatives)Padding(
+         padding:const EdgeInsets.only(bottom:8),
+         child:OutlinedButton.icon(
+          key:Key('m618-correct-to-'+kind),
+          onPressed:()=>Navigator.pop(pick,kind),
+          icon:Icon(kind=='transfer'?Icons.swap_horiz_rounded:
+           kind=='income'?Icons.south_west_rounded:Icons.north_east_rounded),
+          label:WaffraText(switch(kind){
+           'income'=>waffraIsEnglish?'Income':'دخل',
+           'expense'=>waffraIsEnglish?'Expense':'مصروف',
+           _=>waffraIsEnglish?'Transfer':'تحويل',
+          }))),
+       ]),
+     ));
+    if(corrected!=null){reviewType=corrected;decision='correct-type';}
+    else decision=null;
+   }
    if(decision=='correct-type'&&mounted&&reviewType!=null){
     if(reviewType=='transfer'){
      // A correction from unknown/income/expense to internal transfer cannot
@@ -6297,7 +6398,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     if(acknowledged&&mounted){
      setState(()=>_autoSmsPending.removeWhere((item)=>item['id']==id));
      snackSuccess(context,waffraIsEnglish?
-      'Message excluded from review.':'تم استبعاد الرسالة من المراجعة.');
+      'Message added to Excluded for 30 days. Restore it from there.':
+      'الرسالة بقت في قائمة المستبعدة لمدة 30 يوم، وتقدر ترجعها من هناك.');
      // Learn safe sender-scoped exclusion patterns only after acknowledgement.
      try{await _learnSafeSmsRule(
       body:body,sender:sender,kind:'excluded');}catch(_){}
@@ -17992,8 +18094,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        const SizedBox(width:42,height:42,child:CircularProgressIndicator(
         strokeWidth:3,color:emerald)),
        const SizedBox(height:18),
-       WaffraText(waffraIsEnglish?'Preparing secure finances…':
-        'جارٍ تجهيز بياناتك المالية بأمان…',
+       WaffraText(waffraIsEnglish?'Opening your dashboard…':
+        'بنفتح الرئيسية…',
         textAlign:TextAlign.center,
         style:const TextStyle(fontSize:14,fontWeight:FontWeight.w600)),
        const SizedBox(height:16),

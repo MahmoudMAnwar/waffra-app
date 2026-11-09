@@ -57,7 +57,8 @@ void main() {
     expect(login,contains('inspection:inspection'));
     expect(login,contains('await WaffraLocalPhoneCredentials.verify('));
     expect(login,contains('WaffraBiometrics.unlockMandatory()'));
-    expect(login,contains('await widget.onSave(verifiedAccount);'));
+    expect(login,contains('await widget.onVerifiedPasswordSave(verifiedAccount);'));
+    expect(source,contains('onVerifiedPasswordSave:_saveVerifiedPhoneLogin'));
     expect(home,contains('await load();'));
     expect(home,contains('unawaited(_m467RefreshHomeAccounts());'));
     expect(home,contains('WidgetsBinding.instance.addPostFrameCallback'));

@@ -26,7 +26,9 @@ void main() {
    app.indexOf(' String get maskedLastPhone{'));
   expect(signIn,contains('WAFFRA_AUTH_PERF sign_in_ms='));
   expect(signIn,contains('await WaffraLocalPhoneCredentials.verify('));
-  expect(signIn,contains('await widget.onSave(verifiedAccount);'));
+  expect(signIn,contains('await widget.onVerifiedPasswordSave(verifiedAccount);'));
+  expect(app,contains('!identical(_verifiedPhoneLoginProof,u)'));
+  expect(app,contains('try{await saveUser(u);}'));
   final saveUser=app.substring(app.indexOf(' Future<void> saveUser(Person u)async {'),
    app.indexOf(' Future<void> setUiCountry('));
   expect(saveUser,contains('WAFFRA_AUTH_PERF post_login_profile_guard_ms='));

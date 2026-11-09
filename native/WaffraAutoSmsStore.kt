@@ -43,6 +43,9 @@ object WaffraAutoSmsStore {
     // No raw SMS body: encrypted, owner-bound sender/time labels make
     // individual excluded messages visible and reversible in Settings.
     private const val excludedMessageInfoBucketPrefix = "encrypted_excluded_sms_info_v1_"
+    private const val excludedInfoCleanupAt = "excluded_labels_last_cleanup_v1"
+    private const val excludedLabelRetentionMs = 30L * 24 * 60 * 60 * 1000
+    private const val excludedCleanupCadenceMs = 24L * 60 * 60 * 1000
     // M516 #455: a completed self-transfer is neither an excluded SMS nor
     // a finance income/expense commit; store its own encrypted anti-replay ID.
     private const val completedTransferBucketPrefix = "encrypted_completed_transfer_sms_v1_"
@@ -175,7 +178,12 @@ object WaffraAutoSmsStore {
     fun scanProgress(context: Context): Map<String, Any> = synchronized(mutex) {
         val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
         val waiting = try {
-            if (enabled(context)) read(context).length() else -1
+            if (enabled(context)) {
+                // App/open scan progress runs on SMS I/O executor, not Flutter UI.
+                // At most one verified retention sweep per day.
+                pruneExcludedLabelsLocked(context, force = false)
+                read(context).length()
+            } else -1
         } catch (_: Exception) { -1 }
         mapOf(
             "scanned" to prefs.getLong(historyScannedCount, 0L),
@@ -366,12 +374,60 @@ object WaffraAutoSmsStore {
             val key = record.getString("id")
             val sender = record.getString("sender")
             val receivedAt = record.getLong("receivedAt")
+            val excludedAt = record.optLong("excludedAt", 0L)
             if (!Regex("^[a-f0-9]{64}$").matches(key) ||
                 key.take(2) != id.take(2) || sender.length > 100 ||
-                receivedAt < 0 || result.put(key, record) != null)
+                receivedAt < 0 || excludedAt < 0 ||
+                result.put(key, record) != null)
                 throw IllegalStateException("Invalid excluded SMS label")
         }
         return result
+    }
+
+    /**
+     * M616: purge recoverable *labels* 30 days after explicit exclusion, NOT
+     * from original bank SMS date. The tiny encrypted denied-ID fingerprints
+     * remain permanently owner-scoped to prevent historical SMS replay.
+     * Legacy labels are given a fresh retention start rather than guessed
+     * from the received date; neither old data nor a malformed record is
+     * silently reclassified as eligible.
+     */
+    private fun pruneExcludedLabelsLocked(context: Context, force: Boolean) {
+        val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+        val now = System.currentTimeMillis()
+        val last = prefs.getLong(excludedInfoCleanupAt, 0L)
+        if (!force && last > 0L && last <= now &&
+            now - last < excludedCleanupCadenceMs) return
+        val editor = prefs.edit()
+        for (key in prefs.all.keys.filter {
+            it.startsWith(excludedMessageInfoBucketPrefix)
+        }) {
+            val shard = key.removePrefix(excludedMessageInfoBucketPrefix)
+            if (!Regex("^[a-f0-9]{2}$").matches(shard))
+                throw IllegalStateException("Invalid excluded label shard")
+            val labels = excludedMessageInfo(context, shard + "0".repeat(62))
+            val active = mutableListOf<JSONObject>()
+            var changed = false
+            for (record in labels.values) {
+                val excludedAt = record.optLong("excludedAt", 0L)
+                if (excludedAt == 0L) {
+                    record.put("excludedAt", now)
+                    active.add(record)
+                    changed = true
+                } else if (excludedAt > now ||
+                    now - excludedAt < excludedLabelRetentionMs) {
+                    active.add(record)
+                } else changed = true
+                // All old expired labels are physically erased; the separate
+                // encrypted fingerprint denial-list is never removed here.
+            }
+            if (changed && active.isEmpty()) editor.remove(key)
+            else if (changed) editor.putString(key,
+                seal(JSONArray(active).toString()))
+        }
+        editor.putLong(excludedInfoCleanupAt, now)
+        if (!editor.commit())
+            throw IllegalStateException("Could not persist excluded SMS retention")
     }
 
     /** Shows only excluded SMS identities and safe sender/time labels;
@@ -381,6 +437,7 @@ object WaffraAutoSmsStore {
     fun excludedMessages(context: Context): List<Map<String, Any>> =
         synchronized(mutex) {
             if (!enabled(context)) throw IllegalStateException("SMS intake not active")
+            pruneExcludedLabelsLocked(context, force = true)
             val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
             val result = mutableListOf<Map<String, Any>>()
             val shards = prefs.all.keys.filter {
@@ -393,11 +450,14 @@ object WaffraAutoSmsStore {
                 val exemplar = bucket + "0".repeat(62)
                 val labels = excludedMessageInfo(context, exemplar)
                 for (id in excludedMessageBucket(context, exemplar)) {
-                    val info = labels[id]
+                    // Expired labels remain as opaque rescan-denial fingerprints
+                    // only. They are intentionally NOT recoverable in the UI.
+                    val info = labels[id] ?: continue
                     result.add(mapOf(
                         "id" to id,
-                        "sender" to (info?.optString("sender") ?: ""),
-                        "receivedAt" to (info?.optLong("receivedAt", 0L) ?: 0L)
+                        "sender" to info.optString("sender"),
+                        "receivedAt" to info.optLong("receivedAt", 0L),
+                        "excludedAt" to info.optLong("excludedAt", 0L)
                     ))
                 }
             }
@@ -980,6 +1040,7 @@ object WaffraAutoSmsStore {
                             .put("id", fingerprint)
                             .put("sender", row.optString("sender").take(100))
                             .put("receivedAt", row.optLong("receivedAt", 0L))
+                            .put("excludedAt", System.currentTimeMillis())
                     } else remaining.put(row)
                 }
                 // Fail closed if a selected SMS was neither queued nor

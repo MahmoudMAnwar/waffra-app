@@ -33,7 +33,7 @@ void main() {
   expect(login,contains('setState(()=>signingIn=true);'));
   expect(login,contains('await WidgetsBinding.instance.endOfFrame;'));
   expect(login,contains('await WaffraLocalPhoneCredentials.verify('));
-  expect(login,contains('await widget.onSave(verifiedAccount);'));
+  expect(login,contains('await widget.onVerifiedPasswordSave(verifiedAccount);'));
   expect(login,contains('if(mounted)setState(()=>signingIn=false);'));
   expect(button,contains('if(signingIn)...['));
   expect(button,contains('CircularProgressIndicator('));
