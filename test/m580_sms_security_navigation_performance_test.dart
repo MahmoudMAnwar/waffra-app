@@ -83,8 +83,8 @@ void main(){
 
  test('cold Home never shows a completely blank spinner-only body',(){
   final main=File('lib/main.dart').readAsStringSync();
-  expect(main,contains("WaffraText(waffraIsEnglish?'Preparing secure finances…'"));
-  expect(main,contains("'جارٍ تجهيز بياناتك المالية بأمان…'"));
+  expect(main,contains("WaffraText(waffraIsEnglish?'Opening your dashboard…'"));
+  expect(main,contains("'بنفتح الرئيسية…'"));
   expect(main,contains(" !ready?RepaintBoundary("));
   expect(main,isNot(contains("!ready?const Center(child:CircularProgressIndicator())")));
  });
