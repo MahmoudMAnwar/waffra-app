@@ -25,7 +25,7 @@ void main() {
     // Restore-from-process-death still needs biometric, as does the
     // independently enforced 60s background idle rule.
     expect(mainSource, contains('locked=u!=null;startupError=null;loading=false;'));
-    expect(mainSource, contains('locked?WaffraMandatoryBiometricGate('));
+    expect(mainSource, contains('child:WaffraMandatoryBiometricGate('));
     final overlay = File('lib/waffra_idle_biometric_overlay.dart').readAsStringSync();
     expect(overlay, contains('this.timeout=const Duration(seconds:60)'));
     expect(overlay, contains('widget.now().difference(began)>=widget.timeout'));
