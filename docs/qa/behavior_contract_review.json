@@ -325,7 +325,8 @@
         "test/m470_idle_biometric_overlay_test.dart",
         "test/m513_logout_confirmation_test.dart",
         "test/m440_biometric_resume_regression_test.dart",
-        "test/m603_app_wide_lag_source_regression_test.dart"
+        "test/m603_app_wide_lag_source_regression_test.dart",
+        "test/m613_foreground_lock_and_m614_finance_timing_contract_test.dart"
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/m550-behavior-contract-preflight.yml",
@@ -346,14 +347,15 @@
       "id": "M614-PROFILE-STAGE-SECURE-AUTH-FINANCE-LOAD",
       "issue": "Issue #519 owner 2026-11-09 reports approx 1–2s after login action and visible finance preparation loading",
       "previous_behavior": "Sign-in already emits overall/preflight/verifier/activation timings, but Home finance ready was not separated into source bind, authenticated SQLCipher catalog recovery, verified data mapping and first Home frame; user-perceived source wait could not be attributed from those logs.",
-      "approved_behavior": "In kProfileMode only, add content-free WAFFRA_FINANCE_PERF stage timings for actual verified finance binding, catalog recovery, ledger/categories projection, financial ready and first Home frame; leave sign-in crypto, SQLCipher account writer, owner-scoped SMS, source witness, startup loading and negative failure behavior intact. Diagnose measured Android timings before any additional performance-changing patch; no invented immediate-success/zero-balance UI.",
+      "approved_behavior": "In kProfileMode only, add content-free WAFFRA_FINANCE_PERF stage timings for actual verified finance binding, catalog recovery, ledger/categories projection, financial ready and first Home frame; leave sign-in crypto, SQLCipher account writer, owner-scoped SMS, source witness, startup loading and negative failure behavior intact. Diagnose measured Android timings before any additional performance-changing patch; no invented immediate-success/zero-balance UI. SaveUser also emits guarded profile-verifier and source-verified profile persistence stages so the authenticated post-password delay is attributable without removing that secure probe.",
       "source_paths": [
         "lib/main.dart"
       ],
       "test_paths": [
         "test/m604_fast_login_first_frame_test.dart",
         "test/m603_app_wide_lag_source_regression_test.dart",
-        "test/m470_idle_biometric_overlay_test.dart"
+        "test/m470_idle_biometric_overlay_test.dart",
+        "test/m613_foreground_lock_and_m614_finance_timing_contract_test.dart"
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/m550-behavior-contract-preflight.yml",
