@@ -18165,7 +18165,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      builder:(context,hidden,_)=>TweenAnimationBuilder<double>(
       key:ValueKey(accountOpened?'waffra-page-account':'waffra-page-$tab'),
       tween:Tween<double>(begin:0,end:1),
-      duration:waffraMotion(accountOpened?340:240),curve:Curves.easeOutCubic,
+      // The first verified Home paints its complete values together; do
+      // not make the dashboard fade in for an extra quarter-second.
+      duration:tab==0&&!accountOpened?Duration.zero:
+       waffraMotion(accountOpened?340:240),curve:Curves.easeOutCubic,
       builder:(ctx,progress,child)=>Opacity(opacity:progress,
        child:Transform.translate(offset:Offset((1-progress)*(waffraIsEnglish?26:-26),0),
         child:Transform.scale(scale:accountOpened?0.985+0.015*progress:1,child:child))),
