@@ -1,3 +1,10 @@
+[PR #524 M615–M618 CI CONTRACT REPAIR — 2026-11-09]
+=======================================================================
+- Kept every requested SMS review, 30-day safe exclusion retention, cross-sender Select All, and measured-only login optimization in the same Draft PR.
+- Corrected historical M422/M426 tests to assert *verified-password-only* save after mandatory salted PBKDF2 match, instead of old general onSave. Fixed M601 fixture to supply the new mandatory onVerifiedPasswordSave callback while maintaining negative password and busy-state checks.
+- Updated bounded sections for original M463/M514/M547/M549/M580/M601/M604/M613 and new/legacy M422/M426 tests; rechecked all 13 protected files against main with byte-for-byte unchanged content outside each explicitly allowed section. No workflow or tests disabled.
+- Existing financial ledger, owner-scoped SMS fingerprint denial markers, full security verification, restored biometrics and phone SMS remain untouched. PR #524 requires exact-new-head green CI and Android source-preserving profile/release trials before merge. A real 2–3s login speedup is not certified by source-only checks.
+
 [PR #524 M615–M618 SMS REVIEW / 30-DAY EXCLUSIONS / CROSS-SENDER / VERIFIED LOGIN] 2026-11-09
 ===============================================================================================================
 - Owner approved the Waffra bank-SMS review redesign. SMS original opens in its own expanded card, payment/type/category/account/date details appear as structured RTL rows, scroll thumb has a clear left margin, Yes and No/Edit are above Exclude this message; original account, SAR amount and bank timestamp still require verified confirmation before any SQLCipher post.
