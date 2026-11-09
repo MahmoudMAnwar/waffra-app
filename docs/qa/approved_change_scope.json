@@ -1,8 +1,9 @@
 {
   "contract_version": 1,
-  "change_id": "M623-RETAIN-AUTHENTICATED-SCREEN-UNTIL-REAL-HOME-FIRST-FRAME-PR529-20261109",
-  "human_scope_review": "Owner explicitly reported a NEW blank/black screen after earlier Home spinner removal and ordered an actual fix, not another replacement loader. This repair keeps the current login/biometric/permission page visible while the authorized encrypted ledger and account balances are verified, then reveals the genuine full Home together. Avoid new screens, spinners, fake masked balance or artificial data. Preserve SQLCipher, biometric check, existing SMS behavior, data safety and all previous tests. Owner explicitly requested fixing repeated CI errors on PR #529; include the narrowly bounded macOS/Linux SHA256 helper repair and matching M552 regression update in the same reviewed scope. M550/M147 source verification exposed four obsolete tests / workflow assertions; their assertions are replaced by equivalent controls in the approved M623 route while preserving the actual integration tests.",
+  "change_id": "M624-DEFER-SMS-AFTER-VERIFIED-HOME-ISSUE530-20261109",
+  "human_scope_review": "Owner explicitly requests instant-feeling Home after first login/biometrics and logout/relogin; no frozen auth page. Approved Issue #530 specifies removing competing pre-Home native SMS resume, retaining fully verified original Home and no fake/partial data. Defer SMS resume and scan sequentially until after genuine Home first frame; serialize native resume with signout to protect privacy. Preserve all account/SQLCipher/biometric and previous static and runtime guards.",
   "user_requested_changes": [
+    "Issue #530/M624: Avoid competing Android SMS native work during owner-verified Home startup; resume SMS and scan only after the real first Home frame and never on a stale/signing-out owner session.",
     "Fix the failing M174 Python M552 regression by replacing the obsolete GNU-only command expectation with checks for unchanged pins, portable digest computation, and explicit reject-on-tamper behavior.",
     "Repair repeat CI failures on the approved M623 branch: retain exact pinned SHA256 digests while replacing GNU-only hash checking with macOS/Linux portable verification.",
     "Eliminate the black/blank frame introduced by replacing the Home spinner with SizedBox.shrink, without adding a substitute loading screen or fake financial placeholders.",
@@ -30,7 +31,9 @@
     "test/m443_merchant_screenshot_regression_test.dart",
     "test/m463_auth_first_one_page_test.dart",
     "test/m603_app_wide_lag_source_regression_test.dart",
-    "test/m623_verified_home_handoff_no_black_frame_test.dart"
+    "test/m623_verified_home_handoff_no_black_frame_test.dart",
+    "docs/WAFFRA_REQUIREMENTS.md",
+    "test/m624_deferred_sms_after_verified_home_test.dart"
   ],
   "bounded_sections": {
     "test/qa/m552_verified_sqlite3mc_ci_prefetch_test.py": [
