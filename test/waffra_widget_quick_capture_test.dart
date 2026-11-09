@@ -62,8 +62,8 @@ void main(){
    testSourceProbe:() async {},
    testOnReady:initialized.complete,
   ));
-  // M609 integrity preflight runs through compute in a real isolate.
-  // The initial FakeAsync pump cannot complete that work on its own.
+  // In this disposable FakeAsync route the exact integrity preflight uses
+  // its synchronous implementation; production still runs it via compute.
   await tester.runAsync(()=>initialized.future.timeout(const Duration(seconds:20)));
   await tester.pumpAndSettle();
   expect(find.byKey(const Key('waffra-widget-bank-message')),findsOneWidget);
@@ -103,9 +103,9 @@ void main(){
   expect(jsonDecode(p.getString('entries')??'[]'),isEmpty);
   await tester.ensureVisible(find.text('تأكيد إضافة العمليات'));
   await tester.tap(find.text('تأكيد إضافة العمليات'));
-  // Only the native cross-engine lock is bypassed in disposable UI tests.
-  // The real background integrity preflight and confirm-only writer remain.
-  // An explicit async completion signal avoids timed pumps racing compute.
+  // Only the native cross-engine lock and isolate scheduler differ in this
+  // disposable UI fixture. Real finance preflight and confirmed SMS writes
+  // are still enforced; completion signals avoid racing pending async work.
   await tester.runAsync(()=>saveSettled.future.timeout(const Duration(seconds:30)));
   await tester.pump(const Duration(milliseconds:350));
   final saved=jsonDecode(p.getString('entries')??'[]') as List;
