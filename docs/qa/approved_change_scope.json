@@ -21,7 +21,8 @@
     "lib/storage/waffra_verified_accounts_api.dart",
     "lib/waffra_account_transaction_form.dart",
     "test/m549_approved_home_notifications_test.dart",
-    "test/m611_manual_home_finance_regression_test.dart"
+    "test/m611_manual_home_finance_regression_test.dart",
+    "test/storage/m611_verified_transfer_history_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
