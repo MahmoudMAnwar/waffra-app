@@ -3171,3 +3171,18 @@ The owner reported that the unwanted Home startup spinner had merely become a bl
 - Profile-mode first frame metrics now identify biometric_to_home_first_frame_ms and relogin_to_home_first_frame_ms without logging identities/finances.
 - Requirements, M385 scoped files and M550 all-workflow behavior review updated; new M625 test protects negative binder scopes, full verified Home, and both login routes; analyzer typo corrected without muting tests.
 - Source-only change; full same-head CI, signed Android physical first-login/fingerprint/logout/relogin profiling and user-visible responsiveness acceptance are still necessary before marking this PR Done or merging.
+
+[M626 COLD GRADLE ANDROID SHARD TIMEOUT REPAIR — ISSUE #535 PR #534 — 2026-11-09]
+================================================================================
+- Exact-head run 42696359357 passed vault/cloud but first tests of receipts
+  and release exhausted 240s in Gradle/CMake compilation on both API 34 and
+  API 35. Flutter reported "No tests ran"; the required aggregate failed.
+- Precompile each shard's first actual integration-test APK before starting
+  emulator per-test timers, with bounded build time, verified nonempty valid
+  APK, and strict failure on compilation/corruption. Keep all eleven runtime
+  emulator test files, original per-file limits, verified native prefetch,
+  exact SHA, crash diagnostics, API 35 retry and mandatory fail-closed gate.
+- M385 now declares the new helper explicitly; M626 Python static regression
+  verifies matching first-test targets and prebuild before emulator. This is
+  CI only; it does NOT certify a lag-free login or replace Android runtime QA.
+- Status Partial until all exact-head CI shards and mandatory gates pass.
