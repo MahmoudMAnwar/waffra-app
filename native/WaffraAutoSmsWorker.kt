@@ -79,11 +79,17 @@ class WaffraAutoSmsWorker(context: Context, parameters: WorkerParameters) :
                                 context, args?.get("hash") as? String ?: "",
                                 args?.get("income") as? Boolean ?: false,
                                 args?.get("amount") as? String ?: "",
-                                args?.get("linkedBudget") as? Boolean ?: false))
+                                args?.get("linkedBudget") as? Boolean ?: false,
+                                args?.get("entryId") as? String ?: ""))
                         }
-                        "notifyAutoSmsNeedsReview" ->
+                        "notifyAutoSmsNeedsReview" -> {
+                            val args = call.arguments as? Map<*, *>
+                            val id = args?.get("hash") as? String
+                                ?: call.arguments as? String ?: ""
+                            val kind = args?.get("kind") as? String ?: "uncertain"
                             result.success(WaffraAutoSmsNotifications.notifyReview(
-                                context, call.arguments as? String ?: ""))
+                                context, id, kind))
+                        }
                         else -> result.notImplemented()
                     }
                 }
