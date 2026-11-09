@@ -259,7 +259,7 @@
       "id": "M610-WIDGET-ISOLATE-TEST-COMPLETION",
       "issue": "Issue #512 / two real widget CI timeouts on PR #511 after M609 isolated finance integrity",
       "previous_behavior": "The widget quick-SMS test uses pumpAndSettle immediately after mounting an indeterminate loading indicator, and again relies on fixed-duration fake pumps for a confirmed financial save. After M609 moves source integrity to Flutter compute, FakeAsync cannot drive that background completion, and both tests time out before their actual bank SMS and confirmed-writer assertions execute.",
-      "approved_behavior": "Expose only optional disposable-widget-test ready and save-settled callbacks while keeping the production verified source, isolate integrity and confirmed writer untouched. In the two existing Flutter widget tests, use runAsync to wait for the real isolate initialization and durable confirmed save, with finite timeouts. Keep the paste debounce, pre-confirmation empty ledger, exact amount, SHA hash dedup and original-SMS redaction assertions; reject genuine source or save errors.",
+      "approved_behavior": "For disposable FakeAsync widget tests only, inject a test-specific legacy finance authority that executes the SAME fail-closed WaffraFinanceReadView.requireIntegrity() synchronously, since the production compute isolate cannot be driven inside FakeAsync. Production authority and SQLCipher asynchronous integrity remain untouched and are covered by storage tests. Test-only ready and save-settled callbacks signal completion; both original SMS tests must still verify auto-paste debounce, pre-confirm empty ledger, confirmed amount/SHA dedup, and legacy raw-bank-SMS redaction with timeout bounded waits.",
       "source_paths": [
         "lib/waffra_widget_capture.part.dart"
       ],
@@ -275,7 +275,8 @@
         "Production never injects test-only ready/save callbacks, and real finance integrity checks are not bypassed.",
         "Both existing Flutter widget tests must complete and assert actual automatic SMS analysis and post-confirmation only financial commit.",
         "Keep SQLCipher/source/key witnesses, native inter-engine lock, owner data and bank SMS SHA duplicate prevention fully unchanged.",
-        "Do not claim device validation or green exact-head workflow gates until they are independently observed."
+        "Do not claim device validation or green exact-head workflow gates until they are independently observed.",
+        "FakeAsync synchronous canonical preflight executes all original checks rather than skipping validation; production still uses background compute on Home and Widget."
       ]
     }
   ]
