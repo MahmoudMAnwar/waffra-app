@@ -46,9 +46,9 @@ void main() {
   expect(route,contains('child:WaffraMandatoryBiometricGate('));
   expect(route,contains('onSignOut:logout'));
   expect(route,contains('child:Offstage(offstage:!_m623HomeReady,'));
-  expect(route,contains('onVerifiedReady:()=>_m623HomeLoaded(account)'))
+  expect(route,contains('onVerifiedReady:()=>_m623HomeLoaded(account)'));
   expect(route,contains('profile:account,'));
-  expect(route,isNot(contains('onVerifiedReady:()=>_m623HomeLoaded(account!)')));;
+  expect(route,isNot(contains('onVerifiedReady:()=>_m623HomeLoaded(account!)')));
   expect(route,contains('key:const ValueKey(\'waffra-verified-session-home\')'));
   expect(route,isNot(contains('CircularProgressIndicator(')));
  });
