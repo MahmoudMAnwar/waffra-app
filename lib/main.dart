@@ -1655,7 +1655,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
       // A language toggle must not tear down and re-load the finance vault.
       key:const ValueKey('waffra-verified-session-home'),
       profile:account!,
-      onVerifiedReady:()=>_m623HomeLoaded(account),
+      onVerifiedReady:()=>_m623HomeLoaded(account!),
       dark:appearance=='dark'||(appearance=='system'&&
        MediaQuery.platformBrightnessOf(rootContext)==Brightness.dark),
       appearance:appearance,onAppearance:setAppearance,onTheme:theme,
