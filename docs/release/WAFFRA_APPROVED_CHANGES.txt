@@ -1,3 +1,32 @@
+[PR #517 M613/M614 — BACKGROUND-ONLY BIOMETRIC AND PROFILE STAGE METRICS] 2026-11-09
+==========================================================================================================
+- Owner explicitly clarifies a continuously open/foreground Waffra screen must NEVER show a fingerprint just because 60 seconds pass, even with no touches. This source bug was found in WaffraIdleBiometricOverlay._arm() scheduling a Timer(timeout) in foreground. Removed the foreground timer and input-listener countdown entirely. Keep unchanged actual app-background hidden/paused wall-clock 60s gate, opaque green privacy surface, above-Navigator biometric, draft preservation, restored-session mandatory biometric, and password re-login no redundant fingerprint.
+- Updated M470 real lifecycle tests: a visible editor stays usable after >35 minutes; 59s real background shows no biometric even after 10 minutes resumed; 61s hidden/paused background challenges over the same edit draft. The prior M513 Yes/No sign-out-under-lock test now enters real background to trigger the biometric. Added targeted source/diagnostics regression test. No tests were disabled.
+- Owner reports no general lag now, but two ~1–2s waits: sign-in tap and "جارٍ تجهيز بياناتك المالية بأمان". M614 adds strictly kProfileMode, content-free WAFFRA_AUTH_PERF verifier/profile-write timings and WAFFRA_FINANCE_PERF verified binding, catalog, decoded ledger, ready and first-frame timings. Existing 600000-iteration PBKDF2, OS verifier, SQLCipher integrity/authority and app/Widget source locks are unchanged. This is instrumentation, NOT measured on owner's Android phone nor a promise of a faster credential or finance check.
+- Requirements in docs/WAFFRA_REQUIREMENTS.md, M385 explicit per-file/test bounded scope and M550 all-workflow positive contract updated BEFORE release note. Real Android background/foreground QA, login profile measurement, exact-new-head CI, and owner approval remain release blockers. No user financial data migrated or erased; PR remains Draft, not merged.
+
+[PR #517 M612 — M440 ONE-SHARED-ROOT FAILURE FIX, EXACT HEAD QA PENDING] 2026-11-09
+==========================================================================================================
+- CI run 42600657974: 51/52 M440 finance/account tests passed; one old parser test still expected the user-approved SAR display "1,000" to be rejected. This stale assertion contradicted the updated formatter-compatible parser; the database/transfer writer was NOT the failing code.
+- Updated only the old M440 parser test to positively accept 1,000 and properly grouped Arabic/Persian/decimal SAR, alongside new malformed grouping, nonpositive and foreign-currency rejection cases. Existing other M440 test functions remain byte-identical and in the suite.
+- Updated M385 test-section bounds, M550 behavior-to-test contracts and docs/WAFFRA_REQUIREMENTS.md for ongoing protection against stale assumptions; retained M611 SQLCipher transfer journal/balance tests.
+- No production finance, credential, SQLCipher, sender or account selection behavior changed in this CI correction. Android hands-on save verification and exact-new-commit full green CI still required; this PR remains Draft/unmerged.
+
+[PR #517 M611 LATEST HEAD QA SCOPE SYNC] 2026-11-09
+- Owner #513–#516 changes still Draft and unmerged. Fixed Home action closure syntax on the branch, and added actual disposable encrypted SQLCipher transfer-history test with exact amount, source/target scope, account balances and zero new income/expense rows; legacy M549 positive checks follow the owner-approved Home navigation behavior. Source M385 file scope and M550 all-workflow contracts now declare the additional test.
+- The finance entry sheet still needs Android post-confirmation writer/retry testing; residual 1–2-second lag has not been profiled or certified eliminated. Run exact latest SHA checks before considering main merge.
+
+[PR #517 M611 MANUAL FINANCE + COMPACT HOME HISTORY — EXACT HEAD CI/ANDROID PENDING] 2026-11-09
+==========================================================================================================
+- Owner #513: manual income, expense, internal transfers reportedly do not save. The screenshot shows a parent bank selected but mandatory child financial account empty. New inline child-required feedback and provider-child ownership validation preserve SQLCipher authorization and explicit account selection.
+- Manual transfer amounts formatted as 1,000 by the UI were rejected by the transfer parser; accept valid thousands separators with correct SAR cents, reject malformed grouping, negative/zero and excess precision. This does not bypass fresh verified two-account transfer writer.
+- Owner #514: the Home monthly summary selected-account chip was hard-clipped at 100px, one line; it now wraps its full verified bank/account label on a full-width row.
+- Owner #515: three Home income, expense, transfer tiles are shortened to 68px and open recorded histories, never the new-transaction form. Existing fixed floating + still creates operations.
+- The transfer history reads real encrypted fresh_finance_internal_transfers through the existing Home/Widget verified source witness, sorted and account-scoped, read-only. It is excluded from income/expense totals.
+- Source and parser regression tests added, outdated M549 Home-action expectation updated to the newly approved history behavior. M385 bounded diff manifest and M550 workflow behavior contract updated.
+- Owner #516 reports major performance lag resolved in the tested APK but ~1–2s occasional delay remains; this PR does not claim that delay was eliminated. Physical Android measurements are pending.
+- **Release blockers:** verify user-facing manual transaction save after a real child account was chosen, retain draft/retry on authenticated writer rejection, exact HEAD full GitHub workflow CI, real-device income/expense/two-account transfer result, and upgrade-over-existing-data safety. No unverified merge or published APK.
+
 [PR #511 M609 exact-head M440 fix] 2026-11-09 — Open Drift mutex worker before BEGIN IMMEDIATE
 ==========================================================================================================
 - M440 existing and new first-install concurrency tests found the background mutex QueryExecutor was lazy: calling runCustom(BEGIN IMMEDIATE) before opening raised LateInitializationError. This blocked first-install data-source preparation, so the PR remains unmerged.

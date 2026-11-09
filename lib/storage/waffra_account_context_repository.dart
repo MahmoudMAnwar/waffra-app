@@ -21,6 +21,16 @@ class WaffraRecurringAccountTemplate {
  final String? accountId;
 }
 
+/// Verified read-only internal transfer row. This is NOT an income or expense.
+class WaffraInternalTransferHistory {
+ const WaffraInternalTransferHistory({
+  required this.id,required this.fromAccountId,required this.toAccountId,
+  required this.amountMinor,required this.occurredIso,required this.note,
+ });
+ final String id,fromAccountId,toAccountId,occurredIso,note;
+ final int amountMinor;
+}
+
 /// M448 account attribution metadata: never adds a second income, expense,
 /// goal movement, or internal transfer. All mutations require a verified
 /// source lock from WaffraVerifiedAccountsApi/Bridge in production.
@@ -261,4 +271,36 @@ WHERE a.archived=0 AND a.kind='bank' AND a.currency='SAR'
    verifiedSuffixByAccount:suffixes,
   );
  }
+ /// M611: read the actual encrypted two-sided transfer ledger, never infer
+ /// transfers from income/expense MoneyEntry rows or mutable Home state.
+ /// The caller must hold the verified Home/Widget source read lock.
+ Future<List<WaffraInternalTransferHistory>> readInternalTransferHistory({
+  String? accountId,int limit=500,
+ })async{
+  await _ready();
+  if(limit<1||limit>500)throw ArgumentError('Invalid transfer page size');
+  if(accountId!=null)_id(accountId);
+  final rows=await store.customSelect(
+   'SELECT transfer_id,from_account_id,to_account_id,amount_minor,'
+   'occurred_iso,note FROM fresh_finance_internal_transfers '
+   +(accountId==null?'':'WHERE from_account_id=? OR to_account_id=? ')
+   +'ORDER BY occurred_iso DESC,transfer_id DESC LIMIT ?',
+   variables:[
+    if(accountId!=null)...[
+     Variable.withString(accountId),Variable.withString(accountId),
+    ],
+    Variable.withInt(limit),
+   ],
+  ).get();
+  return List<WaffraInternalTransferHistory>.unmodifiable(rows.map((r)=>
+   WaffraInternalTransferHistory(
+    id:r.read<String>('transfer_id'),
+    fromAccountId:r.read<String>('from_account_id'),
+    toAccountId:r.read<String>('to_account_id'),
+    amountMinor:r.read<int>('amount_minor'),
+    occurredIso:r.read<String>('occurred_iso'),
+    note:r.read<String>('note'),
+   )));
+ }
+
 }

@@ -43,6 +43,7 @@ import 'waffra_large_json_decode.dart';
 import 'waffra_home_accounts_sheet.dart';
 import 'waffra_approved_notifications.dart';
 import 'storage/waffra_account_context_read.dart';
+import 'storage/waffra_account_context_repository.dart';
 import 'waffra_mandatory_biometric_gate.dart';
 import 'waffra_idle_biometric_overlay.dart';
 import 'waffra_local_phone_credentials.dart';
@@ -1296,6 +1297,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  final WaffraLiveAccountWriteAuthority _accountWriteAuthority=
      const WaffraLiveAccountWriteAuthority();
  Future<void> saveUser(Person u)async {
+  final profileCommitClock=kProfileMode?(Stopwatch()..start()):null;
   // M513: refuse to declare a new phone profile successfully registered if
   // Android never retained a verifier for that exact account. Keeping the
   // existing login password usable is part of successful account creation.
@@ -1311,6 +1313,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     }
    }
   }
+  final profileGuardMs=profileCommitClock?.elapsedMilliseconds;
   // Profile edits cannot silently detach the stored phone/password verifier.
   if(profile!=null&&profile!.provider.toLowerCase()=='phone'&&
      u.provider.toLowerCase()=='phone'&&profile!.phone!=u.phone){
@@ -1330,6 +1333,12 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    email:u.email.trim().isNotEmpty?u.email.trim():null,
    phone:u.phone.trim().isNotEmpty?u.phone.trim():null,
   );
+  if(kProfileMode&&profileCommitClock!=null){
+   // Profile stage timings only; no phone/password/owner identifiers.
+   debugPrint('WAFFRA_AUTH_PERF post_login_profile_guard_ms='
+    '${profileGuardMs??-1} profile_persist_ms='
+    '${profileCommitClock.elapsedMilliseconds}');
+  }
   // Resume native SMS after the verified authenticated frame, not here.
   final needsGoogleSetup=WaffraSaudiRelease.locationCountryOnboarding&&
    waffraGoogleProfileReadyForCountrySetup(u)&&
@@ -6431,14 +6440,24 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
  Future<void> _loadFinanceSafely()async{
   if(!mounted)return;
+  // M614: measure the real verified finance wait separately from login.
+  final startupClock=kProfileMode?(Stopwatch()..start()):null;
   setState((){ready=false;_financeLoadFailure=null;});
   entries.clear();categories.clear();namedBudgets.clear();goals.clear();recurring.clear();challenges.clear();
   deletedCategories.clear();deletedGoals.clear();deletedRecurring.clear();
   recurringPostponed.clear();smsHashes.clear();learnedMerchantCategories.clear();
   try{
    await load();
+   if(kProfileMode&&startupClock!=null){
+    debugPrint('WAFFRA_FINANCE_PERF source_to_ready_ms='
+     '${startupClock.elapsedMilliseconds}');
+   }
    unawaited(_m467RefreshHomeAccounts());
    WidgetsBinding.instance.addPostFrameCallback((_) {
+    if(kProfileMode&&startupClock!=null){
+     debugPrint('WAFFRA_FINANCE_PERF first_home_frame_ms='
+      '${startupClock.elapsedMilliseconds}');
+    }
     // Home first: encrypted SMS scan starts only after initial layout settles.
     unawaited(()async{
      await Future<void>.delayed(const Duration(milliseconds:900));
@@ -6652,7 +6671,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
  }
  Future<void> load()async {
+  final financeClock=kProfileMode?(Stopwatch()..start()):null;
   await _ensureFinanceBound();
+  final bindMs=financeClock?.elapsedMilliseconds;
   final p=await SharedPreferences.getInstance();
   // An authenticated fresh SQLCipher vault is born with an empty snapshot.
   // Add only absent first-run ledger and category fields via the existing
@@ -6662,6 +6683,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    defaultCategoriesJson:jsonEncode(
     defaultCategories().map((category)=>category.toJson()).toList()),
   );
+  final verifiedSourceMs=financeClock?.elapsedMilliseconds;
   _lastFinanceAuthorityRead=loadedFinance;
   final financeView=loadedFinance.finance;
   financeView.requireIntegrity();
@@ -6859,6 +6881,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   // Category display no longer shows caps. Keep the original category rows
   // intact until the user-confirmed atomic migration commits BOTH collections.
   if(!mounted)return;
+  if(kProfileMode&&financeClock!=null){
+   // Timings only. Never log private finance content or account identity.
+   debugPrint('WAFFRA_FINANCE_PERF bind_ms=${bindMs??-1} '
+    'verified_catalog_ms=${verifiedSourceMs??-1} '
+    'decoded_ready_ms=${financeClock.elapsedMilliseconds}');
+  }
    setState(()=>ready=true);
    // M486 #419: let Home's first interactive frame paint before competing
    // asynchronous widget reads and incoming SMS callbacks begin.
@@ -10112,7 +10140,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         isExpanded:true,initialValue:chosenManualAccount,
         decoration:InputDecoration(labelText:waffraIsEnglish?
          'Linked money account *':'الحساب المالي التابع *',
-         border:const OutlineInputBorder()),
+         errorText:attempted&&initial==null&&!sms&&chosenManualAccount==null
+           ?waffraRequiredFieldMessage:null,
+          border:const OutlineInputBorder()),
         items:[
          ...entryProviders.where((p)=>p.id==chosenManualProvider)
           .expand((p)=>p.accounts).map((account)=>DropdownMenuItem<String>(
@@ -10497,7 +10527,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        }
        if(initial==null&&!sms&&
           (chosenManualAccount==null||
-           !entryAccounts.any((a)=>a.id==chosenManualAccount))){
+           !entryProviders.any((p)=>p.id==chosenManualProvider&&
+            p.accounts.any((a)=>a.id==chosenManualAccount)))){
         snack(sheetContext,waffraIsEnglish?
          'Choose the bank and its linked money account before saving.':
          'اختار الجهة والحساب المالي التابع لها قبل الحفظ.',isError:true);
@@ -13046,18 +13077,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      Expanded(child:WaffraText(waffraIsEnglish?
       'This month summary':'ملخص هذا الشهر',
       style:const TextStyle(fontSize:16,fontWeight:FontWeight.bold))),
-     OutlinedButton.icon(
-      key:const Key('m549-home-account-filter'),
-      onPressed:WaffraHaptics.tap(()=>unawaited(_m467PickHomeAccount())),
-      icon:const Icon(Icons.account_balance_outlined,size:17),
-      label:ConstrainedBox(constraints:const BoxConstraints(maxWidth:100),
-       child:Text(_m467AccountLabel,maxLines:1,
-        overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:11))),
-      style:OutlinedButton.styleFrom(
-       padding:const EdgeInsets.symmetric(horizontal:7,vertical:4),
-       minimumSize:const Size(0,36),
-       foregroundColor:dark?Colors.white:forest)),
     ]),
+    const SizedBox(height:6),
+    // M611: full-width account filter wraps long bank and child names.
+    SizedBox(width:double.infinity,child:OutlinedButton.icon(
+     key:const Key('m549-home-account-filter'),
+     onPressed:WaffraHaptics.tap(()=>unawaited(_m467PickHomeAccount())),
+     icon:const Icon(Icons.account_balance_outlined,size:17),
+     label:Text(_m467AccountLabel,softWrap:true,textAlign:TextAlign.center,
+      style:const TextStyle(fontSize:12)),
+     style:OutlinedButton.styleFrom(
+      padding:const EdgeInsets.symmetric(horizontal:8,vertical:6),
+      minimumSize:const Size(0,42),
+      foregroundColor:dark?Colors.white:forest))),
     const SizedBox(height:8),
     Row(children:[
      SizedBox(width:92,height:92,child:Stack(alignment:Alignment.center,children:[
@@ -13279,6 +13311,73 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       })),
     ])));
  }
+ /// M611: read the actual owner-scoped encrypted transfer journal.
+ /// A Home history tile cannot post any money.
+ Future<void> showInternalTransferTransactions()async{
+  final bridge=_financeBinding?.accountsBridge;
+  final selected=_m467SelectedAccount;
+  final labels={for(final a in _m467Accounts)a.id:a.name};
+  final Future<List<WaffraInternalTransferHistory>> future=bridge==null
+   ?Future<List<WaffraInternalTransferHistory>>.error(
+    StateError('Verified source unavailable'))
+   :WaffraVerifiedAccountsApi(bridge:bridge).readInternalTransferHistory(
+    accountId:selected=='all'?null:selected);
+  if(!mounted)return;
+  await showModalBottomSheet<void>(
+   context:context,isScrollControlled:true,useSafeArea:true,
+   showDragHandle:true,
+   builder:(sheet)=>SizedBox(
+    height:MediaQuery.sizeOf(sheet).height*.7,
+    child:Column(children:[
+     Padding(padding:const EdgeInsets.fromLTRB(18,5,12,9),
+      child:Row(children:[
+       const Icon(Icons.swap_horiz_rounded,color:emerald),
+       const SizedBox(width:8),
+       Expanded(child:WaffraText(waffraIsEnglish?
+        'Transfers between my accounts':'التحويلات بين حساباتي',
+        style:Theme.of(sheet).textTheme.titleLarge)),
+       IconButton(onPressed:()=>Navigator.pop(sheet),
+        icon:const Icon(Icons.close)),
+      ])),
+     Expanded(child:FutureBuilder<List<WaffraInternalTransferHistory>>(
+      future:future,builder:(ctx,snapshot){
+       if(snapshot.connectionState!=ConnectionState.done){
+        return const Center(child:CircularProgressIndicator(strokeWidth:3));
+       }
+       if(snapshot.hasError){
+        return Center(child:Padding(padding:const EdgeInsets.all(24),
+         child:WaffraText(waffraIsEnglish?
+          'Could not verify your transfers. No data was changed.':
+          'تعذر التحقق من سجل التحويلات. لم تتغير أي بيانات.',
+          textAlign:TextAlign.center)));
+       }
+       final transfers=snapshot.data;
+       if(transfers==null||transfers.isEmpty){
+        return Center(child:WaffraText(waffraIsEnglish?
+         'No transfers recorded for this account.':
+         'لا توجد تحويلات مسجلة لهذا الحساب.'));
+       }
+       return ListView.separated(
+        itemCount:transfers.length,
+        separatorBuilder:(_,__)=>const Divider(height:1),
+        itemBuilder:(ctx,index){
+         final t=transfers[index];
+         final when=DateTime.tryParse(t.occurredIso);
+         return ListTile(
+          leading:const Icon(Icons.swap_horiz_rounded,color:emerald),
+          title:WaffraText(
+           '${labels[t.fromAccountId]??t.fromAccountId} ← ${labels[t.toAccountId]??t.toAccountId}',
+           maxLines:3),
+          subtitle:WaffraText(
+           '${when==null?t.occurredIso:dayText(when)}'
+           '${t.note.isEmpty?'':' • ${t.note}'}',maxLines:3),
+          trailing:WaffraCurrencyAmount(t.amountMinor/100,fontSize:14),
+         );
+        });
+      })),
+    ])));
+ }
+
  Widget _dashboardShortcut(String title,IconData icon,VoidCallback onTap){
   final dark=Theme.of(context).brightness==Brightness.dark;
   return Expanded(child:Material(
@@ -13394,13 +13493,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     child:Container(
      key:Key('m549-home-action-'+(icon==Icons.swap_horiz_rounded?'transfer':
       icon==Icons.north_east_rounded?'expense':'income')),
-     height:88,
+     height:68,
      decoration:BoxDecoration(
       borderRadius:BorderRadius.circular(18),
       border:Border.all(color:iconColor.withValues(alpha:.18))),
      child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
-      Icon(icon,size:25,color:iconColor),
-      const SizedBox(height:7),
+      Icon(icon,size:21,color:iconColor),
+      const SizedBox(height:3),
       Padding(padding:const EdgeInsets.symmetric(horizontal:4),
        child:WaffraText(title,textAlign:TextAlign.center,maxLines:2,
         style:TextStyle(fontSize:11,fontWeight:FontWeight.w700,
@@ -13485,21 +13584,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            icon:Icons.south_west_rounded,
            background:const Color(0xFFE6F7EC),
            iconColor:const Color(0xFF087A54),
-           onTap:()=>unawaited(entrySheet(scannedIncome:true))),
+           onTap:()=>unawaited(showSummaryTransactions(true))),
           const SizedBox(width:7),
           _m549HomeFinanceAction(
            title:waffraIsEnglish?'Expense':'مصروف',
            icon:Icons.north_east_rounded,
            background:const Color(0xFFFCECE8),
            iconColor:const Color(0xFFB94838),
-           onTap:()=>unawaited(entrySheet(scannedIncome:false))),
+           onTap:()=>unawaited(showSummaryTransactions(false))),
           const SizedBox(width:7),
           _m549HomeFinanceAction(
            title:waffraIsEnglish?'Between my accounts':'تحويل بين حساباتي',
            icon:Icons.swap_horiz_rounded,
            background:const Color(0xFFFAF0DD),
            iconColor:const Color(0xFF7F561C),
-           onTap:()=>unawaited(openVerifiedTransfer())),
+           onTap:()=>unawaited(showInternalTransferTransactions())),
          ]),
          const SizedBox(height:10),
          monthlySummaryCard(),

@@ -1,142 +1,129 @@
 {
   "contract_version": 1,
-  "change_id": "M609-CODEX-UI-ISOLATES-PLUS-M610-WIDGET-TEST-TIMEOUT-20261109-PR511",
-  "human_scope_review": "2026-11-09 owner explicitly requested continuing Codex's supplied screenshots exactly: isolate heavy SQLCipher open/verification, encrypted finance preflight and duplicate immutable finance reads from Flutter UI. No UI redesign, finance source switch or user-data change. Real Android proof and human merge review remain pending. The same screenshots explicitly mention a contended 10-second first-install SQLite BEGIN IMMEDIATE lock; M609 includes moving only this reservation to the database worker while retaining all receipt and data-preservation tests. M610: owner explicitly ordered fixing the two failed CI cases. Logs show both stale FakeAsync widget waits after M609 compute isolate, so only isolated widget-test completion signals and existing test wait behavior are updated on this PR, linked to Issue #512; no security or financial behavior changes. Owner/device acceptance remains separate. Full-suite M610 retry confirmed an actual 20-second timeout waiting for `compute` inside FakeAsync; a dedicated test-only subclass now calls the unchanged canonical `requireIntegrity()` synchronously on the same saved finance read-view. Production still awaits real isolate verification.",
+  "change_id": "M611-MANUAL-FINANCE-INPUT-HOME-HISTORY-PR517-20261109",
+  "human_scope_review": "Owner 2026-11-09 specifically requests diagnosing income/expense/internal-transfer manual save, showing full selected bank-account name, shrinking Home finance tiles while opening history instead of adding, and investigating remaining 1–2s latency. Implementation must not overwrite existing balances, loosen verified money checks or move the floating +. Owner review and real Android tests still required. On 2026-11-09 owner followed up to explicitly forbid fingerprint after 1+ minute while Waffra is continuously open, while retaining the previously agreed actual background-only 60s biometric. Owner also asks to diagnose remaining 1–2s sign-in and protected finance loading. PR #517 includes only this bounded behavior and diagnostic instrumentation, not a guaranteed device speedup.",
   "user_requested_changes": [
-    "Run native SQLCipher 4 database open, key validation and financial queries outside Flutter's rendering isolate, keeping the same encryption and fail-closed checks.",
-    "Offload encrypted snapshot checksum, canonical encoding, preflight and finance commit preparation to Dart isolates; preserve identical generation CAS, relational SQL and rollback.",
-    "Coalesce and cache successful finance source preflight within a single immutable verified view only, never caching failures or different source snapshots.",
-    "Preserve existing user vaults and migration safeguards, biometric gate, transactional storage, Home and Widget source witness and bank SMS consent.",
-    "Add storage integrity and UI event-loop tests, run full exact-head CI and measure real Android frame responsiveness before merge.",
-    "Preserve BEGIN IMMEDIATE cross-engine install serialization but move its up-to-ten-second SQLite busy-lock wait to background worker; add explicit concurrent-initialization UI-loop test.",
-    "Open the background Drift SQL query executor before issuing the original BEGIN IMMEDIATE installation lock; no caller may bypass the existing serialized install transaction.",
-    "Repair the two confirmed quick bank SMS Flutter WidgetTest timeout failures on PR #511 without disabling background finance preflight, confirmation, SHA dedup, native finance locks or existing tests."
+    "Correct manual income/expense/transfer save validation without removing mandatory child-account selection or source-verified SQLCipher commit.",
+    "Accept the formatter's valid comma-grouped SAR transfer amount while rejecting malformed, negative and excess-decimal money.",
+    "Show the entire selected account label on the Home monthly summary and preserve its bank/account filtering.",
+    "Shrink Home income, expense and transfer summary tiles; pressing them shows recorded transactions of the selected kind rather than opening an addition form; preserve floating plus.",
+    "Read real internal transfers only from the verified owner-scoped SQLCipher account journal; do not treat transfers as income or expense.",
+    "Add targeted regression coverage and reconcile only obsolete source expectation in existing M549 approval test.",
+    "Keep source-authority security, existing user data, dynamic dates and real-device performance acceptance; do not claim residual latency fixed without measurement.",
+    "M613: remove every foreground 60s idle biometric lock; retain a 60s actual hidden/paused background absence lock with privacy shield, sign-out confirmation, restored-session authentication and unsaved draft preservation.",
+    "M614: isolate profile-mode stage timing for sign-in, verified SQLCipher binding/catalog, first Home data projection and first displayed frame without skipping security checks or inventing transactions."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "lib/storage/waffra_atomic_finance_snapshot.dart",
-    "lib/storage/waffra_encrypted_store.dart",
-    "lib/storage/waffra_finance_read_view.dart",
-    "lib/storage/waffra_fresh_home_catalog_recovery.dart",
-    "lib/storage/waffra_fresh_install_source.dart",
-    "lib/storage/waffra_production_finance_authority_binding.dart",
-    "lib/storage/waffra_verified_finance_authority.dart",
-    "lib/waffra_widget_capture.part.dart",
-    "test/storage/encrypted_store_test.dart",
-    "test/storage/finance_read_view_test.dart",
-    "test/storage/m440_fresh_install_source_test.dart",
-    "test/waffra_widget_quick_capture_test.dart"
+    "lib/main.dart",
+    "lib/storage/waffra_account_context_repository.dart",
+    "lib/storage/waffra_verified_accounts_api.dart",
+    "lib/waffra_account_transaction_form.dart",
+    "lib/waffra_idle_biometric_overlay.dart",
+    "test/m440_account_transaction_form_test.dart",
+    "test/m470_idle_biometric_overlay_test.dart",
+    "test/m513_logout_confirmation_test.dart",
+    "test/m549_approved_home_notifications_test.dart",
+    "test/m611_manual_home_finance_regression_test.dart",
+    "test/m613_foreground_lock_and_m614_finance_timing_contract_test.dart",
+    "test/storage/m611_verified_transfer_history_test.dart"
   ],
   "bounded_sections": {
-    "lib/storage/waffra_encrypted_store.dart": [
+    "lib/main.dart": [
       {
-        "start": "  static WaffraEncryptedStore openAt(File file, {required String key}) {",
-        "end": "  @override\n  int get schemaVersion"
-      }
-    ],
-    "lib/storage/waffra_atomic_finance_snapshot.dart": [
-      {
-        "start": "import 'dart:convert';",
-        "end": "class WaffraFinanceSnapshotState {"
+        "start": "import 'storage/waffra_account_context_read.dart';",
+        "end": "import 'storage/waffra_accounts_repository.dart';"
       },
       {
-        "start": "  Future<WaffraFinanceSnapshotState> _readUnsafe() async {",
+        "start": " Future<void> entrySheet({MoneyEntry? initial",
+        "end": " Future<void> showReceipt("
+      },
+      {
+        "start": " Widget monthlySummaryCard(){",
+        "end": " Widget smartMoneyInsightsCard(){"
+      },
+      {
+        "start": " Future<void> showSummaryTransactions(bool income)async {",
+        "end": " Widget homeSummaryCard("
+      },
+      {
+        "start": " Widget _m549HomeFinanceAction({",
+        "end": " Widget dashboard(){"
+      },
+      {
+        "start": " Widget dashboard(){",
+        "end": " Widget _currentTabContents(){"
+      },
+      {
+        "start": " Future<void> _loadFinanceSafely()async{",
+        "end": " Widget _financialRecoveryScreen()"
+      },
+      {
+        "start": " Future<void> _syncWidgetTransactions()async{",
+        "end": " Future<void> _refreshWidget()async{"
+      },
+      {
+        "start": " Future<void> saveUser(Person u)async {",
+        "end": " Future<void> setUiCountry("
+      }
+    ],
+    "lib/waffra_account_transaction_form.dart": [
+      {
+        "start": "int? waffraSarAmountMinor(",
+        "end": "class WaffraAccountTransactionDraft {"
+      }
+    ],
+    "lib/storage/waffra_account_context_repository.dart": [
+      {
+        "start": "class WaffraRecurringAccountTemplate {",
+        "end": "class WaffraAccountContextRepository {"
+      },
+      {
+        "start": "class WaffraAccountContextRepository {",
         "end": null
       }
     ],
-    "lib/storage/waffra_finance_read_view.dart": [
+    "lib/storage/waffra_verified_accounts_api.dart": [
       {
-        "start": "import 'package:shared_preferences/shared_preferences.dart';",
-        "end": "/// A screen-facing view"
-      },
-      {
-        "start": "  final Map<String, Object?> _values;",
-        "end": "  bool containsKey(String key) {"
+        "start": "class WaffraVerifiedAccountsApi implements WaffraAccountOperations {",
+        "end": " Future<T> _commit<T>("
       }
     ],
-    "lib/storage/waffra_verified_finance_authority.dart": [
+    "test/m549_approved_home_notifications_test.dart": [
       {
-        "start": "  Future<WaffraFinanceAuthorityRead> load({",
-        "end": "  Future<WaffraFinanceAuthorityRead> resetVerifiedFinance({"
-      }
-    ],
-    "lib/storage/waffra_production_finance_authority_binding.dart": [
-      {
-        "start": "      final startup = await authority.load(route: startupRoute);",
-        "end": "    } catch (_) {"
-      }
-    ],
-    "lib/storage/waffra_fresh_home_catalog_recovery.dart": [
-      {
-        "start": "  static Future<WaffraFinanceAuthorityRead> load({",
+        "start": " test('M549 approved Home bell saturated at +999; FAB is unchanged',(){",
         "end": null
       }
     ],
-    "test/storage/finance_read_view_test.dart": [
+    "test/m440_account_transaction_form_test.dart": [
+      {
+        "start": " test('M440 SAR parser requires positive integer halalas, no FX relabel',(){",
+        "end": " test('M440 new account opening balances accept Saudi zero in Arabic and English',(){"
+      }
+    ],
+    "lib/waffra_idle_biometric_overlay.dart": [
+      {
+        "start": "import 'package:flutter/material.dart';",
+        "end": "class WaffraIdleBiometricOverlay extends StatefulWidget {"
+      },
+      {
+        "start": "class _WaffraIdleBiometricOverlayState",
+        "end": null
+      }
+    ],
+    "test/m470_idle_biometric_overlay_test.dart": [
+      {
+        "start": "void main(){",
+        "end": null
+      }
+    ],
+    "test/m513_logout_confirmation_test.dart": [
       {
         "start": "void main() {",
-        "end": null
-      }
-    ],
-    "test/storage/encrypted_store_test.dart": [
-      {
-        "start": "void main() {",
-        "end": null
-      }
-    ],
-    "lib/storage/waffra_fresh_install_source.dart": [
-      {
-        "start": "import 'package:crypto/crypto.dart';",
-        "end": "class WaffraFreshInstallSource {"
-      },
-      {
-        "start": "    // POSIX advisory file locks may be shared by Flutter engines in the",
-        "end": "  static Future<WaffraFreshInstallSource?> _prepareLocked("
-      }
-    ],
-    "test/storage/m440_fresh_install_source_test.dart": [
-      {
-        "start": "import 'package:flutter_test/flutter_test.dart';",
-        "end": "import 'package:waffra/storage/waffra_encrypted_store.dart';"
-      },
-      {
-        "start": "void main() {",
-        "end": null
-      }
-    ],
-    "lib/waffra_widget_capture.part.dart": [
-      {
-        "start": "class WaffraWidgetCaptureApp extends StatefulWidget {",
-        "end": "class _WidgetParsedSms {"
-      },
-      {
-        "start": " Future<void> _loadSettings()async{",
-        "end": " void _onTextChanged(String value){"
-      },
-      {
-        "start": " Future<void> _commitWidgetSms()async{",
-        "end": " @override void dispose(){"
-      },
-      {
-        "start": " WaffraVerifiedFinanceAuthority get _financeAuthority {",
-        "end": " @override void initState(){"
-      }
-    ],
-    "test/waffra_widget_quick_capture_test.dart": [
-      {
-        "start": "import 'dart:convert';",
-        "end": "void main(){"
-      },
-      {
-        "start": " testWidgets('Bank SMS is analyzed as soon as user pastes without an Analyze button',(tester)async{",
-        "end": " testWidgets('Only confirmation writes an SMS transaction and prevents duplicates',(tester)async{"
-      },
-      {
-        "start": " testWidgets('Only confirmation writes an SMS transaction and prevents duplicates',(tester)async{",
-        "end": null
+        "end": "  test('M513 password verifier exists before creating phone session"
       }
     ]
   }

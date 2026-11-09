@@ -24,6 +24,12 @@ class WaffraVerifiedAccountsApi implements WaffraAccountOperations {
   return data.balances;
  }
 
+ /// M611: owner-scoped verified read; transfers never enter income/expense.
+ Future<List<WaffraInternalTransferHistory>> readInternalTransferHistory({
+  String? accountId,int limit=500,
+ })=>bridge.readVerifiedAccountMetadata((context)=>
+  context.readInternalTransferHistory(accountId:accountId,limit:limit));
+
  /// A witnessed, bounded read for existing entry Edit. Missing SQLCipher
  /// entries must never be misrepresented as safely migrated legacy data.
  Future<({bool exists,String? accountId})> readExistingEntryAccount({

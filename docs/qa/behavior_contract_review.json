@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "pr": 511,
-  "issue": "2026-11-09 owner request to finish Codex M609 encrypted finance UI isolation",
+  "pr": 517,
+  "issue": "Owner 2026-11-09 fixes #513 #514 #515 #516: manual validation and transfer thousand separators, compact read-only Home history tiles and complete account label; 2026-11-09 M613 #518 background-only biometric and M614 #519 measured auth/finance startup latency",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main",
   "reviewed_at": "2026-11-09",
@@ -277,6 +277,97 @@
         "Keep SQLCipher/source/key witnesses, native inter-engine lock, owner data and bank SMS SHA duplicate prevention fully unchanged.",
         "Do not claim device validation or green exact-head workflow gates until they are independently observed.",
         "FakeAsync synchronous canonical preflight executes all original checks rather than skipping validation; production still uses background compute on Home and Widget."
+      ]
+    },
+    {
+      "id": "M611-MANUAL-SAR-HOME-VERIFIED-TRANSFER-HISTORY",
+      "issue": "GitHub #513 #514 #515 #516 / PR #517 direct owner Android feedback",
+      "previous_behavior": "Manual transfer SAR parser rejected valid displayed 1,000 grouping; manual bank provider selection left child blank without inline required marker; Home big finance tiles opened add forms; monthly account filter cropped names to 100 pixels and 1 line.",
+      "approved_behavior": "Explicit child selection remains mandatory and now appears as a required field error; grouped SAR parser accepts only well-formed grouping. Three compact finance Home overview tiles display actual owner-account-scoped income, expense and verified internal transfer histories, not add forms; existing fixed floating + adds transactions. Home monthly summary account label wraps fully. The former M440 positive-money parser test has been reconciled to the formatter's already-approved grouped SAR input, with new negative cases for malformed separators, currency tokens, nonpositive values and overprecision; unchanged account validation, manual write tests and transfer idempotency remain mandatory.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/storage/waffra_account_context_repository.dart",
+        "lib/storage/waffra_verified_accounts_api.dart",
+        "lib/waffra_account_transaction_form.dart"
+      ],
+      "test_paths": [
+        "test/m611_manual_home_finance_regression_test.dart",
+        "test/m549_approved_home_notifications_test.dart",
+        "test/m470_account_scope_and_transfer_date_test.dart",
+        "test/storage/m611_verified_transfer_history_test.dart",
+        "test/m440_account_transaction_form_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m174-main-sha-regression.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "No new manual income or expense without one explicitly selected, active and provider-linked verified account.",
+        "No internal transfer without two distinct active SAR accounts and explicit user confirmation.",
+        "No transfer or fake income/expense ledger is posted when tapping Home summary tiles.",
+        "Read transfer history only through the existing authenticated encrypted Home/Widget source-witness lock.",
+        "Money and SQLCipher restore preserve old users, owners, ledger integrity and deduplication.",
+        "Maintain the fixed add button, all existing auth/biometrics, SMS review and upgrade-data safety.",
+        "Owner Android finance save and remaining 1–2s delay are not certified by these source tests.",
+        "Old M440 invalid-value and account-authority tests must continue to run, while legitimate grouped SAR 1,000 is accepted in production and CI."
+      ]
+    },
+    {
+      "id": "M613-FOREGROUND-NEVER-TIMEOUT-ON-OPEN-WAFFRA",
+      "issue": "Issue #518 user specifically forbids a 60s biometric timeout while app stays open in foreground",
+      "previous_behavior": "WaffraIdleBiometricOverlay created Timer(timeout) in the foreground, unconditionally locked an untouched visible form after 60 seconds and ran a Listener for all pointer events; two M470 and one M513 tests required this now-unapproved behavior.",
+      "approved_behavior": "Do not schedule or trigger any biometric from elapsed foreground time, whether interacting or quietly reading/editing. The existing verified Session remains until a real hidden/paused/detached transition: immediately shield previews with opaque green, then challenge only if wall-clock background absence reaches 60 seconds. Continue preserving the active Navigator route, unsubmitted form data and authorized Yes/No sign-out. Unmodified mandatory biometric for protected restored sessions and no fingerprint immediately after ordinary password relogin.",
+      "source_paths": [
+        "lib/waffra_idle_biometric_overlay.dart"
+      ],
+      "test_paths": [
+        "test/m470_idle_biometric_overlay_test.dart",
+        "test/m513_logout_confirmation_test.dart",
+        "test/m440_biometric_resume_regression_test.dart",
+        "test/m603_app_wide_lag_source_regression_test.dart",
+        "test/m613_foreground_lock_and_m614_finance_timing_contract_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m429-integration-smoke.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Foreground hour without interaction must never create biometric gate or dispose an unsaved draft.",
+        "First true app background transition must immediately cover finance with opaque privacy shield.",
+        "Under 60s background duration must allow resumed authenticated session with draft intact.",
+        "At or over 60s actual background must require the same OS biometric gate, retaining original Navigator and owner data.",
+        "Restored protected sessions and mandatory initial biometric remain unchanged.",
+        "No biometric success may reveal funds while Flutter inactive/hidden or paused.",
+        "Any lock sign-out still shows only one Yes/No confirmation and preserves encrypted data."
+      ]
+    },
+    {
+      "id": "M614-PROFILE-STAGE-SECURE-AUTH-FINANCE-LOAD",
+      "issue": "Issue #519 owner 2026-11-09 reports approx 1–2s after login action and visible finance preparation loading",
+      "previous_behavior": "Sign-in already emits overall/preflight/verifier/activation timings, but Home finance ready was not separated into source bind, authenticated SQLCipher catalog recovery, verified data mapping and first Home frame; user-perceived source wait could not be attributed from those logs.",
+      "approved_behavior": "In kProfileMode only, add content-free WAFFRA_FINANCE_PERF stage timings for actual verified finance binding, catalog recovery, ledger/categories projection, financial ready and first Home frame; leave sign-in crypto, SQLCipher account writer, owner-scoped SMS, source witness, startup loading and negative failure behavior intact. Diagnose measured Android timings before any additional performance-changing patch; no invented immediate-success/zero-balance UI. SaveUser also emits guarded profile-verifier and source-verified profile persistence stages so the authenticated post-password delay is attributable without removing that secure probe.",
+      "source_paths": [
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m604_fast_login_first_frame_test.dart",
+        "test/m603_app_wide_lag_source_regression_test.dart",
+        "test/m470_idle_biometric_overlay_test.dart",
+        "test/m613_foreground_lock_and_m614_finance_timing_contract_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Never decrease password KDF strength or allow a missing/foreign OS verifier to authenticate.",
+        "Never display assumed zero balances, skip SQLCipher integrity or decrypt private finance in logs.",
+        "No finance data/user identifiers in timing traces; only profile mode logs.",
+        "Keep encrypted startup/upgrade recovery and Widget source validation unchanged.",
+        "Do not claim latency fixed without Android profile/release measurements."
       ]
     }
   ]

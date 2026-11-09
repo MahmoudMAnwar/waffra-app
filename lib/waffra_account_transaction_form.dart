@@ -14,9 +14,12 @@ int? waffraSarAmountMinor(String raw,{bool allowZero=false}) {
   final a=arabic.indexOf(char),p=persian.indexOf(char);
   return a>=0?a.toString():p>=0?p.toString():char;
  }).join();
- final input=digits.replaceAll('٫','.');
- if(!RegExp(r'^[0-9]{1,12}([.][0-9]{1,2})?$').hasMatch(input))return null;
- final parts=input.split('.');
+ // UI formats amounts with thousands separators. Only accept correct grouping.
+ final input=digits.replaceAll('٫','.').replaceAll('٬',',');
+ if(!RegExp(r'^(?:[0-9]+|[0-9]{1,3}(?:,[0-9]{3})+)(?:[.][0-9]{1,2})?$')
+     .hasMatch(input))return null;
+ final parts=input.replaceAll(',','').split('.');
+ if(parts.first.length>12)return null;
  final major=int.tryParse(parts[0]);
  final cents=parts.length==2?int.tryParse(parts[1].padRight(2,'0')):0;
  if(major==null||cents==null)return null;
