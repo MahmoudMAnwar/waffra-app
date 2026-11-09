@@ -18068,7 +18068,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  @override Widget build(BuildContext context)=>PopScope(
   // Let the root back policy route account/tabs before double-back exit.
   canPop:true,
-  child:Stack(children:[Scaffold(
+  child:!ready&&_financeLoadFailure==null?
+   const SizedBox.shrink():Stack(children:[Scaffold(
   appBar:AppBar(
    toolbarHeight:_headerCompact?52:64,
    flexibleSpace:const ColoredBox(color:forest),
@@ -18150,11 +18151,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    ]),
   // Instant content swap avoids building/animating the previous heavy tab
   // alongside the next one (the recurring -> savings navigation hitch).
+  // No fragment of the Home is visible before owner-verified entries AND
+  // account balances have loaded. The root gate above reveals this layout
+  // as one complete screen with no fake amount or loading illustration.
   body:_financeLoadFailure!=null?_financialRecoveryScreen():
-   // M622: never invent balances or hide genuine values behind a fake card.
-   // Enter the real Home dashboard as ONE complete verified screen when
-   // the owner's SQLCipher load completes. SMS scanning starts after frame.
-   !ready?const SizedBox.shrink():
    Stack(clipBehavior:Clip.none,children:[GestureDetector(
     behavior:HitTestBehavior.translucent,
     onHorizontalDragStart:(_)=>_swipeTravel=0,
