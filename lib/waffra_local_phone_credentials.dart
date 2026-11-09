@@ -12,6 +12,15 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 /// displayed account. No password, raw hash or phone is exposed to the UI.
 enum WaffraLocalCredentialProbe { ready, missing, malformed, differentPhone }
 
+/// Opaque, one-attempt-only in-memory snapshot of the OS verifier.
+/// Its content is never logged, persisted, or exposed to widgets. A login
+/// uses it for both the integrity probe and password challenge, avoiding a
+/// second serialized Android keystore read for the same record.
+class WaffraPhoneVerifierInspection {
+ const WaffraPhoneVerifierInspection._(this._saved);
+ final String? _saved;
+}
+
 abstract final class WaffraLocalPhoneCredentials {
  static const _store=FlutterSecureStorage();
  // M546: older Android builds can retain a credential in Jetpack encrypted
@@ -26,6 +35,11 @@ abstract final class WaffraLocalPhoneCredentials {
   final primary=await _store.read(key:_key);
   if(primary!=null)return primary; // Do NOT mask damaged or foreign records.
   return _alternateStore.read(key:_key); // No new enrollment, copy or delete.
+ }
+ /// Called only after a login button tap; never cached across sign-in attempts.
+ static Future<WaffraPhoneVerifierInspection> readForSignIn()async{
+  final saved=await _readVerifier();
+  return WaffraPhoneVerifierInspection._(saved);
  }
  static const _recoveryKey='waffra_phone_missing_verifier_signout_recovery_v1';
 
@@ -175,8 +189,11 @@ abstract final class WaffraLocalPhoneCredentials {
      WaffraLocalCredentialProbe.differentPhone;
   }catch(_){return WaffraLocalCredentialProbe.malformed;}
  }
- static Future<WaffraLocalCredentialProbe> probeForPhone(String phone) async =>
-   inspectStoredRecord(await _readVerifier(),phone:phone);
+ static Future<WaffraLocalCredentialProbe> probeForPhone(String phone,{
+  WaffraPhoneVerifierInspection? inspection,
+ }) async => inspection==null?
+   inspectStoredRecord(await _readVerifier(),phone:phone):
+   inspectStoredRecord(inspection._saved,phone:phone);
 
  static Future<void> register({required String phone,
   required String password})async{
@@ -237,9 +254,12 @@ abstract final class WaffraLocalPhoneCredentials {
  static Future<bool> verify({
   required String phone,required String password,
   String? oldSalt,String? oldHash,
+  WaffraPhoneVerifierInspection? inspection,
  })async{
   if(!validPhone(phone)||!validPassword(password))return false;
-  final saved=await _readVerifier();
+  // The snapshot is scoped to this login attempt. Its immutable verifier is
+  // still checked against the entered phone before PBKDF2 can authenticate.
+  final saved=inspection==null?await _readVerifier():inspection._saved;
   if(saved!=null){
    final obj=jsonDecode(saved);
    return obj is Map<String,dynamic> &&
