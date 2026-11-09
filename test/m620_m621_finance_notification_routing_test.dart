@@ -46,6 +46,9 @@ void main(){
    expect(File(path).readAsStringSync(),
     contains("native/waffra_notification_wallet.xml"));
   }
+  final m417=File('.github/workflows/m417-auto-bank-sms.yml').readAsStringSync();
+  expect(m417,contains("native/waffra_notification_wallet.xml"));
+  expect(m417,contains('namespace = "com.waffra.app"'));
   final native=File('native/WaffraAutoSmsNotifications.kt').readAsStringSync();
   expect(native,contains('R.drawable.waffra_notification_wallet'));
   expect(native,isNot(contains('android.R.drawable.ic_dialog_info')));
