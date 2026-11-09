@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "pr": "https://github.com/MahmoudMAnwar/waffra-app/pull/532",
-  "issue": "https://github.com/MahmoudMAnwar/waffra-app/issues/530",
+  "pr": "https://github.com/MahmoudMAnwar/waffra-app/pull/534",
+  "issue": "https://github.com/MahmoudMAnwar/waffra-app/issues/533",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main",
   "reviewed_at": "2026-11-09",
@@ -690,6 +690,37 @@
         "If logout begins during native resume, wait for its completion before suspending capture; never re-enable signed-out SMS.",
         "No UI loader, placeholder fake amount, masked artificial sum or bypass of biometrics, account controls, or SQLCipher.",
         "Static CI alone cannot prove real Android frame latency; require signed phone profiling before Done."
+      ]
+    },
+    {
+      "id": "M625-AVOID-DUPLICATE-VERIFIED-HOME-SQLCIPHER-READ",
+      "issue": "Issue #533 / PR #534 — confirmed repeated biometric and logout-to-relogin Home screen freeze",
+      "previous_behavior": "Installed Android Home calls production finance binder, which performs one full encrypted appStartup read and integrity check; Home immediately calls WaffraFreshHomeCatalogRecovery.load performing another verified dashboardRead and integrity. The previous login or biometric stage stays visible and non-interactive until verified account balances and Home are fully ready. These serial reads unnecessarily prolong the auth handoff on both first biometrics and password relogin.",
+      "approved_behavior": "Only installed Android Home can opt out of a redundant binder-time encrypted snapshot read. The binder must still enforce sourceGuard, fresh-install activation certificate, OS SQLCipher key and matching journal. The immediately subsequent mandatory Home dashboardRead still verifies ledger integrity and real account balances before ready=true; first real Home renders fully in one frame and SMS resumes only afterward. Trace separately from biometric success or verified repeat-login activation to real first frame; do not alter login PBKDF2, first-run mandatory biometrics, normal relogin no second biometric, logout native suspension, root and widget independent bind verification, or show fake/masked/partial Home.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/storage/waffra_production_finance_authority_binding.dart"
+      ],
+      "test_paths": [
+        "test/m625_single_verified_home_read_login_handoff_test.dart",
+        "test/m623_verified_home_handoff_no_black_frame_test.dart",
+        "test/m624_deferred_sms_after_verified_home_test.dart",
+        "test/m604_fast_login_first_frame_test.dart",
+        "test/storage/production_finance_authority_binding_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m429-integration-smoke.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m174-main-post-merge-sqlcipher.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "Only actual authenticated owner-specific finance may be displayed; every dashboardRead must perform encrypted source and integrity checks.",
+        "No source fallback, SQLCipher key regeneration, synthetic balance, partial masked dashboard, or silent OTP/SMS auto-record.",
+        "Root app startup and Android widget still perform full independent binding-time finance read and integrity verification.",
+        "Existing first-session OS biometric and one-minute idle lock remain, while ordinary explicit signout followed by correct password skips a redundant fingerprint.",
+        "Only signed Android APK profile/release device runs can certify user-visible freeze is resolved; CI source checks are not physical performance evidence."
       ]
     }
   ]
