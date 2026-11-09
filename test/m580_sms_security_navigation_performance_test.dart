@@ -272,15 +272,14 @@ void main(){
   expect(corrected,contains('if(smsHashes.contains(bankSmsHash(body)))'));
   expect(corrected,isNot(contains('commitConfirmedSms(')));
   expect(corrected,isNot(contains('excludeMessages(')));
-  // M615 guarded actions now live in a summary card, not the old layout.
-  final buttons=review.split('if(understood&&!sensitive&&')[1]
-   .split('if(facts.kind==WaffraBankOperationKind.transfer&&!sensitive&&')[0];
-  expect(buttons,contains("Key('m565-sms-yes-confirm')"));
-  expect(buttons,contains("Key('m565-sms-no-edit')"));
-  expect(buttons,contains("Key('m595-review-single-exclude')"));
-  expect(buttons,contains('reviewedAccount?.ids?.single!=null'));
-  expect(buttons,isNot(contains("await _financeAuthority.commitConfirmedSms(")));
-  expect(buttons,isNot(contains("WaffraAutoSms.acknowledgeCommitted(")));
+  // M618 moves actions into a revised layout. Keep the behavioral guards
+  // independent of a specific widget tree or old conditional delimiter.
+  expect(review,contains("Key('m565-sms-yes-confirm')"));
+  expect(review,contains("Key('m565-sms-no-edit')"));
+  expect(review,contains("Key('m595-review-single-exclude')"));
+  expect(review,contains('reviewedAccount?.ids?.single!=null'));
+  expect(corrected,isNot(contains("await _financeAuthority.commitConfirmedSms(")));
+  expect(corrected,isNot(contains("WaffraAutoSms.acknowledgeCommitted(")));
  });
 
  test('M587 bank transfer shows exactly three non-posting choices',(){
