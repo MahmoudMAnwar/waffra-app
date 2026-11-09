@@ -1,18 +1,22 @@
 {
   "contract_version": 1,
-  "change_id": "M620-M621-ANDROID-FINANCE-NOTIFICATION-WALLET-AND-OWNER-GATED-DEEP-LINK-PR527-20261109",
-  "human_scope_review": "Owner approved a new Android small status-bar notification icon and accurate financial notification routing: confident bank SMS kinds as review-only proposals, uncertain as requiring review, exact original Yes/No/Exclude UI on tap, secure saved-ledger details only after actual financial commit. Issues #525 and #526; PR #527. Keep every native owner-scope, biometric, SQLCipher and anti-duplicate check; real Android confirmation required.",
+  "change_id": "M620-M621-M622-ANDROID-NOTIFICATIONS-FULL-VERIFIED-HOME-PR527-20261109",
+  "human_scope_review": "Owner approved a new Android small status-bar notification icon and accurate financial notification routing: confident bank SMS kinds as review-only proposals, uncertain as requiring review, exact original Yes/No/Exclude UI on tap, secure saved-ledger details only after actual financial commit. Issues #525 and #526; PR #527. Keep every native owner-scope, biometric, SQLCipher and anti-duplicate check; real Android confirmation required. Owner's later correction M622 (#528): absolutely no added spinner, loading prose, empty mock cards, masked placeholders or fabricated zero balances. Show the original full Home dashboard with every real amount only after verified owner data is ready, in a single frame; continue SMS scan after first ready Home frame. A genuine storage read cannot complete before it starts; do not claim zero latency or remove SQLCipher.",
   "user_requested_changes": [
     "Replace Android's generic system information notification icon with a minimal one-color wallet mark suited to the status bar and generated Android APK packaging.",
     "Classify trusted bank SMS income, expense and transfer only as proposals requiring explicit user review; say saved only after verified SQLCipher finance commit.",
     "On review system notice tap open exactly that source-SMS review with Yes / No-correct-type / Exclude 30 days, never generic Home or guessed financial write.",
     "On actual committed notification tap open its exact already-persisted owner-verified ledger entry read-only detail, not a second confirmation.",
     "Handle cold start, warm onNewIntent, mandatory biometric, restored owner and stale SMS securely, with immutable per-notice intent IDs, never plaintext SMS extras.",
-    "Add source and parser regression tests and preserve original security tests, full CI and physical phone verification gates."
+    "Add source and parser regression tests and preserve original security tests, full CI and physical phone verification gates.",
+    "M622 owner correction: reject masked-number pseudo-Home, skeleton, spinner and unauthorized Home loading copy. Show genuine existing Home with real balance, records and action cards together after actual verified owner financial read; do not show an intermediate fake/partial financial screen.",
+    "Keep actual SMS analysis and notification sync asynchronous after first verified Home frame; never force new financial IO or classification into the render path.",
+    "M621 M417 standalone Kotlin compile must install exactly the same monochrome drawable and namespace as packaged Android build so the R resource resolves."
   ],
   "allowed_changed_files": [
     ".github/workflows/android-full-smoke.yml",
     ".github/workflows/android.yml",
+    ".github/workflows/m417-auto-bank-sms.yml",
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
@@ -25,7 +29,10 @@
     "native/WaffraAutoSmsWorker.kt",
     "native/WaffraMainActivity.kt",
     "native/waffra_notification_wallet.xml",
-    "test/m620_m621_finance_notification_routing_test.dart"
+    "test/m580_sms_security_navigation_performance_test.dart",
+    "test/m615_m618_sms_review_retention_perf_contract_test.dart",
+    "test/m620_m621_finance_notification_routing_test.dart",
+    "test/m622_immediate_home_without_loader_test.dart"
   ],
   "bounded_sections": {
     ".github/workflows/android.yml": [
@@ -60,6 +67,10 @@
       {
         "start": " Future<void> bulkSmsSheet({String? initialText",
         "end": " Future<void> _previewForeignBankCurrency(String raw)async {"
+      },
+      {
+        "start": "  // Instant content swap avoids building/animating the previous heavy tab",
+        "end": "  // A fixed 58x58 FAB:"
       }
     ],
     "lib/waffra_auto_sms.dart": [
@@ -112,6 +123,24 @@
       {
         "start": "                \"notifyAutoSmsSaved\" -> {",
         "end": "                \"requestAutoSmsPermission\" -> {"
+      }
+    ],
+    ".github/workflows/m417-auto-bank-sms.yml": [
+      {
+        "start": "          for name in ('WaffraAutoSmsStore.kt'",
+        "end": "          gradle.write_text(content)"
+      }
+    ],
+    "test/m580_sms_security_navigation_performance_test.dart": [
+      {
+        "start": " test('re-login submit CTA keeps its width and feedback during secure KDF'",
+        "end": " test('canceling SMS review never triggers a redundant full encrypted SMS reread'"
+      }
+    ],
+    "test/m615_m618_sms_review_retention_perf_contract_test.dart": [
+      {
+        "start": " test('M617 verified login removes only the second OS probe and never skips secure KDF'",
+        "end": null
       }
     ]
   }
