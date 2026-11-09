@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "pr": 507,
+  "pr": 510,
   "issue": "https://github.com/MahmoudMAnwar/waffra-app/issues/506",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main",
-  "reviewed_at": "2026-11-08",
+  "reviewed_at": "2026-11-09",
   "review_policy": "Review changed behavior against all GitHub Actions workflow scripts, all Dart and Python QA test files, and the original tests' protected security assertions; never edit tests merely to silence red jobs.",
   "contracts": [
     {
@@ -164,6 +164,58 @@
         "Existing owner-bound phone verification, password KDF, missing/foreign/malformed recovery and restored/idle biometric gates remain mandatory.",
         "No dropping finance records or accepting unverified encrypted ledger bytes.",
         "Tests are not removed or skipped; only obsolete assertions are updated to inspect the approved current implementation."
+      ]
+    },
+    {
+      "id": "M604-LOGIN-ONE-SECURE-READ",
+      "issue": "Owner report 2026-11-09 issue #506: repeated password login lag",
+      "previous_behavior": "A normal login read a verified phone-bound Android OS-keystore record once during the integrity probe, then performed a second serialized secure-store read to verify the same unchanged OS record with PBKDF2. A fixed 1750ms splash delay also held cold startup independently of readiness.",
+      "approved_behavior": "Use one immutable attempt-local, non-persistent verifier inspection for both phone integrity and full PBKDF2 password verification; refresh only after a successful gated credential recovery; retain distinct-phone, missing/malformed and legacy fail-closed branches. Replace the cosmetic 1750ms launch delay with one painted frame; preserve independent startup finance and biometric gates. Include profile-only timing of verified profile activation.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_local_phone_credentials.dart"
+      ],
+      "test_paths": [
+        "test/m604_fast_login_first_frame_test.dart",
+        "test/m537_phone_credential_lifecycle_test.dart",
+        "test/m601_auth_busy_contract_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Retain original 600000-round PBKDF2 on an isolated worker and no password/verifier persistent cache.",
+        "A missing, corrupt, foreign or mismatched record cannot pass phone-password authentication.",
+        "A fingerprint recovery grant cannot bypass fresh mandatory biometric and password challenge.",
+        "First Home must never display unverified SQLCipher balance or an invented empty ledger.",
+        "Require physical Android frame and tap-feedback traces before claiming the lag is solved."
+      ]
+    },
+    {
+      "id": "M604-VERIFIED-PROFILE-PREFERENCES",
+      "issue": "Owner report 2026-11-09 issue #506: repeat login remains slow although logout is fast",
+      "previous_behavior": "The successful verified phone relogin repeatedly issued several unchanged registered-profile, provider and hint preferences writes inside a required verified encrypted account lease, prolonging activation even for the same unchanged owner.",
+      "approved_behavior": "Keep verified owner/SQLCipher witness, shared Home/Widget lease and a required profile activation on every successful login; conditionally avoid only preference writes whose current values equal their authenticated intended values; do not suppress the verified account transition or change stored ownership.",
+      "source_paths": [
+        "lib/storage/waffra_live_account_write_authority.dart",
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m604_fast_login_first_frame_test.dart",
+        "test/m603_app_wide_lag_source_regression_test.dart",
+        "test/m601_auth_busy_contract_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "Never bypass the verified profile write source lease or SQLCipher active-source witnesses.",
+        "Never change account identity, financial values, encryption keys or the old account recovery rules.",
+        "No automatic posting or acknowledgement of bank SMS as part of login.",
+        "No physical Android speed claim from source-only testing."
       ]
     }
   ]
