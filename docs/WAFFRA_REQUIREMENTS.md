@@ -1038,3 +1038,12 @@ M385 now explicitly bounds the existing M574 SMS preview parser-test change; all
 - **Manual/SMS save:** never synchronously materialize a large confirmed ledger on UI isolate after a tap. Existing verified finance commits, SMS hash and account selections must remain atomic, and saved entry must appear exactly once.
 - **Auth/logout:** don't await noncritical SMS restart before Home; native sign-out SMS store access must not run on Android UI thread; no false success on failure. Preserve credentials and data.
 - **Test gate:** no 'fully fixed' until real profile/release APK p95 build/raster and dropped-frame traces for cold/warm launch, 1,000-SMS Home/review, manual/SMS transaction and auth/logout are captured with both upgrade and clean install.
+
+
+### M604 — Fast repeated login and secure first Home frame (2026-11-09, PR #510)
+- Owner confirmed repeated first sign-in and sign-out/relogin lag remains while sign-out itself is fast. A fresh, financially empty install should not wait for bank SMS review or a cosmetic minimum splash duration before showing the authenticated first screen.
+- Keep mandatory phone-bound Android OS credential verification and 600000-round PBKDF2 off the Flutter UI isolate; reuse only one immutable secure credential read within a single login attempt. Missing, corrupt, foreign, old-salt legacy and biometric-backed recovery are all still fail-closed.
+- Keep the verified account/profile source witness and shared Home/Widget lease; only skip rewriting preference fields that already have the same value on a successfully verified re-login.
+- No fixed 1750ms launch intro after one real rendered frame. Initial Home must still verify SQLCipher origin, cryptographic integrity, real ledger and categories before showing actual balances; never invent a zero balance for a pre-existing or inaccessible owner.
+- Owner-consented first-month banking SMS scan/review must be non-posting, owner-scoped and independent of first Home navigation. Current candidate retains the prior 900ms post-first-frame SMS scheduling; app-wide Dart/native and 1000-SMS profile-device measurements are still needed to prove it is truly non-janky.
+- Acceptance: exact-head full CI plus profile/release physical Android cold and warm login, logout/relogin, first Home, category/account selection, pending SMS review, tap-feedback, p95 frame times, dropped frames, and upgrade-over-old-data preservation. No performance-complete or signed-main-APK claim from source-only checks.
