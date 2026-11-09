@@ -3112,3 +3112,21 @@ The owner explicitly rejected replacing the unauthorized Home loading screen wit
 [M623 FIX BLACK/BLANK HOME AFTER SPINNER REMOVAL — OWNER REPORTED / PR #529 / 2026-11-09]
 ===============================================================================================
 The owner reported that the unwanted Home startup spinner had merely become a black/blank screen before Home displayed. The root cause was the old root disposing the authenticated login/biometric view before Home's verified SQLCipher and bank-account read completed; Home intentionally returned SizedBox.shrink while not ready. The approved correction retains the EXISTING preceding authenticated stage during that real data read, mounts Home Offstage only after granted access, and reveals the complete actual ledger, bank accounts and financial values in one visible transition. There is no new spinner, loading copy, skeleton, artificial zero balance, masking toggle or partial fake dashboard. It does not remove or replace required biometric, secure vault verification, first-run SMS permissions, real financial data or existing failed-source recovery; pending credential screens are no longer interactive after verification. The Home widget stays mounted on language changes. Existing background SMS analysis remains after first actual Home frame with its 900ms deferred schedule. New M623 regression and reconciled M463/M424/M426/M429/M603 test contracts enforce this, with M385 scope and M550 all-workflow review updated. A physical Android APK check of fresh install, biometric unlock, signout/relogin and first actual frame timing is still required: no claim that encrypted storage I/O has become instantaneous. Do not merge solely from static tests.
+
+====================================================================================
+[M623 CI REPAIR — AFTER REAL HOME HANDOFF / PR #529 / 2026-11-09]
+====================================================================================
+- Fixed the exact Flutter analyzer failure in M429: remove only two redundant
+  non-null assertions from the already-verified account passed into HomeScreen
+  and its onVerifiedReady callback. Authentication, biometrics and account
+  ownership checks are unchanged.
+- Fixed the M278 macOS native dependency prefetch: original llamadart v0.4.1
+  bundles remain pinned to the same official release SHA256 values. Portable
+  shasum -a 256 (or sha256sum) computes the digest, and every cached/downloaded
+  file is rejected if its digest differs. No native binary, dependency
+  version, SQLCipher key, security gate or phone app behavior was changed.
+- Declared the narrowly bounded scripts/qa/prefetch_verified_llamadart.sh fix
+  in the approved M385 change scope; keep the exact-file-set protection on.
+- This note is intentionally committed after the last application source
+  change, to satisfy the original M449 release-note ancestry check. This is
+  not physical Android performance or signed APK release certification.
