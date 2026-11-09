@@ -42,7 +42,10 @@ void main() {
     expect(overlay, contains("key:Key('m470-background-green-privacy-shield')"));
     expect(overlay, contains('color:Color(0xFF064D3B)'));
     expect(overlay, contains('child:WaffraMandatoryBiometricGate('));
-    expect(home, contains('locked?WaffraMandatoryBiometricGate('));
+    expect(home, contains('final needsGate=!needsLogin&&!firstConsent&&locked;'));
+     expect(home, contains('if(showGate)KeyedSubtree('));
+     expect(home, contains('child:WaffraMandatoryBiometricGate('));
+     expect(home, contains('WaffraBiometricSessionGuard.canReveal('));
     // Screenshot permission remains an independent user setting.
     expect(home, contains('setScreenshotsAllowed'));
   });
