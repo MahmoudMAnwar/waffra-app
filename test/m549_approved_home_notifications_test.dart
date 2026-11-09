@@ -50,7 +50,7 @@ void main(){
   expect(bulkOpens,1);
  });
 
- testWidgets('M618 sender block requires explicit opt-in after Select All',
+ testWidgets('M592 Select All of one sender confirms exactly one sender block',
  (tester)async{
   final notices=<WaffraReviewNotice>[
    const WaffraReviewNotice(id:'a1',sender:'SyntheticBank',
