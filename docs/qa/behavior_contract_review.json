@@ -254,6 +254,29 @@
         "No biometric, profile, bank SMS, old-account migration, receipt or UI change; exact-head full storage tests and real Android frame traces required before merge.",
         "The fresh-install BEGIN IMMEDIATE reservation must serialize two engines and never unlock before key/receipt and active-source witnesses are durable; do not create an empty vault when existing key/data disagree."
       ]
+    },
+    {
+      "id": "M610-WIDGET-ISOLATE-TEST-COMPLETION",
+      "issue": "Issue #512 / two real widget CI timeouts on PR #511 after M609 isolated finance integrity",
+      "previous_behavior": "The widget quick-SMS test uses pumpAndSettle immediately after mounting an indeterminate loading indicator, and again relies on fixed-duration fake pumps for a confirmed financial save. After M609 moves source integrity to Flutter compute, FakeAsync cannot drive that background completion, and both tests time out before their actual bank SMS and confirmed-writer assertions execute.",
+      "approved_behavior": "Expose only optional disposable-widget-test ready and save-settled callbacks while keeping the production verified source, isolate integrity and confirmed writer untouched. In the two existing Flutter widget tests, use runAsync to wait for the real isolate initialization and durable confirmed save, with finite timeouts. Keep the paste debounce, pre-confirmation empty ledger, exact amount, SHA hash dedup and original-SMS redaction assertions; reject genuine source or save errors.",
+      "source_paths": [
+        "lib/waffra_widget_capture.part.dart"
+      ],
+      "test_paths": [
+        "test/waffra_widget_quick_capture_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Production never injects test-only ready/save callbacks, and real finance integrity checks are not bypassed.",
+        "Both existing Flutter widget tests must complete and assert actual automatic SMS analysis and post-confirmation only financial commit.",
+        "Keep SQLCipher/source/key witnesses, native inter-engine lock, owner data and bank SMS SHA duplicate prevention fully unchanged.",
+        "Do not claim device validation or green exact-head workflow gates until they are independently observed."
+      ]
     }
   ]
 }
