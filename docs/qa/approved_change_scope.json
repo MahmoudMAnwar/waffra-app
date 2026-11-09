@@ -12,7 +12,8 @@
     "M622 owner correction: reject masked-number pseudo-Home, skeleton, spinner and unauthorized Home loading copy. Show genuine existing Home with real balance, records and action cards together after actual verified owner financial read; do not show an intermediate fake/partial financial screen.",
     "Keep actual SMS analysis and notification sync asynchronous after first verified Home frame; never force new financial IO or classification into the render path.",
     "M621 M417 standalone Kotlin compile must install exactly the same monochrome drawable and namespace as packaged Android build so the R resource resolves.",
-    "M622 final implementation: async verified account balances were previously fetched only after the ledger marked Home ready; combine accounts and ledger before first genuine Home paint, overlapping immutable SQLCipher decode and account projection only on already-verified encrypted startup, never racing legacy catalog writes."
+    "M622 final implementation: async verified account balances were previously fetched only after the ledger marked Home ready; combine accounts and ledger before first genuine Home paint, overlapping immutable SQLCipher decode and account projection only on already-verified encrypted startup, never racing legacy catalog writes.",
+    "Owner final M622 simultaneous full-screen requirement: gate the complete Home scaffold, not only its body; header, footer, genuine account balances, cards and transactions appear in one frame AFTER the complete encrypted ledger and account read, never staged placeholders."
   ],
   "allowed_changed_files": [
     ".github/workflows/android-full-smoke.yml",
@@ -76,6 +77,10 @@
       {
         "start": " Future<void> load()async {\n  final financeClock=kProfileMode?",
         "end": "  // Home reloading an encrypted ledger must never silently post a due payment."
+      },
+      {
+        "start": " @override Widget build(BuildContext context)=>PopScope(",
+        "end": "  appBar:AppBar("
       }
     ],
     "lib/waffra_auto_sms.dart": [
