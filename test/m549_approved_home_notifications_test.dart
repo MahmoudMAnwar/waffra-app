@@ -50,7 +50,7 @@ void main(){
   expect(bulkOpens,1);
  });
 
- testWidgets('M592 Select All of one sender confirms exactly one sender block',
+ testWidgets('M618 sender block requires explicit opt-in after Select All',
  (tester)async{
   final notices=<WaffraReviewNotice>[
    const WaffraReviewNotice(id:'a1',sender:'SyntheticBank',
@@ -79,37 +79,44 @@ void main(){
   expect(find.text('المحدد: 2'),findsOneWidget);
   await tester.tap(find.byKey(const Key('m592-confirm-bulk-exclude')));
   await tester.pumpAndSettle();
-  expect(find.textContaining('استبعاد 1 مرسل كامل'),findsOneWidget);
-  await tester.tap(find.text('تأكيد'));
+  expect(find.text('الرسائل والمرسلين'),findsOneWidget);
+  await tester.tap(find.text('الرسائل والمرسلين'));
   await tester.pumpAndSettle();
   expect(savedIds,['a1','a2']);
   expect(blockedSenders,['SyntheticBank']);
   expect(notices.single.id,'b1');
  });
 
- testWidgets('M592 changing filters clears hidden-message selection',
- (tester)async{
+ testWidgets('M618 selection is retained across sender chips and bulk applies to all', (tester)async{
   final notices=[
    const WaffraReviewNotice(id:'a1',sender:'SyntheticBank',preview:'One'),
    const WaffraReviewNotice(id:'b1',sender:'OtherBank',preview:'Two')];
+  var selected=<String>[],blocked=<String>[];
   await tester.pumpWidget(MaterialApp(home:WaffraApprovedNotificationsPage(
    english:false,readPending:()=>notices,
    onReviewAll:()async{},onReviewOne:(id)async{},
    onRescan:()async{},canRescan:()=>true,
-   onBulkExclude:(ids,senders)async{return true;})));
+   onBulkExclude:(ids,senders)async{selected=ids;blocked=senders;return true;})));
   await tester.tap(find.byKey(const Key('m589-open-bulk-sms-review')));
   await tester.pump();
-  await tester.tap(find.byKey(const Key(
-   'm580-notification-filter-sender:syntheticbank')));
+  await tester.tap(find.byKey(const Key('m580-notification-filter-sender:syntheticbank')));
   await tester.pump();
   await tester.tap(find.byKey(const Key('m592-select-all-visible')));
   await tester.pump();
   expect(find.text('المحدد: 1'),findsOneWidget);
-  await tester.tap(find.byKey(const Key(
-   'm580-notification-filter-sender:otherbank')));
+  await tester.tap(find.byKey(const Key('m580-notification-filter-sender:otherbank')));
   await tester.pump();
-  expect(find.text('المحدد: 0'),findsOneWidget);
-  expect(find.byKey(const Key('m592-confirm-bulk-exclude')),findsNothing);
+  expect(find.text('المحدد: 1'),findsOneWidget);
+  await tester.tap(find.byKey(const Key('m592-select-all-visible')));
+  await tester.pump();
+  expect(find.text('المحدد: 2'),findsOneWidget);
+  await tester.tap(find.byKey(const Key('m592-confirm-bulk-exclude')));
+  await tester.pumpAndSettle();
+  expect(find.text('الرسائل فقط'),findsOneWidget);
+  await tester.tap(find.text('الرسائل فقط'));
+  await tester.pumpAndSettle();
+  expect(selected,['a1','b1']);
+  expect(blocked,isEmpty,reason:'The user did not opt in to sender blocking');
  });
 
  testWidgets('M581 empty sender list shows one helpful state',(tester)async{
