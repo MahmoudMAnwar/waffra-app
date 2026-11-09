@@ -1177,6 +1177,14 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  // complete owner-verified Home can paint. Never replace its wait with black.
  bool _m623HomeReady=false;
  String? _m623RetainedStage;
+ // Profile-mode handoff timings; never log identity or financial values.
+ Stopwatch? _m625HandoffClock;
+ String? _m625HandoffOrigin;
+ void _m625TraceHandoff(String origin){
+  if(!kProfileMode)return;
+  _m625HandoffOrigin=origin;
+  _m625HandoffClock=Stopwatch()..start();
+ }
  // M624: native SMS must never compete with owner-verified first Home paint.
  // Logout awaits an already running resume before disabling SMS capture.
  Future<bool>? _m624SmsResumeInFlight;
@@ -1214,6 +1222,17 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
      current.provider!=expectedOwner.provider||
      current.phone!=expectedOwner.phone||current.email!=expectedOwner.email)return;
   setState((){_m623HomeReady=true;_m623RetainedStage=null;});
+  final stopwatch=_m625HandoffClock;
+  final origin=_m625HandoffOrigin;
+  _m625HandoffClock=null;_m625HandoffOrigin=null;
+  if(kProfileMode&&stopwatch!=null&&origin!=null){
+   WidgetsBinding.instance.addPostFrameCallback((_){
+    if(mounted&&_m623HomeReady&&identical(profile,expectedOwner)){
+     debugPrint('WAFFRA_AUTH_PERF ${origin}_to_home_first_frame_ms='
+      '${stopwatch.elapsedMilliseconds}');
+    }
+   });
+  }
  }
  String appearance='light';
  bool introDone=false;
@@ -1241,6 +1260,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    if(_biometricVerifiedAwaitingResume){
     _biometricVerifiedAwaitingResume=false;
     if(mounted&&locked&&profile!=null&&!showLogin){
+     _m625TraceHandoff('biometric');
      setState(()=>locked=false);
     }
    }
@@ -1423,6 +1443,11 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     _m623RetainedStage=locked?'biometric':'login';
    }
   });
+  // Repeat phone login deliberately skips the second biometric gate;
+  // trace the verified-password-to-authentic-Home transition.
+  if(mounted&&ordinaryPhoneRelogin&&!locked&&!autoSmsConsentPending){
+   _m625TraceHandoff('relogin');
+  }
   // M624: do not start native SMS I/O on the login/biometric handoff.
   // Verified Home resumes capture after its first real painted frame
   // and BEFORE the initial encrypted inbox review.
@@ -1547,6 +1572,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   if(mounted)setState((){
    profile=null;showLogin=true;locked=false;googleFirstRunSetup=false;
    _m623HomeReady=false;_m623RetainedStage=null;
+   _m625HandoffClock=null;_m625HandoffOrigin=null;
   });
   }catch(error){
    // Every sign-out entry point shares this fail-closed feedback. An SMS
@@ -1658,6 +1684,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
        if(WaffraBiometricSessionGuard.canReveal(
         authenticated:true,inForeground:lifecycle==AppLifecycleState.resumed)){
         _biometricVerifiedAwaitingResume=false;
+        _m625TraceHandoff('biometric');
         setState(()=>locked=false);
        }else if(lifecycle==AppLifecycleState.inactive){
         _biometricVerifiedAwaitingResume=true;
@@ -3917,6 +3944,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  Future<void> _bindFinanceSource()async{
   final binding=await WaffraProductionFinanceAuthorityBinding.bind(
     installedApp:true,
+   // The first mandatory Home dashboard read validates this source;
+   // skip the duplicate encrypted snapshot read during binder setup.
+   deferInitialDashboardRead:true,
    legacy:_homeFinancePersistence,
    startupRoute:WaffraFinanceRoute.appStartup,
   );
