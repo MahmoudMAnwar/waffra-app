@@ -1,8 +1,9 @@
 {
   "contract_version": 1,
   "change_id": "M623-RETAIN-AUTHENTICATED-SCREEN-UNTIL-REAL-HOME-FIRST-FRAME-PR529-20261109",
-  "human_scope_review": "Owner explicitly reported a NEW blank/black screen after earlier Home spinner removal and ordered an actual fix, not another replacement loader. This repair keeps the current login/biometric/permission page visible while the authorized encrypted ledger and account balances are verified, then reveals the genuine full Home together. Avoid new screens, spinners, fake masked balance or artificial data. Preserve SQLCipher, biometric check, existing SMS behavior, data safety and all previous tests. M550/M147 source verification exposed four obsolete tests / workflow assertions; their assertions are replaced by equivalent controls in the approved M623 route while preserving the actual integration tests.",
+  "human_scope_review": "Owner explicitly reported a NEW blank/black screen after earlier Home spinner removal and ordered an actual fix, not another replacement loader. This repair keeps the current login/biometric/permission page visible while the authorized encrypted ledger and account balances are verified, then reveals the genuine full Home together. Avoid new screens, spinners, fake masked balance or artificial data. Preserve SQLCipher, biometric check, existing SMS behavior, data safety and all previous tests. Owner explicitly requested fixing repeated CI errors on PR #529; include the narrowly bounded macOS/Linux SHA256 helper repair in the same reviewed scope. M550/M147 source verification exposed four obsolete tests / workflow assertions; their assertions are replaced by equivalent controls in the approved M623 route while preserving the actual integration tests.",
   "user_requested_changes": [
+    "Repair repeat CI failures on the approved M623 branch: retain exact pinned SHA256 digests while replacing GNU-only hash checking with macOS/Linux portable verification.",
     "Eliminate the black/blank frame introduced by replacing the Home spinner with SizedBox.shrink, without adding a substitute loading screen or fake financial placeholders.",
     "Keep the already-visible successful authentication, biometric or permission screen in place while the existing verified Home backend read completes; do not request credentials again.",
     "Show the genuine complete Home with actual balance and accounts, transactions, summaries and controls together immediately when its owner-bound read finishes.",
@@ -18,6 +19,7 @@
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
+    "scripts/qa/prefetch_verified_llamadart.sh",
     "test/m290_google_country_reminders_test.dart",
     "test/m422_phone_only_auth_entry_test.dart",
     "test/m424_mandatory_biometrics_test.dart",
@@ -29,6 +31,12 @@
     "test/m623_verified_home_handoff_no_black_frame_test.dart"
   ],
   "bounded_sections": {
+    "scripts/qa/prefetch_verified_llamadart.sh": [
+      {
+        "start": "work=\"$(mktemp -d)\"",
+        "end": null
+      }
+    ],
     "lib/main.dart": [
       {
         "start": "class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {",
