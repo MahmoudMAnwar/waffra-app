@@ -6437,8 +6437,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   recurringPostponed.clear();smsHashes.clear();learnedMerchantCategories.clear();
   try{
    await load();
-   // Start the verified account projection without waiting for it, retaining
-   // the original early balance refresh for existing-device upgrades.
    unawaited(_m467RefreshHomeAccounts());
    WidgetsBinding.instance.addPostFrameCallback((_) {
     // Home first: encrypted SMS scan starts only after initial layout settles.
