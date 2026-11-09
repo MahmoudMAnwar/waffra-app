@@ -132,11 +132,14 @@ void main(){
    main.indexOf(' Widget _currentTabContents(){'));
   expect(dashboard,isNot(contains('          _autoSmsReviewCard(),')));
   expect(dashboard,contains('monthlySummaryCard(),'));
-  // The approved three compact finance actions use existing verified flows.
+  // M611 owner-approved Home summary tiles are read-only history navigation.
+  // The floating + remains the sole add-entry entry point.
   expect(dashboard,contains("Key('m549-three-home-finance-actions')"));
-  expect(dashboard,contains('entrySheet(scannedIncome:true)'));
-  expect(dashboard,contains('entrySheet(scannedIncome:false)'));
-  expect(dashboard,contains('openVerifiedTransfer()'));
+  expect(dashboard,contains('showSummaryTransactions(true)'));
+  expect(dashboard,contains('showSummaryTransactions(false)'));
+  expect(dashboard,contains('showInternalTransferTransactions()'));
+  expect(dashboard,isNot(contains('entrySheet(scannedIncome:true)')));
+  expect(dashboard,isNot(contains('entrySheet(scannedIncome:false)')));
   expect(dashboard,isNot(contains("homeSummaryCard(waffraIsEnglish?'Income'")));
   final summary=main.substring(main.indexOf(' Widget monthlySummaryCard(){'),
    main.indexOf(' Widget smartMoneyInsightsCard(){'));
