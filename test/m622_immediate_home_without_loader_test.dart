@@ -10,6 +10,7 @@ void main(){
   expect(scaffold,contains('child:!ready&&_financeLoadFailure==null?'));
   expect(scaffold,contains('const SizedBox.shrink():Stack(children:[Scaffold('));
   expect(scaffold,contains('Stack(clipBehavior:Clip.none,children:[GestureDetector('));
+  expect(scaffold,contains('duration:tab==0&&!accountOpened?Duration.zero:'));
   expect(source,isNot(contains('Widget _m622ImmediateHomeSurface()=>')));
   expect(source,isNot(contains("'بنفتح الرئيسية…'")));
   expect(source,isNot(contains("'Opening your dashboard…'")));
