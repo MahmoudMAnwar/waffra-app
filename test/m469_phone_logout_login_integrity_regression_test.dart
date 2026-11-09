@@ -101,7 +101,7 @@ void main() {
     expect(login,contains('if(!match){'));
     expect(login.indexOf('if(!match){'),lessThan(
       login.indexOf('await widget.onVerifiedPasswordSave(verifiedAccount);')));
-    expect(login,isNot(contains('await widget.onVerifiedPasswordSave(verifiedAccount)')));
+    expect(login,isNot(contains('await widget.onSave(verifiedAccount)')));
     expect(login,isNot(contains('registerOrResume(')));
     final credentials=File('lib/waffra_local_phone_credentials.dart')
       .readAsStringSync();
