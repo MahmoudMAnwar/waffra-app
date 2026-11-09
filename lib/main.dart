@@ -13284,6 +13284,73 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       })),
     ])));
  }
+ /// M611: read the actual owner-scoped encrypted transfer journal.
+ /// A Home history tile cannot post any money.
+ Future<void> showInternalTransferTransactions()async{
+  final bridge=_financeBinding?.accountsBridge;
+  final selected=_m467SelectedAccount;
+  final labels={for(final a in _m467Accounts)a.id:a.name};
+  final Future<List<WaffraInternalTransferHistory>> future=bridge==null
+   ?Future<List<WaffraInternalTransferHistory>>.error(
+    StateError('Verified source unavailable'))
+   :WaffraVerifiedAccountsApi(bridge:bridge).readInternalTransferHistory(
+    accountId:selected=='all'?null:selected);
+  if(!mounted)return;
+  await showModalBottomSheet<void>(
+   context:context,isScrollControlled:true,useSafeArea:true,
+   showDragHandle:true,
+   builder:(sheet)=>SizedBox(
+    height:MediaQuery.sizeOf(sheet).height*.7,
+    child:Column(children:[
+     Padding(padding:const EdgeInsets.fromLTRB(18,5,12,9),
+      child:Row(children:[
+       const Icon(Icons.swap_horiz_rounded,color:emerald),
+       const SizedBox(width:8),
+       Expanded(child:WaffraText(waffraIsEnglish?
+        'Transfers between my accounts':'التحويلات بين حساباتي',
+        style:Theme.of(sheet).textTheme.titleLarge)),
+       IconButton(onPressed:()=>Navigator.pop(sheet),
+        icon:const Icon(Icons.close)),
+      ])),
+     Expanded(child:FutureBuilder<List<WaffraInternalTransferHistory>>(
+      future:future,builder:(ctx,snapshot){
+       if(snapshot.connectionState!=ConnectionState.done){
+        return const Center(child:CircularProgressIndicator(strokeWidth:3));
+       }
+       if(snapshot.hasError){
+        return Center(child:Padding(padding:const EdgeInsets.all(24),
+         child:WaffraText(waffraIsEnglish?
+          'Could not verify your transfers. No data was changed.':
+          'تعذر التحقق من سجل التحويلات. لم تتغير أي بيانات.',
+          textAlign:TextAlign.center)));
+       }
+       final transfers=snapshot.data;
+       if(transfers==null||transfers.isEmpty){
+        return Center(child:WaffraText(waffraIsEnglish?
+         'No transfers recorded for this account.':
+         'لا توجد تحويلات مسجلة لهذا الحساب.'));
+       }
+       return ListView.separated(
+        itemCount:transfers.length,
+        separatorBuilder:(_,__)=>const Divider(height:1),
+        itemBuilder:(ctx,index){
+         final t=transfers[index];
+         final when=DateTime.tryParse(t.occurredIso);
+         return ListTile(
+          leading:const Icon(Icons.swap_horiz_rounded,color:emerald),
+          title:WaffraText(
+           '${labels[t.fromAccountId]??t.fromAccountId} ← ${labels[t.toAccountId]??t.toAccountId}',
+           maxLines:3),
+          subtitle:WaffraText(
+           '${when==null?t.occurredIso:dayText(when)}'
+           '${t.note.isEmpty?'':' • ${t.note}'}',maxLines:3),
+          trailing:WaffraCurrencyAmount(t.amountMinor/100,fontSize:14),
+         );
+        });
+      })),
+    ])));
+ }
+
  Widget _dashboardShortcut(String title,IconData icon,VoidCallback onTap){
   final dark=Theme.of(context).brightness==Brightness.dark;
   return Expanded(child:Material(
