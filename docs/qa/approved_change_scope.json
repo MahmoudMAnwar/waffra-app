@@ -120,7 +120,7 @@
     ],
     "test/m549_approved_home_notifications_test.dart": [
       {
-        "start": " testWidgets('M618 sender block requires explicit opt-in after Select All',",
+        "start": " testWidgets('M592 Select All of one sender confirms exactly one sender block',",
         "end": " testWidgets('M581 empty sender list shows one helpful state',"
       }
     ],
