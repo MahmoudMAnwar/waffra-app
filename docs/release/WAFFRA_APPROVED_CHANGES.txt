@@ -1,3 +1,7 @@
+[PR #517 M611 LATEST HEAD QA SCOPE SYNC] 2026-11-09
+- Owner #513–#516 changes still Draft and unmerged. Fixed Home action closure syntax on the branch, and added actual disposable encrypted SQLCipher transfer-history test with exact amount, source/target scope, account balances and zero new income/expense rows; legacy M549 positive checks follow the owner-approved Home navigation behavior. Source M385 file scope and M550 all-workflow contracts now declare the additional test.
+- The finance entry sheet still needs Android post-confirmation writer/retry testing; residual 1–2-second lag has not been profiled or certified eliminated. Run exact latest SHA checks before considering main merge.
+
 [PR #517 M611 MANUAL FINANCE + COMPACT HOME HISTORY — EXACT HEAD CI/ANDROID PENDING] 2026-11-09
 ==========================================================================================================
 - Owner #513: manual income, expense, internal transfers reportedly do not save. The screenshot shows a parent bank selected but mandatory child financial account empty. New inline child-required feedback and provider-child ownership validation preserve SQLCipher authorization and explicit account selection.
