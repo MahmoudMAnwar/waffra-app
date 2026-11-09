@@ -4803,8 +4803,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         'Restoring an individual message allows it on the next manual rescan; '
         'blocked senders remain blocked. Financial records are unchanged.':
         '${messages.length} رسالة مستبعدة • ${senders.length} مرسل مستبعد. '
-        'إلغاء استبعاد رسالة يسمح بمراجعتها عند إعادة الفحص، '
-        'ولا يلغي استبعاد المرسل نفسه. بياناتك المالية لا تتغير.',
+        'تقدر ترجع الرسالة خلال 30 يوم من الاستبعاد، وبعدها بيتحذف وصفها '
+        'تلقائيًا مع استمرار منع ظهورها تاني في الفحص. '
+        'استبعاد المرسل منفصل والعمليات المالية لا تتغير.',
         style:Theme.of(ctx).textTheme.bodySmall)),
       Expanded(child:messages.isEmpty&&senders.isEmpty?
        Center(child:WaffraText(waffraIsEnglish?
@@ -4825,6 +4826,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           final id=message['id'] as String;
           final sender=message['sender'] as String? ?? '';
           final receivedAt=message['receivedAt'] as int? ?? 0;
+          final excludedAt=message['excludedAt'] as int? ?? 0;
+          final expiresAt=excludedAt>0?
+           DateTime.fromMillisecondsSinceEpoch(excludedAt).add(
+            const Duration(days:30)):null;
+          final remaining=expiresAt==null?null:
+           (expiresAt.difference(DateTime.now()).inHours/24).ceil().clamp(0,30);
+          final expiryNote=remaining==null?'':waffraIsEnglish?
+           ' • ${remaining}d to restore':' • متبقي ${remaining} يوم للاسترجاع';
           final date=receivedAt>0?
            DateTime.fromMillisecondsSinceEpoch(receivedAt):null;
           final dateLabel=date==null?'':
@@ -4836,7 +4845,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            title:WaffraText(sender.isNotEmpty?sender:
             (waffraIsEnglish?'Excluded message':'رسالة مستبعدة')),
            subtitle:WaffraText(
-            '$labelPrefix••••${id.substring(id.length-8)}',
+            '$labelPrefix••••${id.substring(id.length-8)}$expiryNote',
             style:Theme.of(ctx).textTheme.bodySmall),
            trailing:TextButton(
             onPressed:busy?null:()async{
