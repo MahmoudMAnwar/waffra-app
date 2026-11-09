@@ -81,12 +81,20 @@ void main(){
   expect(button,contains("CircularProgressIndicator("));
  });
 
- test('cold Home never shows a completely blank spinner-only body',(){
+ test('M622 cold Home paints its existing layout immediately without a spinner or invented loading text',(){
   final main=File('lib/main.dart').readAsStringSync();
-  expect(main,contains("WaffraText(waffraIsEnglish?'Opening your dashboard…'"));
-  expect(main,contains("'بنفتح الرئيسية…'"));
-  expect(main,contains(" !ready?RepaintBoundary("));
-  expect(main,isNot(contains("!ready?const Center(child:CircularProgressIndicator())")));
+  expect(main,contains("!ready?_m622ImmediateHomeSurface():"));
+  final early=main.split(' Widget _m622ImmediateHomeSurface()=>')[1]
+   .split(' @override Widget build(BuildContext context)=>PopScope(')[0];
+  expect(early,contains("key:const Key('m622-immediate-home-surface')"));
+  expect(early,contains('WaffraPageHero('));
+  expect(early,contains("waffraIsEnglish?'Total balance':'إجمالي الرصيد'"));
+  expect(early,contains("const Text('••••'"));
+  expect(early,contains('IgnorePointer('));
+  expect(early,isNot(contains('CircularProgressIndicator(')));
+  expect(main,isNot(contains("'بنفتح الرئيسية…'")));
+  expect(main,isNot(contains("'Opening your dashboard…'")));
+  expect(main,isNot(contains(' !ready?RepaintBoundary(')));
  });
 
  test('canceling SMS review never triggers a redundant full encrypted SMS reread',(){
