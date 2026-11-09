@@ -1173,6 +1173,17 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  // True only after a new account was saved or a password challenge passed.
  // A restored session must unlock before its first SMS permission request.
  bool _smsConsentAfterVerifiedSignIn=false;
+ // M623: Keep the actual preceding authenticated screen mounted until the
+ // complete owner-verified Home can paint. Never replace its wait with black.
+ bool _m623HomeReady=false;
+ String? _m623RetainedStage;
+ void _m623HomeLoaded(Person expectedOwner){
+  final current=profile;
+  if(!mounted||current==null||showLogin||locked||
+     current.provider!=expectedOwner.provider||
+     current.phone!=expectedOwner.phone||current.email!=expectedOwner.email)return;
+  setState((){_m623HomeReady=true;_m623RetainedStage=null;});
+ }
  String appearance='light';
  bool introDone=false;
  int _greetingCycle=0;
@@ -1272,6 +1283,8 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
      !(p.getBool(WaffraAutoSms.firstRunKey)??false);
     pinHash=p.getString('waffra_pin_sha256');
     locked=u!=null;startupError=null;loading=false;
+    _m623HomeReady=false;
+    _m623RetainedStage=u==null?null:'biometric';
    });
   }catch(e){
    debugPrint('Waffra startup failed: $e');
@@ -1286,6 +1299,8 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   if(mounted)setState((){
    autoSmsConsentPending=false;
    _smsConsentAfterVerifiedSignIn=false;
+   // If permissions followed biometric unlock, retain THIS existing screen.
+   if(!locked){_m623RetainedStage='consent';_m623HomeReady=false;}
   });
  }
  Future<void> intro()async {
@@ -1372,6 +1387,10 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    final freshSession=profile==null||showLogin;
    profile=u;showLogin=false;googleFirstRunSetup=needsGoogleSetup;
    if(freshSession)locked=!ordinaryPhoneRelogin;
+   if(freshSession){
+    _m623HomeReady=false;
+    _m623RetainedStage=locked?'biometric':'login';
+   }
   });
   if(Platform.isAndroid&&mounted){
    WidgetsBinding.instance.addPostFrameCallback((_){
@@ -1402,7 +1421,10 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   final prefs=await SharedPreferences.getInstance();
   final complete=await prefs.setBool(waffraCountrySetupKey(account!),true);
   if(!complete)throw StateError('Could not save country setup completion.');
-  if(mounted)setState(()=>googleFirstRunSetup=false);
+  if(mounted)setState((){
+   googleFirstRunSetup=false;
+   if(!locked){_m623HomeReady=false;_m623RetainedStage='country';}
+  });
  }
  Future<void> logout()async {
   if(_logoutInProgress)return;
@@ -1500,7 +1522,10 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   // Clear the single progress notice before switching to the signed-out UI.
   if(mounted)waffraDismissFooterNotice();
   if(mounted)_logoutFeedbackKey.currentState?.clearSnackBars();
-  if(mounted)setState((){profile=null;showLogin=true;locked=false;googleFirstRunSetup=false;});
+  if(mounted)setState((){
+   profile=null;showLogin=true;locked=false;googleFirstRunSetup=false;
+   _m623HomeReady=false;_m623RetainedStage=null;
+  });
   }catch(error){
    // Every sign-out entry point shares this fail-closed feedback. An SMS
    // suspension or credential-integrity failure must NOT look like logout.
@@ -1560,6 +1585,83 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   final p=await SharedPreferences.getInstance();
   await p.setString('waffra_appearance_mode_v1',mode);
   await p.setBool('waffra_dark_mode',dark);
+ }
+
+ // M623: authenticate on the ORIGINAL screen. Build verified Home offstage
+ // after successful access, then swap the complete real dashboard in a single
+ // frame. No fake balances, skeleton, spinner, blank/black intermediate page
+ // or duplicate biometric challenge is introduced.
+ Widget _m623RootContent(BuildContext rootContext){
+  final account=profile;
+  final needsLogin=account==null||showLogin||
+   ((account.phone.trim().isEmpty)&&
+     (account.provider.toLowerCase().contains('local')||
+      account.provider.contains('محلي')||
+      account.provider.toLowerCase().contains('guest')||
+      account.provider.toLowerCase().contains('demo')));
+  final firstConsent=!needsLogin&&autoSmsConsentPending&&
+   _smsConsentAfterVerifiedSignIn;
+  final needsGate=!needsLogin&&!firstConsent&&locked;
+  final laterConsent=!needsLogin&&!firstConsent&&!needsGate&&autoSmsConsentPending;
+  final needsCountry=!needsLogin&&!firstConsent&&!needsGate&&!laterConsent&&
+   googleFirstRunSetup&&WaffraSaudiRelease.locationCountryOnboarding;
+  final canMountHome=!needsLogin&&!firstConsent&&!needsGate&&
+   !laterConsent&&!needsCountry;
+  final beforeReady=canMountHome&&!_m623HomeReady;
+  final showLoginScreen=needsLogin||(beforeReady&&_m623RetainedStage=='login');
+  final showConsent=firstConsent||laterConsent||
+   (beforeReady&&_m623RetainedStage=='consent');
+  final showGate=needsGate||(beforeReady&&_m623RetainedStage=='biometric');
+  final showCountry=needsCountry||
+   (beforeReady&&_m623RetainedStage=='country');
+  return Stack(fit:StackFit.expand,children:[
+   if(showLoginScreen)KeyedSubtree(
+    key:const ValueKey('m623-login-stage'),
+    child:IgnorePointer(ignoring:!needsLogin,
+     child:LoginScreen(onSave:saveUser,
+      onVerifiedPasswordSave:_saveVerifiedPhoneLogin))),
+   if(showConsent)KeyedSubtree(
+    key:const ValueKey('m623-consent-stage'),
+    child:IgnorePointer(ignoring:!firstConsent&&!laterConsent,
+     child:WaffraAutoSmsConsentPage(
+      english:language=='en',onComplete:finishSmsPermissionChoice))),
+   if(showGate)KeyedSubtree(
+    key:const ValueKey('m623-biometric-stage'),
+    child:IgnorePointer(ignoring:!needsGate,
+     child:WaffraMandatoryBiometricGate(
+      english:language=='en',
+      onVerified:(){
+       if(!mounted||!locked||profile==null||showLogin)return;
+       final lifecycle=WidgetsBinding.instance.lifecycleState;
+       if(WaffraBiometricSessionGuard.canReveal(
+        authenticated:true,inForeground:lifecycle==AppLifecycleState.resumed)){
+        _biometricVerifiedAwaitingResume=false;
+        setState(()=>locked=false);
+       }else if(lifecycle==AppLifecycleState.inactive){
+        _biometricVerifiedAwaitingResume=true;
+       }
+      },
+      onSignOut:logout))),
+   if(showCountry)KeyedSubtree(
+    key:const ValueKey('m623-country-stage'),
+    child:IgnorePointer(ignoring:!needsCountry,
+     child:WaffraCountryFirstRunPage(
+      english:language=='en',onComplete:completeGoogleCountrySetup,
+      onCountryConfirmed:setUiCountry))),
+   if(canMountHome)KeyedSubtree(
+    key:const ValueKey('m623-real-home'),
+    child:Offstage(offstage:!_m623HomeReady,
+     child:HomeScreen(
+      // A language toggle must not tear down and re-load the finance vault.
+      key:const ValueKey('waffra-verified-session-home'),
+      profile:account,
+      onVerifiedReady:()=>_m623HomeLoaded(account),
+      dark:appearance=='dark'||(appearance=='system'&&
+       MediaQuery.platformBrightnessOf(rootContext)==Brightness.dark),
+      appearance:appearance,onAppearance:setAppearance,onTheme:theme,
+      onLanguage:setLanguage,onLogout:logout,onProfile:saveUser,onSetPin:setPin,
+      pinEnabled:pinHash!=null,greetingIndex:_greetingCycle))),
+  ]);
  }
  @override Widget build(BuildContext context)=>MaterialApp(
   scaffoldMessengerKey:_logoutFeedbackKey,
@@ -1804,41 +1906,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     const SizedBox(height:8),
     FilledButton(onPressed:WaffraHaptics.tap((){setState((){loading=true;startupError=null;});load();}),child:const WaffraText('إعادة المحاولة')),
    ])))):
-   profile==null||showLogin||((profile!.phone.trim().isEmpty)&&
-    (profile!.provider.toLowerCase().contains('local')||
-     profile!.provider.contains('محلي')||
-     profile!.provider.toLowerCase().contains('guest')||
-     profile!.provider.toLowerCase().contains('demo')))?LoginScreen(onSave:saveUser,
-     onVerifiedPasswordSave:_saveVerifiedPhoneLogin):
-   (autoSmsConsentPending&&_smsConsentAfterVerifiedSignIn)?
-    WaffraAutoSmsConsentPage(
-     english:language=='en',onComplete:finishSmsPermissionChoice):
-   locked?WaffraMandatoryBiometricGate(
-    english:language=='en',
-    onVerified:(){
-     if(!mounted||!locked||profile==null||showLogin)return;
-     final lifecycle=WidgetsBinding.instance.lifecycleState;
-     if(WaffraBiometricSessionGuard.canReveal(
-       authenticated:true,inForeground:lifecycle==AppLifecycleState.resumed)){
-      _biometricVerifiedAwaitingResume=false;
-      setState(()=>locked=false);
-     }else if(lifecycle==AppLifecycleState.inactive){
-      // Android's native fingerprint dialog can complete before resumed.
-      // Defer only this verified result; do not unlock a backgrounded app.
-      _biometricVerifiedAwaitingResume=true;
-     }
-    },
-    onSignOut:logout,
-   ):
-   // Updated installs unlock their existing profile before requesting access.
-   autoSmsConsentPending?WaffraAutoSmsConsentPage(
-    english:language=='en',onComplete:finishSmsPermissionChoice):
-   googleFirstRunSetup&&WaffraSaudiRelease.locationCountryOnboarding?WaffraCountryFirstRunPage(
-     english:language=='en',onComplete:completeGoogleCountrySetup,
-     onCountryConfirmed:setUiCountry):
-   HomeScreen(key:ValueKey(language),profile:profile!,
-     dark:appearance=='dark'||(appearance=='system'&&MediaQuery.platformBrightnessOf(rootContext)==Brightness.dark),
-     appearance:appearance,onAppearance:setAppearance,onTheme:theme,onLanguage:setLanguage,onLogout:logout,onProfile:saveUser,onSetPin:setPin,pinEnabled:pinHash!=null,greetingIndex:_greetingCycle)))));
+   _m623RootContent(rootContext)))));
 }
 class PinLockScreen extends StatefulWidget {
  final String pinHash;final VoidCallback onUnlock;
@@ -3612,6 +3680,7 @@ class WaffraTransactionDetailsDialog extends StatelessWidget {
 class HomeScreen extends StatefulWidget {
  final Person profile;final bool dark,pinEnabled;final String appearance;
  final int greetingIndex;
+ final VoidCallback? onVerifiedReady;
  final Future<void> Function(String) onAppearance;
  final Future<void> Function(String?) onSetPin;
  final VoidCallback onTheme;
@@ -3621,7 +3690,7 @@ class HomeScreen extends StatefulWidget {
  const HomeScreen({super.key,required this.profile,required this.dark,required this.pinEnabled,
   required this.onSetPin,required this.onTheme,required this.onLanguage,required this.onLogout,required this.onProfile,
    required this.appearance,required this.onAppearance,
-   required this.greetingIndex});
+   required this.greetingIndex,this.onVerifiedReady});
  @override State<HomeScreen> createState()=>_HomeScreenState();
 }
 // Scroll-linked, pinned balance summary. Shrinks with the user's gesture;
@@ -6557,6 +6626,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   recurringPostponed.clear();smsHashes.clear();learnedMerchantCategories.clear();
   try{
    await load();
+   if(mounted)widget.onVerifiedReady?.call();
    if(kProfileMode&&startupClock!=null){
     debugPrint('WAFFRA_FINANCE_PERF source_to_ready_ms='
      '${startupClock.elapsedMilliseconds}');
@@ -6583,6 +6653,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      'Could not verify your financial data. Nothing was deleted. Retry or restore a trusted backup.':
      'تعذر التحقق من بياناتك. لم يُحذف شيء. حاول مجددًا أو استعد نسخة موثوقة.';
    });
+   // A genuine failed-source recovery page is actionable; never leave
+   // the previous auth screen stuck forever if vault verification fails.
+   if(mounted)widget.onVerifiedReady?.call();
   }
  }
  Widget _financialRecoveryScreen()=>Center(child:Padding(
