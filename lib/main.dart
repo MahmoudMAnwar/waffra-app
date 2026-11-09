@@ -43,6 +43,7 @@ import 'waffra_large_json_decode.dart';
 import 'waffra_home_accounts_sheet.dart';
 import 'waffra_approved_notifications.dart';
 import 'storage/waffra_account_context_read.dart';
+import 'storage/waffra_account_context_repository.dart';
 import 'waffra_mandatory_biometric_gate.dart';
 import 'waffra_idle_biometric_overlay.dart';
 import 'waffra_local_phone_credentials.dart';
@@ -10112,7 +10113,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         isExpanded:true,initialValue:chosenManualAccount,
         decoration:InputDecoration(labelText:waffraIsEnglish?
          'Linked money account *':'الحساب المالي التابع *',
-         border:const OutlineInputBorder()),
+         errorText:attempted&&initial==null&&!sms&&chosenManualAccount==null
+           ?waffraRequiredFieldMessage:null,
+          border:const OutlineInputBorder()),
         items:[
          ...entryProviders.where((p)=>p.id==chosenManualProvider)
           .expand((p)=>p.accounts).map((account)=>DropdownMenuItem<String>(
@@ -10497,7 +10500,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        }
        if(initial==null&&!sms&&
           (chosenManualAccount==null||
-           !entryAccounts.any((a)=>a.id==chosenManualAccount))){
+           !entryProviders.any((p)=>p.id==chosenManualProvider&&
+            p.accounts.any((a)=>a.id==chosenManualAccount)))){
         snack(sheetContext,waffraIsEnglish?
          'Choose the bank and its linked money account before saving.':
          'اختار الجهة والحساب المالي التابع لها قبل الحفظ.',isError:true);
@@ -13046,18 +13050,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      Expanded(child:WaffraText(waffraIsEnglish?
       'This month summary':'ملخص هذا الشهر',
       style:const TextStyle(fontSize:16,fontWeight:FontWeight.bold))),
-     OutlinedButton.icon(
-      key:const Key('m549-home-account-filter'),
-      onPressed:WaffraHaptics.tap(()=>unawaited(_m467PickHomeAccount())),
-      icon:const Icon(Icons.account_balance_outlined,size:17),
-      label:ConstrainedBox(constraints:const BoxConstraints(maxWidth:100),
-       child:Text(_m467AccountLabel,maxLines:1,
-        overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:11))),
-      style:OutlinedButton.styleFrom(
-       padding:const EdgeInsets.symmetric(horizontal:7,vertical:4),
-       minimumSize:const Size(0,36),
-       foregroundColor:dark?Colors.white:forest)),
     ]),
+    const SizedBox(height:6),
+    // M611: full-width account filter wraps long bank and child names.
+    SizedBox(width:double.infinity,child:OutlinedButton.icon(
+     key:const Key('m549-home-account-filter'),
+     onPressed:WaffraHaptics.tap(()=>unawaited(_m467PickHomeAccount())),
+     icon:const Icon(Icons.account_balance_outlined,size:17),
+     label:Text(_m467AccountLabel,softWrap:true,textAlign:TextAlign.center,
+      style:const TextStyle(fontSize:12)),
+     style:OutlinedButton.styleFrom(
+      padding:const EdgeInsets.symmetric(horizontal:8,vertical:6),
+      minimumSize:const Size(0,42),
+      foregroundColor:dark?Colors.white:forest))),
     const SizedBox(height:8),
     Row(children:[
      SizedBox(width:92,height:92,child:Stack(alignment:Alignment.center,children:[
@@ -13394,13 +13399,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     child:Container(
      key:Key('m549-home-action-'+(icon==Icons.swap_horiz_rounded?'transfer':
       icon==Icons.north_east_rounded?'expense':'income')),
-     height:88,
+     height:68,
      decoration:BoxDecoration(
       borderRadius:BorderRadius.circular(18),
       border:Border.all(color:iconColor.withValues(alpha:.18))),
      child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
-      Icon(icon,size:25,color:iconColor),
-      const SizedBox(height:7),
+      Icon(icon,size:21,color:iconColor),
+      const SizedBox(height:3),
       Padding(padding:const EdgeInsets.symmetric(horizontal:4),
        child:WaffraText(title,textAlign:TextAlign.center,maxLines:2,
         style:TextStyle(fontSize:11,fontWeight:FontWeight.w700,
@@ -13485,21 +13490,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            icon:Icons.south_west_rounded,
            background:const Color(0xFFE6F7EC),
            iconColor:const Color(0xFF087A54),
-           onTap:()=>unawaited(entrySheet(scannedIncome:true))),
+           onTap:()=>unawaited(showSummaryTransactions(true)),
           const SizedBox(width:7),
           _m549HomeFinanceAction(
            title:waffraIsEnglish?'Expense':'مصروف',
            icon:Icons.north_east_rounded,
            background:const Color(0xFFFCECE8),
            iconColor:const Color(0xFFB94838),
-           onTap:()=>unawaited(entrySheet(scannedIncome:false))),
+           onTap:()=>unawaited(showSummaryTransactions(false)),
           const SizedBox(width:7),
           _m549HomeFinanceAction(
            title:waffraIsEnglish?'Between my accounts':'تحويل بين حساباتي',
            icon:Icons.swap_horiz_rounded,
            background:const Color(0xFFFAF0DD),
            iconColor:const Color(0xFF7F561C),
-           onTap:()=>unawaited(openVerifiedTransfer())),
+           onTap:()=>unawaited(showInternalTransferTransactions())),
          ]),
          const SizedBox(height:10),
          monthlySummaryCard(),
