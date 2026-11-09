@@ -33,7 +33,7 @@
   "bounded_sections": {
     "lib/main.dart": [
       {
-        "start": " Future<void> saveUser(Person u)async {",
+        "start": " // The live account/profile writer must never bypass the same source lock",
         "end": " Future<void> setUiCountry("
       },
       {
