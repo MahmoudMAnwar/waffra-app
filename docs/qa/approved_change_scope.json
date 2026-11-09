@@ -1,17 +1,16 @@
 {
   "contract_version": 1,
-  "change_id": "M611-MANUAL-FINANCE-INPUT-HOME-HISTORY-PR517-20261109",
-  "human_scope_review": "Owner 2026-11-09 specifically requests diagnosing income/expense/internal-transfer manual save, showing full selected bank-account name, shrinking Home finance tiles while opening history instead of adding, and investigating remaining 1–2s latency. Implementation must not overwrite existing balances, loosen verified money checks or move the floating +. Owner review and real Android tests still required. On 2026-11-09 owner followed up to explicitly forbid fingerprint after 1+ minute while Waffra is continuously open, while retaining the previously agreed actual background-only 60s biometric. Owner also asks to diagnose remaining 1–2s sign-in and protected finance loading. PR #517 includes only this bounded behavior and diagnostic instrumentation, not a guaranteed device speedup.",
+  "change_id": "M615-M618-SMS-REVIEW-30D-UX-CROSS-SENDER-PERF-PR524-20261109",
+  "human_scope_review": "Owner approved generated Waffra SMS review design and explicitly demanded exclusion beneath Yes/No, two alternative templates on No/Edit, 30-day reversible individual exclusion with safe automatic metadata cleanup, cross-sender Select All persistence in notifications, no learning-rules marketing copy anywhere, and real 2–3s login/first-finance diagnostic and safe improvement. This is a new branch / PR #524 after merged PR #517. No SMS or financial ciphertext, account source, historical balances, login KDF, biometric policy or receiver data may be bypassed. Exact-head CI plus real Android proof required before release.",
   "user_requested_changes": [
-    "Correct manual income/expense/transfer save validation without removing mandatory child-account selection or source-verified SQLCipher commit.",
-    "Accept the formatter's valid comma-grouped SAR transfer amount while rejecting malformed, negative and excess-decimal money.",
-    "Show the entire selected account label on the Home monthly summary and preserve its bank/account filtering.",
-    "Shrink Home income, expense and transfer summary tiles; pressing them shows recorded transactions of the selected kind rather than opening an addition form; preserve floating plus.",
-    "Read real internal transfers only from the verified owner-scoped SQLCipher account journal; do not treat transfers as income or expense.",
-    "Add targeted regression coverage and reconcile only obsolete source expectation in existing M549 approval test.",
-    "Keep source-authority security, existing user data, dynamic dates and real-device performance acceptance; do not claim residual latency fixed without measurement.",
-    "M613: remove every foreground 60s idle biometric lock; retain a 60s actual hidden/paused background absence lock with privacy shield, sign-out confirmation, restored-session authentication and unsaved draft preservation.",
-    "M614: isolate profile-mode stage timing for sign-in, verified SQLCipher binding/catalog, first Home data projection and first displayed frame without skipping security checks or inventing transactions."
+    "Keep approved branded SMS-review UI, original SMS in separate expandable card, structured account/amount/type/category/date details and a left RTL scroll-thumb gutter.",
+    "On confirmed suggested Expense No/Edit show exactly Income and Transfer alternative buttons leading to their real templates; symmetric Income alternatives; keep transfer/OTP review fail-closed.",
+    "Place Exclude this message beneath Yes/No, and after success tell user it appears in Excluded for 30 days.",
+    "Use individual exclusion date (not SMS original receipt time); expire encrypted UI labels at 30 days on app SMS scanning/list read, keep only encrypted owner-bound denial fingerprint to prevent historical reappearance, no user SMS deletion and no ledger editing.",
+    "On notifications sender chip changes, maintain checked IDs; Select All of sender B adds to sender A selection. Confirm with all selected live IDs, explicit separate sender-block choice; do not implicitly block whole senders.",
+    "Remove all visible Waffra learns safe rules language, retain local rules behavior and financial validation.",
+    "Shorten unwelcoming initial Home loading copy while protecting verified SQLCipher startup, and skip only demonstrably redundant second OS password verifier probe using exact verified login object identity after secure PBKDF2, never on registration or edits.",
+    "Update old assertions and run new source/widget regression. Physical Android login latency and storage expiry verification remain required."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -19,111 +18,67 @@
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
-    "lib/storage/waffra_account_context_repository.dart",
-    "lib/storage/waffra_verified_accounts_api.dart",
-    "lib/waffra_account_transaction_form.dart",
-    "lib/waffra_idle_biometric_overlay.dart",
-    "test/m440_account_transaction_form_test.dart",
-    "test/m470_idle_biometric_overlay_test.dart",
-    "test/m513_logout_confirmation_test.dart",
+    "lib/waffra_approved_notifications.dart",
+    "native/WaffraAutoSmsStore.kt",
+    "test/m463_auth_first_one_page_test.dart",
+    "test/m514_sms_review_regressions_test.dart",
+    "test/m547_login_isolate_performance_test.dart",
     "test/m549_approved_home_notifications_test.dart",
-    "test/m611_manual_home_finance_regression_test.dart",
+    "test/m580_sms_security_navigation_performance_test.dart",
+    "test/m601_auth_busy_contract_test.dart",
+    "test/m604_fast_login_first_frame_test.dart",
     "test/m613_foreground_lock_and_m614_finance_timing_contract_test.dart",
-    "test/storage/m611_verified_transfer_history_test.dart"
+    "test/m615_m618_sms_review_retention_perf_contract_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
       {
-        "start": "import 'storage/waffra_account_context_read.dart';",
-        "end": "import 'storage/waffra_accounts_repository.dart';"
-      },
-      {
-        "start": " Future<void> entrySheet({MoneyEntry? initial",
-        "end": " Future<void> showReceipt("
-      },
-      {
-        "start": " Widget monthlySummaryCard(){",
-        "end": " Widget smartMoneyInsightsCard(){"
-      },
-      {
-        "start": " Future<void> showSummaryTransactions(bool income)async {",
-        "end": " Widget homeSummaryCard("
-      },
-      {
-        "start": " Widget _m549HomeFinanceAction({",
-        "end": " Widget dashboard(){"
-      },
-      {
-        "start": " Widget dashboard(){",
-        "end": " Widget _currentTabContents(){"
-      },
-      {
-        "start": " Future<void> _loadFinanceSafely()async{",
-        "end": " Widget _financialRecoveryScreen()"
-      },
-      {
-        "start": " Future<void> _syncWidgetTransactions()async{",
-        "end": " Future<void> _refreshWidget()async{"
-      },
-      {
         "start": " Future<void> saveUser(Person u)async {",
         "end": " Future<void> setUiCountry("
-      }
-    ],
-    "lib/waffra_account_transaction_form.dart": [
-      {
-        "start": "int? waffraSarAmountMinor(",
-        "end": "class WaffraAccountTransactionDraft {"
-      }
-    ],
-    "lib/storage/waffra_account_context_repository.dart": [
-      {
-        "start": "class WaffraRecurringAccountTemplate {",
-        "end": "class WaffraAccountContextRepository {"
       },
       {
-        "start": "class WaffraAccountContextRepository {",
-        "end": null
-      }
-    ],
-    "lib/storage/waffra_verified_accounts_api.dart": [
-      {
-        "start": "class WaffraVerifiedAccountsApi implements WaffraAccountOperations {",
-        "end": " Future<T> _commit<T>("
-      }
-    ],
-    "test/m549_approved_home_notifications_test.dart": [
-      {
-        "start": " test('M549 approved Home bell saturated at +999; FAB is unchanged',(){",
-        "end": null
-      }
-    ],
-    "test/m440_account_transaction_form_test.dart": [
-      {
-        "start": " test('M440 SAR parser requires positive integer halalas, no FX relabel',(){",
-        "end": " test('M440 new account opening balances accept Saudi zero in Arabic and English',(){"
-      }
-    ],
-    "lib/waffra_idle_biometric_overlay.dart": [
-      {
-        "start": "import 'package:flutter/material.dart';",
-        "end": "class WaffraIdleBiometricOverlay extends StatefulWidget {"
+        "start": "class LoginScreen extends StatefulWidget {",
+        "end": "class ProfileForm extends StatefulWidget {"
       },
       {
-        "start": "class _WaffraIdleBiometricOverlayState",
+        "start": " Future<void> _openExcludedSenders()async{",
+        "end": " List<WaffraReviewNotice> _m549ReviewNotices(){"
+      },
+      {
+        "start": " Future<bool> _m592ExcludeNotificationSelection(",
+        "end": " Future<void> _m549OpenNotifications()async{"
+      },
+      {
+        "start": " Widget _m615ReviewDetail(",
+        "end": " void _receiveSharedSms(){"
+      },
+      {
+        "start": "  body:_financeLoadFailure!=null?_financialRecoveryScreen():",
+        "end": "  Stack(clipBehavior:Clip.none,children:[GestureDetector("
+      }
+    ],
+    "lib/waffra_approved_notifications.dart": [
+      {
+        "start": "class _WaffraApprovedNotificationsPageState",
         "end": null
       }
     ],
-    "test/m470_idle_biometric_overlay_test.dart": [
+    "native/WaffraAutoSmsStore.kt": [
       {
-        "start": "void main(){",
-        "end": null
-      }
-    ],
-    "test/m513_logout_confirmation_test.dart": [
+        "start": "    private const val excludedMessageInfoBucketPrefix",
+        "end": "    private const val completedTransferBucketPrefix"
+      },
       {
-        "start": "void main() {",
-        "end": "  test('M513 password verifier exists before creating phone session"
+        "start": "    fun scanProgress(context: Context)",
+        "end": "    fun enable(context: Context, allow: Boolean)"
+      },
+      {
+        "start": "    private fun excludedMessageInfo(context: Context",
+        "end": "    private val completedTransferCipherCache"
+      },
+      {
+        "start": "    fun excludeMessages(context: Context",
+        "end": "    fun acknowledgeCompletedTransfer(context: Context"
       }
     ]
   }
