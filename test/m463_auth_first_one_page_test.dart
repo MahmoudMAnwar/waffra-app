@@ -33,7 +33,7 @@ void main() {
   final b=main.indexOf('   HomeScreen(key:ValueKey(language)',a);
   expect(a,greaterThan(0));expect(b,greaterThan(a));
   final route=main.substring(a,b);
-  final login=route.indexOf('LoginScreen(onSave:saveUser)');
+  final login=route.indexOf('LoginScreen(onSave:saveUser,');
   final afterFresh=route.indexOf('(autoSmsConsentPending&&_smsConsentAfterVerifiedSignIn)?');
   final biometric=route.indexOf('locked?WaffraMandatoryBiometricGate');
   final afterRestore=route.indexOf('autoSmsConsentPending?WaffraAutoSmsConsentPage');
