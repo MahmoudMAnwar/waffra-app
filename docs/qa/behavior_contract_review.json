@@ -374,13 +374,14 @@
       "id": "M615-APPROVED-BANK-SMS-REVIEW-DIALOG",
       "issue": "#520 PR #524",
       "previous_behavior": "Unstructured SMS preview, multilines over left-side scrollbar and promotional safe-rule-learning copy.",
-      "approved_behavior": "Owner-approved original SMS expandable card plus structured financial details, separate Yes/No then exclusion, left RTL gutter and no user-visible safe-rule marketing. Maintain readable i18n, OTP and verified account controls.",
+      "approved_behavior": "Owner-approved original SMS expandable card plus structured financial details, separate Yes/No then exclusion, left RTL gutter and no user-visible safe-rule marketing. Maintain readable i18n, OTP and verified account controls. The legacy M574 Python audit remains enabled and now validates each of the eight visible labeled rows (type/amount/description/main/sub/sender/linked account/original time), plus the same verified preview, source suffix, confirmed account count and Yes/No actions.",
       "source_paths": [
         "lib/main.dart"
       ],
       "test_paths": [
         "test/m615_m618_sms_review_retention_perf_contract_test.dart",
-        "test/m580_sms_security_navigation_performance_test.dart"
+        "test/m580_sms_security_navigation_performance_test.dart",
+        "test/qa/m574_sms_confirmation_full_fields_test.py"
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/m550-behavior-contract-preflight.yml",
