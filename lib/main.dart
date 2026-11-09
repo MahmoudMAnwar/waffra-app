@@ -6432,14 +6432,24 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
  Future<void> _loadFinanceSafely()async{
   if(!mounted)return;
+  // M614: measure the real verified finance wait separately from login.
+  final startupClock=kProfileMode?(Stopwatch()..start()):null;
   setState((){ready=false;_financeLoadFailure=null;});
   entries.clear();categories.clear();namedBudgets.clear();goals.clear();recurring.clear();challenges.clear();
   deletedCategories.clear();deletedGoals.clear();deletedRecurring.clear();
   recurringPostponed.clear();smsHashes.clear();learnedMerchantCategories.clear();
   try{
    await load();
+   if(kProfileMode&&startupClock!=null){
+    debugPrint('WAFFRA_FINANCE_PERF source_to_ready_ms='
+     '${startupClock.elapsedMilliseconds}');
+   }
    unawaited(_m467RefreshHomeAccounts());
    WidgetsBinding.instance.addPostFrameCallback((_) {
+    if(kProfileMode&&startupClock!=null){
+     debugPrint('WAFFRA_FINANCE_PERF first_home_frame_ms='
+      '${startupClock.elapsedMilliseconds}');
+    }
     // Home first: encrypted SMS scan starts only after initial layout settles.
     unawaited(()async{
      await Future<void>.delayed(const Duration(milliseconds:900));
@@ -6653,7 +6663,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
  }
  Future<void> load()async {
+  final financeClock=kProfileMode?(Stopwatch()..start()):null;
   await _ensureFinanceBound();
+  final bindMs=financeClock?.elapsedMilliseconds;
   final p=await SharedPreferences.getInstance();
   // An authenticated fresh SQLCipher vault is born with an empty snapshot.
   // Add only absent first-run ledger and category fields via the existing
@@ -6663,6 +6675,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    defaultCategoriesJson:jsonEncode(
     defaultCategories().map((category)=>category.toJson()).toList()),
   );
+  final verifiedSourceMs=financeClock?.elapsedMilliseconds;
   _lastFinanceAuthorityRead=loadedFinance;
   final financeView=loadedFinance.finance;
   financeView.requireIntegrity();
@@ -6860,6 +6873,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   // Category display no longer shows caps. Keep the original category rows
   // intact until the user-confirmed atomic migration commits BOTH collections.
   if(!mounted)return;
+  if(kProfileMode&&financeClock!=null){
+   // Timings only. Never log private finance content or account identity.
+   debugPrint('WAFFRA_FINANCE_PERF bind_ms=${bindMs??-1} '
+    'verified_catalog_ms=${verifiedSourceMs??-1} '
+    'decoded_ready_ms=${financeClock.elapsedMilliseconds}');
+  }
    setState(()=>ready=true);
    // M486 #419: let Home's first interactive frame paint before competing
    // asynchronous widget reads and incoming SMS callbacks begin.
