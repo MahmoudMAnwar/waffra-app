@@ -423,7 +423,7 @@
       "id": "M617-RELOGIN-FINANCE-LOAD-SAFE-FAST-PATH",
       "issue": "#522 PR #524",
       "previous_behavior": "Correct password verified with OS phone-bound verifier, then profile save performed a second redundant secure-storage probe. Startup copy was long and suggested finance had to be downloaded.",
-      "approved_behavior": "After one valid PBKDF2 password check, pass exact ephemeral Person identity to verified save callback, avoiding just the duplicate OS probe. Registration, profile edits, legacy recovery, profile persistence and SQLCipher verified finance binding remain fully checked. Show concise 'بنفتح الرئيسية…' while actually verifying encrypted source. No 2-second improvement claim before Android release profile evidence.",
+      "approved_behavior": "After one valid PBKDF2 password check, pass exact ephemeral Person identity to verified save callback, avoiding just the duplicate OS probe. Registration, profile edits, legacy recovery, profile persistence and SQLCipher verified finance binding remain fully checked. Show concise 'بنفتح الرئيسية…' while actually verifying encrypted source. No 2-second improvement claim before Android release profile evidence. Old M422 and M426 source regressions explicitly require the new verified-only callback AFTER the successful PBKDF2 password-match guard; they are not disabled. M601 widget sends both required callbacks and preserves no-success-on-failed-password.",
       "source_paths": [
         "lib/main.dart"
       ],
@@ -434,7 +434,9 @@
         "test/m613_foreground_lock_and_m614_finance_timing_contract_test.dart",
         "test/m463_auth_first_one_page_test.dart",
         "test/m615_m618_sms_review_retention_perf_contract_test.dart",
-        "test/m580_sms_security_navigation_performance_test.dart"
+        "test/m580_sms_security_navigation_performance_test.dart",
+        "test/m422_phone_only_auth_entry_test.dart",
+        "test/m426_local_phone_credentials_test.dart"
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/m550-behavior-contract-preflight.yml",
