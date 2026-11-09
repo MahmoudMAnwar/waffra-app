@@ -18,14 +18,15 @@ void _resumeFromBackground(WidgetTester tester) {
 }
 
 void main(){
- testWidgets('M470 60s lock sits above an open dialog and restores the exact draft',
+ testWidgets('M613 60s real background absence locks above a dialog and preserves its draft',
   (tester)async{
+   var now=DateTime(2026,11,9,12);
    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
    final draft=TextEditingController(text:'أصل النص');
    addTearDown(draft.dispose);
    await tester.pumpWidget(MaterialApp(
     builder:(ctx,navigator)=>WaffraIdleBiometricOverlay(
-     enabled:true,english:false,onSignOut:()async{},
+     enabled:true,english:false,now:()=>now,onSignOut:()async{},
      child:navigator??const SizedBox.shrink()),
     home:Scaffold(body:Builder(builder:(context)=>FilledButton(
      key:const Key('m470-idle-open-dialog'),
@@ -38,8 +39,13 @@ void main(){
    await tester.tap(find.byKey(const Key('m470-idle-open-dialog')));
    await tester.pumpAndSettle();
    await tester.enterText(find.byKey(const Key('m470-idle-draft')),'تفاصيل محفوظة');
+   await tester.pump(const Duration(minutes:5));
+   // No timeout whatsoever while the editor is still on screen.
+   expect(find.byKey(const Key('m470-idle-lock-biometric')),findsNothing);
+   _moveToBackground(tester);
    await tester.pump();
-   await tester.pump(const Duration(seconds:61));
+   now=now.add(const Duration(seconds:61));
+   _resumeFromBackground(tester);
    await tester.pump();
    expect(find.byKey(const Key('m470-idle-lock-biometric')),findsOneWidget);
    expect(draft.text,'تفاصيل محفوظة');
@@ -54,7 +60,7 @@ void main(){
    expect(draft.text,'تفاصيل محفوظة');
  });
 
- testWidgets('M470 each tap renews the 60s inactivity timer', (tester)async{
+ testWidgets('M613 foreground app never locks even when untouched for hours', (tester)async{
   tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
   await tester.pumpWidget(MaterialApp(
    builder:(ctx,navigator)=>WaffraIdleBiometricOverlay(
@@ -63,13 +69,12 @@ void main(){
    home:const Scaffold(body:Center(child:TextField(
     key:Key('m470-idle-interaction')))),
   ));
-  await tester.pump(const Duration(seconds:50));
-  await tester.tap(find.byKey(const Key('m470-idle-interaction')));
-  await tester.pump();
-  await tester.pump(const Duration(seconds:20));
+  // Reading a summary or leaving an unfinished form open is NOT background.
+  await tester.pump(const Duration(minutes:15));
   expect(find.byKey(const Key('m470-idle-lock-biometric')),findsNothing);
-  await tester.pump(const Duration(seconds:41));
-  expect(find.byKey(const Key('m470-idle-lock-biometric')),findsOneWidget);
+  await tester.tap(find.byKey(const Key('m470-idle-interaction')));
+  await tester.pump(const Duration(minutes:20));
+  expect(find.byKey(const Key('m470-idle-lock-biometric')),findsNothing);
  });
 
  testWidgets('M470 unverified login has no background idle challenge',
@@ -103,6 +108,10 @@ void main(){
   expect(find.byKey(const Key('m470-idle-lock-biometric')),findsNothing);
   expect(find.byKey(const Key('m470-background-green-privacy-shield')),findsNothing);
   expect(draft.text,'المسودة محفوظة');
+  // A short background round-trip must not install a delayed foreground
+  // lock after the user has resumed working.
+  await tester.pump(const Duration(minutes:10));
+  expect(find.byKey(const Key('m470-idle-lock-biometric')),findsNothing);
  });
 
  testWidgets('M470 #22 after 61s background challenges above same draft', (tester)async{
