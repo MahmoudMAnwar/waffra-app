@@ -41,6 +41,36 @@ class WaffraWidgetCaptureApp extends StatefulWidget {
  @override State<WaffraWidgetCaptureApp> createState()=>_WaffraWidgetCaptureState();
 }
 
+/// The disposable FakeAsync widget harness verifies the SAME canonical
+/// finance preflight synchronously. A real `compute` response cannot be
+/// pumped by FakeAsync, whereas production always uses the isolate path.
+/// The verified legacy writer, confirmation and duplicate guard are unchanged.
+class _WaffraWidgetFakeAsyncFinanceAuthority
+    extends WaffraVerifiedFinanceAuthority {
+ _WaffraWidgetFakeAsyncFinanceAuthority(
+     WaffraHomeFinancePersistence persistence)
+   : super(legacy:persistence,
+       sourceGuard:const _WaffraWidgetTestingOnlySourceGuard());
+
+ @override
+ Future<WaffraFinanceAuthorityRead> load({
+  required WaffraFinanceRoute route,
+ }) async {
+  final report=await sourceGuard.inspect();
+  if(report.source!=WaffraProductionFinanceSource.guardedLegacy){
+   throw StateError('Test widget finance source changed.');
+  }
+  final loaded=await legacy.loadWithWitness();
+  loaded.finance.requireIntegrity();
+  return WaffraFinanceAuthorityRead(
+   finance:loaded.finance,
+   source:WaffraRuntimeFinanceBackend.guardedLegacy,
+   widgetRevision:loaded.widgetRevision,
+   ledgerRaw:loaded.ledgerRaw,
+  );
+ }
+}
+
 class _WidgetParsedSms {
  final String raw;
  final BankResult result;
@@ -76,10 +106,7 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
   final binding=_financeBinding;
   if(binding!=null)return binding.authority;
   if(widget.testSourceProbe!=null){
-   return WaffraVerifiedFinanceAuthority(
-    legacy:_financePersistence,
-    sourceGuard:const _WaffraWidgetTestingOnlySourceGuard(),
-   );
+   return _WaffraWidgetFakeAsyncFinanceAuthority(_financePersistence);
   }
   throw StateError('Widget finance source has not been verified.');
  }
