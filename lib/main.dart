@@ -1297,6 +1297,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  final WaffraLiveAccountWriteAuthority _accountWriteAuthority=
      const WaffraLiveAccountWriteAuthority();
  Future<void> saveUser(Person u)async {
+  final profileCommitClock=kProfileMode?(Stopwatch()..start()):null;
   // M513: refuse to declare a new phone profile successfully registered if
   // Android never retained a verifier for that exact account. Keeping the
   // existing login password usable is part of successful account creation.
@@ -1312,6 +1313,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     }
    }
   }
+  final profileGuardMs=profileCommitClock?.elapsedMilliseconds;
   // Profile edits cannot silently detach the stored phone/password verifier.
   if(profile!=null&&profile!.provider.toLowerCase()=='phone'&&
      u.provider.toLowerCase()=='phone'&&profile!.phone!=u.phone){
@@ -1331,6 +1333,12 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    email:u.email.trim().isNotEmpty?u.email.trim():null,
    phone:u.phone.trim().isNotEmpty?u.phone.trim():null,
   );
+  if(kProfileMode&&profileCommitClock!=null){
+   // Profile stage timings only; no phone/password/owner identifiers.
+   debugPrint('WAFFRA_AUTH_PERF post_login_profile_guard_ms='
+    '${profileGuardMs??-1} profile_persist_ms='
+    '${profileCommitClock.elapsedMilliseconds}');
+  }
   // Resume native SMS after the verified authenticated frame, not here.
   final needsGoogleSetup=WaffraSaudiRelease.locationCountryOnboarding&&
    waffraGoogleProfileReadyForCountrySetup(u)&&
