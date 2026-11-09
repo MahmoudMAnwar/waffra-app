@@ -134,6 +134,10 @@
       {
         "start": "  testWidgets('actual login button renders legibly in enabled and busy/disabled states',",
         "end": "  test('M601 source keeps a readable painted spinner and no extra secure-store read',"
+      },
+      {
+        "start": "  test('M601 source keeps a readable painted spinner and no extra secure-store read',",
+        "end": "  test('M601 never loosens phone, biometric recovery, ledger or logout Yes/No',"
       }
     ],
     "test/m604_fast_login_first_frame_test.dart": [
