@@ -22,14 +22,22 @@ class WaffraWidgetCaptureApp extends StatefulWidget {
   this.testWriterDirectory,
   this.testBypassNativeLock = false,
   this.testSourceProbe,
+  this.testOnReady,
+  this.testOnSaveSettled,
  }) : assert(!testBypassNativeLock || testWriterDirectory != null),
-      assert(testSourceProbe == null || testWriterDirectory != null);
+      assert(testSourceProbe == null || testWriterDirectory != null),
+      assert(testOnReady == null || testWriterDirectory != null),
+      assert(testOnSaveSettled == null || testWriterDirectory != null);
  /// Inject an isolated lock folder for widget tests; production uses app support.
  final Directory? testWriterDirectory;
  /// FakeAsync UI tests only; native file-lock correctness has separate tests.
  final bool testBypassNativeLock;
  /// Only for isolated widget tests. Production always uses native key+DB probe.
  final Future<void> Function()? testSourceProbe;
+ /// Disposable widget test: signal the end of async source initialization.
+ final VoidCallback? testOnReady;
+ /// Disposable widget test: signal the end of async confirmed-save attempt.
+ final VoidCallback? testOnSaveSettled;
  @override State<WaffraWidgetCaptureApp> createState()=>_WaffraWidgetCaptureState();
 }
 
@@ -107,6 +115,8 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
    if(mounted)setState((){
     _sourceReady=false;_error='Cannot load local data / تعذر فتح البيانات المحلية';_ready=true;
    });
+  }finally{
+   if(mounted)widget.testOnReady?.call();
   }
  }
 
@@ -295,6 +305,8 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
      'Saving could not be fully confirmed. Review your transactions before retrying.':
      'تعذر تأكيد الحفظ بالكامل. راجع معاملاتك قبل إعادة المحاولة.';
    });
+  }finally{
+   if(mounted)widget.testOnSaveSettled?.call();
   }
  }
 
