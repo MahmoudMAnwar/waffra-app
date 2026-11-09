@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "pr": 529,
-  "issue": "Owner 2026-11-09 M623 PR #529: fix the NEW black/blank screen that appeared after the formerly unwanted Home spinner was removed. Preserve prior authenticated page until genuine full Home is owner-verified, without another loading UI.",
+  "pr": 531,
+  "issue": "Issue #530: owner requests immediate genuine full Home after verified login/biometric and logout-relogin. M624 removes premature native SMS restart from the critical first-frame path without weakening verified account or ledger checks.",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main",
   "reviewed_at": "2026-11-09",
@@ -656,6 +656,33 @@
         "A device physical cold/warm screenshot and performance trace remain required to establish that no black frame persists; static tests alone do not certify smoothness.",
         "M290 still checks country setup consent and ability to skip; M424 and M443 still enforce biometric and logout safeguards. Reconcile exactly four obsolete static source checks, not actual runtime coverage.",
         "M422 still refuses anonymous guest and demo onboarding; authenticated profile identification is checked in the updated root helper."
+      ]
+    },
+    {
+      "id": "M624-VERIFIED-HOME-PAINTS-BEFORE-NATIVE-SMS-RESUME",
+      "issue": "Issue #530 / Draft PR #531",
+      "previous_behavior": "M623 deliberately kept noninteractive login/biometric screen visible while verified Home waited for SQLCipher source/real bank balances. M603 resumed native owner SMS immediately after saveUser's first post-auth frame while Home was still offstage.",
+      "approved_behavior": "The initial native SMS resume occurs once per verified owner session, only after successful Home load has exposed the genuine complete verified dashboard and a frame has painted. Never invoke resume on finance recovery, password/biometric gate, SMS consent page or during logout. Check owner identity/session epoch before and after asynchronous resume; preserve 900ms post-frame non-posting review scan, no new fake screens or delayed security verification. Profile/release actual device timing required to determine remaining unavoidable source read latency.",
+      "source_paths": [
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m603_app_wide_lag_source_regression_test.dart",
+        "test/m624_home_first_sms_after_frame_test.dart",
+        "test/m623_verified_home_handoff_no_black_frame_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m429-integration-smoke.yml"
+      ],
+      "safety_invariants": [
+        "No SMS resume before completed verified financial Home and its first visible frame.",
+        "No post-logout SMS notice for stale profile or epoch and no resume without matching consent.",
+        "No finance source read, account balance, Android biometric or password verifier bypass.",
+        "No fake monetary amount, mask, spinner, black Home or new intermediate authentication route.",
+        "No physical Android performance success claimed from source-only tests."
       ]
     }
   ]
