@@ -1,3 +1,9 @@
+[PR #511 M609 exact-head M440 fix] 2026-11-09 — Open Drift mutex worker before BEGIN IMMEDIATE
+==========================================================================================================
+- M440 existing and new first-install concurrency tests found the background mutex QueryExecutor was lazy: calling runCustom(BEGIN IMMEDIATE) before opening raised LateInitializationError. This blocked first-install data-source preparation, so the PR remains unmerged.
+- Establish the existing background mutex QueryExecutor explicitly with a no-op QueryExecutorUser opening callback before issuing BEGIN IMMEDIATE. This changes no source, key, receipt or finance state and preserves the original SQLite busy timeout, cross-engine lock and release-on-close.
+- Keep M440 fail-closed and concurrent regression tests enabled. New exact-commit CI and Android verification remain required; no pass or APK release is asserted.
+
 [PR #511 M609 startup reservation] 2026-11-09 — Keep concurrent first-install SQL lock off Flutter UI
 ==============================================================================================================
 - The owner-supplied Codex screenshots explicitly identify a SQLite BEGIN IMMEDIATE reservation with busy_timeout=10000 that could block the UI isolate during first-install or re-login source preparation.

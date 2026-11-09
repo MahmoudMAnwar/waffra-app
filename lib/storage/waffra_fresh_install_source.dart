@@ -4,6 +4,7 @@ import 'dart:math';
 
 import 'package:crypto/crypto.dart';
 import 'package:drift/native.dart';
+import 'package:drift/drift.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -15,6 +16,21 @@ import 'waffra_encrypted_store.dart';
 import 'waffra_experimental_writer_gate.dart';
 import 'waffra_fresh_encrypted_vault_bootstrap.dart';
 import 'waffra_live_legacy_finance_guard.dart';
+
+// NativeDatabase.createInBackground is lazy: its QueryExecutor must be opened
+// before issuing the installation mutex's BEGIN IMMEDIATE reservation.
+class _WaffraInstallMutexOpenUser implements QueryExecutorUser {
+  const _WaffraInstallMutexOpenUser();
+
+  @override
+  int get schemaVersion => 1;
+
+  @override
+  Future<void> beforeOpen(
+    QueryExecutor executor,
+    OpeningDetails details,
+  ) async {}
+}
 
 /// Installation receipt for a vault born encrypted. Migrated vaults use
 /// the separate migration binder and cannot acquire this receipt on reopen.
@@ -60,6 +76,7 @@ class WaffraFreshInstallSource {
       setup: (db) => db.execute('PRAGMA busy_timeout=10000'),
     );
     try {
+      await mutex.ensureOpen(const _WaffraInstallMutexOpenUser());
       await mutex.runCustom('BEGIN IMMEDIATE');
       return await _prepareLocked(directory,readKey,writeKey);
     } finally {

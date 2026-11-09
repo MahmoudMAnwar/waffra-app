@@ -8,7 +8,8 @@
     "Coalesce and cache successful finance source preflight within a single immutable verified view only, never caching failures or different source snapshots.",
     "Preserve existing user vaults and migration safeguards, biometric gate, transactional storage, Home and Widget source witness and bank SMS consent.",
     "Add storage integrity and UI event-loop tests, run full exact-head CI and measure real Android frame responsiveness before merge.",
-    "Preserve BEGIN IMMEDIATE cross-engine install serialization but move its up-to-ten-second SQLite busy-lock wait to background worker; add explicit concurrent-initialization UI-loop test."
+    "Preserve BEGIN IMMEDIATE cross-engine install serialization but move its up-to-ten-second SQLite busy-lock wait to background worker; add explicit concurrent-initialization UI-loop test.",
+    "Open the background Drift SQL query executor before issuing the original BEGIN IMMEDIATE installation lock; no caller may bypass the existing serialized install transaction."
   ],
   "allowed_changed_files": [
     "docs/qa/approved_change_scope.json",
@@ -85,7 +86,7 @@
     "lib/storage/waffra_fresh_install_source.dart": [
       {
         "start": "import 'package:crypto/crypto.dart';",
-        "end": "import 'package:flutter_secure_storage/flutter_secure_storage.dart';"
+        "end": "class WaffraFreshInstallSource {"
       },
       {
         "start": "    // POSIX advisory file locks may be shared by Flutter engines in the",
