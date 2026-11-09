@@ -59,12 +59,12 @@ void main(){
     main.indexOf('class ProfileForm extends StatefulWidget'));
   expect(s,contains('WaffraLocalPhoneCredentials.verify('));
   expect(s,contains('oldSalt:'));
-  expect(s,contains('await widget.onSave(verifiedAccount)'));
+  expect(s,contains('await widget.onVerifiedPasswordSave(verifiedAccount)'));
   expect(s,contains('if(!match){'));
   expect(s,contains('hasRegisteredCredentials()'));
   expect(s,contains('signInPassword.text'));
   // The verified profile can only be saved AFTER matching secure credentials.
-  expect(s.indexOf('await widget.onSave(verifiedAccount)'),
+  expect(s.indexOf('await widget.onVerifiedPasswordSave(verifiedAccount)'),
     greaterThan(s.indexOf('if(!match){')));
  });
 }
