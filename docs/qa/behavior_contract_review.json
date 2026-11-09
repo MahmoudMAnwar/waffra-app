@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "pr": 510,
-  "issue": "https://github.com/MahmoudMAnwar/waffra-app/issues/506",
+  "pr": 511,
+  "issue": "2026-11-09 owner request to finish Codex M609 encrypted finance UI isolation",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main",
   "reviewed_at": "2026-11-09",
@@ -217,6 +217,39 @@
         "Never change account identity, financial values, encryption keys or the old account recovery rules.",
         "No automatic posting or acknowledgement of bank SMS as part of login.",
         "No physical Android speed claim from source-only testing."
+      ]
+    },
+    {
+      "id": "M609-FINANCE-SQLCIPHER-AND-SNAPSHOT-UI-ISOLATION",
+      "issue": "Owner-supplied Codex performance screenshots and explicit 2026-11-09 continuation request",
+      "previous_behavior": "SQLCipher NativeDatabase performs native encrypted database open, key and SQLite checks synchronously on Flutter UI isolate. Encrypted large snapshot checksum, JSON validation and financial preflight can repeatedly run on UI in Home, widget and startup source binding even with empty new-user data.",
+      "approved_behavior": "Use a single NativeDatabase.createInBackground worker connection with unchanged SQLCipher 4/key validation, verified source-witness and recovery behavior. Shift encrypted snapshot checksum, canonical JSON decode/preflight and atomic commit preparation into Dart isolates; keep all SQL CAS and transactional invariants. Cache successful preflight only inside the same immutable finance read view; failed checks are retried and never accepted. Await async verification in source authority, binder and catalog recovery without any UI, migration or authentication changes.",
+      "source_paths": [
+        "lib/storage/waffra_encrypted_store.dart",
+        "lib/storage/waffra_atomic_finance_snapshot.dart",
+        "lib/storage/waffra_finance_read_view.dart",
+        "lib/storage/waffra_verified_finance_authority.dart",
+        "lib/storage/waffra_production_finance_authority_binding.dart",
+        "lib/storage/waffra_fresh_home_catalog_recovery.dart"
+      ],
+      "test_paths": [
+        "test/storage/encrypted_store_test.dart",
+        "test/storage/finance_read_view_test.dart",
+        "test/storage/atomic_finance_snapshot_test.dart",
+        "test/storage/production_finance_authority_binding_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/storage-preflight.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/storage-android-integration.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "Do not weaken SQLCipher 4/key checks, encrypted persistent data, existing per-engine writer-lease or source authority.",
+        "Keep existing source digests, canonical preflight, immutable ledger data, widget parity, generation-checked transaction CAS and rollback.",
+        "Never cache a failed or different-revision finance verification; never expose unverified balance or reset an existing vault.",
+        "No biometric, profile, bank SMS, old-account migration, receipt or UI change; exact-head full storage tests and real Android frame traces required before merge."
       ]
     }
   ]

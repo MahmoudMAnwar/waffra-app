@@ -1,3 +1,12 @@
+[PR #511 M609] 2026-11-09 — Owner-approved Codex finance UI-isolation scope (under review)
+=====================================================================================================
+- Follow the owner-supplied Codex screenshots and measurements after already merged #510. Prior 2036ms to 52ms UI-block and 1186ms to 405ms repeated-read measurements are Codex's local observations, not verified by this PR or a real phone.
+- Execute the existing SQLCipher 4 native open/key checks through Drift NativeDatabase.createInBackground with readPool 0, preserving a single encrypted connection, existing key checks, origin validation and cross-engine source/writer authority.
+- Compute encrypted snapshot hash, canonical JSON, finance integrity verification and write-preparation away from Flutter UI via Dart isolates. Keep the original SQL transaction, generation CAS and all existing recovery/rollback/fail-closed checks.
+- Avoid repeated preflight for the identical validated immutable finance view only; keep bad or changed data fail closed. Startup binding, finance authority and first-home catalog recovery await verified background checks without using unsafe display defaults.
+- Add encrypted storage UI-loop test and finance preflight tests. Record strict M385 file/function scope and M550 cross-workflow behavior review. No changes to login, biometric, old user migration, SMS, accounts or visual design.
+- Exact HEAD storage/full app tests, Android build, real cold Home, logout/relogin and transaction-save frame/jank measurements are pending. No merge or signed-main APK certification from source changes alone.
+
 [PR #510 M604] 2026-11-09 — Owner-requested repeat login / empty Home startup latency reduction
 ==================================================================================================
 - Removed the cosmetic 1750ms fixed splash hold. The launch intro paints one real Flutter frame, but encrypted source/owner checks and the mandatory protected startup gates remain required before financial data can appear.

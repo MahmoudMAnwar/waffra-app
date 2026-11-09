@@ -1,6 +1,5 @@
-import 'dart:isolate';
-
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:isolate';
 
 import 'legacy_snapshot_preflight.dart';
 import 'waffra_atomic_finance_snapshot.dart';
