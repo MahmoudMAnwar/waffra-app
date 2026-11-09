@@ -18054,9 +18054,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
   return false;
  }
- // M622: paint the existing Home structure at once, without a full-screen
- // loading animation, invented wording or misleading temporary zero balance.
- // The source authority still has to verify SQLCipher BEFORE money is shown.
  @override Widget build(BuildContext context)=>PopScope(
   // Let the root back policy route account/tabs before double-back exit.
   canPop:true,
