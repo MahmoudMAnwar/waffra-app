@@ -15,11 +15,19 @@ class FullSmsPreviewTest(unittest.TestCase):
   self.assertIsNotNone(method_end,'Could not find SMS review method closing brace')
   block=remaining[:method_end.start()]
   self.assertNotIn('\n void _receiveSharedSms(',block)
-  for text in ('هل العملية صحيحة؟','نوع العملية: ','الوصف: ',
-   'القسم الرئيسي / الفرعي: ','المرسل: ',
-   'تاريخ ووقت العملية الأصلي: ',
-   'previewAccountLabel','previewMainName',
-   'previewDateTime','originalDate.toIso8601String()',
+  # M615 approved review replaced one opaque paragraph with accessible
+  # two-column rows. Keep all audited fields and verified-account safeguards.
+  for text in ("'هل العملية صحيحة؟'",
+   "_m615ReviewDetail(waffraIsEnglish?'Type':'نوع العملية'",
+   "_m615ReviewDetail(waffraIsEnglish?'Amount':'المبلغ'",
+   "_m615ReviewDetail(waffraIsEnglish?'Description':'الوصف'",
+   "_m615ReviewDetail(waffraIsEnglish?'Main category':'القسم الرئيسي'",
+   "_m615ReviewDetail(waffraIsEnglish?'Subcategory':'القسم الفرعي'",
+   "_m615ReviewDetail(waffraIsEnglish?'Sender':'المرسل'",
+   "_m615ReviewDetail(waffraIsEnglish?'Money account':'الحساب المالي'",
+   "_m615ReviewDetail(waffraIsEnglish?'Original date/time':'تاريخ ووقت العملية'",
+   'previewAccountLabel','previewMainName','previewDateTime',
+   'originalDate.toIso8601String()',
    'facts.destinationSuffix:facts.sourceSuffix',
    "Key('m565-sms-yes-confirm')", "Key('m565-sms-no-edit')"):
    self.assertIn(text,block)
