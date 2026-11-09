@@ -44,16 +44,34 @@ void main() {
   });
 
   test('verified sign-in paints first and only then restores owner SMS', () {
-    final section = mainSource.split(' Future<void> saveUser(Person u)async {')[1]
+    final save = mainSource.split(' Future<void> saveUser(Person u)async {')[1]
         .split(' Future<void> setUiCountry(')[0];
-    final displayed = section.indexOf('if(mounted)setState((){');
-    final deferred = section.indexOf('WidgetsBinding.instance.addPostFrameCallback');
-    final resume = section.indexOf('await WaffraAutoSms.resumeAfterSignIn()');
-    expect(displayed, greaterThan(0));
-    expect(deferred, greaterThan(displayed));
-    expect(resume, greaterThan(deferred));
-    expect(section, contains('identical(profile,u)'));
-    expect(section, contains('waffraAutoSmsUpdates.value++'));
+    // Do not resume native collection on the login/biometric transition frame.
+    expect(save, contains('_m624AuthGeneration++;'));
+    expect(save, isNot(contains('WaffraAutoSms.resumeAfterSignIn()')));
+
+    final root = mainSource.split(' Widget _m623RootContent(BuildContext rootContext){')[1]
+        .split(' @override Widget build(BuildContext context)=>MaterialApp(')[0];
+    expect(root, contains(
+      'onVerifiedHomePainted:()=>_m624ResumeSmsAfterVerifiedHome(account)'));
+
+    final resume = mainSource.split(
+      ' void _m624ResumeSmsAfterVerifiedHome(Person expectedOwner){')[1]
+        .split(' void _m623HomeLoaded(')[0];
+    expect(resume, contains('await WaffraAutoSms.resumeAfterSignIn()'));
+    expect(resume, contains('generation!=_m624AuthGeneration'));
+    expect(resume, contains('!identical(profile,expectedOwner)'));
+    expect(resume, contains('autoSmsConsentPending'));
+    expect(resume, contains('_logoutInProgress'));
+
+    final home = mainSource.split(' Future<void> _loadFinanceSafely()async{')[1]
+        .split(' Widget _financialRecoveryScreen()')[0];
+    expect(home.indexOf('await load();'),
+      lessThan(home.indexOf('widget.onVerifiedReady?.call();')));
+    expect(home.indexOf('widget.onVerifiedReady?.call();'),
+      lessThan(home.indexOf('widget.onVerifiedHomePainted?.call();')));
+    expect(home.indexOf('widget.onVerifiedHomePainted?.call();'),
+      lessThan(home.indexOf('await _refreshAutoSmsInbox(importMonth:')));
   });
 
   test('Home first frame precedes four-page month SMS scan', () {
