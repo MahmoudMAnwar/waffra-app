@@ -364,12 +364,16 @@ class MainActivity : FlutterFragmentActivity() {
                     val amount = args?.get("amount") as? String ?: ""
                     val income = args?.get("income") as? Boolean ?: false
                     val linked = args?.get("linkedBudget") as? Boolean ?: false
+                    val entryId = args?.get("entryId") as? String ?: ""
                     result.success(WaffraAutoSmsNotifications.notifySaved(
-                        this, id, income, amount, linked))
+                        this, id, income, amount, linked, entryId))
                 }
                 "notifyAutoSmsNeedsReview" -> {
-                    val id = call.arguments as? String ?: ""
-                    result.success(WaffraAutoSmsNotifications.notifyReview(this, id))
+                    val args = call.arguments as? Map<*, *>
+                    val id = args?.get("hash") as? String
+                        ?: call.arguments as? String ?: ""
+                    val kind = args?.get("kind") as? String ?: "uncertain"
+                    result.success(WaffraAutoSmsNotifications.notifyReview(this, id, kind))
                 }
                 "requestAutoSmsPermission" -> {
                     if (WaffraAutoSmsStore.permissionGranted(this)) result.success(true)
