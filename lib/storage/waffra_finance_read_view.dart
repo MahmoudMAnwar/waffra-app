@@ -1,4 +1,5 @@
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart';
 
 import 'legacy_snapshot_preflight.dart';
 import 'waffra_atomic_finance_snapshot.dart';
@@ -14,6 +15,8 @@ class WaffraFinanceReadView {
       : _values = Map<String, Object?>.unmodifiable(values);
 
   final Map<String, Object?> _values;
+  bool _integrityVerified = false;
+  Future<void>? _integrityCheckInFlight;
 
   factory WaffraFinanceReadView.fromLegacy(
     SharedPreferences preferences,
@@ -47,12 +50,43 @@ class WaffraFinanceReadView {
   ///
   /// This is read-only and works for both legacy and encrypted snapshots.
   void requireIntegrity() {
+    if (_integrityVerified) return;
     final result = WaffraLegacyPreflight.inspect(_values);
     if (!result.canStage) {
       throw StateError(
         'Financial source failed integrity validation; recovery is required.',
       );
     }
+    _integrityVerified = true;
+  }
+
+  /// An immutable screen snapshot needs preflight once, not at every Home,
+  /// SMS, budget or widget hand-off. Failed checks are never cached.
+  Future<void> requireIntegrityInBackground() {
+    if (_integrityVerified) return Future<void>.value();
+    final pending = _integrityCheckInFlight;
+    if (pending != null) return pending;
+    final checking = _checkIntegrityInBackground();
+    _integrityCheckInFlight = checking;
+    return checking.whenComplete(() {
+      if (identical(_integrityCheckInFlight, checking)) {
+        _integrityCheckInFlight = null;
+      }
+    });
+  }
+
+  static bool _inspectFinanceSource(Map<String, Object?> values) =>
+      WaffraLegacyPreflight.inspect(values).canStage;
+
+  Future<void> _checkIntegrityInBackground() async {
+    final immutableValues = _values;
+    final valid = await compute(_inspectFinanceSource, immutableValues);
+    if (!valid) {
+      throw StateError(
+        'Financial source failed integrity validation; recovery is required.',
+      );
+    }
+    _integrityVerified = true;
   }
 
   bool containsKey(String key) {

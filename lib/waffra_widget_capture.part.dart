@@ -22,15 +22,53 @@ class WaffraWidgetCaptureApp extends StatefulWidget {
   this.testWriterDirectory,
   this.testBypassNativeLock = false,
   this.testSourceProbe,
+  this.testOnReady,
+  this.testOnSaveSettled,
  }) : assert(!testBypassNativeLock || testWriterDirectory != null),
-      assert(testSourceProbe == null || testWriterDirectory != null);
+      assert(testSourceProbe == null || testWriterDirectory != null),
+      assert(testOnReady == null || testWriterDirectory != null),
+      assert(testOnSaveSettled == null || testWriterDirectory != null);
  /// Inject an isolated lock folder for widget tests; production uses app support.
  final Directory? testWriterDirectory;
  /// FakeAsync UI tests only; native file-lock correctness has separate tests.
  final bool testBypassNativeLock;
  /// Only for isolated widget tests. Production always uses native key+DB probe.
  final Future<void> Function()? testSourceProbe;
+ /// Disposable widget test: signal the end of async source initialization.
+ final VoidCallback? testOnReady;
+ /// Disposable widget test: signal the end of async confirmed-save attempt.
+ final VoidCallback? testOnSaveSettled;
  @override State<WaffraWidgetCaptureApp> createState()=>_WaffraWidgetCaptureState();
+}
+
+/// The disposable FakeAsync widget harness verifies the SAME canonical
+/// finance preflight synchronously. A real `compute` response cannot be
+/// pumped by FakeAsync, whereas production always uses the isolate path.
+/// The verified legacy writer, confirmation and duplicate guard are unchanged.
+class _WaffraWidgetFakeAsyncFinanceAuthority
+    extends WaffraVerifiedFinanceAuthority {
+ _WaffraWidgetFakeAsyncFinanceAuthority(
+     WaffraHomeFinancePersistence persistence)
+   : super(legacy:persistence,
+       sourceGuard:const _WaffraWidgetTestingOnlySourceGuard());
+
+ @override
+ Future<WaffraFinanceAuthorityRead> load({
+  required WaffraFinanceRoute route,
+ }) async {
+  final report=await sourceGuard.inspect();
+  if(report.source!=WaffraProductionFinanceSource.guardedLegacy){
+   throw StateError('Test widget finance source changed.');
+  }
+  final loaded=await legacy.loadWithWitness();
+  loaded.finance.requireIntegrity();
+  return WaffraFinanceAuthorityRead(
+   finance:loaded.finance,
+   source:WaffraRuntimeFinanceBackend.guardedLegacy,
+   widgetRevision:loaded.widgetRevision,
+   ledgerRaw:loaded.ledgerRaw,
+  );
+ }
 }
 
 class _WidgetParsedSms {
@@ -68,10 +106,7 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
   final binding=_financeBinding;
   if(binding!=null)return binding.authority;
   if(widget.testSourceProbe!=null){
-   return WaffraVerifiedFinanceAuthority(
-    legacy:_financePersistence,
-    sourceGuard:const _WaffraWidgetTestingOnlySourceGuard(),
-   );
+   return _WaffraWidgetFakeAsyncFinanceAuthority(_financePersistence);
   }
   throw StateError('Widget finance source has not been verified.');
  }
@@ -107,6 +142,8 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
    if(mounted)setState((){
     _sourceReady=false;_error='Cannot load local data / تعذر فتح البيانات المحلية';_ready=true;
    });
+  }finally{
+   if(mounted)widget.testOnReady?.call();
   }
  }
 
@@ -295,6 +332,8 @@ class _WaffraWidgetCaptureState extends State<WaffraWidgetCaptureApp> {
      'Saving could not be fully confirmed. Review your transactions before retrying.':
      'تعذر تأكيد الحفظ بالكامل. راجع معاملاتك قبل إعادة المحاولة.';
    });
+  }finally{
+   if(mounted)widget.testOnSaveSettled?.call();
   }
  }
 

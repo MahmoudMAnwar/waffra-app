@@ -1,3 +1,31 @@
+[PR #511 M609 exact-head M440 fix] 2026-11-09 — Open Drift mutex worker before BEGIN IMMEDIATE
+==========================================================================================================
+- M440 existing and new first-install concurrency tests found the background mutex QueryExecutor was lazy: calling runCustom(BEGIN IMMEDIATE) before opening raised LateInitializationError. This blocked first-install data-source preparation, so the PR remains unmerged.
+- Establish the existing background mutex QueryExecutor explicitly with a no-op QueryExecutorUser opening callback before issuing BEGIN IMMEDIATE. This changes no source, key, receipt or finance state and preserves the original SQLite busy timeout, cross-engine lock and release-on-close.
+- Keep M440 fail-closed and concurrent regression tests enabled. New exact-commit CI and Android verification remain required; no pass or APK release is asserted.
+
+[PR #511 M609 startup reservation] 2026-11-09 — Keep concurrent first-install SQL lock off Flutter UI
+==============================================================================================================
+- The owner-supplied Codex screenshots explicitly identify a SQLite BEGIN IMMEDIATE reservation with busy_timeout=10000 that could block the UI isolate during first-install or re-login source preparation.
+- Keep the same cross-engine POSIX writer lock AND the same plain SQLite installation mutex with BEGIN IMMEDIATE, held across all original key, receipt, vault and installation source integrity steps. Host only the lock database on Drift's single background native SQLite connection and close it to release the reservation (no early unlock, alternative installation, source switch or finance changes).
+- Expand the existing M440 concurrency tests with an external SQLite mutex holding BEGIN IMMEDIATE while the first-install UI event-loop timer must still tick. Verify source identity after the lock releases. Preserve and rerun existing encrypted storage and rollback tests.
+- The added scope and behavior review are recorded in M385/M550. Performance on a physical Android phone and latest CI suite remain unverified; no release/merge claim.
+
+[PR #511 M609 exact-head correction] 2026-11-09 — Isolate callback must not capture SQLCipher database
+=============================================================================================================
+- Full existing receipt, merchant and concurrency tests found a real M609 regression: an anonymous Isolate.run callback closed over Drift's unsendable database/transaction, failing before saving. Do not hide or skip this error.
+- Invoke named static pure-Dart finance snapshot encode/decode and integrity callbacks via Flutter compute with only sendable strings, numbers and finance maps. Keep native SQLCipher worker, source witnesses, all original digest/canonical checks and SQL transactional CAS unchanged.
+- Same PR, no new UI feature, no security exceptions. CI and actual Android measurements on this exact correction commit are pending.
+
+[PR #511 M609] 2026-11-09 — Owner-approved Codex finance UI-isolation scope (under review)
+=====================================================================================================
+- Follow the owner-supplied Codex screenshots and measurements after already merged #510. Prior 2036ms to 52ms UI-block and 1186ms to 405ms repeated-read measurements are Codex's local observations, not verified by this PR or a real phone.
+- Execute the existing SQLCipher 4 native open/key checks through Drift NativeDatabase.createInBackground with readPool 0, preserving a single encrypted connection, existing key checks, origin validation and cross-engine source/writer authority.
+- Compute encrypted snapshot hash, canonical JSON, finance integrity verification and write-preparation away from Flutter UI via Dart isolates. Keep the original SQL transaction, generation CAS and all existing recovery/rollback/fail-closed checks.
+- Avoid repeated preflight for the identical validated immutable finance view only; keep bad or changed data fail closed. Startup binding, finance authority and first-home catalog recovery await verified background checks without using unsafe display defaults.
+- Add encrypted storage UI-loop test and finance preflight tests. Record strict M385 file/function scope and M550 cross-workflow behavior review. No changes to login, biometric, old user migration, SMS, accounts or visual design.
+- Exact HEAD storage/full app tests, Android build, real cold Home, logout/relogin and transaction-save frame/jank measurements are pending. No merge or signed-main APK certification from source changes alone.
+
 [PR #510 M604] 2026-11-09 — Owner-requested repeat login / empty Home startup latency reduction
 ==================================================================================================
 - Removed the cosmetic 1750ms fixed splash hold. The launch intro paints one real Flutter frame, but encrypted source/owner checks and the mandatory protected startup gates remain required before financial data can appear.
@@ -2990,3 +3018,13 @@ M597 – PR #505 / Seven Owner Feedback Items #498–#504 (2026-11-08, SOURCE PE
 - M607 fixed an M429 Flutter analyzer unnecessary-null-comparison warning: a verified finance refresh ledger is non-null by source contract. Removed only the unreachable empty-ledger ternary; retained strict decode, verified SQLCipher authority and asynchronous bounded entry projection. M429/M550 passed on SHA e99fa0d.
 - M449 release-notes ancestry requires this latest review to be committed AFTER every application code change before a main APK can publish; no workflow guard bypass.
 - This PR remains Draft. Exact-head all-workflow green CI, protected finance tests, real profile Android dropped-frame/p95/tap-to-feedback traces and clean-install/upgrade verification are still required. Do NOT assert a guaranteed lag-free APK or merge/release readiness from source-level CI alone.
+
+
+[M609/M610 PR #511 BACKGROUND FINANCE UI PRE-FLIGHT AND WIDGET TEST REPAIR — CI PENDING] 2026-11-09
+- PR #511 retains the original SQLCipher encrypted finance source, key checks, snapshot digests, single database connection and Home/Widget source CAS. Native encrypted database creation and financial snapshot integrity/preflight move to background workers, without a new finance authority or a user-data reset. Real device latency and signed APK verification remain outstanding.
+- Issue #512 documents two formerly failing quick bank-SMS WidgetTests: both timed out on FakeAsync `pumpAndSettle` because M609 now awaits real Dart `compute` integrity preflight. The disposable test harness now emits test-only initialization/save-settled signals; the two original tests await real async tasks with `tester.runAsync`, still asserting automatic paste analysis, confirmed-only exact amount, duplicate hash and no plaintext original SMS. No production integrity, financial source lock, banking logic or auto-posting behavior was relaxed.
+- The M550 behavior-contract manifest explicitly records the new test-only widget callbacks, all original positive and safety expectations remain. Status: source code ready, **new exact-HEAD full Flutter/SQLCipher/Android CI and physical Android acceptance not yet certified**. No main merge or release claim.
+
+[M610 CI FOLLOW-UP: FAKEASYNC FINANCE PREFLIGHT — EXACT HEAD CI PENDING] 2026-11-09
+- The first full Flutter rerun on PR #511 confirmed both widget tests were STILL blocked by 20s timeout awaiting compute from inside FakeAsync. Existing widget harness now injects a disposable verified legacy authority that runs precisely the original synchronous WaffraFinanceReadView.requireIntegrity(), including fail-closed error checking, rather than attempting an unreachable background isolate handshake during widget testing. Production authority continues real background isolate and native SQLCipher as before.
+- No SMS auto-post, duplicate acceptance, financial snapshot bypass, account/source switching or data reset. The two unchanged functional test assertions remain mandatory; testing scope is M385-bounded and M550-reviewed. Exact-head CI and actual profile Android acceptance not yet reported successful.

@@ -22,7 +22,7 @@ abstract final class WaffraFreshHomeCatalogRecovery {
     required String defaultCategoriesJson,
   }) async {
     var current = await authority.load(route: WaffraFinanceRoute.dashboardRead);
-    current.finance.requireIntegrity();
+    await current.finance.requireIntegrityInBackground();
     if (current.source != WaffraRuntimeFinanceBackend.verifiedEncrypted) {
       return current;
     }
@@ -61,7 +61,7 @@ abstract final class WaffraFreshHomeCatalogRecovery {
       changedValues: replacements,
     );
     current = await authority.load(route: WaffraFinanceRoute.dashboardRead);
-    current.finance.requireIntegrity();
+    await current.finance.requireIntegrityInBackground();
     if (current.source != WaffraRuntimeFinanceBackend.verifiedEncrypted ||
         !current.finance.containsKey('entries') ||
         !current.finance.containsKey('waffra_categories_v24') ||

@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sqlite3/sqlite3.dart';
 import 'package:waffra/storage/waffra_encrypted_store.dart';
 import 'package:waffra/storage/waffra_fresh_install_source.dart';
 
@@ -47,4 +48,45 @@ void main() {
     expect(await prepare(),isNotNull);
     expect(key,originalKey);
   });
+  test('contended first-install SQL reservation leaves UI event loop responsive',
+      () async {
+    // A competing engine may hold BEGIN IMMEDIATE for a few frames. The
+    // primary Flutter isolate must remain interactive while it waits.
+    final mutex = sqlite3.open('${directory.path}/waffra-install-lock.sqlite');
+    mutex.execute('BEGIN IMMEDIATE');
+    var released = false;
+    try {
+      var finished = false;
+      final opening = prepare().then((source) {
+        finished = true;
+        return source;
+      });
+      await Future<void>.delayed(const Duration(milliseconds: 70));
+      expect(finished, isFalse,
+          reason: 'The external SQLite reservation is still held.');
+      // This delayed event cannot run when BEGIN IMMEDIATE blocks UI.
+      var uiTicked = false;
+      await Future<void>.delayed(const Duration(milliseconds: 30))
+          .then((_) => uiTicked = true);
+      expect(uiTicked, isTrue);
+      mutex.execute('ROLLBACK');
+      released = true;
+      final source = await opening.timeout(const Duration(seconds: 15));
+      expect(source, isNotNull,
+          reason: 'The original encrypted first-run receipt must survive lock contention.');
+      final store = WaffraEncryptedStore.openAt(
+        File('${directory.path}/${WaffraEncryptedStore.encryptedDatabaseFilename}'),
+        key: key!,
+      );
+      try {
+        await source!.verify(store);
+      } finally {
+        await store.close();
+      }
+    } finally {
+      if (!released) mutex.execute('ROLLBACK');
+      mutex.close();
+    }
+  });
+
 }

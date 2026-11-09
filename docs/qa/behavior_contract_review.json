@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "pr": 510,
-  "issue": "https://github.com/MahmoudMAnwar/waffra-app/issues/506",
+  "pr": 511,
+  "issue": "2026-11-09 owner request to finish Codex M609 encrypted finance UI isolation",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main",
   "reviewed_at": "2026-11-09",
@@ -217,6 +217,66 @@
         "Never change account identity, financial values, encryption keys or the old account recovery rules.",
         "No automatic posting or acknowledgement of bank SMS as part of login.",
         "No physical Android speed claim from source-only testing."
+      ]
+    },
+    {
+      "id": "M609-FINANCE-SQLCIPHER-AND-SNAPSHOT-UI-ISOLATION",
+      "issue": "Owner-supplied Codex performance screenshots and explicit 2026-11-09 continuation request",
+      "previous_behavior": "SQLCipher NativeDatabase performs native encrypted database open, key and SQLite checks synchronously on Flutter UI isolate. Encrypted large snapshot checksum, JSON validation and financial preflight can repeatedly run on UI in Home, widget and startup source binding even with empty new-user data. Fresh-install prepareIn also opens a plain SQLite mutex and uses synchronous BEGIN IMMEDIATE with busy_timeout=10000 on Flutter UI, blocking input if another engine owns that installation lock.",
+      "approved_behavior": "Use a single NativeDatabase.createInBackground worker connection with unchanged SQLCipher 4/key validation, verified source-witness and recovery behavior. Shift encrypted snapshot checksum, canonical JSON decode/preflight and atomic commit preparation into Dart isolates; keep all SQL CAS and transactional invariants. Cache successful preflight only inside the same immutable finance read view; failed checks are retried and never accepted. Await async verification in source authority, binder and catalog recovery without any UI, migration or authentication changes. Move only the 10-second contended BEGIN IMMEDIATE reservation to a single background native SQLite worker, keep it held while encrypted creation and OS key receipt checks run, close to release exactly as before; add contention/timer and concurrent first-install proof.",
+      "source_paths": [
+        "lib/storage/waffra_encrypted_store.dart",
+        "lib/storage/waffra_atomic_finance_snapshot.dart",
+        "lib/storage/waffra_finance_read_view.dart",
+        "lib/storage/waffra_verified_finance_authority.dart",
+        "lib/storage/waffra_production_finance_authority_binding.dart",
+        "lib/storage/waffra_fresh_home_catalog_recovery.dart",
+        "lib/storage/waffra_fresh_install_source.dart"
+      ],
+      "test_paths": [
+        "test/storage/encrypted_store_test.dart",
+        "test/storage/finance_read_view_test.dart",
+        "test/storage/atomic_finance_snapshot_test.dart",
+        "test/storage/production_finance_authority_binding_test.dart",
+        "test/storage/m440_fresh_install_source_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/storage-preflight.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/storage-android-integration.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "Do not weaken SQLCipher 4/key checks, encrypted persistent data, existing per-engine writer-lease or source authority.",
+        "Keep existing source digests, canonical preflight, immutable ledger data, widget parity, generation-checked transaction CAS and rollback.",
+        "Never cache a failed or different-revision finance verification; never expose unverified balance or reset an existing vault.",
+        "No biometric, profile, bank SMS, old-account migration, receipt or UI change; exact-head full storage tests and real Android frame traces required before merge.",
+        "The fresh-install BEGIN IMMEDIATE reservation must serialize two engines and never unlock before key/receipt and active-source witnesses are durable; do not create an empty vault when existing key/data disagree."
+      ]
+    },
+    {
+      "id": "M610-WIDGET-ISOLATE-TEST-COMPLETION",
+      "issue": "Issue #512 / two real widget CI timeouts on PR #511 after M609 isolated finance integrity",
+      "previous_behavior": "The widget quick-SMS test uses pumpAndSettle immediately after mounting an indeterminate loading indicator, and again relies on fixed-duration fake pumps for a confirmed financial save. After M609 moves source integrity to Flutter compute, FakeAsync cannot drive that background completion, and both tests time out before their actual bank SMS and confirmed-writer assertions execute.",
+      "approved_behavior": "For disposable FakeAsync widget tests only, inject a test-specific legacy finance authority that executes the SAME fail-closed WaffraFinanceReadView.requireIntegrity() synchronously, since the production compute isolate cannot be driven inside FakeAsync. Production authority and SQLCipher asynchronous integrity remain untouched and are covered by storage tests. Test-only ready and save-settled callbacks signal completion; both original SMS tests must still verify auto-paste debounce, pre-confirm empty ledger, confirmed amount/SHA dedup, and legacy raw-bank-SMS redaction with timeout bounded waits.",
+      "source_paths": [
+        "lib/waffra_widget_capture.part.dart"
+      ],
+      "test_paths": [
+        "test/waffra_widget_quick_capture_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Production never injects test-only ready/save callbacks, and real finance integrity checks are not bypassed.",
+        "Both existing Flutter widget tests must complete and assert actual automatic SMS analysis and post-confirmation only financial commit.",
+        "Keep SQLCipher/source/key witnesses, native inter-engine lock, owner data and bank SMS SHA duplicate prevention fully unchanged.",
+        "Do not claim device validation or green exact-head workflow gates until they are independently observed.",
+        "FakeAsync synchronous canonical preflight executes all original checks rather than skipping validation; production still uses background compute on Home and Widget."
       ]
     }
   ]

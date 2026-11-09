@@ -399,7 +399,7 @@ class WaffraVerifiedFinanceAuthority {
     final selected = await _requireRoute(route);
     if (selected == WaffraRuntimeFinanceBackend.guardedLegacy) {
       final loaded = await legacy.loadWithWitness();
-      loaded.finance.requireIntegrity();
+      await loaded.finance.requireIntegrityInBackground();
       return WaffraFinanceAuthorityRead(
         finance: loaded.finance,
         source: selected,
@@ -410,7 +410,7 @@ class WaffraVerifiedFinanceAuthority {
     // Underlying SQLCipher bridge independently rechecks durable witnesses
     // under native cross-engine file lock, not the caller's own boolean.
     final loaded = await encryptedSession!.loadForDashboardOrWidget();
-    loaded.finance.requireIntegrity();
+    await loaded.finance.requireIntegrityInBackground();
     return WaffraFinanceAuthorityRead(
       finance: loaded.finance,
       source: selected,

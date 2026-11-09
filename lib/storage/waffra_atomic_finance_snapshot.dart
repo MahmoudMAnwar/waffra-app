@@ -1,6 +1,6 @@
 import 'dart:convert';
-
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 
 import 'legacy_snapshot_preflight.dart';
 import 'waffra_encrypted_store.dart';
@@ -143,6 +143,16 @@ CREATE TABLE IF NOT EXISTS $_table(
     final row = rows.single;
     final raw = row.read<String>('snapshot_json');
     final digest = row.read<String>('digest');
+    final generation = row.read<int>('generation');
+    // Preserve *all* digest, schema and canonical-encoding checks, but keep
+    // JSON decoding / finance preflight off the UI isolate.
+    return compute(_decodeRead, (raw, digest, generation));
+  }
+
+  static WaffraFinanceSnapshotState _decodeRead(
+    (String, String, int) input,
+  ) {
+    final (raw, digest, generation) = input;
     if (_digest(raw) != digest) {
       throw StateError('Encrypted financial snapshot checksum mismatch.');
     }
@@ -169,10 +179,20 @@ CREATE TABLE IF NOT EXISTS $_table(
       throw StateError('Finance snapshot encoding is not canonical.');
     }
     return WaffraFinanceSnapshotState(
-      generation: row.read<int>('generation'),
+      generation: generation,
       digest: digest,
       values: valid,
     );
+  }
+
+  // Named static callback receives only plain immutable finance inputs.
+  // No Dart isolate may capture a Drift database/transaction context.
+  static (String, String) _prepareCommit(
+    Map<String, Object?> fullFinanceSnapshot,
+  ) {
+    final captured = _validate(fullFinanceSnapshot);
+    final json = _jsonOf(captured);
+    return (json, _digest(json));
   }
 
   /// Caller must hold the same writer gate as the dashboard/Android widget.
@@ -185,9 +205,11 @@ CREATE TABLE IF NOT EXISTS $_table(
         expectedGeneration >= 9223372036854775806) {
       throw ArgumentError.value(expectedGeneration, 'expectedGeneration');
     }
-    final captured = _validate(fullFinanceSnapshot);
-    final json = _jsonOf(captured);
-    final digest = _digest(json);
+    // A large ledger's validation, canonical encoding and digest are pure
+    // computations. Keep the source generation CAS inside the SQL transaction.
+    final (json, digest) = await compute(
+      _prepareCommit, fullFinanceSnapshot,
+    );
     return store.transaction(() async {
       await _requireReady();
       final before = await _readUnsafe();

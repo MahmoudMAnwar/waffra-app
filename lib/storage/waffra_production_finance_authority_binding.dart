@@ -171,7 +171,7 @@ class WaffraProductionFinanceAuthorityBinding {
       if (startup.encryptedWitness == null) {
         throw StateError('Encrypted startup source witness is missing.');
       }
-      startup.finance.requireIntegrity();
+      await startup.finance.requireIntegrityInBackground();
       return WaffraProductionFinanceAuthorityBinding._(
         authority: authority, encrypted: true, store: store,
         accountsBridge: bridge,
