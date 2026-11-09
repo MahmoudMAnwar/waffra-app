@@ -1,32 +1,21 @@
 {
   "contract_version": 1,
-  "change_id": "M624-DEFER-SMS-AFTER-VERIFIED-HOME-ISSUE530-20261109",
-  "human_scope_review": "Owner explicitly requests instant-feeling Home after first login/biometrics and logout/relogin; no frozen auth page. Approved Issue #530 specifies removing competing pre-Home native SMS resume, retaining fully verified original Home and no fake/partial data. Defer SMS resume and scan sequentially until after genuine Home first frame; serialize native resume with signout to protect privacy. Preserve all account/SQLCipher/biometric and previous static and runtime guards. M429 revealed stale inherited M623 entries in the M385 allowlist: remove exactly the eleven files unchanged relative to the PR #532 main base, preserving all bounded checks for M624 edited production and test files.",
+  "change_id": "M625-SINGLE-VERIFIED-SQLCIPHER-HOME-READ-ISSUE533-PR534-20261109",
+  "human_scope_review": "Owner explicitly requests no freeze on first biometric Home and on logout→relogin, asks for exact source flow after code edit. Limit changes to eliminating one redundant full SQLCipher bind-time read before the mandatory Home dashboard read, profile-mode handoff time measurement, source-preserving tests, requirements/scope/release/behavior documentation. Keep authenticated owner, SQLCipher activation/source witnesses, first complete actual finance Home, 600000-round password check, first-run mandatory biometric, no relogin re-prompt, existing 900ms post-frame native SMS ordering. This manifest records requested scope; formal human approval/physical-device performance acceptance remain pending.",
   "user_requested_changes": [
-    "M624 CI correction: carry over no unrelated M623 changed-file allowances. M385 must enforce exactly the changed files against PR #532 base, with protected source region boundaries intact.",
-    "Reconcile M442's obsolete positive assertion requiring native SMS resume from saveUser: keep verified Android bridge and capture/logout guarantees while requiring post-verified-Home resume and owner checks.",
-    "M624 / Issue #530: update M603 positive regression to assert native SMS resume only after the first verified Home frame and never inside saveUser, preserving owner and logout guards.",
-    "Issue #530/M624: Avoid competing Android SMS native work during owner-verified Home startup; resume SMS and scan only after the real first Home frame and never on a stale/signing-out owner session.",
-    "Fix the failing M174 Python M552 regression by replacing the obsolete GNU-only command expectation with checks for unchanged pins, portable digest computation, and explicit reject-on-tamper behavior.",
-    "Repair repeat CI failures on the approved M623 branch: retain exact pinned SHA256 digests while replacing GNU-only hash checking with macOS/Linux portable verification.",
-    "Eliminate the black/blank frame introduced by replacing the Home spinner with SizedBox.shrink, without adding a substitute loading screen or fake financial placeholders.",
-    "Keep the already-visible successful authentication, biometric or permission screen in place while the existing verified Home backend read completes; do not request credentials again.",
-    "Show the genuine complete Home with actual balance and accounts, transactions, summaries and controls together immediately when its owner-bound read finishes.",
-    "Keep Home state through Arabic/English UI switches so a language toggle does not repeat a cold encrypted read or produce another blank screen.",
-    "Preserve verified finance fail-closed recovery, account owner boundaries, existing logout behavior and post-home-frame background SMS review scan.",
-    "Update protected source contract tests and add M623 coverage, while maintaining mandatory security and full exact-head GitHub CI and physical-device checks.",
-    "Reconcile four legacy M290/M424/M443 positive assertions to the approved retained-screen control flow, retaining checks of country consent, OS biometric protection, credential-safe logout and native workflow verification without skips.",
-    "Keep the M422 no-guest/no-demo/no quick-start login test active against the new account-scoped Home root, without allowing anonymous access to private financial data."
+    "M625 / Issue #533: remove the duplicate encrypted finance full read at installed Android Home binding; dashboardRead still verifies actual encrypted snapshot, integrity, category and account balance before Home readiness.",
+    "Measure first-Home-frame profile-mode timings separately after biometric and after verified password re-login, without logging any user identity, password or financial values.",
+    "Keep password and biometric security gates, sign-out native capture suspension, no extra relogin biometric, original complete Home first visible, and post-first-frame SMS resume/scan untouched.",
+    "Add new negative/source regression tests for installed Home-only deferred read, protected Widget/root paths and both authenticated navigation routes; update requirements, release notes and every-workflow behavior review."
   ],
   "allowed_changed_files": [
+    "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
-    "test/m603_app_wide_lag_source_regression_test.dart",
-    "docs/WAFFRA_REQUIREMENTS.md",
-    "test/m624_deferred_sms_after_verified_home_test.dart",
-    "test/qa/m442_sms_consent_session_recovery_test.py"
+    "lib/storage/waffra_production_finance_authority_binding.dart",
+    "test/m625_single_verified_home_read_login_handoff_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -35,28 +24,18 @@
         "end": "class PinLockScreen extends StatefulWidget {"
       },
       {
-        "start": "class HomeScreen extends StatefulWidget {",
-        "end": "// Scroll-linked, pinned balance summary."
-      },
-      {
-        "start": " Future<void> _loadFinanceSafely()async{",
-        "end": " Widget _financialRecoveryScreen()"
+        "start": " Future<void> _bindFinanceSource()async{",
+        "end": " // Account filters are presentation-only;"
       }
     ],
-    "test/m603_app_wide_lag_source_regression_test.dart": [
+    "lib/storage/waffra_production_finance_authority_binding.dart": [
       {
-        "start": "    expect(mainSource, contains('locked=u!=null;startupError=null;loading=false;'));",
-        "end": "    final overlay = File('lib/waffra_idle_biometric_overlay.dart').readAsStringSync();"
+        "start": "  static Future<WaffraProductionFinanceAuthorityBinding> bind({",
+        "end": "    final freshInstall = installedApp && Platform.isAndroid"
       },
       {
-        "start": "  test('verified sign-in paints first and only then restores owner SMS', () {",
-        "end": "  test('Home first frame precedes four-page month SMS scan', () {"
-      }
-    ],
-    "test/qa/m442_sms_consent_session_recovery_test.py": [
-      {
-        "start": "    def test_bridge_is_wired_to_native_with_no_os_reprompt_on_relogin(self):",
-        "end": "    def test_dashboard_does_not_hide_disabled_or_corrupt_queue_as_zero(self):"
+        "start": "      final authority = WaffraVerifiedFinanceAuthority(",
+        "end": "    } catch (_) {\n      await store.close();"
       }
     ]
   }
