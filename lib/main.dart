@@ -6524,6 +6524,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }
   }finally{
    _autoSmsReviewOpen=false;
+   // Another Android notice tapped during this review is still waiting.
+   if(mounted&&waffraFinanceNoticeTap.value!=null){
+    WidgetsBinding.instance.addPostFrameCallback((_){
+     if(mounted)_m621OnFinanceNoticeTap();
+    });
+   }
    // A simple Back/Cancel only inspected an already loaded SMS. Reloading
    // and reclassifying 1000 encrypted messages after every closed dialog
    // caused avoidable jank. Successful exclusion, AI stage, transfer and
@@ -9112,6 +9118,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  _smsSheetOpen=false;
  disposeLater();
  _receiveSharedSms();
+ if(mounted&&waffraFinanceNoticeTap.value!=null){
+  WidgetsBinding.instance.addPostFrameCallback((_){
+   if(mounted)_m621OnFinanceNoticeTap();
+  });
+ }
 }
 
  Future<void> _previewForeignBankCurrency(String raw)async {
