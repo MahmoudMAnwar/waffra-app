@@ -19,7 +19,24 @@ abstract final class WaffraAutoSmsAutoPoster {
   Future<void> keepForReview(Map<String,Object?> candidate)async{
    summary['review']=summary['review']!+1;
    final id=candidate['id'];
-   if(id is String)await WaffraAutoSms.notifyReview(id);
+   final body=candidate['body'];
+   if(id is String){
+    var kind='uncertain';
+    if(body is String&&candidate['sensitiveOtp']!=true){
+     final facts=WaffraBankSmsFactsParser.parse(body);
+     if(!facts.pending){
+      kind=switch(facts.kind){
+       WaffraBankOperationKind.income=>'income',
+       WaffraBankOperationKind.expense=>'expense',
+       WaffraBankOperationKind.transfer=>'transfer',
+       _=>'uncertain',
+      };
+     }
+    }
+    // A classification is not a verified financial commit. Every suggested
+    // transaction, including transfers, still opens explicit user review.
+    await WaffraAutoSms.notifyReview(id,kind:kind);
+   }
   }
 
   final prefs=await SharedPreferences.getInstance();
@@ -217,7 +234,7 @@ abstract final class WaffraAutoSmsAutoPoster {
       await WaffraAutoSms.acknowledgeCommitted([id]);
       await WaffraAutoSms.notifyCommitted(
        hash:id,amount:parsed.amount!,income:parsed.income,
-       linkedBudget:false);
+       linkedBudget:false,entryId:entry.id);
       summary['saved']=summary['saved']!+1;
      }else if(committed.saved==0&&
          finalHashes.contains(fingerprint)){
