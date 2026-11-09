@@ -3130,3 +3130,29 @@ The owner reported that the unwanted Home startup spinner had merely become a bl
 - This note is intentionally committed after the last application source
   change, to satisfy the original M449 release-note ancestry check. This is
   not physical Android performance or signed APK release certification.
+
+
+====================================================================================
+[M624 VERIFIABLE HOME-FIRST NATIVE SMS RESUME / ISSUE #530 / DRAFT PR #531]
+====================================================================================
+- Owner requests a responsive full authentic Home immediately after verified
+  initial phone/biometric and normal logout -> password re-login; no new spinner,
+  false/masked balance, blank page or substitute loading copy.
+- Main cause remains prior M623 gate: the previous login screen stays mounted
+  while real SQLCipher ledger, category and account balances are verified.
+  Never bypass that source owner check or show unverified/fabricated numbers.
+- Reduced avoidable first-frame contention by removing Android native
+  WaffraAutoSms.resumeAfterSignIn from the immediate saveUser/login callback.
+  Native resume is now requested only after the verified Home frame paints,
+  respecting account identity, signed-out or biometric lock, SMS consent,
+  stale session generation and once-per-authentication-session semantics.
+- Existing 900ms after-first-frame non-posting SMS inbox import/review remains;
+  no SMS auto-recording or credential/SQLCipher/biometric security change.
+- Updated historical M603 source contract and added M624 regressions for
+  Home first-frame ordering, real owner check, logout cancellation and finance
+  recovery denial. The protected full Home M623 regression remains unchanged.
+- These are source-level checks, not an Android performance or APK measurement.
+  Fresh install, existing-transaction upgrade, physical fingerprint,
+  logout/relogin and 1000-SMS frame traces are pending. No claim that a genuine
+  encrypted store read takes zero milliseconds; keep PR #531 Draft until
+  exact-head CI and Android acceptance are confirmed.
