@@ -9,7 +9,7 @@ void main(){
   final unverified=source.split(' Widget _m622ImmediateHomeSurface()=>')[1]
    .split(' @override Widget build(BuildContext context)=>PopScope(')[0];
   final scaffold=source.split(' @override Widget build(BuildContext context)=>PopScope(')[1]
-   .split('   // A fixed 58x58 FAB:')[0];
+   .split('  // A fixed 58x58 FAB:')[0];
   expect(scaffold,contains('!ready?_m622ImmediateHomeSurface():'));
   expect(unverified,contains("key:const Key('m622-immediate-home-surface')"));
   expect(unverified,contains('WaffraPageHero('));
@@ -28,7 +28,7 @@ void main(){
  test('M622 encryption validation still gates balances and finance actions',(){
   final loader=source.split(' Future<void> _loadFinanceSafely()async{')[1]
    .split(' Widget _financialRecoveryScreen()')[0];
-  final load=source.split(' Future<void> load()async {')[1]
+  final load=source.split(' Future<void> load()async {').last
    .split(' // Home reloading an encrypted ledger')[0];
   expect(loader,contains('setState((){ready=false;_financeLoadFailure=null;});'));
   expect(loader,contains('await load();'));
