@@ -28,22 +28,29 @@ void main() {
    expect(find.text('تاريخ الميلاد'),findsNothing);
   });
 
- test('M463 app authentication always precedes first-run permissions',(){
-  final a=main.indexOf('   startupError!=null?Scaffold(');
-  final b=main.indexOf('   HomeScreen(key:ValueKey(language)',a);
+ test('M623 authentication and permissions precede verified Home reveal',(){
+  final a=main.indexOf(' Widget _m623RootContent(BuildContext rootContext){');
+  final b=main.indexOf(' @override Widget build(BuildContext context)=>MaterialApp(',a);
   expect(a,greaterThan(0));expect(b,greaterThan(a));
   final route=main.substring(a,b);
-  final login=route.indexOf('LoginScreen(onSave:saveUser,');
-  final afterFresh=route.indexOf('(autoSmsConsentPending&&_smsConsentAfterVerifiedSignIn)?');
-  final biometric=route.indexOf('locked?WaffraMandatoryBiometricGate');
-  final afterRestore=route.indexOf('autoSmsConsentPending?WaffraAutoSmsConsentPage');
-  expect(login,greaterThan(0));
-  expect(afterFresh,greaterThan(login));
-  expect(biometric,greaterThan(afterFresh));
-  expect(afterRestore,greaterThan(biometric));
+  // The original signed-out/biometric/permission stages stay mounted and
+  // noninteractive once successfully completed, until genuine Home is ready.
+  expect(route,contains('final needsLogin=account==null||showLogin||'));
+  expect(route,contains('final firstConsent=!needsLogin&&autoSmsConsentPending&&'));
+  expect(route,contains('_smsConsentAfterVerifiedSignIn;'));
+  expect(route,contains('final needsGate=!needsLogin&&!firstConsent&&locked;'));
+  expect(route,contains('final laterConsent=!needsLogin&&!firstConsent&&!needsGate&&autoSmsConsentPending;'));
+  expect(route,contains('final canMountHome=!needsLogin&&!firstConsent&&!needsGate&&'));
+  expect(route,contains('child:LoginScreen(onSave:saveUser,'));
+  expect(route,contains('child:WaffraAutoSmsConsentPage('));
+  expect(route,contains('child:WaffraMandatoryBiometricGate('));
   expect(route,contains('onSignOut:logout'));
-  expect(route,isNot(contains(
-   "autoSmsConsentPending?WaffraAutoSmsConsentPage(\n    english:language=='en',onComplete:finishSmsPermissionChoice):\n   profile==null")));
+  expect(route,contains('child:Offstage(offstage:!_m623HomeReady,'));
+  expect(route,contains('onVerifiedReady:()=>_m623HomeLoaded(account)'));
+  expect(route,contains('profile:account,'));
+  expect(route,isNot(contains('onVerifiedReady:()=>_m623HomeLoaded(account!)')));
+  expect(route,contains('key:const ValueKey(\'waffra-verified-session-home\')'));
+  expect(route,isNot(contains('CircularProgressIndicator(')));
  });
 
  test('M463 first clean install has only one account creation form',(){

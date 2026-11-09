@@ -150,7 +150,10 @@ void main() {
       .readAsStringSync();
     final reminders = File('lib/waffra_reminders.dart')
       .readAsStringSync();
-    expect(main, contains('googleFirstRunSetup&&WaffraSaudiRelease.locationCountryOnboarding?WaffraCountryFirstRunPage('));
+    expect(main, contains('googleFirstRunSetup&&WaffraSaudiRelease.locationCountryOnboarding;'));
+     expect(main, contains('final showCountry=needsCountry||'));
+     expect(main, contains('child:WaffraCountryFirstRunPage('));
+     expect(main, contains('onComplete:completeGoogleCountrySetup'));
     expect(main, contains('googleFirstRunSetup=WaffraSaudiRelease.locationCountryOnboarding&&'));
     expect(main, contains('waffraGoogleProfileReadyForCountrySetup(u)'));
     expect(main, contains('waffraCountrySetupKey('));

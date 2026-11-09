@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "pr": 527,
-  "issue": "Owner 2026-11-09: M620–M622 Issues #525 #526 #528: Android finance notification icon and exact-item navigation; original Home shows all REAL amounts together, no loading phrases or fake/hidden placeholders.",
+  "pr": 529,
+  "issue": "Owner 2026-11-09 M623 PR #529: fix the NEW black/blank screen that appeared after the formerly unwanted Home spinner was removed. Preserve prior authenticated page until genuine full Home is owner-verified, without another loading UI.",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main",
   "reviewed_at": "2026-11-09",
@@ -616,6 +616,46 @@
         "Keep genuine Kotlin compilation, Android resource validation and all Gradle preflight gates enabled.",
         "No production app ID or verified notification PendingIntent target must change to satisfy a compile-only job.",
         "No skipping, removal or weakening of security tests."
+      ]
+    },
+    {
+      "id": "M623-RETAIN-AUTH-SURFACE-UNTIL-VERIFIED-HOME",
+      "issue": "Owner 2026-11-09 black Home after M622 spinner removal / PR #529",
+      "previous_behavior": "After successful password sign-in/biometrics, WaffraApp immediately replaced the previous auth/permission view with HomeScreen. The entire Home build returned SizedBox.shrink() until verified SQLCipher finance and account balances finished, painting a blank/black transitional frame with no content. Old positive M422/M424/M443/M290 tests also asserted exact source fragments from the removed ternary route.",
+      "approved_behavior": "Do not replace the spinner with a black screen or partial fake Home. Keep the already-existing auth/biometric/first-run consent/country view mounted and noninteractive after successful verification while HomeScreen initializes behind Offstage. Only after complete verified ledger AND real account balances are ready, atomically show the existing complete Home with no invented spinner, text or fake/masked numbers. A failed source verification displays the existing actionable finance recovery; an ordinary language change preserves the Home state instead of mounting it again. Source owner identity and anti-relogin checks remain enforced; SMS scan begins only after the first genuine Home frame and 900ms delay. Keep M422 guest/demo blocking assertions under the new local variable named account; no functionality or password verifier may be bypassed to pass a source test.",
+      "source_paths": [
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m623_verified_home_handoff_no_black_frame_test.dart",
+        "test/m622_immediate_home_without_loader_test.dart",
+        "test/m463_auth_first_one_page_test.dart",
+        "test/m424_mandatory_biometrics_test.dart",
+        "test/m426_local_phone_credentials_test.dart",
+        "test/m429_sms_phone_integration_test.dart",
+        "test/m603_app_wide_lag_source_regression_test.dart",
+        "test/m580_sms_security_navigation_performance_test.dart",
+        "test/m290_google_country_reminders_test.dart",
+        "test/m443_merchant_screenshot_regression_test.dart",
+        "test/m422_phone_only_auth_entry_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m174-main-post-merge-sqlcipher.yml",
+        ".github/workflows/m429-integration-smoke.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/android.yml",
+        ".github/workflows/m290-country-reminders-multicurrency.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "No unverified default, stale or masked balances may appear on the Home dashboard.",
+        "Do not mount Home until password/biometric/permissions gates have granted access. Never relaunch OS biometric for an already verified transition.",
+        "Never bypass SQLCipher source integrity, account ownership, financial writes, anti-duplicate SMS or signed-out protection.",
+        "Retain every exact-head static, Flutter, Android and finance CI gate; any failed gate blocks merge.",
+        "A device physical cold/warm screenshot and performance trace remain required to establish that no black frame persists; static tests alone do not certify smoothness.",
+        "M290 still checks country setup consent and ability to skip; M424 and M443 still enforce biometric and logout safeguards. Reconcile exactly four obsolete static source checks, not actual runtime coverage.",
+        "M422 still refuses anonymous guest and demo onboarding; authenticated profile identification is checked in the updated root helper."
       ]
     }
   ]

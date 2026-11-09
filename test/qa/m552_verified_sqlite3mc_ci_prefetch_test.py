@@ -46,7 +46,41 @@ class VerifiedSqliteCiPrefetchTest(unittest.TestCase):
         self.assertIn("upstream='leehack/llamadart-native'", llama)
         self.assertIn("tag='v0.4.1'", llama)
         self.assertIn("d71b8a74b330275efbebd9bd345140645a6c3388cc51e4a6ad3f556d7b0f33c3", llama)
-        self.assertIn('sha256sum --check --status', llama)
+        # M623: The GNU-only --check/--status flags break on macOS.
+        # The pinned digests and BOTH cached/downloaded asset checks remain mandatory.
+        self.assertIn('verify_sha256() {', llama)
+        self.assertIn('shasum -a 256 "$file"', llama)
+        self.assertIn('sha256sum "$file"', llama)
+        self.assertIn('[[ "$actual" == "$expected" ]]', llama)
+        self.assertIn('verify_sha256 "$digest" "$target"', llama)
+        self.assertIn('verify_sha256 "$digest" "$original"', llama)
+        for pin in (
+            'linux-x64:d71b8a74b330275efbebd9bd345140645a6c3388cc51e4a6ad3f556d7b0f33c3',
+            'android-arm64:fca52f625e196b4f5d53b5dcbe9646b6b7641eedbd7f61ab1272ddd5ec0a9ee4',
+            'android-x64:221c6b74eacbba43dfd46b069d0e8a786d6cfb9ac56d64898e1aff0d3480ae84',
+        ):
+            self.assertIn(pin, llama)
+
+
+    def test_llamadart_sha256_check_rejects_wrong_and_tampered_artifacts(self):
+        # Exercise the actual shell verifier, not just its source spelling.
+        script = (ROOT / 'scripts/qa/prefetch_verified_llamadart.sh').read_text(encoding='utf-8')
+        function = script.split('verify_sha256() {', 1)[1].split('\n}\nfor spec', 1)[0]
+        verifier = 'verify_sha256() {' + function + '\n}\nverify_sha256 "$1" "$2"'
+        with tempfile.TemporaryDirectory() as directory:
+            artifact = Path(directory) / 'llamadart-native-fixture.tar.gz'
+            artifact.write_bytes(b'pinned original native archive test fixture')
+            pinned = hashlib.sha256(artifact.read_bytes()).hexdigest()
+            good = subprocess.run(['bash', '-c', verifier, 'bash', pinned, str(artifact)],
+                                  capture_output=True, text=True, check=False)
+            self.assertEqual(0, good.returncode, good.stderr)
+            wrong = subprocess.run(['bash', '-c', verifier, 'bash', '0' * 64, str(artifact)],
+                                   capture_output=True, text=True, check=False)
+            self.assertNotEqual(0, wrong.returncode)
+            artifact.write_bytes(b'changed untrusted native archive')
+            corrupted = subprocess.run(['bash', '-c', verifier, 'bash', pinned, str(artifact)],
+                                       capture_output=True, text=True, check=False)
+            self.assertNotEqual(0, corrupted.returncode)
 
     def test_pinned_sha256_check_succeeds_only_for_matching_bytes(self):
         script = (ROOT / 'scripts/qa/prefetch_verified_sqlite3mc.sh').read_text(encoding='utf-8')

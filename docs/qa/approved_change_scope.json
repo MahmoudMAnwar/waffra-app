@@ -1,164 +1,116 @@
 {
   "contract_version": 1,
-  "change_id": "M620-M621-M622-ANDROID-NOTIFICATIONS-FULL-VERIFIED-HOME-PR527-20261109",
-  "human_scope_review": "Owner approved a new Android small status-bar notification icon and accurate financial notification routing: confident bank SMS kinds as review-only proposals, uncertain as requiring review, exact original Yes/No/Exclude UI on tap, secure saved-ledger details only after actual financial commit. Issues #525 and #526; PR #527. Keep every native owner-scope, biometric, SQLCipher and anti-duplicate check; real Android confirmation required. Owner's later correction M622 (#528): absolutely no added spinner, loading prose, empty mock cards, masked placeholders or fabricated zero balances. Show the original full Home dashboard with every real amount only after verified owner data is ready, in a single frame; continue SMS scan after first ready Home frame. A genuine storage read cannot complete before it starts; do not claim zero latency or remove SQLCipher.",
+  "change_id": "M623-RETAIN-AUTHENTICATED-SCREEN-UNTIL-REAL-HOME-FIRST-FRAME-PR529-20261109",
+  "human_scope_review": "Owner explicitly reported a NEW blank/black screen after earlier Home spinner removal and ordered an actual fix, not another replacement loader. This repair keeps the current login/biometric/permission page visible while the authorized encrypted ledger and account balances are verified, then reveals the genuine full Home together. Avoid new screens, spinners, fake masked balance or artificial data. Preserve SQLCipher, biometric check, existing SMS behavior, data safety and all previous tests. Owner explicitly requested fixing repeated CI errors on PR #529; include the narrowly bounded macOS/Linux SHA256 helper repair and matching M552 regression update in the same reviewed scope. M550/M147 source verification exposed four obsolete tests / workflow assertions; their assertions are replaced by equivalent controls in the approved M623 route while preserving the actual integration tests.",
   "user_requested_changes": [
-    "Replace Android's generic system information notification icon with a minimal one-color wallet mark suited to the status bar and generated Android APK packaging.",
-    "Classify trusted bank SMS income, expense and transfer only as proposals requiring explicit user review; say saved only after verified SQLCipher finance commit.",
-    "On review system notice tap open exactly that source-SMS review with Yes / No-correct-type / Exclude 30 days, never generic Home or guessed financial write.",
-    "On actual committed notification tap open its exact already-persisted owner-verified ledger entry read-only detail, not a second confirmation.",
-    "Handle cold start, warm onNewIntent, mandatory biometric, restored owner and stale SMS securely, with immutable per-notice intent IDs, never plaintext SMS extras.",
-    "Add source and parser regression tests and preserve original security tests, full CI and physical phone verification gates.",
-    "M622 owner correction: reject masked-number pseudo-Home, skeleton, spinner and unauthorized Home loading copy. Show genuine existing Home with real balance, records and action cards together after actual verified owner financial read; do not show an intermediate fake/partial financial screen.",
-    "Keep actual SMS analysis and notification sync asynchronous after first verified Home frame; never force new financial IO or classification into the render path.",
-    "M621 M417 standalone Kotlin compile must install exactly the same monochrome drawable and namespace as packaged Android build so the R resource resolves.",
-    "M622 final implementation: async verified account balances were previously fetched only after the ledger marked Home ready; combine accounts and ledger before first genuine Home paint, overlapping immutable SQLCipher decode and account projection only on already-verified encrypted startup, never racing legacy catalog writes.",
-    "Owner final M622 simultaneous full-screen requirement: gate the complete Home scaffold, not only its body; header, footer, genuine account balances, cards and transactions appear in one frame AFTER the complete encrypted ledger and account read, never staged placeholders.",
-    "M622 Issue #528 QA-only repair: legacy M604 regression must assert awaited owner-verified account balances before ready=true and forbid the previous deferred second account repaint; keep all unchanged security and first-frame SMS guards. No production code change."
+    "Fix the failing M174 Python M552 regression by replacing the obsolete GNU-only command expectation with checks for unchanged pins, portable digest computation, and explicit reject-on-tamper behavior.",
+    "Repair repeat CI failures on the approved M623 branch: retain exact pinned SHA256 digests while replacing GNU-only hash checking with macOS/Linux portable verification.",
+    "Eliminate the black/blank frame introduced by replacing the Home spinner with SizedBox.shrink, without adding a substitute loading screen or fake financial placeholders.",
+    "Keep the already-visible successful authentication, biometric or permission screen in place while the existing verified Home backend read completes; do not request credentials again.",
+    "Show the genuine complete Home with actual balance and accounts, transactions, summaries and controls together immediately when its owner-bound read finishes.",
+    "Keep Home state through Arabic/English UI switches so a language toggle does not repeat a cold encrypted read or produce another blank screen.",
+    "Preserve verified finance fail-closed recovery, account owner boundaries, existing logout behavior and post-home-frame background SMS review scan.",
+    "Update protected source contract tests and add M623 coverage, while maintaining mandatory security and full exact-head GitHub CI and physical-device checks.",
+    "Reconcile four legacy M290/M424/M443 positive assertions to the approved retained-screen control flow, retaining checks of country consent, OS biometric protection, credential-safe logout and native workflow verification without skips.",
+    "Keep the M422 no-guest/no-demo/no quick-start login test active against the new account-scoped Home root, without allowing anonymous access to private financial data."
   ],
   "allowed_changed_files": [
-    ".github/workflows/android-full-smoke.yml",
-    ".github/workflows/android.yml",
-    ".github/workflows/m417-auto-bank-sms.yml",
-    "docs/WAFFRA_REQUIREMENTS.md",
+    ".github/workflows/m290-country-reminders-multicurrency.yml",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
-    "lib/waffra_auto_sms.dart",
-    "lib/waffra_auto_sms_autopost.part.dart",
-    "lib/waffra_messages.dart",
-    "native/WaffraAutoSmsNotifications.kt",
-    "native/WaffraAutoSmsWorker.kt",
-    "native/WaffraMainActivity.kt",
-    "native/waffra_notification_wallet.xml",
-    "test/m580_sms_security_navigation_performance_test.dart",
-    "test/m604_fast_login_first_frame_test.dart",
-    "test/m615_m618_sms_review_retention_perf_contract_test.dart",
-    "test/m620_m621_finance_notification_routing_test.dart",
-    "test/m622_immediate_home_without_loader_test.dart"
+    "scripts/qa/prefetch_verified_llamadart.sh",
+    "test/qa/m552_verified_sqlite3mc_ci_prefetch_test.py",
+    "test/m290_google_country_reminders_test.dart",
+    "test/m422_phone_only_auth_entry_test.dart",
+    "test/m424_mandatory_biometrics_test.dart",
+    "test/m426_local_phone_credentials_test.dart",
+    "test/m429_sms_phone_integration_test.dart",
+    "test/m443_merchant_screenshot_regression_test.dart",
+    "test/m463_auth_first_one_page_test.dart",
+    "test/m603_app_wide_lag_source_regression_test.dart",
+    "test/m623_verified_home_handoff_no_black_frame_test.dart"
   ],
   "bounded_sections": {
-    ".github/workflows/android.yml": [
+    "test/qa/m552_verified_sqlite3mc_ci_prefetch_test.py": [
       {
-        "start": "          for filename in ('WaffraAutoSmsStore.kt'",
-        "end": "          if 'android.intent.action.SEND' not in xml:"
+        "start": "    def test_official_api_sha256_pins_every_supported_ci_abi(self):",
+        "end": "    def test_pinned_sha256_check_succeeds_only_for_matching_bytes(self):"
       }
     ],
-    ".github/workflows/android-full-smoke.yml": [
+    "scripts/qa/prefetch_verified_llamadart.sh": [
       {
-        "start": "          for filename in ('WaffraAutoSmsStore.kt'",
-        "end": "          if 'android.intent.action.SEND' not in xml:"
+        "start": "work=\"$(mktemp -d)\"",
+        "end": null
       }
     ],
     "lib/main.dart": [
       {
-        "start": " void _m468OnResume(){",
-        "end": " void _returnToHome(){"
+        "start": "class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {",
+        "end": "class PinLockScreen extends StatefulWidget {"
+      },
+      {
+        "start": "class HomeScreen extends StatefulWidget {",
+        "end": "// Scroll-linked, pinned balance summary."
       },
       {
         "start": " Future<void> _loadFinanceSafely()async{",
         "end": " Widget _financialRecoveryScreen()"
-      },
-      {
-        "start": " Widget _financialRecoveryScreen()=>Center(",
-        "end": " Future<void> _syncWidgetTransactions()async{"
-      },
-      {
-        "start": " Future<void> _reviewAutoSmsCandidates({String? targetId})async {",
-        "end": " void _receiveSharedSms(){"
-      },
-      {
-        "start": " Future<void> bulkSmsSheet({String? initialText",
-        "end": " Future<void> _previewForeignBankCurrency(String raw)async {"
-      },
-      {
-        "start": "  // Instant content swap avoids building/animating the previous heavy tab",
-        "end": "  // A fixed 58x58 FAB:"
-      },
-      {
-        "start": " Future<void> load()async {\n  final financeClock=kProfileMode?",
-        "end": "  // Home reloading an encrypted ledger must never silently post a due payment."
-      },
-      {
-        "start": " @override Widget build(BuildContext context)=>PopScope(",
-        "end": "  appBar:AppBar(\n   toolbarHeight:_headerCompact?52:64,"
       }
     ],
-    "lib/waffra_auto_sms.dart": [
+    "test/m424_mandatory_biometrics_test.dart": [
       {
-        "start": " static Future<bool> notifyCommitted({",
+        "start": "  test('M424: home route no longer exposes optional PIN settings', () {",
         "end": null
       }
     ],
-    "lib/waffra_auto_sms_autopost.part.dart": [
+    "test/m426_local_phone_credentials_test.dart": [
       {
-        "start": "  Future<void> keepForReview(",
-        "end": "  final prefs=await SharedPreferences.getInstance();"
-      },
-      {
-        "start": "      await WaffraAutoSms.notifyCommitted(",
-        "end": "      summary['saved']=summary['saved']!+1;"
+        "start": "  expect(main,contains('if(freshSession)locked=!ordinaryPhoneRelogin;'));",
+        "end": "  expect(main,isNot(contains('WaffraPhoneSecureAuth')));"
       }
     ],
-    "lib/waffra_messages.dart": [
+    "test/m429_sms_phone_integration_test.dart": [
       {
-        "start": "/// Native receiver reports *availability*",
-        "end": "/// Launch the handset's default SMS app;"
+        "start": " test('M429 integrates single SMS opt-in, phone login and OS biometrics',(){",
+        "end": "  expect(src,contains('WaffraLocalPhoneCredentials.verify('));"
       }
     ],
-    "native/WaffraAutoSmsNotifications.kt": [
+    "test/m463_auth_first_one_page_test.dart": [
       {
-        "start": "import android.Manifest",
+        "start": " testWidgets('M463 signup presents all mandatory controls on one screen',",
+        "end": " test('M463 first clean install has only one account creation form',(){"
+      }
+    ],
+    "test/m603_app_wide_lag_source_regression_test.dart": [
+      {
+        "start": "    expect(mainSource, contains('locked=u!=null;startupError=null;loading=false;'));",
+        "end": "    final overlay = File('lib/waffra_idle_biometric_overlay.dart').readAsStringSync();"
+      }
+    ],
+    ".github/workflows/m290-country-reminders-multicurrency.yml": [
+      {
+        "start": "          verify=Path('lib/waffra_sms_multicurrency_review.dart').read_text()",
+        "end": "          assert \"googleFirstRunSetup=WaffraSaudiRelease.locationCountryOnboarding&&\" in app"
+      }
+    ],
+    "test/m290_google_country_reminders_test.dart": [
+      {
+        "start": "  test('M290 permissions are triggered only by the relevant user action', () {",
         "end": null
       }
     ],
-    "native/WaffraAutoSmsWorker.kt": [
+    "test/m443_merchant_screenshot_regression_test.dart": [
       {
-        "start": "                        \"notifyAutoSmsSaved\" -> {",
-        "end": "                        else -> result.notImplemented()"
+        "start": "  test('M443 Home retains biometric lock on actual background only', () {",
+        "end": "  test('M443 no merchant selection, brand logos or remote logo assets in active UI', () {"
       }
     ],
-    "native/WaffraMainActivity.kt": [
+    "test/m422_phone_only_auth_entry_test.dart": [
       {
-        "start": "    private var pendingShare: String? = null",
-        "end": "    private var screenshotsAllowed: Boolean = true"
-      },
-      {
-        "start": "    override fun onCreate(savedInstanceState: Bundle?) {",
-        "end": "    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {"
-      },
-      {
-        "start": "                \"takeSharedText\" -> {",
-        "end": "                \"autoSmsPermissionState\" ->"
-      },
-      {
-        "start": "                \"notifyAutoSmsSaved\" -> {",
-        "end": "                \"requestAutoSmsPermission\" -> {"
-      }
-    ],
-    ".github/workflows/m417-auto-bank-sms.yml": [
-      {
-        "start": "          for name in ('WaffraAutoSmsStore.kt'",
-        "end": "          gradle.write_text(content)"
-      }
-    ],
-    "test/m580_sms_security_navigation_performance_test.dart": [
-      {
-        "start": " test('re-login submit CTA keeps its width and feedback during secure KDF'",
-        "end": " test('canceling SMS review never triggers a redundant full encrypted SMS reread'"
-      }
-    ],
-    "test/m615_m618_sms_review_retention_perf_contract_test.dart": [
-      {
-        "start": " test('M617 verified login removes only the second OS probe and never skips secure KDF'",
-        "end": null
-      }
-    ],
-    "test/m604_fast_login_first_frame_test.dart": [
-      {
-        "start": "  test('login preserves source guards and removes only redundant IO/delay',(){",
-        "end": "  test('relogin avoids redundant preference writes but keeps source lease',(){"
+        "start": " test('M422 blocks all guest onboarding and hidden quick start',(){",
+        "end": " test('M422 registration uses phone only, no social identity chooser',(){"
       }
     ]
   }

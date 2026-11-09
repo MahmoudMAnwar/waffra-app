@@ -40,7 +40,7 @@ void main(){
   expect(main,contains("prefs.getBool('waffra_signed_out_explicitly')"));
   expect(main,contains("u.provider.toLowerCase().trim()=='phone'"));
   expect(main,contains('if(freshSession)locked=!ordinaryPhoneRelogin;'));
-  expect(main,contains('locked?WaffraMandatoryBiometricGate('));
+  expect(main,contains('child:WaffraMandatoryBiometricGate('));
   expect(main,isNot(contains('WaffraPhoneSecureAuth')));
   expect(main,isNot(contains('enrollWithOtp')));
   expect(main,isNot(contains('requestCode:_requestVerifiedPhoneCode')));

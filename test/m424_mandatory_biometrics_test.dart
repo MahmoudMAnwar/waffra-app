@@ -123,7 +123,7 @@ void main() {
 
   test('M424: home route no longer exposes optional PIN settings', () {
     final source = File('lib/main.dart').readAsStringSync();
-    expect(source, contains('locked?WaffraMandatoryBiometricGate('));
+    expect(source, contains('child:WaffraMandatoryBiometricGate('));
     // M602: explicit signout followed by verified phone/password must not
     // prompt twice; registration, restored and idle sessions stay protected.
     expect(source, contains("prefs.getBool('waffra_signed_out_explicitly')"));
@@ -145,6 +145,8 @@ void main() {
     expect(screenshot, isNot(contains('changePin')));
     expect(source, isNot(contains(
       "away>=const Duration(seconds:30)")));
-    expect(source, contains("if(mounted)setState((){profile=null;showLogin=true;locked=false;"));
+    expect(source, contains('profile=null;showLogin=true;locked=false;googleFirstRunSetup=false;'));
+     expect(source, contains('_m623HomeReady=false;_m623RetainedStage=null;'));
+     expect(source, contains('await _accountWriteAuthority.signOut();'));
   });
 }

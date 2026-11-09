@@ -109,7 +109,10 @@ jobs:
           app=Path('lib/main.dart').read_text()
           setup=Path('lib/waffra_country_first_run_page.dart').read_text()
           verify=Path('lib/waffra_sms_multicurrency_review.dart').read_text()
-          assert "googleFirstRunSetup&&WaffraSaudiRelease.locationCountryOnboarding?WaffraCountryFirstRunPage(" in app
+          assert "googleFirstRunSetup&&WaffraSaudiRelease.locationCountryOnboarding;" in app
+          assert "final showCountry=needsCountry||" in app
+          assert "child:WaffraCountryFirstRunPage(" in app
+          assert "onComplete:completeGoogleCountrySetup" in app
           assert "googleFirstRunSetup=WaffraSaudiRelease.locationCountryOnboarding&&" in app
           assert "static const bool locationCountryOnboarding=false;" in Path('lib/waffra_saudi_release.dart').read_text()
           assert "waffraGoogleProfileReadyForCountrySetup(u)" in app
