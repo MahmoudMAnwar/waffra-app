@@ -90,6 +90,14 @@ jobs:
           df -h .
           sudo rm -rf /usr/share/dotnet /usr/local/share/powershell /opt/hostedtoolcache/CodeQL
           df -h .
+      # Android first-test compilation (Gradle/CMake/plugins) previously consumed
+      # the full 240s flutter-test budget before a single assertion ran.
+      # Prebuild the same first test target, fail closed on any build failure,
+      # then keep each existing per-file emulator timeout unchanged.
+      - name: Precompile first shard integration APK outside device test timeout
+        shell: bash
+        timeout-minutes: 18
+        run: bash .github/scripts/prebuild-android-finance-integration.sh "${{ matrix.shard }}"
       # Emulator start-up can intermittently refuse adb TCP 5554 on hosted
       # runners; a successful static analyzer is not a substitute for the
       # Android runtime test. Retry once with a fresh, independent API 35 emulator.
