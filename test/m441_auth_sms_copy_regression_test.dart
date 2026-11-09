@@ -40,7 +40,7 @@ void main() {
     expect(login,contains('await widget.onVerifiedPasswordSave(verifiedAccount);'));
     expect(login.indexOf('if(!match){'),lessThan(
       login.indexOf('await widget.onVerifiedPasswordSave(verifiedAccount);')));
-    expect(login,isNot(contains('await widget.onSave(verifiedAccount)')));
+    expect(login,isNot(contains('await widget.onVerifiedPasswordSave(verifiedAccount)')));
     expect(login,isNot(contains('signInPhone.text.trim()!=account.phone')));
     expect(main,contains('readOnly:widget.initial!=null&&widget.provider==\'Phone\''));
     expect(main,contains('Changing a sign-in phone requires verified account migration'));
