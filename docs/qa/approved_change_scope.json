@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
   "change_id": "M611-MANUAL-FINANCE-INPUT-HOME-HISTORY-PR517-20261109",
-  "human_scope_review": "Owner 2026-11-09 specifically requests diagnosing income/expense/internal-transfer manual save, showing full selected bank-account name, shrinking Home finance tiles while opening history instead of adding, and investigating remaining 1–2s latency. Implementation must not overwrite existing balances, loosen verified money checks or move the floating +. Owner review and real Android tests still required.",
+  "human_scope_review": "Owner 2026-11-09 specifically requests diagnosing income/expense/internal-transfer manual save, showing full selected bank-account name, shrinking Home finance tiles while opening history instead of adding, and investigating remaining 1–2s latency. Implementation must not overwrite existing balances, loosen verified money checks or move the floating +. Owner review and real Android tests still required. On 2026-11-09 owner followed up to explicitly forbid fingerprint after 1+ minute while Waffra is continuously open, while retaining the previously agreed actual background-only 60s biometric. Owner also asks to diagnose remaining 1–2s sign-in and protected finance loading. PR #517 includes only this bounded behavior and diagnostic instrumentation, not a guaranteed device speedup.",
   "user_requested_changes": [
     "Correct manual income/expense/transfer save validation without removing mandatory child-account selection or source-verified SQLCipher commit.",
     "Accept the formatter's valid comma-grouped SAR transfer amount while rejecting malformed, negative and excess-decimal money.",
@@ -9,7 +9,9 @@
     "Shrink Home income, expense and transfer summary tiles; pressing them shows recorded transactions of the selected kind rather than opening an addition form; preserve floating plus.",
     "Read real internal transfers only from the verified owner-scoped SQLCipher account journal; do not treat transfers as income or expense.",
     "Add targeted regression coverage and reconcile only obsolete source expectation in existing M549 approval test.",
-    "Keep source-authority security, existing user data, dynamic dates and real-device performance acceptance; do not claim residual latency fixed without measurement."
+    "Keep source-authority security, existing user data, dynamic dates and real-device performance acceptance; do not claim residual latency fixed without measurement.",
+    "M613: remove every foreground 60s idle biometric lock; retain a 60s actual hidden/paused background absence lock with privacy shield, sign-out confirmation, restored-session authentication and unsaved draft preservation.",
+    "M614: isolate profile-mode stage timing for sign-in, verified SQLCipher binding/catalog, first Home data projection and first displayed frame without skipping security checks or inventing transactions."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -20,7 +22,10 @@
     "lib/storage/waffra_account_context_repository.dart",
     "lib/storage/waffra_verified_accounts_api.dart",
     "lib/waffra_account_transaction_form.dart",
+    "lib/waffra_idle_biometric_overlay.dart",
     "test/m440_account_transaction_form_test.dart",
+    "test/m470_idle_biometric_overlay_test.dart",
+    "test/m513_logout_confirmation_test.dart",
     "test/m549_approved_home_notifications_test.dart",
     "test/m611_manual_home_finance_regression_test.dart",
     "test/storage/m611_verified_transfer_history_test.dart"
@@ -50,6 +55,14 @@
       {
         "start": " Widget dashboard(){",
         "end": " Widget _currentTabContents(){"
+      },
+      {
+        "start": " Future<void> _loadFinanceSafely()async{",
+        "end": " Widget _financialRecoveryScreen()"
+      },
+      {
+        "start": " Future<void> _syncWidgetTransactions()async{",
+        "end": " Future<void> _refreshWidget()async{"
       }
     ],
     "lib/waffra_account_transaction_form.dart": [
@@ -84,6 +97,28 @@
       {
         "start": " test('M440 SAR parser requires positive integer halalas, no FX relabel',(){",
         "end": " test('M440 new account opening balances accept Saudi zero in Arabic and English',(){"
+      }
+    ],
+    "lib/waffra_idle_biometric_overlay.dart": [
+      {
+        "start": "import 'package:flutter/material.dart';",
+        "end": "class WaffraIdleBiometricOverlay extends StatefulWidget {"
+      },
+      {
+        "start": "class _WaffraIdleBiometricOverlayState",
+        "end": null
+      }
+    ],
+    "test/m470_idle_biometric_overlay_test.dart": [
+      {
+        "start": "void main(){",
+        "end": null
+      }
+    ],
+    "test/m513_logout_confirmation_test.dart": [
+      {
+        "start": "void main() {",
+        "end": "  test('M513 password verifier exists before creating phone session"
       }
     ]
   }
