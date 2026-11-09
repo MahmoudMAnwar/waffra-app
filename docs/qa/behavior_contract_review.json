@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "pr": 524,
-  "issue": "Owner 2026-11-09 M615–M618 #520 #521 #522 #523: approved bank SMS review redesign, 30-day reversible excluded metadata and permanent deny hashes, cross-sender notifications selection and verified login repeated-probe optimization",
+  "pr": 527,
+  "issue": "Owner 2026-11-09 M620–M621 #525 #526: icon for Android status notifications and safe deep-link into exact SMS review / verified saved transaction",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main",
   "reviewed_at": "2026-11-09",
@@ -504,6 +504,65 @@
         "Wrong or missing phone/password cannot save profile, PBKDF2 stays unchanged.",
         "No SMS auto-post, auto-ACK or account bypass.",
         "Exact-new-head CI plus Android QA must precede merge."
+      ]
+    },
+    {
+      "id": "M620-NATIVE-NOTIFICATION-ICON-AND-HONEST-TITLES",
+      "issue": "Issues #525 / PR #527",
+      "previous_behavior": "Both Android system SMS notification types displayed generic information icon; review titles always gave generic uncertainty and successful money posting had no link to persisted entry. Workflow regenerated Android resources and had no persistent notification vector.",
+      "approved_behavior": "Use one white single-color wallet vector installed in both Android build workflows and referenced by the small icon. Classify suggested income/expense/transfer only as proposals; generic uncertain if OTP or pending. Name a transaction saved only AFTER verified SQLCipher atomic commit, including its exact generated entry ID. Do not auto-post a guessed transfer.",
+      "source_paths": [
+        "native/waffra_notification_wallet.xml",
+        "native/WaffraAutoSmsNotifications.kt",
+        "native/WaffraAutoSmsWorker.kt",
+        "lib/waffra_auto_sms_autopost.part.dart",
+        "lib/waffra_auto_sms.dart"
+      ],
+      "test_paths": [
+        "test/m620_m621_finance_notification_routing_test.dart",
+        "test/m462_smart_sms_rule_review_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/android.yml",
+        ".github/workflows/android-full-smoke.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "Never report as saved an operation that was only classified by local rules.",
+        "Never post transfers without explicit verified source+destination accounts.",
+        "Android SmallIcon is a monochrome resource installed in every generated native build.",
+        "Review notifications retain lock-screen privacy and no SMS body is included."
+      ]
+    },
+    {
+      "id": "M621-EXACT-ITEM-NOTIFICATION-TAPS-GATED-BY-VERIFIED-HOME",
+      "issue": "Issues #526 / PR #527",
+      "previous_behavior": "Native PendingIntent launched MainActivity with no SMS ID or route. Cold, warm, biometrically locked and already committed targets fell through to Home with no exact-item action.",
+      "approved_behavior": "Create distinct immutable explicit Android notification intents carrying only 64-hex source fingerprint and optional opaque persisted entry ID, received in onCreate/onNewIntent, buffered across Flutter channel startup. After unlocked owner-verified SQLCipher Home ready, pending notice delegates to original owner-checked targeted review Yes/No/Exclude; saved notice resolves exact SMS entry in already verified ledger and opens protected details, without creating or duplicating finance. Fail closed for stale, excluded or other-account notices.",
+      "source_paths": [
+        "native/WaffraMainActivity.kt",
+        "native/WaffraAutoSmsNotifications.kt",
+        "native/WaffraAutoSmsWorker.kt",
+        "lib/waffra_messages.dart",
+        "lib/main.dart",
+        "lib/waffra_auto_sms.dart"
+      ],
+      "test_paths": [
+        "test/m620_m621_finance_notification_routing_test.dart",
+        "test/m580_sms_security_navigation_performance_test.dart",
+        "test/m424_mandatory_biometrics_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m429-integration-smoke.yml",
+        ".github/workflows/android.yml"
+      ],
+      "safety_invariants": [
+        "No raw SMS text, PIN, sender or bank account in notification Intent extras.",
+        "A tap never bypasses app sign-in, idle lock, OS biometric or native owner validation.",
+        "Saved details open only from existing verified SQLCipher ledger record.",
+        "No second finance writer, duplicated debit, invented transaction, or implicit transfer.",
+        "Keep 30-day exclusion and native owner-scoped pendingById filtering."
       ]
     }
   ]
