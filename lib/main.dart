@@ -5013,7 +5013,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    return false;
   }
   snackSuccess(context,waffraIsEnglish?
-   'Messages excluded safely.':'تم استبعاد الرسائل المحددة بأمان.');
+   'Messages moved to Excluded for 30 days. Restore them there.':
+   'الرسائل بقت في قائمة المستبعدة لمدة 30 يوم، وتقدر ترجعها من هناك.');
   return true;
  }
  Future<void> _m549OpenNotifications()async{
@@ -6050,11 +6051,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      if(dialog.mounted)redraw(()=>choosingAccount=false);
     }
    }
+   final reviewScroll=ScrollController();
    final decision=await showWaffraDialog<String>(context:context,
     builder:(dialog)=>StatefulBuilder(builder:(dialog,redraw)=>AlertDialog(
      title:WaffraText(waffraIsEnglish?
       'Review bank message':'مراجعة رسالة بنكية'),
-     content:SingleChildScrollView(child:Column(
+     content:Scrollbar(controller:reviewScroll,thumbVisibility:true,
+      thickness:4,radius:const Radius.circular(8),
+      child:SingleChildScrollView(controller:reviewScroll,
+       child:Padding(
+        // End in RTL is the left edge: never let scrollbar cover text.
+        padding:const EdgeInsetsDirectional.only(start:6,end:24),
+        child:Column(
       mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,
       children:[
        Container(
@@ -6079,7 +6087,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           (localFacts['category']?.toString()??'')),
          if(cloudSummary.isNotEmpty)WaffraText(cloudSummary),
         ])),
-       if(!sensitive)...[
+       if(!sensitive&&!understood)...[
         const SizedBox(height:11),
         WaffraText(waffraIsEnglish?'Transaction type':'نوع العملية',
          style:const TextStyle(fontWeight:FontWeight.w800,fontSize:13)),
@@ -6111,24 +6119,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           onPressed:()=>Navigator.pop(dialog,'correct-type'),
           child:WaffraText(waffraIsEnglish?'Continue to review':'متابعة المراجعة'),
          ),
-        if(facts.kind!=WaffraBankOperationKind.transfer)
-         TextButton.icon(
-          key:const Key('m595-review-single-exclude'),
-          onPressed:()=>Navigator.pop(dialog,'exclude'),
-          icon:const Icon(Icons.block_outlined),
-          label:WaffraText(waffraIsEnglish?
-           'Exclude this message':'استبعاد الرسالة'),
-         ),
        ],
        if(!sensitive)Padding(
         padding:const EdgeInsets.only(top:10),
-        child:ExpansionTile(
+        child:Card(
+         color:Theme.of(dialog).colorScheme.surfaceContainerLow,
+         child:ExpansionTile(
          key:const Key('waffra-sms-original-expand'),
+         initiallyExpanded:true,
          title:WaffraText(waffraIsEnglish?
           'Read original bank message':'عرض نص الرسالة البنكية الأصلي'),
-         children:[Padding(padding:const EdgeInsets.all(12),
+         children:[Padding(padding:const EdgeInsets.all(14),
           child:SelectableText(body,textAlign:TextAlign.start))],
-        )),
+        ))),
        if(understood&&!sensitive&&
           reviewType==(expectedIncome?'income':'expense'))...[
         const SizedBox(height:10),
@@ -6182,11 +6185,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          'Edit missing amount, date or category to continue.':
          'راجع البيانات الناقصة من شاشة التعديل قبل الحفظ.'),
        ],
+       // Exclude is a separate, reversible action BELOW Yes/No.
+       if(!sensitive&&facts.kind!=WaffraBankOperationKind.transfer)
+        Padding(padding:const EdgeInsets.only(top:9),
+         child:OutlinedButton.icon(
+          key:const Key('m595-review-single-exclude'),
+          onPressed:()=>Navigator.pop(dialog,'exclude'),
+          icon:const Icon(Icons.block_outlined),
+          label:WaffraText(waffraIsEnglish?
+           'Exclude this message':'استبعاد الرسالة'))),
+
        const SizedBox(height:12),
-       WaffraText(waffraIsEnglish?
-        'Review the message. Safe rules update after confirmed actions.':
-        'راجع الرسالة؛ وفرة يتعلم القواعد الآمنة بعد تأكيد العملية.'),
-       const SizedBox(height:11),
+       const SizedBox(height:8),
        if(facts.kind==WaffraBankOperationKind.transfer&&!sensitive&&
           reviewType=='transfer')
         Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
@@ -6235,7 +6245,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           'استكمال المراجعة قبل تسجيل أي مبلغ')),
         onTap:()=>Navigator.pop(dialog,firstChoice),
        )),
-      ])),
+      ])))),
      actions:[
       if(facts.kind!=WaffraBankOperationKind.transfer)
        TextButton(onPressed:()=>Navigator.pop(dialog),
@@ -6254,6 +6264,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         ],
        ),
      ])));
+   reviewScroll.dispose();
    if(decision=='correct-type'&&mounted&&reviewType!=null){
     if(reviewType=='transfer'){
      // A correction from unknown/income/expense to internal transfer cannot
@@ -6297,7 +6308,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     if(acknowledged&&mounted){
      setState(()=>_autoSmsPending.removeWhere((item)=>item['id']==id));
      snackSuccess(context,waffraIsEnglish?
-      'Message excluded from review.':'تم استبعاد الرسالة من المراجعة.');
+      'Message added to Excluded for 30 days. Restore it from there.':
+      'الرسالة بقت في قائمة المستبعدة لمدة 30 يوم، وتقدر ترجعها من هناك.');
      // Learn safe sender-scoped exclusion patterns only after acknowledgement.
      try{await _learnSafeSmsRule(
       body:body,sender:sender,kind:'excluded');}catch(_){}
@@ -17992,8 +18004,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        const SizedBox(width:42,height:42,child:CircularProgressIndicator(
         strokeWidth:3,color:emerald)),
        const SizedBox(height:18),
-       WaffraText(waffraIsEnglish?'Preparing secure finances…':
-        'جارٍ تجهيز بياناتك المالية بأمان…',
+       WaffraText(waffraIsEnglish?'Opening your dashboard…':
+        'بنفتح الرئيسية…',
         textAlign:TextAlign.center,
         style:const TextStyle(fontSize:14,fontWeight:FontWeight.w600)),
        const SizedBox(height:16),
