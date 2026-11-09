@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'waffra_mandatory_biometric_gate.dart';
 
@@ -37,7 +39,6 @@ class _WaffraIdleBiometricOverlayState
   if(_foreground){
    _verifiedAwaitingResume=false;
    setState(()=>_idleLocked=false);
-
   }else if(WidgetsBinding.instance.lifecycleState==AppLifecycleState.inactive){
    // The native OS prompt may succeed just before Flutter resumes.
    _verifiedAwaitingResume=true;
@@ -110,5 +111,5 @@ class _WaffraIdleBiometricOverlayState
       onSignOut:widget.onSignOut,
      ),
     )),
-  ]); 
+  ]);
 }
