@@ -52,6 +52,14 @@
       {
         "start": " Widget _financialRecoveryScreen()=>Center(",
         "end": " Future<void> _syncWidgetTransactions()async{"
+      },
+      {
+        "start": " Future<void> _reviewAutoSmsCandidates({String? targetId})async {",
+        "end": " void _receiveSharedSms(){"
+      },
+      {
+        "start": " Future<void> bulkSmsSheet({String? initialText",
+        "end": " Future<void> _previewForeignBankCurrency(String raw)async {"
       }
     ],
     "lib/waffra_auto_sms.dart": [
