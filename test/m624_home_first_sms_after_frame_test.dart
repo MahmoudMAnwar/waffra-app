@@ -41,8 +41,7 @@ void main() {
     expect(onError, greaterThan(painted));
     expect(homeLoader.substring(onError),
       isNot(contains('onVerifiedHomePainted?.call()')));
-    expect(RegExp(r'WaffraAutoSms\\.resumeAfterSignIn\\(\\)')
-      .allMatches(source).length, 1);
+    expect(source.split('WaffraAutoSms.resumeAfterSignIn()').length - 1, 1);
   });
 
   test('M624 session epoch rejects late native completion and sign-out races', () {
