@@ -51,15 +51,26 @@ void main() {
     expect(find.byKey(const Key('m513-biometric-signout-confirmation')),findsNothing);
   });
 
-  testWidgets('M513 idle overlay inherits same Yes/No lock confirmation',
+  testWidgets('M613 real background biometric keeps M513 Yes/No signout',
       (tester) async {
     var logouts=0;
+    var now=DateTime(2026,11,9,13);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     await tester.pumpWidget(MaterialApp(home:WaffraIdleBiometricOverlay(
       english:true,enabled:true,timeout:const Duration(milliseconds:100),
-      onSignOut:()async{logouts++;},
+      now:()=>now,onSignOut:()async{logouts++;},
       child:const Scaffold(body:Center(child:Text('Private finances'))),
     )));
     await tester.pump(const Duration(milliseconds:250));
+    expect(find.byKey(const ValueKey('m470-idle-lock-biometric')),findsNothing);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump();
+    now=now.add(const Duration(milliseconds:250));
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     await tester.pump();
     expect(find.byKey(const ValueKey('m470-idle-lock-biometric')),findsOneWidget);
     await tester.tap(find.byKey(const Key('waffra-mandatory-biometric-signout')));
