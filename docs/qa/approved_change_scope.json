@@ -49,7 +49,7 @@
         "end": " Future<void> _m549OpenNotifications()async{"
       },
       {
-        "start": " Widget _m615ReviewDetail(",
+        "start": " Future<void> _reviewSmsAccountTransfer({",
         "end": " void _receiveSharedSms(){"
       },
       {
