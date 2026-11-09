@@ -1296,12 +1296,27 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  // held by Home and the independent Android Widget finance engine.
  final WaffraLiveAccountWriteAuthority _accountWriteAuthority=
      const WaffraLiveAccountWriteAuthority();
- Future<void> saveUser(Person u,{bool passwordAlreadyVerified=false})async {
+ // Verified-login proof is the exact non-shared Person instance returned
+ // after a successful phone-bound OS + PBKDF2 password check.
+ Person? _verifiedPhoneLoginProof;
+ Future<void> _saveVerifiedPhoneLogin(Person u)async{
+  if(u.provider.toLowerCase().trim()!='phone'||
+     _verifiedPhoneLoginProof!=null){
+   throw StateError('Invalid verified phone login handoff');
+  }
+  _verifiedPhoneLoginProof=u;
+  try{await saveUser(u);}
+  finally{
+   if(identical(_verifiedPhoneLoginProof,u))_verifiedPhoneLoginProof=null;
+  }
+ }
+ Future<void> saveUser(Person u)async {
   final profileCommitClock=kProfileMode?(Stopwatch()..start()):null;
   // M513: refuse to declare a new phone profile successfully registered if
   // Android never retained a verifier for that exact account. Keeping the
   // existing login password usable is part of successful account creation.
-  if(u.provider.toLowerCase().trim()=='phone'&&!passwordAlreadyVerified){
+  if(u.provider.toLowerCase().trim()=='phone'&&
+     !identical(_verifiedPhoneLoginProof,u)){
    // M617: onboarding and profile edits still check fresh OS keystore.
    // Password sign-in just passed the exact phone-bound OS+PBKDF2 verifier.
    final phone=WaffraSaudiMobile.inputFromStored(u.phone);
@@ -1794,7 +1809,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
      profile!.provider.contains('محلي')||
      profile!.provider.toLowerCase().contains('guest')||
      profile!.provider.toLowerCase().contains('demo')))?LoginScreen(onSave:saveUser,
-     onVerifiedPasswordSave:(u)=>saveUser(u,passwordAlreadyVerified:true)):
+     onVerifiedPasswordSave:_saveVerifiedPhoneLogin):
    (autoSmsConsentPending&&_smsConsentAfterVerifiedSignIn)?
     WaffraAutoSmsConsentPage(
      english:language=='en',onComplete:finishSmsPermissionChoice):
