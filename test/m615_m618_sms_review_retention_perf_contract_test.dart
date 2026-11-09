@@ -90,7 +90,7 @@ void main(){
   expect(app,contains('onVerifiedPasswordSave:_saveVerifiedPhoneLogin'));
   expect(app,contains('try{await saveUser(u);}'));
   expect(app,isNot(contains("'بنفتح الرئيسية…'")));
-  expect(app,contains('!ready?const SizedBox.shrink():'));
+  expect(app,contains('child:!ready&&_financeLoadFailure==null?'));
   expect(app,isNot(contains("'جارٍ تجهيز بياناتك المالية بأمان…'")));
  });
 }
