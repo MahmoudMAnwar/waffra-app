@@ -1,3 +1,14 @@
+[PR #517 M611 MANUAL FINANCE + COMPACT HOME HISTORY — EXACT HEAD CI/ANDROID PENDING] 2026-11-09
+==========================================================================================================
+- Owner #513: manual income, expense, internal transfers reportedly do not save. The screenshot shows a parent bank selected but mandatory child financial account empty. New inline child-required feedback and provider-child ownership validation preserve SQLCipher authorization and explicit account selection.
+- Manual transfer amounts formatted as 1,000 by the UI were rejected by the transfer parser; accept valid thousands separators with correct SAR cents, reject malformed grouping, negative/zero and excess precision. This does not bypass fresh verified two-account transfer writer.
+- Owner #514: the Home monthly summary selected-account chip was hard-clipped at 100px, one line; it now wraps its full verified bank/account label on a full-width row.
+- Owner #515: three Home income, expense, transfer tiles are shortened to 68px and open recorded histories, never the new-transaction form. Existing fixed floating + still creates operations.
+- The transfer history reads real encrypted fresh_finance_internal_transfers through the existing Home/Widget verified source witness, sorted and account-scoped, read-only. It is excluded from income/expense totals.
+- Source and parser regression tests added, outdated M549 Home-action expectation updated to the newly approved history behavior. M385 bounded diff manifest and M550 workflow behavior contract updated.
+- Owner #516 reports major performance lag resolved in the tested APK but ~1–2s occasional delay remains; this PR does not claim that delay was eliminated. Physical Android measurements are pending.
+- **Release blockers:** verify user-facing manual transaction save after a real child account was chosen, retain draft/retry on authenticated writer rejection, exact HEAD full GitHub workflow CI, real-device income/expense/two-account transfer result, and upgrade-over-existing-data safety. No unverified merge or published APK.
+
 [PR #511 M609 exact-head M440 fix] 2026-11-09 — Open Drift mutex worker before BEGIN IMMEDIATE
 ==========================================================================================================
 - M440 existing and new first-install concurrency tests found the background mutex QueryExecutor was lazy: calling runCustom(BEGIN IMMEDIATE) before opening raised LateInitializationError. This blocked first-install data-source preparation, so the PR remains unmerged.
