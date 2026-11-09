@@ -83,7 +83,7 @@ void main(){
 
  test('M622 cold Home only displays actual verified balances at once',(){
   final main=File('lib/main.dart').readAsStringSync();
-  expect(main,contains('!ready?const SizedBox.shrink():'));
+  expect(main,contains('child:!ready&&_financeLoadFailure==null?'));
   expect(main,contains('balance:_m467ShownBalance()'));
   expect(main,isNot(contains('Widget _m622ImmediateHomeSurface()=>')));
   expect(main,isNot(contains("'بنفتح الرئيسية…'")));
