@@ -60,7 +60,10 @@ void main() {
     expect(login,contains('await widget.onVerifiedPasswordSave(verifiedAccount);'));
     expect(source,contains('onVerifiedPasswordSave:_saveVerifiedPhoneLogin'));
     expect(home,contains('await load();'));
-    expect(home,contains('unawaited(_m467RefreshHomeAccounts());'));
+    expect(home,isNot(contains('unawaited(_m467RefreshHomeAccounts());')));
+    expect(source,contains('await (accountsLoading??_m467RefreshHomeAccounts());'));
+    expect(source.indexOf('await (accountsLoading??_m467RefreshHomeAccounts());'),
+      lessThan(source.indexOf('setState(()=>ready=true);')));
     expect(home,contains('WidgetsBinding.instance.addPostFrameCallback'));
     expect(home,contains('await _refreshAutoSmsInbox(importMonth:'));
     expect(source,contains('WaffraFreshHomeCatalogRecovery.load('));

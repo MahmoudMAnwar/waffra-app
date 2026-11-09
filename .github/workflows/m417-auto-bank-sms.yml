@@ -119,12 +119,24 @@ jobs:
           for name in ('WaffraAutoSmsStore.kt', 'WaffraAutoSmsReceiver.kt',
                        'WaffraAutoSmsWorker.kt', 'WaffraAutoSmsNotifications.kt'):
               (root/name).write_text((Path('native')/name).read_text())
+          # Install the real wallet drawable in this compile-only project too;
+          # otherwise R.drawable disappears and compilation fails even though
+          # production APK workflows already package the icon.
+          icon=Path('android/app/src/main/res/drawable/waffra_notification_wallet.xml')
+          icon.parent.mkdir(parents=True,exist_ok=True)
+          icon.write_text(Path('native/waffra_notification_wallet.xml').read_text())
           (root/'MainActivity.kt').write_text(
               'package com.waffra.app\n'
               'import io.flutter.embedding.android.FlutterActivity\n'
               'class MainActivity : FlutterActivity() {}\n')
           gradle=Path('android/app/build.gradle.kts')
           content=gradle.read_text()
+          # Generated package is com.waffra.waffra, but the native SMS
+          # candidate lives in com.waffra.app. Give both its resource R.
+          if 'namespace = "com.waffra.waffra"' not in content:
+              raise SystemExit('Unexpected M417 generated Android namespace')
+          content=content.replace('namespace = "com.waffra.waffra"',
+                                  'namespace = "com.waffra.app"')
           content+='\n// Compile-only M417 Android dependencies\ndependencies {\n'
           content+='    implementation("androidx.work:work-runtime-ktx:2.11.2")\n'
           content+='    implementation("androidx.core:core-ktx:1.16.0")\n}\n'

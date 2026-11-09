@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "pr": 524,
-  "issue": "Owner 2026-11-09 M615–M618 #520 #521 #522 #523: approved bank SMS review redesign, 30-day reversible excluded metadata and permanent deny hashes, cross-sender notifications selection and verified login repeated-probe optimization",
+  "pr": 527,
+  "issue": "Owner 2026-11-09: M620–M622 Issues #525 #526 #528: Android finance notification icon and exact-item navigation; original Home shows all REAL amounts together, no loading phrases or fake/hidden placeholders.",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main",
   "reviewed_at": "2026-11-09",
@@ -504,6 +504,118 @@
         "Wrong or missing phone/password cannot save profile, PBKDF2 stays unchanged.",
         "No SMS auto-post, auto-ACK or account bypass.",
         "Exact-new-head CI plus Android QA must precede merge."
+      ]
+    },
+    {
+      "id": "M620-NATIVE-NOTIFICATION-ICON-AND-HONEST-TITLES",
+      "issue": "Issues #525 / PR #527",
+      "previous_behavior": "Both Android system SMS notification types displayed generic information icon; review titles always gave generic uncertainty and successful money posting had no link to persisted entry. Workflow regenerated Android resources and had no persistent notification vector.",
+      "approved_behavior": "Use one white single-color wallet vector installed in both Android build workflows and referenced by the small icon. Classify suggested income/expense/transfer only as proposals; generic uncertain if OTP or pending. Name a transaction saved only AFTER verified SQLCipher atomic commit, including its exact generated entry ID. Do not auto-post a guessed transfer.",
+      "source_paths": [
+        "native/waffra_notification_wallet.xml",
+        "native/WaffraAutoSmsNotifications.kt",
+        "native/WaffraAutoSmsWorker.kt",
+        "lib/waffra_auto_sms_autopost.part.dart",
+        "lib/waffra_auto_sms.dart"
+      ],
+      "test_paths": [
+        "test/m620_m621_finance_notification_routing_test.dart",
+        "test/m462_smart_sms_rule_review_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/android.yml",
+        ".github/workflows/android-full-smoke.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "Never report as saved an operation that was only classified by local rules.",
+        "Never post transfers without explicit verified source+destination accounts.",
+        "Android SmallIcon is a monochrome resource installed in every generated native build.",
+        "Review notifications retain lock-screen privacy and no SMS body is included."
+      ]
+    },
+    {
+      "id": "M621-EXACT-ITEM-NOTIFICATION-TAPS-GATED-BY-VERIFIED-HOME",
+      "issue": "Issues #526 / PR #527",
+      "previous_behavior": "Native PendingIntent launched MainActivity with no SMS ID or route. Cold, warm, biometrically locked and already committed targets fell through to Home with no exact-item action.",
+      "approved_behavior": "Create distinct immutable explicit Android notification intents carrying only 64-hex source fingerprint and optional opaque persisted entry ID, received in onCreate/onNewIntent, buffered across Flutter channel startup. After unlocked owner-verified SQLCipher Home ready, pending notice delegates to original owner-checked targeted review Yes/No/Exclude; saved notice resolves exact SMS entry in already verified ledger and opens protected details, without creating or duplicating finance. Fail closed for stale, excluded or other-account notices.",
+      "source_paths": [
+        "native/WaffraMainActivity.kt",
+        "native/WaffraAutoSmsNotifications.kt",
+        "native/WaffraAutoSmsWorker.kt",
+        "lib/waffra_messages.dart",
+        "lib/main.dart",
+        "lib/waffra_auto_sms.dart"
+      ],
+      "test_paths": [
+        "test/m620_m621_finance_notification_routing_test.dart",
+        "test/m580_sms_security_navigation_performance_test.dart",
+        "test/m424_mandatory_biometrics_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m429-integration-smoke.yml",
+        ".github/workflows/android.yml"
+      ],
+      "safety_invariants": [
+        "No raw SMS text, PIN, sender or bank account in notification Intent extras.",
+        "A tap never bypasses app sign-in, idle lock, OS biometric or native owner validation.",
+        "Saved details open only from existing verified SQLCipher ledger record.",
+        "No second finance writer, duplicated debit, invented transaction, or implicit transfer.",
+        "Keep 30-day exclusion and native owner-scoped pendingById filtering."
+      ]
+    },
+    {
+      "id": "M622-ONE-FULL-VERIFIED-HOME-FRAME-NO-FAKE-LOADER",
+      "issue": "Owner screenshot and correction / Issue #528 / PR #527",
+      "previous_behavior": "Home mounted while owner-verified encrypted ledger was loading and displayed a large spinning circle, unauthorized bilingual startup copy, two blank skeleton cards. First attempt to remove it introduced an intermediate faux Home whose balance appeared as four bullet marks, explicitly rejected by the owner. In addition, the previous code set ready=true before its asynchronous owner-account projection, so a first-frame ledger total could change to bank-account balances later.",
+      "approved_behavior": "Remove ALL separate Home loading spinner, startup copy, skeletons and masked temporary figures. The real Home body only transitions to its complete original dashboard once authenticated owner-specific finance ledger, accounts, categories, and budgets have loaded and verified; no synthetic zero, intermediate false balance, duplicate finance, or unrequested screens. Financial real figures, cards and operations paint together. Actual bank SMS scanning begins asynchronously only after that first verified Home frame. Android startup still has nonzero immutable finance I/O; source tests do not certify instantaneous physical startup. Gate the entire original Home Scaffold, including header and footer, not just the Home body. For already-verified encrypted sources, start the owner-account balance projection while the immutable finance JSON decodes; for legacy data avoid category-migration races. Only mark ready after verified account balances complete. Errors fail closed to the existing recovery UI. User-selected hide-balance preference remains supported, but no unrequested temporary mask is displayed. No verified-account slow second repaint after Home entry. Do not fade the Home in for an additional 240 ms after verified data becomes ready: first Home should render at its final opacity instantly. Retain existing animations for other tabs. M622 exact-head QA fix: legacy M604 test shall assert awaited verified account projection occurs before `ready=true`, rather than demand obsolete `unawaited(_m467RefreshHomeAccounts())` in `_loadFinanceSafely`; do not alter production money/auth behavior to satisfy stale test.",
+      "source_paths": [
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m622_immediate_home_without_loader_test.dart",
+        "test/m580_sms_security_navigation_performance_test.dart",
+        "test/m615_m618_sms_review_retention_perf_contract_test.dart",
+        "test/m603_app_wide_lag_source_regression_test.dart",
+        "test/m604_fast_login_first_frame_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m429-integration-smoke.yml",
+        ".github/workflows/android.yml"
+      ],
+      "safety_invariants": [
+        "Never display fabricated zeros, temporary plaintext ledger or an amount belonging to another owner.",
+        "Keep original unlocked normal Home layout and genuine verified amounts, no hidden four-dot placeholder.",
+        "Do not bypass owner biometric/credential verification, protected session or encrypted finance integrity.",
+        "Never let background SMS analysis or SMS auto-booking block first actual finance frame.",
+        "A separate recovery screen for corrupt source remains mandatory; no silent empty-ledger fallback.",
+        "Verified bank account balances must complete before setting ready=true and beginning user-visible Home or SMS review."
+      ]
+    },
+    {
+      "id": "M621-M417-COMPILE-ONLY-NAMESPACE-AND-DRAWABLE",
+      "issue": "Issue #526 / PR #527 Kotlin compile regression",
+      "previous_behavior": "M417 compiles a synthetic Kotlin-only Android project in package com.waffra.app using generated Gradle namespace com.waffra.waffra, with no copied wallet vector resource; reference to R.drawable.waffra_notification_wallet causes Kotlin Unresolved reference R and cascaded builder errors.",
+      "approved_behavior": "Copy the actual approved monochrome vector into M417 temporary res/drawable and align temporary Kotlin compile namespace with the package com.waffra.app. Do not alter production Android appId, account identity or real build workflow; Android production workflows already copy their own vector. Retain a real native Kotlin compilation job and test the extra resource packaging contract.",
+      "source_paths": [
+        ".github/workflows/m417-auto-bank-sms.yml",
+        "native/WaffraAutoSmsNotifications.kt"
+      ],
+      "test_paths": [
+        "test/m620_m621_finance_notification_routing_test.dart",
+        "test/m622_immediate_home_without_loader_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m417-auto-bank-sms.yml",
+        ".github/workflows/android.yml"
+      ],
+      "safety_invariants": [
+        "Keep genuine Kotlin compilation, Android resource validation and all Gradle preflight gates enabled.",
+        "No production app ID or verified notification PendingIntent target must change to satisfy a compile-only job.",
+        "No skipping, removal or weakening of security tests."
       ]
     }
   ]

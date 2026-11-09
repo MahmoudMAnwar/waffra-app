@@ -440,6 +440,11 @@ jobs:
           for filename in ('WaffraAutoSmsStore.kt', 'WaffraAutoSmsReceiver.kt',
                            'WaffraAutoSmsWorker.kt', 'WaffraAutoSmsNotifications.kt'):
               (activity.parent/filename).write_text((Path('native')/filename).read_text())
+              # M620: flutter create regenerates android/ in CI.
+              icon_source=Path('native/waffra_notification_wallet.xml')
+              icon_dest=Path('android/app/src/main/res/drawable/waffra_notification_wallet.xml')
+              icon_dest.parent.mkdir(parents=True,exist_ok=True)
+              icon_dest.write_text(icon_source.read_text(encoding='utf-8'),encoding='utf-8')
 
           manifest=Path('android/app/src/main/AndroidManifest.xml')
           xml=manifest.read_text()

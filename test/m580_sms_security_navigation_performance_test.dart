@@ -81,12 +81,14 @@ void main(){
   expect(button,contains("CircularProgressIndicator("));
  });
 
- test('cold Home never shows a completely blank spinner-only body',(){
+ test('M622 cold Home only displays actual verified balances at once',(){
   final main=File('lib/main.dart').readAsStringSync();
-  expect(main,contains("WaffraText(waffraIsEnglish?'Opening your dashboard…'"));
-  expect(main,contains("'بنفتح الرئيسية…'"));
-  expect(main,contains(" !ready?RepaintBoundary("));
-  expect(main,isNot(contains("!ready?const Center(child:CircularProgressIndicator())")));
+  expect(main,contains('child:!ready&&_financeLoadFailure==null?'));
+  expect(main,contains('balance:_m467ShownBalance()'));
+  expect(main,isNot(contains('Widget _m622ImmediateHomeSurface()=>')));
+  expect(main,isNot(contains("'بنفتح الرئيسية…'")));
+  expect(main,isNot(contains("'Opening your dashboard…'")));
+  expect(main,isNot(contains("const Text('••••'")));
  });
 
  test('canceling SMS review never triggers a redundant full encrypted SMS reread',(){

@@ -4219,6 +4219,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  final Map<String,Map<String,Object?>> _m492SmsEditorDrafts={};
  bool _m486ResumeQueued=false;
  void _m468OnResume(){
+  _m621OnFinanceNoticeTap();
   if(!mounted||!ready||
      WaffraExternalMediaSession.shouldSkipResumeBackgroundWork)return;
   // M486 #419: biometrics/OS resume must render a frame before expensive
@@ -4249,7 +4250,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    unawaited(_refreshAutoSmsInbox());
   });
  }
- @override void initState(){super.initState();WaffraBackNavigation.onHomeBack=_registeredBackHandler;_dashboardScrollController.addListener(_handleDashboardScroll);_tourGlow=AnimationController(vsync:this,duration:waffraMotion(1150));waffraReturnHome.addListener(_returnToHome);waffraIncomingSms.addListener(_receiveSharedSms);waffraAutoSmsUpdates.addListener(_receiveAutoSmsNotice);waffraWidgetAction.addListener(_receiveWidgetAction);_widgetReloadListener=AppLifecycleListener(onResume:_m468OnResume);unawaited(_loadFinanceSafely());}
+ @override void initState(){super.initState();WaffraBackNavigation.onHomeBack=_registeredBackHandler;_dashboardScrollController.addListener(_handleDashboardScroll);_tourGlow=AnimationController(vsync:this,duration:waffraMotion(1150));waffraReturnHome.addListener(_returnToHome);waffraIncomingSms.addListener(_receiveSharedSms);waffraAutoSmsUpdates.addListener(_receiveAutoSmsNotice);waffraFinanceNoticeTap.addListener(_m621OnFinanceNoticeTap);waffraWidgetAction.addListener(_receiveWidgetAction);_widgetReloadListener=AppLifecycleListener(onResume:_m468OnResume);unawaited(_loadFinanceSafely());}
  void _returnToHome(){if(mounted)setState((){_tabBackStack.clear();tab=0;accountOpened=false;goalsOpened=false;addFabExpanded=false;});}
  void _receiveWidgetAction(){
   if(!mounted||!ready||waffraWidgetAction.value!='add')return;
@@ -6523,6 +6524,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }
   }finally{
    _autoSmsReviewOpen=false;
+   // Another Android notice tapped during this review is still waiting.
+   if(mounted&&waffraFinanceNoticeTap.value!=null){
+    WidgetsBinding.instance.addPostFrameCallback((_){
+     if(mounted)_m621OnFinanceNoticeTap();
+    });
+   }
    // A simple Back/Cancel only inspected an already loaded SMS. Reloading
    // and reclassifying 1000 encrypted messages after every closed dialog
    // caused avoidable jank. Successful exclusion, AI stage, transfer and
@@ -6554,12 +6561,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     debugPrint('WAFFRA_FINANCE_PERF source_to_ready_ms='
      '${startupClock.elapsedMilliseconds}');
    }
-   unawaited(_m467RefreshHomeAccounts());
+   // Account balances were verified before ready=true; no second startup read.
    WidgetsBinding.instance.addPostFrameCallback((_) {
     if(kProfileMode&&startupClock!=null){
      debugPrint('WAFFRA_FINANCE_PERF first_home_frame_ms='
       '${startupClock.elapsedMilliseconds}');
     }
+    _m621OnFinanceNoticeTap();
     // Home first: encrypted SMS scan starts only after initial layout settles.
     unawaited(()async{
      await Future<void>.delayed(const Duration(milliseconds:900));
@@ -6592,7 +6600,48 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     icon:const Icon(Icons.refresh),
     label:WaffraText(waffraIsEnglish?'Retry safely':'إعادة المحاولة بأمان')),
   ])));
- @override void dispose(){if(identical(WaffraBackNavigation.onHomeBack,_registeredBackHandler))WaffraBackNavigation.onHomeBack=null;_dashboardScrollController.dispose();_categoryScrollController.dispose();_goalsScrollController.dispose();_recurringScrollController.dispose();_tourGlow.dispose();waffraReturnHome.removeListener(_returnToHome);waffraIncomingSms.removeListener(_receiveSharedSms);waffraAutoSmsUpdates.removeListener(_receiveAutoSmsNotice);waffraWidgetAction.removeListener(_receiveWidgetAction);_widgetReloadListener?.dispose();_saveProgress.dispose();final binding=_financeBinding;if(binding!=null)unawaited(_financialWriteQueue.drain().whenComplete(binding.close));super.dispose();}
+ // M621: a notification is a navigation request, NOT permission to write
+ // money. Deferred across cold start and biometric/credential verification.
+ bool _m621NoticeOpening=false;
+ void _m621OnFinanceNoticeTap(){
+  if(!mounted||!ready||_financeLoadFailure!=null||
+     _m621NoticeOpening||_autoSmsReviewOpen||_smsSheetOpen)return;
+  final target=waffraFinanceNoticeTap.value;
+  if(target==null)return;
+  final lifecycle=WidgetsBinding.instance.lifecycleState;
+  if(lifecycle!=null&&lifecycle!=AppLifecycleState.resumed)return;
+  _m621NoticeOpening=true;
+  waffraFinanceNoticeTap.value=null;
+  WidgetsBinding.instance.addPostFrameCallback((_)async{
+   try{
+    if(!mounted||!ready||_financeLoadFailure!=null)return;
+    if(target.destination=='review'){
+     // The existing targeted review performs an owner-verified pendingById.
+     // An excluded/stale/committed SMS cannot be posted twice from a tap.
+     await _reviewAutoSmsCandidates(targetId:target.id);
+    }else if(target.destination=='saved'){
+     // Only records from the CURRENT verified finance ledger can open.
+     final matching=entries.where((record)=>
+      record.id==target.entryId&&record.sourceType=='sms').toList();
+     if(matching.length==1){
+      await transactionDetails(matching.single);
+     }else if(mounted){
+      snack(context,waffraIsEnglish?
+       'This saved transaction is not available in the current account.':
+       'العملية المحفوظة غير موجودة في الحساب الحالي.');
+     }
+    }
+   }catch(error){
+    debugPrint('Finance notification route refused: ${error.runtimeType}');
+   }finally{
+    _m621NoticeOpening=false;
+    if(mounted&&waffraFinanceNoticeTap.value!=null){
+     _m621OnFinanceNoticeTap();
+    }
+   }
+  });
+ }
+ @override void dispose(){if(identical(WaffraBackNavigation.onHomeBack,_registeredBackHandler))WaffraBackNavigation.onHomeBack=null;_dashboardScrollController.dispose();_categoryScrollController.dispose();_goalsScrollController.dispose();_recurringScrollController.dispose();_tourGlow.dispose();waffraReturnHome.removeListener(_returnToHome);waffraIncomingSms.removeListener(_receiveSharedSms);waffraAutoSmsUpdates.removeListener(_receiveAutoSmsNotice);waffraFinanceNoticeTap.removeListener(_m621OnFinanceNoticeTap);waffraWidgetAction.removeListener(_receiveWidgetAction);_widgetReloadListener?.dispose();_saveProgress.dispose();final binding=_financeBinding;if(binding!=null)unawaited(_financialWriteQueue.drain().whenComplete(binding.close));super.dispose();}
  Future<void> _syncWidgetTransactions()async{
   if(!mounted||!ready)return;
   try{
@@ -6795,6 +6844,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      financeView.getString('waffra_categories_v24')==null){
    throw StateError('Verified encrypted category source is incomplete.');
   }
+  // M622: verified accounts can read while immutable source JSON decodes.
+  // Legacy category migration must finish before its account projection.
+  final Future<void>? accountsLoading=verifiedEncryptedStartup?
+   _m467RefreshHomeAccounts():null;
   _lastWidgetRevision=loadedFinance.widgetRevision;
   _lastLedgerSavedRaw=loadedFinance.ledgerRaw;
   try{final raw=financeView.getString('entries');if(raw!=null)entries.addAll(await _m593BuildVerifiedEntries((await WaffraLargeJsonDecode.parse(raw)) as List));}catch(e){throw StateError('Saved transactions cannot be decoded safely: $e');}
@@ -6989,6 +7042,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     'verified_catalog_ms=${verifiedSourceMs??-1} '
     'decoded_ready_ms=${financeClock.elapsedMilliseconds}');
   }
+   // Previously Home painted transaction sums and only afterwards loaded
+   // verified bank account balances. Never flash a provisional amount.
+   await (accountsLoading??_m467RefreshHomeAccounts());
+   if(!mounted)return;
+   if(!_m468VerifiedAccountsLoaded){
+    throw StateError('Verified financial account balances are unavailable.');
+   }
    setState(()=>ready=true);
    // M486 #419: let Home's first interactive frame paint before competing
    // asynchronous widget reads and incoming SMS callbacks begin.
@@ -9069,6 +9129,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  _smsSheetOpen=false;
  disposeLater();
  _receiveSharedSms();
+ if(mounted&&waffraFinanceNoticeTap.value!=null){
+  WidgetsBinding.instance.addPostFrameCallback((_){
+   if(mounted)_m621OnFinanceNoticeTap();
+  });
+ }
 }
 
  Future<void> _previewForeignBankCurrency(String raw)async {
@@ -18003,7 +18068,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  @override Widget build(BuildContext context)=>PopScope(
   // Let the root back policy route account/tabs before double-back exit.
   canPop:true,
-  child:Stack(children:[Scaffold(
+  child:!ready&&_financeLoadFailure==null?
+   const SizedBox.shrink():Stack(children:[Scaffold(
   appBar:AppBar(
    toolbarHeight:_headerCompact?52:64,
    flexibleSpace:const ColoredBox(color:forest),
@@ -18085,28 +18151,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    ]),
   // Instant content swap avoids building/animating the previous heavy tab
   // alongside the next one (the recurring -> savings navigation hitch).
+  // No fragment of the Home is visible before owner-verified entries AND
+  // account balances have loaded. The root gate above reveals this layout
+  // as one complete screen with no fake amount or loading illustration.
   body:_financeLoadFailure!=null?_financialRecoveryScreen():
-   !ready?RepaintBoundary(
-    child:Center(child:ConstrainedBox(
-     constraints:const BoxConstraints(maxWidth:320),
-     child:Padding(padding:const EdgeInsets.symmetric(horizontal:24),
-      child:Column(mainAxisSize:MainAxisSize.min,children:[
-       const SizedBox(width:42,height:42,child:CircularProgressIndicator(
-        strokeWidth:3,color:emerald)),
-       const SizedBox(height:18),
-       WaffraText(waffraIsEnglish?'Opening your dashboard…':
-        'بنفتح الرئيسية…',
-        textAlign:TextAlign.center,
-        style:const TextStyle(fontSize:14,fontWeight:FontWeight.w600)),
-       const SizedBox(height:16),
-       Container(height:54,decoration:BoxDecoration(
-        color:Theme.of(context).cardColor,
-        borderRadius:BorderRadius.circular(16))),
-       const SizedBox(height:10),
-       Container(height:36,decoration:BoxDecoration(
-        color:Theme.of(context).cardColor,
-        borderRadius:BorderRadius.circular(14))),
-      ]))))):
    Stack(clipBehavior:Clip.none,children:[GestureDetector(
     behavior:HitTestBehavior.translucent,
     onHorizontalDragStart:(_)=>_swipeTravel=0,
@@ -18117,7 +18165,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      builder:(context,hidden,_)=>TweenAnimationBuilder<double>(
       key:ValueKey(accountOpened?'waffra-page-account':'waffra-page-$tab'),
       tween:Tween<double>(begin:0,end:1),
-      duration:waffraMotion(accountOpened?340:240),curve:Curves.easeOutCubic,
+      // The first verified Home paints its complete values together; do
+      // not make the dashboard fade in for an extra quarter-second.
+      duration:tab==0&&!accountOpened?Duration.zero:
+       waffraMotion(accountOpened?340:240),curve:Curves.easeOutCubic,
       builder:(ctx,progress,child)=>Opacity(opacity:progress,
        child:Transform.translate(offset:Offset((1-progress)*(waffraIsEnglish?26:-26),0),
         child:Transform.scale(scale:accountOpened?0.985+0.015*progress:1,child:child))),
