@@ -283,7 +283,7 @@
       "id": "M611-MANUAL-SAR-HOME-VERIFIED-TRANSFER-HISTORY",
       "issue": "GitHub #513 #514 #515 #516 / PR #517 direct owner Android feedback",
       "previous_behavior": "Manual transfer SAR parser rejected valid displayed 1,000 grouping; manual bank provider selection left child blank without inline required marker; Home big finance tiles opened add forms; monthly account filter cropped names to 100 pixels and 1 line.",
-      "approved_behavior": "Explicit child selection remains mandatory and now appears as a required field error; grouped SAR parser accepts only well-formed grouping. Three compact finance Home overview tiles display actual owner-account-scoped income, expense and verified internal transfer histories, not add forms; existing fixed floating + adds transactions. Home monthly summary account label wraps fully.",
+      "approved_behavior": "Explicit child selection remains mandatory and now appears as a required field error; grouped SAR parser accepts only well-formed grouping. Three compact finance Home overview tiles display actual owner-account-scoped income, expense and verified internal transfer histories, not add forms; existing fixed floating + adds transactions. Home monthly summary account label wraps fully. The former M440 positive-money parser test has been reconciled to the formatter's already-approved grouped SAR input, with new negative cases for malformed separators, currency tokens, nonpositive values and overprecision; unchanged account validation, manual write tests and transfer idempotency remain mandatory.",
       "source_paths": [
         "lib/main.dart",
         "lib/storage/waffra_account_context_repository.dart",
@@ -294,7 +294,8 @@
         "test/m611_manual_home_finance_regression_test.dart",
         "test/m549_approved_home_notifications_test.dart",
         "test/m470_account_scope_and_transfer_date_test.dart",
-        "test/storage/m611_verified_transfer_history_test.dart"
+        "test/storage/m611_verified_transfer_history_test.dart",
+        "test/m440_account_transaction_form_test.dart"
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/m550-behavior-contract-preflight.yml",
@@ -308,7 +309,8 @@
         "Read transfer history only through the existing authenticated encrypted Home/Widget source-witness lock.",
         "Money and SQLCipher restore preserve old users, owners, ledger integrity and deduplication.",
         "Maintain the fixed add button, all existing auth/biometrics, SMS review and upgrade-data safety.",
-        "Owner Android finance save and remaining 1–2s delay are not certified by these source tests."
+        "Owner Android finance save and remaining 1–2s delay are not certified by these source tests.",
+        "Old M440 invalid-value and account-authority tests must continue to run, while legitimate grouped SAR 1,000 is accepted in production and CI."
       ]
     }
   ]
