@@ -99,5 +99,9 @@ void main(){
   expect(review,contains("decision=='yes'"));
   expect(review,contains("decision=='no'"));
   expect(review,contains("decision=='exclude'"));
+  expect(review,contains('if(mounted&&waffraFinanceNoticeTap.value!=null)'));
+  final manual=home.split(' Future<void> bulkSmsSheet({String? initialText')[1]
+   .split(' Future<void> _previewForeignBankCurrency(String raw)async {')[0];
+  expect(manual,contains('if(mounted&&waffraFinanceNoticeTap.value!=null)'));
  });
 }
