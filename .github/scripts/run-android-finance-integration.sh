@@ -59,6 +59,7 @@ preflight_android() {
   return 1
 }
 
+# Prioritize problematic bridge & new encrypted receipts after Gradle warmup.
 # M626: four isolated GitHub Actions emulator jobs; preserve original per-test
 # timeouts and FULL coverage. Explicit 'all' keeps manual/legacy runner working.
 case "${ANDROID_FINANCE_SHARD:-all}" in

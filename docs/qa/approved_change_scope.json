@@ -44,7 +44,7 @@
     ],
     ".github/workflows/storage-android-integration.yml": [
       {
-        "start": "jobs:\n  android-encrypted-db:",
+        "start": "jobs:",
         "end": null
       }
     ],
