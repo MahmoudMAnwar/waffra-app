@@ -43,7 +43,15 @@ class WaffraProductionFinanceAuthorityBinding {
     Future<Directory> Function()? directoryProvider,
     Future<String?> Function()? secureKeyReader,
     bool installedApp = false,
+    // Home's immediate, mandatory dashboard read supplies the first verified
+    // encrypted witness. Other callers still verify on bind as before.
+    bool deferInitialDashboardRead = false,
   }) async {
+    if (deferInitialDashboardRead &&
+        (!installedApp || !Platform.isAndroid ||
+         startupRoute != WaffraFinanceRoute.appStartup)) {
+      throw ArgumentError('Only installed Android Home may defer initial dashboard read.');
+    }
     final freshInstall = installedApp && Platform.isAndroid
         ? await WaffraFreshInstallSource.prepare() : null;
     if (startupRoute != WaffraFinanceRoute.appStartup &&
@@ -165,13 +173,18 @@ class WaffraProductionFinanceAuthorityBinding {
         externalSourceWitnessActive: true,
         verifiedKeyRecoveryInDevice: true,
       );
-      // A real source read rechecks both activation witnesses under the
-      // shared Home/widget native lock before exposing any balance.
-      final startup = await authority.load(route: startupRoute);
-      if (startup.encryptedWitness == null) {
-        throw StateError('Encrypted startup source witness is missing.');
+      // Home immediately calls WaffraFreshHomeCatalogRecovery.load(), which
+      // reads dashboardRead with the same active native source witnesses and
+      // verifies integrity BEFORE it can expose ledger or balances. Avoid a
+      // duplicate full encrypted snapshot read on that one installed path.
+      // Root launch, Widget and every other bind still verify on bind.
+      if (!deferInitialDashboardRead) {
+        final startup = await authority.load(route: startupRoute);
+        if (startup.encryptedWitness == null) {
+          throw StateError('Encrypted startup source witness is missing.');
+        }
+        await startup.finance.requireIntegrityInBackground();
       }
-      await startup.finance.requireIntegrityInBackground();
       return WaffraProductionFinanceAuthorityBinding._(
         authority: authority, encrypted: true, store: store,
         accountsBridge: bridge,

@@ -1,3 +1,15 @@
+[PR #534 M626 EXACT-HEAD M554 PRE-FLIGHT TEST ALIGNMENT — 2026-11-09]
+- Fixed a single stale QA structural assumption in M174: old M554 asserted native SQLite3MC and official pinned Gradle prefetch steps lived in job android-encrypted-db. After approved four-way matrix, that name is intentionally the required aggregate gate; each Android emulator shard performs both prefetches in the same verified order.
+- Strengthened original M554 guard to positively check both prefetched native and Gradle distributions on each matrix runner, the four shards, fail-fast=false and strict dependent aggregate. Every other critical Android job guard remains enabled. No application code, financial security or tested Android files changed.
+- M385 bounded edit scope, M550 test mapping and requirements updated. Status Partial, exact-head preflight and Android matrix remain pending.
+
+[PR #534 M626 — PARALLEL MANDATORY ANDROID ENCRYPTED FINANCE CI, ISSUE #535 — 2026-11-09]
+==========================================================================================
+- Verified PR wall-time bottleneck: 11 mandatory independent Android SQLCipher finance tests execute sequentially inside one opaque emulator step (up to 75 minutes total), even when no test fails. In-progress logs were unavailable; an emulator hang has not been proven.
+- Split all original 11 tests, keeping their exact file names and individual 720/300/240s limits, across four isolated concurrently scheduled emulators: vault, cloud, receipts and release. All original native SQLCipher runtime/source protections, startup checks, preflights, crash logs and test assertions remain intact. Failed primary shard alone retries on clean API 35 emulator.
+- Preserve former required check name android-encrypted-db with a fail-closed aggregate depending on every shard; disable matrix fail-fast for full diagnostics. QA test enforces 11/11 coverage and no duplicate/omitted integration file. Requirement M626 and Issue #535 documented before code.
+- Status PARTIAL: exact-head four-shard CI, 11 real Android tests and measured reduction of wall time not yet confirmed; user-device login performance remains independently unproven. No data/biometric/SQLCipher application behavior changed.
+
 [PR #524 M615 SAFE FULL-FIELD LEGACY QA RECONCILIATION — 2026-11-09]
 ===============================================================================
 - Kept M574 SMS confirmation Python regression active and exact, replacing stale assumptions of one long multiline preview with checks of all eight separate owner-approved detail rows: transaction type, amount, description, parent/subcategory, sender, verified linked account, and original bank date/time. Existing secure account/amount/source suffix and Yes/No validations still run.
@@ -3150,3 +3162,27 @@ The owner reported that the unwanted Home startup spinner had merely become a bl
   serialization; no security or Android-native regression checks were skipped.
 - Physical signed APK startup, re-login and I/O profiling are still pending;
   source-only verification does not certify frame latency or full smoothness.
+
+[M625 SINGLE VERIFIED HOME READ — ISSUE #533 PR #534 — 2026-11-09]
+===============================================================================
+- On installed Android Home only, finance binder now skips its duplicate full encrypted appStartup snapshot read. The required immediately subsequent WaffraFreshHomeCatalogRecovery.load still calls authenticated dashboardRead and independently verifies real SQLCipher ledger/integrity, category defaults, fresh-install activation and real account balances BEFORE Home ready=true. Root startup, other callers and Android Widget retain full bind verification.
+- Password and biometric handling is unchanged. First installation still requires OS biometric where applicable, and normal explicit signout followed by correct phone/password avoids a second fingerprint. No page loader, black frame replacement, fake zero/masked funds, or partial dashboard.
+- Native SMS resume and history review still start after the verified first Home frame (900ms delayed) and never permit signed-out owner work. Actual SQLCipher disk I/O cannot be promised to take zero time.
+- Profile-mode first frame metrics now identify biometric_to_home_first_frame_ms and relogin_to_home_first_frame_ms without logging identities/finances.
+- Requirements, M385 scoped files and M550 all-workflow behavior review updated; new M625 test protects negative binder scopes, full verified Home, and both login routes; analyzer typo corrected without muting tests.
+- Source-only change; full same-head CI, signed Android physical first-login/fingerprint/logout/relogin profiling and user-visible responsiveness acceptance are still necessary before marking this PR Done or merging.
+
+[M626 COLD GRADLE ANDROID SHARD TIMEOUT REPAIR — ISSUE #535 PR #534 — 2026-11-09]
+================================================================================
+- Exact-head run 42696359357 passed vault/cloud but first tests of receipts
+  and release exhausted 240s in Gradle/CMake compilation on both API 34 and
+  API 35. Flutter reported "No tests ran"; the required aggregate failed.
+- Precompile each shard's first actual integration-test APK before starting
+  emulator per-test timers, with bounded build time, verified nonempty valid
+  APK, and strict failure on compilation/corruption. Keep all eleven runtime
+  emulator test files, original per-file limits, verified native prefetch,
+  exact SHA, crash diagnostics, API 35 retry and mandatory fail-closed gate.
+- M385 now declares the new helper explicitly; M626 Python static regression
+  verifies matching first-test targets and prebuild before emulator. This is
+  CI only; it does NOT certify a lag-free login or replace Android runtime QA.
+- Status Partial until all exact-head CI shards and mandatory gates pass.

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "pr": "https://github.com/MahmoudMAnwar/waffra-app/pull/532",
-  "issue": "https://github.com/MahmoudMAnwar/waffra-app/issues/530",
+  "pr": "https://github.com/MahmoudMAnwar/waffra-app/pull/534",
+  "issue": "https://github.com/MahmoudMAnwar/waffra-app/issues/533",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main",
   "reviewed_at": "2026-11-09",
@@ -690,6 +690,65 @@
         "If logout begins during native resume, wait for its completion before suspending capture; never re-enable signed-out SMS.",
         "No UI loader, placeholder fake amount, masked artificial sum or bypass of biometrics, account controls, or SQLCipher.",
         "Static CI alone cannot prove real Android frame latency; require signed phone profiling before Done."
+      ]
+    },
+    {
+      "id": "M625-AVOID-DUPLICATE-VERIFIED-HOME-SQLCIPHER-READ",
+      "issue": "Issue #533 / PR #534 — confirmed repeated biometric and logout-to-relogin Home screen freeze",
+      "previous_behavior": "Installed Android Home calls production finance binder, which performs one full encrypted appStartup read and integrity check; Home immediately calls WaffraFreshHomeCatalogRecovery.load performing another verified dashboardRead and integrity. The previous login or biometric stage stays visible and non-interactive until verified account balances and Home are fully ready. These serial reads unnecessarily prolong the auth handoff on both first biometrics and password relogin.",
+      "approved_behavior": "Only installed Android Home can opt out of a redundant binder-time encrypted snapshot read. The binder must still enforce sourceGuard, fresh-install activation certificate, OS SQLCipher key and matching journal. The immediately subsequent mandatory Home dashboardRead still verifies ledger integrity and real account balances before ready=true; first real Home renders fully in one frame and SMS resumes only afterward. Trace separately from biometric success or verified repeat-login activation to real first frame; do not alter login PBKDF2, first-run mandatory biometrics, normal relogin no second biometric, logout native suspension, root and widget independent bind verification, or show fake/masked/partial Home.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/storage/waffra_production_finance_authority_binding.dart"
+      ],
+      "test_paths": [
+        "test/m625_single_verified_home_read_login_handoff_test.dart",
+        "test/m623_verified_home_handoff_no_black_frame_test.dart",
+        "test/m624_deferred_sms_after_verified_home_test.dart",
+        "test/m604_fast_login_first_frame_test.dart",
+        "test/storage/production_finance_authority_binding_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m429-integration-smoke.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m174-main-post-merge-sqlcipher.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "Only actual authenticated owner-specific finance may be displayed; every dashboardRead must perform encrypted source and integrity checks.",
+        "No source fallback, SQLCipher key regeneration, synthetic balance, partial masked dashboard, or silent OTP/SMS auto-record.",
+        "Root app startup and Android widget still perform full independent binding-time finance read and integrity verification.",
+        "Existing first-session OS biometric and one-minute idle lock remain, while ordinary explicit signout followed by correct password skips a redundant fingerprint.",
+        "Only signed Android APK profile/release device runs can certify user-visible freeze is resolved; CI source checks are not physical performance evidence."
+      ]
+    },
+    {
+      "id": "M626-PARALLEL-ENCRYPTED-ANDROID-CI-RETAIN-EVERY-FINANCE-TEST",
+      "issue": "Issue #535 — owner rejects serial 75-minute mandatory encrypted Android CI wait",
+      "previous_behavior": "One Android emulator job ran 11 independent encrypted finance Flutter integration tests serially with test-specific timeout periods and then potentially retried all files on a new emulator; a healthy PR could wait up to 75 minutes without per-file GitHub status visibility. Existing M554 QA assumed every pinned native/Gradle prefetch lived inside one original job named android-encrypted-db; matrix promotion of that name to a required aggregate moved real prefetch into each shard, triggering a stale-structure failure despite retaining actual prefetch. First file of receipts and release remained subject to the 240-second device-test timeout during cold Gradle/CMake compilation, which ran no tests and made the mandatory aggregate correctly fail on both emulator API levels.",
+      "approved_behavior": "Run four bounded independent emulator matrix shards concurrently, cover all 11 original Android finance integration test files exactly once per attempt with the same timeout per test, preserve ADB boot preflight, SHA verification and API 35 failed-shard retry. A separate original-name android-encrypted-db required aggregate must fail if any shard fails, cancels or times out. M554 QA must assert official SHA-verified native/Gradle prefetch occurs in every matrix worker and a distinct all-shards required aggregate depends on them; preserve all other critical Android job prefetch guards. Before running device tests, perform a bounded fail-closed debug APK cold build of each shard's exact first integration-test target and verify the produced APK exists and is a valid ZIP. All original test files then run unchanged under their original time budgets. Keep dependency prefetch, retry, exact SHA, and aggregate requirements intact.",
+      "source_paths": [
+        ".github/workflows/storage-android-integration.yml",
+        ".github/scripts/run-android-finance-integration.sh",
+        ".github/scripts/prebuild-android-finance-integration.sh"
+      ],
+      "test_paths": [
+        "scripts/qa/test_m626_parallel_android_matrix.py",
+        "test/qa/m554_gradle_release_cache_test.py"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/storage-android-integration.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "All 11 original SQLCipher and finance Android integration tests remain mandatory with unchanged individual timeouts, coverage and native encryption verification.",
+        "Exact PR head SHA checkout and approved SQLite3MC and Gradle asset integrity checks are mandatory.",
+        "The original android-encrypted-db aggregate job fails closed unless all parallel emulator shards report success; no green-on-skipped or dummy tests.",
+        "Legacy app finance, biometric, owner scope, SQLCipher data protection and previous successful checks are untouched.",
+        "Real device measurement is required to claim login freeze fixed; CI parallelism only affects build/PR wait.",
+        "Cold prebuild cannot substitute for emulator test pass: corrupted/missing APK fails early and all 11 original runtime test files remain required."
       ]
     }
   ]
