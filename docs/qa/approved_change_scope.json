@@ -9,7 +9,8 @@
     "Keep Home state through Arabic/English UI switches so a language toggle does not repeat a cold encrypted read or produce another blank screen.",
     "Preserve verified finance fail-closed recovery, account owner boundaries, existing logout behavior and post-home-frame background SMS review scan.",
     "Update protected source contract tests and add M623 coverage, while maintaining mandatory security and full exact-head GitHub CI and physical-device checks.",
-    "Reconcile four legacy M290/M424/M443 positive assertions to the approved retained-screen control flow, retaining checks of country consent, OS biometric protection, credential-safe logout and native workflow verification without skips."
+    "Reconcile four legacy M290/M424/M443 positive assertions to the approved retained-screen control flow, retaining checks of country consent, OS biometric protection, credential-safe logout and native workflow verification without skips.",
+    "Keep the M422 no-guest/no-demo/no quick-start login test active against the new account-scoped Home root, without allowing anonymous access to private financial data."
   ],
   "allowed_changed_files": [
     ".github/workflows/m290-country-reminders-multicurrency.yml",
@@ -18,6 +19,7 @@
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
     "test/m290_google_country_reminders_test.dart",
+    "test/m422_phone_only_auth_entry_test.dart",
     "test/m424_mandatory_biometrics_test.dart",
     "test/m426_local_phone_credentials_test.dart",
     "test/m429_sms_phone_integration_test.dart",
@@ -87,6 +89,12 @@
       {
         "start": "  test('M443 Home retains biometric lock on actual background only', () {",
         "end": "  test('M443 no merchant selection, brand logos or remote logo assets in active UI', () {"
+      }
+    ],
+    "test/m422_phone_only_auth_entry_test.dart": [
+      {
+        "start": " test('M422 blocks all guest onboarding and hidden quick start',(){",
+        "end": " test('M422 registration uses phone only, no social identity chooser',(){"
       }
     ]
   }
