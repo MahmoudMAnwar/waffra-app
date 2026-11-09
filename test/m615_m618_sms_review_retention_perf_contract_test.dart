@@ -89,7 +89,8 @@ void main(){
   expect(saved,contains('await _accountWriteAuthority.saveProfile('));
   expect(app,contains('onVerifiedPasswordSave:_saveVerifiedPhoneLogin'));
   expect(app,contains('try{await saveUser(u);}'));
-  expect(app,contains("'بنفتح الرئيسية…'"));
+  expect(app,isNot(contains("'بنفتح الرئيسية…'")));
+  expect(app,contains('!ready?_m622ImmediateHomeSurface():'));
   expect(app,isNot(contains("'جارٍ تجهيز بياناتك المالية بأمان…'")));
  });
 }
