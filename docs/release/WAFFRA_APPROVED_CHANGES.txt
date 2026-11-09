@@ -3144,5 +3144,9 @@ The owner reported that the unwanted Home startup spinner had merely become a bl
 - Logout waits for any in-flight native SMS resume before suspending native
   capture, preventing a stale callback from re-enabling signed-out SMS.
 - Regression: test/m624_deferred_sms_after_verified_home_test.dart.
+- Reconciled the older M442 Python and M603 Flutter source regressions that
+  incorrectly required resuming SMS inside saveUser. Both now assert same-owner
+  native capture only after the verified Home first frame and logout race
+  serialization; no security or Android-native regression checks were skipped.
 - Physical signed APK startup, re-login and I/O profiling are still pending;
   source-only verification does not certify frame latency or full smoothness.
