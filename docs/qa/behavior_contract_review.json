@@ -170,7 +170,7 @@
       "id": "M604-LOGIN-ONE-SECURE-READ",
       "issue": "Owner report 2026-11-09 issue #506: repeated password login lag",
       "previous_behavior": "A normal login read a verified phone-bound Android OS-keystore record once during the integrity probe, then performed a second serialized secure-store read to verify the same unchanged OS record with PBKDF2. A fixed 1750ms splash delay also held cold startup independently of readiness.",
-      "approved_behavior": "Use one immutable attempt-local, non-persistent verifier inspection for both phone integrity and full PBKDF2 password verification; refresh only after a successful gated credential recovery; retain distinct-phone, missing/malformed and legacy fail-closed branches. Replace the cosmetic 1750ms launch delay with one painted frame; preserve independent startup finance and biometric gates. Include profile-only timing of verified profile activation.",
+      "approved_behavior": "Use one immutable attempt-local, non-persistent verifier inspection for both phone integrity and full PBKDF2 password verification; refresh only after a successful gated credential recovery; retain distinct-phone, missing/malformed and legacy fail-closed branches. Replace the cosmetic 1750ms launch delay with one painted frame; preserve independent startup finance and biometric gates. Include profile-only timing of verified profile activation. The existing M441 login test now asserts an attempt-local verifier inspection before the same fail-closed phone probe; all negative and safety conditions remain asserted.",
       "source_paths": [
         "lib/main.dart",
         "lib/waffra_local_phone_credentials.dart"
@@ -178,7 +178,8 @@
       "test_paths": [
         "test/m604_fast_login_first_frame_test.dart",
         "test/m537_phone_credential_lifecycle_test.dart",
-        "test/m601_auth_busy_contract_test.dart"
+        "test/m601_auth_busy_contract_test.dart",
+        "test/m441_auth_sms_copy_regression_test.dart"
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/m550-behavior-contract-preflight.yml",
