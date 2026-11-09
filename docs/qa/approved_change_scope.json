@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
-  "change_id": "M609-OWNER-CODEX-SQLCIPHER-ISOLATE-UI-LAG-20261109-PR511",
-  "human_scope_review": "2026-11-09 owner explicitly requested continuing Codex's supplied screenshots exactly: isolate heavy SQLCipher open/verification, encrypted finance preflight and duplicate immutable finance reads from Flutter UI. No UI redesign, finance source switch or user-data change. Real Android proof and human merge review remain pending. The same screenshots explicitly mention a contended 10-second first-install SQLite BEGIN IMMEDIATE lock; M609 includes moving only this reservation to the database worker while retaining all receipt and data-preservation tests.",
+  "change_id": "M609-CODEX-UI-ISOLATES-PLUS-M610-WIDGET-TEST-TIMEOUT-20261109-PR511",
+  "human_scope_review": "2026-11-09 owner explicitly requested continuing Codex's supplied screenshots exactly: isolate heavy SQLCipher open/verification, encrypted finance preflight and duplicate immutable finance reads from Flutter UI. No UI redesign, finance source switch or user-data change. Real Android proof and human merge review remain pending. The same screenshots explicitly mention a contended 10-second first-install SQLite BEGIN IMMEDIATE lock; M609 includes moving only this reservation to the database worker while retaining all receipt and data-preservation tests. M610: owner explicitly ordered fixing the two failed CI cases. Logs show both stale FakeAsync widget waits after M609 compute isolate, so only isolated widget-test completion signals and existing test wait behavior are updated on this PR, linked to Issue #512; no security or financial behavior changes. Owner/device acceptance remains separate.",
   "user_requested_changes": [
     "Run native SQLCipher 4 database open, key validation and financial queries outside Flutter's rendering isolate, keeping the same encryption and fail-closed checks.",
     "Offload encrypted snapshot checksum, canonical encoding, preflight and finance commit preparation to Dart isolates; preserve identical generation CAS, relational SQL and rollback.",
@@ -9,9 +9,11 @@
     "Preserve existing user vaults and migration safeguards, biometric gate, transactional storage, Home and Widget source witness and bank SMS consent.",
     "Add storage integrity and UI event-loop tests, run full exact-head CI and measure real Android frame responsiveness before merge.",
     "Preserve BEGIN IMMEDIATE cross-engine install serialization but move its up-to-ten-second SQLite busy-lock wait to background worker; add explicit concurrent-initialization UI-loop test.",
-    "Open the background Drift SQL query executor before issuing the original BEGIN IMMEDIATE installation lock; no caller may bypass the existing serialized install transaction."
+    "Open the background Drift SQL query executor before issuing the original BEGIN IMMEDIATE installation lock; no caller may bypass the existing serialized install transaction.",
+    "Repair the two confirmed quick bank SMS Flutter WidgetTest timeout failures on PR #511 without disabling background finance preflight, confirmation, SHA dedup, native finance locks or existing tests."
   ],
   "allowed_changed_files": [
+    "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
@@ -22,9 +24,11 @@
     "lib/storage/waffra_fresh_install_source.dart",
     "lib/storage/waffra_production_finance_authority_binding.dart",
     "lib/storage/waffra_verified_finance_authority.dart",
+    "lib/waffra_widget_capture.part.dart",
     "test/storage/encrypted_store_test.dart",
     "test/storage/finance_read_view_test.dart",
-    "test/storage/m440_fresh_install_source_test.dart"
+    "test/storage/m440_fresh_install_source_test.dart",
+    "test/waffra_widget_quick_capture_test.dart"
   ],
   "bounded_sections": {
     "lib/storage/waffra_encrypted_store.dart": [
@@ -100,6 +104,34 @@
       },
       {
         "start": "void main() {",
+        "end": null
+      }
+    ],
+    "lib/waffra_widget_capture.part.dart": [
+      {
+        "start": "class WaffraWidgetCaptureApp extends StatefulWidget {",
+        "end": "class _WidgetParsedSms {"
+      },
+      {
+        "start": " Future<void> _loadSettings()async{",
+        "end": " void _onTextChanged(String value){"
+      },
+      {
+        "start": " Future<void> _commitWidgetSms()async{",
+        "end": " @override void dispose(){"
+      }
+    ],
+    "test/waffra_widget_quick_capture_test.dart": [
+      {
+        "start": "import 'dart:convert';",
+        "end": "void main(){"
+      },
+      {
+        "start": " testWidgets('Bank SMS is analyzed as soon as user pastes without an Analyze button',(tester)async{",
+        "end": " testWidgets('Only confirmation writes an SMS transaction and prevents duplicates',(tester)async{"
+      },
+      {
+        "start": " testWidgets('Only confirmation writes an SMS transaction and prevents duplicates',(tester)async{",
         "end": null
       }
     ]
