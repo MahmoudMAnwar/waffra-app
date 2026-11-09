@@ -3,6 +3,7 @@
   "change_id": "M624-DEFER-SMS-AFTER-VERIFIED-HOME-ISSUE530-20261109",
   "human_scope_review": "Owner explicitly requests instant-feeling Home after first login/biometrics and logout/relogin; no frozen auth page. Approved Issue #530 specifies removing competing pre-Home native SMS resume, retaining fully verified original Home and no fake/partial data. Defer SMS resume and scan sequentially until after genuine Home first frame; serialize native resume with signout to protect privacy. Preserve all account/SQLCipher/biometric and previous static and runtime guards.",
   "user_requested_changes": [
+    "Reconcile M442's obsolete positive assertion requiring native SMS resume from saveUser: keep verified Android bridge and capture/logout guarantees while requiring post-verified-Home resume and owner checks.",
     "M624 / Issue #530: update M603 positive regression to assert native SMS resume only after the first verified Home frame and never inside saveUser, preserving owner and logout guards.",
     "Issue #530/M624: Avoid competing Android SMS native work during owner-verified Home startup; resume SMS and scan only after the real first Home frame and never on a stale/signing-out owner session.",
     "Fix the failing M174 Python M552 regression by replacing the obsolete GNU-only command expectation with checks for unchanged pins, portable digest computation, and explicit reject-on-tamper behavior.",
@@ -34,7 +35,8 @@
     "test/m603_app_wide_lag_source_regression_test.dart",
     "test/m623_verified_home_handoff_no_black_frame_test.dart",
     "docs/WAFFRA_REQUIREMENTS.md",
-    "test/m624_deferred_sms_after_verified_home_test.dart"
+    "test/m624_deferred_sms_after_verified_home_test.dart",
+    "test/qa/m442_sms_consent_session_recovery_test.py"
   ],
   "bounded_sections": {
     "test/qa/m552_verified_sqlite3mc_ci_prefetch_test.py": [
@@ -119,6 +121,12 @@
       {
         "start": " test('M422 blocks all guest onboarding and hidden quick start',(){",
         "end": " test('M422 registration uses phone only, no social identity chooser',(){"
+      }
+    ],
+    "test/qa/m442_sms_consent_session_recovery_test.py": [
+      {
+        "start": "    def test_bridge_is_wired_to_native_with_no_os_reprompt_on_relogin(self):",
+        "end": "    def test_dashboard_does_not_hide_disabled_or_corrupt_queue_as_zero(self):"
       }
     ]
   }
