@@ -568,8 +568,8 @@
     {
       "id": "M622-ONE-FULL-VERIFIED-HOME-FRAME-NO-FAKE-LOADER",
       "issue": "Owner screenshot and correction / Issue #528 / PR #527",
-      "previous_behavior": "Home mounted while owner-verified encrypted ledger was loading and displayed a large spinning circle, unauthorized bilingual startup copy, two blank skeleton cards. First attempt to remove it introduced an intermediate faux Home whose balance appeared as four bullet marks, explicitly rejected by the owner.",
-      "approved_behavior": "Remove ALL separate Home loading spinner, startup copy, skeletons and masked temporary figures. The real Home body only transitions to its complete original dashboard once authenticated owner-specific finance ledger, accounts, categories, and budgets have loaded and verified; no synthetic zero, intermediate false balance, duplicate finance, or unrequested screens. Financial real figures, cards and operations paint together. Actual bank SMS scanning begins asynchronously only after that first verified Home frame. Android startup still has nonzero immutable finance I/O; source tests do not certify instantaneous physical startup.",
+      "previous_behavior": "Home mounted while owner-verified encrypted ledger was loading and displayed a large spinning circle, unauthorized bilingual startup copy, two blank skeleton cards. First attempt to remove it introduced an intermediate faux Home whose balance appeared as four bullet marks, explicitly rejected by the owner. In addition, the previous code set ready=true before its asynchronous owner-account projection, so a first-frame ledger total could change to bank-account balances later.",
+      "approved_behavior": "Remove ALL separate Home loading spinner, startup copy, skeletons and masked temporary figures. The real Home body only transitions to its complete original dashboard once authenticated owner-specific finance ledger, accounts, categories, and budgets have loaded and verified; no synthetic zero, intermediate false balance, duplicate finance, or unrequested screens. Financial real figures, cards and operations paint together. Actual bank SMS scanning begins asynchronously only after that first verified Home frame. Android startup still has nonzero immutable finance I/O; source tests do not certify instantaneous physical startup. Gate the entire original Home Scaffold, including header and footer, not just the Home body. For already-verified encrypted sources, start the owner-account balance projection while the immutable finance JSON decodes; for legacy data avoid category-migration races. Only mark ready after verified account balances complete. Errors fail closed to the existing recovery UI. User-selected hide-balance preference remains supported, but no unrequested temporary mask is displayed. No verified-account slow second repaint after Home entry.",
       "source_paths": [
         "lib/main.dart"
       ],
@@ -590,7 +590,8 @@
         "Keep original unlocked normal Home layout and genuine verified amounts, no hidden four-dot placeholder.",
         "Do not bypass owner biometric/credential verification, protected session or encrypted finance integrity.",
         "Never let background SMS analysis or SMS auto-booking block first actual finance frame.",
-        "A separate recovery screen for corrupt source remains mandatory; no silent empty-ledger fallback."
+        "A separate recovery screen for corrupt source remains mandatory; no silent empty-ledger fallback.",
+        "Verified bank account balances must complete before setting ready=true and beginning user-visible Home or SMS review."
       ]
     },
     {
