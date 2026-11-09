@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -55,10 +56,15 @@ void main(){
   // FakeAsync cannot run native file locks: use the isolated test-only bypass.
   final folder=Directory.systemTemp.createTempSync('waffra-widget-load-test-');
   addTearDown((){if(folder.existsSync())folder.deleteSync(recursive:true);});
+  final initialized=Completer<void>();
   await tester.pumpWidget(WaffraWidgetCaptureApp(
    testWriterDirectory:folder,testBypassNativeLock:true,
    testSourceProbe:() async {},
+   testOnReady:initialized.complete,
   ));
+  // M609 integrity preflight runs through compute in a real isolate.
+  // The initial FakeAsync pump cannot complete that work on its own.
+  await tester.runAsync(()=>initialized.future.timeout(const Duration(seconds:20)));
   await tester.pumpAndSettle();
   expect(find.byKey(const Key('waffra-widget-bank-message')),findsOneWidget);
   await tester.enterText(find.byKey(const Key('waffra-widget-bank-message')),
@@ -79,11 +85,16 @@ void main(){
   });
   await tester.binding.setSurfaceSize(const Size(430,920));
   addTearDown(()=>tester.binding.setSurfaceSize(null));
+  final initialized=Completer<void>();
+  final saveSettled=Completer<void>();
   await tester.pumpWidget(WaffraWidgetCaptureApp(
    testWriterDirectory:testLockDirectory,
    testBypassNativeLock:true,
    testSourceProbe:() async {},
+   testOnReady:initialized.complete,
+   testOnSaveSettled:saveSettled.complete,
   ));
+  await tester.runAsync(()=>initialized.future.timeout(const Duration(seconds:20)));
   await tester.pumpAndSettle();
   await tester.enterText(find.byKey(const Key('waffra-widget-bank-message')),
    'شراء PoS\nالمبلغ: 125.50 SAR\nلدى متجر');
@@ -92,11 +103,11 @@ void main(){
   expect(jsonDecode(p.getString('entries')??'[]'),isEmpty);
   await tester.ensureVisible(find.text('تأكيد إضافة العمليات'));
   await tester.tap(find.text('تأكيد إضافة العمليات'));
-  // UI behavior runs with the test-only in-memory coordinator because
-  // Flutter widget FakeAsync cannot execute native File.lock callbacks.
-  // The production lock is exercised by its separate real-I/O tests.
-  await tester.pump(const Duration(milliseconds:250));
-  await tester.pump(const Duration(milliseconds:1350));
+  // Only the native cross-engine lock is bypassed in disposable UI tests.
+  // The real background integrity preflight and confirm-only writer remain.
+  // An explicit async completion signal avoids timed pumps racing compute.
+  await tester.runAsync(()=>saveSettled.future.timeout(const Duration(seconds:30)));
+  await tester.pump(const Duration(milliseconds:350));
   final saved=jsonDecode(p.getString('entries')??'[]') as List;
   expect(saved.length,1);
   expect((saved.first['amount'] as num).toDouble(),125.5);
