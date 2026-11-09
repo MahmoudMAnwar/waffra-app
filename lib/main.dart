@@ -1296,12 +1296,14 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  // held by Home and the independent Android Widget finance engine.
  final WaffraLiveAccountWriteAuthority _accountWriteAuthority=
      const WaffraLiveAccountWriteAuthority();
- Future<void> saveUser(Person u)async {
+ Future<void> saveUser(Person u,{bool passwordAlreadyVerified=false})async {
   final profileCommitClock=kProfileMode?(Stopwatch()..start()):null;
   // M513: refuse to declare a new phone profile successfully registered if
   // Android never retained a verifier for that exact account. Keeping the
   // existing login password usable is part of successful account creation.
-  if(u.provider.toLowerCase().trim()=='phone'){
+  if(u.provider.toLowerCase().trim()=='phone'&&!passwordAlreadyVerified){
+   // M617: onboarding and profile edits still check fresh OS keystore.
+   // Password sign-in just passed the exact phone-bound OS+PBKDF2 verifier.
    final phone=WaffraSaudiMobile.inputFromStored(u.phone);
    final integrity=await WaffraLocalPhoneCredentials.probeForPhone(phone);
    if(integrity!=WaffraLocalCredentialProbe.ready){
@@ -1791,7 +1793,8 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     (profile!.provider.toLowerCase().contains('local')||
      profile!.provider.contains('محلي')||
      profile!.provider.toLowerCase().contains('guest')||
-     profile!.provider.toLowerCase().contains('demo')))?LoginScreen(onSave:saveUser):
+     profile!.provider.toLowerCase().contains('demo')))?LoginScreen(onSave:saveUser,
+     onVerifiedPasswordSave:(u)=>saveUser(u,passwordAlreadyVerified:true)):
    (autoSmsConsentPending&&_smsConsentAfterVerifiedSignIn)?
     WaffraAutoSmsConsentPage(
      english:language=='en',onComplete:finishSmsPermissionChoice):
@@ -2286,7 +2289,9 @@ class _IntroScreenState extends State<IntroScreen> {
 
 class LoginScreen extends StatefulWidget {
  final Future<void> Function(Person) onSave;
- const LoginScreen({super.key,required this.onSave});
+ final Future<void> Function(Person) onVerifiedPasswordSave;
+ const LoginScreen({super.key,required this.onSave,
+  required this.onVerifiedPasswordSave});
  @override State<LoginScreen> createState()=>_LoginScreenState();
 }
 class _LoginScreenState extends State<LoginScreen> {
@@ -2450,7 +2455,8 @@ class _LoginScreenState extends State<LoginScreen> {
     gender:account.gender,avatar:account.avatar,
     birthday:account.birthday,phone:enteredPhone);
    final activationTiming=kProfileMode?(Stopwatch()..start()):null;
-   await widget.onSave(verifiedAccount);
+   // Only the previously successful real password check reaches this hook.
+   await widget.onVerifiedPasswordSave(verifiedAccount);
    if(kProfileMode&&activationTiming!=null){
     debugPrint('WAFFRA_AUTH_PERF verified_profile_activation_ms='
      '${activationTiming.elapsedMilliseconds}');
