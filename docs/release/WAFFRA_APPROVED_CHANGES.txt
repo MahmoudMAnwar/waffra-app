@@ -1,3 +1,10 @@
+[PR #517 M612 — M440 ONE-SHARED-ROOT FAILURE FIX, EXACT HEAD QA PENDING] 2026-11-09
+==========================================================================================================
+- CI run 42600657974: 51/52 M440 finance/account tests passed; one old parser test still expected the user-approved SAR display "1,000" to be rejected. This stale assertion contradicted the updated formatter-compatible parser; the database/transfer writer was NOT the failing code.
+- Updated only the old M440 parser test to positively accept 1,000 and properly grouped Arabic/Persian/decimal SAR, alongside new malformed grouping, nonpositive and foreign-currency rejection cases. Existing other M440 test functions remain byte-identical and in the suite.
+- Updated M385 test-section bounds, M550 behavior-to-test contracts and docs/WAFFRA_REQUIREMENTS.md for ongoing protection against stale assumptions; retained M611 SQLCipher transfer journal/balance tests.
+- No production finance, credential, SQLCipher, sender or account selection behavior changed in this CI correction. Android hands-on save verification and exact-new-commit full green CI still required; this PR remains Draft/unmerged.
+
 [PR #517 M611 LATEST HEAD QA SCOPE SYNC] 2026-11-09
 - Owner #513–#516 changes still Draft and unmerged. Fixed Home action closure syntax on the branch, and added actual disposable encrypted SQLCipher transfer-history test with exact amount, source/target scope, account balances and zero new income/expense rows; legacy M549 positive checks follow the owner-approved Home navigation behavior. Source M385 file scope and M550 all-workflow contracts now declare the additional test.
 - The finance entry sheet still needs Android post-confirmation writer/retry testing; residual 1–2-second lag has not been profiled or certified eliminated. Run exact latest SHA checks before considering main merge.
