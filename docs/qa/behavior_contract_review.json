@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "pr": "M624 issue #530 / new PR pending",
+  "pr": "https://github.com/MahmoudMAnwar/waffra-app/pull/532",
   "issue": "https://github.com/MahmoudMAnwar/waffra-app/issues/530",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main",
@@ -660,7 +660,7 @@
     },
     {
       "id": "M624-VERIFIED-HOME-FIRST-POSTFRAME-SMS",
-      "issue": "Issue #530 / proposed PR for verified Home first-frame SMS deferral",
+      "issue": "Issue #530 / PR #532",
       "previous_behavior": "M623 kept the previous login or biometric page noninteractive while finance verified in Offstage, but saveUser still scheduled native SMS resume in the next frame, before the authenticated Home; competing I/O increased perceived freeze. The Home's separately deferred inbox scan could overlap native SMS resume.",
       "approved_behavior": "No new loading page, fake account sums or bypass of password/biometric/SQLCipher. Once real Home has finished verifying and visibly paints, launch Android native SMS resume AFTER that frame and before the first background inbox scan. Cancel stale/signed-out/locked owner work, await any in-flight resume before safely suspending SMS on logout, and maintain exact owner-bound finance state and first-run consent.",
       "source_paths": [
