@@ -621,8 +621,8 @@
     {
       "id": "M623-RETAIN-AUTH-SURFACE-UNTIL-VERIFIED-HOME",
       "issue": "Owner 2026-11-09 black Home after M622 spinner removal / PR #529",
-      "previous_behavior": "After successful password sign-in/biometrics, WaffraApp immediately replaced the previous auth/permission view with HomeScreen. The entire Home build returned SizedBox.shrink() until verified SQLCipher finance and account balances finished, painting a blank/black transitional frame with no content.",
-      "approved_behavior": "Do not replace the spinner with a black screen or partial fake Home. Keep the already-existing auth/biometric/first-run consent/country view mounted and noninteractive after successful verification while HomeScreen initializes behind Offstage. Only after complete verified ledger AND real account balances are ready, atomically show the existing complete Home with no invented spinner, text or fake/masked numbers. A failed source verification displays the existing actionable finance recovery; an ordinary language change preserves the Home state instead of mounting it again. Source owner identity and anti-relogin checks remain enforced; SMS scan begins only after the first genuine Home frame and 900ms delay.",
+      "previous_behavior": "After successful password sign-in/biometrics, WaffraApp immediately replaced the previous auth/permission view with HomeScreen. The entire Home build returned SizedBox.shrink() until verified SQLCipher finance and account balances finished, painting a blank/black transitional frame with no content. Old positive M422/M424/M443/M290 tests also asserted exact source fragments from the removed ternary route.",
+      "approved_behavior": "Do not replace the spinner with a black screen or partial fake Home. Keep the already-existing auth/biometric/first-run consent/country view mounted and noninteractive after successful verification while HomeScreen initializes behind Offstage. Only after complete verified ledger AND real account balances are ready, atomically show the existing complete Home with no invented spinner, text or fake/masked numbers. A failed source verification displays the existing actionable finance recovery; an ordinary language change preserves the Home state instead of mounting it again. Source owner identity and anti-relogin checks remain enforced; SMS scan begins only after the first genuine Home frame and 900ms delay. Keep M422 guest/demo blocking assertions under the new local variable named account; no functionality or password verifier may be bypassed to pass a source test.",
       "source_paths": [
         "lib/main.dart"
       ],
@@ -636,7 +636,8 @@
         "test/m603_app_wide_lag_source_regression_test.dart",
         "test/m580_sms_security_navigation_performance_test.dart",
         "test/m290_google_country_reminders_test.dart",
-        "test/m443_merchant_screenshot_regression_test.dart"
+        "test/m443_merchant_screenshot_regression_test.dart",
+        "test/m422_phone_only_auth_entry_test.dart"
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/m550-behavior-contract-preflight.yml",
@@ -653,7 +654,8 @@
         "Never bypass SQLCipher source integrity, account ownership, financial writes, anti-duplicate SMS or signed-out protection.",
         "Retain every exact-head static, Flutter, Android and finance CI gate; any failed gate blocks merge.",
         "A device physical cold/warm screenshot and performance trace remain required to establish that no black frame persists; static tests alone do not certify smoothness.",
-        "M290 still checks country setup consent and ability to skip; M424 and M443 still enforce biometric and logout safeguards. Reconcile exactly four obsolete static source checks, not actual runtime coverage."
+        "M290 still checks country setup consent and ability to skip; M424 and M443 still enforce biometric and logout safeguards. Reconcile exactly four obsolete static source checks, not actual runtime coverage.",
+        "M422 still refuses anonymous guest and demo onboarding; authenticated profile identification is checked in the updated root helper."
       ]
     }
   ]
