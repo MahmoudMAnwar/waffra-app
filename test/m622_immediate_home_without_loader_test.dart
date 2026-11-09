@@ -1,52 +1,46 @@
 import 'dart:io';
-
 import 'package:flutter_test/flutter_test.dart';
 
 void main(){
  final source=File('lib/main.dart').readAsStringSync();
 
- test('M622 first Home paints approved sections without loading dialog',(){
-  final unverified=source.split(' Widget _m622ImmediateHomeSurface()=>')[1]
-   .split(' @override Widget build(BuildContext context)=>PopScope(')[0];
+ test('M622 never renders fake balance or loading screen while verifying vault',(){
   final scaffold=source.split(' @override Widget build(BuildContext context)=>PopScope(')[1]
    .split('  // A fixed 58x58 FAB:')[0];
-  expect(scaffold,contains('!ready?_m622ImmediateHomeSurface():'));
-  expect(unverified,contains("key:const Key('m622-immediate-home-surface')"));
-  expect(unverified,contains('WaffraPageHero('));
-  expect(unverified,contains("waffraIsEnglish?'Total balance':'إجمالي الرصيد'"));
-  expect(unverified,contains("const Text('••••'"));
-  expect(unverified,contains('IgnorePointer('));
-  expect(unverified,isNot(contains('CircularProgressIndicator(')));
-  expect(unverified,isNot(contains('WaffraAutoSms.notifyCommitted(')));
-  expect(unverified,isNot(contains('entries.add(')));
-  expect(unverified,isNot(contains('waffraAvailableCash(')));
+  expect(scaffold,contains('!ready?const SizedBox.shrink():'));
+  expect(scaffold,contains('Stack(clipBehavior:Clip.none,children:[GestureDetector('));
+  expect(source,isNot(contains('Widget _m622ImmediateHomeSurface()=>')));
   expect(source,isNot(contains("'بنفتح الرئيسية…'")));
   expect(source,isNot(contains("'Opening your dashboard…'")));
+  expect(source,isNot(contains("const Text('••••'")));
   expect(scaffold,isNot(contains('!ready?RepaintBoundary(')));
+  expect(scaffold,isNot(contains('!ready?const Center(child:CircularProgressIndicator(')));
  });
 
- test('M622 encryption validation still gates balances and finance actions',(){
-  final loader=source.split(' Future<void> _loadFinanceSafely()async{')[1]
+ test('M622 entire real Home values come from one completed verified load',(){
+  final startup=source.split(' Future<void> _loadFinanceSafely()async{')[1]
    .split(' Widget _financialRecoveryScreen()')[0];
   final load=source.split(' Future<void> load()async {').last
    .split(' // Home reloading an encrypted ledger')[0];
-  expect(loader,contains('setState((){ready=false;_financeLoadFailure=null;});'));
-  expect(loader,contains('await load();'));
-  expect(loader,contains('ready=false;'));
+  final dashboard=source.split(' Widget dashboard(){')[1]
+   .split(' Widget _currentTabContents()')[0];
+  expect(startup,contains('await load();'));
   expect(load,contains('await _ensureFinanceBound();'));
   expect(load,contains('financeView.requireIntegrity();'));
   expect(load,contains('setState(()=>ready=true);'));
+  expect(dashboard,contains('final scopedEntries=_m467ScopedEntries().toList();'));
+  expect(dashboard,contains('balance:_m467ShownBalance()'));
   expect(source,contains('floatingActionButton:!ready||accountOpened||tab==2?null:'));
  });
 
- test('M622 actual SMS scan stays after first verified Home frame',(){
-  final loader=source.split(' Future<void> _loadFinanceSafely()async{')[1]
+ test('M622 SMS scan is deferred until after verified Home frame',(){
+  final startup=source.split(' Future<void> _loadFinanceSafely()async{')[1]
    .split(' Widget _financialRecoveryScreen()')[0];
-  final paints=loader.indexOf('WidgetsBinding.instance.addPostFrameCallback');
-  final scan=loader.indexOf('await _refreshAutoSmsInbox(importMonth:!_autoSmsHistoryComplete)');
-  expect(paints,greaterThan(0));
-  expect(scan,greaterThan(paints));
-  expect(loader,contains('Duration(milliseconds:900)'));
-  expect(loader,contains('if(!mounted||!ready||_financeLoadFailure!=null)return;'));
+  expect(startup.indexOf('await load();'),
+   lessThan(startup.indexOf('WidgetsBinding.instance.addPostFrameCallback')));
+  expect(startup.indexOf('WidgetsBinding.instance.addPostFrameCallback'),
+   lessThan(startup.indexOf('await _refreshAutoSmsInbox(importMonth:!_autoSmsHistoryComplete)')));
+  expect(startup,contains('Duration(milliseconds:900)'));
+  expect(startup,contains('if(!mounted||!ready||_financeLoadFailure!=null)return;'));
  });
 }
