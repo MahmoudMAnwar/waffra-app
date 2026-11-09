@@ -279,7 +279,13 @@ void main(){
   expect(review,contains("Key('m595-review-single-exclude')"));
   expect(review,contains('reviewedAccount?.ids?.single!=null'));
   expect(corrected,isNot(contains("await _financeAuthority.commitConfirmedSms(")));
-  expect(corrected,isNot(contains("WaffraAutoSms.acknowledgeCommitted(")));
+  // A corrected SMS may be ACKed only AFTER the verified SQLCipher writer
+  // has recorded its exact source hash; choosing a different type alone
+  // never ACKs or posts a transaction.
+  expect(corrected,contains('if(smsHashes.contains(bankSmsHash(body)))'));
+  expect(corrected,contains('await WaffraAutoSms.acknowledgeCommitted([id])'));
+  expect(corrected.indexOf('if(smsHashes.contains(bankSmsHash(body)))'),
+    lessThan(corrected.indexOf('await WaffraAutoSms.acknowledgeCommitted([id])')));
  });
 
  test('M587 bank transfer shows exactly three non-posting choices',(){
