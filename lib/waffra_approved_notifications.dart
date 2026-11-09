@@ -62,8 +62,8 @@ class _WaffraApprovedNotificationsPageState
     style:TextStyle(color:active?Colors.white:green,
      fontWeight:FontWeight.w700,fontSize:11)),
    onSelected:(_)=>setState((){
-    // A filter change cannot accidentally act on hidden selections.
-    filter=key;selectedIds.clear();
+    // A sender-chip change keeps selections from other senders.
+    filter=key;
    }));
  }
  Widget noticeTile(WaffraReviewNotice notice){
@@ -139,6 +139,7 @@ class _WaffraApprovedNotificationsPageState
   final selected=filter.startsWith('sender:')?filter.substring(7):null;
   final shown=selected==null?items:
    (senderGroups[selected]??const <WaffraReviewNotice>[]);
+  final liveSelected=selectedIds.intersection(items.map((n)=>n.id).toSet());
   return Directionality(
    textDirection:widget.english?TextDirection.ltr:TextDirection.rtl,
    child:Scaffold(
@@ -199,7 +200,7 @@ class _WaffraApprovedNotificationsPageState
        )),
        const SizedBox(width:8),
        Text((widget.english?'Selected: ':'المحدد: ')+
-        selectedIds.length.toString(),
+        liveSelected.length.toString(),
         style:const TextStyle(color:green,fontWeight:FontWeight.w700)),
       ]),
      ),
@@ -213,7 +214,7 @@ class _WaffraApprovedNotificationsPageState
         key:ValueKey('m580-notice-'+shown[index].id),
         child:noticeTile(shown[index])),
       )),
-     if(selecting&&widget.onBulkExclude!=null&&selectedIds.isNotEmpty)
+     if(selecting&&widget.onBulkExclude!=null&&liveSelected.isNotEmpty)
       SafeArea(top:false,child:Padding(
        padding:const EdgeInsets.fromLTRB(12,8,12,10),
        child:SizedBox(width:double.infinity,
@@ -222,40 +223,40 @@ class _WaffraApprovedNotificationsPageState
          style:FilledButton.styleFrom(backgroundColor:green),
          icon:const Icon(Icons.block_outlined),
          label:Text(widget.english?
-          'Exclude ${selectedIds.length} selected':
-          'استبعاد ${selectedIds.length} رسالة محددة'),
+          'Exclude ${liveSelected.length} selected':
+          'استبعاد ${liveSelected.length} رسالة محددة'),
          onPressed:busy?null:()async{
-          // IDs from the selected current filter only. Full sender blocking
-          // requires all of that sender's visible pending queue to be chosen.
-          final ids=shown.where((r)=>selectedIds.contains(r.id))
-           .map((r)=>r.id).toList(growable:false);
-          // Set lookups keep a 1000-message/sender Select All linear.
+          // M618: aggregate ALL selected live IDs across sender filters.
+          final ids=items.where((n)=>liveSelected.contains(n.id))
+           .map((n)=>n.id).toList(growable:false);
           final idSet=ids.toSet();
-          final fullKeys=senderGroups.keys.where((key)=>
+          final completeKeys=senderGroups.keys.where((key)=>
            senderGroups[key]!.isNotEmpty&&
-           senderGroups[key]!.every((r)=>idSet.contains(r.id))).toList();
-          final senders=fullKeys.map((key)=>senderLabels[key]!)
+           senderGroups[key]!.every((n)=>idSet.contains(n.id))).toList();
+          final senders=completeKeys.map((key)=>senderLabels[key]!)
            .toList(growable:false);
           if(ids.isEmpty)return;
-          final approved=await showDialog<bool>(context:context,
+          // Never automatically block an entire sender when selecting messages.
+          final blockSenders=await showDialog<bool>(context:context,
            builder:(dialog)=>AlertDialog(
             title:Text(widget.english?'Confirm exclusion':'تأكيد الاستبعاد'),
             content:Text(widget.english?
-             'Exclude ${ids.length} Waffra review messages; '
-             'block ${senders.length} complete senders (future SMS too). '
-             'Phone messages and saved transactions are untouched.':
-             'سيتم استبعاد ${ids.length} رسالة من مراجعة وفرة، '
-             'واستبعاد ${senders.length} مرسل كامل من الرسائل القادمة. '
-             'رسائل الهاتف والعمليات المالية المحفوظة لن تتأثر.'),
+             'Exclude ${ids.length} selected messages from all checked senders. '
+             'They remain in Excluded for 30 days. Phone SMS and saved finance are unchanged.':
+             'استبعاد ${ids.length} رسالة محددة من جميع المرسلين. '
+             'ستبقى في المستبعدة لمدة 30 يومًا. رسائل الهاتف والعمليات المالية لن تتأثر.'),
             actions:[
-             TextButton(onPressed:()=>Navigator.pop(dialog,false),
+             TextButton(onPressed:()=>Navigator.pop(dialog,null),
               child:Text(widget.english?'Back':'العودة')),
-             FilledButton(onPressed:()=>Navigator.pop(dialog,true),
-              child:Text(widget.english?'Confirm':'تأكيد')),
+             OutlinedButton(onPressed:()=>Navigator.pop(dialog,false),
+              child:Text(widget.english?'Messages only':'الرسائل فقط')),
+             if(senders.isNotEmpty)FilledButton(
+              onPressed:()=>Navigator.pop(dialog,true),
+              child:Text(widget.english?'Messages and senders':'الرسائل والمرسلين')),
             ]));
-          if(approved!=true||!mounted)return;
+          if(blockSenders==null||!mounted)return;
           await run(()async{
-           final ok=await widget.onBulkExclude!(ids,senders);
+           final ok=await widget.onBulkExclude!(ids,blockSenders?senders:const []);
            if(ok&&mounted)setState((){
             selectedIds.clear();selecting=false;
            });
