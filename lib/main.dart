@@ -18054,6 +18054,66 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
   return false;
  }
+ // M622: paint the existing Home structure at once, without a full-screen
+ // loading animation, invented wording or misleading temporary zero balance.
+ // The source authority still has to verify SQLCipher BEFORE money is shown.
+ Widget _m622ImmediateHomeSurface()=>IgnorePointer(
+  child:CustomScrollView(
+   key:const Key('m622-immediate-home-surface'),
+   physics:const NeverScrollableScrollPhysics(),
+   slivers:[
+    SliverToBoxAdapter(child:Padding(
+     padding:const EdgeInsets.fromLTRB(14,14,14,4),
+     child:WaffraPageHero(
+      title:greeting,
+      subtitle:waffraIsEnglish?'Your finances at a glance':
+       'تابع رصيدك ومعاملاتك وخططك المالية بسهولة.',
+      icon:Icons.spa_outlined))),
+    SliverToBoxAdapter(child:Padding(
+     padding:const EdgeInsets.fromLTRB(14,10,14,0),
+     child:Container(
+      height:148,
+      padding:const EdgeInsets.all(20),
+      decoration:BoxDecoration(
+       color:forest,borderRadius:BorderRadius.circular(22)),
+      child:Column(
+       crossAxisAlignment:CrossAxisAlignment.start,
+       children:[
+        WaffraText(waffraIsEnglish?'Total balance':'إجمالي الرصيد',
+         style:const TextStyle(color:Colors.white,fontSize:14)),
+        const SizedBox(height:12),
+        // Never substitute 0 for unverified finance or a foreign owner's
+        // old ledger. Same concealed-number affordance as the approved Home.
+        const Text('••••',style:TextStyle(
+         color:Colors.white,fontSize:30,fontWeight:FontWeight.w800)),
+       ])))),
+    SliverToBoxAdapter(child:Padding(
+     padding:const EdgeInsets.fromLTRB(14,12,14,0),
+     child:Row(children:[
+      _m549HomeFinanceAction(
+       title:waffraIsEnglish?'Income':'دخل',
+       icon:Icons.south_west_rounded,
+       background:const Color(0xFFE6F7EC),
+       iconColor:const Color(0xFF087A54),
+       onTap:(){}),
+      const SizedBox(width:7),
+      _m549HomeFinanceAction(
+       title:waffraIsEnglish?'Expense':'مصروف',
+       icon:Icons.north_east_rounded,
+       background:const Color(0xFFFCECE8),
+       iconColor:const Color(0xFFB94838),
+       onTap:(){}),
+      const SizedBox(width:7),
+      _m549HomeFinanceAction(
+       title:waffraIsEnglish?'Between my accounts':'تحويل بين حساباتي',
+       icon:Icons.swap_horiz_rounded,
+       background:const Color(0xFFFAF0DD),
+       iconColor:const Color(0xFF7F561C),
+       onTap:(){}),
+     ]))),
+   ],
+  ),
+ );
  @override Widget build(BuildContext context)=>PopScope(
   // Let the root back policy route account/tabs before double-back exit.
   canPop:true,
@@ -18140,27 +18200,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   // Instant content swap avoids building/animating the previous heavy tab
   // alongside the next one (the recurring -> savings navigation hitch).
   body:_financeLoadFailure!=null?_financialRecoveryScreen():
-   !ready?RepaintBoundary(
-    child:Center(child:ConstrainedBox(
-     constraints:const BoxConstraints(maxWidth:320),
-     child:Padding(padding:const EdgeInsets.symmetric(horizontal:24),
-      child:Column(mainAxisSize:MainAxisSize.min,children:[
-       const SizedBox(width:42,height:42,child:CircularProgressIndicator(
-        strokeWidth:3,color:emerald)),
-       const SizedBox(height:18),
-       WaffraText(waffraIsEnglish?'Opening your dashboard…':
-        'بنفتح الرئيسية…',
-        textAlign:TextAlign.center,
-        style:const TextStyle(fontSize:14,fontWeight:FontWeight.w600)),
-       const SizedBox(height:16),
-       Container(height:54,decoration:BoxDecoration(
-        color:Theme.of(context).cardColor,
-        borderRadius:BorderRadius.circular(16))),
-       const SizedBox(height:10),
-       Container(height:36,decoration:BoxDecoration(
-        color:Theme.of(context).cardColor,
-        borderRadius:BorderRadius.circular(14))),
-      ]))))):
+   !ready?_m622ImmediateHomeSurface():
    Stack(clipBehavior:Clip.none,children:[GestureDetector(
     behavior:HitTestBehavior.translucent,
     onHorizontalDragStart:(_)=>_swipeTravel=0,
