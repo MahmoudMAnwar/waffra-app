@@ -28,6 +28,7 @@
     "test/m513_logout_confirmation_test.dart",
     "test/m549_approved_home_notifications_test.dart",
     "test/m611_manual_home_finance_regression_test.dart",
+    "test/m613_foreground_lock_and_m614_finance_timing_contract_test.dart",
     "test/storage/m611_verified_transfer_history_test.dart"
   ],
   "bounded_sections": {
@@ -63,6 +64,10 @@
       {
         "start": " Future<void> _syncWidgetTransactions()async{",
         "end": " Future<void> _refreshWidget()async{"
+      },
+      {
+        "start": " Future<void> saveUser(Person u)async {",
+        "end": " Future<void> setUiCountry("
       }
     ],
     "lib/waffra_account_transaction_form.dart": [
