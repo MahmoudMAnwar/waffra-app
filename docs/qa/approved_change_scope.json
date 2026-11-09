@@ -1,182 +1,109 @@
 {
   "contract_version": 1,
-  "change_id": "M615-M618-SMS-REVIEW-30D-UX-CROSS-SENDER-PERF-PR524-20261109",
-  "human_scope_review": "Owner approved generated Waffra SMS review design and explicitly demanded exclusion beneath Yes/No, two alternative templates on No/Edit, 30-day reversible individual exclusion with safe automatic metadata cleanup, cross-sender Select All persistence in notifications, no learning-rules marketing copy anywhere, and real 2–3s login/first-finance diagnostic and safe improvement. This is a new branch / PR #524 after merged PR #517. No SMS or financial ciphertext, account source, historical balances, login KDF, biometric policy or receiver data may be bypassed. Exact-head CI plus real Android proof required before release.",
+  "change_id": "M620-M621-ANDROID-FINANCE-NOTIFICATION-WALLET-AND-OWNER-GATED-DEEP-LINK-PR527-20261109",
+  "human_scope_review": "Owner approved a new Android small status-bar notification icon and accurate financial notification routing: confident bank SMS kinds as review-only proposals, uncertain as requiring review, exact original Yes/No/Exclude UI on tap, secure saved-ledger details only after actual financial commit. Issues #525 and #526; PR #527. Keep every native owner-scope, biometric, SQLCipher and anti-duplicate check; real Android confirmation required.",
   "user_requested_changes": [
-    "Keep approved branded SMS-review UI, original SMS in separate expandable card, structured account/amount/type/category/date details and a left RTL scroll-thumb gutter.",
-    "On confirmed suggested Expense No/Edit show exactly Income and Transfer alternative buttons leading to their real templates; symmetric Income alternatives; keep transfer/OTP review fail-closed.",
-    "Place Exclude this message beneath Yes/No, and after success tell user it appears in Excluded for 30 days.",
-    "Use individual exclusion date (not SMS original receipt time); expire encrypted UI labels at 30 days on app SMS scanning/list read, keep only encrypted owner-bound denial fingerprint to prevent historical reappearance, no user SMS deletion and no ledger editing.",
-    "On notifications sender chip changes, maintain checked IDs; Select All of sender B adds to sender A selection. Confirm with all selected live IDs, explicit separate sender-block choice; do not implicitly block whole senders.",
-    "Remove all visible Waffra learns safe rules language, retain local rules behavior and financial validation.",
-    "Shorten unwelcoming initial Home loading copy while protecting verified SQLCipher startup, and skip only demonstrably redundant second OS password verifier probe using exact verified login object identity after secure PBKDF2, never on registration or edits.",
-    "Update old assertions and run new source/widget regression. Physical Android login latency and storage expiry verification remain required.",
-    "M617 CI anti-regression: old tests preserve the secure PBKDF2 rejection and post-match profile commit ordering while changing old onSave assertions to verified-password-only callback; update constructor fixture without disabling tests.",
-    "M615 Python M574 audit of required original bank SMS fields remains mandatory; its exact asserted presentation changes only from a joined paragraph to separate labeled and verified rows.",
-    "M619: six full-suite CI job failures traced to M469/M441 obsolete authentication callback and M580 obsolete review layout; preserve negative security/no-auto-post assertions while matching the actual verified-login and Yes/No/exclude code."
+    "Replace Android's generic system information notification icon with a minimal one-color wallet mark suited to the status bar and generated Android APK packaging.",
+    "Classify trusted bank SMS income, expense and transfer only as proposals requiring explicit user review; say saved only after verified SQLCipher finance commit.",
+    "On review system notice tap open exactly that source-SMS review with Yes / No-correct-type / Exclude 30 days, never generic Home or guessed financial write.",
+    "On actual committed notification tap open its exact already-persisted owner-verified ledger entry read-only detail, not a second confirmation.",
+    "Handle cold start, warm onNewIntent, mandatory biometric, restored owner and stale SMS securely, with immutable per-notice intent IDs, never plaintext SMS extras.",
+    "Add source and parser regression tests and preserve original security tests, full CI and physical phone verification gates."
   ],
   "allowed_changed_files": [
+    ".github/workflows/android-full-smoke.yml",
+    ".github/workflows/android.yml",
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
-    "lib/waffra_approved_notifications.dart",
-    "native/WaffraAutoSmsStore.kt",
-    "test/m422_phone_only_auth_entry_test.dart",
-    "test/m426_local_phone_credentials_test.dart",
-    "test/m463_auth_first_one_page_test.dart",
-    "test/m514_sms_review_regressions_test.dart",
-    "test/m547_login_isolate_performance_test.dart",
-    "test/m549_approved_home_notifications_test.dart",
-    "test/m580_sms_security_navigation_performance_test.dart",
-    "test/m601_auth_busy_contract_test.dart",
-    "test/m604_fast_login_first_frame_test.dart",
-    "test/m613_foreground_lock_and_m614_finance_timing_contract_test.dart",
-    "test/m615_m618_sms_review_retention_perf_contract_test.dart",
-    "test/qa/m574_sms_confirmation_full_fields_test.py",
-    "test/m469_phone_logout_login_integrity_regression_test.dart",
-    "test/m441_auth_sms_copy_regression_test.dart"
+    "lib/waffra_auto_sms.dart",
+    "lib/waffra_auto_sms_autopost.part.dart",
+    "lib/waffra_messages.dart",
+    "native/WaffraAutoSmsNotifications.kt",
+    "native/WaffraAutoSmsWorker.kt",
+    "native/WaffraMainActivity.kt",
+    "native/waffra_notification_wallet.xml",
+    "test/m620_m621_finance_notification_routing_test.dart"
   ],
   "bounded_sections": {
+    ".github/workflows/android.yml": [
+      {
+        "start": "          for filename in ('WaffraAutoSmsStore.kt'",
+        "end": "          if 'android.intent.action.SEND' not in xml:"
+      }
+    ],
+    ".github/workflows/android-full-smoke.yml": [
+      {
+        "start": "          for filename in ('WaffraAutoSmsStore.kt'",
+        "end": "          if 'android.intent.action.SEND' not in xml:"
+      }
+    ],
     "lib/main.dart": [
       {
-        "start": " // The live account/profile writer must never bypass the same source lock",
-        "end": " Future<void> setUiCountry("
+        "start": " void _m468OnResume(){",
+        "end": " void _returnToHome(){"
       },
       {
-        "start": "class LoginScreen extends StatefulWidget {",
-        "end": "class ProfileForm extends StatefulWidget {"
+        "start": " Future<void> _loadFinanceSafely()async{",
+        "end": " Widget _financialRecoveryScreen()"
       },
       {
-        "start": " Future<void> _openExcludedSenders()async{",
-        "end": " List<WaffraReviewNotice> _m549ReviewNotices(){"
-      },
-      {
-        "start": " Future<bool> _m592ExcludeNotificationSelection(",
-        "end": " Future<void> _m549OpenNotifications()async{"
-      },
-      {
-        "start": " Future<void> _reviewSmsAccountTransfer({",
-        "end": " void _receiveSharedSms(){"
-      },
-      {
-        "start": "  body:_financeLoadFailure!=null?_financialRecoveryScreen():",
-        "end": "  Stack(clipBehavior:Clip.none,children:[GestureDetector("
-      },
-      {
-        "start": "   profile==null||showLogin||((profile!.phone.trim().isEmpty)&&",
-        "end": "   (autoSmsConsentPending&&_smsConsentAfterVerifiedSignIn)?"
+        "start": " Widget _financialRecoveryScreen()=>Center(",
+        "end": " Future<void> _syncWidgetTransactions()async{"
       }
     ],
-    "lib/waffra_approved_notifications.dart": [
+    "lib/waffra_auto_sms.dart": [
       {
-        "start": "class _WaffraApprovedNotificationsPageState",
+        "start": " static Future<bool> notifyCommitted({",
         "end": null
       }
     ],
-    "native/WaffraAutoSmsStore.kt": [
+    "lib/waffra_auto_sms_autopost.part.dart": [
       {
-        "start": "    private const val excludedMessageInfoBucketPrefix",
-        "end": "    private const val completedTransferBucketPrefix"
+        "start": "  Future<void> keepForReview(",
+        "end": "  final prefs=await SharedPreferences.getInstance();"
       },
       {
-        "start": "    fun scanProgress(context: Context)",
-        "end": "    fun enable(context: Context, allow: Boolean)"
-      },
-      {
-        "start": "    private fun excludedMessageInfo(context: Context",
-        "end": "    private val completedTransferCipherCache"
-      },
-      {
-        "start": "    fun excludeMessages(context: Context",
-        "end": "    fun acknowledgeCompletedTransfer(context: Context"
+        "start": "      await WaffraAutoSms.notifyCommitted(",
+        "end": "      summary['saved']=summary['saved']!+1;"
       }
     ],
-    "test/m422_phone_only_auth_entry_test.dart": [
+    "lib/waffra_messages.dart": [
       {
-        "start": " test('M422 login retains explicit password challenge before profile save',(){",
+        "start": "/// Native receiver reports *availability*",
+        "end": "/// Launch the handset's default SMS app;"
+      }
+    ],
+    "native/WaffraAutoSmsNotifications.kt": [
+      {
+        "start": "import android.Manifest",
         "end": null
       }
     ],
-    "test/m426_local_phone_credentials_test.dart": [
+    "native/WaffraAutoSmsWorker.kt": [
       {
-        "start": " test('M426 verified password, protected startup biometric and no redundant relogin gate',(){",
-        "end": null
+        "start": "                        \"notifyAutoSmsSaved\" -> {",
+        "end": "                        else -> result.notImplemented()"
       }
     ],
-    "test/m463_auth_first_one_page_test.dart": [
+    "native/WaffraMainActivity.kt": [
       {
-        "start": " test('M463 app authentication always precedes first-run permissions',(){",
-        "end": " test('M463 first clean install has only one account creation form',(){"
-      }
-    ],
-    "test/m514_sms_review_regressions_test.dart": [
-      {
-        "start": " test('M517 excluded SMS list keeps per-message count separate from senders',(){",
-        "end": " test('M518 live SMS and history prefer the same sender timestamp',(){"
-      }
-    ],
-    "test/m547_login_isolate_performance_test.dart": [
-      {
-        "start": " test('login shows a painted, stable busy indicator and prevents double taps', () {",
-        "end": " test('Android SMS re-enable and resume do not block main-thread login frames', () {"
-      }
-    ],
-    "test/m549_approved_home_notifications_test.dart": [
-      {
-        "start": " testWidgets('M592 Select All of one sender confirms exactly one sender block',",
-        "end": " testWidgets('M581 empty sender list shows one helpful state',"
-      }
-    ],
-    "test/m580_sms_security_navigation_performance_test.dart": [
-      {
-        "start": " test('cold Home never shows a completely blank spinner-only body',(){",
-        "end": " test('canceling SMS review never triggers a redundant full encrypted SMS reread',(){"
+        "start": "    private var pendingShare: String? = null",
+        "end": "    private var screenshotsAllowed: Boolean = true"
       },
       {
-        "start": " test('M595 correction must not auto-post, guess a transfer, or auto ACK',(){",
-        "end": " test('M587 bank transfer shows exactly three non-posting choices',(){"
-      }
-    ],
-    "test/m601_auth_busy_contract_test.dart": [
-      {
-        "start": "  testWidgets('actual login button renders legibly in enabled and busy/disabled states',",
-        "end": "  test('M601 source keeps a readable painted spinner and no extra secure-store read',"
+        "start": "    override fun onCreate(savedInstanceState: Bundle?) {",
+        "end": "    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {"
       },
       {
-        "start": "  test('M601 source keeps a readable painted spinner and no extra secure-store read',",
-        "end": "  test('M601 never loosens phone, biometric recovery, ledger or logout Yes/No',"
-      }
-    ],
-    "test/m604_fast_login_first_frame_test.dart": [
+        "start": "                \"takeSharedText\" -> {",
+        "end": "                \"autoSmsPermissionState\" ->"
+      },
       {
-        "start": "  test('login preserves source guards and removes only redundant IO/delay',(){",
-        "end": "  test('relogin avoids redundant preference writes but keeps source lease',(){"
-      }
-    ],
-    "test/m613_foreground_lock_and_m614_finance_timing_contract_test.dart": [
-      {
-        "start": " test('M614 profile-mode spans distinguish secure login from verified financial first frame', () {",
-        "end": null
-      }
-    ],
-    "test/qa/m574_sms_confirmation_full_fields_test.py": [
-      {
-        "start": " def test_review_preview_displays_all_495_fields(self):",
-        "end": "if __name__=='__main__':unittest.main()"
-      }
-    ],
-    "test/m469_phone_logout_login_integrity_regression_test.dart": [
-      {
-        "start": "  test('M469 login differentiates missing verifier without bypassing password',(){",
-        "end": null
-      }
-    ],
-    "test/m441_auth_sms_copy_regression_test.dart": [
-      {
-        "start": "  test('M441: verified phone, not editable display profile, owns login', () {",
-        "end": "  test('M459: Saudi account registration is a single page', () {"
+        "start": "                \"notifyAutoSmsSaved\" -> {",
+        "end": "                \"requestAutoSmsPermission\" -> {"
       }
     ]
   }
