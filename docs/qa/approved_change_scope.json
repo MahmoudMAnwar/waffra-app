@@ -10,7 +10,8 @@
     "On notifications sender chip changes, maintain checked IDs; Select All of sender B adds to sender A selection. Confirm with all selected live IDs, explicit separate sender-block choice; do not implicitly block whole senders.",
     "Remove all visible Waffra learns safe rules language, retain local rules behavior and financial validation.",
     "Shorten unwelcoming initial Home loading copy while protecting verified SQLCipher startup, and skip only demonstrably redundant second OS password verifier probe using exact verified login object identity after secure PBKDF2, never on registration or edits.",
-    "Update old assertions and run new source/widget regression. Physical Android login latency and storage expiry verification remain required."
+    "Update old assertions and run new source/widget regression. Physical Android login latency and storage expiry verification remain required.",
+    "M617 CI anti-regression: old tests preserve the secure PBKDF2 rejection and post-match profile commit ordering while changing old onSave assertions to verified-password-only callback; update constructor fixture without disabling tests."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -20,6 +21,8 @@
     "lib/main.dart",
     "lib/waffra_approved_notifications.dart",
     "native/WaffraAutoSmsStore.kt",
+    "test/m422_phone_only_auth_entry_test.dart",
+    "test/m426_local_phone_credentials_test.dart",
     "test/m463_auth_first_one_page_test.dart",
     "test/m514_sms_review_regressions_test.dart",
     "test/m547_login_isolate_performance_test.dart",
@@ -83,6 +86,66 @@
       {
         "start": "    fun excludeMessages(context: Context",
         "end": "    fun acknowledgeCompletedTransfer(context: Context"
+      }
+    ],
+    "test/m422_phone_only_auth_entry_test.dart": [
+      {
+        "start": " test('M422 login retains explicit password challenge before profile save',(){",
+        "end": null
+      }
+    ],
+    "test/m426_local_phone_credentials_test.dart": [
+      {
+        "start": " test('M426 verified password, protected startup biometric and no redundant relogin gate',(){",
+        "end": null
+      }
+    ],
+    "test/m463_auth_first_one_page_test.dart": [
+      {
+        "start": " test('M463 app authentication always precedes first-run permissions',(){",
+        "end": " test('M463 first clean install has only one account creation form',(){"
+      }
+    ],
+    "test/m514_sms_review_regressions_test.dart": [
+      {
+        "start": " test('M517 excluded SMS list keeps per-message count separate from senders',(){",
+        "end": " test('M518 live SMS and history prefer the same sender timestamp',(){"
+      }
+    ],
+    "test/m547_login_isolate_performance_test.dart": [
+      {
+        "start": " test('login shows a painted, stable busy indicator and prevents double taps', () {",
+        "end": " test('Android SMS re-enable and resume do not block main-thread login frames', () {"
+      }
+    ],
+    "test/m549_approved_home_notifications_test.dart": [
+      {
+        "start": " testWidgets('M618 sender block requires explicit opt-in after Select All',",
+        "end": " testWidgets('M581 empty sender list shows one helpful state',"
+      }
+    ],
+    "test/m580_sms_security_navigation_performance_test.dart": [
+      {
+        "start": " test('cold Home never shows a completely blank spinner-only body',(){",
+        "end": " test('canceling SMS review never triggers a redundant full encrypted SMS reread',(){"
+      }
+    ],
+    "test/m601_auth_busy_contract_test.dart": [
+      {
+        "start": "  testWidgets('actual login button renders legibly in enabled and busy/disabled states',",
+        "end": "  test('M601 source keeps a readable painted spinner and no extra secure-store read',"
+      }
+    ],
+    "test/m604_fast_login_first_frame_test.dart": [
+      {
+        "start": "  test('login preserves source guards and removes only redundant IO/delay',(){",
+        "end": "  test('relogin avoids redundant preference writes but keeps source lease',(){"
+      }
+    ],
+    "test/m613_foreground_lock_and_m614_finance_timing_contract_test.dart": [
+      {
+        "start": " test('M614 profile-mode spans distinguish secure login from verified financial first frame', () {",
+        "end": null
       }
     ]
   }
