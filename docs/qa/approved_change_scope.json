@@ -1,71 +1,51 @@
 {
   "contract_version": 1,
-  "change_id": "M631-OWNER-VERIFIED-FINANCE-PREWARM-FIRST-FRAME",
-  "human_scope_review": "Issue #545 records owner request to try early binding and remove first Home contention. Safe adaptation: BIND only after verified profile/startup, reuse exact session, await real balances before painting, defer nonessential tasks.",
+  "change_id": "M632-SPLASH-FIRST-ACCOUNT-SMS-HOME-JANK",
+  "human_scope_review": "Owner P0 2026-11-10 + Issue #549: finish splash animation, enable first SMS account creation before category confirmation, and reduce UI contention from auto SMS refresh, without weakening mandatory ledger/owner gates.",
   "user_requested_changes": [
-    "Start verified finance binding without awaiting it during confirmed login and restored-session biometric handoff; reuse that single exact owner/session binding on Home.",
-    "Keep Home fully secure and authenticated by waiting for real SQLCipher ledger plus account balances before any visible Home; no placeholder or pre-biometric financial reads.",
-    "Move nonessential widget, tour and reminder work after the first verified Home paint while retaining owner-scoped native SMS resume and logout cleanup.",
-    "Add positive regression coverage, profile-only stage timing and documentation; validate exact-head CI and physical Android before claiming no lag.",
-    "Reconcile M629 source-contract regression with the newly awaited signout Home-close and speculative-prewarm-close branches, preserving both teardown and fail-closed sequencing."
+    "Hold initial Waffra splash until text visibly animates and controller ends while asynchronous app initialization continues.",
+    "For first bank SMS with no money account, offer Add Account even when category is missing; preserve SMS review and restore new verified account, allow Yes only if amount/date/categories/identity are valid; no second picker.",
+    "Keep real SMS analysis; avoid four-page native scans and repeated full pending queues on first Home frame; reduce UI isolate batch monopolization, log stages in profile and cancel stale-session work.",
+    "Measure Android profile and report data; CI does not imply fixed physical freeze."
   ],
   "allowed_changed_files": [
     "lib/main.dart",
-    "test/m631_verified_finance_prewarm_test.dart",
+    "test/m632_splash_sms_home_first_account_test.dart",
     "docs/WAFFRA_REQUIREMENTS.md",
+    "docs/qa/M632_SPLASH_SMS_PERFORMANCE.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
-    "docs/qa/M631_VERIFIED_FINANCE_PREWARM.md",
-    "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "test/m629_pull_refresh_parity_auth_home_test.dart"
+    "docs/release/WAFFRA_APPROVED_CHANGES.txt"
   ],
   "bounded_sections": {
     "lib/main.dart": [
       {
-        "start": " // M627: one Home State per authenticated session, stable across locale.",
-        "end": " // Profile-mode handoff timings; never log identity or financial values."
+        "start": " Future<void> launchIntro()async{",
+        "end": " @override void didChangeAppLifecycleState(AppLifecycleState state){"
       },
       {
-        "start": " @override void dispose(){WaffraRegionalCopy.countryIso.removeListener(_onRegionChanged);",
-        "end": " String? startupError;"
+        "start": " void _receiveAutoSmsNotice(){",
+        "end": " Future<void> _rescanAutoSmsInbox()async{"
       },
       {
-        "start": " String? startupError;\n Future<void> load()async {",
-        "end": " Future<void> finishSmsPermissionChoice()async{"
+        "start": " Future<void>? _autoSmsRefreshInFlight;",
+        "end": " Future<void> _runAutoSmsRefresh({bool importMonth=false})async{"
       },
       {
-        "start": " Future<void> saveUser(Person u)async {",
-        "end": " Future<void> setUiCountry("
+        "start": " Future<void> _runAutoSmsRefresh({bool importMonth=false})async{",
+        "end": " Future<void> _openSmsRules("
       },
       {
-        "start": " Future<void> logout()async {",
-        "end": " bool _logoutInProgress=false;"
-      },
-      {
-        "start": "  if(canMountHome)KeyedSubtree(",
-        "end": " @override Widget build(BuildContext context)=>MaterialApp("
-      },
-      {
-        "start": "class HomeScreen extends StatefulWidget {",
-        "end": "// Scroll-linked, pinned balance summary."
-      },
-      {
-        "start": " Future<void> _bindFinanceSource()async{",
-        "end": " // M627: sign-out closes the Home-owned binding, not a root-local phantom."
+        "start": " Future<void> _reviewAutoSmsCandidates({String? targetId})async {",
+        "end": " void _receiveSharedSms(){"
       },
       {
         "start": " Future<void> _loadFinanceSafely()async{",
         "end": " Widget _financialRecoveryScreen()=>"
       },
       {
-        "start": " Future<void> load()async {\n  final financeClock=",
-        "end": " Future<void> _refreshWidget()async{"
-      }
-    ],
-    "test/m629_pull_refresh_parity_auth_home_test.dart": [
-      {
-        "start": " test('M629 logout awaits BOTH independent teardown tasks before signout',(){",
-        "end": " test('M629 does not move SMS scanning before verified Home',(){"
+        "start": " Future<({List<String?>? ids,int? generation})?> reviewSmsAccountLinks(",
+        "end": "/// Budget assignment is OPTIONAL in every bank import:"
       }
     ]
   }
