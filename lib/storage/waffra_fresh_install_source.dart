@@ -3,8 +3,11 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:crypto/crypto.dart';
-import 'package:drift/native.dart';
 import 'package:drift/drift.dart';
+import 'package:drift/native.dart';
+// Drift wraps worker SQLite errors; unwrap only to classify bounded contention.
+// ignore: experimental_member_use
+import 'package:drift/remote.dart' show DriftRemoteException;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -16,21 +19,6 @@ import 'waffra_encrypted_store.dart';
 import 'waffra_experimental_writer_gate.dart';
 import 'waffra_fresh_encrypted_vault_bootstrap.dart';
 import 'waffra_live_legacy_finance_guard.dart';
-
-// NativeDatabase.createInBackground is lazy: its QueryExecutor must be opened
-// before issuing the installation mutex's BEGIN IMMEDIATE reservation.
-class _WaffraInstallMutexOpenUser implements QueryExecutorUser {
-  const _WaffraInstallMutexOpenUser();
-
-  @override
-  int get schemaVersion => 1;
-
-  @override
-  Future<void> beforeOpen(
-    QueryExecutor executor,
-    OpeningDetails details,
-  ) async {}
-}
 
 /// Installation receipt for a vault born encrypted. Migrated vaults use
 /// the separate migration binder and cannot acquire this receipt on reopen.
@@ -66,18 +54,10 @@ class WaffraFreshInstallSource {
   }) => WaffraExperimentalWriterGate(disposableDirectory:directory,experimentalEnabled:true)
       .withExclusiveAccess(() async {
     // POSIX advisory file locks may be shared by Flutter engines in the
-    // same process. Retain the exact BEGIN IMMEDIATE SQLite write reservation
-    // while moving its 10-second busy wait off Flutter's rendering isolate.
-    // The native connection stays open for every awaited installation step;
-    // closing it releases the transaction as the previous sqlite3 lock did.
-    final mutex = NativeDatabase.createInBackground(
-      File('${directory.path}/waffra-install-lock.sqlite'),
-      readPool: 0,
-      setup: (db) => db.execute('PRAGMA busy_timeout=10000'),
-    );
+    // same process. A SQLite write reservation also serializes those engines.
+    final mutex = _WaffraInstallMutex(File('${directory.path}/waffra-install-lock.sqlite'));
     try {
-      await mutex.ensureOpen(const _WaffraInstallMutexOpenUser());
-      await mutex.runCustom('BEGIN IMMEDIATE');
+      await mutex.acquire();
       return await _prepareLocked(directory,readKey,writeKey);
     } finally {
       await mutex.close();
@@ -226,4 +206,38 @@ class WaffraFreshInstallSource {
       throw StateError('Encrypted install identity mismatch.');
     }
   }
+}
+
+// A separate worker owns the SQLite write reservation. In another Flutter
+// engine, waiting for this reservation must not stop rendering or timers.
+class _WaffraInstallMutex extends GeneratedDatabase {
+  _WaffraInstallMutex(File file) : super(NativeDatabase.createInBackground(
+    file, enableMigrations: false,
+    setup: (db) => db.execute('PRAGMA busy_timeout=100'),
+  ));
+
+  Future<void> acquire() async {
+    final elapsed = Stopwatch()..start();
+    while (true) {
+      try {
+        await customStatement('BEGIN IMMEDIATE');
+        return;
+      } catch (error) {
+        final cause = error is DriftRemoteException ? error.remoteCause : error;
+        // SQLite can return BUSY immediately when upgrading a lock; retry
+        // only contention, never corruption/permissions, within the old bound.
+        if (cause is! SqliteException ||
+            (cause.resultCode != 5 && cause.resultCode != 6) ||
+            elapsed.elapsedMilliseconds >= 10000) rethrow;
+        await Future<void>.delayed(const Duration(milliseconds: 25));
+      }
+    }
+  }
+
+  @override
+  int get schemaVersion => 1;
+  @override
+  Iterable<TableInfo<Table, dynamic>> get allSchemaEntities => const [];
+  @override
+  List<TableInfo<Table, Object?>> get allTables => const [];
 }

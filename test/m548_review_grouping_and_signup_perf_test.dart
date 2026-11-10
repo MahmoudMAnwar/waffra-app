@@ -51,17 +51,22 @@ void main() {
   expect(open,isNot(contains('acknowledgeCommitted(')));
  });
 
- test('SMS background state updates yield between bounded parser batches',(){
+ test('SMS classification runs outside UI isolate; native ACK stays checked',(){
   final main=File('lib/main.dart').readAsStringSync();
   final refresh=main.split(' Future<void> _runAutoSmsRefresh(')[1]
    .split(' Future<void> _analyzeAmbiguousSmsOnDemand(')[0];
-  expect(refresh,contains('if(++classifiedSinceYield>=16)'));
-  expect(refresh,contains('await Future<void>.delayed('));
-  expect(refresh,contains('if(!mounted||!ready)return;'));
+  final worker=main.split('Map<String,Object?> waffraM632ClassifySmsQueue(')[1]
+   .split('List<String> splitBankMessages(')[0];
+  expect(refresh,contains('await compute(waffraM632ClassifySmsQueue,'));
+  expect(refresh,contains('if(!mounted||!ready||_m627ClosingSession)return;'));
   expect(refresh,contains('WaffraAutoSms.pendingChecked()'));
-  expect(refresh,contains('_localSmsClassification(annotated,customRules)'));
   expect(refresh,contains('WaffraAutoSms.acknowledgeCommitted(batch)'));
   expect(refresh,contains('WaffraAutoSms.excludeMessages(batch)'));
+  expect(worker,contains('WaffraBankSmsFactsParser.parse(body)'));
+  expect(worker,contains('WaffraSmsLocalRules.resolve('));
+  expect(worker,contains('waiting.add(annotated);'));
+  expect(worker,isNot(contains('WaffraAutoSms.')));
+  expect(worker,isNot(contains('setState(')));
  });
 
  test('fresh registration proves exact read-back without duplicate KDF',(){

@@ -11,11 +11,12 @@ import 'waffra_atomic_finance_snapshot.dart';
 /// Never use an older legacy finance value as fallback for a missing encrypted
 /// value: missing and empty are distinct and cross-source mixing loses money.
 class WaffraFinanceReadView {
-  WaffraFinanceReadView._(Map<String, Object?> values)
-      : _values = Map<String, Object?>.unmodifiable(values);
+  WaffraFinanceReadView._(Map<String, Object?> values, {bool verified = false})
+      : _values = Map<String, Object?>.unmodifiable(values),
+        _integrityVerified = verified;
 
   final Map<String, Object?> _values;
-  bool _integrityVerified = false;
+  bool _integrityVerified;
   Future<void>? _integrityCheckInFlight;
 
   factory WaffraFinanceReadView.fromLegacy(
@@ -40,7 +41,10 @@ class WaffraFinanceReadView {
     if (extras.isNotEmpty) {
       throw StateError('Encrypted finance snapshot contains unknown keys.');
     }
-    return WaffraFinanceReadView._(snapshot.values);
+    // Only an internally validated immutable snapshot may reuse its preflight.
+    // Public/synthetic snapshots and legacy data must still pass validation.
+    return WaffraFinanceReadView._(snapshot.values,
+        verified: WaffraAtomicFinanceSnapshot.wasValidated(snapshot));
   }
 
   /// Validate the COMPLETE captured finance source before a live screen uses

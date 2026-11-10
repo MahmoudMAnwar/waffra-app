@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "pr": "https://github.com/MahmoudMAnwar/waffra-app/pull/543",
-  "issue": "https://github.com/MahmoudMAnwar/waffra-app/issues/542",
+  "pr": "PR #548 M632 against merged M633 main; exact-head QA pending",
+  "issue": "Issue #547; preserve #550 and #552 behavior",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main",
   "reviewed_at": "2026-11-10",
@@ -813,38 +813,151 @@
         "Sign-in always awaits OS-protected inspection and actual PBKDF2 password verification before activating any profile.",
         "Explicit signout suspends native SMS and awaits BOTH Qwen context disposal and Home financial DB drain/close before clearing profile.",
         "A failed native suspension, AI disposal or finance drain leaves signed-in owner intact and shows failure; no cross-account leak.",
-        "Physical Android profile first-frame and login/logout timing evidence needed; source-level improvements do not prove issue resolved."
+        "Physical Android profile first-frame and login/logout timing evidence needed; source-level improvements do not prove issue resolved.",
+        "M631 extends M629 logout: await Home binding drain+close and any unclaimed prewarm connection inside the same independently awaited finance teardown job before any profile signout; a logout at the biometric stage closes a claimed-but-not-mounted prewarm."
       ]
     },
     {
-      "id": "M630-FIRST-VERIFIED-HOME-FRAME-POST-PAINT-ISOLATION",
-      "issue": "Issue #542 / PR #543 — owner physical Android first biometric and logout/relogin Home freeze",
-      "previous_behavior": "After accounts and ledger were verified, Home.load() scheduled widget reread, reminder sync and tutorial work before/at the first real authenticated frame. Root Home loader also requested notification navigation and post-first-frame native SMS. An immediate signout had no explicit drain witness for the separately started widget reread.",
-      "approved_behavior": "Wait for genuine integrity checked SQLCipher source and balances before ready, then reveal fully authentic Home. Reserve its first frame by delaying independent widget/reminder/nav/SMS work 900 ms, sequencing widget/reminder before native SMS resume and inbox review. Show tutorial after scan. Every callback must compare the current Home epoch and abort on logout/retry/dispose. Signout awaits in-flight postframe finance work before closing SQLCipher, bounded and fail-closed. No fake balances, no changes to passwords/biometrics or native review-only policy. For >=48 encrypted pending SMS rows, the exact existing pure BankParser is executed using Flutter compute() off the UI isolate, and its aligned results feed unchanged OTP, local rules, exclusion, financial hash/ACK and human-review logic. For smaller queues keep inline parsing. Discard results on signout, unmount or Home epoch change. No SMS body or secure account value enters logs.",
+      "id": "M630-LOGIN-FINANCE-CONTENTION-AND-VALIDATION",
+      "issue": "Owner requests fix for first-install login and relogin freeze",
+      "previous_behavior": "Installation lock lazy opening can fail with SQLite BUSY; repeated identical reads repeat full worker validation and read-view preflight.",
+      "approved_behavior": "Bound installation lock contention on a migration-free background connection. Reuse only fully verified immutable snapshots for exact SQL bytes, digest and revision on the same store, preserving all fresh source reads.",
+      "source_paths": [
+        "lib/storage/waffra_atomic_finance_snapshot.dart",
+        "lib/storage/waffra_finance_read_view.dart",
+        "lib/storage/waffra_fresh_install_source.dart"
+      ],
+      "test_paths": [
+        "test/storage/m630_finance_responsiveness_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Always read current SQL and check source/schema readiness; never cache authorization.",
+        "Changed bytes, revision, digest and rolled-back transactions must not reuse mismatched validation.",
+        "No authentication, biometric, password strength, finance data or SMS-consent bypass.",
+        "Host measurements do not certify physical Android frame pacing."
+      ]
+    },
+    {
+      "id": "M631-OWNER-SCOPED-FINANCE-BIND-PREWARM",
+      "issue": "https://github.com/MahmoudMAnwar/waffra-app/issues/545",
+      "previous_behavior": "A new HomeState starts another SQLCipher finance bind only after password-login or restored-session biometric unlock, then waits for verified catalog/ledger/account projections before first visible Home. Optional reminder/widget/tour work can also begin on or before that frame.",
+      "approved_behavior": "Only after a verified login/profile commit, or the existing restored-session startup source guard, start one BIND-only background finance preparation and pass the connection to the exact owner/session HomeState after mandatory biometric unlock. On prewarm failure Home retries its normal verified bind. Close unused prewarm before signout and never transfer another owner/session. Keep full ledger/catalog/account integrity and 15s genuine-account timeout before first Home; defer optional widget/tour/reminder work to after verified visible Home.",
       "source_paths": [
         "lib/main.dart"
       ],
       "test_paths": [
-        "test/m630_home_first_frame_contention_test.dart",
+        "test/m631_verified_finance_prewarm_test.dart",
         "test/m622_immediate_home_without_loader_test.dart",
-        "test/m623_verified_home_handoff_no_black_frame_test.dart",
         "test/m624_deferred_sms_after_verified_home_test.dart",
         "test/m627_home_handoff_timeout_and_session_reset_test.dart",
+        "test/m604_fast_login_first_frame_test.dart",
+        "test/storage/m630_finance_responsiveness_test.dart",
         "test/m629_pull_refresh_parity_auth_home_test.dart"
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/m550-behavior-contract-preflight.yml",
         ".github/workflows/m147-final-main-review-gate.yml",
         ".github/workflows/finance-full-regression.yml",
-        ".github/workflows/m429-integration-smoke.yml"
+        ".github/workflows/m429-integration-smoke.yml",
+        ".github/workflows/android-encrypted-db.yml"
       ],
       "safety_invariants": [
-        "No financial Home access before verified active SQLCipher source, integrity validation, account balance projection and owner authentication.",
-        "Never replace initial verified dashboard with zero/placeholder/blank/blur or alter fingerprint re-login policy.",
-        "No native SMS scan before a fully painted, verified first Home and successful owner-scoped resume.",
-        "Explicit signout blocks stale post-frame work and drains every in-flight widget finance read before closing SQLCipher.",
-        "Success in source CI is not evidence of physical Android no-freeze; profile-mode traces and same-data upgrade QA required.",
-        "The 1000 synthetic SMS isolate-vs-inline parity regression must match amount, direction, category and currency review; actual APK frame timings and finance data preservation remain unverified until measured."
+        "Do not construct or reveal Home, read customer finance, or resume native SMS while mandatory biometric is locked.",
+        "Never mark ready until verified ledger/categories AND fresh account balances succeed; keep 15s fail-closed retry, no placeholder or stale/zero balance.",
+        "Prewarm only a binding (no dashboard read); ownership must match exact current Person object and session epoch; never abandon or silently reuse an orphan open SQLCipher connection.",
+        "Logout waits to close unclaimed prewarm and Home-owned open binding before profile removal; failed signout does not change stored balances.",
+        "Profile-mode logs exclude all personal/financial details; exact-head CI and measured Android frame timings are separate acceptance."
+      ]
+    },
+    {
+      "id": "M633-PUBLIC-PREWARM-VERIFIED-HOME-BATCH-DECODE",
+      "issue": "Issue #550: eliminate real UI freezes after first biometric and logout/relogin through safe predictive preparation",
+      "previous_behavior": "Default category JSON was allocated and encoded while Home was verifying its finance source; after verified source integrity, eleven independent JSON fields were decoded in sequence with one compute isolate per large field; verified MoneyEntry mapping artificially waited a millisecond after every 32 records. Existing verified account projection and owner-bound finance binding prewarm were already available.",
+      "approved_behavior": "Prime only public immutable category JSON via a background compute after first splash frame, before login. Reuse the prepared public catalog in verified Home; after WaffraFreshHomeCatalogRecovery.load and source integrity, run one aggregate parseStartupFields worker for all eleven immutable JSON fields, throwing when an invalid field is accessed. Keep real account balances and SQLCipher witness/biometric gate before first visible frame, with account read concurrent to decoding. Yield every 96 rows at Duration.zero instead of 32-row artificial sleeps; neither cached account balance nor SQLCipher key ever carries over after signout. Three existing M468/M580/M603 literal tests are updated from 32/1ms to 96/Duration.zero while retaining source integrity and data conversion assertions. M451 regression continues to assert the real WaffraFreshHomeCatalogRecovery SQLCipher repair and exactly unchanged public category projection, via the newly prewarmed JSON future. M468/M580/M603 retain actual yield checks using valid Duration.zero, not invalid const Duration.zero.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_large_json_decode.dart"
+      ],
+      "test_paths": [
+        "test/m633_startup_batch_decoder_test.dart",
+        "test/m631_verified_finance_prewarm_test.dart",
+        "test/m629_pull_refresh_parity_auth_home_test.dart",
+        "test/m468_large_ledger_decode_test.dart",
+        "test/m603_app_wide_lag_source_regression_test.dart",
+        "test/m580_sms_security_navigation_performance_test.dart",
+        "test/storage/m451_fresh_home_catalog_recovery_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "App only primes fixed public categories, never a credential, personal SQLCipher key, private balance or unverified ledger.",
+        "A missing, corrupt or foreign encrypted finance witness still fails closed before first visible verified Home.",
+        "First registered, restored and idle biometric behavior remains mandatory; ordinary explicit logout/relogin skips the second biometric only after password verification.",
+        "Native SMS signed-out suspension, outstanding financial write/read drain, owner session rotation, and authenticated SQLCipher teardown remain unchanged.",
+        "An exact-head passing test is not sufficient to certify Android lag eliminated; profile APK device frame timing and data-preservation evidence required."
+      ]
+    },
+    {
+      "id": "M634-M453-CANCEL-GITHUB-500-BOUNDED-RETRY",
+      "issue": "Issue #552, actual failed M453 pull_request_target owner report at job 129854755021",
+      "previous_behavior": "M453 iteratively cancelled stale runs while paging a live mutating Actions list, causing duplicate old-run cancellation calls, and treated four transient GitHub API 500 cancellation responses as hard job failure with no retry or observed-run-status check.",
+      "approved_behavior": "Collect and de-duplicate stale run candidates before cancellation, preserve same-repo active PR/main-only/current-SHA and fork guards; recheck PR head before each attempt; bounded 429/500/502/503/504 retry with run-status inspection; count and warn on unresolved backend cancellations as explicit partial cleanup instead of failing unrelated application CI; still fail 401/403, wrong-run identity, unexpected permanent errors; do not check out PR code or cancel current SHA, keep manual dispatch dry run. Space successful mutating requests by >=1000ms per GitHub REST API guidance, use 1s/2s bounded transient 5xx backoff and stop promptly on 429 rather than retrying rate-limited requests.",
+      "source_paths": [
+        ".github/workflows/m453-superseded-pr-cleanup.yml"
+      ],
+      "test_paths": [
+        "scripts/qa/test_m453_queue_hygiene.py"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m453-queue-regression.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "Trusted pull_request_target script executes only the immutable default-branch code and never checks out untrusted PR content.",
+        "Never cancel any main run or unrelated owner, another PR, a current SHA run, or a different branch.",
+        "Error 401/403 or immutable run identity mismatch cannot be reported as successful housekeeping.",
+        "Persistent transient GitHub 5xx cleanup incompleteness is visible as warnings and summary, and cannot hide Flutter regression failures.",
+        "Existing or historical failed cleanup jobs are not retroactively fixed before main workflow YAML is merged."
+      ]
+    },
+    {
+      "id": "M632-SMS-ISOLATE-FIRST-ACCOUNT-VISIBLE-SPLASH",
+      "issue": "Issue #547",
+      "previous_behavior": "Root marks splash introDone after one frame, before wordmark animation ends. First reviewed SMS account action is gated by transaction canConfirm, including valid category; Android initial SMS import and each full queue refresh parse hashes and local rules on Flutter rendering isolate with bursty native notifications.",
+      "approved_behavior": "Splash animation itself gates introDone via its completion callback; finance initialization continues concurrently. First review shows Add Account with zero active money accounts and allows account creation independently of missing financial category, with fresh owner-verified account witness; Yes still requires all original SAR/date/category/account checks. Classify large native encrypted SMS queue in Dart compute worker with pure data, while preserving owner-safe native ACK; debounce reactive refresh, keep first Home interactive before automatic month import. Never auto-post SMS.",
+      "source_paths": [
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m632_sms_account_splash_isolate_contract_test.dart",
+        "test/m548_review_grouping_and_signup_perf_test.dart",
+        "test/m603_app_wide_lag_source_regression_test.dart",
+        "test/m506_android_nine_regressions_test.dart",
+        "test/m580_sms_security_navigation_performance_test.dart",
+        "test/m461_sms_exclusion_and_history_scan_test.dart",
+        "test/m509_all_sender_sms_rescan_dedup_test.dart",
+        "test/m547_sms_incremental_jank_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "Never classify by automatic financial posting; worker cannot mutate native SMS, SQLCipher or UI.",
+        "Original native SMS, confirmed hash and active owner are required for every ACK; batch failure retains original review candidates.",
+        "New account creation requires user-approved SQLCipher writer and matching known bank identity, fresh account witness; never infer bank account from sender alone or post unreviewed message.",
+        "Yes requires valid currency/amount/date/category, selected active account generation, and deduplicated verified finance commit.",
+        "Splash never exposes protected Home or blocks identity/storage startup; Android profile trace required for performance claim.",
+        "M461/M509 financial ACK checks must assert authenticated main-isolate ACK fed by background compute; M547 must assert debounced native notice refresh and never hidden historical rescan."
       ]
     }
   ]

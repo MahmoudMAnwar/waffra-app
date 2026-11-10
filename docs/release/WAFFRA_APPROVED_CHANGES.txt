@@ -1,3 +1,34 @@
+[PR #548 M632 POST-QA SOURCE REVIEW — 2026-11-10]
+- Current production code retains the former private single-message classifier as a clearly annotated reference for M473 learning/parity; the actual high-volume inbox processing uses only the compute worker. Scoped Dart analyzer annotation addresses the documented unused private function warning without disabling analyzer, bypassing security tests, or altering any customer data.
+- The M550 contract references the actual existing M580 SMS security navigation regression, rather than a nonexistent test filename; code/test scope remains exactly declared. The original PR SHA had M550 preflight and M429 analyzer failures, diagnosed and corrected before requesting latest SHA certification.
+- Pending: latest exact-head CI, profile-mode Android login/Home/2000 SMS frame measurements, and old-data device migration. No claim that every device freeze was eliminated.
+
+[PR #548 M632 — DIRECT FIRST SMS ACCOUNT / OFF-ISOLATE REVIEW / VISIBLE WAFFRA SPLASH — ISSUE #547 — 2026-11-10]
+====================================================================================================
+- Root-cause: Waffra root dismissed intro after a single Flutter frame, cutting off the 1650ms logo/Waffra/وفرة animation. Root now responds to the one-shot WaffraLaunchIntro animation-complete callback. The bilingual mark appears earlier and remains visible if startup verification exceeds animation. Finance verification proceeds independently.
+- First SMS review: missing account now shows "إضافة حساب" directly. Account creation (existing verified SQLCipher bank/wallet account API) is independent of preview's category completeness; newly created account is returned, verified and selected inside the SAME SMS review. "نعم" still requires verified SAR/date/category/active account and user's final confirmation. Existing accounts keep selection; new account is not automatically treated as an SMS posting.
+- Mass SMS performance: native encrypted pending queue is still the only source; 2k-item hashes, OTP detection, local rule matching and bank parsing move to a pure-data Flutter compute isolate instead of blocking widget frames. Native ACK/exclusion/committed hashes remain owner-gated in original Home and failed ACK candidates are restored. Bursty native notices debounce before refreshing; initial month history starts after Home is actually painted and has time to respond; explicit rescan remains.
+- M548/M603 regression assertions now prove the stronger off-isolate contract rather than treating 16-message event-loop yields as sufficient. New M632 test covers genuine splash completion, account behavior, original anti-replay and off-isolate candidate processing.
+- Current status: implementation committed in Draft PR pending; exact-head CI and physical Android profile traces (cold first login, relogin, 2000 SMS, navigation after Home, dual-device data retention) still required. CI success does not establish that owner-reported freeze has disappeared.
+
+[PR #546 M631 M629 EXACT-HEAD FULL-SUITE REGRESSION CORRECTION — 2026-11-10]
+- Four CI workflows (M103, M160, M282, full offline finance/UI) shared ONE failing legacy M629 source assertion; 2,637 Dart tests passed and one failed. M629 asserted a one-line Home close. New M631 code still awaits the same close, then additionally awaits an unused owner-scoped prewarm close before credential signout.
+- Reconciled only M629 logout regression with positive checks for both teardown branches, single finance task inside Future.wait alongside AI disposal, and no credential signout before either task completes. Existing source tests, SQLCipher integrity, biometric and SMS signout protection unchanged. Updated M385 bounded test scope, M550 contract, permanent requirements and QA evidence.
+- Status: latest-head CI rerun pending; Android physical freeze remains unverified. No claim of fixed p95 latency.
+
+[PR #546 M631 LATEST SOURCE FOLLOW-UP — 2026-11-10]
+- Reviewed code after first draft: speculative BIND is consumed exactly once by Home. A secure Retry following failed signout or closed Home cannot re-adopt the old/closed connection; it falls back to a newly verified binding. Regression test asserts this one-shot lease. All data integrity, 15-second account verification, biometric/SMS consent and owner isolation are preserved.
+- This entry follows the latest production source commit for M449 ancestry. Exact-head CI and Android profile first-home timing remain pending; no physical lag-fix claim.
+
+[PR #546 — M631 OWNER-VERIFIED PREWARM + FIRST HOME POST-FRAME DEFERRAL — ISSUE #545 — 2026-11-10]
+================================================================================================
+- Owner reports both "جارٍ تسجيل الدخول" and biometric-to-Home wait remain after merged PR #544. External analysis proposed opening Home before biometrics and painting ready=true before account balances. These specific shortcuts are NOT applied: they would allow protected work before mandatory biometric and inaccurate/stale first-frame balances.
+- After successful OS/password verification and awaited owner-profile persistence (or restored-session startup source guard), begin a single speculative BIND-only SQLCipher authority connection in the background. No financial ledger/account load occurs before biometric approval. Transfer that verified active owner/session binding to Home when it mounts after mandatory unlock; Home falls back to secure normal bind if prewarm failed.
+- An unused prewarm is awaited/closed during logout, including logout from biometric stage, and no finance connection crosses user/session changes. Existing Home drain, 15-second verified account balance timeout and real finance recovery remain.
+- Delay optional widget refresh, SMS action review trigger, legacy recurring, reminder synchronization and tour initialization 400ms after ready/frame scheduling to avoid competing with the first real Home paint. Keep native SMS resume after verified Home with its existing separate 900ms gate and no automatic transaction posting.
+- Added M631 source/behavior regression and scope manifest; original M622/M624/M627/M630 guards remain. No changes to SQLCipher schema, encrypted balances, passwords, biometrics or display wording.
+- Status: CODE READY / CI PENDING. Physical Android cold/first-biometric/logout-relogin traces, full latest-head CI and both-device data-retention still required. NO promise that physical login lag has disappeared.
+
 [PR #534 M626 EXACT-HEAD M554 PRE-FLIGHT TEST ALIGNMENT — 2026-11-09]
 - Fixed a single stale QA structural assumption in M174: old M554 asserted native SQLite3MC and official pinned Gradle prefetch steps lived in job android-encrypted-db. After approved four-way matrix, that name is intentionally the required aggregate gate; each Android emulator shard performs both prefetches in the same verified order.
 - Strengthened original M554 guard to positively check both prefetched native and Gradle distributions on each matrix runner, the four shards, fail-fast=false and strict dependent aggregate. Every other critical Android job guard remains enabled. No application code, financial security or tested Android files changed.
@@ -3262,15 +3293,45 @@ The owner reported that the unwanted Home startup spinner had merely become a bl
 - M385 CI also blocked three workflows due to an ambiguous protected code-scope anchor `Future<void> load()async {` which occurs in both the root app and Home state. Replaced the manifest anchor with the uniquely verified Home `load()` signature, in both main baseline and PR HEAD; no protected source or CI guard was bypassed.
 - Original fast pull verified digest/delta, owner-bound secure sign-in, Home first real encrypted balance, and native SMS suspension remain unchanged in intent. New M629 async overlap is committed, but neither physical Android speed nor all mandatory latest-HEAD tests are proven yet. No APK release/merge on incomplete CI.
 
+M630 — login finance lock contention and repeated verification (2026-11-10)
+Owner-requested scope: first-install login and logout/relogin stalls; base main
+10d5682a (PR #541). No manual-entry UI changes or deployment.
+Reproduced SQLite BUSY during contended installation-lock opening. Use a
+migration-free background lock connection and bounded retries for BUSY/LOCKED
+only. Retain BEGIN IMMEDIATE through installation and release on close.
+Reuse verified immutable snapshot preflight only when a fresh SQL row matches
+bytes, digest and revision on the same connection. Preserve all schema/source
+checks, SQL reads, key verification, CAS and financial validation on changes.
+Synthetic 2,000-entry Linux test: repeated reads 1079 -> 421 ms. Timer worst gap
+45 -> 67 ms: no claim of improved device frame pacing. Physical first-install,
+biometric and logout/relogin profile acceptance remains pending; do not claim
+all Android freezes solved or merge without exact-head CI/device acceptance.
+Validation completed: 1195 storage tests and 30 auth/biometric/logout tests
+passed; changed-source analysis clean; M550 contract preflight passed.
 
-[M630 — OWNER-REPORTED FIRST BIOMETRIC/RELOGIN HOME FRAME CONTENTION — ISSUE #542 PR #543 — 2026-11-10]
-===================================================================================================
-- Owner screenshots show biometric stage and explicit logout/relogin still appear frozen before real Home despite merged #541. This is an additional bounded mitigation, not confirmed removal of all measured cold-start latency.
-- Home's existing real SQLCipher verified catalog and account balance prerequisites remain unchanged. No fake numbers, empty/black/skeleton Home, weakened biometric or early native SMS.
-- Move first-load widget reread, reminder synchronization, pending notice/action dispatch and tour layout/animation out of the initial authenticated Home paint, into the delayed post-first-frame phase. Native SMS resume still precedes encrypted inbox import; the original tour runs afterward.
-- Add a per-Home startup epoch and logout/retry guards. Explicit signout waits for any post-frame widget/reminder finance task before encrypted binding close, failing closed on bounded timeout rather than losing data.
-- New M630 source regression validates the first verified frame, serialized optional work, owner epoch and logout bound. Existing M622/M623/M624/M627/M629 remain mandatory. CI and Android profile first-login/relogin, 1,000 SMS and upgrade data-preservation acceptance pending; PR is Draft.
 
-[M630 ISOLATE EXTENSION — ISSUE #542 / PR #543 — 2026-11-10]
-- Implemented existing pure BankParser compute() batch path for >=48 native encrypted review candidates; small queues retain the same inline parser. Adds per-session epoch/mounted/ready checks across worker completion and native ACK batches so post-logout results are ignored. OTP, review-only rules, explicit exclusions and verified finance commit semantics unchanged. Profile logging reports only timing/count, never SMS content.
-- Added 1000 synthetic SMS parser parity coverage (amount, income, category, SAR currency-review) and source review guards in test/m630_home_first_frame_contention_test.dart. Flutter exact-head CI, signed Android device first-login/biometric/relogin and 1000-review p95 traces are still pending. No measured jank-resolution, no merge, no new PR.
+[M633 — PREDICTIVE PUBLIC STARTUP PREWARM AND VERIFIED HOME BATCH JSON — ISSUE #550 PR #551 — 2026-11-10]
+=====================================================================================================
+- Owner approved proactively preparing safe components from first app icon while preserving verified password/biometric, SQLCipher ownership and real financial balances.
+- On the first frame of app startup, schedule one isolate to construct only the fixed PUBLIC category catalog. The same future is awaited at first Home after owner verification; no decrypted finance, password or encrypted key is ever pre-cached across signout.
+- In Home startup, begin the existing read-only verified account balance projection concurrently with one immutable 11-field JSON batch decoder. The combined JSON crosses a pure worker only above 32 KiB; each malformed field is still rejected by its original type/error handling and cannot silently become an empty balance.
+- Verified records convert in bounded batches of 96 with zero-delay event-loop yielding; no artificial 1ms per 32 records. This alters only scheduling, not amount rounding, record counts or SQLCipher commit behavior.
+- Existing explicit Logout Yes/No and secure teardown, fresh-instance phone password verification and first/restored biometric gate remain in force; the existing M631 exact-session finance BIND prewarm remains.
+- M633 tests cover small, large, malformed JSON, real account gating, login security and old-session state rotation. Permanent requirements and scope/behavior manifests updated. CI and physical Android first biometric and logout/relogin profile evidence are still required before declaring freeze fixed or merging.
+
+[M633 EXACT-HEAD CI REPAIR — FOUR ACTUAL FLUTTER FAILURES — 2026-11-10]
+================================================================================
+- Prior PR #551 SHA a57ac941: six GitHub Actions workflows failed because four Flutter tests failed (2638 pass/4 fail); a seventh failed job is M340's dependent verdict, not another defect.
+- M468, M580 and M603 expected an invalid Dart source spelling 'const Duration.zero'; their existing verified ledger parser tests now require the real and equivalent 'Duration.zero' implementation. All original integrity and callback checks remain.
+- M451 expected direct inline default category JSON despite the user-approved public immutable category prewarm. Its regression now verifies WaffraFreshHomeCatalogRecovery.load, that Home awaits the prewarmed catalog, and that the original public default category JSON source is unchanged. All atomic encrypted storage integration cases retained.
+- The M385 exact-function-boundary change scope, M550 behavior-to-test contract, requirements register and current release notes are updated. No CI gate disabled or test deleted. Exact-head rerun and actual Android device evidence remain mandatory.
+
+[M634 — GITHUB M453 TRUSTED CLEANUP SERVER ERRORS — ISSUE #552 PR #551 — 2026-11-10]
+=====================================================================================
+- Owner reported failed pull_request_target run 42823508903/job/129854755021; previous checks only enumerated pull_request runs. M453 accepted cancellation of many stale PR #551 SHA runs but four GitHub API calls failed Server Error (500); at least one run id was cancelled twice after pagination mutated.
+- Safe default-branch source change collects candidate run IDs before cancelling; global de-dup, bounded 120 cancels, fresh PR-head checks, 409/terminal state reconciliation, 429/500/502/503/504 max three attempts with short backoff.
+- Persistent transient API failures report explicit PARTIAL CLEANUP warnings and unresolved counts, not an unrelated Flutter build failure; 401/403, wrong run ownership and other hard failures still fail the housekeeping job. No continue-on-error, no bypass of source tests, no cancellation of latest SHA, main, fork/unrelated PR, and no PR checkout.
+- M453 regression tests extended with positive guards; exact-scope/behavior manifests updated. Trusted pull_request_target uses the workflow on main until merge, so old failed job cannot be declared fixed by an unmerged branch or rerun of old SHA.
+
+[M634 API PACING AFTER OWNER'S 500 FAILURE — 2026-11-10]
+- Space accepted cancellation mutations by 1 second per GitHub REST documented best practices; retry true server 5xx with bounded exponential 1-second/2-second delay. Stop on 429 and explicitly warn partial cleanup instead of hammering the backend. No additional PR/permission/finance behavior changes.
