@@ -7,7 +7,8 @@
     "Use a native Android background crypto worker for byte-compatible PBKDF2-HMAC-SHA256; preserve original Dart isolate fallback and add a Unicode parity vector.",
     "Prevent an otherwise redundant WorkManager FlutterEngine during foreground SMS consent/resume and while the application is visible; background SMS receiver remains durable.",
     "Keep encrypted SMS queue and anti-replay; deliver large pending encrypted review result from the dedicated SMS executor rather than Android UI thread.",
-    "Add a bounded positive regression test for credentials and SMS foreground/background behavior and require real Android first login, biometric, relogin and 2000-SMS frame evidence."
+    "Add a bounded positive regression test for credentials and SMS foreground/background behavior and require real Android first login, biometric, relogin and 2000-SMS frame evidence.",
+    "Keep M470 positive queue/decryption/off-main regression but assert MethodChannel reply serialization no longer blocks Android UI; no unrelated test changes."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -17,6 +18,7 @@
     "lib/waffra_local_phone_credentials.dart",
     "native/WaffraAutoSmsWorker.kt",
     "native/WaffraMainActivity.kt",
+    "test/m470_sms_excluded_senders_test.dart",
     "test/m635_historical_login_sms_jank_regression_test.dart"
   ],
   "bounded_sections": {
@@ -76,6 +78,12 @@
       {
         "start": "    override fun onDestroy() {",
         "end": null
+      }
+    ],
+    "test/m470_sms_excluded_senders_test.dart": [
+      {
+        "start": " test('M470 #3/#10 review queue 500-SMS decode never blocks Android UI',(){",
+        "end": "\n}"
       }
     ]
   }
