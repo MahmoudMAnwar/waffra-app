@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "pr": "https://github.com/MahmoudMAnwar/waffra-app/pull/537",
-  "issue": "https://github.com/MahmoudMAnwar/waffra-app/issues/536",
+  "pr": "https://github.com/MahmoudMAnwar/waffra-app/pull/541",
+  "issue": "https://github.com/MahmoudMAnwar/waffra-app/issues/540",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main",
   "reviewed_at": "2026-11-10",
@@ -782,6 +782,38 @@
         "No credentials, account identifiers, SMS bodies, ledger values, encryption keys or user PII in profile step logging.",
         "Only physical profile-mode Android measurements can certify the freeze's actual cause or resolution.",
         "A Dart Future.timeout only detaches its await; account database reads that outlive it must finish or block sign-out from closing SQLCipher."
+      ]
+    },
+    {
+      "id": "M629-FAST-PULL-PARITY-SAFE-AUTH-HOME-SIGNOUT",
+      "issue": "Issue #540 / PR #541 — reuse excellent pull-refresh performance principles in Home/login/logout",
+      "previous_behavior": "Verified pull-to-refresh used single-flight, generation/digest no-op and off-isolate parsing. Home cold startup awaited independent SharedPreferences only AFTER verified finance binding. Sign-in awaited preferences THEN OS verifier read, even though independent. Logout completed AI disposal THEN finance session shutdown sequentially; physical owner still reports first Home/login/relogin lag.",
+      "approved_behavior": "Start Home preferences and verified finance binding concurrently but wait for both plus authentic account balances before showing Home. Start sign-in preferences and one OS credential read concurrently but retain verified phone probe, full PBKDF2 password check and owner-bound activation. After native SMS suspension, run independent on-device AI disposal and Home encrypted finance drain/close concurrently with Future.wait; wait for BOTH before signout and new identity. Preserve original pull-refresh digest/generation short-circuit for unchanged authenticated snapshots, and deferred SMS. Only physical profile Android measurements validate end-to-end responsiveness.",
+      "source_paths": [
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m629_pull_refresh_parity_auth_home_test.dart",
+        "test/m604_fast_login_first_frame_test.dart",
+        "test/m441_auth_sms_copy_regression_test.dart",
+        "test/m320_ai_live_entrypoints_test.dart",
+        "test/m627_home_handoff_timeout_and_session_reset_test.dart",
+        "test/m622_immediate_home_without_loader_test.dart",
+        "test/m470_logout_and_refresh_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m429-integration-smoke.yml"
+      ],
+      "safety_invariants": [
+        "No first-login Home without full SQLCipher integrity, catalog and verified account read; no fallback to guessed or stale balances.",
+        "No use of digest fast path on the first cold unverified snapshot or on a different owner after signout.",
+        "Sign-in always awaits OS-protected inspection and actual PBKDF2 password verification before activating any profile.",
+        "Explicit signout suspends native SMS and awaits BOTH Qwen context disposal and Home financial DB drain/close before clearing profile.",
+        "A failed native suspension, AI disposal or finance drain leaves signed-in owner intact and shows failure; no cross-account leak.",
+        "Physical Android profile first-frame and login/logout timing evidence needed; source-level improvements do not prove issue resolved."
       ]
     }
   ]
