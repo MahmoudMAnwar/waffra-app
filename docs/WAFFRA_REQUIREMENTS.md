@@ -1211,7 +1211,7 @@ Preserve M622's one authentic first visible Home with SQLCipher-integrity-verifi
 
 
 ## M632 — First SMS account, post-Home SMS responsiveness, real Waffra splash (2026-11-10)
-**Issue:** [#547](https://github.com/MahmoudMAnwar/waffra-app/issues/547) · **PR:** Pending M632. **Status:** Recorded before coding; CI/Android QA pending.
+**Issue:** [#547](https://github.com/MahmoudMAnwar/waffra-app/issues/547) · **PR:** [#548](https://github.com/MahmoudMAnwar/waffra-app/pull/548) (Draft). **Status:** Code ready; exact-head CI and physical Android QA pending.
 
 Owner confirms P0 on physical Android after merged #546: entire app janks after Home becomes visible while many SMS messages are being imported/reclassified; first bank-SMS transaction without a money account shows disabled `اختار الحساب المالي قبل نعم` even before a category can be fixed; splash wordmark `وفرة` flashes and immediately switches to login.
 
