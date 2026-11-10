@@ -992,6 +992,79 @@ bool bankSmsHasUnverifiedTimestamp(String raw,{DateTime? referenceDate}){
 }
 
 String bankSmsHash(String raw)=>sha256.convert(utf8.encode(digits(raw).replaceAll(RegExp(r'\s+'),' ').trim().toLowerCase())).toString();
+
+ // M632: a pure compute worker. No BuildContext, widget, native platform
+ // channel, SQLCipher handle or owner identity is ever sent to this isolate.
+ // Transfer only the current verified native queue and local rule data; return
+ // review candidates and requested ACKs for owner-checked main-isolate I/O.
+Map<String,Object?> _m632ClassifySmsQueue(Map<String,Object?> input){
+ final results=(input['results'] as List).cast<Map<String,Object?>>();
+ final rules=(input['rules'] as List).map((entry)=>
+  WaffraSmsLocalRule.fromJson(Map<String,dynamic>.from(entry as Map)))
+  .toList(growable:false);
+ final validCategories=(input['categories'] as List).whereType<String>().toSet();
+ final hashes=(input['hashes'] as List).whereType<String>().toSet();
+ final waiting=<Map<String,Object?>>[];
+ final excluded=<String>[];
+ final committed=<String>[];
+ final retainOnAckFailure=<Map<String,Object?>>[];
+ for(final candidate in results){
+  final id=candidate['id'],body=candidate['body'];
+  if(id is! String||body is! String)continue;
+  if(hashes.contains(bankSmsHash(body))){
+   committed.add(id);
+   retainOnAckFailure.add(Map<String,Object?>.from(candidate));
+   continue;
+  }
+  final annotated=Map<String,Object?>.from(candidate);
+  if(WaffraBankSmsFactsParser.isVerificationChallenge(body)){
+   annotated['sensitiveOtp']=true;
+  }
+  final sender=candidate['sender'] is String?candidate['sender'] as String:'';
+  final facts=WaffraBankSmsFactsParser.parse(body);
+  final parsed=BankParser.parse(body);
+  final special=WaffraSmsLocalRules.resolveSpecial(
+   body:body,sender:sender,
+   bankKind:annotated['sensitiveOtp']==true?
+    WaffraBankOperationKind.uncertain:facts.kind,custom:rules);
+  Map<String,Object?>? local;
+  if(special!=null){
+   local=<String,Object?>{
+    'rule':special.name,'kind':special.resolvedKind,
+    'category':special.category,'income':false,
+    'defaultSeed':special.builtIn,
+   };
+  }else if(!facts.pending&&parsed.amount!=null&&parsed.amount!>0&&
+    !parsed.requiresCurrencyReview&&
+    !WaffraSmsCurrencies.requiresReviewForSarLedger(body)&&
+    ((facts.kind==WaffraBankOperationKind.income)==parsed.income||
+     (facts.kind!=WaffraBankOperationKind.income&&
+      facts.kind!=WaffraBankOperationKind.expense))){
+   final rule=WaffraSmsLocalRules.resolve(
+    body:body,sender:sender,bankKind:facts.kind,custom:rules);
+   if(rule!=null&&validCategories.contains(
+      '${rule.income?'1':'0'}:${rule.category}')){
+    local=<String,Object?>{
+     'rule':rule.name,'kind':rule.resolvedKind,
+     'category':rule.category,'income':rule.income,
+    };
+   }
+  }
+  if(local!=null){
+   annotated['local']=local;
+   if(local['kind']=='excluded'&&local['defaultSeed']!=true){
+    excluded.add(id);
+    retainOnAckFailure.add(annotated);
+    continue;
+   }
+  }
+  waiting.add(annotated);
+ }
+ return <String,Object?>{
+  'waiting':waiting,'excluded':excluded,'committed':committed,
+  'retainOnAckFailure':retainOnAckFailure,
+ };
+}
 List<String> splitBankMessages(String raw){
  var clean=raw.replaceAll('\r\n','\n').replaceAll('\u200f','').replaceAll('\u200e','').trim();
  if(clean.isEmpty)return [];
@@ -4744,8 +4817,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   };
  }
 
+ Timer? _m632SmsNoticeTimer;
  void _receiveAutoSmsNotice(){
-  if(mounted&&ready)unawaited(_refreshAutoSmsInbox());
+  if(!mounted||!ready||_m627ClosingSession)return;
+  // One refresh per notification BURST, not one full 2k-message reparse
+  // for each new or repeated Android receiver callback.
+  _m632SmsNoticeTimer?.cancel();
+  _m632SmsNoticeTimer=Timer(const Duration(milliseconds:900),(){
+   _m632SmsNoticeTimer=null;
+   if(mounted&&ready&&!_m627ClosingSession){
+    unawaited(_refreshAutoSmsInbox());
+   }
+  });
  }
  Future<void> _rescanAutoSmsInbox()async{
   if(_autoSmsRescanRunning||!mounted)return;
@@ -4912,48 +4995,31 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    catch(_){ /* No bank SMS in logs. Built-ins remain usable. */ }
   }
   if(!mounted)return;
-  final waiting=<Map<String,Object?>>[];
-  var classifiedSinceYield=0;
-  final toAcknowledge=<String>[];
-  final toAcknowledgeCommitted=<String>[];
-  final toRestoreOnAckFailure=<Map<String,Object?>>[];
-  for(final candidate in results){
-   // Yield between small CPU-heavy parser batches. Native AES and inbox I/O
-   // are already off-thread; this prevents 1000 Dart parses monopolizing
-   // Flutter frames on Home, navigation and SMS notice refresh.
-   if(++classifiedSinceYield>=16){
-    classifiedSinceYield=0;
-    await Future<void>.delayed(const Duration(milliseconds:1));
-    if(!mounted||!ready)return;
-   }
-   final id=candidate['id'],body=candidate['body'];
-   if(id is! String||body is! String)continue;
-   if(smsHashes.contains(bankSmsHash(body))){
-    // This source SMS was already committed in the verified finance journal:
-    // atomically seal the native fingerprint against every future rescan.
-    toAcknowledgeCommitted.add(id);
-    toRestoreOnAckFailure.add(Map<String,Object?>.from(candidate));
-    continue;
-   }
-   final annotated=Map<String,Object?>.from(candidate);
-   // Parse security evidence once during bounded background-intake batching,
-   // not 1000 times in the notifications widget build path.
-   if(WaffraBankSmsFactsParser.isVerificationChallenge(body)){
-    annotated['sensitiveOtp']=true;
-   }
-   final local=_localSmsClassification(annotated,customRules);
-   if(local!=null){
-    annotated['local']=local;
-    if(local['kind']=='excluded'&&local['defaultSeed']!=true){
-     // Only the user's previously approved exclusion can ACK automatically.
-     // Bundled Saudi hints are review-only even for apparent promotions/OTPs.
-     toAcknowledge.add(id);
-     toRestoreOnAckFailure.add(annotated);
-     continue;
-    }
-   }
-   waiting.add(annotated);
+  // Heavy SHA256, bank parser, OTP detection and local-rule matching now
+  // run on a background isolate; the main isolate handles only native ACKs
+  // and one UI update. No network or database is used inside the worker.
+  final classifyClock=kProfileMode?(Stopwatch()..start()):null;
+  final categoryNames=<String>[
+   for(final c in categories)
+    if(c.isSubcategory&&waffraCategoryAvailableForNewEntry(categories,c))
+     '${c.income?'1':'0'}:${c.name}',
+  ];
+  final classified=await compute(_m632ClassifySmsQueue,<String,Object?>{
+   'results':results,
+   'rules':customRules.map((r)=>r.toJson()).toList(growable:false),
+   'categories':categoryNames,
+   'hashes':smsHashes.toList(growable:false),
+  });
+  if(!mounted||!ready||_m627ClosingSession)return;
+  if(kProfileMode&&classifyClock!=null){
+   debugPrint('WAFFRA_SMS_PERF classify_count=${results.length} '
+    'isolate_ms=${classifyClock.elapsedMilliseconds}');
   }
+  final waiting=(classified['waiting'] as List).cast<Map<String,Object?>>();
+  final toAcknowledge=(classified['excluded'] as List).cast<String>();
+  final toAcknowledgeCommitted=(classified['committed'] as List).cast<String>();
+  final toRestoreOnAckFailure=
+   (classified['retainOnAckFailure'] as List).cast<Map<String,Object?>>();
   // One encrypted native queue commit instead of one platform call per SMS.
   // If the durable acknowledgement fails, retain every pending item in UI.
   if(toAcknowledge.isNotEmpty){
@@ -6948,6 +7014,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      // only after the first fully verified Home frame has painted.
      final activeOwner=(await widget.onVerifiedHomeSmsResume?.call())??true;
      if(!activeOwner||!mounted||!ready||_financeLoadFailure!=null)return;
+     // Let Home receive interactions and finish its first tab animation
+     // before Android starts historical month paging and native AES I/O.
+     await Future<void>.delayed(const Duration(milliseconds:1200));
+     if(!mounted||!ready||_m627ClosingSession||
+        _financeLoadFailure!=null)return;
      await _refreshAutoSmsInbox(importMonth:!_autoSmsHistoryComplete);
     }());
    });
@@ -7026,7 +7097,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }
   });
  }
- @override void dispose(){if(identical(WaffraBackNavigation.onHomeBack,_registeredBackHandler))WaffraBackNavigation.onHomeBack=null;_dashboardScrollController.dispose();_categoryScrollController.dispose();_goalsScrollController.dispose();_recurringScrollController.dispose();_tourGlow.dispose();waffraReturnHome.removeListener(_returnToHome);waffraIncomingSms.removeListener(_receiveSharedSms);waffraAutoSmsUpdates.removeListener(_receiveAutoSmsNotice);waffraFinanceNoticeTap.removeListener(_m621OnFinanceNoticeTap);waffraWidgetAction.removeListener(_receiveWidgetAction);_widgetReloadListener?.dispose();_saveProgress.dispose();final binding=_financeBinding;if(binding!=null)unawaited(_financialWriteQueue.drain().whenComplete(binding.close));super.dispose();}
+ @override void dispose(){_m632SmsNoticeTimer?.cancel();if(identical(WaffraBackNavigation.onHomeBack,_registeredBackHandler))WaffraBackNavigation.onHomeBack=null;_dashboardScrollController.dispose();_categoryScrollController.dispose();_goalsScrollController.dispose();_recurringScrollController.dispose();_tourGlow.dispose();waffraReturnHome.removeListener(_returnToHome);waffraIncomingSms.removeListener(_receiveSharedSms);waffraAutoSmsUpdates.removeListener(_receiveAutoSmsNotice);waffraFinanceNoticeTap.removeListener(_m621OnFinanceNoticeTap);waffraWidgetAction.removeListener(_receiveWidgetAction);_widgetReloadListener?.dispose();_saveProgress.dispose();final binding=_financeBinding;if(binding!=null)unawaited(_financialWriteQueue.drain().whenComplete(binding.close));super.dispose();}
  Future<void> _syncWidgetTransactions()async{
   if(!mounted||!ready)return;
   try{
