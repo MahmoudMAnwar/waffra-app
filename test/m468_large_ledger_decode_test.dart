@@ -59,7 +59,7 @@ void main(){
   expect(src,contains('await _m593BuildVerifiedEntries('));
   expect(src,contains('const batchSize=96;'));
   expect(src,contains('MoneyEntry.fromJson(Map<String,dynamic>.from(row))'));
-  expect(src,contains('await Future<void>.delayed(const Duration.zero)'));
+  expect(src,contains('await Future<void>.delayed(Duration.zero)'));
   expect(src,contains('await readList<BudgetCategory>(catalog,BudgetCategory.fromJson)'));
   expect(src,contains('financeView.requireIntegrity();'));
   expect(src,contains('view.requireIntegrity();'));
