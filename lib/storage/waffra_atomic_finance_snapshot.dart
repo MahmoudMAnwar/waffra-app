@@ -39,6 +39,14 @@ class WaffraAtomicFinanceSnapshot {
 
   static const _table = 'fresh_finance_snapshot_state';
 
+  // Re-read SQL and source/schema guards on every access. Reuse only CPU
+  // validation of identical bytes, digest and revision on the same connection.
+  static final _readCache =
+      Expando<({String raw, WaffraFinanceSnapshotState state})>();
+  static final _validatedStates = Expando<bool>();
+  static bool wasValidated(WaffraFinanceSnapshotState state) =>
+      _validatedStates[state] == true;
+
   static Map<String, Object?> _validate(Map<String, Object?> input) {
     final extra = input.keys.toSet().difference(
       WaffraLegacyPreflight.allKeys.toSet(),
@@ -146,7 +154,15 @@ CREATE TABLE IF NOT EXISTS $_table(
     final generation = row.read<int>('generation');
     // Preserve *all* digest, schema and canonical-encoding checks, but keep
     // JSON decoding / finance preflight off the UI isolate.
-    return compute(_decodeRead, (raw, digest, generation));
+    final cached = _readCache[store];
+    if (cached != null && cached.raw == raw &&
+        cached.state.digest == digest && cached.state.generation == generation) {
+      return cached.state;
+    }
+    final state = await compute(_decodeRead, (raw, digest, generation));
+    _validatedStates[state] = true;
+    _readCache[store] = (raw: raw, state: state);
+    return state;
   }
 
   static WaffraFinanceSnapshotState _decodeRead(

@@ -1,63 +1,56 @@
 {
   "contract_version": 1,
-  "change_id": "M629-FAST-PULL-PARITY-INDEPENDENT-AUTH-HOME-AND-LOGOUT-ISSUE540-PR541-20261110",
-  "human_scope_review": "Owner confirmed excellent pull-to-refresh but ongoing first Home/login/relogin delays. Apply verified pull refresh single-flight and independent I/O overlap principles only where safe: never skip first encrypted integrity read or password verification. Authentication OS/preference preparations start together; Home prefs start while finance bind happens; Qwen + Home teardown complete concurrently before identity removal. No device performance claim without profile trace.",
+  "change_id": "M630-LOGIN-FINANCE-CONTENTION-AND-VALIDATION",
+  "human_scope_review": "Owner explicitly requests a PR fixing first-install and repeated-login freezes. Focus on reproduced contention and repeated CPU verification; physical device acceptance pending.",
   "user_requested_changes": [
-    "M629 Issue #540 PR #541: independently start SharedPreferences and secure verifier read during verified password sign-in, await both before challenge.",
-    "M629 Issue #540 PR #541: independently start preferences and verified finance binding on Home cold start, await both and genuine accounts before ready=true.",
-    "M629 Issue #540 PR #541: after native SMS suspension, await both independent AI context disposal and Home finance teardown through Future.wait before signOut; preserve all existing fail-closed guards.",
-    "M629 source/test coverage only; first-install and relogin Android profile first-frame acceptance and exact-head CI pending. No caching across signout or disabled password/SQLCipher checks.",
-    "Update two old login test literals to assert the new concurrent-but-awaited secure verifier snapshot and unchanged owner/password preflight; keep all other security assertions.",
-    "M629: old M320 synchronous teardown assertion now positively validates awaited concurrent AI-and-finance cleanup before identity removal.",
-    "M629: if concurrent logout finance close succeeds but AI shutdown errors, signed-in screen remains fail-closed with actionable safe finance Retry instead of the previous indefinite signout label.",
-    "M629 #540 CI failure correction: M385 source scope must anchor uniquely to Home load() rather than the separate root load() with the same method name. No production changes or disabled gate."
+    "Fix reproduced installation mutex contention without blocking the rendering isolate.",
+    "Avoid redundant immutable snapshot verification while retaining fresh SQL and all source/security checks.",
+    "Add real SQLCipher regression evidence and document remaining device acceptance."
   ],
   "allowed_changed_files": [
+    "lib/storage/waffra_atomic_finance_snapshot.dart",
+    "lib/storage/waffra_finance_read_view.dart",
+    "lib/storage/waffra_fresh_install_source.dart",
+    "test/storage/m630_finance_responsiveness_test.dart",
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
-    "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "lib/main.dart",
-    "test/m629_pull_refresh_parity_auth_home_test.dart",
-    "test/m604_fast_login_first_frame_test.dart",
-    "test/m441_auth_sms_copy_regression_test.dart",
-    "test/m320_ai_live_entrypoints_test.dart"
+    "docs/qa/M630_LOGIN_FINANCE_RESPONSIVENESS.md",
+    "docs/release/WAFFRA_APPROVED_CHANGES.txt"
   ],
   "bounded_sections": {
-    "lib/main.dart": [
+    "lib/storage/waffra_atomic_finance_snapshot.dart": [
       {
-        "start": " Future<void> _signIn()async{",
-        "end": " String get maskedLastPhone{"
+        "start": "  static const _table =",
+        "end": "  static Map<String, Object?> _validate"
       },
       {
-        "start": " Future<void> logout()async {",
-        "end": " Future<void> setPin("
+        "start": "  Future<WaffraFinanceSnapshotState> _readUnsafe()",
+        "end": "  static WaffraFinanceSnapshotState _decodeRead("
+      }
+    ],
+    "lib/storage/waffra_finance_read_view.dart": [
+      {
+        "start": "  WaffraFinanceReadView._(",
+        "end": "  factory WaffraFinanceReadView.fromLegacy("
       },
       {
-        "start": " }\n Future<void> load()async {\n  final financeClock=kProfileMode",
-        "end": " Future<void> _refreshWidget()async{"
+        "start": "  factory WaffraFinanceReadView.fromEncrypted(",
+        "end": "  /// Validate the COMPLETE"
+      }
+    ],
+    "lib/storage/waffra_fresh_install_source.dart": [
+      {
+        "start": "import 'package:crypto/crypto.dart';",
+        "end": "/// Installation receipt"
       },
       {
-        "start": " void _m627AbortFailedLogout(){",
-        "end": " // Account filters are presentation-only;"
-      }
-    ],
-    "test/m604_fast_login_first_frame_test.dart": [
+        "start": "    // POSIX advisory file locks",
+        "end": "  static Future<WaffraFreshInstallSource?> _prepareLocked("
+      },
       {
-        "start": "  test('login preserves source guards and removes only redundant IO/delay',(){",
-        "end": "  test('relogin avoids redundant preference writes but keeps source lease',(){"
-      }
-    ],
-    "test/m441_auth_sms_copy_regression_test.dart": [
-      {
-        "start": "  test('M441: verified phone, not editable display profile, owns login', () {",
-        "end": "  test('M459: Saudi account registration is a single page', () {"
-      }
-    ],
-    "test/m320_ai_live_entrypoints_test.dart": [
-      {
-        "start": "  test('M320 opt-in AI is wired to all five features with manual finance review',(){",
-        "end": "  test('M416 bank SMS stays offline, OCR import is disabled, and Global AI remains gated',(){"
+        "start": "  Future<void> verify(",
+        "end": null
       }
     ]
   }
