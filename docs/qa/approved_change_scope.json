@@ -1,14 +1,12 @@
 {
   "contract_version": 1,
-  "change_id": "M627-HOME-LOAD-PROFILE-TIMINGS-ACCOUNT-FAILCLOSED-SESSION-TEARDOWN-ISSUE536-PR537-20261110",
-  "human_scope_review": "Owner supplied exact M627 diagnosis steps: profile-only stopwatch timings, 15s fail-closed account wait with recovery Retry, explicit awaited Home finance teardown on logout and per-session Home identity. This manifest is a machine-checkable code-boundary record; physical Android results remain mandatory. No modification to SQLCipher activation/migration, password or SMS permissions.",
+  "change_id": "M629-FAST-PULL-PARITY-INDEPENDENT-AUTH-HOME-AND-LOGOUT-ISSUE540-PR541-20261110",
+  "human_scope_review": "Owner confirmed excellent pull-to-refresh but ongoing first Home/login/relogin delays. Apply verified pull refresh single-flight and independent I/O overlap principles only where safe: never skip first encrypted integrity read or password verification. Authentication OS/preference preparations start together; Home prefs start while finance bind happens; Qwen + Home teardown complete concurrently before identity removal. No device performance claim without profile trace.",
   "user_requested_changes": [
-    "M627 Issue #536: Stopwatch logs before/after each startup finance binding, preferences, catalog, account balances await and _m623HomeLoaded for physical profile-mode diagnosis.",
-    "M627 Issue #536: set a 15s verified account-balance timeout and retain existing fail-closed finance recovery screen with safe Retry; prevent late obsolete account read from repopulating the new session.",
-    "M627 Issue #536: await Home-local pending finance writes and close the actual binding at signout, reset Home-local finance state, rotate Home session key, retain biometric and owner-bound SMS rules.",
-    "M627 Issue #536: reconcile two former stable-key source regression assertions with a stronger per-session GlobalKey/session boundary; exact-head and physical Android acceptance still required.",
-    "M627 exact-head M550 reconciliation: old M424 signout lock and M604/M624/M625 account-await positive assertions must verify the newly approved locked=true signed-out state and mandatory 15-second accounts timeout before showing real Home, without dropping other security checks.",
-    "M627 repeat CI failure: update M622 old unbounded await source assertion to check bounded awaited verified account read; fix M627 dynamic stage-name interpolation in test while retaining all mandatory stage checks. 2621 passing tests remain unchanged."
+    "M629 Issue #540 PR #541: independently start SharedPreferences and secure verifier read during verified password sign-in, await both before challenge.",
+    "M629 Issue #540 PR #541: independently start preferences and verified finance binding on Home cold start, await both and genuine accounts before ready=true.",
+    "M629 Issue #540 PR #541: after native SMS suspension, await both independent AI context disposal and Home finance teardown through Future.wait before signOut; preserve all existing fail-closed guards.",
+    "M629 source/test coverage only; first-install and relogin Android profile first-frame acceptance and exact-head CI pending. No caching across signout or disabled password/SQLCipher checks."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -16,78 +14,21 @@
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
-    "test/m627_home_handoff_timeout_and_session_reset_test.dart",
-    "test/m623_verified_home_handoff_no_black_frame_test.dart",
-    "test/m463_auth_first_one_page_test.dart",
-    "test/m424_mandatory_biometrics_test.dart",
-    "test/m604_fast_login_first_frame_test.dart",
-    "test/m624_deferred_sms_after_verified_home_test.dart",
-    "test/m625_single_verified_home_read_login_handoff_test.dart",
-    "test/m622_immediate_home_without_loader_test.dart"
+    "test/m629_pull_refresh_parity_auth_home_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
       {
-        "start": "class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {",
-        "end": "class PinLockScreen extends StatefulWidget {"
+        "start": " Future<void> _signIn()async{",
+        "end": " String get maskedLastPhone{"
       },
       {
-        "start": "class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {",
-        "end": " // Account filters are presentation-only;"
+        "start": " Future<void> logout()async {",
+        "end": " Future<void> setPin("
       },
       {
-        "start": " Future<void> _m467RefreshHomeAccounts()async{",
-        "end": " String get _m467AccountLabel{"
-      },
-      {
-        "start": " Future<void> _loadFinanceSafely()async{",
-        "end": " Widget _financialRecoveryScreen()"
-      },
-      {
-        "start": "   });\n  }\n }\n Future<void> load()async {",
+        "start": " Future<void> load()async {",
         "end": " Future<void> _refreshWidget()async{"
-      }
-    ],
-    "test/m623_verified_home_handoff_no_black_frame_test.dart": [
-      {
-        "start": " test('M623 keeps prior authenticated UI until one complete verified Home',(){",
-        "end": " test('M623 authenticated Home transition cannot expose unverified money',(){"
-      }
-    ],
-    "test/m463_auth_first_one_page_test.dart": [
-      {
-        "start": " test('M623 authentication and permissions precede verified Home reveal',(){",
-        "end": " test('M463 first clean install has only one account creation form',(){"
-      }
-    ],
-    "test/m424_mandatory_biometrics_test.dart": [
-      {
-        "start": "  test('M424: home route no longer exposes optional PIN settings', () {",
-        "end": null
-      }
-    ],
-    "test/m604_fast_login_first_frame_test.dart": [
-      {
-        "start": "  test('login preserves source guards and removes only redundant IO/delay',(){",
-        "end": "  test('relogin avoids redundant preference writes but keeps source lease',(){"
-      }
-    ],
-    "test/m624_deferred_sms_after_verified_home_test.dart": [
-      {
-        "start": " test('M624: do not replace genuine complete finance Home with fake values',(){",
-        "end": null
-      }
-    ],
-    "test/m625_single_verified_home_read_login_handoff_test.dart": [
-      {
-        "start": "  test('only installed Home skips duplicated full read, never source checks', () {",
-        "end": "  test('verified biometric and relogin meet identical complete-Home contract', () {"
-      }
-    ],
-    "test/m622_immediate_home_without_loader_test.dart": [
-      {
-        "start": " test('M622 entire real Home values come from one completed verified load',(){",
-        "end": " test('M622 SMS scan is deferred until after verified Home frame',(){"
       }
     ]
   }
