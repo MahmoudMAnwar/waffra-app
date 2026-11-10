@@ -1,16 +1,13 @@
 {
   "contract_version": 1,
-  "change_id": "M629-FAST-PULL-PARITY-INDEPENDENT-AUTH-HOME-AND-LOGOUT-ISSUE540-PR541-20261110",
-  "human_scope_review": "Owner confirmed excellent pull-to-refresh but ongoing first Home/login/relogin delays. Apply verified pull refresh single-flight and independent I/O overlap principles only where safe: never skip first encrypted integrity read or password verification. Authentication OS/preference preparations start together; Home prefs start while finance bind happens; Qwen + Home teardown complete concurrently before identity removal. No device performance claim without profile trace.",
+  "change_id": "M630-FIRST-VERIFIED-HOME-FRAME-POST-PAINT-WORK-ISSUE542-PR543-20261110",
+  "human_scope_review": "Owner Android biometric and logout/relogin Home still freeze after merged #541. Remove competing post-ready widget, reminder, tour and SMS scheduling from Home's first verified paint; maintain mandatory finance verification, authenticated session, source isolation and bounded cleanup. Needs exact-head CI and phone measurements.",
   "user_requested_changes": [
-    "M629 Issue #540 PR #541: independently start SharedPreferences and secure verifier read during verified password sign-in, await both before challenge.",
-    "M629 Issue #540 PR #541: independently start preferences and verified finance binding on Home cold start, await both and genuine accounts before ready=true.",
-    "M629 Issue #540 PR #541: after native SMS suspension, await both independent AI context disposal and Home finance teardown through Future.wait before signOut; preserve all existing fail-closed guards.",
-    "M629 source/test coverage only; first-install and relogin Android profile first-frame acceptance and exact-head CI pending. No caching across signout or disabled password/SQLCipher checks.",
-    "Update two old login test literals to assert the new concurrent-but-awaited secure verifier snapshot and unchanged owner/password preflight; keep all other security assertions.",
-    "M629: old M320 synchronous teardown assertion now positively validates awaited concurrent AI-and-finance cleanup before identity removal.",
-    "M629: if concurrent logout finance close succeeds but AI shutdown errors, signed-in screen remains fail-closed with actionable safe finance Retry instead of the previous indefinite signout label.",
-    "M629 #540 CI failure correction: M385 source scope must anchor uniquely to Home load() rather than the separate root load() with the same method name. No production changes or disabled gate."
+    "M630 #542/#543: verified first Home frame paints before independent Widget/SQLCipher refresh, tour, reminder and native SMS work.",
+    "M630: defer real widget + reminder work, await it before native SMS resume and before signout finance close; don't launch SMS before real Home.",
+    "M630: epoch guards cancel post-first-frame jobs on logout, retry and widget unmount. No stale owner or source leakage.",
+    "M630: launch the original 30-day unshown tour only after the first SMS review scan, not during real Home reveal.",
+    "M630: source-order regression tests and full exact-head CI mandatory; physical Android p95 verification outstanding."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -18,46 +15,21 @@
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
-    "test/m629_pull_refresh_parity_auth_home_test.dart",
-    "test/m604_fast_login_first_frame_test.dart",
-    "test/m441_auth_sms_copy_regression_test.dart",
-    "test/m320_ai_live_entrypoints_test.dart"
+    "test/m630_home_first_frame_contention_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
       {
-        "start": " Future<void> _signIn()async{",
-        "end": " String get maskedLastPhone{"
-      },
-      {
-        "start": " Future<void> logout()async {",
-        "end": " Future<void> setPin("
-      },
-      {
-        "start": " }\n Future<void> load()async {\n  final financeClock=kProfileMode",
-        "end": " Future<void> _refreshWidget()async{"
-      },
-      {
-        "start": " void _m627AbortFailedLogout(){",
+        "start": " bool _m627ClosingSession=false;",
         "end": " // Account filters are presentation-only;"
-      }
-    ],
-    "test/m604_fast_login_first_frame_test.dart": [
+      },
       {
-        "start": "  test('login preserves source guards and removes only redundant IO/delay',(){",
-        "end": "  test('relogin avoids redundant preference writes but keeps source lease',(){"
-      }
-    ],
-    "test/m441_auth_sms_copy_regression_test.dart": [
+        "start": " Future<void> _loadFinanceSafely()async{",
+        "end": " Widget _financialRecoveryScreen()"
+      },
       {
-        "start": "  test('M441: verified phone, not editable display profile, owns login', () {",
-        "end": "  test('M459: Saudi account registration is a single page', () {"
-      }
-    ],
-    "test/m320_ai_live_entrypoints_test.dart": [
-      {
-        "start": "  test('M320 opt-in AI is wired to all five features with manual finance review',(){",
-        "end": "  test('M416 bank SMS stays offline, OCR import is disabled, and Global AI remains gated',(){"
+        "start": " }\\n Future<void> load()async {\\n  final financeClock=kProfileMode",
+        "end": " Future<void> _refreshWidget()async{"
       }
     ]
   }
