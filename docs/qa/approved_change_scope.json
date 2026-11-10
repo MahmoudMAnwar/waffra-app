@@ -33,7 +33,7 @@
       },
       {
         "start": " Future<void> _runAutoSmsRefresh({bool importMonth=false})async{",
-        "end": " Future<void> _openSmsRules("
+        "end": " Future<void> _analyzeAmbiguousSmsOnDemand("
       },
       {
         "start": " Future<void> _reviewAutoSmsCandidates({String? targetId})async {",
