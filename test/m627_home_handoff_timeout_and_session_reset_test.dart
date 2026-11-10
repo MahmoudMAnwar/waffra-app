@@ -21,7 +21,7 @@ void main() {
       'before_accounts_refresh','after_accounts_refresh_started',
       'before_accounts_await','after_accounts_await','accounts_timeout',
     ]){
-      expect(load,contains("traceHomeStep('\$step')"),reason:step);
+      expect(load,contains("traceHomeStep('$step')"),reason:step);
     }
     expect(load.indexOf("traceHomeStep('before_ensureFinanceBound')"),
       lessThan(load.indexOf('await _ensureFinanceBound();')));
