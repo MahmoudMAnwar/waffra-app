@@ -1589,6 +1589,9 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    _m625HandoffClock=null;_m625HandoffOrigin=null;
   });
   }catch(error){
+   // A failed logout must keep protected recovery/retry usable, never leave
+   // the old Home indefinitely marked as closing with a dead Retry button.
+   _m627HomeKey.currentState?._m627AbortFailedLogout();
    // Every sign-out entry point shares this fail-closed feedback. An SMS
    // suspension or credential-integrity failure must NOT look like logout.
    debugPrint('Verified sign-out was not completed: ${error.runtimeType}');
@@ -3999,6 +4002,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    _m627ClosingSession=false;
    rethrow;
   }
+ }
+ void _m627AbortFailedLogout(){
+  _m627ClosingSession=false;
  }
 
  // Account filters are presentation-only; never inherit them for new money.
