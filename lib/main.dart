@@ -4785,6 +4785,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   if(!identical(next,previous))await store.write(_smsRuleOwnerKey,next);
  }
 
+ // Retained single-message reference for on-demand review and M473 parity;
+ // the production bulk queue now uses the background compute worker.
+ // ignore: unused_element
  Map<String,Object?>? _localSmsClassification(
   Map<String,Object?> item,List<WaffraSmsLocalRule> custom){
   final body=item['body'],sender=item['sender'];
