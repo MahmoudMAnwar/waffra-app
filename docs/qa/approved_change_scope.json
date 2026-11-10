@@ -1,20 +1,27 @@
 {
   "contract_version": 1,
   "change_id": "M630-PR543-RECONCILE-LATEST-MAIN-OWNER-EPOCH-POSTFRAME-FINANCE-20261110",
-  "human_scope_review": "Owner requested continuing PR #543, which was dirty against current main. Retain merged M631/M632/M633 performance fixes, add only genuinely missing post-frame finance logout drain and owner epoch guard for stale asynchronous SMS/notification callbacks; no new parser or bypass of finance verification. Physical Android profile acceptance still pending.",
+  "human_scope_review": "Owner requested continuing PR #543, which was dirty against current main. Retain merged M631/M632/M633 performance fixes, add only genuinely missing post-frame finance logout drain and owner epoch guard for stale asynchronous SMS/notification callbacks; no new parser or bypass of finance verification. Physical Android profile acceptance still pending. CI review of exact PR diff explicitly includes six legacy M548/M622/M623/M624/M631/M632 test updates, each restricted to its existing affected source-assertion test; M385 remains enabled and all unrelated test bodies are unchanged. Human scope approval is separately required.",
   "user_requested_changes": [
     "Keep already merged M632 compute whole-queue SMS classification, splash, first-account flow, and M633 verified Home decode unchanged.",
     "Protect optional post-Home widget/reminder finance work from SQLCipher close during logout; guard each scheduled callback by Home startup epoch.",
     "Before native SMS ACK and after compute/await boundaries, compare originating Home epoch and current verified session; never mutate new session from stale results.",
-    "Maintain SQLCipher finance source and genuine account balances, biometric, native ACK anti-replay, review-only bank SMS, and all existing tests."
+    "Maintain SQLCipher finance source and genuine account balances, biometric, native ACK anti-replay, review-only bank SMS, and all existing tests.",
+    "Reconcile six existing regression test assertions to M630 session-epoch and async drain behavior without weakening their original positive safety checks or modifying unrelated tests."
   ],
   "allowed_changed_files": [
-    "lib/main.dart",
-    "test/m630_home_first_frame_contention_test.dart",
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
-    "docs/release/WAFFRA_APPROVED_CHANGES.txt"
+    "docs/release/WAFFRA_APPROVED_CHANGES.txt",
+    "lib/main.dart",
+    "test/m548_review_grouping_and_signup_perf_test.dart",
+    "test/m622_immediate_home_without_loader_test.dart",
+    "test/m623_verified_home_handoff_no_black_frame_test.dart",
+    "test/m624_deferred_sms_after_verified_home_test.dart",
+    "test/m630_home_first_frame_contention_test.dart",
+    "test/m631_verified_finance_prewarm_test.dart",
+    "test/m632_sms_account_splash_isolate_contract_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -33,6 +40,42 @@
       {
         "start": " Future<void> load()async {\n  final financeClock=kProfileMode",
         "end": " Future<void> _refreshWidget()async{"
+      }
+    ],
+    "test/m548_review_grouping_and_signup_perf_test.dart": [
+      {
+        "start": " test('SMS classification runs outside UI isolate; native ACK stays checked',(){",
+        "end": " test('fresh registration proves exact read-back without duplicate KDF',(){"
+      }
+    ],
+    "test/m622_immediate_home_without_loader_test.dart": [
+      {
+        "start": " test('M622 SMS scan is deferred until after verified Home frame',(){",
+        "end": "\n}"
+      }
+    ],
+    "test/m623_verified_home_handoff_no_black_frame_test.dart": [
+      {
+        "start": " test('M623 background SMS runs only after the complete Home frame',(){",
+        "end": "\n}"
+      }
+    ],
+    "test/m624_deferred_sms_after_verified_home_test.dart": [
+      {
+        "start": " test('M624: after-first-frame native work then sequential inbox review',(){",
+        "end": " test('M624: do not replace genuine complete finance Home with fake values',(){"
+      }
+    ],
+    "test/m631_verified_finance_prewarm_test.dart": [
+      {
+        "start": " test('optional widget tour/reminder after ready and SMS only after real Home',(){",
+        "end": "\n}"
+      }
+    ],
+    "test/m632_sms_account_splash_isolate_contract_test.dart": [
+      {
+        "start": " test('large input uses worker without main-isolate message parser loop',()async{",
+        "end": "\n}"
       }
     ]
   }
