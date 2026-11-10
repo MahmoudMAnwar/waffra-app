@@ -3977,6 +3977,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  int _m627AccountEpoch=0;
  // A signout must not close SQLCipher while a Home load still owns a read.
  Completer<void>? _m627HomeLoadCompletion;
+ // Keep genuine DB reads visible to teardown even after Future.timeout
+ // detached an old UI await. Each read must complete before SQLCipher closes.
+ final Set<Future<void>> _m627OutstandingAccountReads=<Future<void>>{};
  Future<void> _m627CloseForLogout()async{
   if(_m627ClosingSession)return;
   _m627ClosingSession=true;
@@ -3994,6 +3997,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    if(pendingLoad!=null){
     await pendingLoad.future.timeout(const Duration(seconds:20));
    }
+   // Future.timeout does not cancel the SQL query: fail signout rather
+   // than close a vault whose old account read is still running.
+   await Future.wait<void>(_m627OutstandingAccountReads.toList())
+    .timeout(const Duration(seconds:20));
    await _m468PersistSequence.timeout(const Duration(seconds:20));
    await _financialWriteQueue.drain().timeout(const Duration(seconds:20));
    final pending=_financeBindingFuture;
@@ -4042,9 +4049,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    return;
   }
   final running=_m468ReadVerifiedAccountsOnce();
+  _m627OutstandingAccountReads.add(running);
   _m468AccountReadInFlight=running;
   try{await running;}
   finally{
+   _m627OutstandingAccountReads.remove(running);
    // Do not detach a newer retry after an older timeout finishes late.
    if(identical(_m468AccountReadInFlight,running)){
     _m468AccountReadInFlight=null;
