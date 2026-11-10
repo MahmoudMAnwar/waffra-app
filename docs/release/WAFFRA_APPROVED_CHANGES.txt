@@ -1,3 +1,21 @@
+[PR #546 M631 M629 EXACT-HEAD FULL-SUITE REGRESSION CORRECTION — 2026-11-10]
+- Four CI workflows (M103, M160, M282, full offline finance/UI) shared ONE failing legacy M629 source assertion; 2,637 Dart tests passed and one failed. M629 asserted a one-line Home close. New M631 code still awaits the same close, then additionally awaits an unused owner-scoped prewarm close before credential signout.
+- Reconciled only M629 logout regression with positive checks for both teardown branches, single finance task inside Future.wait alongside AI disposal, and no credential signout before either task completes. Existing source tests, SQLCipher integrity, biometric and SMS signout protection unchanged. Updated M385 bounded test scope, M550 contract, permanent requirements and QA evidence.
+- Status: latest-head CI rerun pending; Android physical freeze remains unverified. No claim of fixed p95 latency.
+
+[PR #546 M631 LATEST SOURCE FOLLOW-UP — 2026-11-10]
+- Reviewed code after first draft: speculative BIND is consumed exactly once by Home. A secure Retry following failed signout or closed Home cannot re-adopt the old/closed connection; it falls back to a newly verified binding. Regression test asserts this one-shot lease. All data integrity, 15-second account verification, biometric/SMS consent and owner isolation are preserved.
+- This entry follows the latest production source commit for M449 ancestry. Exact-head CI and Android profile first-home timing remain pending; no physical lag-fix claim.
+
+[PR #546 — M631 OWNER-VERIFIED PREWARM + FIRST HOME POST-FRAME DEFERRAL — ISSUE #545 — 2026-11-10]
+================================================================================================
+- Owner reports both "جارٍ تسجيل الدخول" and biometric-to-Home wait remain after merged PR #544. External analysis proposed opening Home before biometrics and painting ready=true before account balances. These specific shortcuts are NOT applied: they would allow protected work before mandatory biometric and inaccurate/stale first-frame balances.
+- After successful OS/password verification and awaited owner-profile persistence (or restored-session startup source guard), begin a single speculative BIND-only SQLCipher authority connection in the background. No financial ledger/account load occurs before biometric approval. Transfer that verified active owner/session binding to Home when it mounts after mandatory unlock; Home falls back to secure normal bind if prewarm failed.
+- An unused prewarm is awaited/closed during logout, including logout from biometric stage, and no finance connection crosses user/session changes. Existing Home drain, 15-second verified account balance timeout and real finance recovery remain.
+- Delay optional widget refresh, SMS action review trigger, legacy recurring, reminder synchronization and tour initialization 400ms after ready/frame scheduling to avoid competing with the first real Home paint. Keep native SMS resume after verified Home with its existing separate 900ms gate and no automatic transaction posting.
+- Added M631 source/behavior regression and scope manifest; original M622/M624/M627/M630 guards remain. No changes to SQLCipher schema, encrypted balances, passwords, biometrics or display wording.
+- Status: CODE READY / CI PENDING. Physical Android cold/first-biometric/logout-relogin traces, full latest-head CI and both-device data-retention still required. NO promise that physical login lag has disappeared.
+
 [PR #534 M626 EXACT-HEAD M554 PRE-FLIGHT TEST ALIGNMENT — 2026-11-09]
 - Fixed a single stale QA structural assumption in M174: old M554 asserted native SQLite3MC and official pinned Gradle prefetch steps lived in job android-encrypted-db. After approved four-way matrix, that name is intentionally the required aggregate gate; each Android emulator shard performs both prefetches in the same verified order.
 - Strengthened original M554 guard to positively check both prefetched native and Gradle distributions on each matrix runner, the four shards, fail-fast=false and strict dependent aggregate. Every other critical Android job guard remains enabled. No application code, financial security or tested Android files changed.

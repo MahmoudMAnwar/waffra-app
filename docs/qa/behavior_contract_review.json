@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "pr": "Pending M630 focused login finance PR",
-  "issue": "Owner-reported fresh-install and repeated-login freeze",
+  "pr": "Draft PR #546 (M631 verified finance prewarm, pending exact-head CI)",
+  "issue": "Issue #545, owner-reported post #544 login and biometric Home delays",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main",
   "reviewed_at": "2026-11-10",
@@ -813,7 +813,8 @@
         "Sign-in always awaits OS-protected inspection and actual PBKDF2 password verification before activating any profile.",
         "Explicit signout suspends native SMS and awaits BOTH Qwen context disposal and Home financial DB drain/close before clearing profile.",
         "A failed native suspension, AI disposal or finance drain leaves signed-in owner intact and shows failure; no cross-account leak.",
-        "Physical Android profile first-frame and login/logout timing evidence needed; source-level improvements do not prove issue resolved."
+        "Physical Android profile first-frame and login/logout timing evidence needed; source-level improvements do not prove issue resolved.",
+        "M631 extends M629 logout: await Home binding drain+close and any unclaimed prewarm connection inside the same independently awaited finance teardown job before any profile signout; a logout at the biometric stage closes a claimed-but-not-mounted prewarm."
       ]
     },
     {
@@ -838,6 +839,38 @@
         "Changed bytes, revision, digest and rolled-back transactions must not reuse mismatched validation.",
         "No authentication, biometric, password strength, finance data or SMS-consent bypass.",
         "Host measurements do not certify physical Android frame pacing."
+      ]
+    },
+    {
+      "id": "M631-OWNER-SCOPED-FINANCE-BIND-PREWARM",
+      "issue": "https://github.com/MahmoudMAnwar/waffra-app/issues/545",
+      "previous_behavior": "A new HomeState starts another SQLCipher finance bind only after password-login or restored-session biometric unlock, then waits for verified catalog/ledger/account projections before first visible Home. Optional reminder/widget/tour work can also begin on or before that frame.",
+      "approved_behavior": "Only after a verified login/profile commit, or the existing restored-session startup source guard, start one BIND-only background finance preparation and pass the connection to the exact owner/session HomeState after mandatory biometric unlock. On prewarm failure Home retries its normal verified bind. Close unused prewarm before signout and never transfer another owner/session. Keep full ledger/catalog/account integrity and 15s genuine-account timeout before first Home; defer optional widget/tour/reminder work to after verified visible Home.",
+      "source_paths": [
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m631_verified_finance_prewarm_test.dart",
+        "test/m622_immediate_home_without_loader_test.dart",
+        "test/m624_deferred_sms_after_verified_home_test.dart",
+        "test/m627_home_handoff_timeout_and_session_reset_test.dart",
+        "test/m604_fast_login_first_frame_test.dart",
+        "test/storage/m630_finance_responsiveness_test.dart",
+        "test/m629_pull_refresh_parity_auth_home_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m429-integration-smoke.yml",
+        ".github/workflows/android-encrypted-db.yml"
+      ],
+      "safety_invariants": [
+        "Do not construct or reveal Home, read customer finance, or resume native SMS while mandatory biometric is locked.",
+        "Never mark ready until verified ledger/categories AND fresh account balances succeed; keep 15s fail-closed retry, no placeholder or stale/zero balance.",
+        "Prewarm only a binding (no dashboard read); ownership must match exact current Person object and session epoch; never abandon or silently reuse an orphan open SQLCipher connection.",
+        "Logout waits to close unclaimed prewarm and Home-owned open binding before profile removal; failed signout does not change stored balances.",
+        "Profile-mode logs exclude all personal/financial details; exact-head CI and measured Android frame timings are separate acceptance."
       ]
     }
   ]

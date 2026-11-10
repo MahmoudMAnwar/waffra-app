@@ -61,8 +61,24 @@ void main(){
   expect(logout,contains('await Future.wait<void>(['));
   expect(logout,contains(
    'WaffraOnDeviceQwen.shared.dispose().timeout(const Duration(seconds:12))'));
-  expect(logout,contains('if(closingHome!=null)await closingHome._m627CloseForLogout();'));
+  // M631: genuine Home close now also waits for owner-scoped speculative
+  // binding closure. The old single-line source shape is no longer valid,
+  // but both async jobs MUST still complete before the credential signout.
+  expect(logout,contains('final closingHome=_m627HomeKey.currentState;'));
+  expect(logout,contains('Future<void> closeHomeFinance()async{'));
+  expect(logout,contains('if(closingHome!=null){'));
+  expect(logout,contains('await closingHome._m627CloseForLogout();'));
+  expect(logout,contains('await _m631CloseUnusedPrewarm();'));
+  expect(logout,contains('await _m631CloseUnusedPrewarm(includeClaimed:true);'));
+  expect(logout.indexOf('await closingHome._m627CloseForLogout();'),
+   lessThan(logout.indexOf('await _m631CloseUnusedPrewarm();')));
+  expect(logout.indexOf('Future<void> closeHomeFinance()async{'),
+   lessThan(logout.indexOf('await Future.wait<void>([')));
   expect(logout,contains('closeHomeFinance(),'));
+  expect(logout.indexOf('closeHomeFinance(),'),
+   lessThan(logout.indexOf('await _accountWriteAuthority.signOut();')));
+  expect(logout,contains('_m627HomeSession++;'));
+  expect(logout,contains('_m631PrewarmBinding=null;_m631PrewarmOwner=null;'));
   expect(logout.indexOf('await Future.wait<void>(['),
    lessThan(logout.indexOf('await _accountWriteAuthority.signOut();')));
   expect(logout.indexOf('await _accountWriteAuthority.signOut();'),
