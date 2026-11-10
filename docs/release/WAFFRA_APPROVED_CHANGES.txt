@@ -1,3 +1,8 @@
+[PR #546 M631 M629 EXACT-HEAD FULL-SUITE REGRESSION CORRECTION — 2026-11-10]
+- Four CI workflows (M103, M160, M282, full offline finance/UI) shared ONE failing legacy M629 source assertion; 2,637 Dart tests passed and one failed. M629 asserted a one-line Home close. New M631 code still awaits the same close, then additionally awaits an unused owner-scoped prewarm close before credential signout.
+- Reconciled only M629 logout regression with positive checks for both teardown branches, single finance task inside Future.wait alongside AI disposal, and no credential signout before either task completes. Existing source tests, SQLCipher integrity, biometric and SMS signout protection unchanged. Updated M385 bounded test scope, M550 contract, permanent requirements and QA evidence.
+- Status: latest-head CI rerun pending; Android physical freeze remains unverified. No claim of fixed p95 latency.
+
 [PR #546 M631 LATEST SOURCE FOLLOW-UP — 2026-11-10]
 - Reviewed code after first draft: speculative BIND is consumed exactly once by Home. A secure Retry following failed signout or closed Home cannot re-adopt the old/closed connection; it falls back to a newly verified binding. Regression test asserts this one-shot lease. All data integrity, 15-second account verification, biometric/SMS consent and owner isolation are preserved.
 - This entry follows the latest production source commit for M449 ancestry. Exact-head CI and Android profile first-home timing remain pending; no physical lag-fix claim.
