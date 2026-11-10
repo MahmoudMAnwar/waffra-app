@@ -90,10 +90,16 @@ void main() {
  test('optional widget tour/reminder after ready and SMS only after real Home',(){
   expect(load.indexOf('setState(()=>ready=true);'),
     lessThan(load.indexOf('Duration(milliseconds:400)')));
-  expect(load,contains('if(!mounted||!ready||_m627ClosingSession||_financeLoadFailure!=null)return;'));
+  expect(load,contains('if(!_m630SmsSessionCurrent(startupEpoch))return;'));
+  expect(home,contains('mounted&&ready&&!_m627ClosingSession&&_financeLoadFailure==null&&'));
+  expect(home,contains('epoch==_m630HomeStartupEpoch;'));
+  expect(load,contains('_m630PostFrameFinanceWork=postFrameFinance;'));
+  expect(load,contains('if(!verifiedEncryptedStartup)await applyRecurring();'));
+  expect(load,isNot(contains('unawaited(_refreshWidget());')));
+  expect(load,isNot(contains('unawaited(syncRecurringReminders());')));
   for(final phrase in <String>[
-   '_receiveWidgetAction();', 'unawaited(_refreshWidget());',
-   'unawaited(syncRecurringReminders());',
+   '_receiveWidgetAction();', 'await _refreshWidget();',
+   'await syncRecurringReminders();',
    "tourActive=true;tourStep=0;",
   ]){expect(load,contains(phrase),reason:phrase);}
   expect(startup,contains('Duration(milliseconds:900)'));

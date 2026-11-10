@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "pr": "PR #548 M632 against merged M633 main; exact-head QA pending",
-  "issue": "Issue #547; preserve #550 and #552 behavior",
+  "pr": "PR #543 — M630 reconciled against merged M631/M632/M633 main; exact-HEAD CI/phone QA pending",
+  "issue": "Issue #542 / PR #543; preserve #547 #550 #552 verified behaviors",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main",
   "reviewed_at": "2026-11-10",
@@ -958,6 +958,35 @@
         "Yes requires valid currency/amount/date/category, selected active account generation, and deduplicated verified finance commit.",
         "Splash never exposes protected Home or blocks identity/storage startup; Android profile trace required for performance claim.",
         "M461/M509 financial ACK checks must assert authenticated main-isolate ACK fed by background compute; M547 must assert debounced native notice refresh and never hidden historical rescan."
+      ]
+    },
+    {
+      "id": "M630-RECONCILED-OWNER-EPOCH-POSTFRAME-FINANCE-DRAIN",
+      "issue": "Issue #542, existing Draft PR #543, current merged main",
+      "previous_behavior": "M632 isolated whole-SMS-queue parsing but late isolate native ACK batches and post-frame navigation could continue after a Home retry or explicit signout; optional widget/reminder source reread was fired unawaited and could race SQLCipher vault close. Older #543 additionally attempted a duplicate partial SMS worker and outdated Home scheduling.",
+      "approved_behavior": "Keep M631 verified finance prewarm, M632 whole-SMS worker, M633 startup batch decode and splash intact. On current Home, assign new startup epoch per load/signout; require matching verified owner epoch before scheduled postframe callbacks, SMS import, isolate results and each native ACK batch. Track postpaint widget/recurring finance tasks, drain them on logout before SQLCipher close, with original bounded fail-closed shutdown. Move finance-notice route after first real Home frame without extra synthetic waits. No finance bypass or unreviewed SMS auto-post.",
+      "source_paths": [
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m630_home_first_frame_contention_test.dart",
+        "test/m632_sms_account_splash_isolate_contract_test.dart",
+        "test/m629_pull_refresh_parity_auth_home_test.dart",
+        "test/m622_immediate_home_without_loader_test.dart",
+        "test/m509_all_sender_sms_rescan_dedup_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/m429-integration-smoke.yml"
+      ],
+      "safety_invariants": [
+        "Maintain actual mandatory SQLCipher source/witness/account balances before Home ready, no black/dummy/stale screen and no bypass of password or biometric.",
+        "M632 compute classifies all SMS locally off UI isolate; owner/session epoch checked before each native exclude/committed ACK and final UI update.",
+        "Logout sets owner closing state and advances epoch, awaits all pending postframe finance tasks and writes before source close; timeout prevents dangerous early close.",
+        "Fresh login and logout cannot leak an old session callback; no automatic bank SMS financial posting or review reclassification.",
+        "Source-only tests are not Android physical frame evidence; require 1000–2000 message profile, first biometric, logout/relogin and second-device data upgrade."
       ]
     }
   ]

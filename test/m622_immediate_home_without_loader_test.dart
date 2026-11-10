@@ -53,6 +53,8 @@ void main(){
   expect(startup.indexOf('WidgetsBinding.instance.addPostFrameCallback'),
    lessThan(startup.indexOf('await _refreshAutoSmsInbox(importMonth:!_autoSmsHistoryComplete)')));
   expect(startup,contains('Duration(milliseconds:900)'));
-  expect(startup,contains('if(!mounted||!ready||_financeLoadFailure!=null)return;'));
+  expect(startup,contains('if(!_m630SmsSessionCurrent(startupEpoch))return;'));
+  expect(source,contains('mounted&&ready&&!_m627ClosingSession&&_financeLoadFailure==null&&'));
+  expect(source,contains('epoch==_m630HomeStartupEpoch;'));
  });
 }

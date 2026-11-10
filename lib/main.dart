@@ -4178,6 +4178,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  // M627: sign-out closes the Home-owned binding, not a root-local phantom.
  bool _m627ClosingSession=false;
  int _m627AccountEpoch=0;
+ // M630 / #542: reject stale Home callbacks and await optional vault I/O
+ // before explicit logout closes the owner-bound SQLCipher connection.
+ int _m630HomeStartupEpoch=0;
+ Future<void>? _m630PostFrameFinanceWork;
+ bool _m630SmsSessionCurrent(int epoch)=>
+  mounted&&ready&&!_m627ClosingSession&&_financeLoadFailure==null&&
+  epoch==_m630HomeStartupEpoch;
  // A signout must not close SQLCipher while a Home load still owns a read.
  Completer<void>? _m627HomeLoadCompletion;
  // Keep genuine DB reads visible to teardown even after Future.timeout
@@ -4187,6 +4194,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   if(_m627ClosingSession)return;
   _m627ClosingSession=true;
   _m627AccountEpoch++;
+  _m630HomeStartupEpoch++;
   if(mounted)setState((){
    ready=false;
    _financeLoadFailure=waffraIsEnglish?
@@ -4204,6 +4212,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    // than close a vault whose old account read is still running.
    await Future.wait<void>(_m627OutstandingAccountReads.toList())
     .timeout(const Duration(seconds:20));
+   // M630: a widget reread or due-payment/reminder task may still own
+   // this source after the first Home frame. Finish it before vault close.
+   final postFrameFinance=_m630PostFrameFinanceWork;
+   if(postFrameFinance!=null){
+    await postFrameFinance.timeout(const Duration(seconds:20));
+   }
    await _m468PersistSequence.timeout(const Duration(seconds:20));
    await _financialWriteQueue.drain().timeout(const Duration(seconds:20));
    final pending=_financeBindingFuture;
@@ -4942,9 +4956,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
  }
  Future<void> _runAutoSmsRefresh({bool importMonth=false})async{
-  if(!mounted||!ready||_financeLoadFailure!=null)return;
+  if(!mounted||!ready||_m627ClosingSession||_financeLoadFailure!=null)return;
+  final smsEpoch=_m630HomeStartupEpoch;
   final status=await WaffraAutoSms.trackingStatus();
-  if(!mounted)return;
+  if(!_m630SmsSessionCurrent(smsEpoch))return;
   if(status==null||status['enabled']!=true){
    final message=status==null?
     (waffraIsEnglish?'Could not verify bank SMS state. Retry.':
@@ -4973,10 +4988,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     for(var page=0;page<4;page++){
      // Preserve complete month scan but avoid uninterrupted native I/O.
      if(page>0)await Future<void>.delayed(const Duration(milliseconds:500));
-     if(!mounted||!ready)return;
+     if(!_m630SmsSessionCurrent(smsEpoch))return;
      final imported=await WaffraAutoSms.importConsentMonthChecked();
      final snapshot=await WaffraAutoSms.scanProgress();
-     if(mounted&&snapshot!=null)setState(()=>_autoSmsProgress=snapshot);
+     if(_m630SmsSessionCurrent(smsEpoch)&&snapshot!=null)setState(()=>_autoSmsProgress=snapshot);
      final progress=await WaffraAutoSms.trackingStatus();
      if(progress==null||progress['enabled']!=true||
         progress['historyComplete']==true)break;
@@ -4985,7 +5000,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      if(imported==0&&snapshot==null)break;
     }
    }catch(_){
-    if(mounted)setState((){
+    if(_m630SmsSessionCurrent(smsEpoch))setState((){
      _autoSmsStatusChecked=true;
      _autoSmsStatusProblem=waffraIsEnglish?
       'Could not finish reading the SMS history. Retry.':
@@ -4995,7 +5010,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }
   }
   final results=await WaffraAutoSms.pendingChecked();
-  if(!mounted)return;
+  if(!_m630SmsSessionCurrent(smsEpoch))return;
   if(results==null){
    setState((){
     _autoSmsStatusChecked=true;
@@ -5010,7 +5025,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
   // Update counts on *every* completed refresh, not just initial import.
   final latestScan=await WaffraAutoSms.scanProgress();
-  if(mounted&&latestScan!=null){
+  if(_m630SmsSessionCurrent(smsEpoch)&&latestScan!=null){
    setState((){
     _autoSmsProgress=latestScan;
     _autoSmsLastChecked=DateTime.now();
@@ -5023,7 +5038,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     _smsRuleOwnerKey);}
    catch(_){ /* No bank SMS in logs. Built-ins remain usable. */ }
   }
-  if(!mounted)return;
+  if(!_m630SmsSessionCurrent(smsEpoch))return;
   // Heavy SHA256, bank parser, OTP detection and local-rule matching now
   // run on a background isolate; the main isolate handles only native ACKs
   // and one UI update. No network or database is used inside the worker.
@@ -5039,7 +5054,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    'categories':categoryNames,
    'hashes':smsHashes.toList(growable:false),
   });
-  if(!mounted||!ready||_m627ClosingSession)return;
+  if(!_m630SmsSessionCurrent(smsEpoch))return;
   if(kProfileMode&&classifyClock!=null){
    debugPrint('WAFFRA_SMS_PERF classify_count=${results.length} '
     'isolate_ms=${classifyClock.elapsedMilliseconds}');
@@ -5056,6 +5071,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    // Drain larger review queues in batches without losing failed items.
    final failedAcks=<String>{};
    for(var from=0;from<toAcknowledge.length;from+=100){
+    if(!_m630SmsSessionCurrent(smsEpoch))return;
     final batch=toAcknowledge.skip(from).take(100).toList(growable:false);
     final removed=await WaffraAutoSms.excludeMessages(batch);
     if(!removed)failedAcks.addAll(batch);
@@ -5068,6 +5084,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   if(toAcknowledgeCommitted.isNotEmpty){
    final failed=<String>{};
    for(var from=0;from<toAcknowledgeCommitted.length;from+=100){
+    if(!_m630SmsSessionCurrent(smsEpoch))return;
     final batch=toAcknowledgeCommitted.skip(from).take(100).toList(growable:false);
     if(!await WaffraAutoSms.acknowledgeCommitted(batch))failed.addAll(batch);
    }
@@ -5075,7 +5092,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     (row)=>failed.contains(row['id'])));
   }
   final progress=await WaffraAutoSms.trackingStatus();
-  if(!mounted)return;
+  if(!_m630SmsSessionCurrent(smsEpoch))return;
   if(progress?['enabled']!=true){
    setState((){
     _autoSmsStatusChecked=true;
@@ -7012,6 +7029,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
   final completion=Completer<void>();
   _m627HomeLoadCompletion=completion;
+  final startupEpoch=++_m630HomeStartupEpoch;
   // Retry invalidates any late completion from a previous account read.
   _m627AccountEpoch++;
   // M614: measure the real verified finance wait separately from login.
@@ -7030,24 +7048,25 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }
    // Account balances were verified before ready=true; no second startup read.
    WidgetsBinding.instance.addPostFrameCallback((_) {
+    if(!_m630SmsSessionCurrent(startupEpoch))return;
     if(kProfileMode&&startupClock!=null){
      debugPrint('WAFFRA_FINANCE_PERF first_home_frame_ms='
       '${startupClock.elapsedMilliseconds}');
     }
-    _m621OnFinanceNoticeTap();
+    // Finance notice dispatch happens with the other optional UI work,
+    // never on the first authenticated Home frame.
     // Home first: encrypted SMS scan starts only after initial layout settles.
     unawaited(()async{
      await Future<void>.delayed(const Duration(milliseconds:900));
-     if(!mounted||!ready||_financeLoadFailure!=null)return;
+     if(!_m630SmsSessionCurrent(startupEpoch))return;
      // M624: native SMS resume and encrypted inbox scan are sequential,
      // only after the first fully verified Home frame has painted.
      final activeOwner=(await widget.onVerifiedHomeSmsResume?.call())??true;
-     if(!activeOwner||!mounted||!ready||_financeLoadFailure!=null)return;
+     if(!activeOwner||!_m630SmsSessionCurrent(startupEpoch))return;
      // Let Home receive interactions and finish its first tab animation
      // before Android starts historical month paging and native AES I/O.
      await Future<void>.delayed(const Duration(milliseconds:1200));
-     if(!mounted||!ready||_m627ClosingSession||
-        _financeLoadFailure!=null)return;
+     if(!_m630SmsSessionCurrent(startupEpoch))return;
      await _refreshAutoSmsInbox(importMonth:!_autoSmsHistoryComplete);
     }());
    });
@@ -7308,6 +7327,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
  Future<void> load()async {
   final financeClock=kProfileMode?(Stopwatch()..start()):null;
+  final startupEpoch=_m630HomeStartupEpoch;
   void traceHomeStep(String stage){
    if(financeClock==null)return;
    debugPrint('WAFFRA_HOME_LOAD_STEP $stage elapsed_ms='
@@ -7593,12 +7613,32 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      // Load returns before the retained biometric/login stage is dismissed.
      // Let its FIRST genuinely verified Home frame render before optional I/O.
      await Future<void>.delayed(const Duration(milliseconds:400));
-     if(!mounted||!ready||_m627ClosingSession||_financeLoadFailure!=null)return;
+     if(!_m630SmsSessionCurrent(startupEpoch))return;
+     // M630: these happen after the verified Home frame, not during paint.
+     _m621OnFinanceNoticeTap();
      _receiveSharedSms();
      _receiveWidgetAction();
-     unawaited(_refreshWidget());
-     if(!verifiedEncryptedStartup)unawaited(applyRecurring());
-     if(recurringRemindersEnabled)unawaited(syncRecurringReminders());
+     // Track ALL optional finance operations so signout cannot close the
+     // verified SQLCipher source beneath an in-flight widget/recurring read.
+     // They remain after Home render, and never post SMS automatically.
+     final postFrameFinance=()async{
+      try{
+       await _refreshWidget();
+       if(!_m630SmsSessionCurrent(startupEpoch))return;
+       if(!verifiedEncryptedStartup)await applyRecurring();
+       if(!_m630SmsSessionCurrent(startupEpoch))return;
+       if(recurringRemindersEnabled)await syncRecurringReminders();
+      }catch(error){
+       debugPrint('Post-frame optional finance: ${error.runtimeType}');
+      }
+     }();
+     _m630PostFrameFinanceWork=postFrameFinance;
+     unawaited(()async{
+      await postFrameFinance;
+      if(identical(_m630PostFrameFinanceWork,postFrameFinance)){
+       _m630PostFrameFinanceWork=null;
+      }
+     }());
      if(!(p.getBool('waffra_in_app_tour_seen_v2')??false)&&mounted){
       setState((){
        tourActive=true;tourStep=0;tab=0;accountOpened=false;

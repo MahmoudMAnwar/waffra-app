@@ -48,7 +48,9 @@ void main(){
   expect(homeLoader.indexOf('widget.onVerifiedReady?.call();'),
    lessThan(homeLoader.indexOf('WidgetsBinding.instance.addPostFrameCallback')));
   expect(homeLoader,contains('Duration(milliseconds:900)'));
-  expect(homeLoader,contains('if(!mounted||!ready||_financeLoadFailure!=null)return;'));
+  expect(homeLoader,contains('if(!_m630SmsSessionCurrent(startupEpoch))return;'));
+  expect(source,contains('mounted&&ready&&!_m627ClosingSession&&_financeLoadFailure==null&&'));
+  expect(source,contains('epoch==_m630HomeStartupEpoch;'));
   expect(homeLoader,contains('await _refreshAutoSmsInbox(importMonth:!_autoSmsHistoryComplete)'));
  });
 }
