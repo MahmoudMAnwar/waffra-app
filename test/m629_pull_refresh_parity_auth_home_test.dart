@@ -69,6 +69,10 @@ void main(){
    lessThan(logout.indexOf('profile=null;showLogin=true;locked=true;')));
   expect(logout,contains('}catch(error){'));
   expect(logout,contains('_m627AbortFailedLogout()'));
+  final abort=home.split(' void _m627AbortFailedLogout(){')[1]
+   .split(' // Account filters are presentation-only;')[0];
+  expect(abort,contains('ready=false;'));
+  expect(abort,contains('_financeLoadFailure=waffraIsEnglish?'));
   expect(root,contains('if(freshSession)locked=!ordinaryPhoneRelogin;'));
  });
 
