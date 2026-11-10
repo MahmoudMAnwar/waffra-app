@@ -1201,7 +1201,7 @@ Owner requests a focused PR for fresh-install login and logout/relogin freezes. 
 
 
 ## M631 — owner-scoped finance BIND prewarm and first-frame deferral (2026-11-10)
-**Issue [#545](https://github.com/MahmoudMAnwar/waffra-app/issues/545)** (related #542, after merged #544). **PR:** next M631 Draft. **Status:** Recorded / Implementation in progress, exact-head CI and physical device acceptance pending.
+**Issue [#545](https://github.com/MahmoudMAnwar/waffra-app/issues/545)** (related #542, after merged #544). **PR:** [#546](https://github.com/MahmoudMAnwar/waffra-app/pull/546), Draft. **Status:** Code ready / exact-head CI and physical device acceptance pending.
 
 Owner confirms two independent delays after PR #544: the authentication CTA remains pending on password sign-in, and biometric success retains the previous screen until verified Home is ready. A proposed external review recommends `unawaited(_ensureFinanceBound())`, pre-mounting Offstage Home before biometric, and painting `ready=true` before accounts load. Adopt only the security-compatible optimization: an owner/session-scoped, **BIND-only** background source preparation after verified login or validated restored-session startup; transfer its unique connection to Home after mandatory biometrics and close on logout, disposal, session switch or failed preparation. Never display, decode or attach Home's financial data before biometric; never reuse a different owner's binding.
 
