@@ -886,7 +886,7 @@
         "test/m548_review_grouping_and_signup_perf_test.dart",
         "test/m603_app_wide_lag_source_regression_test.dart",
         "test/m506_android_nine_regressions_test.dart",
-        "test/m565_sms_preview_validation_test.dart"
+        "test/m580_sms_security_navigation_performance_test.dart"
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/m550-behavior-contract-preflight.yml",
