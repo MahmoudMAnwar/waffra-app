@@ -24,7 +24,11 @@ void main() {
       main.indexOf('String get maskedLastPhone{'));
     // M609: the single OS-backed verifier probe replaces a duplicate
     // secure-store existence read, and still fails closed on corrupt records.
-    expect(login,contains('var inspection=await WaffraLocalPhoneCredentials.readForSignIn();'));
+    // M629 overlap with preferences changes timing, never verifier scope.
+    expect(login,contains('final secureInspectionLoading=WaffraLocalPhoneCredentials.readForSignIn();'));
+    expect(login,contains('var inspection=await secureInspectionLoading;'));
+    expect(login.indexOf('var inspection=await secureInspectionLoading;'),
+      lessThan(login.indexOf('var verifierStatus=await WaffraLocalPhoneCredentials.probeForPhone(')));
     expect(login,contains('var verifierStatus=await WaffraLocalPhoneCredentials.probeForPhone('));
     expect(login,contains('enteredPhone,inspection:inspection'));
     expect(login,contains('verifierStatus==WaffraLocalCredentialProbe.malformed'));
