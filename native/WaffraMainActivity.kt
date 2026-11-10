@@ -16,6 +16,8 @@ import io.flutter.plugin.common.MethodChannel
 import com.google.firebase.auth.FirebaseAuth
 import java.security.KeyStore
 import java.util.concurrent.Executors
+import javax.crypto.SecretKeyFactory
+import javax.crypto.spec.PBEKeySpec
 import javax.crypto.Mac
 import javax.crypto.SecretKey
 import org.json.JSONArray
@@ -27,6 +29,33 @@ class MainActivity : FlutterFragmentActivity() {
     private val messagesChannel = "waffra/messages"
     // History scans/decryption must never run on the Android UI thread.
     private val smsHistoryExecutor = Executors.newSingleThreadExecutor()
+    // Native PBKDF2 runs independently of SMS I/O and the Android UI thread.
+    private val passwordKdfExecutor = Executors.newSingleThreadExecutor()
+    private var nativePasswordKdfParityVerified = false
+
+    // Deterministic public vector, not user data. Reject Android providers
+    // with different UTF-8/emoji PBKDF2 semantics; Dart performs the original
+    // full-strength Isolate fallback instead of rejecting valid passwords.
+    private fun assertNativePasswordKdfParity() {
+        if (nativePasswordKdfParityVerified) return
+        val salt = ByteArray(32) { it.toByte() }
+        val chars = "اختبار🟢Waffra".toCharArray()
+        val spec = PBEKeySpec(chars, salt, 1000, 256)
+        try {
+            val actual = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
+                .generateSecret(spec).encoded
+            val expected = "25c045b0f0158c986f57d1e4f260b73009c8ce9cf40a8b2fb4d44cd4e7cb9cd2"
+                .chunked(2).map { it.toInt(16).toByte() }.toByteArray()
+            if (!java.security.MessageDigest.isEqual(actual, expected)) {
+                throw IllegalStateException("Native PBKDF2 encoding mismatch")
+            }
+            nativePasswordKdfParityVerified = true
+        } finally {
+            spec.clearPassword()
+            chars.fill('\u0000')
+            salt.fill(0)
+        }
+    }
     private val autoSmsRequestCode = 7712
     private var pendingSmsPermissionResult: MethodChannel.Result? = null
     private val autoSmsNotificationRequestCode = 7713
@@ -116,6 +145,16 @@ class MainActivity : FlutterFragmentActivity() {
 
     // Android's Recent Apps thumbnail is captured while leaving the foreground.
     // Do not block normal foreground screenshots unless requested separately.
+    override fun onStart() {
+        super.onStart()
+        WaffraAutoSmsWorker.setForegroundUiActive(true)
+    }
+
+    override fun onStop() {
+        WaffraAutoSmsWorker.setForegroundUiActive(false)
+        super.onStop()
+    }
+
     override fun onPause() {
         if (protectRecents) window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         super.onPause()
@@ -197,6 +236,41 @@ class MainActivity : FlutterFragmentActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        // Same on-device 600000-round PBKDF2-HMAC-SHA256 verifier bytes as Dart,
+        // calculated by Android's native crypto provider off the UI isolate.
+        // Do not persist or log the supplied password or derived key.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "waffra/password_kdf")
+            .setMethodCallHandler { call, result ->
+                if (call.method != "derivePbkdf2Sha256") {
+                    result.notImplemented()
+                    return@setMethodCallHandler
+                }
+                val password = call.argument<String>("password")
+                val salt = call.argument<ByteArray>("salt")
+                if (password == null || salt == null || salt.size != 32) {
+                    result.error("PASSWORD_KDF_INVALID", "Invalid password KDF input", null)
+                    return@setMethodCallHandler
+                }
+                passwordKdfExecutor.execute {
+                    val chars = password.toCharArray()
+                    val spec = PBEKeySpec(chars, salt, 600000, 256)
+                    try {
+                        assertNativePasswordKdfParity()
+                        val secret = SecretKeyFactory
+                            .getInstance("PBKDF2WithHmacSHA256")
+                            .generateSecret(spec).encoded
+                        if (secret.size != 32) throw IllegalStateException("KDF length")
+                        // MethodChannel.Result supports background-thread replies.
+                        result.success(secret)
+                    } catch (_: Exception) {
+                        result.error("PASSWORD_KDF_UNAVAILABLE", "Native password verification unavailable", null)
+                    } finally {
+                        spec.clearPassword()
+                        chars.fill('\u0000')
+                        salt.fill(0)
+                    }
+                }
+            }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, privacyChannel)
             .setMethodCallHandler { call, result ->
                 if (call.method == "setScreenshotsAllowed") {
@@ -337,7 +411,8 @@ class MainActivity : FlutterFragmentActivity() {
                     smsHistoryExecutor.execute {
                         try {
                             val resumed = WaffraAutoSmsStore.resumeForSameSignedInOwner(app)
-                            if (resumed) WaffraAutoSmsWorker.enqueue(app)
+                            // Visible Home owns this queue; do not spin up a
+                            // competing background FlutterEngine on relogin.
                             runOnUiThread { result.success(resumed) }
                         } catch (_: Exception) {
                             runOnUiThread { result.error("SMS_RESUME_UNAVAILABLE",
@@ -393,7 +468,8 @@ class MainActivity : FlutterFragmentActivity() {
                     smsHistoryExecutor.execute {
                         try {
                             val saved = WaffraAutoSmsStore.enable(app, allow)
-                            if (saved && allow) WaffraAutoSmsWorker.enqueue(app)
+                            // First-run consent is followed by biometric/Home.
+                            // The foreground scan will consume pending review.
                             runOnUiThread { result.success(saved) }
                         } catch (_: Exception) {
                             runOnUiThread { result.error("SMS_CONSENT_UNAVAILABLE",
@@ -506,7 +582,10 @@ class MainActivity : FlutterFragmentActivity() {
                     smsHistoryExecutor.execute {
                         try {
                             val pending = WaffraAutoSmsStore.pending(app)
-                            runOnUiThread { result.success(pending) }
+                            // Serialize large decrypted SMS lists off Android UI.
+                            // Result callbacks are thread-safe; Flutter receives
+                            // its reply asynchronously on its own platform channel.
+                            result.success(pending)
                         } catch (_: Exception) {
                             runOnUiThread { result.error("SMS_REVIEW_READ_FAILED",
                                 "Could not verify encrypted SMS queue", null) }
@@ -715,7 +794,9 @@ class MainActivity : FlutterFragmentActivity() {
     }
 
     override fun onDestroy() {
+        WaffraAutoSmsWorker.setForegroundUiActive(false)
         smsHistoryExecutor.shutdown()
+        passwordKdfExecutor.shutdown()
         WaffraAutoSmsStore.onChanged = null
         pendingSmsPermissionResult?.error("SMS_PERMISSION_CANCELLED", "Activity closed", null)
         pendingSmsPermissionResult = null

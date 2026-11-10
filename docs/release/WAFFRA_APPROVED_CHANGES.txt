@@ -3347,3 +3347,15 @@ passed; changed-source analysis clean; M550 contract preflight passed.
 [M630 PR #543 EXACT APP SOURCE REVIEW — 2026-11-10]
 - Reviewed current lib/main.dart through a9dd421aeb5d0189f39df5932ee2b6198cda4aad: M633 Home load declaration retains the original recognized first line and captures startup epoch on the next line. This is source-order compatibility for existing M633 positive tests, not a relaxation of the verified finance source or a new user-visible behavior.
 - Post-frame SQLCipher reader/writer drain, session-invalidated SMS isolate/ACK and genuine first Home verified balance protections remain as above. No freeze-resolution claim or APK release before exact-head QA and physical-device proof.
+
+
+[M635 — EARLY APP SPEED WITHOUT LEGACY SECURITY ROLLBACK — ISSUE #553 — 2026-11-10]
+- Compared actual October 21 login code (fast salted SHA256 / SharedPreferences) with current verified 600000-iteration PBKDF2 + SQLCipher/biometric Home. DO NOT restore weak authentication or skip genuine Home/finance verification.
+- Android's built-in PBKDF2WithHmacSHA256 executes exact 600000 rounds / 256-bit password proof on an independent native executor; public Arabic/emoji parity vector rejects incompatible native provider and original Dart Isolate.run remains the full-strength fallback. No password/finance source migration, logging or server call.
+- A foreground Waffra Activity now prevents another WorkManager-launched background FlutterEngine from racing the same native SMS queue while Home animates; broadcast receiver still encrypts pending and schedules background work when UI inactive. First consent/relogin no longer enqueue redundant worker. Existing Home's deferred SMS review and native ACK continue.
+- Large pendingAutoBankSms queue serializes its MethodChannel result from SMS executor rather than Android's UI thread; encrypted reads, error handling and source review remain unchanged.
+- Added test/m635_historical_login_sms_jank_regression_test.dart for KDF byte-vector, thread affinity, background WorkManager gating, and foreground review. Maintained existing M547/M603/M442 login/SMS regression expectations. No automatic merge.
+- **Status: Partial; exact PR SHA Flutter/Python/Android CI and real Android fresh first login + permission + biometric + relogin + 1000–2000 SMS profile/FPS evidence required. Not a claim that owner-observed 3-second delays or jank have disappeared.**
+
+[M635 FINAL SOURCE ANCESTRY — 2026-11-10]
+- Reviewed the latest post-source code and CI at commit 3a7e932752f1c4f6e45e18851fc1336339234496: Flutter analyzer's unnecessary dart:typed_data import was removed; native PBKDF2, foreground Worker isolation, and pending native SMS background reply remain unchanged. No financial, login-policy, biometric or durable SMS data behavior was removed. This notes update intentionally follows the final app-source edit for M449 release-note ancestry. Full physical Android benchmark remains pending.
