@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "pr": "Pending M632 targeted P0 PR",
+  "pr": "Draft PR #548, exact-head CI and physical Android QA pending",
   "issue": "Issue #547",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main",
