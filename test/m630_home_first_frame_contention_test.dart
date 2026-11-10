@@ -1,5 +1,7 @@
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/foundation.dart';
+import 'package:waffra/main.dart' show BankParser, waffraParseBankSmsBatchInIsolate;
 
 /// M630 / Issue #542: independent work must not steal the first verified
 /// authenticated Home frame or run against a signed-out finance session.
@@ -68,5 +70,42 @@ void main() {
   expect(root,contains('if(freshSession)locked=!ordinaryPhoneRelogin;'));
   expect(root,contains('_m627HomeSession++;'));
   expect(initial,contains('_financeLoadFailure=waffraIsEnglish?'));
+ });
+
+ test('large post-Home SMS review parses off-isolate and ignores stale owner',(){
+  final classifier=home.split(' Map<String,Object?>? _localSmsClassification(')[1]
+   .split(' void _receiveAutoSmsNotice()')[0];
+  final scan=home.split(' Future<void> _runAutoSmsRefresh({bool importMonth=false})async{')[1]
+   .split(' Future<void> _analyzeAmbiguousSmsOnDemand(')[0];
+  expect(classifier,contains('parsedFromBatch??BankParser.parse(body)'));
+  expect(scan,contains('bodies.length>=48?'));
+  expect(scan,contains('await compute(waffraParseBankSmsBatchInIsolate,bodies)'));
+  expect(scan,contains('parsedFromBatch:parsedQueue[candidateIndex]'));
+  expect(scan,contains('smsSessionEpoch!=_m630HomeStartupEpoch'));
+  expect(scan,contains('if(!mounted||!ready||_m627ClosingSession'));
+  expect(scan,contains('await WaffraAutoSms.excludeMessages(batch)'));
+  expect(scan,contains('await WaffraAutoSms.acknowledgeCommitted(batch)'));
+  expect(scan,isNot(contains('automaticPost')));
+ });
+
+ test('batch isolate parser matches original BankParser for a 1000-SMS queue',()async{
+  final examples=<String>[
+   'Online Purchase Card\\nAmount: 120.50 SAR\\nMerchant: Grocery',
+   'Credit Transfer\\nAmount: 2,000 SAR\\nSalary',
+   'OTP 745841 - Never share this code',
+   'Internal Transfer\\nAmount: 125 SAR',
+  ];
+  // Synthetic bodies: no private message or bank credentials in CI.
+  final bodies=List<String>.generate(1000,(index)=>examples[index%examples.length]);
+  final expected=bodies.map(BankParser.parse).toList(growable:false);
+  final actual=await compute(waffraParseBankSmsBatchInIsolate,bodies);
+  expect(actual.length,expected.length);
+  for(var i=0;i<expected.length;i++){
+   expect(actual[i].amount,expected[i].amount,reason:'amount row $i');
+   expect(actual[i].income,expected[i].income,reason:'direction row $i');
+   expect(actual[i].category,expected[i].category,reason:'category row $i');
+   expect(actual[i].requiresCurrencyReview,expected[i].requiresCurrencyReview,
+    reason:'currency safety row $i');
+  }
  });
 }
