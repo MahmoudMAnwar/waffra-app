@@ -3205,3 +3205,16 @@ The owner reported that the unwanted Home startup spinner had merely become a bl
 - No SQLCipher migration/activation change, no backend data clearing, and no
   claim of physical freeze removal without Android flutter run --profile logs.
 - Status Partial pending exact-head CI and real Android profile evidence.
+
+[M627 EXACT-HEAD TEST EXPECTATION RECONCILIATION — ISSUE #536 PR #537 — 2026-11-10]
+================================================================================
+- GitHub M550 identified four old source assumptions inconsistent with the
+  approved session lock and bounded account wait. M424 now checks locked=true
+  after explicit signout and retained password-relogin no-second-biometric.
+- M604/M624/M625 now still require the awaited genuine account balances
+  before ready=true, plus the new mandatory 15-second fail-closed timeout.
+- Preserved prior OS biometric, owner-bound SMS, integrity and first genuine
+  Home checks; no positive checks removed or bypassed. M385 and M550 scope
+  and requirements updated before expensive exact-head Android checks.
+- Physical flutter run --profile and real biometric/login/relogin timings
+  are still unverified. PR #537 remains draft until exact-head gates pass.
