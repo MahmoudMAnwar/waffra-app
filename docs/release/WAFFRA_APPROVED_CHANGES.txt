@@ -1,3 +1,8 @@
+[PR #548 M632 POST-QA SOURCE REVIEW — 2026-11-10]
+- Current production code retains the former private single-message classifier as a clearly annotated reference for M473 learning/parity; the actual high-volume inbox processing uses only the compute worker. Scoped Dart analyzer annotation addresses the documented unused private function warning without disabling analyzer, bypassing security tests, or altering any customer data.
+- The M550 contract references the actual existing M580 SMS security navigation regression, rather than a nonexistent test filename; code/test scope remains exactly declared. The original PR SHA had M550 preflight and M429 analyzer failures, diagnosed and corrected before requesting latest SHA certification.
+- Pending: latest exact-head CI, profile-mode Android login/Home/2000 SMS frame measurements, and old-data device migration. No claim that every device freeze was eliminated.
+
 [PR #548 M632 — DIRECT FIRST SMS ACCOUNT / OFF-ISOLATE REVIEW / VISIBLE WAFFRA SPLASH — ISSUE #547 — 2026-11-10]
 ====================================================================================================
 - Root-cause: Waffra root dismissed intro after a single Flutter frame, cutting off the 1650ms logo/Waffra/وفرة animation. Root now responds to the one-shot WaffraLaunchIntro animation-complete callback. The bilingual mark appears earlier and remains visible if startup verification exceeds animation. Finance verification proceeds independently.
