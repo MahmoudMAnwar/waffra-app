@@ -38,7 +38,7 @@
         "end": "/// White Waffra leaf emblem drawn directly on the emerald splash."
       },
       {
-        "start": " void _receiveAutoSmsNotice(){",
+        "start": " Map<String,Object?>? _localSmsClassification(",
         "end": " Future<void> _rescanAutoSmsInbox()async{"
       },
       {
@@ -60,7 +60,7 @@
     ],
     "test/m548_review_grouping_and_signup_perf_test.dart": [
       {
-        "start": " test('SMS background state updates yield between bounded parser batches',(){",
+        "start": "  // Never turn opening review into a historical reimport/financial posting.",
         "end": " test('fresh registration proves exact read-back without duplicate KDF',(){"
       }
     ],
