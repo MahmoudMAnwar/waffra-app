@@ -1,13 +1,14 @@
 {
   "contract_version": 1,
   "change_id": "M632-FIRST-SMS-ACCOUNT-ISOLATED-CLASSIFICATION-SPLASH",
-  "human_scope_review": "Owner 2026-11-10 explicitly requested first SMS account workflow, post-Home SMS freeze fix, full splash animation, web-grounded Flutter performance improvements; #547 tracks scope.",
+  "human_scope_review": "Owner 2026-11-10 explicitly requested first SMS account workflow, post-Home SMS freeze fix, full splash animation, web-grounded Flutter performance improvements; #547 tracks scope. Rebased onto merged M633 (#551), preserving existing verified Home startup.",
   "user_requested_changes": [
     "Make first bank SMS account creation directly accessible without requiring a valid transaction category before choosing or creating an account.",
     "Move SMS queue cryptographic hashes and complex parsing off the Flutter UI isolate with a pure-data worker, debounce bursts of updates, and keep native ACK and original source secure.",
     "Finish the real Waffra wordmark and logo animation before switching to login while initializing app data concurrently and preserving fast post-login handoff.",
     "Preserve actual verified balances, mandatory biometrics, manual SMS approval, re-scan cursor, 30-day exclusion, and exact-head behavioral and real Android QA.",
-    "Reconcile original M461, M509 and M547 positive regression assertions with off-isolate ACK classification and notification debounce while retaining all financial anti-replay and explicit rescan security controls."
+    "Reconcile original M461, M509 and M547 positive regression assertions with off-isolate ACK classification and notification debounce while retaining all financial anti-replay and explicit rescan security controls.",
+    "Retain M590 original finance guard while asserting the selected/created account ID against fresh SQLCipher witness instead of obsolete source literal."
   ],
   "allowed_changed_files": [
     "lib/main.dart",
@@ -21,7 +22,8 @@
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "test/m461_sms_exclusion_and_history_scan_test.dart",
     "test/m509_all_sender_sms_rescan_dedup_test.dart",
-    "test/m547_sms_incremental_jank_regression_test.dart"
+    "test/m547_sms_incremental_jank_regression_test.dart",
+    "test/m580_sms_security_navigation_performance_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -90,6 +92,12 @@
       {
         "start": " test('M547 only an explicit rescan fetches historical pages during UI interactions', () {",
         "end": null
+      }
+    ],
+    "test/m580_sms_security_navigation_performance_test.dart": [
+      {
+        "start": " test('M590 review requires verified account BEFORE Yes, and never opens picker after Yes',(){",
+        "end": " test('M596 foreign or malformed bank fees fail closed before money',(){"
       }
     ]
   }
