@@ -50,7 +50,9 @@ void main() {
   expect(startup,contains('WidgetsBinding.instance.addPostFrameCallback'));
   expect(startup,contains('await Future<void>.delayed(const Duration(milliseconds:900));'));
   expect(startup,contains('final activeOwner=(await widget.onVerifiedHomeSmsResume?.call())??true;'));
-  expect(startup,contains('if(!activeOwner||!mounted||!ready||_financeLoadFailure!=null)return;'));
+  expect(startup,contains('if(!activeOwner||!_m630SmsSessionCurrent(startupEpoch))return;'));
+  expect(source,contains('epoch==_m630HomeStartupEpoch;'));
+  expect(source,contains('mounted&&ready&&!_m627ClosingSession&&_financeLoadFailure==null&&'));
   expect(startup.indexOf('final activeOwner=(await widget.onVerifiedHomeSmsResume?.call())??true;'),
    lessThan(startup.indexOf('await _refreshAutoSmsInbox(importMonth:')));
  });

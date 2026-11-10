@@ -58,7 +58,9 @@ void main() {
   final worker=main.split('Map<String,Object?> waffraM632ClassifySmsQueue(')[1]
    .split('List<String> splitBankMessages(')[0];
   expect(refresh,contains('await compute(waffraM632ClassifySmsQueue,'));
-  expect(refresh,contains('if(!mounted||!ready||_m627ClosingSession)return;'));
+  expect(refresh,contains('if(!mounted||!ready||_m627ClosingSession||_financeLoadFailure!=null)return;'));
+  expect(refresh,contains('if(!_m630SmsSessionCurrent(smsEpoch))return;'));
+  expect(main,contains('epoch==_m630HomeStartupEpoch;'));
   expect(refresh,contains('WaffraAutoSms.pendingChecked()'));
   expect(refresh,contains('WaffraAutoSms.acknowledgeCommitted(batch)'));
   expect(refresh,contains('WaffraAutoSms.excludeMessages(batch)'));

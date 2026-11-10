@@ -108,7 +108,9 @@ void main(){
   });
   expect((result['waiting'] as List).length,120);
   expect(refresher,contains('await compute(waffraM632ClassifySmsQueue,'));
-  expect(refresher,contains('if(!mounted||!ready||_m627ClosingSession)return;'));
+  expect(refresher,contains('if(!mounted||!ready||_m627ClosingSession||_financeLoadFailure!=null)return;'));
+  expect(refresher,contains('if(!_m630SmsSessionCurrent(smsEpoch))return;'));
+  expect(source,contains('epoch==_m630HomeStartupEpoch;'));
   expect(refresher,contains('WaffraAutoSms.pendingChecked()'));
   expect(refresher,contains('WaffraAutoSms.excludeMessages(batch)'));
   expect(refresher,contains('WaffraAutoSms.acknowledgeCommitted(batch)'));
