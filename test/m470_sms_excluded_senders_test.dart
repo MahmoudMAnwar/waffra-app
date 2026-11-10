@@ -105,7 +105,8 @@ void main(){
   expect(messages,contains('"ackAutoBankSms" -> {'));
   expect(messages,contains('smsHistoryExecutor.execute {'));
   expect(messages,contains('WaffraAutoSmsStore.acknowledge(app, ids)'));
-  expect(messages,contains('runOnUiThread { result.success(pending) }'));
+  expect(messages,contains('result.success(pending)'));
+  expect(messages,isNot(contains('runOnUiThread { result.success(pending) }')));
   expect(messages,contains('SMS_REVIEW_READ_FAILED'));
   expect(messages,contains('runOnUiThread { result.success(acknowledged) }'));
  });
