@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "pr": "Pending M631 verified finance prewarm PR",
+  "pr": "Draft PR #546 (M631 verified finance prewarm, pending exact-head CI)",
   "issue": "Issue #545, owner-reported post #544 login and biometric Home delays",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main",
