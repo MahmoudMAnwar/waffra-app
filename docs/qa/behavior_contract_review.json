@@ -813,7 +813,8 @@
         "Sign-in always awaits OS-protected inspection and actual PBKDF2 password verification before activating any profile.",
         "Explicit signout suspends native SMS and awaits BOTH Qwen context disposal and Home financial DB drain/close before clearing profile.",
         "A failed native suspension, AI disposal or finance drain leaves signed-in owner intact and shows failure; no cross-account leak.",
-        "Physical Android profile first-frame and login/logout timing evidence needed; source-level improvements do not prove issue resolved."
+        "Physical Android profile first-frame and login/logout timing evidence needed; source-level improvements do not prove issue resolved.",
+        "M631 extends M629 logout: await Home binding drain+close and any unclaimed prewarm connection inside the same independently awaited finance teardown job before any profile signout; a logout at the biometric stage closes a claimed-but-not-mounted prewarm."
       ]
     },
     {
@@ -854,7 +855,8 @@
         "test/m624_deferred_sms_after_verified_home_test.dart",
         "test/m627_home_handoff_timeout_and_session_reset_test.dart",
         "test/m604_fast_login_first_frame_test.dart",
-        "test/storage/m630_finance_responsiveness_test.dart"
+        "test/storage/m630_finance_responsiveness_test.dart",
+        "test/m629_pull_refresh_parity_auth_home_test.dart"
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/m550-behavior-contract-preflight.yml",
