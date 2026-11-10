@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "pr": "https://github.com/MahmoudMAnwar/waffra-app/pull/541",
-  "issue": "https://github.com/MahmoudMAnwar/waffra-app/issues/540",
+  "pr": "https://github.com/MahmoudMAnwar/waffra-app/pull/543",
+  "issue": "https://github.com/MahmoudMAnwar/waffra-app/issues/542",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main",
   "reviewed_at": "2026-11-10",
@@ -814,6 +814,36 @@
         "Explicit signout suspends native SMS and awaits BOTH Qwen context disposal and Home financial DB drain/close before clearing profile.",
         "A failed native suspension, AI disposal or finance drain leaves signed-in owner intact and shows failure; no cross-account leak.",
         "Physical Android profile first-frame and login/logout timing evidence needed; source-level improvements do not prove issue resolved."
+      ]
+    },
+    {
+      "id": "M630-FIRST-VERIFIED-HOME-FRAME-POST-PAINT-ISOLATION",
+      "issue": "Issue #542 / PR #543 — owner physical Android first biometric and logout/relogin Home freeze",
+      "previous_behavior": "After accounts and ledger were verified, Home.load() scheduled widget reread, reminder sync and tutorial work before/at the first real authenticated frame. Root Home loader also requested notification navigation and post-first-frame native SMS. An immediate signout had no explicit drain witness for the separately started widget reread.",
+      "approved_behavior": "Wait for genuine integrity checked SQLCipher source and balances before ready, then reveal fully authentic Home. Reserve its first frame by delaying independent widget/reminder/nav/SMS work 900 ms, sequencing widget/reminder before native SMS resume and inbox review. Show tutorial after scan. Every callback must compare the current Home epoch and abort on logout/retry/dispose. Signout awaits in-flight postframe finance work before closing SQLCipher, bounded and fail-closed. No fake balances, no changes to passwords/biometrics or native review-only policy.",
+      "source_paths": [
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m630_home_first_frame_contention_test.dart",
+        "test/m622_immediate_home_without_loader_test.dart",
+        "test/m623_verified_home_handoff_no_black_frame_test.dart",
+        "test/m624_deferred_sms_after_verified_home_test.dart",
+        "test/m627_home_handoff_timeout_and_session_reset_test.dart",
+        "test/m629_pull_refresh_parity_auth_home_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m429-integration-smoke.yml"
+      ],
+      "safety_invariants": [
+        "No financial Home access before verified active SQLCipher source, integrity validation, account balance projection and owner authentication.",
+        "Never replace initial verified dashboard with zero/placeholder/blank/blur or alter fingerprint re-login policy.",
+        "No native SMS scan before a fully painted, verified first Home and successful owner-scoped resume.",
+        "Explicit signout blocks stale post-frame work and drains every in-flight widget finance read before closing SQLCipher.",
+        "Success in source CI is not evidence of physical Android no-freeze; profile-mode traces and same-data upgrade QA required."
       ]
     }
   ]
