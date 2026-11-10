@@ -52,7 +52,7 @@ class MainActivity : FlutterFragmentActivity() {
             nativePasswordKdfParityVerified = true
         } finally {
             spec.clearPassword()
-            chars.fill('\\u0000')
+            chars.fill('\u0000')
             salt.fill(0)
         }
     }
