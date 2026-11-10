@@ -72,6 +72,7 @@ jobs:
             const maxAttempts = 3;
             const maxPerSweep = 120;
             const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+            let throttleDetected = false;
             for (const pr of prs) {
               if (pr.state !== 'open' || pr.base?.ref !== 'main' ||
                   pr.head?.repo?.full_name !== repository) {
@@ -146,6 +147,8 @@ jobs:
                     resolved = true;
                     core.info('Cancelled old PR #' + pr.number +
                       ' run ' + run.id);
+                    // Github REST: leave >=1s between successful mutations.
+                    await sleep(1000);
                     break;
                   } catch (err) {
                     if (err.status === 409) {
@@ -197,6 +200,10 @@ jobs:
                       break;
                     }
                     transientFailure = err;
+                    if (err.status === 429) {
+                      throttleDetected = true;
+                      break;
+                    }
                     if (attempt + 1 < maxAttempts) {
                       // An owner can push while GitHub is experiencing a 5xx.
                       const headNow = await github.rest.pulls.get({
@@ -208,7 +215,7 @@ jobs:
                         core.info('PR head moved; do not retry ' + run.id);
                         break;
                       }
-                      await sleep(250 * (2 ** attempt));
+                      await sleep(1000 * (2 ** attempt));
                     }
                   }
                 }
@@ -218,11 +225,11 @@ jobs:
                     run.id + ' after ' + maxAttempts + ' attempts: ' +
                     String(transientFailure?.message).slice(0, 150));
                   // Stop promptly during broad GitHub outages instead of flooding API.
-                  if (unresolved >= 8) break;
+                  if (unresolved >= 8 || throttleDetected) break;
                 }
                 if (attempted >= maxPerSweep) break;
               }
-              if (attempted >= maxPerSweep || unresolved >= 8) break;
+              if (attempted >= maxPerSweep || unresolved >= 8 || throttleDetected) break;
             }
             await core.summary
               .addHeading('M453 superseded-run cleanup')

@@ -3319,3 +3319,6 @@ passed; changed-source analysis clean; M550 contract preflight passed.
 - Safe default-branch source change collects candidate run IDs before cancelling; global de-dup, bounded 120 cancels, fresh PR-head checks, 409/terminal state reconciliation, 429/500/502/503/504 max three attempts with short backoff.
 - Persistent transient API failures report explicit PARTIAL CLEANUP warnings and unresolved counts, not an unrelated Flutter build failure; 401/403, wrong run ownership and other hard failures still fail the housekeeping job. No continue-on-error, no bypass of source tests, no cancellation of latest SHA, main, fork/unrelated PR, and no PR checkout.
 - M453 regression tests extended with positive guards; exact-scope/behavior manifests updated. Trusted pull_request_target uses the workflow on main until merge, so old failed job cannot be declared fixed by an unmerged branch or rerun of old SHA.
+
+[M634 API PACING AFTER OWNER'S 500 FAILURE — 2026-11-10]
+- Space accepted cancellation mutations by 1 second per GitHub REST documented best practices; retry true server 5xx with bounded exponential 1-second/2-second delay. Stop on 429 and explicitly warn partial cleanup instead of hammering the backend. No additional PR/permission/finance behavior changes.
