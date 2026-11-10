@@ -60,8 +60,9 @@ void main() {
   expect(root,contains('onVerifiedReady:()=>_m623HomeLoaded(account)'));
   expect(root,isNot(contains('CircularProgressIndicator(')));
   expect(root,isNot(contains('بنفتح الرئيسية')));
-  expect(source,contains('await (accountsLoading??_m467RefreshHomeAccounts());'));
-  expect(source.indexOf('await (accountsLoading??_m467RefreshHomeAccounts());'),
+  expect(source,contains('await (accountsLoading??_m467RefreshHomeAccounts())'));
+  expect(source,contains('.timeout(const Duration(seconds:15));'));
+  expect(source.indexOf('await (accountsLoading??_m467RefreshHomeAccounts())'),
    lessThan(source.indexOf('setState(()=>ready=true);')));
   expect(startup,contains('_financeLoadFailure=waffraIsEnglish?'));
  });
