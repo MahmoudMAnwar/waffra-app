@@ -7326,8 +7326,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
  }
  Future<void> load()async {
-  final startupEpoch=_m630HomeStartupEpoch;
   final financeClock=kProfileMode?(Stopwatch()..start()):null;
+  final startupEpoch=_m630HomeStartupEpoch;
   void traceHomeStep(String stage){
    if(financeClock==null)return;
    debugPrint('WAFFRA_HOME_LOAD_STEP $stage elapsed_ms='
