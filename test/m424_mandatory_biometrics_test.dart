@@ -145,7 +145,7 @@ void main() {
     expect(screenshot, isNot(contains('changePin')));
     expect(source, isNot(contains(
       "away>=const Duration(seconds:30)")));
-    expect(source, contains('profile=null;showLogin=true;locked=false;googleFirstRunSetup=false;'));
+    expect(source, contains('profile=null;showLogin=true;locked=true;googleFirstRunSetup=false;'));
      expect(source, contains('_m623HomeReady=false;_m623RetainedStage=null;'));
      expect(source, contains('await _accountWriteAuthority.signOut();'));
   });

@@ -49,7 +49,8 @@ void main() {
   expect(route,contains('onVerifiedReady:()=>_m623HomeLoaded(account)'));
   expect(route,contains('profile:account,'));
   expect(route,isNot(contains('onVerifiedReady:()=>_m623HomeLoaded(account!)')));
-  expect(route,contains('key:const ValueKey(\'waffra-verified-session-home\')'));
+  expect(route,contains("key:ValueKey('home-\$_m627HomeSession')"));
+  expect(route,contains('key:_m627HomeKey,'));
   expect(route,isNot(contains('CircularProgressIndicator(')));
  });
 

@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "pr": "https://github.com/MahmoudMAnwar/waffra-app/pull/534",
-  "issue": "https://github.com/MahmoudMAnwar/waffra-app/issues/533",
+  "pr": "https://github.com/MahmoudMAnwar/waffra-app/pull/537",
+  "issue": "https://github.com/MahmoudMAnwar/waffra-app/issues/536",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main",
-  "reviewed_at": "2026-11-09",
+  "reviewed_at": "2026-11-10",
   "review_policy": "Review changed behavior against all GitHub Actions workflow scripts, all Dart and Python QA test files, and the original tests' protected security assertions; never edit tests merely to silence red jobs.",
   "contracts": [
     {
@@ -749,6 +749,39 @@
         "Legacy app finance, biometric, owner scope, SQLCipher data protection and previous successful checks are untouched.",
         "Real device measurement is required to claim login freeze fixed; CI parallelism only affects build/PR wait.",
         "Cold prebuild cannot substitute for emulator test pass: corrupted/missing APK fails early and all 11 original runtime test files remain required."
+      ]
+    },
+    {
+      "id": "M627-BIOMETRIC-HOME-PROFILE-TRACE-AND-LOGOUT-RESET",
+      "issue": "Issue #536 / PR #537 — physical first-biometric Home and logout/relogin stalls",
+      "previous_behavior": "Home finance bind, prefs, SQLCipher recovery and account balances await had only coarse timing; the SQL-projection await could remain unbounded. The biometric/login stage stayed on-screen until verified Home, and explicit logout relied on asynchronous dispose rather than awaited Home binding drain/close. A fixed Home widget key did not explicitly encode session identity.",
+      "approved_behavior": "Use kProfileMode stopwatch before and after finance binding, SharedPreferences, verified catalog recovery and accounts refresh/await, plus first entry into m623HomeLoaded. Abort account wait after 15 seconds with existing finance recovery Retry, protecting against late stale account callbacks. During successful explicit signout await Home-owned ledger queue drain and binding close; rotate session GlobalKey and keyed parent, keep a new account session isolated. Retain actual verified balances on the first visible complete Home, initial/restored OS biometric, password-rel ogin no extra biometric, owner-scoped SMS suspension and post-frame scanning. Physical profile logs are still required to pinpoint the slow stage. Reconcile four obsolete source-test assertions to check signed-out locked=true and timed (15s) verified accounts await while preserving full dashboard, owner/session and notification security assertions. When signout races an in-flight Home load, await its tracked completion before closing the DB; separately retain and drain even detached post-timeout account reads, plus queued/prepared writes, all with bounded fail-closed waits. Never reuse old Home callbacks or declare a hung cleanup successful. Exact-head 2-test failure reconciliation: M622 must assert awaited genuine accounts with the 15s timeout and epoch invalidation before ready=true; M627 stage-loop must interpolate each actual step name, not an escaped literal. Keep both tests active.",
+      "source_paths": [
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m627_home_handoff_timeout_and_session_reset_test.dart",
+        "test/m623_verified_home_handoff_no_black_frame_test.dart",
+        "test/m463_auth_first_one_page_test.dart",
+        "test/m625_single_verified_home_read_login_handoff_test.dart",
+        "test/m424_mandatory_biometrics_test.dart",
+        "test/m604_fast_login_first_frame_test.dart",
+        "test/m624_deferred_sms_after_verified_home_test.dart",
+        "test/m622_immediate_home_without_loader_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m429-integration-smoke.yml"
+      ],
+      "safety_invariants": [
+        "Never reveal account balances until verified SQLCipher witness, catalog integrity and real accounts read all pass.",
+        "Timeout and stale read cannot substitute zero balances or post partial finance state; financial recovery Retry remains actionable.",
+        "Explicit logout retains Yes/No, bank SMS native suspension and no second biometric for ordinary verified password relogin.",
+        "No credentials, account identifiers, SMS bodies, ledger values, encryption keys or user PII in profile step logging.",
+        "Only physical profile-mode Android measurements can certify the freeze's actual cause or resolution.",
+        "A Dart Future.timeout only detaches its await; account database reads that outlive it must finish or block sign-out from closing SQLCipher."
       ]
     }
   ]
