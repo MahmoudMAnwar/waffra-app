@@ -47,8 +47,9 @@ void main() {
     expect(binder,contains('Only installed Android Home may defer initial dashboard read.'));
     expect(app,contains('final loadedFinance=await WaffraFreshHomeCatalogRecovery.load('));
     expect(app,contains('financeView.requireIntegrity();'));
-    expect(app,contains('await (accountsLoading??_m467RefreshHomeAccounts());'));
-    expect(app.indexOf('await (accountsLoading??_m467RefreshHomeAccounts());'),
+    expect(app,contains('await (accountsLoading??_m467RefreshHomeAccounts())'));
+    expect(app,contains('.timeout(const Duration(seconds:15));'));
+    expect(app.indexOf('await (accountsLoading??_m467RefreshHomeAccounts())'),
         lessThan(app.indexOf('setState(()=>ready=true);')));
   });
 
