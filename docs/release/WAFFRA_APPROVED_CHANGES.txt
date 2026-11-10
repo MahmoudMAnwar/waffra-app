@@ -3356,3 +3356,6 @@ passed; changed-source analysis clean; M550 contract preflight passed.
 - Large pendingAutoBankSms queue serializes its MethodChannel result from SMS executor rather than Android's UI thread; encrypted reads, error handling and source review remain unchanged.
 - Added test/m635_historical_login_sms_jank_regression_test.dart for KDF byte-vector, thread affinity, background WorkManager gating, and foreground review. Maintained existing M547/M603/M442 login/SMS regression expectations. No automatic merge.
 - **Status: Partial; exact PR SHA Flutter/Python/Android CI and real Android fresh first login + permission + biometric + relogin + 1000–2000 SMS profile/FPS evidence required. Not a claim that owner-observed 3-second delays or jank have disappeared.**
+
+[M635 FINAL SOURCE ANCESTRY — 2026-11-10]
+- Reviewed the latest post-source code and CI at commit 3a7e932752f1c4f6e45e18851fc1336339234496: Flutter analyzer's unnecessary dart:typed_data import was removed; native PBKDF2, foreground Worker isolation, and pending native SMS background reply remain unchanged. No financial, login-policy, biometric or durable SMS data behavior was removed. This notes update intentionally follows the final app-source edit for M449 release-note ancestry. Full physical Android benchmark remains pending.
