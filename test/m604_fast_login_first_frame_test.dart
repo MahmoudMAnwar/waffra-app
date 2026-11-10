@@ -50,8 +50,13 @@ void main() {
       .split(' Widget _financialRecoveryScreen()')[0];
     expect(intro,contains('await WidgetsBinding.instance.endOfFrame;'));
     expect(intro,isNot(contains('Duration(milliseconds:1750)')));
-    expect(login,contains(
-      'var inspection=await WaffraLocalPhoneCredentials.readForSignIn();'));
+    // M629: an in-flight secure-store snapshot may overlap preferences,
+    // but it is STILL awaited and used by the exact owner verifier.
+    expect(login,contains('final secureInspectionLoading=WaffraLocalPhoneCredentials.readForSignIn();'));
+    expect(login,contains('var inspection=await secureInspectionLoading;'));
+    expect(login,contains('final prefs=await prefsLoading;'));
+    expect(login.indexOf('final secureInspectionLoading='),
+      lessThan(login.indexOf('var inspection=await secureInspectionLoading;')));
     expect(login,contains(
       'WaffraLocalPhoneCredentials.probeForPhone('));
     expect(login,contains('inspection:inspection'));
