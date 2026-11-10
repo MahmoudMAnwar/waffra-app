@@ -59,7 +59,10 @@ void main() {
   test('review refresh serializes work and batches durable exclusions',(){
     final app=File('lib/main.dart').readAsStringSync();
     expect(app,contains('Future<void>? _autoSmsRefreshInFlight;'));
-    expect(app,contains('final toAcknowledge=<String>[];'));
+    // The batch worker produces exclusion IDs; main retains only owner-
+    // checked native ACK/rollback, rather than re-parsing 2k SMS on UI.
+    expect(app,contains("final toAcknowledge=(classified['excluded'] as List).cast<String>();"));
+    expect(app,contains('await compute(waffraM632ClassifySmsQueue,'));
     expect(app,contains('WaffraAutoSms.excludeMessages(batch)'));
     expect(app,contains('WaffraAutoSms.acknowledgeCommitted(batch)'));
     expect(app,isNot(contains('if(!await WaffraAutoSms.acknowledge(batch))')));

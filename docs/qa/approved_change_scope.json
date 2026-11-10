@@ -1,91 +1,103 @@
 {
   "contract_version": 1,
-  "change_id": "M633-PREDICTIVE-PUBLIC-PREWARM-VERIFIED-HOME-BATCH-DECODE",
-  "human_scope_review": "Owner approved preparing safe public resources before login, removing repeated Home JSON decode, and keeping SQLCipher/biometric/phone sign-in and Logout Yes/No mandatory. Issue #550 PR #551, physical Android acceptance pending.",
+  "change_id": "M632-FIRST-SMS-ACCOUNT-ISOLATED-CLASSIFICATION-SPLASH",
+  "human_scope_review": "Owner 2026-11-10 explicitly requested first SMS account workflow, post-Home SMS freeze fix, full splash animation, web-grounded Flutter performance improvements; #547 tracks scope. Rebased onto merged M633 (#551), preserving existing verified Home startup.",
   "user_requested_changes": [
-    "Prepare public fixed category catalog asynchronously immediately after initial app frame; reuse it when verified Home initializes without caching user finance or touching secure keys.",
-    "Replace eleven sequential startup JSON decode awaits with one bounded background isolate decode for a verified immutable SQLCipher snapshot; retain per-field fail-closed type validation.",
-    "Retain genuine SQLCipher source and verified bank account balances before first Home frame; keep independent accounts read parallel with JSON and no fingerprint after explicit normal relogin.",
-    "Remove artificial one-millisecond sleeps on every 32 verified ledger records: yield every 96 records with Duration.zero for responsive UI and reduced startup latency.",
-    "Update exact-branch regression tests, behavior-contract manifest, permanent requirements and approved change notes; do not fake Android performance success.",
-    "Update three existing exact-source performance assertions M468/M580/M603 to require verified 96-row zero-delay yielding, retaining all record integrity and caller checks; never skip tests.",
-    "Reconcile four repeatedly failing tests across six workflows: M468 M580 M603 demand valid Duration.zero yielding; M451 still asserts exactly the same immutable public defaults are given to verified SQLCipher atomic Home repair.",
-    "Fix owner-proven M453 pull_request_target cleanup job failure #552 due to repeated GitHub 500 errors by bounded retry, deduping candidate IDs before pagination mutation, retaining SHA/owner security gates, honest partial-backend warning and strict hard permission failure."
+    "Make first bank SMS account creation directly accessible without requiring a valid transaction category before choosing or creating an account.",
+    "Move SMS queue cryptographic hashes and complex parsing off the Flutter UI isolate with a pure-data worker, debounce bursts of updates, and keep native ACK and original source secure.",
+    "Finish the real Waffra wordmark and logo animation before switching to login while initializing app data concurrently and preserving fast post-login handoff.",
+    "Preserve actual verified balances, mandatory biometrics, manual SMS approval, re-scan cursor, 30-day exclusion, and exact-head behavioral and real Android QA.",
+    "Reconcile original M461, M509 and M547 positive regression assertions with off-isolate ACK classification and notification debounce while retaining all financial anti-replay and explicit rescan security controls.",
+    "Retain M590 original finance guard while asserting the selected/created account ID against fresh SQLCipher witness instead of obsolete source literal."
   ],
   "allowed_changed_files": [
     "lib/main.dart",
-    "lib/waffra_large_json_decode.dart",
-    "test/m633_startup_batch_decoder_test.dart",
+    "test/m548_review_grouping_and_signup_perf_test.dart",
+    "test/m603_app_wide_lag_source_regression_test.dart",
+    "test/m632_sms_account_splash_isolate_contract_test.dart",
     "docs/WAFFRA_REQUIREMENTS.md",
+    "docs/qa/M632_SMS_HOME_SPLASH.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "test/m468_large_ledger_decode_test.dart",
-    "test/m603_app_wide_lag_source_regression_test.dart",
-    "test/m580_sms_security_navigation_performance_test.dart",
-    "test/storage/m451_fresh_home_catalog_recovery_test.dart",
-    ".github/workflows/m453-superseded-pr-cleanup.yml",
-    "scripts/qa/test_m453_queue_hygiene.py"
+    "test/m461_sms_exclusion_and_history_scan_test.dart",
+    "test/m509_all_sender_sms_rescan_dedup_test.dart",
+    "test/m547_sms_incremental_jank_regression_test.dart",
+    "test/m580_sms_security_navigation_performance_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
       {
-        "start": "List<BudgetCategory> defaultCategories()=>[",
-        "end": "/// Category-scoped monthly budgets never include income"
+        "start": "String bankSmsHash(String raw)=>",
+        "end": "List<String> splitBankMessages(String raw){"
       },
       {
-        "start": " @override void initState(){super.initState();WidgetsBinding.instance.addObserver(this);",
-        "end": " void _onRegionChanged(){"
+        "start": " Future<void> launchIntro()async{",
+        "end": " @override void didChangeAppLifecycleState("
       },
       {
-        "start": " Future<List<MoneyEntry>> _m593BuildVerifiedEntries(List<dynamic> raw)async{",
-        "end": " /// M565: a reviewed bank SMS posts only with a verified account"
+        "start": "  },child:Directionality(textDirection:language=='ar'?TextDirection.rtl:TextDirection.ltr,child:",
+        "end": "   startupError!=null?Scaffold("
       },
       {
-        "start": " Future<void> load()async {\n  final financeClock=",
-        "end": " Future<void> _refreshWidget()async{"
+        "start": "class WaffraLaunchIntro extends StatefulWidget {",
+        "end": "/// White Waffra leaf emblem drawn directly on the emerald splash."
+      },
+      {
+        "start": " Future<void> _learnManualCategoryPreference(MoneyEntry record)async{",
+        "end": " Future<void> _rescanAutoSmsInbox()async{"
+      },
+      {
+        "start": " Future<void> _refreshAutoSmsInbox({bool importMonth=false})async{",
+        "end": " Future<void> _analyzeAmbiguousSmsOnDemand("
+      },
+      {
+        "start": " Future<void> _reviewAutoSmsCandidates({String? targetId})async {",
+        "end": " void _receiveSharedSms(){"
+      },
+      {
+        "start": " Future<void> _loadFinanceSafely()async{",
+        "end": " Widget _financialRecoveryScreen()=>"
+      },
+      {
+        "start": "    debugPrint('Finance notification route refused: ${error.runtimeType}');",
+        "end": " Future<void> _syncWidgetTransactions()async{"
       }
     ],
-    "lib/waffra_large_json_decode.dart": [
+    "test/m548_review_grouping_and_signup_perf_test.dart": [
       {
-        "start": "Object? _waffraDecodeJsonWorker(String source)=>jsonDecode(source);",
-        "end": null
-      }
-    ],
-    "test/m468_large_ledger_decode_test.dart": [
-      {
-        "start": "  expect(src,contains('await _m593BuildVerifiedEntries('));",
-        "end": "  expect(src,contains('await readList<BudgetCategory>(catalog,BudgetCategory.fromJson)'));"
+        "start": "  // Never turn opening review into a historical reimport/financial posting.",
+        "end": " test('fresh registration proves exact read-back without duplicate KDF',(){"
       }
     ],
     "test/m603_app_wide_lag_source_regression_test.dart": [
       {
-        "start": "  test('verified large-transaction remapping yields rather than freezing the UI', () {",
-        "end": "  test('signout native queue suspension never blocks Android main thread', () {"
+        "start": "  test('Home first frame precedes four-page month SMS scan', () {",
+        "end": "  test('verified large-transaction remapping yields rather than freezing the UI', () {"
+      }
+    ],
+    "test/m461_sms_exclusion_and_history_scan_test.dart": [
+      {
+        "start": "  test('review refresh serializes work and batches durable exclusions',(){",
+        "end": null
+      }
+    ],
+    "test/m509_all_sender_sms_rescan_dedup_test.dart": [
+      {
+        "start": " test('M509 finance-backed ACK is separate from exclude/reject ACK',(){",
+        "end": " test('M509 duplicate source alone never auto-creates a financial posting',(){"
+      }
+    ],
+    "test/m547_sms_incremental_jank_regression_test.dart": [
+      {
+        "start": " test('M547 only an explicit rescan fetches historical pages during UI interactions', () {",
+        "end": null
       }
     ],
     "test/m580_sms_security_navigation_performance_test.dart": [
       {
-        "start": " test('M593 manual and reviewed-SMS verified ledger mapping yields frames',(){",
-        "end": " test('M595 compact review has exact three selectable transaction types',(){"
-      }
-    ],
-    "test/storage/m451_fresh_home_catalog_recovery_test.dart": [
-      {
-        "start": "  test('M451 actual Home uses the same verified startup repair', () async {",
-        "end": null
-      }
-    ],
-    ".github/workflows/m453-superseded-pr-cleanup.yml": [
-      {
-        "start": "          script: |",
-        "end": null
-      }
-    ],
-    "scripts/qa/test_m453_queue_hygiene.py": [
-      {
-        "start": "    def test_cleanup_remains_trusted_and_scoped(self):",
-        "end": "\n\nif __name__ == \"__main__\":"
+        "start": " test('M590 review requires verified account BEFORE Yes, and never opens picker after Yes',(){",
+        "end": " test('M596 foreign or malformed bank fees fail closed before money',(){"
       }
     ]
   }

@@ -82,7 +82,7 @@ void main() {
     expect(refresh, contains('const Duration(milliseconds:500)'));
     expect(refresh, contains('WaffraAutoSms.importConsentMonthChecked()'));
     expect(refresh, contains('WaffraAutoSms.pendingChecked()'));
-    expect(refresh, contains('if(++classifiedSinceYield>=16)'));
+    expect(refresh, contains('await compute(waffraM632ClassifySmsQueue,'));
   });
 
   test('verified large-transaction remapping yields rather than freezing the UI', () {

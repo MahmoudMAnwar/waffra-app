@@ -73,7 +73,11 @@ void main() {
   expect(transactionEditor,contains('_learnManualCategoryPreference(result)'));
   expect(transactionEditor,isNot(contains('_refreshAutoSmsInbox(importMonth:true)')));
   expect(main,contains('void _receiveAutoSmsNotice()'));
-  expect(main,contains('if(mounted&&ready)unawaited(_refreshAutoSmsInbox());'));
+  // Bursty native callbacks debounce rather than reclassifying the whole
+  // encrypted queue for each notification while Home is interactive.
+  expect(main,contains('_m632SmsNoticeTimer=Timer(const Duration(milliseconds:900),(){'));
+  expect(main,contains('if(mounted&&ready&&!_m627ClosingSession){'));
+  expect(main,contains('_m632SmsNoticeTimer?.cancel();'));
   expect(main,contains('smsHashes.contains(bankSmsHash(body))'));
   expect(main,contains('WaffraAutoSms.acknowledgeCommitted(batch)'));
  });

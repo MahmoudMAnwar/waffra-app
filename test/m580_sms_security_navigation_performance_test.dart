@@ -118,7 +118,12 @@ void main(){
   expect(preview,contains("Key('m590-sms-choose-account-before-yes')"));
   expect(preview,contains('reviewedAccount?.ids?.single!=null'));
   expect(preview,contains('await reviewSmsAccountLinks([trial],smsSender:sender)'));
-  expect(preview,contains('reviewedAccount=(ids:<String?>[id],generation:fresh.witness.generation)'));
+  // The first-account path must verify the freshly selected/created ID
+  // against a live SQLCipher witness before enabling confirmation.
+  expect(preview,contains('final fresh=await bridge.readVerifiedAccounts();'));
+  expect(preview,contains('if(active.length!=1)return;'));
+  expect(preview,contains('reviewedAccount=(ids:<String?>[pickedId],'));
+  expect(preview,contains('generation:fresh.witness.generation);'));
   expect(preview,contains('selectedAccount:reviewedAccount!'));
   final writer=main.split(' Future<void> _m565ConfirmSms({')[1]
    .split(' Future<void> _reviewAutoSmsCandidates({')[0];

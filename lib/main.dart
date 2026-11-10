@@ -1010,6 +1010,79 @@ bool bankSmsHasUnverifiedTimestamp(String raw,{DateTime? referenceDate}){
 }
 
 String bankSmsHash(String raw)=>sha256.convert(utf8.encode(digits(raw).replaceAll(RegExp(r'\s+'),' ').trim().toLowerCase())).toString();
+
+ // M632: a pure compute worker. No BuildContext, widget, native platform
+ // channel, SQLCipher handle or owner identity is ever sent to this isolate.
+ // Transfer only the current verified native queue and local rule data; return
+ // review candidates and requested ACKs for owner-checked main-isolate I/O.
+Map<String,Object?> waffraM632ClassifySmsQueue(Map<String,Object?> input){
+ final results=(input['results'] as List).cast<Map<String,Object?>>();
+ final rules=(input['rules'] as List).map((entry)=>
+  WaffraSmsLocalRule.fromJson(Map<String,dynamic>.from(entry as Map)))
+  .toList(growable:false);
+ final validCategories=(input['categories'] as List).whereType<String>().toSet();
+ final hashes=(input['hashes'] as List).whereType<String>().toSet();
+ final waiting=<Map<String,Object?>>[];
+ final excluded=<String>[];
+ final committed=<String>[];
+ final retainOnAckFailure=<Map<String,Object?>>[];
+ for(final candidate in results){
+  final id=candidate['id'],body=candidate['body'];
+  if(id is! String||body is! String)continue;
+  if(hashes.contains(bankSmsHash(body))){
+   committed.add(id);
+   retainOnAckFailure.add(Map<String,Object?>.from(candidate));
+   continue;
+  }
+  final annotated=Map<String,Object?>.from(candidate);
+  if(WaffraBankSmsFactsParser.isVerificationChallenge(body)){
+   annotated['sensitiveOtp']=true;
+  }
+  final sender=candidate['sender'] is String?candidate['sender'] as String:'';
+  final facts=WaffraBankSmsFactsParser.parse(body);
+  final parsed=BankParser.parse(body);
+  final special=WaffraSmsLocalRules.resolveSpecial(
+   body:body,sender:sender,
+   bankKind:annotated['sensitiveOtp']==true?
+    WaffraBankOperationKind.uncertain:facts.kind,custom:rules);
+  Map<String,Object?>? local;
+  if(special!=null){
+   local=<String,Object?>{
+    'rule':special.name,'kind':special.resolvedKind,
+    'category':special.category,'income':false,
+    'defaultSeed':special.builtIn,
+   };
+  }else if(!facts.pending&&parsed.amount!=null&&parsed.amount!>0&&
+    !parsed.requiresCurrencyReview&&
+    !WaffraSmsCurrencies.requiresReviewForSarLedger(body)&&
+    ((facts.kind==WaffraBankOperationKind.income)==parsed.income||
+     (facts.kind!=WaffraBankOperationKind.income&&
+      facts.kind!=WaffraBankOperationKind.expense))){
+   final rule=WaffraSmsLocalRules.resolve(
+    body:body,sender:sender,bankKind:facts.kind,custom:rules);
+   if(rule!=null&&validCategories.contains(
+      '${rule.income?'1':'0'}:${rule.category}')){
+    local=<String,Object?>{
+     'rule':rule.name,'kind':rule.resolvedKind,
+     'category':rule.category,'income':rule.income,
+    };
+   }
+  }
+  if(local!=null){
+   annotated['local']=local;
+   if(local['kind']=='excluded'&&local['defaultSeed']!=true){
+    excluded.add(id);
+    retainOnAckFailure.add(annotated);
+    continue;
+   }
+  }
+  waiting.add(annotated);
+ }
+ return <String,Object?>{
+  'waiting':waiting,'excluded':excluded,'committed':committed,
+  'retainOnAckFailure':retainOnAckFailure,
+ };
+}
 List<String> splitBankMessages(String raw){
  var clean=raw.replaceAll('\r\n','\n').replaceAll('\u200f','').replaceAll('\u200e','').trim();
  if(clean.isEmpty)return [];
@@ -1329,14 +1402,14 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  }
  void _onRegionChanged(){if(mounted)setState((){});}
  Future<void> launchIntro()async{
-  // Keep the launch animation visible but avoid a fixed three-second
-  // delay when finance initialization is already ready. Actual loading
-  // and mandatory biometric gates still independently block unsafe entry.
-  // Do not hold the launch screen for an arbitrary minimum duration.
-  // Render one frame, while the independent finance authority still blocks
-  // access to protected Home data until its actual verification completes.
+  // Startup finance initialization runs independently. The actual splash
+  // animation owns when the wordmark can disappear; one frame is not enough.
   await WidgetsBinding.instance.endOfFrame;
-  if(mounted)setState(()=>introDone=true);
+ }
+ void _m632SplashCompleted(){
+  if(!mounted||introDone)return;
+  if(kProfileMode)debugPrint('WAFFRA_SPLASH_PERF animation_complete');
+  setState(()=>introDone=true);
  }
  @override void didChangeAppLifecycleState(AppLifecycleState state){
   if(state==AppLifecycleState.resumed){
@@ -2062,7 +2135,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
      duration:const Duration(milliseconds:2400));
    }
   },child:Directionality(textDirection:language=='ar'?TextDirection.rtl:TextDirection.ltr,child:
-   (loading||!introDone)?const WaffraLaunchIntro():
+   (loading||!introDone)?WaffraLaunchIntro(onFinished:_m632SplashCompleted):
    startupError!=null?Scaffold(body:Center(child:Padding(padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[
     const Icon(Icons.error_outline,size:48,color:Colors.red),
     const SizedBox(height:12),
@@ -2261,14 +2334,23 @@ const String _waffraGoogleLogo = '''
 ''';
 
 class WaffraLaunchIntro extends StatefulWidget {
- const WaffraLaunchIntro({super.key});
+ final VoidCallback? onFinished;
+ const WaffraLaunchIntro({super.key,this.onFinished});
  @override State<WaffraLaunchIntro> createState()=>_WaffraLaunchIntroState();
 }
 class _WaffraLaunchIntroState extends State<WaffraLaunchIntro> with SingleTickerProviderStateMixin {
  late final AnimationController controller;
+ bool _completionSent=false;
  @override void initState(){
   super.initState();
-  controller=AnimationController(vsync:this,duration:const Duration(milliseconds:1650))..forward();
+  controller=AnimationController(vsync:this,duration:const Duration(milliseconds:1650));
+  controller.addStatusListener((status){
+   if(status==AnimationStatus.completed&&!_completionSent){
+    _completionSent=true;
+    widget.onFinished?.call();
+   }
+  });
+  controller.forward();
  }
  @override void dispose(){controller.dispose();super.dispose();}
  double reveal(double t,double start,double end)=>((t-start)/(end-start)).clamp(0.0,1.0);
@@ -2277,9 +2359,13 @@ class _WaffraLaunchIntroState extends State<WaffraLaunchIntro> with SingleTicker
   body:AnimatedBuilder(animation:controller,builder:(ctx,_){
    final t=controller.value;
    final iconProgress=Curves.easeOutBack.transform(reveal(t,.02,.28));
-   final nameProgress=Curves.easeOutCubic.transform(reveal(t,.26,.48));
-   final sloganProgress=Curves.easeOutCubic.transform(reveal(t,.44,.70));
-   final fadeOut=1-reveal(t,.92,1.0);
+   // Reveal the full bilingual wordmark earlier; it remains readable until
+   // the genuine animation completion before the auth route becomes visible.
+   final nameProgress=Curves.easeOutCubic.transform(reveal(t,.12,.33));
+   final sloganProgress=Curves.easeOutCubic.transform(reveal(t,.28,.51));
+   // Loading may legitimately outlive the animation; retain the complete
+   // bilingual logo instead of fading to a blank green screen.
+   const fadeOut=1.0;
    return Stack(children:[
     const Positioned.fill(child:DecoratedBox(decoration:BoxDecoration(
      gradient:RadialGradient(colors:[Color(0xFF075B43),Color(0xFF003C2E)],radius:1.2)))),
@@ -4723,6 +4809,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   if(!identical(next,previous))await store.write(_smsRuleOwnerKey,next);
  }
 
+ // Retained single-message reference for on-demand review and M473 parity;
+ // the production bulk queue now uses the background compute worker.
+ // ignore: unused_element
  Map<String,Object?>? _localSmsClassification(
   Map<String,Object?> item,List<WaffraSmsLocalRule> custom){
   final body=item['body'],sender=item['sender'];
@@ -4757,8 +4846,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   };
  }
 
+ Timer? _m632SmsNoticeTimer;
  void _receiveAutoSmsNotice(){
-  if(mounted&&ready)unawaited(_refreshAutoSmsInbox());
+  if(!mounted||!ready||_m627ClosingSession)return;
+  // One refresh per notification BURST, not one full 2k-message reparse
+  // for each new or repeated Android receiver callback.
+  _m632SmsNoticeTimer?.cancel();
+  _m632SmsNoticeTimer=Timer(const Duration(milliseconds:900),(){
+   _m632SmsNoticeTimer=null;
+   if(mounted&&ready&&!_m627ClosingSession){
+    unawaited(_refreshAutoSmsInbox());
+   }
+  });
  }
  Future<void> _rescanAutoSmsInbox()async{
   if(_autoSmsRescanRunning||!mounted)return;
@@ -4925,48 +5024,31 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    catch(_){ /* No bank SMS in logs. Built-ins remain usable. */ }
   }
   if(!mounted)return;
-  final waiting=<Map<String,Object?>>[];
-  var classifiedSinceYield=0;
-  final toAcknowledge=<String>[];
-  final toAcknowledgeCommitted=<String>[];
-  final toRestoreOnAckFailure=<Map<String,Object?>>[];
-  for(final candidate in results){
-   // Yield between small CPU-heavy parser batches. Native AES and inbox I/O
-   // are already off-thread; this prevents 1000 Dart parses monopolizing
-   // Flutter frames on Home, navigation and SMS notice refresh.
-   if(++classifiedSinceYield>=16){
-    classifiedSinceYield=0;
-    await Future<void>.delayed(const Duration(milliseconds:1));
-    if(!mounted||!ready)return;
-   }
-   final id=candidate['id'],body=candidate['body'];
-   if(id is! String||body is! String)continue;
-   if(smsHashes.contains(bankSmsHash(body))){
-    // This source SMS was already committed in the verified finance journal:
-    // atomically seal the native fingerprint against every future rescan.
-    toAcknowledgeCommitted.add(id);
-    toRestoreOnAckFailure.add(Map<String,Object?>.from(candidate));
-    continue;
-   }
-   final annotated=Map<String,Object?>.from(candidate);
-   // Parse security evidence once during bounded background-intake batching,
-   // not 1000 times in the notifications widget build path.
-   if(WaffraBankSmsFactsParser.isVerificationChallenge(body)){
-    annotated['sensitiveOtp']=true;
-   }
-   final local=_localSmsClassification(annotated,customRules);
-   if(local!=null){
-    annotated['local']=local;
-    if(local['kind']=='excluded'&&local['defaultSeed']!=true){
-     // Only the user's previously approved exclusion can ACK automatically.
-     // Bundled Saudi hints are review-only even for apparent promotions/OTPs.
-     toAcknowledge.add(id);
-     toRestoreOnAckFailure.add(annotated);
-     continue;
-    }
-   }
-   waiting.add(annotated);
+  // Heavy SHA256, bank parser, OTP detection and local-rule matching now
+  // run on a background isolate; the main isolate handles only native ACKs
+  // and one UI update. No network or database is used inside the worker.
+  final classifyClock=kProfileMode?(Stopwatch()..start()):null;
+  final categoryNames=<String>[
+   for(final c in categories)
+    if(c.isSubcategory&&waffraCategoryAvailableForNewEntry(categories,c))
+     '${c.income?'1':'0'}:${c.name}',
+  ];
+  final classified=await compute(waffraM632ClassifySmsQueue,<String,Object?>{
+   'results':results,
+   'rules':customRules.map((r)=>r.toJson()).toList(growable:false),
+   'categories':categoryNames,
+   'hashes':smsHashes.toList(growable:false),
+  });
+  if(!mounted||!ready||_m627ClosingSession)return;
+  if(kProfileMode&&classifyClock!=null){
+   debugPrint('WAFFRA_SMS_PERF classify_count=${results.length} '
+    'isolate_ms=${classifyClock.elapsedMilliseconds}');
   }
+  final waiting=(classified['waiting'] as List).cast<Map<String,Object?>>();
+  final toAcknowledge=(classified['excluded'] as List).cast<String>();
+  final toAcknowledgeCommitted=(classified['committed'] as List).cast<String>();
+  final toRestoreOnAckFailure=
+   (classified['retainOnAckFailure'] as List).cast<Map<String,Object?>>();
   // One encrypted native queue commit instead of one platform call per SMS.
   // If the durable acknowledgement fails, retain every pending item in UI.
   if(toAcknowledge.isNotEmpty){
@@ -6358,6 +6440,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final previewMainName=previewParents.length==1?
     previewParents.single.displayName:
     (waffraIsEnglish?'Choose main category':'يحتاج اختيار القسم الرئيسي');
+   // The first account is an independent setup step, NOT a valid-category
+   // confirmation. A user must be able to create it before fixing category.
+   final hasActiveMoneyAccount=_m467Accounts.any((a)=>!a.archived);
    final previewSuffix=WaffraSmsAccountLearning.suffix4(
     expectedIncome?facts.destinationSuffix:facts.sourceSuffix);
    final previewAccountLabel=previewSuffix==null?
@@ -6390,32 +6475,73 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    String? reviewedAccountName;
    bool choosingAccount=false;
    Future<void> selectAccountBeforeYes(StateSetter redraw,BuildContext dialog)async{
-    if(!canConfirm||choosingAccount)return;
+    // Account setup/selection may happen BEFORE category/date corrections;
+    // only Yes authorizes posting and retains the full canConfirm guard.
+    if(choosingAccount)return;
     redraw(()=>choosingAccount=true);
     try{
-     final trial=MoneyEntry(
-      id:newId(),title:parsed.title,category:proposedCategory,
-      amount:originalAmount.amount,income:expectedIncome,
-      date:originalDate,notes:body,sourceType:'sms');
-     final picked=await reviewSmsAccountLinks([trial],smsSender:sender);
-     final id=picked?.ids?.single;
-     if(id==null||picked?.generation==null||!mounted)return;
      final bridge=_financeBinding?.accountsBridge;
      if(bridge==null)return;
+     final before=await bridge.readVerifiedAccounts();
+     if(!mounted||!dialog.mounted)return;
+     String? pickedId;
+     if(!before.balances.any((a)=>!a.archived)){
+      // No account: the one clear action opens account creation directly,
+      // without an extra bank-account prompt or a transaction save.
+      final knownBank=WaffraSmsAccountLearning.bankGroup(sender);
+      final suffix=WaffraSmsAccountLearning.suffix4(
+       expectedIncome?facts.destinationSuffix:facts.sourceSuffix);
+      final draft=await showWaffraDialog<WaffraNewAccountDraft>(
+       context:dialog,builder:(ctx)=>WaffraNewAccountDialog(
+        english:waffraIsEnglish,suggestedProviderId:knownBank,
+        suggestedSenderName:sender,suggestedLastFour:suffix));
+      if(draft==null||!mounted||!dialog.mounted)return;
+      if(knownBank!=null&&(draft.kind!='bank'||
+         draft.providerId!=knownBank||draft.subtype==null)){
+       throw StateError('SMS account must match the verified bank sender');
+      }
+      final api=WaffraVerifiedAccountsApi(bridge:bridge);
+      final newId='m632-sms-'+DateTime.now().microsecondsSinceEpoch.toString();
+      await api.balances();
+      await api.createTypedAccountWithIdentity(
+       id:newId,name:draft.name,kind:draft.kind,
+       providerId:draft.providerId??'none',
+       subtype:draft.subtype??'other',
+       openingMinor:draft.openingMinor,
+       createdIso:DateTime.now().toUtc().toIso8601String(),
+       lastFour:draft.lastFour,
+       customSubtypeLabel:draft.customSubtypeLabel,userConfirmed:true);
+      pickedId=newId;
+     }else{
+      // An existing account can be selected even when the transaction's
+      // category/date needs editing; the trial is never posted.
+      final trial=MoneyEntry(
+       id:newId(),title:parsed.title,category:proposedCategory,
+       amount:originalAmount?.amount??parsed.amount??0.0,
+       income:expectedIncome,date:originalDate??DateTime.now(),
+       notes:body,sourceType:'sms');
+      final picked=await reviewSmsAccountLinks([trial],smsSender:sender);
+      pickedId=picked?.ids?.single;
+     }
+     if(pickedId==null||!mounted||!dialog.mounted)return;
+     // Always read the CURRENT SQLCipher witness after selecting/creating.
      final fresh=await bridge.readVerifiedAccounts();
-     final active=fresh.balances.where((a)=>!a.archived&&a.id==id).toList();
-     if(active.length!=1||!dialog.mounted)return;
-     // The account generation checked at final commit comes from this
-     // latest read, so a changed account cannot be posted optimistically.
+     final active=fresh.balances.where(
+      (a)=>!a.archived&&a.id==pickedId).toList();
+     if(active.length!=1)return;
      redraw((){
-      reviewedAccount=(ids:<String?>[id],generation:fresh.witness.generation);
+      reviewedAccount=(ids:<String?>[pickedId],
+       generation:fresh.witness.generation);
       reviewedAccountName=active.single.name;
      });
+     // Refresh dashboard accounts without reloading the Home ledger and
+     // without opening a second account-confirmation dialog.
+     unawaited(_m467RefreshHomeAccounts());
     }catch(e){
-     debugPrint('M590 pre-Yes account selection: ${e.runtimeType}');
+     debugPrint('M632 pre-Yes account setup: ${e.runtimeType}');
      if(mounted)snack(context,waffraIsEnglish?
-      'Could not verify this account; choose again.':
-      'تعذر التحقق من الحساب، اختاره مرة أخرى.',isError:true);
+      'Could not verify or add this account. Please retry.':
+      'تعذر إضافة الحساب أو التحقق منه. حاول مرة أخرى.',isError:true);
     }finally{
      if(dialog.mounted)redraw(()=>choosingAccount=false);
     }
@@ -6531,7 +6657,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            _m615ReviewDetail(waffraIsEnglish?'Sender':'المرسل',
             sender,Icons.account_balance_outlined),
            _m615ReviewDetail(waffraIsEnglish?'Money account':'الحساب المالي',
-            (reviewedAccountName??previewAccountLabel)+' • '+
+            (reviewedAccountName??(hasActiveMoneyAccount?
+              previewAccountLabel:(waffraIsEnglish?
+               'No money account yet':'لم تضف حسابًا ماليًا بعد')))+' • '+
             (reviewedAccount!=null?
              (waffraIsEnglish?'Verified':'تم تأكيد الحساب'):
              (waffraIsEnglish?'Choose before saving':'اختار الحساب قبل الحفظ')),
@@ -6542,14 +6670,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         const SizedBox(height:8),
         OutlinedButton.icon(
          key:const Key('m590-sms-choose-account-before-yes'),
-         onPressed:canConfirm&&!choosingAccount?
+         onPressed:!choosingAccount?
           ()=>selectAccountBeforeYes(redraw,dialog):null,
          icon:choosingAccount?
           const SizedBox(width:17,height:17,
            child:CircularProgressIndicator(strokeWidth:2)):
           const Icon(Icons.account_balance_wallet_outlined),
-         label:WaffraText(reviewedAccountName??(waffraIsEnglish?
-          'Select verified money account':'اختار الحساب المالي قبل نعم')),
+         label:WaffraText(reviewedAccountName??(!hasActiveMoneyAccount?
+          (waffraIsEnglish?'Add account':'إضافة حساب'):
+          (waffraIsEnglish?'Choose money account':'اختيار الحساب المالي'))),
         ),
         const SizedBox(height:6),
         Row(children:[
@@ -6914,6 +7043,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      // only after the first fully verified Home frame has painted.
      final activeOwner=(await widget.onVerifiedHomeSmsResume?.call())??true;
      if(!activeOwner||!mounted||!ready||_financeLoadFailure!=null)return;
+     // Let Home receive interactions and finish its first tab animation
+     // before Android starts historical month paging and native AES I/O.
+     await Future<void>.delayed(const Duration(milliseconds:1200));
+     if(!mounted||!ready||_m627ClosingSession||
+        _financeLoadFailure!=null)return;
      await _refreshAutoSmsInbox(importMonth:!_autoSmsHistoryComplete);
     }());
    });
@@ -6992,7 +7126,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }
   });
  }
- @override void dispose(){if(identical(WaffraBackNavigation.onHomeBack,_registeredBackHandler))WaffraBackNavigation.onHomeBack=null;_dashboardScrollController.dispose();_categoryScrollController.dispose();_goalsScrollController.dispose();_recurringScrollController.dispose();_tourGlow.dispose();waffraReturnHome.removeListener(_returnToHome);waffraIncomingSms.removeListener(_receiveSharedSms);waffraAutoSmsUpdates.removeListener(_receiveAutoSmsNotice);waffraFinanceNoticeTap.removeListener(_m621OnFinanceNoticeTap);waffraWidgetAction.removeListener(_receiveWidgetAction);_widgetReloadListener?.dispose();_saveProgress.dispose();final binding=_financeBinding;if(binding!=null)unawaited(_financialWriteQueue.drain().whenComplete(binding.close));super.dispose();}
+ @override void dispose(){_m632SmsNoticeTimer?.cancel();if(identical(WaffraBackNavigation.onHomeBack,_registeredBackHandler))WaffraBackNavigation.onHomeBack=null;_dashboardScrollController.dispose();_categoryScrollController.dispose();_goalsScrollController.dispose();_recurringScrollController.dispose();_tourGlow.dispose();waffraReturnHome.removeListener(_returnToHome);waffraIncomingSms.removeListener(_receiveSharedSms);waffraAutoSmsUpdates.removeListener(_receiveAutoSmsNotice);waffraFinanceNoticeTap.removeListener(_m621OnFinanceNoticeTap);waffraWidgetAction.removeListener(_receiveWidgetAction);_widgetReloadListener?.dispose();_saveProgress.dispose();final binding=_financeBinding;if(binding!=null)unawaited(_financialWriteQueue.drain().whenComplete(binding.close));super.dispose();}
  Future<void> _syncWidgetTransactions()async{
   if(!mounted||!ready)return;
   try{
