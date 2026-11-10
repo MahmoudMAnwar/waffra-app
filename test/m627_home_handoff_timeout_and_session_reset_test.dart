@@ -59,8 +59,20 @@ void main() {
     expect(root,contains('if(freshSession)locked=!ordinaryPhoneRelogin;'));
     expect(root,contains('onVerifiedReady:()=>_m623HomeLoaded(account)'));
 
-    expect(home,contains('await _financialWriteQueue.drain();'));
-    expect(home,contains('if(pending!=null)await pending;'));
+    final cleanup=home.split(' Future<void> _m627CloseForLogout()async{')[1]
+      .split(' void _m627AbortFailedLogout()')[0];
+    expect(cleanup,contains('_m627HomeLoadCompletion;'));
+    expect(cleanup,contains('await pendingLoad.future.timeout(const Duration(seconds:20));'));
+    expect(cleanup,contains('_m627OutstandingAccountReads.toList()'));
+    expect(cleanup,contains('await _m468PersistSequence.timeout(const Duration(seconds:20));'));
+    expect(cleanup,contains('await _financialWriteQueue.drain().timeout(const Duration(seconds:20));'));
+    expect(cleanup,contains('if(pending!=null)await pending;'));
+    expect(home,contains('_m627OutstandingAccountReads.add(running);'));
+    expect(home,contains('_m627OutstandingAccountReads.remove(running);'));
+    expect(home,contains('Completer<void>? _m627HomeLoadCompletion;'));
+    expect(home,contains('if(activeLoad!=null){'));
+    expect(home,contains('if(_m627ClosingSession)return;'));
+    expect(home,contains('if(!completion.isCompleted)completion.complete();'));
     expect(home,contains('if(binding!=null)await binding.close();'));
     expect(home,contains('_financeBinding=null;'));
     expect(home,contains('_financeBindingFuture=null;'));
