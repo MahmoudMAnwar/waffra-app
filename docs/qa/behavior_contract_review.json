@@ -886,7 +886,10 @@
         "test/m548_review_grouping_and_signup_perf_test.dart",
         "test/m603_app_wide_lag_source_regression_test.dart",
         "test/m506_android_nine_regressions_test.dart",
-        "test/m580_sms_security_navigation_performance_test.dart"
+        "test/m580_sms_security_navigation_performance_test.dart",
+        "test/m461_sms_exclusion_and_history_scan_test.dart",
+        "test/m509_all_sender_sms_rescan_dedup_test.dart",
+        "test/m547_sms_incremental_jank_regression_test.dart"
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/m550-behavior-contract-preflight.yml",
@@ -898,7 +901,8 @@
         "Original native SMS, confirmed hash and active owner are required for every ACK; batch failure retains original review candidates.",
         "New account creation requires user-approved SQLCipher writer and matching known bank identity, fresh account witness; never infer bank account from sender alone or post unreviewed message.",
         "Yes requires valid currency/amount/date/category, selected active account generation, and deduplicated verified finance commit.",
-        "Splash never exposes protected Home or blocks identity/storage startup; Android profile trace required for performance claim."
+        "Splash never exposes protected Home or blocks identity/storage startup; Android profile trace required for performance claim.",
+        "M461/M509 financial ACK checks must assert authenticated main-isolate ACK fed by background compute; M547 must assert debounced native notice refresh and never hidden historical rescan."
       ]
     }
   ]
