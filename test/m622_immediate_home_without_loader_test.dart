@@ -32,9 +32,12 @@ void main(){
   expect(load,contains('setState(()=>ready=true);'));
   // Verified financial account balances must not update in a second frame.
   expect(load,contains('final Future<void>? accountsLoading=verifiedEncryptedStartup?'));
-  expect(load,contains('await (accountsLoading??_m467RefreshHomeAccounts());'));
+  expect(load,contains('await (accountsLoading??_m467RefreshHomeAccounts())'));
+  expect(load,contains('.timeout(const Duration(seconds:15));'));
+  expect(load,contains('}on TimeoutException{'));
+  expect(load,contains('_m627AccountEpoch++;'));
   expect(load,contains('if(!_m468VerifiedAccountsLoaded){'));
-  expect(load.indexOf('await (accountsLoading??_m467RefreshHomeAccounts());'),
+  expect(load.indexOf('await (accountsLoading??_m467RefreshHomeAccounts())'),
    lessThan(load.indexOf('setState(()=>ready=true);')));
   expect(startup,isNot(contains('unawaited(_m467RefreshHomeAccounts());')));
   expect(dashboard,contains('final scopedEntries=_m467ScopedEntries().toList();'));
