@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "pr": "https://github.com/MahmoudMAnwar/waffra-app/pull/541",
-  "issue": "https://github.com/MahmoudMAnwar/waffra-app/issues/540",
+  "pr": "Pending M630 focused login finance PR",
+  "issue": "Owner-reported fresh-install and repeated-login freeze",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main",
   "reviewed_at": "2026-11-10",
@@ -814,6 +814,30 @@
         "Explicit signout suspends native SMS and awaits BOTH Qwen context disposal and Home financial DB drain/close before clearing profile.",
         "A failed native suspension, AI disposal or finance drain leaves signed-in owner intact and shows failure; no cross-account leak.",
         "Physical Android profile first-frame and login/logout timing evidence needed; source-level improvements do not prove issue resolved."
+      ]
+    },
+    {
+      "id": "M630-LOGIN-FINANCE-CONTENTION-AND-VALIDATION",
+      "issue": "Owner requests fix for first-install login and relogin freeze",
+      "previous_behavior": "Installation lock lazy opening can fail with SQLite BUSY; repeated identical reads repeat full worker validation and read-view preflight.",
+      "approved_behavior": "Bound installation lock contention on a migration-free background connection. Reuse only fully verified immutable snapshots for exact SQL bytes, digest and revision on the same store, preserving all fresh source reads.",
+      "source_paths": [
+        "lib/storage/waffra_atomic_finance_snapshot.dart",
+        "lib/storage/waffra_finance_read_view.dart",
+        "lib/storage/waffra_fresh_install_source.dart"
+      ],
+      "test_paths": [
+        "test/storage/m630_finance_responsiveness_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Always read current SQL and check source/schema readiness; never cache authorization.",
+        "Changed bytes, revision, digest and rolled-back transactions must not reuse mismatched validation.",
+        "No authentication, biometric, password strength, finance data or SMS-consent bypass.",
+        "Host measurements do not certify physical Android frame pacing."
       ]
     }
   ]
