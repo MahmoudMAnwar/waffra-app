@@ -755,7 +755,7 @@
       "id": "M627-BIOMETRIC-HOME-PROFILE-TRACE-AND-LOGOUT-RESET",
       "issue": "Issue #536 / PR #537 — physical first-biometric Home and logout/relogin stalls",
       "previous_behavior": "Home finance bind, prefs, SQLCipher recovery and account balances await had only coarse timing; the SQL-projection await could remain unbounded. The biometric/login stage stayed on-screen until verified Home, and explicit logout relied on asynchronous dispose rather than awaited Home binding drain/close. A fixed Home widget key did not explicitly encode session identity.",
-      "approved_behavior": "Use kProfileMode stopwatch before and after finance binding, SharedPreferences, verified catalog recovery and accounts refresh/await, plus first entry into m623HomeLoaded. Abort account wait after 15 seconds with existing finance recovery Retry, protecting against late stale account callbacks. During successful explicit signout await Home-owned ledger queue drain and binding close; rotate session GlobalKey and keyed parent, keep a new account session isolated. Retain actual verified balances on the first visible complete Home, initial/restored OS biometric, password-rel ogin no extra biometric, owner-scoped SMS suspension and post-frame scanning. Physical profile logs are still required to pinpoint the slow stage. Reconcile four obsolete source-test assertions to check signed-out locked=true and timed (15s) verified accounts await while preserving full dashboard, owner/session and notification security assertions.",
+      "approved_behavior": "Use kProfileMode stopwatch before and after finance binding, SharedPreferences, verified catalog recovery and accounts refresh/await, plus first entry into m623HomeLoaded. Abort account wait after 15 seconds with existing finance recovery Retry, protecting against late stale account callbacks. During successful explicit signout await Home-owned ledger queue drain and binding close; rotate session GlobalKey and keyed parent, keep a new account session isolated. Retain actual verified balances on the first visible complete Home, initial/restored OS biometric, password-rel ogin no extra biometric, owner-scoped SMS suspension and post-frame scanning. Physical profile logs are still required to pinpoint the slow stage. Reconcile four obsolete source-test assertions to check signed-out locked=true and timed (15s) verified accounts await while preserving full dashboard, owner/session and notification security assertions. When signout races an in-flight Home load, await its tracked completion before closing the DB; separately retain and drain even detached post-timeout account reads, plus queued/prepared writes, all with bounded fail-closed waits. Never reuse old Home callbacks or declare a hung cleanup successful.",
       "source_paths": [
         "lib/main.dart"
       ],
@@ -779,7 +779,8 @@
         "Timeout and stale read cannot substitute zero balances or post partial finance state; financial recovery Retry remains actionable.",
         "Explicit logout retains Yes/No, bank SMS native suspension and no second biometric for ordinary verified password relogin.",
         "No credentials, account identifiers, SMS bodies, ledger values, encryption keys or user PII in profile step logging.",
-        "Only physical profile-mode Android measurements can certify the freeze's actual cause or resolution."
+        "Only physical profile-mode Android measurements can certify the freeze's actual cause or resolution.",
+        "A Dart Future.timeout only detaches its await; account database reads that outlive it must finish or block sign-out from closing SQLCipher."
       ]
     }
   ]
