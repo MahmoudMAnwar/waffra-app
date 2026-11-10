@@ -11,4 +11,4 @@
 - First account creation uses same production verified account writer and fresh read, no auto account silently; existing accounts keep picker; only a confirmed valid amount, timestamp, category and account unlock Yes.
 - Keep all existing security checks and tests; do not silence regressions by removing assertions.
 
-**Evidence:** Source-level implementation pending; Android profile-mode p95 and both-device persisted-data migration pending. No claim physical freeze solved until measured.
+**Evidence:** Source-level code in Draft PR #548; exact-head CI pending; Android profile-mode p95 and both-device persisted-data migration pending. No claim physical freeze solved until measured.
