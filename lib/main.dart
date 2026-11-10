@@ -4631,10 +4631,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
 
  Map<String,Object?>? _localSmsClassification(
-  Map<String,Object?> item,List<WaffraSmsLocalRule> custom){
+  Map<String,Object?> item,List<WaffraSmsLocalRule> custom,
+  {BankResult? parsedFromBatch}){
   final body=item['body'],sender=item['sender'];
   if(body is! String||body.trim().isEmpty)return null;
-  final parsed=BankParser.parse(body);
+  // M630: large SMS queues use the original parser in a worker isolate.
+  final parsed=parsedFromBatch??BankParser.parse(body);
   final facts=WaffraBankSmsFactsParser.parse(body);
   final special=WaffraSmsLocalRules.resolveSpecial(
    body:body,sender:sender is String?sender:'',
@@ -4831,20 +4833,52 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     _smsRuleOwnerKey);}
    catch(_){ /* No bank SMS in logs. Built-ins remain usable. */ }
   }
-  if(!mounted)return;
+  if(!mounted||!ready||_m627ClosingSession)return;
+  // M630 / #542: 48+ pending SMS messages are parsed in an isolate so
+  // expensive regex processing cannot steal Flutter UI frames. No message
+  // leaves the device; user exclusion, ACKs and manual review stay unchanged.
+  final smsSessionEpoch=_m630HomeStartupEpoch;
+  final bodies=<String>[
+   for(final candidate in results)
+    candidate['body'] is String?candidate['body'] as String:'',
+  ];
+  final parseClock=kProfileMode?(Stopwatch()..start()):null;
+  late final List<BankResult> parsedQueue;
+  try{
+   parsedQueue=bodies.length>=48?
+    await compute(waffraParseBankSmsBatchInIsolate,bodies):
+    bodies.map(BankParser.parse).toList(growable:false);
+  }catch(error){
+   debugPrint('Bank SMS review parser unavailable: ${error.runtimeType}');
+   if(mounted&&ready&&!_m627ClosingSession&&
+      smsSessionEpoch==_m630HomeStartupEpoch){
+    setState(()=>_autoSmsStatusProblem=waffraIsEnglish?
+     'Could not prepare local SMS review. Retry without losing messages.':
+     'تعذر تجهيز مراجعة الرسائل محليًا. حاول مجددًا دون فقد الرسائل.');
+   }
+   return;
+  }
+  if(kProfileMode&&parseClock!=null){
+   debugPrint('WAFFRA_SMS_PERF review_bank_parse_ms='
+    '${parseClock.elapsedMilliseconds} count=${bodies.length} '
+    'worker=${bodies.length>=48}');
+  }
+  if(!mounted||!ready||_m627ClosingSession||
+     smsSessionEpoch!=_m630HomeStartupEpoch)return;
   final waiting=<Map<String,Object?>>[];
   var classifiedSinceYield=0;
   final toAcknowledge=<String>[];
   final toAcknowledgeCommitted=<String>[];
   final toRestoreOnAckFailure=<Map<String,Object?>>[];
-  for(final candidate in results){
-   // Yield between small CPU-heavy parser batches. Native AES and inbox I/O
-   // are already off-thread; this prevents 1000 Dart parses monopolizing
-   // Flutter frames on Home, navigation and SMS notice refresh.
+  for(var candidateIndex=0;candidateIndex<results.length;candidateIndex++){
+   final candidate=results[candidateIndex];
+   // OTP/rule matching remains in bounded UI batches; BankParser already
+   // completed in the worker isolate on large review queues.
    if(++classifiedSinceYield>=16){
     classifiedSinceYield=0;
     await Future<void>.delayed(const Duration(milliseconds:1));
-    if(!mounted||!ready)return;
+    if(!mounted||!ready||_m627ClosingSession||
+       smsSessionEpoch!=_m630HomeStartupEpoch)return;
    }
    final id=candidate['id'],body=candidate['body'];
    if(id is! String||body is! String)continue;
@@ -4861,7 +4895,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    if(WaffraBankSmsFactsParser.isVerificationChallenge(body)){
     annotated['sensitiveOtp']=true;
    }
-   final local=_localSmsClassification(annotated,customRules);
+   final local=_localSmsClassification(annotated,customRules,
+    parsedFromBatch:parsedQueue[candidateIndex]);
    if(local!=null){
     annotated['local']=local;
     if(local['kind']=='excluded'&&local['defaultSeed']!=true){
@@ -4874,6 +4909,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }
    waiting.add(annotated);
   }
+  if(!mounted||!ready||_m627ClosingSession||
+     smsSessionEpoch!=_m630HomeStartupEpoch)return;
   // One encrypted native queue commit instead of one platform call per SMS.
   // If the durable acknowledgement fails, retain every pending item in UI.
   if(toAcknowledge.isNotEmpty){
@@ -4881,6 +4918,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    // Drain larger review queues in batches without losing failed items.
    final failedAcks=<String>{};
    for(var from=0;from<toAcknowledge.length;from+=100){
+    if(!mounted||!ready||_m627ClosingSession||
+       smsSessionEpoch!=_m630HomeStartupEpoch)return;
     final batch=toAcknowledge.skip(from).take(100).toList(growable:false);
     final removed=await WaffraAutoSms.excludeMessages(batch);
     if(!removed)failedAcks.addAll(batch);
@@ -4893,6 +4932,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   if(toAcknowledgeCommitted.isNotEmpty){
    final failed=<String>{};
    for(var from=0;from<toAcknowledgeCommitted.length;from+=100){
+    if(!mounted||!ready||_m627ClosingSession||
+       smsSessionEpoch!=_m630HomeStartupEpoch)return;
     final batch=toAcknowledgeCommitted.skip(from).take(100).toList(growable:false);
     if(!await WaffraAutoSms.acknowledgeCommitted(batch))failed.addAll(batch);
    }
@@ -4900,7 +4941,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     (row)=>failed.contains(row['id'])));
   }
   final progress=await WaffraAutoSms.trackingStatus();
-  if(!mounted)return;
+  if(!mounted||!ready||_m627ClosingSession||
+     smsSessionEpoch!=_m630HomeStartupEpoch)return;
   if(progress?['enabled']!=true){
    setState((){
     _autoSmsStatusChecked=true;
