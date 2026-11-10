@@ -30,7 +30,7 @@
         "end": " @override void didChangeAppLifecycleState("
       },
       {
-        "start": "   (loading||!introDone)?const WaffraLaunchIntro():",
+        "start": "  },child:Directionality(textDirection:language=='ar'?TextDirection.rtl:TextDirection.ltr,child:",
         "end": "   startupError!=null?Scaffold("
       },
       {
