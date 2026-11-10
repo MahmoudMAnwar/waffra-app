@@ -3295,3 +3295,13 @@ biometric and logout/relogin profile acceptance remains pending; do not claim
 all Android freezes solved or merge without exact-head CI/device acceptance.
 Validation completed: 1195 storage tests and 30 auth/biometric/logout tests
 passed; changed-source analysis clean; M550 contract preflight passed.
+
+
+[M633 — PREDICTIVE PUBLIC STARTUP PREWARM AND VERIFIED HOME BATCH JSON — ISSUE #550 PR #551 — 2026-11-10]
+=====================================================================================================
+- Owner approved proactively preparing safe components from first app icon while preserving verified password/biometric, SQLCipher ownership and real financial balances.
+- On the first frame of app startup, schedule one isolate to construct only the fixed PUBLIC category catalog. The same future is awaited at first Home after owner verification; no decrypted finance, password or encrypted key is ever pre-cached across signout.
+- In Home startup, begin the existing read-only verified account balance projection concurrently with one immutable 11-field JSON batch decoder. The combined JSON crosses a pure worker only above 32 KiB; each malformed field is still rejected by its original type/error handling and cannot silently become an empty balance.
+- Verified records convert in bounded batches of 96 with zero-delay event-loop yielding; no artificial 1ms per 32 records. This alters only scheduling, not amount rounding, record counts or SQLCipher commit behavior.
+- Existing explicit Logout Yes/No and secure teardown, fresh-instance phone password verification and first/restored biometric gate remain in force; the existing M631 exact-session finance BIND prewarm remains.
+- M633 tests cover small, large, malformed JSON, real account gating, login security and old-session state rotation. Permanent requirements and scope/behavior manifests updated. CI and physical Android first biometric and logout/relogin profile evidence are still required before declaring freeze fixed or merging.
