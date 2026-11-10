@@ -3261,3 +3261,19 @@ The owner reported that the unwanted Home startup spinner had merely become a bl
 - Reviewed the latest M629 runtime code through commit f5fbe8e65c4bafa84876e5e4cd27a63aefd8e2cb and its actual signed-out/failed-cleanup behavior before refreshing this post-app-code release notes entry. Prior release notes predated that runtime change; M449 correctly rejected it.
 - M385 CI also blocked three workflows due to an ambiguous protected code-scope anchor `Future<void> load()async {` which occurs in both the root app and Home state. Replaced the manifest anchor with the uniquely verified Home `load()` signature, in both main baseline and PR HEAD; no protected source or CI guard was bypassed.
 - Original fast pull verified digest/delta, owner-bound secure sign-in, Home first real encrypted balance, and native SMS suspension remain unchanged in intent. New M629 async overlap is committed, but neither physical Android speed nor all mandatory latest-HEAD tests are proven yet. No APK release/merge on incomplete CI.
+
+M630 — login finance lock contention and repeated verification (2026-11-10)
+Owner-requested scope: first-install login and logout/relogin stalls; base main
+10d5682a (PR #541). No manual-entry UI changes or deployment.
+Reproduced SQLite BUSY during contended installation-lock opening. Use a
+migration-free background lock connection and bounded retries for BUSY/LOCKED
+only. Retain BEGIN IMMEDIATE through installation and release on close.
+Reuse verified immutable snapshot preflight only when a fresh SQL row matches
+bytes, digest and revision on the same connection. Preserve all schema/source
+checks, SQL reads, key verification, CAS and financial validation on changes.
+Synthetic 2,000-entry Linux test: repeated reads 1079 -> 421 ms. Timer worst gap
+45 -> 67 ms: no claim of improved device frame pacing. Physical first-install,
+biometric and logout/relogin profile acceptance remains pending; do not claim
+all Android freezes solved or merge without exact-head CI/device acceptance.
+Validation completed: 1195 storage tests and 30 auth/biometric/logout tests
+passed; changed-source analysis clean; M550 contract preflight passed.
