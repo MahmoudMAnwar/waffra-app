@@ -3233,3 +3233,14 @@ The owner reported that the unwanted Home startup spinner had merely become a bl
 - M627 regression checks the actual logout cleanup method's waits plus
   retained account-reader tracking, not merely an unrelated queue-drain text.
 - Status Partial: all exact-head checks and physical profile timings required.
+
+[M627 REPEATED TWO-TEST CI FAILURE FIX — ISSUE #536 PR #537 — 2026-11-10]
+================================================================================
+- M147, M160 and Full Offline reported the same 2 failing tests out of
+  2,623: M622 checked an obsolete unbounded verified-account await string;
+  M627 accidentally escaped the dynamic stage name in a source assertion.
+- M622 now positively checks the awaited genuine SQLCipher accounts before
+  ready=true, the 15-second timeout, TimeoutException and stale-read epoch
+  invalidation. M627 now checks all actual stage names, not literal $step.
+- Neither test was skipped or disabled. App behavior and SQLCipher safety
+  remain unchanged by these test-only repairs. Await exact-head rerun.
