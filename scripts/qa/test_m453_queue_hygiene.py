@@ -120,5 +120,42 @@ class M453QueueSafetyTests(unittest.TestCase):
         self.assertIn("event === 'workflow_dispatch' && inputs.dry_run !== 'false'", raw)
 
 
+    def test_cancel_candidates_deduped_before_mutating_github_pagination(self):
+        source = (ROOT / ".github/workflows/m453-superseded-pr-cleanup.yml").read_text(encoding="utf-8")
+        self.assertIn("const seenRuns = new Set();", source)
+        self.assertIn("if (seenRuns.has(run.id)) continue;", source)
+        self.assertIn("seenRuns.add(run.id);", source)
+        self.assertIn("candidateRuns.push(run);", source)
+        self.assertLess(source.index("candidateRuns.push(run);"),
+                        source.index("for (const run of candidateRuns.slice("))
+        self.assertIn("const maxPerSweep = 120;", source)
+        self.assertIn("refreshed.data.head.sha !== latest", source)
+
+    def test_github_transient_500_is_bounded_visible_not_a_fake_app_failure(self):
+        source = (ROOT / ".github/workflows/m453-superseded-pr-cleanup.yml").read_text(encoding="utf-8")
+        self.assertIn("const retryable = new Set([429, 500, 502, 503, 504]);", source)
+        self.assertIn("const maxAttempts = 3;", source)
+        self.assertIn("github.rest.actions.getWorkflowRun({", source)
+        self.assertIn("if (!active.has(observed.data.status))", source)
+        self.assertIn("err.status === 409", source)
+        self.assertIn("observed.data.head_sha !== run.head_sha", source)
+        self.assertIn("headNow.data.head.sha !== latest", source)
+        self.assertIn("core.warning('PARTIAL CLEANUP:", source)
+        self.assertIn("'; transient unresolved: ' + unresolved", source)
+        self.assertIn("if (hardErrors) core.setFailed(", source)
+        self.assertNotIn("if (unresolved) core.setFailed(", source)
+        self.assertNotIn("continue-on-error: true", source)
+
+    def test_permanent_auth_failure_remains_red_and_no_pr_checkout(self):
+        source = (ROOT / ".github/workflows/m453-superseded-pr-cleanup.yml").read_text(encoding="utf-8")
+        self.assertIn("statusError.status === 401 || statusError.status === 403", source)
+        self.assertIn("if (!retryable.has(err.status))", source)
+        self.assertIn("core.error('Permanent cancellation error", source)
+        self.assertIn("if (hardErrors) core.setFailed(", source)
+        self.assertIn("pull_request_target:", source)
+        self.assertIn("event === 'workflow_dispatch' && inputs.dry_run !== 'false'", source)
+        self.assertNotIn("actions/checkout", source)
+
+
 if __name__ == "__main__":
     unittest.main()

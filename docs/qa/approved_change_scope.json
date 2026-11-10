@@ -9,7 +9,8 @@
     "Remove artificial one-millisecond sleeps on every 32 verified ledger records: yield every 96 records with Duration.zero for responsive UI and reduced startup latency.",
     "Update exact-branch regression tests, behavior-contract manifest, permanent requirements and approved change notes; do not fake Android performance success.",
     "Update three existing exact-source performance assertions M468/M580/M603 to require verified 96-row zero-delay yielding, retaining all record integrity and caller checks; never skip tests.",
-    "Reconcile four repeatedly failing tests across six workflows: M468 M580 M603 demand valid Duration.zero yielding; M451 still asserts exactly the same immutable public defaults are given to verified SQLCipher atomic Home repair."
+    "Reconcile four repeatedly failing tests across six workflows: M468 M580 M603 demand valid Duration.zero yielding; M451 still asserts exactly the same immutable public defaults are given to verified SQLCipher atomic Home repair.",
+    "Fix owner-proven M453 pull_request_target cleanup job failure #552 due to repeated GitHub 500 errors by bounded retry, deduping candidate IDs before pagination mutation, retaining SHA/owner security gates, honest partial-backend warning and strict hard permission failure."
   ],
   "allowed_changed_files": [
     "lib/main.dart",
@@ -22,7 +23,9 @@
     "test/m468_large_ledger_decode_test.dart",
     "test/m603_app_wide_lag_source_regression_test.dart",
     "test/m580_sms_security_navigation_performance_test.dart",
-    "test/storage/m451_fresh_home_catalog_recovery_test.dart"
+    "test/storage/m451_fresh_home_catalog_recovery_test.dart",
+    ".github/workflows/m453-superseded-pr-cleanup.yml",
+    "scripts/qa/test_m453_queue_hygiene.py"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -71,6 +74,18 @@
       {
         "start": "  test('M451 actual Home uses the same verified startup repair', () async {",
         "end": null
+      }
+    ],
+    ".github/workflows/m453-superseded-pr-cleanup.yml": [
+      {
+        "start": "          script: |",
+        "end": null
+      }
+    ],
+    "scripts/qa/test_m453_queue_hygiene.py": [
+      {
+        "start": "    def test_cleanup_remains_trusted_and_scoped(self):",
+        "end": "\n\nif __name__ == \"__main__\":"
       }
     ]
   }
