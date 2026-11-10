@@ -3186,3 +3186,22 @@ The owner reported that the unwanted Home startup spinner had merely become a bl
   verifies matching first-test targets and prebuild before emulator. This is
   CI only; it does NOT certify a lag-free login or replace Android runtime QA.
 - Status Partial until all exact-head CI shards and mandatory gates pass.
+
+[M627 BIOMETRIC-TO-HOME PROFILE TRACE / SESSION SAFETY — ISSUE #536 PR #537 — 2026-11-10]
+================================================================================
+- Added profile-only elapsed markers before/after SQLCipher Home binding,
+  SharedPreferences, verified fresh catalog recovery and account balances
+  refresh/await, plus first entry to _m623HomeLoaded. No owner or money in logs.
+- Bound account-balance readiness wait to 15 seconds; a timeout fails closed
+  through the existing protected financial recovery screen and real Retry.
+  Late old account-read completions are invalidated before the next attempt.
+- Explicit logout now drains the Home finance write queue and closes its
+  binding before new login can mount another Home. Reset binding futures and
+  Home-local protected authority, rotate session GlobalKey/ValueKey on logout.
+  Preserve initial/restored biometric, ordinary password relogin without
+  repeat biometric, signed-out SMS suspension and post-full-frame SMS scan.
+- Updated previous M623/M463 static assertions to require stronger session
+  identity while retaining verified Home/offstage and authentication checks.
+- No SQLCipher migration/activation change, no backend data clearing, and no
+  claim of physical freeze removal without Android flutter run --profile logs.
+- Status Partial pending exact-head CI and real Android profile evidence.
