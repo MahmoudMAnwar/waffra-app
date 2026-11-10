@@ -54,7 +54,7 @@
         "end": " Widget _financialRecoveryScreen()=>"
       },
       {
-        "start": " @override void dispose(){if(identical(WaffraBackNavigation.onHomeBack,",
+        "start": "    debugPrint('Finance notification route refused: ${error.runtimeType}');",
         "end": " Future<void> _syncWidgetTransactions()async{"
       }
     ],
