@@ -6,7 +6,8 @@
     "Make first bank SMS account creation directly accessible without requiring a valid transaction category before choosing or creating an account.",
     "Move SMS queue cryptographic hashes and complex parsing off the Flutter UI isolate with a pure-data worker, debounce bursts of updates, and keep native ACK and original source secure.",
     "Finish the real Waffra wordmark and logo animation before switching to login while initializing app data concurrently and preserving fast post-login handoff.",
-    "Preserve actual verified balances, mandatory biometrics, manual SMS approval, re-scan cursor, 30-day exclusion, and exact-head behavioral and real Android QA."
+    "Preserve actual verified balances, mandatory biometrics, manual SMS approval, re-scan cursor, 30-day exclusion, and exact-head behavioral and real Android QA.",
+    "Reconcile original M461, M509 and M547 positive regression assertions with off-isolate ACK classification and notification debounce while retaining all financial anti-replay and explicit rescan security controls."
   ],
   "allowed_changed_files": [
     "lib/main.dart",
@@ -17,7 +18,10 @@
     "docs/qa/M632_SMS_HOME_SPLASH.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
-    "docs/release/WAFFRA_APPROVED_CHANGES.txt"
+    "docs/release/WAFFRA_APPROVED_CHANGES.txt",
+    "test/m461_sms_exclusion_and_history_scan_test.dart",
+    "test/m509_all_sender_sms_rescan_dedup_test.dart",
+    "test/m547_sms_incremental_jank_regression_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -68,6 +72,24 @@
       {
         "start": "  test('Home first frame precedes four-page month SMS scan', () {",
         "end": "  test('verified large-transaction remapping yields rather than freezing the UI', () {"
+      }
+    ],
+    "test/m461_sms_exclusion_and_history_scan_test.dart": [
+      {
+        "start": "  test('review refresh serializes work and batches durable exclusions',(){",
+        "end": null
+      }
+    ],
+    "test/m509_all_sender_sms_rescan_dedup_test.dart": [
+      {
+        "start": " test('M509 finance-backed ACK is separate from exclude/reject ACK',(){",
+        "end": " test('M509 duplicate source alone never auto-creates a financial posting',(){"
+      }
+    ],
+    "test/m547_sms_incremental_jank_regression_test.dart": [
+      {
+        "start": " test('M547 only an explicit rescan fetches historical pages during UI interactions', () {",
+        "end": null
       }
     ]
   }
