@@ -8,7 +8,8 @@
     "Retain genuine SQLCipher source and verified bank account balances before first Home frame; keep independent accounts read parallel with JSON and no fingerprint after explicit normal relogin.",
     "Remove artificial one-millisecond sleeps on every 32 verified ledger records: yield every 96 records with Duration.zero for responsive UI and reduced startup latency.",
     "Update exact-branch regression tests, behavior-contract manifest, permanent requirements and approved change notes; do not fake Android performance success.",
-    "Update three existing exact-source performance assertions M468/M580/M603 to require verified 96-row zero-delay yielding, retaining all record integrity and caller checks; never skip tests."
+    "Update three existing exact-source performance assertions M468/M580/M603 to require verified 96-row zero-delay yielding, retaining all record integrity and caller checks; never skip tests.",
+    "Reconcile four repeatedly failing tests across six workflows: M468 M580 M603 demand valid Duration.zero yielding; M451 still asserts exactly the same immutable public defaults are given to verified SQLCipher atomic Home repair."
   ],
   "allowed_changed_files": [
     "lib/main.dart",
@@ -20,7 +21,8 @@
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "test/m468_large_ledger_decode_test.dart",
     "test/m603_app_wide_lag_source_regression_test.dart",
-    "test/m580_sms_security_navigation_performance_test.dart"
+    "test/m580_sms_security_navigation_performance_test.dart",
+    "test/storage/m451_fresh_home_catalog_recovery_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -63,6 +65,12 @@
       {
         "start": " test('M593 manual and reviewed-SMS verified ledger mapping yields frames',(){",
         "end": " test('M595 compact review has exact three selectable transaction types',(){"
+      }
+    ],
+    "test/storage/m451_fresh_home_catalog_recovery_test.dart": [
+      {
+        "start": "  test('M451 actual Home uses the same verified startup repair', () async {",
+        "end": null
       }
     ]
   }
