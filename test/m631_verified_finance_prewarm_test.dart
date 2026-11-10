@@ -48,7 +48,10 @@ void main() {
  test('Home reuses warmed binding or retries secure original binder',(){
   final bind=home.split(' Future<void> _bindFinanceSource()async{')[1]
     .split(' // M627: sign-out closes the Home-owned binding')[0];
-  expect(bind,contains('final warmed=await widget.prewarmedFinanceBinding;'));
+  expect(bind,contains('final pendingWarm=_m631PrewarmConsumed?null:widget.prewarmedFinanceBinding;'));
+  expect(bind,contains('_m631PrewarmConsumed=true;'));
+  expect(bind,contains('final warmed=await pendingWarm;'));
+  expect(home,contains('bool _m631PrewarmConsumed=false;'));
   expect(bind,contains('final binding=warmed??await WaffraProductionFinanceAuthorityBinding.bind('));
   expect(bind,contains('deferInitialDashboardRead:true,'));
   expect(bind,contains('if(!mounted){await binding.close();'));
