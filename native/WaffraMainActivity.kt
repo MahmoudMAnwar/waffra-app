@@ -31,6 +31,31 @@ class MainActivity : FlutterFragmentActivity() {
     private val smsHistoryExecutor = Executors.newSingleThreadExecutor()
     // Native PBKDF2 runs independently of SMS I/O and the Android UI thread.
     private val passwordKdfExecutor = Executors.newSingleThreadExecutor()
+    private var nativePasswordKdfParityVerified = false
+
+    // Deterministic public vector, not user data. Reject Android providers
+    // with different UTF-8/emoji PBKDF2 semantics; Dart performs the original
+    // full-strength Isolate fallback instead of rejecting valid passwords.
+    private fun assertNativePasswordKdfParity() {
+        if (nativePasswordKdfParityVerified) return
+        val salt = ByteArray(32) { it.toByte() }
+        val chars = "اختبار🟢Waffra".toCharArray()
+        val spec = PBEKeySpec(chars, salt, 1000, 256)
+        try {
+            val actual = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
+                .generateSecret(spec).encoded
+            val expected = "25c045b0f0158c986f57d1e4f260b73009c8ce9cf40a8b2fb4d44cd4e7cb9cd2"
+                .chunked(2).map { it.toInt(16).toByte() }.toByteArray()
+            if (!java.security.MessageDigest.isEqual(actual, expected)) {
+                throw IllegalStateException("Native PBKDF2 encoding mismatch")
+            }
+            nativePasswordKdfParityVerified = true
+        } finally {
+            spec.clearPassword()
+            chars.fill('\\u0000')
+            salt.fill(0)
+        }
+    }
     private val autoSmsRequestCode = 7712
     private var pendingSmsPermissionResult: MethodChannel.Result? = null
     private val autoSmsNotificationRequestCode = 7713
@@ -230,6 +255,7 @@ class MainActivity : FlutterFragmentActivity() {
                     val chars = password.toCharArray()
                     val spec = PBEKeySpec(chars, salt, 600000, 256)
                     try {
+                        assertNativePasswordKdfParity()
                         val secret = SecretKeyFactory
                             .getInstance("PBKDF2WithHmacSHA256")
                             .generateSecret(spec).encoded
