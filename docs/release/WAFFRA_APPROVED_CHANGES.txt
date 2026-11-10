@@ -1,3 +1,7 @@
+[PR #546 M631 LATEST SOURCE FOLLOW-UP — 2026-11-10]
+- Reviewed code after first draft: speculative BIND is consumed exactly once by Home. A secure Retry following failed signout or closed Home cannot re-adopt the old/closed connection; it falls back to a newly verified binding. Regression test asserts this one-shot lease. All data integrity, 15-second account verification, biometric/SMS consent and owner isolation are preserved.
+- This entry follows the latest production source commit for M449 ancestry. Exact-head CI and Android profile first-home timing remain pending; no physical lag-fix claim.
+
 [PR #546 — M631 OWNER-VERIFIED PREWARM + FIRST HOME POST-FRAME DEFERRAL — ISSUE #545 — 2026-11-10]
 ================================================================================================
 - Owner reports both "جارٍ تسجيل الدخول" and biometric-to-Home wait remain after merged PR #544. External analysis proposed opening Home before biometrics and painting ready=true before account balances. These specific shortcuts are NOT applied: they would allow protected work before mandatory biometric and inaccurate/stale first-frame balances.
