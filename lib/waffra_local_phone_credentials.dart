@@ -1,9 +1,12 @@
 import 'dart:convert';
 import 'dart:isolate';
+import 'dart:io';
+import 'dart:typed_data';
 import 'dart:math';
 import 'package:crypto/crypto.dart' as legacy_crypto;
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter/services.dart';
 
 /// M426: Local-only Saudi-phone/password verifier.
 /// No SMS, Firebase phone identity, network service or subscription.
@@ -23,6 +26,7 @@ class WaffraPhoneVerifierInspection {
 
 abstract final class WaffraLocalPhoneCredentials {
  static const _store=FlutterSecureStorage();
+ static const _nativeKdf=MethodChannel('waffra/password_kdf');
  // M546: older Android builds can retain a credential in Jetpack encrypted
  // preferences while the default OS-protected backend has no matching key.
  // Read ONLY when the primary is genuinely absent, never on corruption/errors.
@@ -102,14 +106,29 @@ abstract final class WaffraLocalPhoneCredentials {
  static bool validPassword(String pass)=>utf8.encode(pass).length>=8&&
    utf8.encode(pass).length<=128&&!pass.contains('\u0000');
 
- // M547 PERF-04: PBKDF2 intentionally retains all 600000 rounds and the
- // same verifier bytes. Its CPU work must never block Flutter's UI isolate.
- // No storage plugins, user records or platform channels run in this isolate.
- // Never cache, log or persist plaintext passwords or derived keys.
- static Future<List<int>> _derive(String password,List<int> salt) =>
-  Isolate.run<List<int>>(
+ // M635: prefer Android's native PBKDF2-HMAC-SHA256 provider on a
+ // dedicated Java worker. It preserves the exact persisted 600000-round,
+ // 256-bit verifier format; older APKs and other platforms still verify.
+ // Never cache passwords, log secrets or perform KDF on the UI thread.
+ static Future<List<int>> _derive(String password,List<int> salt)async{
+  if(Platform.isAndroid){
+   try{
+    final derived=await _nativeKdf.invokeMethod<Uint8List>(
+     'derivePbkdf2Sha256',<String,Object>{
+      'password':password,
+      'salt':Uint8List.fromList(salt),
+     });
+    if(derived!=null&&derived.length==32)return derived;
+   }on PlatformException{
+    // The existing secure Dart isolate remains a full-strength fallback.
+   }on MissingPluginException{
+    // Allows upgrades from an older native Android shell.
+   }
+  }
+  return Isolate.run<List<int>>(
    () => _deriveInBackground(password,salt),
    debugName:'waffra-pbkdf2-verifier');
+ }
 
  static Future<List<int>> _deriveInBackground(String password,List<int> salt)async{
   final key=await Pbkdf2(macAlgorithm:Hmac.sha256(),
