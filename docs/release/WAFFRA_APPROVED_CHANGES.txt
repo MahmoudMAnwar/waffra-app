@@ -1,4 +1,4 @@
-[M632 — DIRECT FIRST SMS ACCOUNT / OFF-ISOLATE REVIEW / VISIBLE WAFFRA SPLASH — ISSUE #547 — 2026-11-10]
+[PR #548 M632 — DIRECT FIRST SMS ACCOUNT / OFF-ISOLATE REVIEW / VISIBLE WAFFRA SPLASH — ISSUE #547 — 2026-11-10]
 ====================================================================================================
 - Root-cause: Waffra root dismissed intro after a single Flutter frame, cutting off the 1650ms logo/Waffra/وفرة animation. Root now responds to the one-shot WaffraLaunchIntro animation-complete callback. The bilingual mark appears earlier and remains visible if startup verification exceeds animation. Finance verification proceeds independently.
 - First SMS review: missing account now shows "إضافة حساب" directly. Account creation (existing verified SQLCipher bank/wallet account API) is independent of preview's category completeness; newly created account is returned, verified and selected inside the SAME SMS review. "نعم" still requires verified SAR/date/category/active account and user's final confirmation. Existing accounts keep selection; new account is not automatically treated as an SMS posting.
