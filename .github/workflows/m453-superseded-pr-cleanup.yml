@@ -62,10 +62,17 @@ jobs:
               });
               prs = response.data;
             }
-            let attempted = 0, previewed = 0, scanned = 0, errors = 0;
+            let attempted = 0, previewed = 0, scanned = 0, settled = 0;
+            let unresolved = 0, hardErrors = 0;
+            const seenRuns = new Set();
             const active = new Set([
               'queued', 'in_progress', 'pending', 'waiting', 'requested'
             ]);
+            const retryable = new Set([429, 500, 502, 503, 504]);
+            const maxAttempts = 3;
+            const maxPerSweep = 120;
+            const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+            let throttleDetected = false;
             for (const pr of prs) {
               if (pr.state !== 'open' || pr.base?.ref !== 'main' ||
                   pr.head?.repo?.full_name !== repository) {
@@ -76,8 +83,10 @@ jobs:
               const branch = pr.head.ref;
               const cutoff = Date.parse(pr.updated_at);
               if (!Number.isFinite(cutoff)) continue;
+              // First collect candidates; cancelling during pagination shifts the list
+              // and used to submit duplicate requests against the same run id.
+              const candidateRuns = [];
               for (let page = 1; page <= 10; page++) {
-                // A newer push during cleanup must never be mistaken for an old run.
                 const refreshed = await github.rest.pulls.get({
                   owner, repo, pull_number: pr.number,
                 });
@@ -92,6 +101,8 @@ jobs:
                 });
                 const runs = response.data.workflow_runs || [];
                 for (const run of runs) {
+                  if (seenRuns.has(run.id)) continue;
+                  seenRuns.add(run.id);
                   scanned++;
                   if (!active.has(run.status) ||
                       !run.created_at ||
@@ -104,40 +115,137 @@ jobs:
                         linked => linked.number === pr.number)) {
                     continue;
                   }
-                  if (dryRun) {
-                    previewed++;
-                    core.info('DRY RUN PR #' + pr.number +
-                      ': stale run ' + run.id + ' SHA ' + run.head_sha);
-                    continue;
-                  }
+                  candidateRuns.push(run);
+                }
+                if (runs.length < 100 || candidateRuns.length >= maxPerSweep) break;
+              }
+              for (const run of candidateRuns.slice(0, maxPerSweep)) {
+                // The head is rechecked for EACH action, not just for list pagination.
+                // Never cancel the new head, another owner's PR or main workflow.
+                const refreshed = await github.rest.pulls.get({
+                  owner, repo, pull_number: pr.number,
+                });
+                if (refreshed.data.state !== 'open' ||
+                    refreshed.data.head.sha !== latest) {
+                  core.info('PR head moved; stop cancellations for #' + pr.number);
+                  break;
+                }
+                if (dryRun) {
+                  previewed++;
+                  core.info('DRY RUN PR #' + pr.number +
+                    ': stale run ' + run.id + ' SHA ' + run.head_sha);
+                  continue;
+                }
+                let resolved = false;
+                let transientFailure = null;
+                for (let attempt = 0; attempt < maxAttempts; attempt++) {
                   try {
                     await github.rest.actions.cancelWorkflowRun({
                       owner, repo, run_id: run.id,
                     });
                     attempted++;
+                    resolved = true;
                     core.info('Cancelled old PR #' + pr.number +
                       ' run ' + run.id);
+                    // Github REST: leave >=1s between successful mutations.
+                    await sleep(1000);
+                    break;
                   } catch (err) {
-                    // This run may finish before the cancellation reaches GitHub.
-                    if (err.status !== 409) {
-                      errors++;
-                      core.warning('Cannot cancel run ' + run.id +
+                    if (err.status === 409) {
+                      // Already completed or cancellation raced another cleaner.
+                      settled++;
+                      resolved = true;
+                      break;
+                    }
+                    // GitHub can return 500 after actually accepting a cancel.
+                    // Re-read the run before retrying to avoid duplicate cancel storms.
+                    try {
+                      const observed = await github.rest.actions.getWorkflowRun({
+                        owner, repo, run_id: run.id,
+                      });
+                      if (!active.has(observed.data.status)) {
+                        settled++;
+                        resolved = true;
+                        break;
+                      }
+                      if (observed.data.head_sha !== run.head_sha ||
+                          observed.data.head_branch !== branch ||
+                          observed.data.event !== 'pull_request') {
+                        hardErrors++;
+                        core.error('Unexpected run identity for ' + run.id);
+                        resolved = true;
+                        break;
+                      }
+                    } catch (statusError) {
+                      if (statusError.status === 404) {
+                        settled++;
+                        resolved = true;
+                        break;
+                      }
+                      if (statusError.status === 401 || statusError.status === 403) {
+                        hardErrors++;
+                        core.error('Cannot verify run ' + run.id +
+                          ': ' + String(statusError.message).slice(0, 150));
+                        resolved = true;
+                        break;
+                      }
+                      // Transient inspection errors use the same bounded retry budget.
+                    }
+                    if (resolved) break;
+                    if (!retryable.has(err.status)) {
+                      hardErrors++;
+                      core.error('Permanent cancellation error for ' + run.id +
                         ': ' + String(err.message).slice(0, 150));
+                      resolved = true;
+                      break;
+                    }
+                    transientFailure = err;
+                    if (err.status === 429) {
+                      throttleDetected = true;
+                      break;
+                    }
+                    if (attempt + 1 < maxAttempts) {
+                      // An owner can push while GitHub is experiencing a 5xx.
+                      const headNow = await github.rest.pulls.get({
+                        owner, repo, pull_number: pr.number,
+                      });
+                      if (headNow.data.state !== 'open' ||
+                          headNow.data.head.sha !== latest) {
+                        resolved = true;
+                        core.info('PR head moved; do not retry ' + run.id);
+                        break;
+                      }
+                      await sleep(1000 * (2 ** attempt));
                     }
                   }
-                  if (attempted >= 300) break;
                 }
-                if (runs.length < 100 || attempted >= 300) break;
+                if (!resolved) {
+                  unresolved++;
+                  core.warning('PARTIAL CLEANUP: GitHub API could not cancel stale run ' +
+                    run.id + ' after ' + maxAttempts + ' attempts: ' +
+                    String(transientFailure?.message).slice(0, 150));
+                  // Stop promptly during broad GitHub outages instead of flooding API.
+                  if (unresolved >= 8 || throttleDetected) break;
+                }
+                if (attempted >= maxPerSweep) break;
               }
-              if (attempted >= 300) break;
+              if (attempted >= maxPerSweep || unresolved >= 8 || throttleDetected) break;
             }
             await core.summary
               .addHeading('M453 superseded-run cleanup')
               .addRaw('PRs checked: ' + prs.length +
                 '; runs scanned: ' + scanned +
-                '; cancelled: ' + attempted +
+                '; accepted cancels: ' + attempted +
+                '; already settled: ' + settled +
                 '; dry-run matches: ' + previewed +
-                '; errors: ' + errors +
-                '; mode: ' + (dryRun ? 'DRY RUN' : 'ACTIVE'))
+                '; transient unresolved: ' + unresolved +
+                '; permanent errors: ' + hardErrors +
+                '; mode: ' + (dryRun ? 'DRY RUN' : 'ACTIVE') +
+                (unresolved ? '; result: PARTIAL (GitHub API unavailable)' :
+                  '; result: complete'))
               .write();
-            if (errors) core.setFailed(errors + ' cancel requests failed.');
+            if (unresolved) {
+              core.warning('M453 cleanup incomplete due to GitHub transient API errors; ' +
+                unresolved + ' stale runs still require a later sweep.');
+            }
+            if (hardErrors) core.setFailed(hardErrors + ' permanent cleanup errors.');

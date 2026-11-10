@@ -739,6 +739,24 @@ List<BudgetCategory> defaultCategories()=>[
     icon:group.icon,color:colors[group.colorIndex],income:group.income,parentId:group.id),
  ],
 ];
+
+/// M633: only immutable public default categories are prepared on app launch.
+/// No account balance, credential, SQLCipher key or user finance is cached.
+String _m633EncodePublicCategoryCatalog(bool unused)=>jsonEncode(
+ defaultCategories().map((category)=>category.toJson()).toList());
+
+abstract final class WaffraPublicStartupPrewarm {
+ static Future<String>? _catalogJson;
+ static Future<String> categoriesJson()=>_catalogJson??=
+  compute(_m633EncodePublicCategoryCatalog,true);
+ static void prime(){
+  // Background task may finish before/after login. The actual Home awaits it
+  // and still performs fresh verified SQLCipher source/witness validation.
+  unawaited(categoriesJson().then((_) {},
+   onError:(Object error,StackTrace stackTrace){}));
+ }
+}
+
 /// Category-scoped monthly budgets never include income, goals, or
 /// scheduled-but-unpaid recurring items. No money is created by a budget.
 /// Only explicitly budget-linked expense records contribute to a named budget.
@@ -1302,7 +1320,13 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  String language='ar';
  String? pinHash;Person? profile;
  @override void initState(){super.initState();WidgetsBinding.instance.addObserver(this);
-  WaffraRegionalCopy.countryIso.addListener(_onRegionChanged);load();launchIntro();}
+  WaffraRegionalCopy.countryIso.addListener(_onRegionChanged);load();launchIntro();
+  // Prime only public resources after the splash's first frame. Never block
+  // rendering, login verification, biometric gating or SQLCipher ownership.
+  WidgetsBinding.instance.addPostFrameCallback((_){
+   WaffraPublicStartupPrewarm.prime();
+  });
+ }
  void _onRegionChanged(){if(mounted)setState((){});}
  Future<void> launchIntro()async{
   // Keep the launch animation visible but avoid a fixed three-second
@@ -6137,7 +6161,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  /// without publishing partial/unverified ledger state to Home.
  Future<List<MoneyEntry>> _m593BuildVerifiedEntries(List<dynamic> raw)async{
   final items=<MoneyEntry>[];
-  const batchSize=32;
+  const batchSize=96;
   for(var at=0;at<raw.length;at+=batchSize){
    final end=min(at+batchSize,raw.length);
    for(var i=at;i<end;i++){
@@ -6147,7 +6171,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     items.add(MoneyEntry.fromJson(Map<String,dynamic>.from(row)));
    }
    if(end<raw.length){
-    await Future<void>.delayed(const Duration(milliseconds:1));
+    await Future<void>.delayed(Duration.zero);
    }
   }
   return items;
@@ -7172,8 +7196,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   traceHomeStep('before_catalog_recovery');
   final loadedFinance=await WaffraFreshHomeCatalogRecovery.load(
    authority:_financeAuthority,
-   defaultCategoriesJson:jsonEncode(
-    defaultCategories().map((category)=>category.toJson()).toList()),
+   defaultCategoriesJson:await WaffraPublicStartupPrewarm.categoriesJson(),
   );
   traceHomeStep('after_catalog_recovery');
   final verifiedSourceMs=financeClock?.elapsedMilliseconds;
@@ -7194,11 +7217,34 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   traceHomeStep('after_accounts_refresh_started');
   _lastWidgetRevision=loadedFinance.widgetRevision;
   _lastLedgerSavedRaw=loadedFinance.ledgerRaw;
-  try{final raw=financeView.getString('entries');if(raw!=null)entries.addAll(await _m593BuildVerifiedEntries((await WaffraLargeJsonDecode.parse(raw)) as List));}catch(e){throw StateError('Saved transactions cannot be decoded safely: $e');}
-  try{final raw=financeView.getString('waffra_categories_v24');categories.addAll(raw==null?defaultCategories():(await WaffraLargeJsonDecode.parse(raw) as List).map((x)=>BudgetCategory.fromJson(Map<String,dynamic>.from(x))));}catch(e){throw StateError('Saved categories cannot be decoded safely: $e');}
+  // M633: one batch-decode for immutable, integrity-verified finance JSON.
+  // The verified accounts projection started above runs concurrently.
+  traceHomeStep('before_batch_json_decode');
+  final startupSources=<String,String>{};
+  for(final field in <String>[
+   'entries',
+   'waffra_categories_v24',
+   'waffra_named_budgets_v1',
+   'waffra_goals_v24',
+   'waffra_recurring_v24',
+   'waffra_challenges_v1',
+   'waffra_deleted_categories_v1',
+   'waffra_deleted_goals_v1',
+   'waffra_deleted_recurring_v1',
+   'waffra_recurring_postponed_v1',
+   'waffra_learned_merchants_v1',
+  ]){
+   final raw=financeView.getString(field);
+   if(raw!=null)startupSources[field]=raw;
+  }
+  final decodedStartup=await WaffraLargeJsonDecode.parseStartupFields(
+   startupSources);
+  traceHomeStep('after_batch_json_decode');
+  try{final raw=financeView.getString('entries');if(raw!=null)entries.addAll(await _m593BuildVerifiedEntries((decodedStartup.read('entries')) as List));}catch(e){throw StateError('Saved transactions cannot be decoded safely: $e');}
+  try{final raw=financeView.getString('waffra_categories_v24');categories.addAll(raw==null?defaultCategories():(decodedStartup.read('waffra_categories_v24') as List).map((x)=>BudgetCategory.fromJson(Map<String,dynamic>.from(x))));}catch(e){throw StateError('Saved categories cannot be decoded safely: $e');}
   try{
    final raw=financeView.getString('waffra_named_budgets_v1');
-   if(raw!=null)namedBudgets.addAll((await WaffraLargeJsonDecode.parse(raw) as List).map(
+   if(raw!=null)namedBudgets.addAll((decodedStartup.read('waffra_named_budgets_v1') as List).map(
     (x)=>WaffraNamedBudget.fromJson(Map<String,dynamic>.from(x))));
    for(final c in categories.where((c)=>!c.income&&c.budget>0)){
     if(!namedBudgets.any((b)=>b.id==c.id)){
@@ -7206,16 +7252,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     }
    }
   }catch(e){throw StateError('Saved independent budgets are invalid: $e');}
-  try{final raw=financeView.getString('waffra_goals_v24');if(raw!=null)goals.addAll((await WaffraLargeJsonDecode.parse(raw) as List).map((x)=>SavingGoal.fromJson(Map<String,dynamic>.from(x))));}catch(e){throw StateError('Saved goals cannot be decoded safely: $e');}
-  try{final raw=financeView.getString('waffra_recurring_v24');if(raw!=null)recurring.addAll((await WaffraLargeJsonDecode.parse(raw) as List).map((x)=>RecurringBill.fromJson(Map<String,dynamic>.from(x))));}catch(e){throw StateError('Saved recurring finance cannot be decoded safely: $e');}
-  try{final raw=financeView.getString('waffra_challenges_v1');if(raw!=null)challenges.addAll((await WaffraLargeJsonDecode.parse(raw) as List).map((e)=>SavingChallenge.fromJson(Map<String,dynamic>.from(e))));}catch(e){throw StateError('Saved challenges cannot be decoded safely: $e');}
+  try{final raw=financeView.getString('waffra_goals_v24');if(raw!=null)goals.addAll((decodedStartup.read('waffra_goals_v24') as List).map((x)=>SavingGoal.fromJson(Map<String,dynamic>.from(x))));}catch(e){throw StateError('Saved goals cannot be decoded safely: $e');}
+  try{final raw=financeView.getString('waffra_recurring_v24');if(raw!=null)recurring.addAll((decodedStartup.read('waffra_recurring_v24') as List).map((x)=>RecurringBill.fromJson(Map<String,dynamic>.from(x))));}catch(e){throw StateError('Saved recurring finance cannot be decoded safely: $e');}
+  try{final raw=financeView.getString('waffra_challenges_v1');if(raw!=null)challenges.addAll((decodedStartup.read('waffra_challenges_v1') as List).map((e)=>SavingChallenge.fromJson(Map<String,dynamic>.from(e))));}catch(e){throw StateError('Saved challenges cannot be decoded safely: $e');}
   try{
    final raw=financeView.getString('waffra_deleted_categories_v1');
-   if(raw!=null)deletedCategories.addAll((await WaffraLargeJsonDecode.parse(raw) as List).map((x)=>Map<String,dynamic>.from(x as Map)));
+   if(raw!=null)deletedCategories.addAll((decodedStartup.read('waffra_deleted_categories_v1') as List).map((x)=>Map<String,dynamic>.from(x as Map)));
   }catch(e){throw StateError('Deleted categories cannot be decoded safely: $e');}
-  try{final raw=financeView.getString('waffra_deleted_goals_v1');if(raw!=null)deletedGoals.addAll((await WaffraLargeJsonDecode.parse(raw) as List).map((x)=>Map<String,dynamic>.from(x as Map)));}catch(e){throw StateError('Deleted goals cannot be decoded safely: $e');}
-  try{final raw=financeView.getString('waffra_deleted_recurring_v1');if(raw!=null)deletedRecurring.addAll((await WaffraLargeJsonDecode.parse(raw) as List).map((x)=>Map<String,dynamic>.from(x as Map)));}catch(e){throw StateError('Deleted recurring cannot be decoded safely: $e');}
-  try{final raw=financeView.getString('waffra_recurring_postponed_v1');if(raw!=null)recurringPostponed.addAll((await WaffraLargeJsonDecode.parse(raw) as Map).map((k,v)=>MapEntry(k.toString(),v.toString())));}catch(e){throw StateError('Recurring postponements cannot be decoded safely: $e');}
+  try{final raw=financeView.getString('waffra_deleted_goals_v1');if(raw!=null)deletedGoals.addAll((decodedStartup.read('waffra_deleted_goals_v1') as List).map((x)=>Map<String,dynamic>.from(x as Map)));}catch(e){throw StateError('Deleted goals cannot be decoded safely: $e');}
+  try{final raw=financeView.getString('waffra_deleted_recurring_v1');if(raw!=null)deletedRecurring.addAll((decodedStartup.read('waffra_deleted_recurring_v1') as List).map((x)=>Map<String,dynamic>.from(x as Map)));}catch(e){throw StateError('Deleted recurring cannot be decoded safely: $e');}
+  try{final raw=financeView.getString('waffra_recurring_postponed_v1');if(raw!=null)recurringPostponed.addAll((decodedStartup.read('waffra_recurring_postponed_v1') as Map).map((k,v)=>MapEntry(k.toString(),v.toString())));}catch(e){throw StateError('Recurring postponements cannot be decoded safely: $e');}
   // The user's device clock cannot purge or hide encrypted SQL tombstones.
   // Deletion/expiry requires independently verified encrypted retention.
   final trashBefore=deletedCategories.length;
@@ -7361,7 +7407,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   try{
    final rawRules=financeView.getString('waffra_learned_merchants_v1');
    if(rawRules!=null){
-    final data=await WaffraLargeJsonDecode.parse(rawRules);
+    final data=decodedStartup.read('waffra_learned_merchants_v1');
     if(data is Map){
      learnedMerchantCategories.addAll(data.map((key,value)=>MapEntry(key.toString(),value.toString())));
     }

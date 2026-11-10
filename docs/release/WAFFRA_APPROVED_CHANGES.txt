@@ -3295,3 +3295,30 @@ biometric and logout/relogin profile acceptance remains pending; do not claim
 all Android freezes solved or merge without exact-head CI/device acceptance.
 Validation completed: 1195 storage tests and 30 auth/biometric/logout tests
 passed; changed-source analysis clean; M550 contract preflight passed.
+
+
+[M633 — PREDICTIVE PUBLIC STARTUP PREWARM AND VERIFIED HOME BATCH JSON — ISSUE #550 PR #551 — 2026-11-10]
+=====================================================================================================
+- Owner approved proactively preparing safe components from first app icon while preserving verified password/biometric, SQLCipher ownership and real financial balances.
+- On the first frame of app startup, schedule one isolate to construct only the fixed PUBLIC category catalog. The same future is awaited at first Home after owner verification; no decrypted finance, password or encrypted key is ever pre-cached across signout.
+- In Home startup, begin the existing read-only verified account balance projection concurrently with one immutable 11-field JSON batch decoder. The combined JSON crosses a pure worker only above 32 KiB; each malformed field is still rejected by its original type/error handling and cannot silently become an empty balance.
+- Verified records convert in bounded batches of 96 with zero-delay event-loop yielding; no artificial 1ms per 32 records. This alters only scheduling, not amount rounding, record counts or SQLCipher commit behavior.
+- Existing explicit Logout Yes/No and secure teardown, fresh-instance phone password verification and first/restored biometric gate remain in force; the existing M631 exact-session finance BIND prewarm remains.
+- M633 tests cover small, large, malformed JSON, real account gating, login security and old-session state rotation. Permanent requirements and scope/behavior manifests updated. CI and physical Android first biometric and logout/relogin profile evidence are still required before declaring freeze fixed or merging.
+
+[M633 EXACT-HEAD CI REPAIR — FOUR ACTUAL FLUTTER FAILURES — 2026-11-10]
+================================================================================
+- Prior PR #551 SHA a57ac941: six GitHub Actions workflows failed because four Flutter tests failed (2638 pass/4 fail); a seventh failed job is M340's dependent verdict, not another defect.
+- M468, M580 and M603 expected an invalid Dart source spelling 'const Duration.zero'; their existing verified ledger parser tests now require the real and equivalent 'Duration.zero' implementation. All original integrity and callback checks remain.
+- M451 expected direct inline default category JSON despite the user-approved public immutable category prewarm. Its regression now verifies WaffraFreshHomeCatalogRecovery.load, that Home awaits the prewarmed catalog, and that the original public default category JSON source is unchanged. All atomic encrypted storage integration cases retained.
+- The M385 exact-function-boundary change scope, M550 behavior-to-test contract, requirements register and current release notes are updated. No CI gate disabled or test deleted. Exact-head rerun and actual Android device evidence remain mandatory.
+
+[M634 — GITHUB M453 TRUSTED CLEANUP SERVER ERRORS — ISSUE #552 PR #551 — 2026-11-10]
+=====================================================================================
+- Owner reported failed pull_request_target run 42823508903/job/129854755021; previous checks only enumerated pull_request runs. M453 accepted cancellation of many stale PR #551 SHA runs but four GitHub API calls failed Server Error (500); at least one run id was cancelled twice after pagination mutated.
+- Safe default-branch source change collects candidate run IDs before cancelling; global de-dup, bounded 120 cancels, fresh PR-head checks, 409/terminal state reconciliation, 429/500/502/503/504 max three attempts with short backoff.
+- Persistent transient API failures report explicit PARTIAL CLEANUP warnings and unresolved counts, not an unrelated Flutter build failure; 401/403, wrong run ownership and other hard failures still fail the housekeeping job. No continue-on-error, no bypass of source tests, no cancellation of latest SHA, main, fork/unrelated PR, and no PR checkout.
+- M453 regression tests extended with positive guards; exact-scope/behavior manifests updated. Trusted pull_request_target uses the workflow on main until merge, so old failed job cannot be declared fixed by an unmerged branch or rerun of old SHA.
+
+[M634 API PACING AFTER OWNER'S 500 FAILURE — 2026-11-10]
+- Space accepted cancellation mutations by 1 second per GitHub REST documented best practices; retry true server 5xx with bounded exponential 1-second/2-second delay. Stop on 429 and explicitly warn partial cleanup instead of hammering the backend. No additional PR/permission/finance behavior changes.

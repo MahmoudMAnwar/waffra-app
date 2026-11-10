@@ -234,8 +234,8 @@ void main(){
  test('M593 manual and reviewed-SMS verified ledger mapping yields frames',(){
   final app=File('lib/main.dart').readAsStringSync();
   expect(app,contains('Future<List<MoneyEntry>> _m593BuildVerifiedEntries('));
-  expect(app,contains('const batchSize=32;'));
-  expect(app,contains('await Future<void>.delayed(const Duration(milliseconds:1))'));
+  expect(app,contains('const batchSize=96;'));
+  expect(app,contains('await Future<void>.delayed(Duration.zero)'));
   expect(app,contains('final verified=await _m593BuildVerifiedEntries(decoded);'));
   expect(app,contains('final updated=await _m593BuildVerifiedEntries(decoded);'));
  });
