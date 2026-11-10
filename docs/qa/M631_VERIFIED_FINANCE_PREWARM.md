@@ -1,6 +1,6 @@
 # M631 — Login & biometric verified-finance prewarm
 
-Issue: #545. Base: merged #544 main. Draft PR: pending.
+Issue: #545. Base: merged #544 main. Draft PR: [#546](https://github.com/MahmoudMAnwar/waffra-app/pull/546).
 
 ## Owner-reported symptoms
 - Repeated phone login remains on the progress button until verification and profile persistence finish.
@@ -19,4 +19,4 @@ Issue: #545. Base: merged #544 main. Draft PR: pending.
 - Existing M622 (one authentic financial Home), M624 native SMS, M627 session cleanup and M630 integrity regression must pass.
 - Exact-head CI and Android profile APK: fresh install, biometric, logout/relogin, restored session, two-device old data retention, p95 first-frame and tap latency.
 
-Status: **Recorded before code**. No Android performance acceptance yet.
+Status: **Code ready / CI pending**. No Android performance acceptance yet.
