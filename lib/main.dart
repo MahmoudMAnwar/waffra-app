@@ -3975,6 +3975,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  // M627: sign-out closes the Home-owned binding, not a root-local phantom.
  bool _m627ClosingSession=false;
  int _m627AccountEpoch=0;
+ // A signout must not close SQLCipher while a Home load still owns a read.
+ Completer<void>? _m627HomeLoadCompletion;
  Future<void> _m627CloseForLogout()async{
   if(_m627ClosingSession)return;
   _m627ClosingSession=true;
@@ -3986,7 +3988,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     'جارٍ إنهاء الجلسة بأمان. بياناتك المالية محمية.';
   });
   try{
-   await _financialWriteQueue.drain();
+   // Never close an active database underneath a Home load or pending
+   // finance preparation/write. Timeout fails signout closed, not finance.
+   final pendingLoad=_m627HomeLoadCompletion;
+   if(pendingLoad!=null){
+    await pendingLoad.future.timeout(const Duration(seconds:20));
+   }
+   await _m468PersistSequence.timeout(const Duration(seconds:20));
+   await _financialWriteQueue.drain().timeout(const Duration(seconds:20));
    final pending=_financeBindingFuture;
    if(pending!=null)await pending;
    final binding=_financeBinding;
@@ -6730,6 +6739,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
  Future<void> _loadFinanceSafely()async{
   if(!mounted||_m627ClosingSession)return;
+  // One Home finance load at a time. Do not concurrently clear the same
+  // verified ledger or race a sign-out DB close.
+  final activeLoad=_m627HomeLoadCompletion;
+  if(activeLoad!=null){
+   await activeLoad.future;
+   return;
+  }
+  final completion=Completer<void>();
+  _m627HomeLoadCompletion=completion;
   // Retry invalidates any late completion from a previous account read.
   _m627AccountEpoch++;
   // M614: measure the real verified finance wait separately from login.
@@ -6740,6 +6758,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   recurringPostponed.clear();smsHashes.clear();learnedMerchantCategories.clear();
   try{
    await load();
+   if(_m627ClosingSession)return;
    if(mounted)widget.onVerifiedReady?.call();
    if(kProfileMode&&startupClock!=null){
     debugPrint('WAFFRA_FINANCE_PERF source_to_ready_ms='
@@ -6765,6 +6784,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    });
   }catch(e){
    debugPrint('Financial startup integrity/recovery gate blocked access: $e');
+   if(_m627ClosingSession)return;
    if(mounted)setState((){
     ready=false;
     _financeLoadFailure=waffraIsEnglish?
@@ -6774,6 +6794,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    // A genuine failed-source recovery page is actionable; never leave
    // the previous auth screen stuck forever if vault verification fails.
    if(mounted)widget.onVerifiedReady?.call();
+  }finally{
+   if(identical(_m627HomeLoadCompletion,completion)){
+    _m627HomeLoadCompletion=null;
+   }
+   if(!completion.isCompleted)completion.complete();
   }
  }
  Widget _financialRecoveryScreen()=>Center(child:Padding(
