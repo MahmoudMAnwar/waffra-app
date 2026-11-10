@@ -1,15 +1,12 @@
 {
   "contract_version": 1,
-  "change_id": "M625-M626-SINGLE-READ-AND-PARALLEL-ANDROID-CI-ISSUES533-535-PR534-20261109",
-  "human_scope_review": "Owner explicitly requests no freeze on first biometric Home and on logout→relogin, asks for exact source flow after code edit. Limit changes to eliminating one redundant full SQLCipher bind-time read before the mandatory Home dashboard read, profile-mode handoff time measurement, source-preserving tests, requirements/scope/release/behavior documentation. Keep authenticated owner, SQLCipher activation/source witnesses, first complete actual finance Home, 600000-round password check, first-run mandatory biometric, no relogin re-prompt, existing 900ms post-frame native SMS ordering. This manifest records requested scope; formal human approval/physical-device performance acceptance remain pending. Owner also explicitly rejects an hour for every PR/build. CI-only M626 optimization authorized: use four independent emulator matrix shards retaining all mandatory security tests and aggregate gate; actual CI time/approval remain unverified.",
+  "change_id": "M627-HOME-LOAD-PROFILE-TIMINGS-ACCOUNT-FAILCLOSED-SESSION-TEARDOWN-ISSUE536-PR537-20261110",
+  "human_scope_review": "Owner supplied exact M627 diagnosis steps: profile-only stopwatch timings, 15s fail-closed account wait with recovery Retry, explicit awaited Home finance teardown on logout and per-session Home identity. This manifest is a machine-checkable code-boundary record; physical Android results remain mandatory. No modification to SQLCipher activation/migration, password or SMS permissions.",
   "user_requested_changes": [
-    "M625 / Issue #533: remove the duplicate encrypted finance full read at installed Android Home binding; dashboardRead still verifies actual encrypted snapshot, integrity, category and account balance before Home readiness.",
-    "Measure first-Home-frame profile-mode timings separately after biometric and after verified password re-login, without logging any user identity, password or financial values.",
-    "Keep password and biometric security gates, sign-out native capture suspension, no extra relogin biometric, original complete Home first visible, and post-first-frame SMS resume/scan untouched.",
-    "Add new negative/source regression tests for installed Home-only deferred read, protected Widget/root paths and both authenticated navigation routes; update requirements, release notes and every-workflow behavior review.",
-    "M626 Issue #535: shorten excessive sequential Android encrypted-database CI wall time by parallelizing exactly 11 existing finance integration test files in four emulator shards, preserving every original timeout, fallback retry and a mandatory all-shards gate.",
-    "M626 exact-head regression: reconcile M554 official pinned Gradle/SQLite3MC prefetch QA to assert each four-way emulator shard prefetches verified assets and the preserved all-shards aggregate fails closed; keep every original other critical Android job assertion unchanged.",
-    "M626 Issue #535 exact-head shard timeout fix: precompile the actual first integration-test APK for each shard outside the unchanged 240/300/720s runtime test budget, fail closed if build/APK invalid, and prove this with shard mapping regression; required Android aggregate stays strict."
+    "M627 Issue #536: Stopwatch logs before/after each startup finance binding, preferences, catalog, account balances await and _m623HomeLoaded for physical profile-mode diagnosis.",
+    "M627 Issue #536: set a 15s verified account-balance timeout and retain existing fail-closed finance recovery screen with safe Retry; prevent late obsolete account read from repopulating the new session.",
+    "M627 Issue #536: await Home-local pending finance writes and close the actual binding at signout, reset Home-local finance state, rotate Home session key, retain biometric and owner-bound SMS rules.",
+    "M627 Issue #536: reconcile two former stable-key source regression assertions with a stronger per-session GlobalKey/session boundary; exact-head and physical Android acceptance still required."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -17,13 +14,9 @@
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
-    "lib/storage/waffra_production_finance_authority_binding.dart",
-    "test/m625_single_verified_home_read_login_handoff_test.dart",
-    ".github/workflows/storage-android-integration.yml",
-    ".github/scripts/run-android-finance-integration.sh",
-    "scripts/qa/test_m626_parallel_android_matrix.py",
-    "test/qa/m554_gradle_release_cache_test.py",
-    ".github/scripts/prebuild-android-finance-integration.sh"
+    "test/m627_home_handoff_timeout_and_session_reset_test.dart",
+    "test/m623_verified_home_handoff_no_black_frame_test.dart",
+    "test/m463_auth_first_one_page_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -32,36 +25,32 @@
         "end": "class PinLockScreen extends StatefulWidget {"
       },
       {
-        "start": " Future<void> _bindFinanceSource()async{",
+        "start": "class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {",
         "end": " // Account filters are presentation-only;"
-      }
-    ],
-    "lib/storage/waffra_production_finance_authority_binding.dart": [
-      {
-        "start": "  static Future<WaffraProductionFinanceAuthorityBinding> bind({",
-        "end": "    final freshInstall = installedApp && Platform.isAndroid"
       },
       {
-        "start": "      final authority = WaffraVerifiedFinanceAuthority(",
-        "end": "    } catch (_) {\n      await store.close();"
+        "start": " Future<void> _m467RefreshHomeAccounts()async{",
+        "end": " String get _m467AccountLabel{"
+      },
+      {
+        "start": " Future<void> _loadFinanceSafely()async{",
+        "end": " Widget _financialRecoveryScreen()"
+      },
+      {
+        "start": "  Future<void> load()async {\n  final financeClock=kProfileMode?(Stopwatch()..start()):null;",
+        "end": " Future<void> _refreshWidget()async{"
       }
     ],
-    ".github/workflows/storage-android-integration.yml": [
+    "test/m623_verified_home_handoff_no_black_frame_test.dart": [
       {
-        "start": "jobs:",
-        "end": null
+        "start": " test('M623 keeps prior authenticated UI until one complete verified Home',(){",
+        "end": " test('M623 authenticated Home transition cannot expose unverified money',(){"
       }
     ],
-    ".github/scripts/run-android-finance-integration.sh": [
+    "test/m463_auth_first_one_page_test.dart": [
       {
-        "start": "# Prioritize problematic bridge & new encrypted receipts after Gradle warmup.",
-        "end": null
-      }
-    ],
-    "test/qa/m554_gradle_release_cache_test.py": [
-      {
-        "start": "    def test_critical_android_jobs_prefetch_verified_gradle(self):",
-        "end": "    def test_all_flutter_apk_and_direct_gradle_jobs_have_pinned_distribution(self):"
+        "start": " test('M623 authentication and permissions precede verified Home reveal',(){",
+        "end": " test('M463 first clean install has only one account creation form',(){"
       }
     ]
   }
