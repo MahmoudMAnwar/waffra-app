@@ -61,8 +61,9 @@ void main() {
     expect(source,contains('onVerifiedPasswordSave:_saveVerifiedPhoneLogin'));
     expect(home,contains('await load();'));
     expect(home,isNot(contains('unawaited(_m467RefreshHomeAccounts());')));
-    expect(source,contains('await (accountsLoading??_m467RefreshHomeAccounts());'));
-    expect(source.indexOf('await (accountsLoading??_m467RefreshHomeAccounts());'),
+    expect(source,contains('await (accountsLoading??_m467RefreshHomeAccounts())'));
+  expect(source,contains('.timeout(const Duration(seconds:15));'));
+    expect(source.indexOf('await (accountsLoading??_m467RefreshHomeAccounts())'),
       lessThan(source.indexOf('setState(()=>ready=true);')));
     expect(home,contains('WidgetsBinding.instance.addPostFrameCallback'));
     expect(home,contains('await _refreshAutoSmsInbox(importMonth:'));
