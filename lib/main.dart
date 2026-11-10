@@ -1177,6 +1177,9 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  // complete owner-verified Home can paint. Never replace its wait with black.
  bool _m623HomeReady=false;
  String? _m623RetainedStage;
+ // M627: one Home State per authenticated session, stable across locale.
+ int _m627HomeSession=0;
+ GlobalKey<_HomeScreenState> _m627HomeKey=GlobalKey<_HomeScreenState>(debugLabel:'home-session-0');
  // Profile-mode handoff timings; never log identity or financial values.
  Stopwatch? _m625HandoffClock;
  String? _m625HandoffOrigin;
@@ -1217,6 +1220,10 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   }
  }
  void _m623HomeLoaded(Person expectedOwner){
+  if(kProfileMode){
+   debugPrint('WAFFRA_HOME_LOAD_STEP first_m623HomeLoaded elapsed_ms='
+    '${_m625HandoffClock?.elapsedMilliseconds??-1}');
+  }
   final current=profile;
   if(!mounted||current==null||showLogin||locked||
      current.provider!=expectedOwner.provider||
@@ -1565,13 +1572,20 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   // Drop any in-memory AI prompt context and cancel model download before
   // a new account can open its verified finance scope.
   await WaffraOnDeviceQwen.shared.dispose().timeout(const Duration(seconds:12));
+  // Finance binding lives in Home State. Await queue drain and close before
+  // authorizing a new account session; never delete the encrypted vault.
+  final closingHome=_m627HomeKey.currentState;
+  if(closingHome!=null)await closingHome._m627CloseForLogout();
   await _accountWriteAuthority.signOut();
   // Clear the single progress notice before switching to the signed-out UI.
   if(mounted)waffraDismissFooterNotice();
   if(mounted)_logoutFeedbackKey.currentState?.clearSnackBars();
   if(mounted)setState((){
-   profile=null;showLogin=true;locked=false;googleFirstRunSetup=false;
+   profile=null;showLogin=true;locked=true;googleFirstRunSetup=false;
    _m623HomeReady=false;_m623RetainedStage=null;
+   _m627HomeSession++;
+   _m627HomeKey=GlobalKey<_HomeScreenState>(
+    debugLabel:'home-session-$_m627HomeSession');
    _m625HandoffClock=null;_m625HandoffOrigin=null;
   });
   }catch(error){
@@ -1698,11 +1712,11 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
       english:language=='en',onComplete:completeGoogleCountrySetup,
       onCountryConfirmed:setUiCountry))),
    if(canMountHome)KeyedSubtree(
-    key:const ValueKey('m623-real-home'),
+    key:ValueKey('home-$_m627HomeSession'),
     child:Offstage(offstage:!_m623HomeReady,
      child:HomeScreen(
-      // A language toggle must not tear down and re-load the finance vault.
-      key:const ValueKey('waffra-verified-session-home'),
+      // Stable across language changes; rotated on explicit sign-out only.
+      key:_m627HomeKey,
       profile:account,
       onVerifiedReady:()=>_m623HomeLoaded(account),
       onVerifiedHomeSmsResume:()=>_m624ResumeSmsAfterRealHome(account),
@@ -3955,6 +3969,38 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   _financeAuthority=binding.authority;
  }
 
+ // M627: sign-out closes the Home-owned binding, not a root-local phantom.
+ bool _m627ClosingSession=false;
+ int _m627AccountEpoch=0;
+ Future<void> _m627CloseForLogout()async{
+  if(_m627ClosingSession)return;
+  _m627ClosingSession=true;
+  _m627AccountEpoch++;
+  if(mounted)setState((){
+   ready=false;
+   _financeLoadFailure=waffraIsEnglish?
+    'Signing out securely. Your financial data is protected.':
+    'جارٍ إنهاء الجلسة بأمان. بياناتك المالية محمية.';
+  });
+  try{
+   await _financialWriteQueue.drain();
+   final pending=_financeBindingFuture;
+   if(pending!=null)await pending;
+   final binding=_financeBinding;
+   if(binding!=null)await binding.close();
+   _financeBinding=null;
+   _financeBindingFuture=null;
+   // Preserve a non-null guarded authority until this Home unmounts.
+   _financeAuthority=WaffraVerifiedFinanceAuthority(legacy:_homeFinancePersistence);
+   _m468AccountReadInFlight=null;
+   _m468AccountReadAgain=false;
+   _m468VerifiedAccountsLoaded=false;
+  }catch(_){
+   _m627ClosingSession=false;
+   rethrow;
+  }
+ }
+
  // Account filters are presentation-only; never inherit them for new money.
  List<WaffraAccountBalance> _m467Accounts=const <WaffraAccountBalance>[];
  WaffraAccountContextReadResult? _m467AccountContext;
@@ -3984,14 +4030,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   _m468AccountReadInFlight=running;
   try{await running;}
   finally{
-   _m468AccountReadInFlight=null;
-   final again=_m468AccountReadAgain;
-   _m468AccountReadAgain=false;
-   if(again&&mounted)unawaited(_m467RefreshHomeAccounts());
+   // Do not detach a newer retry after an older timeout finishes late.
+   if(identical(_m468AccountReadInFlight,running)){
+    _m468AccountReadInFlight=null;
+    final again=_m468AccountReadAgain;
+    _m468AccountReadAgain=false;
+    if(again&&mounted&&!_m627ClosingSession)unawaited(_m467RefreshHomeAccounts());
+   }
   }
  }
 
  Future<void> _m468ReadVerifiedAccountsOnce()async{
+  final readEpoch=_m627AccountEpoch;
+  if(_m627ClosingSession)return;
   try{
    await _ensureFinanceBound();
    final bridge=_financeBinding?.accountsBridge;
@@ -4013,7 +4064,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final contextView=chosen=='all'?null:await api.readAccountContext(
     monthIso:month,
     selectedAccountId:chosen);
-   if(!mounted)return;
+   if(!mounted||_m627ClosingSession||readEpoch!=_m627AccountEpoch)return;
    // A user may switch accounts while this async SQL projection is running.
    // Never repaint that newly chosen view with a stale older selection.
    if(_m467AccountChoiceRestored&&_m467SelectedAccount!=chosen){
@@ -4029,7 +4080,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    });
   }catch(error){
    debugPrint('Home accounts view unavailable: '+error.runtimeType.toString());
-   if(!mounted)return;
+   if(!mounted||_m627ClosingSession||readEpoch!=_m627AccountEpoch)return;
    // Never show a stale bank balance when verified SQL projection is absent.
    setState((){
     _m467Accounts=const <WaffraAccountBalance>[];
@@ -6672,7 +6723,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   });
  }
  Future<void> _loadFinanceSafely()async{
-  if(!mounted)return;
+  if(!mounted||_m627ClosingSession)return;
+  // Retry invalidates any late completion from a previous account read.
+  _m627AccountEpoch++;
   // M614: measure the real verified finance wait separately from login.
   final startupClock=kProfileMode?(Stopwatch()..start()):null;
   setState((){ready=false;_financeLoadFailure=null;});
@@ -6955,17 +7008,28 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
  Future<void> load()async {
   final financeClock=kProfileMode?(Stopwatch()..start()):null;
+  void traceHomeStep(String stage){
+   if(financeClock==null)return;
+   debugPrint('WAFFRA_HOME_LOAD_STEP $stage elapsed_ms='
+    '${financeClock.elapsedMilliseconds}');
+  }
+  traceHomeStep('before_ensureFinanceBound');
   await _ensureFinanceBound();
+  traceHomeStep('after_ensureFinanceBound');
   final bindMs=financeClock?.elapsedMilliseconds;
+  traceHomeStep('before_sharedPreferences');
   final p=await SharedPreferences.getInstance();
+  traceHomeStep('after_sharedPreferences');
   // An authenticated fresh SQLCipher vault is born with an empty snapshot.
   // Add only absent first-run ledger and category fields via the existing
   // atomic SQLCipher writer before displaying Home; never use legacy fallback.
+  traceHomeStep('before_catalog_recovery');
   final loadedFinance=await WaffraFreshHomeCatalogRecovery.load(
    authority:_financeAuthority,
    defaultCategoriesJson:jsonEncode(
     defaultCategories().map((category)=>category.toJson()).toList()),
   );
+  traceHomeStep('after_catalog_recovery');
   final verifiedSourceMs=financeClock?.elapsedMilliseconds;
   _lastFinanceAuthorityRead=loadedFinance;
   final financeView=loadedFinance.finance;
@@ -6978,8 +7042,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
   // M622: verified accounts can read while immutable source JSON decodes.
   // Legacy category migration must finish before its account projection.
+  traceHomeStep('before_accounts_refresh');
   final Future<void>? accountsLoading=verifiedEncryptedStartup?
    _m467RefreshHomeAccounts():null;
+  traceHomeStep('after_accounts_refresh_started');
   _lastWidgetRevision=loadedFinance.widgetRevision;
   _lastLedgerSavedRaw=loadedFinance.ledgerRaw;
   try{final raw=financeView.getString('entries');if(raw!=null)entries.addAll(await _m593BuildVerifiedEntries((await WaffraLargeJsonDecode.parse(raw)) as List));}catch(e){throw StateError('Saved transactions cannot be decoded safely: $e');}
@@ -7176,8 +7242,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
    // Previously Home painted transaction sums and only afterwards loaded
    // verified bank account balances. Never flash a provisional amount.
-   await (accountsLoading??_m467RefreshHomeAccounts());
-   if(!mounted)return;
+   traceHomeStep('before_accounts_await');
+   try{
+    await (accountsLoading??_m467RefreshHomeAccounts())
+     .timeout(const Duration(seconds:15));
+   }on TimeoutException{
+    traceHomeStep('accounts_timeout');
+    // timeout() does not cancel the underlying SQL task: reject late state.
+    _m627AccountEpoch++;
+    _m468AccountReadInFlight=null;
+    _m468AccountReadAgain=false;
+    rethrow;
+   }
+   traceHomeStep('after_accounts_await');
+   if(!mounted||_m627ClosingSession)return;
    if(!_m468VerifiedAccountsLoaded){
     throw StateError('Verified financial account balances are unavailable.');
    }
