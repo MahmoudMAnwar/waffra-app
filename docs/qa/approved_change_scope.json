@@ -37,7 +37,7 @@
         "end": " Widget _financialRecoveryScreen()"
       },
       {
-        "start": "  Future<void> load()async {\n  final financeClock=kProfileMode?(Stopwatch()..start()):null;",
+        "start": "   });\n  }\n }\n Future<void> load()async {",
         "end": " Future<void> _refreshWidget()async{"
       }
     ],
