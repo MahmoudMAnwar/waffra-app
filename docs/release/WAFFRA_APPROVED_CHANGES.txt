@@ -3244,3 +3244,13 @@ The owner reported that the unwanted Home startup spinner had merely become a bl
   invalidation. M627 now checks all actual stage names, not literal $step.
 - Neither test was skipped or disabled. App behavior and SQLCipher safety
   remain unchanged by these test-only repairs. Await exact-head rerun.
+
+
+[M629 — FAST PULL-REFRESH PRINCIPLES FOR FIRST HOME/LOGIN/LOGOUT — ISSUE #540 PR #541 — 2026-11-10]
+===================================================================================================
+- Owner reports Pull-to-Refresh is now excellent; requested exactly the same non-redundant work patterns on first Home, sign-in, and logout/relogin. Prior Android freeze is NOT verified fixed.
+- What pull already does: one in-flight refresh, unchanged verified generation+digest avoids redundant JSON rebuild, off-isolate parse for big financial data. A first Home has no previously verified digest and must still verify the real SQLCipher vault and accounts.
+- Home cold prep: independently begin SharedPreferences retrieval while authenticated finance binding starts; await both and the original mandatory 15s verified balances check before ready=true.
+- Phone login: independently start preferences and the one OS-keystore verifier snapshot read, await each before the existing phone owner probe + full-strength password verification and profile write; do not bypass auth.
+- Safe signout: following required SMS native suspension, AI prompt/model disposal and Home encrypted finance drain/close overlap under awaited Future.wait. Identity only clears after both completed; any error cancels signout. Ordinary verified relogin biometric behavior unchanged.
+- Tests: new M629 source contract, plus strengthened existing M604, M441, M320 checks that explicitly preserve OS authentication and awaited teardown. All original financial and SMS checks retained. PR intentionally Draft; no exact-head CI/physical APK performance certification yet.
