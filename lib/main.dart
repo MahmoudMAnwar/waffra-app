@@ -997,7 +997,7 @@ String bankSmsHash(String raw)=>sha256.convert(utf8.encode(digits(raw).replaceAl
  // channel, SQLCipher handle or owner identity is ever sent to this isolate.
  // Transfer only the current verified native queue and local rule data; return
  // review candidates and requested ACKs for owner-checked main-isolate I/O.
-Map<String,Object?> _m632ClassifySmsQueue(Map<String,Object?> input){
+Map<String,Object?> waffraM632ClassifySmsQueue(Map<String,Object?> input){
  final results=(input['results'] as List).cast<Map<String,Object?>>();
  final rules=(input['rules'] as List).map((entry)=>
   WaffraSmsLocalRule.fromJson(Map<String,dynamic>.from(entry as Map)))
@@ -5006,7 +5006,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     if(c.isSubcategory&&waffraCategoryAvailableForNewEntry(categories,c))
      '${c.income?'1':'0'}:${c.name}',
   ];
-  final classified=await compute(_m632ClassifySmsQueue,<String,Object?>{
+  final classified=await compute(waffraM632ClassifySmsQueue,<String,Object?>{
    'results':results,
    'rules':customRules.map((r)=>r.toJson()).toList(growable:false),
    'categories':categoryNames,
