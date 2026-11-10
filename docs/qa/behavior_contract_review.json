@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "pr": "PR #543 — M630 reconciled against merged M631/M632/M633 main; exact-HEAD CI/phone QA pending",
-  "issue": "Issue #542 / PR #543; preserve #547 #550 #552 verified behaviors",
+  "pr": "M635 PR pending — restore early-build responsiveness with native PBKDF2 and foreground SMS engine isolation; Android device QA pending",
+  "issue": "Issue #553: owner 3s sign-in/biometric, 5–6s post-Home jank; related #538 #542",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main",
   "reviewed_at": "2026-11-10",
@@ -987,6 +987,36 @@
         "Logout sets owner closing state and advances epoch, awaits all pending postframe finance tasks and writes before source close; timeout prevents dangerous early close.",
         "Fresh login and logout cannot leak an old session callback; no automatic bank SMS financial posting or review reclassification.",
         "Source-only tests are not Android physical frame evidence; require 1000–2000 message profile, first biometric, logout/relogin and second-device data upgrade."
+      ]
+    },
+    {
+      "id": "M635-EARLY-BUILD-RESPONSIVENESS-NATIVE-KDF-FOREGROUND-SMS",
+      "issue": "Issue #553",
+      "previous_behavior": "October 21 login was quick, using a one-shot salted SHA256 check and SharedPreferences profile. Current stronger 600000-iteration PBKDF2 verified credentials and SQLCipher Home are slower on Android. Foreground consent/resume scheduled WorkManager's second FlutterEngine; 1000-2000 pending SMS objects were serialized by Android UI in result.success after executor decryption.",
+      "approved_behavior": "Retain full PBKDF2-HMAC-SHA256 600000 iterations, OS-protected credential and current passwords; move KDF to Android native crypto provider on its own executor with public Arabic/emoji parity vector and safe full-strength Dart isolate fallback. A foreground visible Activity owns SMS review, so WorkManager's separate FlutterEngine is skipped until true background, preserving encrypted queue and receiver scheduling. Encode entire pending reply on SMS background executor; notify Flutter UI via existing main callback. Do not bypass SQLCipher or biometric, post automatic SMS money, lose pending messages, or invent balances.",
+      "source_paths": [
+        "lib/waffra_local_phone_credentials.dart",
+        "native/WaffraMainActivity.kt",
+        "native/WaffraAutoSmsWorker.kt"
+      ],
+      "test_paths": [
+        "test/m635_historical_login_sms_jank_regression_test.dart",
+        "test/m547_login_isolate_performance_test.dart",
+        "test/qa/m442_sms_consent_session_recovery_test.py",
+        "test/m603_app_wide_lag_source_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/android.yml",
+        ".github/workflows/m174-main-sha-postmerge.yml"
+      ],
+      "safety_invariants": [
+        "Keep 600000 iteration/256-bit PBKDF2-HMAC-SHA256 and persisted password salt/hash/phone verifier exactly unchanged; native unicode selftest mismatch must use original full-strength Dart isolate fallback.",
+        "All native crypto/provider processing is off Android UI thread; temporary password/salt char buffers scrubbed, no logs or new verifier caches.",
+        "Foreground worker skip occurs only while Activity is visible and native encrypted pending remains durable; receiver schedules background work and native review notifications remain delivered.",
+        "MethodChannel pending result returned off main after same encrypted queue read; errors still explicit, neither ACK nor posting is changed.",
+        "Source tests alone cannot prove 3-second freeze or 5–6-second jank resolved; require physical Android profile FPS/first login + biometric + relogin + 2000 SMS and data-upgrade UAT before Done."
       ]
     }
   ]
