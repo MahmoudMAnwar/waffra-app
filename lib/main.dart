@@ -4045,7 +4045,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  Future<void> _bindFinanceSource()async{
   // Reuse the exact verified owner/session connection; if speculative open
   // failed, use the existing fail-closed original binder instead.
-  final warmed=await widget.prewarmedFinanceBinding;
+  final pendingWarm=_m631PrewarmConsumed?null:widget.prewarmedFinanceBinding;
+  _m631PrewarmConsumed=true;
+  final warmed=await pendingWarm;
   if(kProfileMode)debugPrint('WAFFRA_AUTH_PERF home_binding_reused=${warmed!=null}');
   final binding=warmed??await WaffraProductionFinanceAuthorityBinding.bind(
     installedApp:true,
@@ -4059,6 +4061,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   _financeBinding=binding;
   _financeAuthority=binding.authority;
  }
+ // Never reopen a previously adopted (possibly now CLOSED) binding on Retry,
+ // particularly after an aborted signout or an interrupted Home load.
+ bool _m631PrewarmConsumed=false;
 
  // M627: sign-out closes the Home-owned binding, not a root-local phantom.
  bool _m627ClosingSession=false;
