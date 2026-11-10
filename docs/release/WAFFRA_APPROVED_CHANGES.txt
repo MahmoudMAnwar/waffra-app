@@ -3254,3 +3254,10 @@ The owner reported that the unwanted Home startup spinner had merely become a bl
 - Phone login: independently start preferences and the one OS-keystore verifier snapshot read, await each before the existing phone owner probe + full-strength password verification and profile write; do not bypass auth.
 - Safe signout: following required SMS native suspension, AI prompt/model disposal and Home encrypted finance drain/close overlap under awaited Future.wait. Identity only clears after both completed; any error cancels signout. Ordinary verified relogin biometric behavior unchanged.
 - Tests: new M629 source contract, plus strengthened existing M604, M441, M320 checks that explicitly preserve OS authentication and awaited teardown. All original financial and SMS checks retained. PR intentionally Draft; no exact-head CI/physical APK performance certification yet.
+
+
+[M629 EXACT-HEAD CI REMEDIATION — ISSUE #540 PR #541 — 2026-11-10]
+====================================================================================
+- Reviewed the latest M629 runtime code through commit f5fbe8e65c4bafa84876e5e4cd27a63aefd8e2cb and its actual signed-out/failed-cleanup behavior before refreshing this post-app-code release notes entry. Prior release notes predated that runtime change; M449 correctly rejected it.
+- M385 CI also blocked three workflows due to an ambiguous protected code-scope anchor `Future<void> load()async {` which occurs in both the root app and Home state. Replaced the manifest anchor with the uniquely verified Home `load()` signature, in both main baseline and PR HEAD; no protected source or CI guard was bypassed.
+- Original fast pull verified digest/delta, owner-bound secure sign-in, Home first real encrypted balance, and native SMS suspension remain unchanged in intent. New M629 async overlap is committed, but neither physical Android speed nor all mandatory latest-HEAD tests are proven yet. No APK release/merge on incomplete CI.
