@@ -6,7 +6,8 @@
     "Start verified finance binding without awaiting it during confirmed login and restored-session biometric handoff; reuse that single exact owner/session binding on Home.",
     "Keep Home fully secure and authenticated by waiting for real SQLCipher ledger plus account balances before any visible Home; no placeholder or pre-biometric financial reads.",
     "Move nonessential widget, tour and reminder work after the first verified Home paint while retaining owner-scoped native SMS resume and logout cleanup.",
-    "Add positive regression coverage, profile-only stage timing and documentation; validate exact-head CI and physical Android before claiming no lag."
+    "Add positive regression coverage, profile-only stage timing and documentation; validate exact-head CI and physical Android before claiming no lag.",
+    "Reconcile M629 source-contract regression with the newly awaited signout Home-close and speculative-prewarm-close branches, preserving both teardown and fail-closed sequencing."
   ],
   "allowed_changed_files": [
     "lib/main.dart",
@@ -15,7 +16,8 @@
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/qa/M631_VERIFIED_FINANCE_PREWARM.md",
-    "docs/release/WAFFRA_APPROVED_CHANGES.txt"
+    "docs/release/WAFFRA_APPROVED_CHANGES.txt",
+    "test/m629_pull_refresh_parity_auth_home_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -58,6 +60,12 @@
       {
         "start": " Future<void> load()async {\n  final financeClock=",
         "end": " Future<void> _refreshWidget()async{"
+      }
+    ],
+    "test/m629_pull_refresh_parity_auth_home_test.dart": [
+      {
+        "start": " test('M629 logout awaits BOTH independent teardown tasks before signout',(){",
+        "end": " test('M629 does not move SMS scanning before verified Home',(){"
       }
     ]
   }
