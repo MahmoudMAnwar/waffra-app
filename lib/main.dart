@@ -1569,13 +1569,19 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     throw StateError('Could not safely suspend bank SMS before sign-out');
    }
   }
-  // Drop any in-memory AI prompt context and cancel model download before
-  // a new account can open its verified finance scope.
-  await WaffraOnDeviceQwen.shared.dispose().timeout(const Duration(seconds:12));
-  // Finance binding lives in Home State. Await queue drain and close before
-  // authorizing a new account session; never delete the encrypted vault.
+  // M629: verified pull refresh proves independent jobs can be coalesced
+  // without blocking each other. AI teardown and Home finance shutdown do
+  // not depend on each other, so overlap them, but WAIT FOR BOTH before
+  // deleting the account session. Future.wait rejects failures; signout
+  // remains fail-closed, with native SMS already suspended above.
   final closingHome=_m627HomeKey.currentState;
-  if(closingHome!=null)await closingHome._m627CloseForLogout();
+  Future<void> closeHomeFinance()async{
+   if(closingHome!=null)await closingHome._m627CloseForLogout();
+  }
+  await Future.wait<void>([
+   WaffraOnDeviceQwen.shared.dispose().timeout(const Duration(seconds:12)),
+   closeHomeFinance(),
+  ]);
   await _accountWriteAuthority.signOut();
   // Clear the single progress notice before switching to the signed-out UI.
   if(mounted)waffraDismissFooterNotice();
@@ -2528,12 +2534,17 @@ class _LoginScreenState extends State<LoginScreen> {
      'بيانات الحساب غير متاحة على هذا الجهاز.');
     return;
    }
-   final prefs=await SharedPreferences.getInstance();
+   // M629: like fast verified pull refresh, independently requested work
+   // begins together. BOTH results are awaited before authenticating;
+   // neither preferences nor secure identity is cached across sessions.
+   final prefsLoading=SharedPreferences.getInstance();
+   final secureInspectionLoading=WaffraLocalPhoneCredentials.readForSignIn();
+   final prefs=await prefsLoading;
    final storedPhone=WaffraSaudiMobile.inputFromStored(account.phone);
    // One OS-keystore verifier read, not two identical secure-store reads.
    // Probe reports missing/malformed/foreign distinctly, preserving the
    // legacy fallback and fail-closed sign-in recovery semantics.
-   var inspection=await WaffraLocalPhoneCredentials.readForSignIn();
+   var inspection=await secureInspectionLoading;
    var verifierStatus=await WaffraLocalPhoneCredentials.probeForPhone(
     enteredPhone,inspection:inspection);
    // Missing or malformed OS credentials are not equivalent to a wrong
@@ -4021,6 +4032,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
  void _m627AbortFailedLogout(){
   _m627ClosingSession=false;
+  // M629: if AI disposal fails AFTER the parallel Home DB close succeeds,
+  // keep the owner signed in but offer genuine finance Retry, not a frozen
+  // `Signing out` state with a disposed authority or fake old balances.
+  if(mounted)setState((){
+   ready=false;
+   _financeLoadFailure=waffraIsEnglish?
+    'Sign-out was cancelled. Retry safely to verify your financial data.':
+    'توقف تسجيل الخروج. أعد المحاولة بأمان للتحقق من بياناتك المالية.';
+  });
  }
 
  // Account filters are presentation-only; never inherit them for new money.
@@ -7053,12 +7073,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    debugPrint('WAFFRA_HOME_LOAD_STEP $stage elapsed_ms='
     '${financeClock.elapsedMilliseconds}');
   }
+  // M629: on cold Home, start the independent cheap preference read while
+  // binding the verified SQLCipher source. Both must finish BEFORE Home can
+  // consume user-specific settings or display any financial balance.
+  traceHomeStep('before_sharedPreferences');
+  final preferencesLoading=SharedPreferences.getInstance();
   traceHomeStep('before_ensureFinanceBound');
   await _ensureFinanceBound();
   traceHomeStep('after_ensureFinanceBound');
   final bindMs=financeClock?.elapsedMilliseconds;
-  traceHomeStep('before_sharedPreferences');
-  final p=await SharedPreferences.getInstance();
+  final p=await preferencesLoading;
   traceHomeStep('after_sharedPreferences');
   // An authenticated fresh SQLCipher vault is born with an empty snapshot.
   // Add only absent first-run ledger and category fields via the existing

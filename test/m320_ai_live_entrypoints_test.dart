@@ -23,7 +23,12 @@ void main(){
     expect(tools,contains('WaffraAiFinanceCoach.savingSuggestions('));
     expect(tools,contains('WaffraAiModelGate.ensureReady('));
     expect(tools,contains('WaffraAiModelGate.ensureReady('));
-    expect(home,contains('await WaffraOnDeviceQwen.shared.dispose()'));
+    // M629: AI teardown still completes before signout, now concurrently
+    // awaited with Home's owner-scoped SQLCipher session close.
+    expect(home,contains('await Future.wait<void>(['));
+    expect(home,contains('WaffraOnDeviceQwen.shared.dispose().timeout(const Duration(seconds:12))'));
+    expect(home.indexOf('await Future.wait<void>(['),
+      lessThan(home.indexOf('await _accountWriteAuthority.signOut();')));
     expect(runner,contains('account_session_changed'));
     expect(runner,contains('_activeDownload?.close()'));
   });
