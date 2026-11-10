@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "pr": "Draft PR #546 (M631 verified finance prewarm, pending exact-head CI)",
-  "issue": "Issue #545, owner-reported post #544 login and biometric Home delays",
+  "pr": "Pending M632 targeted P0 PR",
+  "issue": "Issue #547",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main",
   "reviewed_at": "2026-11-10",
@@ -871,6 +871,34 @@
         "Prewarm only a binding (no dashboard read); ownership must match exact current Person object and session epoch; never abandon or silently reuse an orphan open SQLCipher connection.",
         "Logout waits to close unclaimed prewarm and Home-owned open binding before profile removal; failed signout does not change stored balances.",
         "Profile-mode logs exclude all personal/financial details; exact-head CI and measured Android frame timings are separate acceptance."
+      ]
+    },
+    {
+      "id": "M632-SMS-ISOLATE-FIRST-ACCOUNT-VISIBLE-SPLASH",
+      "issue": "Issue #547",
+      "previous_behavior": "Root marks splash introDone after one frame, before wordmark animation ends. First reviewed SMS account action is gated by transaction canConfirm, including valid category; Android initial SMS import and each full queue refresh parse hashes and local rules on Flutter rendering isolate with bursty native notifications.",
+      "approved_behavior": "Splash animation itself gates introDone via its completion callback; finance initialization continues concurrently. First review shows Add Account with zero active money accounts and allows account creation independently of missing financial category, with fresh owner-verified account witness; Yes still requires all original SAR/date/category/account checks. Classify large native encrypted SMS queue in Dart compute worker with pure data, while preserving owner-safe native ACK; debounce reactive refresh, keep first Home interactive before automatic month import. Never auto-post SMS.",
+      "source_paths": [
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m632_sms_account_splash_isolate_contract_test.dart",
+        "test/m548_review_grouping_and_signup_perf_test.dart",
+        "test/m603_app_wide_lag_source_regression_test.dart",
+        "test/m506_android_nine_regressions_test.dart",
+        "test/m565_sms_preview_validation_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "Never classify by automatic financial posting; worker cannot mutate native SMS, SQLCipher or UI.",
+        "Original native SMS, confirmed hash and active owner are required for every ACK; batch failure retains original review candidates.",
+        "New account creation requires user-approved SQLCipher writer and matching known bank identity, fresh account witness; never infer bank account from sender alone or post unreviewed message.",
+        "Yes requires valid currency/amount/date/category, selected active account generation, and deduplicated verified finance commit.",
+        "Splash never exposes protected Home or blocks identity/storage startup; Android profile trace required for performance claim."
       ]
     }
   ]
