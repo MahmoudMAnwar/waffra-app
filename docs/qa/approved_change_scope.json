@@ -38,7 +38,7 @@
         "end": "/// White Waffra leaf emblem drawn directly on the emerald splash."
       },
       {
-        "start": " Map<String,Object?>? _localSmsClassification(",
+        "start": " Future<void> _learnManualCategoryPreference(MoneyEntry record)async{",
         "end": " Future<void> _rescanAutoSmsInbox()async{"
       },
       {
