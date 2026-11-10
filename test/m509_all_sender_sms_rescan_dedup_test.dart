@@ -69,7 +69,10 @@ void main() {
   final worker=File('lib/waffra_auto_sms_autopost.part.dart').readAsStringSync();
   final nativeMain=File('native/WaffraMainActivity.kt').readAsStringSync();
   final nativeWorker=File('native/WaffraAutoSmsWorker.kt').readAsStringSync();
-  expect(home,contains('final toAcknowledgeCommitted=<String>[];'));
+  // Only the pure worker identifies already-committed hashes; authenticated
+  // Home alone performs native ACK in bounded batches after that result.
+  expect(home,contains("final toAcknowledgeCommitted=(classified['committed'] as List).cast<String>();"));
+  expect(home,contains('WaffraAutoSms.acknowledgeCommitted(batch)'));
   expect(home,contains('WaffraAutoSms.acknowledgeCommitted(batch)'));
   expect(home,contains('WaffraAutoSms.acknowledgeCommitted([id])'));
   expect(home,contains('WaffraAutoSms.excludeMessages([id])'));
