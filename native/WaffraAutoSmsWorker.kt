@@ -29,14 +29,17 @@ class WaffraAutoSmsWorker(context: Context, parameters: WorkerParameters) :
 
     override fun doWork(): Result {
         val context = applicationContext
-        if (!WaffraAutoSmsStore.enabled(context)) return Result.success()
+        // Foreground Home owns review. Do not start a second FlutterEngine
+        // against the same encrypted SMS queue while its first frames paint.
+        if (isForegroundUiActive() || !WaffraAutoSmsStore.enabled(context))
+            return Result.success()
         val done = CountDownLatch(1)
         var successful = false
         var engine: FlutterEngine? = null
         val main = Handler(Looper.getMainLooper())
         main.post {
             try {
-                if (!WaffraAutoSmsStore.enabled(context)) {
+                if (isForegroundUiActive() || !WaffraAutoSmsStore.enabled(context)) {
                     successful = true
                     done.countDown()
                     return@post
@@ -131,8 +134,18 @@ class WaffraAutoSmsWorker(context: Context, parameters: WorkerParameters) :
     }
 
     companion object {
+        @Volatile private var foregroundUiActive = false
+
+        fun setForegroundUiActive(active: Boolean) {
+            foregroundUiActive = active
+        }
+
+        fun isForegroundUiActive(): Boolean = foregroundUiActive
+
         fun enqueue(context: Context) {
-            if (!WaffraAutoSmsStore.enabled(context)) return
+            // An active Activity already drives incremental encrypted review.
+            // Keep candidates on disk; background-only workers still run.
+            if (isForegroundUiActive() || !WaffraAutoSmsStore.enabled(context)) return
             try {
                 val work = OneTimeWorkRequestBuilder<WaffraAutoSmsWorker>()
                     .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
