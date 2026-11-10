@@ -88,8 +88,8 @@ void main() {
   test('verified large-transaction remapping yields rather than freezing the UI', () {
     final mapper = mainSource.split('Future<List<MoneyEntry>> _m593BuildVerifiedEntries(')[1]
         .split(' Future<void> _m565ConfirmSms(')[0];
-    expect(mapper, contains('const batchSize=32;'));
-    expect(mapper, contains('Future<void>.delayed(const Duration(milliseconds:1))'));
+    expect(mapper, contains('const batchSize=96;'));
+    expect(mapper, contains('Future<void>.delayed(const Duration.zero)'));
     expect(mapper, contains('MoneyEntry.fromJson('));
     final usages = RegExp(r'await _m593BuildVerifiedEntries\(')
         .allMatches(mainSource).length;

@@ -7,7 +7,8 @@
     "Replace eleven sequential startup JSON decode awaits with one bounded background isolate decode for a verified immutable SQLCipher snapshot; retain per-field fail-closed type validation.",
     "Retain genuine SQLCipher source and verified bank account balances before first Home frame; keep independent accounts read parallel with JSON and no fingerprint after explicit normal relogin.",
     "Remove artificial one-millisecond sleeps on every 32 verified ledger records: yield every 96 records with Duration.zero for responsive UI and reduced startup latency.",
-    "Update exact-branch regression tests, behavior-contract manifest, permanent requirements and approved change notes; do not fake Android performance success."
+    "Update exact-branch regression tests, behavior-contract manifest, permanent requirements and approved change notes; do not fake Android performance success.",
+    "Update three existing exact-source performance assertions M468/M580/M603 to require verified 96-row zero-delay yielding, retaining all record integrity and caller checks; never skip tests."
   ],
   "allowed_changed_files": [
     "lib/main.dart",
@@ -16,7 +17,10 @@
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
-    "docs/release/WAFFRA_APPROVED_CHANGES.txt"
+    "docs/release/WAFFRA_APPROVED_CHANGES.txt",
+    "test/m468_large_ledger_decode_test.dart",
+    "test/m603_app_wide_lag_source_regression_test.dart",
+    "test/m580_sms_security_navigation_performance_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -41,6 +45,24 @@
       {
         "start": "Object? _waffraDecodeJsonWorker(String source)=>jsonDecode(source);",
         "end": null
+      }
+    ],
+    "test/m468_large_ledger_decode_test.dart": [
+      {
+        "start": "  expect(src,contains('await _m593BuildVerifiedEntries('));",
+        "end": "  expect(src,contains('await readList<BudgetCategory>(catalog,BudgetCategory.fromJson)'));"
+      }
+    ],
+    "test/m603_app_wide_lag_source_regression_test.dart": [
+      {
+        "start": "  test('verified large-transaction remapping yields rather than freezing the UI', () {",
+        "end": "  test('signout native queue suspension never blocks Android main thread', () {"
+      }
+    ],
+    "test/m580_sms_security_navigation_performance_test.dart": [
+      {
+        "start": " test('M593 manual and reviewed-SMS verified ledger mapping yields frames',(){",
+        "end": " test('M595 compact review has exact three selectable transaction types',(){"
       }
     ]
   }

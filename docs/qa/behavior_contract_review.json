@@ -877,7 +877,7 @@
       "id": "M633-PUBLIC-PREWARM-VERIFIED-HOME-BATCH-DECODE",
       "issue": "Issue #550: eliminate real UI freezes after first biometric and logout/relogin through safe predictive preparation",
       "previous_behavior": "Default category JSON was allocated and encoded while Home was verifying its finance source; after verified source integrity, eleven independent JSON fields were decoded in sequence with one compute isolate per large field; verified MoneyEntry mapping artificially waited a millisecond after every 32 records. Existing verified account projection and owner-bound finance binding prewarm were already available.",
-      "approved_behavior": "Prime only public immutable category JSON via a background compute after first splash frame, before login. Reuse the prepared public catalog in verified Home; after WaffraFreshHomeCatalogRecovery.load and source integrity, run one aggregate parseStartupFields worker for all eleven immutable JSON fields, throwing when an invalid field is accessed. Keep real account balances and SQLCipher witness/biometric gate before first visible frame, with account read concurrent to decoding. Yield every 96 rows at Duration.zero instead of 32-row artificial sleeps; neither cached account balance nor SQLCipher key ever carries over after signout.",
+      "approved_behavior": "Prime only public immutable category JSON via a background compute after first splash frame, before login. Reuse the prepared public catalog in verified Home; after WaffraFreshHomeCatalogRecovery.load and source integrity, run one aggregate parseStartupFields worker for all eleven immutable JSON fields, throwing when an invalid field is accessed. Keep real account balances and SQLCipher witness/biometric gate before first visible frame, with account read concurrent to decoding. Yield every 96 rows at Duration.zero instead of 32-row artificial sleeps; neither cached account balance nor SQLCipher key ever carries over after signout. Three existing M468/M580/M603 literal tests are updated from 32/1ms to 96/Duration.zero while retaining source integrity and data conversion assertions.",
       "source_paths": [
         "lib/main.dart",
         "lib/waffra_large_json_decode.dart"
@@ -886,7 +886,9 @@
         "test/m633_startup_batch_decoder_test.dart",
         "test/m631_verified_finance_prewarm_test.dart",
         "test/m629_pull_refresh_parity_auth_home_test.dart",
-        "test/m468_large_ledger_decode_test.dart"
+        "test/m468_large_ledger_decode_test.dart",
+        "test/m603_app_wide_lag_source_regression_test.dart",
+        "test/m580_sms_security_navigation_performance_test.dart"
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/m550-behavior-contract-preflight.yml",
