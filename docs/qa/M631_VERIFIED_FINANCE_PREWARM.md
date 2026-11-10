@@ -20,3 +20,6 @@ Issue: #545. Base: merged #544 main. Draft PR: [#546](https://github.com/Mahmoud
 - Exact-head CI and Android profile APK: fresh install, biometric, logout/relogin, restored session, two-device old data retention, p95 first-frame and tap latency.
 
 Status: **Code ready / CI pending**. No Android performance acceptance yet.
+
+## M631 exact-head CI failure diagnosis (2026-11-10)
+Four failing runs—M103, M160, M282, Waffra Full Offline Finance and UI Regression—reported the same single Dart source-test failure, `M629 logout awaits BOTH independent teardown tasks before signout`. In the full-suite run, 2,637 tests passed and one failed. The former assertion matched a single-line Home close, whereas M631 retains the close and adds awaited speculative SQLCipher binding cleanup before profile signout. Replaced only that brittle assertion with positive checks that both Home close and unclaimed prewarm cleanup are awaited and that full `Future.wait` completes before `_accountWriteAuthority.signOut()`. Existing negative/owner guards unchanged. No functional app source modification was needed for the failing checks. Rerun the exact new HEAD before any merge.
