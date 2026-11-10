@@ -1209,7 +1209,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
      debugPrint('WAFFRA_AUTH_PERF prewarm_bind_ms=${clock.elapsedMilliseconds}');
     }
     return binding;
-   }catch(error){
+   }catch(_){
     if(kProfileMode)debugPrint('WAFFRA_AUTH_PERF prewarm_bind_unavailable');
     // Home will retry its original authenticated SQLCipher binding.
     return null;
