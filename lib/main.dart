@@ -2339,7 +2339,9 @@ class _WaffraLaunchIntroState extends State<WaffraLaunchIntro> with SingleTicker
    // the genuine animation completion before the auth route becomes visible.
    final nameProgress=Curves.easeOutCubic.transform(reveal(t,.12,.33));
    final sloganProgress=Curves.easeOutCubic.transform(reveal(t,.28,.51));
-   final fadeOut=1-reveal(t,.97,1.0);
+   // Loading may legitimately outlive the animation; retain the complete
+   // bilingual logo instead of fading to a blank green screen.
+   const fadeOut=1.0;
    return Stack(children:[
     const Positioned.fill(child:DecoratedBox(decoration:BoxDecoration(
      gradient:RadialGradient(colors:[Color(0xFF075B43),Color(0xFF003C2E)],radius:1.2)))),
@@ -6488,7 +6490,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       // category/date needs editing; the trial is never posted.
       final trial=MoneyEntry(
        id:newId(),title:parsed.title,category:proposedCategory,
-       amount:originalAmount?.amount??parsed.amount??0,
+       amount:originalAmount?.amount??parsed.amount??0.0,
        income:expectedIncome,date:originalDate??DateTime.now(),
        notes:body,sourceType:'sms');
       final picked=await reviewSmsAccountLinks([trial],smsSender:sender);
