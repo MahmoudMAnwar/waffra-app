@@ -1,4 +1,4 @@
-[M631 OWNER-VERIFIED PREWARM + FIRST HOME POST-FRAME DEFERRAL — ISSUE #545 — 2026-11-10]
+[PR #546 — M631 OWNER-VERIFIED PREWARM + FIRST HOME POST-FRAME DEFERRAL — ISSUE #545 — 2026-11-10]
 ================================================================================================
 - Owner reports both "جارٍ تسجيل الدخول" and biometric-to-Home wait remain after merged PR #544. External analysis proposed opening Home before biometrics and painting ready=true before account balances. These specific shortcuts are NOT applied: they would allow protected work before mandatory biometric and inaccurate/stale first-frame balances.
 - After successful OS/password verification and awaited owner-profile persistence (or restored-session startup source guard), begin a single speculative BIND-only SQLCipher authority connection in the background. No financial ledger/account load occurs before biometric approval. Transfer that verified active owner/session binding to Home when it mounts after mandatory unlock; Home falls back to secure normal bind if prewarm failed.
