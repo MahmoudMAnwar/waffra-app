@@ -4032,6 +4032,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
  void _m627AbortFailedLogout(){
   _m627ClosingSession=false;
+  // M629: if AI disposal fails AFTER the parallel Home DB close succeeds,
+  // keep the owner signed in but offer genuine finance Retry, not a frozen
+  // `Signing out` state with a disposed authority or fake old balances.
+  if(mounted)setState((){
+   ready=false;
+   _financeLoadFailure=waffraIsEnglish?
+    'Sign-out was cancelled. Retry safely to verify your financial data.':
+    'توقف تسجيل الخروج. أعد المحاولة بأمان للتحقق من بياناتك المالية.';
+  });
  }
 
  // Account filters are presentation-only; never inherit them for new money.
