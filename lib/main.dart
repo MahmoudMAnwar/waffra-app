@@ -6345,6 +6345,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final previewMainName=previewParents.length==1?
     previewParents.single.displayName:
     (waffraIsEnglish?'Choose main category':'يحتاج اختيار القسم الرئيسي');
+   // The first account is an independent setup step, NOT a valid-category
+   // confirmation. A user must be able to create it before fixing category.
+   final hasActiveMoneyAccount=_m467Accounts.any((a)=>!a.archived);
    final previewSuffix=WaffraSmsAccountLearning.suffix4(
     expectedIncome?facts.destinationSuffix:facts.sourceSuffix);
    final previewAccountLabel=previewSuffix==null?
@@ -6377,32 +6380,73 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    String? reviewedAccountName;
    bool choosingAccount=false;
    Future<void> selectAccountBeforeYes(StateSetter redraw,BuildContext dialog)async{
-    if(!canConfirm||choosingAccount)return;
+    // Account setup/selection may happen BEFORE category/date corrections;
+    // only Yes authorizes posting and retains the full canConfirm guard.
+    if(choosingAccount)return;
     redraw(()=>choosingAccount=true);
     try{
-     final trial=MoneyEntry(
-      id:newId(),title:parsed.title,category:proposedCategory,
-      amount:originalAmount.amount,income:expectedIncome,
-      date:originalDate,notes:body,sourceType:'sms');
-     final picked=await reviewSmsAccountLinks([trial],smsSender:sender);
-     final id=picked?.ids?.single;
-     if(id==null||picked?.generation==null||!mounted)return;
      final bridge=_financeBinding?.accountsBridge;
      if(bridge==null)return;
+     final before=await bridge.readVerifiedAccounts();
+     if(!mounted||!dialog.mounted)return;
+     String? pickedId;
+     if(!before.balances.any((a)=>!a.archived)){
+      // No account: the one clear action opens account creation directly,
+      // without an extra bank-account prompt or a transaction save.
+      final knownBank=WaffraSmsAccountLearning.bankGroup(sender);
+      final suffix=WaffraSmsAccountLearning.suffix4(
+       expectedIncome?facts.destinationSuffix:facts.sourceSuffix);
+      final draft=await showWaffraDialog<WaffraNewAccountDraft>(
+       context:dialog,builder:(ctx)=>WaffraNewAccountDialog(
+        english:waffraIsEnglish,suggestedProviderId:knownBank,
+        suggestedSenderName:sender,suggestedLastFour:suffix));
+      if(draft==null||!mounted||!dialog.mounted)return;
+      if(knownBank!=null&&(draft.kind!='bank'||
+         draft.providerId!=knownBank||draft.subtype==null)){
+       throw StateError('SMS account must match the verified bank sender');
+      }
+      final api=WaffraVerifiedAccountsApi(bridge:bridge);
+      final newId='m632-sms-'+DateTime.now().microsecondsSinceEpoch.toString();
+      await api.balances();
+      await api.createTypedAccountWithIdentity(
+       id:newId,name:draft.name,kind:draft.kind,
+       providerId:draft.providerId??'none',
+       subtype:draft.subtype??'other',
+       openingMinor:draft.openingMinor,
+       createdIso:DateTime.now().toUtc().toIso8601String(),
+       lastFour:draft.lastFour,
+       customSubtypeLabel:draft.customSubtypeLabel,userConfirmed:true);
+      pickedId=newId;
+     }else{
+      // An existing account can be selected even when the transaction's
+      // category/date needs editing; the trial is never posted.
+      final trial=MoneyEntry(
+       id:newId(),title:parsed.title,category:proposedCategory,
+       amount:originalAmount?.amount??parsed.amount??0,
+       income:expectedIncome,date:originalDate??DateTime.now(),
+       notes:body,sourceType:'sms');
+      final picked=await reviewSmsAccountLinks([trial],smsSender:sender);
+      pickedId=picked?.ids?.single;
+     }
+     if(pickedId==null||!mounted||!dialog.mounted)return;
+     // Always read the CURRENT SQLCipher witness after selecting/creating.
      final fresh=await bridge.readVerifiedAccounts();
-     final active=fresh.balances.where((a)=>!a.archived&&a.id==id).toList();
-     if(active.length!=1||!dialog.mounted)return;
-     // The account generation checked at final commit comes from this
-     // latest read, so a changed account cannot be posted optimistically.
+     final active=fresh.balances.where(
+      (a)=>!a.archived&&a.id==pickedId).toList();
+     if(active.length!=1)return;
      redraw((){
-      reviewedAccount=(ids:<String?>[id],generation:fresh.witness.generation);
+      reviewedAccount=(ids:<String?>[pickedId],
+       generation:fresh.witness.generation);
       reviewedAccountName=active.single.name;
      });
+     // Refresh dashboard accounts without reloading the Home ledger and
+     // without opening a second account-confirmation dialog.
+     unawaited(_m467RefreshHomeAccounts());
     }catch(e){
-     debugPrint('M590 pre-Yes account selection: ${e.runtimeType}');
+     debugPrint('M632 pre-Yes account setup: ${e.runtimeType}');
      if(mounted)snack(context,waffraIsEnglish?
-      'Could not verify this account; choose again.':
-      'تعذر التحقق من الحساب، اختاره مرة أخرى.',isError:true);
+      'Could not verify or add this account. Please retry.':
+      'تعذر إضافة الحساب أو التحقق منه. حاول مرة أخرى.',isError:true);
     }finally{
      if(dialog.mounted)redraw(()=>choosingAccount=false);
     }
@@ -6518,7 +6562,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            _m615ReviewDetail(waffraIsEnglish?'Sender':'المرسل',
             sender,Icons.account_balance_outlined),
            _m615ReviewDetail(waffraIsEnglish?'Money account':'الحساب المالي',
-            (reviewedAccountName??previewAccountLabel)+' • '+
+            (reviewedAccountName??(hasActiveMoneyAccount?
+              previewAccountLabel:(waffraIsEnglish?
+               'No money account yet':'لم تضف حسابًا ماليًا بعد')))+' • '+
             (reviewedAccount!=null?
              (waffraIsEnglish?'Verified':'تم تأكيد الحساب'):
              (waffraIsEnglish?'Choose before saving':'اختار الحساب قبل الحفظ')),
@@ -6529,14 +6575,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         const SizedBox(height:8),
         OutlinedButton.icon(
          key:const Key('m590-sms-choose-account-before-yes'),
-         onPressed:canConfirm&&!choosingAccount?
+         onPressed:!choosingAccount?
           ()=>selectAccountBeforeYes(redraw,dialog):null,
          icon:choosingAccount?
           const SizedBox(width:17,height:17,
            child:CircularProgressIndicator(strokeWidth:2)):
           const Icon(Icons.account_balance_wallet_outlined),
-         label:WaffraText(reviewedAccountName??(waffraIsEnglish?
-          'Select verified money account':'اختار الحساب المالي قبل نعم')),
+         label:WaffraText(reviewedAccountName??(!hasActiveMoneyAccount?
+          (waffraIsEnglish?'Add account':'إضافة حساب'):
+          (waffraIsEnglish?'Choose money account':'اختيار الحساب المالي'))),
         ),
         const SizedBox(height:6),
         Row(children:[
