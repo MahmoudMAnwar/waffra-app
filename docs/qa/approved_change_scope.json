@@ -1,71 +1,73 @@
 {
   "contract_version": 1,
-  "change_id": "M631-OWNER-VERIFIED-FINANCE-PREWARM-FIRST-FRAME",
-  "human_scope_review": "Issue #545 records owner request to try early binding and remove first Home contention. Safe adaptation: BIND only after verified profile/startup, reuse exact session, await real balances before painting, defer nonessential tasks.",
+  "change_id": "M632-FIRST-SMS-ACCOUNT-ISOLATED-CLASSIFICATION-SPLASH",
+  "human_scope_review": "Owner 2026-11-10 explicitly requested first SMS account workflow, post-Home SMS freeze fix, full splash animation, web-grounded Flutter performance improvements; #547 tracks scope.",
   "user_requested_changes": [
-    "Start verified finance binding without awaiting it during confirmed login and restored-session biometric handoff; reuse that single exact owner/session binding on Home.",
-    "Keep Home fully secure and authenticated by waiting for real SQLCipher ledger plus account balances before any visible Home; no placeholder or pre-biometric financial reads.",
-    "Move nonessential widget, tour and reminder work after the first verified Home paint while retaining owner-scoped native SMS resume and logout cleanup.",
-    "Add positive regression coverage, profile-only stage timing and documentation; validate exact-head CI and physical Android before claiming no lag.",
-    "Reconcile M629 source-contract regression with the newly awaited signout Home-close and speculative-prewarm-close branches, preserving both teardown and fail-closed sequencing."
+    "Make first bank SMS account creation directly accessible without requiring a valid transaction category before choosing or creating an account.",
+    "Move SMS queue cryptographic hashes and complex parsing off the Flutter UI isolate with a pure-data worker, debounce bursts of updates, and keep native ACK and original source secure.",
+    "Finish the real Waffra wordmark and logo animation before switching to login while initializing app data concurrently and preserving fast post-login handoff.",
+    "Preserve actual verified balances, mandatory biometrics, manual SMS approval, re-scan cursor, 30-day exclusion, and exact-head behavioral and real Android QA."
   ],
   "allowed_changed_files": [
     "lib/main.dart",
-    "test/m631_verified_finance_prewarm_test.dart",
+    "test/m548_review_grouping_and_signup_perf_test.dart",
+    "test/m603_app_wide_lag_source_regression_test.dart",
+    "test/m632_sms_account_splash_isolate_contract_test.dart",
     "docs/WAFFRA_REQUIREMENTS.md",
+    "docs/qa/M632_SMS_HOME_SPLASH.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
-    "docs/qa/M631_VERIFIED_FINANCE_PREWARM.md",
-    "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "test/m629_pull_refresh_parity_auth_home_test.dart"
+    "docs/release/WAFFRA_APPROVED_CHANGES.txt"
   ],
   "bounded_sections": {
     "lib/main.dart": [
       {
-        "start": " // M627: one Home State per authenticated session, stable across locale.",
-        "end": " // Profile-mode handoff timings; never log identity or financial values."
+        "start": "String bankSmsHash(String raw)=>",
+        "end": "List<String> splitBankMessages(String raw){"
       },
       {
-        "start": " @override void dispose(){WaffraRegionalCopy.countryIso.removeListener(_onRegionChanged);",
-        "end": " String? startupError;"
+        "start": " Future<void> launchIntro()async{",
+        "end": " @override void didChangeAppLifecycleState("
       },
       {
-        "start": " String? startupError;\n Future<void> load()async {",
-        "end": " Future<void> finishSmsPermissionChoice()async{"
+        "start": "   (loading||!introDone)?const WaffraLaunchIntro():",
+        "end": "   startupError!=null?Scaffold("
       },
       {
-        "start": " Future<void> saveUser(Person u)async {",
-        "end": " Future<void> setUiCountry("
+        "start": "class WaffraLaunchIntro extends StatefulWidget {",
+        "end": "/// White Waffra leaf emblem drawn directly on the emerald splash."
       },
       {
-        "start": " Future<void> logout()async {",
-        "end": " bool _logoutInProgress=false;"
+        "start": " void _receiveAutoSmsNotice(){",
+        "end": " Future<void> _rescanAutoSmsInbox()async{"
       },
       {
-        "start": "  if(canMountHome)KeyedSubtree(",
-        "end": " @override Widget build(BuildContext context)=>MaterialApp("
+        "start": " Future<void> _refreshAutoSmsInbox({bool importMonth=false})async{",
+        "end": " Future<void> _analyzeAmbiguousSmsOnDemand("
       },
       {
-        "start": "class HomeScreen extends StatefulWidget {",
-        "end": "// Scroll-linked, pinned balance summary."
-      },
-      {
-        "start": " Future<void> _bindFinanceSource()async{",
-        "end": " // M627: sign-out closes the Home-owned binding, not a root-local phantom."
+        "start": " Future<void> _reviewAutoSmsCandidates({String? targetId})async {",
+        "end": " void _receiveSharedSms(){"
       },
       {
         "start": " Future<void> _loadFinanceSafely()async{",
         "end": " Widget _financialRecoveryScreen()=>"
       },
       {
-        "start": " Future<void> load()async {\n  final financeClock=",
-        "end": " Future<void> _refreshWidget()async{"
+        "start": " @override void dispose(){if(identical(WaffraBackNavigation.onHomeBack,",
+        "end": " Future<void> _syncWidgetTransactions()async{"
       }
     ],
-    "test/m629_pull_refresh_parity_auth_home_test.dart": [
+    "test/m548_review_grouping_and_signup_perf_test.dart": [
       {
-        "start": " test('M629 logout awaits BOTH independent teardown tasks before signout',(){",
-        "end": " test('M629 does not move SMS scanning before verified Home',(){"
+        "start": " test('SMS background state updates yield between bounded parser batches',(){",
+        "end": " test('fresh registration proves exact read-back without duplicate KDF',(){"
+      }
+    ],
+    "test/m603_app_wide_lag_source_regression_test.dart": [
+      {
+        "start": "  test('Home first frame precedes four-page month SMS scan', () {",
+        "end": "  test('verified large-transaction remapping yields rather than freezing the UI', () {"
       }
     ]
   }
