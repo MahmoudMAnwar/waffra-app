@@ -1,81 +1,81 @@
 {
   "contract_version": 1,
-  "change_id": "M630-PR543-RECONCILE-LATEST-MAIN-OWNER-EPOCH-POSTFRAME-FINANCE-20261110",
-  "human_scope_review": "Owner requested continuing PR #543, which was dirty against current main. Retain merged M631/M632/M633 performance fixes, add only genuinely missing post-frame finance logout drain and owner epoch guard for stale asynchronous SMS/notification callbacks; no new parser or bypass of finance verification. Physical Android profile acceptance still pending. CI review of exact PR diff explicitly includes six legacy M548/M622/M623/M624/M631/M632 test updates, each restricted to its existing affected source-assertion test; M385 remains enabled and all unrelated test bodies are unchanged. Human scope approval is separately required.",
+  "change_id": "M635-EARLY-BUILD-LOGIN-NATIVE-KDF-AND-FOREGROUND-SMS-ISOLATION-553",
+  "human_scope_review": "Owner explicitly requests return to responsive early October login/Home behavior and repair measured 3-second sign-in/post-biometric handoff and 5–6-second post-Home jank. October's one-shot SHA256 and unverified wallet must NOT be revived. Native PBKDF2 retains the 600000-round verifier and OS keystore; native UI SMS work skips competing background FlutterEngine, with durable pending queue. Exact SHA CI, physical Android performance and independent owner scope review required before Done/merge.",
   "user_requested_changes": [
-    "Keep already merged M632 compute whole-queue SMS classification, splash, first-account flow, and M633 verified Home decode unchanged.",
-    "Protect optional post-Home widget/reminder finance work from SQLCipher close during logout; guard each scheduled callback by Home startup epoch.",
-    "Before native SMS ACK and after compute/await boundaries, compare originating Home epoch and current verified session; never mutate new session from stale results.",
-    "Maintain SQLCipher finance source and genuine account balances, biometric, native ACK anti-replay, review-only bank SMS, and all existing tests.",
-    "Reconcile six existing regression test assertions to M630 session-epoch and async drain behavior without weakening their original positive safety checks or modifying unrelated tests."
+    "Compare October 21 fast local SHA256/profile launch with current verified 600000-round PBKDF2 and SQLCipher/biometric Home, without weakening security.",
+    "Use a native Android background crypto worker for byte-compatible PBKDF2-HMAC-SHA256; preserve original Dart isolate fallback and add a Unicode parity vector.",
+    "Prevent an otherwise redundant WorkManager FlutterEngine during foreground SMS consent/resume and while the application is visible; background SMS receiver remains durable.",
+    "Keep encrypted SMS queue and anti-replay; deliver large pending encrypted review result from the dedicated SMS executor rather than Android UI thread.",
+    "Add a bounded positive regression test for credentials and SMS foreground/background behavior and require real Android first login, biometric, relogin and 2000-SMS frame evidence."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "lib/main.dart",
-    "test/m548_review_grouping_and_signup_perf_test.dart",
-    "test/m622_immediate_home_without_loader_test.dart",
-    "test/m623_verified_home_handoff_no_black_frame_test.dart",
-    "test/m624_deferred_sms_after_verified_home_test.dart",
-    "test/m630_home_first_frame_contention_test.dart",
-    "test/m631_verified_finance_prewarm_test.dart",
-    "test/m632_sms_account_splash_isolate_contract_test.dart"
+    "lib/waffra_local_phone_credentials.dart",
+    "native/WaffraAutoSmsWorker.kt",
+    "native/WaffraMainActivity.kt",
+    "test/m635_historical_login_sms_jank_regression_test.dart"
   ],
   "bounded_sections": {
-    "lib/main.dart": [
+    "lib/waffra_local_phone_credentials.dart": [
       {
-        "start": " // M627: sign-out closes the Home-owned binding, not a root-local phantom.",
-        "end": " // Account filters are presentation-only;"
+        "start": "import 'dart:convert';",
+        "end": "/// M426:"
       },
       {
-        "start": " Future<void> _runAutoSmsRefresh({bool importMonth=false})async{",
-        "end": " Future<void> _analyzeAmbiguousSmsOnDemand("
+        "start": " static const _store=FlutterSecureStorage();",
+        "end": " // M546:"
       },
       {
-        "start": " Future<void> _loadFinanceSafely()async{",
-        "end": " Widget _financialRecoveryScreen()"
+        "start": " static bool validPhone(String phone)=>",
+        "end": " static Future<List<int>> _deriveInBackground("
+      }
+    ],
+    "native/WaffraAutoSmsWorker.kt": [
+      {
+        "start": "    override fun doWork(): Result {",
+        "end": "    companion object {"
       },
       {
-        "start": " Future<void> load()async {\n  final financeClock=kProfileMode",
-        "end": " Future<void> _refreshWidget()async{"
+        "start": "    companion object {",
+        "end": null
       }
     ],
-    "test/m548_review_grouping_and_signup_perf_test.dart": [
+    "native/WaffraMainActivity.kt": [
       {
-        "start": " test('SMS classification runs outside UI isolate; native ACK stays checked',(){",
-        "end": " test('fresh registration proves exact read-back without duplicate KDF',(){"
-      }
-    ],
-    "test/m622_immediate_home_without_loader_test.dart": [
+        "start": "import android.Manifest",
+        "end": "// Share only SMS"
+      },
       {
-        "start": " test('M622 SMS scan is deferred until after verified Home frame',(){",
-        "end": "\n}"
-      }
-    ],
-    "test/m623_verified_home_handoff_no_black_frame_test.dart": [
+        "start": "    private val smsHistoryExecutor =",
+        "end": "    private val autoSmsRequestCode"
+      },
       {
-        "start": " test('M623 background SMS runs only after the complete Home frame',(){",
-        "end": "\n}"
-      }
-    ],
-    "test/m624_deferred_sms_after_verified_home_test.dart": [
+        "start": "    // Android's Recent Apps thumbnail",
+        "end": "    override fun onPause() {"
+      },
       {
-        "start": " test('M624: after-first-frame native work then sequential inbox review',(){",
-        "end": " test('M624: do not replace genuine complete finance Home with fake values',(){"
-      }
-    ],
-    "test/m631_verified_finance_prewarm_test.dart": [
+        "start": "    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {",
+        "end": "        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, ownerProofChannelName)"
+      },
       {
-        "start": " test('optional widget tour/reminder after ready and SMS only after real Home',(){",
-        "end": "\n}"
-      }
-    ],
-    "test/m632_sms_account_splash_isolate_contract_test.dart": [
+        "start": "\"resumeAutoSmsAfterSignIn\" -> {",
+        "end": "\"autoSmsNotificationsEnabled\""
+      },
       {
-        "start": " test('large input uses worker without main-isolate message parser loop',()async{",
-        "end": "\n}"
+        "start": "\"setAutoSmsEnabled\" -> {",
+        "end": "\"restartCompletedSmsHistory\""
+      },
+      {
+        "start": "\"pendingAutoBankSms\" -> {",
+        "end": "\"pendingAutoBankSmsById\" -> {"
+      },
+      {
+        "start": "    override fun onDestroy() {",
+        "end": null
       }
     ]
   }
