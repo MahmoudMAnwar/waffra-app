@@ -19,7 +19,8 @@ void main(){
   expect(root,contains('child:IgnorePointer(ignoring:!needsLogin,'));
   expect(root,contains('child:IgnorePointer(ignoring:!needsGate,'));
   expect(root,contains('child:Offstage(offstage:!_m623HomeReady,'));
-  expect(root,contains('key:const ValueKey(\'waffra-verified-session-home\')'));
+  expect(root,contains("key:ValueKey('home-\$_m627HomeSession')"));
+  expect(root,contains('key:_m627HomeKey,'));;
   expect(root,contains('onVerifiedReady:()=>_m623HomeLoaded(account)'));
   expect(root,contains('profile:account,'));
   expect(root,isNot(contains('onVerifiedReady:()=>_m623HomeLoaded(account!)')));
