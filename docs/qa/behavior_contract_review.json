@@ -820,7 +820,7 @@
       "id": "M630-FIRST-VERIFIED-HOME-FRAME-POST-PAINT-ISOLATION",
       "issue": "Issue #542 / PR #543 — owner physical Android first biometric and logout/relogin Home freeze",
       "previous_behavior": "After accounts and ledger were verified, Home.load() scheduled widget reread, reminder sync and tutorial work before/at the first real authenticated frame. Root Home loader also requested notification navigation and post-first-frame native SMS. An immediate signout had no explicit drain witness for the separately started widget reread.",
-      "approved_behavior": "Wait for genuine integrity checked SQLCipher source and balances before ready, then reveal fully authentic Home. Reserve its first frame by delaying independent widget/reminder/nav/SMS work 900 ms, sequencing widget/reminder before native SMS resume and inbox review. Show tutorial after scan. Every callback must compare the current Home epoch and abort on logout/retry/dispose. Signout awaits in-flight postframe finance work before closing SQLCipher, bounded and fail-closed. No fake balances, no changes to passwords/biometrics or native review-only policy.",
+      "approved_behavior": "Wait for genuine integrity checked SQLCipher source and balances before ready, then reveal fully authentic Home. Reserve its first frame by delaying independent widget/reminder/nav/SMS work 900 ms, sequencing widget/reminder before native SMS resume and inbox review. Show tutorial after scan. Every callback must compare the current Home epoch and abort on logout/retry/dispose. Signout awaits in-flight postframe finance work before closing SQLCipher, bounded and fail-closed. No fake balances, no changes to passwords/biometrics or native review-only policy. For >=48 encrypted pending SMS rows, the exact existing pure BankParser is executed using Flutter compute() off the UI isolate, and its aligned results feed unchanged OTP, local rules, exclusion, financial hash/ACK and human-review logic. For smaller queues keep inline parsing. Discard results on signout, unmount or Home epoch change. No SMS body or secure account value enters logs.",
       "source_paths": [
         "lib/main.dart"
       ],
@@ -843,7 +843,8 @@
         "Never replace initial verified dashboard with zero/placeholder/blank/blur or alter fingerprint re-login policy.",
         "No native SMS scan before a fully painted, verified first Home and successful owner-scoped resume.",
         "Explicit signout blocks stale post-frame work and drains every in-flight widget finance read before closing SQLCipher.",
-        "Success in source CI is not evidence of physical Android no-freeze; profile-mode traces and same-data upgrade QA required."
+        "Success in source CI is not evidence of physical Android no-freeze; profile-mode traces and same-data upgrade QA required.",
+        "The 1000 synthetic SMS isolate-vs-inline parity regression must match amount, direction, category and currency review; actual APK frame timings and finance data preservation remain unverified until measured."
       ]
     }
   ]
