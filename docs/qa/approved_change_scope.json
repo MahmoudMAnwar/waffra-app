@@ -7,7 +7,8 @@
     "M627 Issue #536: set a 15s verified account-balance timeout and retain existing fail-closed finance recovery screen with safe Retry; prevent late obsolete account read from repopulating the new session.",
     "M627 Issue #536: await Home-local pending finance writes and close the actual binding at signout, reset Home-local finance state, rotate Home session key, retain biometric and owner-bound SMS rules.",
     "M627 Issue #536: reconcile two former stable-key source regression assertions with a stronger per-session GlobalKey/session boundary; exact-head and physical Android acceptance still required.",
-    "M627 exact-head M550 reconciliation: old M424 signout lock and M604/M624/M625 account-await positive assertions must verify the newly approved locked=true signed-out state and mandatory 15-second accounts timeout before showing real Home, without dropping other security checks."
+    "M627 exact-head M550 reconciliation: old M424 signout lock and M604/M624/M625 account-await positive assertions must verify the newly approved locked=true signed-out state and mandatory 15-second accounts timeout before showing real Home, without dropping other security checks.",
+    "M627 repeat CI failure: update M622 old unbounded await source assertion to check bounded awaited verified account read; fix M627 dynamic stage-name interpolation in test while retaining all mandatory stage checks. 2621 passing tests remain unchanged."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -21,7 +22,8 @@
     "test/m424_mandatory_biometrics_test.dart",
     "test/m604_fast_login_first_frame_test.dart",
     "test/m624_deferred_sms_after_verified_home_test.dart",
-    "test/m625_single_verified_home_read_login_handoff_test.dart"
+    "test/m625_single_verified_home_read_login_handoff_test.dart",
+    "test/m622_immediate_home_without_loader_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -80,6 +82,12 @@
       {
         "start": "  test('only installed Home skips duplicated full read, never source checks', () {",
         "end": "  test('verified biometric and relogin meet identical complete-Home contract', () {"
+      }
+    ],
+    "test/m622_immediate_home_without_loader_test.dart": [
+      {
+        "start": " test('M622 entire real Home values come from one completed verified load',(){",
+        "end": " test('M622 SMS scan is deferred until after verified Home frame',(){"
       }
     ]
   }
