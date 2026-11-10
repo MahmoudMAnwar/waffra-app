@@ -188,7 +188,11 @@ void main() {
       app.indexOf('class _HomeScreenState'));
     final slice = app.substring(pos, app.indexOf('  _lastWidgetRevision=',pos));
     expect(slice, contains('WaffraFreshHomeCatalogRecovery.load('));
-    expect(slice, contains('defaultCategories().map((category)=>category.toJson())'));
+    // M633 precomputes unchanged public defaults before login, while Home
+    // still sends the exact catalog into the verified SQLCipher repair gate.
+    expect(slice, contains('defaultCategoriesJson:await WaffraPublicStartupPrewarm.categoriesJson(),'));
+    expect(app, contains('defaultCategories().map((category)=>category.toJson())'));
+    expect(app, contains('static Future<String> categoriesJson()'));
     expect(slice, isNot(contains('SharedPreferences.setString(\'entries\'')));
   });
 }
