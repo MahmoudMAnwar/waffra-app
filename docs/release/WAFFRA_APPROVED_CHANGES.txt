@@ -3261,3 +3261,12 @@ The owner reported that the unwanted Home startup spinner had merely become a bl
 - Reviewed the latest M629 runtime code through commit f5fbe8e65c4bafa84876e5e4cd27a63aefd8e2cb and its actual signed-out/failed-cleanup behavior before refreshing this post-app-code release notes entry. Prior release notes predated that runtime change; M449 correctly rejected it.
 - M385 CI also blocked three workflows due to an ambiguous protected code-scope anchor `Future<void> load()async {` which occurs in both the root app and Home state. Replaced the manifest anchor with the uniquely verified Home `load()` signature, in both main baseline and PR HEAD; no protected source or CI guard was bypassed.
 - Original fast pull verified digest/delta, owner-bound secure sign-in, Home first real encrypted balance, and native SMS suspension remain unchanged in intent. New M629 async overlap is committed, but neither physical Android speed nor all mandatory latest-HEAD tests are proven yet. No APK release/merge on incomplete CI.
+
+
+[M630 — OWNER-REPORTED FIRST BIOMETRIC/RELOGIN HOME FRAME CONTENTION — ISSUE #542 PR #543 — 2026-11-10]
+===================================================================================================
+- Owner screenshots show biometric stage and explicit logout/relogin still appear frozen before real Home despite merged #541. This is an additional bounded mitigation, not confirmed removal of all measured cold-start latency.
+- Home's existing real SQLCipher verified catalog and account balance prerequisites remain unchanged. No fake numbers, empty/black/skeleton Home, weakened biometric or early native SMS.
+- Move first-load widget reread, reminder synchronization, pending notice/action dispatch and tour layout/animation out of the initial authenticated Home paint, into the delayed post-first-frame phase. Native SMS resume still precedes encrypted inbox import; the original tour runs afterward.
+- Add a per-Home startup epoch and logout/retry guards. Explicit signout waits for any post-frame widget/reminder finance task before encrypted binding close, failing closed on bounded timeout rather than losing data.
+- New M630 source regression validates the first verified frame, serialized optional work, owner epoch and logout bound. Existing M622/M623/M624/M627/M629 remain mandatory. CI and Android profile first-login/relogin, 1,000 SMS and upgrade data-preservation acceptance pending; PR is Draft.
