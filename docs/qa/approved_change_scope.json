@@ -9,7 +9,8 @@
     "M629 source/test coverage only; first-install and relogin Android profile first-frame acceptance and exact-head CI pending. No caching across signout or disabled password/SQLCipher checks.",
     "Update two old login test literals to assert the new concurrent-but-awaited secure verifier snapshot and unchanged owner/password preflight; keep all other security assertions.",
     "M629: old M320 synchronous teardown assertion now positively validates awaited concurrent AI-and-finance cleanup before identity removal.",
-    "M629: if concurrent logout finance close succeeds but AI shutdown errors, signed-in screen remains fail-closed with actionable safe finance Retry instead of the previous indefinite signout label."
+    "M629: if concurrent logout finance close succeeds but AI shutdown errors, signed-in screen remains fail-closed with actionable safe finance Retry instead of the previous indefinite signout label.",
+    "M629 #540 CI failure correction: M385 source scope must anchor uniquely to Home load() rather than the separate root load() with the same method name. No production changes or disabled gate."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -33,7 +34,7 @@
         "end": " Future<void> setPin("
       },
       {
-        "start": " Future<void> load()async {",
+        "start": " }\n Future<void> load()async {\n  final financeClock=kProfileMode",
         "end": " Future<void> _refreshWidget()async{"
       },
       {
