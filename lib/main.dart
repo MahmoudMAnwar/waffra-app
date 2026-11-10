@@ -3986,6 +3986,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  // M627: sign-out closes the Home-owned binding, not a root-local phantom.
  bool _m627ClosingSession=false;
  int _m627AccountEpoch=0;
+ // M630: one deferred post-first-frame batch per verified Home session.
+ // A logout/retry invalidates all callbacks from the previous batch.
+ int _m630HomeStartupEpoch=0;
+ Future<void>? _m630PostFrameFinanceWork;
+ bool _m630TourPending=false;
  // A signout must not close SQLCipher while a Home load still owns a read.
  Completer<void>? _m627HomeLoadCompletion;
  // Keep genuine DB reads visible to teardown even after Future.timeout
@@ -3995,6 +4000,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   if(_m627ClosingSession)return;
   _m627ClosingSession=true;
   _m627AccountEpoch++;
+  _m630HomeStartupEpoch++;
+  _m630TourPending=false;
   if(mounted)setState((){
    ready=false;
    _financeLoadFailure=waffraIsEnglish?
@@ -4012,6 +4019,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    // than close a vault whose old account read is still running.
    await Future.wait<void>(_m627OutstandingAccountReads.toList())
     .timeout(const Duration(seconds:20));
+   // The post-frame widget/reminder task also owns SQLCipher reads.
+   // Do not close the vault beneath it when logout races the first Home.
+   final startupFinance=_m630PostFrameFinanceWork;
+   if(startupFinance!=null){
+    await startupFinance.timeout(const Duration(seconds:20));
+   }
    await _m468PersistSequence.timeout(const Duration(seconds:20));
    await _financialWriteQueue.drain().timeout(const Duration(seconds:20));
    final pending=_financeBindingFuture;
@@ -6777,6 +6790,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
   final completion=Completer<void>();
   _m627HomeLoadCompletion=completion;
+  final startupEpoch=++_m630HomeStartupEpoch;
   // Retry invalidates any late completion from a previous account read.
   _m627AccountEpoch++;
   // M614: measure the real verified finance wait separately from login.
@@ -6799,16 +6813,55 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      debugPrint('WAFFRA_FINANCE_PERF first_home_frame_ms='
       '${startupClock.elapsedMilliseconds}');
     }
-    _m621OnFinanceNoticeTap();
-    // Home first: encrypted SMS scan starts only after initial layout settles.
+    // M630: first VERIFIED Home frame is exclusively for the authentic
+    // dashboard. No widget SQLCipher reread, reminder sync, tour animation
+    // or native SMS bridge runs during the frame being revealed.
     unawaited(()async{
      await Future<void>.delayed(const Duration(milliseconds:900));
      if(!mounted||!ready||_financeLoadFailure!=null)return;
+     if(_m627ClosingSession||startupEpoch!=_m630HomeStartupEpoch)return;
+     // Defer these actual navigation requests until the dashboard is visible.
+     _m621OnFinanceNoticeTap();
+     _receiveSharedSms();
+     _receiveWidgetAction();
+     if(!mounted||!ready||_financeLoadFailure!=null)return;
+     if(_m627ClosingSession||startupEpoch!=_m630HomeStartupEpoch)return;
+     // Serialize the optional widget reread and reminder sync BEFORE SMS
+     // import, and make logout await this DB work before closing SQLCipher.
+     final startupFinance=()async{
+      await _refreshWidget();
+      if(mounted&&ready&&!_m627ClosingSession&&
+         startupEpoch==_m630HomeStartupEpoch&&recurringRemindersEnabled){
+       await syncRecurringReminders();
+      }
+     }();
+     _m630PostFrameFinanceWork=startupFinance;
+     try{await startupFinance;}
+     catch(error){
+      debugPrint('Deferred Home startup finance: ${error.runtimeType}');
+     }finally{
+      if(identical(_m630PostFrameFinanceWork,startupFinance)){
+       _m630PostFrameFinanceWork=null;
+      }
+     }
+     if(!mounted||!ready||_financeLoadFailure!=null)return;
+     if(_m627ClosingSession||startupEpoch!=_m630HomeStartupEpoch)return;
      // M624: native SMS resume and encrypted inbox scan are sequential,
      // only after the first fully verified Home frame has painted.
      final activeOwner=(await widget.onVerifiedHomeSmsResume?.call())??true;
      if(!activeOwner||!mounted||!ready||_financeLoadFailure!=null)return;
+     if(_m627ClosingSession||startupEpoch!=_m630HomeStartupEpoch)return;
      await _refreshAutoSmsInbox(importMonth:!_autoSmsHistoryComplete);
+     if(!mounted||!ready||_financeLoadFailure!=null)return;
+     if(_m627ClosingSession||startupEpoch!=_m630HomeStartupEpoch)return;
+     if(_m630TourPending&&tab==0&&!accountOpened){
+      _m630TourPending=false;
+      setState((){tourActive=true;tourStep=0;tab=0;
+       accountOpened=false;_headerCompact=false;goalsOpened=false;
+       addFabExpanded=false;tourTargetReady=false;});
+      if(waffraAnimationLevel.value!='off')_tourGlow.repeat(reverse:true);
+      scheduleTourFocus();
+     }
     }());
    });
   }catch(e){
@@ -7324,32 +7377,24 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     throw StateError('Verified financial account balances are unavailable.');
    }
    setState(()=>ready=true);
-   // M486 #419: let Home's first interactive frame paint before competing
-   // asynchronous widget reads and incoming SMS callbacks begin.
-   WidgetsBinding.instance.addPostFrameCallback((_){
-    if(!mounted||!ready)return;
-    _receiveSharedSms();
-    _receiveWidgetAction();
-    unawaited(_refreshWidget());
-   });
+   // M630: independent widget/SMS/navigation work is deliberately NOT
+   // dispatched here. _loadFinanceSafely starts it after real Home paint.
   // Home reloading an encrypted ledger must never silently post a due payment.
   if(!verifiedEncryptedStartup){
    WidgetsBinding.instance.addPostFrameCallback((_){
     if(mounted)unawaited(applyRecurring());
    });
   }
-  if(recurringRemindersEnabled)unawaited(syncRecurringReminders());
+  // M630: reminder sync runs in the guarded post-first-frame finance batch.
   // An explicit Google onboarding notification consent may be pending;
   // enable reminder scheduling only through the verified finance authority.
   // No reminder OS permission at startup; wait for explicit recurring toggle.
   if(!verifiedEncryptedStartup&&trashBefore!=deletedCategories.length){
    await persist(route:WaffraFinanceRoute.categoryCreateEditDeleteRestore);
   }
-  if(!(p.getBool('waffra_in_app_tour_seen_v2')??false)&&mounted){
-   WidgetsBinding.instance.addPostFrameCallback((_){
-    if(mounted){setState((){tourActive=true;tourStep=0;tab=0;accountOpened=false;_headerCompact=false;goalsOpened=false;addFabExpanded=false;tourTargetReady=false;});if(waffraAnimationLevel.value!='off')_tourGlow.repeat(reverse:true);scheduleTourFocus();}
-   });
-  }
+  // M630: preserve the existing tour, but do not animate/relayout Home
+  // during its first verified frame or while native inbox imports.
+  _m630TourPending=!(p.getBool('waffra_in_app_tour_seen_v2')??false)&&mounted;
  }
  Future<void> _refreshWidget()async{
   if(!Platform.isAndroid)return;
