@@ -1305,14 +1305,14 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   WaffraRegionalCopy.countryIso.addListener(_onRegionChanged);load();launchIntro();}
  void _onRegionChanged(){if(mounted)setState((){});}
  Future<void> launchIntro()async{
-  // Keep the launch animation visible but avoid a fixed three-second
-  // delay when finance initialization is already ready. Actual loading
-  // and mandatory biometric gates still independently block unsafe entry.
-  // Do not hold the launch screen for an arbitrary minimum duration.
-  // Render one frame, while the independent finance authority still blocks
-  // access to protected Home data until its actual verification completes.
+  // Startup finance initialization runs independently. The actual splash
+  // animation owns when the wordmark can disappear; one frame is not enough.
   await WidgetsBinding.instance.endOfFrame;
-  if(mounted)setState(()=>introDone=true);
+ }
+ void _m632SplashCompleted(){
+  if(!mounted||introDone)return;
+  if(kProfileMode)debugPrint('WAFFRA_SPLASH_PERF animation_complete');
+  setState(()=>introDone=true);
  }
  @override void didChangeAppLifecycleState(AppLifecycleState state){
   if(state==AppLifecycleState.resumed){
@@ -2038,7 +2038,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
      duration:const Duration(milliseconds:2400));
    }
   },child:Directionality(textDirection:language=='ar'?TextDirection.rtl:TextDirection.ltr,child:
-   (loading||!introDone)?const WaffraLaunchIntro():
+   (loading||!introDone)?WaffraLaunchIntro(onFinished:_m632SplashCompleted):
    startupError!=null?Scaffold(body:Center(child:Padding(padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[
     const Icon(Icons.error_outline,size:48,color:Colors.red),
     const SizedBox(height:12),
@@ -2237,14 +2237,23 @@ const String _waffraGoogleLogo = '''
 ''';
 
 class WaffraLaunchIntro extends StatefulWidget {
- const WaffraLaunchIntro({super.key});
+ final VoidCallback? onFinished;
+ const WaffraLaunchIntro({super.key,this.onFinished});
  @override State<WaffraLaunchIntro> createState()=>_WaffraLaunchIntroState();
 }
 class _WaffraLaunchIntroState extends State<WaffraLaunchIntro> with SingleTickerProviderStateMixin {
  late final AnimationController controller;
+ bool _completionSent=false;
  @override void initState(){
   super.initState();
-  controller=AnimationController(vsync:this,duration:const Duration(milliseconds:1650))..forward();
+  controller=AnimationController(vsync:this,duration:const Duration(milliseconds:1650));
+  controller.addStatusListener((status){
+   if(status==AnimationStatus.completed&&!_completionSent){
+    _completionSent=true;
+    widget.onFinished?.call();
+   }
+  });
+  controller.forward();
  }
  @override void dispose(){controller.dispose();super.dispose();}
  double reveal(double t,double start,double end)=>((t-start)/(end-start)).clamp(0.0,1.0);
@@ -2253,9 +2262,11 @@ class _WaffraLaunchIntroState extends State<WaffraLaunchIntro> with SingleTicker
   body:AnimatedBuilder(animation:controller,builder:(ctx,_){
    final t=controller.value;
    final iconProgress=Curves.easeOutBack.transform(reveal(t,.02,.28));
-   final nameProgress=Curves.easeOutCubic.transform(reveal(t,.26,.48));
-   final sloganProgress=Curves.easeOutCubic.transform(reveal(t,.44,.70));
-   final fadeOut=1-reveal(t,.92,1.0);
+   // Reveal the full bilingual wordmark earlier; it remains readable until
+   // the genuine animation completion before the auth route becomes visible.
+   final nameProgress=Curves.easeOutCubic.transform(reveal(t,.12,.33));
+   final sloganProgress=Curves.easeOutCubic.transform(reveal(t,.28,.51));
+   final fadeOut=1-reveal(t,.97,1.0);
    return Stack(children:[
     const Positioned.fill(child:DecoratedBox(decoration:BoxDecoration(
      gradient:RadialGradient(colors:[Color(0xFF075B43),Color(0xFF003C2E)],radius:1.2)))),
