@@ -1180,6 +1180,59 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  // M627: one Home State per authenticated session, stable across locale.
  int _m627HomeSession=0;
  GlobalKey<_HomeScreenState> _m627HomeKey=GlobalKey<_HomeScreenState>(debugLabel:'home-session-0');
+ // M631: speculative BIND only, never decrypt/paint balances before biometric.
+ Person? _m631PrewarmOwner;
+ int? _m631PrewarmSession;
+ Future<WaffraProductionFinanceAuthorityBinding?>? _m631PrewarmBinding;
+ bool _m631PrewarmClaimed=false;
+ void _m631StartFinancePrewarm(Person owner){
+  if(!mounted||_logoutInProgress||_m631PrewarmBinding!=null||
+     !identical(profile,owner))return;
+  final session=_m627HomeSession;
+  final clock=kProfileMode?(Stopwatch()..start()):null;
+  _m631PrewarmOwner=owner;
+  _m631PrewarmSession=session;
+  _m631PrewarmClaimed=false;
+  // Successful credentials/profile verification precedes this non-awaited bind.
+  _m631PrewarmBinding=()async{
+   try{
+    final binding=await WaffraProductionFinanceAuthorityBinding.bind(
+     installedApp:true,deferInitialDashboardRead:true,
+     legacy:const WaffraHomeFinancePersistence(),
+     startupRoute:WaffraFinanceRoute.appStartup);
+    if(!mounted||_logoutInProgress||!identical(profile,owner)||
+       _m627HomeSession!=session){
+     await binding.close();
+     return null;
+    }
+    if(kProfileMode&&clock!=null){
+     debugPrint('WAFFRA_AUTH_PERF prewarm_bind_ms=${clock.elapsedMilliseconds}');
+    }
+    return binding;
+   }catch(error){
+    if(kProfileMode)debugPrint('WAFFRA_AUTH_PERF prewarm_bind_unavailable');
+    // Home will retry its original authenticated SQLCipher binding.
+    return null;
+   }
+  }();
+ }
+ Future<WaffraProductionFinanceAuthorityBinding?>? _m631ClaimFinancePrewarm(
+  Person owner){
+  if(_m631PrewarmClaimed||!identical(_m631PrewarmOwner,owner)||
+     _m631PrewarmSession!=_m627HomeSession||_logoutInProgress)return null;
+  final pending=_m631PrewarmBinding;
+  if(pending!=null)_m631PrewarmClaimed=true;
+  return pending;
+ }
+ Future<void> _m631CloseUnusedPrewarm({bool includeClaimed=false})async{
+  if(_m631PrewarmClaimed&&!includeClaimed)return;
+  final pending=_m631PrewarmBinding;
+  _m631PrewarmBinding=null;_m631PrewarmOwner=null;
+  _m631PrewarmSession=null;_m631PrewarmClaimed=false;
+  if(pending==null)return;
+  final binding=await pending;
+  if(binding!=null)await binding.close();
+ }
  // Profile-mode handoff timings; never log identity or financial values.
  Stopwatch? _m625HandoffClock;
  String? _m625HandoffOrigin;
@@ -1284,7 +1337,11 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   }
  }
  @override void dispose(){WaffraRegionalCopy.countryIso.removeListener(_onRegionChanged);
-  WidgetsBinding.instance.removeObserver(this);super.dispose();}
+  WidgetsBinding.instance.removeObserver(this);
+  // Home owns claimed bindings; root closes only unclaimed preparation.
+  unawaited(_m631CloseUnusedPrewarm(
+   includeClaimed:_m627HomeKey.currentState==null));
+  super.dispose();}
  String? startupError;
  Future<void> load()async {
   try {
@@ -1344,6 +1401,9 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     _m623HomeReady=false;
     _m623RetainedStage=u==null?null:'biometric';
    });
+   // Restored session already passed startup source verification.
+   // Prepare the connection, NOT financial data, during biometric gating.
+   if(u!=null)_m631StartFinancePrewarm(u);
   }catch(e){
    debugPrint('Waffra startup failed: $e');
    if(mounted)setState((){startupError=e.toString();loading=false;});
@@ -1435,6 +1495,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     !(prefs.getBool(waffraCountrySetupKey(u))??false);
   final needsSmsAccessAfterRegistration=Platform.isAndroid&&profile==null&&
    !(prefs.getBool(WaffraAutoSms.firstRunKey)??false);
+  final shouldPrewarmNewSession=profile==null||showLogin;
   if(mounted)setState((){
    if(needsSmsAccessAfterRegistration)autoSmsConsentPending=true;
    // Once the account has been verified, first-run permissions precede
@@ -1450,6 +1511,8 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     _m623RetainedStage=locked?'biometric':'login';
    }
   });
+  // Password verification and protected profile write have succeeded.
+  if(mounted&&shouldPrewarmNewSession)_m631StartFinancePrewarm(u);
   // Repeat phone login deliberately skips the second biometric gate;
   // trace the verified-password-to-authentic-Home transition.
   if(mounted&&ordinaryPhoneRelogin&&!locked&&!autoSmsConsentPending){
@@ -1576,7 +1639,13 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   // remains fail-closed, with native SMS already suspended above.
   final closingHome=_m627HomeKey.currentState;
   Future<void> closeHomeFinance()async{
-   if(closingHome!=null)await closingHome._m627CloseForLogout();
+   if(closingHome!=null){
+    await closingHome._m627CloseForLogout();
+    await _m631CloseUnusedPrewarm();
+   }else{
+    // Logout from biometric or a build/mount race still closes the opener.
+    await _m631CloseUnusedPrewarm(includeClaimed:true);
+   }
   }
   await Future.wait<void>([
    WaffraOnDeviceQwen.shared.dispose().timeout(const Duration(seconds:12)),
@@ -1590,6 +1659,8 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    profile=null;showLogin=true;locked=true;googleFirstRunSetup=false;
    _m623HomeReady=false;_m623RetainedStage=null;
    _m627HomeSession++;
+   _m631PrewarmBinding=null;_m631PrewarmOwner=null;
+   _m631PrewarmSession=null;_m631PrewarmClaimed=false;
    _m627HomeKey=GlobalKey<_HomeScreenState>(
     debugLabel:'home-session-$_m627HomeSession');
    _m625HandoffClock=null;_m625HandoffOrigin=null;
@@ -1727,6 +1798,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
       // Stable across language changes; rotated on explicit sign-out only.
       key:_m627HomeKey,
       profile:account,
+      prewarmedFinanceBinding:_m631ClaimFinancePrewarm(account),
       onVerifiedReady:()=>_m623HomeLoaded(account),
       onVerifiedHomeSmsResume:()=>_m624ResumeSmsAfterRealHome(account),
       dark:appearance=='dark'||(appearance=='system'&&
@@ -3757,6 +3829,7 @@ class WaffraTransactionDetailsDialog extends StatelessWidget {
 }
 class HomeScreen extends StatefulWidget {
  final Person profile;final bool dark,pinEnabled;final String appearance;
+ final Future<WaffraProductionFinanceAuthorityBinding?>? prewarmedFinanceBinding;
  final int greetingIndex;
  final VoidCallback? onVerifiedReady;
  final Future<bool> Function()? onVerifiedHomeSmsResume;
@@ -3770,7 +3843,7 @@ class HomeScreen extends StatefulWidget {
   required this.onSetPin,required this.onTheme,required this.onLanguage,required this.onLogout,required this.onProfile,
    required this.appearance,required this.onAppearance,
    required this.greetingIndex,this.onVerifiedReady,
-   this.onVerifiedHomeSmsResume});
+   this.prewarmedFinanceBinding,this.onVerifiedHomeSmsResume});
  @override State<HomeScreen> createState()=>_HomeScreenState();
 }
 // Scroll-linked, pinned balance summary. Shrinks with the user's gesture;
@@ -3970,7 +4043,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   catch(_){if(identical(_financeBindingFuture,pending))_financeBindingFuture=null;rethrow;}
  }
  Future<void> _bindFinanceSource()async{
-  final binding=await WaffraProductionFinanceAuthorityBinding.bind(
+  // Reuse the exact verified owner/session connection; if speculative open
+  // failed, use the existing fail-closed original binder instead.
+  final warmed=await widget.prewarmedFinanceBinding;
+  if(kProfileMode)debugPrint('WAFFRA_AUTH_PERF home_binding_reused=${warmed!=null}');
+  final binding=warmed??await WaffraProductionFinanceAuthorityBinding.bind(
     installedApp:true,
    // The first mandatory Home dashboard read validates this source;
    // skip the duplicate encrypted snapshot read during binder setup.
@@ -7327,28 +7404,32 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    // M486 #419: let Home's first interactive frame paint before competing
    // asynchronous widget reads and incoming SMS callbacks begin.
    WidgetsBinding.instance.addPostFrameCallback((_){
-    if(!mounted||!ready)return;
-    _receiveSharedSms();
-    _receiveWidgetAction();
-    unawaited(_refreshWidget());
+    unawaited(()async{
+     // Load returns before the retained biometric/login stage is dismissed.
+     // Let its FIRST genuinely verified Home frame render before optional I/O.
+     await Future<void>.delayed(const Duration(milliseconds:400));
+     if(!mounted||!ready||_m627ClosingSession||_financeLoadFailure!=null)return;
+     _receiveSharedSms();
+     _receiveWidgetAction();
+     unawaited(_refreshWidget());
+     if(!verifiedEncryptedStartup)unawaited(applyRecurring());
+     if(recurringRemindersEnabled)unawaited(syncRecurringReminders());
+     if(!(p.getBool('waffra_in_app_tour_seen_v2')??false)&&mounted){
+      setState((){
+       tourActive=true;tourStep=0;tab=0;accountOpened=false;
+       _headerCompact=false;goalsOpened=false;addFabExpanded=false;
+       tourTargetReady=false;
+      });
+      if(waffraAnimationLevel.value!='off')_tourGlow.repeat(reverse:true);
+      scheduleTourFocus();
+     }
+    }());
    });
-  // Home reloading an encrypted ledger must never silently post a due payment.
-  if(!verifiedEncryptedStartup){
-   WidgetsBinding.instance.addPostFrameCallback((_){
-    if(mounted)unawaited(applyRecurring());
-   });
-  }
-  if(recurringRemindersEnabled)unawaited(syncRecurringReminders());
   // An explicit Google onboarding notification consent may be pending;
   // enable reminder scheduling only through the verified finance authority.
   // No reminder OS permission at startup; wait for explicit recurring toggle.
   if(!verifiedEncryptedStartup&&trashBefore!=deletedCategories.length){
    await persist(route:WaffraFinanceRoute.categoryCreateEditDeleteRestore);
-  }
-  if(!(p.getBool('waffra_in_app_tour_seen_v2')??false)&&mounted){
-   WidgetsBinding.instance.addPostFrameCallback((_){
-    if(mounted){setState((){tourActive=true;tourStep=0;tab=0;accountOpened=false;_headerCompact=false;goalsOpened=false;addFabExpanded=false;tourTargetReady=false;});if(waffraAnimationLevel.value!='off')_tourGlow.repeat(reverse:true);scheduleTourFocus();}
-   });
   }
  }
  Future<void> _refreshWidget()async{
