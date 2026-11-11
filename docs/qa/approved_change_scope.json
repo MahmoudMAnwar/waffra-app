@@ -232,6 +232,14 @@
       {
         "start": " Future<void> recurringDialog({String? suggestedTitle,double? suggestedAmount,RecurringBill? initial,RecurringBill? duplicate})async {",
         "end": " DateTime nextRecurringDue(RecurringBill r) {"
+      },
+      {
+        "start": " Widget goalsPage(){",
+        "end": " Future<void> recurringDialog({String? suggestedTitle"
+      },
+      {
+        "start": " Widget recurringPage(){",
+        "end": " Future<void> showWaffraFinancialCalendar()async{"
       }
     ],
     "lib/waffra_auto_sms.dart": [
