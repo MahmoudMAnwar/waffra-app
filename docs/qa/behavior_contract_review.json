@@ -1241,6 +1241,42 @@
         "Do not merge or claim queue cleared until latest exact-head CI green and physical Android acceptance.",
         "M548 old test for deliberately per-SHA-isolated groups must assert the approved superseded PR-only policy instead, retaining exact SHA checkout, same PR-only cancellation, main/manual separation and trusted cleanup safeguards."
       ]
+    },
+    {
+      "id": "M643-EXACT-HEAD-FAILURES-GOAL-SOURCE-AND-FOOTER-NOTICES",
+      "issue": "Issue #564 / Draft PR #558",
+      "previous_behavior": "M174/M417 M385 guard rejects a scripts/qa path incorrectly declared as a wholesale test replacement; M429/M417 analyzer flags dead null check in verified goal funding and intentionally inactive FX preview; M160 full regression fails 4 tests because M641 goal dialogs directly create extra SnackBars and M266 only recognizes old inline binding, not mandatory delegated bound account helper.",
+      "approved_behavior": "Keep strict M385 full replacement limited to test/ and use two narrowly anchored M453 test scopes. Preserve dormant FX as non-posting Saudi-disabled, remove dead legacy branch after verified funding fail-closed guard. Both goal edit/fund errors route through the sole common footer-aware snack presenter; goal suggestion source binding is asserted through the M641 verified helper before reading suggestions, without redundant UI-path database binding. Preserve all original finance/account/privacy guards.",
+      "source_paths": [
+        "docs/qa/approved_change_scope.json",
+        "lib/main.dart",
+        "lib/waffra_goal_recurring_actions.part.dart",
+        "scripts/qa/test_m453_queue_hygiene.py"
+      ],
+      "test_paths": [
+        "test/waffra_footer_notice_test.dart",
+        "test/m502_logout_paths_test.dart",
+        "test/waffra_directional_fab_receipt_corner_test.dart",
+        "test/storage/m266_home_bound_source_regression_test.dart",
+        "test/m641_goal_recurring_account_binding_test.dart",
+        "test/storage/m641_goal_account_integrity_test.dart",
+        "test/qa/m385_approved_scope_guard_test.py",
+        "test/qa/m548_ci_exact_sha_concurrency_test.py"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m174-main-sha-postmerge.yml",
+        ".github/workflows/m429-integration-smoke.yml",
+        ".github/workflows/m417-auto-bank-sms.yml",
+        ".github/workflows/m160-main-reconciliation.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Retain M385 fail-closed protected function scope with no unapproved wholesale replacement or weakened tests.",
+        "One single Waffra footer-aware notice presenter for all dialogs, including goal edit/funding and logout.",
+        "Goal suggestions and SQLCipher accounts cannot read before verified finance source is bound by helper; backup binding remains explicit.",
+        "Savings funding debits selected verified source account exactly once, goal wallet credit stays separate; no legacy fallback, double charge, unauthenticated write or auto merge.",
+        "Exact-PR-HEAD Flutter full regression and Android compile must pass before merge; no feature-branch APK."
+      ]
     }
   ]
 }
