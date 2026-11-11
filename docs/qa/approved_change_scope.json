@@ -87,7 +87,8 @@
     "test/m639_permissions_onboarding_plain_copy_test.dart",
     "test/m640_receipt_reader_retirement_test.dart",
     "test/qa/m412_workflow_wiring_test.py",
-    "test/storage/m637_biometric_home_schema_hotpath_test.dart"
+    "test/storage/m637_biometric_home_schema_hotpath_test.dart",
+    "assets/tessdata_config.json"
   ],
   "approved_deleted_files": [
     ".github/workflows/m287-receipt-ocr.yml",
@@ -102,7 +103,8 @@
     "test/m329_ai_model_restart_and_visible_analysis_test.dart",
     "test/m332_ai_ocr_hang_and_six_for_three_test.dart",
     "test/m332_live_bank_image_sms_hang_regression_test.dart",
-    "test/m335_real_sms_ocr_accuracy_test.dart"
+    "test/m335_real_sms_ocr_accuracy_test.dart",
+    "assets/tessdata_config.json"
   ],
   "approved_full_test_replacements": [
     "test/m281_practical_tools_test.dart",
