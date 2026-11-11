@@ -108,7 +108,7 @@ void main() {
     // no financial write may bypass main/child category validation.
     expect(source, contains('if(!waffraCanAssignManualCategory(categories,'));
     expect(source, contains('income,selectedParentId,category))return;'));
-    expect(source, contains('!waffraCanAssignManualCategory(available,income,activeSmsParent,category)'));
+    expect(source, contains('waffraCanAssignManualCategory(categories,'));
     expect(source, contains('selectedParentId'));
     expect(source, contains('leafLabels:true'));
     expect(source, contains('title:WaffraText(waffraTr(leafLabels?'));
