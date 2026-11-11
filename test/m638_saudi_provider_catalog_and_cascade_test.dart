@@ -69,6 +69,6 @@ void main(){
   expect(account,contains('m470-new-account-provider'));
   expect(account,contains('WaffraSaudiFinancialProviders.wallet'));
   expect(account,contains("providerId:(kind=='bank'||kind=='wallet')?provider:'none'"));
-  expect(account,contains("kind='wallet'"));
+  expect(account,contains("kind=selected?.category==WaffraSaudiFinancialProviders.wallet?'wallet':'bank'"));
  });
 }
