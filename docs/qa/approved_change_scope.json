@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
   "change_id": "M637-M640-20261111-VERIFIED-HOME-SA-CATALOG-SMS-SYNC-PLAIN-PERMISSIONS-OCR-RETIRE-557-561",
-  "human_scope_review": "Two approved user scopes combined by explicit owner request in the same Draft PR #558. M637 performance unchanged; M638 local vs digital bank vs wallet Arabic catalog, cascaded entry/account selection + dimmed validation, remove surplus transfer explanations, explicit Android SMS inbox deletion reconciliation on I/O executor, no saved ledger/anti-replay/excluded loss. Permanent requirements M637/M638 documented before source changes. M639 #560 explicit owner direction: permissions title and explanation no artificial-intelligence references; copy-only scoped change, PR #558.Two approved user scopes combined by explicit owner request in the same Draft PR #558. M637 performance unchanged; M638 local vs digital bank vs wallet Arabic catalog, cascaded entry/account selection + dimmed validation, remove surplus transfer explanations, explicit Android SMS inbox deletion reconciliation on I/O executor, no saved ledger/anti-replay/excluded loss. Permanent requirements M637/M638 documented before source changes. M639 #560 explicit owner direction: permissions title and explanation no artificial-intelligence references; copy-only scoped change, PR #558. M640 owner specifically authorized OCR-only engine/tests/workflow removal with exact path deletion list; no other runtime, security or finance paths may be deleted.",
+  "human_scope_review": "Two approved user scopes combined by explicit owner request in the same Draft PR #558. M637 performance unchanged; M638 local vs digital bank vs wallet Arabic catalog, cascaded entry/account selection + dimmed validation, remove surplus transfer explanations, explicit Android SMS inbox deletion reconciliation on I/O executor, no saved ledger/anti-replay/excluded loss. Permanent requirements M637/M638 documented before source changes. M639 #560 explicit owner direction: permissions title and explanation no artificial-intelligence references; copy-only scoped change, PR #558.Two approved user scopes combined by explicit owner request in the same Draft PR #558. M637 performance unchanged; M638 local vs digital bank vs wallet Arabic catalog, cascaded entry/account selection + dimmed validation, remove surplus transfer explanations, explicit Android SMS inbox deletion reconciliation on I/O executor, no saved ledger/anti-replay/excluded loss. Permanent requirements M637/M638 documented before source changes. M639 #560 explicit owner direction: permissions title and explanation no artificial-intelligence references; copy-only scoped change, PR #558. M640 owner specifically authorized OCR-only engine/tests/workflow removal with exact path deletion list; no other runtime, security or finance paths may be deleted. M642 #563 owner-approved exact PR #558 queue remedy: only nine named workflow concurrency blocks and M453 trusted cleanup, M453 current-behavior QA and new M642 test; no finance runtime changes. M453 default-branch activation needs merge or authorized Actions dispatch.",
   "user_requested_changes": [
     "Speed up the actual verified finance Home handoff after successful biometric and ordinary logout/login; no cosmetic spinner in this performance-first patch.",
     "Remove repeated account schema foreign-key validations and avoid unnecessary already-installed AccountContext transaction on the verified account balance read hot path without losing any schema corruption checks.",
@@ -22,7 +22,8 @@
     "M641 #562 new/edit savings goals require a verified institution and actual financial account, fund wallet with a single verified source debit, and carry account identity to linked due reminders; preserve old unlinked goals without invented transfers.",
     "M641 #562: SQLCipher integration test verifies linked savings goal and due account ID in typed/snapshot projection and rejects stale/missing accounts without ledger changes.",
     "M640 #561 regression: retained M587 transfer correction now calls entrySheet with manualIncomeOverride instead of removed OCR-era scannedIncome, while three non-posting actions, transfer receipts, explicit SMS ACK and account confirmation assertions stay intact.",
-    "M641 #562 regression: M500 retroactive account link protection remains on the actual institution/child dropdown onChanged guards; replace obsolete callback-shape expectation with exact two identity-locked selections, preserving existing SQLCipher link/consent/rollback assertions."
+    "M641 #562 regression: M500 retroactive account link protection remains on the actual institution/child dropdown onChanged guards; replace obsolete callback-shape expectation with exact two identity-locked selections, preserving existing SQLCipher link/consent/rollback assertions.",
+    "M642 #563: Fix only PR #558 exact-head CI queue supersession: workflow+PR-scoped cancellation (not SHA/run-id isolated), protect main/manual runs and exact SHA test checkout; allow M453 trusted sweep to finish instead of cancelling itself; never cancel current SHA or weaken tests."
   ],
   "allowed_changed_files": [
     ".github/workflows/android-full-smoke.yml",
@@ -107,7 +108,14 @@
     "test/m641_goal_recurring_account_binding_test.dart",
     "test/m371_goal_wallet_and_budgets_regression_test.dart",
     "test/storage/m641_goal_account_integrity_test.dart",
-    "test/m580_sms_security_navigation_performance_test.dart"
+    "test/m580_sms_security_navigation_performance_test.dart",
+    ".github/workflows/finance-full-regression.yml",
+    ".github/workflows/m103-same-sha-release-certification.yml",
+    ".github/workflows/m160-main-reconciliation.yml",
+    ".github/workflows/m550-behavior-contract-preflight.yml",
+    ".github/workflows/m453-superseded-pr-cleanup.yml",
+    "scripts/qa/test_m453_queue_hygiene.py",
+    "scripts/qa/test_m642_latest_pr_ci_concurrency.py"
   ],
   "approved_deleted_files": [
     ".github/workflows/m287-receipt-ocr.yml",
@@ -135,7 +143,8 @@
     "test/m336_whole_app_finance_quality_matrix_test.dart",
     "test/m341_multilingual_bank_sms_ocr_test.dart",
     "test/m470_financial_currency_word_boundary_regression_test.dart",
-    "test/qa/m412_workflow_wiring_test.py"
+    "test/qa/m412_workflow_wiring_test.py",
+    "scripts/qa/test_m453_queue_hygiene.py"
   ],
   "bounded_sections": {
     "lib/storage/waffra_verified_encrypted_finance_bridge.dart": [
@@ -494,6 +503,36 @@
       {
         "start": " test('M587 bank transfer shows exactly three non-posting choices',(){",
         "end": " test('notification center never repeats a second review hero',(){"
+      }
+    ],
+    ".github/workflows/finance-full-regression.yml": [
+      {
+        "start": "name: Waffra Full Offline Finance and UI Regression",
+        "end": null
+      }
+    ],
+    ".github/workflows/m103-same-sha-release-certification.yml": [
+      {
+        "start": "name: Waffra M103 Same-SHA Whole-App Release Certification",
+        "end": null
+      }
+    ],
+    ".github/workflows/m160-main-reconciliation.yml": [
+      {
+        "start": "name: M160 Main Reconciliation and Backup Regression",
+        "end": null
+      }
+    ],
+    ".github/workflows/m550-behavior-contract-preflight.yml": [
+      {
+        "start": "name: M550 Every-PR Behavior and Test Contract Preflight",
+        "end": null
+      }
+    ],
+    ".github/workflows/m453-superseded-pr-cleanup.yml": [
+      {
+        "start": "name: M453 Safe Superseded PR Run Cleanup",
+        "end": null
       }
     ]
   }

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "pr": "M637–M640 PR #558 — verified Home hot path, Saudi financial provider grouping, SMS sync, permissions copy, and complete receipt OCR retirement",
-  "issue": "Issues #557, #559, #560, #561 — owner confirmed OCR removal",
+  "pr": "M637–M640 PR #558 — verified Home hot path, Saudi financial provider grouping, SMS sync, permissions copy, and complete receipt OCR retirement; M642 PR queue remediation",
+  "issue": "Issues #557, #559, #560, #561 — owner confirmed OCR removal; M642 #563",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main",
   "reviewed_at": "2026-11-11",
@@ -1205,6 +1205,39 @@
         "Linked goal due posts only once on user confirmation. Already saved funds are not debited a second time; only cash shortfall is linked to existing verified account.",
         "Old goals with no accountId remain readable; they require explicit account selection for new edits/funding and must not rewrite historical money.",
         "No branch APK or auto merge; tests and physical first-account and due scenarios required."
+      ]
+    },
+    {
+      "id": "M642-PR-ONLY-CONCURRENCY-AND-TRUSTED-CLEANUP",
+      "issue": "Issue #563 / existing Draft PR #558",
+      "previous_behavior": "Heavy PR CI workflows isolate every head SHA or run ID, leaving old M340/M282/M103/M160/Flutter jobs active; M453 pull_request_target cleanup cancels itself during repeated synchronize events and does not finish a stale-run sweep.",
+      "approved_behavior": "In nine specifically named workflows, replace SHA/unique run concurrency for PR events with stable workflow+PR-number identity, cancel superseded copies only for pull_request event, isolate push main and manual dispatch by distinct event/run IDs. M453 trusted sweep retains security/safety checks but a running sweep is not killed by a later synchronize; newer pending sweep coalesces.",
+      "source_paths": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m103-same-sha-release-certification.yml",
+        ".github/workflows/m160-main-reconciliation.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m453-superseded-pr-cleanup.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/m274-production-ui-golden.yml",
+        ".github/workflows/m282-combined-candidate.yml",
+        ".github/workflows/m340-continuous-financial-quality.yml"
+      ],
+      "test_paths": [
+        "scripts/qa/test_m453_queue_hygiene.py",
+        "scripts/qa/test_m642_latest_pr_ci_concurrency.py"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m453-queue-regression.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "Preserve exact event-head checkout and all existing Flutter/finance/security/Android tests; do not mark delayed/stale SHA successes current.",
+        "Run cancellation only for stale same-PR same-workflow pull_request events; main push/release/manual and other PR runs remain isolated.",
+        "Trusted pull_request_target sweeper never checks out PR code, verifies live HEAD before cancellation, keeps dry_run, full existing protections and 120 run bound.",
+        "Workflow source changes in Draft PR do not alter main-based pull_request_target behavior or cancel old runs until deployed/authorized separately.",
+        "Do not merge or claim queue cleared until latest exact-head CI green and physical Android acceptance."
       ]
     }
   ]
