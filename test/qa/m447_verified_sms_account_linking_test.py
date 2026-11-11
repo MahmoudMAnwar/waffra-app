@@ -8,19 +8,22 @@ ROOT = Path(__file__).resolve().parents[2]
 class VerifiedSmsAccountLinkingTest(unittest.TestCase):
     def test_every_home_sms_commit_reviews_accounts(self):
         home = (ROOT / "lib/main.dart").read_text(encoding="utf-8")
-        self.assertEqual(home.count("commitConfirmedSms("), 4)
-        # M565 adds a real fourth verified, hash-atomic SMS yes-confirm path.
+        self.assertEqual(home.count("commitConfirmedSms("), 2)
+        self.assertNotIn("Future<void> bulkSmsSheet(", home)
+        self.assertIn("await entrySheet(sms:true,initialSms:body,reviewedSender:sender);", home)
+        self.assertIn("userConfirmed:true", home)
+        # M636: surviving paths are M565 yes-confirm + account-bound SMS editor;\n        # retired bulk paste and widget direct writers must NEVER return.
         self.assertIn("selectedAccountIds:chosen.ids", home)
         self.assertIn("expectedAccountGeneration:chosen.generation", home)
         self.assertIn("allowDuplicateHashes:false", home)
-        # The sixth verified review is the goal-due cash remainder; it must
-        # be accounted for, not removed to satisfy an obsolete call count.
-        self.assertEqual(home.count("await reviewSmsAccountLinks("), 7)
+        # Verified source account selection remains mandatory for both SMS
+        # routes, and goal_due continues to require an account and witness.
+        self.assertEqual(home.count("await reviewSmsAccountLinks("), 5)
         self.assertIn("sourceType:'goal_due'", home)
-        self.assertEqual(home.count("selectedAccountIds:reviewedAccounts.ids"), 1)
-        self.assertEqual(home.count("selectedAccountIds:reviewedAccount.ids"), 2)
-        self.assertEqual(home.count("expectedAccountGeneration:reviewedAccounts.generation"), 1)
-        self.assertEqual(home.count("expectedAccountGeneration:reviewedAccount.generation"), 2)
+        self.assertEqual(home.count("selectedAccountIds:reviewedAccounts.ids"), 0)
+        self.assertEqual(home.count("selectedAccountIds:reviewedAccount.ids"), 1)
+        self.assertEqual(home.count("expectedAccountGeneration:reviewedAccounts.generation"), 0)
+        self.assertEqual(home.count("expectedAccountGeneration:reviewedAccount.generation"), 1)
 
     def test_manual_and_recurring_finance_account_selection(self):
         home = (ROOT / "lib/main.dart").read_text(encoding="utf-8")
