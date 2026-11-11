@@ -35,8 +35,14 @@ class WaffraWidget : AppWidgetProvider() {
                 balance.length >= 9 -> 10.5f
                 else -> 13.0f
             }
-            val intent = Intent(context, WaffraQuickActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            // M636: The launcher widget no longer opens the old SMS-paste
+            // FlutterEngine. Its only quick action is manual entry in the
+            // authenticated main app. The Home owner+finance gates enforce
+            // biometric/verified account selection before any transaction.
+            val intent = Intent(context, MainActivity::class.java).apply {
+                action = "waffra.ADD_TRANSACTION"
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                    or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             }
             val pending = PendingIntent.getActivity(
                 context, 1340, intent,
