@@ -106,9 +106,9 @@ void main(){
   expect(directory,contains("budgetStatusFilter=='active'"));
   // Manual editor and SMS import revalidate active standalone budget IDs.
   expect(home,contains('final linkedBudget=namedBudgets.where((b)=>b.id==result.budgetId&&!b.deleted)'));
-  expect(home,contains('final reviewedBudgets=await reviewSmsBudgetLinks(additions)'));
-  expect(home,contains('!namedBudgets.any((b)=>b.id==id&&b.budget>0&&b.budgetActive&&!b.deleted)'));
-  expect(home,contains('A selected budget was paused. Review the batch again.'));
+  expect(home,contains('final budgets=await reviewSmsBudgetLinks([record]);'));
+  expect(home,contains('if(!income&&selectedBudgetId==null&&'));
+  expect(home,contains('waffraHasSelectableBudget(namedBudgets)'));
   // Separating budgets from categories must never mutate linked transactions.
   expect(home,contains("operation:'retroactive-opt-in-budget-link'"));
   expect(home,contains('Existing allocations stay unchanged.'));
