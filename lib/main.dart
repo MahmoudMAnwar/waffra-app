@@ -114,6 +114,7 @@ import 'waffra_accounts_manager_page.dart';
 import 'waffra_new_account_dialog.dart';
 import 'waffra_account_transaction_form.dart';
 import 'waffra_recurring_account_groups.dart';
+import 'waffra_saudi_financial_providers.dart';
 import 'storage/waffra_fresh_finance_modules_repository.dart';
 import 'storage/waffra_verified_module_ui_guard.dart';
 import 'storage/waffra_runtime_finance_route_contract.dart';
@@ -8881,9 +8882,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   String? selectedParentId;
   String? selectedBudgetId=(smsEditorDraft?['budget'] as String?)??initial?.budgetId;
   var entryAccounts=_m467Accounts.where((a)=>!a.archived).toList();
-  var entryProviders=sms?
-   WaffraRecurringAccountGroups.withBankProviderChoices(entryAccounts):
-   WaffraRecurringAccountGroups.fromAccounts(entryAccounts);
+  var entryProviders=WaffraRecurringAccountGroups.withBankProviderChoices(entryAccounts);
   String? chosenManualProvider=smsEditorDraft?['provider'] as String?;
   String? chosenManualAccount=smsEditorDraft?['account'] as String?;
   // The sender identifies a bank/provider only, NEVER a financial account.
@@ -8910,6 +8909,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     chosenManualAccount=originalLinkedAccountId;
    }
   }
+  String? chosenManualProviderCategory=chosenManualProvider==null?null:
+   WaffraSaudiFinancialProviders.categoryForGroup(chosenManualProvider);
   int budgetMenuRevision=0; // reset action-only dropdown selections
   int accountProviderMenuRevision=0,accountChildMenuRevision=0;
   int transferSourceProviderRevision=0,transferTargetProviderRevision=0;
@@ -8961,6 +8962,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    List<WaffraAccountBalance> transferAccounts=<WaffraAccountBalance>[];
    String? transferSource,transferDestination,transferError;
    String? transferSourceProvider,transferDestinationProvider;
+   String? transferSourceCategory,transferDestinationCategory;
    DateTime transferDate=DateTime.now();
    final transferAmount=TextEditingController();
    final transferNote=TextEditingController();
@@ -9080,10 +9082,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       final api=WaffraVerifiedAccountsApi(bridge:bridge);
       final before=await api.balances(); // establish a fresh writer witness
       if(!sheetContext.mounted)return;
-      final bankSelection=RegExp(
-       r'^bank:institution:(rajhi|inma|snb|riyad|bilad|stc)$')
-       .firstMatch(mainProvider?'':selectedProviderBefore??'');
-      final expectedBank=bankSelection?.group(1);
+      final selectedParent=mainProvider?'':selectedProviderBefore??'';
+      final catalogId=selectedParent.split(':').last;
+      final selectedCatalog=WaffraSaudiFinancialProviders.byId(catalogId);
+      final expectedBank=selectedCatalog!=null&&
+       selectedCatalog.groupId==selectedParent?selectedCatalog.id:null;
       // A masked account suffix from an Android SMS is a suggestion ONLY
       // when the reviewed sender's bank matches the selected provider.
       // Never inherit a suffix from a different bank or an uncertain SMS.
@@ -9112,7 +9115,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       // Bank child creation must stay under the selected real institution;
       // never silently convert a specific bank group into another provider.
       if(expectedBank!=null&&
-         (draft.kind!='bank'||draft.providerId!=expectedBank)){
+         (draft.kind!=(selectedCatalog!.category==WaffraSaudiFinancialProviders.wallet?
+          'wallet':'bank')||draft.providerId!=expectedBank)){
        snack(sheetContext,waffraIsEnglish?
         'The linked account must belong to the selected bank.':
         'الحساب التابع لازم يكون لنفس البنك المختار.',isError:true);
@@ -9144,26 +9148,30 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        'New account group is not uniquely verified');
       update((){
        entryAccounts=refreshed;
-       entryProviders=sms?
-        WaffraRecurringAccountGroups.withBankProviderChoices(refreshed):groups;
+       entryProviders=WaffraRecurringAccountGroups.withBankProviderChoices(refreshed);
        if(forTransfer){
         transferAccounts=refreshed;
         transferApi=api;
         if(transferTarget){
          transferDestinationProvider=related.single.id;
+         transferDestinationCategory=related.single.category;
          transferDestination=mainProvider?null:id;
         }else{
          transferSourceProvider=related.single.id;
+         transferSourceCategory=related.single.category;
          transferSource=mainProvider?null:id;
         }
         transferError=null;
        }else if(mainProvider){
         chosenManualProvider=related.single.id;
+        chosenManualProviderCategory=related.single.category;
         chosenManualAccount=null;
        }else if(related.single.id==selectedProviderBefore){
+        chosenManualProviderCategory=related.single.category;
         chosenManualAccount=id;
        }else{
         chosenManualProvider=related.single.id;
+        chosenManualProviderCategory=related.single.category;
         chosenManualAccount=id;
        }
       });
@@ -9222,9 +9230,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         update((){
          transferApi=api;
          transferAccounts=accounts.where((a)=>!a.archived).toList();
-         transferError=transferAccounts.length<2?
-          (waffraIsEnglish?'Create two accounts before transferring.':
-           'لازم تضيف حسابين على الأقل قبل التحويل.'):null;
+         transferError=null; // The disabled confirm already conveys missing accounts.
         });
        }catch(error){
         if(sheetContext.mounted)update(()=>transferError=waffraIsEnglish?
@@ -9248,7 +9254,37 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        groups.single.accounts.where((a)=>a.id!=exclude).toList();
       final parentRevision=target?transferTargetProviderRevision:transferSourceProviderRevision;
       final childRevision=target?transferTargetChildRevision:transferSourceChildRevision;
+      String? groupCategory=target?transferDestinationCategory:transferSourceCategory;
+      groupCategory??=group==null?null:
+       WaffraSaudiFinancialProviders.categoryForGroup(group);
       return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+       WaffraCenteredDropdownFormField<String>(
+        key:ValueKey('m638-transfer-type-${target?'to':'from'}-$parentRevision'),
+        initialValue:groupCategory,isExpanded:true,
+        decoration:InputDecoration(
+         labelText:waffraIsEnglish?'Institution type':'نوع الجهة',
+         border:const OutlineInputBorder()),
+        items:[
+         for(final type in const [
+          WaffraSaudiFinancialProviders.local,
+          WaffraSaudiFinancialProviders.digital,
+          WaffraSaudiFinancialProviders.wallet,
+          WaffraSaudiFinancialProviders.other,
+         ])DropdownMenuItem<String>(value:type,
+          child:WaffraText(WaffraSaudiFinancialProviders.labelAr(type))),
+        ],
+        onChanged:transferSaving?null:(value)=>update((){
+         if(target){
+          transferDestinationCategory=value;
+          transferDestinationProvider=null;transferDestination=null;
+         }else{
+          transferSourceCategory=value;
+          transferSourceProvider=null;transferSource=null;
+         }
+         transferError=null;
+        }),
+       ),
+       const SizedBox(height:9),
        WaffraCenteredDropdownFormField<String>(
         key:ValueKey('m470-home-transfer-'+(target?'target':'source')+
          '-provider-'+(group??'none')+'-$parentRevision'),
@@ -9257,13 +9293,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          labelText:waffraIsEnglish?'Bank or provider':'الجهة أو البنك',
          border:const OutlineInputBorder()),
         items:[
-         ...providers.map((p)=>DropdownMenuItem<String>(
-          value:p.id,child:WaffraText(waffraIsEnglish?p.labelEn:p.labelAr,
-           maxLines:1))),
+         ...providers.where((p)=>p.category==groupCategory)
+          .map((p)=>DropdownMenuItem<String>(
+           value:p.id,child:WaffraText(p.labelAr,maxLines:1))),
          DropdownMenuItem<String>(value:'__create_transfer_provider__',
           child:WaffraText(waffraIsEnglish?'Add bank / provider':'إضافة جهة أو بنك')),
         ],
-        onChanged:transferSaving?null:(v)async{
+        onChanged:transferSaving||groupCategory==null?null:(v)async{
          if(v=='__create_transfer_provider__'){
           await createAccountInsideEntryDropdown(
            mainProvider:true,forTransfer:true,transferTarget:target);
@@ -9319,12 +9355,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          const SizedBox(height:12),
          operationPicker(),
          const SizedBox(height:18),
-         WaffraText(waffraIsEnglish?
-          'Moving money between your own accounts is not income or spending.':
-          'التحويل بين حساباتك لا يُحسب دخلًا ولا مصروفًا.',
-          style:const TextStyle(color:emerald)),
-         const SizedBox(height:14),
          TextField(key:const Key('m466-transfer-amount'),controller:transferAmount,
+          onChanged:(_)=>update((){}),
           keyboardType:const TextInputType.numberWithOptions(decimal:true),
           inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],
           decoration:InputDecoration(
@@ -9510,15 +9542,37 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           'اربط العملية القديمة بحساب دون إضافة دخل أو مصروف مرة ثانية.'),
          style:const TextStyle(fontSize:12,color:emerald))),
        WaffraCenteredDropdownFormField<String>(
+        key:ValueKey('m638-home-manual-institution-type-${chosenManualProviderCategory??'none'}'),
+        isExpanded:true,initialValue:chosenManualProviderCategory,
+        decoration:InputDecoration(
+         labelText:waffraIsEnglish?'Institution type *':'نوع الجهة *',
+         border:const OutlineInputBorder()),
+        items:[
+         for(final type in const [
+          WaffraSaudiFinancialProviders.local,
+          WaffraSaudiFinancialProviders.digital,
+          WaffraSaudiFinancialProviders.wallet,
+          WaffraSaudiFinancialProviders.other,
+         ])DropdownMenuItem<String>(value:type,
+          child:WaffraText(WaffraSaudiFinancialProviders.labelAr(type))),
+        ],
+        onChanged:initial!=null&&originalLinkedAccountId!=null?null:(type)=>update((){
+         chosenManualProviderCategory=type;
+         chosenManualProvider=null;
+         chosenManualAccount=null;
+        }),
+       ),
+       const SizedBox(height:10),
+       WaffraCenteredDropdownFormField<String>(
         key:ValueKey('m470-home-manual-provider-'+(chosenManualProvider??'none')+
          '-$accountProviderMenuRevision'),
         isExpanded:true,initialValue:chosenManualProvider,
         decoration:InputDecoration(labelText:waffraIsEnglish?
          'Bank or provider *':'الجهة أو البنك *',border:const OutlineInputBorder()),
         items:[
-         ...entryProviders.map((p)=>DropdownMenuItem<String>(
-          value:p.id,child:WaffraText(waffraIsEnglish?p.labelEn:p.labelAr,
-           maxLines:1))),
+         ...entryProviders.where((p)=>p.category==chosenManualProviderCategory)
+          .map((p)=>DropdownMenuItem<String>(
+           value:p.id,child:WaffraText(p.labelAr,maxLines:1))),
          DropdownMenuItem<String>(value:'__create_provider__',
           child:Row(children:[
            const Icon(Icons.add_circle_outline,color:emerald,size:19),
@@ -9527,7 +9581,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             'Add bank / provider':'إضافة جهة أو بنك',maxLines:1)),
           ])),
         ],
-        onChanged:initial!=null&&originalLinkedAccountId!=null?null:(provider)async{
+        onChanged:chosenManualProviderCategory==null||
+         (initial!=null&&originalLinkedAccountId!=null)?null:(provider)async{
          if(provider=='__create_provider__'){
           await createAccountInsideEntryDropdown(mainProvider:true);
           // Synthetic Add must not replace a chosen provider on cancel.
@@ -9675,7 +9730,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          (waffraIsEnglish?'Choose a main category':'اختر القسم الرئيسي'):
          selectedMain.first.displayName,maxLines:2))),
        const SizedBox(height:10),
-       InkWell(key:const Key('m470-entry-subcategory-picker'),onTap:WaffraHaptics.tap(()async{
+       InkWell(key:const Key('m470-entry-subcategory-picker'),
+        onTap:selectedParentId==null?null:WaffraHaptics.tap(()async{
         final selectedParentAtTap=selectedParentId;
         if(selectedParentAtTap==null){
          snack(sheetContext,waffraIsEnglish?
@@ -9705,6 +9761,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         }
        }),child:InputDecorator(decoration:InputDecoration(
         labelText:waffraIsEnglish?'Subcategory *':'القسم الفرعي *',
+        enabled:selectedParentId!=null,
         errorText:attempted&&selectedSub.isEmpty?waffraRequiredFieldMessage:null,
         border:const OutlineInputBorder(),
         suffixIcon:const Icon(Icons.arrow_drop_down_rounded)),
@@ -9893,7 +9950,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        ])),
       footer:FilledButton(
        key:const Key('waffra-entry-confirm-save'),
-       onPressed:WaffraHaptics.tap(analyzing||submitTapped?null:()async {
+       onPressed:WaffraHaptics.tap(analyzing||submitTapped?null:
+        (!waffraTransactionTitleAllowed(title.text,oldTitle:initial?.title)||
+         !waffraTransactionNotesAllowed(notes.text,
+          oldNotes:initial?.sourceType=='sms'?initial?.personalNotes:initial?.notes)||
+         waffraAmountFieldError(value.text)!=null||
+         (sms?amountOf(value.text):amountOfDisplay(value.text))==null||
+         !waffraCanAssignManualCategory(categories,income,selectedParentId,category)||
+         ((initial==null||(canLinkExistingAccount&&originalLinkedAccountId==null))&&
+          chosenManualAccount==null)||
+         (sms&&!smsDateConfirmed))?null:()async {
        if(submitTapped)return;
        update(()=>attempted=true);
        final n=sms?amountOf(value.text):amountOfDisplay(value.text);
