@@ -20,8 +20,6 @@
     "lib/storage/waffra_account_context_schema.dart",
     "lib/storage/waffra_accounts_repository.dart",
     "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
-    "lib/waffra_account_context_settings.dart",
-    "lib/waffra_account_transaction_form.dart",
     "lib/waffra_accounts_manager_page.dart",
     "lib/waffra_auto_sms.dart",
     "lib/waffra_new_account_dialog.dart",
@@ -66,72 +64,32 @@
         "end": "class WaffraNewAccountDraft {"
       },
       {
-        "start": " String kind='cash';",
-        "end": " @override void initState(){"
-      },
-      {
-        "start": "    if(kind=='bank')...[",
-        "end": "    if(kind=='bank'||kind=='wallet')...["
-      },
-      {
-        "start": "     onChanged:(v){if(v!=null)setState((){",
-        "end": "    if(kind=='bank')...["
-      },
-      {
-        "start": " String get accountLabel{",
-        "end": " bool get valid{"
-      },
-      {
-        "start": "  final suggested=widget.suggestedProviderId;",
-        "end": "  // A masked bank SMS"
+        "start": "class _WaffraNewAccountDialogState extends State<WaffraNewAccountDialog> {",
+        "end": null
       }
     ],
     "lib/waffra_accounts_manager_page.dart": [
       {
-        "start": "  final bank=RegExp(",
-        "end": "  final customSubtypes=<String,List<String>>{"
+        "start": "import 'waffra_new_account_dialog.dart';",
+        "end": "/// M440 optional SQLCipher account page."
+      },
+      {
+        "start": " Future<WaffraAccountBalance?> createAccountInsideComposer(",
+        "end": " Future<void> compose("
       }
     ],
     "lib/main.dart": [
       {
-        "start": "  var entryProviders=sms?",
-        "end": "  int budgetMenuRevision=0;"
+        "start": "import 'waffra_recurring_account_groups.dart';",
+        "end": "import 'storage/waffra_fresh_finance_modules_repository.dart';"
       },
       {
-        "start": "   String? transferSourceProvider,transferDestinationProvider;",
-        "end": "   DateTime transferDate=DateTime.now();"
+        "start": " Future<void> _rescanAutoSmsInbox()async{",
+        "end": " Future<void>? _autoSmsRefreshInFlight;"
       },
       {
-        "start": "     Widget accountChoice({required String label,required String? value,",
-        "end": "     return WaffraEntrySheetSafeLayout("
-      },
-      {
-        "start": "         WaffraText(waffraIsEnglish?\n          'Moving money between your own accounts is not income or spending.':",
-        "end": "         TextField(key:const Key('m466-transfer-amount')"
-      },
-      {
-        "start": "         transferAccounts.length<2?null:WaffraHaptics.tap",
-        "end": "        final amount=waffraSarAmountMinor(transferAmount.text);"
-      },
-      {
-        "start": "         transferError=transferAccounts.length<2?",
-        "end": "        });"
-      },
-      {
-        "start": "       WaffraCenteredDropdownFormField<String>(\n        key:ValueKey('m470-home-manual-provider-'",
-        "end": "       const SizedBox(height:10),\n       WaffraCenteredDropdownFormField<String>(\n        key:ValueKey('m470-home-manual-account-'"
-      },
-      {
-        "start": "       InkWell(key:const Key('m470-entry-subcategory-picker')",
-        "end": "       if(selectedMain.isNotEmpty&&subcategories.isEmpty)"
-      },
-      {
-        "start": "       footer:FilledButton(\n       key:const Key('waffra-entry-confirm-save'),",
-        "end": "       if(submitTapped)return;"
-      },
-      {
-        "start": "  final results=await WaffraAutoSms.pendingChecked();",
-        "end": "  if(!_m630SmsSessionCurrent(smsEpoch))return;"
+        "start": " Future<void> entrySheet(",
+        "end": " Future<void> showReceipt("
       }
     ],
     "lib/waffra_auto_sms.dart": [
@@ -142,7 +100,7 @@
     ],
     "native/WaffraAutoSmsStore.kt": [
       {
-        "start": "    /**\n     * M547: a completed historical pass",
+        "start": "    fun acknowledgeCommitted(context: Context, ids: Set<String>): Boolean =",
         "end": "    private data class HistoricalSmsRow("
       }
     ],
