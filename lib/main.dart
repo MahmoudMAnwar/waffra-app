@@ -13141,10 +13141,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           }),
         if(entry.sourceType=='goal_due'&&entry.goalWalletPaidMinor>0)
          Padding(padding:const EdgeInsets.only(top:3),
-          child:WaffraText(
-           (waffraIsEnglish?'From goal wallet: ':'من محفظة الهدف: ')+
-           cash(entry.goalWalletPaidMinor/100),
-           maxLines:2,style:TextStyle(color:valueColor,fontSize:11))),
+          child:Row(mainAxisSize:MainAxisSize.min,children:[
+           WaffraText(waffraIsEnglish?
+            'From goal wallet: ':'من محفظة الهدف: ',
+            style:TextStyle(color:valueColor,fontSize:11)),
+           Flexible(child:WaffraCurrencyAmount(
+            entry.goalWalletPaidMinor/100,fontSize:11,color:valueColor)),
+          ])),
       ]))),
      const SizedBox(width:5),
      ConstrainedBox(constraints:const BoxConstraints(maxWidth:119),
