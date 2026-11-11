@@ -4861,6 +4861,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final active=_autoSmsRefreshInFlight;
    if(active!=null)await active;
    final before=await WaffraAutoSms.scanProgress();
+   // M638: Rescan first removes only encrypted, unconfirmed SMS review
+   // candidates no longer present in the Android inbox. This checked
+   // native source operation fails closed on missing permission or error.
+   // It runs on SMS I/O executor, never the first Home frame/UI thread.
+   final removedFromPhone=await WaffraAutoSms.reconcilePendingWithAndroidInboxChecked();
    final continuingInitialHistory=before?['initialComplete']!=true;
    if(!mounted)return;
    await _refreshAutoSmsInbox(importMonth:true);
@@ -4892,14 +4897,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       'لسه فيه رسائل جديدة محتاجة استكمال الفحص.');
     snack(context,waffraIsEnglish?
      'Examined $scanned new inbox rows • $added added • '
+      '$removedFromPhone deleted from phone removed from review • '
       '${_autoSmsPending.length} awaiting review. $continuation':
      'تم فحص $scanned رسالة من الدفعة الحالية • $added اتضافت للمراجعة • '
+      '$removedFromPhone اتحذفت من المراجعة بعد حذفها من الهاتف • '
       '${_autoSmsPending.length} بانتظار المراجعة. $continuation');
    }else{
     snackSuccess(context,waffraIsEnglish?
      'Scan completed: $scanned newly examined • $added added for review • '
+      '$removedFromPhone deleted from phone removed from review • '
       '${_autoSmsPending.length} awaiting review.':
      'اكتمل الفحص: $scanned رسالة جديدة فُحصت • $added اتضافت للمراجعة • '
+      '$removedFromPhone اتحذفت من المراجعة بعد حذفها من الهاتف • '
       '${_autoSmsPending.length} بانتظار المراجعة.');
    }
   }catch(_){
