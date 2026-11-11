@@ -465,6 +465,10 @@
       {
         "start": "        case WaffraFinanceModule.goals:",
         "end": "        case WaffraFinanceModule.recurring:"
+      },
+      {
+        "start": "        case WaffraFinanceModule.recurring:",
+        "end": "          // Account default and typed recurring source must commit in the SAME"
       }
     ],
     "lib/storage/waffra_verified_goal_due_snapshot_writer.dart": [
