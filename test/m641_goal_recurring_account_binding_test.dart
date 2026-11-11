@@ -48,6 +48,9 @@ void main(){
   expect(editor,contains('WaffraGoalRecurringAccountPicker('));
   expect(editor,contains('_m641CreateGoalRecurringAccount(provider)'));
   expect(editor,contains('selectedRecurringAccount!=null'));
+  expect(editor,contains("if(initial?.linkedGoalId!=null)"));
+  expect(editor,contains("'حساب الهدف (التعديل من الأهداف)'"));
+  expect(editor,contains("selectedRecurringAccount=linked.single.accountId;"));
   final funding=app.substring(app.indexOf(' Future<void> fundGoal('),
    app.indexOf(' Future<void> deletedGoalsDialog('));
   expect(funding,contains('sourceAccountId:funding.sourceAccountId'));
