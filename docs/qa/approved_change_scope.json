@@ -11,7 +11,8 @@
     "M638: dependent institution/account/subcategory dropdown dimmed until parent set; manual income/expense confirm disabled until every required field valid; remove exactly two transfer explanatory lines without removing real errors.",
     "M638: explicit SMS Rescan must reconcile unconfirmed encrypted pending queue against current Android inbox, remove only missing source records, group count updates; permission/partial scan fails closed and never deletes SQLCipher ledger, confirmed hashes, exclusions or sender rule.",
     "M639 #560: Replace the Arabic and English visible SMS/notification onboarding permission screen heading and description with plain purpose-and-choice copy. Remove AI/cloud/model mentions from visible permission screen text while preserving opt-in defaults and secure OS consent behavior exactly.",
-    "M640 Issue #561: Owner approved complete retirement/deletion of receipt OCR Tools section, Tesseract model downloads and dependency, receipt/bank screenshot OCR parser and hidden scan-and-create income/expense routes, obsolete OCR tests/Workflows/Gradle shim. Preserve ordinary receipt attachments, SQLCipher receipt storage, and text-only SMS source processing."
+    "M640 Issue #561: Owner approved complete retirement/deletion of receipt OCR Tools section, Tesseract model downloads and dependency, receipt/bank screenshot OCR parser and hidden scan-and-create income/expense routes, obsolete OCR tests/Workflows/Gradle shim. Preserve ordinary receipt attachments, SQLCipher receipt storage, and text-only SMS source processing.",
+    "M640 #561: M416 legacy OCR release-switch test must no longer reference deleted receiptImageTransactionImport; retain all existing Saudi release currency/location/SMS assertions."
   ],
   "allowed_changed_files": [
     ".github/workflows/android-full-smoke.yml",
@@ -73,6 +74,7 @@
     "test/m336_fx_consent_and_full_title_test.dart",
     "test/m336_whole_app_finance_quality_matrix_test.dart",
     "test/m341_multilingual_bank_sms_ocr_test.dart",
+    "test/m416_saudi_release_offline_test.dart",
     "test/m417_sms_first_run_test.dart",
     "test/m470_financial_currency_word_boundary_regression_test.dart",
     "test/m638_saudi_provider_catalog_and_cascade_test.dart",
@@ -344,6 +346,12 @@
       {
         "start": "name: M340 Continuous Financial Quality Gate (Exact SHA, No Cutover)",
         "end": null
+      }
+    ],
+    "test/m416_saudi_release_offline_test.dart": [
+      {
+        "start": " test('M416 Saudi release switches preserve Global features in source',(){",
+        "end": " test('M416 old foreign display preference is preserved but not applied',()async{"
       }
     ]
   }
