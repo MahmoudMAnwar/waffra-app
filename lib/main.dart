@@ -6887,7 +6887,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         child:WaffraText(waffraIsEnglish?'Income':'دخل')),
       ]));
     if(mounted&&(kind=='income'||kind=='expense')){
-     await entrySheet(scannedIncome:kind=='income');
+     await entrySheet(manualIncomeOverride:kind=='income');
     }
    }else if(decision=='yes'&&mounted&&canConfirm&&
              reviewedAccount!=null){
@@ -8567,7 +8567,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
 
  Future<void> entrySheet({MoneyEntry? initial,bool sms=false,String? initialSms,
-  String? reviewedSender,bool? reviewedIncomeOverride,bool? scannedIncome})async {
+  String? reviewedSender,bool? reviewedIncomeOverride,bool? manualIncomeOverride})async {
   // Cold-start money selection needs a verified, non-Home-header account list.
   if(!_m468VerifiedAccountsLoaded){
    await _m467RefreshHomeAccounts();
@@ -8654,7 +8654,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   // Explicit compact correction outranks an OLD uncommitted SMS draft.
   // Ordinary manual/receipt editing still preserves previous precedence.
   bool income=reviewedIncomeOverride??(smsEditorDraft?['income'] as bool?)??
-   initial?.income??scannedIncome??
+   initial?.income??manualIncomeOverride??
    (trustedSms?(parsedSms.income):false),
    analyzing=false,hasParsed=initialSms!=null;
   bool submitTapped=false;
