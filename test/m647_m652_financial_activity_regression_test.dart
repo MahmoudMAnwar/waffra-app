@@ -85,6 +85,9 @@ void main() {
   expect(card,contains("'تم السداد من: '"));
   expect(card,contains("'حساب غير محدد'"));
   expect(card,contains('entry.goalWalletPaidMinor/100'));
+  expect(card,contains('Flexible(child:WaffraCurrencyAmount('),
+      reason:'Goal-wallet amount must respect the Home eye privacy mask.');
+  expect(card,isNot(contains('cash(entry.goalWalletPaidMinor/100)')));
  });
 
  test('M651 durable local rule learning triggers debounced non-posting refresh', () {
