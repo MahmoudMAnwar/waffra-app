@@ -89,7 +89,9 @@ class ReleaseNotesPreparationTests(unittest.TestCase):
         ):
             with self.subTest(args=args):
                 self.assertNotEqual(self.prep(*args, "--commit").returncode, 0)
-        self.assertEqual(self.prep("--verify-only").returncode, 0)
+        # The app changed but every proposed review was invalid; existing
+        # M449 MUST remain red because no approved notes were committed.
+        self.assertNotEqual(self.prep("--verify-only").returncode, 0)
 
     def test_test_only_changes_make_no_extra_notes_commit(self):
         self.write("test/example_test.dart", "void main() {}\n")
