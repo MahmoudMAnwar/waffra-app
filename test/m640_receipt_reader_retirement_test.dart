@@ -8,6 +8,7 @@ import 'package:waffra/waffra_practical_tools_page.dart';
 void main(){
  test('M640 Tesseract runtime, scanner parsers and active OCR CI are deleted',(){
   for(final path in <String>[
+   'assets/tessdata_config.json',
    'lib/waffra_receipt_ocr.dart',
    'lib/waffra_receipt_ocr_parser.dart',
    'lib/waffra_bank_screenshot_parser.dart',
