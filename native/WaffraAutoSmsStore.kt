@@ -1160,6 +1160,106 @@ object WaffraAutoSmsStore {
         }
 
     /**
+     * M638 #559: reconcile only UNSAVED encrypted review candidates with the
+     * Android inbox on the user's explicit Rescan. The high-water import
+     * cursor, financial SQLCipher ledger, committed/excluded hash shards,
+     * retained exclusions and user rules are deliberately untouched.
+     *
+     * A complete inbox query is required BEFORE removal. Inaccessible,
+     * truncated or malformed providers fail closed; never mistake an Android
+     * permission failure for an empty inbox. Caller runs on smsHistoryExecutor.
+     */
+    fun reconcilePendingWithInbox(context: Context): Int {
+        if (!enabled(context) || !permissionGranted(context)) {
+            throw SecurityException("SMS reconciliation requires live owner consent")
+        }
+        val ownerAtStart = signedInOwnerHash(context)
+            ?: throw IllegalStateException("No active SMS owner")
+        val start = installationMonthStart(context)
+        if (start <= 0L) throw IllegalStateException("SMS source window unknown")
+        val initialIds = synchronized(mutex) {
+            if (!enabled(context) || signedInOwnerHash(context) != ownerAtStart)
+                throw IllegalStateException("SMS owner changed before reconciliation")
+            val original = read(context)
+            HashSet<String>(original.length() * 2 + 1).apply {
+                for (i in 0 until original.length()) {
+                    add(original.getJSONObject(i).getString("id"))
+                }
+            }
+        }
+        if (initialIds.isEmpty()) return 0
+
+        val present = HashSet<String>(initialIds.size * 2 + 1)
+        val projection = arrayOf("_id", "address", "body", "date", "date_sent")
+        val provider = context.contentResolver.query(
+            Uri.parse("content://sms/inbox"), projection,
+            "date >= ? AND date < ?",
+            arrayOf(start.toString(), (System.currentTimeMillis() + 1).toString()),
+            "date ASC, _id ASC"
+        ) ?: throw IllegalStateException("Android SMS inbox is not readable")
+
+        provider.use { rows ->
+            val senderCol = rows.getColumnIndex("address")
+            val bodyCol = rows.getColumnIndex("body")
+            val dateCol = rows.getColumnIndex("date")
+            val sentCol = rows.getColumnIndex("date_sent")
+            if (senderCol < 0 || bodyCol < 0 || dateCol < 0)
+                throw IllegalStateException("Android SMS provider schema missing")
+            var scanned = 0
+            while (rows.moveToNext()) {
+                // Never prune from a partial scan of a huge or unbounded inbox.
+                if (++scanned > 50000)
+                    throw IllegalStateException("Android SMS inbox scan incomplete")
+                val sender = rows.getString(senderCol) ?: continue
+                val body = rows.getString(bodyCol) ?: continue
+                val received = rows.getLong(dateCol)
+                val sent = if (sentCol >= 0 && !rows.isNull(sentCol))
+                    rows.getLong(sentCol) else 0L
+                val identityAt = if (sent > 946684800000L &&
+                    sent <= System.currentTimeMillis() + 300000L) sent else received
+                val sentId = id(sender, body, identityAt)
+                if (initialIds.contains(sentId)) present.add(sentId)
+                // Live SMS_RECEIVED also uses message timestamp; some Android
+                // providers normalize date_sent on insert, so accept either
+                // exact original timestamp, never a sender-name-only match.
+                if (identityAt != received) {
+                    val receivedId = id(sender, body, received)
+                    if (initialIds.contains(receivedId)) present.add(receivedId)
+                }
+                if (present.size == initialIds.size) break // No deletion possible.
+            }
+        }
+        return synchronized(mutex) {
+            if (!enabled(context) || !permissionGranted(context) ||
+                signedInOwnerHash(context) != ownerAtStart)
+                throw IllegalStateException("SMS session changed during reconciliation")
+            val current = read(context)
+            val retained = JSONArray()
+            var removed = 0
+            val recentFloor = System.currentTimeMillis() - 120000L
+            for (index in 0 until current.length()) {
+                val row = current.getJSONObject(index)
+                val fingerprint = row.getString("id")
+                val receivedAt = row.optLong("receivedAt", 0L)
+                if (initialIds.contains(fingerprint) &&
+                    !present.contains(fingerprint) &&
+                    receivedAt > 0L && receivedAt < recentFloor) {
+                    removed++
+                } else {
+                    // Keep new arrivals during the query and in-flight SMS.
+                    retained.put(row)
+                }
+            }
+            if (removed > 0) {
+                if (!save(context, retained))
+                    throw IllegalStateException("Encrypted SMS queue update failed")
+                Handler(Looper.getMainLooper()).post { onChanged?.invoke() }
+            }
+            removed
+        }
+    }
+
+    /**
      * M547: a completed historical pass is a durable high-water mark.
      * Never rewind to the first day of installation on a normal rescan:
      * committed and excluded SMS must stay invisible and the user should
