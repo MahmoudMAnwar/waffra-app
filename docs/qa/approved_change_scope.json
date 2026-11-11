@@ -193,6 +193,10 @@
       {
         "start": "   }else if(decision=='transfer-manual'&&mounted){",
         "end": "   }else if(decision=='yes'&&mounted&&canConfirm&&"
+      },
+      {
+        "start": "List<String> splitBankMessages(String raw){",
+        "end": " // Insert boundaries only before strongly recognizable new actions."
       }
     ],
     "lib/waffra_auto_sms.dart": [
