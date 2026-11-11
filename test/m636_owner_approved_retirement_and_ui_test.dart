@@ -36,9 +36,11 @@ void main(){
   expect(home,contains('_m623RootContent(rootContext)'));
  });
  test('M636 normal logout avoids finance error UI, but error stays fail-closed',(){
-  final start=home.indexOf(' Future<void> _m627CloseForLogout()async {');
-  final end=home.indexOf(' Future<void> _m627',start+2);
-  final first=home.substring(start,end>start?end:start+2500);
+  final start=home.indexOf(' Future<void> _m627CloseForLogout()async{');
+  final end=home.indexOf(' void _m627AbortFailedLogout(){',start);
+  expect(start,greaterThan(0));
+  expect(end,greaterThan(start));
+  final first=home.substring(start,end);
   expect(first,contains('_m627ClosingSession=true'));
   expect(first,isNot(contains("'جارٍ إنهاء الجلسة بأمان. بياناتك المالية محمية.'")));
   expect(home,contains('void _m627AbortFailedLogout(){'));
