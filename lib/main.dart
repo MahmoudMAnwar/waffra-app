@@ -21,9 +21,6 @@ import 'waffra_centered_dropdown.dart';
 import 'waffra_subtle_selection.dart';
 import 'waffra_receipt_filename.dart';
 import 'storage/waffra_portable_encrypted_vault_restorer.dart' show WaffraEncryptedReceiptReference;
-import 'waffra_receipt_ocr.dart';
-import 'waffra_receipt_ocr_parser.dart';
-import 'waffra_bank_screenshot_parser.dart';
 import 'waffra_sms_intelligence.dart';
 import 'waffra_sms_multicurrency_review.dart';
 import 'waffra_foreign_currency_preview.dart';
@@ -4529,7 +4526,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  // UI-only history: no finance record or persisted state is modified.
  final List<int> _tabBackStack=<int>[];
  bool goalsOpened=false;
- bool _receiptOcrAiOpening=false;
  String? _lastWidgetRevision;
  // Exact last finance ledger string seen or committed, including null vs [].
  // Detect partial widget saves even if the last-save marker never committed.
@@ -8570,229 +8566,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
  }
 
- Future<bool> _canReviewOcrAsLedgerTransaction(String raw)async {
-  if(!WaffraBankScreenshotParser.requiresForeignCurrencyReview(raw))return true;
-  if(!mounted)return false;
-  // A foreign OCR image has no verified FX provenance and must NEVER be
-  // relabeled as SAR by allowing manual numeric input in an SAR-only sheet.
-  final currencyCodes=WaffraSmsCurrencies.currenciesForMessage(raw);
-  final label=currencyCodes.isEmpty?
-   (waffraIsEnglish?'foreign currency':'عملة أجنبية'):
-   currencyCodes.join(' / ');
-  // Offer a verified, consented current-rate preview instead of a dead
-  // end, but keep the SAR ledger blocked until FX provenance is atomic.
-  final evidence=WaffraSmsCurrencies.originalAmount(raw);
-  if(evidence!=null){
-   await _previewForeignBankCurrency(raw);
-  }else{
-   await showWaffraDialog<void>(context:context,builder:(dialog)=>AlertDialog(
-    title:WaffraText(waffraIsEnglish?
-     'Foreign currency requires review':'عملة أجنبية تحتاج مراجعة'),
-    content:WaffraText(waffraIsEnglish?
-     'Detected $label but cannot verify the original amount. Nothing was saved.':
-     'اكتُشفت عملة $label ولكن المبلغ الأصلي غير واضح. لم تُحفظ المعاملة.'),
-    actions:[TextButton(onPressed:()=>Navigator.pop(dialog),
-     child:WaffraText(waffraIsEnglish?'OK':'حسنًا'))],
-   ));
-  }
-  return false;
- }
-
- /// Show visible, blocking feedback for offline OCR work. The overlay is
- /// always removed on success, cancellation and exceptions; the task cannot
- /// submit a finance write.
- Future<T> _withOcrWorkProgress<T>(String arabic,String english,
-     Future<T> Function() operation)async{
-  if(!mounted)throw StateError('ocr_screen_unmounted');
-  final overlay=Overlay.of(context,rootOverlay:true);
-  final cancellation=Completer<T>();
-  var completed=false;
-  void cancelAnalysis(){
-   if(completed)return;
-   completed=true;
-   /* M636: no local language-model task remains to cancel. */
-   cancellation.completeError(StateError('ocr_analysis_cancelled'));
-  }
-  final item=OverlayEntry(builder:(progressContext)=>Positioned.fill(
-   child:Material(
-    color:Colors.black54,
-    child:Center(child:Semantics(
-     liveRegion:true,label:waffraIsEnglish?english:arabic,
-     child:Card(child:Padding(
-      padding:const EdgeInsets.symmetric(horizontal:24,vertical:18),
-      child:Column(mainAxisSize:MainAxisSize.min,children:[
-       const CircularProgressIndicator(
-        key:Key('waffra-ocr-analysis-progress')),
-       const SizedBox(height:16),
-       WaffraText(waffraIsEnglish?english:arabic,
-        textAlign:TextAlign.center),
-       const SizedBox(height:10),
-       TextButton(
-        key:const Key('waffra-ocr-analysis-cancel'),
-        onPressed:cancelAnalysis,
-        child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
-      ]))))))));
-  overlay.insert(item);
-  try{
-   // Register the cancel future before the first frame delay, so a fast
-   // user cancellation cannot produce an uncaught asynchronous error.
-   final work=(()async{
-    await Future<void>.delayed(const Duration(milliseconds:30));
-    if(completed)throw StateError('ocr_analysis_cancelled');
-    return await operation();
-   })();
-   return await Future.any<T>([work,cancellation.future])
-       .timeout(const Duration(seconds:60),onTimeout:(){
-    /* M636: no local language-model task remains to cancel. */
-    throw TimeoutException('waffra_ocr_analysis_timeout');
-   });
-  }finally{
-   completed=true;
-   item.remove();
-   item.dispose();
-  }
- }
-
- Future<void> scanAndAddReceipt()async {
-  if(!WaffraSaudiRelease.receiptImageTransactionImport){
-   if(mounted)snack(context,waffraIsEnglish?
-    'Receipt scanning is temporarily unavailable in this release.':
-    'استخراج العمليات من الصور والفواتير غير متاح حاليًا.');
-   return;
-  }
-  // Offline OCR itself needs its tiny Tesseract assets, not Qwen.
-  // A slow/removed GGUF must not block the camera and image review.
-  if(_receiptOcrAiOpening||!mounted)return;
-  _receiptOcrAiOpening=true;
-  // Ask only for the exact camera/gallery access the user selected.
-  final source=await showWaffraDialog<ImageSource>(context:context,builder:(dialog)=>AlertDialog(
-   title:WaffraText(waffraIsEnglish?'Add from receipt or image':'إضافة عملية من فاتورة أو صورة'),
-   content:WaffraText(waffraIsEnglish?
-    'Scan a receipt, transfer notice or bank screenshot. Review every amount and type before saving.':
-    'صوّر فاتورة أو اختر إيصال تحويل أو صورة رسائل بنكية. راجع كل مبلغ ونوع عملية قبل الحفظ.'),
-   actions:[
-    TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialog)),child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
-    OutlinedButton.icon(icon:const Icon(Icons.photo_library_outlined),
-     onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialog,ImageSource.gallery)),
-     label:WaffraText(waffraIsEnglish?'Gallery':'المعرض')),
-    FilledButton.icon(icon:const Icon(Icons.camera_alt_outlined),
-     onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialog,ImageSource.camera)),
-     label:WaffraText(waffraIsEnglish?'Camera':'الكاميرا')),
-   ]));
-  if(source==null||!mounted){_receiptOcrAiOpening=false;return;}
-  try{
-   final picked=await WaffraExternalMediaSession.runPicker(()=>
-    ImagePicker().pickImage(source:source,imageQuality:95));
-   if(picked==null||!mounted)return;
-   final extracted=await _withOcrWorkProgress(
-    'جاري قراءة الصورة واستخراج بيانات المعاملات…',
-    'Reading image and extracting transactions…',
-    ()=>WaffraReceiptOcr.scan(picked.path));
-   if(!mounted)return;
-   // M636: deterministic local OCR only. No retired generative model fallback.
-   if(!mounted)return;
-   final candidates=WaffraBankScreenshotParser.reviewItems(extracted.rawText);
-   if(candidates.isEmpty){
-    if(!await _canReviewOcrAsLedgerTransaction(extracted.rawText))return;
-    // Do not reuse speculative OCR merchant/amount for an SMS screenshot.
-    final suggestion=WaffraBankScreenshotParser.looksLikeBankScreenshot(extracted.rawText)?
-     WaffraReceiptOcrFields(rawText:extracted.rawText):extracted;
-    await entrySheet(scannedReceipt:suggestion,scannedImage:picked);
-    return;
-   }
-   if(candidates.length==1){
-    final one=candidates.single;
-    if(!await _canReviewOcrAsLedgerTransaction(one.sourceText))return;
-    await entrySheet(
-     scannedReceipt:WaffraReceiptOcrFields(rawText:one.sourceText,
-      merchant:one.merchant,amount:one.amount,date:one.date),
-     scannedIncome:one.income,scannedImage:picked,
-     scannedImagePosition:one.position,scannedImageTotal:candidates.length);
-    return;
-   }
-   // One screenshot may have independent transactions. Require explicit user
-   // selection, then full review of each via the existing finance entry gate.
-   final chosen=<int>{for(var i=0;i<candidates.length;i++)i};
-   final selected=await showWaffraDialog<List<int>>(context:context,
-    builder:(dialog)=>StatefulBuilder(builder:(dialog,update)=>AlertDialog(
-     title:WaffraText(waffraIsEnglish?'Detected '+candidates.length.toString()+' transactions':'تم اكتشاف '+candidates.length.toString()+' عمليات'),
-     content:SizedBox(width:420,child:SingleChildScrollView(child:Column(
-      mainAxisSize:MainAxisSize.min,children:[
-       WaffraText(waffraIsEnglish?
-        'Review selected entries in image order. Enter unclear amounts manually; nothing is saved automatically.':
-        'راجع العمليات بالترتيب. أدخل المبالغ غير الواضحة يدويًا؛ لا حفظ تلقائي.'),
-       for(var i=0;i<candidates.length;i++)
-        CheckboxListTile(
-         value:chosen.contains(i),
-         onChanged:WaffraHaptics.selection((value)=>update((){
-          if(value==true){chosen.add(i);}else{chosen.remove(i);}
-         })),
-         title:WaffraText((waffraIsEnglish?'Transaction ':'العملية ')+(i+1).toString()+(waffraIsEnglish?' of ':' من ')+candidates.length.toString()+' — '+(candidates[i].amount==null?(waffraIsEnglish?'Amount unclear':'المبلغ غير واضح'):candidates[i].amount!.toStringAsFixed(2)+' SAR')),
-         subtitle:WaffraText(candidates[i].merchant??(waffraIsEnglish?'Unconfirmed source':'اسم غير مؤكد')),
-        ),
-      ]))),
-     actions:[
-      TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialog)),child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
-      FilledButton(onPressed:chosen.isEmpty?null:WaffraHaptics.tap(
-       ()=>Navigator.pop(dialog,chosen.toList()..sort())),
-       child:WaffraText(waffraIsEnglish?'Review selected':'مراجعة المحدد')),
-     ],
-    )));
-   if(selected==null||!mounted)return;
-   for(final index in selected){
-    if(!mounted)return;
-    final candidate=candidates[index];
-    if(!await _canReviewOcrAsLedgerTransaction(candidate.sourceText))continue;
-    await entrySheet(
-     scannedReceipt:WaffraReceiptOcrFields(rawText:candidate.sourceText,
-      merchant:candidate.merchant,amount:candidate.amount,date:candidate.date),
-     scannedIncome:candidate.income,scannedImage:picked,
-     scannedImagePosition:candidate.position,scannedImageTotal:candidates.length);
-   }
-  }on TimeoutException catch(_){
-   if(mounted)snack(context,waffraIsEnglish?
-    'Analysis took too long. Try a smaller image or add manually.':
-    'التحليل استغرق وقتًا طويلًا. جرّب صورة أصغر أو أضف يدويًا.');
-  }on StateError catch(error){
-   if(error.message=='ocr_analysis_cancelled')return;
-   if(mounted)snack(context,waffraIsEnglish?
-    'Could not complete analysis. Try again or add manually.':
-    'تعذر إكمال التحليل. حاول مجددًا أو أضف يدويًا.');
-  }on WaffraReceiptOcrException catch(error){
-   if(mounted)snack(context,waffraIsEnglish?
-    'Image recognition is unavailable (${error.code}). You can add the transaction manually.':
-    'تعذر التعرف على الصورة (${error.code}). يمكنك إضافة العملية يدويًا.');
-  }catch(error){
-   debugPrint('Receipt import review failed without a finance write: $error');
-   if(mounted)snack(context,waffraIsEnglish?
-    'Could not read this image. Try a clearer image or add manually.':
-    'تعذر قراءة الصورة. جرّب صورة أوضح أو أضف العملية يدويًا.');
-  }finally{
-   _receiptOcrAiOpening=false;
-  }
- }
-
  Future<void> entrySheet({MoneyEntry? initial,bool sms=false,String? initialSms,
-  String? reviewedSender,bool? reviewedIncomeOverride,
-  WaffraReceiptOcrFields? scannedReceipt,XFile? scannedImage,bool? scannedIncome,
-  int? scannedImagePosition,int? scannedImageTotal})async {
-  if(!WaffraSaudiRelease.receiptImageTransactionImport&&
-     (scannedReceipt!=null||scannedImage!=null)){
-   if(mounted)snack(context,waffraIsEnglish?
-    'Receipt/image transaction import is unavailable in this release.':
-    'إضافة عمليات من فاتورة أو صورة غير متاحة في النسخة الحالية.');
-   return;
-  }
-  // Bank SMS and OCR edit forms work offline without starting Qwen.
-  // Model-dependent finance advice remains gated separately.
-  // Last defense: every OCR entry must verify the currency *inside* the
-  // editor too, so future callers cannot bypass scanAndAddReceipt's gate.
-  if(scannedReceipt!=null &&
-      WaffraBankScreenshotParser.requiresForeignCurrencyReview(
-          scannedReceipt.rawText)) {
-    await _canReviewOcrAsLedgerTransaction(scannedReceipt.rawText);
-    return;
-  }
+  String? reviewedSender,bool? reviewedIncomeOverride,bool? scannedIncome})async {
   // Cold-start money selection needs a verified, non-Home-header account list.
   if(!_m468VerifiedAccountsLoaded){
    await _m467RefreshHomeAccounts();
@@ -8867,16 +8642,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      parsedSms.title):'';
   final title=TextEditingController(text:
    (smsEditorDraft?['title'] as String?)??initial?.title??
-   scannedReceipt?.merchant??suggestedSmsTitle);
+   suggestedSmsTitle);
   final notes=TextEditingController(text:
    (smsEditorDraft?['notes'] as String?)??
    (initial?.sourceType=='sms'?initial?.personalNotes:initial?.notes)??'');
   final value=TextEditingController(text:
    (smsEditorDraft?['amount'] as String?)??(initial!=null?
    formatWaffraEditAmount(initial.amount):
-   scannedReceipt?.amount!=null?
-    formatWaffraEditAmount(scannedReceipt!.amount!):
-    trustedSms?formatWaffraMoney(parsedSms.amount??0):''));
+   trustedSms?formatWaffraMoney(parsedSms.amount??0):''));
   final message=TextEditingController(text:initialSms??'');
   // Explicit compact correction outranks an OLD uncommitted SMS draft.
   // Ordinary manual/receipt editing still preserves previous precedence.
@@ -8961,7 +8734,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   var smsDateConfirmed=initial!=null||
    smsEditorDraft?['dateConfirmed']==true||originalSmsDate!=null;
   DateTime date=(smsEditorDraft?['date'] as DateTime?)??
-   initial?.date??scannedReceipt?.date??originalSmsDate??DateTime.now();
+   initial?.date??originalSmsDate??DateTime.now();
    String? suggestion,pendingHash,receiptPath=initial?.receiptPath;
    final stagedReceiptCopies=<String>[];
    // All three modes share the SAME manual bottom sheet. Transfers never
@@ -8976,18 +8749,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final transferAmount=TextEditingController();
    final transferNote=TextEditingController();
    final transferRequestId='m466-'+DateTime.now().microsecondsSinceEpoch.toString();
-   if(scannedImage!=null){
-    try{
-     final copy=await saveReceipt(scannedImage);
-     stagedReceiptCopies.add(copy);
-     receiptPath=waffraEncodeReceipts([...waffraReceiptPaths(receiptPath),copy]);
-    }catch(error){
-     debugPrint('Could not stage receipt before confirmed save: $error');
-     if(mounted)snack(context,waffraIsEnglish?'Could not attach the image. Please retry.':
-      'تعذر إرفاق الصورة، حاول مجددًا.');
-     disposeLater([title,value,notes,message]);return;
-    }
-   }
    bool attempted=false;
    bool explicitlyApprovedSmsDuplicate=false;
   Timer? debounce;
@@ -9192,7 +8953,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      }
     }
     Widget operationPicker(){
-     if(initial!=null||sms||scannedReceipt!=null){
+     if(initial!=null||sms){
       return SegmentedButton<bool>(
        segments:const [
         ButtonSegment(value:true,label:WaffraText('دخل')),
@@ -9466,8 +9227,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        padding:const EdgeInsets.fromLTRB(18,10,18,8),
        child:Column(mainAxisSize:MainAxisSize.min,
         crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-      WaffraText(initial!=null?'تعديل العملية':sms?'إضافة رسالة بنكية':
-        scannedReceipt!=null?(waffraIsEnglish?'Review image transaction':'مراجعة عملية من صورة'):'إضافة عملية',
+      WaffraText(initial!=null?'تعديل العملية':sms?'إضافة رسالة بنكية':'إضافة عملية',
        style:Theme.of(sheetContext).textTheme.titleLarge),
       if(initial!=null)...[
        const SizedBox(height:9),
@@ -9498,20 +9258,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          'The protected original SMS is in transaction details.':
          'الرسالة البنكية الأصلية المحمية موجودة في تفاصيل المعاملة.',
          style:const TextStyle(fontSize:12))),
-      ],
-      if(scannedImagePosition!=null&&scannedImageTotal!=null)
-       Padding(padding:const EdgeInsets.only(top:6),child:WaffraText(
-        waffraIsEnglish?
-         'Transaction $scannedImagePosition of $scannedImageTotal in image':
-         'العملية $scannedImagePosition من $scannedImageTotal في الصورة',
-        style:const TextStyle(fontWeight:FontWeight.w600,color:emerald))),
-      const SizedBox(height:12),
-      if(scannedReceipt!=null)...[
-       WaffraText(waffraIsEnglish?
-        'OCR suggestions are unverified. Confirm the income/expense type, amount, source and date before saving. The image is attached only after confirmation.':
-        'بيانات الصورة مقترحات غير مؤكدة. راجع الدخل أو المصروف والمبلغ والاسم والتاريخ قبل الحفظ. الصورة تُرفق بعد التأكيد فقط.',
-        style:const TextStyle(color:emerald,fontSize:12)),
-       const SizedBox(height:12),
       ],
       if(sms&&initialSms==null)...[
        TextField(controller:message,minLines:3,maxLines:6,
@@ -10079,7 +9825,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         personalNotes:sms||initial?.sourceType=='sms'?notes.text:'',
         category:category,amount:n,
         income:income,date:date,receiptPath:receiptPath,
-        sourceType:initial?.sourceType??(sms?'sms':scannedReceipt!=null?'receipt':'manual'),
+        sourceType:initial?.sourceType??(sms?'sms':'manual'),
         merchantKey:initial?.merchantKey??
          (sms?(waffraMerchantKey(message.text)??''):''),
         goalWalletPaidMinor:initial?.goalWalletPaidMinor??0,
@@ -10118,7 +9864,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }
    return;
   }
-  // Compare OCR, manual and SMS entries across source types before commit.
+  // Compare manual and SMS entries across source types before commit.
   // This is an advisory warning: same-day equal purchases are legitimate.
   if(initial==null&&entries.any((e)=>
     WaffraCrossSourceDuplicateReview.mightBeSame(
@@ -17484,12 +17230,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          label:waffraIsEnglish?'Add manual transaction':'إضافة عملية يدوية',
          onTap:WaffraHaptics.tapRequired((){
           unawaited(_launchAddAction(()=>entrySheet(),fromMenu:true));
-         })),
-        if(WaffraSaudiRelease.receiptImageTransactionImport)_addMenuOption(
-         icon:Icons.document_scanner_outlined,
-         label:waffraIsEnglish?'Scan receipt / image':'تصوير / استخراج فاتورة',
-         onTap:WaffraHaptics.tapRequired((){
-          unawaited(_launchAddAction(scanAndAddReceipt,fromMenu:true));
          })),
         ]else if(goalsOpened||tab==3)...[
          _addMenuOption(icon:Icons.add_circle_outline_rounded,
