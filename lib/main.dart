@@ -15241,6 +15241,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     debugPrint('M641 recurring default read failed: '+error.runtimeType.toString());
    }
   }
+  // A goal-linked due gets its identity ONLY from its parent goal.
+  // Change the account in Goals, where both records commit atomically.
+  if(initial?.linkedGoalId!=null){
+   final linked=goals.where((g)=>g.id==initial!.linkedGoalId).toList();
+   if(linked.length!=1){
+    if(mounted)snack(context,waffraIsEnglish?
+     'Linked goal unavailable; edit the goal before this due.':
+     'الهدف المرتبط غير متاح. راجع الهدف قبل تعديل الاستحقاق.',
+     isError:true);
+    return;
+   }
+   selectedRecurringAccount=linked.single.accountId;
+  }
   if(!liveAccounts.any((a)=>a.id==selectedRecurringAccount&&!a.archived)){
    selectedRecurringAccount=null;
   }
@@ -15279,7 +15292,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        decoration:InputDecoration(labelText:waffraIsEnglish?'Amount *':'المبلغ *',
         errorText:attempted?waffraAmountFieldError(amount.text):null)),
       const SizedBox(height:12),
-      WaffraGoalRecurringAccountPicker(
+      if(initial?.linkedGoalId!=null)
+       InputDecorator(
+        decoration:InputDecoration(
+         labelText:waffraIsEnglish?'Goal account (edit in Goals)':
+          'حساب الهدف (التعديل من الأهداف)',
+         border:const OutlineInputBorder()),
+        child:WaffraText(
+         selectedRecurringAccount==null?
+          (waffraIsEnglish?'Set account in linked goal first':
+           'اختر حساب الهدف من صفحة الأهداف أولًا'):
+          liveAccounts.where((a)=>a.id==selectedRecurringAccount)
+           .map((a)=>a.name).firstOrNull??
+           (waffraIsEnglish?'Account needs verification':'الحساب يحتاج مراجعة'),
+         maxLines:2),
+       )
+      else WaffraGoalRecurringAccountPicker(
        key:const Key('m641-recurring-account-cascade'),
        idPrefix:'m641-recurring',english:waffraIsEnglish,
        accounts:liveAccounts,selectedAccountId:selectedRecurringAccount,
