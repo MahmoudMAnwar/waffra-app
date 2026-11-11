@@ -71,7 +71,7 @@ void main() {
 
   test('M636 generic OCR progress can cancel without any Qwen model',(){
     final app=File('lib/main.dart').readAsStringSync();
-    expect(app,contains("Key('waffra-ai-analysis-cancel')"));
+    expect(app,contains("Key('waffra-ocr-analysis-cancel')"));
     expect(app,contains('Future.any<T>([work,cancellation.future])'));
     expect(app,contains('item.remove();'));
     expect(app,contains('item.dispose();'));
