@@ -3447,3 +3447,9 @@ passed; changed-source analysis clean; M550 contract preflight passed.
 - Final exact-branch tree audit discovered and removed assets/tessdata_config.json (empty files array) that remained bundled under Flutter assets/ after deleting the Tesseract OCR reader. The M640 absence regression asserts this old OCR-only file cannot return.
 - The removal was first registered in #561 and docs/WAFFRA_REQUIREMENTS.md; M385 manifest and explicit deletion allowlist updated without relaxing other source protection. Existing ordinary photo/receipt attachments, encrypted storage, SMS review, account IDs and saved finance data are unchanged.
 - This release note follows the latest source and test commits. PR #558 remains Draft and unmerged; fresh exact-head CI/Flutter analyzer/Android native compilation and physical-device checks are still required. No APK from a feature branch.
+
+
+[M640 OCR RETIREMENT — M281 FOUR-TOOLS WORKFLOW AND SPEC RECONCILIATION — ISSUE #561 / DRAFT PR #558 — 2026-11-11]
+- Following full OCR source/model/runtime retirement, audited M281 and removed surviving misleading «Five Practical Tools» CI display descriptions. .github/workflows/m281-practical-tools.yml continues its actual engine, four-section widget and M268 regression; only the workflow display title and one step label change to Four Practical Tools.
+- docs/qa/m281-five-practical-tools.md is historical-named and now accurately inventories just Data Health, Advanced Search, Monthly Close and Safe Diagnostics, without any Receipt Review Assistant/card/model workflow. Ordinary receipt photo attachments and encrypted receipt storage are unchanged.
+- Added a negative assertion to test/m640_receipt_reader_retirement_test.dart for the retained four-tools CI/doc contract. Exact M385 workflow bounds and M550 contract updated first. All live tests must still pass on the exact PR head; no phone success or main merge claimed.
