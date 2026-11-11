@@ -86,6 +86,22 @@ void main() {
   expect(refresh, contains('_m630SmsSessionCurrent('));
  });
 
+ test('M651 sender-specific confirmed income expense transfer exclusion refreshes only after durable rule commit', () {
+  final start = app.indexOf('Future<bool> _learnSafeSmsRule(');
+  final end = app.indexOf(' /// Manual entries have no bank SMS sender.', start);
+  expect(start, greaterThan(0));
+  expect(end, greaterThan(start));
+  final learned = app.substring(start, end);
+  final savedAt = learned.indexOf('await store.write(_smsRuleOwnerKey,updated);');
+  final notifiedAt = learned.indexOf('_receiveAutoSmsNotice();');
+  expect(savedAt, greaterThan(0));
+  expect(notifiedAt, greaterThan(savedAt),
+      reason:'Never announce learned SMS changes before the durable local rule write.');
+  expect(learned, isNot(contains('_refreshAutoSmsInbox(importMonth:true)')));
+  expect(learned, isNot(contains('commitConfirmedSms(')));
+  expect(learned, isNot(contains('commitConfirmedManual(')));
+ });
+
  test('M652 PDF follows selected types and preserves non-posting internal movements', () {
   final begin = app.indexOf('Future<void> exportEntriesPdf(');
   final end = app.indexOf(' Future<void> _deleteVerifiedEntry(', begin);
