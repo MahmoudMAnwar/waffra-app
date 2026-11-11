@@ -20,6 +20,13 @@ void main(){
   expect(SavingGoal.fromJson({
    'id':'old','name':'legacy','target':1000,'saved':150,
   }).accountId,isNull,reason:'Never invent an account for historical goals');
+  for(final invalid in [42,'',' ',List.filled(129,'a').join()]){
+   expect(()=>SavingGoal.fromJson({
+    'id':'bad','name':'Corrupt','target':1000,'saved':0,
+    'accountId':invalid,
+   }),throwsFormatException,
+    reason:'Invalid stored account identity must fail closed');
+  }
  });
 
  test('M641 linked due preserves stable account and original goal identity',(){
