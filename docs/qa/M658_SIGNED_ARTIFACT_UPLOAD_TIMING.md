@@ -15,7 +15,7 @@ Status: Partial; corrective PR source not yet validated on main.
 ## Bounded code changes
 - Do not edit app or finance/source-signing code and do not remove either artifact or its receipts.
 - Main matrix build should have a finite timeout, so a hung external publisher cannot silently block forever or be green when no artifact is published.
-- Both original `actions/upload-artifact@v4` steps should set `compression-level: 0`, preserve `if-no-files-found: error` and 30-day retention. Log input file sizes/start at publication without leaking credentials.
+- Both original `actions/upload-artifact@v4` steps should set `compression-level: 0`, preserve `if-no-files-found: error` and 30-day retention. Use native Actions step start/completion timestamps and artifact metadata for measurement; avoid adding extra build work or logging credentials.
 - Enforce exact main SHA, verified Google Play/QA signing, signed APK/AAB, M174 SQLCipher, M449 latest release notes and complete Flutter/Python checks.
 - M658 QA source contracts must fail on compression 6/default, missing source receipts, duplicate APK artifact, disabled signing, missing time bound or `continue-on-error`.
 
