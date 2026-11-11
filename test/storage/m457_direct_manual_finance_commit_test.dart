@@ -277,7 +277,7 @@ void main() {
     expect(start,greaterThan(0));
     expect(end,greaterThan(start));
     final menu=app.substring(start,end);
-    expect(menu,contains("'Manual transaction':'عملية يدوية'"));
+    expect(menu,contains("'Add manual transaction':'إضافة عملية يدوية'"));
     expect(menu, isNot(contains(
       "'Transfer between my accounts':'تحويل بين حساباتي'")));
   });
