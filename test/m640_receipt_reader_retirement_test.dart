@@ -45,6 +45,8 @@ void main(){
   expect(app,isNot(contains('waffra-ocr-analysis-progress')));
   expect(app,isNot(contains('scannedReceipt')));
   expect(app,isNot(contains('scannedImage')));
+  expect(app,isNot(contains('scannedIncome')));
+  expect(app,contains('manualIncomeOverride:kind==\'income\''));
   expect(app,isNot(contains('sourceType:initial?.sourceType??(sms?\'sms\':scannedReceipt')));
   expect(app,contains('Future<void> entrySheet('));
   expect(app,contains('ImagePicker().pickImage(source:ImageSource.camera'));
