@@ -14715,7 +14715,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       occurredIso:DateTime.now().toUtc().toIso8601String(),
       sourceAccountId:funding.sourceAccountId,userConfirmed:true,
      );
-     if(mounted)await _loadFinanceSafely();
+     // A verified same-owner refresh updates goal and bank account balances
+     // without reinitializing Home or scheduling another SMS startup scan.
+     if(mounted)await _refreshFromVerifiedFinance();
     }catch(error){
      debugPrint('Atomic goal funding was not confirmed: $error');
      if(mounted)await _loadFinanceSafely();
