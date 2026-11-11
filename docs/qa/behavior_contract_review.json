@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "pr": "M637–M640 PR #558 — verified Home hot path, Saudi financial provider grouping, SMS sync, permissions copy, and complete receipt OCR retirement; M642 PR queue remediation",
-  "issue": "Issues #557, #559, #560, #561 — owner confirmed OCR removal; M642 #563",
+  "pr": "M645/M646 Draft PR #568 — approved current-only release notes, pre-PR M449 helper and quiet trusted Android CI",
+  "issue": "Issues #566 (M645), #567 (M646)",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main",
   "reviewed_at": "2026-11-11",
@@ -1311,6 +1311,63 @@
         "Goal funding never optimistically writes wallet or source balance; it must commit through trusted encrypted source with explicit verified account ID and optional low-balance warning; failure returns before notifications.",
         "No original M302/M363 category/recurring tests removed or weakened, only obsolete source-shape assertions replaced with positive new behavior and extra M644 coverage.",
         "Never bypass M449 release freshness, M385 exact bounded scope, M550 contract, source verification, physical Android acceptance or latest-head CI; Draft until verified."
+      ]
+    },
+    {
+      "id": "M645-CURRENT-SAUDI-NOTES-AND-REVIEWED-M449-PREPR",
+      "issue": "Issue #566 / Draft PR #568",
+      "previous_behavior": "Active 439 KB historical release note mixes retired Qwen/OCR/obsolete UX descriptions with current product behavior. Any new app-code commit after the last notes commit causes M449 fail on PR even though developers can detect that before opening/updating PR.",
+      "approved_behavior": "Active release notes list only current source-verified Saudi capabilities; original full historical record is byte-for-byte retained in an archive Git blob. A documented, unit-tested CLI takes explicitly human-reviewed change summary plus Issue/PR, resolves exact last app source SHA from Git and writes release notes AFTER committed source changes; caller commits notes and runs existing untouched M449 gate before PR push. Never auto-sign invented approvals, never write from untrusted PR Actions context.",
+      "source_paths": [
+        "docs/release/WAFFRA_APPROVED_CHANGES.txt",
+        "docs/release/archive/WAFFRA_APPROVED_CHANGES_PRE_M645_20261111.txt",
+        "scripts/qa/m449_prepare_release_notes.py",
+        "AGENTS.md"
+      ],
+      "test_paths": [
+        "test/qa/m449_release_notes_ancestry_test.py",
+        "test/qa/m645_release_notes_prepare_test.py"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/android.yml"
+      ],
+      "safety_invariants": [
+        "Keep original M449 ancestry check unchanged and rejecting stale source, missing notes, and dirty app worktree.",
+        "Approved summary must be provided by reviewer, not synthesized from filenames or unchecked model claims; source SHA is real commit before notes.",
+        "Original release notes content preserved as exact Git archive blob, including prior retired features as historical not current.",
+        "No app runtime/SQLCipher changes, no release certification from source-only description; actual Android checks required."
+      ]
+    },
+    {
+      "id": "M646-QUIET-TRUSTED-M410-AND-MAIN-ONLY-RELEASE",
+      "issue": "Issue #567 / Draft PR #568",
+      "previous_behavior": "M410 workflow_run completed fires for every M274 run. In latest 100 main run entries 92 M410, 80 skipped, crowding Actions/history. Signed APK workflow still lists long-retired feature-branch push triggers; M267 branch-only physical identity job intentionally skips on unrelated PRs. Many full Flutter suites repeat but remain independent required QA gates.",
+      "approved_behavior": "M410 is explicit manual-only workflow_dispatch with numeric run ID for a genuinely failed M274 PR workflow; fetch trusted GitHub run and use original strict candidate verifier: latest head SHA, same repository PR, single failed Android emulator job on first attempt, verified infrastructure marker, no user-facing assertion failure, only one job rerun. Old unconditional automatic skipped event gone. Signed APK push restricted to main, manual main build retained. Physical M267 probe and all mandatory source/SQLCipher/UI/release checks remain; no broad test deletion.",
+      "source_paths": [
+        ".github/workflows/m410-failed-android-retry.yml",
+        "scripts/qa/m410_failed_job_retry.py",
+        ".github/workflows/android.yml",
+        "docs/qa/M646_MAIN_WORKFLOW_AUDIT.md"
+      ],
+      "test_paths": [
+        "test/qa/m410_smart_ci_retry_test.py",
+        "test/qa/m646_main_ci_quiet_contract_test.py",
+        "test/qa/m381_main_fast_release_gate_test.py",
+        "test/qa/m533_android_emulator_runner_contract_test.py"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/android.yml",
+        ".github/workflows/m274-production-ui-golden.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "Do not retry failed Flutter assertions, other jobs, second attempt, missing or stale SHA, forks, or other repos.",
+        "Manual rerun executes trusted main code only; never checkout PR source with actions write.",
+        "Do not skip M274 real Android emulator, whole Flutter suite, verified finance or main signing release checks.",
+        "M267 two-phone exact signed APK identity remains separate; never count a Skipped job as an identity pass."
       ]
     }
   ]
