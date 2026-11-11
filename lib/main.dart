@@ -2134,8 +2134,14 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     snack(rootContext,message,isError:false,kind:WaffraSnackKind.info,
      duration:const Duration(milliseconds:2400));
    }
-  },child:Directionality(textDirection:language=='ar'?TextDirection.rtl:TextDirection.ltr,child:
-   (loading||!introDone)?WaffraLaunchIntro(onFinished:_m632SplashCompleted):
+  },child:Directionality(textDirection:language=='ar'?TextDirection.rtl:TextDirection.ltr,
+   child:AnimatedSwitcher(
+    duration:waffraMotion(420),
+    switchInCurve:Curves.easeOutCubic,
+    switchOutCurve:Curves.easeInCubic,
+    // M636: natural splash-to-auth crossfade; do not delay the finished
+    // native intro, password verification, or the authenticated Home.
+    child:(loading||!introDone)?WaffraLaunchIntro(onFinished:_m632SplashCompleted):
    startupError!=null?Scaffold(body:Center(child:Padding(padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[
     const Icon(Icons.error_outline,size:48,color:Colors.red),
     const SizedBox(height:12),
@@ -2148,7 +2154,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     const SizedBox(height:8),
     FilledButton(onPressed:WaffraHaptics.tap((){setState((){loading=true;startupError=null;});load();}),child:const WaffraText('إعادة المحاولة')),
    ])))):
-   _m623RootContent(rootContext)))));
+   _m623RootContent(rootContext))))));
 }
 class PinLockScreen extends StatefulWidget {
  final String pinHash;final VoidCallback onUnlock;
@@ -4195,12 +4201,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   _m627ClosingSession=true;
   _m627AccountEpoch++;
   _m630HomeStartupEpoch++;
-  if(mounted)setState((){
-   ready=false;
-   _financeLoadFailure=waffraIsEnglish?
-    'Signing out securely. Your financial data is protected.':
-    'جارٍ إنهاء الجلسة بأمان. بياناتك المالية محمية.';
-  });
+  // M636: retain the last verified Home frame behind the blocking logout
+  // overlay. An error/retry view belongs to real failure, never success.
+  // _m627ClosingSession still prevents finance work until safe teardown.
   try{
    // Never close an active database underneath a Home load or pending
    // finance preparation/write. Timeout fails signout closed, not finance.
@@ -18811,8 +18814,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     child:GestureDetector(
       behavior:HitTestBehavior.opaque,
       onTap:WaffraHaptics.tap(()=>setState(()=>addFabExpanded=false)),
-      // M474: dim scrim avoids repeatedly blurring every dashboard frame.
-      child:ColoredBox(color:Colors.black.withValues(alpha:.30))),
+      // M636: true blur composited only while '+' is expanded.
+      child:ClipRect(child:BackdropFilter(
+       filter:ui.ImageFilter.blur(sigmaX:6,sigmaY:6),
+       child:ColoredBox(color:Colors.black.withValues(alpha:.22))))),
    ),
     if(addFabExpanded&&!accountOpened&&(tab==0||tab==1||tab==3||tab==4||goalsOpened))
      WaffraFabMenuAnchor(
@@ -18825,18 +18830,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         if(tab==0&&!goalsOpened)...[
         _addMenuOption(
          icon:Icons.edit_note_rounded,
-         label:waffraIsEnglish?'Manual transaction':'عملية يدوية',
+         label:waffraIsEnglish?'Add manual transaction':'إضافة عملية يدوية',
          onTap:WaffraHaptics.tapRequired((){
           unawaited(_launchAddAction(()=>entrySheet(),fromMenu:true));
          })),
-        const SizedBox(height:7),
-        _addMenuOption(
-         icon:Icons.sms_outlined,
-         label:waffraIsEnglish?'Bank message':'رسالة بنكية',
-         onTap:WaffraHaptics.tapRequired((){
-          unawaited(_launchAddAction(()=>bulkSmsSheet(),fromMenu:true));
-         })),
-        const SizedBox(height:7),
         if(WaffraSaudiRelease.receiptImageTransactionImport)_addMenuOption(
          icon:Icons.document_scanner_outlined,
          label:waffraIsEnglish?'Scan receipt / image':'تصوير / استخراج فاتورة',
