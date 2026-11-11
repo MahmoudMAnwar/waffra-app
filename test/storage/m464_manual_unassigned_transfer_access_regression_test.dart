@@ -105,7 +105,7 @@ void main(){
   expect(menuStart,greaterThan(0));
   expect(menuEnd,greaterThan(menuStart));
   final menu=main.substring(menuStart,menuEnd);
-  expect(menu,contains("label:waffraIsEnglish?'Manual transaction':'عملية يدوية'"));
+  expect(menu,contains("label:waffraIsEnglish?'Add manual transaction':'إضافة عملية يدوية'"));
   expect(menu,isNot(contains("_launchAddAction(openVerifiedTransfer,fromMenu:true)")));
   expect(main,contains("Key('waffra-manual-three-modes')"));
   expect(main,contains("Key('m466-confirm-transfer')"));
