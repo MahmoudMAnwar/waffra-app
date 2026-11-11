@@ -4231,8 +4231,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
  void _m627AbortFailedLogout(){
   _m627ClosingSession=false;
-  // M629: if AI disposal fails AFTER the parallel Home DB close succeeds,
-  // keep the owner signed in but offer genuine finance Retry, not a frozen
+  // M636: if the genuine Home DB close fails, keep the owner signed in
+  // but offer verified finance Retry rather than a frozen
   // `Signing out` state with a disposed authority or fake old balances.
   if(mounted)setState((){
    ready=false;
@@ -8529,7 +8529,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  /// submit a finance write.
  Future<T> _withOcrWorkProgress<T>(String arabic,String english,
      Future<T> Function() operation)async{
-  if(!mounted)throw StateError('ai_screen_unmounted');
+  if(!mounted)throw StateError('ocr_screen_unmounted');
   final overlay=Overlay.of(context,rootOverlay:true);
   final cancellation=Completer<T>();
   var completed=false;
@@ -8537,7 +8537,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    if(completed)return;
    completed=true;
    /* M636: no local language-model task remains to cancel. */
-   cancellation.completeError(StateError('ai_analysis_cancelled'));
+   cancellation.completeError(StateError('ocr_analysis_cancelled'));
   }
   final item=OverlayEntry(builder:(progressContext)=>Positioned.fill(
    child:Material(
@@ -8564,7 +8564,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    // user cancellation cannot produce an uncaught asynchronous error.
    final work=(()async{
     await Future<void>.delayed(const Duration(milliseconds:30));
-    if(completed)throw StateError('ai_analysis_cancelled');
+    if(completed)throw StateError('ocr_analysis_cancelled');
     return await operation();
    })();
    return await Future.any<T>([work,cancellation.future])
@@ -8680,7 +8680,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     'Analysis took too long. Try a smaller image or add manually.':
     'التحليل استغرق وقتًا طويلًا. جرّب صورة أصغر أو أضف يدويًا.');
   }on StateError catch(error){
-   if(error.message=='ai_analysis_cancelled')return;
+   if(error.message=='ocr_analysis_cancelled')return;
    if(mounted)snack(context,waffraIsEnglish?
     'Could not complete analysis. Try again or add manually.':
     'تعذر إكمال التحليل. حاول مجددًا أو أضف يدويًا.');
