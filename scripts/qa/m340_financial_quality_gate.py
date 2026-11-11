@@ -133,7 +133,10 @@ def audit_sources(sources: Mapping[str, str]) -> list[str]:
     # Check only the actual foreign-FX preview handler, not unrelated app writes.
     home = sources.get(main, "")
     start = home.find("Future<void> _previewForeignBankCurrency(")
-    end = home.find("Future<bool> _canReviewOcrAsLedgerTransaction(", start)
+    # M640: OCR handler was deleted. The verified manual/SMS editor now
+    # immediately follows the still-required foreign-FX preview. Preserve
+    # the narrow no-finance-write boundary rather than bypassing the test.
+    end = home.find("Future<void> entrySheet(", start)
     if start == -1 or end <= start:
         problems.append(f"{main}: FX preview handler boundary missing")
     else:
