@@ -376,6 +376,40 @@
         "start": "      - name: Analyze shared merchant parser and Widget code\n",
         "end": null
       }
+    ],
+    ".github/workflows/m266-sqlcipher-precutover-qa.yml": [
+      {
+        "start": "on:\n  pull_request:\n    branches: [main]",
+        "end": "      - '.github/workflows/m266-sqlcipher-precutover-qa.yml'"
+      }
+    ],
+    ".github/workflows/m96-runtime-finance-cloud-integration.yml": [
+      {
+        "start": "on:\n  pull_request:\n    paths:",
+        "end": "  workflow_dispatch:\n\npermissions:"
+      },
+      {
+        "start": "      - name: Confirm production source remains protected",
+        "end": "          assert 'if (evidence == null)' in binder"
+      }
+    ],
+    "scripts/qa/m340_financial_quality_gate.py": [
+      {
+        "start": "    # authority. M565 adds the owner's first-pass Yes path: checking only the",
+        "end": "        problems.append(f\"{main}: owner-confirmed SMS review route missing\")"
+      },
+      {
+        "start": "        ):\n            if required not in approved_sms:",
+        "end": "    for proof in (\n        \"reviewSmsAccountLinks([trial],smsSender:sender)\","
+      },
+      {
+        "start": "        (\"_financeAuthority.commitConfirmedSms(\", \"SMS save bypasses verified finance authority\"),",
+        "end": "    ):\n        require(main, marker, reason)"
+      },
+      {
+        "start": "    require(fx, \"onPressed:()=>Navigator.pop(dialog,true)\",",
+        "end": "        (\"this.externalSourceWitnessActive = false\", \"external finance source activated\"),"
+      }
     ]
   }
 }
