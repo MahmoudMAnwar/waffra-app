@@ -244,97 +244,97 @@
     ],
     ".github/workflows/m174-main-arm64-compile.yml": [
       {
-        "start": "name:",
+        "start": "name: M174 Main ARM64 Compilation (CI Only)",
         "end": null
       }
     ],
     ".github/workflows/m282-combined-candidate.yml": [
       {
-        "start": "name:",
+        "start": "name: M282 Combined QA + Features Exact-SHA Acceptance (No Production Cutover)",
         "end": null
       }
     ],
     ".github/workflows/m278-mobile-system-insets.yml": [
       {
-        "start": "name:",
+        "start": "name: M278 Android iOS Safe Area and System Bar Compatibility",
         "end": null
       }
     ],
     ".github/workflows/m174-main-sha-postmerge.yml": [
       {
-        "start": "name:",
+        "start": "name: M174 Main SHA Post-Merge SQLCipher Regression",
         "end": null
       }
     ],
     ".github/workflows/storage-android-emulator.yml": [
       {
-        "start": "name:",
+        "start": "name: Waffra Android Encrypted Storage Integration",
         "end": null
       }
     ],
     ".github/workflows/m266-sqlcipher-precutover-qa.yml": [
       {
-        "start": "name:",
+        "start": "name: M266 SQLCipher Widget Source Safety + Android QA (NO CUTOVER)",
         "end": null
       }
     ],
     ".github/workflows/android.yml": [
       {
-        "start": "name:",
+        "start": "name: Build Waffra Android APK",
         "end": null
       }
     ],
     ".github/workflows/m290-country-reminders-multicurrency.yml": [
       {
-        "start": "name:",
+        "start": "name: M290-M291 Google Country, Reminders and Multi-Currency Safe Import",
         "end": null
       }
     ],
     ".github/workflows/m201-sqlcipher-finance-acceptance.yml": [
       {
-        "start": "name:",
+        "start": "name: M201 SQLCipher Routes, Migration and Receipt Acceptance (CI ONLY)",
         "end": null
       }
     ],
     ".github/workflows/m274-production-ui-golden.yml": [
       {
-        "start": "name:",
+        "start": "name: M274 Production UI Journeys and Golden Screenshot Review",
         "end": null
       }
     ],
     ".github/workflows/storage-android-integration.yml": [
       {
-        "start": "name:",
+        "start": "name: Waffra Android encrypted DB integration",
         "end": null
       }
     ],
     ".github/workflows/android-full-smoke.yml": [
       {
-        "start": "name:",
+        "start": "name: Waffra Android Full Startup Smoke (Nightly or Manual)",
         "end": null
       }
     ],
     ".github/workflows/m147-final-main-review-gate.yml": [
       {
-        "start": "name:",
+        "start": "name: M147 Final Main-Safe Merge Readiness Review",
         "end": null
       }
     ],
     ".github/workflows/m202-android-sqlcipher-source-binder-dryrun.yml": [
       {
-        "start": "name:",
+        "start": "name: M202 Android SQLCipher Source Binding Dry Run (CI ONLY)",
         "end": null
       }
     ],
     ".github/workflows/m298-finance-validation.yml": [
       {
-        "start": "name:",
+        "start": "name: M298 Mandatory Finance Field Validation",
         "end": null
       }
     ],
     ".github/workflows/m340-continuous-financial-quality.yml": [
       {
-        "start": "name:",
+        "start": "name: M340 Continuous Financial Quality Gate (Exact SHA, No Cutover)",
         "end": null
       }
     ]
