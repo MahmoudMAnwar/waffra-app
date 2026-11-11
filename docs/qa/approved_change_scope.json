@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
   "change_id": "M637-M638-PERF-PLUS-SAUDI-FINANCIAL-PROVIDERS-AND-SMS-INBOX-SYNC-557-559",
-  "human_scope_review": "Two approved user scopes combined by explicit owner request in the same Draft PR #558. M637 performance unchanged; M638 local vs digital bank vs wallet Arabic catalog, cascaded entry/account selection + dimmed validation, remove surplus transfer explanations, explicit Android SMS inbox deletion reconciliation on I/O executor, no saved ledger/anti-replay/excluded loss. Permanent requirements M637/M638 documented before source changes.",
+  "human_scope_review": "Two approved user scopes combined by explicit owner request in the same Draft PR #558. M637 performance unchanged; M638 local vs digital bank vs wallet Arabic catalog, cascaded entry/account selection + dimmed validation, remove surplus transfer explanations, explicit Android SMS inbox deletion reconciliation on I/O executor, no saved ledger/anti-replay/excluded loss. Permanent requirements M637/M638 documented before source changes. M639 #560 explicit owner direction: permissions title and explanation no artificial-intelligence references; copy-only scoped change, PR #558.",
   "user_requested_changes": [
     "Speed up the actual verified finance Home handoff after successful biometric and ordinary logout/login; no cosmetic spinner in this performance-first patch.",
     "Remove repeated account schema foreign-key validations and avoid unnecessary already-installed AccountContext transaction on the verified account balance read hot path without losing any schema corruption checks.",
@@ -9,7 +9,8 @@
     "Add meaningful positive/negative account schema and first-home contract regressions and require real Android profile-mode timings before claiming success.",
     "M638 #559: Local banks, digital banks and digital wallets are separate categories; Arabic provider names in second dropdown, D360 verbatim, Barq/Enjaz Pay/Alinma Pay wallets not banks; preserve existing verified account IDs.",
     "M638: dependent institution/account/subcategory dropdown dimmed until parent set; manual income/expense confirm disabled until every required field valid; remove exactly two transfer explanatory lines without removing real errors.",
-    "M638: explicit SMS Rescan must reconcile unconfirmed encrypted pending queue against current Android inbox, remove only missing source records, group count updates; permission/partial scan fails closed and never deletes SQLCipher ledger, confirmed hashes, exclusions or sender rule."
+    "M638: explicit SMS Rescan must reconcile unconfirmed encrypted pending queue against current Android inbox, remove only missing source records, group count updates; permission/partial scan fails closed and never deletes SQLCipher ledger, confirmed hashes, exclusions or sender rule.",
+    "M639 #560: Replace the Arabic and English visible SMS/notification onboarding permission screen heading and description with plain purpose-and-choice copy. Remove AI/cloud/model mentions from visible permission screen text while preserving opt-in defaults and secure OS consent behavior exactly."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -22,6 +23,7 @@
     "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
     "lib/waffra_accounts_manager_page.dart",
     "lib/waffra_auto_sms.dart",
+    "lib/waffra_auto_sms_consent.dart",
     "lib/waffra_new_account_dialog.dart",
     "lib/waffra_recurring_account_groups.dart",
     "lib/waffra_saudi_financial_providers.dart",
@@ -29,6 +31,7 @@
     "native/WaffraMainActivity.kt",
     "test/m638_saudi_provider_catalog_and_cascade_test.dart",
     "test/m638_sms_inbox_delete_sync_test.dart",
+    "test/m639_permissions_onboarding_plain_copy_test.dart",
     "test/storage/m637_biometric_home_schema_hotpath_test.dart"
   ],
   "approved_deleted_files": [],
@@ -108,6 +111,12 @@
       {
         "start": "                \"importConsentMonthBankSms\" -> {",
         "end": "                \"scanUnknownFinancialSms\" -> {"
+      }
+    ],
+    "lib/waffra_auto_sms_consent.dart": [
+      {
+        "start": "    const SizedBox(height:18),\n    Text(widget.english?",
+        "end": "    const SizedBox(height:20),\n    if(busy)"
       }
     ]
   }
