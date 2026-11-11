@@ -16,7 +16,7 @@ CURRENT USER-FACING CAPABILITIES (supported by existing Flutter/QA source contra
 - SMS: optional permission, locally reviewed bank SMS with sender/source verification; pending, approved and excluded messages have explicit user actions. No SMS is automatically recorded as a financial transaction without a verified, user-confirmed write. Original/OTP and anti-replay controls remain.
 - Receipts: user-selected photos/attachments and encrypted storage/viewer are still supported; importing or recognizing financial transactions from photographed receipts is NOT a current feature.
 - Settings, authentication and data safety: phone credential/OS biometric owner verification, secure session/logout, encrypted backup/restore, SQLCipher-ledger source and legacy data retention safeguards.
-- Tools: the maintained four practical tools (financial health, transaction search, monthly closing, safe diagnostics) and existing currency/gold/oil read-only market utilities.
+- Tools: the maintained four practical tools (financial health, transaction search, monthly closing, safe diagnostics) and existing currency/gold/oil read-only market utilities. [M222] أسعار الذهب remains a real available gold-pricing/calculator feature, subject to verified live quote availability.
 
 NOT CURRENT FEATURES:
 - Old on-device Qwen model, automatic AI feature pane/installer and the removed on-device receipt OCR/Tesseract pipeline are NOT available in the Saudi UI.
