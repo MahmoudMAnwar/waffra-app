@@ -1,12 +1,13 @@
 {
   "contract_version": 1,
   "change_id": "M658-20261111-SIGNED-MAIN-ARTIFACT-UPLOAD-COMPRESSION-585",
-  "human_scope_review": "Owner reported >21-minute same-SHA signed main build #43093248678 after merged PR #580. Exact main SHA 98dee202: full Flutter/Python, M174+M449, APK/AAB build, signature/source gates passed, while final signed APK and AAB actions/upload-artifact@v4 remained in progress. Default artifact gzip6 recompresses precompressed APK/AAB and prolongs CPU; GitHub official action documentation recommends compression-level: 0 for incompressible large binary archives. Required bounded non-invasive improvement: pin level0 on BOTH existing uploads with original unique artifact names/paths, receipts and 30-day retention; set explicit build job timeout so upload outage cannot hang forever, no fake success or skipped artifact. Preserve main-only publishing, all finance/SQLCipher, signing, SHA, Firebase and full test acceptance. Issue #585 + permanent requirements registered before code. NO app change, no test deletion or semantic changes.",
+  "human_scope_review": "Owner reported >21-minute same-SHA signed main build #43093248678 after merged PR #580. Exact main SHA 98dee202: full Flutter/Python, M174+M449, APK/AAB build, signature/source gates passed, while final signed APK and AAB actions/upload-artifact@v4 remained in progress. Default artifact gzip6 recompresses precompressed APK/AAB and prolongs CPU; GitHub official action documentation recommends compression-level: 0 for incompressible large binary archives. Required bounded non-invasive improvement: pin level0 on BOTH existing uploads with original unique artifact names/paths, receipts and 30-day retention; set explicit build job timeout so upload outage cannot hang forever, no fake success or skipped artifact. Preserve main-only publishing, all finance/SQLCipher, signing, SHA, Firebase and full test acceptance. Issue #585 + permanent requirements registered before code. NO app change, no test deletion or semantic changes. Owner on 2026-11-12 explicitly requested PR #586 CI jobs; Issue #587 and M659 requirements were recorded before source. Add only focused PR HEAD source QA and fail-closed terminal certification, no new release builds.",
   "user_requested_changes": [
     "Two existing upload-artifact@v4 steps in android.yml use compression-level: 0 only for signed APK and signed Play AAB; retain original artifact names and full verification files, same path and retention.",
     "Add safe build-job timeout to bound a stuck artifact service; missing/timeout APK or AAB must fail workflow, never claim success.",
     "Regression M658 validates exactly two artifacts and all original signing/source/finance gates and automatic main-only release, no duplicate files or unapproved artifact.",
-    "Maintain M550 behavioral contract, M385 bounding and factual M449 ancestry note; compare future actual main APK/AAB upload latency before claiming Done."
+    "Maintain M550 behavioral contract, M385 bounding and factual M449 ancestry note; compare future actual main APK/AAB upload latency before claiming Done.",
+    "Add PR #586 focused exact-head M659 jobs for the existing M658 APK and AAB contract plus independent release source regressions, with final certification that fails if any required job is skipped/failed/cancelled; do not duplicate Flutter/Gradle compilation."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -15,7 +16,9 @@
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "test/qa/m658_fast_signed_artifact_upload_test.py"
+    "test/qa/m658_fast_signed_artifact_upload_test.py",
+    ".github/workflows/m659-pr-signed-artifact-qa.yml",
+    "test/qa/m659_pr_signed_artifact_jobs_test.py"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
