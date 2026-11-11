@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "pr": "M637 PR #558 — post-biometric verified account schema hotpath, exact-head CI/device proof pending",
-  "issue": "Issue #557 — owner request to fix actual first Home freeze before spinner, 2026-11-11",
+  "pr": "M637 + M638 PR #558 — verified Home hotpath plus Saudi institution pickers and explicit SMS inbox deletion reconciliation",
+  "issue": "Issues #557 and #559 — owner specifically requested same PR",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main",
   "reviewed_at": "2026-11-11",
@@ -1081,6 +1081,39 @@
         "Keep per-account SQLCipher source lock, active-source validation, snapshot read and actual account balances; no bypass of native PBKDF2 600000, biometric, missing/corrupt finance errors, or account witness/epoch checks.",
         "Context already installed still runs full requireReady including FK and revision, no caching across owner sessions; first-time schema installation is transactional and rechecks marker under lock to avoid race.",
         "Do not claim real mobile jank fixed until fresh/biometric/relogin and SMS 1000-2000 physical profile measurements; keep post-Home SMS deferred. No spinner in this patch."
+      ]
+    },
+    {
+      "id": "M638-SAUDI-BANKS-DIGITAL-WALLETS-AND-ANDROID-SMS-SYNC",
+      "issue": "Issue #559 / existing PR #558",
+      "previous_behavior": "Only six bank names in account picker, STC Bank miscategorized with local banks; child selectors appear enabled before parent, save button active when mandatory fields empty; native new-only historical SMS cursor never removes pending messages deleted in Android inbox.",
+      "approved_behavior": "Present category then Arabic institution name then verified child financial account, local banks / digital banks / digital wallets distinct, D360 exact, Barq/Enjaz Pay/Alinma Pay wallets, category/child and confirm disabled until valid, remove two transfer help texts. Explicit Rescan reconciles unsaved encrypted candidates to Android provider only on dedicated SMS executor; deletion prunes their group/list, not committed finance or 30-day excluded records.",
+      "source_paths": [
+        "lib/waffra_saudi_financial_providers.dart",
+        "lib/waffra_recurring_account_groups.dart",
+        "lib/waffra_new_account_dialog.dart",
+        "lib/waffra_accounts_manager_page.dart",
+        "lib/main.dart",
+        "lib/waffra_auto_sms.dart",
+        "native/WaffraAutoSmsStore.kt",
+        "native/WaffraMainActivity.kt"
+      ],
+      "test_paths": [
+        "test/m638_saudi_provider_catalog_and_cascade_test.dart",
+        "test/m638_sms_inbox_delete_sync_test.dart",
+        "test/m470_new_account_dialog_test.dart",
+        "test/m509_all_sender_sms_rescan_dedup_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/android.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Preserve structured provider IDs and old saved accounts; no bank/wallet category inference from SMS without owner confirmation. No change to SQLCipher money writes.",
+        "No Android SMS Provider mutations or deletion of confirmed finance, sender rules, anti-replay or retained excluded records; all rescan matching only after complete and permitted provider scan. Keep zero invisible on errors.",
+        "No new parallel SMS engine or work before first Home frame; scan on existing SMS executor, 1000-pending backpressure and original historical cursor stay unchanged.",
+        "All software changes bounded in M385 and QA tests; no release claim without on-device verification."
       ]
     }
   ]
