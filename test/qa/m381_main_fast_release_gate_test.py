@@ -47,7 +47,7 @@ class MainReleaseSpeedWithoutBypassTest(unittest.TestCase):
         self.assertIn("if not missing and not pending:", self.audit)
         self.assertIn("raise SystemExit('BLOCKED: required same-SHA CI never finished')", self.audit)
 
-    def test_main_expected_checks_and_single_full_suite_cover_critical_finance(self):
+    def test_nonempty_main_expected_checks_exist_and_run_on_main_push(self):
         # M653: M340 whole-app PR matrix is still mandatory on PRs;
         # on main its finance guard runs in this release's full verifier.
         self.assertIn("M174 Main SHA Post-Merge SQLCipher Regression", self.audit)
