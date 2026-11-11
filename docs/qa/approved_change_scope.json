@@ -23,7 +23,7 @@
     ".github/workflows/android.yml": [
       {
         "start": "  build:\n",
-        "end": "    steps:\n"
+        "end": "      - name: Checkout repository\n"
       },
       {
         "start": "      - name: Upload signed Google Play internal-testing AAB candidate\n",
