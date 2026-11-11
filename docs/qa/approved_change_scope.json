@@ -45,6 +45,7 @@
     "test/m161_manual_category_leaf_routing_test.dart",
     "test/m224_verified_pull_refresh_dialog_test.dart",
     "test/m264_app_wide_action_haptics_test.dart",
+    "test/m268_smart_features_ten_calendar_art_test.dart",
     "test/m273_production_user_journey_regression_test.dart",
     "test/m275_smooth_confirmation_performance_test.dart",
     "test/m297_ocr_to_finance_and_sms_layout_test.dart",
@@ -434,6 +435,12 @@
       {
         "start": "    require(fx, \"onPressed:()=>Navigator.pop(dialog,true)\",",
         "end": "        (\"this.externalSourceWitnessActive = false\", \"external finance source activated\"),"
+      }
+    ],
+    "test/m268_smart_features_ten_calendar_art_test.dart": [
+      {
+        "start": "   expect(find.byKey(const Key('waffra-m268-feature-markets')),findsOneWidget);\n   expect(find.byKey(const Key('waffra-m268-expanded-analysis')),findsNothing);",
+        "end": "   await tester.tap(find.byKey(const Key('waffra-m268-feature-analysis')));"
       }
     ]
   }
