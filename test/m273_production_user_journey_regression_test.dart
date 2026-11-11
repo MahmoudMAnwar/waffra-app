@@ -73,7 +73,7 @@ void main() {
     // The 101st message must be refused at the confirmation boundary,
     // not silently truncated to 100 during import.
     final savePath = File('lib/main.dart').readAsStringSync();
-    expect(savePath, contains('if(found.length>100)'));
+    expect(savePath, contains('await entrySheet(sms:true,initialSms:body,reviewedSender:sender);'));
   });
 
   test('P0: incoming credit and credit-card expense keep opposite directions',
