@@ -55,7 +55,15 @@ extension WaffraGoalRecurringActions on _HomeScreenState {
   RecurringBill? next;
   if(linked.isNotEmpty){
    final old=linked.single;
-   next=date==null||updated.target<=0||!updated.active?
+   final originalDue=DateTime(
+    old.startAt.year,old.startAt.month,old.startAt.day);
+   final settledKey=WaffraRecurringPolicy.entryId(old.id,originalDue);
+   // A one-time goal due that was actually paid cannot be revived by
+   // editing the goal's name, account or date. Reopening would generate
+   // a fresh due ID on a new date and risk charging the same goal twice.
+   final alreadySettled=entries.any((entry)=>
+    entry.id==settledKey&&entry.sourceType=='goal_due');
+   next=date==null||updated.target<=0||!updated.active||alreadySettled?
     old.copy(active:false,title:'استحقاق '+updated.name,
      accountId:updated.accountId):
     old.copy(title:'استحقاق '+updated.name,amount:updated.target,
