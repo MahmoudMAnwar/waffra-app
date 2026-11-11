@@ -14088,7 +14088,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      ?const Color(0xFFD9FFE9):forest):null,
     fontWeight:selected?FontWeight.bold:FontWeight.normal));
  Future<void> goalDialog({SavingGoal? duplicate,bool openEnded=false})async {
-  await _ensureFinanceBound();
+  // M641 account helper already verifies the source; don't bind twice.
   final verifiedGoalAccounts=await _m641VerifiedGoalRecurringAccounts();
   if(verifiedGoalAccounts==null||!mounted)return;
   List<WaffraAccountBalance> goalAccounts=verifiedGoalAccounts;
