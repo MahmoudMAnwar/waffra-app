@@ -56,7 +56,7 @@ void main(){
   expect(main,contains('await WaffraAutoSms.importConsentMonth()'));
   expect(main,contains('Future<void> _openAutoSmsInbox()'));
   expect(main,contains('await entrySheet(sms:true,initialSms:body,reviewedSender:sender);'));
-  expect(main,contains('reviewSmsBudgetLinks(additions)'));
+  expect(main,contains('reviewSmsBudgetLinks([record])'));
   expect(main,contains('if(targetId!=null&&id!=targetId)continue;'));
  });
   test('M436 signed QA APK Cloudflare staging is main only, cloud opt-in',(){
