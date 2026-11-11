@@ -12617,6 +12617,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  /// M611: read the actual owner-scoped encrypted transfer journal.
  /// A Home history tile cannot post any money.
 
+ /// M611: read the actual owner-scoped encrypted transfer journal.
+ /// A Home history tile cannot post any money.
+ Future<void> showInternalTransferTransactions()async{
+  await _m647ShowInternalTransfers();
+ }
  /// M647: source and destination are separate verified account identities.
  /// Presentation-only: no money write, no inferred sender, no extra expense.
  Widget _m647TransferCard(WaffraInternalTransferHistory t,{bool compact=false}){
@@ -12684,7 +12689,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
 
  /// M647: content-sized sheet replaces a forced 70% blank white pane.
- Future<void> showInternalTransferTransactions({String? focusId})async{
+ Future<void> _m647ShowInternalTransfers({String? focusId})async{
   final selected=_m467SelectedAccount;
   final future=_m648HomeTransfers(selected);
   if(!mounted)return;
@@ -13232,7 +13237,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 InkWell(
                  key:Key('m648-home-transfer-'+transfer.id),
                  onTap:WaffraHaptics.tap(()=>
-                  showInternalTransferTransactions(focusId:transfer.id)),
+                  _m647ShowInternalTransfers(focusId:transfer.id)),
                  child:_m647TransferCard(transfer,compact:true)),
               ]);
              }),
