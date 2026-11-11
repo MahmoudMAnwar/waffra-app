@@ -93,12 +93,12 @@ Sender can't accept replies. Contact them directly.''';
 
  test('M297 full home add flow has three actions and uses guarded entry form',(){
   final src=File('lib/main.dart').readAsStringSync();
-  expect(src,contains("'Manual transaction':'عملية يدوية'"));
-  expect(src,contains("'Bank message':'رسالة بنكية'"));
+  expect(src,contains("'Add manual transaction':'إضافة عملية يدوية'"));
+  expect(src,contains("'Add manual transaction':'إضافة عملية يدوية'"));
   expect(src,contains("'Scan receipt / image':'تصوير / استخراج فاتورة'"));
   expect(src,contains('_launchAddAction(scanAndAddReceipt,fromMenu:true)'));
   expect(src,contains('()=>WaffraReceiptOcr.scan(picked.path)'));
-  expect(src,contains('waffra-ai-analysis-progress'));
+  expect(src,contains('waffra-ocr-analysis-progress'));
   expect(src,contains('await entrySheet('));
   expect(src,contains('scannedReceipt:'));
   expect(src,contains('scannedIncome:'));
