@@ -1,114 +1,37 @@
 {
   "contract_version": 1,
-  "change_id": "M653-20261111-MAIN-CI-CRITICAL-PATH-REDUNDANT-COMPILE-AND-PRUNE-579",
-  "human_scope_review": "Owner requested main CI/Skipped workflow cleanup on 2026-11-11; verified main SHA 37030c8 APK 18m50, external audit 13m53, full Flutter 9m50, APK 4m50. M410's 85 historical skipped runs were already stopped by merged #568; do not edit M410. Release gate currently awaits unrelated Android nightly/manual smoke and maintenance. Move only M340 duplicate full suite to PR/manual (retain all finance/hostile guards on mandatory main verify-all-tests), keep M174 duplicate unsigned main compile manual-only (signed APK remains main auto). Require M174 exact SHA and M449; if triggered, also require M201. Safely repair M647 incorrect unittest import to unittest discover; errors remain visible, maintenance does not block signing. Narrowly reconcile M381/M382 obsolete source assertions with equal/stronger positive coverage, add M653 tests. No app/source/SQLCipher/signing removal, no skipped mandatory test, no workflow deletion. Docs and Issue #579 were created before workflow/test edits. Exact-head run #43085793313 identified M383 protected test stale literal from old M340 main-external layout. Issue #579 comment 6805081659 approved targeted positive replacement; no removal or unrelated test change. At exact head fbfd011d, PR #580 M147 Android preview failed with Android Lint JavaDocParser List.removeLast NoSuchMethodError running Java17 (job 130751731090). Google AGP issue #522845800 documents matching bug. Owner requested definitive remediation; Issue #582 and WAFFRA_REQUIREMENTS.md were updated before code edits. Only CI JDK runtime and assert steps, no finance code/AGP template/lint bypass, are now approved in 5 scoped workflows.",
+  "change_id": "M658-20261111-SIGNED-MAIN-ARTIFACT-UPLOAD-COMPRESSION-585",
+  "human_scope_review": "Owner reported >21-minute same-SHA signed main build #43093248678 after merged PR #580. Exact main SHA 98dee202: full Flutter/Python, M174+M449, APK/AAB build, signature/source gates passed, while final signed APK and AAB actions/upload-artifact@v4 remained in progress. Default artifact gzip6 recompresses precompressed APK/AAB and prolongs CPU; GitHub official action documentation recommends compression-level: 0 for incompressible large binary archives. Required bounded non-invasive improvement: pin level0 on BOTH existing uploads with original unique artifact names/paths, receipts and 30-day retention; set explicit build job timeout so upload outage cannot hang forever, no fake success or skipped artifact. Preserve main-only publishing, all finance/SQLCipher, signing, SHA, Firebase and full test acceptance. Issue #585 + permanent requirements registered before code. NO app change, no test deletion or semantic changes.",
   "user_requested_changes": [
-    "Keep main signed APK/AAB after one exhaustive full Flutter/Python mandatory suite plus M340 source and hostile finance negative tests; no code/data policy change.",
-    "Do not delay main APK for incidental same-SHA nightly/manual Android smoke or maintenance cleanup; require all declared M174/M449 and any running M201 source acceptance. Failed/absent required CI blocks.",
-    "Retain full M340 PR/manual gate but avoid redundant whole-app Flutter duplicate on main, with equivalent source safety inside mandatory main build.",
-    "Make unsigned CI-only duplicate M174 ARM64 build manual while retaining signed main APK compile, signature source identity and Android App Bundle.",
-    "Fix historical M647 main prune first-run failure from wrong unittest dotted import using discovery; preserve negative tests and deletion fail-closed controls.",
-    "Update only obsolete M381/M382 CI contract assertions and add M653 comprehensive positive and negative release gate regression; document exact timing and evidence.",
-    "PR #580 exact-head M174 regression exposed M383 obsolete literal M340 separate main external gate assertion; narrow ONLY its prerequisite-test method to positively assert integrated M340 source/negative tests, M174 finance and M449 release gate; all other M383 signing, APK/AAB cache/identity assertions retained.",
-    "M654 Issue #582 / PR #580 red M147 ARM64 release-lint crash: pin and positively verify Temurin JDK21 on M147, main signed APK/AAB, M274 native emulator, manual unsigned M174 ARM64 and night Android smoke; preserve every Gradle Lint/static analysis and source-identity test; new fail-closed m654 Android JDK contract regression."
+    "Two existing upload-artifact@v4 steps in android.yml use compression-level: 0 only for signed APK and signed Play AAB; retain original artifact names and full verification files, same path and retention.",
+    "Add safe build-job timeout to bound a stuck artifact service; missing/timeout APK or AAB must fail workflow, never claim success.",
+    "Regression M658 validates exactly two artifacts and all original signing/source/finance gates and automatic main-only release, no duplicate files or unapproved artifact.",
+    "Maintain M550 behavioral contract, M385 bounding and factual M449 ancestry note; compare future actual main APK/AAB upload latency before claiming Done."
   ],
   "allowed_changed_files": [
+    ".github/workflows/android.yml",
     "docs/WAFFRA_REQUIREMENTS.md",
-    "docs/qa/M653_MAIN_CI_RELEASE_CRITICAL_PATH.md",
-    "docs/qa/m340-continuous-financial-quality-gate.md",
+    "docs/qa/M658_SIGNED_ARTIFACT_UPLOAD_TIMING.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    ".github/workflows/android.yml",
-    ".github/workflows/m340-continuous-financial-quality.yml",
-    ".github/workflows/m174-main-arm64-compile.yml",
-    ".github/workflows/m647-main-history-prune.yml",
-    "test/qa/m381_main_fast_release_gate_test.py",
-    "test/qa/m382_skip_free_workflow_routing_test.py",
-    "test/qa/m653_main_ci_release_critical_path_test.py",
-    "test/qa/m383_parallel_signed_android_build_test.py",
-    ".github/workflows/m147-final-main-review-gate.yml",
-    ".github/workflows/m274-production-ui-golden.yml",
-    ".github/workflows/android-full-smoke.yml",
-    "test/qa/m654_android_lint_jdk_compatibility_test.py"
+    "test/qa/m658_fast_signed_artifact_upload_test.py"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
   "bounded_sections": {
     ".github/workflows/android.yml": [
       {
-        "start": "  verify-all-tests:\n",
-        "end": "  verify-same-sha-checks:\n"
+        "start": "  build:\n",
+        "end": "    steps:\n"
       },
       {
-        "start": "  verify-same-sha-checks:\n",
-        "end": "  build:\n"
+        "start": "      - name: Upload signed Google Play internal-testing AAB candidate\n",
+        "end": "      # Save per-artifact compilation state only after that artifact has\n"
       },
       {
-        "start": "      - name: Set up Java\n",
-        "end": "      - name: Set up Flutter (SDK and pub cache)\n"
-      }
-    ],
-    ".github/workflows/m340-continuous-financial-quality.yml": [
-      {
-        "start": "on:\n",
-        "end": "permissions:\n"
-      }
-    ],
-    ".github/workflows/m174-main-arm64-compile.yml": [
-      {
-        "start": "name: M174 Main ARM64 Compilation (CI Only)\n",
-        "end": "permissions:\n"
-      },
-      {
-        "start": "      - uses: actions/checkout@v4\n",
-        "end": "      - uses: subosito/flutter-action@v2\n"
-      }
-    ],
-    ".github/workflows/m647-main-history-prune.yml": [
-      {
-        "start": "      - name: Run negative tests before any history mutation\n",
-        "end": "      - name: Snapshot, audit and prune old main failed/skipped/cancelled runs\n"
-      }
-    ],
-    "test/qa/m381_main_fast_release_gate_test.py": [
-      {
-        "start": "    def test_nonempty_main_expected_checks_exist_and_run_on_main_push(self):",
-        "end": "    def test_main_build_does_not_duplicate_full_test_job(self):"
-      }
-    ],
-    "test/qa/m382_skip_free_workflow_routing_test.py": [
-      {
-        "start": "    def test_m174_native_compile_preserved_only_for_main(self):",
-        "end": "    def test_full_finance_suite_still_runs_for_general_prs(self):"
-      },
-      {
-        "start": "    def test_main_release_gates_unchanged(self):",
-        "end": "\n\nif __name__ == \"__main__\":"
-      }
-    ],
-    "test/qa/m383_parallel_signed_android_build_test.py": [
-      {
-        "start": "    def test_exact_sha_full_release_gates_are_prerequisite_of_both_artifacts(self):",
-        "end": "    def test_apk_only_steps_do_not_wait_for_aab(self):"
-      }
-    ],
-    ".github/workflows/m147-final-main-review-gate.yml": [
-      {
-        "start": "  android-arm64-compilation:\n",
-        "end": "      - name: Set up Flutter SDK\n"
-      }
-    ],
-    ".github/workflows/m274-production-ui-golden.yml": [
-      {
-        "start": "  android-emulator-ui-taps:\n",
-        "end": "      - uses: subosito/flutter-action@v2\n"
-      }
-    ],
-    ".github/workflows/android-full-smoke.yml": [
-      {
-        "start": "      - name: Checkout repository\n",
-        "end": "      - name: Set up Flutter (SDK and pub cache)\n"
+        "start": "      - name: Publish signed QA APK (FINAL step)\n",
+        "end": null
       }
     ]
   }
