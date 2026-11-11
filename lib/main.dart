@@ -599,6 +599,10 @@ class SavingGoal {
   if(accountId!=null)'accountId':accountId,
   if(dueDate!=null)'dueDate':dueDate!.toIso8601String()};
  factory SavingGoal.fromJson(Map<String,dynamic> j){
+  final linked=j['accountId'];
+  if(linked!=null&&(linked is! String||linked.trim().isEmpty||linked.length>128)){
+   throw const FormatException('Invalid linked savings account ID.');
+  }
   if(j['progressAlertsEnabled']!=null&&j['progressAlertsEnabled'] is! bool ||
      j['progressAlertPercent']!=null&&
       (j['progressAlertPercent'] is! int||
@@ -609,10 +613,7 @@ class SavingGoal {
   id:'${j['id']??newId()}',name:'${j['name']??''}',
   target:(j['target'] as num).toDouble(),
   saved:(j['saved'] as num?)?.toDouble()??0,
-  accountId:j['accountId'] is String&&
-    (j['accountId'] as String).trim().isNotEmpty&&
-    (j['accountId'] as String).length<=128?
-    (j['accountId'] as String):null,
+  accountId:linked as String?,
   dueDate:DateTime.tryParse('${j['dueDate']??''}'),
   active:!j.containsKey('active')||j['active']==true,
   progressAlertsEnabled:j['progressAlertsEnabled']==true,
