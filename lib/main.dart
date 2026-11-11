@@ -134,7 +134,6 @@ part 'waffra_smart_analysis.part.dart';
 part 'waffra_recurring_trash.part.dart';
 part 'waffra_goal_recurring_actions.part.dart';
 part 'waffra_deleted_item_card.part.dart';
-part 'waffra_widget_capture.part.dart';
 part 'waffra_auto_sms_autopost.part.dart';
 
 Future<Map<String,dynamic>> waffraDecodeBackupInIsolate(Map<String,String> request) async {
@@ -178,11 +177,6 @@ void waffraAutoSmsBackgroundEntrypoint() {
 
 Future<void> main()async {
  WidgetsFlutterBinding.ensureInitialized();
- // Flutter engine started by the circular Android widget, not the normal app.
- if(WidgetsBinding.instance.platformDispatcher.defaultRouteName=='/waffra-widget'){
-  runApp(const WaffraWidgetCaptureApp());
-  return;
- }
  // Classify the installation before onboarding writes its first preferences.
  if(Platform.isAndroid){
   try{await WaffraFreshInstallSource.prepare();}catch(_){
@@ -4538,7 +4532,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  // UI-only history: no finance record or persisted state is modified.
  final List<int> _tabBackStack=<int>[];
  bool goalsOpened=false;
- bool _smsSheetOpen=false;
  bool _receiptOcrAiOpening=false;
  String? _lastWidgetRevision;
  // Exact last finance ledger string seen or committed, including null vs [].
@@ -6369,7 +6362,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    ]));
 
  Future<void> _reviewAutoSmsCandidates({String? targetId})async {
-  if(!mounted||!ready||_smsSheetOpen||_autoSmsReviewOpen||
+  if(!mounted||!ready||_autoSmsReviewOpen||
      _financeLoadFailure!=null)return;
   _autoSmsReviewOpen=true;
   try{
@@ -7098,7 +7091,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  bool _m621NoticeOpening=false;
  void _m621OnFinanceNoticeTap(){
   if(!mounted||!ready||_financeLoadFailure!=null||
-     _m621NoticeOpening||_autoSmsReviewOpen||_smsSheetOpen)return;
+     _m621NoticeOpening||_autoSmsReviewOpen)return;
   final target=waffraFinanceNoticeTap.value;
   if(target==null)return;
   final lifecycle=WidgetsBinding.instance.lifecycleState;
@@ -8534,7 +8527,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  /// Show visible, blocking feedback for local OCR/AI work. The overlay is
  /// always removed on success, cancellation and exceptions; the task cannot
  /// submit a finance write.
- Future<T> _withAiWorkProgress<T>(String arabic,String english,
+ Future<T> _withOcrWorkProgress<T>(String arabic,String english,
      Future<T> Function() operation)async{
   if(!mounted)throw StateError('ai_screen_unmounted');
   final overlay=Overlay.of(context,rootOverlay:true);
@@ -8555,13 +8548,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       padding:const EdgeInsets.symmetric(horizontal:24,vertical:18),
       child:Column(mainAxisSize:MainAxisSize.min,children:[
        const CircularProgressIndicator(
-        key:Key('waffra-ai-analysis-progress')),
+        key:Key('waffra-ocr-analysis-progress')),
        const SizedBox(height:16),
        WaffraText(waffraIsEnglish?english:arabic,
         textAlign:TextAlign.center),
        const SizedBox(height:10),
        TextButton(
-        key:const Key('waffra-ai-analysis-cancel'),
+        key:const Key('waffra-ocr-analysis-cancel'),
         onPressed:cancelAnalysis,
         child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
       ]))))))));
@@ -8577,7 +8570,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    return await Future.any<T>([work,cancellation.future])
        .timeout(const Duration(seconds:60),onTimeout:(){
     /* M636: no local language-model task remains to cancel. */
-    throw TimeoutException('waffra_ai_analysis_timeout');
+    throw TimeoutException('waffra_ocr_analysis_timeout');
    });
   }finally{
    completed=true;
@@ -8617,7 +8610,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final picked=await WaffraExternalMediaSession.runPicker(()=>
     ImagePicker().pickImage(source:source,imageQuality:95));
    if(picked==null||!mounted)return;
-   final extracted=await _withAiWorkProgress(
+   final extracted=await _withOcrWorkProgress(
     'جاري قراءة الصورة واستخراج بيانات المعاملات…',
     'Reading image and extracting transactions…',
     ()=>WaffraReceiptOcr.scan(picked.path));
