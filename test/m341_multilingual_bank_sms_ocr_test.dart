@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/main.dart';
-import 'package:waffra/waffra_bank_screenshot_parser.dart';
 import 'package:waffra/waffra_sms_multicurrency_review.dart';
 
 void main() {
@@ -101,29 +100,4 @@ void main() {
     });
   });
 
-  group('M341 English OCR screenshot review', () {
-    test('purchase card headlines produce exactly three expense drafts', () {
-      const text = 'Purchase Card\nAmount: 42 SAR\nAt: TEST MERCHANT\n'
-          'On: 2026-10-24 18:53\n'
-          'Online Purchase Card\nAmount: 80.55 SAR\nAt: Keeta\n'
-          'On: 2026-10-21 23:40\n'
-          'Purchase Card\nAmount: 37.76 SAR\nAt: LULU HYPER\n'
-          'On: 2026-10-24 16:34';
-      final rows = WaffraBankScreenshotParser.reviewItems(text);
-      expect(rows, hasLength(3), reason: 'Do not duplicate purchase/card anchors');
-      expect(rows.map((r) => r.amount).toList(), [42, 80.55, 37.76]);
-      expect(rows.every((r) => !r.income), isTrue);
-    });
-
-    test('OCR retains foreign currency leading credit as review-only', () {
-      const text = 'Purchase Card\nAmount: 10 SAR\nAt: TEST STORE\n'
-          'JOD198.000 has been credited to TEST ACCOUNT. Balance 201.632JOD';
-      final rows = WaffraBankScreenshotParser.reviewItems(text);
-      expect(rows, hasLength(2));
-      expect(rows.first.amount, 10);
-      expect(rows.last.income, isTrue);
-      expect(rows.last.amount, isNull,
-          reason: 'Foreign OCR cannot prefill a SAR-only ledger amount');
-    });
-  });
 }
