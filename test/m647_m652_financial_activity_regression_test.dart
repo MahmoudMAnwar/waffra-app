@@ -79,7 +79,7 @@ void main() {
   expect(notice, contains('Duration(milliseconds:900)'));
   expect(notice, contains('unawaited(_refreshAutoSmsInbox())'));
   final refresh = app.substring(app.indexOf('Future<void> _runAutoSmsRefresh('),
-      app.indexOf(' Future<void> _rescanAutoSmsInbox('));
+      app.indexOf(' Future<void> _refreshAutoSmsInbox(', app.indexOf('Future<void> _runAutoSmsRefresh(')));
   expect(refresh, contains('compute(waffraM632ClassifySmsQueue'));
   expect(refresh, contains('if(importMonth){'));
   expect(refresh, contains('_m630SmsSessionCurrent('));
