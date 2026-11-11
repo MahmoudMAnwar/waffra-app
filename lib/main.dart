@@ -14089,8 +14089,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     fontWeight:selected?FontWeight.bold:FontWeight.normal));
  Future<void> goalDialog({SavingGoal? duplicate,bool openEnded=false})async {
   await _ensureFinanceBound();
-  var goalAccounts=await _m641VerifiedGoalRecurringAccounts();
-  if(goalAccounts==null||!mounted)return;
+  final verifiedGoalAccounts=await _m641VerifiedGoalRecurringAccounts();
+  if(verifiedGoalAccounts==null||!mounted)return;
+  List<WaffraAccountBalance> goalAccounts=verifiedGoalAccounts;
   String? chosenGoalAccount=duplicate?.accountId;
   if(!goalAccounts.any((a)=>a.id==chosenGoalAccount&&!a.archived)){
    chosenGoalAccount=null;
@@ -14499,8 +14500,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  Future<void> fundGoal(SavingGoal g)async {
   // M641: an independent goal wallet credit and one verified source debit.
   final fundingBridge=_financeBinding?.accountsBridge;
-  var fundingAccounts=await _m641VerifiedGoalRecurringAccounts();
-  if(fundingBridge==null||fundingAccounts==null||!mounted)return;
+  final verifiedFundingAccounts=await _m641VerifiedGoalRecurringAccounts();
+  if(fundingBridge==null||verifiedFundingAccounts==null||!mounted)return;
+  List<WaffraAccountBalance> fundingAccounts=verifiedFundingAccounts;
   String? chosenSource=g.accountId;
   if(!fundingAccounts.any((a)=>a.id==chosenSource&&!a.archived)){
    chosenSource=null; // old goals need explicit source choice
@@ -15223,8 +15225,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  Future<void> recurringDialog({String? suggestedTitle,double? suggestedAmount,RecurringBill? initial,RecurringBill? duplicate})async {
   // M641: the editor opens even on a fresh install with ZERO accounts.
   // Account selection remains mandatory at SAVE, not before opening.
-  var liveAccounts=await _m641VerifiedGoalRecurringAccounts();
-  if(liveAccounts==null||!mounted)return;
+  final verifiedRecurringAccounts=await _m641VerifiedGoalRecurringAccounts();
+  if(verifiedRecurringAccounts==null||!mounted)return;
+  List<WaffraAccountBalance> liveAccounts=verifiedRecurringAccounts;
   String? selectedRecurringAccount=initial?.accountId??duplicate?.accountId;
   if(initial!=null){
    try{
