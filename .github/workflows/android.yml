@@ -1126,16 +1126,6 @@ jobs:
           print('PASS: signed AAB matches release certificate and exact SHA')
           PY
 
-      # M658: AAB already carries compressed application/asset data.
-      - name: Record verified signed AAB upload input size
-        if: matrix.artifact == 'aab'
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -s build/app/outputs/bundle/release/app-release.aab
-          test -s aab_candidate_sha256.txt
-          du -h build/app/outputs/bundle/release/app-release.aab
-          echo "Signed AAB publish started (UTC): $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
       - name: Upload signed Google Play internal-testing AAB candidate
         if: matrix.artifact == 'aab'
         uses: actions/upload-artifact@v4
@@ -1356,17 +1346,6 @@ jobs:
 
       # Only the LAST step of the APK matrix runner publishes its signed
       # artifact, compiled identity receipt and approved release notes.
-      # M658: record upload inputs after source/signature checks, not before.
-      - name: Record verified signed APK upload input size
-        if: matrix.artifact == 'apk'
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -s build/Waffra.apk
-          test -s build/waffra-qa-build-receipt.txt
-          test -s build/Waffra-Release-Notes.txt
-          du -h build/Waffra.apk
-          echo "Signed APK publish started (UTC): $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
       - name: Publish signed QA APK (FINAL step)
         if: matrix.artifact == 'apk'
         uses: actions/upload-artifact@v4
