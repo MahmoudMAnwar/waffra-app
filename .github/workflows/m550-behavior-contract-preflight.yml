@@ -9,9 +9,9 @@ on:
 permissions:
   contents: read
 
-# Never let delayed events from an old PR commit cancel its new exact head.
+# M642: PR-scoped supersession; trusted M453 rechecks the live head for stale events.
 concurrency:
-  group: m550-contracts-${{ github.event.pull_request.number || github.run_id }}-${{ github.event.pull_request.head.sha || github.sha }}
+  group: m550-contracts-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:

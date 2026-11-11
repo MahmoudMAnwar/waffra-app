@@ -82,17 +82,18 @@ class M453QueueSafetyTests(unittest.TestCase):
             with self.subTest(workflow=path):
                 raw = (ROOT / path).read_text(encoding="utf-8")
                 slug = Path(path).stem
-                expected_group = (
-                    "group: waffra-pr-" + slug
-                    + "-${{ github.event.pull_request.number || github.run_id }}"
-                )
-                # M548: older PR head must never cancel newer head.
-                if Path(path).name in {
+                # M642: heavy formerly SHA-isolated PR workflows now use
+                # event + PR identity, without affecting main/manual runs.
+                special = Path(path).name in {
                     "finance-full-regression.yml",
                     "m103-same-sha-release-certification.yml",
                     "m160-main-reconciliation.yml",
-                }:
-                    expected_group += "-${{ github.event.pull_request.head.sha || github.sha }}"
+                }
+                expected_group = (
+                    "group: waffra-pr-" + slug
+                    + ("-${{ github.event_name }}" if special else "")
+                    + "-${{ github.event.pull_request.number || github.run_id }}"
+                )
                 self.assertIn(expected_group, raw)
                 self.assertIn(
                     "cancel-in-progress: ${{ github.event_name == 'pull_request' }}",
@@ -109,6 +110,7 @@ class M453QueueSafetyTests(unittest.TestCase):
         raw = (ROOT / ".github/workflows/m453-superseded-pr-cleanup.yml").read_text(
             encoding="utf-8"
         )
+        self.assertIn("  cancel-in-progress: false", raw)
         self.assertIn("pull_request_target:", raw)
         self.assertIn("actions: write", raw)
         self.assertIn("dry_run:", raw)

@@ -13,8 +13,8 @@ permissions:
 
 # Event driven, never scheduled. Outdated runs of this workflow are cancelled.
 concurrency:
-  group: m340-finance-${{ github.event.pull_request.number || github.ref }}-${{ github.event.pull_request.head.sha || github.sha }}
-  cancel-in-progress: true
+  group: m340-finance-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
