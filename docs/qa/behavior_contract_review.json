@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "pr": "PR #575 M647–M652 activity with M656 analyzer compatibility against merged #580 main",
-  "issue": "Issues #569–#574 plus previously merged #566/#567/#576, #579 and #582; Issue #583 M656",
+  "pr": "PR #575 rebased via 2-parent merge on merged #586 main; preserves M647–M652 + M656 source behavior and M658/M659 CI contracts",
+  "issue": "Issues #569–#574 plus previously merged #566/#567/#576, #579 and #582; Issue #583 M656; Issues #585/#587 (M658/M659 merged main before PR #575)",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main",
   "reviewed_at": "2026-11-11",
@@ -1514,6 +1514,62 @@
         "Every original Dart file stays analyzed and every original SMS/biometrics/cloud/finance test stays required.",
         "Analyzer warnings/errors are fatal; only SDK info warnings are non-fatal. No global source deprecation suppression or disabling of analysis.",
         "M385 guard and exact SHA full CI must succeed before merging PR #575; no untested app behavior claims."
+      ]
+    },
+    {
+      "id": "M658-FAST-SIGNED-MAIN-ARTIFACT-UPLOAD-BOUNDED-FAIL-CLOSED",
+      "issue": "Issue #585; 2026-11-11 owner's >21min post-#580 first signed main build #43093248678 on SHA 98dee202",
+      "previous_behavior": "Main release's mandatory tests, exact SHA checks, APK/AAB compilation, signatures and file identity passed; nevertheless same SHA workflow stayed >21min in the two upload-artifact@v4 steps (APK/AAB). Both uploads recompressed pre-zipped binary files with default zlib level6, wasting CPU with little size benefit. No explicit build job timeout; user couldn't download APK yet.",
+      "approved_behavior": "Both existing distinct signed APK and AAB artifact uploads set compression-level: 0 on unchanged upload-artifact@v4 to avoid repeated compression of ZIP-derived binaries. The matrix build job gets an explicit bounded timeout (failure if upload stalls); no step skipped, no success on missing files. Preserve original APK artifact containing Waffra.apk, verified hash receipt and current release notes, plus AAB candidate and its sha receipt, 30d retention, exact main SHA, signing gates and full money/SQLCipher/full Flutter/Python test acceptance. GitHub Actions' native step timestamps and artifact metadata will be used to measure future upload timing without introducing extra steps. Future main SHA successful end-to-end runtime and artifact availability needed before calling the latency fix Done.",
+      "source_paths": [
+        ".github/workflows/android.yml"
+      ],
+      "test_paths": [
+        "test/qa/m658_fast_signed_artifact_upload_test.py"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m174-main-sha-postmerge.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/android.yml"
+      ],
+      "safety_invariants": [
+        "APK/AAB are built and signed only on exact main SHA; no PR release or stale cache reuse.",
+        "All tests, Flutter finance source, owner/SQLCipher verification, identity, signatures and output receipts remain mandatory.",
+        "Artifact upload failures/missing files/timeouts remain red, no continue-on-error or credential bypass.",
+        "No AAB removal or duplicate APK uploads; each artifact retains original name and 30-day retention. Compression 0 only changes upload compression; not the signed APK itself or its ZIP contents.",
+        "A >21-minute build proves PR #580 missed the upload bottleneck. No measured speedup claim before next actual signed main run."
+      ]
+    },
+    {
+      "id": "M659-PR-586-EXACT-HEAD-ARTIFACT-CONTRACT-CERTIFICATION",
+      "issue": "Issue #587; owner requested test jobs on Draft PR #586, 2026-11-12",
+      "previous_behavior": "M658 has Python source tests on its PR branch, and the signed main-only android.yml release, but no dedicated M658 pull-request Actions job with explicit APK and AAB contract certification. Pre-existing generic PR checks do not constitute a named M658 gate.",
+      "approved_behavior": "Run a light PR-triggered M659 exact-head Actions workflow with separate M658 signed artifact contract and independent M381/M382/M383/M449 release-safety source QA jobs. The terminal always() job fails unless every upstream job has GitHub conclusion success, rejecting skipped, cancelled and failed checks. No flutter/gradle production builds, app signing, uploads, or duplicated heavyweight release work on PRs; actual signed APK/AAB verification remains main-only.",
+      "source_paths": [
+        ".github/workflows/m659-pr-signed-artifact-qa.yml"
+      ],
+      "test_paths": [
+        "test/qa/m658_fast_signed_artifact_upload_test.py",
+        "test/qa/m659_pr_signed_artifact_jobs_test.py",
+        "test/qa/m381_main_fast_release_gate_test.py",
+        "test/qa/m382_skip_free_workflow_routing_test.py",
+        "test/qa/m383_parallel_signed_android_build_test.py",
+        "test/qa/m449_release_notes_ancestry_test.py"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m659-pr-signed-artifact-qa.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/m174-main-sha-postmerge.yml"
+      ],
+      "safety_invariants": [
+        "A PR source contract is not a signed APK or a successful remote artifact upload, and no latency improvement can be claimed from it.",
+        "M659 does not call Flutter/Gradle release compilation or upload artifacts; signed builds remain main only.",
+        "Checkout and assertions use the exact PR head SHA, never a stale branch tip or merge SHA.",
+        "Terminal job always runs and fails if either required source job is skipped, failed or cancelled; no continue-on-error.",
+        "M340/finance, M174/SQLCipher, M449/notes, M550 preflight and existing full Flutter regression remain independently mandatory."
       ]
     }
   ]

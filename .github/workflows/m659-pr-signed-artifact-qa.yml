@@ -1,0 +1,90 @@
+name: M659 PR APK and AAB Artifact Upload QA (No Release Build)
+
+# M659 / Issue #587: source-contract checks on the current PR head only.
+# The ACTUAL signed release and artifact uploads remain main-only in android.yml.
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - '.github/workflows/android.yml'
+      - '.github/workflows/m659-pr-signed-artifact-qa.yml'
+      - 'test/qa/m658_fast_signed_artifact_upload_test.py'
+      - 'test/qa/m659_pr_signed_artifact_jobs_test.py'
+      - 'docs/qa/approved_change_scope.json'
+      - 'docs/qa/behavior_contract_review.json'
+      - 'docs/release/WAFFRA_APPROVED_CHANGES.txt'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m659-pr-artifact-qa-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate-m658-upload-contract:
+    name: Verify APK and AAB signed upload source contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Fail on stale PR checkout
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - name: Run M658 upload and M659 CI wiring regressions
+        run: |
+          python3 -m unittest discover -s test/qa -p 'm658_fast_signed_artifact_upload_test.py' -v
+          python3 -m unittest discover -s test/qa -p 'm659_pr_signed_artifact_jobs_test.py' -v
+
+  validate-release-safety-contracts:
+    name: Verify source identity, finance preconditions and release notes
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact PR head and full history
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Fail on stale PR checkout
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - name: Run independent existing M381 M382 M383 and M449 source tests
+        run: |
+          python3 -m unittest discover -s test/qa -p 'm381_main_fast_release_gate_test.py' -v
+          python3 -m unittest discover -s test/qa -p 'm382_skip_free_workflow_routing_test.py' -v
+          python3 -m unittest discover -s test/qa -p 'm383_parallel_signed_android_build_test.py' -v
+          python3 -m unittest discover -s test/qa -p 'm449_release_notes_ancestry_test.py' -v
+      - name: Enforce M385 exact PR change scope
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python3 scripts/qa/m385_approved_change_guard.py --base "$BASE_SHA" --head "$HEAD_SHA"
+      - name: Enforce actual M449 latest release notes
+        run: python3 scripts/qa/m449_release_notes_ancestry.py
+
+  certify-m659:
+    name: Fail closed if any required M659 QA job was skipped or failed
+    if: ${{ always() }}
+    needs: [validate-m658-upload-contract, validate-release-safety-contracts]
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Reject skipped cancelled failed or missing QA
+        env:
+          UPLOAD_CONTRACT: ${{ needs.validate-m658-upload-contract.result }}
+          RELEASE_CONTRACT: ${{ needs.validate-release-safety-contracts.result }}
+        run: |
+          echo "M658 APK/AAB contract: $UPLOAD_CONTRACT"
+          echo "Existing finance/release safety contract: $RELEASE_CONTRACT"
+          test "$UPLOAD_CONTRACT" = success
+          test "$RELEASE_CONTRACT" = success
+          echo "PASS: both required exact-head PR source jobs ran successfully; no APK was compiled or published."

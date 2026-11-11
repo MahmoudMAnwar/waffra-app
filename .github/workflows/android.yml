@@ -167,6 +167,9 @@ jobs:
         artifact: [apk, aab]
     name: Signed Android ${{ matrix.artifact }} on exact main SHA
     runs-on: ubuntu-latest
+    # M658: never leave a built-but-unpublished signed artifact job hanging.
+    # A timeout MUST fail the job; no release without a completed upload.
+    timeout-minutes: 20
 
     steps:
       - name: Checkout repository
@@ -1131,6 +1134,9 @@ jobs:
           path: |
             build/app/outputs/bundle/release/app-release.aab
             aab_candidate_sha256.txt
+          if-no-files-found: error
+          # Pre-compressed AAB: avoid wasteful default gzip level 6.
+          compression-level: 0
           retention-days: 30
 
       # Save per-artifact compilation state only after that artifact has
@@ -1350,4 +1356,6 @@ jobs:
             build/waffra-qa-build-receipt.txt
             build/Waffra-Release-Notes.txt
           if-no-files-found: error
+          # Pre-compressed APK: avoid wasteful default gzip level 6.
+          compression-level: 0
           retention-days: 30
