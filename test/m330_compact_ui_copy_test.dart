@@ -13,15 +13,16 @@ void main() {
     expect(tools,isNot(contains('waffra-local-ai-opt-in')));
   });
 
-  test('M636 offline OCR and compact finance copy survive model removal',(){
+  test('M640 retired scanner is absent while finance tools remain',(){
     final home=File('lib/main.dart').readAsStringSync();
     final country=File('lib/waffra_country_first_run_page.dart').readAsStringSync();
     final receipt=File('lib/waffra_practical_tools_page.dart').readAsStringSync();
     final smart=File('lib/waffra_smart_features.dart').readAsStringSync();
-    expect(home,contains('WaffraReceiptOcr.scan(picked.path)'));
-    expect(home,contains('waffra-ocr-analysis-progress'));
+    expect(home,isNot(contains('WaffraReceiptOcr.scan(')));
+    expect(home,isNot(contains('waffra-ocr-analysis-progress')));
     expect(country,contains('لا نحفظ موقعك ولا نتتبعك.'));
-    expect(receipt,contains('اختر فاتورة أو صوّرها.'));
+    expect(receipt,isNot(contains('receiptAssistant()')));
+    expect(receipt,contains("section(2, 'الإقفال الشهري'"));
     expect(smart,contains('أدوات وفرة الذكية'));
     expect(smart,isNot(contains('تنزيل نموذج الذكاء')));
   });
