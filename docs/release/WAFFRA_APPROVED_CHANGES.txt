@@ -3535,3 +3535,9 @@ Issues: #569, #570, #571, #572, #573, #574.
 - M651: the successfully persisted local transfer and income/expense category-rule learners now trigger the existing debounced, background-isolate pending SMS review refresh, without a full Android history import or automatic ledger posting. Existing session/owner checks and explicit review remain in force. No claim of per-message versioned incremental optimization or measured Android performance is made.
 - M652: Home/PDF use green income, red expense, blue transfers, gold savings, violet paid due. Transfer and saving rows are separate verified PDF sections with account provenance; income and expense totals remain derived only from MoneyEntry rows. Report filters can export transfer-only or savings-only movements.
 - QA: new dedicated source-safety regression and existing encrypted finance/goal/SMS suites must pass at the actual PR HEAD. M385/M550 contract is tracked; current PR CI is not yet fully green. Real Android device UX, scrolling/performance, RTL and PDF readability have not yet been signed off. No merged main change or branch APK claimed.
+
+
+## M652 PDF row palette regression repair — PR #575 (2026-11-11)
+- Preserve the original explicit `PdfColor.fromInt(e.income?waffraIncomeBackground.toARGB32():waffraExpenseBackground.toARGB32())` row-color selection for real income and expense entries; render only confirmed recurring/goal-due rows violet using a separate branch. The existing Waffra October PDF exact-palette test remains enabled and its intended behavior is not weakened.
+- Source fix commit `a618c6a42a709ea0773b2efc721859eb9fca1c1e`. No new finance ledger posting; internal transfer blue and linked savings gold PDF sections continue using owner-verified journal reads.
+- QA status: fix committed, latest-head exact Flutter/SQLCipher/PDF/Android CI still requires independent verification; PR #575 stays Draft and APK only from main after merging and real-device checks.
