@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "pr": "M636 PR #556 — owner-approved retired Qwen and legacy SMS widget removal; exact-head CI/device proof pending",
-  "issue": "Issue #555 — user six-item UX + code deletion request, 2026-11-11",
+  "pr": "M637–M640 PR #558 — verified Home hot path, Saudi financial provider grouping, SMS sync, permissions copy, and complete receipt OCR retirement; M642 PR queue remediation",
+  "issue": "Issues #557, #559, #560, #561 — owner confirmed OCR removal; M642 #563",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main",
   "reviewed_at": "2026-11-11",
@@ -1052,6 +1052,265 @@
         "Widget has no independent money-writing engine; user authentication and account binding remain mandatory.",
         "True blur is shown only while + expanded and native Splash transitions by a short crossfade after its fixed existing completion.",
         "Full exact-head Flutter analyzer, real Android compile, positive source regression, and physical fresh/login/relogin/device-update performance validation required before Done."
+      ]
+    },
+    {
+      "id": "M637-POST-BIOMETRIC-ACCOUNT-SCHEMA-READ-HOTPATH",
+      "issue": "Issue #557 / Draft PR #558",
+      "previous_behavior": "After biometric, Home blocks until verified balances. Under exclusive SQLCipher account read, bridge prevalidated AccountsSchema and installed AccountContextSchema, then AccountsRepository.balances revalidated accounts and installed context again; even existing schema ran a transaction. Repeated FK scans and SQL reads delayed owner-verified Home.",
+      "approved_behavior": "Reduce duplicate same-read schema checks: keep bridge source activation, snapshot witness and exclusive lock; delegate account schema checks to repository once, which installs/validates context. Already-installed context skips transaction only, still calls full requireReady and PRAGMA foreign_key_check. First-time installation remains atomic and race-safe.",
+      "source_paths": [
+        "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
+        "lib/storage/waffra_accounts_repository.dart",
+        "lib/storage/waffra_account_context_schema.dart"
+      ],
+      "test_paths": [
+        "test/storage/m637_biometric_home_schema_hotpath_test.dart",
+        "test/storage/m440_accounts_repository_test.dart",
+        "test/storage/m448_account_context_encrypted_test.dart",
+        "test/m633_startup_batch_decoder_test.dart",
+        "test/m635_historical_login_sms_jank_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/android.yml",
+        ".github/workflows/m174-main-sha-postmerge.yml"
+      ],
+      "safety_invariants": [
+        "Keep per-account SQLCipher source lock, active-source validation, snapshot read and actual account balances; no bypass of native PBKDF2 600000, biometric, missing/corrupt finance errors, or account witness/epoch checks.",
+        "Context already installed still runs full requireReady including FK and revision, no caching across owner sessions; first-time schema installation is transactional and rechecks marker under lock to avoid race.",
+        "Do not claim real mobile jank fixed until fresh/biometric/relogin and SMS 1000-2000 physical profile measurements; keep post-Home SMS deferred. No spinner in this patch."
+      ]
+    },
+    {
+      "id": "M638-SAUDI-BANKS-DIGITAL-WALLETS-AND-ANDROID-SMS-SYNC",
+      "issue": "Issue #559 / existing PR #558",
+      "previous_behavior": "Only six bank names in account picker, STC Bank miscategorized with local banks; child selectors appear enabled before parent, save button active when mandatory fields empty; native new-only historical SMS cursor never removes pending messages deleted in Android inbox.",
+      "approved_behavior": "Present category then Arabic institution name then verified child financial account, local banks / digital banks / digital wallets distinct, D360 exact, Barq/Enjaz Pay/Alinma Pay wallets, category/child and confirm disabled until valid, remove two transfer help texts. Explicit Rescan reconciles unsaved encrypted candidates to Android provider only on dedicated SMS executor; deletion prunes their group/list, not committed finance or 30-day excluded records.",
+      "source_paths": [
+        "lib/waffra_saudi_financial_providers.dart",
+        "lib/waffra_recurring_account_groups.dart",
+        "lib/waffra_new_account_dialog.dart",
+        "lib/waffra_accounts_manager_page.dart",
+        "lib/main.dart",
+        "lib/waffra_auto_sms.dart",
+        "native/WaffraAutoSmsStore.kt",
+        "native/WaffraMainActivity.kt"
+      ],
+      "test_paths": [
+        "test/m638_saudi_provider_catalog_and_cascade_test.dart",
+        "test/m638_sms_inbox_delete_sync_test.dart",
+        "test/m470_new_account_dialog_test.dart",
+        "test/m509_all_sender_sms_rescan_dedup_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/android.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Preserve structured provider IDs and old saved accounts; no bank/wallet category inference from SMS without owner confirmation. No change to SQLCipher money writes.",
+        "No Android SMS Provider mutations or deletion of confirmed finance, sender rules, anti-replay or retained excluded records; all rescan matching only after complete and permitted provider scan. Keep zero invisible on errors.",
+        "No new parallel SMS engine or work before first Home frame; scan on existing SMS executor, 1000-pending backpressure and original historical cursor stay unchanged.",
+        "All software changes bounded in M385 and QA tests; no release claim without on-device verification."
+      ]
+    },
+    {
+      "id": "M639-PLAIN-LOCALIZED-SMS-NOTIFICATION-PERMISSION-COPY",
+      "issue": "Issue #560 / existing Draft PR #558",
+      "previous_behavior": "Android onboarding displayed convoluted text invoking local SMS analysis and artificial intelligence in both Arabic and English, despite the owner wanting only clear SMS and notifications permission purposes.",
+      "approved_behavior": "Show Arabic title «أذونات وفرة» and body «هنطلب إذن الرسائل علشان نعرض العمليات المالية اللي تحتاج مراجعة، وبعده إذن الإشعارات علشان توصلك التنبيهات المهمة. تقدر ترفض الأذونات أو تغيّرها لاحقًا من إعدادات جهازك.» Equivalent English copy. No mention of AI, cloud, or model in the visible permissions onboarding copy. Preserve request order, declined permissions not blocking app, and all privacy protections.",
+      "source_paths": [
+        "lib/waffra_auto_sms_consent.dart"
+      ],
+      "test_paths": [
+        "test/m639_permissions_onboarding_plain_copy_test.dart",
+        "test/m417_sms_first_run_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/android.yml"
+      ],
+      "safety_invariants": [
+        "Do not change native READ_SMS/RECEIVE_SMS or notification OS permission request behavior, order, error handling, or retries.",
+        "Never turn on optional external processing via this onboarding; preserve WaffraSmsCloudService.setConsent(false) and all existing consent semantics.",
+        "No first-run access block when user denies permission; no new startup work or extra UI waiting."
+      ]
+    },
+    {
+      "id": "M640-REMOVE-RECEIPT-OCR-TESSERACT-AND-DORMANT-ENTRY-POINTS",
+      "issue": "Issue #561 / PR #558",
+      "previous_behavior": "Tools displayed قارئ الفواتير OCR, downloaded Tesseract ara/eng language models, exposed camera/gallery text extraction and draft validation; main.dart contained gated but still compiled OCR scanner and scan-and-add image finance entry route. Tesseract Gradle shim in production workflows and legacy OCR tests expected retired behavior.",
+      "approved_behavior": "Completely retire receipt OCR Tools card, native Tesseract language download, OCR recognition/parser, bank screenshot parsing, OCR data sources and finance-entry args/disabled hidden FAB action. Four remaining read-only tool cards. Remove OCR workflows/shim/dependencies/tests or rewrite old tests as current-behavior negative contracts. Preserve ordinary image attachments and encrypted receipt storage/reopen, and text-only Android SMS review unchanged. The M281 CI and documented tools inventory must now enumerate exactly four read-only sections and must no longer present the deprecated receipt review assistant as available.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_practical_tools_page.dart",
+        "lib/waffra_ai_finance_brain.dart",
+        "lib/waffra_practical_ledger_engine.dart",
+        "lib/waffra_saudi_release.dart",
+        "pubspec.yaml",
+        "scripts/qa/m385_approved_change_guard.py",
+        ".github/workflows/android.yml",
+        ".github/workflows/m281-practical-tools.yml",
+        "docs/qa/m281-five-practical-tools.md"
+      ],
+      "test_paths": [
+        "test/m640_receipt_reader_retirement_test.dart",
+        "test/m281_practical_tools_test.dart",
+        "test/m285_compact_action_widths_test.dart",
+        "test/qa/m412_workflow_wiring_test.py"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/android.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m278-mobile-system-insets.yml"
+      ],
+      "safety_invariants": [
+        "No receipt OCR package or model download, screenshot import or user-visible receipt reader tool remains. No hidden code path can invoke OCR.",
+        "Keep plain photo attachment picker (image_picker), encrypted receipt persistence/restore, bank SMS review, native message scanning, verified financial writes and all historical data intact.",
+        "Disable only explicit OCR-specific workflows and tests; preserve all current financial and lifecycle regression checks. Add anti-regression retirement test and exact-file deletion allowlist to M385, no broad deletion bypass.",
+        "No claim of complete removal before exact-head Flutter analyzer/Android and test suite succeed; mobile device acceptance pending.",
+        "Retired paths are asserted ABSENT in M640 test and M385 deletion list; source_paths and test_paths in M550 must only refer to files present on the PR head. Previously existing deleted files remain listed in the retirement issue and approved behavior."
+      ]
+    },
+    {
+      "id": "M641-GOAL-RECURRING-SINGLE-ACCOUNT-IDENTITY",
+      "issue": "Issue #562 / existing Draft PR #558",
+      "previous_behavior": "Recurring editor returned before opening when no verified financial accounts; savings goals lacked an accountId, goal funding defaulted to no source, and linked due schedule had no account identity.",
+      "approved_behavior": "Recurring + always opens a valid editor with 3-tier verified category/provider/account picker and inline trusted new-account creation. Goals create/edit use that same cascade, save verified account ID; transfers increase goal wallet and debit source account once atomically; optional one-time linked due inherits account identity, displays it and settles without duplicate debit.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_goal_recurring_actions.part.dart",
+        "lib/waffra_goal_recurring_account_picker.dart",
+        "lib/storage/waffra_fresh_finance_modules_repository.dart",
+        "lib/storage/waffra_verified_goal_due_snapshot_writer.dart"
+      ],
+      "test_paths": [
+        "test/m641_goal_recurring_account_binding_test.dart",
+        "test/m470_recurring_provider_accounts_test.dart",
+        "test/m371_goal_wallet_and_budgets_regression_test.dart",
+        "test/storage/m448_verified_goal_funding_writer_test.dart",
+        "test/storage/m452_atomic_goal_due_projection_test.dart",
+        "test/storage/m641_goal_account_integrity_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/android.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Never bypass verified SQLCipher source/balances, PBKDF2, biometric or owner epoch; never infer historical account ID from name.",
+        "Creating/editing recurring or a goal never changes bank or goal balance. Funding commits a separate goal savings wallet credit and one chosen source account debit in one SQLCipher transaction, not income/expense.",
+        "Linked goal due posts only once on user confirmation. Already saved funds are not debited a second time; only cash shortfall is linked to existing verified account.",
+        "Old goals with no accountId remain readable; they require explicit account selection for new edits/funding and must not rewrite historical money.",
+        "No branch APK or auto merge; tests and physical first-account and due scenarios required."
+      ]
+    },
+    {
+      "id": "M642-PR-ONLY-CONCURRENCY-AND-TRUSTED-CLEANUP",
+      "issue": "Issue #563 / existing Draft PR #558",
+      "previous_behavior": "Heavy PR CI workflows isolate every head SHA or run ID, leaving old M340/M282/M103/M160/Flutter jobs active; M453 pull_request_target cleanup cancels itself during repeated synchronize events and does not finish a stale-run sweep.",
+      "approved_behavior": "In nine specifically named workflows, replace SHA/unique run concurrency for PR events with stable workflow+PR-number identity, cancel superseded copies only for pull_request event, isolate push main and manual dispatch by distinct event/run IDs. M453 trusted sweep retains security/safety checks but a running sweep is not killed by a later synchronize; newer pending sweep coalesces.",
+      "source_paths": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m103-same-sha-release-certification.yml",
+        ".github/workflows/m160-main-reconciliation.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m453-superseded-pr-cleanup.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/m274-production-ui-golden.yml",
+        ".github/workflows/m282-combined-candidate.yml",
+        ".github/workflows/m340-continuous-financial-quality.yml"
+      ],
+      "test_paths": [
+        "scripts/qa/test_m453_queue_hygiene.py",
+        "scripts/qa/test_m642_latest_pr_ci_concurrency.py",
+        "test/qa/m548_ci_exact_sha_concurrency_test.py"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m453-queue-regression.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "Preserve exact event-head checkout and all existing Flutter/finance/security/Android tests; do not mark delayed/stale SHA successes current.",
+        "Run cancellation only for stale same-PR same-workflow pull_request events; main push/release/manual and other PR runs remain isolated.",
+        "Trusted pull_request_target sweeper never checks out PR code, verifies live HEAD before cancellation, keeps dry_run, full existing protections and 120 run bound.",
+        "Workflow source changes in Draft PR do not alter main-based pull_request_target behavior or cancel old runs until deployed/authorized separately.",
+        "Do not merge or claim queue cleared until latest exact-head CI green and physical Android acceptance.",
+        "M548 old test for deliberately per-SHA-isolated groups must assert the approved superseded PR-only policy instead, retaining exact SHA checkout, same PR-only cancellation, main/manual separation and trusted cleanup safeguards."
+      ]
+    },
+    {
+      "id": "M643-EXACT-HEAD-FAILURES-GOAL-SOURCE-AND-FOOTER-NOTICES",
+      "issue": "Issue #564 / Draft PR #558",
+      "previous_behavior": "M174/M417 M385 guard rejects a scripts/qa path incorrectly declared as a wholesale test replacement; M429/M417 analyzer flags dead null check in verified goal funding and intentionally inactive FX preview; M160 full regression fails 4 tests because M641 goal dialogs directly create extra SnackBars and M266 only recognizes old inline binding, not mandatory delegated bound account helper.",
+      "approved_behavior": "Keep strict M385 full replacement limited to test/ and use two narrowly anchored M453 test scopes. Preserve dormant FX as non-posting Saudi-disabled, remove dead legacy branch after verified funding fail-closed guard. Both goal edit/fund errors route through the sole common footer-aware snack presenter; goal suggestion source binding is asserted through the M641 verified helper before reading suggestions, without redundant UI-path database binding. Preserve all original finance/account/privacy guards.",
+      "source_paths": [
+        "docs/qa/approved_change_scope.json",
+        "lib/main.dart",
+        "lib/waffra_goal_recurring_actions.part.dart",
+        "scripts/qa/test_m453_queue_hygiene.py"
+      ],
+      "test_paths": [
+        "test/waffra_footer_notice_test.dart",
+        "test/m502_logout_paths_test.dart",
+        "test/waffra_directional_fab_receipt_corner_test.dart",
+        "test/storage/m266_home_bound_source_regression_test.dart",
+        "test/m641_goal_recurring_account_binding_test.dart",
+        "test/storage/m641_goal_account_integrity_test.dart",
+        "test/qa/m385_approved_scope_guard_test.py",
+        "test/qa/m548_ci_exact_sha_concurrency_test.py"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m174-main-sha-postmerge.yml",
+        ".github/workflows/m429-integration-smoke.yml",
+        ".github/workflows/m417-auto-bank-sms.yml",
+        ".github/workflows/m160-main-reconciliation.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Retain M385 fail-closed protected function scope with no unapproved wholesale replacement or weakened tests.",
+        "One single Waffra footer-aware notice presenter for all dialogs, including goal edit/funding and logout.",
+        "Goal suggestions and SQLCipher accounts cannot read before verified finance source is bound by helper; backup binding remains explicit.",
+        "Savings funding debits selected verified source account exactly once, goal wallet credit stays separate; no legacy fallback, double charge, unauthenticated write or auto merge.",
+        "Exact-PR-HEAD Flutter full regression and Android compile must pass before merge; no feature-branch APK."
+      ]
+    },
+    {
+      "id": "M644-EXACT-HEAD-SHARED-FLUTTER-FAILURES-AND-FRESH-RELEASE-NOTES",
+      "issue": "Issue #565 / Draft PR #558",
+      "previous_behavior": "Three Flutter regressions fail in six heavy exact-head jobs: an extra direct SnackBar in reusable M641 provider/account picker, M302 outdated legacy goal save path expectation, and M362 outdated optimistic wallet mutation expectation. M449 release notes older than last approved runtime edits.",
+      "approved_behavior": "Picker emits account-creation validation error through a supplied callback wired in all four goal/recurring production callers into the single footer-aware snack presenter. M302/M362 guard tests positively assert trusted SQLCipher atomic goal-funding debit/goal-wallet credit, verified owner source, explicit warning and no congratulations on unconfirmed write, with all non-goal test bytes unchanged. Approved release notes are committed *after* last runtime changes with exact user-visible scope; M449 freshness guard stays mandatory.",
+      "source_paths": [
+        "lib/waffra_goal_recurring_account_picker.dart",
+        "lib/main.dart",
+        "lib/waffra_goal_recurring_actions.part.dart",
+        "docs/release/WAFFRA_APPROVED_CHANGES.txt"
+      ],
+      "test_paths": [
+        "test/waffra_footer_notice_test.dart",
+        "test/m302_optimistic_module_write_safety_test.dart",
+        "test/m363_transaction_category_inline_creation_test.dart",
+        "test/m644_goal_notice_funding_contract_test.dart",
+        "test/m641_goal_recurring_account_binding_test.dart",
+        "test/storage/m641_goal_account_integrity_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m449-release-notes-freshness.yml",
+        ".github/workflows/m367-sqlcipher-stage-ci.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m103-same-sha-release-certification.yml",
+        ".github/workflows/m160-main-reconciliation.yml",
+        ".github/workflows/m282-combined-candidate.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "Only one Flutter SnackBar constructor in centralized main.dart presenter, no direct picker snackbars or silent failure; all production picker callers relay error UI.",
+        "Goal funding never optimistically writes wallet or source balance; it must commit through trusted encrypted source with explicit verified account ID and optional low-balance warning; failure returns before notifications.",
+        "No original M302/M363 category/recurring tests removed or weakened, only obsolete source-shape assertions replaced with positive new behavior and extra M644 coverage.",
+        "Never bypass M449 release freshness, M385 exact bounded scope, M550 contract, source verification, physical Android acceptance or latest-head CI; Draft until verified."
       ]
     }
   ]

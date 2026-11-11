@@ -1470,8 +1470,10 @@ class WaffraVerifiedEncryptedFinanceBridge {
       disposableDirectory:writerDirectory,experimentalEnabled:true,
     ).withExclusiveAccess(() async {
       await _requireActivatedUnderLock();
-      await WaffraAccountsSchema.requireReady(snapshot.store);
-      await WaffraAccountContextSchema.install(snapshot.store);
+      // M637: the repository's balances() installs/verifies both account
+      // schemas under THIS same exclusive source lock. Repeating the checks
+      // here ran extra PRAGMA foreign_key_check and a SQLite transaction on
+      // every biometric Home handoff without adding source protection.
       final current=await snapshot.read();
       final accounts=await WaffraAccountsRepository(
         db:snapshot.store,experimentalEnabled:true).balances();

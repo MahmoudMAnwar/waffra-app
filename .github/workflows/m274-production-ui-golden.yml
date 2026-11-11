@@ -21,8 +21,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: m274-ui-${{ github.event.pull_request.number || github.ref }}-${{ github.event.pull_request.head.sha || github.sha }}
-  cancel-in-progress: true
+  group: m274-ui-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   m412-impact:
@@ -68,7 +68,6 @@ jobs:
       - name: Restore dependencies
         run: |
           flutter pub get
-          python3 scripts/qa/m287_patch_tesseract_gradle.py
       - name: Analyze responsive and pixel snapshot suites
         run: dart analyze test/m274_responsive_ui_journeys_test.dart tool/goldens/m274_capture_test.dart integration_test/m274_ui_tap_smoke_android_test.dart
       - name: Tap through five tabs, account-safe balance hide and inline errors
@@ -125,7 +124,6 @@ jobs:
       - name: Install dependencies
         run: |
           flutter pub get
-          python3 scripts/qa/m287_patch_tesseract_gradle.py
       - name: Generate temporary Android host for disposable UI test
         run: flutter create --no-pub --platforms=android --project-name=waffra --org com.waffra .
       # M543: Flutter upstream #192736: Impeller/GLES can terminate Linux

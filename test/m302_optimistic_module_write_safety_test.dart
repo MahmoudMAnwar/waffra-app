@@ -33,11 +33,27 @@ void main() {
   expect(start,greaterThan(0));
   expect(end,greaterThan(start));
   final source=code.substring(start,end);
-  final guarded=source.indexOf("operation:'goal-funding'");
+  // M641 commits a trusted source-account debit and separate goal-wallet credit.
+  final guard=source.indexOf('if(fundingBridge==null||verifiedFundingAccounts==null||!mounted)return;');
+  final baseline=source.indexOf('final baseline=await _financeAuthority.load(');
+  final witness=source.indexOf('baseline.source!=WaffraRuntimeFinanceBackend.verifiedEncrypted');
+  final posted=source.indexOf('await fundingBridge.fundVerifiedGoal(');
+  final refreshed=source.indexOf('if(mounted)await _refreshFromVerifiedFinance();',posted);
+  final rejected=source.indexOf('}catch(error){',posted);
+  final stop=source.indexOf('return;',rejected);
   final congratulations=source.indexOf('if(achieved&&mounted)');
-  expect(guarded,greaterThan(0));
-  expect(congratulations,greaterThan(guarded));
-  expect(source,contains("if(!await _persistModuleOrReload("));
+  expect(guard,greaterThan(0));
+  expect(baseline,greaterThan(guard));
+  expect(witness,greaterThan(baseline));
+  expect(posted,greaterThan(witness));
+  expect(refreshed,greaterThan(posted));
+  expect(rejected,greaterThan(refreshed));
+  expect(stop,greaterThan(rejected));
+  expect(congratulations,greaterThan(stop),
+    reason:'Only a committed verified funding transaction may celebrate');
+  expect(source,contains('sourceAccountId:funding.sourceAccountId,userConfirmed:true'));
+  expect(source,isNot(contains("operation:'goal-funding'")));
+  expect(source,isNot(contains('goals[i]=current.copy(saved:current.saved+n)')));
  });
 
  test('M302 inline category picker returns a new name only after durable save',(){

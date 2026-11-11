@@ -4,7 +4,6 @@
 abstract final class WaffraSaudiRelease {
  static const bool enabled=true;
  static const bool locationCountryOnboarding=false;
- static const bool receiptImageTransactionImport=false;
  static const bool userCountryChoice=false;
  static const bool userCurrencyChoice=false;
  static const bool globalCurrencyConverter=true;

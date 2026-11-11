@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/main.dart';
 import 'package:waffra/waffra_sms_multicurrency_review.dart';
 import 'package:waffra/waffra_sms_fx_review.dart';
-import 'package:waffra/waffra_receipt_ocr_parser.dart';
 
 void main(){
  BudgetCategory cat(String id,String name,{String parentId='',bool income=false})=>
@@ -68,14 +67,6 @@ void main(){
     reason:code);
    expect(WaffraCurrencyMinor.exact(double.parse(amount),code),isNotNull);
   }
- });
-
- test('M336 OCR never silently saves screenshot timestamp as merchant',(){
-  final receipt=WaffraReceiptOcrParser.parse(
-    'Yesterday • 11:48 pm\nشراء PoS\nSAR 4.50\nJoanna Sa\n'
-    '30/10/26 23:49');
-  expect(receipt.merchant,isNull);
-  expect(receipt.amount,isNull);
  });
 
  test('M336 previously saved wrong-currency titles are flagged without edits',(){

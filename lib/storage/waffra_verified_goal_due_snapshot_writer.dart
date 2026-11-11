@@ -95,6 +95,15 @@ class WaffraVerifiedGoalDueSnapshotWriter {
         throw StateError('Canonical recurring goal identity differs.');
       }
 
+      // M641: a linked goal and its one-time recurring due must identify
+      // exactly the same verified account, never just matching bank labels.
+      final goalAccountId=goal['accountId'];
+      if(goalAccountId!=null&&
+         (goalAccountId is! String||
+          goalAccountId.trim().isEmpty||
+          recurring['accountId']!=goalAccountId)){
+        throw StateError('Goal due account differs from linked goal account.');
+      }
       final savedBefore=_minor(goal['saved']??0);
       final sqlGoal=await store.customSelect(
         'SELECT saved_minor,source_json FROM fresh_finance_goals WHERE goal_id=?',
@@ -162,6 +171,9 @@ class WaffraVerifiedGoalDueSnapshotWriter {
       // One SQLCipher commit links the settled goal to the chosen account.
       // Account balance calculation deducts ONLY fromCurrentMinor, not the
       // amount already paid from the separate goals wallet.
+      if(goalAccountId is String&&selectedAccountId!=goalAccountId){
+        throw StateError('Confirmed due account differs from linked goal.');
+      }
       if(selectedAccountId!=null){
         if(selectedAccountId.trim().isEmpty||selectedAccountId.length>128){
           throw StateError('Invalid confirmed goal cash account.');

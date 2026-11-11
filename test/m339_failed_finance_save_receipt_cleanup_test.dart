@@ -2,14 +2,14 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main(){
- test('M339 manual and OCR staged receipts roll back when ledger commit fails',(){
+ test('M339 manual receipt attachment stages roll back when ledger commit fails',(){
   final main=File('lib/main.dart').readAsStringSync();
   final start=main.indexOf('Future<void> entrySheet(');
   final end=main.indexOf('Future<String?> chooseTransactionCategory(',start);
   expect(start,greaterThan(0));
   expect(end,greaterThan(start));
   final editor=main.substring(start,end);
-  expect(editor,contains('stagedReceiptCopies.add(copy)'));
+  expect(editor,contains('stagedReceiptCopies.add(renamed)'));
   expect(editor,contains('stagedReceiptCopies.add(path)'));
   expect(editor,contains('stagedReceiptCopies.add(copied)'));
   final catchPoint=editor.indexOf('Could not save the transaction.');

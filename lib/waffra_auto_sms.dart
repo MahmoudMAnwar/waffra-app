@@ -50,6 +50,17 @@ abstract final class WaffraAutoSms {
   if(!Platform.isAndroid)throw StateError('Android SMS scan is unavailable.');
   return await channel.invokeMethod<int>('importConsentMonthBankSms')??0;
  }
+ /// M638: explicit review-only Android inbox synchronization. This never
+ /// deletes committed finance, excludes, account identities or sender rules.
+ /// A missing native channel/error is NOT an empty inbox or a success.
+ static Future<int> reconcilePendingWithAndroidInboxChecked()async{
+  if(!Platform.isAndroid)throw StateError('Android SMS inbox unavailable');
+  final removed=await channel.invokeMethod<int>(
+   'reconcilePendingAutoBankSmsWithAndroidInbox');
+  if(removed==null||removed<0)throw StateError('SMS inbox reconciliation failed');
+  return removed;
+ }
+
  static Future<bool> suspendForSignOut()=>_boolCall('pauseAutoSmsForSignOut');
  static Future<bool> resumeAfterSignIn()=>_boolCall('resumeAutoSmsAfterSignIn');
  static Future<bool> notificationPermission()=>_boolCall('autoSmsNotificationsEnabled');

@@ -8,8 +8,9 @@ void main(){
      (tester) async {
   await tester.pumpWidget(MaterialApp(home:WaffraAutoSmsConsentPage(
    english:true,onComplete:() async {})));
-  expect(find.textContaining('bank SMS access'),findsOneWidget);
-  expect(find.textContaining('notifications'),findsOneWidget);
+  expect(find.textContaining('SMS access to show financial messages'),findsOneWidget);
+  expect(find.textContaining('notification permission'),findsOneWidget);
+  expect(find.textContaining('decline either permission'),findsOneWidget);
   expect(find.byKey(const Key('m417-permission-skip')),findsNothing);
   expect(find.text('Allow SMS only'),findsNothing);
   expect(find.text('Allow SMS and automatic analysis'),findsNothing);

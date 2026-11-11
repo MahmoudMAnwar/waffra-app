@@ -64,18 +64,12 @@ void main() {
   expect(await pending,isNull);
  });
 
- test('M336 source guard: no foreign-SAR write without encrypted FX',(){
+ test('M640 foreign SMS source still blocks SAR posting without verification',(){
   final app=File('lib/main.dart').readAsStringSync();
-  final beginning=app.indexOf('Future<void> _previewForeignBankCurrency(');
-  final end=app.indexOf('Future<bool> _canReviewOcrAsLedgerTransaction(',beginning);
-  final handler=app.substring(beginning,end);
-  expect(handler,contains('WaffraForeignCurrencyPreview.show('));
-  expect(handler,isNot(contains('commitConfirmedSms(')));
-  expect(handler,isNot(contains('entries.insert(')));
   expect(app,contains('WaffraSmsCurrencies.requiresReviewForSarLedger(message.text)'));
-  expect(app,contains('WaffraBankScreenshotParser.requiresForeignCurrencyReview('));
-  expect(app,contains("Future<void> _previewForeignBankCurrency("));
-  expect(app,contains("WaffraForeignCurrencyPreview.show("));
+  expect(app,contains('WaffraSmsCurrencies.originalAmount(initialSms)'));
+  expect(app,isNot(contains('WaffraBankScreenshotParser.requiresForeignCurrencyReview(')));
+  expect(app,isNot(contains('_canReviewOcrAsLedgerTransaction(')));
  });
 
  test('M336 title is not forced into a single line',(){

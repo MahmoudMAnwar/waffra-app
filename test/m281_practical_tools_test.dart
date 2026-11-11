@@ -75,16 +75,6 @@ void main() {
       year: 2026, month: 13, openingMinor: 0), throwsArgumentError);
   });
 
-  test('M281 receipt review requires valid merchant and halala precision', () {
-    WaffraReceiptReviewDraft draft(String merchant, double amount) =>
-      WaffraReceiptReviewDraft(merchant: merchant, amount: amount, date: oct);
-    expect(draft('Local merchant', 25.15).isValid, isTrue);
-    expect(draft('', 25.15).isValid, isFalse);
-    expect(draft('Local merchant', 25.155).isValid, isFalse);
-    expect(draft('Local merchant', double.nan).isValid, isFalse);
-    expect(draft('Local merchant', -1).isValid, isFalse);
-  });
-
   test('M281 privacy diagnostics allowlist cannot include raw financial data', () {
     final tags = WaffraSafeDiagnosticCode.values
       .map((c) => WaffraSafeDiagnosticEvent(c).safeTag).toList();
@@ -97,7 +87,7 @@ void main() {
     }
   });
 
-  testWidgets('M281 all five tools are reachable with a verified read-only list',
+  testWidgets('M640 all four surviving tools are reachable with a verified read-only list',
       (tester) async {
     await tester.pumpWidget(MaterialApp(home: WaffraPracticalToolsPage(
       english: true, entries: [entry('first')],
@@ -105,7 +95,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('m281-health-tile')), findsOneWidget);
     expect(find.byKey(const Key('m281-search-tile')), findsOneWidget);
-    expect(find.byKey(const Key('m281-receipt-tile')), findsOneWidget);
+    expect(find.byKey(const Key('m281-receipt-tile')), findsNothing);
     expect(find.byKey(const Key('m281-month-tile')), findsOneWidget);
     expect(find.byKey(const Key('m281-diagnostics-tile')), findsOneWidget);
     await tester.tap(find.text('Data health center'));

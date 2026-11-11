@@ -154,16 +154,3 @@ class WaffraMonthlyClose {
     );
   }
 }
-
-class WaffraReceiptReviewDraft {
-  const WaffraReceiptReviewDraft({
-    required this.amount, required this.merchant, required this.date,
-  });
-  final double amount;
-  final String merchant;
-  final DateTime date;
-  bool get isValid => amount.isFinite && amount > 0 &&
-    amount <= 1000000000000 &&
-    ((amount * 100) - (amount * 100).round()).abs() < 0.000001 &&
-    merchant.trim().isNotEmpty && merchant.runes.length <= 250;
-}

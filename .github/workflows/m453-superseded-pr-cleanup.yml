@@ -25,7 +25,8 @@ permissions:
 
 concurrency:
   group: m453-sweep-${{ github.event.pull_request.number || github.run_id }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request_target' }}
+  # M642: keep an in-flight trusted cleanup alive; latest pending run coalesces.
+  cancel-in-progress: false
 
 jobs:
   cancel-superseded-only:

@@ -1,4 +1,4 @@
-name: M281 Five Practical Tools (QA No Finance Write)
+name: M281 Four Practical Tools (QA No Finance Write)
 
 on:
   pull_request:
@@ -63,7 +63,7 @@ jobs:
             lib/waffra_practical_tools_page.dart \
             lib/waffra_smart_features.dart \
             test/m281_practical_tools_test.dart
-      - name: Prove five tools, read-only invariants, search and UI
+      - name: Prove four tools, read-only invariants, search and UI
         run: flutter test --reporter expanded test/m281_practical_tools_test.dart
       - name: Existing ten smart tools must not regress
         run: flutter test --reporter expanded test/m268_smart_features_ten_calendar_art_test.dart

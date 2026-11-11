@@ -106,13 +106,33 @@ def audit_scope(manifest: dict, changed: set[str],
         raise ScopeViolation("Invalid approved deletion list")
     if set(deletions) != {p for p in changed if p in base_exists and p not in head_text}:
         raise ScopeViolation("Every removed source must have specific user approval")
+    # M640 #561: only these exact owner-approved, obsolete OCR-only assets
+    # may be deleted, in addition to the M636 Qwen retirement exceptions.
+    # The manifest must ALSO declare every removed path by exact name.
+    explicitly_retired = {
+        "lib/waffra_ondevice_qwen.dart",
+        "lib/waffra_ai_model_gate.dart",
+        "scripts/qa/prefetch_verified_llamadart.sh",
+        ".github/workflows/m317-ondevice-ai-brain.yml",
+        "lib/waffra_widget_capture.part.dart",
+        "native/WaffraQuickActivity.kt",
+        "assets/tessdata_config.json",
+        "lib/waffra_receipt_ocr.dart",
+        "lib/waffra_receipt_ocr_parser.dart",
+        "lib/waffra_bank_screenshot_parser.dart",
+        ".github/workflows/m287-receipt-ocr.yml",
+        ".github/workflows/m297-receipt-to-entry.yml",
+        "scripts/qa/m287_patch_tesseract_gradle.py",
+        "test/m287_receipt_ocr_test.dart",
+        "test/m297_ocr_to_finance_and_sms_layout_test.dart",
+        "test/m299_multi_transaction_image_review_test.dart",
+        "test/m335_real_sms_ocr_accuracy_test.dart",
+        "test/m332_ai_ocr_hang_and_six_for_three_test.dart",
+        "test/m332_live_bank_image_sms_hang_regression_test.dart",
+        "test/m329_ai_model_restart_and_visible_analysis_test.dart",
+    }
     for p in deletions:
-        if p not in ("lib/waffra_ondevice_qwen.dart",
-                             "lib/waffra_ai_model_gate.dart",
-                             "scripts/qa/prefetch_verified_llamadart.sh",
-                             ".github/workflows/m317-ondevice-ai-brain.yml",
-                             "lib/waffra_widget_capture.part.dart",
-                             "native/WaffraQuickActivity.kt"):
+        if p not in explicitly_retired:
             raise ScopeViolation(f"Unrelated code deletion is prohibited: {p}")
     # M636: an owner-approved replacement of an obsolete test file is allowed
     # ONLY when declared by exact path, and only under test/. Never allow

@@ -62,9 +62,9 @@ void main() {
     (tester) async {
     await tester.pumpWidget(MaterialApp(home:WaffraAutoSmsConsentPage(
       english:false,onComplete:() async {})));
-    expect(find.text('إعداد أذونات وفرة'),findsOneWidget);
-    expect(find.textContaining('أندرويد هيطلب إذن الرسائل البنكية'),findsOneWidget);
-    expect(find.textContaining('تحليل الرسائل محليًا'),findsOneWidget);
+    expect(find.text('أذونات وفرة'),findsOneWidget);
+    expect(find.textContaining('هنطلب إذن الرسائل'),findsOneWidget);
+    expect(find.textContaining('إذن الإشعارات'),findsOneWidget);
     expect(find.text('تخطي الآن'),findsNothing);
     expect(find.textContaining('لخدمة سحابية'),findsNothing);
   });

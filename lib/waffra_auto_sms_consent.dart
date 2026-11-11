@@ -54,15 +54,16 @@ class _WaffraAutoSmsConsentPageState extends State<WaffraAutoSmsConsentPage> {
     const Icon(Icons.verified_user_outlined,
      size:65,color:Color(0xFF087A54)),
     const SizedBox(height:18),
-    Text(widget.english?'Set up Waffra permissions':'إعداد أذونات وفرة',
+    Text(widget.english?'Waffra permissions':'أذونات وفرة',
      style:Theme.of(context).textTheme.titleLarge,textAlign:TextAlign.center),
     const SizedBox(height:12),
     Text(widget.english?
-     'Android will ask for bank SMS access, then notifications. '
-     'Local SMS classification works without AI. You can change permissions later.':
-     'أندرويد هيطلب إذن الرسائل البنكية، وبعده إذن الإشعارات. '
-     'تحليل الرسائل محليًا من غير ذكاء اصطناعي سحابي. '
-     'تقدر تغيّر الأذونات بعدين.',
+     "We'll request SMS access to show financial messages that need review, "
+     "then notification permission for important alerts. "
+     "You can decline either permission or change it later in your device settings.":
+     'هنطلب إذن الرسائل علشان نعرض العمليات المالية اللي تحتاج مراجعة، '
+     'وبعده إذن الإشعارات علشان توصلك التنبيهات المهمة. '
+     'تقدر ترفض الأذونات أو تغيّرها لاحقًا من إعدادات جهازك.',
      textAlign:TextAlign.center),
     const SizedBox(height:20),
     if(busy)const CircularProgressIndicator(),
