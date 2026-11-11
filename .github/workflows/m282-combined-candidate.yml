@@ -90,7 +90,6 @@ jobs:
           github-token: ${{ github.token }}
       - run: |
           flutter pub get
-          python3 scripts/qa/m287_patch_tesseract_gradle.py
       - name: Full Flutter static analysis
         run: flutter analyze --no-pub --no-fatal-infos --no-fatal-warnings
       - name: All unit and widget tests including M274–M281
@@ -114,7 +113,6 @@ jobs:
           github-token: ${{ github.token }}
       - run: |
           flutter pub get
-          python3 scripts/qa/m287_patch_tesseract_gradle.py
       - name: Test integrity, consent, financial recovery and practical tools
         run: |
           flutter test --reporter expanded \
