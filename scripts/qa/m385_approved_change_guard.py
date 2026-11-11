@@ -112,7 +112,7 @@ def audit_scope(manifest: dict, changed: set[str],
                              "scripts/qa/prefetch_verified_llamadart.sh",
                              ".github/workflows/m317-ondevice-ai-brain.yml",
                              "lib/waffra_widget_capture.part.dart",
-                             "native/WaffraQuickActivity.kt")):
+                             "native/WaffraQuickActivity.kt"):
             raise ScopeViolation(f"Unrelated code deletion is prohibited: {p}")
     bounded = manifest.get("bounded_sections")
     if not isinstance(bounded, dict):
