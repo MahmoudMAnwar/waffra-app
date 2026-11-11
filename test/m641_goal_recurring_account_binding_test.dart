@@ -1,0 +1,101 @@
+
+import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:waffra/main.dart';
+import 'package:waffra/storage/waffra_accounts_repository.dart';
+import 'package:waffra/waffra_goal_recurring_account_picker.dart';
+import 'package:waffra/waffra_saudi_financial_providers.dart';
+
+void main(){
+ test('M641 goal account ID survives encrypted snapshot JSON and edits',(){
+  final goal=SavingGoal(id:'g1',name:'سيارة',target:10000,saved:550,
+   accountId:'verified-rajhi-current');
+  expect(goal.toJson()['accountId'],'verified-rajhi-current');
+  expect(SavingGoal.fromJson(goal.toJson()).accountId,
+   'verified-rajhi-current');
+  expect(goal.copy(name:'سيارة جديدة').accountId,
+   'verified-rajhi-current');
+  expect(SavingGoal.fromJson({
+   'id':'old','name':'legacy','target':1000,'saved':150,
+  }).accountId,isNull,reason:'Never invent an account for historical goals');
+ });
+
+ test('M641 linked due preserves stable account and original goal identity',(){
+  final bill=RecurringBill(id:'due',title:'استحقاق سيارة',
+   category:'المواصلات',amount:10000,income:false,day:12,
+   linkedGoalId:'g1',accountId:'verified-rajhi-current');
+  expect(RecurringBill.fromJson(bill.toJson()).accountId,
+   'verified-rajhi-current');
+  expect(bill.copy(active:false).accountId,'verified-rajhi-current');
+  final actions=File('lib/waffra_goal_recurring_actions.part.dart').readAsStringSync();
+  expect(actions,contains('accountId:updated.accountId'));
+  expect(actions,contains('accountId:linkedAccount'));
+  final writer=File('lib/storage/waffra_verified_goal_due_snapshot_writer.dart')
+   .readAsStringSync();
+  expect(writer,contains("recurring['accountId']!=goalAccountId"));
+  expect(writer,contains('selectedAccountId!=goalAccountId'));
+ });
+
+ test('M641 zero-account recurring dialog opens; fund and due never double post',(){
+  final app=File('lib/main.dart').readAsStringSync();
+  final start=app.indexOf(' Future<void> recurringDialog(');
+  final end=app.indexOf(' DateTime nextRecurringDue(',start);
+  expect(start,greaterThan(0));expect(end,greaterThan(start));
+  final editor=app.substring(start,end);
+  expect(editor,isNot(contains('if(liveAccounts.isEmpty)')));
+  expect(editor,contains('WaffraGoalRecurringAccountPicker('));
+  expect(editor,contains('_m641CreateGoalRecurringAccount(provider)'));
+  expect(editor,contains('selectedRecurringAccount!=null'));
+  final funding=app.substring(app.indexOf(' Future<void> fundGoal('),
+   app.indexOf(' Future<void> deletedGoalsDialog('));
+  expect(funding,contains('sourceAccountId:funding.sourceAccountId'));
+  expect(funding,contains('fundVerifiedGoal('));
+  expect(funding,isNot(contains("sourceAccountId:chosenSource=='none'")));
+  expect(app,contains("goalWalletPaidMinor:goalPreview.fromGoalMinor"));
+  final sql=File('lib/storage/waffra_verified_goal_funding_writer.dart')
+   .readAsStringSync();
+  expect(sql,contains('attributeGoalMovement('));
+  expect(sql,contains('await snapshot.commit('));
+  final module=File('lib/storage/waffra_fresh_finance_modules_repository.dart')
+   .readAsStringSync();
+  expect(module,contains('Savings goal requires an active verified SAR account.'));
+ });
+
+ test('M641 local/digital banks and digital wallets remain distinct',(){
+  expect(WaffraSaudiFinancialProviders.byId('rajhi')?.category,
+   WaffraSaudiFinancialProviders.local);
+  expect(WaffraSaudiFinancialProviders.byId('d360')?.category,
+   WaffraSaudiFinancialProviders.digital);
+  expect(WaffraSaudiFinancialProviders.byId('barq')?.category,
+   WaffraSaudiFinancialProviders.wallet);
+ });
+
+ testWidgets('M641 empty recurring/goal selector offers create-account path',
+  (tester)async{
+   String? confirmed;
+   var invoked=0;
+   await tester.pumpWidget(MaterialApp(home:Scaffold(
+    body:SingleChildScrollView(child:WaffraGoalRecurringAccountPicker(
+     accounts:const <WaffraAccountBalance>[],
+     idPrefix:'m641-first',onChanged:(id)=>confirmed=id,
+     onCreateAccount:(group)async{
+      invoked++;
+      return const WaffraAccountBalance(
+       'new-account','مصرف الراجحي - الجاري','bank',0,false,
+       providerId:'rajhi',subtype:'current');
+     },
+    )),
+   )));
+   await tester.pumpAndSettle();
+   expect(find.byKey(const Key('m641-first-add-account')),findsOneWidget);
+   expect(find.text('إضافة حساب'),findsOneWidget);
+   await tester.tap(find.byKey(const Key('m641-first-add-account')));
+   await tester.pumpAndSettle();
+   expect(invoked,1);
+   expect(confirmed,'new-account');
+   expect(find.text('مصرف الراجحي'),findsOneWidget);
+   expect(find.text('إضافة حساب تابع'),findsOneWidget);
+  });
+}
