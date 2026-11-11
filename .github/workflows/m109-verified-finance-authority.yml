@@ -71,11 +71,16 @@ jobs:
           from pathlib import Path
           app=Path('lib/main.dart').read_text()
           router=Path('lib/storage/waffra_verified_finance_authority.dart').read_text()
-          widget=Path('lib/waffra_widget_capture.part.dart').read_text()
+          widget=Path('native/WaffraWidget.kt').read_text()
+          binding=Path('lib/storage/waffra_production_finance_authority_binding.dart').read_text()
           assert 'WaffraVerifiedFinanceAuthority(legacy:_homeFinancePersistence)' in app
           assert 'WaffraFinanceRoute.dashboardRead' in app
-          assert 'WaffraProductionFinanceSourceGuard' in widget
-          assert 'WaffraHomeFinancePersistence' in widget
+          assert 'WaffraProductionFinanceSourceGuard' in binding
+          assert 'WaffraHomeFinancePersistence' in app
+          assert 'Intent(context, MainActivity::class.java)' in widget
+          assert 'action = "waffra.ADD_TRANSACTION"' in widget
+          assert '_financeAuthority.commitConfirmedSms(' not in widget
+          assert 'await _ensureFinanceBound();' in app
           assert 'sourceGuard.inspect()' in router
           assert 'verifiedKeyRecoveryInDevice = false' in router
           assert 'encryptedSqlWitnessActive = false' in router
