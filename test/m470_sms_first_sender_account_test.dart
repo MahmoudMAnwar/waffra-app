@@ -91,13 +91,14 @@ void main(){
   expect(flow,isNot(contains('commitConfirmedSms(')));
  });
 
- test('M470 #11 SMS posting remains a separate user approved atomic writer',(){
+ test('M636 SMS posting remains a separately confirmed atomic finance write',(){
   final home=File('lib/main.dart').readAsStringSync();
-  expect(home,contains('await bulkSmsSheet(initialText:body,initialSender:sender'));
-  final review=home.substring(home.indexOf('Future<void> bulkSmsSheet('),
-   home.indexOf('Future<void> entrySheet(',home.indexOf('Future<void> bulkSmsSheet(')));
-  expect(review,contains('reviewSmsAccountLinks('));
-  expect(review,contains('commitConfirmedSms('));
-  expect(review,contains('userConfirmed:true'));
+  final editor=home.substring(home.indexOf(' Future<void> entrySheet('),
+   home.indexOf(' Future<void> showReceipt('));
+  expect(editor,contains('reviewSmsAccountLinks([result]'));
+  expect(editor,contains('_financeAuthority.commitConfirmedSms('));
+  expect(editor,contains('userConfirmed:true'));
+  expect(editor,contains('expectedAccountGeneration:reviewedAccount.generation'));
+  expect(home,contains('await entrySheet(sms:true,initialSms:body,reviewedSender:sender);'));
  });
 }
