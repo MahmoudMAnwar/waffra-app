@@ -14358,6 +14358,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        'wallet':'bank'))){
    throw StateError('New financial account provider changed');
   }
+  // The account form may stay open while SMS/widget writes change finance.
+  // Take a fresh verified witness after the user confirms this draft.
+  await api.balances();
   final id='m641-goal-recurring-'+newId();
   await api.createTypedAccountWithIdentity(
    id:id,name:draft.name,kind:draft.kind,
@@ -14370,7 +14373,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final refreshed=await api.balances();
   final created=refreshed.where((a)=>a.id==id&&!a.archived).toList();
   if(created.length!=1)throw StateError('New account lacked verified ledger');
-  unawaited(_m467RefreshHomeAccounts());
+  // Account creation increments the canonical SQLCipher generation. Refresh
+  // the Home authority witness before saving the goal/recurring draft;
+  // otherwise its subsequent persist rejects as stale even though the first
+  // account was created successfully. Do not restart Home or clear the form.
+  await _refreshFromVerifiedFinance();
+  if(!mounted||!ready||_financeLoadFailure!=null){
+   throw StateError('Account created, but fresh finance was not verified.');
+  }
   return created.single;
  }
  /// Release an earmark back to spendable cash. The eventual expense is
