@@ -7856,6 +7856,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     goals.where((g)=>g.id==r.linkedGoalId&&g.dueDate!=null).toList():
     <SavingGoal>[];
    if(isGoalDue&&linkedGoals.length!=1)continue;
+   final linkedAccount=r.accountId==null
+    ?const <WaffraAccountBalance>[]
+    :_m467Accounts.where((a)=>a.id==r.accountId&&!a.archived).toList();
+   final accountLabel=linkedAccount.length==1?
+    linkedAccount.single.name:(r.accountId==null?null:
+     (waffraIsEnglish?'Account needs verification':'الحساب يحتاج مراجعة'));
    final due=isGoalDue?
     DateTime(r.startAt.year,r.startAt.month,r.startAt.day):
     WaffraRecurringPolicy.dueDate(today.year,today.month,r.day);
@@ -7895,6 +7901,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         Directionality(textDirection:TextDirection.ltr,
          child:Text(dayText(postponed??due))),
        ]),
+       if(accountLabel!=null)...[
+        const SizedBox(height:8),
+        Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+         const Icon(Icons.account_balance_wallet_outlined,size:16,color:emerald),
+         const SizedBox(width:6),
+         Flexible(child:WaffraText(
+          (waffraIsEnglish?'Linked account: ':'الحساب المرتبط: ')+accountLabel,
+          maxLines:2,textAlign:TextAlign.center)),
+        ]),
+       ],
        const SizedBox(height:15),
        if(goalPreview!=null)...[
         const SizedBox(height:8),
@@ -7940,13 +7956,28 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         WaffraRuntimeFinanceBackend.verifiedEncrypted){
        final cashMinor=WaffraRecurringPolicy.toHalalas(r.amount)-
         goalPreview!.fromGoalMinor;
-       final chosen=cashMinor>0?await reviewSmsAccountLinks([
-        MoneyEntry(id:id,title:r.title,category:r.category,
-         amount:r.amount,income:false,date:DateTime.now(),
-         sourceType:'goal_due',goalWalletPaidMinor:goalPreview.fromGoalMinor)]):null;
-       if(cashMinor>0&&chosen==null)return;
-       final chosenId=chosen?.ids?.single;
-       if(chosenId!=null&&chosen!.generation!=
+       final activeAccounts=await _m641VerifiedGoalRecurringAccounts();
+       if(activeAccounts==null||!mounted)return;
+       final defaultId=r.accountId;
+       if(defaultId!=null&&
+          !activeAccounts.any((a)=>a.id==defaultId&&!a.archived)){
+        snack(context,waffraIsEnglish?
+         'The goal account is unavailable. Edit the goal before paying.':
+         'الحساب المرتبط بالهدف غير متاح. عدّل حساب الهدف قبل تسجيل الدفع.',
+         isError:true);
+        return;
+       }
+       // The linked goal account is the default; don't require another
+       // picker or debit saved funds twice. Old unlinked goals still ask.
+       final chosen=cashMinor>0&&defaultId==null?
+        await reviewSmsAccountLinks([
+         MoneyEntry(id:id,title:r.title,category:r.category,
+          amount:r.amount,income:false,date:DateTime.now(),
+          sourceType:'goal_due',goalWalletPaidMinor:goalPreview.fromGoalMinor)]):null;
+       if(cashMinor>0&&defaultId==null&&chosen==null)return;
+       final chosenId=defaultId??chosen?.ids?.single;
+       if(cashMinor>0&&chosenId==null)return;
+       if(chosen!=null&&chosenId!=null&&chosen.generation!=
           _lastFinanceAuthorityRead?.encryptedWitness?.generation){
         if(mounted)await _loadFinanceSafely();
         if(mounted)snack(context,waffraIsEnglish?
