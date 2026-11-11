@@ -31,6 +31,7 @@
     "pubspec.yaml",
     "scripts/qa/m385_approved_change_guard.py",
     "scripts/qa/prefetch_verified_llamadart.sh",
+    "scripts/qa/test_m453_queue_hygiene.py",
     "test/m161_manual_category_leaf_routing_test.dart",
     "test/m224_verified_pull_refresh_dialog_test.dart",
     "test/m273_production_user_journey_regression_test.dart",
@@ -312,6 +313,16 @@
       {
         "start": "        raise ScopeViolation(\n            \"Unrequested or undeclared file change: extra=\" +",
         "end": "        if path in bounded:"
+      }
+    ],
+    "scripts/qa/test_m453_queue_hygiene.py": [
+      {
+        "start": "            \".github/workflows/m174-main-sha-postmerge.yml\",\n",
+        "end": "            \".github/workflows/m368-sqlcipher-stage-ci.yml\",\n"
+      },
+      {
+        "start": "            \".github/workflows/unified-finance-cloud-release-evidence.yml\",\n        ]\n",
+        "end": "        for path in paths:\n"
       }
     ]
   }
