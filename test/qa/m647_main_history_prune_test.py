@@ -42,6 +42,13 @@ class FakeAPI:
         if method == "GET" and "/actions/runs?" in route:
             from urllib.parse import parse_qs
             q = parse_qs(route.partition("?")[2])
+            # GitHub's supported "created" query uses an explicit comparison.
+            # Bare "..YYYY-MM-DD" appears valid but returns ZERO real runs.
+            expected_date = "<=" + (NOW - mod.AGE).date().isoformat()
+            if q.get("created") != [expected_date]:
+                raise AssertionError(
+                    "Unsupported GitHub created filter (silent zero-run risk): "
+                    + str(q.get("created")))
             matching = [x for x in self.rows
                         if x["conclusion"] == q["status"][0]]
             page = int(q["page"][0])
@@ -147,6 +154,22 @@ class M647MainHistoryPruneTest(unittest.TestCase):
         first_delete = next(i for i, x in enumerate(api.calls) if x[0] == "DELETE")
         self.assertTrue(any("status=cancelled" in route
                             for method, route in api.calls[:first_delete] if method == "GET"))
+
+    def test_created_filter_is_verified_github_api_comparison_not_zero_run_range(self):
+        api = FakeAPI([run(10)])
+        pruner = mod.MainPruner(api, now=NOW, run_id=99, commit_sha=HEAD,
+                                sleep=lambda _: None)
+        result = pruner.execute(dry_run=True)
+        self.assertEqual(result["snapshotted"], 1)
+        self.assertEqual(result["previewed"], 1)
+        from urllib.parse import parse_qs
+        list_calls = [parse_qs(route.partition("?")[2])
+                      for method, route in api.calls
+                      if method == "GET" and "/actions/runs?" in route]
+        self.assertEqual(len(list_calls), 3)  # all 3 conclusions scanned
+        self.assertTrue(all(q.get("created") == ["<=2026-11-09"]
+                            for q in list_calls))
+        self.assertFalse(any(method == "DELETE" for method, _ in api.calls))
 
     def test_unknown_artifact_count_fails_closed(self):
         api = FakeAPI([run(10)])
