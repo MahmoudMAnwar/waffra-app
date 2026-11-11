@@ -90,7 +90,10 @@
     "test/qa/m564_sms_exact_date_guard_test.py",
     "test/qa/test_m340_financial_quality_gate.py",
     "test/storage/live_legacy_finance_guard_test.dart",
+    "test/storage/m177_live_finance_authority_integration_test.dart",
     "test/storage/m266_widget_source_fail_closed_ui_test.dart",
+    "test/storage/m457_direct_manual_finance_commit_test.dart",
+    "test/storage/m464_manual_unassigned_transfer_access_regression_test.dart",
     "test/waffra_concept2_final_visual_test.dart",
     "test/waffra_design_preservation_test.dart",
     "test/waffra_m206_day_theme_tour_sms_regression_test.dart",
@@ -441,6 +444,24 @@
       {
         "start": "   expect(find.byKey(const Key('waffra-m268-feature-markets')),findsOneWidget);\n   expect(find.byKey(const Key('waffra-m268-expanded-analysis')),findsNothing);",
         "end": "   await tester.tap(find.byKey(const Key('waffra-m268-feature-analysis')));"
+      }
+    ],
+    "test/storage/m457_direct_manual_finance_commit_test.dart": [
+      {
+        "start": "    final menu=app.substring(start,end);",
+        "end": "    expect(menu, isNot(contains("
+      }
+    ],
+    "test/storage/m464_manual_unassigned_transfer_access_regression_test.dart": [
+      {
+        "start": "  final menu=main.substring(menuStart,menuEnd);",
+        "end": "  expect(menu,isNot(contains("
+      }
+    ],
+    "test/storage/m177_live_finance_authority_integration_test.dart": [
+      {
+        "start": "    expect(home, contains(\n      \"'commit-confirmed-bank-sms',()=>_financeAuthority.commitConfirmedSms(\"));",
+        "end": "    final reviewedYes=home.split('Future<void> _m565ConfirmSms(')[1]"
       }
     ]
   }
