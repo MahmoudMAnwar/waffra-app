@@ -14653,10 +14653,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           if(value==null||value<=0)return;
           if(chosenSource==null||!fundingAccounts.any(
              (a)=>a.id==chosenSource&&!a.archived)){
-           ScaffoldMessenger.maybeOf(dialogCtx)?.showSnackBar(
-            SnackBar(content:Text(waffraIsEnglish?
-             'Choose or create a verified savings account.':
-             'اختار أو أضف حسابًا ماليًا موثّقًا لمصدر الادخار.')));
+           snack(dialogCtx,waffraIsEnglish?
+            'Choose or create a verified savings account.':
+            'اختار أو أضف حسابًا ماليًا موثّقًا لمصدر الادخار.');
            return;
           }
           Navigator.pop(dialogCtx,(amount:value,sourceAccountId:chosenSource));
