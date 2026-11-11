@@ -29,6 +29,9 @@ class _WaffraPracticalToolsPageState extends State<WaffraPracticalToolsPage> {
   final opening = TextEditingController(text: '0');
   final actual = TextEditingController();
   WaffraSafeDiagnosticCode? userSelectedIssue;
+  bool? incomeFilter;
+  DateTimeRange? range;
+  DateTime month=DateTime(DateTime.now().year,DateTime.now().month);
   int? openSection;
   final ScrollController sectionScroll = ScrollController();
   final sectionKeys = List.generate(4, (_) => GlobalKey());
