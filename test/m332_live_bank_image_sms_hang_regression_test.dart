@@ -85,7 +85,7 @@ Merchant Test
 
  test('M636 OCR remains cancellable while SMS review stays verified',(){
   final home=File('lib/main.dart').readAsStringSync();
-  expect(home,contains("Key('waffra-ai-analysis-cancel')"));
+  expect(home,contains("Key('waffra-ocr-analysis-cancel')"));
   expect(home,contains('item.dispose();'));
   expect(home,contains('await entrySheet(sms:true,initialSms:body,reviewedSender:sender);'));
   expect(home,isNot(contains('WaffraOnDeviceQwen')));
