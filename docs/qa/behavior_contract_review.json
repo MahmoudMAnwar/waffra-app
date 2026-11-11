@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "pr": "M637 + M638 PR #558 — verified Home hotpath plus Saudi institution pickers and explicit SMS inbox deletion reconciliation",
-  "issue": "Issues #557 and #559 — owner specifically requested same PR",
+  "pr": "M637–M640 PR #558 — verified Home hot path, Saudi financial provider grouping, SMS sync, permissions copy, and complete receipt OCR retirement",
+  "issue": "Issues #557, #559, #560, #561 — owner confirmed OCR removal",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main",
   "reviewed_at": "2026-11-11",
@@ -1136,6 +1136,44 @@
         "Do not change native READ_SMS/RECEIVE_SMS or notification OS permission request behavior, order, error handling, or retries.",
         "Never turn on optional external processing via this onboarding; preserve WaffraSmsCloudService.setConsent(false) and all existing consent semantics.",
         "No first-run access block when user denies permission; no new startup work or extra UI waiting."
+      ]
+    },
+    {
+      "id": "M640-REMOVE-RECEIPT-OCR-TESSERACT-AND-DORMANT-ENTRY-POINTS",
+      "issue": "Issue #561 / PR #558",
+      "previous_behavior": "Tools displayed قارئ الفواتير OCR, downloaded Tesseract ara/eng language models, exposed camera/gallery text extraction and draft validation; main.dart contained gated but still compiled OCR scanner and scan-and-add image finance entry route. Tesseract Gradle shim in production workflows and legacy OCR tests expected retired behavior.",
+      "approved_behavior": "Completely retire receipt OCR Tools card, native Tesseract language download, OCR recognition/parser, bank screenshot parsing, OCR data sources and finance-entry args/disabled hidden FAB action. Four remaining read-only tool cards. Remove OCR workflows/shim/dependencies/tests or rewrite old tests as current-behavior negative contracts. Preserve ordinary image attachments and encrypted receipt storage/reopen, and text-only Android SMS review unchanged.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_practical_tools_page.dart",
+        "lib/waffra_receipt_ocr.dart",
+        "lib/waffra_receipt_ocr_parser.dart",
+        "lib/waffra_bank_screenshot_parser.dart",
+        "lib/waffra_ai_finance_brain.dart",
+        "lib/waffra_practical_ledger_engine.dart",
+        "lib/waffra_saudi_release.dart",
+        "pubspec.yaml",
+        "scripts/qa/m287_patch_tesseract_gradle.py",
+        ".github/workflows/m287-receipt-ocr.yml",
+        ".github/workflows/m297-receipt-to-entry.yml"
+      ],
+      "test_paths": [
+        "test/m640_receipt_reader_retirement_test.dart",
+        "test/m281_practical_tools_test.dart",
+        "test/m285_compact_action_widths_test.dart",
+        "test/m330_compact_ui_copy_test.dart",
+        "test/qa/m412_workflow_wiring_test.py"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/android.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m278-mobile-system-insets.yml"
+      ],
+      "safety_invariants": [
+        "No receipt OCR package or model download, screenshot import or user-visible receipt reader tool remains. No hidden code path can invoke OCR.",
+        "Keep plain photo attachment picker (image_picker), encrypted receipt persistence/restore, bank SMS review, native message scanning, verified financial writes and all historical data intact.",
+        "Disable only explicit OCR-specific workflows and tests; preserve all current financial and lifecycle regression checks. Add anti-regression retirement test and exact-file deletion allowlist to M385, no broad deletion bypass.",
+        "No claim of complete removal before exact-head Flutter analyzer/Android and test suite succeed; mobile device acceptance pending."
       ]
     }
   ]
