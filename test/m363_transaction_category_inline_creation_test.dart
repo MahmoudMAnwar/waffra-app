@@ -44,9 +44,9 @@ void main(){
 
  test('M363 bulk bank review also receives inline parent/child creation',(){
   final source=File('lib/main.dart').readAsStringSync();
-  expect(source,contains('allowCreate:true,typeIncome:income,parentId:smsParentId'));
+  expect(source,contains('allowCreate:true,typeIncome:income,parentId:selectedParentId'));
   expect(source,contains('leafLabels:true,allowCreate:true,'));
-  expect(source,contains('smsParentId=leaf.single.parentId'));
+  expect(source,contains('selectedParentId=leaves.single.parentId'));
  });
 
  test('M362 verified encrypted goal spend uses one atomic wallet-and-ledger writer',(){
