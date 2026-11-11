@@ -44,6 +44,10 @@
         "end": " Widget _dashboardShortcut("
       },
       {
+        "start": " Widget compactTransaction(MoneyEntry entry){",
+        "end": " Widget _m549HomeFinanceAction({"
+      },
+      {
         "start": " Widget dashboard(){",
         "end": " List<MoneyEntry> get analysisEntries"
       }
