@@ -436,8 +436,8 @@
     ],
     "test/m495_pr402_ui_performance_regression_test.dart": [
       {
-        "start": "  test('M500 #420 Details Edit enables verified retroactive account link',(){",
-        "end": "  testWidgets('M499 #416 child picker is disabled without provider, cancel preserves amount',"
+        "start": " test('M500 #420 Details Edit enables verified retroactive account link',(){",
+        "end": " testWidgets('M499 #416 child picker is disabled without provider, cancel preserves amount',"
       }
     ],
     ".github/workflows/m281-practical-tools.yml": [
@@ -492,8 +492,8 @@
     ],
     "test/m580_sms_security_navigation_performance_test.dart": [
       {
-        "start": "  test('M587 bank transfer shows exactly three non-posting choices',(){",
-        "end": "  test('notification center never repeats a second review hero',(){"
+        "start": " test('M587 bank transfer shows exactly three non-posting choices',(){",
+        "end": " test('notification center never repeats a second review hero',(){"
       }
     ]
   }
