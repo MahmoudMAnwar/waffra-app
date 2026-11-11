@@ -101,7 +101,8 @@
     "lib/waffra_goal_recurring_actions.part.dart",
     "lib/storage/waffra_fresh_finance_modules_repository.dart",
     "lib/storage/waffra_verified_goal_due_snapshot_writer.dart",
-    "test/m641_goal_recurring_account_binding_test.dart"
+    "test/m641_goal_recurring_account_binding_test.dart",
+    "test/m371_goal_wallet_and_budgets_regression_test.dart"
   ],
   "approved_deleted_files": [
     ".github/workflows/m287-receipt-ocr.yml",
@@ -456,8 +457,8 @@
     ],
     "lib/storage/waffra_fresh_finance_modules_repository.dart": [
       {
-        "start": "      case WaffraFinanceModule.goals:",
-        "end": "      case WaffraFinanceModule.recurring:"
+        "start": "      case WaffraFinanceModule.goals:\n        if(data['dueDate']",
+        "end": "      case WaffraFinanceModule.recurring:\n        if (data['income']"
       },
       {
         "start": "        case WaffraFinanceModule.goals:",
@@ -470,8 +471,14 @@
         "end": "      final savedBefore=_minor(goal['saved']??0);"
       },
       {
-        "start": "      if(selectedAccountId!=null){",
+        "start": "      // One SQLCipher commit links the settled goal to the chosen account.",
         "end": "      goal['saved']=(savedBefore-receipt.fromGoalMinor)/100;"
+      }
+    ],
+    "test/m371_goal_wallet_and_budgets_regression_test.dart": [
+      {
+        "start": "  test('M371 goal creation cannot post an expense or negative cash debit',",
+        "end": null
       }
     ]
   }
