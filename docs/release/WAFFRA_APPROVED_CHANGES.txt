@@ -3441,3 +3441,9 @@ passed; changed-source analysis clean; M550 contract preflight passed.
 - M640 follow-up review: the last OCR-era `scannedIncome` argument in the independent/manual transfer decision was renamed to `manualIncomeOverride` without changing the owner-selected income/expense behavior. Negative M640 regression rejects the old argument name; ordinary manual and verified SMS entry remains functional. Source and exact-head CI still require approval.
 
 - M640 final textual cleanup: eliminated the obsolete OCR-era `scannedIncome` argument in the independent manual transfer decision and the OCR reference in the retained `splitBankMessages` comment; no change to SMS parsing, category validation or owner-approved manual accounting. Updated the M640 negative test accordingly. Exact-head CI pending.
+
+
+[M640 FINAL EMPTY TESSERACT ASSET REMOVAL — ISSUE #561 / DRAFT PR #558 — 2026-11-11]
+- Final exact-branch tree audit discovered and removed assets/tessdata_config.json (empty files array) that remained bundled under Flutter assets/ after deleting the Tesseract OCR reader. The M640 absence regression asserts this old OCR-only file cannot return.
+- The removal was first registered in #561 and docs/WAFFRA_REQUIREMENTS.md; M385 manifest and explicit deletion allowlist updated without relaxing other source protection. Existing ordinary photo/receipt attachments, encrypted storage, SMS review, account IDs and saved finance data are unchanged.
+- This release note follows the latest source and test commits. PR #558 remains Draft and unmerged; fresh exact-head CI/Flutter analyzer/Android native compilation and physical-device checks are still required. No APK from a feature branch.
