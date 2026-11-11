@@ -16,7 +16,8 @@
     "M640: Update M340 finance quality gate to use retained entrySheet as the end boundary for foreign FX review, replacing deleted OCR handler marker without weakening the pre-existing FX/no-ledger-write contract.",
     "M640 #561: update old M339 OCR-stage expectations to the three still-live manual/image-attachment stage paths (path/copied/renamed) without weakening finance-failure cleanup assertion.",
     "M640 manual income override: rename residual scannedIncome OCR-era argument to manualIncomeOverride in retained transfer-SMS to independent manual entry, preserving selection and no OCR engine dependency.",
-    "M640/M639 regression refresh: preserve SMS permission, historical link and retained encrypted manual attachment tests while changing obsolete pre-retirement string assertions; never restore deleted OCR features or bypass verified account guards."
+    "M640/M639 regression refresh: preserve SMS permission, historical link and retained encrypted manual attachment tests while changing obsolete pre-retirement string assertions; never restore deleted OCR features or bypass verified account guards.",
+    "M640 #561: align old five-tools workflow display title/step and M281 QA spec to four Tools after removing receipt reader, preserving health/search/monthly/diagnostics tests."
   ],
   "allowed_changed_files": [
     ".github/workflows/android-full-smoke.yml",
@@ -29,6 +30,7 @@
     ".github/workflows/m266-sqlcipher-precutover-qa.yml",
     ".github/workflows/m274-production-ui-golden.yml",
     ".github/workflows/m278-mobile-system-insets.yml",
+    ".github/workflows/m281-practical-tools.yml",
     ".github/workflows/m282-combined-candidate.yml",
     ".github/workflows/m287-receipt-ocr.yml",
     ".github/workflows/m290-country-reminders-multicurrency.yml",
@@ -41,6 +43,7 @@
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
+    "docs/qa/m281-five-practical-tools.md",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
     "lib/storage/waffra_account_context_schema.dart",
@@ -394,6 +397,16 @@
       {
         "start": "  test('M500 #420 Details Edit enables verified retroactive account link',",
         "end": "  testWidgets('M499 #416 child picker is disabled without provider, cancel preserves amount',"
+      }
+    ],
+    ".github/workflows/m281-practical-tools.yml": [
+      {
+        "start": "name: M281 ",
+        "end": "\non:\n"
+      },
+      {
+        "start": "      - name: Prove ",
+        "end": "\n        run: flutter test --reporter expanded test/m281_practical_tools_test.dart"
       }
     ]
   }
