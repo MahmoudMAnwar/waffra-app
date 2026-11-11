@@ -112,6 +112,12 @@ class WaffraFreshModulesRepository {
         if(data['active'] != null && data['active'] is! bool){
           throw ArgumentError('Invalid goal active flag.');
         }
+        if(data['accountId']!=null&&
+           (data['accountId'] is! String||
+            (data['accountId'] as String).trim().isEmpty||
+            (data['accountId'] as String).length>128)){
+          throw ArgumentError('Invalid verified goal account ID.');
+        }
         if(data['progressAlertsEnabled']!=null&&
            data['progressAlertsEnabled'] is! bool ||
            data['progressAlertPercent']!=null&&
@@ -220,6 +226,21 @@ class WaffraFreshModulesRepository {
           }
           break;
         case WaffraFinanceModule.goals:
+          // A real, active SAR account must back any newly linked goal.
+          // Old savings with no stored accountId remain readable as-is.
+          final linkedGoalAccount=data['accountId'];
+          if(linkedGoalAccount is String){
+            await WaffraAccountContextSchema.requireReady(store);
+            final active=await store.customSelect(
+              'SELECT archived,currency FROM fresh_finance_money_accounts '
+              'WHERE account_id=?',
+              variables:[Variable.withString(linkedGoalAccount)],
+            ).get();
+            if(active.length!=1||active.single.read<int>('archived')!=0||
+               active.single.read<String>('currency')!='SAR'){
+              throw StateError('Savings goal requires an active verified SAR account.');
+            }
+          }
           final values = <Object?>[
             data['name'], _halalas(data['target']),
             _halalas(data['saved'] ?? 0), raw,
