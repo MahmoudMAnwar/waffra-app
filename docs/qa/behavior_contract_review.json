@@ -1317,9 +1317,11 @@
       "id": "M647-M652-TRANSFER-ACTIVITY-AND-RULE-REFRESH",
       "issue": "Issues #569–#574 (2026-11-11)",
       "previous_behavior": "History transfer sheet occupied fixed 70% height without clear source and destination; Home timeline ignored verified transfers and did not distinguish posted recurring dues. Rule learning updated storage, but no versioned pending queue refresh was scheduled after durable confirmation.",
-      "approved_behavior": "Display bilingual transfer source and destination in compact content-sized cards with a blue palette, show one verified transfer event in Home without changing income or expense totals, present confirmed due entries with violet visual category but no separate debit, schedule nonblocking existing pending SMS classifier refresh on learned rule commit, preserve notification counters and explicit review-only approval.",
+      "approved_behavior": "Display bilingual transfer source and destination in compact content-sized cards with a blue palette, show one verified transfer event in Home without changing income or expense totals, present confirmed due entries with violet visual category but no separate debit, schedule nonblocking existing pending SMS classifier refresh on learned rule commit, preserve notification counters and explicit review-only approval. Add linked gold goal-wallet source movement read-only cards and include verified transfers and goal movements in relevant home transaction PDF with matching colors and account filter.",
       "source_paths": [
-        "lib/main.dart"
+        "lib/main.dart",
+        "lib/storage/waffra_account_context_repository.dart",
+        "lib/storage/waffra_verified_accounts_api.dart"
       ],
       "test_paths": [
         "test/m647_m652_financial_activity_regression_test.dart"
@@ -1334,7 +1336,9 @@
         "Due cards are presentation-only for already confirmed entries; no new expense posted by rendering.",
         "A local rule is refreshed only after durable save; pending SMS suggestions are never auto-posted.",
         "Do not start full SMS history scan during an income/expense commit or delay the first Home frame.",
-        "Retain account and owner scoped session cancellation and notify users of failed verified reads."
+        "Retain account and owner scoped session cancellation and notify users of failed verified reads.",
+        "Goal source journal reads must not debit the bank again or duplicate expense/budget postings.",
+        "PDF sections must not add internal transfers and savings funding to income/expense totals."
       ]
     }
   ]
