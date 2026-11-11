@@ -1142,7 +1142,7 @@
       "id": "M640-REMOVE-RECEIPT-OCR-TESSERACT-AND-DORMANT-ENTRY-POINTS",
       "issue": "Issue #561 / PR #558",
       "previous_behavior": "Tools displayed قارئ الفواتير OCR, downloaded Tesseract ara/eng language models, exposed camera/gallery text extraction and draft validation; main.dart contained gated but still compiled OCR scanner and scan-and-add image finance entry route. Tesseract Gradle shim in production workflows and legacy OCR tests expected retired behavior.",
-      "approved_behavior": "Completely retire receipt OCR Tools card, native Tesseract language download, OCR recognition/parser, bank screenshot parsing, OCR data sources and finance-entry args/disabled hidden FAB action. Four remaining read-only tool cards. Remove OCR workflows/shim/dependencies/tests or rewrite old tests as current-behavior negative contracts. Preserve ordinary image attachments and encrypted receipt storage/reopen, and text-only Android SMS review unchanged.",
+      "approved_behavior": "Completely retire receipt OCR Tools card, native Tesseract language download, OCR recognition/parser, bank screenshot parsing, OCR data sources and finance-entry args/disabled hidden FAB action. Four remaining read-only tool cards. Remove OCR workflows/shim/dependencies/tests or rewrite old tests as current-behavior negative contracts. Preserve ordinary image attachments and encrypted receipt storage/reopen, and text-only Android SMS review unchanged. The M281 CI and documented tools inventory must now enumerate exactly four read-only sections and must no longer present the deprecated receipt review assistant as available.",
       "source_paths": [
         "lib/main.dart",
         "lib/waffra_practical_tools_page.dart",
@@ -1151,7 +1151,9 @@
         "lib/waffra_saudi_release.dart",
         "pubspec.yaml",
         "scripts/qa/m385_approved_change_guard.py",
-        ".github/workflows/android.yml"
+        ".github/workflows/android.yml",
+        ".github/workflows/m281-practical-tools.yml",
+        "docs/qa/m281-five-practical-tools.md"
       ],
       "test_paths": [
         "test/m640_receipt_reader_retirement_test.dart",
