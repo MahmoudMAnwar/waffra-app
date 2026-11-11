@@ -25,3 +25,12 @@ Main M647 prune run 43083569171 failed because unittest attempted to import 'tes
 - Preserve M381/M382 assertions for exhaustive/branch-safe release; reconcile only historical M340 main-push and M174 duplicate native-push assumptions to verified new roles.
 - M385 changed file and bounded function scopes, M550 behavior registry, M449 latest append-only release note.
 - Main post-merge measure run duration and compare with baseline 18m50; goal 14–16 min where runner availability and cache conditions permit, no guaranteed duration.
+
+
+## M654 — Root cause of the newly failed M147 Android build on PR #580
+- Issue https://github.com/MahmoudMAnwar/waffra-app/issues/582; exact PR HEAD fbfd011d, run 43086351577, job 130751731090.
+- M147's Flutter suite and source review passed; only ARM64 CI-preview compile failed at `:firebase_core:lintVitalAnalyzeRelease`, `JavaDocParser`, `NoSuchMethodError: java.util.List.removeLast()`. Runner confirmed Temurin JDK 17.0.21. Android lint toolchain fault, not Waffra finance code or the application's widget tests.
+- Google tracked this as AGP Android Lint #522845800 and fixed it in AGP 9.3.2: https://developer.android.com/build/releases/agp-9-3-0-release-notes . Gradle's compatibility table supports JDK 21 runtime from Gradle 8.5 onward.
+- Bounded workaround: use Temurin 21 + actual version preflight before Android Gradle/Lint in five key CI paths: M147 exact-head ARM64 review, `android.yml` signed APK/AAB, M274 emulator UI, M174 manual unsigned ARM64 compile, and Android nightly/full smoke. Do not disable lint, alter generated Gradle versions, or claim production native/physical-device certification.
+- Test `test/qa/m654_android_lint_jdk_compatibility_test.py` guards all five runtime pins, runtime assertions, no lint bypass and intact signed source/finance release checks. Scope M385, behavior M550 and release note M449 updated on same PR.
+- **Status: Partial — fixes committed to Draft PR #580; exact-head repeat of M147 native compile and clean main signed APK still required.**
