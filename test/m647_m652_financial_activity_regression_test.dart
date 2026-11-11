@@ -29,7 +29,8 @@ void main() {
   expect(repository, contains('FROM fresh_finance_internal_transfers'));
   expect(repository, contains('readInternalTransferHistory('));
   expect(api, contains('bridge.readVerifiedAccountMetadata'));
-  expect(app, contains('_m648HomeTransfers(_m467SelectedAccount)'));
+  expect(app, contains('_m652UnifiedActivities(_m467SelectedAccount)'));
+  expect(app, contains('Future<List<WaffraInternalTransferHistory>> _m648HomeTransfers('));
   expect(app, contains("Key('m648-home-transfer-'"));
   expect(app, contains("'التحويلات'=>'Transfers'"));
   final cards = app.substring(app.indexOf('Widget _m647TransferCard('),
@@ -45,7 +46,8 @@ void main() {
   expect(repository, contains("m.kind IN ('fund','release')"));
   expect(repository, contains('ORDER BY m.occurred_at_iso DESC'));
   expect(api, contains('readGoalAccountMovementHistory('));
-  expect(app, contains('_m649HomeSavings(_m467SelectedAccount)'));
+  expect(app, contains('_m652UnifiedActivities(_m467SelectedAccount)'));
+  expect(app, contains('Future<List<WaffraVerifiedGoalMovement>> _m649HomeSavings('));
   expect(app, contains("Key('m649-verified-saving-'"));
   expect(app, contains("'إضافة مبلغ للهدف الادخاري'"));
   expect(app, contains("'سحب من الادخار'"));
@@ -99,4 +101,20 @@ void main() {
   expect(pdf, isNot(contains('sum(pdfTransfers')));
   expect(pdf, isNot(contains('sum(pdfSavings')));
  });
+ test('M652 Home mixes five kinds chronologically without new money writes', () {
+  final from = app.indexOf('Widget dashboard(){');
+  final to = app.indexOf('List<MoneyEntry> get analysisEntries',from);
+  final home=app.substring(from,to);
+  expect(home,contains('future:_m652UnifiedActivities(_m467SelectedAccount)'));
+  expect(home,contains('history=<({DateTime when,Object activity})>['));
+  expect(home,contains('..sort((a,b)=>b.when.compareTo(a.when))'));
+  expect(home,contains('if(event.activity is MoneyEntry)'));
+  expect(home,contains('event.activity is WaffraInternalTransferHistory'));
+  expect(home,contains('event.activity is WaffraVerifiedGoalMovement'));
+  expect(home,contains('if(!snapshot.hasData)return Column('));
+  expect(home,contains('...shown.map(compactTransaction)'));
+  expect(home,isNot(contains('entries.add(')));
+  expect(home,isNot(contains('api.transfer(')));
+ });
+
 }
