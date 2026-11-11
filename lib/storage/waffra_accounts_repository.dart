@@ -50,7 +50,9 @@ class WaffraAccountsRepository implements WaffraAccountOperations {
 
  Future<void> _ready()async{
   if(!experimentalEnabled)throw StateError('Account release not certified for production.');
-  await WaffraAccountsSchema.requireReady(db);
+  // M637: install() already calls AccountsSchema.requireReady, then verifies
+  // its own revision, tables and foreign keys. Do not duplicate that full
+  // account schema scan on every verified balance read after biometric.
   await WaffraAccountContextSchema.install(db);
  }
  static void _id(String value){
