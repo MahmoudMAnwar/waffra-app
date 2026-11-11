@@ -14,6 +14,15 @@ abstract final class WaffraAccountContextSchema {
  ];
 
  static Future<void> install(WaffraEncryptedStore db)async{
+  // M637: an already-installed context needs full revision/table/FK
+  // validation, not an extra SQLite transaction just to read the marker.
+  // requireReady() still verifies AccountsSchema and PRAGMA foreign_key_check.
+  final existing=await db.customSelect(
+   "SELECT name FROM sqlite_master WHERE type='table' "
+   "AND name='fresh_finance_account_context_revision'").get();
+  if(existing.isNotEmpty){await requireReady(db);return;}
+  // First installation is still fail-closed and atomic. Recheck the marker
+  // *inside* the transaction because another verified owner may install it.
   await WaffraAccountsSchema.requireReady(db);
   await db.transaction(()async{
    final markers=await db.customSelect(
