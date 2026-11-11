@@ -71,7 +71,7 @@ void main(){
   expect(src,contains('WidgetsBinding.instance.addPostFrameCallback'));
   expect(src,contains('if(target<0||target>=WaffraFooterNavigation.itemCount'));
   expect(src,contains('WaffraStationaryFabAnimator()'));
-  expect(src,contains('child:ColoredBox(color:Colors.black.withValues(alpha:.30))'));
+  expect(src,contains('child:ClipRect(child:BackdropFilter('));
   expect(src,contains('WaffraSmoothConfirmationOverlay('));
  });
 
