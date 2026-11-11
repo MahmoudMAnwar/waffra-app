@@ -12,7 +12,8 @@
     "M638: explicit SMS Rescan must reconcile unconfirmed encrypted pending queue against current Android inbox, remove only missing source records, group count updates; permission/partial scan fails closed and never deletes SQLCipher ledger, confirmed hashes, exclusions or sender rule.",
     "M639 #560: Replace the Arabic and English visible SMS/notification onboarding permission screen heading and description with plain purpose-and-choice copy. Remove AI/cloud/model mentions from visible permission screen text while preserving opt-in defaults and secure OS consent behavior exactly.",
     "M640 Issue #561: Owner approved complete retirement/deletion of receipt OCR Tools section, Tesseract model downloads and dependency, receipt/bank screenshot OCR parser and hidden scan-and-create income/expense routes, obsolete OCR tests/Workflows/Gradle shim. Preserve ordinary receipt attachments, SQLCipher receipt storage, and text-only SMS source processing.",
-    "M640 #561: M416 legacy OCR release-switch test must no longer reference deleted receiptImageTransactionImport; retain all existing Saudi release currency/location/SMS assertions."
+    "M640 #561: M416 legacy OCR release-switch test must no longer reference deleted receiptImageTransactionImport; retain all existing Saudi release currency/location/SMS assertions.",
+    "M640: Update M340 finance quality gate to use retained entrySheet as the end boundary for foreign FX review, replacing deleted OCR handler marker without weakening the pre-existing FX/no-ledger-write contract."
   ],
   "allowed_changed_files": [
     ".github/workflows/android-full-smoke.yml",
@@ -58,6 +59,7 @@
     "native/WaffraMainActivity.kt",
     "pubspec.yaml",
     "scripts/qa/m287_patch_tesseract_gradle.py",
+    "scripts/qa/m340_financial_quality_gate.py",
     "scripts/qa/m385_approved_change_guard.py",
     "test/m281_practical_tools_test.dart",
     "test/m285_compact_action_widths_test.dart",
@@ -352,6 +354,12 @@
       {
         "start": " test('M416 Saudi release switches preserve Global features in source',(){",
         "end": " test('M416 old foreign display preference is preserved but not applied',()async{"
+      }
+    ],
+    "scripts/qa/m340_financial_quality_gate.py": [
+      {
+        "start": "    # Check only the actual foreign-FX preview handler, not unrelated app writes.",
+        "end": "    require(fx, \"quote.provider\", \"FX preview must display quote provider\")"
       }
     ]
   }
