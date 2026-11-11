@@ -21,7 +21,7 @@ class SkipFreeWorkflowRoutingTest(unittest.TestCase):
         self.assertNotIn("main-arm64-compile:", preflight)
         self.assertNotIn("if: github.event_name == 'push'", preflight)
 
-    def test_m174_native_compile_preserved_for_manual_diagnostics(self):
+    def test_m174_native_compile_preserved_only_for_main(self):
         # M653: signed main APK already covers ARM64; avoid duplicate
         # unsigned native builds and preserve manual troubleshooting.
         native = source("m174-main-arm64-compile.yml")
@@ -69,7 +69,7 @@ class SkipFreeWorkflowRoutingTest(unittest.TestCase):
         self.assertIn("test/m268_smart_features_ten_calendar_art_test.dart", m268)
         self.assertIn("test/storage/m201_24_route_no_false_production_proof_test.dart", m268)
 
-    def test_main_release_keeps_all_finance_and_signing_safety_gates(self):
+    def test_main_release_gates_unchanged(self):
         release = source("android.yml")
         m340 = source("m340-continuous-financial-quality.yml")
         self.assertIn("needs: [verify-all-tests, verify-same-sha-checks]", release)
