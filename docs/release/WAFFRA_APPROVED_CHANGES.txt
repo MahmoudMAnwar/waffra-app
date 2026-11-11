@@ -63,6 +63,113 @@ RELEASE AND QA TRUTH:
 - STATUS: Source+tests committed in Draft PR #580; newest exact-head GitHub CI and new signed main build results NOT YET CONFIRMED. Issue: https://github.com/MahmoudMAnwar/waffra-app/issues/582
 
 
+[CURRENT FINANCIAL ACTIVITY CHANGE REVIEW — PR #575, ISSUES #569–#574]
+- This adds M647–M652 pending transfer, five activity-card families, SMS review-rule refresh and PDF parity to the ACTIVE concise release notes, not to the archived legacy 441k history. It preserves the M645 current-only feature policy and does not restore removed OCR/AI features.
+- Conflict-resolved base includes merged main CI improvements PR #580 and previously merged PR #568; #575 remains Draft until exact-new-head tests, Android source preview and two-device validation.
+
+
+M647–M652 — 2026-11-11 — Draft PR #575 — financial activity and SMS rule refresh
+Issues: #569, #570, #571, #572, #573, #574.
+- Replaced the fixed 70%-height internal transfer history with compact verified source/destination account cards, amount, date and note; transfer details remain read-only, not income/expense.
+- Added a blue, account-scoped verified internal transfer Home activity section, sourced directly from two-sided SQLCipher transfer records; no fake MoneyEntry rows or duplicate balance changes.
+- Added gold linked goal savings fund/release cards sourced from verified goal-wallet movement + source-account joins; goal creation without actual funding never creates a fictional bank movement.
+- Marked already-settled recurring and goal-due MoneyEntry cards violet with "استحقاق مدفوع"; the card is a visual facet of one posting, not a second debit.
+- Following durable senderless income/expense and transfer-rule learning, existing debounced SMS review refresh reclassifies pending messages on a background isolate; no full Android history scan is initiated by these learning hooks. Other existing reviewed SMS/exclusion refresh paths stay intact.
+- Extended the finance Home PDF export with verified blue transfer and gold savings movement sections, violet settled-dues presentation, relevant filtering, and independent income/expense totals that exclude internal transfers and savings.
+- Added test/m647_m652_financial_activity_regression_test.dart to assert source-bound read-only movement types, SMS refresh boundaries, paid-due presentation, transfer UX, and PDF type/color separation. Updated M385 exact bounded scopes and M550 behavior contract before shipping.
+- Status: SOURCE IMPLEMENTATION COMMITTED / QA PENDING. Source-level structure checks passed in assistant review; Flutter analyzer, automated Flutter/SQLCipher suites, GitHub exact-head CI, PDF actual rendering and real Android-device smoke have NOT been confirmed passing. Do not mark Done, merge or produce APK from this branch. Main-only release APK policy remains unchanged.
+
+
+[M647-M652 — TRANSFER ACTIVITY, TRACEABLE GOAL SAVINGS, PAID DUES, SMS RULE REFRESH AND PDF — ISSUES #569-#574 / DRAFT PR #575 — 2026-11-11]
+- Registered six permanent numbered requirements and Issues #569/#570/#571/#572/#573/#574 before source implementation; one Draft PR #575 tracks all six with dedicated acceptance specification, bounded M385 scope and M550 behavioral/QA contract.
+- M647: replaced forced-height transfer history display with compact blue verified from-account/to-account, dated amount and note cards, plus a focused transfer detail view. Account names come from verified money-account identities, not inferred bank sender aliases.
+- M648: Home «عملياتك المالية» can display verified two-sided internal transfers as blue records and filter by transfer kind/account. A transfer is read from the owner-scoped SQLCipher transfer journal; it does not create an additional income/expense MoneyEntry or modify balances on display.
+- M649: separately reads account-linked goal-wallet fund/release movements from the encrypted goal and source journals and presents gold cards showing goal, originating money account, date, amount and direction. Goal creation without an actual movement does not create a financial card.
+- M650: already-posted recurring/goal-due MoneyEntry rows are distinguishable as violet «استحقاق مدفوع» in Home; rendering cannot settle or charge a due. Existing exactly-once settlement remains the authoritative writer.
+- M651: the successfully persisted local transfer and income/expense category-rule learners now trigger the existing debounced, background-isolate pending SMS review refresh, without a full Android history import or automatic ledger posting. Existing session/owner checks and explicit review remain in force. No claim of per-message versioned incremental optimization or measured Android performance is made.
+- M652: Home/PDF use green income, red expense, blue transfers, gold savings, violet paid due. Transfer and saving rows are separate verified PDF sections with account provenance; income and expense totals remain derived only from MoneyEntry rows. Report filters can export transfer-only or savings-only movements.
+- QA: new dedicated source-safety regression and existing encrypted finance/goal/SMS suites must pass at the actual PR HEAD. M385/M550 contract is tracked; current PR CI is not yet fully green. Real Android device UX, scrolling/performance, RTL and PDF readability have not yet been signed off. No merged main change or branch APK claimed.
+
+
+## M652 PDF row palette regression repair — PR #575 (2026-11-11)
+- Preserve the original explicit `PdfColor.fromInt(e.income?waffraIncomeBackground.toARGB32():waffraExpenseBackground.toARGB32())` row-color selection for real income and expense entries; render only confirmed recurring/goal-due rows violet using a separate branch. The existing Waffra October PDF exact-palette test remains enabled and its intended behavior is not weakened.
+- Source fix commit `a618c6a42a709ea0773b2efc721859eb9fca1c1e`. No new finance ledger posting; internal transfer blue and linked savings gold PDF sections continue using owner-verified journal reads.
+- QA status: fix committed, latest-head exact Flutter/SQLCipher/PDF/Android CI still requires independent verification; PR #575 stays Draft and APK only from main after merging and real-device checks.
+
+
+M647–M652 CI reconciliation checkpoint — PR #575, 2026-11-11
+- Historical test/waffra_oct21_regression_test.dart contained an exact 2-color PDF source string expectation. New owner-approved paid-due violet rows intentionally change that string. CI run 43075376491 failed in this one legacy PDF test while its other 14 cases and legacy write queue tests passed.
+- Only that one obsolete test block now positively asserts retained green income, red expense and a violet paid recurring/goal_due branch; no unrelated assertions removed. M385 protected sections explicitly bounded; M550 contracts updated.
+- Permanent docs/WAFFRA_REQUIREMENTS.md now records M647–M652 as Partial, not Done. Tests and real Android PDF/ledger validation remain necessary; do not merge or claim fully passing until latest exact-head checks and device QA.
+
+
+M648 M550 source-contract reconciliation — 2026-11-11 — Draft PR #575
+- Exact-head M550/M147 reported stale test/m296_monthly_budget_and_transactions_test.dart positive assertion expecting only `if(waffraCanExpandDashboardTransactions(visible.length))`. This predated the user-requested verified transfer and savings Show more extension.
+- Replaced only that now-obsolete exact-string assertion with positive validation that the original 10-entry list count policy is retained and the verified transfer/goal activity filters are included. All monthly budget and remaining count tests retained.
+- Added one M385 bounded test block and updated M550 behavior source/test relation before modification. No financial writer, user login, unrelated workflow or platform code changed.
+- CI/Flutter/Android proof remains pending for latest SHA; no merge or APK from Draft branch.
+
+
+M647/M649/M652 provenance labels — PR #575, 2026-11-11
+- Verified account display now uses the account's recorded provider ID to resolve the Arabic/English Saudi institution name and the user's actual child-account label; no SMS sender text is promoted into bank identity. Transfer cards, savings funding cards, and PDF provenance columns use the same verified display helper. Unknown/archived account labels remain explicitly unavailable, not guessed.
+- M296 monthly/transaction display regression was narrowly reconciled to approved transfer and savings Show-more behavior; ten-entry count logic remains intact. Existing old tests were not deleted and CI gates were not skipped.
+- App/source and scoped QA changes committed on Draft PR #575; this release note is deliberately after the latest app-source edit to satisfy M449. Current-head CI, physical Android appearance, PDF output and financial integrity still require verification. No branch APK or merge authorized.
+
+
+[M647–M652 — FOLLOW-UP EXACT APP CODE AND M449 ANCESTRY FIX — PR #575 — 2026-11-11]
+- This factual addendum follows the latest M647–M652 app changes. M449 on earlier exact-head d712d63c correctly failed because the latest lib/main.dart source at 57aff930 came after the previous release notes; the ancestry gate was NOT weakened, disabled or skipped.
+- Additional source behavior: the Home activity timeline now combines existing MoneyEntry, verified two-sided transfers, and account-linked goal-wallet funding/release events, ordered by the same real transaction date. The first frame still renders existing verified income/expense rows while cached encrypted journal reads complete asynchronously; no card writes a financial entry.
+- Account labels in Home transfer, goal savings and exported PDF now use the verified account's stored Saudi providerId (when available) and child account name, never using display-only institution metadata to authorize a posting. Unknown legacy provider remains unguessed.
+- Existing M296 expand-count source regression was minimally updated to preserve its original 10-item preview and Show more/less assertions while acknowledging new types. Existing October 21 PDF test keeps green income and red expense checks and positively tests violet settled dues. Both test modifications are bounded by M385.
+- PDF contains distinct blue transfer and gold savings tables, plus original green/red and violet paid-due transaction rows. Bank-to-bank/goal-wallet principal is NOT added into income, expense, budget or cash summaries by a presentation-only operation.
+- **Not a release attestation:** PR #575 stays Draft. Latest source SHA exact-head Flutter, SQLCipher, full CI, Android screen/performance and PDF QA remain to be independently checked before any Done status or merge. APK builds only from main.
+
+
+[M651 — SENDER-SPECIFIC CONFIRMED RULE INSTANT REVIEW INVALIDATION — PR #575 — 2026-11-11]
+- Existing safe SMS learning from confirmed sender-specific bank income/expense, two-account transfer, and explicit exclusion previously persisted the new rule but did not itself schedule the pending-message review refresh. After the **successful awaited** local rule store.write, that same method now calls the established 900ms-coalesced _receiveAutoSmsNotice(), so already-pending queue predictions are recomputed with the newest local rules without a manual Android history reimport.
+- No extra balance or transaction writes, no auto-post, no sender-wide exclusion consent bypass, and no synchronous Home reclassification. Added an M651 regression that checks invocation order and absence of finance writers/full native-history scans. Main source change is included in explicit M385 bounded approved scope.
+- Draft PR #575: implementation committed, exact current-head Flutter/SQLCipher/Android checks and physical device/large pending queue acceptance pending; no declaration of completed release or successful merge.
+
+
+[M648 — SELECTED-ACCOUNT TRANSFER DIRECTION — PR #575 — 2026-11-11]
+- Verified internal transfers now show the account-relative cash direction for either account when filtered: a minus sign and «صادر من الحساب المحدد» for the source account, or a plus sign and «وارد إلى الحساب المحدد» for the destination account. In All Accounts the same single transfer stays unsigned and does not alter income/expense totals.
+- The amount is scaled down on narrow devices rather than overflowing the transfer card; the existing verified from/to bank names and principal are preserved. No finance posting or balance calculation was introduced by this presentation change.
+- Added a focused M648 regression asserting signed direction, labels and no finance commit. This note follows app-source commit 01b8e20b. Exact latest-head CI and physical Android checks are still pending; not yet ready to merge.
+
+
+[M650 — PAID DUE ACCOUNT PROVENANCE IN HOME — PR #575 — 2026-11-11]
+- The violet already-paid recurring or linked-goal due card now displays the actually linked financial account by using the existing read-only, verified SQLCipher entry-to-account source lookup (readExistingEntryAccount), not guessing based on a recurring title, SMS sender, or a mutable selected Home display filter. A wallet-funded goal due explicitly identifies the savings wallet and its actual wallet-paid portion.
+- Read-only futures are cached by posted entry ID and rendered only after verified Home accounts are available; no blocking first-frame account read, new due settlement or duplicate debit. Unknown and archived account identities remain labeled as unverified. Refresh invalidates only presentation cache.
+- Added a narrowly scoped M650 source regression proving verified lookup, goal-wallet portion, and absence of a second financial writer. Exact-current-head Flutter/SQLCipher/Android QA and real-device UX remain pending; PR #575 is Draft, unmerged, and no branch APK is authorized.
+
+
+[M650 — PAID GOAL-WALLET PRIVACY MASK PARITY — PR #575 — 2026-11-11]
+- The already-paid linked-goal card's saved-wallet contribution now uses the standard WaffraCurrencyAmount visibility-aware component rather than direct cash(...) text, ensuring the existing Home eye toggle hides this amount too. The underlying SQLCipher data is unchanged and no new debit/writer is added.
+- Extended M650 regression to assert the visibility-aware widget and reject a plaintext interpolated cash amount on the card. Exact-current-head CI/Android UX remains unverified until those checks complete. PR #575 remains Draft and no APK from branch.
+
+
+[M611 — VERIFIED TRANSFER READ-CHAIN REGRESSION REPAIR — PR #575 — 2026-11-11]
+- Exact-head 33316ee8 failed the same single M611 assertion in Waffra Full Offline Finance and UI Regression and M282 Combined QA (2,640 tests passed, one failed). The assertion assumed the UI handler directly invoked readInternalTransferHistory; the approved M647/M648 refactor now delegates UI -> _m647ShowInternalTransfers -> cached _m648HomeTransfers -> WaffraVerifiedAccountsApi.readInternalTransferHistory -> witnessed SQLCipher account context.
+- The original M611 final test was narrowly updated, NOT removed or skipped, to positively verify delegation, the verified finance bridge, the all-accounts versus selected-account filter, fail-closed missing source, read-only behavior, SQLCipher journal query and owner witness.
+- M385 exact changed-file/bounded-section scope now includes this sole existing M611 transfer history test, linked to approved #570; M550 original M611 behavior contract and all finance invariants remain unchanged.
+- This note follows implementation/test commit daff1f5f and scoped manifest commit 7bb90b2c; no production finance code was altered in this repair. Exact new HEAD CI and real Android QA are not yet confirmed. Draft PR #575 remains unmerged; APK builds remain main-only.
+
+[M647–M652 INTEGRATION AFTER PR #580]
+- Previous long history stays in archived release notes. Current release note retains only current functionality and the #575 changes. Build signed APK from main only, after latest SHA CI and source/finance tests. Existing green 43/43 applies to old PR head before this merge; it is not an approval of this integration commit.
+
+[M647–M652 FINAL SOURCE NOTES ANCESTRY FOLLOW-UP — PR #575, 2026-11-11]
+- Source integration commit 20209d0e526bee65d1452c72c97e9948e6b64f67 has both parents: validated M647–M652 financial activity PR head and merged main #580 CI JDK21/current-only notes. This subsequent note commit records the integrated source SHA AFTER the code and test changes to satisfy M449 freshness; it does not assert a new physical-device approval.
+- Current release notes remain concise; the pre-M645 legacy history remains archived, and no eliminated feature is reinstated. M653/M654 Android CI improvements and M647–M652 card/SMS/PDF tests coexist; only main may produce a signed QA APK.
+- New integrated PR HEAD CI must be green before marking PR #575 Ready or merging. Prior 43 green workflows prove ONLY the previous #575 source SHA.
+
+
+[M656 — M429/M417 Flutter 3.50 INFO ANALYZER COMPATIBILITY, ISSUE #583, PR #575]
+- Exact source integration SHA d9fbe1f3 failed ONLY two legacy analyzer steps: M429 run 43094172937 and M417 run 43094173032, where Flutter stable produced only 6/4 info-level deprecated_member_use diagnostics for material.dart/localization imports. Their SMS/finance/native tests did not report business failures.
+- After Issue #583 and permanent requirements documentation, M656 source/QA commit ad16cb46fa8e5e8d87e54e293c963e939cbc87f7 changed precisely the two original analyzer commands to `flutter analyze --no-fatal-infos`; all original nine selected source paths remain analyzed in each job. Errors and warnings are STILL FATAL; full tests, M385 exact file guard and App Check remain unchanged.
+- New `test/qa/m656_flutter_analyzer_info_gate_test.py` verifies analyzer warnings/error strictness, original paths, SMS/phone/biometric, worker and M385 contract; both changed workflows are narrowly allowed in M385 and documented in M550.
+- Current M647–M652 release note stays concise; original historical notes remain archived and Android signed artifacts remain main-only.
+- Status: implementation committed; full exact-new-head PR #575 CI must pass before Ready or merge. Physical two-phone user QA remains separate. Issue https://github.com/MahmoudMAnwar/waffra-app/issues/583.
+
 [M658 — MAIN APK/AAB SIGNED ARTIFACT PUBLICATION BOTTLENECK, ISSUE #585, 2026-11-11]
 - First signed main after PR #580 on exact SHA 98dee202 (run #43093248678) did NOT deliver the predicted 14–16m: the owner observed more than 21 minutes. The full Flutter/Python suite, exact SHA M174/M449, both signed builds, APK/AAB signatures and receipts were green, but both upload-artifact@v4 steps stalled and subsequently displayed failure, with no published artifact available at the time of evidence collection.
 - Source analysis: both uploads used default gzip 6 on already compressed APK/AAB binaries; GitHub documents compression-level: 0 as faster for large incompressible files. This is a proven configuration inefficiency, NOT proof of the remote artifact service error cause (job logs unavailable after tool timeout).
@@ -76,3 +183,9 @@ RELEASE AND QA TRUTH:
 - Add .github/workflows/m659-pr-signed-artifact-qa.yml: independent exact-PR-head jobs cover M658 APK/AAB upload/receipt/timeout safety plus existing M381/M382/M383/M449 source contracts and M385 exact-PR change boundaries. A terminal always-running job must fail if either required job failed, was skipped, or was cancelled. New test/qa/m659_pr_signed_artifact_jobs_test.py asserts this no-skip source contract.
 - Preserve original main-only signed APK and AAB jobs; PR jobs do NOT compile, sign, or publish binaries, and do not duplicate full Flutter/Gradle builds. Pre-existing full Flutter/finance/SQLCipher/M550 checks remain independently required.
 - Status: source workflow and regression committed to Draft PR #586; latest exact-head GitHub Actions success NOT confirmed at this writing. Neither real main APK/AAB artifact delivery nor upload-latency reduction is proved by this new source-only QA. Issue: https://github.com/MahmoudMAnwar/waffra-app/issues/587
+
+
+[M647–M652 INTEGRATION WITH MERGED #586 — PR #575 EXACT ANCESTRY, 2026-11-12]
+- Two-parent integration source commit `f703c8de68da104e97d28b31e17237209c8229aa` contains the existing M647–M652 activity-card, local SMS rule refresh and PDF changes plus the main #586 signed artifact upload hardening (main SHA `9534017873030dea17d807b5380ab5203392265a`). No app logic or finance posting behavior was changed solely by this integration step.
+- The merge retained main's M658 two signed APK/AAB upload optimizations, M659 independent PR source QA jobs and both issue/behavior contracts alongside original #575 features and M656 strict-warning analyzer compatibility. All shared requirements and release source metadata were reconciled, no test erased or workflow marked skipped.
+- This M449 note follows the integrated source commit and does not claim latest-head CI green, Android handset acceptance, downloadable build artifacts or measured speedup. The final exact head must pass M385/M550/Flutter/finance/Android checks before any merge. Issues: #569–#574, #583, #585 and #587.

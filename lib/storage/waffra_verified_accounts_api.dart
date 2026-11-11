@@ -30,6 +30,12 @@ class WaffraVerifiedAccountsApi implements WaffraAccountOperations {
  })=>bridge.readVerifiedAccountMetadata((context)=>
   context.readInternalTransferHistory(accountId:accountId,limit:limit));
 
+ /// M649: owner/vault-scoped read-only linked savings wallet provenance.
+ Future<List<WaffraVerifiedGoalMovement>> readGoalAccountMovementHistory({
+  String? accountId,int limit=500,
+ })=>bridge.readVerifiedAccountMetadata((context)=>
+  context.readGoalAccountMovementHistory(accountId:accountId,limit:limit));
+
  /// A witnessed, bounded read for existing entry Edit. Missing SQLCipher
  /// entries must never be misrepresented as safely migrated legacy data.
  Future<({bool exists,String? accountId})> readExistingEntryAccount({

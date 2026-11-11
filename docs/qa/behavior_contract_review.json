@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
-  "pr": "M658 fast signed main QA artifact uploads in separate Draft PR after #580",
-  "issue": "Issue #585 M658 signed main artifact upload latency; Issue #587 M659 PR-specific CI jobs",
+  "pr": "PR #575 rebased via 2-parent merge on merged #586 main; preserves M647–M652 + M656 source behavior and M658/M659 CI contracts",
+  "issue": "Issues #569–#574 plus previously merged #566/#567/#576, #579 and #582; Issue #583 M656; Issues #585/#587 (M658/M659 merged main before PR #575)",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main",
   "reviewed_at": "2026-11-11",
-  "review_policy": "Review changed behavior against all GitHub Actions workflow scripts, all Dart and Python QA test files, and the original tests' protected security assertions; never edit tests merely to silence red jobs.",
+  "review_policy": "Review changed behavior against all GitHub Actions workflow scripts, all Dart and Python QA test files, and the original tests' protected security assertions; never edit tests merely to silence red jobs. PR #575 merge with main preserves every M645/M646/M647/M653/M654 contract; original PR-specific positive finance tests and approved fallback/owner-authority remain in effect.",
   "contracts": [
     {
       "id": "M601-AUTH-PENDING-BUTTON-AND-VERIFIER-LATENCY",
@@ -1457,6 +1457,63 @@
         "Never skip Gradle Android Lint, suppress lintVitalAnalyzeRelease, or hide an actual compile error behind continue-on-error/retry.",
         "Actual native APK compiler with verified ARM64 ELF and source identity remains; signed main APK/AAB retain SHA-bound signing and all finance, SQLCipher, Android tests.",
         "All edited workflows must select Temurin21 and positively check runtime before compilation; new M654 tests fail on JDK17 regression. Mark Done only after fresh exact-head M147 and signed main Android QA, not on docs alone."
+      ]
+    },
+    {
+      "id": "M647-M652-TRANSFER-ACTIVITY-AND-RULE-REFRESH",
+      "issue": "Issues #569–#574 (2026-11-11)",
+      "previous_behavior": "History transfer sheet occupied fixed 70% height without clear source and destination; Home timeline ignored verified transfers and did not distinguish posted recurring dues. Rule learning updated storage, but no versioned pending queue refresh was scheduled after durable confirmation.",
+      "approved_behavior": "Display bilingual transfer source and destination in compact content-sized cards with a blue palette, show one verified transfer event in Home without changing income or expense totals, present confirmed due entries with violet visual category but no separate debit, schedule nonblocking existing pending SMS classifier refresh on learned rule commit, preserve notification counters and explicit review-only approval. Add linked gold goal-wallet source movement read-only cards and include verified transfers and goal movements in relevant home transaction PDF with matching colors and account filter. The legacy PDF color test is updated to assert the existing emerald/red constants still apply to ordinary income/expense and the new paid-due violet branch applies only to an actually saved recurring/goal_due MoneyEntry. Correct a preexisting PDF test that expected income/expense-only row coloring; now explicitly assert the violet paid-due branch while retaining all green/red and RTL/amount currency tests. M296 preview count remains 10 for standard income/expense but the Home Show more CTA must also account for SQLCipher-backed transfers and savings under the selected new activity filter; only the old exact one-argument source assertion is superseded. Home expansion CTA includes verified transfer and savings activity even when ordinary income/expense rows are fewer than eleven; M296 original numerical limits for MoneyEntry-only tables remain unchanged.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/storage/waffra_account_context_repository.dart",
+        "lib/storage/waffra_verified_accounts_api.dart"
+      ],
+      "test_paths": [
+        "test/m647_m652_financial_activity_regression_test.dart",
+        "test/waffra_oct21_regression_test.dart",
+        "test/m296_monthly_budget_and_transactions_test.dart",
+        "test/m296_monthly_budget_and_transactions_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Internal transfers read the verified two-sided SQLCipher transfer journal, never inferred as a MoneyEntry expense.",
+        "Due cards are presentation-only for already confirmed entries; no new expense posted by rendering.",
+        "A local rule is refreshed only after durable save; pending SMS suggestions are never auto-posted.",
+        "Do not start full SMS history scan during an income/expense commit or delay the first Home frame.",
+        "Retain account and owner scoped session cancellation and notify users of failed verified reads.",
+        "Goal source journal reads must not debit the bank again or duplicate expense/budget postings.",
+        "PDF sections must not add internal transfers and savings funding to income/expense totals.",
+        "M296 budget limits and 0–10/11-plus pagination tests are preserved; only one obsolete exact source assertion is widened to the approved activity types."
+      ]
+    },
+    {
+      "id": "M656-M429-M417-FLUTTER-INFO-NONFATAL-STRICT-ERRORS",
+      "issue": "Issue #583 — exact PR #575 head M429/M417 analyzer info-only deprecation false reds",
+      "previous_behavior": "Two independent Flutter analyze invocations in M429 SMS/phone/biometric and M417 SMS-source UI failed return code 1 only on deprecation info from Flutter stable v3.50 for material.dart/localizations; no errors or warnings. Main exhaustive test already treats infos as non-fatal. All other SMS/finance/native compile jobs passed.",
+      "approved_behavior": "Only add --no-fatal-infos before their original nine explicit source arguments; full original Flutter tests remain, all Dart analyzer warning/error diagnostics still fail, M385 exact-source boundary still runs; no --no-fatal-warnings, no continue-on-error or || true. Preserve app code, production security and signed source identity.",
+      "source_paths": [
+        ".github/workflows/m429-integration-smoke.yml",
+        ".github/workflows/m417-auto-bank-sms.yml"
+      ],
+      "test_paths": [
+        "test/qa/m656_flutter_analyzer_info_gate_test.py"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m429-integration-smoke.yml",
+        ".github/workflows/m417-auto-bank-sms.yml",
+        ".github/workflows/m174-main-sha-postmerge.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "Every original Dart file stays analyzed and every original SMS/biometrics/cloud/finance test stays required.",
+        "Analyzer warnings/errors are fatal; only SDK info warnings are non-fatal. No global source deprecation suppression or disabling of analysis.",
+        "M385 guard and exact SHA full CI must succeed before merging PR #575; no untested app behavior claims."
       ]
     },
     {
