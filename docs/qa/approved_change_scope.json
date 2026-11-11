@@ -1,15 +1,18 @@
 {
   "contract_version": 1,
-  "change_id": "M648-20261111-M647-UNITTEST-DISCOVERY-HOTFIX",
-  "human_scope_review": "Owner requested successful M160 verification, merge #568, and actual M647 cleanup of old main Failed/Skipped/Cancelled runs. On trusted main run #43083569171 the M647 job's unittest path invocation failed import with ModuleNotFoundError before deletion. Issue #577 and Draft PR #578 scoped narrowly to one Python unittest discovery command plus corresponding negative regression and permanent requirements; no modification to cleanup deletion policy, permission, triggering, artifacts, 48h age, bounded 250 limit, M449/M550 or finance/Android gates.",
+  "change_id": "M648-M649-20261111-M647-UNITTEST-DISCOVERY-M147-LINT-JDK21",
+  "human_scope_review": "Owner requested successful M160 verification, merge #568, and actual M647 cleanup of old main Failed/Skipped/Cancelled runs. On trusted main run #43083569171 the M647 job's unittest path invocation failed import with ModuleNotFoundError before deletion. Issue #577 and Draft PR #578 scoped narrowly to one Python unittest discovery command plus corresponding negative regression and permanent requirements; no modification to cleanup deletion policy, permission, triggering, artifacts, 48h age, bounded 250 limit, M449/M550 or finance/Android gates. M649 Issue #581, same PR #578: M147 Android Lint's JavaDocParser crashes with NoSuchMethodError List.removeLast in JDK17, independently of application code. Only that M147 ARM64 compilation job's Temurin runtime changes to Java 21, preserving mandatory Lint and release compile, plus a dedicated source-contract test.",
   "user_requested_changes": [
-    "M648 Issue #577 PR #578: Repair M647 test discovery on trusted main after #568 merge; use python3 -m unittest discover -s test/qa -p m647_main_history_prune_test.py -v instead of Python path-as-module; fail closed until negative tests pass and report real deleted counts."
+    "M648 Issue #577 PR #578: Repair M647 test discovery on trusted main after #568 merge; use python3 -m unittest discover -s test/qa -p m647_main_history_prune_test.py -v instead of Python path-as-module; fail closed until negative tests pass and report real deleted counts.",
+    "M649 Issue #581 PR #578: After M147 ARM64 build twice crashed in upstream Lint (List.removeLast missing from JDK17), change only the M147 build CI Temurin runtime to JDK21; retain lint, Gradle, Flutter, SQLCipher and failure guards; add source contract test."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     ".github/workflows/m647-main-history-prune.yml",
-    "test/qa/m647_main_history_prune_test.py"
+    "test/qa/m647_main_history_prune_test.py",
+    ".github/workflows/m147-final-main-review-gate.yml",
+    "test/qa/m649_m147_android_lint_jdk_runtime_test.py"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
@@ -24,6 +27,12 @@
       {
         "start": "    def test_workflow_only_runs_after_main_merge_and_never_on_pr(self):\n",
         "end": "if __name__ == \"__main__\":\n"
+      }
+    ],
+    ".github/workflows/m147-final-main-review-gate.yml": [
+      {
+        "start": "  android-arm64-compilation:\n",
+        "end": "      - name: Set up Flutter SDK\n"
       }
     ]
   }
