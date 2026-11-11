@@ -10730,11 +10730,67 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   out.write('</svg>');
   return out.toString();
  }
- Future<void> exportEntriesPdf(List<MoneyEntry> items,String title,{bool analytics=false})async {
-  if(items.isEmpty){
+ Future<void> exportEntriesPdf(List<MoneyEntry> items,String title,{
+  bool analytics=false,String? activityFilter,
+ })async {
+  // M652: never fabricate transfers or savings by recoding income/expenses.
+  // Read the *same* owner-scoped SQLCipher account journals as Home.
+  var pdfTransfers=<WaffraInternalTransferHistory>[];
+  var pdfSavings=<WaffraVerifiedGoalMovement>[];
+  if(!analytics && _m468VerifiedAccountsLoaded){
+   final wantsTransfers=activityFilter==null||
+    activityFilter=='الكل'||activityFilter=='التحويلات';
+   final wantsSavings=activityFilter==null||
+    activityFilter=='الكل'||activityFilter=='الادخار';
+   if(wantsTransfers||wantsSavings){
+    try{
+     final account=_m467SelectedAccount;
+     if(wantsTransfers){
+      pdfTransfers=await _m648HomeTransfers(account);
+     }
+     if(wantsSavings){
+      pdfSavings=await _m649HomeSavings(account);
+     }
+     if(activityFilter!=null){
+      bool keep(DateTime? date,int amountMinor,List<String> terms){
+       final q=search.trim();
+       return waffraSearchAny(terms,q)&&
+        (transactionsDateRange==null||date==null||
+         (!date.isBefore(transactionsDateRange!.start)&&
+          date.isBefore(transactionsDateRange!.end.add(
+           const Duration(days:1)))))&&
+        (minTransactionAmount==null||
+         amountMinor>=minTransactionAmount!*100)&&
+        (maxTransactionAmount==null||
+         amountMinor<=maxTransactionAmount!*100);
+      }
+      final names={for(final a in _m467Accounts)a.id:a.name};
+      pdfTransfers=pdfTransfers.where((t)=>keep(
+       DateTime.tryParse(t.occurredIso),t.amountMinor,[
+        names[t.fromAccountId]??'',names[t.toAccountId]??'',
+        t.note,waffraIsEnglish?'Transfer':'تحويل',
+       ])).toList(growable:false);
+      pdfSavings=pdfSavings.where((m)=>keep(
+       DateTime.tryParse(m.occurredIso),m.amountMinor,[
+        m.goalName,m.kind,waffraIsEnglish?'Savings':'ادخار',
+       ])).toList(growable:false);
+     }
+    }catch(error){
+     debugPrint('M652 verified activity PDF read rejected: ${error.runtimeType}');
+     if(mounted)snack(context,waffraIsEnglish?
+      'Could not verify transfers or savings for PDF export. Retry.':
+      'تعذر التحقق من التحويلات أو الادخار قبل تصدير التقرير.',
+      isError:true);
+     return;
+    }
+   }
+  }
+  if(items.isEmpty&&pdfTransfers.isEmpty&&pdfSavings.isEmpty){
    if(mounted)snack(context,analytics
-    ?(waffraIsEnglish?'Cannot export the analytics report. Add an income or expense transaction first.':'لا يمكن تصدير تقرير التحليلات. أضف عملية دخل أو مصروف أولاً.')
-    :(waffraIsEnglish?'Cannot export the report. Add an income or expense transaction first.':'لا يمكن تصدير التقرير. يجب إضافة عملية دخل أو مصروف أولاً.'));
+    ?(waffraIsEnglish?'Cannot export empty analytics.':
+       'لا يمكن تصدير تحليلات بدون عمليات مالية.'):
+     (waffraIsEnglish?'No verified transactions to export.':
+       'لا توجد عمليات مالية موثقة لتصديرها.'));
    return;
   }
   bool exportDialogOpen=false;
@@ -10909,7 +10965,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    pw.Widget heading(String ar,String en)=>pw.Padding(
     padding:const pw.EdgeInsets.only(bottom:10),
     child:pw.Text(english?en:ar,style:pw.TextStyle(font:bold,fontSize:15,color:PdfColors.teal900)));
-   if(!analytics){
+   if(!analytics&&items.isNotEmpty){
     final ordered=items.toList()..sort((a,b)=>b.date.compareTo(a.date));
     final descriptions=<(pw.MemoryImage,double)>[];
     for(final e in ordered){descriptions.add(await pdfDescriptionArtwork(e.title));}
