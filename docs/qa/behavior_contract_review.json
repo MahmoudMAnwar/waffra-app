@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "pr": "PR #575 M647–M652 financial activity reconciled against merged #568/#580 main",
-  "issue": "Issues #569–#574 plus previously merged #566/#567/#576, #579 and #582",
+  "pr": "PR #575 M647–M652 activity with M656 analyzer compatibility against merged #580 main",
+  "issue": "Issues #569–#574 plus previously merged #566/#567/#576, #579 and #582; Issue #583 M656",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main",
   "reviewed_at": "2026-11-11",
@@ -1489,6 +1489,31 @@
         "Goal source journal reads must not debit the bank again or duplicate expense/budget postings.",
         "PDF sections must not add internal transfers and savings funding to income/expense totals.",
         "M296 budget limits and 0–10/11-plus pagination tests are preserved; only one obsolete exact source assertion is widened to the approved activity types."
+      ]
+    },
+    {
+      "id": "M656-M429-M417-FLUTTER-INFO-NONFATAL-STRICT-ERRORS",
+      "issue": "Issue #583 — exact PR #575 head M429/M417 analyzer info-only deprecation false reds",
+      "previous_behavior": "Two independent Flutter analyze invocations in M429 SMS/phone/biometric and M417 SMS-source UI failed return code 1 only on deprecation info from Flutter stable v3.50 for material.dart/localizations; no errors or warnings. Main exhaustive test already treats infos as non-fatal. All other SMS/finance/native compile jobs passed.",
+      "approved_behavior": "Only add --no-fatal-infos before their original nine explicit source arguments; full original Flutter tests remain, all Dart analyzer warning/error diagnostics still fail, M385 exact-source boundary still runs; no --no-fatal-warnings, no continue-on-error or || true. Preserve app code, production security and signed source identity.",
+      "source_paths": [
+        ".github/workflows/m429-integration-smoke.yml",
+        ".github/workflows/m417-auto-bank-sms.yml"
+      ],
+      "test_paths": [
+        "test/qa/m656_flutter_analyzer_info_gate_test.py"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m429-integration-smoke.yml",
+        ".github/workflows/m417-auto-bank-sms.yml",
+        ".github/workflows/m174-main-sha-postmerge.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "Every original Dart file stays analyzed and every original SMS/biometrics/cloud/finance test stays required.",
+        "Analyzer warnings/errors are fatal; only SDK info warnings are non-fatal. No global source deprecation suppression or disabling of analysis.",
+        "M385 guard and exact SHA full CI must succeed before merging PR #575; no untested app behavior claims."
       ]
     }
   ]

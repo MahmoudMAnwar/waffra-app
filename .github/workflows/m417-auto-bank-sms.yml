@@ -78,7 +78,7 @@ jobs:
         with:
           github-token: ${{ github.token }}
       - run: flutter pub get
-      - run: flutter analyze lib/main.dart lib/waffra_auto_sms.dart lib/waffra_auto_sms_policy.dart lib/waffra_auto_sms_consent.dart lib/waffra_messages.dart lib/waffra_bank_sms_facts.dart lib/waffra_sms_cloud_service.dart lib/waffra_sms_cloud_redactor.dart lib/waffra_cloudflare_sms_gateway.dart
+      - run: flutter analyze --no-fatal-infos lib/main.dart lib/waffra_auto_sms.dart lib/waffra_auto_sms_policy.dart lib/waffra_auto_sms_consent.dart lib/waffra_messages.dart lib/waffra_bank_sms_facts.dart lib/waffra_sms_cloud_service.dart lib/waffra_sms_cloud_redactor.dart lib/waffra_cloudflare_sms_gateway.dart
       - name: Test foreground opt-in and strict income/expense decision matrix
         run: flutter test --reporter expanded test/m417_sms_first_run_test.dart test/waffra_auto_sms_policy_test.dart test/waffra_bank_sms_facts_test.dart test/waffra_sms_cloud_redactor_test.dart test/m423_cloudflare_sms_gateway_test.dart
 
