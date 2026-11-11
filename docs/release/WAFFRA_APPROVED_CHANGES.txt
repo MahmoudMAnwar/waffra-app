@@ -156,3 +156,8 @@ M647/M649/M652 provenance labels — PR #575, 2026-11-11
 
 [M647–M652 INTEGRATION AFTER PR #580]
 - Previous long history stays in archived release notes. Current release note retains only current functionality and the #575 changes. Build signed APK from main only, after latest SHA CI and source/finance tests. Existing green 43/43 applies to old PR head before this merge; it is not an approval of this integration commit.
+
+[M647–M652 FINAL SOURCE NOTES ANCESTRY FOLLOW-UP — PR #575, 2026-11-11]
+- Source integration commit 20209d0e526bee65d1452c72c97e9948e6b64f67 has both parents: validated M647–M652 financial activity PR head and merged main #580 CI JDK21/current-only notes. This subsequent note commit records the integrated source SHA AFTER the code and test changes to satisfy M449 freshness; it does not assert a new physical-device approval.
+- Current release notes remain concise; the pre-M645 legacy history remains archived, and no eliminated feature is reinstated. M653/M654 Android CI improvements and M647–M652 card/SMS/PDF tests coexist; only main may produce a signed QA APK.
+- New integrated PR HEAD CI must be green before marking PR #575 Ready or merging. Prior 43 green workflows prove ONLY the previous #575 source SHA.
