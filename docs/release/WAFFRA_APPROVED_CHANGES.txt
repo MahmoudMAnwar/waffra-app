@@ -3439,3 +3439,5 @@ passed; changed-source analysis clean; M550 contract preflight passed.
 - Exact scoped change registered under M385 and original Issue #561; full Flutter/Android CI and physical smoke must still run on exact PR head. Main-only APK and no automatic PR merge remain mandatory.
 
 - M640 follow-up review: the last OCR-era `scannedIncome` argument in the independent/manual transfer decision was renamed to `manualIncomeOverride` without changing the owner-selected income/expense behavior. Negative M640 regression rejects the old argument name; ordinary manual and verified SMS entry remains functional. Source and exact-head CI still require approval.
+
+- M640 final textual cleanup: eliminated the obsolete OCR-era `scannedIncome` argument in the independent manual transfer decision and the OCR reference in the retained `splitBankMessages` comment; no change to SMS parsing, category validation or owner-approved manual accounting. Updated the M640 negative test accordingly. Exact-head CI pending.
