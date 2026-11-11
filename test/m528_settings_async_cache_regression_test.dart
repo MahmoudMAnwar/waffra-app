@@ -12,25 +12,19 @@ void main() {
     return source.substring(a, b);
   }
 
-  test('M528 reuses pending async SMS/cloud/model reads per account view', () {
+  test('M636 reuses pending SMS/cloud without obsolete model reads', () {
     final state = between('bool protectRecentApps=true;',
         'String? _accountOpenSection;');
     expect(state, contains('_m528SmsEnabledFuture??=WaffraAutoSms.enabled()'));
     expect(state, contains(
         '_m528CloudConsentFuture??=WaffraSmsCloudService.hasConsent()'));
-    expect(state, contains('_m528ModelDiskRevision!=revision'));
-    expect(state, contains(
-        '_m528ModelDiskFuture=WaffraOnDeviceQwen.shared.downloadedOnDisk()'));
     final profile = between('Widget profilePage(){',
         'Widget _addMenuOption({');
     expect(profile, contains('future:_m528SmsEnabled()'));
     expect(profile, contains('future:_m528CloudConsent()'));
-    expect(profile, contains('future:_m528ModelDiskStatus(revision)'));
     expect(profile, isNot(contains('future:WaffraAutoSms.enabled()')));
     expect(profile,
         isNot(contains('future:WaffraSmsCloudService.hasConsent()')));
-    expect(profile, isNot(contains(
-        'future:WaffraOnDeviceQwen.shared.downloadedOnDisk()')));
   });
 
   test('M528 refreshes state only after setting changes and profile entry', () {
@@ -63,15 +57,12 @@ void main() {
     expect(reviewed, contains('_m528CloudConsentFuture=null;'));
   });
 
-  test('M528 maintains model deletion biometric safety and revision reload', () {
-    final deletion = between('Future<void> deleteAiModel()async {',
-        'Future<void> eraseFinancialData()async {');
-    expect(deletion,
-        contains('WaffraBiometrics.confirmAiModelRemoval('));
-    expect(deletion, contains('if(!biometric)'));
-    expect(deletion, contains('await model.deleteDownloadedModel()'));
-    expect(deletion, contains('_m528ModelDiskRevision=null;'));
-    expect(deletion, contains('_m528ModelDiskFuture=null;'));
-    expect(deletion, isNot(contains('persist(')));
+  test('M636 removes model settings while retaining protected finance deletion',(){
+    final profile=between('Widget profilePage(){','Widget _addMenuOption({');
+    expect(profile,isNot(contains("AI model':'نموذج الذكاء الاصطناعي")));
+    expect(profile,contains('Encrypted backup & restore'));
+    expect(source,isNot(contains('deleteAiModel()')));
+    expect(source,contains('Future<void> eraseFinancialData()async'));
+    expect(source,contains('WaffraAutoSms.disable()'));
   });
 }
