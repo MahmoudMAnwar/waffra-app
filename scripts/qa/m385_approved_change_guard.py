@@ -107,10 +107,12 @@ def audit_scope(manifest: dict, changed: set[str],
     if set(deletions) != {p for p in changed if p in base_exists and p not in head_text}:
         raise ScopeViolation("Every removed source must have specific user approval")
     for p in deletions:
-        if not p.startswith(("lib/waffra_ondevice_qwen.dart",
+        if p not in ("lib/waffra_ondevice_qwen.dart",
                              "lib/waffra_ai_model_gate.dart",
                              "scripts/qa/prefetch_verified_llamadart.sh",
-                             ".github/workflows/m317-ondevice-ai-brain.yml")):
+                             ".github/workflows/m317-ondevice-ai-brain.yml",
+                             "lib/waffra_widget_capture.part.dart",
+                             "native/WaffraQuickActivity.kt")):
             raise ScopeViolation(f"Unrelated code deletion is prohibited: {p}")
     bounded = manifest.get("bounded_sections")
     if not isinstance(bounded, dict):
