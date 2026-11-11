@@ -61,7 +61,6 @@ jobs:
           github-token: ${{ github.token }}
       - run: |
           flutter pub get
-          python3 scripts/qa/m287_patch_tesseract_gradle.py
       - name: Analyze fail-closed Widget UI regression
         run: dart analyze test/storage/m266_widget_source_fail_closed_ui_test.dart test/storage/m266_home_bound_source_regression_test.dart
       - name: Exercise widget UI, legacy guard and all-24-route negative acceptance
@@ -132,7 +131,6 @@ jobs:
           PY
       - run: |
           flutter pub get
-          python3 scripts/qa/m287_patch_tesseract_gradle.py
       # Flutter's generated Android project requires NDK 28.2.13676358.
       # Preflight it before booting the emulator; a partially downloaded NDK
       # can otherwise surface as a misleading integration-test failure.
