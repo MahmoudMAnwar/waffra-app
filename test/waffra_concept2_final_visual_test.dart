@@ -16,7 +16,7 @@ void main() {
       'Widget goalsPage()',
       'Widget recurringPage()',
       'Widget profilePage()',
-      'bulkSmsSheet()',
+      'entrySheet(sms:true,initialSms:body,reviewedSender:sender)',
       'entrySheet()',
       'showAiAnalysis()',
       'backupDialog()',
