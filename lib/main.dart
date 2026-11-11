@@ -1072,7 +1072,7 @@ Map<String,Object?> waffraM632ClassifySmsQueue(Map<String,Object?> input){
 List<String> splitBankMessages(String raw){
  var clean=raw.replaceAll('\r\n','\n').replaceAll('\u200f','').replaceAll('\u200e','').trim();
  if(clean.isEmpty)return [];
- // SMS exports/OCR can join the end of a bank notification to the next
+ // Concatenated SMS exports can join the end of a bank notification to the next
  // message without a space (e.g. "SARCredit Transfer" or "JODJOD10").
  // Insert boundaries only before strongly recognizable new actions.
  clean=clean.replaceAll(RegExp(
