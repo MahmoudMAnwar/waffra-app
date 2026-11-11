@@ -4,7 +4,8 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - 'lib/waffra_widget_capture.part.dart'
+      - 'lib/waffra_home_widget.dart'
+      - 'native/WaffraWidget.kt'
       - 'lib/main.dart'
       - 'test/storage/m266_home_bound_source_regression_test.dart'
       - 'test/storage/m266_widget_source_fail_closed_ui_test.dart'
