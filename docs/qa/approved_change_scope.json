@@ -13,7 +13,8 @@
     "M652 owner-requested violet settled due PDF rows extend the former two-color transaction PDF row assertion; update only the exact legacy color test while preserving income and expense color assertions and all other financial tests.",
     "Reconcile the obsolete PDF regression assertion with the newly requested violet paid-due color branch while preserving income, expense, all other PDF checks and protected test functions.",
     "M648 revised Home Show more respects verified transfer/savings activity; adjust only M296 existing 11+ matching transactions test to assert the newly expanded activity controls while preserving original zero-through-ten count logic.",
-    "M648 verified Home activity list expansion now covers transfer and goal-wallet activity as well as MoneyEntry, so M296's obsolete single-category expansion source assertion must be updated without weakening its numeric 0-to-10 and 11-plus tests."
+    "M648 verified Home activity list expansion now covers transfer and goal-wallet activity as well as MoneyEntry, so M296's obsolete single-category expansion source assertion must be updated without weakening its numeric 0-to-10 and 11-plus tests.",
+    "Confirmed sender-specific income, expense, transfer and excluded SMS rules must invalidate pending suggestions immediately after durable local rule store write through the existing debounced non-posting refresh."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -63,6 +64,10 @@
       {
         "start": " Future<void> exportEntriesPdf(",
         "end": " Future<void> _deleteVerifiedEntry(MoneyEntry entry)async {"
+      },
+      {
+        "start": " Future<bool> _learnSafeSmsRule({",
+        "end": " /// Manual entries have no bank SMS sender."
       }
     ],
     "lib/storage/waffra_account_context_repository.dart": [
