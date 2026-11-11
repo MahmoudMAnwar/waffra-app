@@ -12852,9 +12852,30 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      Expanded(child:WaffraText(waffraIsEnglish?
       'Between my accounts':'تحويل بين حساباتي',
       style:TextStyle(color:textColor,fontWeight:FontWeight.bold,fontSize:13))),
-     WaffraCurrencyAmount(t.amountMinor/100,
-      fontSize:compact?14:18,color:textColor),
+     // M648: the same transfer has opposite signed effects when viewing
+     // either involved account; All Accounts remains one unsigned event.
+     Flexible(child:FittedBox(fit:BoxFit.scaleDown,
+      child:Row(mainAxisSize:MainAxisSize.min,children:[
+       if(_m467SelectedAccount==t.fromAccountId)
+        WaffraText('−',style:TextStyle(color:textColor,
+         fontWeight:FontWeight.bold,fontSize:compact?14:18))
+       else if(_m467SelectedAccount==t.toAccountId)
+        WaffraText('+',style:TextStyle(color:textColor,
+         fontWeight:FontWeight.bold,fontSize:compact?14:18)),
+       WaffraCurrencyAmount(t.amountMinor/100,
+        fontSize:compact?14:18,color:textColor),
+      ]))),
     ]),
+    if(_m467SelectedAccount==t.fromAccountId||
+       _m467SelectedAccount==t.toAccountId)...[
+     const SizedBox(height:4),
+     WaffraText(_m467SelectedAccount==t.fromAccountId?
+      (waffraIsEnglish?'Outgoing from selected account':
+       'صادر من الحساب المحدد'):
+      (waffraIsEnglish?'Incoming to selected account':
+       'وارد إلى الحساب المحدد'),
+      style:TextStyle(color:textColor,fontSize:11)),
+    ],
     const SizedBox(height:13),
     Row(textDirection:waffraIsEnglish?TextDirection.ltr:TextDirection.rtl,
      children:[
