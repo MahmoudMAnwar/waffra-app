@@ -81,7 +81,6 @@ jobs:
       - name: Flutter dependencies
         run: |
           flutter pub get
-          python3 scripts/qa/m287_patch_tesseract_gradle.py
       - name: Analyze real Android binding and existing migration/receipt cases
         run: |
           dart analyze \
