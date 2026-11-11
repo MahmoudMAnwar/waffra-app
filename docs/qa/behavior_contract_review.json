@@ -1115,6 +1115,28 @@
         "No new parallel SMS engine or work before first Home frame; scan on existing SMS executor, 1000-pending backpressure and original historical cursor stay unchanged.",
         "All software changes bounded in M385 and QA tests; no release claim without on-device verification."
       ]
+    },
+    {
+      "id": "M639-PLAIN-LOCALIZED-SMS-NOTIFICATION-PERMISSION-COPY",
+      "issue": "Issue #560 / existing Draft PR #558",
+      "previous_behavior": "Android onboarding displayed convoluted text invoking local SMS analysis and artificial intelligence in both Arabic and English, despite the owner wanting only clear SMS and notifications permission purposes.",
+      "approved_behavior": "Show Arabic title «أذونات وفرة» and body «هنطلب إذن الرسائل علشان نعرض العمليات المالية اللي تحتاج مراجعة، وبعده إذن الإشعارات علشان توصلك التنبيهات المهمة. تقدر ترفض الأذونات أو تغيّرها لاحقًا من إعدادات جهازك.» Equivalent English copy. No mention of AI, cloud, or model in the visible permissions onboarding copy. Preserve request order, declined permissions not blocking app, and all privacy protections.",
+      "source_paths": [
+        "lib/waffra_auto_sms_consent.dart"
+      ],
+      "test_paths": [
+        "test/m639_permissions_onboarding_plain_copy_test.dart",
+        "test/m417_sms_first_run_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/android.yml"
+      ],
+      "safety_invariants": [
+        "Do not change native READ_SMS/RECEIVE_SMS or notification OS permission request behavior, order, error handling, or retries.",
+        "Never turn on optional external processing via this onboarding; preserve WaffraSmsCloudService.setConsent(false) and all existing consent semantics.",
+        "No first-run access block when user denies permission; no new startup work or extra UI waiting."
+      ]
     }
   ]
 }
