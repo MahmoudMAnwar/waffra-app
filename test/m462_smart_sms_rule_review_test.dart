@@ -310,15 +310,17 @@ void main(){
   expect(worker,contains('WaffraAutoSms.acknowledge([id])'));
  });
 
- test('M462 bank batch cannot silently post transfers as expense/income',(){
+ test('M636 transfers cannot silently post through SMS expense editor',(){
   final source=File('lib/main.dart').readAsStringSync();
-  expect(source,contains('final facts=WaffraBankSmsFactsParser.parse(found[i]);'));
-  expect(source,contains('facts.kind==WaffraBankOperationKind.transfer||'));
-  expect(source,contains('facts.kind==WaffraBankOperationKind.cardSettlement'));
-  expect(source,contains('final learned=WaffraSmsLocalRules.resolve('));
-  expect(source,contains("sender:found.length==1?initialSender:''"));
-  expect(source,contains('final categoryName=learnedCategory??plan!.categoryName'));
-  expect(source,contains('initialSender:sender'));
+  final confirmed=source.substring(
+   source.indexOf(' Future<void> _m565ConfirmSms({'),
+   source.indexOf(' Future<void> _reviewAutoSmsCandidates('));
+  expect(confirmed,contains('!facts.canAutoPostAsIncomeExpense'));
+  expect(confirmed,contains('(facts.kind==WaffraBankOperationKind.income)!=income'));
+  expect(confirmed,contains('original.currency!=\'SAR\''));
+  expect(confirmed,contains('userConfirmed:true'));
+  expect(source,contains('WaffraSmsLocalRules.resolve('));
+
  });
 
 }
