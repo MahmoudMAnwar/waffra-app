@@ -53,3 +53,11 @@ RELEASE AND QA TRUTH:
 - PR #580 first exact-head run #43085793313 exposed one obsolete M383 source-string assertion that required an external M340 workflow name in android.yml. This is superseded by the owner-approved M653 integrated, mandatory main Flutter/Python and M340 source/hostile-finance checks.
 - Replaced ONLY the M383 exact-SHA prerequisite assertion with positive checks for M340 financial guard, hostile negative tests, M174 independent SQLCipher regression and M449 approved release notes. All APK/AAB signing, latest SHA, cache isolation and native acceptance assertions remain. No test deleted, disabled, weakened to trivial true, or Skipped.
 - Exact affected path added to M385 bounded section scope and M550 behavior contract; Issue #579 has pre-edit evidence comment. Current PR HEAD CI rerun is pending, no performance or release attestation.
+
+
+[M654 — M147 ANDROID LINT JDK17 NO-SUCH-METHOD BUILD REPAIR, ISSUE #582, 2026-11-11]
+- Exact PR #580 head fbfd011d failed M147's ARM64 preview compilation only, while Flutter regression passed: Android library :firebase_core:lintVitalAnalyzeRelease crashed with JDK17-only NoSuchMethodError java.util.List.removeLast() in JavaDocParser (job 130751731090). Google confirms Android Gradle Plugin Lint bug #522845800 and its AGP 9.3.2 resolution.
+- Fix the CI runtime, not app financial or Android source: pin and assert Temurin JDK21 on the five real native Android compilation paths (M147, signed main APK/AAB, M274 emulator, manual M174 native diagnostics and Android nightly/full smoke).
+- Explicitly preserve Android Lint, every existing Flutter/Python test, M340/M174 SQLCipher/finance gates, APK+AAB verified signatures and SHA identity; no --no-lint, lint task exclusion, continue-on-error, source code or Gradle plugin/version override.
+- New M654 regression contract checks JDK21 before native build, no lint bypass and main-signed/source invariants. M385 bounded file manifest, M550 behavior registry and M653 QA evidence updated before this append.
+- STATUS: Source+tests committed in Draft PR #580; newest exact-head GitHub CI and new signed main build results NOT YET CONFIRMED. Issue: https://github.com/MahmoudMAnwar/waffra-app/issues/582
