@@ -204,7 +204,7 @@
         "end": " String? _lastWidgetRevision;"
       },
       {
-        "start": " Future<void> _previewForeignBankCurrency(",
+        "start": " // M636: Manual paste/review sheet retired.",
         "end": " Future<void> entrySheet("
       },
       {
