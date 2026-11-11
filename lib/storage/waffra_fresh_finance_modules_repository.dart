@@ -261,6 +261,26 @@ class WaffraFreshModulesRepository {
           }
           break;
         case WaffraFinanceModule.recurring:
+          // M641: a linked due event must inherit the goal's verified source.
+          // This check happens in the SAME SQLCipher transaction as both
+          // typed rows and Home snapshot, not after a partial save.
+          final linkedGoalId=data['linkedGoalId'];
+          if(linkedGoalId is String){
+            final linked=await store.customSelect(
+              'SELECT source_json FROM fresh_finance_goals WHERE goal_id=?',
+              variables:[Variable.withString(linkedGoalId)],
+            ).get();
+            if(linked.length!=1)throw StateError(
+              'Recurring goal due refers to missing goal.');
+            final rawGoal=jsonDecode(linked.single.read<String>('source_json'));
+            if(rawGoal is! Map)throw StateError('Linked goal source invalid.');
+            final expectedAccount=rawGoal['accountId'];
+            if(expectedAccount!=null&&
+               (expectedAccount is! String||
+                expectedAccount!=data['accountId'])){
+              throw StateError('Recurring due must use goal account ID.');
+            }
+          }
           final values = <Object?>[
             _halalas(data['amount']), data['income'] == true ? 1 : 0,
             data['day'], raw,
