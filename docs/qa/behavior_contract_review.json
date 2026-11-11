@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "pr": "M653 CI maintenance and fast signed main release (new draft PR pending); M645/M646/M647 main merged in PR #568",
-  "issue": "Issue #579 M653; historical Issues #566 #567 #576 already merged in PR #568",
+  "issue": "Issue #579 M653; historical Issues #566 #567 #576 already merged in PR #568; Issue #582 M654",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main",
   "reviewed_at": "2026-11-11",
@@ -1428,6 +1428,35 @@
         "Only main SHA builds signed APK/AAB after tests; source identity, Firebase signing, approved release notes, original account/finance/SQLCipher/backup migrations and artifact release gates remain unchanged.",
         "PR M340 retains exhaustive finance/security QA; no test deleted, no historical data altered and no silently changed user-visible app behavior.",
         "M410 was already manual-only under #568; old Skipped run records cannot be removed from GitHub without separate guarded maintenance execution."
+      ]
+    },
+    {
+      "id": "M654-JDK21-ANDROID-LINT-COMPATIBILITY-ALL-NATIVE-CI",
+      "issue": "Issue #582, red PR #580 job 130751731090 in M147 Android ARM64 native lint, 2026-11-11",
+      "previous_behavior": "M147 native compilation used Temurin JDK17 and failed the Android Firebase Core lintVitalAnalyzeRelease with Android Lint JavaDocParser java.util.List.removeLast NoSuchMethodError after exhausting almost 8 minutes of compilation. Other signed main, M274 Android emulator, M174 manual native preview and nightly Android smoke also pinned JDK17, risking reoccurrence on unchanged toolchain. Google AGP issue #522845800 describes same class of bug.",
+      "approved_behavior": "Pin Temurin Java 21 for five high-value real Android build paths with explicit java -version major assertion BEFORE Flutter/Gradle. Keep plugin native lint, the existing release APK and AAB build and signature checks, all Flutter unit/widget and Python QA, M274 emulator UI, M147 ELF and build failure checks, and SQLCipher/finance acceptance. No Android lint suppression or continue-on-error, no app code or AGP generated template changed.",
+      "source_paths": [
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/android.yml",
+        ".github/workflows/m274-production-ui-golden.yml",
+        ".github/workflows/m174-main-arm64-compile.yml",
+        ".github/workflows/android-full-smoke.yml"
+      ],
+      "test_paths": [
+        "test/qa/m654_android_lint_jdk_compatibility_test.py"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/m274-production-ui-golden.yml",
+        ".github/workflows/m174-main-sha-postmerge.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "The source was verified to fail with NoSuchMethodError in Android Lint JavaDocParser against JDK17, not a Flutter assertion. Java21 is a runtime/toolchain-only fix supported by Gradle; do not rewrite app code to avoid the crash.",
+        "Never skip Gradle Android Lint, suppress lintVitalAnalyzeRelease, or hide an actual compile error behind continue-on-error/retry.",
+        "Actual native APK compiler with verified ARM64 ELF and source identity remains; signed main APK/AAB retain SHA-bound signing and all finance, SQLCipher, Android tests.",
+        "All edited workflows must select Temurin21 and positively check runtime before compilation; new M654 tests fail on JDK17 regression. Mark Done only after fresh exact-head M147 and signed main Android QA, not on docs alone."
       ]
     }
   ]
