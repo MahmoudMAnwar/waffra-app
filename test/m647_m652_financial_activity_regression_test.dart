@@ -68,6 +68,25 @@ void main() {
   expect(widget, isNot(contains('entries.insert(')));
  });
 
+ test('M650 paid dues show SQLCipher-linked account or goal wallet, not a guessed sender', () {
+  final methodStart=app.indexOf('Future<String?> _m650DueVerifiedAccount(');
+  final methodEnd=app.indexOf(' String? _m652ActivityAccountKey;',methodStart);
+  expect(methodStart,greaterThan(0));
+  expect(methodEnd,greaterThan(methodStart));
+  final binding=app.substring(methodStart,methodEnd);
+  expect(binding,contains('readExistingEntryAccount(entryId:entry.id)'));
+  expect(binding,contains('_m647VerifiedAccountLabel(account)'));
+  expect(binding,contains('goalWalletPaidMinor'));
+  expect(binding,isNot(contains('commitConfirmedManual(')));
+  expect(binding,isNot(contains('api.transfer(')));
+  final card=app.substring(app.indexOf('Widget compactTransaction('),
+      app.indexOf(' Widget _m549HomeFinanceAction('));
+  expect(card,contains('future:_m650DueVerifiedAccount(entry)'));
+  expect(card,contains("'تم السداد من: '"));
+  expect(card,contains("'حساب غير محدد'"));
+  expect(card,contains('entry.goalWalletPaidMinor/100'));
+ });
+
  test('M651 durable local rule learning triggers debounced non-posting refresh', () {
   final from = app.indexOf('Future<void> _learnManualTransferPreference()');
   final to = app.indexOf(' Map<String,Object?>? _localSmsClassification(',from);
