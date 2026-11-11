@@ -20,7 +20,9 @@
     "M640 #561: align old five-tools workflow display title/step and M281 QA spec to four Tools after removing receipt reader, preserving health/search/monthly/diagnostics tests.",
     "M641 #562 recurring + opens even with no money accounts; shared bank/wallet/provider/child cascading picker enables verified inline account creation without losing the recurring draft. Save stable default account ID and retain due behavior.",
     "M641 #562 new/edit savings goals require a verified institution and actual financial account, fund wallet with a single verified source debit, and carry account identity to linked due reminders; preserve old unlinked goals without invented transfers.",
-    "M641 #562: SQLCipher integration test verifies linked savings goal and due account ID in typed/snapshot projection and rejects stale/missing accounts without ledger changes."
+    "M641 #562: SQLCipher integration test verifies linked savings goal and due account ID in typed/snapshot projection and rejects stale/missing accounts without ledger changes.",
+    "M640 #561 regression: retained M587 transfer correction now calls entrySheet with manualIncomeOverride instead of removed OCR-era scannedIncome, while three non-posting actions, transfer receipts, explicit SMS ACK and account confirmation assertions stay intact.",
+    "M641 #562 regression: M500 retroactive account link protection remains on the actual institution/child dropdown onChanged guards; replace obsolete callback-shape expectation with exact two identity-locked selections, preserving existing SQLCipher link/consent/rollback assertions."
   ],
   "allowed_changed_files": [
     ".github/workflows/android-full-smoke.yml",
@@ -104,7 +106,8 @@
     "lib/storage/waffra_verified_goal_due_snapshot_writer.dart",
     "test/m641_goal_recurring_account_binding_test.dart",
     "test/m371_goal_wallet_and_budgets_regression_test.dart",
-    "test/storage/m641_goal_account_integrity_test.dart"
+    "test/storage/m641_goal_account_integrity_test.dart",
+    "test/m580_sms_security_navigation_performance_test.dart"
   ],
   "approved_deleted_files": [
     ".github/workflows/m287-receipt-ocr.yml",
@@ -433,7 +436,7 @@
     ],
     "test/m495_pr402_ui_performance_regression_test.dart": [
       {
-        "start": "  test('M500 #420 Details Edit enables verified retroactive account link',",
+        "start": "  test('M500 #420 Details Edit enables verified retroactive account link',(){",
         "end": "  testWidgets('M499 #416 child picker is disabled without provider, cancel preserves amount',"
       }
     ],
@@ -485,6 +488,12 @@
       {
         "start": "  test('M371 goal creation cannot post an expense or negative cash debit',",
         "end": null
+      }
+    ],
+    "test/m580_sms_security_navigation_performance_test.dart": [
+      {
+        "start": "  test('M587 bank transfer shows exactly three non-posting choices',(){",
+        "end": "  test('notification center never repeats a second review hero',(){"
       }
     ]
   }
