@@ -3512,3 +3512,15 @@ passed; changed-source analysis clean; M550 contract preflight passed.
 - Updated existing M641 picker test for the mandatory error callback and added a dedicated M644 source regression for four routed notice sites plus atomic finance posting/refresh/failure order. M302/M363 other category, budgeting, recurring, and writer-safety tests retained byte-for-byte outside approved M385 anchored scopes.
 - Permanent Issue #565 and docs/WAFFRA_REQUIREMENTS.md registered BEFORE implementation, M385 manifest with 3 named QA test paths and M550 behavior contract updated before code modifications. App+test implementation commit: c547f2febaf681c3937d3ec246ab1407956a7eb1. This entry follows the latest app-code change for the M449 release freshness gate.
 - **Status: implementation committed; exact latest-head Flutter/Android/security/SQLCipher CI and physical phone testing still pending, not represented as passed.** PR #558 remains Draft and unmerged; release APK must only be built from main after full validation.
+
+
+M647–M652 — 2026-11-11 — Draft PR #575 — financial activity and SMS rule refresh
+Issues: #569, #570, #571, #572, #573, #574.
+- Replaced the fixed 70%-height internal transfer history with compact verified source/destination account cards, amount, date and note; transfer details remain read-only, not income/expense.
+- Added a blue, account-scoped verified internal transfer Home activity section, sourced directly from two-sided SQLCipher transfer records; no fake MoneyEntry rows or duplicate balance changes.
+- Added gold linked goal savings fund/release cards sourced from verified goal-wallet movement + source-account joins; goal creation without actual funding never creates a fictional bank movement.
+- Marked already-settled recurring and goal-due MoneyEntry cards violet with "استحقاق مدفوع"; the card is a visual facet of one posting, not a second debit.
+- Following durable senderless income/expense and transfer-rule learning, existing debounced SMS review refresh reclassifies pending messages on a background isolate; no full Android history scan is initiated by these learning hooks. Other existing reviewed SMS/exclusion refresh paths stay intact.
+- Extended the finance Home PDF export with verified blue transfer and gold savings movement sections, violet settled-dues presentation, relevant filtering, and independent income/expense totals that exclude internal transfers and savings.
+- Added test/m647_m652_financial_activity_regression_test.dart to assert source-bound read-only movement types, SMS refresh boundaries, paid-due presentation, transfer UX, and PDF type/color separation. Updated M385 exact bounded scopes and M550 behavior contract before shipping.
+- Status: SOURCE IMPLEMENTATION COMMITTED / QA PENDING. Source-level structure checks passed in assistant review; Flutter analyzer, automated Flutter/SQLCipher suites, GitHub exact-head CI, PDF actual rendering and real Android-device smoke have NOT been confirmed passing. Do not mark Done, merge or produce APK from this branch. Main-only release APK policy remains unchanged.
