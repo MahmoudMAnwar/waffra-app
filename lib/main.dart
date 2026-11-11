@@ -15192,44 +15192,25 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   ]));
  }
  Future<void> recurringDialog({String? suggestedTitle,double? suggestedAmount,RecurringBill? initial,RecurringBill? duplicate})async {
-  // The original recurring editor must pick an actual account at creation,
-  // not rely on the account display filter or a later settings-only write.
-  List<WaffraAccountBalance> liveAccounts;
-  String? selectedRecurringAccount;
-  try{
-   await _ensureFinanceBound();
-   final bridge=_financeBinding?.accountsBridge;
-   if(bridge==null)throw StateError('Verified recurring account source unavailable.');
-   final snapshot=await bridge.readVerifiedAccounts();
-   liveAccounts=snapshot.balances.where((a)=>!a.archived).toList();
-   if(initial!=null){
-    selectedRecurringAccount=await WaffraVerifiedAccountsApi(bridge:bridge)
-     .recurringDefaultAccount(initial.id);
+  // M641: the editor opens even on a fresh install with ZERO accounts.
+  // Account selection remains mandatory at SAVE, not before opening.
+  var liveAccounts=await _m641VerifiedGoalRecurringAccounts();
+  if(liveAccounts==null||!mounted)return;
+  String? selectedRecurringAccount=initial?.accountId??duplicate?.accountId;
+  if(initial!=null){
+   try{
+    final bridge=_financeBinding?.accountsBridge;
+    if(bridge!=null){
+     selectedRecurringAccount=
+      await WaffraVerifiedAccountsApi(bridge:bridge)
+       .recurringDefaultAccount(initial.id)??selectedRecurringAccount;
+    }
+   }catch(error){
+    debugPrint('M641 recurring default read failed: '+error.runtimeType.toString());
    }
-  }catch(error){
-   if(mounted)snack(context,waffraIsEnglish?
-    'Verified accounts are unavailable. Open My Accounts before creating recurring payments.':
-    'الحسابات الموثقة غير متاحة. افتح حساباتي قبل إنشاء عملية متكررة.',
-    isError:true);
-   return;
   }
-  if(!mounted)return;
-  if(liveAccounts.isEmpty){
-   snack(context,waffraIsEnglish?
-    'Create a bank or cash account before adding a recurring payment.':
-    'أضف حسابًا ماليًا قبل إنشاء عملية متكررة.',isError:true);
-   return;
-  }
-  final recurringProviders=WaffraRecurringAccountGroups.fromAccounts(liveAccounts);
-  selectedRecurringAccount ??= initial?.accountId??duplicate?.accountId;
-  if(!liveAccounts.any((a)=>a.id==selectedRecurringAccount)){
+  if(!liveAccounts.any((a)=>a.id==selectedRecurringAccount&&!a.archived)){
    selectedRecurringAccount=null;
-  }
-  String? selectedRecurringProvider;
-  for(final group in recurringProviders){
-   if(group.accounts.any((a)=>a.id==selectedRecurringAccount)){
-    selectedRecurringProvider=group.id;break;
-   }
   }
   final title=TextEditingController(text:initial?.title??duplicate?.title??suggestedTitle??''),
    amount=TextEditingController(text:initial!=null?formatWaffraEditAmount(initial.amount):duplicate!=null?formatWaffraEditAmount(duplicate.amount):suggestedAmount==null?'':formatWaffraEditAmount(suggestedAmount)),
@@ -15266,33 +15247,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        decoration:InputDecoration(labelText:waffraIsEnglish?'Amount *':'المبلغ *',
         errorText:attempted?waffraAmountFieldError(amount.text):null)),
       const SizedBox(height:12),
-      WaffraCenteredDropdownFormField<String>(
-       key:ValueKey('m470-recurring-create-provider-'+(selectedRecurringProvider??'none')),
-       initialValue:selectedRecurringProvider,isExpanded:true,
-       decoration:InputDecoration(
-        labelText:waffraIsEnglish?'Bank or provider *':'الجهة أو البنك *',
-        border:const OutlineInputBorder()),
-       items:recurringProviders.map((group)=>DropdownMenuItem<String>(
-        value:group.id,child:WaffraText(waffraIsEnglish?
-         group.labelEn:group.labelAr,maxLines:1))).toList(),
-       onChanged:(v)=>update((){
-        selectedRecurringProvider=v;
-        selectedRecurringAccount=null;
+      WaffraGoalRecurringAccountPicker(
+       key:const Key('m641-recurring-account-cascade'),
+       idPrefix:'m641-recurring',english:waffraIsEnglish,
+       accounts:liveAccounts,selectedAccountId:selectedRecurringAccount,
+       onChanged:(id)=>update(()=>selectedRecurringAccount=id),
+       onCreateAccount:(provider)async{
+        final added=await _m641CreateGoalRecurringAccount(provider);
+        if(added!=null)liveAccounts=[...liveAccounts,added];
+        return added;
        }),
-      ),
-      const SizedBox(height:12),
-      WaffraCenteredDropdownFormField<String>(
-       key:ValueKey('m470-recurring-create-account-'+(selectedRecurringProvider??'none')),
-       initialValue:selectedRecurringAccount,isExpanded:true,
-       decoration:InputDecoration(
-        labelText:waffraIsEnglish?'Linked account *':'الحساب المرتبط *',
-        border:const OutlineInputBorder()),
-       items:recurringProviders.where((g)=>g.id==selectedRecurringProvider)
-        .expand((g)=>g.accounts).map((a)=>DropdownMenuItem<String>(
-         value:a.id,child:WaffraText(a.name,maxLines:1))).toList(),
-       onChanged:selectedRecurringProvider==null?null:(v)=>
-        update(()=>selectedRecurringAccount=v),
-      ),
       const SizedBox(height:12),
       WaffraCenteredDropdownFormField<bool>(initialValue:income,
        items:const [DropdownMenuItem(value:true,child:WaffraText('دخل')),
@@ -15382,7 +15346,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         WaffraValidators.dayOfMonth(day.text)==null&&
         WaffraValidators.requiredCategory(selected,validNames)==null&&
         selectedRecurringAccount!=null&&
-        liveAccounts.any((a)=>a.id==selectedRecurringAccount)&&
+        liveAccounts.any((a)=>a.id==selectedRecurringAccount&&!a.archived)&&
         n!=null&&d!=null){
         Navigator.pop(ctx,RecurringBill(id:initial?.id??newId(),title:title.text.trim(),category:selected,
          amount:initial?.linkedGoalId!=null?initial!.amount:n,income:income,
