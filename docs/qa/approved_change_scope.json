@@ -161,7 +161,7 @@
       },
       {
         "start": " bool _receiptOcrAiOpening=false;",
-        "end": " bool _m528SettingsRefreshQueued=false;"
+        "end": " String? _lastWidgetRevision;"
       },
       {
         "start": " Future<bool> _canReviewOcrAsLedgerTransaction(",
@@ -173,7 +173,7 @@
       },
       {
         "start": "        if(WaffraSaudiRelease.receiptImageTransactionImport)_addMenuOption(",
-        "end": "        if(tab==1)"
+        "end": "        ]else if(goalsOpened||tab==3)...["
       }
     ],
     "lib/waffra_auto_sms.dart": [
