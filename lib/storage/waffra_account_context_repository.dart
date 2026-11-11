@@ -303,4 +303,38 @@ WHERE a.archived=0 AND a.kind='bank' AND a.currency='SAR'
    )));
  }
 
+
+ /// M649: account-linked goal movements are a separate savings wallet.
+ /// Read only verified source provenance; never synthesize MoneyEntry rows.
+ Future<List<({String id,String goalId,String goalName,String accountId,String kind,int amountMinor,String occurredIso})>> readGoalAccountMovementHistory({
+  String? accountId,int limit=500,
+ })async{
+  await _ready();
+  if(limit<1||limit>500)throw ArgumentError('Invalid savings page size');
+  if(accountId!=null)_id(accountId);
+  final rows=await store.customSelect(
+   'SELECT m.movement_id,m.goal_id,g.name,m.kind,m.amount_minor,'
+   'm.occurred_at_iso,s.account_id '
+   'FROM fresh_finance_goal_wallet_movements m '
+   'JOIN fresh_finance_goal_account_sources s ON s.movement_id=m.movement_id '
+   'JOIN fresh_finance_goals g ON g.goal_id=m.goal_id '
+   "WHERE m.kind IN ('fund','release') "
+   +(accountId==null?'':'AND s.account_id=? ')
+   +'ORDER BY m.occurred_at_iso DESC,m.movement_id DESC LIMIT ?',
+   variables:[
+    if(accountId!=null)Variable.withString(accountId),
+    Variable.withInt(limit),
+   ],
+  ).get();
+  return List<({String id,String goalId,String goalName,String accountId,String kind,int amountMinor,String occurredIso})>.unmodifiable(rows.map((r)=>
+   (
+    id:r.read<String>('movement_id'),
+    goalId:r.read<String>('goal_id'),
+    goalName:r.read<String>('name'),
+    accountId:r.read<String>('account_id'),
+    kind:r.read<String>('kind'),
+    amountMinor:r.read<int>('amount_minor'),
+    occurredIso:r.read<String>('occurred_at_iso'),
+   )));
+ }
 }
