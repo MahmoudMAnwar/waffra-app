@@ -66,61 +66,66 @@ def gh_api(endpoint: str, post: bool = False) -> str:
 
 
 def main() -> int:
+    # Manual-only trusted recovery: the 80+ Skipped workflow_run notifications
+    # must not create new Actions runs just to reject a successful M274 job.
+    if os.environ.get("GITHUB_EVENT_NAME") != "workflow_dispatch":
+        raise RuntimeError("M410 requires explicit authorized manual dispatch")
     event_path = os.environ.get("GITHUB_EVENT_PATH", "")
-    if not event_path:
-        raise RuntimeError("No GitHub workflow event; fail closed")
+    raw = os.environ.get("SOURCE_M274_RUN_ID", "").strip()
+    if not event_path or not re.fullmatch(r"[1-9][0-9]{0,14}", raw):
+        raise RuntimeError("Missing/invalid numeric failed M274 workflow run ID")
     event = json.loads(Path(event_path).read_text(encoding="utf-8"))
-    run = event.get("workflow_run") or {}
-    if (run.get("name") != WORKFLOW or run.get("event") != "pull_request"
+    repo = (event.get("repository") or {}).get("full_name", "")
+    if (not isinstance(repo, str)
+            or not re.fullmatch(r"[\w.-]+/[\w.-]+", repo)
+            or repo != os.environ.get("GITHUB_REPOSITORY")):
+        raise RuntimeError("Missing or mismatched trusted GitHub repository")
+    run_id = int(raw)
+    run = json.loads(gh_api(f"repos/{repo}/actions/runs/{run_id}"))
+    if (run.get("id") != run_id or run.get("name") != WORKFLOW
+            or run.get("event") != "pull_request"
+            or run.get("status") != "completed"
             or run.get("conclusion") != "failure"
             or run.get("run_attempt") != 1):
-        print("M410 SKIP: event not eligible")
-        return 0
-    repo = (event.get("repository") or {}).get("full_name", "")
+        raise RuntimeError("Not a first-attempt failed M274 PR workflow")
     head = run.get("head_branch", "")
-    if not (isinstance(repo, str) and re.fullmatch(r"[\w.-]+/[\w.-]+", repo)
-            and isinstance(head, str)
-            and re.fullmatch(r"[\w./-]+", head)
-            and ".." not in head and len(head) < 220):
-        print("M410 SKIP: unsafe repository/branch")
-        return 0
+    if (not isinstance(head, str)
+            or not re.fullmatch(r"[\w./-]+", head)
+            or ".." in head or len(head) >= 220):
+        raise RuntimeError("Invalid source branch")
     if (run.get("head_repository") or {}).get("full_name") != repo:
-        print("M410 SKIP: untrusted fork")
-        return 0
-
+        raise RuntimeError("Foreign fork cannot receive a privileged retry")
+    # The current exact PR branch HEAD must still equal the reviewed failed run.
     from urllib.parse import quote
-    # HEAD must still match this exact run; ignore a superseded SHA.
-    ref = json.loads(gh_api(f"repos/{repo}/git/ref/heads/{quote(head, safe='/')}"))
+    ref = json.loads(gh_api(
+        f"repos/{repo}/git/ref/heads/{quote(head, safe='/')}"))
     current_sha = (ref.get("object") or {}).get("sha", "")
-    run_id = run.get("id")
-    if not isinstance(run_id, int) or run_id <= 0:
-        print("M410 SKIP: invalid run ID")
-        return 0
+    if current_sha != run.get("head_sha"):
+        raise RuntimeError("Refusing obsolete M274 SHA")
     response = json.loads(gh_api(
         f"repos/{repo}/actions/runs/{run_id}/jobs?filter=latest&per_page=100"))
     jobs = response.get("jobs") or []
     if response.get("total_count", 101) > 100:
-        print("M410 SKIP: job pagination required")
-        return 0
+        raise RuntimeError("Refusing unverified paginated M274 jobs")
     failed = [job for job in jobs if job.get("conclusion") == "failure"]
     if len(failed) != 1 or failed[0].get("name") != JOB:
-        print("M410 SKIP: not exactly one M274 Android emulator failure")
-        return 0
+        raise RuntimeError("Not exactly one failed M274 Android emulator job")
     job_id = failed[0].get("id")
-    if not isinstance(job_id, int):
-        print("M410 SKIP: invalid failed job")
-        return 0
+    if not isinstance(job_id, int) or job_id <= 0:
+        raise RuntimeError("Invalid failed M274 job ID")
     log = gh_api(f"repos/{repo}/actions/jobs/{job_id}/logs")
     if len(log.encode("utf-8")) > MAX_LOG_BYTES:
-        print("M410 SKIP: logs exceed safety limit")
-        return 0
-    selected, reason = candidate(event, jobs, log, current_sha)
+        raise RuntimeError("Log too large to verify a safe retry")
+    selected, reason = candidate(
+        {"repository": event["repository"], "workflow_run": run},
+        jobs, log, current_sha)
     print(f"M410: {reason}")
     if selected is None:
+        print("M410 NO RETRY: actual test failure, stale job or unproven outage")
         return 0
-    # Re-run ONE job on the SAME SHA; no new commit or blanket 42-workflow run.
+    # Re-run only a verified infrastructure-failed Android job at same SHA.
     gh_api(f"repos/{repo}/actions/jobs/{selected}/rerun", post=True)
-    print(f"M410 RETRY: job {selected}, run {run_id}, attempt 2 maximum")
+    print(f"M410 RETRY: job {selected}, source run {run_id}, maximum attempt 2")
     return 0
 
 

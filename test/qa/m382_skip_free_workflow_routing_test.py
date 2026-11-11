@@ -22,9 +22,10 @@ class SkipFreeWorkflowRoutingTest(unittest.TestCase):
         self.assertNotIn("if: github.event_name == 'push'", preflight)
 
     def test_m174_native_compile_preserved_only_for_main(self):
+        # M653: signed main APK already covers ARM64; avoid duplicate
+        # unsigned native builds and preserve manual troubleshooting.
         native = source("m174-main-arm64-compile.yml")
-        self.assertIn("  push:", native)
-        self.assertIn("branches: [main]", native)
+        self.assertNotIn("  push:", native)
         self.assertIn("  workflow_dispatch:", native)
         self.assertNotIn("  pull_request:", native)
         self.assertIn("  main-arm64-compile:", native)
@@ -70,13 +71,18 @@ class SkipFreeWorkflowRoutingTest(unittest.TestCase):
 
     def test_main_release_gates_unchanged(self):
         release = source("android.yml")
+        m340 = source("m340-continuous-financial-quality.yml")
         self.assertIn("needs: [verify-all-tests, verify-same-sha-checks]", release)
-        self.assertIn("M340 Continuous Financial Quality Gate (Exact SHA, No Cutover)", release)
         self.assertIn("M174 Main SHA Post-Merge SQLCipher Regression", release)
+        self.assertIn("M449 Release Notes Freshness Before Main Merge", release)
+        self.assertIn("m340_financial_quality_gate.py --json", release)
+        self.assertIn("test_m34*_*.py", release)
         self.assertIn("Run every Flutter regression including future test files", release)
         self.assertIn("flutter test --reporter expanded", release)
         self.assertIn("Verify final APK uses Firebase-registered Waffra release signing", release)
         self.assertIn("Build Android App Bundle candidate for Google Play internal testing", release)
+        self.assertIn("  pull_request:", m340)
+        self.assertNotIn("  push:", m340)
 
 
 if __name__ == "__main__":

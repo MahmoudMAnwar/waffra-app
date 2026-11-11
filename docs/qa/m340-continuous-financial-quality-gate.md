@@ -5,8 +5,11 @@
 ## How it runs (no schedules)
 
 The GitHub Actions workflow `.github/workflows/m340-continuous-financial-quality.yml`
-runs on pull requests targeting `main`, on `main` pushes, and by manual
-`workflow_dispatch`. No `schedule` or hourly ChatGPT tasks are necessary.
+runs on pull requests targeting `main` and by manual `workflow_dispatch`.
+For `main` pushes, the signed Android release's mandatory Flutter/Python
+suite now includes the M340 source guard and negative QA cases on the exact
+commit, rather than repeat the entire Flutter suite in a second M340 runner.
+No `schedule` or hourly ChatGPT tasks are necessary.
 It checks out `github.event.pull_request.head.sha || github.sha` and
 verifies `git rev-parse HEAD` equals the source SHA before each job.
 

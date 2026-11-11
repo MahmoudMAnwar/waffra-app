@@ -48,15 +48,18 @@ class MainReleaseSpeedWithoutBypassTest(unittest.TestCase):
         self.assertIn("raise SystemExit('BLOCKED: required same-SHA CI never finished')", self.audit)
 
     def test_nonempty_main_expected_checks_exist_and_run_on_main_push(self):
-        for expected, file in [
-            ("M340 Continuous Financial Quality Gate (Exact SHA, No Cutover)", M340),
-            ("M174 Main SHA Post-Merge SQLCipher Regression", M174),
-        ]:
-            self.assertIn(expected, self.audit)
-            contents = file.read_text(encoding="utf-8")
-            self.assertIn("  push:", contents)
-            self.assertIn("main", contents)
+        # M653: M340 whole-app PR matrix is still mandatory on PRs;
+        # on main its finance guard runs in this release's full verifier.
+        self.assertIn("M174 Main SHA Post-Merge SQLCipher Regression", self.audit)
+        self.assertIn("M449 Release Notes Freshness Before Main Merge", self.audit)
         self.assertIn("if branch == 'main'", self.audit)
+        self.assertIn("m340_financial_quality_gate.py --json", self.full)
+        self.assertIn("test_m34*_*.py", self.full)
+        self.assertIn("flutter test --reporter expanded", self.full)
+        self.assertNotIn("M340 Continuous Financial Quality Gate", self.audit)
+        self.assertIn("  pull_request:", M340.read_text(encoding="utf-8"))
+        self.assertNotIn("  push:", M340.read_text(encoding="utf-8"))
+        self.assertIn("  push:", M174.read_text(encoding="utf-8"))
 
     def test_main_build_does_not_duplicate_full_test_job(self):
         for step in [
