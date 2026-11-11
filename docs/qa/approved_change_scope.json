@@ -1,90 +1,77 @@
 {
   "contract_version": 1,
-  "change_id": "M635-EARLY-BUILD-LOGIN-NATIVE-KDF-AND-FOREGROUND-SMS-ISOLATION-553",
-  "human_scope_review": "Owner explicitly requests return to responsive early October login/Home behavior and repair measured 3-second sign-in/post-biometric handoff and 5–6-second post-Home jank. October's one-shot SHA256 and unverified wallet must NOT be revived. Native PBKDF2 retains the 600000-round verifier and OS keystore; native UI SMS work skips competing background FlutterEngine, with durable pending queue. Exact SHA CI, physical Android performance and independent owner scope review required before Done/merge.",
+  "change_id": "M636-REMOVE-QWEN-BANK-SMS-PASTE-WIDGET-AND-LOGIN-UX-555",
+  "human_scope_review": "Owner approved screenshots and explicit six requirements; retire model and old paste widget, preserve M635 fast relogin, SQLCipher/mandatory biometric, secure source-date/account-confirmed SMS Review, real blur and fade. Tests must be updated with meaningful positive regressions, not bypassed. Device confirmation needed.",
   "user_requested_changes": [
-    "Compare October 21 fast local SHA256/profile launch with current verified 600000-round PBKDF2 and SQLCipher/biometric Home, without weakening security.",
-    "Use a native Android background crypto worker for byte-compatible PBKDF2-HMAC-SHA256; preserve original Dart isolate fallback and add a Unicode parity vector.",
-    "Prevent an otherwise redundant WorkManager FlutterEngine during foreground SMS consent/resume and while the application is visible; background SMS receiver remains durable.",
-    "Keep encrypted SMS queue and anti-replay; deliver large pending encrypted review result from the dedicated SMS executor rather than Android UI thread.",
-    "Add a bounded positive regression test for credentials and SMS foreground/background behavior and require real Android first login, biometric, relogin and 2000-SMS frame evidence.",
-    "Keep M470 positive queue/decryption/off-main regression but assert MethodChannel reply serialization no longer blocks Android UI; no unrelated test changes."
+    "Successful logout must show only a blocking spinner over last verified Home; never a transient financial recovery page on success.",
+    "Delete Qwen3-0.6B on-device runtime, GGUF gate/install/delete/Tools/Ask and native llamadart dependency from code and Android CI; preserve independent SMS and financial features.",
+    "BackdropFilter must blur content behind every expanded bottom-tab floating plus menu without shifting FAB or harming responsiveness.",
+    "Home plus menu must offer only Add Manual Transaction, removing Bank message paste-and-bulk-review template but preserving automatic encrypted SMS review and explicit verified finance writes.",
+    "Remove external widget standalone bank-message paste editor, replacing widget click with authenticated MainActivity manual transaction action.",
+    "Fade original splash gently to sign-in without fixed additional wait; keep fast biometric and relogin behavior."
   ],
   "allowed_changed_files": [
+    ".github/actions/prefetch-sqlite3mc/action.yml",
+    ".github/workflows/android-full-smoke.yml",
+    ".github/workflows/android.yml",
+    ".github/workflows/m317-ondevice-ai-brain.yml",
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "lib/waffra_local_phone_credentials.dart",
-    "native/WaffraAutoSmsWorker.kt",
-    "native/WaffraMainActivity.kt",
-    "test/m470_sms_excluded_senders_test.dart",
-    "test/m635_historical_login_sms_jank_regression_test.dart"
+    "lib/main.dart",
+    "lib/waffra_ai_model_gate.dart",
+    "lib/waffra_biometrics.dart",
+    "lib/waffra_ondevice_qwen.dart",
+    "lib/waffra_saudi_release.dart",
+    "lib/waffra_smart_features.dart",
+    "lib/waffra_widget_capture.part.dart",
+    "native/WaffraQuickActivity.kt",
+    "native/WaffraWidget.kt",
+    "pubspec.yaml",
+    "scripts/qa/m385_approved_change_guard.py",
+    "scripts/qa/prefetch_verified_llamadart.sh",
+    "test/m320_ai_live_entrypoints_test.dart",
+    "test/m321_ai_model_download_delete_test.dart",
+    "test/m324_required_ai_sms_receipts_test.dart",
+    "test/m325_ai_tools_visibility_test.dart",
+    "test/m329_ai_model_restart_and_visible_analysis_test.dart",
+    "test/m330_compact_ui_copy_test.dart",
+    "test/m332_ai_ocr_hang_and_six_for_three_test.dart",
+    "test/m332_live_bank_image_sms_hang_regression_test.dart",
+    "test/m333_ask_waffra_verified_answers_test.dart",
+    "test/m335_ask_waffra_scope_test.dart",
+    "test/m335_real_sms_ocr_accuracy_test.dart",
+    "test/m336_whole_app_finance_quality_matrix_test.dart",
+    "test/m337_bank_sms_timestamp_finance_safety_test.dart",
+    "test/m416_saudi_release_offline_test.dart",
+    "test/m429_sms_phone_integration_test.dart",
+    "test/m436_cloud_review_pipeline_test.dart",
+    "test/m462_smart_sms_rule_review_test.dart",
+    "test/m470_postsave_lag_and_teach_return_test.dart",
+    "test/m470_sms_first_sender_account_test.dart",
+    "test/m473_manual_sms_keyword_learning_parity_test.dart",
+    "test/m507_sms_amount_and_continuous_review_test.dart",
+    "test/m528_settings_async_cache_regression_test.dart",
+    "test/m620_m621_finance_notification_routing_test.dart",
+    "test/m629_pull_refresh_parity_auth_home_test.dart",
+    "test/m636_owner_approved_retirement_and_ui_test.dart",
+    "test/qa/m417_sms_permission_acceptance_test.py",
+    "test/qa/m552_verified_sqlite3mc_ci_prefetch_test.py",
+    "test/storage/live_legacy_finance_guard_test.dart",
+    "test/storage/m266_widget_source_fail_closed_ui_test.dart",
+    "test/waffra_concept2_final_visual_test.dart",
+    "test/waffra_design_preservation_test.dart",
+    "test/waffra_widget_quick_capture_test.dart"
   ],
-  "bounded_sections": {
-    "lib/waffra_local_phone_credentials.dart": [
-      {
-        "start": "import 'dart:convert';",
-        "end": "/// M426:"
-      },
-      {
-        "start": " static const _store=FlutterSecureStorage();",
-        "end": " // M546:"
-      },
-      {
-        "start": " static bool validPhone(String phone)=>",
-        "end": " static Future<List<int>> _deriveInBackground("
-      }
-    ],
-    "native/WaffraAutoSmsWorker.kt": [
-      {
-        "start": "    override fun doWork(): Result {",
-        "end": "    companion object {"
-      },
-      {
-        "start": "    companion object {",
-        "end": null
-      }
-    ],
-    "native/WaffraMainActivity.kt": [
-      {
-        "start": "import android.Manifest",
-        "end": "// Share only SMS"
-      },
-      {
-        "start": "    private val smsHistoryExecutor =",
-        "end": "    private val autoSmsRequestCode"
-      },
-      {
-        "start": "    // Android's Recent Apps thumbnail",
-        "end": "    override fun onPause() {"
-      },
-      {
-        "start": "    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {",
-        "end": "        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, ownerProofChannelName)"
-      },
-      {
-        "start": "\"resumeAutoSmsAfterSignIn\" -> {",
-        "end": "\"autoSmsNotificationsEnabled\""
-      },
-      {
-        "start": "\"setAutoSmsEnabled\" -> {",
-        "end": "\"restartCompletedSmsHistory\""
-      },
-      {
-        "start": "\"pendingAutoBankSms\" -> {",
-        "end": "\"pendingAutoBankSmsById\" -> {"
-      },
-      {
-        "start": "    override fun onDestroy() {",
-        "end": null
-      }
-    ],
-    "test/m470_sms_excluded_senders_test.dart": [
-      {
-        "start": " test('M470 #3/#10 review queue 500-SMS decode never blocks Android UI',(){",
-        "end": "\n}"
-      }
-    ]
-  }
+  "approved_deleted_files": [
+    ".github/workflows/m317-ondevice-ai-brain.yml",
+    "lib/waffra_ai_model_gate.dart",
+    "lib/waffra_ondevice_qwen.dart",
+    "lib/waffra_widget_capture.part.dart",
+    "native/WaffraQuickActivity.kt",
+    "scripts/qa/prefetch_verified_llamadart.sh"
+  ],
+  "approved_full_test_replacements": [],
+  "bounded_sections": {}
 }
