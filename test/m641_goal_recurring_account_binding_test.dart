@@ -42,6 +42,10 @@ void main(){
   expect(actions,contains('WaffraRecurringPolicy.toHalalas(goals[i].saved)'));
   expect(actions,contains('WaffraRecurringPolicy.toHalalas(updated.saved)'));
   expect(actions,contains('مبلغ الادخار اتغير أثناء التعديل'));
+  expect(actions,contains('WaffraRecurringPolicy.entryId(old.id,originalDue)'));
+  expect(actions,contains("entry.id==settledKey&&entry.sourceType=='goal_due'"));
+  expect(actions,contains('||alreadySettled?'));
+
 
   final writer=File('lib/storage/waffra_verified_goal_due_snapshot_writer.dart')
    .readAsStringSync();
