@@ -10,8 +10,8 @@ void main(){
  test('M300 attached JOD recognized, no UNKNOWN and no balance transaction',(){
   expect(WaffraSmsCurrencies.currenciesForMessage(cliq),{'JOD'});
   expect(WaffraSmsCurrencies.summarize([cliq]).summary,'JOD: 1');
-  expect(WaffraSmsCurrencies.originalAmount(cliq),'198.000 JOD');
-  expect(WaffraSmsCurrencies.originalAmount(
+  expect(WaffraSmsCurrencies.originalAmountPreview(cliq),'198.000 JOD');
+  expect(WaffraSmsCurrencies.originalAmountPreview(
    'JOD198.000 credited Balance 201.632JOD'),'198.000 JOD');
   expect(WaffraSmsCurrencies.requiresReviewForSarLedger(cliq),isTrue);
   final parsed=BankParser.parse(cliq);
