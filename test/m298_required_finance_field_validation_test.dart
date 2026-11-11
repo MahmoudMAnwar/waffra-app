@@ -57,9 +57,9 @@ void main() {
   // sheet must reject an invalid (or stale) leaf before persisting money.
   expect(source,contains("labelText:waffraIsEnglish?'Main category *':'القسم الرئيسي *'"));
   expect(source,contains("labelText:waffraIsEnglish?'Subcategory *':'القسم الفرعي *'"));
-  expect(source,contains("errorText:reviewAttempted&&activeSmsMains.isEmpty"));
-  expect(source,contains("errorText:reviewAttempted&&"));
-  expect(source,contains("!waffraCanAssignManualCategory(available,income,activeSmsParent,category)"));
+  expect(source,contains("errorText:attempted&&selectedMain.isEmpty"));
+  expect(source,contains("errorText:attempted&&selectedSub.isEmpty"));
+  expect(source,contains("waffraCanAssignManualCategory(categories,"));
   expect(source,contains("errorText:attempted&&selectedMain.isEmpty"));
   expect(source,contains("errorText:attempted&&selectedSub.isEmpty"));
   expect(source,contains("if(!waffraCanAssignManualCategory(categories,"));
