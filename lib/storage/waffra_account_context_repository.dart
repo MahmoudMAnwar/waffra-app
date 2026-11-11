@@ -306,7 +306,7 @@ WHERE a.archived=0 AND a.kind='bank' AND a.currency='SAR'
 
  /// M649: account-linked goal movements are a separate savings wallet.
  /// Read only verified source provenance; never synthesize MoneyEntry rows.
- Future<List<({String id,String goalId,String goalName,String accountId,String kind,int amountMinor,String occurredIso})>> readGoalAccountMovementHistory({
+ Future<List<WaffraVerifiedGoalMovement>> readGoalAccountMovementHistory({
   String? accountId,int limit=500,
  })async{
   await _ready();
@@ -326,7 +326,7 @@ WHERE a.archived=0 AND a.kind='bank' AND a.currency='SAR'
     Variable.withInt(limit),
    ],
   ).get();
-  return List<({String id,String goalId,String goalName,String accountId,String kind,int amountMinor,String occurredIso})>.unmodifiable(rows.map((r)=>
+  return List<WaffraVerifiedGoalMovement>.unmodifiable(rows.map((r)=>
    (
     id:r.read<String>('movement_id'),
     goalId:r.read<String>('goal_id'),
@@ -338,3 +338,8 @@ WHERE a.archived=0 AND a.kind='bank' AND a.currency='SAR'
    )));
  }
 }
+/// A single actual verified account-linked fund/release event.
+typedef WaffraVerifiedGoalMovement = ({
+ String id,String goalId,String goalName,String accountId,String kind,
+ int amountMinor,String occurredIso,
+});
