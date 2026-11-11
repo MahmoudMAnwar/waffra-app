@@ -11,16 +11,18 @@ class WaffraSmsRuleSettingsPage extends StatefulWidget {
   required this.scannedMessages,required this.incomeCategories,
   required this.expenseCategories,this.seedMessage,this.seedKind,
   this.seedSender='',this.seedAccountSuffix='',this.seedCategory='',
-  this.bankAccounts=const {},
-  required this.onNotice,
+  this.bankAccounts=const {},this.scannedSenders=const [],
+  required this.onNotice,this.onRulesChanged,
  });
  final bool english;
  final String ownerKey;
  final List<String> scannedMessages,incomeCategories,expenseCategories;
+ final List<String> scannedSenders;
  final String? seedMessage,seedKind;
  final String seedSender,seedAccountSuffix,seedCategory;
  final Map<String,String> bankAccounts;
  final void Function(String) onNotice;
+ final VoidCallback? onRulesChanged;
  @override State<WaffraSmsRuleSettingsPage> createState()=>_WaffraSmsRuleSettingsPageState();
 }
 
@@ -56,7 +58,12 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
   setState(()=>busy=true);
   try{
    await store.write(widget.ownerKey,next);
-   if(mounted)setState(()=>saved=next);
+   if(mounted){
+    setState(()=>saved=next);
+    // M661: a seedless user-created rule has no route result to signal Home.
+    // Persist first, then notify the existing debounced pending-SMS refresh.
+    widget.onRulesChanged?.call();
+   }
    return true;
   }catch(_){
    if(mounted)widget.onNotice(widget.english?
@@ -145,11 +152,17 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
      // A seeded bank sender is known. Never fake a 0-match preview by
      // evaluating a sender-scoped rule against senderless queue text.
      // When teaching a specific SMS, preview THAT sender and SMS only.
-     final previewMessages=seed!=null?<String>{seed}:
-      <String>{...widget.scannedMessages};
-     final matches=previewMessages.where((sms)=>
-      WaffraSmsLocalRules.matches(previewRule,sms,
-       sender:seed!=null&&sms==seed?widget.seedSender:'')).length;
+     final previewMessages=seed!=null?<String>{seed}:<String>{};
+     // M661: manual preview used sender='' for every current SMS, so a
+     // properly scoped rule incorrectly showed zero matches. Pair each body
+     // with its verified live native sender; do not store extra SMS data.
+     final matches=seed!=null?
+      previewMessages.where((sms)=>WaffraSmsLocalRules.matches(
+       previewRule,sms,sender:widget.seedSender)).length:
+      widget.scannedMessages.asMap().entries.where((row)=>
+       WaffraSmsLocalRules.matches(previewRule,row.value,
+        sender:row.key<widget.scannedSenders.length?
+         widget.scannedSenders[row.key]:'')).length;
      return SafeArea(top:false,child:Padding(
       padding:EdgeInsets.fromLTRB(18,8,18,MediaQuery.viewInsetsOf(ctx).bottom+12),
       child:ConstrainedBox(constraints:BoxConstraints(
