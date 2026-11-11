@@ -15023,8 +15023,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      refreshVerifiedWidgetBalance:_refreshWidget).build(context,0,false)),
    Padding(padding:const EdgeInsets.symmetric(horizontal:14,vertical:7),
     child:WaffraText(waffraIsEnglish?
-     'Your goals wallet is independent from current balance. Saving progress does not spend cash automatically.':
-     'محفظة الأهداف مستقلة عن الرصيد الحالي؛ إضافة الادخار لا تخصم منه تلقائيًا.',
+     'Your goals wallet is separate. Confirmed funding debits the selected bank account once; goal progress is not an expense.':
+     'محفظة الأهداف منفصلة؛ عند إضافة ادخار يُخصم المبلغ مرة واحدة من الحساب المختار بدون احتسابه مصروفًا.',
      textAlign:TextAlign.center,style:const TextStyle(fontSize:12,color:emerald))),
    const SizedBox(height:13),
    if(goals.isNotEmpty)...[
@@ -15079,6 +15079,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        overdue=forecast.overdue;
       }catch(_){/* Show no invented target guidance. */}
     }
+    final storedAccount=g.accountId==null?const <WaffraAccountBalance>[]:
+     _m467Accounts.where((a)=>a.id==g.accountId&&!a.archived).toList();
+    final displayedAccount=storedAccount.length==1?storedAccount.single.name:
+     (g.accountId==null?null:
+      (waffraIsEnglish?'Account requires verification':'الحساب يحتاج مراجعة'));
     final percent=g.target<=0?0.0:(g.saved/g.target).clamp(0.0,1.0);
     final shade=goalIcon(g.name)==Icons.flight_takeoff?const Color(0xFF9C56B8):
      goalIcon(g.name)==Icons.directions_car?const Color(0xFF3867D6):emerald;
@@ -15096,6 +15101,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         WaffraText(g.name,style:const TextStyle(fontWeight:FontWeight.bold,fontSize:16)),
         WaffraText(g.target<=0?(waffraIsEnglish?'Open-ended savings':'ادخار مفتوح'):(waffraIsEnglish?'Target: ${cash(g.target)}':'المستهدف: ${cash(g.target)}'),
          style:const TextStyle(fontSize:12)),
+        if(displayedAccount!=null)WaffraText(
+         (waffraIsEnglish?'Linked account: ':'الحساب المرتبط: ')+displayedAccount,
+         style:const TextStyle(fontSize:11,color:emerald),maxLines:2),
        ])),
        const SizedBox(width:1),
       ]),
@@ -15586,6 +15594,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     final goal=linked.isEmpty?null:linked.single;
     final color=Color(categoryFor(r.category,r.income).color);
     final when=nextRecurringDue(r);
+    final activeAccounts=r.accountId==null?const <WaffraAccountBalance>[]:
+     _m467Accounts.where((a)=>a.id==r.accountId&&!a.archived).toList();
+    final accountLabel=activeAccounts.length==1?activeAccounts.single.name:
+     (r.accountId==null?null:
+      (waffraIsEnglish?'Account requires verification':'الحساب يحتاج مراجعة'));
     return Card(elevation:0,margin:const EdgeInsets.only(bottom:11),
      color:Theme.of(context).brightness==Brightness.dark?Theme.of(context).cardColor:
       (r.income?const Color(0xFFEAF6EF):const Color(0xFFFFF0ED)),
@@ -15599,6 +15612,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
        WaffraText(r.title,style:const TextStyle(fontSize:15,fontWeight:FontWeight.bold)),
        WaffraText(cash(r.amount),style:const TextStyle(fontSize:14)),
+       if(accountLabel!=null)WaffraText(
+        (waffraIsEnglish?'Linked account: ':'الحساب المرتبط: ')+accountLabel,
+        maxLines:2,style:const TextStyle(fontSize:11,color:emerald)),
        if(goal!=null)...[
         const SizedBox(height:7),
         if(goal.target>0)LinearProgressIndicator(
