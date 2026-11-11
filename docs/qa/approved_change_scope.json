@@ -186,6 +186,10 @@
         "end": "import 'waffra_back_navigation.dart';"
       },
       {
+        "start": "import 'storage/waffra_live_legacy_finance_guard.dart';\n",
+        "end": "import 'waffra_home_widget.dart';\n"
+      },
+      {
         "start": "part 'waffra_smart_analysis.part.dart';",
         "end": " final decoded=jsonDecode(await WaffraSecureBackup.decrypt("
       },
