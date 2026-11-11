@@ -4843,6 +4843,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    r.resolvedKind==kind&&r.category==category&&
    WaffraSmsLocalRules.matches(r,body,sender:sender));
   await store.write(_smsRuleOwnerKey,updated);
+  // M651: a newly confirmed sender-specific rule must update old pending
+  // SMS suggestions too. The existing debounce refresh imports no history,
+  // classifies on a worker isolate, and never authorizes a money posting.
+  _receiveAutoSmsNotice();
   return true;
  }
 
