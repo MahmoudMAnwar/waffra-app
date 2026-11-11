@@ -12,8 +12,6 @@ SCOPED = [
   "m277-ux-accessibility.yml",
   "m278-mobile-system-insets.yml",
   "m281-practical-tools.yml",
-  "m287-receipt-ocr.yml",
-  "m297-receipt-to-entry.yml",
   "m298-finance-validation.yml",
   "m302-cross-feature-input-qa.yml",
   "m303-m306-production-hardening.yml",
@@ -43,8 +41,9 @@ ALWAYS_ON = [
 
 
 class WorkflowWiringTest(unittest.TestCase):
-    def test_owner_retired_qwen_only_workflow_without_suppressing_security_ci(self):
-        self.assertFalse((WF / "m317-ondevice-ai-brain.yml").exists())
+    def test_owner_retired_model_and_receipt_ocr_workflows_without_suppressing_security_ci(self):
+        for retired in ("m317-ondevice-ai-brain.yml", "m287-receipt-ocr.yml", "m297-receipt-to-entry.yml"):
+            self.assertFalse((WF / retired).exists(), retired)
         for required in ("android.yml", "m340-continuous-financial-quality.yml",
                          "m108-home-widget-one-finance-commit.yml",
                          "m109-verified-finance-authority.yml"):
