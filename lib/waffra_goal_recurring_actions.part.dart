@@ -45,9 +45,10 @@ extension WaffraGoalRecurringActions on _HomeScreenState {
   if(linked.isNotEmpty){
    final old=linked.single;
    next=date==null||updated.target<=0||!updated.active?
-    old.copy(active:false,title:'استحقاق '+updated.name):
+    old.copy(active:false,title:'استحقاق '+updated.name,
+     accountId:updated.accountId):
     old.copy(title:'استحقاق '+updated.name,amount:updated.target,
-     day:date.day,startAt:date,active:true);
+     day:date.day,startAt:date,active:true,accountId:updated.accountId);
   }else if(linkNew){
    if(date==null||updated.target<=0||!updated.active)return false;
    final available=categories.where((c)=>!c.income&&c.isSubcategory&&
@@ -63,7 +64,8 @@ extension WaffraGoalRecurringActions on _HomeScreenState {
     orElse:()=>available.first);
    next=RecurringBill(id:newId(),title:'استحقاق '+updated.name,
     category:chosen.name,amount:updated.target,income:false,
-    day:date.day,startAt:date,linkedGoalId:updated.id);
+    day:date.day,startAt:date,linkedGoalId:updated.id,
+    accountId:updated.accountId);
   }
   // Mutate both in-memory collections before the ONE source-aware save.
   // The SQLCipher projection and snapshot commit succeed or roll back together.
@@ -91,6 +93,12 @@ extension WaffraGoalRecurringActions on _HomeScreenState {
    creating:false,linkNew:false,operation:'goal-active-and-due');
  }
  Future<void> editGoal(SavingGoal existing)async{
+  var accountOptions=await _m641VerifiedGoalRecurringAccounts();
+  if(accountOptions==null||!mounted)return;
+  String? linkedAccount=existing.accountId;
+  if(!accountOptions.any((a)=>a.id==linkedAccount&&!a.archived)){
+   linkedAccount=null; // Legacy goals must be linked by explicit choice.
+  }
   final name=TextEditingController(text:existing.name);
   final target=TextEditingController(text:existing.target<=0?'':formatWaffraEditAmount(existing.target));
   bool noTarget=existing.target<=0;
@@ -110,6 +118,17 @@ extension WaffraGoalRecurringActions on _HomeScreenState {
         onChanged:(_)=>update(()=>nameError=null),
         decoration:InputDecoration(labelText:waffraIsEnglish?'Goal name *':'اسم الهدف *',
          border:const OutlineInputBorder(),errorText:nameError)),
+       const SizedBox(height:10),
+       WaffraGoalRecurringAccountPicker(
+        key:const Key('m641-edit-goal-account-cascade'),
+        idPrefix:'m641-edit-goal',english:waffraIsEnglish,
+        accounts:accountOptions,selectedAccountId:linkedAccount,
+        onChanged:(id)=>update(()=>linkedAccount=id),
+        onCreateAccount:(provider)async{
+         final created=await _m641CreateGoalRecurringAccount(provider);
+         if(created!=null)accountOptions=[...accountOptions,created];
+         return created;
+        }),
        const SizedBox(height:10),
        SwitchListTile.adaptive(
         contentPadding:EdgeInsets.zero,
@@ -160,9 +179,16 @@ extension WaffraGoalRecurringActions on _HomeScreenState {
          amountError=noTarget?null:waffraAmountFieldError(target.text);
         });
         if(nameError!=null||amountError!=null||(!noTarget&&(v==null||v<=0)))return;
+        if(linkedAccount==null||!accountOptions.any(
+          (a)=>a.id==linkedAccount&&!a.archived)){
+         ScaffoldMessenger.maybeOf(dialog)?.showSnackBar(SnackBar(content:Text(
+          waffraIsEnglish?'Select a verified money account.':
+           'اختر حسابًا ماليًا تابعًا موثّقًا.')));
+         return;
+        }
         Navigator.pop(dialog,SavingGoal(id:existing.id,name:n,target:noTarget?0.0:v!,
          saved:existing.saved,dueDate:removeDeadline?null:deadline,
-         active:existing.active,
+         active:existing.active,accountId:linkedAccount,
          progressAlertsEnabled:!noTarget&&goalAlertsEnabled,
          progressAlertPercent:goalAlertPercent));
        }),child:WaffraText(waffraIsEnglish?'Save changes':'حفظ التعديل')),
