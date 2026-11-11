@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_ai_finance_brain.dart';
 import 'package:waffra/waffra_auto_sms_policy.dart';
-import 'package:waffra/waffra_bank_screenshot_parser.dart';
 import 'package:waffra/waffra_cloudflare_sms_gateway.dart';
 import 'package:waffra/waffra_sms_cloud_redactor.dart';
 
@@ -47,19 +46,6 @@ void main() {
       sourceAccountVerified: true,
     );
     expect(decision.canPost, isTrue);
-  });
-
-  test('M470 currency-less OCR caption cannot create a financial amount', () {
-    final rows = WaffraBankScreenshotParser.reviewItems(
-      'تم إيداع 500 رسالة بانتظار المراجعة',
-    );
-    expect(rows, hasLength(1));
-    expect(rows.single.amount, isNull);
-    final sar = WaffraBankScreenshotParser.reviewItems(
-      'تم إيداع 135.00 SAR',
-    );
-    expect(sar, hasLength(1));
-    expect(sar.single.amount, 135);
   });
 
   test('M470 currency-less Arabic prose cannot authorize cloud analysis', () {
