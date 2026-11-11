@@ -8,7 +8,8 @@
     "Use distinct visual presentation for paid recurring/goal-due entries, without additional database posting or double counting.",
     "After durably saving a new local classification rule, refresh pending SMS suggestions off the first Home rendering path.",
     "Keep color conventions consistent for financial PDF exporting and preserve all transaction and account safety guards.",
-    "Document new six numbered issues and acceptance tests before completing implementation."
+    "Document new six numbered issues and acceptance tests before completing implementation.",
+    "Read traceable goal-funding movements directly from the encrypted account-linked goal wallet journal and present savings movements without fictional entries."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -17,7 +18,9 @@
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
-    "test/m647_m652_financial_activity_regression_test.dart"
+    "test/m647_m652_financial_activity_regression_test.dart",
+    "lib/storage/waffra_account_context_repository.dart",
+    "lib/storage/waffra_verified_accounts_api.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
@@ -50,6 +53,22 @@
       {
         "start": " Widget dashboard(){",
         "end": " List<MoneyEntry> get analysisEntries"
+      },
+      {
+        "start": " Future<void> exportEntriesPdf(List<MoneyEntry> items,String title,{bool analytics=false})async {",
+        "end": " Future<void> _deleteVerifiedEntry(MoneyEntry entry)async {"
+      }
+    ],
+    "lib/storage/waffra_account_context_repository.dart": [
+      {
+        "start": " /// M611: read the actual encrypted two-sided transfer ledger",
+        "end": null
+      }
+    ],
+    "lib/storage/waffra_verified_accounts_api.dart": [
+      {
+        "start": " /// M611: owner-scoped verified read; transfers never enter income/expense.",
+        "end": " /// A witnessed, bounded read for existing entry Edit."
       }
     ]
   }
