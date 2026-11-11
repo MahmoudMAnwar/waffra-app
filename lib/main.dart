@@ -11016,11 +11016,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           pdfCell('${e.income?'+':'-'}${fmt(e.amount)}',center:true,monetary:true),
          ];
          return pw.TableRow(
-          decoration:pw.BoxDecoration(color:PdfColor.fromInt(
+          decoration:pw.BoxDecoration(color:
            (e.sourceType=='recurring'||e.sourceType=='goal_due')?
-            const Color(0xFFEFE9F8).toARGB32():
-            (e.income?waffraIncomeBackground.toARGB32():
-             waffraExpenseBackground.toARGB32()))),
+            PdfColor.fromInt(const Color(0xFFEFE9F8).toARGB32()):
+            PdfColor.fromInt(e.income?waffraIncomeBackground.toARGB32():waffraExpenseBackground.toARGB32())),
           children:english?orderedCells:orderedCells.reversed.toList(),
          );
         }),
