@@ -61,3 +61,18 @@ RELEASE AND QA TRUTH:
 - Explicitly preserve Android Lint, every existing Flutter/Python test, M340/M174 SQLCipher/finance gates, APK+AAB verified signatures and SHA identity; no --no-lint, lint task exclusion, continue-on-error, source code or Gradle plugin/version override.
 - New M654 regression contract checks JDK21 before native build, no lint bypass and main-signed/source invariants. M385 bounded file manifest, M550 behavior registry and M653 QA evidence updated before this append.
 - STATUS: Source+tests committed in Draft PR #580; newest exact-head GitHub CI and new signed main build results NOT YET CONFIRMED. Issue: https://github.com/MahmoudMAnwar/waffra-app/issues/582
+
+
+[M658 — MAIN APK/AAB SIGNED ARTIFACT PUBLICATION BOTTLENECK, ISSUE #585, 2026-11-11]
+- First signed main after PR #580 on exact SHA 98dee202 (run #43093248678) did NOT deliver the predicted 14–16m: the owner observed more than 21 minutes. The full Flutter/Python suite, exact SHA M174/M449, both signed builds, APK/AAB signatures and receipts were green, but both upload-artifact@v4 steps stalled and subsequently displayed failure, with no published artifact available at the time of evidence collection.
+- Source analysis: both uploads used default gzip 6 on already compressed APK/AAB binaries; GitHub documents compression-level: 0 as faster for large incompressible files. This is a proven configuration inefficiency, NOT proof of the remote artifact service error cause (job logs unavailable after tool timeout).
+- Issue #585 and permanent requirements were recorded first. M658 CI workflow change then pins compression-level: 0 for the SAME two signed artifact uploads with the SAME filenames, receipts, exact SHA, error-if-missing and 30d retention; adds a 20-minute maximum for each native build/publish job. A timeout or failed upload remains a failed release; neither APK nor AAB is disabled.
+- QA regression test/qa/m658_fast_signed_artifact_upload_test.py checks the two unique uploads, unchanged APK+AAB receipt/signature/source/finance gates and fail-closed time bounds. M385 three bounded workflow sections, M550 registered behavior, and M658 evidence document preserve the approved release contract. No app or finance code changes.
+- Status: PR source committed; exact-head CI and NEXT **actual main** completed signed release, downloadable artifacts and wall-clock/upload-step duration still PENDING. Do not mark speedup Done or claim a 14–16m result before measuring it. https://github.com/MahmoudMAnwar/waffra-app/issues/585
+
+
+[M659 — PR #586 DEDICATED SIGNED ARTIFACT SOURCE QA, ISSUE #587, 2026-11-12]
+- Owner requested actual CI jobs for the open Draft PR #586 instead of merely checking M658 Python tests into the repository. This is a CI-only change, not a new app feature.
+- Add .github/workflows/m659-pr-signed-artifact-qa.yml: independent exact-PR-head jobs cover M658 APK/AAB upload/receipt/timeout safety plus existing M381/M382/M383/M449 source contracts and M385 exact-PR change boundaries. A terminal always-running job must fail if either required job failed, was skipped, or was cancelled. New test/qa/m659_pr_signed_artifact_jobs_test.py asserts this no-skip source contract.
+- Preserve original main-only signed APK and AAB jobs; PR jobs do NOT compile, sign, or publish binaries, and do not duplicate full Flutter/Gradle builds. Pre-existing full Flutter/finance/SQLCipher/M550 checks remain independently required.
+- Status: source workflow and regression committed to Draft PR #586; latest exact-head GitHub Actions success NOT confirmed at this writing. Neither real main APK/AAB artifact delivery nor upload-latency reduction is proved by this new source-only QA. Issue: https://github.com/MahmoudMAnwar/waffra-app/issues/587
