@@ -1,21 +1,36 @@
 {
   "contract_version": 1,
-  "change_id": "M637-BIOMETRIC-HOME-VERIFIED-ACCOUNT-SCHEMA-HOTPATH-557",
-  "human_scope_review": "Owner explicitly requested fix real performance first after biometric and logout/login, with old-vs-current code analysis. Only avoid redundant already-proven schema checks; preserve SQLCipher, foreign-key integrity, independent original SMS Review and biometric/PBKDF2. Issue #557 / Draft PR #558 and permanent requirements before code. Not physical performance certified.",
+  "change_id": "M637-M638-PERF-PLUS-SAUDI-FINANCIAL-PROVIDERS-AND-SMS-INBOX-SYNC-557-559",
+  "human_scope_review": "Two approved user scopes combined by explicit owner request in the same Draft PR #558. M637 performance unchanged; M638 local vs digital bank vs wallet Arabic catalog, cascaded entry/account selection + dimmed validation, remove surplus transfer explanations, explicit Android SMS inbox deletion reconciliation on I/O executor, no saved ledger/anti-replay/excluded loss. Permanent requirements M637/M638 documented before source changes.",
   "user_requested_changes": [
     "Speed up the actual verified finance Home handoff after successful biometric and ordinary logout/login; no cosmetic spinner in this performance-first patch.",
     "Remove repeated account schema foreign-key validations and avoid unnecessary already-installed AccountContext transaction on the verified account balance read hot path without losing any schema corruption checks.",
     "Retain exactly one owner/source-gated, witnessed encrypted account read, full integrity, first-install transactional schema repair, SQLCipher and mandatory authentication, while SMS scans stay delayed until Home is painted.",
-    "Add meaningful positive/negative account schema and first-home contract regressions and require real Android profile-mode timings before claiming success."
+    "Add meaningful positive/negative account schema and first-home contract regressions and require real Android profile-mode timings before claiming success.",
+    "M638 #559: Local banks, digital banks and digital wallets are separate categories; Arabic provider names in second dropdown, D360 verbatim, Barq/Enjaz Pay/Alinma Pay wallets not banks; preserve existing verified account IDs.",
+    "M638: dependent institution/account/subcategory dropdown dimmed until parent set; manual income/expense confirm disabled until every required field valid; remove exactly two transfer explanatory lines without removing real errors.",
+    "M638: explicit SMS Rescan must reconcile unconfirmed encrypted pending queue against current Android inbox, remove only missing source records, group count updates; permission/partial scan fails closed and never deletes SQLCipher ledger, confirmed hashes, exclusions or sender rule."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
+    "lib/main.dart",
     "lib/storage/waffra_account_context_schema.dart",
     "lib/storage/waffra_accounts_repository.dart",
     "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
+    "lib/waffra_account_context_settings.dart",
+    "lib/waffra_account_transaction_form.dart",
+    "lib/waffra_accounts_manager_page.dart",
+    "lib/waffra_auto_sms.dart",
+    "lib/waffra_new_account_dialog.dart",
+    "lib/waffra_recurring_account_groups.dart",
+    "lib/waffra_saudi_financial_providers.dart",
+    "native/WaffraAutoSmsStore.kt",
+    "native/WaffraMainActivity.kt",
+    "test/m638_saudi_provider_catalog_and_cascade_test.dart",
+    "test/m638_sms_inbox_delete_sync_test.dart",
     "test/storage/m637_biometric_home_schema_hotpath_test.dart"
   ],
   "approved_deleted_files": [],
@@ -37,6 +52,104 @@
       {
         "start": " static Future<void> install(WaffraEncryptedStore db)async{",
         "end": " static Future<void> requireReady(WaffraEncryptedStore db)async{"
+      }
+    ],
+    "lib/waffra_recurring_account_groups.dart": [
+      {
+        "start": "import 'storage/waffra_accounts_repository.dart';",
+        "end": "/// Accounts without a recognized institution"
+      }
+    ],
+    "lib/waffra_new_account_dialog.dart": [
+      {
+        "start": "import 'package:flutter/material.dart';",
+        "end": "class WaffraNewAccountDraft {"
+      },
+      {
+        "start": " String kind='cash';",
+        "end": " @override void initState(){"
+      },
+      {
+        "start": "    if(kind=='bank')...[",
+        "end": "    if(kind=='bank'||kind=='wallet')...["
+      },
+      {
+        "start": "     onChanged:(v){if(v!=null)setState((){",
+        "end": "    if(kind=='bank')...["
+      },
+      {
+        "start": " String get accountLabel{",
+        "end": " bool get valid{"
+      },
+      {
+        "start": "  final suggested=widget.suggestedProviderId;",
+        "end": "  // A masked bank SMS"
+      }
+    ],
+    "lib/waffra_accounts_manager_page.dart": [
+      {
+        "start": "  final bank=RegExp(",
+        "end": "  final customSubtypes=<String,List<String>>{"
+      }
+    ],
+    "lib/main.dart": [
+      {
+        "start": "  var entryProviders=sms?",
+        "end": "  int budgetMenuRevision=0;"
+      },
+      {
+        "start": "   String? transferSourceProvider,transferDestinationProvider;",
+        "end": "   DateTime transferDate=DateTime.now();"
+      },
+      {
+        "start": "     Widget accountChoice({required String label,required String? value,",
+        "end": "     return WaffraEntrySheetSafeLayout("
+      },
+      {
+        "start": "         WaffraText(waffraIsEnglish?\n          'Moving money between your own accounts is not income or spending.':",
+        "end": "         TextField(key:const Key('m466-transfer-amount')"
+      },
+      {
+        "start": "         transferAccounts.length<2?null:WaffraHaptics.tap",
+        "end": "        final amount=waffraSarAmountMinor(transferAmount.text);"
+      },
+      {
+        "start": "         transferError=transferAccounts.length<2?",
+        "end": "        });"
+      },
+      {
+        "start": "       WaffraCenteredDropdownFormField<String>(\n        key:ValueKey('m470-home-manual-provider-'",
+        "end": "       const SizedBox(height:10),\n       WaffraCenteredDropdownFormField<String>(\n        key:ValueKey('m470-home-manual-account-'"
+      },
+      {
+        "start": "       InkWell(key:const Key('m470-entry-subcategory-picker')",
+        "end": "       if(selectedMain.isNotEmpty&&subcategories.isEmpty)"
+      },
+      {
+        "start": "       footer:FilledButton(\n       key:const Key('waffra-entry-confirm-save'),",
+        "end": "       if(submitTapped)return;"
+      },
+      {
+        "start": "  final results=await WaffraAutoSms.pendingChecked();",
+        "end": "  if(!_m630SmsSessionCurrent(smsEpoch))return;"
+      }
+    ],
+    "lib/waffra_auto_sms.dart": [
+      {
+        "start": " static Future<int> importConsentMonthChecked()async{",
+        "end": " static Future<bool> suspendForSignOut()"
+      }
+    ],
+    "native/WaffraAutoSmsStore.kt": [
+      {
+        "start": "    /**\n     * M547: a completed historical pass",
+        "end": "    private data class HistoricalSmsRow("
+      }
+    ],
+    "native/WaffraMainActivity.kt": [
+      {
+        "start": "                \"importConsentMonthBankSms\" -> {",
+        "end": "                \"scanUnknownFinancialSms\" -> {"
       }
     ]
   }
