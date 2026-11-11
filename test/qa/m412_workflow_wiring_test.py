@@ -19,7 +19,6 @@ SCOPED = [
   "m303-m306-production-hardening.yml",
   "m371-goal-wallet-budget-android-regression.yml",
   "m290-country-reminders-multicurrency.yml",
-  "m317-ondevice-ai-brain.yml",
   "m106-play-privacy-preflight.yml",
   "m107-account-deletion-crash-privacy.yml",
   "m108-home-widget-one-finance-commit.yml",
@@ -44,6 +43,13 @@ ALWAYS_ON = [
 
 
 class WorkflowWiringTest(unittest.TestCase):
+    def test_owner_retired_qwen_only_workflow_without_suppressing_security_ci(self):
+        self.assertFalse((WF / "m317-ondevice-ai-brain.yml").exists())
+        for required in ("android.yml", "m340-continuous-financial-quality.yml",
+                         "m108-home-widget-one-finance-commit.yml",
+                         "m109-verified-finance-authority.yml"):
+            self.assertTrue((WF / required).is_file(), required)
+
     def test_scoped_jobs_gate_on_exact_changed_commit_without_removing_tests(self):
         for name in SCOPED:
             with self.subTest(workflow=name):
