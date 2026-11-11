@@ -3581,3 +3581,9 @@ M647/M649/M652 provenance labels — PR #575, 2026-11-11
 - Verified internal transfers now show the account-relative cash direction for either account when filtered: a minus sign and «صادر من الحساب المحدد» for the source account, or a plus sign and «وارد إلى الحساب المحدد» for the destination account. In All Accounts the same single transfer stays unsigned and does not alter income/expense totals.
 - The amount is scaled down on narrow devices rather than overflowing the transfer card; the existing verified from/to bank names and principal are preserved. No finance posting or balance calculation was introduced by this presentation change.
 - Added a focused M648 regression asserting signed direction, labels and no finance commit. This note follows app-source commit 01b8e20b. Exact latest-head CI and physical Android checks are still pending; not yet ready to merge.
+
+
+[M650 — PAID DUE ACCOUNT PROVENANCE IN HOME — PR #575 — 2026-11-11]
+- The violet already-paid recurring or linked-goal due card now displays the actually linked financial account by using the existing read-only, verified SQLCipher entry-to-account source lookup (readExistingEntryAccount), not guessing based on a recurring title, SMS sender, or a mutable selected Home display filter. A wallet-funded goal due explicitly identifies the savings wallet and its actual wallet-paid portion.
+- Read-only futures are cached by posted entry ID and rendered only after verified Home accounts are available; no blocking first-frame account read, new due settlement or duplicate debit. Unknown and archived account identities remain labeled as unverified. Refresh invalidates only presentation cache.
+- Added a narrowly scoped M650 source regression proving verified lookup, goal-wallet portion, and absence of a second financial writer. Exact-current-head Flutter/SQLCipher/Android QA and real-device UX remain pending; PR #575 is Draft, unmerged, and no branch APK is authorized.
