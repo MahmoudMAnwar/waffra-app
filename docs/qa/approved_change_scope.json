@@ -29,6 +29,7 @@
     "lib/waffra_saudi_financial_providers.dart",
     "native/WaffraAutoSmsStore.kt",
     "native/WaffraMainActivity.kt",
+    "test/m417_sms_first_run_test.dart",
     "test/m638_saudi_provider_catalog_and_cascade_test.dart",
     "test/m638_sms_inbox_delete_sync_test.dart",
     "test/m639_permissions_onboarding_plain_copy_test.dart",
@@ -117,6 +118,12 @@
       {
         "start": "    const SizedBox(height:18),\n    Text(widget.english?",
         "end": "    const SizedBox(height:20),\n    if(busy)"
+      }
+    ],
+    "test/m417_sms_first_run_test.dart": [
+      {
+        "start": " testWidgets('M417 consent explains Android permission prompts in order',",
+        "end": " test('M417 permissions follow signup without unsolicited cloud consent',"
       }
     ]
   }
