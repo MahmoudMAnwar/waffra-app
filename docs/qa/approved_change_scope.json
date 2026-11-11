@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
   "change_id": "M647-M652-20261111-FINANCIAL-ACTIVITY-SMS-REFRESH-PR575",
-  "human_scope_review": "Owner explicitly requested in chat 2026-11-11: transfer visual clarification, blue internal transfer and gold savings and violet paid recurring cards, refreshed local SMS classification and PDF color parity. Prior PR #558 manifest belongs to another branch and must not be copied into #575. Only newly approved paths and exact M647–M652 function sections are allowed. M652 CI run #43075376491 exposed one obsolete PDF two-color source assertion in test/waffra_oct21_regression_test.dart; only the named original color test scope may change, with positive red/green/violet assertions. PR #575 M550 run 43076285421 found one obsolete M296 assert; only the existing 11+ expansion test may change, no budgets or count policy alterations. M648 follow-up on PR #575: original M296 test still checks old exact CTA condition before the new transfer/savings support; replace only this exact asserted source line with checks of the widened trigger and preserve all numeric pagination assertions. M296 exact M385 source anchor corrected after the assertion text changed; keep original numerical assertions and anchor the single Eleven-or-more test only, never overwrite another test.",
+  "human_scope_review": "Owner explicitly requested in chat 2026-11-11: transfer visual clarification, blue internal transfer and gold savings and violet paid recurring cards, refreshed local SMS classification and PDF color parity. Prior PR #558 manifest belongs to another branch and must not be copied into #575. Only newly approved paths and exact M647–M652 function sections are allowed. M652 CI run #43075376491 exposed one obsolete PDF two-color source assertion in test/waffra_oct21_regression_test.dart; only the named original color test scope may change, with positive red/green/violet assertions. PR #575 M550 run 43076285421 found one obsolete M296 assert; only the existing 11+ expansion test may change, no budgets or count policy alterations. M648 follow-up on PR #575: original M296 test still checks old exact CTA condition before the new transfer/savings support; replace only this exact asserted source line with checks of the widened trigger and preserve all numeric pagination assertions. M296 exact M385 source anchor corrected after the assertion text changed; keep original numerical assertions and anchor the single Eleven-or-more test only, never overwrite another test. Latest PR #575 exact-head 33316ee8 Flutter full-run failure was one M611 test requiring readInternalTransferHistory inside the click handler despite the owner-approved M647/M648 verified cached adapter. Permit only the last M611 transfer-history test to assert the complete UI -> cache -> witnessed SQLCipher read chain; no test deletion, no finance source changes or relaxed account checks.",
   "user_requested_changes": [
     "Replace oversized transfer history modal with readable verified from/to accounts and balance-safe amount, date and optional notes.",
     "Show verified internal transfers as distinct blue Home activity cards and never treat the transferred principal as income or expense.",
@@ -14,7 +14,8 @@
     "Reconcile the obsolete PDF regression assertion with the newly requested violet paid-due color branch while preserving income, expense, all other PDF checks and protected test functions.",
     "M648 revised Home Show more respects verified transfer/savings activity; adjust only M296 existing 11+ matching transactions test to assert the newly expanded activity controls while preserving original zero-through-ten count logic.",
     "M648 verified Home activity list expansion now covers transfer and goal-wallet activity as well as MoneyEntry, so M296's obsolete single-category expansion source assertion must be updated without weakening its numeric 0-to-10 and 11-plus tests.",
-    "Confirmed sender-specific income, expense, transfer and excluded SMS rules must invalidate pending suggestions immediately after durable local rule store write through the existing debounced non-posting refresh."
+    "Confirmed sender-specific income, expense, transfer and excluded SMS rules must invalidate pending suggestions immediately after durable local rule store write through the existing debounced non-posting refresh.",
+    "PR #575 exact-head failures in M282 and full Flutter suite exposed M611's obsolete direct UI storage invocation assertion; update only M611 verified transfer history test to validate UI -> cached verified API -> encrypted journal, preserving account scoping and read-only failure behavior."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -27,7 +28,8 @@
     "lib/storage/waffra_account_context_repository.dart",
     "lib/storage/waffra_verified_accounts_api.dart",
     "test/waffra_oct21_regression_test.dart",
-    "test/m296_monthly_budget_and_transactions_test.dart"
+    "test/m296_monthly_budget_and_transactions_test.dart",
+    "test/m611_manual_home_finance_regression_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
@@ -92,6 +94,12 @@
       {
         "start": " test('Eleven or more matching transactions start at ten and can expand',(){",
         "end": "  expect(source,contains('visible.length,expanded:showAllTransactions'));"
+      }
+    ],
+    "test/m611_manual_home_finance_regression_test.dart": [
+      {
+        "start": " test('M611 transfer history reads real encrypted rows under owner witness', () {",
+        "end": null
       }
     ]
   }
