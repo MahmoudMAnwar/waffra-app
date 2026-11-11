@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main(){
  final home=File('lib/main.dart').readAsStringSync();
  test('M636 OCR progress remains bounded and dismisses on completion',(){
-  expect(home,contains("Key('waffra-ai-analysis-progress')"));
+  expect(home,contains("Key('waffra-ocr-analysis-progress')"));
   expect(home,contains('item.remove();'));
   expect(home,contains('item.dispose();'));
   expect(home,contains('()=>WaffraReceiptOcr.scan(picked.path)'));
