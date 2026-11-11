@@ -5,9 +5,6 @@ abstract final class WaffraSaudiRelease {
  static const bool enabled=true;
  static const bool locationCountryOnboarding=false;
  static const bool receiptImageTransactionImport=false;
- static const bool qwenForBankSms=false;
- static const bool qwenForAskWaffra=false;
- static const bool freeTextAskWaffra=false;
  static const bool userCountryChoice=false;
  static const bool userCurrencyChoice=false;
  static const bool globalCurrencyConverter=true;
