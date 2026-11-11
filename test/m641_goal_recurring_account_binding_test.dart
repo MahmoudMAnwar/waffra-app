@@ -39,6 +39,10 @@ void main(){
   final actions=File('lib/waffra_goal_recurring_actions.part.dart').readAsStringSync();
   expect(actions,contains('accountId:updated.accountId'));
   expect(actions,contains('accountId:linkedAccount'));
+  expect(actions,contains('WaffraRecurringPolicy.toHalalas(goals[i].saved)'));
+  expect(actions,contains('WaffraRecurringPolicy.toHalalas(updated.saved)'));
+  expect(actions,contains('مبلغ الادخار اتغير أثناء التعديل'));
+
   final writer=File('lib/storage/waffra_verified_goal_due_snapshot_writer.dart')
    .readAsStringSync();
   expect(writer,contains("recurring['accountId']!=goalAccountId"));
