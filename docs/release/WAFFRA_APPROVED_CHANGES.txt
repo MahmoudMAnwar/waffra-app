@@ -3393,3 +3393,9 @@ passed; changed-source analysis clean; M550 contract preflight passed.
 - Bound scope: eliminate duplicate bridge + repository AccountSchema/AccountContextSchema verification in one already source-locked read; keep account schema checks/foreign-key and fail-closed verification in repository. On installed AccountContext schema, perform full revision/FK validation without needless SQL transaction; first-time installation remains transactional and race safe.
 - Regression coverage: M637 specific positive and negative gate, plus unchanged M440/M448 encrypted SQL integration. Existing post-biometric root, native PBKDF2, actual SQLCipher owner binding, M633 decode, M624 SMS deferral and all persisted finance unchanged.
 - Status: PARTIAL; complete exact-head PR CI and actual Android p95/FPS/login→Home/relogin measurements required before Done; no feature-branch APK, no auto merge.
+
+
+[M638 CATALOG + EXPLICIT RESCAN INBOX RECONCILIATION — ISSUE #559 / EXISTING DRAFT PR #558]
+- Owner explicitly requested this additional scope in the same M637 performance PR after displaying Income/Expense/Transfer/Notifications screenshots. Separate SAMA local banks, digital banks, and e-wallets (Barq, Enjaz Pay, Alinma Pay); preserve exact label D360. New cascaded disabled child controls and dimmed confirm button; remove surplus transfer help copy.
+- Add explicit foreground Rescan reconciliation to Android inbox current SMS identities for native encrypted unconfirmed review only, without resetting new-only cursor or deleting SQLCipher accounts/posted transactions/excluded 30-day records. Fail closed on permission or provider error and execute off Android UI thread.
+- Status: planned/partially implemented; same PR #558; follow exact-head source/QA CI and device test before Done. No APK from PR.
