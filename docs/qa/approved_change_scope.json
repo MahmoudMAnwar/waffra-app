@@ -324,6 +324,48 @@
         "start": "            \".github/workflows/unified-finance-cloud-release-evidence.yml\",\n        ]\n",
         "end": "        for path in paths:\n"
       }
+    ],
+    ".github/workflows/finance-full-regression.yml": [
+      {
+        "start": "        run: |\n          python3 - <<'PY'",
+        "end": "          assert 'SharedPreferences.getInstance()' in main"
+      },
+      {
+        "start": "          assert '_financeAuthority.saveCaptured(' in main",
+        "end": "          assert 'await journal.recover(prefs);' in persistence"
+      }
+    ],
+    ".github/workflows/m103-same-sha-release-certification.yml": [
+      {
+        "start": "          python3 - <<'PY'",
+        "end": "            'lib/storage/waffra_portable_encrypted_vault_restorer.dart',"
+      }
+    ],
+    ".github/workflows/m108-home-widget-one-finance-commit.yml": [
+      {
+        "start": "name: Waffra M108 Live Home and Widget Shared SMS Commit",
+        "end": "      - '.github/workflows/m108-home-widget-one-finance-commit.yml'"
+      },
+      {
+        "start": "        with:\n          github-token: ${{ github.token }}",
+        "end": "          test/m108_home_widget_one_finance_writer_test.dart"
+      }
+    ],
+    ".github/workflows/m109-verified-finance-authority.yml": [
+      {
+        "start": "          python3 - <<'PY'",
+        "end": "          assert 'externalSourceWitnessActive = false' in router"
+      }
+    ],
+    ".github/workflows/m124-main-integration-audit.yml": [
+      {
+        "start": "        run: |\n          python3 - <<'PY'\n          from pathlib import Path",
+        "end": "          authority=Path("
+      },
+      {
+        "start": "          assert 'this.externalSourceWitnessActive = false' in authority",
+        "end": "\n  encrypted-finance-regression:"
+      }
     ]
   }
 }
