@@ -506,6 +506,24 @@ class MainActivity : FlutterFragmentActivity() {
                         }
                     }
                 }
+                "reconcilePendingAutoBankSmsWithAndroidInbox" -> {
+                    // M638: only an explicit user Rescan calls this. Keep
+                    // Android ContentResolver/Keystore work off the UI thread.
+                    val app = applicationContext
+                    smsHistoryExecutor.execute {
+                        try {
+                            val removed = WaffraAutoSmsStore.reconcilePendingWithInbox(app)
+                            runOnUiThread { result.success(removed) }
+                        } catch (_: Exception) {
+                            // Do not silently clear an encrypted pending queue
+                            // when READ_SMS/provider access is denied or fails.
+                            runOnUiThread {
+                                result.error("SMS_INBOX_SYNC_UNAVAILABLE",
+                                    "Could not verify the Android SMS inbox; pending review is unchanged", null)
+                            }
+                        }
+                    }
+                }
                 "scanUnknownFinancialSms" -> {
                     val app = applicationContext
                     smsHistoryExecutor.execute {
