@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
   "change_id": "M647-M652-20261111-FINANCIAL-ACTIVITY-SMS-REFRESH-PR575",
-  "human_scope_review": "Owner explicitly requested in chat 2026-11-11: transfer visual clarification, blue internal transfer and gold savings and violet paid recurring cards, refreshed local SMS classification and PDF color parity. Prior PR #558 manifest belongs to another branch and must not be copied into #575. Only newly approved paths and exact M647–M652 function sections are allowed. M652 CI run #43075376491 exposed one obsolete PDF two-color source assertion in test/waffra_oct21_regression_test.dart; only the named original color test scope may change, with positive red/green/violet assertions. PR #575 M550 run 43076285421 found one obsolete M296 assert; only the existing 11+ expansion test may change, no budgets or count policy alterations. M648 follow-up on PR #575: original M296 test still checks old exact CTA condition before the new transfer/savings support; replace only this exact asserted source line with checks of the widened trigger and preserve all numeric pagination assertions.",
+  "human_scope_review": "Owner explicitly requested in chat 2026-11-11: transfer visual clarification, blue internal transfer and gold savings and violet paid recurring cards, refreshed local SMS classification and PDF color parity. Prior PR #558 manifest belongs to another branch and must not be copied into #575. Only newly approved paths and exact M647–M652 function sections are allowed. M652 CI run #43075376491 exposed one obsolete PDF two-color source assertion in test/waffra_oct21_regression_test.dart; only the named original color test scope may change, with positive red/green/violet assertions. PR #575 M550 run 43076285421 found one obsolete M296 assert; only the existing 11+ expansion test may change, no budgets or count policy alterations. M648 follow-up on PR #575: original M296 test still checks old exact CTA condition before the new transfer/savings support; replace only this exact asserted source line with checks of the widened trigger and preserve all numeric pagination assertions. M296 exact M385 source anchor corrected after the assertion text changed; keep original numerical assertions and anchor the single Eleven-or-more test only, never overwrite another test.",
   "user_requested_changes": [
     "Replace oversized transfer history modal with readable verified from/to accounts and balance-safe amount, date and optional notes.",
     "Show verified internal transfers as distinct blue Home activity cards and never treat the transferred principal as income or expense.",
@@ -85,7 +85,7 @@
     ],
     "test/m296_monthly_budget_and_transactions_test.dart": [
       {
-        "start": "  expect(source,contains('if(waffraCanExpandDashboardTransactions(visible.length))'));",
+        "start": " test('Eleven or more matching transactions start at ten and can expand',(){",
         "end": "  expect(source,contains('visible.length,expanded:showAllTransactions'));"
       }
     ]
