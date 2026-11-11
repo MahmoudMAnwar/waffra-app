@@ -40,7 +40,7 @@ jobs:
         run: echo "PASS is source-only; not a physical Android or production SQLCipher certification."
 
   critical-finance-tests:
-    name: Manual, bank SMS, OCR, FX and Ask Waffra
+    name: Manual, bank SMS, FX and verified finance checks
     runs-on: ubuntu-latest
     timeout-minutes: 50
     steps:
@@ -66,25 +66,21 @@ jobs:
             test/waffra_validators_test.dart \
             test/m280_sms_fuzz_and_boundary_test.dart \
             test/m280_financial_integrity_fault_injection_test.dart \
-            test/m287_receipt_ocr_test.dart \
             test/m291_multicurrency_bank_sms_review_test.dart \
             test/m292_sms_fx_review_test.dart \
-            test/m297_ocr_to_finance_and_sms_layout_test.dart \
             test/m300_all_supported_currency_sms_matrix_test.dart \
             test/m302_cross_feature_input_precision_test.dart \
             test/m317_ai_finance_brain_test.dart \
-            test/m332_ai_ocr_hang_and_six_for_three_test.dart \
-            test/m332_live_bank_image_sms_hang_regression_test.dart \
             test/m333_ask_waffra_verified_answers_test.dart \
             test/m335_ask_waffra_scope_test.dart \
-            test/m335_real_sms_ocr_accuracy_test.dart \
             test/m336_fx_consent_and_full_title_test.dart \
             test/m336_whole_app_finance_quality_matrix_test.dart \
             test/m337_bank_sms_timestamp_finance_safety_test.dart \
             test/m337_finance_durable_preflight_safety_test.dart \
             test/m337_sms_parser_duplicate_integrity_test.dart \
             test/m338_currency_less_sms_finance_guard_test.dart \
-            test/m339_failed_finance_save_receipt_cleanup_test.dart
+            test/m339_failed_finance_save_receipt_cleanup_test.dart \
+            test/m640_receipt_reader_retirement_test.dart
 
   full-app:
     name: Analyze and test complete Flutter application
