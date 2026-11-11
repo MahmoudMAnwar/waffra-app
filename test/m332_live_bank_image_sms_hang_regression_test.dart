@@ -83,16 +83,11 @@ Merchant Test
   expect(WaffraAiFinanceBrain.matchesVerifiedImageActions(input,wrong),false);
  });
 
- test('M332 AI progress is cancellable and bank AI starts on every paste',(){
+ test('M636 OCR remains cancellable while SMS review stays verified',(){
   final home=File('lib/main.dart').readAsStringSync();
-  final engine=File('lib/waffra_ondevice_qwen.dart').readAsStringSync();
   expect(home,contains("Key('waffra-ai-analysis-cancel')"));
-  expect(home,contains('scheduleBankSmsAnalysis(ctx,update,text);'));
-  expect(home,contains('analyzeBankSmsAutomatically('));
-  expect(home,contains('final evidence=WaffraSmsCurrencies.originalAmount(found[i]);'));
-  expect(home,isNot(contains("Key('waffra-sms-ai-review')")));
-  expect(engine,contains('cancelCurrentGeneration()'));
-  expect(engine,contains('generationTimeLimit'));
-  expect(engine,contains('cancelGeneration()'));
+  expect(home,contains('item.dispose();'));
+  expect(home,contains('await entrySheet(sms:true,initialSms:body,reviewedSender:sender);'));
+  expect(home,isNot(contains('WaffraOnDeviceQwen')));
  });
 }
