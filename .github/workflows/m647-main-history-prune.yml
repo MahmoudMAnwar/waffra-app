@@ -55,7 +55,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           test "$GITHUB_REF" = "refs/heads/main"
       - name: Run negative tests before any history mutation
-        run: python3 -m unittest test/qa/m647_main_history_prune_test.py -v
+        run: python3 -m unittest discover -s test/qa -p m647_main_history_prune_test.py -v
       - name: Snapshot, audit and prune old main failed/skipped/cancelled runs
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
