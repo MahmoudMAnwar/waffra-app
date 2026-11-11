@@ -3554,3 +3554,9 @@ M648 M550 source-contract reconciliation — 2026-11-11 — Draft PR #575
 - Replaced only that now-obsolete exact-string assertion with positive validation that the original 10-entry list count policy is retained and the verified transfer/goal activity filters are included. All monthly budget and remaining count tests retained.
 - Added one M385 bounded test block and updated M550 behavior source/test relation before modification. No financial writer, user login, unrelated workflow or platform code changed.
 - CI/Flutter/Android proof remains pending for latest SHA; no merge or APK from Draft branch.
+
+
+M647/M649/M652 provenance labels — PR #575, 2026-11-11
+- Verified account display now uses the account's recorded provider ID to resolve the Arabic/English Saudi institution name and the user's actual child-account label; no SMS sender text is promoted into bank identity. Transfer cards, savings funding cards, and PDF provenance columns use the same verified display helper. Unknown/archived account labels remain explicitly unavailable, not guessed.
+- M296 monthly/transaction display regression was narrowly reconciled to approved transfer and savings Show-more behavior; ten-entry count logic remains intact. Existing old tests were not deleted and CI gates were not skipped.
+- App/source and scoped QA changes committed on Draft PR #575; this release note is deliberately after the latest app-source edit to satisfy M449. Current-head CI, physical Android appearance, PDF output and financial integrity still require verification. No branch APK or merge authorized.
