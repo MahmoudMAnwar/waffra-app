@@ -62,7 +62,7 @@ class NoUnrequestedChangesTest(unittest.TestCase):
 
     def test_deleted_existing_app_source_is_not_approved(self):
         manifest = contract()
-        with self.assertRaisesRegex(guard.ScopeViolation, "deleted"):
+        with self.assertRaisesRegex(guard.ScopeViolation, "removed source must have specific user approval"):
             guard.audit_scope(manifest, set(manifest["allowed_changed_files"]),
                               {"lib/main.dart": BASE},
                               {MANIFEST: "scope", "test/new_approval_test.dart": "test"},
