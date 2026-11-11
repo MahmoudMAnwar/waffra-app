@@ -55,7 +55,7 @@
         "end": " List<MoneyEntry> get analysisEntries"
       },
       {
-        "start": " Future<void> exportEntriesPdf(List<MoneyEntry> items,String title,{bool analytics=false})async {",
+        "start": " Future<void> exportEntriesPdf(",
         "end": " Future<void> _deleteVerifiedEntry(MoneyEntry entry)async {"
       }
     ],
