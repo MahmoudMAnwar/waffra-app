@@ -3547,3 +3547,10 @@ M647–M652 CI reconciliation checkpoint — PR #575, 2026-11-11
 - Historical test/waffra_oct21_regression_test.dart contained an exact 2-color PDF source string expectation. New owner-approved paid-due violet rows intentionally change that string. CI run 43075376491 failed in this one legacy PDF test while its other 14 cases and legacy write queue tests passed.
 - Only that one obsolete test block now positively asserts retained green income, red expense and a violet paid recurring/goal_due branch; no unrelated assertions removed. M385 protected sections explicitly bounded; M550 contracts updated.
 - Permanent docs/WAFFRA_REQUIREMENTS.md now records M647–M652 as Partial, not Done. Tests and real Android PDF/ledger validation remain necessary; do not merge or claim fully passing until latest exact-head checks and device QA.
+
+
+M648 M550 source-contract reconciliation — 2026-11-11 — Draft PR #575
+- Exact-head M550/M147 reported stale test/m296_monthly_budget_and_transactions_test.dart positive assertion expecting only `if(waffraCanExpandDashboardTransactions(visible.length))`. This predated the user-requested verified transfer and savings Show more extension.
+- Replaced only that now-obsolete exact-string assertion with positive validation that the original 10-entry list count policy is retained and the verified transfer/goal activity filters are included. All monthly budget and remaining count tests retained.
+- Added one M385 bounded test block and updated M550 behavior source/test relation before modification. No financial writer, user login, unrelated workflow or platform code changed.
+- CI/Flutter/Android proof remains pending for latest SHA; no merge or APK from Draft branch.
