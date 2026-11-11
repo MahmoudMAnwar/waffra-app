@@ -54,6 +54,17 @@ void main(){
   expect(editor,isNot(contains('if(liveAccounts.isEmpty)')));
   expect(editor,contains('WaffraGoalRecurringAccountPicker('));
   expect(editor,contains('_m641CreateGoalRecurringAccount(provider)'));
+  // First account creation advances the finance generation; next save must
+  // use a refreshed verified baseline, not the witness from before the form.
+  final helperStart=app.indexOf(' Future<WaffraAccountBalance?> _m641CreateGoalRecurringAccount(');
+  final helperEnd=app.indexOf(' /// Release an earmark back to spendable cash.',helperStart);
+  expect(helperStart,greaterThan(0));
+  final helper=app.substring(helperStart,helperEnd);
+  expect(helper,contains('await api.balances();'));
+  expect(helper,contains('await api.createTypedAccountWithIdentity('));
+  expect(helper,contains('await _refreshFromVerifiedFinance();'));
+  expect(helper,contains('if(!mounted||!ready||_financeLoadFailure!=null)'));
+
   expect(editor,contains('selectedRecurringAccount!=null'));
   expect(editor,contains("if(initial?.linkedGoalId!=null)"));
   expect(editor,contains("'حساب الهدف (التعديل من الأهداف)'"));
