@@ -133,4 +133,17 @@ void main() {
   expect(home,isNot(contains('api.transfer(')));
  });
 
+ test('M648 transfer shows opposite signed effect on the selected account', () {
+  final begin=app.indexOf('Widget _m647TransferCard(');
+  final end=app.indexOf('Widget _m649SavingsCard(',begin);
+  final transfer=app.substring(begin,end);
+  expect(transfer,contains('_m467SelectedAccount==t.fromAccountId'));
+  expect(transfer,contains('_m467SelectedAccount==t.toAccountId'));
+  expect(transfer,contains("WaffraText('−'"));
+  expect(transfer,contains("WaffraText('+'"));
+  expect(transfer,contains('صادر من الحساب المحدد'));
+  expect(transfer,contains('وارد إلى الحساب المحدد'));
+  expect(transfer,isNot(contains('commitConfirmedManual(')));
+ });
+
 }
