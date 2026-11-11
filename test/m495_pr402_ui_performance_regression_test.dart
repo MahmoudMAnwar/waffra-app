@@ -107,7 +107,8 @@ void main(){
   expect(src,contains("case 'edit':await entrySheet(initial:entry);break;"));
   expect(edit,contains('readExistingEntryAccount(entryId:initial.id)'));
   expect(edit,contains('if(initial==null||canLinkExistingAccount)...['));
-  expect(edit,contains('originalLinkedAccountId!=null?null:(provider)async'));
+  expect(edit,contains('(initial!=null&&originalLinkedAccountId!=null)?null:(provider)async'));
+   expect(edit,contains('chosenManualProviderCategory==null||'));
   expect(edit,contains('accountId:chosenManualAccount!,userConfirmed:true'));
   expect(edit,contains('await api.linkUnassignedEntry(entryId:initial.id'));
   expect(edit,contains('linkedHistoricalAccountInThisEdit=true;'));
