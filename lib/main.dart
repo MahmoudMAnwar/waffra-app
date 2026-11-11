@@ -10944,7 +10944,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          final orderedCells=<pw.Widget>[
           pdfCell('${row.key+1}',center:true),
           pdfCell(dayText(e.date),center:true),
-          pdfCell(english?(e.income?'Income':'Expense'):(e.income?'دخل':'مصروف'),rtl:!english),
+          pdfCell(e.sourceType=='recurring'||e.sourceType=='goal_due'?
+           (english?'Paid due':'استحقاق مدفوع'):
+           (english?(e.income?'Income':'Expense'):(e.income?'دخل':'مصروف')),
+           rtl:!english),
           pdfCell(waffraTr(e.category),rtl:!english),
           pw.Container(
            alignment:english?pw.Alignment.centerLeft:pw.Alignment.centerRight,
@@ -10957,8 +10960,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           pdfCell('${e.income?'+':'-'}${fmt(e.amount)}',center:true,monetary:true),
          ];
          return pw.TableRow(
-          decoration:pw.BoxDecoration(color:PdfColor.fromInt(e.income?
-           waffraIncomeBackground.toARGB32():waffraExpenseBackground.toARGB32())),
+          decoration:pw.BoxDecoration(color:PdfColor.fromInt(
+           (e.sourceType=='recurring'||e.sourceType=='goal_due')?
+            const Color(0xFFEFE9F8).toARGB32():
+            (e.income?waffraIncomeBackground.toARGB32():
+             waffraExpenseBackground.toARGB32()))),
           children:english?orderedCells:orderedCells.reversed.toList(),
          );
         }),
