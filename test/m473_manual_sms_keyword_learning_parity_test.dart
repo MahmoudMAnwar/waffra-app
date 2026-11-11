@@ -97,12 +97,10 @@ void main(){
   expect(smsLearn,greaterThan(smsCommit));
   expect(manualCommit,greaterThan(smsLearn));
   expect(manualLearn,greaterThan(manualCommit));
-  final sms=main.substring(main.indexOf(' Future<void> bulkSmsSheet('),
-   main.indexOf(' Future<void> entrySheet('));
-  expect(sms,contains('final descriptionRule=WaffraSmsLocalRules.manualCategoryPattern('));
-  expect(sms,contains('try{await _learnManualCategoryPreference(entry);}'));
-  expect(sms.indexOf('final descriptionRule=WaffraSmsLocalRules.manualCategoryPattern('),
-   greaterThan(sms.indexOf('final persistedRaw=await WaffraLargeJsonDecode.parse(')));
-  expect(sms,contains('if(!identical(originalRules,revisedRules))'));
+  // M636: the deleted bulk paste UI cannot maintain a second learning
+  // pipeline; both SMS and manual confirmation use this verified editor.
+  expect(editor,contains('WaffraSmsLocalRules.resolve(body:initialSms,'));
+  expect(editor,contains('try{await _learnManualCategoryPreference(result);}'));
+  expect(main,isNot(contains(' Future<void> bulkSmsSheet(')));
  });
 }
