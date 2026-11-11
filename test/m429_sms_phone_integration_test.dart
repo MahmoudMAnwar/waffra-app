@@ -55,7 +55,7 @@ void main(){
   expect(main,contains("Key('waffra-auto-sms-review-open')"));
   expect(main,contains('await WaffraAutoSms.importConsentMonth()'));
   expect(main,contains('Future<void> _openAutoSmsInbox()'));
-  expect(main,contains('bulkSmsSheet(initialText:body,'));
+  expect(main,contains('await entrySheet(sms:true,initialSms:body,reviewedSender:sender);'));
   expect(main,contains('reviewSmsBudgetLinks(additions)'));
   expect(main,contains('if(targetId!=null&&id!=targetId)continue;'));
  });
