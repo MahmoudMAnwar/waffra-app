@@ -250,7 +250,7 @@
     ],
     "scripts/qa/m385_approved_change_guard.py": [
       {
-        "start": "    for p in deletions:",
+        "start": "    if set(deletions) != {p for p in changed if p in base_exists and p not in head_text}:",
         "end": "    # M636: an owner-approved replacement"
       }
     ],
