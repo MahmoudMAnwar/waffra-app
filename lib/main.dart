@@ -12770,9 +12770,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
  /// M611: read the actual owner-scoped encrypted transfer journal.
  /// A Home history tile cannot post any money.
-
- /// M611: read the actual owner-scoped encrypted transfer journal.
- /// A Home history tile cannot post any money.
  Future<void> showInternalTransferTransactions()async{
   await _m647ShowInternalTransfers();
  }
