@@ -6,28 +6,6 @@ on:
   push:
     branches:
       - main
-      # M206 on-branch QA build; no merge, store deploy or SQLCipher activation.
-      - 'fix/m206-daylight-tour-sms-notes-motion-20261024'
-      # M259 signed owner-only QA; never Google Play or SQLCipher cutover.
-      - 'feature/m259-approved-markets-oil-accordion-refresh-20261026'
-      # M160 signed APK for owner physical-device QA only; no store release.
-      - 'integration/m160-reconcile-main-m158-release-gate-20261023'
-      - 'feature/storage-finance-startup-recovery-m62'
-      - 'feature/storage-verified-backup-restore-m63'
-      - 'feature/storage-encrypted-receipt-view-m66'
-      - 'feature/combined-finance-cloud-validation-m70'
-      - 'feature/m99-production-sync-queue-and-android-build'
-      - 'feature/waffra-unified-finance-release-candidate'
-      - 'feature/m106-play-privacy-observability-readiness'
-      - 'feature/m107-production-account-delete-observability'
-      - 'feature/m108-unified-home-widget-finance-commit'
-      - 'feature/m109-verified-finance-authority-dispatch'
-      - 'feature/m110-home-finance-writer-source-authority'
-      # M124: signed pre-merge APK/AAB candidate from the exact cumulative
-      # branch, never a production store deployment or SQLCipher activation.
-      - 'feature/m124-main-integration-merge-preview'
-      # M127: isolated signed QA artifact only; never auto-release or deploy.
-      - 'feature/m127-approved-ui-and-safe-backup-build'
   workflow_dispatch:
     inputs:
       sms_staging_worker:
@@ -158,6 +136,8 @@ jobs:
           PY
 
   build:
+    # M646: signed release and QA APKs are allowed only on main.
+    if: github.ref == 'refs/heads/main'
     # M383: compile signed APK and Play AAB in independent clean runners.
     # Never publish EITHER artifact until mandatory full tests and independent
     # exact-SHA finance/SQLCipher gates have both succeeded.

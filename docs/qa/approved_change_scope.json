@@ -1,576 +1,65 @@
 {
   "contract_version": 1,
-  "change_id": "M637-M640-20261111-VERIFIED-HOME-SA-CATALOG-SMS-SYNC-PLAIN-PERMISSIONS-OCR-RETIRE-557-561",
-  "human_scope_review": "Two approved user scopes combined by explicit owner request in the same Draft PR #558. M637 performance unchanged; M638 local vs digital bank vs wallet Arabic catalog, cascaded entry/account selection + dimmed validation, remove surplus transfer explanations, explicit Android SMS inbox deletion reconciliation on I/O executor, no saved ledger/anti-replay/excluded loss. Permanent requirements M637/M638 documented before source changes. M639 #560 explicit owner direction: permissions title and explanation no artificial-intelligence references; copy-only scoped change, PR #558.Two approved user scopes combined by explicit owner request in the same Draft PR #558. M637 performance unchanged; M638 local vs digital bank vs wallet Arabic catalog, cascaded entry/account selection + dimmed validation, remove surplus transfer explanations, explicit Android SMS inbox deletion reconciliation on I/O executor, no saved ledger/anti-replay/excluded loss. Permanent requirements M637/M638 documented before source changes. M639 #560 explicit owner direction: permissions title and explanation no artificial-intelligence references; copy-only scoped change, PR #558. M640 owner specifically authorized OCR-only engine/tests/workflow removal with exact path deletion list; no other runtime, security or finance paths may be deleted. M642 #563 owner-approved exact PR #558 queue remedy: only nine named workflow concurrency blocks and M453 trusted cleanup, M453 current-behavior QA and new M642 test; no finance runtime changes. M453 default-branch activation needs merge or authorized Actions dispatch. M642 explicitly updates M548 regression previously requiring per-SHA isolated jobs; new approved rule requires stable same-workflow+PR cancellation, isolated main/manual, live-head exact checkout and M453 trusted stale-run protections. Old assertion is obsolete by user direction, not a removal of coverage. M643 #564: M453 Python script cannot enter test-only wholesale replacement allowlist; restrict its approved edits to two anchored test methods. Correct dormant non-posting FX unused declaration annotation and dead null fallback in M641 verified goal-funding bounded function, preserving finance behavior and all guards. M643 late M160/M417: only existing bounded edit-goal / fund-goal notifications; change M266 one goal-and-backup source assertion to verify delegated mandatory finance binding before suggestions, retaining backup contract. M643 full 92-path audit discovered old M339/M441 anchors absent in exact base or new head after authorized OCR and permissions regression updates. New stable starts uniquely identify those test scopes on both trees; no production or test changes. M644 #565: owner requested actual CI failure repair. Bound only M302 goal-funding legacy assertion and M362 short-balance legacy assertion; preserve all unrelated test bytes. Four production WaffraGoalRecurringAccountPicker instances pass common-footer error callback in previously M641-bounded methods; add stand-alone M644 regression. Append accurate release notes after source change, preserve M449 gate.",
+  "change_id": "M645-M646-M647-20261111-CURRENT-NOTES-QUIET-CI-HISTORY-PRUNE",
+  "human_scope_review": "Owner explicitly approved a permanent M449 pre-PR release-note update with source SHA and a clean current feature listing, and asked to examine and remove always-Skipped unnecessary main workflows. M645 archive preserves exact old blob; current file becomes a source-backed Saudi release summary. M646 only converts M410's noisy unconditional listener into owner/manual-triggered, same-security bounded failed emulator rerun, and trims obsolete non-main signed APK push branch triggers. Finance Android M274/M267 and exhaustive CI gates remain. Exact bounded edits only in existing protected files; no security-test deletions. M646 main-only signed publishing: release build job gets explicit main-ref if guard, bounded from build: to unchanged needs block, preserving full tests and all signing checks. Manual workflow_dispatch on historical branches cannot output signed APK. M647 #576 owner explicitly asked deletion of OLD failed/skipped builds on main in same Draft PR #568. Existing M504 cleans PR-only failure logs and is untouched. NEW dedicated trusted-main script/workflow/unit tests and audit are the only M647 additions; zero production/security test edits. No actions:write in PR, dry-run manual by default, completed historical main only, preserve artifacts and latest main SHA.",
   "user_requested_changes": [
-    "Speed up the actual verified finance Home handoff after successful biometric and ordinary logout/login; no cosmetic spinner in this performance-first patch.",
-    "Remove repeated account schema foreign-key validations and avoid unnecessary already-installed AccountContext transaction on the verified account balance read hot path without losing any schema corruption checks.",
-    "Retain exactly one owner/source-gated, witnessed encrypted account read, full integrity, first-install transactional schema repair, SQLCipher and mandatory authentication, while SMS scans stay delayed until Home is painted.",
-    "Add meaningful positive/negative account schema and first-home contract regressions and require real Android profile-mode timings before claiming success.",
-    "M638 #559: Local banks, digital banks and digital wallets are separate categories; Arabic provider names in second dropdown, D360 verbatim, Barq/Enjaz Pay/Alinma Pay wallets not banks; preserve existing verified account IDs.",
-    "M638: dependent institution/account/subcategory dropdown dimmed until parent set; manual income/expense confirm disabled until every required field valid; remove exactly two transfer explanatory lines without removing real errors.",
-    "M638: explicit SMS Rescan must reconcile unconfirmed encrypted pending queue against current Android inbox, remove only missing source records, group count updates; permission/partial scan fails closed and never deletes SQLCipher ledger, confirmed hashes, exclusions or sender rule.",
-    "M639 #560: Replace the Arabic and English visible SMS/notification onboarding permission screen heading and description with plain purpose-and-choice copy. Remove AI/cloud/model mentions from visible permission screen text while preserving opt-in defaults and secure OS consent behavior exactly.",
-    "M640 Issue #561: Owner approved complete retirement/deletion of receipt OCR Tools section, Tesseract model downloads and dependency, receipt/bank screenshot OCR parser and hidden scan-and-create income/expense routes, obsolete OCR tests/Workflows/Gradle shim. Preserve ordinary receipt attachments, SQLCipher receipt storage, and text-only SMS source processing.",
-    "M640 #561: M416 legacy OCR release-switch test must no longer reference deleted receiptImageTransactionImport; retain all existing Saudi release currency/location/SMS assertions.",
-    "M640: Update M340 finance quality gate to use retained entrySheet as the end boundary for foreign FX review, replacing deleted OCR handler marker without weakening the pre-existing FX/no-ledger-write contract.",
-    "M640 #561: update old M339 OCR-stage expectations to the three still-live manual/image-attachment stage paths (path/copied/renamed) without weakening finance-failure cleanup assertion.",
-    "M640 manual income override: rename residual scannedIncome OCR-era argument to manualIncomeOverride in retained transfer-SMS to independent manual entry, preserving selection and no OCR engine dependency.",
-    "M640/M639 regression refresh: preserve SMS permission, historical link and retained encrypted manual attachment tests while changing obsolete pre-retirement string assertions; never restore deleted OCR features or bypass verified account guards.",
-    "M640 #561: align old five-tools workflow display title/step and M281 QA spec to four Tools after removing receipt reader, preserving health/search/monthly/diagnostics tests.",
-    "M641 #562 recurring + opens even with no money accounts; shared bank/wallet/provider/child cascading picker enables verified inline account creation without losing the recurring draft. Save stable default account ID and retain due behavior.",
-    "M641 #562 new/edit savings goals require a verified institution and actual financial account, fund wallet with a single verified source debit, and carry account identity to linked due reminders; preserve old unlinked goals without invented transfers.",
-    "M641 #562: SQLCipher integration test verifies linked savings goal and due account ID in typed/snapshot projection and rejects stale/missing accounts without ledger changes.",
-    "M640 #561 regression: retained M587 transfer correction now calls entrySheet with manualIncomeOverride instead of removed OCR-era scannedIncome, while three non-posting actions, transfer receipts, explicit SMS ACK and account confirmation assertions stay intact.",
-    "M641 #562 regression: M500 retroactive account link protection remains on the actual institution/child dropdown onChanged guards; replace obsolete callback-shape expectation with exact two identity-locked selections, preserving existing SQLCipher link/consent/rollback assertions.",
-    "M642 #563: Fix only PR #558 exact-head CI queue supersession: workflow+PR-scoped cancellation (not SHA/run-id isolated), protect main/manual runs and exact SHA test checkout; allow M453 trusted sweep to finish instead of cancelling itself; never cancel current SHA or weaken tests.",
-    "M642 #563 regression alignment: adapt M548 test/qa/m548_ci_exact_sha_concurrency_test.py from asserting SHA in concurrency group to asserting stable PR-only supersession, event separation, event-head checkout, safe trusted cleanup; do not remove checks.",
-    "M643 #564: Repair exact PR-head M174 invalid wholesale test-path exemption and M429 analyzer warnings without bypassing M385 or altering SQLCipher goal funding semantics.",
-    "M643 #564: preserve one footer-aware notice presenter in goal edit/fund and update delegated M266 secure finance-binding test to follow the verified helper and retain backup direct binding assertions.",
-    "M643 #564: repair two stale M385 old-test anchors on retired OCR M339 and renamed M459 SMS permissions test, preserving exact content outside bounded test functions.",
-    "M644 #565: Resolve three new exact-head Flutter test failures: goal picker error notification uses one footer notice, M302/M362 enforce verified SQLCipher funding, plus M449 release-note ancestry refreshed after latest source changes."
+    "M645 #566: Replace misleading outdated 439K active release-notes history with current-only feature list; preserve byte-perfect history in archived blob; add reviewed pre-PR M449 helper requiring source SHA, issue and factual description and refusing dirty source.",
+    "M646 #567: Audit 104 workflows and stop 80 Skipped M410 runs out of latest 100 by removing unconditional completed-workflow trigger; preserve manually authorized safe rerun of only proven infra-flaky Android emulator job; restrict signed APK automatic push to main while preserving all independent mandatory tests.",
+    "M647 #576: Prune historical completed Failed/Skipped/Cancelled main Actions runs older than 48h only, preserving success/current SHA/artifact-bearing/PR/active data with dry-run/manual approval, trustworthy scheduled and initial main-push batch, and no change to M504 PR policy."
   ],
   "allowed_changed_files": [
-    ".github/workflows/android-full-smoke.yml",
-    ".github/workflows/android.yml",
-    ".github/workflows/m147-final-main-review-gate.yml",
-    ".github/workflows/m174-main-arm64-compile.yml",
-    ".github/workflows/m174-main-sha-postmerge.yml",
-    ".github/workflows/m201-sqlcipher-finance-acceptance.yml",
-    ".github/workflows/m202-android-sqlcipher-source-binder-dryrun.yml",
-    ".github/workflows/m266-sqlcipher-precutover-qa.yml",
-    ".github/workflows/m274-production-ui-golden.yml",
-    ".github/workflows/m278-mobile-system-insets.yml",
-    ".github/workflows/m281-practical-tools.yml",
-    ".github/workflows/m282-combined-candidate.yml",
-    ".github/workflows/m287-receipt-ocr.yml",
-    ".github/workflows/m290-country-reminders-multicurrency.yml",
-    ".github/workflows/m297-receipt-to-entry.yml",
-    ".github/workflows/m298-finance-validation.yml",
-    ".github/workflows/m340-continuous-financial-quality.yml",
-    ".github/workflows/storage-android-emulator.yml",
-    ".github/workflows/storage-android-integration.yml",
-    "assets/tessdata_config.json",
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
-    "docs/qa/m281-five-practical-tools.md",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "lib/main.dart",
-    "lib/storage/waffra_account_context_schema.dart",
-    "lib/storage/waffra_accounts_repository.dart",
-    "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
-    "lib/waffra_accounts_manager_page.dart",
-    "lib/waffra_ai_finance_brain.dart",
-    "lib/waffra_auto_sms.dart",
-    "lib/waffra_auto_sms_consent.dart",
-    "lib/waffra_bank_screenshot_parser.dart",
-    "lib/waffra_new_account_dialog.dart",
-    "lib/waffra_practical_ledger_engine.dart",
-    "lib/waffra_practical_tools_page.dart",
-    "lib/waffra_receipt_ocr.dart",
-    "lib/waffra_receipt_ocr_parser.dart",
-    "lib/waffra_recurring_account_groups.dart",
-    "lib/waffra_saudi_financial_providers.dart",
-    "lib/waffra_saudi_release.dart",
-    "native/WaffraAutoSmsStore.kt",
-    "native/WaffraMainActivity.kt",
-    "pubspec.yaml",
-    "scripts/qa/m287_patch_tesseract_gradle.py",
-    "scripts/qa/m340_financial_quality_gate.py",
-    "scripts/qa/m385_approved_change_guard.py",
-    "test/m281_practical_tools_test.dart",
-    "test/m285_compact_action_widths_test.dart",
-    "test/m287_receipt_ocr_test.dart",
-    "test/m297_ocr_to_finance_and_sms_layout_test.dart",
-    "test/m299_multi_transaction_image_review_test.dart",
-    "test/m317_ai_finance_brain_test.dart",
-    "test/m324_required_ai_sms_receipts_test.dart",
-    "test/m329_ai_model_restart_and_visible_analysis_test.dart",
-    "test/m330_compact_ui_copy_test.dart",
-    "test/m332_ai_ocr_hang_and_six_for_three_test.dart",
-    "test/m332_live_bank_image_sms_hang_regression_test.dart",
-    "test/m335_real_sms_ocr_accuracy_test.dart",
-    "test/m336_fx_consent_and_full_title_test.dart",
-    "test/m336_whole_app_finance_quality_matrix_test.dart",
-    "test/m339_failed_finance_save_receipt_cleanup_test.dart",
-    "test/m341_multilingual_bank_sms_ocr_test.dart",
-    "test/m416_saudi_release_offline_test.dart",
-    "test/m417_sms_first_run_test.dart",
-    "test/m441_auth_sms_copy_regression_test.dart",
-    "test/m470_financial_currency_word_boundary_regression_test.dart",
-    "test/m495_pr402_ui_performance_regression_test.dart",
-    "test/m638_saudi_provider_catalog_and_cascade_test.dart",
-    "test/m638_sms_inbox_delete_sync_test.dart",
-    "test/m639_permissions_onboarding_plain_copy_test.dart",
-    "test/m640_receipt_reader_retirement_test.dart",
-    "test/qa/m412_workflow_wiring_test.py",
-    "test/storage/m637_biometric_home_schema_hotpath_test.dart",
-    "lib/waffra_goal_recurring_account_picker.dart",
-    "lib/waffra_goal_recurring_actions.part.dart",
-    "lib/storage/waffra_fresh_finance_modules_repository.dart",
-    "lib/storage/waffra_verified_goal_due_snapshot_writer.dart",
-    "test/m641_goal_recurring_account_binding_test.dart",
-    "test/m371_goal_wallet_and_budgets_regression_test.dart",
-    "test/storage/m641_goal_account_integrity_test.dart",
-    "test/m580_sms_security_navigation_performance_test.dart",
-    ".github/workflows/finance-full-regression.yml",
-    ".github/workflows/m103-same-sha-release-certification.yml",
-    ".github/workflows/m160-main-reconciliation.yml",
-    ".github/workflows/m550-behavior-contract-preflight.yml",
-    ".github/workflows/m453-superseded-pr-cleanup.yml",
-    "scripts/qa/test_m453_queue_hygiene.py",
-    "scripts/qa/test_m642_latest_pr_ci_concurrency.py",
-    "test/qa/m548_ci_exact_sha_concurrency_test.py",
-    "test/storage/m266_home_bound_source_regression_test.dart",
-    "test/m302_optimistic_module_write_safety_test.dart",
-    "test/m363_transaction_category_inline_creation_test.dart",
-    "test/m644_goal_notice_funding_contract_test.dart"
+    "docs/release/archive/WAFFRA_APPROVED_CHANGES_PRE_M645_20261111.txt",
+    "docs/qa/M646_MAIN_WORKFLOW_AUDIT.md",
+    "AGENTS.md",
+    "scripts/qa/m449_prepare_release_notes.py",
+    "test/qa/m645_release_notes_prepare_test.py",
+    "test/qa/m646_main_ci_quiet_contract_test.py",
+    ".github/workflows/m410-failed-android-retry.yml",
+    "scripts/qa/m410_failed_job_retry.py",
+    "test/qa/m410_smart_ci_retry_test.py",
+    ".github/workflows/android.yml",
+    ".github/workflows/m647-main-history-prune.yml",
+    "scripts/qa/m647_main_history_prune.py",
+    "test/qa/m647_main_history_prune_test.py",
+    "docs/qa/M647_MAIN_HISTORY_PRUNE_AUDIT.md"
   ],
-  "approved_deleted_files": [
-    ".github/workflows/m287-receipt-ocr.yml",
-    ".github/workflows/m297-receipt-to-entry.yml",
-    "lib/waffra_bank_screenshot_parser.dart",
-    "lib/waffra_receipt_ocr.dart",
-    "lib/waffra_receipt_ocr_parser.dart",
-    "scripts/qa/m287_patch_tesseract_gradle.py",
-    "test/m287_receipt_ocr_test.dart",
-    "test/m297_ocr_to_finance_and_sms_layout_test.dart",
-    "test/m299_multi_transaction_image_review_test.dart",
-    "test/m329_ai_model_restart_and_visible_analysis_test.dart",
-    "test/m332_ai_ocr_hang_and_six_for_three_test.dart",
-    "test/m332_live_bank_image_sms_hang_regression_test.dart",
-    "test/m335_real_sms_ocr_accuracy_test.dart",
-    "assets/tessdata_config.json"
-  ],
-  "approved_full_test_replacements": [
-    "test/m281_practical_tools_test.dart",
-    "test/m285_compact_action_widths_test.dart",
-    "test/m317_ai_finance_brain_test.dart",
-    "test/m324_required_ai_sms_receipts_test.dart",
-    "test/m330_compact_ui_copy_test.dart",
-    "test/m336_fx_consent_and_full_title_test.dart",
-    "test/m336_whole_app_finance_quality_matrix_test.dart",
-    "test/m341_multilingual_bank_sms_ocr_test.dart",
-    "test/m470_financial_currency_word_boundary_regression_test.dart",
-    "test/qa/m412_workflow_wiring_test.py",
-    "test/qa/m548_ci_exact_sha_concurrency_test.py"
-  ],
+  "approved_deleted_files": [],
+  "approved_full_test_replacements": [],
   "bounded_sections": {
-    "lib/storage/waffra_verified_encrypted_finance_bridge.dart": [
+    "scripts/qa/m410_failed_job_retry.py": [
       {
-        "start": "  Future<({WaffraEncryptedHomeWitness witness,\n           List<WaffraAccountBalance> balances})> readVerifiedAccounts() async {",
-        "end": "  /// Read only existing and owner-verified encrypted attachment BLOBs."
+        "start": "def main() -> int:\n",
+        "end": "if __name__ == \"__main__\":\n"
       }
     ],
-    "lib/storage/waffra_accounts_repository.dart": [
+    "test/qa/m410_smart_ci_retry_test.py": [
       {
-        "start": " Future<void> _ready()async{",
-        "end": " static void _id(String value){"
+        "start": "    def test_workflow_preserves_review_and_main_gates(self):",
+        "end": "if __name__ == \"__main__\":\n"
       }
     ],
-    "lib/storage/waffra_account_context_schema.dart": [
+    ".github/workflows/m410-failed-android-retry.yml": [
       {
-        "start": " static Future<void> install(WaffraEncryptedStore db)async{",
-        "end": " static Future<void> requireReady(WaffraEncryptedStore db)async{"
-      }
-    ],
-    "lib/waffra_recurring_account_groups.dart": [
-      {
-        "start": "import 'storage/waffra_accounts_repository.dart';",
-        "end": "/// Accounts without a recognized institution"
-      }
-    ],
-    "lib/waffra_new_account_dialog.dart": [
-      {
-        "start": "import 'package:flutter/material.dart';",
-        "end": "class WaffraNewAccountDraft {"
+        "start": "on:\n",
+        "end": "permissions:\n"
       },
       {
-        "start": "class _WaffraNewAccountDialogState extends State<WaffraNewAccountDialog> {",
-        "end": null
-      }
-    ],
-    "lib/waffra_accounts_manager_page.dart": [
-      {
-        "start": "import 'waffra_new_account_dialog.dart';",
-        "end": "/// M440 optional SQLCipher account page."
-      },
-      {
-        "start": " Future<WaffraAccountBalance?> createAccountInsideComposer(",
-        "end": " Future<void> compose("
-      }
-    ],
-    "lib/main.dart": [
-      {
-        "start": "import 'storage/waffra_portable_encrypted_vault_restorer.dart' show WaffraEncryptedReceiptReference;",
-        "end": "import 'waffra_back_navigation.dart';"
-      },
-      {
-        "start": " bool goalsOpened=false;",
-        "end": " String? _lastWidgetRevision;"
-      },
-      {
-        "start": " // M636: Manual paste/review sheet retired.",
-        "end": " Future<void> entrySheet("
-      },
-      {
-        "start": " Future<void> entrySheet(",
-        "end": " Future<void> showReceipt("
-      },
-      {
-        "start": "        _addMenuOption(\n         icon:Icons.edit_note_rounded,",
-        "end": "        ]else if(goalsOpened||tab==3)...["
-      },
-      {
-        "start": "import 'waffra_recurring_account_groups.dart';",
-        "end": "import 'storage/waffra_fresh_finance_modules_repository.dart';"
-      },
-      {
-        "start": " Future<void> _rescanAutoSmsInbox()async{",
-        "end": " Future<void>? _autoSmsRefreshInFlight;"
-      },
-      {
-        "start": "   }else if(decision=='transfer-manual'&&mounted){",
-        "end": "   }else if(decision=='yes'&&mounted&&canConfirm&&"
-      },
-      {
-        "start": "List<String> splitBankMessages(String raw){",
-        "end": " // Insert boundaries only before strongly recognizable new actions."
-      },
-      {
-        "start": "class SavingGoal {",
-        "end": "class SavingChallenge {"
-      },
-      {
-        "start": " Future<void> applyRecurring()async {",
-        "end": " double sum(Iterable<MoneyEntry> list,bool income)=>"
-      },
-      {
-        "start": " Future<void> goalDialog({SavingGoal? duplicate,bool openEnded=false})async {",
-        "end": " /// Release an earmark back to spendable cash."
-      },
-      {
-        "start": " Future<void> fundGoal(SavingGoal g)async {",
-        "end": " Future<void> deletedGoalsDialog()async{"
-      },
-      {
-        "start": " Future<void> recurringDialog({String? suggestedTitle,double? suggestedAmount,RecurringBill? initial,RecurringBill? duplicate})async {",
-        "end": " DateTime nextRecurringDue(RecurringBill r) {"
-      },
-      {
-        "start": " Widget goalsPage(){",
-        "end": " Future<void> recurringDialog({String? suggestedTitle"
-      },
-      {
-        "start": " Widget recurringPage(){",
-        "end": " Future<void> showWaffraFinancialCalendar()async{"
-      }
-    ],
-    "lib/waffra_auto_sms.dart": [
-      {
-        "start": " static Future<int> importConsentMonthChecked()async{",
-        "end": " static Future<bool> suspendForSignOut()"
-      }
-    ],
-    "native/WaffraAutoSmsStore.kt": [
-      {
-        "start": "    fun acknowledgeCommitted(context: Context, ids: Set<String>): Boolean =",
-        "end": "    private data class HistoricalSmsRow("
-      }
-    ],
-    "native/WaffraMainActivity.kt": [
-      {
-        "start": "                \"importConsentMonthBankSms\" -> {",
-        "end": "                \"scanUnknownFinancialSms\" -> {"
-      }
-    ],
-    "lib/waffra_auto_sms_consent.dart": [
-      {
-        "start": "    const SizedBox(height:18),\n    Text(widget.english?",
-        "end": "    const SizedBox(height:20),\n    if(busy)"
-      }
-    ],
-    "test/m417_sms_first_run_test.dart": [
-      {
-        "start": " testWidgets('M417 consent explains Android permission prompts in order',",
-        "end": " test('M417 permissions follow signup without unsolicited cloud consent',"
-      }
-    ],
-    "lib/waffra_practical_tools_page.dart": [
-      {
-        "start": "import 'package:flutter/material.dart';",
-        "end": null
-      }
-    ],
-    "lib/waffra_ai_finance_brain.dart": [
-      {
-        "start": "import 'dart:convert';",
-        "end": null
-      }
-    ],
-    "lib/waffra_practical_ledger_engine.dart": [
-      {
-        "start": "class WaffraMonthlyClose {",
-        "end": null
-      }
-    ],
-    "lib/waffra_saudi_release.dart": [
-      {
-        "start": " static const bool locationCountryOnboarding=false;",
-        "end": " static const bool userCountryChoice=false;"
-      }
-    ],
-    "pubspec.yaml": [
-      {
-        "start": "  flutter_timezone: ^5.1.1",
-        "end": "  path_provider: ^2.1.5"
-      }
-    ],
-    "scripts/qa/m385_approved_change_guard.py": [
-      {
-        "start": "    if set(deletions) != {p for p in changed if p in base_exists and p not in head_text}:",
-        "end": "    # M636: an owner-approved replacement"
-      }
-    ],
-    ".github/workflows/m174-main-arm64-compile.yml": [
-      {
-        "start": "name: M174 Main ARM64 Compilation (CI Only)",
-        "end": null
-      }
-    ],
-    ".github/workflows/m282-combined-candidate.yml": [
-      {
-        "start": "name: M282 Combined QA + Features Exact-SHA Acceptance (No Production Cutover)",
-        "end": null
-      }
-    ],
-    ".github/workflows/m278-mobile-system-insets.yml": [
-      {
-        "start": "name: M278 Android iOS Safe Area and System Bar Compatibility",
-        "end": null
-      }
-    ],
-    ".github/workflows/m174-main-sha-postmerge.yml": [
-      {
-        "start": "name: M174 Main SHA Post-Merge SQLCipher Regression",
-        "end": null
-      }
-    ],
-    ".github/workflows/storage-android-emulator.yml": [
-      {
-        "start": "name: Waffra Android Encrypted Storage Integration",
-        "end": null
-      }
-    ],
-    ".github/workflows/m266-sqlcipher-precutover-qa.yml": [
-      {
-        "start": "name: M266 SQLCipher Widget Source Safety + Android QA (NO CUTOVER)",
+        "start": "jobs:\n",
         "end": null
       }
     ],
     ".github/workflows/android.yml": [
       {
-        "start": "name: Build Waffra Android APK",
-        "end": null
-      }
-    ],
-    ".github/workflows/m290-country-reminders-multicurrency.yml": [
-      {
-        "start": "name: M290-M291 Google Country, Reminders and Multi-Currency Safe Import",
-        "end": null
-      }
-    ],
-    ".github/workflows/m201-sqlcipher-finance-acceptance.yml": [
-      {
-        "start": "name: M201 SQLCipher Routes, Migration and Receipt Acceptance (CI ONLY)",
-        "end": null
-      }
-    ],
-    ".github/workflows/m274-production-ui-golden.yml": [
-      {
-        "start": "name: M274 Production UI Journeys and Golden Screenshot Review",
-        "end": null
-      }
-    ],
-    ".github/workflows/storage-android-integration.yml": [
-      {
-        "start": "name: Waffra Android encrypted DB integration",
-        "end": null
-      }
-    ],
-    ".github/workflows/android-full-smoke.yml": [
-      {
-        "start": "name: Waffra Android Full Startup Smoke (Nightly or Manual)",
-        "end": null
-      }
-    ],
-    ".github/workflows/m147-final-main-review-gate.yml": [
-      {
-        "start": "name: M147 Final Main-Safe Merge Readiness Review",
-        "end": null
-      }
-    ],
-    ".github/workflows/m202-android-sqlcipher-source-binder-dryrun.yml": [
-      {
-        "start": "name: M202 Android SQLCipher Source Binding Dry Run (CI ONLY)",
-        "end": null
-      }
-    ],
-    ".github/workflows/m298-finance-validation.yml": [
-      {
-        "start": "name: M298 Mandatory Finance Field Validation",
-        "end": null
-      }
-    ],
-    ".github/workflows/m340-continuous-financial-quality.yml": [
-      {
-        "start": "name: M340 Continuous Financial Quality Gate (Exact SHA, No Cutover)",
-        "end": null
-      }
-    ],
-    "test/m416_saudi_release_offline_test.dart": [
-      {
-        "start": " test('M416 Saudi release switches preserve Global features in source',(){",
-        "end": " test('M416 old foreign display preference is preserved but not applied',()async{"
-      }
-    ],
-    "scripts/qa/m340_financial_quality_gate.py": [
-      {
-        "start": "    # Check only the actual foreign-FX preview handler, not unrelated app writes.",
-        "end": "    require(fx, \"quote.provider\", \"FX preview must display quote provider\")"
-      }
-    ],
-    "test/m339_failed_finance_save_receipt_cleanup_test.dart": [
-      {
-        "start": "void main(){\n test(",
-        "end": null
-      }
-    ],
-    "test/m441_auth_sms_copy_regression_test.dart": [
-      {
-        "start": "  testWidgets('M459: SMS permission follows signup without cloud choice',",
-        "end": null
-      }
-    ],
-    "test/m495_pr402_ui_performance_regression_test.dart": [
-      {
-        "start": " test('M500 #420 Details Edit enables verified retroactive account link',(){",
-        "end": " testWidgets('M499 #416 child picker is disabled without provider, cancel preserves amount',"
-      }
-    ],
-    ".github/workflows/m281-practical-tools.yml": [
-      {
-        "start": "name: M281 ",
-        "end": "\non:\n"
+        "start": "  push:\n    branches:\n",
+        "end": "  workflow_dispatch:\n    inputs:\n"
       },
       {
-        "start": "      - name: Prove ",
-        "end": "\n        run: flutter test --reporter expanded test/m281_practical_tools_test.dart"
-      }
-    ],
-    "lib/waffra_goal_recurring_actions.part.dart": [
-      {
-        "start": " Future<bool> _saveGoalAndLinkedDueAtomically(",
-        "end": " /// Pause/resume edits its linked schedule"
-      },
-      {
-        "start": " Future<void> editGoal(SavingGoal existing)async{",
-        "end": null
-      }
-    ],
-    "lib/storage/waffra_fresh_finance_modules_repository.dart": [
-      {
-        "start": "      case WaffraFinanceModule.goals:\n        if(data['dueDate']",
-        "end": "      case WaffraFinanceModule.recurring:\n        if (data['income']"
-      },
-      {
-        "start": "        case WaffraFinanceModule.goals:",
-        "end": "        case WaffraFinanceModule.recurring:"
-      },
-      {
-        "start": "        case WaffraFinanceModule.recurring:",
-        "end": "          // Account default and typed recurring source must commit in the SAME"
-      }
-    ],
-    "lib/storage/waffra_verified_goal_due_snapshot_writer.dart": [
-      {
-        "start": "      final goal=_unique(goals,goalId,'goal');",
-        "end": "      final savedBefore=_minor(goal['saved']??0);"
-      },
-      {
-        "start": "      // One SQLCipher commit links the settled goal to the chosen account.",
-        "end": "      goal['saved']=(savedBefore-receipt.fromGoalMinor)/100;"
-      }
-    ],
-    "test/m371_goal_wallet_and_budgets_regression_test.dart": [
-      {
-        "start": "  test('M371 goal creation cannot post an expense or negative cash debit',",
-        "end": null
-      }
-    ],
-    "test/m580_sms_security_navigation_performance_test.dart": [
-      {
-        "start": " test('M587 bank transfer shows exactly three non-posting choices',(){",
-        "end": " test('notification center never repeats a second review hero',(){"
-      }
-    ],
-    ".github/workflows/finance-full-regression.yml": [
-      {
-        "start": "name: Waffra Full Offline Finance and UI Regression",
-        "end": null
-      }
-    ],
-    ".github/workflows/m103-same-sha-release-certification.yml": [
-      {
-        "start": "name: Waffra M103 Same-SHA Whole-App Release Certification",
-        "end": null
-      }
-    ],
-    ".github/workflows/m160-main-reconciliation.yml": [
-      {
-        "start": "name: M160 Main Reconciliation and Backup Regression",
-        "end": null
-      }
-    ],
-    ".github/workflows/m550-behavior-contract-preflight.yml": [
-      {
-        "start": "name: M550 Every-PR Behavior and Test Contract Preflight",
-        "end": null
-      }
-    ],
-    ".github/workflows/m453-superseded-pr-cleanup.yml": [
-      {
-        "start": "name: M453 Safe Superseded PR Run Cleanup",
-        "end": null
-      }
-    ],
-    "scripts/qa/test_m453_queue_hygiene.py": [
-      {
-        "start": "    def test_exact_pr_concurrency_for_every_modified_workflow(self):",
-        "end": "    def test_cleanup_remains_trusted_and_scoped(self):"
-      },
-      {
-        "start": "    def test_cleanup_remains_trusted_and_scoped(self):",
-        "end": "    def test_cancel_candidates_deduped_before_mutating_github_pagination(self):"
-      }
-    ],
-    "test/storage/m266_home_bound_source_regression_test.dart": [
-      {
-        "start": "  test('goals and backup request verified finance binding before reads', () {",
-        "end": "  test('Home source selection still starts through guarded production binding',"
-      }
-    ],
-    "test/m302_optimistic_module_write_safety_test.dart": [
-      {
-        "start": " test('M302 goal funding does not celebrate uncommitted savings',(){",
-        "end": " test('M302 inline category picker returns a new name only after durable save',(){"
-      }
-    ],
-    "test/m363_transaction_category_inline_creation_test.dart": [
-      {
-        "start": " test('M362 a short available balance warns and permits funding',(){",
-        "end": null
+        "start": "  build:\n",
+        "end": "    needs: [verify-all-tests, verify-same-sha-checks]\n"
       }
     ]
   }
