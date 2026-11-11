@@ -1277,6 +1277,41 @@
         "Savings funding debits selected verified source account exactly once, goal wallet credit stays separate; no legacy fallback, double charge, unauthenticated write or auto merge.",
         "Exact-PR-HEAD Flutter full regression and Android compile must pass before merge; no feature-branch APK."
       ]
+    },
+    {
+      "id": "M644-EXACT-HEAD-SHARED-FLUTTER-FAILURES-AND-FRESH-RELEASE-NOTES",
+      "issue": "Issue #565 / Draft PR #558",
+      "previous_behavior": "Three Flutter regressions fail in six heavy exact-head jobs: an extra direct SnackBar in reusable M641 provider/account picker, M302 outdated legacy goal save path expectation, and M362 outdated optimistic wallet mutation expectation. M449 release notes older than last approved runtime edits.",
+      "approved_behavior": "Picker emits account-creation validation error through a supplied callback wired in all four goal/recurring production callers into the single footer-aware snack presenter. M302/M362 guard tests positively assert trusted SQLCipher atomic goal-funding debit/goal-wallet credit, verified owner source, explicit warning and no congratulations on unconfirmed write, with all non-goal test bytes unchanged. Approved release notes are committed *after* last runtime changes with exact user-visible scope; M449 freshness guard stays mandatory.",
+      "source_paths": [
+        "lib/waffra_goal_recurring_account_picker.dart",
+        "lib/main.dart",
+        "lib/waffra_goal_recurring_actions.part.dart",
+        "docs/release/WAFFRA_APPROVED_CHANGES.txt"
+      ],
+      "test_paths": [
+        "test/waffra_footer_notice_test.dart",
+        "test/m302_optimistic_module_write_safety_test.dart",
+        "test/m363_transaction_category_inline_creation_test.dart",
+        "test/m644_goal_notice_funding_contract_test.dart",
+        "test/m641_goal_recurring_account_binding_test.dart",
+        "test/storage/m641_goal_account_integrity_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m449-release-notes-freshness.yml",
+        ".github/workflows/m367-sqlcipher-stage-ci.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m103-same-sha-release-certification.yml",
+        ".github/workflows/m160-main-reconciliation.yml",
+        ".github/workflows/m282-combined-candidate.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "Only one Flutter SnackBar constructor in centralized main.dart presenter, no direct picker snackbars or silent failure; all production picker callers relay error UI.",
+        "Goal funding never optimistically writes wallet or source balance; it must commit through trusted encrypted source with explicit verified account ID and optional low-balance warning; failure returns before notifications.",
+        "No original M302/M363 category/recurring tests removed or weakened, only obsolete source-shape assertions replaced with positive new behavior and extra M644 coverage.",
+        "Never bypass M449 release freshness, M385 exact bounded scope, M550 contract, source verification, physical Android acceptance or latest-head CI; Draft until verified."
+      ]
     }
   ]
 }
