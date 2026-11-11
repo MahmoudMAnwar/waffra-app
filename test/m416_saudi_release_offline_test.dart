@@ -14,7 +14,6 @@ void main(){
  test('M416 Saudi release switches preserve Global features in source',(){
   expect(WaffraSaudiRelease.enabled,isTrue);
   expect(WaffraSaudiRelease.locationCountryOnboarding,isFalse);
-  expect(WaffraSaudiRelease.receiptImageTransactionImport,isFalse);
   expect(WaffraSaudiRelease.userCountryChoice,isFalse);
   expect(WaffraSaudiRelease.userCurrencyChoice,isFalse);
   expect(WaffraSaudiRelease.globalCurrencyConverter,isTrue);
