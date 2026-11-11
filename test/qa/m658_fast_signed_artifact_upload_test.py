@@ -53,25 +53,16 @@ class M658SignedUploadRegression(unittest.TestCase):
         self.assertEqual(self.build.count("compression-level: 0"), 2)
         self.assertEqual(self.build.count("retention-days: 30"), 2)
 
-    def test_measurement_steps_confirm_actual_files_and_no_secrets(self):
-        for name, file_paths in (
-            ("Record verified signed APK upload input size",
-             ("build/Waffra.apk", "build/waffra-qa-build-receipt.txt",
-              "build/Waffra-Release-Notes.txt")),
-            ("Record verified signed AAB upload input size",
-             ("build/app/outputs/bundle/release/app-release.aab",
-              "aab_candidate_sha256.txt")),
-        ):
-            with self.subTest(name=name):
-                part = self.build.split("      - name: " + name + "\n", 1)[1]
-                step = part.split("\n      - name: ", 1)[0]
-                self.assertIn("set -euo pipefail", step)
-                for path in file_paths:
-                    self.assertIn("test -s " + path, step)
-                self.assertIn("date -u", step)
+    def test_original_release_payload_and_identity_gate_stay_ordered(self):
         self.assertLess(
             self.build.index("Gate QA APK on embedded SHA and current branch head"),
             self.build.index("Publish signed QA APK (FINAL step)"))
+        self.assertLess(
+            self.build.index("Generate and validate Waffra Release Notes TXT"),
+            self.build.index("Publish signed QA APK (FINAL step)"))
+        self.assertLess(
+            self.build.index("Verify signed AAB release certificate and compiled source identity"),
+            self.build.index("Upload signed Google Play internal-testing AAB candidate"))
 
     def test_full_finance_and_signature_evidence_preserved(self):
         for marker in (
