@@ -93,8 +93,9 @@ extension WaffraGoalRecurringActions on _HomeScreenState {
    creating:false,linkNew:false,operation:'goal-active-and-due');
  }
  Future<void> editGoal(SavingGoal existing)async{
-  var accountOptions=await _m641VerifiedGoalRecurringAccounts();
-  if(accountOptions==null||!mounted)return;
+  final verifiedAccountOptions=await _m641VerifiedGoalRecurringAccounts();
+  if(verifiedAccountOptions==null||!mounted)return;
+  List<WaffraAccountBalance> accountOptions=verifiedAccountOptions;
   String? linkedAccount=existing.accountId;
   if(!accountOptions.any((a)=>a.id==linkedAccount&&!a.archived)){
    linkedAccount=null; // Legacy goals must be linked by explicit choice.
