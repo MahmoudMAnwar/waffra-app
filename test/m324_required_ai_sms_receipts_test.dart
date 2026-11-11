@@ -9,10 +9,10 @@ void main(){
   expect(home,isNot(contains('unawaited(_launchAddAction(()=>bulkSmsSheet()')));
   expect(home,isNot(contains('Future<void> bulkSmsSheet(')));
  });
- test('M636 deterministic image OCR is independent of removed model',(){
-  expect(home,contains('Future<void> scanAndAddReceipt()async'));
-  expect(home,contains('WaffraReceiptOcr.scan(picked.path)'));
-  expect(home,contains('WaffraBankScreenshotParser.reviewItems(extracted.rawText)'));
+ test('M640 no old OCR scan button or model survives',(){
+  expect(home,isNot(contains('Future<void> scanAndAddReceipt()async')));
+  expect(home,isNot(contains('WaffraReceiptOcr.scan(picked.path)')));
+  expect(home,isNot(contains('WaffraBankScreenshotParser.reviewItems(extracted.rawText)')));
   expect(home,isNot(contains('WaffraOnDeviceQwen')));
  });
  test('M636 auto SMS remains reviewed, account-bound, and explicitly saved',(){
