@@ -1173,6 +1173,38 @@
         "No claim of complete removal before exact-head Flutter analyzer/Android and test suite succeed; mobile device acceptance pending.",
         "Retired paths are asserted ABSENT in M640 test and M385 deletion list; source_paths and test_paths in M550 must only refer to files present on the PR head. Previously existing deleted files remain listed in the retirement issue and approved behavior."
       ]
+    },
+    {
+      "id": "M641-GOAL-RECURRING-SINGLE-ACCOUNT-IDENTITY",
+      "issue": "Issue #562 / existing Draft PR #558",
+      "previous_behavior": "Recurring editor returned before opening when no verified financial accounts; savings goals lacked an accountId, goal funding defaulted to no source, and linked due schedule had no account identity.",
+      "approved_behavior": "Recurring + always opens a valid editor with 3-tier verified category/provider/account picker and inline trusted new-account creation. Goals create/edit use that same cascade, save verified account ID; transfers increase goal wallet and debit source account once atomically; optional one-time linked due inherits account identity, displays it and settles without duplicate debit.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_goal_recurring_actions.part.dart",
+        "lib/waffra_goal_recurring_account_picker.dart",
+        "lib/storage/waffra_fresh_finance_modules_repository.dart",
+        "lib/storage/waffra_verified_goal_due_snapshot_writer.dart"
+      ],
+      "test_paths": [
+        "test/m641_goal_recurring_account_binding_test.dart",
+        "test/m470_recurring_provider_accounts_test.dart",
+        "test/m371_goal_wallet_and_budgets_regression_test.dart",
+        "test/storage/m448_verified_goal_funding_writer_test.dart",
+        "test/storage/m452_atomic_goal_due_projection_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/android.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Never bypass verified SQLCipher source/balances, PBKDF2, biometric or owner epoch; never infer historical account ID from name.",
+        "Creating/editing recurring or a goal never changes bank or goal balance. Funding commits a separate goal savings wallet credit and one chosen source account debit in one SQLCipher transaction, not income/expense.",
+        "Linked goal due posts only once on user confirmation. Already saved funds are not debited a second time; only cash shortfall is linked to existing verified account.",
+        "Old goals with no accountId remain readable; they require explicit account selection for new edits/funding and must not rewrite historical money.",
+        "No branch APK or auto merge; tests and physical first-account and due scenarios required."
+      ]
     }
   ]
 }
