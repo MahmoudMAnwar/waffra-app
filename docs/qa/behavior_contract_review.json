@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "pr": "M637–M640 PR #558 — verified Home hot path, Saudi financial provider grouping, SMS sync, permissions copy, and complete receipt OCR retirement; M642 PR queue remediation",
-  "issue": "Issues #557, #559, #560, #561 — owner confirmed OCR removal; M642 #563",
+  "pr": "PR #575 M647–M652 transfer, visual financial activity, SMS rule refresh",
+  "issue": "Issues #569 #570 #571 #572 #573 #574",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main",
   "reviewed_at": "2026-11-11",
@@ -1311,6 +1311,30 @@
         "Goal funding never optimistically writes wallet or source balance; it must commit through trusted encrypted source with explicit verified account ID and optional low-balance warning; failure returns before notifications.",
         "No original M302/M363 category/recurring tests removed or weakened, only obsolete source-shape assertions replaced with positive new behavior and extra M644 coverage.",
         "Never bypass M449 release freshness, M385 exact bounded scope, M550 contract, source verification, physical Android acceptance or latest-head CI; Draft until verified."
+      ]
+    },
+    {
+      "id": "M647-M652-TRANSFER-ACTIVITY-AND-RULE-REFRESH",
+      "issue": "Issues #569–#574 (2026-11-11)",
+      "previous_behavior": "History transfer sheet occupied fixed 70% height without clear source and destination; Home timeline ignored verified transfers and did not distinguish posted recurring dues. Rule learning updated storage, but no versioned pending queue refresh was scheduled after durable confirmation.",
+      "approved_behavior": "Display bilingual transfer source and destination in compact content-sized cards with a blue palette, show one verified transfer event in Home without changing income or expense totals, present confirmed due entries with violet visual category but no separate debit, schedule nonblocking existing pending SMS classifier refresh on learned rule commit, preserve notification counters and explicit review-only approval.",
+      "source_paths": [
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m647_m652_financial_activity_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Internal transfers read the verified two-sided SQLCipher transfer journal, never inferred as a MoneyEntry expense.",
+        "Due cards are presentation-only for already confirmed entries; no new expense posted by rendering.",
+        "A local rule is refreshed only after durable save; pending SMS suggestions are never auto-posted.",
+        "Do not start full SMS history scan during an income/expense commit or delay the first Home frame.",
+        "Retain account and owner scoped session cancellation and notify users of failed verified reads."
       ]
     }
   ]
