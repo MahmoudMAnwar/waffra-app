@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'waffra_account_transaction_form.dart';
+import 'waffra_saudi_financial_providers.dart';
 
 class WaffraNewAccountDraft {
  const WaffraNewAccountDraft({
@@ -38,14 +39,11 @@ class _WaffraNewAccountDialogState extends State<WaffraNewAccountDialog> {
  String? provider;
  String? subtype='cash';
  String t(String ar,String en)=>widget.english?en:ar;
- static const banks=<String,({String ar,String en})>{
-  'rajhi':(ar:'مصرف الراجحي',en:'Al Rajhi Bank'),
-  'inma':(ar:'مصرف الإنماء',en:'Alinma Bank'),
-  'snb':(ar:'البنك الأهلي السعودي',en:'Saudi National Bank'),
-  'riyad':(ar:'بنك الرياض',en:'Riyad Bank'),
-  'bilad':(ar:'بنك البلاد',en:'Bank Albilad'),
-  'stc':(ar:'STC Bank',en:'STC Bank'),
-  'other':(ar:'بنك آخر',en:'Other bank'),
+ String bankCategory=WaffraSaudiFinancialProviders.local;
+ static final banks=<String,({String ar,String en})>{
+  for(final p in WaffraSaudiFinancialProviders.all)
+   p.id:(ar:p.labelAr,en:p.labelEn),
+  'other':(ar:'جهة أخرى',en:'Other provider'),
  };
  @override void initState(){
   super.initState();
@@ -58,6 +56,8 @@ class _WaffraNewAccountDialogState extends State<WaffraNewAccountDialog> {
   final suggested=widget.suggestedProviderId;
   if(suggested!=null&&banks.containsKey(suggested)&&suggested!='other'){
    kind='bank';provider=suggested;subtype='current';
+   bankCategory=WaffraSaudiFinancialProviders.byId(suggested)?.category??
+    WaffraSaudiFinancialProviders.local;
    final sender=widget.suggestedSenderName?.trim()??'';
    // SMS sender labels are untrusted text: never inject unbounded control
    // characters or render an arbitrary message body as an account name.
@@ -71,7 +71,7 @@ class _WaffraNewAccountDialogState extends State<WaffraNewAccountDialog> {
  int? get openingMinor=>waffraSarAmountMinor(opening.text,allowZero:true);
  String get accountLabel{
   final name=nickname.text.trim();
-  if(kind!='bank'||provider==null||provider=='other')return name;
+  if((kind!='bank'&&kind!='wallet')||provider==null||provider=='other')return name;
   // On first bank SMS, store exactly the user-approved sender name rather
   // than prepending a second bank name (e.g. «الإنماء - AlinmaPay»).
   if(widget.suggestedSenderName!=null&&name.isNotEmpty)return name;
@@ -82,7 +82,7 @@ class _WaffraNewAccountDialogState extends State<WaffraNewAccountDialog> {
  bool get valid{
   final label=accountLabel;
   return nickname.text.trim().isNotEmpty&&label.runes.length<=80&&
-   openingMinor!=null&&(kind!='bank'||provider!=null)&&
+   openingMinor!=null&&((kind!='bank'&&kind!='wallet')||provider!=null)&&
    subtype!=null&&
    (customSubtypeLabel==null||
     (customSubtypeLabel!.trim().runes.length>=2&&
@@ -157,25 +157,49 @@ class _WaffraNewAccountDialogState extends State<WaffraNewAccountDialog> {
      items:[
       DropdownMenuItem(value:'bank',child:Text(t('حساب بنكي','Bank account'))),
       DropdownMenuItem(value:'cash',child:Text(t('نقدي','Cash'))),
-      DropdownMenuItem(value:'wallet',child:Text(t('محفظة','Wallet'))),
+      DropdownMenuItem(value:'wallet',child:Text(t('محفظة رقمية','Digital wallet'))),
       DropdownMenuItem(value:'other',child:Text(t('أخرى','Other'))),
      ],
      onChanged:(v){if(v!=null)setState((){
       kind=v;provider=null;customSubtypeLabel=null;
+      bankCategory=WaffraSaudiFinancialProviders.local;
       subtype=kind=='cash'?'cash':kind=='other'?'other':null;
      });},
     ),
     if(kind=='bank')...[
      const SizedBox(height:12),
      DropdownButtonFormField<String>(
-      key:const Key('m470-new-account-provider'),
+      key:ValueKey('m638-bank-category-$bankCategory'),
+      initialValue:bankCategory,isExpanded:true,
+      decoration:InputDecoration(labelText:t('نوع البنك *','Bank category *'),
+       border:const OutlineInputBorder()),
+      items:const [
+       DropdownMenuItem(value:WaffraSaudiFinancialProviders.local,
+        child:Text('بنوك محلية')),
+       DropdownMenuItem(value:WaffraSaudiFinancialProviders.digital,
+        child:Text('بنوك رقمية')),
+      ],
+      onChanged:(next){if(next!=null)setState((){
+       bankCategory=next;provider=null;
+      });},
+     ),
+    ],
+    if(kind=='bank'||kind=='wallet')...[
+     const SizedBox(height:12),
+     DropdownButtonFormField<String>(
+      key:ValueKey('m470-new-account-provider-${kind=='bank'?bankCategory:'wallet'}'),
       initialValue:provider,isExpanded:true,
       decoration:InputDecoration(
-       labelText:t('البنك أو الجهة *','Bank or provider *'),
+       labelText:t('اسم الجهة *','Financial institution *'),
        border:const OutlineInputBorder()),
-      items:banks.entries.map((bank)=>DropdownMenuItem<String>(
-       value:bank.key,child:Text(t(bank.value.ar,bank.value.en),
-        overflow:TextOverflow.ellipsis))).toList(),
+      items:[
+       ...WaffraSaudiFinancialProviders.inCategory(
+        kind=='wallet'?WaffraSaudiFinancialProviders.wallet:bankCategory)
+        .map((p)=>DropdownMenuItem<String>(
+         value:p.id,child:Text(p.labelAr,overflow:TextOverflow.ellipsis))),
+       DropdownMenuItem<String>(value:'other',
+        child:Text(t('جهة أخرى','Other provider'))),
+      ],
       onChanged:(v)=>setState(()=>provider=v),
      ),
     ],
@@ -296,8 +320,7 @@ class _WaffraNewAccountDialogState extends State<WaffraNewAccountDialog> {
     key:const Key('m470-new-account-save'),
     onPressed:valid?()=>Navigator.pop(context,WaffraNewAccountDraft(
      name:accountLabel,kind:kind,openingMinor:openingMinor!,
-     providerId:kind=='bank'?provider:
-      kind=='wallet'?'other':'none',
+     providerId:(kind=='bank'||kind=='wallet')?provider:'none',
      subtype:subtype,customSubtypeLabel:customSubtypeLabel,
      lastFour:kind=='bank'&&smsSuffix.text.trim().isNotEmpty?
       smsSuffix.text.trim():null)):null,
