@@ -45,27 +45,27 @@ void main() {
     expect(tour, contains(r"'${tourStep+1}/${tourTabs.length}'"));
   });
 
-  test('SMS content remains in memory for encrypted source, legacy bridge redacts plaintext', () {
-    final home = File('lib/main.dart').readAsStringSync();
-    final widget = File('lib/waffra_widget_capture.part.dart').readAsStringSync();
-    expect(home, contains("date:verifiedSmsDate,notes:raw,sourceType:'sms'"));
-    expect(home, contains('final verifiedSmsDate=bankSmsDate(raw);'));
-    expect(home, isNot(contains('date:bankSmsDate(raw)??DateTime.now()')));
-    expect(home, contains('date:verifiedSmsDate,notes:messages[index],sourceType:'));
-    expect(home, contains('final verifiedSmsDate=bankSmsDate(messages[index]);'));
-    expect(home, isNot(contains('date:now,notes:messages[index],sourceType:')));
-    expect(home, contains('notes:sms?message.text:'));
-    expect(home, contains("personalNotes:sms||initial?.sourceType=='sms'?notes.text:''"));
-    expect(widget, contains('notes:entry.raw,sourceType:'));
-    expect(widget, contains('waffraSafeSmsTransactionTitle(parsed.title,entry.raw'));
-    expect(home, contains("Key('waffra-transaction-personal-notes')"));
-    expect(home, contains("Key('waffra-transaction-protected-bank-sms')"));
+  test('M636 verified SMS keeps source text encrypted and date/fingerprint exact',(){
+    final home=File('lib/main.dart').readAsStringSync();
+    final editor=home.substring(home.indexOf(' Future<void> entrySheet('),
+      home.indexOf(' Future<void> showReceipt('));
+    final confirm=home.substring(home.indexOf(' Future<void> _m565ConfirmSms({'),
+      home.indexOf(' Future<void> _reviewAutoSmsCandidates('));
+    expect(confirm,contains('bankSmsDate(body)==null||bankSmsHasUnverifiedTimestamp(body)'));
+    expect(confirm,contains('notes:body,sourceType:\'sms\''));
+    expect(confirm,contains('hashes:[hash],userConfirmed:true'));
+    expect(editor,contains('notes:sms?message.text:'));
+    expect(editor,contains("personalNotes:sms||initial?.sourceType=='sms'?notes.text:''"));
+    expect(home,contains("Key('waffra-transaction-personal-notes')"));
+    expect(home,contains("Key('waffra-transaction-protected-bank-sms')"));
+    expect(File('lib/waffra_widget_capture.part.dart').existsSync(),isFalse);
     final authority=File('lib/storage/waffra_verified_finance_authority.dart').readAsStringSync();
     expect(authority,contains("return Map<String, Object?>.unmodifiable({...record, 'notes': ''});"));
     expect(authority,contains('records: redacted, messageHashes: fingerprints'));
     final legacy=File('lib/storage/waffra_home_finance_persistence.dart').readAsStringSync();
     expect(legacy,contains('WaffraLegacySmsNotesPrivacyGate.rejectConfirmedSmsNotes(copied)'));
   });
+
 
   test('FAB launch waits for the menu collapse and suppresses double taps', () {
     final source = File('lib/main.dart').readAsStringSync();
