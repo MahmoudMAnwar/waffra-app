@@ -1420,3 +1420,10 @@ All 6 requirements remain **Partial / CI and physical Android QA pending**, NOT 
 
 
 - **Integration note (after PR #580):** M647–M652 activity requirements are preserved alongside the merged M645/M646/M647 and M653/M654 main CI requirements. Updating #575 to the current main base does not certify Android device behavior or authorize an untested merge.
+
+
+## M656 — Same-PR M429/M417 Flutter analyzer consistency (Issue #583, PR #575)
+- **Owner approval:** correct recurring false CI failures rather than rerunning or disabling security/source tests. PR #575 integrated source SHA `d9fbe1f3`: M429 exact-head SMS/phone/biometric QA run 43094172937 and M417 opt-in bank SMS QA run 43094173032 failed ONLY because their strict `flutter analyze` returned nonzero for six/four Flutter stable 3.50 `info: deprecated_member_use` diagnostics (material.dart and localizations). The failing steps reported **zero warnings or errors**; other SMS/finance/Android jobs remained green.
+- **Fix scope:** align just those two selected-file Flutter analyzers to `flutter analyze --no-fatal-infos`, **without** `--no-fatal-warnings`, `|| true` or `continue-on-error`. Every preexisting analyzed source path, Flutter test, M385 approved-source boundary, auth/SMS/finance/biometric coverage remains intact. Warnings and errors still fail CI. Keep deprecation diagnostics visible and track separate framework migration, without broad unreviewed source changes.
+- **Coverage:** one positive/negative M656 QA regression locks the two commands, all sources, all original tests and source guardians, no blanket bypass. M385 exact changed-file/section scope and M550 behavior contract both updated. Append M449 factual source ancestry after code/test changes and run complete latest-head PR CI.
+- **Status Partial:** issue https://github.com/MahmoudMAnwar/waffra-app/issues/583 created before implementation; no claimed resolved Flutter build until new exact-head CI green.
