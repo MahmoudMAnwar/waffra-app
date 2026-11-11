@@ -55,6 +55,9 @@ void main(){
    app.indexOf(' Future<void> deletedGoalsDialog('));
   expect(funding,contains('sourceAccountId:funding.sourceAccountId'));
   expect(funding,contains('fundVerifiedGoal('));
+  expect(funding,contains('if(mounted)await _refreshFromVerifiedFinance();'));
+  expect(funding,contains('if(mounted)await _loadFinanceSafely();'));
+  // A verified success refresh must never re-enter cold Home/SMS startup.
   expect(funding,isNot(contains("sourceAccountId:chosenSource=='none'")));
   expect(app,contains("goalWalletPaidMinor:goalPreview.fromGoalMinor"));
   final sql=File('lib/storage/waffra_verified_goal_funding_writer.dart')
