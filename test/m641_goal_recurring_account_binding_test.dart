@@ -77,6 +77,9 @@ void main(){
   expect(funding,contains('if(mounted)await _loadFinanceSafely();'));
   // A verified success refresh must never re-enter cold Home/SMS startup.
   expect(funding,isNot(contains("sourceAccountId:chosenSource=='none'")));
+  expect(funding,contains('final available=source.single.balanceMinor/100;'));
+  expect(funding,isNot(contains('final available=waffraAvailableCash(entries,goals);')),
+   reason:'Fresh account opening balance must drive savings warning');
   expect(app,contains("goalWalletPaidMinor:goalPreview.fromGoalMinor"));
   final sql=File('lib/storage/waffra_verified_goal_funding_writer.dart')
    .readAsStringSync();
