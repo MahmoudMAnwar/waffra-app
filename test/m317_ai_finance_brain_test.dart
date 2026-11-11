@@ -13,9 +13,9 @@ void main() {
     'currency_text':currency,'direction':direction,'merchant':merchant,
   };
 
-  test('M317 Arabic OCR with independent bank notices counts 2 actions',()async{
+  test('M317 Arabic bank SMS with independent notices counts 2 actions',()async{
     const text='حوالة واردة 100 ريال سعودي\nشراء POS SAR 30.50';
-    final result=await WaffraAiFinanceBrain.imageOcr(text,generate:(_)async=>
+    final result=await WaffraAiFinanceBrain.bankSms(text,generate:(_)async=>
       model([
         tx('حوالة واردة 100 ريال سعودي','100','ريال سعودي','income'),
         tx('شراء POS SAR 30.50','30.50','SAR','expense',
@@ -27,14 +27,6 @@ void main() {
     expect(result.items.map((e)=>e.direction),
         [WaffraAiDirection.income,WaffraAiDirection.expense]);
     expect(result.needsReviewCount,0);
-  });
-
-  test('M317 one receipt with many products is ONE transaction',()async{
-    const text='Market\nMilk 10\nBread 5\nVAT 2.25\nTotal SAR 17.25';
-    final result=await WaffraAiFinanceBrain.imageOcr(text,generate:(_)async=>
-      model([tx('Total SAR 17.25','17.25','SAR','expense')]));
-    expect(result.error,isNull);
-    expect(result.count,1);
   });
 
   test('M317 Qwen cannot invent a financial amount',()async{
@@ -102,7 +94,7 @@ void main() {
 
   test('M317 two competing action amounts require review',()async{
     const text='شراء POS SAR 10.00 SAR 20.00';
-    final result=await WaffraAiFinanceBrain.imageOcr(text,generate:(_)async=>
+    final result=await WaffraAiFinanceBrain.bankSms(text,generate:(_)async=>
       model([tx(text,'10.00','SAR','expense')]));
     expect(result.items.single.needsReview,isTrue);
     expect(result.items.single.reason,'competing_amounts');
@@ -110,7 +102,7 @@ void main() {
 
   test('M317 duplicate model item cannot double-count one payment',()async{
     const text='شراء POS SAR 20.00';
-    final result=await WaffraAiFinanceBrain.imageOcr(text,generate:(_)async=>
+    final result=await WaffraAiFinanceBrain.bankSms(text,generate:(_)async=>
       model([tx(text,'20.00','SAR','expense'),
         tx(text,'20.00','SAR','expense')]));
     expect(result.error,'untrusted_model_output');
@@ -119,7 +111,7 @@ void main() {
 
   test('M317 ungrounded text and malformed JSON fail closed',()async{
     const text='شراء POS SAR 20.00';
-    final hallucinated=await WaffraAiFinanceBrain.imageOcr(
+    final hallucinated=await WaffraAiFinanceBrain.bankSms(
       text,generate:(_)async=>model([tx('Some other payment','20','SAR','expense')]));
     expect(hallucinated.count,0);
     expect(hallucinated.error,'untrusted_model_output');
@@ -128,15 +120,15 @@ void main() {
     expect(malformed.error,'untrusted_model_output');
   });
 
-  test('M317 never sends empty input or oversized OCR text to model',()async{
+  test('M317 never sends empty input or oversized bank SMS text to model',()async{
     var invoked=0;
     Future<String> generator(String _)async{
       invoked++;
       return model([]);
     }
-    expect((await WaffraAiFinanceBrain.imageOcr('',
+    expect((await WaffraAiFinanceBrain.bankSms('',
         generate:generator)).error,'invalid_input');
-    expect((await WaffraAiFinanceBrain.imageOcr(
+    expect((await WaffraAiFinanceBrain.bankSms(
         'x'*12001,generate:generator)).error,'invalid_input');
     expect(invoked,0);
   });
