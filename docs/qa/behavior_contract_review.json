@@ -1191,7 +1191,8 @@
         "test/m470_recurring_provider_accounts_test.dart",
         "test/m371_goal_wallet_and_budgets_regression_test.dart",
         "test/storage/m448_verified_goal_funding_writer_test.dart",
-        "test/storage/m452_atomic_goal_due_projection_test.dart"
+        "test/storage/m452_atomic_goal_due_projection_test.dart",
+        "test/storage/m641_goal_account_integrity_test.dart"
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/m550-behavior-contract-preflight.yml",
