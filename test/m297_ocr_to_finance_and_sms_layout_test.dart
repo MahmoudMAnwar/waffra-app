@@ -106,13 +106,12 @@ Sender can't accept replies. Contact them directly.''';
   expect(src,contains("sourceType:initial?.sourceType??(sms?'sms':scannedReceipt!=null?'receipt':'manual')"));
  });
 
- test('M297 bank SMS buttons share a responsive horizontal row',(){
-  final src=File('lib/main.dart').readAsStringSync();
-  expect(src,contains("Key('waffra-sms-paste-action')"));
-  expect(src,contains("Key('waffra-sms-open-messages-action')"));
-  expect(src,contains('return stack?Column('));
-  expect(src,contains('Expanded(child:pasteAction)'));
-  expect(src,contains('Expanded(child:messagesAction)'));
-  expect(src,contains('constraints.maxWidth<318'));
+ test('M636 Home plus contains only manual action with real blur',(){
+   final src=File('lib/main.dart').readAsStringSync();
+   expect(src,contains('child:ClipRect(child:BackdropFilter('));
+   expect(src,contains('ui.ImageFilter.blur(sigmaX:6,sigmaY:6)'));
+   expect(src,contains("label:waffraIsEnglish?'Add manual transaction':'إضافة عملية يدوية'"));
+   expect(src,isNot(contains("label:waffraIsEnglish?'Bank message':'رسالة بنكية'")));
+   expect(src,contains('await entrySheet(sms:true,initialSms:body,reviewedSender:sender);'));
  });
 }
