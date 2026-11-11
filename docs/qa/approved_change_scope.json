@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
-  "change_id": "M637-M638-PERF-PLUS-SAUDI-FINANCIAL-PROVIDERS-AND-SMS-INBOX-SYNC-557-559",
-  "human_scope_review": "Two approved user scopes combined by explicit owner request in the same Draft PR #558. M637 performance unchanged; M638 local vs digital bank vs wallet Arabic catalog, cascaded entry/account selection + dimmed validation, remove surplus transfer explanations, explicit Android SMS inbox deletion reconciliation on I/O executor, no saved ledger/anti-replay/excluded loss. Permanent requirements M637/M638 documented before source changes. M639 #560 explicit owner direction: permissions title and explanation no artificial-intelligence references; copy-only scoped change, PR #558.",
+  "change_id": "M637-M640-20261111-VERIFIED-HOME-SA-CATALOG-SMS-SYNC-PLAIN-PERMISSIONS-OCR-RETIRE-557-561",
+  "human_scope_review": "Two approved user scopes combined by explicit owner request in the same Draft PR #558. M637 performance unchanged; M638 local vs digital bank vs wallet Arabic catalog, cascaded entry/account selection + dimmed validation, remove surplus transfer explanations, explicit Android SMS inbox deletion reconciliation on I/O executor, no saved ledger/anti-replay/excluded loss. Permanent requirements M637/M638 documented before source changes. M639 #560 explicit owner direction: permissions title and explanation no artificial-intelligence references; copy-only scoped change, PR #558.Two approved user scopes combined by explicit owner request in the same Draft PR #558. M637 performance unchanged; M638 local vs digital bank vs wallet Arabic catalog, cascaded entry/account selection + dimmed validation, remove surplus transfer explanations, explicit Android SMS inbox deletion reconciliation on I/O executor, no saved ledger/anti-replay/excluded loss. Permanent requirements M637/M638 documented before source changes. M639 #560 explicit owner direction: permissions title and explanation no artificial-intelligence references; copy-only scoped change, PR #558. M640 owner specifically authorized OCR-only engine/tests/workflow removal with exact path deletion list; no other runtime, security or finance paths may be deleted.",
   "user_requested_changes": [
     "Speed up the actual verified finance Home handoff after successful biometric and ordinary logout/login; no cosmetic spinner in this performance-first patch.",
     "Remove repeated account schema foreign-key validations and avoid unnecessary already-installed AccountContext transaction on the verified account balance read hot path without losing any schema corruption checks.",
@@ -10,9 +10,28 @@
     "M638 #559: Local banks, digital banks and digital wallets are separate categories; Arabic provider names in second dropdown, D360 verbatim, Barq/Enjaz Pay/Alinma Pay wallets not banks; preserve existing verified account IDs.",
     "M638: dependent institution/account/subcategory dropdown dimmed until parent set; manual income/expense confirm disabled until every required field valid; remove exactly two transfer explanatory lines without removing real errors.",
     "M638: explicit SMS Rescan must reconcile unconfirmed encrypted pending queue against current Android inbox, remove only missing source records, group count updates; permission/partial scan fails closed and never deletes SQLCipher ledger, confirmed hashes, exclusions or sender rule.",
-    "M639 #560: Replace the Arabic and English visible SMS/notification onboarding permission screen heading and description with plain purpose-and-choice copy. Remove AI/cloud/model mentions from visible permission screen text while preserving opt-in defaults and secure OS consent behavior exactly."
+    "M639 #560: Replace the Arabic and English visible SMS/notification onboarding permission screen heading and description with plain purpose-and-choice copy. Remove AI/cloud/model mentions from visible permission screen text while preserving opt-in defaults and secure OS consent behavior exactly.",
+    "M640 Issue #561: Owner approved complete retirement/deletion of receipt OCR Tools section, Tesseract model downloads and dependency, receipt/bank screenshot OCR parser and hidden scan-and-create income/expense routes, obsolete OCR tests/Workflows/Gradle shim. Preserve ordinary receipt attachments, SQLCipher receipt storage, and text-only SMS source processing."
   ],
   "allowed_changed_files": [
+    ".github/workflows/android-full-smoke.yml",
+    ".github/workflows/android.yml",
+    ".github/workflows/m147-final-main-review-gate.yml",
+    ".github/workflows/m174-main-arm64-compile.yml",
+    ".github/workflows/m174-main-sha-postmerge.yml",
+    ".github/workflows/m201-sqlcipher-finance-acceptance.yml",
+    ".github/workflows/m202-android-sqlcipher-source-binder-dryrun.yml",
+    ".github/workflows/m266-sqlcipher-precutover-qa.yml",
+    ".github/workflows/m274-production-ui-golden.yml",
+    ".github/workflows/m278-mobile-system-insets.yml",
+    ".github/workflows/m282-combined-candidate.yml",
+    ".github/workflows/m287-receipt-ocr.yml",
+    ".github/workflows/m290-country-reminders-multicurrency.yml",
+    ".github/workflows/m297-receipt-to-entry.yml",
+    ".github/workflows/m298-finance-validation.yml",
+    ".github/workflows/m340-continuous-financial-quality.yml",
+    ".github/workflows/storage-android-emulator.yml",
+    ".github/workflows/storage-android-integration.yml",
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
@@ -22,21 +41,74 @@
     "lib/storage/waffra_accounts_repository.dart",
     "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
     "lib/waffra_accounts_manager_page.dart",
+    "lib/waffra_ai_finance_brain.dart",
     "lib/waffra_auto_sms.dart",
     "lib/waffra_auto_sms_consent.dart",
+    "lib/waffra_bank_screenshot_parser.dart",
     "lib/waffra_new_account_dialog.dart",
+    "lib/waffra_practical_ledger_engine.dart",
+    "lib/waffra_practical_tools_page.dart",
+    "lib/waffra_receipt_ocr.dart",
+    "lib/waffra_receipt_ocr_parser.dart",
     "lib/waffra_recurring_account_groups.dart",
     "lib/waffra_saudi_financial_providers.dart",
+    "lib/waffra_saudi_release.dart",
     "native/WaffraAutoSmsStore.kt",
     "native/WaffraMainActivity.kt",
+    "pubspec.yaml",
+    "scripts/qa/m287_patch_tesseract_gradle.py",
+    "scripts/qa/m385_approved_change_guard.py",
+    "test/m281_practical_tools_test.dart",
+    "test/m285_compact_action_widths_test.dart",
+    "test/m287_receipt_ocr_test.dart",
+    "test/m297_ocr_to_finance_and_sms_layout_test.dart",
+    "test/m299_multi_transaction_image_review_test.dart",
+    "test/m317_ai_finance_brain_test.dart",
+    "test/m324_required_ai_sms_receipts_test.dart",
+    "test/m329_ai_model_restart_and_visible_analysis_test.dart",
+    "test/m330_compact_ui_copy_test.dart",
+    "test/m332_ai_ocr_hang_and_six_for_three_test.dart",
+    "test/m332_live_bank_image_sms_hang_regression_test.dart",
+    "test/m335_real_sms_ocr_accuracy_test.dart",
+    "test/m336_fx_consent_and_full_title_test.dart",
+    "test/m336_whole_app_finance_quality_matrix_test.dart",
+    "test/m341_multilingual_bank_sms_ocr_test.dart",
     "test/m417_sms_first_run_test.dart",
+    "test/m470_financial_currency_word_boundary_regression_test.dart",
     "test/m638_saudi_provider_catalog_and_cascade_test.dart",
     "test/m638_sms_inbox_delete_sync_test.dart",
     "test/m639_permissions_onboarding_plain_copy_test.dart",
+    "test/m640_receipt_reader_retirement_test.dart",
+    "test/qa/m412_workflow_wiring_test.py",
     "test/storage/m637_biometric_home_schema_hotpath_test.dart"
   ],
-  "approved_deleted_files": [],
-  "approved_full_test_replacements": [],
+  "approved_deleted_files": [
+    ".github/workflows/m287-receipt-ocr.yml",
+    ".github/workflows/m297-receipt-to-entry.yml",
+    "lib/waffra_bank_screenshot_parser.dart",
+    "lib/waffra_receipt_ocr.dart",
+    "lib/waffra_receipt_ocr_parser.dart",
+    "scripts/qa/m287_patch_tesseract_gradle.py",
+    "test/m287_receipt_ocr_test.dart",
+    "test/m297_ocr_to_finance_and_sms_layout_test.dart",
+    "test/m299_multi_transaction_image_review_test.dart",
+    "test/m329_ai_model_restart_and_visible_analysis_test.dart",
+    "test/m332_ai_ocr_hang_and_six_for_three_test.dart",
+    "test/m332_live_bank_image_sms_hang_regression_test.dart",
+    "test/m335_real_sms_ocr_accuracy_test.dart"
+  ],
+  "approved_full_test_replacements": [
+    "test/m281_practical_tools_test.dart",
+    "test/m285_compact_action_widths_test.dart",
+    "test/m317_ai_finance_brain_test.dart",
+    "test/m324_required_ai_sms_receipts_test.dart",
+    "test/m330_compact_ui_copy_test.dart",
+    "test/m336_fx_consent_and_full_title_test.dart",
+    "test/m336_whole_app_finance_quality_matrix_test.dart",
+    "test/m341_multilingual_bank_sms_ocr_test.dart",
+    "test/m470_financial_currency_word_boundary_regression_test.dart",
+    "test/qa/m412_workflow_wiring_test.py"
+  ],
   "bounded_sections": {
     "lib/storage/waffra_verified_encrypted_finance_bridge.dart": [
       {
@@ -84,16 +156,24 @@
     ],
     "lib/main.dart": [
       {
-        "start": "import 'waffra_recurring_account_groups.dart';",
-        "end": "import 'storage/waffra_fresh_finance_modules_repository.dart';"
+        "start": "import 'waffra_receipt_ocr.dart';",
+        "end": "import 'waffra_back_navigation.dart';"
       },
       {
-        "start": " Future<void> _rescanAutoSmsInbox()async{",
-        "end": " Future<void>? _autoSmsRefreshInFlight;"
+        "start": " bool _receiptOcrAiOpening=false;",
+        "end": " bool _m528SettingsRefreshQueued=false;"
+      },
+      {
+        "start": " Future<bool> _canReviewOcrAsLedgerTransaction(",
+        "end": " Future<void> entrySheet("
       },
       {
         "start": " Future<void> entrySheet(",
         "end": " Future<void> showReceipt("
+      },
+      {
+        "start": "        if(WaffraSaudiRelease.receiptImageTransactionImport)_addMenuOption(",
+        "end": "        if(tab==1)"
       }
     ],
     "lib/waffra_auto_sms.dart": [
@@ -124,6 +204,138 @@
       {
         "start": " testWidgets('M417 consent explains Android permission prompts in order',",
         "end": " test('M417 permissions follow signup without unsolicited cloud consent',"
+      }
+    ],
+    "lib/waffra_practical_tools_page.dart": [
+      {
+        "start": "import 'package:flutter/material.dart';",
+        "end": null
+      }
+    ],
+    "lib/waffra_ai_finance_brain.dart": [
+      {
+        "start": "import 'dart:convert';",
+        "end": null
+      }
+    ],
+    "lib/waffra_practical_ledger_engine.dart": [
+      {
+        "start": "class WaffraReceiptReviewDraft {",
+        "end": null
+      }
+    ],
+    "lib/waffra_saudi_release.dart": [
+      {
+        "start": " static const bool receiptImageTransactionImport=false;",
+        "end": " static const bool userCountryChoice=false;"
+      }
+    ],
+    "pubspec.yaml": [
+      {
+        "start": "  flutter_tesseract_ocr: ^0.4.31",
+        "end": "  path_provider: ^2.1.5"
+      }
+    ],
+    "scripts/qa/m385_approved_change_guard.py": [
+      {
+        "start": "    for p in deletions:",
+        "end": "    # M636: an owner-approved replacement"
+      }
+    ],
+    ".github/workflows/m174-main-arm64-compile.yml": [
+      {
+        "start": "name:",
+        "end": null
+      }
+    ],
+    ".github/workflows/m282-combined-candidate.yml": [
+      {
+        "start": "name:",
+        "end": null
+      }
+    ],
+    ".github/workflows/m278-mobile-system-insets.yml": [
+      {
+        "start": "name:",
+        "end": null
+      }
+    ],
+    ".github/workflows/m174-main-sha-postmerge.yml": [
+      {
+        "start": "name:",
+        "end": null
+      }
+    ],
+    ".github/workflows/storage-android-emulator.yml": [
+      {
+        "start": "name:",
+        "end": null
+      }
+    ],
+    ".github/workflows/m266-sqlcipher-precutover-qa.yml": [
+      {
+        "start": "name:",
+        "end": null
+      }
+    ],
+    ".github/workflows/android.yml": [
+      {
+        "start": "name:",
+        "end": null
+      }
+    ],
+    ".github/workflows/m290-country-reminders-multicurrency.yml": [
+      {
+        "start": "name:",
+        "end": null
+      }
+    ],
+    ".github/workflows/m201-sqlcipher-finance-acceptance.yml": [
+      {
+        "start": "name:",
+        "end": null
+      }
+    ],
+    ".github/workflows/m274-production-ui-golden.yml": [
+      {
+        "start": "name:",
+        "end": null
+      }
+    ],
+    ".github/workflows/storage-android-integration.yml": [
+      {
+        "start": "name:",
+        "end": null
+      }
+    ],
+    ".github/workflows/android-full-smoke.yml": [
+      {
+        "start": "name:",
+        "end": null
+      }
+    ],
+    ".github/workflows/m147-final-main-review-gate.yml": [
+      {
+        "start": "name:",
+        "end": null
+      }
+    ],
+    ".github/workflows/m202-android-sqlcipher-source-binder-dryrun.yml": [
+      {
+        "start": "name:",
+        "end": null
+      }
+    ],
+    ".github/workflows/m298-finance-validation.yml": [
+      {
+        "start": "name:",
+        "end": null
+      }
+    ],
+    ".github/workflows/m340-continuous-financial-quality.yml": [
+      {
+        "start": "name:",
+        "end": null
       }
     ]
   }
