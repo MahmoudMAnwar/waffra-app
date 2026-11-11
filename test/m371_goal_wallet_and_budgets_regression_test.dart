@@ -125,6 +125,10 @@ void main() {
     expect(source,contains('_m467Accounts.fold<int>(0,(total,a)=>total+a.balanceMinor)/100'));
     expect(source,contains('goalWalletPaidMinor:allocation.fromGoalMinor'));
     expect(source,isNot(contains('inc-exp-waffraGoalWalletBalance(goals)')));
-    expect(source,contains('إضافة الادخار لن تخصم أي مبلغ من الرصيد الحالي'));
+    expect(source,contains('عند إضافة ادخار يُخصم المبلغ مرة واحدة من الحساب المختار'));
+    expect(source,contains('WaffraGoalRecurringAccountPicker('));
+    expect(source,contains('accountId:chosenGoalAccount'));
+    expect(source,contains('sourceAccountId:funding.sourceAccountId'));
+    expect(source,contains('goalWalletPaidMinor:goalPreview.fromGoalMinor'));
   });
 }
