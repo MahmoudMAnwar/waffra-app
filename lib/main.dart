@@ -14499,8 +14499,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
  Future<void> fundGoal(SavingGoal g)async {
   // M641: an independent goal wallet credit and one verified source debit.
-  final fundingBridge=_financeBinding?.accountsBridge;
   final verifiedFundingAccounts=await _m641VerifiedGoalRecurringAccounts();
+  final fundingBridge=_financeBinding?.accountsBridge;
   if(fundingBridge==null||verifiedFundingAccounts==null||!mounted)return;
   List<WaffraAccountBalance> fundingAccounts=verifiedFundingAccounts;
   String? chosenSource=g.accountId;
