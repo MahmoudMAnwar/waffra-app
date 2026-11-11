@@ -95,7 +95,7 @@
     ],
     ".github/workflows/m147-final-main-review-gate.yml": [
       {
-        "start": "      - name: Checkout exactly reviewed head\n",
+        "start": "  android-arm64-compilation:\n",
         "end": "      - name: Set up Flutter SDK\n"
       }
     ],
