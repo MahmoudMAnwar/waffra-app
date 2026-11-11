@@ -11238,7 +11238,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        pw.TableRow(decoration:const pw.BoxDecoration(color:PdfColors.teal800),
         children:(english?['Date','From','To','Details','Amount']:
          ['المبلغ','تفاصيل','إلى الحساب','من الحساب','التاريخ'])
-        .map((v)=>pdfCell(v,rtl:!english,center:true)).toList()),
+        .map((v)=>pw.Padding(padding:const pw.EdgeInsets.all(6),
+         child:pw.Text(v,textAlign:pw.TextAlign.center,
+          textDirection:english?pw.TextDirection.ltr:pw.TextDirection.rtl,
+          style:pw.TextStyle(font:bold,fontSize:9,color:PdfColors.white))))
+         .toList()),
        ...ordered.map((t){
         final when=DateTime.tryParse(t.occurredIso);
         final cells=<pw.Widget>[
@@ -11273,7 +11277,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        pw.TableRow(decoration:const pw.BoxDecoration(color:PdfColors.teal800),
         children:(english?['Date','Type','Savings goal','Source account','Amount']:
          ['المبلغ','الحساب الأصلي','الهدف','نوع الحركة','التاريخ'])
-         .map((v)=>pdfCell(v,rtl:!english,center:true)).toList()),
+         .map((v)=>pw.Padding(padding:const pw.EdgeInsets.all(6),
+         child:pw.Text(v,textAlign:pw.TextAlign.center,
+          textDirection:english?pw.TextDirection.ltr:pw.TextDirection.rtl,
+          style:pw.TextStyle(font:bold,fontSize:9,color:PdfColors.white))))
+         .toList()),
        ...ordered.map((m){
         final when=DateTime.tryParse(m.occurredIso);
         final label=m.kind=='fund'?
