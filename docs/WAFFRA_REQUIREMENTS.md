@@ -1376,3 +1376,5 @@ Owner confirms P0 on physical Android after merged #546: entire app janks after 
 - **No bypass:** Unknown/failing required release gates always block signed artifact, both signed release formats still validate source/signature; financial and SQLCipher tests are neither deleted nor skipped. Main release never publishes APK from a PR.
 - **Coverage:** M653 new source contract tests, narrow M381/M382 expectation updates, full M385 scope and M550 behavior preflight, M449 append-only release note; final target measured on post-merge exact main SHA vs 18m50s baseline.
 - **Tracking:** Issue https://github.com/MahmoudMAnwar/waffra-app/issues/579 ; branch `fix/m653-main-ci-critical-path-and-prune`. **Status: Partial — requirements registered, code/CI and post-merge latency not yet verified.**
+
+- **M653 additional checked regression:** exact-head M174 CI exposed old M383 literal M340 main-external assertion; Issue #579 evidence comment authorizes only this method's positive replacement with integrated M340 source/negative checks plus M449/M174 gates. Preserve all APK/AAB signing tests. Status Partial / pending rerun.

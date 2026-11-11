@@ -1,14 +1,15 @@
 {
   "contract_version": 1,
   "change_id": "M653-20261111-MAIN-CI-CRITICAL-PATH-REDUNDANT-COMPILE-AND-PRUNE-579",
-  "human_scope_review": "Owner requested main CI/Skipped workflow cleanup on 2026-11-11; verified main SHA 37030c8 APK 18m50, external audit 13m53, full Flutter 9m50, APK 4m50. M410's 85 historical skipped runs were already stopped by merged #568; do not edit M410. Release gate currently awaits unrelated Android nightly/manual smoke and maintenance. Move only M340 duplicate full suite to PR/manual (retain all finance/hostile guards on mandatory main verify-all-tests), keep M174 duplicate unsigned main compile manual-only (signed APK remains main auto). Require M174 exact SHA and M449; if triggered, also require M201. Safely repair M647 incorrect unittest import to unittest discover; errors remain visible, maintenance does not block signing. Narrowly reconcile M381/M382 obsolete source assertions with equal/stronger positive coverage, add M653 tests. No app/source/SQLCipher/signing removal, no skipped mandatory test, no workflow deletion. Docs and Issue #579 were created before workflow/test edits.",
+  "human_scope_review": "Owner requested main CI/Skipped workflow cleanup on 2026-11-11; verified main SHA 37030c8 APK 18m50, external audit 13m53, full Flutter 9m50, APK 4m50. M410's 85 historical skipped runs were already stopped by merged #568; do not edit M410. Release gate currently awaits unrelated Android nightly/manual smoke and maintenance. Move only M340 duplicate full suite to PR/manual (retain all finance/hostile guards on mandatory main verify-all-tests), keep M174 duplicate unsigned main compile manual-only (signed APK remains main auto). Require M174 exact SHA and M449; if triggered, also require M201. Safely repair M647 incorrect unittest import to unittest discover; errors remain visible, maintenance does not block signing. Narrowly reconcile M381/M382 obsolete source assertions with equal/stronger positive coverage, add M653 tests. No app/source/SQLCipher/signing removal, no skipped mandatory test, no workflow deletion. Docs and Issue #579 were created before workflow/test edits. Exact-head run #43085793313 identified M383 protected test stale literal from old M340 main-external layout. Issue #579 comment 6805081659 approved targeted positive replacement; no removal or unrelated test change.",
   "user_requested_changes": [
     "Keep main signed APK/AAB after one exhaustive full Flutter/Python mandatory suite plus M340 source and hostile finance negative tests; no code/data policy change.",
     "Do not delay main APK for incidental same-SHA nightly/manual Android smoke or maintenance cleanup; require all declared M174/M449 and any running M201 source acceptance. Failed/absent required CI blocks.",
     "Retain full M340 PR/manual gate but avoid redundant whole-app Flutter duplicate on main, with equivalent source safety inside mandatory main build.",
     "Make unsigned CI-only duplicate M174 ARM64 build manual while retaining signed main APK compile, signature source identity and Android App Bundle.",
     "Fix historical M647 main prune first-run failure from wrong unittest dotted import using discovery; preserve negative tests and deletion fail-closed controls.",
-    "Update only obsolete M381/M382 CI contract assertions and add M653 comprehensive positive and negative release gate regression; document exact timing and evidence."
+    "Update only obsolete M381/M382 CI contract assertions and add M653 comprehensive positive and negative release gate regression; document exact timing and evidence.",
+    "PR #580 exact-head M174 regression exposed M383 obsolete literal M340 separate main external gate assertion; narrow ONLY its prerequisite-test method to positively assert integrated M340 source/negative tests, M174 finance and M449 release gate; all other M383 signing, APK/AAB cache/identity assertions retained."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -23,7 +24,8 @@
     ".github/workflows/m647-main-history-prune.yml",
     "test/qa/m381_main_fast_release_gate_test.py",
     "test/qa/m382_skip_free_workflow_routing_test.py",
-    "test/qa/m653_main_ci_release_critical_path_test.py"
+    "test/qa/m653_main_ci_release_critical_path_test.py",
+    "test/qa/m383_parallel_signed_android_build_test.py"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
@@ -70,6 +72,12 @@
       {
         "start": "    def test_main_release_gates_unchanged(self):",
         "end": "\n\nif __name__ == \"__main__\":"
+      }
+    ],
+    "test/qa/m383_parallel_signed_android_build_test.py": [
+      {
+        "start": "    def test_exact_sha_full_release_gates_are_prerequisite_of_both_artifacts(self):",
+        "end": "    def test_apk_only_steps_do_not_wait_for_aab(self):"
       }
     ]
   }

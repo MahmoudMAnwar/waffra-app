@@ -1402,7 +1402,7 @@
       "id": "M653-MAIN-CI-RELEASE-CRITICAL-PATH-AND-M647-PRUNE-REPAIR",
       "issue": "Issue #579 — main 19–22 minute APK and recurring skipped/duplicate build audit",
       "previous_behavior": "The main release's same-SHA audit waited for every unrelated workflow (including 14-minute optional night/manual Android smoke and Actions cleanup), despite mandatory Flutter/Python itself finishing in 9m50s; the signed APK only started after the 13m53s independent wait. M340 separately repeated the exhaustive Flutter suite on every main push; M174 CI-only unsigned ARM64 compilation duplicated the real signed main APK. M647 trusted main retention job's initial failure was an incorrect unittest dotted module import; M410 repetitive historical no-op skips were already stopped by merged PR #568.",
-      "approved_behavior": "Exact main signed APK/AAB stays main-only and requires one exhaustive Flutter/Python suite INCLUDING M340 source guard and hostile negative tests, plus latest SHA mandatory M174 finance/SQLCipher and M449 notes gates; M201 route acceptance is required whenever actually triggered. Only release-relevant same-SHA checks block signing; independent maintenance or scheduled/manual emulator smoke do not delay or impersonate a release gate. M340 retains full PR and manual tests; on main the exhaustive suite and finance source guard run inside mandatory release verifier instead of a duplicate full-app runner. M174 duplicate unsigned ARM64 compile becomes diagnostic manual-only while signed APK still compiles fresh on every main push. Repair M647 trusted pruning test invocation with actual unittest discovery; its own failure and deletion rules remain fail-closed. Test original M381/M382 claims updated only where the owner-approved gate routing changed, with new M653 positive and negative test.",
+      "approved_behavior": "Exact main signed APK/AAB stays main-only and requires one exhaustive Flutter/Python suite INCLUDING M340 source guard and hostile negative tests, plus latest SHA mandatory M174 finance/SQLCipher and M449 notes gates; M201 route acceptance is required whenever actually triggered. Only release-relevant same-SHA checks block signing; independent maintenance or scheduled/manual emulator smoke do not delay or impersonate a release gate. M340 retains full PR and manual tests; on main the exhaustive suite and finance source guard run inside mandatory release verifier instead of a duplicate full-app runner. M174 duplicate unsigned ARM64 compile becomes diagnostic manual-only while signed APK still compiles fresh on every main push. Repair M647 trusted pruning test invocation with actual unittest discovery; its own failure and deletion rules remain fail-closed. Test original M381/M382 claims updated only where the owner-approved gate routing changed, with new M653 positive and negative test. Existing M383 same-SHA prerequisite test now positively asserts relocated M340 source guard and M449 fresh notes in addition to M174, while all signed APK/AAB invariants remain unchanged.",
       "source_paths": [
         ".github/workflows/android.yml",
         ".github/workflows/m340-continuous-financial-quality.yml",
@@ -1412,7 +1412,8 @@
       "test_paths": [
         "test/qa/m381_main_fast_release_gate_test.py",
         "test/qa/m382_skip_free_workflow_routing_test.py",
-        "test/qa/m653_main_ci_release_critical_path_test.py"
+        "test/qa/m653_main_ci_release_critical_path_test.py",
+        "test/qa/m383_parallel_signed_android_build_test.py"
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/m550-behavior-contract-preflight.yml",
