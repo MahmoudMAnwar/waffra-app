@@ -74,8 +74,8 @@ void main() {
   expect(handler,isNot(contains('entries.insert(')));
   expect(app,contains('WaffraSmsCurrencies.requiresReviewForSarLedger(message.text)'));
   expect(app,contains('WaffraBankScreenshotParser.requiresForeignCurrencyReview('));
-  expect(app,contains("key:const Key('waffra-fx-quote-preview-action')"));
-  expect(app,contains("key:const Key('waffra-fx-transaction-preview')"));
+  expect(app,contains("Future<void> _previewForeignBankCurrency("));
+  expect(app,contains("WaffraForeignCurrencyPreview.show("));
  });
 
  test('M336 title is not forced into a single line',(){
