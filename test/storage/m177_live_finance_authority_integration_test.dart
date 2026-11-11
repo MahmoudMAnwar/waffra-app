@@ -192,12 +192,12 @@ void main() {
     // writer; a legacy bypass or split hash/record save is still disallowed.
     expect(home, contains(
       "'commit-confirmed-bank-sms',()=>_financeAuthority.commitConfirmedSms("));
-    // Four owner-confirmed, source-authorized entry points are intentional:
-    // bulk pasted SMS, reviewed individual SMS, single entry sheet SMS, and
-    // M565 Yes-confirm after exact original date/SAR/category/account review.
-    // A new path is valid ONLY with verified account generation and atomic
-    // record+fingerprint duplicate protection (never a legacy split write).
-    expect('_financeAuthority.commitConfirmedSms('.allMatches(home).length, 4);
+    // After retiring manual bank-message paste, two owner-confirmed and
+    // source-authorized routes remain: M565 SMS Review Yes-confirm and the
+    // individual SMS entry editor. Both atomically commit the verified
+    // record with its deduplication fingerprint; never split finance writes.
+    expect('_financeAuthority.commitConfirmedSms('.allMatches(home).length, 2);
+    expect(home,isNot(contains('Future<void> bulkSmsSheet(')));
     final reviewedYes=home.split('Future<void> _m565ConfirmSms(')[1]
       .split('Future<void> _reviewAutoSmsCandidates(')[0];
     expect(reviewedYes, contains('final chosen=selectedAccount;'));
