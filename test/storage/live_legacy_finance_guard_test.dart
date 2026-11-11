@@ -1,10 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:waffra/main.dart';
 import 'package:waffra/storage/waffra_live_legacy_finance_guard.dart';
 
 void main() {
@@ -64,24 +62,19 @@ void main() {
     expect(prefs.getStringList('waffra_sms_hashes_v1'), ['previous-hash']);
   });
 
-  testWidgets('live quick-add refuses unsafe activated finance source',
-      (tester) async {
+  test('M636 widget shortcut cannot bypass an activated encrypted finance source',() async {
     SharedPreferences.setMockInitialValues({
       WaffraLiveLegacyFinanceGuard.activeKey: true,
-      'entries': '[]',
-      'waffra_language': 'ar',
+      'entries':'[{"id":"existing-verified"}]',
+      'waffra_language':'ar',
     });
-    await tester.binding.setSurfaceSize(const Size(430, 920));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-    final folder=Directory.systemTemp.createTempSync('waffra-guard-ui-');
-    addTearDown((){if(folder.existsSync())folder.deleteSync(recursive:true);});
-    await tester.pumpWidget(WaffraWidgetCaptureApp(
-      testWriterDirectory:folder,testBypassNativeLock:true,
-      testSourceProbe:() async {},
-    ));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('تعذر فتح البيانات المحلية'), findsOneWidget);
-    final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getString('entries'), '[]');
+    final prefs=await SharedPreferences.getInstance();
+    await expectLater(guard.requireLegacySource(prefs),
+      throwsA(isA<StateError>()));
+    // No obsolete widget capture engine can read or rewrite these records.
+    expect(prefs.getString('entries'),contains('existing-verified'));
+    final native=File('native/WaffraWidget.kt').readAsStringSync();
+    expect(native,contains('Intent(context, MainActivity::class.java)'));
+    expect(File('lib/waffra_widget_capture.part.dart').existsSync(),isFalse);
   });
 }
