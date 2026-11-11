@@ -111,6 +111,7 @@ import 'waffra_accounts_manager_page.dart';
 import 'waffra_new_account_dialog.dart';
 import 'waffra_account_transaction_form.dart';
 import 'waffra_recurring_account_groups.dart';
+import 'waffra_goal_recurring_account_picker.dart';
 import 'waffra_saudi_financial_providers.dart';
 import 'storage/waffra_fresh_finance_modules_repository.dart';
 import 'storage/waffra_verified_module_ui_guard.dart';
@@ -571,6 +572,8 @@ bool waffraCanAssignManualCategory(Iterable<BudgetCategory> values,
 
 class SavingGoal {
  final String id,name;
+ /// Stable, user-approved verified funding account; null only for old goals.
+ final String? accountId;
  final double target,saved;
  /// Optional savings progress alerts, independent of goal active state.
  final bool progressAlertsEnabled;
@@ -580,18 +583,20 @@ class SavingGoal {
  /// Deadline alone never posts money; payment needs user confirmation.
  final DateTime? dueDate;
  SavingGoal({required this.id,required this.name,required this.target,
-  required this.saved,this.dueDate,this.active=true,
+  required this.saved,this.dueDate,this.active=true,this.accountId,
   this.progressAlertsEnabled=false,this.progressAlertPercent=80});
  SavingGoal copy({String? name,double? target,double? saved,DateTime? dueDate,
-  bool? active,bool? progressAlertsEnabled,int? progressAlertPercent})=>
+  bool? active,bool? progressAlertsEnabled,int? progressAlertPercent,
+  String? accountId})=>
   SavingGoal(id:id,name:name??this.name,target:target??this.target,
    saved:saved??this.saved,dueDate:dueDate??this.dueDate,
-   active:active??this.active,
+   accountId:accountId??this.accountId,active:active??this.active,
    progressAlertsEnabled:progressAlertsEnabled??this.progressAlertsEnabled,
    progressAlertPercent:progressAlertPercent??this.progressAlertPercent);
  Map<String,dynamic> toJson()=>{'id':id,'name':name,'target':target,'saved':saved,
   'active':active,'progressAlertsEnabled':progressAlertsEnabled,
   'progressAlertPercent':progressAlertPercent,
+  if(accountId!=null)'accountId':accountId,
   if(dueDate!=null)'dueDate':dueDate!.toIso8601String()};
  factory SavingGoal.fromJson(Map<String,dynamic> j){
   if(j['progressAlertsEnabled']!=null&&j['progressAlertsEnabled'] is! bool ||
@@ -604,6 +609,10 @@ class SavingGoal {
   id:'${j['id']??newId()}',name:'${j['name']??''}',
   target:(j['target'] as num).toDouble(),
   saved:(j['saved'] as num?)?.toDouble()??0,
+  accountId:j['accountId'] is String&&
+    (j['accountId'] as String).trim().isNotEmpty&&
+    (j['accountId'] as String).length<=128?
+    (j['accountId'] as String):null,
   dueDate:DateTime.tryParse('${j['dueDate']??''}'),
   active:!j.containsKey('active')||j['active']==true,
   progressAlertsEnabled:j['progressAlertsEnabled']==true,
