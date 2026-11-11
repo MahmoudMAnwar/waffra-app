@@ -161,3 +161,11 @@ M647/M649/M652 provenance labels — PR #575, 2026-11-11
 - Source integration commit 20209d0e526bee65d1452c72c97e9948e6b64f67 has both parents: validated M647–M652 financial activity PR head and merged main #580 CI JDK21/current-only notes. This subsequent note commit records the integrated source SHA AFTER the code and test changes to satisfy M449 freshness; it does not assert a new physical-device approval.
 - Current release notes remain concise; the pre-M645 legacy history remains archived, and no eliminated feature is reinstated. M653/M654 Android CI improvements and M647–M652 card/SMS/PDF tests coexist; only main may produce a signed QA APK.
 - New integrated PR HEAD CI must be green before marking PR #575 Ready or merging. Prior 43 green workflows prove ONLY the previous #575 source SHA.
+
+
+[M656 — M429/M417 Flutter 3.50 INFO ANALYZER COMPATIBILITY, ISSUE #583, PR #575]
+- Exact source integration SHA d9fbe1f3 failed ONLY two legacy analyzer steps: M429 run 43094172937 and M417 run 43094173032, where Flutter stable produced only 6/4 info-level deprecated_member_use diagnostics for material.dart/localization imports. Their SMS/finance/native tests did not report business failures.
+- After Issue #583 and permanent requirements documentation, M656 source/QA commit ad16cb46fa8e5e8d87e54e293c963e939cbc87f7 changed precisely the two original analyzer commands to `flutter analyze --no-fatal-infos`; all original nine selected source paths remain analyzed in each job. Errors and warnings are STILL FATAL; full tests, M385 exact file guard and App Check remain unchanged.
+- New `test/qa/m656_flutter_analyzer_info_gate_test.py` verifies analyzer warnings/error strictness, original paths, SMS/phone/biometric, worker and M385 contract; both changed workflows are narrowly allowed in M385 and documented in M550.
+- Current M647–M652 release note stays concise; original historical notes remain archived and Android signed artifacts remain main-only.
+- Status: implementation committed; full exact-new-head PR #575 CI must pass before Ready or merge. Physical two-phone user QA remains separate. Issue https://github.com/MahmoudMAnwar/waffra-app/issues/583.
