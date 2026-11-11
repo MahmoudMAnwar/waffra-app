@@ -1,9 +1,7 @@
 import 'dart:convert';
-import 'waffra_bank_screenshot_parser.dart';
-import 'waffra_receipt_ocr_parser.dart';
 
 typedef WaffraAiTextInference = Future<String> Function(String prompt);
-enum WaffraAiSource { bankSms, imageOcr }
+enum WaffraAiSource { bankSms }
 enum WaffraAiDirection { income, expense, unknown }
 
 class WaffraAiTransaction {
@@ -29,7 +27,6 @@ class WaffraAiResult {
 
 /// Read-only source-grounded LLM output. Model has no access to any finance
 /// writer, vault, backup, camera permission, network, or user identity.
-/// OCR reads the image first; the model sees only extracted text.
 /// No method on this class can save a transaction.
 abstract final class WaffraAiFinanceBrain {
   static const maxCharacters=12000, maxItems=100;
@@ -114,7 +111,7 @@ abstract final class WaffraAiFinanceBrain {
     for(final pair in currencyNames.entries){
       if(normalized.contains(pair.key)&&pair.value!=iso)return false;
     }
-    // Block a conflicting supported ISO code on the same OCR/SMS action.
+    // Block conflicting supported ISO codes on the same bank SMS action.
     final codes=RegExp(r'(?<![A-Za-z])[A-Z]{3}(?![A-Za-z])')
       .allMatches(quote.toUpperCase()).map((m)=>m.group(0)!)
       .where(supported.contains).toSet();
@@ -126,39 +123,9 @@ abstract final class WaffraAiFinanceBrain {
     r'معلق|قيد المعالجه|مرفوض|فاشل|رمز التحقق',
     caseSensitive:false).hasMatch(normalize(quote));
 
-  /// Never let a small LLM invent extra bank-image transactions or amounts.
-  /// Only consider a bank screenshot AI answer usable when each action agrees
-  /// with independently parsed, currency-verified OCR text in source order.
-  /// No finance write is performed by this comparison.
-  static bool matchesVerifiedImageActions(String source,WaffraAiResult ai){
-    if(ai.error!=null||ai.items.isEmpty)return false;
-    final ocr=WaffraBankScreenshotParser.reviewItems(source);
-    if(ocr.isEmpty||ocr.length!=ai.items.length)return false;
-    final fingerprints=<String>{};
-    for(var i=0;i<ocr.length;i++){
-      final row=ocr[i],candidate=ai.items[i];
-      if(row.amount==null||candidate.needsReview||candidate.currency!='SAR'||
-         !row.sourceText.contains(candidate.quote)||
-         !fingerprints.add(row.sourceText.trim())){
-        return false;
-      }
-      final amount=candidate.amountText==null?null:
-        WaffraReceiptOcrParser.amountFromText(candidate.amountText!);
-      if(amount==null||(amount-row.amount!).abs()>0.00001||
-         (candidate.direction==WaffraAiDirection.income)!=row.income){
-        return false;
-      }
-    }
-    return true;
-  }
-
   static Future<WaffraAiResult> bankSms(String text,
       {required WaffraAiTextInference generate})=>
       _run(text,WaffraAiSource.bankSms,generate);
-  static Future<WaffraAiResult> imageOcr(String ocrText,
-      {required WaffraAiTextInference generate})=>
-      _run(ocrText,WaffraAiSource.imageOcr,generate);
-
   static Future<WaffraAiResult> _run(String text,WaffraAiSource origin,
       WaffraAiTextInference generate) async {
     final raw=text.trim();
@@ -173,9 +140,8 @@ Respond with ONLY strict JSON and no Markdown:
 "currency_text":"literal currency label from source or null",
 "direction":"income|expense|unknown","merchant":"name or null"}]}
 Each separate completed bank payment or transfer is one transaction.
-A single shopping receipt with many item lines and one payment is ONE
-transaction, not one transaction per product. Never count a balance,
-VAT, discount, reference, card number, or pending/declined notice.
+A source bank message can describe one confirmed transaction. Never count
+balances, VAT, card numbers, references or pending/declined notices as payments.
 Never invent an amount, currency, merchant, transaction, or FX rate.
 Return no more than 100 items, in the original reading order.
 SOURCE TYPE: '''+origin.name+'''
@@ -239,16 +205,6 @@ UNTRUSTED TEXT END''';
             :kind==WaffraAiDirection.unknown?'direction_unknown'
             :'manual_confirmation_required',
         ));
-      }
-      // A small model can split "شراء POS" into multiple invented rows.
-      // Do not present more Qwen rows than independently anchored OCR bank
-      // actions. Abstain and let the guarded deterministic review take over.
-      if(origin==WaffraAiSource.imageOcr&&
-         WaffraBankScreenshotParser.looksLikeBankScreenshot(raw)){
-        final grounded=WaffraBankScreenshotParser.reviewItems(raw);
-        if(grounded.isNotEmpty&&grounded.length!=result.length){
-          throw const FormatException('ai_ocr_action_count_mismatch');
-        }
       }
       return WaffraAiResult(origin,
         List<WaffraAiTransaction>.unmodifiable(result),null);
