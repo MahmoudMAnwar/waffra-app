@@ -201,9 +201,9 @@ extension WaffraGoalRecurringActions on _HomeScreenState {
         if(nameError!=null||amountError!=null||(!noTarget&&(v==null||v<=0)))return;
         if(linkedAccount==null||!accountOptions.any(
           (a)=>a.id==linkedAccount&&!a.archived)){
-         ScaffoldMessenger.maybeOf(dialog)?.showSnackBar(SnackBar(content:Text(
-          waffraIsEnglish?'Select a verified money account.':
-           'اختر حسابًا ماليًا تابعًا موثّقًا.')));
+         snack(dialog,waffraIsEnglish?
+          'Select a verified money account.':
+          'اختر حسابًا ماليًا تابعًا موثّقًا.');
          return;
         }
         Navigator.pop(dialog,SavingGoal(id:existing.id,name:n,target:noTarget?0.0:v!,
