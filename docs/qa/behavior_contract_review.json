@@ -1225,7 +1225,8 @@
       ],
       "test_paths": [
         "scripts/qa/test_m453_queue_hygiene.py",
-        "scripts/qa/test_m642_latest_pr_ci_concurrency.py"
+        "scripts/qa/test_m642_latest_pr_ci_concurrency.py",
+        "test/qa/m548_ci_exact_sha_concurrency_test.py"
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/m453-queue-regression.yml",
@@ -1237,7 +1238,8 @@
         "Run cancellation only for stale same-PR same-workflow pull_request events; main push/release/manual and other PR runs remain isolated.",
         "Trusted pull_request_target sweeper never checks out PR code, verifies live HEAD before cancellation, keeps dry_run, full existing protections and 120 run bound.",
         "Workflow source changes in Draft PR do not alter main-based pull_request_target behavior or cancel old runs until deployed/authorized separately.",
-        "Do not merge or claim queue cleared until latest exact-head CI green and physical Android acceptance."
+        "Do not merge or claim queue cleared until latest exact-head CI green and physical Android acceptance.",
+        "M548 old test for deliberately per-SHA-isolated groups must assert the approved superseded PR-only policy instead, retaining exact SHA checkout, same PR-only cancellation, main/manual separation and trusted cleanup safeguards."
       ]
     }
   ]
