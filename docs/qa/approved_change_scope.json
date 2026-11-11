@@ -15,7 +15,8 @@
     "M640 #561: M416 legacy OCR release-switch test must no longer reference deleted receiptImageTransactionImport; retain all existing Saudi release currency/location/SMS assertions.",
     "M640: Update M340 finance quality gate to use retained entrySheet as the end boundary for foreign FX review, replacing deleted OCR handler marker without weakening the pre-existing FX/no-ledger-write contract.",
     "M640 #561: update old M339 OCR-stage expectations to the three still-live manual/image-attachment stage paths (path/copied/renamed) without weakening finance-failure cleanup assertion.",
-    "M640 manual income override: rename residual scannedIncome OCR-era argument to manualIncomeOverride in retained transfer-SMS to independent manual entry, preserving selection and no OCR engine dependency."
+    "M640 manual income override: rename residual scannedIncome OCR-era argument to manualIncomeOverride in retained transfer-SMS to independent manual entry, preserving selection and no OCR engine dependency.",
+    "M640/M639 regression refresh: preserve SMS permission, historical link and retained encrypted manual attachment tests while changing obsolete pre-retirement string assertions; never restore deleted OCR features or bypass verified account guards."
   ],
   "allowed_changed_files": [
     ".github/workflows/android-full-smoke.yml",
@@ -36,6 +37,7 @@
     ".github/workflows/m340-continuous-financial-quality.yml",
     ".github/workflows/storage-android-emulator.yml",
     ".github/workflows/storage-android-integration.yml",
+    "assets/tessdata_config.json",
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
@@ -81,14 +83,15 @@
     "test/m341_multilingual_bank_sms_ocr_test.dart",
     "test/m416_saudi_release_offline_test.dart",
     "test/m417_sms_first_run_test.dart",
+    "test/m441_auth_sms_copy_regression_test.dart",
     "test/m470_financial_currency_word_boundary_regression_test.dart",
+    "test/m495_pr402_ui_performance_regression_test.dart",
     "test/m638_saudi_provider_catalog_and_cascade_test.dart",
     "test/m638_sms_inbox_delete_sync_test.dart",
     "test/m639_permissions_onboarding_plain_copy_test.dart",
     "test/m640_receipt_reader_retirement_test.dart",
     "test/qa/m412_workflow_wiring_test.py",
-    "test/storage/m637_biometric_home_schema_hotpath_test.dart",
-    "assets/tessdata_config.json"
+    "test/storage/m637_biometric_home_schema_hotpath_test.dart"
   ],
   "approved_deleted_files": [
     ".github/workflows/m287-receipt-ocr.yml",
@@ -379,6 +382,18 @@
       {
         "start": " test('M339 manual and OCR staged receipts roll back when ledger commit fails',(){",
         "end": null
+      }
+    ],
+    "test/m441_auth_sms_copy_regression_test.dart": [
+      {
+        "start": "   testWidgets('M459: SMS permission follows signup without cloud choice',",
+        "end": null
+      }
+    ],
+    "test/m495_pr402_ui_performance_regression_test.dart": [
+      {
+        "start": "  test('M500 #420 Details Edit enables verified retroactive account link',",
+        "end": "  testWidgets('M499 #416 child picker is disabled without provider, cancel preserves amount',"
       }
     ]
   }
