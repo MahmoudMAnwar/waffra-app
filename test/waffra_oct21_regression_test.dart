@@ -13,8 +13,14 @@ void main() {
   expect(waffraIncomeBackground.toARGB32(), 0xFFB2D5C2);
   expect(waffraExpenseBackground.toARGB32(), 0xFFFCECE8);
   final normalized=app.replaceAll(RegExp(r'\s+'),'');
+  // M652: ordinary income/expense colors are unchanged; the violet branch
+  // applies only to a separately verified, already-posted paid due.
   expect(normalized, contains(
-   'PdfColor.fromInt(e.income?waffraIncomeBackground.toARGB32():waffraExpenseBackground.toARGB32())'));
+   "e.sourceType=='recurring'||e.sourceType=='goal_due'"));
+  expect(normalized, contains('constColor(0xFFEFE9F8).toARGB32()'));
+  expect(normalized, contains(
+   'e.income?waffraIncomeBackground.toARGB32():waffraExpenseBackground.toARGB32()'));
+  expect(normalized, contains('children:english?orderedCells:orderedCells.reversed.toList()'));
   expect(app, contains("pdfCell('\u0024{row.key+1}',center:true)"));
   expect(app, contains("'رقم المعاملة'"));
   expect(app, contains('children:english?orderedCells:orderedCells.reversed.toList()'));
