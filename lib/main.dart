@@ -8524,7 +8524,75 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  // M636: Manual paste/review sheet retired. Automatic encrypted SMS Review
  // and owner-verified account-bound finance editor are retained.
 
- /// Show visible, blocking feedback for local OCR/AI work. The overlay is
+ Future<void> _previewForeignBankCurrency(String raw)async {
+  if(!WaffraSaudiRelease.bankSmsForeignCurrencyPreview){
+   if(mounted)snack(context,waffraIsEnglish?
+    'Non-SAR transactions cannot be saved in this Saudi release.':
+    'العمليات بغير الريال غير مدعومة في النسخة السعودية الحالية.');
+   return;
+  }
+  // No bank message contents, personal identifiers, photos or notes are
+  // included in the FX network request: only original and target codes.
+  final source=WaffraSmsCurrencies.originalAmount(raw);
+  if(!mounted)return;
+  if(source==null){
+   snack(context,waffraIsEnglish?
+    'Original currency or amount is uncertain. Check the bank message first.':
+    'العملة أو المبلغ الأصلي غير مؤكد. راجع الرسالة البنكية أولًا.');
+   return;
+  }
+  final target=WaffraDisplayCurrency.country.code;
+  if(source.currency==target){
+   snack(context,waffraIsEnglish?
+    'Bank currency matches the app display currency. Encrypted foreign-currency saving is not enabled yet.':
+    'عملة الرسالة مطابقة لعملة العرض. حفظ العملات الأجنبية المشفر غير مفعل بعد.');
+   return;
+  }
+  snack(context,waffraIsEnglish?
+   'Retrieving the latest available exchange rate…':
+   'جاري جلب أحدث سعر صرف متاح…',isError:false);
+  final approved=await WaffraForeignCurrencyPreview.show(context,
+   originalAmount:source.amount,originalCurrency:source.currency,
+   targetCurrency:target,english:waffraIsEnglish);
+  if(approved!=null&&mounted){
+   // Do not write an FX amount to the guarded legacy ledger. We can only
+   // persist the conversion together with original currency + approved quote
+   // in the atomically encrypted FX finance source after cutover approval.
+   snack(context,waffraIsEnglish?
+    'Conversion preview approved. No amount was saved; encrypted FX posting is not active.':
+    'تمت الموافقة على معاينة التحويل فقط. لم يُحفظ أي مبلغ؛ تسجيل العملات المحوّلة ينتظر تفعيل التخزين المعتمد.');
+  }
+ }
+
+ Future<bool> _canReviewOcrAsLedgerTransaction(String raw)async {
+  if(!WaffraBankScreenshotParser.requiresForeignCurrencyReview(raw))return true;
+  if(!mounted)return false;
+  // A foreign OCR image has no verified FX provenance and must NEVER be
+  // relabeled as SAR by allowing manual numeric input in an SAR-only sheet.
+  final currencyCodes=WaffraSmsCurrencies.currenciesForMessage(raw);
+  final label=currencyCodes.isEmpty?
+   (waffraIsEnglish?'foreign currency':'عملة أجنبية'):
+   currencyCodes.join(' / ');
+  // Offer a verified, consented current-rate preview instead of a dead
+  // end, but keep the SAR ledger blocked until FX provenance is atomic.
+  final evidence=WaffraSmsCurrencies.originalAmount(raw);
+  if(evidence!=null){
+   await _previewForeignBankCurrency(raw);
+  }else{
+   await showWaffraDialog<void>(context:context,builder:(dialog)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?
+     'Foreign currency requires review':'عملة أجنبية تحتاج مراجعة'),
+    content:WaffraText(waffraIsEnglish?
+     'Detected $label but cannot verify the original amount. Nothing was saved.':
+     'اكتُشفت عملة $label ولكن المبلغ الأصلي غير واضح. لم تُحفظ المعاملة.'),
+    actions:[TextButton(onPressed:()=>Navigator.pop(dialog),
+     child:WaffraText(waffraIsEnglish?'OK':'حسنًا'))],
+   ));
+  }
+  return false;
+ }
+
+ /// Show visible, blocking feedback for offline OCR work. The overlay is
  /// always removed on success, cancellation and exceptions; the task cannot
  /// submit a finance write.
  Future<T> _withOcrWorkProgress<T>(String arabic,String english,
