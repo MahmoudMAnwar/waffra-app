@@ -366,6 +366,16 @@
         "start": "          assert 'this.externalSourceWitnessActive = false' in authority",
         "end": "\n  encrypted-finance-regression:"
       }
+    ],
+    ".github/workflows/m158-widget-sms-title-privacy.yml": [
+      {
+        "start": "  pull_request:\n",
+        "end": "  workflow_dispatch:\n"
+      },
+      {
+        "start": "      - name: Analyze shared merchant parser and Widget code\n",
+        "end": null
+      }
     ]
   }
 }
