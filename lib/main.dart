@@ -14466,25 +14466,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }finally{disposeLater([ctl]);}
  }
  Future<void> fundGoal(SavingGoal g)async {
-  // Source accounts are offered ONLY for a previously verified SQLCipher
-  // vault. Legacy/unknown sources cannot invent a bank debit.
-  await _ensureFinanceBound();
+  // M641: an independent goal wallet credit and one verified source debit.
   final fundingBridge=_financeBinding?.accountsBridge;
-  var fundingAccounts=<WaffraAccountBalance>[];
-  if(fundingBridge!=null){
-   try{
-    fundingAccounts=(await WaffraVerifiedAccountsApi(
-     bridge:fundingBridge).balances()).where((a)=>!a.archived).toList();
-   }catch(error){
-    debugPrint('Verified savings accounts unavailable: $error');
-    if(mounted)snack(context,waffraIsEnglish?
-     'Accounts could not be verified. Refresh and try again.':
-     'تعذر التحقق من الحسابات. حدّث الصفحة وحاول مرة أخرى.');
-    return;
-   }
+  var fundingAccounts=await _m641VerifiedGoalRecurringAccounts();
+  if(fundingBridge==null||fundingAccounts==null||!mounted)return;
+  String? chosenSource=g.accountId;
+  if(!fundingAccounts.any((a)=>a.id==chosenSource&&!a.archived)){
+   chosenSource=null; // old goals need explicit source choice
   }
-  if(!mounted)return;
-  String chosenSource='none';
   final amount=TextEditingController();
   bool attempted=false;
   final funding=await showWaffraDialog<({double amount,String? sourceAccountId})>(
@@ -14562,28 +14551,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            borderSide:BorderSide(color:accent,width:2)),
           border:OutlineInputBorder(borderRadius:BorderRadius.circular(15)),
          )),
-        if(fundingBridge!=null)...[
-         const SizedBox(height:12),
-         WaffraCenteredDropdownFormField<String>(
-          key:const Key('waffra-goal-funding-source-account'),
-          isExpanded:true,initialValue:chosenSource,
-          decoration:InputDecoration(
-           labelText:waffraIsEnglish?'Transfer savings from':'مصدر مبلغ الادخار',
-           border:const OutlineInputBorder()),
-          items:[
-           DropdownMenuItem(value:'none',
-            child:WaffraText(waffraIsEnglish?'Unassigned':'بدون حساب')),
-           ...fundingAccounts.map((a)=>DropdownMenuItem(
-            value:a.id,child:WaffraText(a.name,maxLines:1))),
-          ],
-          onChanged:(v){if(v!=null)update(()=>chosenSource=v);},
-         ),
-         const SizedBox(height:7),
-         WaffraText(waffraIsEnglish
-          ?'Choose a bank or cash account for this deposit only. An unassigned deposit does not change any account balance.'
-          :'اختار حساب مصدر الدفعة فقط. تركها بدون حساب لا يغيّر رصيد أي حساب.',
-          style:const TextStyle(fontSize:12)),
-        ],
+        const SizedBox(height:12),
+        WaffraGoalRecurringAccountPicker(
+         key:const Key('m641-goal-funding-account-cascade'),
+         idPrefix:'m641-fund-goal',english:waffraIsEnglish,
+         accounts:fundingAccounts,selectedAccountId:chosenSource,
+         onChanged:(id)=>update(()=>chosenSource=id),
+         onCreateAccount:(provider)async{
+          final added=await _m641CreateGoalRecurringAccount(provider);
+          if(added!=null)fundingAccounts=[...fundingAccounts,added];
+          return added;
+         }),
+        const SizedBox(height:7),
+        WaffraText(waffraIsEnglish
+         ?'This credits the goal wallet and debits the selected account once.'
+         :'إضافة الادخار تزود رصيد الهدف وتخصم من الحساب المالي المحدد مرة واحدة، بدون تسجيل مصروف.',
+         style:const TextStyle(fontSize:12)),
         const SizedBox(height:10),
         Row(children:[
          for(final quick in [500.0,1000.0,2000.0])...[
@@ -14622,8 +14605,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           if(waffraAmountFieldError(amount.text)!=null)return;
           final value=amountOfDisplay(amount.text);
           if(value==null||value<=0)return;
-          Navigator.pop(dialogCtx,(amount:value,
-           sourceAccountId:chosenSource=='none'?null:chosenSource));
+          if(chosenSource==null||!fundingAccounts.any(
+             (a)=>a.id==chosenSource&&!a.archived)){
+           ScaffoldMessenger.maybeOf(dialogCtx)?.showSnackBar(
+            SnackBar(content:Text(waffraIsEnglish?
+             'Choose or create a verified savings account.':
+             'اختار أو أضف حسابًا ماليًا موثّقًا لمصدر الادخار.')));
+           return;
+          }
+          Navigator.pop(dialogCtx,(amount:value,sourceAccountId:chosenSource));
          }),
          child:WaffraText(waffraIsEnglish?'Add amount':'إضافة'))),
         const SizedBox(height:7),
@@ -14646,10 +14636,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        'Savings exceed available balance':'تنبيه: مبلغ الادخار أكبر من الرصيد المتاح'),
       content:WaffraText(waffraIsEnglish?
        'Available: ${cash(available)}. Requested: ${cash(n)}. '
-       'The goals wallet is separate. This saving will not deduct money '
-       'from your current balance. This is an informational warning only.':
+       'The goals wallet is separate. Your verified account will be debited once '
+       'if you continue. This is an informational warning only.':
        'الرصيد الحالي: ${cash(available)}، والادخار المطلوب: ${cash(n)}. '
-       'محفظة الأهداف منفصلة؛ إضافة الادخار لن تخصم أي مبلغ من الرصيد الحالي. '
+       'محفظة الأهداف منفصلة؛ سيتم خصم المبلغ من الحساب المختار مرة واحدة عند المتابعة. '
        'هذا تنبيه توضيحي فقط.'),
       actions:[SizedBox(width:double.maxFinite,child:Row(children:[
        Expanded(child:OutlinedButton(
