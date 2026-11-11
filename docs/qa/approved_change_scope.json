@@ -156,15 +156,15 @@
     ],
     "lib/main.dart": [
       {
-        "start": "import 'waffra_receipt_ocr.dart';",
+        "start": "import 'storage/waffra_portable_encrypted_vault_restorer.dart' show WaffraEncryptedReceiptReference;",
         "end": "import 'waffra_back_navigation.dart';"
       },
       {
-        "start": " bool _receiptOcrAiOpening=false;",
+        "start": " bool goalsOpened=false;",
         "end": " String? _lastWidgetRevision;"
       },
       {
-        "start": " Future<bool> _canReviewOcrAsLedgerTransaction(",
+        "start": " Future<void> _previewForeignBankCurrency(",
         "end": " Future<void> entrySheet("
       },
       {
@@ -172,7 +172,7 @@
         "end": " Future<void> showReceipt("
       },
       {
-        "start": "        if(WaffraSaudiRelease.receiptImageTransactionImport)_addMenuOption(",
+        "start": "        _addMenuOption(\n         icon:Icons.edit_note_rounded,",
         "end": "        ]else if(goalsOpened||tab==3)...["
       }
     ],
@@ -220,19 +220,19 @@
     ],
     "lib/waffra_practical_ledger_engine.dart": [
       {
-        "start": "class WaffraReceiptReviewDraft {",
+        "start": "class WaffraMonthlyClose {",
         "end": null
       }
     ],
     "lib/waffra_saudi_release.dart": [
       {
-        "start": " static const bool receiptImageTransactionImport=false;",
+        "start": " static const bool locationCountryOnboarding=false;",
         "end": " static const bool userCountryChoice=false;"
       }
     ],
     "pubspec.yaml": [
       {
-        "start": "  flutter_tesseract_ocr: ^0.4.31",
+        "start": "  flutter_timezone: ^5.1.1",
         "end": "  path_provider: ^2.1.5"
       }
     ],
