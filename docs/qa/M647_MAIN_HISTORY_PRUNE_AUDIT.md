@@ -15,3 +15,8 @@ M504's trusted seven-day cleanup only prunes redundant failed PR runs and preser
 
 ## Execution status
 This change is on Draft PR #568 and **cannot delete history from the PR**. GitHub connector has no Actions run DELETE/dispatch action. First deletion only after this exact reviewed change lands in main and its trusted push/schedule/manual maintenance job actually runs. No claim any record has been deleted yet.
+
+## M647 verified GitHub API date-filter correction (2026-11-11)
+- Live read-only REST check disproved the first `created=..2026-11-09` query: it returned zero old Skipped main records even though `created=<=2026-11-09` returned **1,414** matching records (query-time inventory). The original syntax would have silently produced an empty deletion snapshot.
+- The trusted M647 Python cleaner now builds an explicit API-supported inclusive cutoff via `urlencode({'created':'<='+until})` to reach actual historic data. `test/qa/m647_main_history_prune_test.py` FakeAPI now rejects unsupported `created` expressions and positively requires three supported same-cutoff queries with one eligible old skipped run; existing dry-run/no-success/no-artifact/active/latest-SHA safeguards remain.
+- Fix commits `068fd83c` (query) and `f2a28f4c` (negative/positive regression), after requirements and Issue #576 were extended **before the source patch**. This is API preflight evidence only, NOT proof that a DELETE was executed. PR #568 exact-head CI, safe merge into `main`, initial trusted push sweep and scheduled 250-batch reviews remain pending.
