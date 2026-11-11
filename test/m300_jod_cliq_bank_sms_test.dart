@@ -10,8 +10,8 @@ void main(){
  test('M300 attached JOD recognized, no UNKNOWN and no balance transaction',(){
   expect(WaffraSmsCurrencies.currenciesForMessage(cliq),{'JOD'});
   expect(WaffraSmsCurrencies.summarize([cliq]).summary,'JOD: 1');
-  expect(WaffraSmsCurrencies.originalAmountPreview(cliq),'198.000 JOD');
-  expect(WaffraSmsCurrencies.originalAmountPreview(
+  expect(WaffraSmsCurrencies.originalAmount(cliq),'198.000 JOD');
+  expect(WaffraSmsCurrencies.originalAmount(
    'JOD198.000 credited Balance 201.632JOD'),'198.000 JOD');
   expect(WaffraSmsCurrencies.requiresReviewForSarLedger(cliq),isTrue);
   final parsed=BankParser.parse(cliq);
@@ -38,9 +38,9 @@ void main(){
  });
  test('M300 no accidental ledger conversion or false field-error notice',(){
   final src=File('lib/main.dart').readAsStringSync();
-  expect(src,contains('WaffraSmsCurrencies.originalAmountPreview('));
-  expect(src,contains("'waffra-sms-review-notice'"));
-  expect(src,contains('errorText:pasteAttempted&&pasted.text.trim().isEmpty'));
+  expect(src,contains('WaffraSmsCurrencies.originalAmount('));
+  expect(src,contains("WaffraSmsCurrencies.requiresReviewForSarLedger(message.text)"));
+  expect(src,contains('bankSmsDate(body)==null||bankSmsHasUnverifiedTimestamp(body)'));
   expect(src,contains('requiresCurrencyReview:true'));
  });
 }
