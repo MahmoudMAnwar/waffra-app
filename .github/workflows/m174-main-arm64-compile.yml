@@ -1,11 +1,9 @@
 name: M174 Main ARM64 Compilation (CI Only)
 
-# Historically this was a push-only job inside a PR-triggered workflow,
-# yielding an unavoidable gray "Skipped" check for every pull request.
-# Keep it as its own main-push-only workflow without weakening coverage.
+# M653: CI-only unsigned ARM64 build duplicates the required freshly signed
+# main APK. Retain this independent compile as manual diagnostic only.
+# Every main push still compiles and validates its signed APK in android.yml.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
