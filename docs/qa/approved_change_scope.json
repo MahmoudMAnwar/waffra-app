@@ -17,7 +17,9 @@
     "M640 #561: update old M339 OCR-stage expectations to the three still-live manual/image-attachment stage paths (path/copied/renamed) without weakening finance-failure cleanup assertion.",
     "M640 manual income override: rename residual scannedIncome OCR-era argument to manualIncomeOverride in retained transfer-SMS to independent manual entry, preserving selection and no OCR engine dependency.",
     "M640/M639 regression refresh: preserve SMS permission, historical link and retained encrypted manual attachment tests while changing obsolete pre-retirement string assertions; never restore deleted OCR features or bypass verified account guards.",
-    "M640 #561: align old five-tools workflow display title/step and M281 QA spec to four Tools after removing receipt reader, preserving health/search/monthly/diagnostics tests."
+    "M640 #561: align old five-tools workflow display title/step and M281 QA spec to four Tools after removing receipt reader, preserving health/search/monthly/diagnostics tests.",
+    "M641 #562 recurring + opens even with no money accounts; shared bank/wallet/provider/child cascading picker enables verified inline account creation without losing the recurring draft. Save stable default account ID and retain due behavior.",
+    "M641 #562 new/edit savings goals require a verified institution and actual financial account, fund wallet with a single verified source debit, and carry account identity to linked due reminders; preserve old unlinked goals without invented transfers."
   ],
   "allowed_changed_files": [
     ".github/workflows/android-full-smoke.yml",
@@ -94,7 +96,12 @@
     "test/m639_permissions_onboarding_plain_copy_test.dart",
     "test/m640_receipt_reader_retirement_test.dart",
     "test/qa/m412_workflow_wiring_test.py",
-    "test/storage/m637_biometric_home_schema_hotpath_test.dart"
+    "test/storage/m637_biometric_home_schema_hotpath_test.dart",
+    "lib/waffra_goal_recurring_account_picker.dart",
+    "lib/waffra_goal_recurring_actions.part.dart",
+    "lib/storage/waffra_fresh_finance_modules_repository.dart",
+    "lib/storage/waffra_verified_goal_due_snapshot_writer.dart",
+    "test/m641_goal_recurring_account_binding_test.dart"
   ],
   "approved_deleted_files": [
     ".github/workflows/m287-receipt-ocr.yml",
@@ -205,6 +212,26 @@
       {
         "start": "List<String> splitBankMessages(String raw){",
         "end": " // Insert boundaries only before strongly recognizable new actions."
+      },
+      {
+        "start": "class SavingGoal {",
+        "end": "class SavingChallenge {"
+      },
+      {
+        "start": " Future<void> applyRecurring()async {",
+        "end": " double sum(Iterable<MoneyEntry> list,bool income)=>"
+      },
+      {
+        "start": " Future<void> goalDialog({SavingGoal? duplicate,bool openEnded=false})async {",
+        "end": " /// Release an earmark back to spendable cash."
+      },
+      {
+        "start": " Future<void> fundGoal(SavingGoal g)async {",
+        "end": " Future<void> deletedGoalsDialog()async{"
+      },
+      {
+        "start": " Future<void> recurringDialog({String? suggestedTitle,double? suggestedAmount,RecurringBill? initial,RecurringBill? duplicate})async {",
+        "end": " DateTime nextRecurringDue(RecurringBill r) {"
       }
     ],
     "lib/waffra_auto_sms.dart": [
@@ -407,6 +434,36 @@
       {
         "start": "      - name: Prove ",
         "end": "\n        run: flutter test --reporter expanded test/m281_practical_tools_test.dart"
+      }
+    ],
+    "lib/waffra_goal_recurring_actions.part.dart": [
+      {
+        "start": " Future<bool> _saveGoalAndLinkedDueAtomically(",
+        "end": " /// Pause/resume edits its linked schedule"
+      },
+      {
+        "start": " Future<void> editGoal(SavingGoal existing)async{",
+        "end": null
+      }
+    ],
+    "lib/storage/waffra_fresh_finance_modules_repository.dart": [
+      {
+        "start": "      case WaffraFinanceModule.goals:",
+        "end": "      case WaffraFinanceModule.recurring:"
+      },
+      {
+        "start": "        case WaffraFinanceModule.goals:",
+        "end": "        case WaffraFinanceModule.recurring:"
+      }
+    ],
+    "lib/storage/waffra_verified_goal_due_snapshot_writer.dart": [
+      {
+        "start": "      final goal=_unique(goals,goalId,'goal');",
+        "end": "      final savedBefore=_minor(goal['saved']??0);"
+      },
+      {
+        "start": "      if(selectedAccountId!=null){",
+        "end": "      goal['saved']=(savedBefore-receipt.fromGoalMinor)/100;"
       }
     ]
   }
