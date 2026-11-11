@@ -4,25 +4,18 @@ import 'package:flutter_test/flutter_test.dart';
 void main(){
  final source=File('lib/main.dart').readAsStringSync();
 
- test('M470 #3/#4: manual and SMS success paths parse outside UI isolate',(){
-  final sms=source.substring(
-   source.indexOf(' Future<void> bulkSmsSheet('),
-   source.indexOf(' Future<void> entrySheet('));
-  expect(sms,contains('await WaffraLargeJsonDecode.parse('));
-  expect(sms,contains('final persistedRaw=await WaffraLargeJsonDecode.parse('));
-  expect(sms,contains('final verifiedRaw=await WaffraLargeJsonDecode.parse('));
-  expect(sms,contains('if(verifiedRaw is! List)throw StateError'));
-  expect(sms,isNot(contains("final verified=(jsonDecode(committed.current.ledgerRaw")));
-  expect(sms,contains('final decodedCategories=await WaffraLargeJsonDecode.parse(stored);'));
-  expect(sms.indexOf('final decodedCategories=await WaffraLargeJsonDecode.parse(stored);'),
-   lessThan(sms.indexOf('if(verifiedCategories!=null){')));
-  final manual=source.substring(
+ test('M636 manual and automatic SMS both parse ledger off the UI path',(){
+  final editor=source.substring(
    source.indexOf(' Future<void> entrySheet('),
    source.indexOf(' Future<void> showReceipt('));
-  expect(manual,contains('final decoded=await WaffraLargeJsonDecode.parse(raw);'));
-  expect(manual,contains('final parsedLedger=await WaffraLargeJsonDecode.parse('));
-  expect(manual,contains('if(decoded is! List)throw StateError'));
-  expect(manual,contains('if(parsedLedger is! List)throw StateError'));
+  expect(editor,contains('final decoded=await WaffraLargeJsonDecode.parse(raw);'));
+  expect(editor,contains('final parsedLedger=await WaffraLargeJsonDecode.parse('));
+  expect(editor,contains('if(decoded is! List)throw StateError'));
+  expect(editor,contains('if(parsedLedger is! List)throw StateError'));
+  final confirm=source.substring(source.indexOf(' Future<void> _m565ConfirmSms('),
+   source.indexOf(' Future<void> _reviewAutoSmsCandidates('));
+  expect(confirm,contains('await WaffraLargeJsonDecode.parse('));
+  expect(confirm,contains('userConfirmed:true'));
  });
 
  test('M470 final UX: no Teach Waffra, post-confirmed-only safe learning',(){
