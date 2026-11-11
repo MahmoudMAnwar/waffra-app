@@ -114,6 +114,17 @@ def audit_scope(manifest: dict, changed: set[str],
                              "lib/waffra_widget_capture.part.dart",
                              "native/WaffraQuickActivity.kt"):
             raise ScopeViolation(f"Unrelated code deletion is prohibited: {p}")
+    # M636: an owner-approved replacement of an obsolete test file is allowed
+    # ONLY when declared by exact path, and only under test/. Never allow
+    # wholesale production, security-gate, or workflow replacement.
+    full_replacements = manifest.get("approved_full_test_replacements", [])
+    if (not isinstance(full_replacements, list) or
+            len(full_replacements) != len(set(full_replacements)) or
+            any(not isinstance(p, str) or not p.startswith("test/") or
+                ".." in p for p in full_replacements)):
+        raise ScopeViolation("Invalid wholesale test replacement allowlist")
+    if not set(full_replacements).issubset(changed):
+        raise ScopeViolation("Unused full replacement declaration")
     bounded = manifest.get("bounded_sections")
     if not isinstance(bounded, dict):
         raise ScopeViolation("Missing protected-section boundaries")
@@ -130,6 +141,8 @@ def audit_scope(manifest: dict, changed: set[str],
             # Only exact allowlisted, physically removed model-only paths pass.
             if path not in deletions:
                 raise ScopeViolation(f"Existing file deleted without authorization: {path}")
+            continue
+        if path in full_replacements:
             continue
         if path.startswith(PROTECTED_PREFIXES) and path not in bounded:
             raise ScopeViolation(
