@@ -52,10 +52,27 @@ void main() {
   });
 
   test('goals and backup request verified finance binding before reads', () {
-    ensureBefore(
-      between('Future<void> goalDialog({SavingGoal? duplicate,bool openEnded=false})async', 'Future<void>'),
-      '_financeAuthority.loadCustomGoalSuggestions(',
+    // M641: goalDialog delegates its mandatory source bind to the verified
+    // account picker helper; the helper must bind BEFORE any account read.
+    final helper=between(
+      'Future<List<WaffraAccountBalance>?> _m641VerifiedGoalRecurringAccounts()async{',
+      ' Future<WaffraAccountBalance?> _m641CreateGoalRecurringAccount(',
     );
+    ensureBefore(helper,'WaffraVerifiedAccountsApi(bridge:bridge).balances()');
+    expect(helper.indexOf('await _ensureFinanceBound();'),
+      lessThan(helper.indexOf('final bridge=_financeBinding?.accountsBridge;')));
+    final goalDialog=between(
+      'Future<void> goalDialog({SavingGoal? duplicate,bool openEnded=false})async',
+      'Future<void>',
+    );
+    final delegated=goalDialog.indexOf(
+      'final verifiedGoalAccounts=await _m641VerifiedGoalRecurringAccounts();');
+    final goalRead=goalDialog.indexOf('_financeAuthority.loadCustomGoalSuggestions(');
+    expect(delegated,greaterThanOrEqualTo(0),
+      reason:'Goal dialog must enter the verified account binding helper');
+    expect(goalRead,greaterThan(delegated),
+      reason:'Goal suggestions must not read before verified account binding');
+    // Backup still binds directly before reading the encrypted source.
     ensureBefore(
       between('Future<void> backupDialog()async', 'Future<void>'),
       '_financeAuthority.load(',
