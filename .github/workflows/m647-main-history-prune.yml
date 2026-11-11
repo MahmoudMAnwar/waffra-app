@@ -1,0 +1,62 @@
+name: M647 Safe Old Main Actions History Pruning
+
+# This is NOT a PR job. Only trusted default-branch code can delete run history.
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/m647-main-history-prune.yml'
+      - 'scripts/qa/m647_main_history_prune.py'
+      - 'test/qa/m647_main_history_prune_test.py'
+  schedule:
+    - cron: '41 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Preview only; do NOT delete anything (default)'
+        required: true
+        type: boolean
+        default: true
+      confirm_delete:
+        description: 'For deletion type DELETE_OLD_MAIN_ACTIONS_HISTORY'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m647-trusted-main-old-history
+  cancel-in-progress: false
+
+jobs:
+  prune-completed-main-history:
+    if: >-
+      github.repository == 'MahmoudMAnwar/waffra-app' &&
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' ||
+       github.event_name == 'schedule' ||
+       github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - name: Checkout trusted exact main only
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Require unmodified exact checked-out main revision
+        shell: bash
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$GITHUB_REF" = "refs/heads/main"
+      - name: Run negative tests before any history mutation
+        run: python3 -m unittest test/qa/m647_main_history_prune_test.py -v
+      - name: Snapshot, audit and prune old main failed/skipped/cancelled runs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 scripts/qa/m647_main_history_prune.py
