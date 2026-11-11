@@ -115,6 +115,7 @@ void main(){
     body:SingleChildScrollView(child:WaffraGoalRecurringAccountPicker(
      accounts:const <WaffraAccountBalance>[],
      idPrefix:'m641-first',onChanged:(id)=>confirmed=id,
+     onError:(message)=>fail('Unexpected account creation error: $message'),
      onCreateAccount:(group)async{
       invoked++;
       return const WaffraAccountBalance(

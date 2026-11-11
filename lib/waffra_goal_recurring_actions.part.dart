@@ -144,6 +144,7 @@ extension WaffraGoalRecurringActions on _HomeScreenState {
         idPrefix:'m641-edit-goal',english:waffraIsEnglish,
         accounts:accountOptions,selectedAccountId:linkedAccount,
         onChanged:(id)=>update(()=>linkedAccount=id),
+        onError:(message)=>snack(context,message),
         onCreateAccount:(provider)async{
          final created=await _m641CreateGoalRecurringAccount(provider);
          if(created!=null)accountOptions=[...accountOptions,created];

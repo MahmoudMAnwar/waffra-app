@@ -10,7 +10,7 @@ import 'waffra_saudi_financial_providers.dart';
 class WaffraGoalRecurringAccountPicker extends StatefulWidget {
  const WaffraGoalRecurringAccountPicker({
   super.key,required this.accounts,required this.onChanged,
-  required this.onCreateAccount,this.selectedAccountId,
+  required this.onCreateAccount,required this.onError,this.selectedAccountId,
   this.english=false,this.idPrefix='m641',
  });
  final List<WaffraAccountBalance> accounts;
@@ -18,6 +18,7 @@ class WaffraGoalRecurringAccountPicker extends StatefulWidget {
  final bool english;
  final ValueChanged<String?> onChanged;
  final Future<WaffraAccountBalance?> Function(String? providerGroupId) onCreateAccount;
+ final ValueChanged<String> onError;
  @override State<WaffraGoalRecurringAccountPicker> createState()=>
   _WaffraGoalRecurringAccountPickerState();
 }
@@ -90,9 +91,8 @@ class _WaffraGoalRecurringAccountPickerState
    if(previousAccount!=created.id)widget.onChanged(created.id);
   }catch(_){
    if(mounted){
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content:Text(
-     label('تعذر إضافة الحساب أو التحقق منه. حاول مرة أخرى.',
-      'Account creation could not be verified. Try again.'))));
+    widget.onError(label('تعذر إضافة الحساب أو التحقق منه. حاول مرة أخرى.',
+     'Account creation could not be verified. Try again.'));
    }
   }finally{
    if(mounted)setState(()=>creating=false);

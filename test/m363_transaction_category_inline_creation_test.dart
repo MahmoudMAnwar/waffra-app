@@ -69,7 +69,12 @@ void main(){
   expect(fund,contains('if(n>available)'));
   expect(fund,contains('showWaffraDialog<bool>'));
   expect(fund,contains('if(acknowledged!=true||!mounted)return;'));
-  expect(fund,contains('goals[i]=current.copy(saved:current.saved+n)'));
+  expect(fund,contains('final available=source.single.balanceMinor/100;'));
+  expect(fund,contains('sourceAccountId:funding.sourceAccountId,userConfirmed:true'));
+  expect(fund,contains('await fundingBridge.fundVerifiedGoal('));
+  expect(fund,contains('if(mounted)await _refreshFromVerifiedFinance();'));
+  expect(fund,isNot(contains('goals[i]=current.copy(saved:current.saved+n)')),
+    reason:'No optimistic local wallet mutation after SQLCipher activation');
   expect(fund,isNot(contains('Insufficient available balance to allocate')));
  });
 }

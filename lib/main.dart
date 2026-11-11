@@ -14215,6 +14215,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       idPrefix:'m641-goal',english:waffraIsEnglish,
       accounts:goalAccounts,selectedAccountId:chosenGoalAccount,
       onChanged:(id)=>updateGoal(()=>chosenGoalAccount=id),
+     onError:(message)=>snack(context,message),
       onCreateAccount:(provider)async{
        final newAccount=await _m641CreateGoalRecurringAccount(provider);
        if(newAccount!=null){
@@ -14603,6 +14604,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          idPrefix:'m641-fund-goal',english:waffraIsEnglish,
          accounts:fundingAccounts,selectedAccountId:chosenSource,
          onChanged:(id)=>update(()=>chosenSource=id),
+         onError:(message)=>snack(context,message),
          onCreateAccount:(provider)async{
           final added=await _m641CreateGoalRecurringAccount(provider);
           if(added!=null)fundingAccounts=[...fundingAccounts,added];
@@ -15326,6 +15328,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        idPrefix:'m641-recurring',english:waffraIsEnglish,
        accounts:liveAccounts,selectedAccountId:selectedRecurringAccount,
        onChanged:(id)=>update(()=>selectedRecurringAccount=id),
+       onError:(message)=>snack(context,message),
        onCreateAccount:(provider)async{
         final added=await _m641CreateGoalRecurringAccount(provider);
         if(added!=null)liveAccounts=[...liveAccounts,added];
