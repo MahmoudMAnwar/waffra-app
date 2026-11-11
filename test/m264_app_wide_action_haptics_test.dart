@@ -110,7 +110,8 @@ void main() {
       'lib/waffra_recurring_trash.part.dart',
       'lib/waffra_smart_analysis.part.dart',
       'lib/waffra_verified_receipt_panel.dart',
-      'lib/waffra_widget_capture.part.dart',
+      // M636: retired widget SMS sheet had 5 haptic actions; its
+      // replacement opens authenticated MainActivity, not a Dart widget UI.
       'lib/waffra_account_deletion.dart',
     ];
     var taps=0;
@@ -122,7 +123,13 @@ void main() {
       taps+=RegExp(r'WaffraHaptics\.(?:tap|selection)\(')
           .allMatches(s).length;
     }
-    expect(taps,greaterThan(250));
+    // Original 250+ threshold included five now-deleted SMS widget actions;
+    // enforce the same count across all surviving click/touch entrypoints.
+    expect(taps,greaterThan(245));
+    expect(File('lib/waffra_widget_capture.part.dart').existsSync(),isFalse);
+    final widget=File('native/WaffraWidget.kt').readAsStringSync();
+    expect(widget,contains('Intent(context, MainActivity::class.java)'));
+    expect(widget,contains('PendingIntent.FLAG_IMMUTABLE'));
     final main=File('lib/main.dart').readAsStringSync();
     expect(main,contains('if(!_acceptFabTap())return;'));
     expect(main,contains('HapticFeedback.lightImpact();'));

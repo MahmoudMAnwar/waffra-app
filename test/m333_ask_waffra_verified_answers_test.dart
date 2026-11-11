@@ -96,22 +96,13 @@ void main(){
       '{"income_minor":120000}'),isNull);
   });
 
-  test('M333 Ask Waffra checks verified records before calling local Qwen',(){
-    final home=File('lib/waffra_smart_features.dart').readAsStringSync();
-    final from=home.indexOf('void _ask(){');
-    final until=home.indexOf('Widget _assistant(){',from);
-    expect(from,greaterThan(0));
-    expect(until,greaterThan(from));
-    final method=home.substring(from,until);
-    expect(method,contains('WaffraAiRecordedAnswers.answer('));
-    expect(method.indexOf('if(direct!=null)'),lessThan(
-      method.indexOf("_generateAiSkill('ask'")));
-    expect(method.indexOf('if(!WaffraOnDeviceQwen.shared.isReady)'),
-      greaterThan(method.indexOf('if(direct!=null)')));
-    expect(method,contains('Download the AI library to enable advice.'));
-    expect(home,contains('WaffraAiRecordedAnswers.cleanModelAnswer(response)'));
-    expect(home,contains('size:value.length>140?14:19'));
-    expect(home,contains('textDirection:direction'));
+  test('M636 retired Ask Waffra never loads local model',(){
+    final tools=File('lib/waffra_smart_features.dart').readAsStringSync();
+    expect(tools,isNot(contains('WaffraOnDeviceQwen')));
+    expect(tools,isNot(contains("case 4:return _assistant()")));
+    expect(tools,isNot(contains("'اسأل وفرة'")));
+    // Historical deterministic answer calculations remain covered above,
+    // but cannot accidentally resurrect the removed Tools AI section.
   });
 
   test('M333 calendar-periods never default to all recorded expenses',(){

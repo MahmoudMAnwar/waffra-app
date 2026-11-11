@@ -56,14 +56,11 @@ void main(){
   expect(login,contains('if(!match){'));
  });
 
- test('M629 logout awaits BOTH independent teardown tasks before signout',(){
+ test('M636 logout completes SQLCipher teardown before signout',(){
   expect(logout,contains('await WaffraAutoSms.suspendForSignOut().timeout('));
-  expect(logout,contains('await Future.wait<void>(['));
-  expect(logout,contains(
-   'WaffraOnDeviceQwen.shared.dispose().timeout(const Duration(seconds:12))'));
-  // M631: genuine Home close now also waits for owner-scoped speculative
-  // binding closure. The old single-line source shape is no longer valid,
-  // but both async jobs MUST still complete before the credential signout.
+  expect(logout,isNot(contains('WaffraOnDeviceQwen')));
+  // M636: retire the model and wait for the full owner-scoped SQLCipher
+  // binding/writes/prewarm before allowing signout.
   expect(logout,contains('final closingHome=_m627HomeKey.currentState;'));
   expect(logout,contains('Future<void> closeHomeFinance()async{'));
   expect(logout,contains('if(closingHome!=null){'));
@@ -73,13 +70,13 @@ void main(){
   expect(logout.indexOf('await closingHome._m627CloseForLogout();'),
    lessThan(logout.indexOf('await _m631CloseUnusedPrewarm();')));
   expect(logout.indexOf('Future<void> closeHomeFinance()async{'),
-   lessThan(logout.indexOf('await Future.wait<void>([')));
-  expect(logout,contains('closeHomeFinance(),'));
-  expect(logout.indexOf('closeHomeFinance(),'),
+   lessThan(logout.indexOf('await closeHomeFinance();')));
+  expect(logout,contains('await closeHomeFinance();'));
+  expect(logout.indexOf('await closeHomeFinance();'),
    lessThan(logout.indexOf('await _accountWriteAuthority.signOut();')));
   expect(logout,contains('_m627HomeSession++;'));
   expect(logout,contains('_m631PrewarmBinding=null;_m631PrewarmOwner=null;'));
-  expect(logout.indexOf('await Future.wait<void>(['),
+  expect(logout.indexOf('await closeHomeFinance();'),
    lessThan(logout.indexOf('await _accountWriteAuthority.signOut();')));
   expect(logout.indexOf('await _accountWriteAuthority.signOut();'),
    lessThan(logout.indexOf('profile=null;showLogin=true;locked=true;')));

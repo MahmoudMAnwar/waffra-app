@@ -93,12 +93,12 @@ Sender can't accept replies. Contact them directly.''';
 
  test('M297 full home add flow has three actions and uses guarded entry form',(){
   final src=File('lib/main.dart').readAsStringSync();
-  expect(src,contains("'Manual transaction':'عملية يدوية'"));
-  expect(src,contains("'Bank message':'رسالة بنكية'"));
+  expect(src,contains("'Add manual transaction':'إضافة عملية يدوية'"));
+  expect(src,contains("'Add manual transaction':'إضافة عملية يدوية'"));
   expect(src,contains("'Scan receipt / image':'تصوير / استخراج فاتورة'"));
   expect(src,contains('_launchAddAction(scanAndAddReceipt,fromMenu:true)'));
   expect(src,contains('()=>WaffraReceiptOcr.scan(picked.path)'));
-  expect(src,contains('waffra-ai-analysis-progress'));
+  expect(src,contains('waffra-ocr-analysis-progress'));
   expect(src,contains('await entrySheet('));
   expect(src,contains('scannedReceipt:'));
   expect(src,contains('scannedIncome:'));
@@ -106,13 +106,12 @@ Sender can't accept replies. Contact them directly.''';
   expect(src,contains("sourceType:initial?.sourceType??(sms?'sms':scannedReceipt!=null?'receipt':'manual')"));
  });
 
- test('M297 bank SMS buttons share a responsive horizontal row',(){
-  final src=File('lib/main.dart').readAsStringSync();
-  expect(src,contains("Key('waffra-sms-paste-action')"));
-  expect(src,contains("Key('waffra-sms-open-messages-action')"));
-  expect(src,contains('return stack?Column('));
-  expect(src,contains('Expanded(child:pasteAction)'));
-  expect(src,contains('Expanded(child:messagesAction)'));
-  expect(src,contains('constraints.maxWidth<318'));
+ test('M636 Home plus contains only manual action with real blur',(){
+   final src=File('lib/main.dart').readAsStringSync();
+   expect(src,contains('child:ClipRect(child:BackdropFilter('));
+   expect(src,contains('ui.ImageFilter.blur(sigmaX:6,sigmaY:6)'));
+   expect(src,contains("label:waffraIsEnglish?'Add manual transaction':'إضافة عملية يدوية'"));
+   expect(src,isNot(contains("label:waffraIsEnglish?'Bank message':'رسالة بنكية'")));
+   expect(src,contains('await entrySheet(sms:true,initialSms:body,reviewedSender:sender);'));
  });
 }

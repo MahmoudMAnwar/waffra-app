@@ -207,7 +207,7 @@ void main(){
    expect(find.byKey(const Key('waffra-m268-feature-analysis')),findsOneWidget);
    expect(find.byKey(const Key('waffra-m268-feature-markets')),findsOneWidget);
    expect(find.byKey(const Key('waffra-m268-expanded-analysis')),findsNothing);
-   expect(find.byKey(const Key('waffra-local-ai-opt-in')),findsOneWidget);
+   expect(find.byKey(const Key('waffra-local-ai-opt-in')),findsNothing);
    await tester.tap(find.byKey(const Key('waffra-m268-feature-analysis')));
    await tester.pumpAndSettle();
    expect(find.text('Verified financial analysis content'),findsOneWidget);

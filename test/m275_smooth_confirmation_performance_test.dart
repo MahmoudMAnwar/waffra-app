@@ -162,11 +162,11 @@ void main() {
     expect(code,contains('return saving;'));
     expect(code,contains("'persist-financial-change'"));
     expect(code,contains("'commit-confirmed-bank-sms'"));
-    expect(code,contains("'waffra-bank-sms-save-progress'"));
+    expect(code,contains("'commit-confirmed-bank-sms'"));
     expect(code,contains('if(submitTapped)return;'));
     expect(code,contains('previousEntries=List<MoneyEntry>.of(entries)'));
     expect(code,contains('entries..clear()..addAll(previousEntries)'));
     expect(code,contains('await WidgetsBinding.instance.endOfFrame;'));
-    expect(code,contains('await compute(waffraParseBankSmsBatchInIsolate,found)'));
+    expect(code,contains('await WaffraLargeJsonDecode.parse('));
   });
 }

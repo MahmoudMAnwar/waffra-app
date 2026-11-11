@@ -17,7 +17,7 @@ void main() {
         'Widget profilePage()',
         'void openFinancialCalendar()',
         'void openSubscriptionInsights()',
-        'bulkSmsSheet()',
+        'entrySheet(sms:true,initialSms:body,reviewedSender:sender)',
         'entrySheet()',
         'backupDialog()',
         'goalDialog()',

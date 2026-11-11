@@ -339,7 +339,7 @@ jobs:
           assert len(activity)==1, 'Missing Waffra MainActivity'
           kotlin=activity[0].parent
           assert 'waffra/widget' in activity[0].read_text()
-          for filename in ('WaffraWidget.kt','WaffraQuickActivity.kt'):
+          for filename in ('WaffraWidget.kt',):
               (kotlin/filename).write_text((Path('native')/filename).read_text())
           layout=root/'res/layout'
           layout.mkdir(parents=True,exist_ok=True)
@@ -428,14 +428,10 @@ jobs:
                   <meta-data android:name="android.appwidget.provider"
                       android:resource="@xml/waffra_widget_info"/>
               </receiver>
-              <activity android:name="com.waffra.app.WaffraQuickActivity"
-                  android:theme="@style/WaffraWidgetTheme"
-                  android:exported="false" android:hardwareAccelerated="true"
-                  android:windowSoftInputMode="adjustResize"/>
               </application>""",1)
           manifest.write_text(xml)
-          assert 'WaffraQuickActivity' in xml and 'WaffraWidget' in xml
-          print('Circular 1x1 Waffra widget and translucent quick capture activity configured')
+          assert 'WaffraWidget' in xml and 'WaffraQuickActivity' not in xml
+          print('Circular Waffra widget routes to verified main-app manual transaction')
           PY
 
       - name: Configure Android scheduled notification support

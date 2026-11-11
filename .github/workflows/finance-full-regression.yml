@@ -58,7 +58,8 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           main=Path('lib/main.dart').read_text()
-          widget=Path('lib/waffra_widget_capture.part.dart').read_text()
+          widget=Path('native/WaffraWidget.kt').read_text()
+          assert not Path('lib/waffra_widget_capture.part.dart').exists()
           widget_journal=Path('lib/storage/waffra_legacy_widget_commit_journal.dart').read_text()
           writer=Path('lib/storage/waffra_unified_finance_writer.dart').read_text()
           receipt=Path('lib/storage/waffra_encrypted_receipt_vault.dart').read_text()
@@ -79,9 +80,11 @@ jobs:
           assert 'Encrypted screen mutation requires a verified atomic SQL projection writer.' in authority
           assert 'commitConfirmedLegacySms(' in authority
           assert 'commitConfirmedLegacySms(' not in widget
-          assert '_financeAuthority.commitConfirmedSms(' in widget
-          assert 'WaffraFinanceRoute.widgetSmsConfirmedSave' in widget
-          assert '_financeAuthority.load(route:WaffraFinanceRoute.widgetRead)' in widget
+          assert '_financeAuthority.commitConfirmedSms(' not in widget
+          assert 'Intent(context, MainActivity::class.java)' in widget
+          assert 'action = "waffra.ADD_TRANSACTION"' in widget
+          assert 'route:WaffraFinanceRoute.widgetBalanceRefresh' in main
+          assert 'WaffraAuthoritativeWidgetBalance.netHalalas(raw)' in main
           assert '_financeAuthority.load(route:WaffraFinanceRoute.dashboardRead)' in main
           assert 'await legacy.commitConfirmedLegacySms(' in authority
           assert 'await journal.prepare(' in persistence

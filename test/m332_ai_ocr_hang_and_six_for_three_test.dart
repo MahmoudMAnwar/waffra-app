@@ -69,43 +69,18 @@ void main() {
     expect(result.needsReviewCount, 0);
   });
 
-  test('M332: AI overlay can cancel and never blocks app forever', () {
-    final app = File('lib/main.dart').readAsStringSync();
-    final engine = File('lib/waffra_ondevice_qwen.dart').readAsStringSync();
-    expect(app, contains("Key('waffra-ai-analysis-cancel')"));
-    expect(app, contains('waffra_ai_analysis_timeout'));
-    expect(app, contains('Future.any<T>([work,cancellation.future])'));
-    expect(app, contains('cancelCurrentGeneration()'));
-    expect(engine, contains('generationTimeLimit=Duration(seconds:45)'));
-    expect(engine, contains('engine.create(['));
-    expect(engine, contains('maxTokens:768'));
-    expect(engine, contains('/no_think'));
-    expect(engine, contains('cancelGeneration()'));
-    expect(app, contains('WaffraAiResult result;'));
-    expect(app, contains('AI timed out. Review the extracted image transactions manually.'));
-    expect(app, contains("error.message!='ai_analysis_cancelled'"));
-    expect(app, contains('return false;'));
+  test('M636 generic OCR progress can cancel without any Qwen model',(){
+    final app=File('lib/main.dart').readAsStringSync();
+    expect(app,contains("Key('waffra-ocr-analysis-cancel')"));
+    expect(app,contains('Future.any<T>([work,cancellation.future])'));
+    expect(app,contains('item.remove();'));
+    expect(app,contains('item.dispose();'));
+    expect(app,isNot(contains('WaffraOnDeviceQwen')));
   });
-
-  test('M332: SMS paste/share auto-runs AI; button removed; no AI save', () {
-    final app = File('lib/main.dart').readAsStringSync();
-    expect(app, contains('scheduleBankSmsAnalysis(ctx,update,text)'));
-    expect(app, contains('analyzeBankSmsAutomatically(ctx,update,input.trim(),revision)'));
-    expect(app, contains('await _reviewAiPastedBankMessages(ctx,input)'));
-    expect(app, contains('جاري الآن تحليل الرسائل بالذكاء الاصطناعي'));
-    expect(app, isNot(contains("Key('waffra-sms-ai-review')")));
-    expect(app, contains('waffra-sms-review-unverified'));
-    expect(app, contains('Never commit on paste'));
-    expect(app, contains('userConfirmed:true'));
-    // Unexpected native errors must not strand the paste progress state.
-    expect(app, contains('AI analysis was interrupted. Review bank messages manually.'));
-    expect(app, contains('analyzingPaste=false;'));
-    expect(app, contains('Review before saving.'));
-    // Re-paste/clear/close invalidates stale AI results and native inference.
-    expect(app, contains('scheduleBankSmsAnalysis('));
-    expect(app, contains('++pasteRevision;pasted.clear();'));
-    expect(app, contains('++pasteRevision;'));
-    expect(app, contains('WaffraOnDeviceQwen.shared.cancelCurrentGeneration();'));
-    expect(app, contains('analyzingPaste=false;messages=[];index=0;pasted.clear()'));
+  test('M636 bank SMS human confirmation remains mandatory',(){
+    final app=File('lib/main.dart').readAsStringSync();
+    expect(app,contains('await entrySheet(sms:true,initialSms:body,reviewedSender:sender);'));
+    expect(app,contains('if(smsHashes.contains(bankSmsHash(body)))'));
+    expect(app,isNot(contains('Future<void> bulkSmsSheet(')));
   });
 }

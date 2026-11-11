@@ -26,19 +26,17 @@ void main() {
   expect(bankSmsHasUnverifiedTimestamp('شراء SAR 10\nبدون تاريخ',
     referenceDate:reference),isFalse);
  });
- test('M337 bulk date gate is before parsing, category assignment and commit',(){
+ test('M636 auto-SMS confirms original source date BEFORE hash/commit',(){
   final main=File('lib/main.dart').readAsStringSync();
-  final from=main.indexOf('Future<void> saveParsedMessages(');
-  final end=main.indexOf('Future<void> prepare(',from);
-  final section=from>=0?main.substring(from):
-    main.substring(main.indexOf('Future<void> bulkSmsSheet('));
-  // M564 strengthens the same original-date gate: missing timestamps also
-  // require explicit review; testing obsolete source spelling is not a pass.
-  final date=section.indexOf('final invalidDates=found.where((raw)=>');
-  expect(section,contains('bankSmsDate(raw)==null||bankSmsHasUnverifiedTimestamp(raw)'));
+  final from=main.indexOf(' Future<void> _m565ConfirmSms({');
+  final to=main.indexOf(' Future<void> _reviewAutoSmsCandidates(',from);
+  expect(from,greaterThan(0));
+  expect(to,greaterThan(from));
+  final section=main.substring(from,to);
+  final date=section.indexOf('bankSmsDate(body)==null||bankSmsHasUnverifiedTimestamp(body)');
   final commit=section.indexOf('_financeAuthority.commitConfirmedSms(');
   expect(date,greaterThan(0));
   expect(commit,greaterThan(date));
-  expect(section,contains('لم تُحفظ معاملات'));
+  expect(section,contains('userConfirmed:true'));
  });
 }

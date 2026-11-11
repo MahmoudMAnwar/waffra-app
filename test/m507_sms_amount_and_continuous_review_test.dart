@@ -66,25 +66,17 @@ void main() {
     expect(BankParser.parse(next).amount,315);
   });
 
-  test('M507-02 source editor reloads rules for each next SMS', () {
+  test('M636 automatic SMS review and editor still use latest learned rules',(){
     final src=File('lib/main.dart').readAsStringSync();
-    final start=src.indexOf(' Future<void> bulkSmsSheet(');
-    final end=src.indexOf(' Future<void> _previewForeignBankCurrency(');
-    expect(start,greaterThan(0));
-    expect(end,greaterThan(start));
-    final sheet=src.substring(start,end);
-    expect(sheet,contains('final inferred=WaffraSmsLocalRules.resolve('));
-    expect(sheet,contains('.read(_smsRuleOwnerKey)'));
-    expect(sheet,contains('category=suggested??learned??'));
-    // The next/previous message must see recently learned rules. A finance
-    // save must NOT trigger four historical SMS pages on the UI transition.
-    final prepare=sheet.split('Future<void> prepare(int i,StateSetter update)async {')[1]
-     .split('// Kept for staged SMS migration;')[0];
-    expect(prepare,contains('.read(_smsRuleOwnerKey)'));
-    expect(prepare,contains('custom:refreshedRules'));
-    expect(sheet,isNot(contains('_refreshAutoSmsInbox(importMonth:true)')));
-    // Do not auto-post inferred SMS: every next item still uses the
-    // explicitly reviewed, verified source commit path.
-    expect(sheet,contains('userConfirmed:true'));
+    final review=src.substring(src.indexOf(' Future<void> _reviewAutoSmsCandidates('),
+     src.indexOf(' void _receiveSharedSms('));
+    final editor=src.substring(src.indexOf(' Future<void> entrySheet('),
+     src.indexOf(' Future<void> showReceipt('));
+    expect(review,contains('await _learnSafeSmsRule('));
+    expect(review,contains('bankSmsHash(body)'));
+    expect(editor,contains('WaffraSmsLocalRules.resolve(body:initialSms,'));
+    expect(editor,contains('userConfirmed:true'));
+    expect(review,isNot(contains('_refreshAutoSmsInbox(importMonth:true)')));
+    expect(src,isNot(contains('Future<void> bulkSmsSheet(')));
   });
 }

@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "pr": "M635 PR pending — restore early-build responsiveness with native PBKDF2 and foreground SMS engine isolation; Android device QA pending",
-  "issue": "Issue #553: owner 3s sign-in/biometric, 5–6s post-Home jank; related #538 #542",
+  "pr": "M636 PR #556 — owner-approved retired Qwen and legacy SMS widget removal; exact-head CI/device proof pending",
+  "issue": "Issue #555 — user six-item UX + code deletion request, 2026-11-11",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main",
-  "reviewed_at": "2026-11-10",
+  "reviewed_at": "2026-11-11",
   "review_policy": "Review changed behavior against all GitHub Actions workflow scripts, all Dart and Python QA test files, and the original tests' protected security assertions; never edit tests merely to silence red jobs.",
   "contracts": [
     {
@@ -258,13 +258,15 @@
     {
       "id": "M610-WIDGET-ISOLATE-TEST-COMPLETION",
       "issue": "Issue #512 / two real widget CI timeouts on PR #511 after M609 isolated finance integrity",
-      "previous_behavior": "The widget quick-SMS test uses pumpAndSettle immediately after mounting an indeterminate loading indicator, and again relies on fixed-duration fake pumps for a confirmed financial save. After M609 moves source integrity to Flutter compute, FakeAsync cannot drive that background completion, and both tests time out before their actual bank SMS and confirmed-writer assertions execute.",
-      "approved_behavior": "For disposable FakeAsync widget tests only, inject a test-specific legacy finance authority that executes the SAME fail-closed WaffraFinanceReadView.requireIntegrity() synchronously, since the production compute isolate cannot be driven inside FakeAsync. Production authority and SQLCipher asynchronous integrity remain untouched and are covered by storage tests. Test-only ready and save-settled callbacks signal completion; both original SMS tests must still verify auto-paste debounce, pre-confirm empty ledger, confirmed amount/SHA dedup, and legacy raw-bank-SMS redaction with timeout bounded waits.",
+      "previous_behavior": "The widget quick-SMS test uses pumpAndSettle immediately after mounting an indeterminate loading indicator, and again relies on fixed-duration fake pumps for a confirmed financial save. After M609 moves source integrity to Flutter compute, FakeAsync cannot drive that background completion, and both tests time out before their actual bank SMS and confirmed-writer assertions execute. The separate SMS paste-capture widget screen was intentionally retired by M636.",
+      "approved_behavior": "M636 supersedes standalone widget capture: the Android widget now opens MainActivity via explicit manual-add action, never a second FlutterEngine/SMS paste finance writer; Waffra Home verifies account owner and SQLCipher before presenting entrySheet.",
       "source_paths": [
-        "lib/waffra_widget_capture.part.dart"
+        "native/WaffraWidget.kt",
+        "lib/main.dart"
       ],
       "test_paths": [
-        "test/waffra_widget_quick_capture_test.dart"
+        "test/waffra_widget_quick_capture_test.dart",
+        "test/storage/m266_widget_source_fail_closed_ui_test.dart"
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/m550-behavior-contract-preflight.yml",
@@ -272,11 +274,8 @@
         ".github/workflows/finance-full-regression.yml"
       ],
       "safety_invariants": [
-        "Production never injects test-only ready/save callbacks, and real finance integrity checks are not bypassed.",
-        "Both existing Flutter widget tests must complete and assert actual automatic SMS analysis and post-confirmation only financial commit.",
-        "Keep SQLCipher/source/key witnesses, native inter-engine lock, owner data and bank SMS SHA duplicate prevention fully unchanged.",
-        "Do not claim device validation or green exact-head workflow gates until they are independently observed.",
-        "FakeAsync synchronous canonical preflight executes all original checks rather than skipping validation; production still uses background compute on Home and Widget."
+        "No separate unauthenticated widget SMS capture or direct ledger posting; only verified MainActivity/entrySheet may add money.",
+        "Encrypted owner/source guard, widget balance read, and account selection still fail closed; existing financial data remains intact."
       ]
     },
     {
@@ -1017,6 +1016,42 @@
         "Foreground worker skip occurs only while Activity is visible and native encrypted pending remains durable; receiver schedules background work and native review notifications remain delivered.",
         "MethodChannel pending result returned off main after same encrypted queue read; errors still explicit, neither ACK nor posting is changed.",
         "Source tests alone cannot prove 3-second freeze or 5–6-second jank resolved; require physical Android profile FPS/first login + biometric + relogin + 2000 SMS and data-upgrade UAT before Done."
+      ]
+    },
+    {
+      "id": "M636-OWNER-RETIRED-QWEN-SMS-WIDGET-LOGOUT-BLUR-SPLASH",
+      "issue": "Issue #555 / PR #556 — six explicitly approved Waffra removals and UI behavior",
+      "previous_behavior": "Successful logout flashed a light financial-recovery page behind its spinner, Tools/account still offered Qwen GGUF installers/Ask/generation, the global FAB dimmed without blur, Home + and the launcher widget exposed a second SMS paste/review editor, and splash switched abruptly to login.",
+      "approved_behavior": "Never show finance-recovery UI on successful logout; preserve secure close and fail-closed genuine errors. Delete GGUF engine/gate/native dependency and installer, Qwen-only workflow and model biometric controls; keep deterministic finance Tools and normal automatic SMS Review. Blur global + background with performant BackdropFilter, show manual-only Home +. Launcher widget routes to authenticated MainActivity/entrySheet. Fade the original approved splash into the next real auth screen without a new timer.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_smart_features.dart",
+        "lib/waffra_biometrics.dart",
+        "lib/waffra_saudi_release.dart",
+        "native/WaffraWidget.kt"
+      ],
+      "test_paths": [
+        "test/m636_owner_approved_retirement_and_ui_test.dart",
+        "test/m320_ai_live_entrypoints_test.dart",
+        "test/m325_ai_tools_visibility_test.dart",
+        "test/m629_pull_refresh_parity_auth_home_test.dart",
+        "test/m470_sms_first_sender_account_test.dart",
+        "test/waffra_widget_quick_capture_test.dart",
+        "test/storage/m266_widget_source_fail_closed_ui_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/android.yml",
+        ".github/workflows/android-full-smoke.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Model runtime, optional installer and llama_cpp/llamadart native bundle are removed without weakening OS PBKDF2/biometric or SQLCipher owners.",
+        "Only normal successful logout keeps the last Home frame; actual finance close failure remains signed in and shows recovery.",
+        "Deterministic/local and separately consented cloud SMS reviews retain real date/SAR/source evidence, account selection, explicit confirmation, hash deduplication and post-write ACK.",
+        "Widget has no independent money-writing engine; user authentication and account binding remain mandatory.",
+        "True blur is shown only while + expanded and native Splash transitions by a short crossfade after its fixed existing completion.",
+        "Full exact-head Flutter analyzer, real Android compile, positive source regression, and physical fresh/login/relogin/device-update performance validation required before Done."
       ]
     }
   ]

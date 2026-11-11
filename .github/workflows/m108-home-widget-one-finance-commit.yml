@@ -3,7 +3,8 @@ name: Waffra M108 Live Home and Widget Shared SMS Commit
 on:
   pull_request:
     paths:
-      - 'lib/waffra_widget_capture.part.dart'
+      - 'lib/waffra_home_widget.dart'
+      - 'native/WaffraWidget.kt'
       - 'lib/main.dart'
       - 'lib/storage/waffra_home_finance_persistence.dart'
       - 'test/m108_home_widget_one_finance_writer_test.dart'
@@ -51,7 +52,7 @@ jobs:
           github-token: ${{ github.token }}
       - run: flutter pub get
       - name: Strict analyze actual widget and main route
-        run: dart analyze lib/waffra_widget_capture.part.dart test/m108_home_widget_one_finance_writer_test.dart
+        run: dart analyze lib/waffra_home_widget.dart test/m108_home_widget_one_finance_writer_test.dart
       - name: Source unity, widget UI, crash journal, 100 messages and races
         run: >-
           flutter test

@@ -49,7 +49,7 @@ class FinancialQualityGateTest(unittest.TestCase):
     def test_detects_foreign_currency_bypass(self):
         self.assert_detects_change(
             "lib/main.dart",
-            "WaffraSmsCurrencies.requiresReviewForSarLedger(messages[index])",
+            "WaffraSmsCurrencies.requiresReviewForSarLedger(message.text)",
             "false",
             "foreign currency guard removal")
 
@@ -60,12 +60,24 @@ class FinancialQualityGateTest(unittest.TestCase):
             "persist(); WaffraForeignCurrencyPreview.show(context,",
             "FX preview unexpected finance write")
 
-    def test_detects_ai_money_hallucination_gate_removed(self):
+    def test_detects_retired_qwen_tools_reintroduced(self):
+        self.assertNotIn("WaffraOnDeviceQwen",
+                         self.source["lib/waffra_smart_features.dart"])
+        self.assertNotIn("WaffraAiModelGate",
+                         self.source["lib/waffra_smart_features.dart"])
+        for unsafe in ("WaffraOnDeviceQwen",
+                       "WaffraAiFinanceCoach.askWaffra",
+                       "waffra-local-ai-opt-in"):
+            mutated = dict(self.source)
+            mutated["lib/waffra_smart_features.dart"] += "\n// " + unsafe + "\n"
+            self.assertTrue(gate.audit_sources(mutated),unsafe)
+
+    def test_detects_sms_editor_account_generation_bypass(self):
         self.assert_detects_change(
-            "lib/waffra_smart_features.dart",
-            "hasUnverifiedMoneyClaim(cleaned)",
-            "false",
-            "unverified model-derived amounts")
+            "lib/main.dart",
+            "expectedAccountGeneration:reviewedAccount.generation",
+            "expectedAccountGeneration:null",
+            "surviving SMS editor account witness bypass")
 
     def test_detects_fx_consent_bypass(self):
         self.assert_detects_change(

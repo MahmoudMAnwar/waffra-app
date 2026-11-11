@@ -74,7 +74,9 @@ jobs:
           from pathlib import Path
           required = [
             'lib/main.dart',
-            'lib/waffra_widget_capture.part.dart',
+            'lib/waffra_home_widget.dart',
+            'native/WaffraWidget.kt',
+            'native/WaffraMainActivity.kt',
             'lib/storage/waffra_production_finance_source_guard.dart',
             'lib/storage/waffra_production_finance_routing_gate.dart',
             'lib/storage/waffra_encrypted_finance_session.dart',

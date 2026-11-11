@@ -97,6 +97,34 @@ def audit_scope(manifest: dict, changed: set[str],
             "Unrequested or undeclared file change: extra=" +
             repr(sorted(changed - expected)) + " missing=" +
             repr(sorted(expected - changed)))
+    # M636: An explicitly user-approved retirement may DELETE obsolete
+    # engine-only files. Require a declared exact-path allowlist, not globs.
+    # Protected source replacements cannot masquerade as deletion/recreation.
+    deletions = manifest.get("approved_deleted_files", [])
+    if (not isinstance(deletions, list) or len(deletions) != len(set(deletions)) or
+            any(not isinstance(p, str) or not p or ".." in p for p in deletions)):
+        raise ScopeViolation("Invalid approved deletion list")
+    if set(deletions) != {p for p in changed if p in base_exists and p not in head_text}:
+        raise ScopeViolation("Every removed source must have specific user approval")
+    for p in deletions:
+        if p not in ("lib/waffra_ondevice_qwen.dart",
+                             "lib/waffra_ai_model_gate.dart",
+                             "scripts/qa/prefetch_verified_llamadart.sh",
+                             ".github/workflows/m317-ondevice-ai-brain.yml",
+                             "lib/waffra_widget_capture.part.dart",
+                             "native/WaffraQuickActivity.kt"):
+            raise ScopeViolation(f"Unrelated code deletion is prohibited: {p}")
+    # M636: an owner-approved replacement of an obsolete test file is allowed
+    # ONLY when declared by exact path, and only under test/. Never allow
+    # wholesale production, security-gate, or workflow replacement.
+    full_replacements = manifest.get("approved_full_test_replacements", [])
+    if (not isinstance(full_replacements, list) or
+            len(full_replacements) != len(set(full_replacements)) or
+            any(not isinstance(p, str) or not p.startswith("test/") or
+                ".." in p for p in full_replacements)):
+        raise ScopeViolation("Invalid wholesale test replacement allowlist")
+    if not set(full_replacements).issubset(changed):
+        raise ScopeViolation("Unused full replacement declaration")
     bounded = manifest.get("bounded_sections")
     if not isinstance(bounded, dict):
         raise ScopeViolation("Missing protected-section boundaries")
@@ -110,7 +138,12 @@ def audit_scope(manifest: dict, changed: set[str],
                 raise ScopeViolation(f"Missing newly declared file: {path}")
             continue
         if path not in head_text:
-            raise ScopeViolation(f"Existing file deleted without authorization: {path}")
+            # Only exact allowlisted, physically removed model-only paths pass.
+            if path not in deletions:
+                raise ScopeViolation(f"Existing file deleted without authorization: {path}")
+            continue
+        if path in full_replacements:
+            continue
         if path.startswith(PROTECTED_PREFIXES) and path not in bounded:
             raise ScopeViolation(
                 f"Existing production / CI file cannot change wholesale: {path}")

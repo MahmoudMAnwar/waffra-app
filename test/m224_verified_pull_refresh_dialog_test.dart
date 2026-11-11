@@ -38,8 +38,8 @@ void main() {
 
   test('M224 original SMS legacy storage ban remains unchanged', () {
     final code=File('lib/main.dart').readAsStringSync();
-    expect(code,contains('if(applied.originalSmsNotesOmittedOnLegacy)'));
-    expect(code,contains('التخزين المشفر غير مفعّل'));
-    expect(code,contains('notes:raw,sourceType:'));
+    expect(code,contains('if(WaffraSmsCurrencies.requiresReviewForSarLedger(message.text))'));
+    expect(code,contains('Foreign or unknown currency: no transaction was saved as SAR'));
+    expect(code,contains("notes:body,sourceType:'sms'"));
   });
 }

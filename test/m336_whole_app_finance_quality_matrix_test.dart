@@ -114,14 +114,14 @@ void main(){
   expect(picker,contains('))return null;'));
   expect(picker,contains('return created.name;'));
 
-  final smsFrom=app.indexOf('Future<void> bulkSmsSheet(');
-  final smsTo=app.indexOf('Future<void> _previewForeignBankCurrency(',smsFrom);
+  final smsFrom=app.indexOf(' Future<void> entrySheet(');
+  final smsTo=app.indexOf(' Future<void> showReceipt(',smsFrom);
   expect(smsFrom,greaterThan(0));
   expect(smsTo,greaterThan(smsFrom));
   final sms=app.substring(smsFrom,smsTo);
-  expect(sms,contains('allowCreate:true,typeIncome:income,parentId:smsParentId'));
-  expect(sms,contains('smsParentId=leaf.single.parentId'));
-  expect(sms,contains('category=leaf.single.name;'));
+  expect(sms,contains('allowCreate:true,typeIncome:income,parentId:selectedParentId'));
+  expect(sms,contains('waffraManualCategoryChildren('));
+  expect(sms,contains('waffraCanAssignManualCategory('));
  });
 
   test('M338 repeated SMS totals use exact integer currency units',(){
@@ -151,19 +151,18 @@ void main(){
   expect(summary.unresolved,1);
  });
 
- test('M336 bulk SMS requires currency evidence BEFORE hash and finance commit',(){
+ test('M636 SMS editor validates original currency BEFORE hash and commit',(){
   final app=File('lib/main.dart').readAsStringSync();
-  final start=app.indexOf('Future<void> bulkSmsSheet(');
-  final end=app.indexOf('Future<void> _previewForeignBankCurrency(',start);
-  final bulk=app.substring(start,end);
-  final marker=bulk.indexOf(
-   'WaffraSmsCurrencies.requiresReviewForSarLedger(messages[index])');
-  final hash=bulk.indexOf('final hash=bankSmsHash(messages[index]);',marker);
-  final commit=bulk.indexOf('_financeAuthority.commitConfirmedSms(',hash);
-  expect(marker,greaterThan(0));
-  expect(hash,greaterThan(marker));
+  final start=app.indexOf(' Future<void> entrySheet(');
+  final end=app.indexOf(' Future<void> showReceipt(',start);
+  final editor=app.substring(start,end);
+  final currency=editor.indexOf('WaffraSmsCurrencies.requiresReviewForSarLedger(message.text)');
+  final hash=editor.indexOf('final h=sha256.convert(',currency);
+  final commit=editor.indexOf('_financeAuthority.commitConfirmedSms(',hash);
+  expect(currency,greaterThanOrEqualTo(0));
+  expect(hash,greaterThan(currency));
   expect(commit,greaterThan(hash));
-  expect(bulk,contains('sourceTotalsLabel'));
+  expect(editor,contains('userConfirmed:true'));
  });
 
   test('M336 exchange approval cannot be forged by zero, NaN or unsupported',(){

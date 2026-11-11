@@ -45,8 +45,8 @@ void main() {
   expect(auto,isNot(contains('WaffraSmsCloudReviewAnalyzer.stagePending(')));
   expect(main,contains('Future<void> _analyzeAmbiguousSmsOnDemand('));
   expect(main,contains('explicitlyRequested:true'));
-  expect(main,contains('await bulkSmsSheet(initialText:body,'));
-  expect(main,contains('reviewSmsBudgetLinks(additions)'));
+  expect(main,contains('await entrySheet(sms:true,initialSms:body,reviewedSender:sender);'));
+  expect(main,contains('reviewSmsBudgetLinks([record])'));
  });
 
  test('M436 signed main QA APK enables protected staging, not Play AAB',(){

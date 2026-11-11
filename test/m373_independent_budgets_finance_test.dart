@@ -91,7 +91,7 @@ void main() {
     expect(app,contains("operation:'standalone-budget-soft-delete'"));
     expect(app,contains("operation:'standalone-budget-toggle'"));
     expect(app,contains("operation:'standalone-budget-edit'"));
-    expect(app,contains("reviewSmsBudgetLinks(additions)"));
+    expect(app,contains("reviewSmsBudgetLinks([record])"));
     expect(directory,contains("saved=namedBudgets.where((b)=>!b.deleted)"));
     final create=app.split('Future<String?> chooseBudgetCategory(').last
      .split('void refreshFromBudgetDirectory()').first;

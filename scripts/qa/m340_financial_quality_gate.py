@@ -50,8 +50,11 @@ def audit_sources(sources: Mapping[str, str]) -> list[str]:
     # former three would incorrectly reject a *more* protected finance route.
     # Independently demand its user-confirmed, account-witness and hash guards.
     home = sources.get(main, "")
-    if home.count("_financeAuthority.commitConfirmedSms(") != 4:
-        problems.append(f"{main}: a bank SMS confirmation path bypasses verified source authority")
+    # M636: two remaining secure SMS routes (confirmed Review and editor).
+    # The two old widget/paste paths are deleted, NOT downgraded to plain
+    # SharedPreferences. A new writer or missing route must fail this gate.
+    if home.count("_financeAuthority.commitConfirmedSms(") != 2:
+        problems.append(f"{main}: expected exactly two verified SMS authority writers")
     start = home.find("Future<void> _m565ConfirmSms(")
     end = home.find("Future<void> _reviewAutoSmsCandidates(", start)
     if start == -1 or end <= start:
@@ -73,6 +76,27 @@ def audit_sources(sources: Mapping[str, str]) -> list[str]:
             if required not in approved_sms:
                 problems.append(f"{main}: quick SMS review bypasses required authority/approval: {required}")
 
+    editor_start = home.find("Future<void> entrySheet(")
+    editor_end = home.find("Future<void> showReceipt(", editor_start)
+    if editor_start == -1 or editor_end <= editor_start:
+        problems.append(f"{main}: surviving SMS/manual finance editor missing")
+    else:
+        editor = home[editor_start:editor_end]
+        for required in (
+            "WaffraSmsCurrencies.requiresReviewForSarLedger(message.text)",
+            "if(!smsDateConfirmed)",
+            "reviewSmsAccountLinks([result]",
+            "expectedAccountGeneration:reviewedAccount.generation",
+            "allowDuplicateHashes:explicitlyApprovedSmsDuplicate",
+            "userConfirmed:true",
+            "final parsedLedger=await WaffraLargeJsonDecode.parse(",
+        ):
+            if required not in editor:
+                problems.append(f"{main}: surviving SMS editor bypasses {required}")
+    # Old standalone Widget/paste bank SMS writers are prohibited.
+    if "Future<void> bulkSmsSheet(" in home or "WaffraWidgetCaptureApp" in home:
+        problems.append(f"{main}: removed unverified SMS paste/widget writer returned")
+
     # Owner-approved first-time account linkage now happens INSIDE preview
     # before the final Yes; an old post-Yes picker would fail this check.
     reviewed_choice = home[end:home.find("void _receiveSharedSms()", end)]
@@ -93,8 +117,8 @@ def audit_sources(sources: Mapping[str, str]) -> list[str]:
         ("waffraCanAssignManualCategory(", "manual category leaf validation missing"),
         ("waffraAmountFieldError(", "mandatory finance amount validation missing"),
         ("bankSmsHasUnverifiedTimestamp", "ambiguous bank date fail-closed missing"),
-        ("WaffraSmsCurrencies.requiresReviewForSarLedger(messages[index])",
-         "bulk SMS foreign currency guard missing"),
+        ("WaffraSmsCurrencies.requiresReviewForSarLedger(message.text)",
+         "surviving SMS editor foreign currency guard missing"),
         ("final verifiedSource=WaffraSmsCurrencies.originalAmount(s);",
          "bank parser SAR amount is no longer verified against source action"),
         ("stagedReceiptCopies", "receipt staging tracking missing"),
@@ -129,12 +153,16 @@ def audit_sources(sources: Mapping[str, str]) -> list[str]:
             "FX preview does not expose an explicit approval action")
     require(fx, "userConfirmed:true",
             "FX review witness no longer requires confirmed user approval")
-    require(ai, "WaffraAskScope.isRelated(q)",
-            "Ask Waffra can send off-topic questions to model")
-    require(ai, "hasUnverifiedMoneyClaim(cleaned)",
-            "AI unverified monetary number rejection missing")
+    # M636: model/Ask was removed by owner approval. For safety, reject
+    # resurrection of any unscoped generation/installer or off-topic Ask
+    # instead of requiring code that must no longer exist.
+    for marker in ("WaffraOnDeviceQwen", "WaffraAiModelGate",
+                   "WaffraAiFinanceCoach.askWaffra", "WaffraAskScope.isRelated(",
+                   "waffra-local-ai-opt-in", "waffra-ai-financial-analysis"):
+        if marker in sources.get(ai, "") or marker in home:
+            problems.append(f"{ai}: retired AI entrypoint reintroduced: {marker}")
     require(model, "static bool hasUnverifiedMoneyClaim(",
-            "unverified-model-money guard missing")
+            "archived unverified-model-money guard changed")
 
     for marker, reason in (
         ("this.encryptedSqlWitnessActive = false", "encrypted SQL witness activated"),

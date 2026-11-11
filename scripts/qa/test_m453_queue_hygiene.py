@@ -53,7 +53,6 @@ class M453QueueSafetyTests(unittest.TestCase):
             ".github/workflows/m172-rtl-accessibility-performance-qa.yml",
             ".github/workflows/m173-production-cutover-evidence-qa.yml",
             ".github/workflows/m174-main-sha-postmerge.yml",
-            ".github/workflows/m317-ondevice-ai-brain.yml",
             ".github/workflows/m368-sqlcipher-stage-ci.yml",
             ".github/workflows/m369-sqlcipher-stage-ci.yml",
             ".github/workflows/m370-sqlcipher-stage-ci.yml",
@@ -72,7 +71,13 @@ class M453QueueSafetyTests(unittest.TestCase):
             ".github/workflows/storage-preflight.yml",
             ".github/workflows/unified-finance-cloud-release-evidence.yml",
         ]
-        self.assertEqual(len(paths), 58)
+        # M636 #555: the old on-device Qwen-only workflow is fully retired.
+        # All remaining production workflows STILL require isolated,
+        # exact-PR concurrency (including finance safety and Android).
+        self.assertFalse(
+            (ROOT / ".github/workflows/m317-ondevice-ai-brain.yml").exists()
+        )
+        self.assertEqual(len(paths), 57)
         for path in paths:
             with self.subTest(workflow=path):
                 raw = (ROOT / path).read_text(encoding="utf-8")

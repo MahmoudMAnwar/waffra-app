@@ -53,7 +53,7 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           main=Path('lib/main.dart').read_text()
-          widget=Path('lib/waffra_widget_capture.part.dart').read_text()
+          widget=Path('native/WaffraWidget.kt').read_text()
           bridge=Path(
               'lib/storage/waffra_verified_encrypted_finance_bridge.dart'
           ).read_text()
@@ -72,7 +72,10 @@ jobs:
           assert 'this.verifiedKeyRecoveryInDevice = false' in authority
           assert 'automaticallyActivateSqlCipher => false' in release
           assert '_financeAuthority.commitConfirmedSms(' in main
-          assert '_financeAuthority.commitConfirmedSms(' in widget
+          assert '_financeAuthority.commitConfirmedSms(' not in widget
+          assert 'Intent(context, MainActivity::class.java)' in widget
+          assert 'action = "waffra.ADD_TRANSACTION"' in widget
+          assert 'await _ensureFinanceBound();' in main
           print('PASS: experimental SQLCipher remains opt-in; legacy flows retain source authority.')
           print('NOTICE: safe test gate is NOT real-device production source activation evidence.')
           PY

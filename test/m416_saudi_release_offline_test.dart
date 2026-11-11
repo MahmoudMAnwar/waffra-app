@@ -15,9 +15,6 @@ void main(){
   expect(WaffraSaudiRelease.enabled,isTrue);
   expect(WaffraSaudiRelease.locationCountryOnboarding,isFalse);
   expect(WaffraSaudiRelease.receiptImageTransactionImport,isFalse);
-  expect(WaffraSaudiRelease.qwenForBankSms,isFalse);
-  expect(WaffraSaudiRelease.qwenForAskWaffra,isFalse);
-  expect(WaffraSaudiRelease.freeTextAskWaffra,isFalse);
   expect(WaffraSaudiRelease.userCountryChoice,isFalse);
   expect(WaffraSaudiRelease.userCurrencyChoice,isFalse);
   expect(WaffraSaudiRelease.globalCurrencyConverter,isTrue);

@@ -38,9 +38,9 @@ void main(){
  });
  test('M300 no accidental ledger conversion or false field-error notice',(){
   final src=File('lib/main.dart').readAsStringSync();
-  expect(src,contains('WaffraSmsCurrencies.originalAmountPreview('));
-  expect(src,contains("'waffra-sms-review-notice'"));
-  expect(src,contains('errorText:pasteAttempted&&pasted.text.trim().isEmpty'));
+  expect(src,contains('WaffraSmsCurrencies.originalAmount('));
+  expect(src,contains("WaffraSmsCurrencies.requiresReviewForSarLedger(message.text)"));
+  expect(src,contains('bankSmsDate(body)==null||bankSmsHasUnverifiedTimestamp(body)'));
   expect(src,contains('requiresCurrencyReview:true'));
  });
 }

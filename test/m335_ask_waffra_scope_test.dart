@@ -35,13 +35,13 @@ void main() {
     expect(WaffraAskScope.isRelated(''), isFalse);
   });
 
-  test('M335 scope is enforced in widget before model/finance access', () {
-    final home=File('lib/waffra_smart_features.dart').readAsStringSync();
-    final method=home.substring(
-      home.indexOf('void _ask(){'),home.indexOf('Widget _assistant(){'));
-    expect(method.indexOf('WaffraAskScope.isRelated(q)'),
-      lessThan(method.indexOf('WaffraAiRecordedAnswers.answer(')));
-    expect(method, contains('WaffraAskScope.outsideResponse('));
+  test('M636 model-based Ask Waffra is not exposed in Tools',(){
+    final tools=File('lib/waffra_smart_features.dart').readAsStringSync();
+    expect(tools,isNot(contains('void _ask(){')));
+    expect(tools,isNot(contains('Widget _assistant(){')));
+    expect(tools,isNot(contains('WaffraOnDeviceQwen')));
+    expect(tools,isNot(contains('WaffraAiModelGate')));
+    expect(tools,contains('التحليل المالي'));
   });
 
   test('M336 no invented monetary amounts in generated Ask Waffra advice',(){
@@ -75,7 +75,7 @@ void main() {
     expect(WaffraAiRecordedAnswers.hasUnverifiedMoneyClaim(
       'Consider a 10% savings challenge'),isFalse);
     final source=File('lib/waffra_smart_features.dart').readAsStringSync();
-    expect(source,contains('WaffraAiRecordedAnswers.hasUnverifiedMoneyClaim(cleaned)'));
+    expect(source,isNot(contains('WaffraAiRecordedAnswers.hasUnverifiedMoneyClaim(cleaned)')));
   });
 
     test('M335 direct AI helper never invokes Qwen for unrelated questions', () async {
