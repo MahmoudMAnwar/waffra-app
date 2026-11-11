@@ -1,10 +1,11 @@
 {
   "contract_version": 1,
-  "change_id": "M645-M646-20261111-CURRENT-RELEASE-NOTES-PREPR-M449-MAIN-CI-QUIET",
-  "human_scope_review": "Owner explicitly approved a permanent M449 pre-PR release-note update with source SHA and a clean current feature listing, and asked to examine and remove always-Skipped unnecessary main workflows. M645 archive preserves exact old blob; current file becomes a source-backed Saudi release summary. M646 only converts M410's noisy unconditional listener into owner/manual-triggered, same-security bounded failed emulator rerun, and trims obsolete non-main signed APK push branch triggers. Finance Android M274/M267 and exhaustive CI gates remain. Exact bounded edits only in existing protected files; no security-test deletions. M646 main-only signed publishing: release build job gets explicit main-ref if guard, bounded from build: to unchanged needs block, preserving full tests and all signing checks. Manual workflow_dispatch on historical branches cannot output signed APK.",
+  "change_id": "M645-M646-M647-20261111-CURRENT-NOTES-QUIET-CI-HISTORY-PRUNE",
+  "human_scope_review": "Owner explicitly approved a permanent M449 pre-PR release-note update with source SHA and a clean current feature listing, and asked to examine and remove always-Skipped unnecessary main workflows. M645 archive preserves exact old blob; current file becomes a source-backed Saudi release summary. M646 only converts M410's noisy unconditional listener into owner/manual-triggered, same-security bounded failed emulator rerun, and trims obsolete non-main signed APK push branch triggers. Finance Android M274/M267 and exhaustive CI gates remain. Exact bounded edits only in existing protected files; no security-test deletions. M646 main-only signed publishing: release build job gets explicit main-ref if guard, bounded from build: to unchanged needs block, preserving full tests and all signing checks. Manual workflow_dispatch on historical branches cannot output signed APK. M647 #576 owner explicitly asked deletion of OLD failed/skipped builds on main in same Draft PR #568. Existing M504 cleans PR-only failure logs and is untouched. NEW dedicated trusted-main script/workflow/unit tests and audit are the only M647 additions; zero production/security test edits. No actions:write in PR, dry-run manual by default, completed historical main only, preserve artifacts and latest main SHA.",
   "user_requested_changes": [
     "M645 #566: Replace misleading outdated 439K active release-notes history with current-only feature list; preserve byte-perfect history in archived blob; add reviewed pre-PR M449 helper requiring source SHA, issue and factual description and refusing dirty source.",
-    "M646 #567: Audit 104 workflows and stop 80 Skipped M410 runs out of latest 100 by removing unconditional completed-workflow trigger; preserve manually authorized safe rerun of only proven infra-flaky Android emulator job; restrict signed APK automatic push to main while preserving all independent mandatory tests."
+    "M646 #567: Audit 104 workflows and stop 80 Skipped M410 runs out of latest 100 by removing unconditional completed-workflow trigger; preserve manually authorized safe rerun of only proven infra-flaky Android emulator job; restrict signed APK automatic push to main while preserving all independent mandatory tests.",
+    "M647 #576: Prune historical completed Failed/Skipped/Cancelled main Actions runs older than 48h only, preserving success/current SHA/artifact-bearing/PR/active data with dry-run/manual approval, trustworthy scheduled and initial main-push batch, and no change to M504 PR policy."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -20,7 +21,11 @@
     ".github/workflows/m410-failed-android-retry.yml",
     "scripts/qa/m410_failed_job_retry.py",
     "test/qa/m410_smart_ci_retry_test.py",
-    ".github/workflows/android.yml"
+    ".github/workflows/android.yml",
+    ".github/workflows/m647-main-history-prune.yml",
+    "scripts/qa/m647_main_history_prune.py",
+    "test/qa/m647_main_history_prune_test.py",
+    "docs/qa/M647_MAIN_HISTORY_PRUNE_AUDIT.md"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
