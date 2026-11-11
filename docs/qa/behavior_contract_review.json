@@ -1369,6 +1369,34 @@
         "Do not skip M274 real Android emulator, whole Flutter suite, verified finance or main signing release checks.",
         "M267 two-phone exact signed APK identity remains separate; never count a Skipped job as an identity pass."
       ]
+    },
+    {
+      "id": "M647-MAIN-ONLY-OLD-FAILED-SKIPPED-CANCELLED-ACTIONS-HISTORY-PRUNE",
+      "issue": "Issue #576 / Draft PR #568",
+      "previous_behavior": "Main run history contains 1,727 Skipped, 177 Failed and 253 Cancelled GitHub Actions records as of 2026-11-11, many M410 legacy completed-listener runs and obsolete signed Android builds. M646 stops future noisy M410 listener, but old records are still visible. M504 only prunes obsolete failed PR runs and explicitly excludes main.",
+      "approved_behavior": "A dedicated trusted-default-main-only M647 GitHub Actions maintenance job performs one bounded initial on-file-push sweep and scheduled sweeps, with manual dry-run true default and typed authorization for destructive manual execution. Only old (>=48h since create and update) completed failure/skipped/cancelled branch=main runs for same-repository supported main events are eligible, after snapshot, explicit latest main HEAD check, fresh run and zero-artifact checks and 250/run deletion cap. Every successful run on any commit, active/queued, current main SHA, current cleanup run, non-main/fork/PR or missing metadata is protected. GitHub API errors fail closed; no PR code executes with actions write. M504 PR retention and all finance/Android/release tests remain unchanged.",
+      "source_paths": [
+        ".github/workflows/m647-main-history-prune.yml",
+        "scripts/qa/m647_main_history_prune.py",
+        "docs/qa/M647_MAIN_HISTORY_PRUNE_AUDIT.md"
+      ],
+      "test_paths": [
+        "test/qa/m647_main_history_prune_test.py",
+        "test/qa/m646_main_ci_quiet_contract_test.py"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/m174-main-postmerge-sqlcipher-regression.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/android.yml"
+      ],
+      "safety_invariants": [
+        "Never delete successful, recent, active, PR/fork, non-main or current-main-SHA runs. Preserve signed build artifacts and any run with artifact metadata unavailable.",
+        "Dry-run must never call DELETE. Destructive manual dispatch requires explicit typed confirmation. GitHub native actions write only inside trusted main maintenance job; PR events get no cleanup permissions.",
+        "Snapshot IDs before deletion to avoid pagination drift; re-read run metadata and artifact count immediately before each DELETE. Limit to 250 deletions per execution and fail on API errors.",
+        "M504's existing PR failed-run seven-day retention and negative security test remain unchanged; CI source/provenance, SQLCipher, main release APK and two-phone identity gates remain active.",
+        "Deletion of old GitHub Actions history is irreversible and only possible after M647 is safely merged into main and GitHub scheduled/push/manual workflow actually executes."
+      ]
     }
   ]
 }
