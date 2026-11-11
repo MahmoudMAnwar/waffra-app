@@ -10787,7 +10787,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         (maxTransactionAmount==null||
          amountMinor<=maxTransactionAmount!*100);
       }
-      final names={for(final a in _m467Accounts)a.id:a.name};
+      final names={for(final a in _m467Accounts)a.id:_m647VerifiedAccountLabel(a)};
       pdfTransfers=pdfTransfers.where((t)=>keep(
        DateTime.tryParse(t.occurredIso),t.amountMinor,[
         names[t.fromAccountId]??'',names[t.toAccountId]??'',
@@ -11245,7 +11245,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    // M652: transfers and wallet movements form separate sections, never
    // become income, expenses or budget line items. All values are verified.
    if(!analytics&&pdfTransfers.isNotEmpty){
-    final labels={for(final a in _m467Accounts)a.id:a.name};
+    final labels={for(final a in _m467Accounts)a.id:_m647VerifiedAccountLabel(a)};
     final ordered=pdfTransfers.toList()
      ..sort((a,b)=>b.occurredIso.compareTo(a.occurredIso));
     doc.addPage(pw.MultiPage(pageTheme:pageTheme,build:(ctx)=>[
@@ -11284,7 +11284,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     ]));
    }
    if(!analytics&&pdfSavings.isNotEmpty){
-    final labels={for(final a in _m467Accounts)a.id:a.name};
+    final labels={for(final a in _m467Accounts)a.id:_m647VerifiedAccountLabel(a)};
     final ordered=pdfSavings.toList()
      ..sort((a,b)=>b.occurredIso.compareTo(a.occurredIso));
     doc.addPage(pw.MultiPage(pageTheme:pageTheme,build:(ctx)=>[
@@ -12803,10 +12803,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  Future<void> showInternalTransferTransactions()async{
   await _m647ShowInternalTransfers();
  }
+ /// Parent institution is a visual attribute of a *verified* child account.
+ /// Never treat the provider catalog as authorization to post money.
+ String _m647VerifiedAccountLabel(WaffraAccountBalance account){
+  final provider=WaffraSaudiFinancialProviders.byId(account.providerId);
+  if(provider==null)return account.name;
+  final label=waffraIsEnglish?provider.labelEn:provider.labelAr;
+  final name=account.name.trim();
+  if(name.isEmpty||name.toLowerCase()==label.toLowerCase())return label;
+  if(name.toLowerCase().contains(label.toLowerCase()))return name;
+  return '${label} • ${name}';
+ }
  /// M647: source and destination are separate verified account identities.
  /// Presentation-only: no money write, no inferred sender, no extra expense.
  Widget _m647TransferCard(WaffraInternalTransferHistory t,{bool compact=false}){
-  final names={for(final a in _m467Accounts)a.id:a.name};
+  final names={for(final a in _m467Accounts)a.id:_m647VerifiedAccountLabel(a)};
   final from=names[t.fromAccountId]??(waffraIsEnglish?
    'Account unavailable':'حساب غير متاح');
   final to=names[t.toAccountId]??(waffraIsEnglish?
@@ -12874,7 +12885,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  Widget _m649SavingsCard(WaffraVerifiedGoalMovement movement){
   final dark=Theme.of(context).brightness==Brightness.dark;
   final account=_m467Accounts.where((a)=>a.id==movement.accountId).toList();
-  final accountName=account.length==1?account.single.name:
+  final accountName=account.length==1?_m647VerifiedAccountLabel(account.single):
    (waffraIsEnglish?'Account unavailable':'حساب غير متاح');
   final funded=movement.kind=='fund';
   final when=DateTime.tryParse(movement.occurredIso);
@@ -13446,7 +13457,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               if(!snapshot.hasData)return Column(children:[
                if(typeFilter=='الكل')...shown.map(compactTransaction),
               ]);
-              final names={for(final a in _m467Accounts)a.id:a.name};
+              final names={for(final a in _m467Accounts)a.id:_m647VerifiedAccountLabel(a)};
               bool accepted(DateTime? when,int amountMinor,List<String> terms)=>
                waffraSearchAny(terms,search)&&
                (transactionsDateRange==null||when==null||
