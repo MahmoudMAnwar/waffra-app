@@ -4248,6 +4248,27 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
  // Account filters are presentation-only; never inherit them for new money.
  List<WaffraAccountBalance> _m467Accounts=const <WaffraAccountBalance>[];
+ // M648: bounded verified transfer read is cached per displayed account.
+ // It never affects startup binding or creates a MoneyEntry financial debit.
+ String? _m648TransferAccountKey;
+ Future<List<WaffraInternalTransferHistory>>? _m648TransferRead;
+ void _m648InvalidateTransfers(){
+  _m648TransferAccountKey=null;
+  _m648TransferRead=null;
+ }
+ Future<List<WaffraInternalTransferHistory>> _m648HomeTransfers(String account){
+  if(_m648TransferAccountKey==account&&_m648TransferRead!=null){
+   return _m648TransferRead!;
+  }
+  final bridge=_financeBinding?.accountsBridge;
+  _m648TransferAccountKey=account;
+  _m648TransferRead=bridge==null
+   ?Future<List<WaffraInternalTransferHistory>>.error(
+     StateError('Verified transfer history source unavailable'))
+   :WaffraVerifiedAccountsApi(bridge:bridge)
+     .readInternalTransferHistory(accountId:account=='all'?null:account);
+  return _m648TransferRead!;
+ }
  WaffraAccountContextReadResult? _m467AccountContext;
  String _m467SelectedAccount='all';
  bool _m467AccountChoiceRestored=false;
@@ -4318,6 +4339,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     _m468AccountReadAgain=true;
     return;
    }
+   // Invalidate only after the new account source has been verified.
+   // A fresh transfer card read is asynchronous and never awaited by Home.
+   _m648InvalidateTransfers();
    setState((){
     _m467Accounts=accounts.where((a)=>!a.archived).toList();
     _m467AccountContext=contextView;
@@ -4789,7 +4813,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final original=await store.read(_smsRuleOwnerKey);
   final updated=WaffraSmsLocalRules.upsertLearned(
    existing:original,candidate:WaffraSmsLocalRules.manualTransferPattern());
-  if(!identical(original,updated))await store.write(_smsRuleOwnerKey,updated);
+  if(!identical(original,updated)){
+   await store.write(_smsRuleOwnerKey,updated);
+   // Debounced non-posting review refresh; no Android history import.
+   _receiveAutoSmsNotice();
+  }
  }
  // Reuse one senderless review-only category bucket after a committed
  // manual OR bank-SMS entry; sender/suffix account learning stays separate.
@@ -4804,7 +4832,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final previous=await store.read(_smsRuleOwnerKey);
   final next=WaffraSmsLocalRules.upsertLearned(
    existing:previous,candidate:candidate);
-  if(!identical(next,previous))await store.write(_smsRuleOwnerKey,next);
+  if(!identical(next,previous)){
+   await store.write(_smsRuleOwnerKey,next);
+   // The pending queue is reclassified on its existing background isolate.
+   _receiveAutoSmsNotice();
+  }
  }
 
  // Retained single-message reference for on-demand review and M473 parity;
@@ -12584,25 +12616,87 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
  /// M611: read the actual owner-scoped encrypted transfer journal.
  /// A Home history tile cannot post any money.
- Future<void> showInternalTransferTransactions()async{
-  final bridge=_financeBinding?.accountsBridge;
+
+ /// M647: source and destination are separate verified account identities.
+ /// Presentation-only: no money write, no inferred sender, no extra expense.
+ Widget _m647TransferCard(WaffraInternalTransferHistory t,{bool compact=false}){
+  final names={for(final a in _m467Accounts)a.id:a.name};
+  final from=names[t.fromAccountId]??(waffraIsEnglish?
+   'Account unavailable':'حساب غير متاح');
+  final to=names[t.toAccountId]??(waffraIsEnglish?
+   'Account unavailable':'حساب غير متاح');
+  final dark=Theme.of(context).brightness==Brightness.dark;
+  const accent=Color(0xFF2764AD);
+  final bg=dark?const Color(0xFF182C40):const Color(0xFFE7F0FA);
+  final textColor=dark?const Color(0xFFC6DDF8):const Color(0xFF194B82);
+  final when=DateTime.tryParse(t.occurredIso);
+  Widget endpoint(String label,String name)=>Expanded(child:Column(
+   crossAxisAlignment:CrossAxisAlignment.start,children:[
+    WaffraText(label,style:TextStyle(color:textColor,fontSize:11)),
+    const SizedBox(height:4),
+    WaffraText(name,maxLines:2,overflow:TextOverflow.ellipsis,
+     style:TextStyle(fontSize:compact?12:15,fontWeight:FontWeight.bold)),
+   ]));
+  return Container(
+   key:Key('m647-verified-transfer-'+t.id),
+   margin:const EdgeInsets.symmetric(vertical:5),
+   padding:EdgeInsets.all(compact?12:15),
+   decoration:BoxDecoration(
+    color:bg,borderRadius:BorderRadius.circular(17),
+    border:Border.all(color:accent.withValues(alpha:.32))),
+   child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+    Row(children:[
+     const Icon(Icons.swap_horiz_rounded,color:accent,size:22),
+     const SizedBox(width:7),
+     Expanded(child:WaffraText(waffraIsEnglish?
+      'Between my accounts':'تحويل بين حساباتي',
+      style:TextStyle(color:textColor,fontWeight:FontWeight.bold,fontSize:13))),
+     WaffraCurrencyAmount(t.amountMinor/100,
+      fontSize:compact?14:18,color:textColor),
+    ]),
+    const SizedBox(height:13),
+    Row(textDirection:waffraIsEnglish?TextDirection.ltr:TextDirection.rtl,
+     children:[
+      endpoint(waffraIsEnglish?'From':'من الحساب',from),
+      Padding(padding:const EdgeInsets.symmetric(horizontal:8),
+       child:Icon(waffraIsEnglish?Icons.arrow_forward_rounded:
+        Icons.arrow_back_rounded,color:accent,size:24)),
+      endpoint(waffraIsEnglish?'To':'إلى الحساب',to),
+     ]),
+    const SizedBox(height:9),
+    Row(children:[
+     Icon(Icons.event_outlined,size:15,color:textColor),
+     const SizedBox(width:5),
+     Expanded(child:WaffraText(when==null?t.occurredIso:
+      dayText(when),style:TextStyle(color:textColor,fontSize:11))),
+    ]),
+    if(t.note.trim().isNotEmpty)...[
+     const SizedBox(height:6),
+     Row(children:[
+      Icon(Icons.notes_rounded,size:15,color:textColor),
+      const SizedBox(width:5),
+      Expanded(child:WaffraText(t.note,maxLines:compact?1:4,
+       overflow:TextOverflow.ellipsis,
+       style:TextStyle(fontSize:12,color:textColor))),
+     ]),
+    ],
+   ]));
+ }
+
+ /// M647: content-sized sheet replaces a forced 70% blank white pane.
+ Future<void> showInternalTransferTransactions({String? focusId})async{
   final selected=_m467SelectedAccount;
-  final labels={for(final a in _m467Accounts)a.id:a.name};
-  final Future<List<WaffraInternalTransferHistory>> future=bridge==null
-   ?Future<List<WaffraInternalTransferHistory>>.error(
-    StateError('Verified source unavailable'))
-   :WaffraVerifiedAccountsApi(bridge:bridge).readInternalTransferHistory(
-    accountId:selected=='all'?null:selected);
+  final future=_m648HomeTransfers(selected);
   if(!mounted)return;
   await showModalBottomSheet<void>(
    context:context,isScrollControlled:true,useSafeArea:true,
    showDragHandle:true,
-   builder:(sheet)=>SizedBox(
-    height:MediaQuery.sizeOf(sheet).height*.7,
-    child:Column(children:[
-     Padding(padding:const EdgeInsets.fromLTRB(18,5,12,9),
+   builder:(sheet)=>ConstrainedBox(
+    constraints:BoxConstraints(maxHeight:MediaQuery.sizeOf(sheet).height*.82),
+    child:Column(mainAxisSize:MainAxisSize.min,children:[
+     Padding(padding:const EdgeInsets.fromLTRB(18,4,12,8),
       child:Row(children:[
-       const Icon(Icons.swap_horiz_rounded,color:emerald),
+       const Icon(Icons.swap_horiz_rounded,color:Color(0xFF2764AD)),
        const SizedBox(width:8),
        Expanded(child:WaffraText(waffraIsEnglish?
         'Transfers between my accounts':'التحويلات بين حساباتي',
@@ -12610,41 +12704,32 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        IconButton(onPressed:()=>Navigator.pop(sheet),
         icon:const Icon(Icons.close)),
       ])),
-     Expanded(child:FutureBuilder<List<WaffraInternalTransferHistory>>(
+     Flexible(child:FutureBuilder<List<WaffraInternalTransferHistory>>(
       future:future,builder:(ctx,snapshot){
        if(snapshot.connectionState!=ConnectionState.done){
-        return const Center(child:CircularProgressIndicator(strokeWidth:3));
+        return const Padding(padding:EdgeInsets.all(42),
+         child:Center(child:CircularProgressIndicator(strokeWidth:3)));
        }
        if(snapshot.hasError){
-        return Center(child:Padding(padding:const EdgeInsets.all(24),
+        return Padding(padding:const EdgeInsets.all(24),
          child:WaffraText(waffraIsEnglish?
-          'Could not verify your transfers. No data was changed.':
+          'Transfer history could not be verified. No data changed.':
           'تعذر التحقق من سجل التحويلات. لم تتغير أي بيانات.',
-          textAlign:TextAlign.center)));
+          textAlign:TextAlign.center));
        }
-       final transfers=snapshot.data;
-       if(transfers==null||transfers.isEmpty){
-        return Center(child:WaffraText(waffraIsEnglish?
-         'No transfers recorded for this account.':
-         'لا توجد تحويلات مسجلة لهذا الحساب.'));
+       final items=(snapshot.data??const <WaffraInternalTransferHistory>[])
+        .where((t)=>focusId==null||t.id==focusId).toList();
+       if(items.isEmpty){
+        return Padding(padding:const EdgeInsets.all(32),
+         child:WaffraText(waffraIsEnglish?
+          'No verified transfers for this account.':
+          'لا توجد تحويلات موثقة لهذا الحساب.',
+          textAlign:TextAlign.center));
        }
-       return ListView.separated(
-        itemCount:transfers.length,
-        separatorBuilder:(_,__)=>const Divider(height:1),
-        itemBuilder:(ctx,index){
-         final t=transfers[index];
-         final when=DateTime.tryParse(t.occurredIso);
-         return ListTile(
-          leading:const Icon(Icons.swap_horiz_rounded,color:emerald),
-          title:WaffraText(
-           '${labels[t.fromAccountId]??t.fromAccountId} ← ${labels[t.toAccountId]??t.toAccountId}',
-           maxLines:3),
-          subtitle:WaffraText(
-           '${when==null?t.occurredIso:dayText(when)}'
-           '${t.note.isEmpty?'':' • ${t.note}'}',maxLines:3),
-          trailing:WaffraCurrencyAmount(t.amountMinor/100,fontSize:14),
-         );
-        });
+       return ListView.builder(
+        shrinkWrap:true,padding:const EdgeInsets.fromLTRB(16,0,16,20),
+        itemCount:items.length,itemBuilder:(ctx,index)=>
+         _m647TransferCard(items[index]));
       })),
     ])));
  }
@@ -12699,9 +12784,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  Widget compactTransaction(MoneyEntry entry){
   final cat=categoryFor(entry.category,entry.income);
   final attachmentCount=waffraReceiptPaths(entry.receiptPath).length;
-  final valueColor=entry.income?waffraIncomeTone(context):Colors.deepOrange;
+  // M650: paid recurring/goal-due rows are already persisted MoneyEntry
+  // rows. Violet is a visual facet, never a new ledger debit.
+  final paidDue=entry.sourceType=='recurring'||entry.sourceType=='goal_due';
   final darkMode=Theme.of(context).brightness==Brightness.dark;
-  final rowColor=entry.income?(darkMode?const Color(0xFF244C3A):const Color(0xFFB2D5C2)):
+  final valueColor=paidDue?(darkMode?const Color(0xFFD6BBFF):
+   const Color(0xFF7653AA)):(entry.income?waffraIncomeTone(context):Colors.deepOrange);
+  final rowColor=paidDue?(darkMode?const Color(0xFF302744):
+   const Color(0xFFEFE9F8)):entry.income?
+   (darkMode?const Color(0xFF244C3A):const Color(0xFFB2D5C2)):
    (darkMode?const Color(0xFF49302C):const Color(0xFFFCECE8));
   return Padding(padding:const EdgeInsets.symmetric(vertical:5),child:Container(
    decoration:BoxDecoration(color:rowColor,borderRadius:BorderRadius.circular(17),
@@ -12714,6 +12805,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      const SizedBox(width:8),
      Expanded(child:InkWell(onTap:WaffraHaptics.tap(()=>transactionDetails(entry)),
       child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+       if(paidDue)WaffraText(waffraIsEnglish?'Paid due':'استحقاق مدفوع',
+        style:TextStyle(fontSize:11,color:valueColor,fontWeight:FontWeight.w700)),
        Tooltip(message:entry.title,child:WaffraText(entry.title,maxLines:3,
         style:const TextStyle(fontSize:13,fontWeight:FontWeight.w600))),
        if(entry.title.startsWith('معاملة بعملة تحتاج'))
@@ -12802,11 +12895,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     (transactionsDateRange==null||(e.date.isAfter(transactionsDateRange!.start.subtract(const Duration(days:1)))&&e.date.isBefore(transactionsDateRange!.end.add(const Duration(days:1)))))&&
     (minTransactionAmount==null||e.amount>=minTransactionAmount!)&&
     (maxTransactionAmount==null||e.amount<=maxTransactionAmount!)&&
-    (typeFilter=='الكل'||(typeFilter=='الدخل'&&e.income)||(typeFilter=='المصروفات'&&!e.income))&&
+    (typeFilter=='الكل'||(typeFilter=='الدخل'&&e.income)||
+     (typeFilter=='المصروفات'&&!e.income)||
+     (typeFilter=='الاستحقاقات'&&
+      (e.sourceType=='recurring'||e.sourceType=='goal_due')))&&
     (categoryFilter=='الكل'||categoryFilter==e.category);
   }).toList()..sort((a,b)=>b.date.compareTo(a.date));
   final filterCats=<String>{'الكل',...scopedEntries.where((e)=>typeFilter=='الكل'||
-   (typeFilter=='الدخل'&&e.income)||(typeFilter=='المصروفات'&&!e.income)).map((e)=>e.category)}.toList();
+   (typeFilter=='الدخل'&&e.income)||(typeFilter=='المصروفات'&&!e.income)||
+   (typeFilter=='الاستحقاقات'&&
+    (e.sourceType=='recurring'||e.sourceType=='goal_due'))).map((e)=>e.category)}.toList();
   final selected=filterCats.contains(categoryFilter)?categoryFilter:'الكل';
   final shown=visible.take(waffraDashboardTransactionDisplayCount(
    visible.length,expanded:showAllTransactions)).toList();
@@ -12991,19 +13089,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
              ]))),
            ]),
            const SizedBox(height:10),
-           Row(children:['الكل','الدخل','المصروفات'].map((choice)=>
-            Expanded(child:Padding(padding:const EdgeInsets.symmetric(horizontal:2),
-             child:ChoiceChip(
-              label:Center(child:WaffraText(waffraIsEnglish?
-               (choice=='الكل'?'All':choice=='الدخل'?'Income':'Expenses'):choice,
-               style:TextStyle(fontSize:12,color:typeFilter==choice?Colors.white:null))),
-              selected:typeFilter==choice,
-              selectedColor:emerald,
+           Wrap(spacing:6,runSpacing:6,children:[
+            for(final choice in ['الكل','الدخل','المصروفات','التحويلات','الاستحقاقات'])
+             ChoiceChip(
+              label:WaffraText(waffraIsEnglish?switch(choice){
+               'الدخل'=>'Income','المصروفات'=>'Expenses',
+               'التحويلات'=>'Transfers','الاستحقاقات'=>'Paid dues',
+               _=>'All',
+              }:choice,style:TextStyle(fontSize:12,
+               color:typeFilter==choice?Colors.white:null)),
+              selected:typeFilter==choice,selectedColor:emerald,
               showCheckmark:false,
               onSelected:WaffraHaptics.selection((_)=>setState((){
                typeFilter=choice;categoryFilter='الكل';
               })),
-             )))).toList()),
+             ),
+           ]),
            const SizedBox(height:7),
            Divider(color:forest.withValues(alpha:0.10)),
            Row(children:[
@@ -13059,10 +13160,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            if(showTransactionFilters)...[
             const SizedBox(height:8),
             Wrap(spacing:6,runSpacing:6,
-             children:['الكل','الدخل','المصروفات'].map((choice)=>ChoiceChip(
+             children:['الكل','الدخل','المصروفات','التحويلات','الاستحقاقات']
+              .map((choice)=>ChoiceChip(
               selected:typeFilter==choice,
-              label:WaffraText(waffraIsEnglish?
-               (choice=='الكل'?'All':choice=='الدخل'?'Income':'Expenses'):choice),
+              label:WaffraText(waffraIsEnglish?switch(choice){
+               'الدخل'=>'Income','المصروفات'=>'Expenses',
+               'التحويلات'=>'Transfers','الاستحقاقات'=>'Paid dues',
+               _=>'All',
+              }:choice),
               onSelected:WaffraHaptics.selection((_)=>setState((){
                typeFilter=choice;categoryFilter='الكل';
               })))).toList()),
@@ -13080,11 +13185,57 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                'Date and amount filters':'فلترة بالتاريخ والمبلغ'))),
            ],
            const SizedBox(height:6),
-           if(visible.isEmpty)Padding(
+           if(visible.isEmpty&&typeFilter!='التحويلات')Padding(
             padding:const EdgeInsets.symmetric(vertical:26),
             child:Center(child:WaffraText(waffraIsEnglish?
              'No matching transactions':'ما عندك عمليات مطابقة'))),
            ...shown.map(compactTransaction),
+           // M648: genuine internal transfer journal, loaded after the
+           // verified Home projection; never convert two legs to MoneyEntry.
+           if(_m468VerifiedAccountsLoaded&&
+              (typeFilter=='الكل'||typeFilter=='التحويلات'))
+            FutureBuilder<List<WaffraInternalTransferHistory>>(
+             future:_m648HomeTransfers(_m467SelectedAccount),
+             builder:(ctx,snapshot){
+              if(snapshot.hasError){
+               return Padding(padding:const EdgeInsets.all(10),
+                child:WaffraText(waffraIsEnglish?
+                 'Transfers unavailable; retry refresh.':
+                 'تعذر عرض التحويلات. أعد تحديث الصفحة.'));
+              }
+              if(!snapshot.hasData)return const SizedBox.shrink();
+              final names={for(final a in _m467Accounts)a.id:a.name};
+              final matching=snapshot.data!.where((t){
+               final when=DateTime.tryParse(t.occurredIso);
+               return (waffraSearchAny([
+                names[t.fromAccountId]??'',names[t.toAccountId]??'',
+                t.note,waffraIsEnglish?'Transfer':'تحويل',
+               ],search))&&
+                (transactionsDateRange==null||when==null||
+                 (!when.isBefore(transactionsDateRange!.start)&&
+                  when.isBefore(transactionsDateRange!.end.add(
+                   const Duration(days:1)))))&&
+                (minTransactionAmount==null||
+                 t.amountMinor>=minTransactionAmount!*100)&&
+                (maxTransactionAmount==null||
+                 t.amountMinor<=maxTransactionAmount!*100);
+              }).toList(growable:false);
+              if(matching.isEmpty&&typeFilter=='التحويلات'){
+               return Padding(padding:const EdgeInsets.all(24),
+                child:WaffraText(waffraIsEnglish?
+                 'No verified transfers for this filter.':
+                 'لا توجد تحويلات مطابقة.'));
+              }
+              final limited=matching.take(showAllTransactions?30:4);
+              return Column(children:[
+               for(final transfer in limited)
+                InkWell(
+                 key:Key('m648-home-transfer-'+transfer.id),
+                 onTap:WaffraHaptics.tap(()=>
+                  showInternalTransferTransactions(focusId:transfer.id)),
+                 child:_m647TransferCard(transfer,compact:true)),
+              ]);
+             }),
            if(visible.isNotEmpty)Padding(
             padding:const EdgeInsets.only(top:7),
             child:Row(children:[
