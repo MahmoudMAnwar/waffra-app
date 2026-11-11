@@ -50,12 +50,37 @@ void main() {
 
  test('M611 transfer history reads real encrypted rows under owner witness', () {
   final src=File('lib/main.dart').readAsStringSync();
-  final start=src.indexOf('Future<void> showInternalTransferTransactions()async');
-  final end=src.indexOf('Widget _dashboardShortcut(',start);
-  final tile=src.substring(start,end);
-  expect(tile,contains('readInternalTransferHistory('));
-  expect(tile,contains("accountId:selected=='all'?null:selected"));
-  expect(tile,isNot(contains('transferApi!.transfer(')));
+  // M647/M648 refactored presentation into a read-only sheet and a
+  // cached, verified-account SQLCipher reader. Verify the entire call chain
+  // rather than requiring the storage call inside the UI click handler.
+  final handlerStart=src.indexOf('Future<void> showInternalTransferTransactions()async');
+  final handlerEnd=src.indexOf('String _m647VerifiedAccountLabel(',handlerStart);
+  expect(handlerStart,greaterThanOrEqualTo(0));
+  expect(handlerEnd,greaterThan(handlerStart));
+  final handler=src.substring(handlerStart,handlerEnd);
+  expect(handler,contains('await _m647ShowInternalTransfers();'));
+
+  final sheetStart=src.indexOf('Future<void> _m647ShowInternalTransfers({String? focusId})async');
+  final sheetEnd=src.indexOf('Widget _dashboardShortcut(',sheetStart);
+  expect(sheetStart,greaterThanOrEqualTo(0));
+  expect(sheetEnd,greaterThan(sheetStart));
+  final sheet=src.substring(sheetStart,sheetEnd);
+  expect(sheet,contains('final future=_m648HomeTransfers(selected);'));
+  expect(sheet,isNot(contains('transferApi!.transfer(')));
+
+  final readStart=src.indexOf(
+   'Future<List<WaffraInternalTransferHistory>> _m648HomeTransfers(String account){');
+  final readEnd=src.indexOf(
+   'Future<List<WaffraVerifiedGoalMovement>> _m649HomeSavings(',readStart);
+  expect(readStart,greaterThanOrEqualTo(0));
+  expect(readEnd,greaterThan(readStart));
+  final reader=src.substring(readStart,readEnd);
+  expect(reader,contains('final bridge=_financeBinding?.accountsBridge;'));
+  expect(reader,contains('WaffraVerifiedAccountsApi(bridge:bridge)'));
+  expect(reader,contains(
+   "readInternalTransferHistory(accountId:account=='all'?null:account)"));
+  expect(reader,contains('Verified transfer history source unavailable'));
+  expect(reader,isNot(contains('transferApi!.transfer(')));
   final context=File('lib/storage/waffra_account_context_repository.dart').readAsStringSync();
   expect(context,contains('FROM fresh_finance_internal_transfers'));
   expect(context,contains('WHERE from_account_id=? OR to_account_id=?'));
