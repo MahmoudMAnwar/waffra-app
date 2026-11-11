@@ -120,7 +120,7 @@ class MainPruner:
             for page in range(1, MAX_PAGES + 1):
                 qs = urllib.parse.urlencode({
                     "branch": "main", "status": conclusion,
-                    "created": ".." + until,
+                    "created": "<=" + until,
                     "per_page": PER_PAGE, "page": page,
                 })
                 data = self.api("GET", "/repos/" + REPOSITORY + "/actions/runs?" + qs)
