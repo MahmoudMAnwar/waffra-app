@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "pr": "M636 PR #556 — owner-approved retired Qwen and legacy SMS widget removal; exact-head CI/device proof pending",
-  "issue": "Issue #555 — user six-item UX + code deletion request, 2026-11-11",
+  "pr": "M637 PR #558 — post-biometric verified account schema hotpath, exact-head CI/device proof pending",
+  "issue": "Issue #557 — owner request to fix actual first Home freeze before spinner, 2026-11-11",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main",
   "reviewed_at": "2026-11-11",
@@ -1052,6 +1052,35 @@
         "Widget has no independent money-writing engine; user authentication and account binding remain mandatory.",
         "True blur is shown only while + expanded and native Splash transitions by a short crossfade after its fixed existing completion.",
         "Full exact-head Flutter analyzer, real Android compile, positive source regression, and physical fresh/login/relogin/device-update performance validation required before Done."
+      ]
+    },
+    {
+      "id": "M637-POST-BIOMETRIC-ACCOUNT-SCHEMA-READ-HOTPATH",
+      "issue": "Issue #557 / Draft PR #558",
+      "previous_behavior": "After biometric, Home blocks until verified balances. Under exclusive SQLCipher account read, bridge prevalidated AccountsSchema and installed AccountContextSchema, then AccountsRepository.balances revalidated accounts and installed context again; even existing schema ran a transaction. Repeated FK scans and SQL reads delayed owner-verified Home.",
+      "approved_behavior": "Reduce duplicate same-read schema checks: keep bridge source activation, snapshot witness and exclusive lock; delegate account schema checks to repository once, which installs/validates context. Already-installed context skips transaction only, still calls full requireReady and PRAGMA foreign_key_check. First-time installation remains atomic and race-safe.",
+      "source_paths": [
+        "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
+        "lib/storage/waffra_accounts_repository.dart",
+        "lib/storage/waffra_account_context_schema.dart"
+      ],
+      "test_paths": [
+        "test/storage/m637_biometric_home_schema_hotpath_test.dart",
+        "test/storage/m440_accounts_repository_test.dart",
+        "test/storage/m448_account_context_encrypted_test.dart",
+        "test/m633_startup_batch_decoder_test.dart",
+        "test/m635_historical_login_sms_jank_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/android.yml",
+        ".github/workflows/m174-main-sha-postmerge.yml"
+      ],
+      "safety_invariants": [
+        "Keep per-account SQLCipher source lock, active-source validation, snapshot read and actual account balances; no bypass of native PBKDF2 600000, biometric, missing/corrupt finance errors, or account witness/epoch checks.",
+        "Context already installed still runs full requireReady including FK and revision, no caching across owner sessions; first-time schema installation is transactional and rechecks marker under lock to avoid race.",
+        "Do not claim real mobile jank fixed until fresh/biometric/relogin and SMS 1000-2000 physical profile measurements; keep post-Home SMS deferred. No spinner in this patch."
       ]
     }
   ]
