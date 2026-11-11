@@ -11,7 +11,7 @@ void main(){
   expect(workflow,contains('android:targetCellHeight="1"'));
   expect(home,contains('WaffraAuthoritativeWidgetBalance.netHalalas(raw)'));
   expect(home,contains('currency:WaffraDisplayCurrency.label(waffraIsEnglish)'));
-  expect(widget,contains('WaffraQuickActivity::class.java'),isFalse);
+  expect(widget,isNot(contains('WaffraQuickActivity::class.java')));
   expect(widget,contains('Intent(context, MainActivity::class.java)'));
   expect(widget,contains('action = "waffra.ADD_TRANSACTION"'));
   expect(widget,contains('PendingIntent.FLAG_IMMUTABLE'));
