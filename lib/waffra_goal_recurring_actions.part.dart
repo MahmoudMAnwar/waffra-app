@@ -34,6 +34,17 @@ extension WaffraGoalRecurringActions on _HomeScreenState {
     'Goal changed; reload first.':'الهدف اتغير؛ حدّث البيانات.');
    return false;
   }
+  // M641: an inline account creation refreshes the Home snapshot while an
+  // edit dialog can still be open. Never overwrite a newer verified saving
+  // contribution with the stale saved amount captured when the edit opened.
+  if(!creating&&WaffraRecurringPolicy.toHalalas(goals[i].saved)!=
+      WaffraRecurringPolicy.toHalalas(updated.saved)){
+   if(mounted)snack(context,waffraIsEnglish?
+    'Goal savings changed. Reopen the goal before editing.':
+    'مبلغ الادخار اتغير أثناء التعديل. افتح الهدف من جديد قبل الحفظ.',
+    isError:true);
+   return false;
+  }
   final linked=recurring.where((r)=>r.linkedGoalId==updated.id).toList();
   if(linked.length>1){
    if(mounted)snack(context,waffraIsEnglish?
