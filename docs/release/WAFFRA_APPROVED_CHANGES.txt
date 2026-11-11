@@ -3541,3 +3541,9 @@ Issues: #569, #570, #571, #572, #573, #574.
 - Preserve the original explicit `PdfColor.fromInt(e.income?waffraIncomeBackground.toARGB32():waffraExpenseBackground.toARGB32())` row-color selection for real income and expense entries; render only confirmed recurring/goal-due rows violet using a separate branch. The existing Waffra October PDF exact-palette test remains enabled and its intended behavior is not weakened.
 - Source fix commit `a618c6a42a709ea0773b2efc721859eb9fca1c1e`. No new finance ledger posting; internal transfer blue and linked savings gold PDF sections continue using owner-verified journal reads.
 - QA status: fix committed, latest-head exact Flutter/SQLCipher/PDF/Android CI still requires independent verification; PR #575 stays Draft and APK only from main after merging and real-device checks.
+
+
+M647–M652 CI reconciliation checkpoint — PR #575, 2026-11-11
+- Historical test/waffra_oct21_regression_test.dart contained an exact 2-color PDF source string expectation. New owner-approved paid-due violet rows intentionally change that string. CI run 43075376491 failed in this one legacy PDF test while its other 14 cases and legacy write queue tests passed.
+- Only that one obsolete test block now positively asserts retained green income, red expense and a violet paid recurring/goal_due branch; no unrelated assertions removed. M385 protected sections explicitly bounded; M550 contracts updated.
+- Permanent docs/WAFFRA_REQUIREMENTS.md now records M647–M652 as Partial, not Done. Tests and real Android PDF/ledger validation remain necessary; do not merge or claim fully passing until latest exact-head checks and device QA.
