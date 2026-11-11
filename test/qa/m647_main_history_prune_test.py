@@ -194,6 +194,8 @@ class M647MainHistoryPruneTest(unittest.TestCase):
         self.assertIn("actions: write", source)
         self.assertIn("github.ref == 'refs/heads/main'", source)
         self.assertIn("persist-credentials: false", source)
+        self.assertIn("python3 -m unittest discover -s test/qa -p m647_main_history_prune_test.py -v", source)
+        self.assertNotIn("python3 -m unittest test/qa/m647_main_history_prune_test.py -v", source)
         self.assertIn("m647_main_history_prune_test.py", source)
         self.assertIn("scripts/qa/m647_main_history_prune.py", source)
         self.assertNotIn("continue-on-error: true", source)
