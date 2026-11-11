@@ -336,11 +336,7 @@
     ],
     "scripts/qa/test_m453_queue_hygiene.py": [
       {
-        "start": "            \".github/workflows/m174-main-sha-postmerge.yml\",\n",
-        "end": "            \".github/workflows/m368-sqlcipher-stage-ci.yml\",\n"
-      },
-      {
-        "start": "            \".github/workflows/unified-finance-cloud-release-evidence.yml\",\n        ]\n",
+        "start": "        paths = [\n",
         "end": "        for path in paths:\n"
       }
     ],
