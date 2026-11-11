@@ -305,7 +305,9 @@ void main(){
   expect(review,contains("Key('m587-sms-transfer-exclude')"));
   expect(review,contains("Navigator.pop(dialog,'transfer-manual')"));
   expect(review,contains("await _reviewSmsAccountTransfer(item:selected,facts:facts)"));
-  expect(review,contains("await entrySheet(scannedIncome:kind=='income')"));
+  expect(review,contains("await entrySheet(manualIncomeOverride:kind=='income')"));
+  expect(review,isNot(contains('scannedIncome:')),
+   reason:'Retired OCR-era argument must never be reintroduced.');
   expect(review,contains("await WaffraAutoSms.excludeMessages([id])"));
   final writer=main.split(' Future<void> _reviewSmsAccountTransfer({')[1]
    .split(' /// M565: a reviewed bank SMS posts only')[0];
