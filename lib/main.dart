@@ -14058,6 +14058,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     fontWeight:selected?FontWeight.bold:FontWeight.normal));
  Future<void> goalDialog({SavingGoal? duplicate,bool openEnded=false})async {
   await _ensureFinanceBound();
+  var goalAccounts=await _m641VerifiedGoalRecurringAccounts();
+  if(goalAccounts==null||!mounted)return;
+  String? chosenGoalAccount=duplicate?.accountId;
+  if(!goalAccounts.any((a)=>a.id==chosenGoalAccount&&!a.archived)){
+   chosenGoalAccount=null;
+  }
   final name=TextEditingController(text:duplicate==null?'':(waffraIsEnglish?'Copy of ':'نسخة من ')+duplicate.name),
    target=TextEditingController(text:duplicate==null||duplicate.target<=0?'':formatWaffraEditAmount(duplicate.target));
   DateTime? selectedDeadline=duplicate?.dueDate!=null&&duplicate!.dueDate!.isAfter(DateTime.now())?duplicate.dueDate:null;
@@ -14169,6 +14175,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         border:const OutlineInputBorder())),
      ],
      const SizedBox(height:12),
+     WaffraGoalRecurringAccountPicker(
+      key:const Key('m641-goal-account-cascade'),
+      idPrefix:'m641-goal',english:waffraIsEnglish,
+      accounts:goalAccounts,selectedAccountId:chosenGoalAccount,
+      onChanged:(id)=>updateGoal(()=>chosenGoalAccount=id),
+      onCreateAccount:(provider)async{
+       final newAccount=await _m641CreateGoalRecurringAccount(provider);
+       if(newAccount!=null){
+        goalAccounts=[...goalAccounts,newAccount];
+       }
+       return newAccount;
+      }),
+     const SizedBox(height:12),
      OutlinedButton.icon(onPressed:WaffraHaptics.tap(()async{
       final date=await waffraPickDateWithToday(english:waffraIsEnglish,context:ctx,
        initialDate:selectedDeadline??DateTime.now().add(const Duration(days:1)),
@@ -14211,8 +14230,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       final n=amountOfDisplay(target.text);
       if(selectedGoal.isEmpty||validateGoalName()!=null||
        (!noTarget&&(WaffraValidators.positiveAmount(target.text)!=null||n==null)))return;
+      if(chosenGoalAccount==null||!goalAccounts.any(
+         (a)=>a.id==chosenGoalAccount&&!a.archived)){
+       snack(ctx,waffraIsEnglish?
+        'Select or create a financial account for this goal.':
+        'اختر حسابًا ماليًا تابعًا للهدف أو أضف حسابًا جديدًا.',
+        isError:true);
+       return;
+      }
       Navigator.pop(ctx,SavingGoal(id:newId(),name:name.text.trim(),
        target:noTarget?0.0:n!,saved:0,dueDate:selectedDeadline,
+       accountId:chosenGoalAccount,
        progressAlertsEnabled:!noTarget&&goalAlertsEnabled,
        progressAlertPercent:goalAlertPercent));
      }),child:WaffraText(waffraIsEnglish?'Add goal':'إضافة الهدف')),
@@ -14244,6 +14272,73 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     (waffraIsEnglish?'Savings goal added successfully':
      'تمت إضافة الهدف بنجاح'));
   }
+ }
+
+ /// M641: both form types use the same owner-verified account source.
+ /// An empty result means a valid first installation, not a navigation error.
+ Future<List<WaffraAccountBalance>?> _m641VerifiedGoalRecurringAccounts()async{
+  try{
+   await _ensureFinanceBound();
+   final bridge=_financeBinding?.accountsBridge;
+   if(bridge==null)throw StateError('No verified financial account source');
+   final records=await WaffraVerifiedAccountsApi(bridge:bridge).balances();
+   return records.where((a)=>!a.archived).toList();
+  }catch(error){
+   debugPrint('M641 verified accounts load failed: '+error.runtimeType.toString());
+   if(mounted)snack(context,waffraIsEnglish?
+    'Financial accounts could not be verified. Try again.':
+    'تعذر التحقق من الحسابات المالية. حاول مرة أخرى.',isError:true);
+   return null;
+  }
+ }
+
+ /// Uses the same trusted SQLCipher create API as manual income/expense.
+ /// Cancellation never changes the draft or creates a phantom account.
+ Future<WaffraAccountBalance?> _m641CreateGoalRecurringAccount(
+  String? requestedGroupId)async{
+  await _ensureFinanceBound();
+  final bridge=_financeBinding?.accountsBridge;
+  if(bridge==null)throw StateError('Verified account writer unavailable');
+  final api=WaffraVerifiedAccountsApi(bridge:bridge);
+  final before=await api.balances();
+  if(!mounted)return null;
+  WaffraSaudiProvider? selectedProvider;
+  if(requestedGroupId!=null&&requestedGroupId.contains(':institution:')){
+   final identifier=requestedGroupId.split(':').last;
+   selectedProvider=WaffraSaudiFinancialProviders.byId(identifier);
+  }
+  final kinds=<String,List<String>>{
+   for(final kind in const ['bank','wallet'])
+    kind:before.where((a)=>!a.archived&&a.kind==kind&&
+      a.customSubtypeLabel!=null)
+      .map((a)=>a.customSubtypeLabel!).toSet().toList()..sort(),
+  };
+  final draft=await showWaffraDialog<WaffraNewAccountDraft>(
+   context:context,builder:(dialog)=>WaffraNewAccountDialog(
+    english:waffraIsEnglish,
+    suggestedProviderId:selectedProvider?.id,
+    customSubtypeOptions:kinds));
+  if(draft==null||!mounted)return null;
+  if(selectedProvider!=null&&
+     (draft.providerId!=selectedProvider.id||
+      draft.kind!=(selectedProvider.category==WaffraSaudiFinancialProviders.wallet?
+       'wallet':'bank'))){
+   throw StateError('New financial account provider changed');
+  }
+  final id='m641-goal-recurring-'+newId();
+  await api.createTypedAccountWithIdentity(
+   id:id,name:draft.name,kind:draft.kind,
+   providerId:draft.providerId??'none',
+   subtype:draft.subtype??'other',
+   openingMinor:draft.openingMinor,
+   createdIso:DateTime.now().toUtc().toIso8601String(),
+   lastFour:draft.lastFour,
+   customSubtypeLabel:draft.customSubtypeLabel,userConfirmed:true);
+  final refreshed=await api.balances();
+  final created=refreshed.where((a)=>a.id==id&&!a.archived).toList();
+  if(created.length!=1)throw StateError('New account lacked verified ledger');
+  unawaited(_m467RefreshHomeAccounts());
+  return created.single;
  }
  /// Release an earmark back to spendable cash. The eventual expense is
  /// recorded once using the normal finance entry editor, not in this transfer.
