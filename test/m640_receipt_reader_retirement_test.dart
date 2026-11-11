@@ -59,6 +59,18 @@ void main(){
   expect(tools,isNot(contains('قارئ الفواتير OCR')));
  });
 
+ test('M640 M281 CI and feature inventory name the four surviving tools',(){
+  final workflow=File('.github/workflows/m281-practical-tools.yml').readAsStringSync();
+  final specification=File('docs/qa/m281-five-practical-tools.md').readAsStringSync();
+  expect(workflow,contains('M281 Four Practical Tools'));
+  expect(workflow,contains('Prove four tools, read-only invariants'));
+  expect(workflow,isNot(contains('Five Practical Tools')));
+  expect(specification,contains('four practical Waffra tools'));
+  expect(specification,isNot(contains('Receipt review assistant')));
+  expect(specification,isNot(contains('All five tools')));
+  expect(specification,contains('M640 intentionally retired receipt OCR'));
+ });
+
  test('M640 no active workflow calls the removed native OCR shim',(){
   final workflows=Directory('.github/workflows').listSync()
    .whereType<File>().where((f)=>f.path.endsWith('.yml')||f.path.endsWith('.yaml'));
