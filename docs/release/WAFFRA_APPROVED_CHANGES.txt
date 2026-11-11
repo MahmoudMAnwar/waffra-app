@@ -3575,3 +3575,9 @@ M647/M649/M652 provenance labels — PR #575, 2026-11-11
 - Existing safe SMS learning from confirmed sender-specific bank income/expense, two-account transfer, and explicit exclusion previously persisted the new rule but did not itself schedule the pending-message review refresh. After the **successful awaited** local rule store.write, that same method now calls the established 900ms-coalesced _receiveAutoSmsNotice(), so already-pending queue predictions are recomputed with the newest local rules without a manual Android history reimport.
 - No extra balance or transaction writes, no auto-post, no sender-wide exclusion consent bypass, and no synchronous Home reclassification. Added an M651 regression that checks invocation order and absence of finance writers/full native-history scans. Main source change is included in explicit M385 bounded approved scope.
 - Draft PR #575: implementation committed, exact current-head Flutter/SQLCipher/Android checks and physical device/large pending queue acceptance pending; no declaration of completed release or successful merge.
+
+
+[M648 — SELECTED-ACCOUNT TRANSFER DIRECTION — PR #575 — 2026-11-11]
+- Verified internal transfers now show the account-relative cash direction for either account when filtered: a minus sign and «صادر من الحساب المحدد» for the source account, or a plus sign and «وارد إلى الحساب المحدد» for the destination account. In All Accounts the same single transfer stays unsigned and does not alter income/expense totals.
+- The amount is scaled down on narrow devices rather than overflowing the transfer card; the existing verified from/to bank names and principal are preserved. No finance posting or balance calculation was introduced by this presentation change.
+- Added a focused M648 regression asserting signed direction, labels and no finance commit. This note follows app-source commit 01b8e20b. Exact latest-head CI and physical Android checks are still pending; not yet ready to merge.
