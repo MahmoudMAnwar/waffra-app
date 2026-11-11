@@ -55,9 +55,11 @@ class _WaffraNewAccountDialogState extends State<WaffraNewAccountDialog> {
   }
   final suggested=widget.suggestedProviderId;
   if(suggested!=null&&banks.containsKey(suggested)&&suggested!='other'){
-   kind='bank';provider=suggested;subtype='current';
-   bankCategory=WaffraSaudiFinancialProviders.byId(suggested)?.category??
-    WaffraSaudiFinancialProviders.local;
+   final selected=WaffraSaudiFinancialProviders.byId(suggested);
+   kind=selected?.category==WaffraSaudiFinancialProviders.wallet?'wallet':'bank';
+   provider=suggested;subtype=kind=='wallet'?'digital':'current';
+   bankCategory=selected?.category==WaffraSaudiFinancialProviders.digital?
+    WaffraSaudiFinancialProviders.digital:WaffraSaudiFinancialProviders.local;
    final sender=widget.suggestedSenderName?.trim()??'';
    // SMS sender labels are untrusted text: never inject unbounded control
    // characters or render an arbitrary message body as an account name.
@@ -186,8 +188,10 @@ class _WaffraNewAccountDialogState extends State<WaffraNewAccountDialog> {
     ],
     if(kind=='bank'||kind=='wallet')...[
      const SizedBox(height:12),
-     DropdownButtonFormField<String>(
-      key:ValueKey('m470-new-account-provider-${kind=='bank'?bankCategory:'wallet'}'),
+     KeyedSubtree(
+      key:ValueKey('m638-provider-category-${kind=='bank'?bankCategory:'wallet'}'),
+      child:DropdownButtonFormField<String>(
+      key:const Key('m470-new-account-provider'),
       initialValue:provider,isExpanded:true,
       decoration:InputDecoration(
        labelText:t('اسم الجهة *','Financial institution *'),
@@ -201,7 +205,7 @@ class _WaffraNewAccountDialogState extends State<WaffraNewAccountDialog> {
         child:Text(t('جهة أخرى','Other provider'))),
       ],
       onChanged:(v)=>setState(()=>provider=v),
-     ),
+     )),
     ],
     if(kind=='bank'||kind=='wallet')...[
      const SizedBox(height:12),
