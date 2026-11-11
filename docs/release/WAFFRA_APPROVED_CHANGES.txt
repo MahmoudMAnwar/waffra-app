@@ -3592,3 +3592,10 @@ M647/M649/M652 provenance labels — PR #575, 2026-11-11
 [M650 — PAID GOAL-WALLET PRIVACY MASK PARITY — PR #575 — 2026-11-11]
 - The already-paid linked-goal card's saved-wallet contribution now uses the standard WaffraCurrencyAmount visibility-aware component rather than direct cash(...) text, ensuring the existing Home eye toggle hides this amount too. The underlying SQLCipher data is unchanged and no new debit/writer is added.
 - Extended M650 regression to assert the visibility-aware widget and reject a plaintext interpolated cash amount on the card. Exact-current-head CI/Android UX remains unverified until those checks complete. PR #575 remains Draft and no APK from branch.
+
+
+[M611 — VERIFIED TRANSFER READ-CHAIN REGRESSION REPAIR — PR #575 — 2026-11-11]
+- Exact-head 33316ee8 failed the same single M611 assertion in Waffra Full Offline Finance and UI Regression and M282 Combined QA (2,640 tests passed, one failed). The assertion assumed the UI handler directly invoked readInternalTransferHistory; the approved M647/M648 refactor now delegates UI -> _m647ShowInternalTransfers -> cached _m648HomeTransfers -> WaffraVerifiedAccountsApi.readInternalTransferHistory -> witnessed SQLCipher account context.
+- The original M611 final test was narrowly updated, NOT removed or skipped, to positively verify delegation, the verified finance bridge, the all-accounts versus selected-account filter, fail-closed missing source, read-only behavior, SQLCipher journal query and owner witness.
+- M385 exact changed-file/bounded-section scope now includes this sole existing M611 transfer history test, linked to approved #570; M550 original M611 behavior contract and all finance invariants remain unchanged.
+- This note follows implementation/test commit daff1f5f and scoped manifest commit 7bb90b2c; no production finance code was altered in this repair. Exact new HEAD CI and real Android QA are not yet confirmed. Draft PR #575 remains unmerged; APK builds remain main-only.
