@@ -39,7 +39,7 @@ class M417AutoSmsContractTest(unittest.TestCase):
 
     def test_writes_only_from_existing_verified_sms_review(self):
         home=self.read("lib/main.dart")
-        self.assertIn("bulkSmsSheet(initialText:body,",home)
+        self.assertIn("await entrySheet(sms:true,initialSms:body,reviewedSender:sender);",home)
         self.assertIn("smsHashes.contains(bankSmsHash(body))",home)
         # Income/expense and two-sided transfers have independent durable
         # acknowledgements. A queue-only ACK can replay money on rescan.
