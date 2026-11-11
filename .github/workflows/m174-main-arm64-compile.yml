@@ -1,11 +1,9 @@
 name: M174 Main ARM64 Compilation (CI Only)
 
-# Historically this was a push-only job inside a PR-triggered workflow,
-# yielding an unavoidable gray "Skipped" check for every pull request.
-# Keep it as its own main-push-only workflow without weakening coverage.
+# M653: CI-only unsigned ARM64 build duplicates the required freshly signed
+# main APK. Retain this independent compile as manual diagnostic only.
+# Every main push still compiles and validates its signed APK in android.yml.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -19,11 +17,18 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.sha }}
-      - name: Set up Java 17
+      - name: Set up Java 21 for Android Lint
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
+      # M654: Android Lint's JavaDocParser may invoke JDK21 List.removeLast.
+      # Fail before native build on a wrong JDK; NEVER disable Gradle lint.
+      - name: Require JDK 21 before Android compilation
+        shell: bash
+        run: |
+          java -version
+          java -version 2>&1 | grep -Eq 'version "21[.]'
       - uses: subosito/flutter-action@v2
         with:
           channel: stable

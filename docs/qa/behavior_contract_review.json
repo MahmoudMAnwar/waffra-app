@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "pr": "M645/M646 Draft PR #568 — approved current-only release notes, pre-PR M449 helper and quiet trusted Android CI",
-  "issue": "Issues #566 (M645), #567 (M646)",
+  "pr": "M653 CI maintenance and fast signed main release (new draft PR pending); M645/M646/M647 main merged in PR #568",
+  "issue": "Issue #579 M653; historical Issues #566 #567 #576 already merged in PR #568; Issue #582 M654",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main",
   "reviewed_at": "2026-11-11",
@@ -1396,6 +1396,67 @@
         "Snapshot IDs before deletion to avoid pagination drift; re-read run metadata and artifact count immediately before each DELETE. Limit to 250 deletions per execution and fail on API errors.",
         "M504's existing PR failed-run seven-day retention and negative security test remain unchanged; CI source/provenance, SQLCipher, main release APK and two-phone identity gates remain active.",
         "Deletion of old GitHub Actions history is irreversible and only possible after M647 is safely merged into main and GitHub scheduled/push/manual workflow actually executes."
+      ]
+    },
+    {
+      "id": "M653-MAIN-CI-RELEASE-CRITICAL-PATH-AND-M647-PRUNE-REPAIR",
+      "issue": "Issue #579 — main 19–22 minute APK and recurring skipped/duplicate build audit",
+      "previous_behavior": "The main release's same-SHA audit waited for every unrelated workflow (including 14-minute optional night/manual Android smoke and Actions cleanup), despite mandatory Flutter/Python itself finishing in 9m50s; the signed APK only started after the 13m53s independent wait. M340 separately repeated the exhaustive Flutter suite on every main push; M174 CI-only unsigned ARM64 compilation duplicated the real signed main APK. M647 trusted main retention job's initial failure was an incorrect unittest dotted module import; M410 repetitive historical no-op skips were already stopped by merged PR #568.",
+      "approved_behavior": "Exact main signed APK/AAB stays main-only and requires one exhaustive Flutter/Python suite INCLUDING M340 source guard and hostile negative tests, plus latest SHA mandatory M174 finance/SQLCipher and M449 notes gates; M201 route acceptance is required whenever actually triggered. Only release-relevant same-SHA checks block signing; independent maintenance or scheduled/manual emulator smoke do not delay or impersonate a release gate. M340 retains full PR and manual tests; on main the exhaustive suite and finance source guard run inside mandatory release verifier instead of a duplicate full-app runner. M174 duplicate unsigned ARM64 compile becomes diagnostic manual-only while signed APK still compiles fresh on every main push. Repair M647 trusted pruning test invocation with actual unittest discovery; its own failure and deletion rules remain fail-closed. Test original M381/M382 claims updated only where the owner-approved gate routing changed, with new M653 positive and negative test. Existing M383 same-SHA prerequisite test now positively asserts relocated M340 source guard and M449 fresh notes in addition to M174, while all signed APK/AAB invariants remain unchanged.",
+      "source_paths": [
+        ".github/workflows/android.yml",
+        ".github/workflows/m340-continuous-financial-quality.yml",
+        ".github/workflows/m174-main-arm64-compile.yml",
+        ".github/workflows/m647-main-history-prune.yml"
+      ],
+      "test_paths": [
+        "test/qa/m381_main_fast_release_gate_test.py",
+        "test/qa/m382_skip_free_workflow_routing_test.py",
+        "test/qa/m653_main_ci_release_critical_path_test.py",
+        "test/qa/m383_parallel_signed_android_build_test.py"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m174-main-sha-postmerge.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/android.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "Original M340 source guard, hostile finance negative tests, ALL Flutter/Dart and Python QA and M174 SQLCipher negative acceptance remain required for signed main release; missing, running, skipped, cancelled and failed REQUIRED checks block.",
+        "Nightly/manual Android startup and M453/M647 history maintenance remain independently visible and never claim to validate signed APK; failed maintenance must be repaired, not hidden, and must not block unrelated signed APK.",
+        "Only main SHA builds signed APK/AAB after tests; source identity, Firebase signing, approved release notes, original account/finance/SQLCipher/backup migrations and artifact release gates remain unchanged.",
+        "PR M340 retains exhaustive finance/security QA; no test deleted, no historical data altered and no silently changed user-visible app behavior.",
+        "M410 was already manual-only under #568; old Skipped run records cannot be removed from GitHub without separate guarded maintenance execution."
+      ]
+    },
+    {
+      "id": "M654-JDK21-ANDROID-LINT-COMPATIBILITY-ALL-NATIVE-CI",
+      "issue": "Issue #582, red PR #580 job 130751731090 in M147 Android ARM64 native lint, 2026-11-11",
+      "previous_behavior": "M147 native compilation used Temurin JDK17 and failed the Android Firebase Core lintVitalAnalyzeRelease with Android Lint JavaDocParser java.util.List.removeLast NoSuchMethodError after exhausting almost 8 minutes of compilation. Other signed main, M274 Android emulator, M174 manual native preview and nightly Android smoke also pinned JDK17, risking reoccurrence on unchanged toolchain. Google AGP issue #522845800 describes same class of bug.",
+      "approved_behavior": "Pin Temurin Java 21 for five high-value real Android build paths with explicit java -version major assertion BEFORE Flutter/Gradle. Keep plugin native lint, the existing release APK and AAB build and signature checks, all Flutter unit/widget and Python QA, M274 emulator UI, M147 ELF and build failure checks, and SQLCipher/finance acceptance. No Android lint suppression or continue-on-error, no app code or AGP generated template changed.",
+      "source_paths": [
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/android.yml",
+        ".github/workflows/m274-production-ui-golden.yml",
+        ".github/workflows/m174-main-arm64-compile.yml",
+        ".github/workflows/android-full-smoke.yml"
+      ],
+      "test_paths": [
+        "test/qa/m654_android_lint_jdk_compatibility_test.py"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/m274-production-ui-golden.yml",
+        ".github/workflows/m174-main-sha-postmerge.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "The source was verified to fail with NoSuchMethodError in Android Lint JavaDocParser against JDK17, not a Flutter assertion. Java21 is a runtime/toolchain-only fix supported by Gradle; do not rewrite app code to avoid the crash.",
+        "Never skip Gradle Android Lint, suppress lintVitalAnalyzeRelease, or hide an actual compile error behind continue-on-error/retry.",
+        "Actual native APK compiler with verified ARM64 ELF and source identity remains; signed main APK/AAB retain SHA-bound signing and all finance, SQLCipher, Android tests.",
+        "All edited workflows must select Temurin21 and positively check runtime before compilation; new M654 tests fail on JDK17 regression. Mark Done only after fresh exact-head M147 and signed main Android QA, not on docs alone."
       ]
     }
   ]

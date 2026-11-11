@@ -30,8 +30,15 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
 
+      # M654: Android Lint's JavaDocParser may invoke JDK21 List.removeLast.
+      # Fail before native build on a wrong JDK; NEVER disable Gradle lint.
+      - name: Require JDK 21 before Android compilation
+        shell: bash
+        run: |
+          java -version
+          java -version 2>&1 | grep -Eq 'version "21[.]'
       - name: Set up Flutter (SDK and pub cache)
         uses: subosito/flutter-action@v2
         with:

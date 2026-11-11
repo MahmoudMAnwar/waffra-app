@@ -37,3 +37,27 @@ RELEASE AND QA TRUTH:
 - M449 pre-PR helper accepts a real Issue and PR and a specific approved summary, derives the latest source commit SHA and refuses uncommitted production changes. Original GitHub Actions M449 gate remains unchanged.
 - M410 unconditional completed-run listener retired; manual trusted bounded retry retained. Old non-main signed APK automatic push branches removed and main-ref build guard added. All existing Flutter/SQLCipher/finance/native checks retained.
 - STATUS: Await latest exact PR HEAD GitHub Actions and real-device QA before calling this cleanup fully released.
+
+
+[CURRENT CI MAINTENANCE REVIEW: M653 — ISSUE #579 — 2026-11-11]
+- Evidence: exact main SHA 37030c8 signed build #43059887405 took 18m50; independent same-SHA audit 13m53 and full mandatory Flutter/Python 9m50. Android Full Startup Smoke (nightly/manual) completed just before the audit despite not being a release prerequisite. Historical M410 Skipped noise was already stopped by merged PR #568.
+- Source changes: main APK external check now waits for required exact-SHA M174 finance/SQLCipher preflight and M449 release-note ancestry, plus M201 route acceptance if its same-SHA workflow actually fires, instead of every optional maintenance/nightly run. Missing, pending or failed required checks still BLOCK publishing; extra checks remain independently visible and can fail without masquerading as signed-artifact checks.
+- Full M340 finance and whole-app QA remains on PR and manual runs, while main's already mandatory complete Flutter/Python verification now ALSO runs M340 source guard and hostile-source negative tests on exact SHA. This removes redundant full-app main-push duplicate with no removed finance/source coverage.
+- Redundant M174 unsigned native ARM64 compilation now manual diagnostic only; every main push still builds, signs and verifies fresh ARM64 APK and Google Play AAB, including source-identity and release-note gates. M410 retry stays trusted/manual-only; old historic run records remain untouched pending independent protected cleanup.
+- M647 cleanup first-run regression repaired: Python unittest discover selects the genuine test/qa/m647_main_history_prune_test.py instead of importing nonexistent test.qa module. Tests still fail closed before any deletion and job API errors still surface as failures.
+- M381/M382 old source-test assumptions narrowed to new main and PR gate split; M653 positive/negative test checks mandatory release gating, absent/failed CI, main-only signing, independent maintenance/no repeated M410, and M647 discovery. M385 bounded manifest and M550 registered behavior updated; no app, SQLCipher writer or user data changes.
+- **Status: Draft source and tests committed; current-head CI and new main build timing NOT YET VERIFIED.** Do not claim faster build or merge readiness until checks pass; compare post-merge main wall-clock against baseline 18m50. Issue: https://github.com/MahmoudMAnwar/waffra-app/issues/579
+
+
+[M653 FOLLOW-UP — M383 EXACT-HEAD POSITIVE REGRESSION RECONCILIATION, 2026-11-11]
+- PR #580 first exact-head run #43085793313 exposed one obsolete M383 source-string assertion that required an external M340 workflow name in android.yml. This is superseded by the owner-approved M653 integrated, mandatory main Flutter/Python and M340 source/hostile-finance checks.
+- Replaced ONLY the M383 exact-SHA prerequisite assertion with positive checks for M340 financial guard, hostile negative tests, M174 independent SQLCipher regression and M449 approved release notes. All APK/AAB signing, latest SHA, cache isolation and native acceptance assertions remain. No test deleted, disabled, weakened to trivial true, or Skipped.
+- Exact affected path added to M385 bounded section scope and M550 behavior contract; Issue #579 has pre-edit evidence comment. Current PR HEAD CI rerun is pending, no performance or release attestation.
+
+
+[M654 — M147 ANDROID LINT JDK17 NO-SUCH-METHOD BUILD REPAIR, ISSUE #582, 2026-11-11]
+- Exact PR #580 head fbfd011d failed M147's ARM64 preview compilation only, while Flutter regression passed: Android library :firebase_core:lintVitalAnalyzeRelease crashed with JDK17-only NoSuchMethodError java.util.List.removeLast() in JavaDocParser (job 130751731090). Google confirms Android Gradle Plugin Lint bug #522845800 and its AGP 9.3.2 resolution.
+- Fix the CI runtime, not app financial or Android source: pin and assert Temurin JDK21 on the five real native Android compilation paths (M147, signed main APK/AAB, M274 emulator, manual M174 native diagnostics and Android nightly/full smoke).
+- Explicitly preserve Android Lint, every existing Flutter/Python test, M340/M174 SQLCipher/finance gates, APK+AAB verified signatures and SHA identity; no --no-lint, lint task exclusion, continue-on-error, source code or Gradle plugin/version override.
+- New M654 regression contract checks JDK21 before native build, no lint bypass and main-signed/source invariants. M385 bounded file manifest, M550 behavior registry and M653 QA evidence updated before this append.
+- STATUS: Source+tests committed in Draft PR #580; newest exact-head GitHub CI and new signed main build results NOT YET CONFIRMED. Issue: https://github.com/MahmoudMAnwar/waffra-app/issues/582
