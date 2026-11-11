@@ -77,7 +77,7 @@ def main() -> int:
     event = json.loads(Path(event_path).read_text(encoding="utf-8"))
     repo = (event.get("repository") or {}).get("full_name", "")
     if (not isinstance(repo, str)
-            or not re.fullmatch(r"[\\w.-]+/[\\w.-]+", repo)
+            or not re.fullmatch(r"[\w.-]+/[\w.-]+", repo)
             or repo != os.environ.get("GITHUB_REPOSITORY")):
         raise RuntimeError("Missing or mismatched trusted GitHub repository")
     run_id = int(raw)
@@ -90,7 +90,7 @@ def main() -> int:
         raise RuntimeError("Not a first-attempt failed M274 PR workflow")
     head = run.get("head_branch", "")
     if (not isinstance(head, str)
-            or not re.fullmatch(r"[\\w./-]+", head)
+            or not re.fullmatch(r"[\w./-]+", head)
             or ".." in head or len(head) >= 220):
         raise RuntimeError("Invalid source branch")
     if (run.get("head_repository") or {}).get("full_name") != repo:
