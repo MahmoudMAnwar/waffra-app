@@ -35,35 +35,25 @@ void main() {
     }
   });
 
-  test('M213 Home and Widget source-bound refresh cannot use local cache', () {
-    final home = File('lib/main.dart').readAsStringSync();
-    final widget = File('lib/waffra_widget_capture.part.dart').readAsStringSync();
-    final homeStart = home.indexOf('Future<void> _refreshWidget()async{');
-    final homeEnd = home.indexOf('Future<void> persist({',homeStart);
-    expect(homeStart, greaterThan(0));
-    expect(homeEnd, greaterThan(homeStart));
-    final homeBody = home.substring(homeStart,homeEnd);
-    expect(homeBody,
-        contains('route:WaffraFinanceRoute.widgetBalanceRefresh'));
-    expect(homeBody,
-        contains('WaffraAuthoritativeWidgetBalance.netHalalas(raw)'));
-    expect(homeBody, contains("balance:'***',negative:false,hidden:true"));
-    expect(homeBody, isNot(contains('entries.where(')));
-
-    final widgetStart = widget.indexOf('// Refresh the circular balance');
-    final widgetEnd = widget.indexOf('final ignored=outcome.skipped;',
-        widgetStart);
-    expect(widgetStart, greaterThan(0));
-    expect(widgetEnd, greaterThan(widgetStart));
-    final widgetBody = widget.substring(widgetStart,widgetEnd);
-    expect(widgetBody,
-        contains('route:WaffraFinanceRoute.widgetBalanceRefresh'));
-    expect(widgetBody,contains(
-        'WaffraAuthoritativeWidgetBalance.netHalalas(verified.ledgerRaw!)'));
-    expect(widgetBody,contains('verified.finance.requireIntegrity()'));
-    expect(widgetBody,contains("balance:'***',negative:false,hidden:true"));
-    expect(widgetBody,isNot(contains('outcome.merged.where(')));
+  test('M636 Home verified balance remains the only widget finance source',(){
+    final home=File('lib/main.dart').readAsStringSync();
+    final native=File('native/WaffraWidget.kt').readAsStringSync();
+    final bridge=File('lib/waffra_home_widget.dart').readAsStringSync();
+    final homeStart=home.indexOf('Future<void> _refreshWidget()async{');
+    final homeEnd=home.indexOf('Future<void> persist({',homeStart);
+    expect(homeStart,greaterThan(0));
+    expect(homeEnd,greaterThan(homeStart));
+    final body=home.substring(homeStart,homeEnd);
+    expect(body,contains('route:WaffraFinanceRoute.widgetBalanceRefresh'));
+    expect(body,contains('WaffraAuthoritativeWidgetBalance.netHalalas(raw)'));
+    expect(body,contains("balance:'***',negative:false,hidden:true"));
+    expect(body,isNot(contains('entries.where(')));
     expect(home,contains('refreshVerifiedWidgetBalance:_refreshWidget'));
+    expect(home,contains('if(!mounted||!ready||waffraWidgetAction.value!=\'add\')return;'));
+    expect(native,contains('Intent(context, MainActivity::class.java)'));
+    expect(native,isNot(contains('commitConfirmedSms(')));
+    expect(bridge,contains("invokeMethod<void>('updateSummary'"));
+    expect(File('lib/waffra_widget_capture.part.dart').existsSync(),isFalse);
     expect(home,isNot(contains("balance:conceal?'***':formatWaffraMoney(balance)")));
   });
 }
