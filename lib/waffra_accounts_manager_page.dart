@@ -7,6 +7,7 @@ import 'storage/waffra_verified_accounts_api.dart';
 import 'waffra_account_transaction_form.dart';
 import 'waffra_account_context_page.dart';
 import 'waffra_new_account_dialog.dart';
+import 'waffra_saudi_financial_providers.dart';
 
 /// M440 optional SQLCipher account page. A production Home route must only
 /// open this after the same certified finance source is active for SMS/widget.
@@ -229,8 +230,11 @@ class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {
   }
   final existing=await verified.balances();
   if(!mounted)return null;
-  final bank=RegExp(r'^bank:institution:(rajhi|inma|snb|riyad|bilad|stc)$')
-   .firstMatch(createProvider?'':providerGroup??'')?.group(1);
+  final requestedGroup=createProvider?'':providerGroup??'';
+  final requestedId=requestedGroup.split(':').last;
+  final chosenProvider=WaffraSaudiFinancialProviders.byId(requestedId);
+  final bank=chosenProvider!=null&&
+   requestedGroup==chosenProvider.groupId?chosenProvider.id:null;
   final custom=<String,List<String>>{
    for(final kind in const ['bank','wallet'])
     kind:existing.where((a)=>!a.archived&&a.kind==kind&&
@@ -242,7 +246,9 @@ class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {
     english:widget.english,suggestedProviderId:bank,
     customSubtypeOptions:custom));
   if(choice==null||!mounted)return null;
-  if(bank!=null&&(choice.kind!='bank'||choice.providerId!=bank)){
+  if(bank!=null&&(
+   choice.kind!=(chosenProvider!.category==WaffraSaudiFinancialProviders.wallet?'wallet':'bank')||
+   choice.providerId!=bank)){
    throw StateError('Child account must be under the selected bank');
   }
   final newId='m499-account-composer-'+
