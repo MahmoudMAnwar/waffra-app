@@ -11027,7 +11027,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        ],
       ),
      ]));
-   }else{
+   }else if(analytics){
     // "Financial Analytics" and "Smart Analysis" now render the very
     // same chart datasets shown by their respective Flutter screens.
     final smart=title.contains('آخر 90 يوم')||title.contains('Last 90 days');
@@ -11219,6 +11219,80 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        ],
       )));
     }
+   }
+   // M652: transfers and wallet movements form separate sections, never
+   // become income, expenses or budget line items. All values are verified.
+   if(!analytics&&pdfTransfers.isNotEmpty){
+    final labels={for(final a in _m467Accounts)a.id:a.name};
+    final ordered=pdfTransfers.toList()
+     ..sort((a,b)=>b.occurredIso.compareTo(a.occurredIso));
+    doc.addPage(pw.MultiPage(pageTheme:pageTheme,build:(ctx)=>[
+     heading('التحويلات بين حساباتي','Transfers between my accounts'),
+     pw.Padding(padding:const pw.EdgeInsets.only(bottom:10),
+      child:pw.Text(english?
+       'Transfers do not increase income or expenses.':
+       'أصل التحويل لا يُحسب دخلًا أو مصروفًا.',
+       style:pw.TextStyle(font:font,fontSize:10,color:PdfColors.teal900))),
+     pw.Table(border:pw.TableBorder.all(color:PdfColors.grey400,width:.4),
+      children:[
+       pw.TableRow(decoration:const pw.BoxDecoration(color:PdfColors.teal800),
+        children:(english?['Date','From','To','Details','Amount']:
+         ['المبلغ','تفاصيل','إلى الحساب','من الحساب','التاريخ'])
+        .map((v)=>pdfCell(v,rtl:!english,center:true)).toList()),
+       ...ordered.map((t){
+        final when=DateTime.tryParse(t.occurredIso);
+        final cells=<pw.Widget>[
+         pdfCell(when==null?t.occurredIso:dayText(when),center:true),
+         pdfCell(labels[t.fromAccountId]??(english?'Unknown':'حساب غير متاح'),
+          rtl:!english),
+         pdfCell(labels[t.toAccountId]??(english?'Unknown':'حساب غير متاح'),
+          rtl:!english),
+         pdfCell(t.note,rtl:!english),
+         pdfCell(fmt(t.amountMinor/100),center:true,monetary:true),
+        ];
+        return pw.TableRow(decoration:pw.BoxDecoration(
+         color:PdfColor.fromInt(const Color(0xFFE7F0FA).toARGB32())),
+         children:english?cells:cells.reversed.toList());
+       }),
+      ]),
+    ]));
+   }
+   if(!analytics&&pdfSavings.isNotEmpty){
+    final labels={for(final a in _m467Accounts)a.id:a.name};
+    final ordered=pdfSavings.toList()
+     ..sort((a,b)=>b.occurredIso.compareTo(a.occurredIso));
+    doc.addPage(pw.MultiPage(pageTheme:pageTheme,build:(ctx)=>[
+     heading('حركات الادخار','Savings goal movements'),
+     pw.Padding(padding:const pw.EdgeInsets.only(bottom:10),
+      child:pw.Text(english?
+       'Savings movements are internal assets, not new revenue or expense.':
+       'نقل مبالغ الادخار حركة أصول داخلية، وليس دخلًا أو مصروفًا جديدًا.',
+       style:pw.TextStyle(font:font,fontSize:10,color:PdfColors.teal900))),
+     pw.Table(border:pw.TableBorder.all(color:PdfColors.grey400,width:.4),
+      children:[
+       pw.TableRow(decoration:const pw.BoxDecoration(color:PdfColors.teal800),
+        children:(english?['Date','Type','Savings goal','Source account','Amount']:
+         ['المبلغ','الحساب الأصلي','الهدف','نوع الحركة','التاريخ'])
+         .map((v)=>pdfCell(v,rtl:!english,center:true)).toList()),
+       ...ordered.map((m){
+        final when=DateTime.tryParse(m.occurredIso);
+        final label=m.kind=='fund'?
+         (english?'Saved':'إضافة ادخار'):
+         (english?'Withdrawn':'سحب ادخار');
+        final cells=<pw.Widget>[
+         pdfCell(when==null?m.occurredIso:dayText(when),center:true),
+         pdfCell(label,rtl:!english),
+         pdfCell(m.goalName,rtl:!english),
+         pdfCell(labels[m.accountId]??(english?'Unknown':'حساب غير متاح'),
+          rtl:!english),
+         pdfCell(fmt(m.amountMinor/100),center:true,monetary:true),
+        ];
+        return pw.TableRow(decoration:pw.BoxDecoration(
+         color:PdfColor.fromInt(const Color(0xFFF8F0D9).toARGB32())),
+         children:english?cells:cells.reversed.toList());
+       }),
+      ]),
+    ]));
    }
    final bytes=await doc.save();
    if(exportDialogOpen&&exportNavigator.mounted){exportNavigator.pop();exportDialogOpen=false;}
@@ -13267,7 +13341,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
              onSelected:WaffraHaptics.selection((action){
               if(action=='delete-all')confirmDeleteAllEntries();
               if(action=='restore-transactions')_showVerifiedDeletedTransactions();
-              if(action=='pdf')exportEntriesPdf(visible,'تقرير عمليات وفرة');
+              if(action=='pdf')exportEntriesPdf(visible,'تقرير عمليات وفرة',activityFilter:typeFilter);
              }),
              itemBuilder:(ctx)=>[
               if(_lastFinanceAuthorityRead?.source==
@@ -13417,7 +13491,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               'عدد العمليات: '+visible.length.toString(),
               style:const TextStyle(color:Colors.grey,fontSize:12)),
              const Spacer(),
-             TextButton.icon(onPressed:WaffraHaptics.tap(()=>exportEntriesPdf(visible,'تقرير عمليات وفرة')),
+             TextButton.icon(onPressed:WaffraHaptics.tap(()=>exportEntriesPdf(visible,'تقرير عمليات وفرة',activityFilter:typeFilter)),
               icon:const Icon(Icons.picture_as_pdf_outlined,size:18),
               label:WaffraText(waffraIsEnglish?'Export PDF':'تصدير PDF')),
             ])),
