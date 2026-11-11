@@ -1146,22 +1146,17 @@
       "source_paths": [
         "lib/main.dart",
         "lib/waffra_practical_tools_page.dart",
-        "lib/waffra_receipt_ocr.dart",
-        "lib/waffra_receipt_ocr_parser.dart",
-        "lib/waffra_bank_screenshot_parser.dart",
         "lib/waffra_ai_finance_brain.dart",
         "lib/waffra_practical_ledger_engine.dart",
         "lib/waffra_saudi_release.dart",
         "pubspec.yaml",
-        "scripts/qa/m287_patch_tesseract_gradle.py",
-        ".github/workflows/m287-receipt-ocr.yml",
-        ".github/workflows/m297-receipt-to-entry.yml"
+        "scripts/qa/m385_approved_change_guard.py",
+        ".github/workflows/android.yml"
       ],
       "test_paths": [
         "test/m640_receipt_reader_retirement_test.dart",
         "test/m281_practical_tools_test.dart",
         "test/m285_compact_action_widths_test.dart",
-        "test/m330_compact_ui_copy_test.dart",
         "test/qa/m412_workflow_wiring_test.py"
       ],
       "ci_workflows_to_watch": [
@@ -1173,7 +1168,8 @@
         "No receipt OCR package or model download, screenshot import or user-visible receipt reader tool remains. No hidden code path can invoke OCR.",
         "Keep plain photo attachment picker (image_picker), encrypted receipt persistence/restore, bank SMS review, native message scanning, verified financial writes and all historical data intact.",
         "Disable only explicit OCR-specific workflows and tests; preserve all current financial and lifecycle regression checks. Add anti-regression retirement test and exact-file deletion allowlist to M385, no broad deletion bypass.",
-        "No claim of complete removal before exact-head Flutter analyzer/Android and test suite succeed; mobile device acceptance pending."
+        "No claim of complete removal before exact-head Flutter analyzer/Android and test suite succeed; mobile device acceptance pending.",
+        "Retired paths are asserted ABSENT in M640 test and M385 deletion list; source_paths and test_paths in M550 must only refer to files present on the PR head. Previously existing deleted files remain listed in the retirement issue and approved behavior."
       ]
     }
   ]
