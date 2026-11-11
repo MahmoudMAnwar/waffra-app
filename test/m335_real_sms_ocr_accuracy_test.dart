@@ -50,29 +50,20 @@ Joanna Sa
     expect(WaffraReceiptOcrParser.parse(foreign).merchant,isNull);
   });
 
-  test('M335 SMS review uses two bounded hierarchical selectors',(){
+  test('M636 automatic SMS editor retains category validation',(){
     final app=File('lib/main.dart').readAsStringSync();
-    final section=app.substring(
-      app.indexOf('Future<void> bulkSmsSheet({String? initialText,'),
-      app.indexOf('Future<void> scanAndAddReceipt()async'));
-    expect(section,contains('final smsMainCategories=waffraManualCategoryParents('));
-    expect(section,contains('final smsSubcategories=waffraManualCategoryChildren('));
-    expect(section,contains("labelText:waffraIsEnglish?'Main category *':'القسم الرئيسي *'"));
-    expect(section,contains("labelText:waffraIsEnglish?'Subcategory *':'القسم الفرعي *'"));
-    expect(section,contains('waffraCanAssignManualCategory('));
-    expect(section,isNot(contains("DropdownButtonFormField<String>(key:ValueKey('\$index-\$income')")));
+    expect(app,contains('waffraManualCategoryParents('));
+    expect(app,contains('waffraManualCategoryChildren('));
+    expect(app,contains('waffraCanAssignManualCategory('));
+    expect(app,contains('await entrySheet(sms:true,initialSms:body,reviewedSender:sender);'));
+    expect(app,isNot(contains('Future<void> bulkSmsSheet(')));
   });
 
-  test('M335 fast SMS path never starts Qwen for verified SAR',(){
+  test('M636 real SMS remains deterministic without Qwen',(){
     final app=File('lib/main.dart').readAsStringSync();
-    final start=app.indexOf('Future<void> analyzeBankSmsAutomatically(');
-    final end=app.indexOf('void scheduleBankSmsAnalysis(',start);
-    final method=app.substring(start,end);
-    expect(method.indexOf('final reliable=found.every('),
-      lessThan(method.indexOf('final ai=await _reviewAiPastedBankMessages(')));
-    expect(method,contains("if(!WaffraSaudiRelease.qwenForBankSms||reliable||"));
-    expect(method,contains("!WaffraOnDeviceQwen.shared.isReady)"));
-    expect(method,contains('Never commit on paste'));
-    expect(method,isNot(contains('await saveParsedMessages(ctx,update)')));
+    expect(app,isNot(contains('WaffraOnDeviceQwen')));
+    expect(app,isNot(contains('_reviewAiPastedBankMessages')));
+    expect(app,contains('WaffraSmsCurrencies.originalAmount('));
+    expect(app,contains('await WaffraAutoSms.acknowledgeCommitted([id]);'));
   });
 }
