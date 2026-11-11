@@ -101,7 +101,7 @@
     ],
     ".github/workflows/m274-production-ui-golden.yml": [
       {
-        "start": "      - name: Checkout exact PR head\n",
+        "start": "  android-emulator-ui-taps:\n",
         "end": "      - uses: subosito/flutter-action@v2\n"
       }
     ],
