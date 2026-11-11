@@ -14672,17 +14672,29 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   disposeLater([amount]);
   if(funding!=null&&mounted){
    final n=funding.amount;
-   final available=waffraAvailableCash(entries,goals);
+   // The selected verified money account, not the global income/expense
+   // ledger, owns this funding debit. Opening cash on a new account must
+   // never display a false 0 SAR balance warning.
+   final source=fundingAccounts.where((account)=>
+    account.id==funding.sourceAccountId&&!account.archived).toList();
+   if(source.length!=1){
+    snack(context,waffraIsEnglish?
+     'Funding account changed. Reopen and verify the account.':
+     'الحساب المحدد للادخار اتغير. افتح الإضافة واختار حسابًا موثّقًا.',
+     isError:true);
+    return;
+   }
+   final available=source.single.balanceMinor/100;
    if(n>available){
     final acknowledged=await showWaffraDialog<bool>(
      context:context,builder:(dialog)=>AlertDialog(
       title:WaffraText(waffraIsEnglish?
        'Savings exceed available balance':'تنبيه: مبلغ الادخار أكبر من الرصيد المتاح'),
       content:WaffraText(waffraIsEnglish?
-       'Available: ${cash(available)}. Requested: ${cash(n)}. '
+       'Selected account balance: ${cash(available)}. Requested: ${cash(n)}. '
        'The goals wallet is separate. Your verified account will be debited once '
        'if you continue. This is an informational warning only.':
-       'الرصيد الحالي: ${cash(available)}، والادخار المطلوب: ${cash(n)}. '
+       'رصيد الحساب المختار: ${cash(available)}، والادخار المطلوب: ${cash(n)}. '
        'محفظة الأهداف منفصلة؛ سيتم خصم المبلغ من الحساب المختار مرة واحدة عند المتابعة. '
        'هذا تنبيه توضيحي فقط.'),
       actions:[SizedBox(width:double.maxFinite,child:Row(children:[
