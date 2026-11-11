@@ -185,7 +185,7 @@ class WaffraIllustration extends StatelessWidget {
       'gaming':'🎮','tax':'🧮','investment':'📈','pension':'🪙',
       'agriculture':'🌾',
       'runway':'👛','subscription':'📺','simulation':'📱',
-      'guardian':'🛡️','assistant':'🤖','season':'🌙',
+      'guardian':'🛡️','season':'🌙',
       'wallet':'🧳','challenge':'🏆','flow':'🌿','emergency':'☂️',
       'calendar':'📅','income':'💰','expense':'🛍️',
     };
@@ -577,9 +577,6 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
   // Negative indices avoid changing the ten tools' stable names and keys.
   final tiles=List<Widget?>.generate(types.length+2,(slot){
    final i=slot-2;
-   if(i==4&&WaffraSaudiRelease.freeTextAskWaffra&&!_aiToolVisible)return null;
-   final aiLocked=i==4&&WaffraSaudiRelease.freeTextAskWaffra&&
-    _aiToolState==WaffraAiToolsState.disabled;
    final id=i==-2?'analysis':i==-1?'markets':types[i];
    final name=i==-2?t('التحليل المالي','Financial analysis'):
     i==-1?t('العملات والذهب والبترول','Currency, gold and oil markets'):names[i];
@@ -597,7 +594,6 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
        widget.analysisBuilder?.call(context)??
        _paragraph(t('التحليل متاح بعد فتح التطبيق ببيانات مالية مؤمنة.',
         'Financial insights require the verified app data source.')),
-       const SizedBox(height:10),_aiAnalysisPanel(),
      ]
      else if(i==-1)const CurrencyConverterPage(embedded:true)
      else _body(i),
@@ -609,8 +605,7 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
      key:Key('waffra-m268-accordion-'+id),
      duration:duration,curve:Curves.easeInOutCubic,
      decoration:BoxDecoration(
-      color:aiLocked?Theme.of(context).disabledColor.withValues(alpha:.10):
-       expanded?(dark?const Color(0xFF153C2D):const Color(0xFFE9F7ED)):
+      color:expanded?(dark?const Color(0xFF153C2D):const Color(0xFFE9F7ED)):
         Theme.of(context).cardColor,
       borderRadius:BorderRadius.circular(22),
       border:Border.all(color:green.withValues(alpha:expanded ? 0.48 : 0.15),
@@ -618,28 +613,22 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
       boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:dark ? 0.09 : 0.055),
        blurRadius:expanded?17:8,offset:const Offset(0,3))]),
      child:Column(mainAxisSize:MainAxisSize.min,children:[
-      Semantics(button:true,enabled:!aiLocked,
-       label:name+' — '+detail+(aiLocked?' — disabled':expanded?' — open':' — closed'),
+      Semantics(button:true,
+       label:name+' — '+detail+(expanded?' — open':' — closed'),
        child:InkWell(
         key:Key('waffra-m268-feature-'+id),
         borderRadius:BorderRadius.circular(22),
-        onTap:aiLocked?null:WaffraHaptics.tap(()=>_activateSection(i)),
+        onTap:WaffraHaptics.tap(()=>_activateSection(i)),
         child:Padding(
          padding:const EdgeInsets.symmetric(horizontal:10,vertical:8),
          child:Row(children:[
-          Opacity(opacity:aiLocked?0.42:1,
-            child:WaffraIllustration(topic:illustration,size:45)),
+          WaffraIllustration(topic:illustration,size:45),
           const SizedBox(width:9),
           Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,
-           children:[_label(name,bold:true,size:15,
-              color:aiLocked?Theme.of(context).disabledColor:null),
-            const SizedBox(height:2),_paragraph(aiLocked?
-              t('الميزة معطّلة — أعد تفعيل الموديل',
-                'Disabled — reactivate AI model'):detail)])), 
+           children:[_label(name,bold:true,size:15),
+             const SizedBox(height:2),_paragraph(detail)])), 
           const SizedBox(width:5),
-          if(aiLocked)const Icon(Icons.lock_outline_rounded,
-            color:Colors.grey,size:22)
-          else AnimatedRotation(turns:expanded ? 0.5 : 0,duration:duration,
+          AnimatedRotation(turns:expanded ? 0.5 : 0,duration:duration,
            child:Icon(Icons.keyboard_arrow_down_rounded,
              color:green,size:25)),
          ])))),
@@ -664,7 +653,7 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
       borderRadius:BorderRadius.circular(23),
       border:Border.all(color:green.withValues(alpha:.20))),
      child:Row(children:[
-      const WaffraIllustration(topic:'assistant',size:50),
+      const WaffraIllustration(topic:'investment',size:50),
       const SizedBox(width:10),
       Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
        _label(t('أدوات وفرة الذكية','Waffra smart tools'),size:18,bold:true),
@@ -672,10 +661,6 @@ class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{
        _paragraph(t('خطّط لميزانيتك، حلّل معاملاتك واستكشف أدواتك المالية.',
         'Plan your budget, analyze spending and explore financial tools.')),
       ]))])),
-    if(!WaffraOnDeviceQwen.shared.isReady||aiBusy||aiStatus.isNotEmpty)...[
-     _surface(_aiActivation()),
-     const SizedBox(height:10),
-    ],
     ...tiles,
     Card(
      key:const Key('m281-practical-tools-entry'),
