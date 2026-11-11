@@ -40,6 +40,20 @@ def check_m449() -> None:
         raise NotesPreparationError(
             "Existing M449 freshness gate not green: " + result.stderr[:350])
 
+    # A past signed APK failed after M449 passed because its current feature
+    # summary lacked the real mandatory Arabic release sections. Catch these
+    # still-active controls BEFORE any expensive GitHub Android build starts.
+    required = (
+        "M222", "أسعار الذهب",
+        "شارة المرفقات", "الملاحظات", "زر الإضافة", "الوضع الفاتح",
+    )
+    text = Path(NOTES).read_text(encoding="utf-8")
+    missing = [label for label in required if label not in text]
+    if missing:
+        raise NotesPreparationError(
+            "Current notes missing live signed APK release sections: "
+            + ", ".join(missing))
+
 
 def validate_review(issue: int | None, pr: int | None, summary: str | None) -> str:
     if issue is None or issue < 1 or pr is None or pr < 1:

@@ -24,7 +24,9 @@ class ReleaseNotesPreparationTests(unittest.TestCase):
         self.git("config", "user.email", "qa@example.invalid")
         self.git("config", "user.name", "Waffra QA")
         self.write("lib/main.dart", "void main() {}\n")
-        self.write(NOTES, "Current verified Saudi finance features.\n")
+        self.write(NOTES, "Current verified Saudi finance features. "
+                   "M222 أسعار الذهب شارة المرفقات الملاحظات زر الإضافة "
+                   "الوضع الفاتح.\n")
         self.write("scripts/qa/m449_release_notes_ancestry.py",
                    M449.read_text(encoding="utf-8"))
         self.git("add", "-A")
@@ -108,6 +110,20 @@ class ReleaseNotesPreparationTests(unittest.TestCase):
         result = self.prep(*REVIEW, "--commit")
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("Missing current release notes", result.stderr)
+
+    def test_current_notes_keep_the_real_signed_apk_release_sections(self):
+        approved = (ROOT / NOTES).read_text(encoding="utf-8")
+        for name in (
+            "M222", "أسعار الذهب", "شارة المرفقات",
+            "الملاحظات", "زر الإضافة", "الوضع الفاتح",
+        ):
+            self.assertIn(name, approved)
+
+    def test_missing_current_release_sections_block_prepr_gate(self):
+        self.write(NOTES, "Current finance summary without the required categories.\n")
+        result = self.prep("--verify-only")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("missing live signed APK release sections", result.stderr)
 
 
 if __name__ == "__main__":
