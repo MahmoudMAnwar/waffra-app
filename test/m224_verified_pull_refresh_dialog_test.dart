@@ -40,6 +40,6 @@ void main() {
     final code=File('lib/main.dart').readAsStringSync();
     expect(code,contains('if(WaffraSmsCurrencies.requiresReviewForSarLedger(message.text))'));
     expect(code,contains('Foreign or unknown currency: no transaction was saved as SAR'));
-    expect(code,contains('notes:body,sourceType:'sms''));
+    expect(code,contains("notes:body,sourceType:'sms'"));
   });
 }
