@@ -68,15 +68,31 @@ class BoundedRetryTest(unittest.TestCase):
         self.assertIsNone(self.candidate(event=event)[0])
 
     def test_workflow_preserves_review_and_main_gates(self):
-        text = (ROOT / ".github/workflows/m410-failed-android-retry.yml").read_text()
-        self.assertIn("workflow_run:", text)
-        self.assertIn("actions: write", text)
-        self.assertIn("run_attempt == 1", text)
-        self.assertIn("persist-credentials: false", text)
-        self.assertNotIn("continue-on-error: true", text)
+        source = (ROOT / ".github/workflows/m410-failed-android-retry.yml").read_text()
+        self.assertIn("workflow_dispatch:", source)
+        self.assertIn("failed_m274_run_id:", source)
+        self.assertIn("required: true", source)
+        self.assertNotIn("workflow_run:", source)
+        self.assertIn("actions: write", source)
+        self.assertIn("persist-credentials: false", source)
+        self.assertIn("ref: ${{ github.event.repository.default_branch }}", source)
+        self.assertNotIn("continue-on-error: true", source)
         release = (ROOT / ".github/workflows/android.yml").read_text()
         self.assertIn("needs: [verify-all-tests, verify-same-sha-checks]", release)
 
+    def test_manual_retry_requires_trusted_numeric_failed_pr_run(self):
+        source = SCRIPT.read_text()
+        self.assertIn('GITHUB_EVENT_NAME") != "workflow_dispatch"', source)
+        self.assertIn('SOURCE_M274_RUN_ID', source)
+        self.assertIn('GITHUB_REPOSITORY', source)
+        self.assertIn('run.get("id") != run_id', source)
+        self.assertIn('run.get("event") != "pull_request"', source)
+        self.assertIn('run.get("run_attempt") != 1', source)
+        self.assertIn('run.get("status") != "completed"', source)
+        self.assertIn('current_sha != run.get("head_sha")', source)
+        self.assertIn('run.get("head_repository") or {}', source)
+        self.assertIn('selected, reason = candidate(', source)
+        self.assertIn('actions/jobs/{selected}/rerun', source)
 
 if __name__ == "__main__":
     unittest.main()
