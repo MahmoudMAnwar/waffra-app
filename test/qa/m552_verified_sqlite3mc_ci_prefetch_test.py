@@ -37,50 +37,19 @@ class VerifiedSqliteCiPrefetchTest(unittest.TestCase):
         action = (ROOT / '.github/actions/prefetch-sqlite3mc/action.yml').read_text(encoding='utf-8')
         self.assertIn('uses: actions/cache@v4', action)
         self.assertIn('run: bash scripts/qa/prefetch_verified_sqlite3mc.sh', action)
-        self.assertIn('run: bash scripts/qa/prefetch_verified_llamadart.sh', action)
-        self.assertIn('run: flutter pub get',action)
-        self.assertLess(action.index('run: flutter pub get'),
-                        action.index('run: bash scripts/qa/prefetch_verified_llamadart.sh'))
-        self.assertIn('llamadart-0.8.24/.dart_tool/llamadart/native_bundles/v0.4.1', action)
-        llama = (ROOT / 'scripts/qa/prefetch_verified_llamadart.sh').read_text(encoding='utf-8')
-        self.assertIn("upstream='leehack/llamadart-native'", llama)
-        self.assertIn("tag='v0.4.1'", llama)
-        self.assertIn("d71b8a74b330275efbebd9bd345140645a6c3388cc51e4a6ad3f556d7b0f33c3", llama)
-        # M623: The GNU-only --check/--status flags break on macOS.
-        # The pinned digests and BOTH cached/downloaded asset checks remain mandatory.
-        self.assertIn('verify_sha256() {', llama)
-        self.assertIn('shasum -a 256 "$file"', llama)
-        self.assertIn('sha256sum "$file"', llama)
-        self.assertIn('[[ "$actual" == "$expected" ]]', llama)
-        self.assertIn('verify_sha256 "$digest" "$target"', llama)
-        self.assertIn('verify_sha256 "$digest" "$original"', llama)
-        for pin in (
-            'linux-x64:d71b8a74b330275efbebd9bd345140645a6c3388cc51e4a6ad3f556d7b0f33c3',
-            'android-arm64:fca52f625e196b4f5d53b5dcbe9646b6b7641eedbd7f61ab1272ddd5ec0a9ee4',
-            'android-x64:221c6b74eacbba43dfd46b069d0e8a786d6cfb9ac56d64898e1aff0d3480ae84',
-        ):
-            self.assertIn(pin, llama)
+        # M636: only SQLCipher cryptography requires verified native bundles.
+        # The optional Qwen/llamadart runtime has been retired entirely.
+        self.assertNotIn('prefetch_verified_llamadart', action)
+        self.assertNotIn('llamadart', action)
+        self.assertNotIn('llama_cpp', (ROOT / 'pubspec.yaml').read_text(encoding='utf-8'))
 
-
-    def test_llamadart_sha256_check_rejects_wrong_and_tampered_artifacts(self):
-        # Exercise the actual shell verifier, not just its source spelling.
-        script = (ROOT / 'scripts/qa/prefetch_verified_llamadart.sh').read_text(encoding='utf-8')
-        function = script.split('verify_sha256() {', 1)[1].split('\n}\nfor spec', 1)[0]
-        verifier = 'verify_sha256() {' + function + '\n}\nverify_sha256 "$1" "$2"'
-        with tempfile.TemporaryDirectory() as directory:
-            artifact = Path(directory) / 'llamadart-native-fixture.tar.gz'
-            artifact.write_bytes(b'pinned original native archive test fixture')
-            pinned = hashlib.sha256(artifact.read_bytes()).hexdigest()
-            good = subprocess.run(['bash', '-c', verifier, 'bash', pinned, str(artifact)],
-                                  capture_output=True, text=True, check=False)
-            self.assertEqual(0, good.returncode, good.stderr)
-            wrong = subprocess.run(['bash', '-c', verifier, 'bash', '0' * 64, str(artifact)],
-                                   capture_output=True, text=True, check=False)
-            self.assertNotEqual(0, wrong.returncode)
-            artifact.write_bytes(b'changed untrusted native archive')
-            corrupted = subprocess.run(['bash', '-c', verifier, 'bash', pinned, str(artifact)],
-                                       capture_output=True, text=True, check=False)
-            self.assertNotEqual(0, corrupted.returncode)
+    def test_retired_qwen_dependency_never_restores_native_download(self):
+        pub = (ROOT / 'pubspec.yaml').read_text(encoding='utf-8')
+        action = (ROOT / '.github/actions/prefetch-sqlite3mc/action.yml').read_text(encoding='utf-8')
+        self.assertNotIn('llamadart:', pub)
+        self.assertNotIn('llamadart_native_runtimes', pub)
+        self.assertNotIn('llamadart-native', action)
+        self.assertIn('prefetch_verified_sqlite3mc.sh', action)
 
     def test_pinned_sha256_check_succeeds_only_for_matching_bytes(self):
         script = (ROOT / 'scripts/qa/prefetch_verified_sqlite3mc.sh').read_text(encoding='utf-8')
