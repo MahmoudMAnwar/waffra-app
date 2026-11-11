@@ -4254,6 +4254,27 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  Future<List<WaffraInternalTransferHistory>>? _m648TransferRead;
  String? _m649SavingsAccountKey;
  Future<List<WaffraVerifiedGoalMovement>>? _m649SavingsRead;
+ // M650: memoize receipt/linked-money account provenance for paid dues.
+ // Display-only metadata, never an extra payment or a source-account guess.
+ final Map<String,Future<String?>> _m650DueSourceCache={};
+ Future<String?> _m650DueVerifiedAccount(MoneyEntry entry){
+  return _m650DueSourceCache.putIfAbsent(entry.id,()async{
+   if(entry.sourceType=='goal_due'&&
+      entry.goalWalletPaidMinor>=
+       WaffraRecurringPolicy.toHalalas(entry.amount)){
+    return waffraIsEnglish?'Savings goal wallet':'محفظة الهدف الادخاري';
+   }
+   final bridge=_financeBinding?.accountsBridge;
+   if(bridge==null)return null;
+   final link=await WaffraVerifiedAccountsApi(bridge:bridge)
+    .readExistingEntryAccount(entryId:entry.id);
+   if(!link.exists||link.accountId==null||_m627ClosingSession)return null;
+   for(final account in _m467Accounts){
+    if(account.id==link.accountId)return _m647VerifiedAccountLabel(account);
+   }
+   return null; // Archived/missing account identity must not be invented.
+  });
+ }
  String? _m652ActivityAccountKey;
  Future<({
   List<WaffraInternalTransferHistory> transfers,
@@ -4266,6 +4287,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   _m649SavingsRead=null;
   _m652ActivityAccountKey=null;
   _m652ActivityRead=null;
+  _m650DueSourceCache.clear();
  }
  Future<List<WaffraInternalTransferHistory>> _m648HomeTransfers(String account){
   if(_m648TransferAccountKey==account&&_m648TransferRead!=null){
@@ -13100,6 +13122,29 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            entry.sourceType,waffraIsEnglish),
           maxLines:1,style:const TextStyle(fontSize:11,color:Colors.grey))),
         ]),
+        // A settled due is linked to the *verified* financial source,
+        // not its mutable schedule title or sender label.
+        if(paidDue&&_m468VerifiedAccountsLoaded)
+         FutureBuilder<String?>(
+          future:_m650DueVerifiedAccount(entry),
+          builder:(ctx,snapshot){
+           if(snapshot.connectionState!=ConnectionState.done){
+            return const SizedBox.shrink();
+           }
+           return Padding(padding:const EdgeInsets.only(top:4),
+            child:WaffraText(
+             (waffraIsEnglish?'Paid from: ':'تم السداد من: ')+
+             (snapshot.data??(waffraIsEnglish?
+              'Unverified account':'حساب غير محدد')),
+             maxLines:2,style:TextStyle(
+              color:valueColor,fontSize:11,fontWeight:FontWeight.w600)));
+          }),
+        if(entry.sourceType=='goal_due'&&entry.goalWalletPaidMinor>0)
+         Padding(padding:const EdgeInsets.only(top:3),
+          child:WaffraText(
+           (waffraIsEnglish?'From goal wallet: ':'من محفظة الهدف: ')+
+           cash(entry.goalWalletPaidMinor/100),
+           maxLines:2,style:TextStyle(color:valueColor,fontSize:11))),
       ]))),
      const SizedBox(width:5),
      ConstrainedBox(constraints:const BoxConstraints(maxWidth:119),
