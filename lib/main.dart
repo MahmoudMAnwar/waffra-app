@@ -8567,6 +8567,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  // M636: Manual paste/review sheet retired. Automatic encrypted SMS Review
  // and owner-verified account-bound finance editor are retained.
 
+ // M643: Saudi FX posting stays disabled; retain non-posting preview for strict FX QA.
+ // ignore: unused_element
  Future<void> _previewForeignBankCurrency(String raw)async {
   if(!WaffraSaudiRelease.bankSmsForeignCurrencyPreview){
    if(mounted)snack(context,waffraIsEnglish?
@@ -14720,7 +14722,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final current=matching.single;
    final achieved=current.saved<current.target&&
     current.saved+n>=current.target;
-   if(fundingBridge!=null){
     // One trusted writer handles the goal-wallet movement, funding account
     // attribution and canonical snapshot in one SQLCipher transaction.
     try{
@@ -14749,17 +14750,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       'لم تتأكد حركة الادخار. أعدنا تحميل الأرصدة بدون خصم غير مؤكد.');
      return;
     }
-   }else{
-    // The legacy wallet has no verified bank-account ledger. Preserve its
-    // original independent wallet-only behavior; do not invent a debit.
-    setState((){
-     final i=goals.indexWhere((x)=>x.id==g.id);
-     if(i>=0)goals[i]=current.copy(saved:current.saved+n);
-    });
-    if(!await _persistModuleOrReload(
-       WaffraFinanceRoute.goalCreateEditDeleteRestore,
-       operation:'goal-funding'))return;
-   }
    final progressCrossed=WaffraFinancialInsights.crossedBudgetThreshold(
     previousSpent:current.saved,spent:current.saved+n,
     limit:current.target,alertPercent:current.progressAlertPercent,
