@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "pr": "PR #590 draft M661 saved exclusion-rule refresh on merged main with M647–M652, M658/M659 protected",
-  "issue": "Issues #569–#574 plus previously merged #566/#567/#576, #579 and #582; Issue #583 M656; Issues #585/#587 (M658/M659 merged main before PR #575); Issue #589 M661; Issue #588 M660 is tracked separately but not implemented by PR #590",
+  "pr": "#592",
+  "issue": "#591",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main",
   "reviewed_at": "2026-11-12",
@@ -1600,6 +1600,102 @@
         "Custom excluded rules may only exclude parser-uncertain SMS with safe keyword/sender match. Never exclude completed finance messages based on phrase overlap.",
         "Exact individual excluded SMS retains encrypted ID anti-replay indefinitely, label recovery 30 days; rule storage separate; M660 broad templates remain unimplemented.",
         "Test actual Android and real owner APK; PR draft stays unmerged without exact-head mandatory CI."
+      ]
+    },
+    {
+      "id": "M662-REVIEW-EDITORS-ACCOUNTS-CARDS-PDF-PR592",
+      "issue": "Issue #591, Draft PR #592, owner Android screenshots 2026-11-12",
+      "previous_behavior": "SMS review presents duplicate top kind selector plus long transfer disclaimer; reviewed transfer does not show original bank SMS in verified form and date is asked before entry; manual income/expense alternatives drop original transfer message. Inline account add uses possibly stale Home balance cache and clears first created child's selected id. Savings piggy icon and verbose goal/settled-due cards create RTL SAR overlap. Transfer and goal PDF tables force separate new pages leaving avoidable blank areas. New manually created expenses preselected main category Other because entrySheet() initialized empty manual category as 'أخرى', a valid expense parent, while income had no corresponding parent. M597 source test expected showDatePicker and showTimePicker in main SMS review, but owner-approved M662 moved both controls inside the actual verified transfer form.",
+      "approved_behavior": "Preserve lower SMS review transfer/correct/exclude actions; remove duplicate type control and overly long text. Transfer review always opens verified account-to-account form with read-only SMS original, both verified accounts may be independently created and selected, uncertain SMS timestamp requires deliberate date+time selection before confirmed write. Separate manual correction shows original transfer text without acknowledging transfer SMS. Income/expense SMS editor expands original source. All new accounts are reread directly from verified SQLCipher balances and child selected. Compact goals/paid-dues with full readable SAR inside card, neutral wallet icon. Nonanalytics PDF collects transfer/savings and transaction sections in a single auto-paginated MultiPage rather than forcing extra pages. M662.8: a new manual income or expense must have no parent/subcategory selection (select-main placeholder; disabled subcategory until parent); preserve existing edit category and recognized SMS rule proposal. Keep identical explicit date/time safety and atomic fee/transfer ACK ordering; M597 source assertions must inspect the form where the pickers now live.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_account_transaction_form.dart"
+      ],
+      "test_paths": [
+        "test/m662_sms_review_activity_pdf_regression_test.dart",
+        "test/m514_sms_review_regressions_test.dart",
+        "test/m495_pr402_ui_performance_regression_test.dart",
+        "test/m647_m652_financial_activity_regression_test.dart",
+        "test/m580_sms_security_navigation_performance_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/m174-main-sha-postmerge.yml",
+        ".github/workflows/android.yml"
+      ],
+      "safety_invariants": [
+        "Review/excluded SMS never posts or ACKs transfer automatically; only explicit verified account IDs, confirmed amount/date/fee and SQLCipher authority create financial movement.",
+        "Bank SMS provenance and source body remain read-only (not public test data); transfer SMS manual alternative is independent and must not relabel SMS as committed.",
+        "New account selection must come from a verified authoritative balances() witness, with existing provider identity rules and two distinct transfer IDs.",
+        "Goal contributions and due payments are presentation-only in this PR; retain actual verified source, privacy-masked amounts, no duplicate ledger debit.",
+        "PDF must preserve all source ledger rows with stable amounts, multilingual RTL and branded background; long reports still paginate safely.",
+        "No existing security, SMS, Flutter, Android, PDF, account or finance suite disabled; exact-head CI and real Android remain required.",
+        "The previous M595 regression now positively asserts revised lower type choices and unchanged exclusion/confirmed finance logic; no unrelated M580 security checks are removed.",
+        "M662.8 changes manual new entry initial category only; prevents any implicit expense Other parent and does not clear existing saved edits, SMS classification, budget/finance authority or account selection."
+      ]
+    },
+    {
+      "id": "M663-VERIFIED-FIRST-INSTALL-HOME-PREASSEMBLY-PR592",
+      "issue": "Issue #591 M663, Draft PR #592, owner approved first-install and re-login handoff on 2026-11-12",
+      "previous_behavior": "HomeScreen is mounted only after new-registration consent and biometrics finish; a slow SQLCipher catalog/account read then leaves the biometric UI retained and non-interactive, creating a perceived freeze. Existing M631 prewarm opens a BIND-only source while the owner is signing in, but does not prepare the actual first Home in the permissions window. Optional native SMS and lifecycle listeners may begin work as soon as an offstage Home reports ready.",
+      "approved_behavior": "Only an authenticated, first-time new registration (new profile, first-run Android SMS permission, not ordinary verified phone relogin) may mount the one real Home beneath an interactive consent/biometric stage after password and profile persistence. Home uses original SQLCipher authority, verifies source integrity and balances, caches readiness while locked, and is revealed after biometric succeeds without re-mount/re-load. PostauthVisible first-frame barrier blocks SMS, widget, notification, recurring, tour, lifecycle and back callbacks until visible. Logout invalidates owner-scoped Home/finance and retains source-close guards. Existing/relogged-in accounts still wait for verified exact-owner finance, never fake zero.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_large_json_decode.dart",
+        "lib/storage/waffra_verified_finance_authority.dart"
+      ],
+      "test_paths": [
+        "test/m663_home_prewarm_auth_handoff_test.dart",
+        "test/m623_verified_home_handoff_no_black_frame_test.dart",
+        "test/m624_deferred_sms_after_verified_home_test.dart",
+        "test/m631_verified_finance_prewarm_test.dart",
+        "test/m625_single_verified_home_read_login_handoff_test.dart",
+        "test/m463_auth_first_one_page_test.dart",
+        "test/m622_immediate_home_without_loader_test.dart",
+        "test/m627_home_handoff_timeout_and_session_reset_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/m174-main-sha-postmerge.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/android.yml"
+      ],
+      "safety_invariants": [
+        "No speculative Home mount for a restored, logged-out, or different owner; first install only after verified credential and persisted profile.",
+        "No fake empty financial state: verified SQLCipher finance.requireIntegrity and accounts still gate Home-ready; no permissive legacy fallback.",
+        "Consent and biometrics retain accessible top-level UI and mandatory authentication; hidden Home is Offstage and TickerMode disabled until user verified.",
+        "Every optional native SMS scan, native resume, widget, notification, recurring, tour and lifecycle callback stays deferred until the first actually visible Home frame.",
+        "No asset/owner balance, credentials or SMS content logged; profile logs are elapsed times only.",
+        "Logout still drains owner-bound Home I/O, suspends SMS and closes the exact finance binding; relogin never reuses closed handles or stale balances.",
+        "M385 bounded source diff and existing positive security/finance tests remain enabled; exact SHA CI and physical Android acceptance pending."
+      ]
+    },
+    {
+      "id": "M664-FULL-FLUTTER-TEST-ASSERTION-DRIFT-ISSUE593",
+      "issue": "Issue #593, same Draft PR #592, 2026-11-12",
+      "previous_behavior": "Six full-suite CI jobs were red on dc6ec5c from three stale source-test expectations (M587 one-line manual entry call, M494 blocking Home reload, M663 back handler outside truncated test source window). Complete Flutter app executed and all other tests succeeded; the M340 quality-verdict failure was downstream, not an extra root error.",
+      "approved_behavior": "Retain complete Flutter test suite and production source unchanged. Positively check manual entry opens with separate transfer SMS reference without ACK, newly created account appears only after direct verified SQLCipher balances read and both pickers/selection update while Home refresh remains nonblocking, and hidden Home back handling is gated by postAuthVisible at its real function location. Never reduce finance, OTP, authorization, anti-replay or SMS confirmation assertions.",
+      "source_paths": [
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m486_sms_back_navigation_source_test.dart",
+        "test/m580_sms_security_navigation_performance_test.dart",
+        "test/m663_home_prewarm_auth_handoff_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/m160-main-reconciliation.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "M494: authoritative api.balances() read after createTypedAccountWithIdentity, one created ID and one matching bank group, inline provider+child state update and selected financial account, plus nonblocking Home list sync.",
+        "M587: transfer remains pending when user instead adds a separate manual income/expense; reviewedOriginalSms stays read-only and no automatic transfer ACK; known transfer still requires source+destination confirmed by owner.",
+        "M663: hidden/offstage preloaded Home cannot process back navigation until user-visible first frame; guard remains in actual _consumeHomeBack function.",
+        "No skipped, removed, commented-out or selectively hidden unit/widget/security tests; all mandatory PR checks must execute against exact new head."
       ]
     }
   ]

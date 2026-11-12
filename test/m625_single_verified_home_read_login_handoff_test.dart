@@ -70,7 +70,7 @@ void main() {
     expect(root,contains("_m625TraceHandoff('biometric');"));
     expect(saveUser,contains('locked=!ordinaryPhoneRelogin;'));
     expect(saveUser,contains("_m625TraceHandoff('relogin');"));
-    expect(root,contains('child:Offstage(offstage:!_m623HomeReady,'));
+    expect(root,contains('child:Offstage(offstage:!homeInteractive,'));
     expect(root,contains('onVerifiedReady:()=>_m623HomeLoaded(account)'));
     expect(homeLoader.indexOf('await load();'),
         lessThan(homeLoader.indexOf('widget.onVerifiedReady?.call();')));

@@ -1263,6 +1263,18 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  // M623: Keep the actual preceding authenticated screen mounted until the
  // complete owner-verified Home can paint. Never replace its wait with black.
  bool _m623HomeReady=false;
+ // M663: first credential-verified registration can prepare the real hidden
+ // Home while consent/biometric UI is active. No root data/zero is fabricated.
+ bool _m663OnboardingHomePreload=false;
+ bool _m663PreloadedFinanceReady=false;
+ void _m663RevealPreloadedHome(){
+  // Only a signed-in, foreground-authenticated owner can show verified Home.
+  if(!mounted||locked||showLogin||autoSmsConsentPending||
+     (googleFirstRunSetup&&WaffraSaudiRelease.locationCountryOnboarding))return;
+  if(_m663PreloadedFinanceReady){
+   setState((){_m623HomeReady=true;_m623RetainedStage=null;});
+  }
+ }
  String? _m623RetainedStage;
  // M627: one Home State per authenticated session, stable across locale.
  int _m627HomeSession=0;
@@ -1365,9 +1377,18 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     '${_m625HandoffClock?.elapsedMilliseconds??-1}');
   }
   final current=profile;
-  if(!mounted||current==null||showLogin||locked||
+  if(!mounted||current==null||showLogin||
      current.provider!=expectedOwner.provider||
      current.phone!=expectedOwner.phone||current.email!=expectedOwner.email)return;
+  // The hidden, owner-verified Home may finish while first-run permission
+  // and biometric UI is still active. Remember readiness but NEVER reveal
+  // it until the biometric gate and every consent step were completed.
+  if(_m663OnboardingHomePreload&&(locked||autoSmsConsentPending)){
+   _m663PreloadedFinanceReady=true;
+   if(kProfileMode)debugPrint('WAFFRA_AUTH_PERF m663_hidden_home_ready=true');
+   return;
+  }
+  if(locked||autoSmsConsentPending)return;
   setState((){_m623HomeReady=true;_m623RetainedStage=null;});
   final stopwatch=_m625HandoffClock;
   final origin=_m625HandoffOrigin;
@@ -1415,6 +1436,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     if(mounted&&locked&&profile!=null&&!showLogin){
      _m625TraceHandoff('biometric');
      setState(()=>locked=false);
+     _m663RevealPreloadedHome();
     }
    }
    return;
@@ -1602,6 +1624,12 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    if(freshSession){
     _m623HomeReady=false;
     _m623RetainedStage=locked?'biometric':'login';
+    _m663PreloadedFinanceReady=false;
+    // A credential-verified first registration is the ONLY time we may
+    // prepare the hidden owner Home before the first biometric gate.
+    // Explicit logout/login and restored sessions never use this path.
+    _m663OnboardingHomePreload=needsSmsAccessAfterRegistration&&
+     !ordinaryPhoneRelogin;
    }
   });
   // Password verification and protected profile write have succeeded.
@@ -1749,6 +1777,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   if(mounted)setState((){
    profile=null;showLogin=true;locked=true;googleFirstRunSetup=false;
    _m623HomeReady=false;_m623RetainedStage=null;
+   _m663OnboardingHomePreload=false;_m663PreloadedFinanceReady=false;
    _m627HomeSession++;
    _m631PrewarmBinding=null;_m631PrewarmOwner=null;
    _m631PrewarmSession=null;_m631PrewarmClaimed=false;
@@ -1802,6 +1831,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    pinHash=hash;
    locked=false;
   });
+  _m663RevealPreloadedHome();
  }
  Future<void> setLanguage(String next)async {
   if((next!='ar'&&next!='en')||next==language)return;
@@ -1838,9 +1868,14 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   final laterConsent=!needsLogin&&!firstConsent&&!needsGate&&autoSmsConsentPending;
   final needsCountry=!needsLogin&&!firstConsent&&!needsGate&&!laterConsent&&
    googleFirstRunSetup&&WaffraSaudiRelease.locationCountryOnboarding;
-  final canMountHome=!needsLogin&&!firstConsent&&!needsGate&&
+  final canShowHome=!needsLogin&&!firstConsent&&!needsGate&&
    !laterConsent&&!needsCountry;
-  final beforeReady=canMountHome&&!_m623HomeReady;
+  // M663: offstage mount is restricted to a NEW credential-verified signup.
+  // The visible gate remains mounted and receives every user interaction.
+  final canMountHome=canShowHome||
+   (_m663OnboardingHomePreload&&!needsLogin&&!needsCountry);
+  final homeInteractive=canShowHome&&_m623HomeReady;
+  final beforeReady=canShowHome&&!_m623HomeReady;
   final showLoginScreen=needsLogin||(beforeReady&&_m623RetainedStage=='login');
   final showConsent=firstConsent||laterConsent||
    (beforeReady&&_m623RetainedStage=='consent');
@@ -1871,6 +1906,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
         _biometricVerifiedAwaitingResume=false;
         _m625TraceHandoff('biometric');
         setState(()=>locked=false);
+        _m663RevealPreloadedHome();
        }else if(lifecycle==AppLifecycleState.inactive){
         _biometricVerifiedAwaitingResume=true;
        }
@@ -1884,19 +1920,20 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
       onCountryConfirmed:setUiCountry))),
    if(canMountHome)KeyedSubtree(
     key:ValueKey('home-$_m627HomeSession'),
-    child:Offstage(offstage:!_m623HomeReady,
-     child:HomeScreen(
+    child:Offstage(offstage:!homeInteractive,
+     child:TickerMode(enabled:homeInteractive,child:HomeScreen(
       // Stable across language changes; rotated on explicit sign-out only.
       key:_m627HomeKey,
       profile:account,
       prewarmedFinanceBinding:_m631ClaimFinancePrewarm(account),
       onVerifiedReady:()=>_m623HomeLoaded(account),
+      postAuthVisible:homeInteractive,
       onVerifiedHomeSmsResume:()=>_m624ResumeSmsAfterRealHome(account),
       dark:appearance=='dark'||(appearance=='system'&&
        MediaQuery.platformBrightnessOf(rootContext)==Brightness.dark),
       appearance:appearance,onAppearance:setAppearance,onTheme:theme,
       onLanguage:setLanguage,onLogout:logout,onProfile:saveUser,onSetPin:setPin,
-      pinEnabled:pinHash!=null,greetingIndex:_greetingCycle))),
+      pinEnabled:pinHash!=null,greetingIndex:_greetingCycle)))),
   ]);
  }
  @override Widget build(BuildContext context)=>MaterialApp(
@@ -3941,6 +3978,7 @@ class HomeScreen extends StatefulWidget {
  final Person profile;final bool dark,pinEnabled;final String appearance;
  final Future<WaffraProductionFinanceAuthorityBinding?>? prewarmedFinanceBinding;
  final int greetingIndex;
+ final bool postAuthVisible;
  final VoidCallback? onVerifiedReady;
  final Future<bool> Function()? onVerifiedHomeSmsResume;
  final Future<void> Function(String) onAppearance;
@@ -3953,6 +3991,7 @@ class HomeScreen extends StatefulWidget {
   required this.onSetPin,required this.onTheme,required this.onLanguage,required this.onLogout,required this.onProfile,
    required this.appearance,required this.onAppearance,
    required this.greetingIndex,this.onVerifiedReady,
+   this.postAuthVisible=true, // Standalone Home remains interactive; root overrides for preload.
    this.prewarmedFinanceBinding,this.onVerifiedHomeSmsResume});
  @override State<HomeScreen> createState()=>_HomeScreenState();
 }
@@ -4136,6 +4175,31 @@ Future<bool> waffraConfirmUnlinkedBudgetSave({
 }
 
 class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
+ // M663: separate a verified, hidden first-run Home preload from actual
+ // owner-visible first paint. No optional SMS/native/widget I/O during gate.
+ final Completer<void> _m663FirstInteractiveFrame=Completer<void>();
+ @override void didUpdateWidget(covariant HomeScreen oldWidget){
+  super.didUpdateWidget(oldWidget);
+  if(widget.postAuthVisible&&!oldWidget.postAuthVisible&&
+     !_m663FirstInteractiveFrame.isCompleted){
+   WidgetsBinding.instance.addPostFrameCallback((_){
+    if(mounted&&widget.postAuthVisible&&
+       !_m663FirstInteractiveFrame.isCompleted){
+     _m663FirstInteractiveFrame.complete();
+    }
+   });
+  }
+ }
+ Future<bool> _m663AwaitVisible(int epoch)async{
+  if(widget.postAuthVisible){
+   // Actual layout is allowed to finish before optional I/O.
+   await WidgetsBinding.instance.endOfFrame;
+  }else{
+   await _m663FirstInteractiveFrame.future;
+  }
+  return mounted&&widget.postAuthVisible&&
+   epoch==_m630HomeStartupEpoch&&!_m627ClosingSession;
+ }
  // Stable callback identity ensures an old locale-specific Home disposal
  // cannot clear the replacement Home's back handler.
  late final bool Function() _registeredBackHandler=_consumeHomeBack;
@@ -4183,7 +4247,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  int _m630HomeStartupEpoch=0;
  Future<void>? _m630PostFrameFinanceWork;
  bool _m630SmsSessionCurrent(int epoch)=>
-  mounted&&ready&&!_m627ClosingSession&&_financeLoadFailure==null&&
+  mounted&&ready&&widget.postAuthVisible&&
+  !_m627ClosingSession&&_financeLoadFailure==null&&
   epoch==_m630HomeStartupEpoch;
  // A signout must not close SQLCipher while a Home load still owns a read.
  Completer<void>? _m627HomeLoadCompletion;
@@ -4717,16 +4782,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  final Map<String,Map<String,Object?>> _m492SmsEditorDrafts={};
  bool _m486ResumeQueued=false;
  void _m468OnResume(){
-  _m621OnFinanceNoticeTap();
-  if(!mounted||!ready||
+  if(!mounted||!ready||!widget.postAuthVisible||
      WaffraExternalMediaSession.shouldSkipResumeBackgroundWork)return;
+  _m621OnFinanceNoticeTap();
   // M486 #419: biometrics/OS resume must render a frame before expensive
   // SQLCipher/widget and SMS I/O start. Collapse repeated lifecycle events.
   if(_m486ResumeQueued)return;
   _m486ResumeQueued=true;
   WidgetsBinding.instance.addPostFrameCallback((_){
    _m486ResumeQueued=false;
-   if(!mounted||!ready||
+   if(!mounted||!ready||!widget.postAuthVisible||
       WaffraExternalMediaSession.shouldSkipResumeBackgroundWork)return;
    // Verified finance/widget read is still required, merely deferred one
    // frame. Never infer cash from an unverified snapshot.
@@ -4749,6 +4814,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  @override void initState(){super.initState();WaffraBackNavigation.onHomeBack=_registeredBackHandler;_dashboardScrollController.addListener(_handleDashboardScroll);_tourGlow=AnimationController(vsync:this,duration:waffraMotion(1150));waffraReturnHome.addListener(_returnToHome);waffraIncomingSms.addListener(_receiveSharedSms);waffraAutoSmsUpdates.addListener(_receiveAutoSmsNotice);waffraFinanceNoticeTap.addListener(_m621OnFinanceNoticeTap);waffraWidgetAction.addListener(_receiveWidgetAction);_widgetReloadListener=AppLifecycleListener(onResume:_m468OnResume);unawaited(_loadFinanceSafely());}
  void _returnToHome(){if(mounted)setState((){_tabBackStack.clear();tab=0;accountOpened=false;goalsOpened=false;addFabExpanded=false;});}
  void _receiveWidgetAction(){
+  // New pre-auth barrier. Preserve the original owner/action guard below
+  // because existing Widgets/source regressions depend on its semantics.
+  if(!mounted||!ready||!widget.postAuthVisible)return;
   if(!mounted||!ready||waffraWidgetAction.value!='add')return;
   waffraWidgetAction.value=null;
   setState((){tab=0;goalsOpened=false;addFabExpanded=false;});
@@ -4951,13 +5019,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
  Timer? _m632SmsNoticeTimer;
  void _receiveAutoSmsNotice(){
-  if(!mounted||!ready||_m627ClosingSession)return;
+  if(!mounted||!ready||!widget.postAuthVisible||
+     _m627ClosingSession)return;
   // One refresh per notification BURST, not one full 2k-message reparse
   // for each new or repeated Android receiver callback.
   _m632SmsNoticeTimer?.cancel();
   _m632SmsNoticeTimer=Timer(const Duration(milliseconds:900),(){
    _m632SmsNoticeTimer=null;
    if(mounted&&ready&&!_m627ClosingSession){
+    // A received native notice can queue during first-run biometric setup.
+    // Do not start encrypted history work until real Home is interactive.
+    if(!widget.postAuthVisible)return;
     unawaited(_refreshAutoSmsInbox());
    }
   });
@@ -6149,6 +6221,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     principalMinor:verifiedMinor,feeSar:facts.fee);
   // No confirmed principal means an EMPTY editable field, never the fee.
   // The verified form refuses zero amounts on submit.
+  // The first reviewed transfer on a clean install must bootstrap the same
+  // verified finance bridge used by manual entry, before showing the form.
+  await _ensureFinanceBound();
+  if(!mounted)return;
   final bridge=_financeBinding?.accountsBridge;
   if(bridge==null){
    if(mounted)snack(context,'الحسابات الموثقة غير متاحة.',
@@ -6169,19 +6245,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      DateTime.now().millisecondsSinceEpoch);
    // M597: received-at is only a picker hint, never a fabricated bank
    // transaction timestamp. Unknown dates require an explicit day AND time.
-   DateTime? date=bankSmsDate(body,referenceDate:arrived);
-   if(date==null||bankSmsHasUnverifiedTimestamp(body)){
-    final pickedDay=await showDatePicker(context:context,
-     initialDate:arrived,firstDate:DateTime(2000),
-     lastDate:DateTime.now().add(const Duration(days:1)));
-    if(pickedDay==null||!mounted)return;
-    final pickedTime=await showTimePicker(context:context,
-     initialTime:TimeOfDay.fromDateTime(arrived));
-    if(pickedTime==null||!mounted)return;
-    date=DateTime(pickedDay.year,pickedDay.month,pickedDay.day,
-     pickedTime.hour,pickedTime.minute);
-   }
-   // Source timestamp or explicit picker has already established a date.
+   final smsDate=bankSmsDate(body,referenceDate:arrived);
+   final needsDateConfirmation=smsDate==null||
+    bankSmsHasUnverifiedTimestamp(body);
+   // Open the transfer form immediately. A received-at fallback is only a
+   // visible hint: the editor refuses commit until the user picks a date.
+   final date=needsDateConfirmation?arrived:smsDate;
    final prefill=WaffraInternalTransferDraft(
     // Native fingerprint includes sender, body AND receivedAt; two distinct
     // identical-body SMS must not share a single SQLCipher transfer ID.
@@ -6212,7 +6281,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          style:const TextStyle(color:emerald,fontSize:12))),
       Expanded(child:WaffraAccountTransactionForm(
        accounts:accounts,english:waffraIsEnglish,
-       initialSmsTransfer:prefill,
+       initialSmsTransfer:prefill,originalSmsText:body,
+       requireSmsDateConfirmation:needsDateConfirmation,
        onCreateSmsAccount:(group,createProvider,isDestination)async{
         // #416: never infer transfer source or destination from SMS sender.
         final existing=await api.balances();
@@ -6709,39 +6779,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           (localFacts['category']?.toString()??'')),
          if(cloudSummary.isNotEmpty)WaffraText(cloudSummary),
         ])),
-       if(!sensitive&&!understood)...[
-        const SizedBox(height:11),
-        WaffraText(waffraIsEnglish?'Transaction type':'نوع العملية',
-         style:const TextStyle(fontWeight:FontWeight.w800,fontSize:13)),
-        const SizedBox(height:6),
-        Wrap(spacing:8,runSpacing:6,children:[
-         for(final option in const <String>['income','expense','transfer'])
-          ChoiceChip(
-           key:Key('m595-review-type-'+option),
-           showCheckmark:false,
-           selected:reviewType==option,
-           label:WaffraText(switch(option){
-            'income'=>waffraIsEnglish?'Income':'دخل',
-            'expense'=>waffraIsEnglish?'Expense':'مصروف',
-            _=>waffraIsEnglish?'Transfer':'تحويل',
-           }),
-           onSelected:(_)=>redraw((){
-            // A type change invalidates a previously reviewed money account.
-            reviewType=option;
-            reviewedAccount=null;
-            reviewedAccountName=null;
-           })),
-        ]),
-        const SizedBox(height:6),
-        if(reviewType!=null&&
-           !(reviewType==(expectedIncome?'income':'expense')&&understood)&&
-           !(reviewType=='transfer'&&facts.kind==WaffraBankOperationKind.transfer))
-         FilledButton(
-          key:const Key('m595-review-type-continue'),
-          onPressed:()=>Navigator.pop(dialog,'correct-type'),
-          child:WaffraText(waffraIsEnglish?'Continue to review':'متابعة المراجعة'),
-         ),
-       ],
+       // M662: no duplicate type picker above the original SMS. Uncertain
+       // SMS keeps explicit user-driven choices BELOW the message.
        if(!sensitive)Padding(
         padding:const EdgeInsets.only(top:10),
         child:Card(
@@ -6754,6 +6793,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          children:[Padding(padding:const EdgeInsets.all(14),
           child:SelectableText(body,textAlign:TextAlign.start))],
         ))),
+       if(!sensitive&&!understood&&
+          facts.kind!=WaffraBankOperationKind.transfer)...[
+        const SizedBox(height:8),
+        for(final kind in const <String>['income','expense','transfer'])
+         Padding(padding:const EdgeInsets.only(bottom:6),
+          child:OutlinedButton(
+           key:Key('m662-unknown-correct-to-'+kind),
+           onPressed:()=>Navigator.pop(dialog,'m662-type-'+kind),
+           child:WaffraText(switch(kind){
+            'income'=>waffraIsEnglish?'Income':'دخل',
+            'expense'=>waffraIsEnglish?'Expense':'مصروف',
+            _=>waffraIsEnglish?'Transfer':'تحويل',
+           }))),
+       ],
        if(understood&&!sensitive&&
           reviewType==(expectedIncome?'income':'expense'))...[
         const SizedBox(height:10),
@@ -6839,14 +6892,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        if(facts.kind==WaffraBankOperationKind.transfer&&!sensitive&&
           reviewType=='transfer')
         Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-         WaffraText(waffraIsEnglish?
-          'A transfer is not automatically income or expense. '
-          'Choose two verified accounts and confirm the principal amount. '
-          'Any transfer fee remains separate and unposted.':
-          'التحويل مش دخل أو مصروف تلقائيًا. اختار حسابين موثّقين '
-          'وراجع مبلغ التحويل الأساسي. أي رسوم تفضل منفصلة ولا تُخصم تلقائيًا.',
-          style:const TextStyle(fontSize:12,height:1.5)),
-         const SizedBox(height:9),
          FilledButton.icon(
           key:const Key('m587-sms-transfer-yes'),
           onPressed:()=>Navigator.pop(dialog,'transfer'),
@@ -6937,6 +6982,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     if(corrected!=null){reviewType=corrected;decision='correct-type';}
     else decision=null;
    }
+   if(decision!=null&&decision.startsWith('m662-type-')){
+    reviewType=decision.substring('m662-type-'.length);
+    decision='correct-type';
+   }
    if(decision=='correct-type'&&mounted&&reviewType!=null){
     if(reviewType=='transfer'){
      // A correction from unknown/income/expense to internal transfer cannot
@@ -7022,7 +7071,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         child:WaffraText(waffraIsEnglish?'Income':'دخل')),
       ]));
     if(mounted&&(kind=='income'||kind=='expense')){
-     await entrySheet(manualIncomeOverride:kind=='income');
+     // The chosen entry is a genuinely separate MANUAL operation: show
+     // the original transfer SMS for reference, but never ACK or relabel it.
+     await entrySheet(manualIncomeOverride:kind=='income',
+      reviewedOriginalSms:body);
     }
    }else if(decision=='yes'&&mounted&&canConfirm&&
              reviewedAccount!=null){
@@ -7126,7 +7178,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
  }
  void _receiveSharedSms(){
-  if(!mounted||!ready)return;
+  if(!mounted||!ready||!widget.postAuthVisible)return;
   final shared=waffraIncomingSms.value;
   if(shared==null||shared.trim().isEmpty)return;
   // M636: never resurrect the removed SMS paste/review screen.
@@ -7167,7 +7219,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }
    // Account balances were verified before ready=true; no second startup read.
    WidgetsBinding.instance.addPostFrameCallback((_) {
-    if(!_m630SmsSessionCurrent(startupEpoch))return;
+    unawaited(()async{
+    if(!await _m663AwaitVisible(startupEpoch)||
+       !_m630SmsSessionCurrent(startupEpoch))return;
     if(kProfileMode&&startupClock!=null){
      debugPrint('WAFFRA_FINANCE_PERF first_home_frame_ms='
       '${startupClock.elapsedMilliseconds}');
@@ -7187,6 +7241,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      await Future<void>.delayed(const Duration(milliseconds:1200));
      if(!_m630SmsSessionCurrent(startupEpoch))return;
      await _refreshAutoSmsInbox(importMonth:!_autoSmsHistoryComplete);
+    }());
     }());
    });
   }catch(e){
@@ -7227,7 +7282,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  // money. Deferred across cold start and biometric/credential verification.
  bool _m621NoticeOpening=false;
  void _m621OnFinanceNoticeTap(){
-  if(!mounted||!ready||_financeLoadFailure!=null||
+  if(!mounted||!ready||!widget.postAuthVisible||_financeLoadFailure!=null||
      _m621NoticeOpening||_autoSmsReviewOpen)return;
   final target=waffraFinanceNoticeTap.value;
   if(target==null)return;
@@ -7264,7 +7319,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }
   });
  }
- @override void dispose(){_m632SmsNoticeTimer?.cancel();if(identical(WaffraBackNavigation.onHomeBack,_registeredBackHandler))WaffraBackNavigation.onHomeBack=null;_dashboardScrollController.dispose();_categoryScrollController.dispose();_goalsScrollController.dispose();_recurringScrollController.dispose();_tourGlow.dispose();waffraReturnHome.removeListener(_returnToHome);waffraIncomingSms.removeListener(_receiveSharedSms);waffraAutoSmsUpdates.removeListener(_receiveAutoSmsNotice);waffraFinanceNoticeTap.removeListener(_m621OnFinanceNoticeTap);waffraWidgetAction.removeListener(_receiveWidgetAction);_widgetReloadListener?.dispose();_saveProgress.dispose();final binding=_financeBinding;if(binding!=null)unawaited(_financialWriteQueue.drain().whenComplete(binding.close));super.dispose();}
+ @override void dispose(){if(!_m663FirstInteractiveFrame.isCompleted)_m663FirstInteractiveFrame.complete();_m632SmsNoticeTimer?.cancel();if(identical(WaffraBackNavigation.onHomeBack,_registeredBackHandler))WaffraBackNavigation.onHomeBack=null;_dashboardScrollController.dispose();_categoryScrollController.dispose();_goalsScrollController.dispose();_recurringScrollController.dispose();_tourGlow.dispose();waffraReturnHome.removeListener(_returnToHome);waffraIncomingSms.removeListener(_receiveSharedSms);waffraAutoSmsUpdates.removeListener(_receiveAutoSmsNotice);waffraFinanceNoticeTap.removeListener(_m621OnFinanceNoticeTap);waffraWidgetAction.removeListener(_receiveWidgetAction);_widgetReloadListener?.dispose();_saveProgress.dispose();final binding=_financeBinding;if(binding!=null)unawaited(_financialWriteQueue.drain().whenComplete(binding.close));super.dispose();}
  Future<void> _syncWidgetTransactions()async{
   if(!mounted||!ready)return;
   try{
@@ -7729,6 +7784,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    // asynchronous widget reads and incoming SMS callbacks begin.
    WidgetsBinding.instance.addPostFrameCallback((_){
     unawaited(()async{
+     // First-install preload is intentionally hidden during consent+biometric.
+     if(!await _m663AwaitVisible(startupEpoch)||
+        !_m630SmsSessionCurrent(startupEpoch))return;
      // Load returns before the retained biometric/login stage is dismissed.
      // Let its FIRST genuinely verified Home frame render before optional I/O.
      await Future<void>.delayed(const Duration(milliseconds:400));
@@ -8735,7 +8793,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
 
  Future<void> entrySheet({MoneyEntry? initial,bool sms=false,String? initialSms,
-  String? reviewedSender,bool? reviewedIncomeOverride,bool? manualIncomeOverride})async {
+  String? reviewedSender,bool? reviewedIncomeOverride,bool? manualIncomeOverride,
+  String? reviewedOriginalSms})async {
   // Cold-start money selection needs a verified, non-Home-header account list.
   if(!_m468VerifiedAccountsLoaded){
    await _m467RefreshHomeAccounts();
@@ -8826,9 +8885,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    (trustedSms?(parsedSms.income):false),
    analyzing=false,hasParsed=initialSms!=null;
   bool submitTapped=false;
+  // M662.8: manual new entry must have NO default parent/category.
+  // 'أخرى' exists as an expense parent but not as an income parent; using
+  // it here silently selected expense/Other before the owner chose a category.
+  // Keep existing edit categories and previously-approved SMS suggestions.
   String category=(smsEditorDraft?['category'] as String?)??
-   initial?.category??(trustedSms?
-    (editorLearnedCategory??parsedSms.category):'أخرى');
+   initial?.category??(sms?
+    (trustedSms?(editorLearnedCategory??parsedSms.category):'أخرى'):'');
   String? selectedParentId;
   String? selectedBudgetId=(smsEditorDraft?['budget'] as String?)??initial?.budgetId;
   var entryAccounts=_m467Accounts.where((a)=>!a.archived).toList();
@@ -9070,9 +9133,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        lastFour:draft.lastFour,
        customSubtypeLabel:draft.customSubtypeLabel,
        userConfirmed:true);
-      await _m467RefreshHomeAccounts();
+      // Read the authoritative SQLCipher result directly. A concurrent
+      // Home refresh can lag behind this route, leaving both dropdowns empty.
+      final refreshed=(await api.balances()).where((a)=>!a.archived).toList();
       if(!sheetContext.mounted)return;
-      final refreshed=_m467Accounts.where((a)=>!a.archived).toList();
+      unawaited(_m467RefreshHomeAccounts());
       final created=refreshed.where((a)=>a.id==id).toList();
       if(created.length!=1)throw StateError(
        'Account creation has no verified refreshed balance');
@@ -9103,7 +9168,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        }else if(mainProvider){
         chosenManualProvider=related.single.id;
         chosenManualProviderCategory=related.single.category;
-        chosenManualAccount=null;
+        chosenManualAccount=id; // Creating a provider also created its first child.
        }else if(related.single.id==selectedProviderBefore){
         chosenManualProviderCategory=related.single.category;
         chosenManualAccount=id;
@@ -9427,6 +9492,25 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          'الرسالة البنكية الأصلية المحمية موجودة في تفاصيل المعاملة.',
          style:const TextStyle(fontSize:12))),
       ],
+      if(!sms&&reviewedOriginalSms!=null)...[
+       Card(child:ExpansionTile(
+        key:const Key('m662-manual-correction-original-expand'),
+        initiallyExpanded:true,
+        title:WaffraText(waffraIsEnglish?
+         'Original transfer message (reference only)':
+         'نص رسالة التحويل الأصلية (للمراجعة فقط)'),
+        children:[Padding(padding:const EdgeInsets.all(12),
+         child:SelectableText(reviewedOriginalSms,
+          key:const Key('m662-manual-correction-original-text'),
+          textAlign:TextAlign.start))],
+       )),
+       const SizedBox(height:10),
+       WaffraText(waffraIsEnglish?
+        'This is a separate manual entry; the transfer SMS stays in Review.':
+        'هذه عملية يدوية منفصلة؛ رسالة التحويل ستظل في المراجعة.',
+        style:const TextStyle(fontSize:12,color:emerald)),
+       const SizedBox(height:10),
+      ],
       if(sms&&initialSms==null)...[
        TextField(controller:message,minLines:3,maxLines:6,
         // Reviewed Android SMS provenance must remain byte-for-byte original.
@@ -9579,6 +9663,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        // #409: readable, read-only original SMS while editing; verification
        // and pending SMS remain hidden to avoid exposing private codes.
        ExpansionTile(
+        initiallyExpanded:true,
         key:const Key('waffra-entry-original-sms-expand'),
         tilePadding:const EdgeInsets.symmetric(horizontal:9),
         title:WaffraText(waffraIsEnglish?
@@ -11040,15 +11125,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    pw.Widget heading(String ar,String en)=>pw.Padding(
     padding:const pw.EdgeInsets.only(bottom:10),
     child:pw.Text(english?en:ar,style:pw.TextStyle(font:bold,fontSize:15,color:PdfColors.teal900)));
+   // M662: collect all non-analytics sections in ONE flowing MultiPage.
+   // Separate addPage calls forced goals/recurring onto new half-empty sheets.
+   final reportSections=<pw.Widget>[];
    if(!analytics&&items.isNotEmpty){
     final ordered=items.toList()..sort((a,b)=>b.date.compareTo(a.date));
     final descriptions=<(pw.MemoryImage,double)>[];
     for(final e in ordered){descriptions.add(await pdfDescriptionArtwork(e.title));}
-    doc.addPage(pw.MultiPage(
-     pageTheme:pageTheme,
-     footer:(ctx)=>pw.Align(alignment:pw.Alignment.centerRight,
-      child:pw.Text('${ctx.pageNumber} / ${ctx.pagesCount}',style:pw.TextStyle(font:font,fontSize:9,color:PdfColors.teal900))),
-     build:(ctx)=>[
+    reportSections.addAll([
       heading('تقرير الدخل والمصروفات','Income & Expenses Report'),
       pw.Row(children:[summary('إجمالي الدخل',totalIncome,PdfColors.green50),pw.SizedBox(width:8),
        summary('إجمالي المصروفات',totalExpenses,PdfColors.red50),pw.SizedBox(width:8),
@@ -11100,7 +11184,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         }),
        ],
       ),
-     ]));
+     ]);
    }else if(analytics){
     // "Financial Analytics" and "Smart Analysis" now render the very
     // same chart datasets shown by their respective Flutter screens.
@@ -11300,7 +11384,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     final labels={for(final a in _m467Accounts)a.id:_m647VerifiedAccountLabel(a)};
     final ordered=pdfTransfers.toList()
      ..sort((a,b)=>b.occurredIso.compareTo(a.occurredIso));
-    doc.addPage(pw.MultiPage(pageTheme:pageTheme,build:(ctx)=>[
+    reportSections.addAll([
+     pw.SizedBox(height:8),
      heading('التحويلات بين حساباتي','Transfers between my accounts'),
      pw.Padding(padding:const pw.EdgeInsets.only(bottom:10),
       child:pw.Text(english?
@@ -11333,13 +11418,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          children:english?cells:cells.reversed.toList());
        }),
       ]),
-    ]));
+    ]);
    }
    if(!analytics&&pdfSavings.isNotEmpty){
     final labels={for(final a in _m467Accounts)a.id:_m647VerifiedAccountLabel(a)};
     final ordered=pdfSavings.toList()
      ..sort((a,b)=>b.occurredIso.compareTo(a.occurredIso));
-    doc.addPage(pw.MultiPage(pageTheme:pageTheme,build:(ctx)=>[
+    reportSections.addAll([
+     pw.SizedBox(height:8),
      heading('حركات الادخار','Savings goal movements'),
      pw.Padding(padding:const pw.EdgeInsets.only(bottom:10),
       child:pw.Text(english?
@@ -11374,7 +11460,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          children:english?cells:cells.reversed.toList());
        }),
       ]),
-    ]));
+    ]);
+   }
+   if(!analytics&&reportSections.isNotEmpty){
+    doc.addPage(pw.MultiPage(
+     pageTheme:pageTheme,
+     footer:(ctx)=>pw.Align(alignment:pw.Alignment.centerRight,
+      child:pw.Text('${ctx.pageNumber} / ${ctx.pagesCount}',
+       style:pw.TextStyle(font:font,fontSize:9,color:PdfColors.teal900))),
+     build:(ctx)=>reportSections));
    }
    final bytes=await doc.save();
    if(exportDialogOpen&&exportNavigator.mounted){exportNavigator.pop();exportDialogOpen=false;}
@@ -12965,41 +13059,35 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final accent=dark?const Color(0xFFF4D790):const Color(0xFF866017);
   return Container(
    key:Key('m649-verified-saving-'+movement.id),
-   margin:const EdgeInsets.symmetric(vertical:5),
-   padding:const EdgeInsets.all(13),
+   margin:const EdgeInsets.symmetric(vertical:3),
+   padding:const EdgeInsets.symmetric(horizontal:12,vertical:9),
    decoration:BoxDecoration(
     color:dark?const Color(0xFF3C3223):const Color(0xFFF8F0D9),
     borderRadius:BorderRadius.circular(17),
     border:Border.all(color:accent.withValues(alpha:.36))),
    child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
     Row(children:[
-     Icon(Icons.savings_outlined,color:accent,size:22),
-     const SizedBox(width:7),
+     Icon(Icons.account_balance_wallet_outlined,color:accent,size:22),
+     const SizedBox(width:5),
      Expanded(child:WaffraText(funded?
       (waffraIsEnglish?'Savings contribution':'إضافة مبلغ للهدف الادخاري'):
       (waffraIsEnglish?'Savings withdrawal':'سحب من الادخار'),
       style:TextStyle(fontWeight:FontWeight.bold,color:accent,fontSize:12))),
-     WaffraCurrencyAmount(movement.amountMinor/100,fontSize:14,color:accent),
+     WaffraCurrencyAmount(movement.amountMinor/100,fontSize:13,color:accent),
     ]),
-    const SizedBox(height:7),
+    const SizedBox(height:4),
     WaffraText(movement.goalName,maxLines:2,
-     style:const TextStyle(fontWeight:FontWeight.w700,fontSize:14)),
-    const SizedBox(height:6),
-    Row(children:[
-     Expanded(child:WaffraText(funded?
-      (waffraIsEnglish?'From: ':'من: ')+accountName:
-      (waffraIsEnglish?'From goal: ':'من الهدف: ')+movement.goalName,
-      maxLines:2,style:const TextStyle(fontSize:11))),
-     Padding(padding:const EdgeInsets.symmetric(horizontal:6),
-      child:Icon(Icons.swap_horiz_rounded,size:16,color:accent)),
-     Expanded(child:WaffraText(funded?
-      (waffraIsEnglish?'Goal wallet':'محفظة الهدف'):
-      (waffraIsEnglish?'To: ':'إلى: ')+accountName,
-      maxLines:2,style:const TextStyle(fontSize:11))),
-    ]),
-    const SizedBox(height:5),
+     style:const TextStyle(fontWeight:FontWeight.w700,fontSize:13)),
+    const SizedBox(height:3),
+    WaffraText(funded?
+     (waffraIsEnglish?'From: ':'من: ')+accountName+
+      (waffraIsEnglish?'  →  Goal wallet':'  ←  محفظة الهدف'):
+     (waffraIsEnglish?'Goal wallet  →  ':'محفظة الهدف  ←  ')+accountName,
+     maxLines:2,overflow:TextOverflow.ellipsis,
+     style:const TextStyle(fontSize:11,height:1.25)),
+    const SizedBox(height:3),
     WaffraText(when==null?movement.occurredIso:dayText(when),
-     style:TextStyle(color:accent,fontSize:11)),
+     style:TextStyle(color:accent,fontSize:10)),
    ]));
  }
 
@@ -13114,12 +13202,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    const Color(0xFFEFE9F8)):entry.income?
    (darkMode?const Color(0xFF244C3A):const Color(0xFFB2D5C2)):
    (darkMode?const Color(0xFF49302C):const Color(0xFFFCECE8));
-  return Padding(padding:const EdgeInsets.symmetric(vertical:5),child:Container(
+  return Padding(padding:const EdgeInsets.symmetric(vertical:3),child:Container(
    decoration:BoxDecoration(color:rowColor,borderRadius:BorderRadius.circular(17),
     border:Border.all(color:forest.withValues(alpha:darkMode ? 0.18 : 0.08))),
    clipBehavior:Clip.antiAlias,child:Stack(children:[
-    Padding(padding:EdgeInsets.fromLTRB(11,attachmentCount>0?23:12,11,12),child:Row(children:[
-     CircleAvatar(radius:18,
+    Padding(padding:EdgeInsets.fromLTRB(10,attachmentCount>0?20:9,10,9),child:Row(children:[
+     CircleAvatar(radius:16,
       backgroundColor:Color(cat.color).withValues(alpha:0.13),
       child:WaffraIllustration(topic:cat.icon,size:36)),
      const SizedBox(width:8),
@@ -13139,7 +13227,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        WaffraText(waffraTr(entry.category)+' • '+dayText(entry.date),
         maxLines:1,style:const TextStyle(fontSize:11,color:Colors.grey)),
         const SizedBox(height:2),
-        Row(children:[
+        if(!paidDue)Row(children:[
          Icon(entry.sourceType=='sms'?Icons.sms_outlined:
           Icons.edit_note_outlined,size:13,color:Colors.grey),
          const SizedBox(width:4),
@@ -13174,12 +13262,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            Flexible(child:WaffraCurrencyAmount(
             entry.goalWalletPaidMinor/100,fontSize:11,color:valueColor)),
           ])),
+       const SizedBox(height:4),
+       Align(alignment:AlignmentDirectional.centerStart,
+        child:WaffraCurrencyAmount(entry.income?entry.amount:-entry.amount,
+         fontSize:15,color:valueColor)),
       ]))),
-     const SizedBox(width:5),
-     ConstrainedBox(constraints:const BoxConstraints(maxWidth:119),
-      child:FittedBox(fit:BoxFit.scaleDown,
-       child:WaffraCurrencyAmount(entry.income?entry.amount:-entry.amount,
-        fontSize:15,color:valueColor))),
+     const SizedBox(width:2),
      IconButton(tooltip:waffraIsEnglish?'Transaction options':'خيارات المعاملة',
       onPressed:WaffraHaptics.tap(()=>transactionActions(entry)),icon:const Icon(Icons.more_vert,size:18)),
     ])),
@@ -13996,7 +14084,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        'Reduce spending on ${waffraTr(top.first.key)} by 15% to save roughly ${cash(top.first.value*.15)} over this period.':
        'تقليل مصروفات «${waffraTr(top.first.key)}» بنسبة 15% قد يوفر حوالي ${cash(top.first.value*.15)} خلال فترة التحليل.')),
      if(goals.isNotEmpty&&income>spending)ListTile(
-      leading:const Icon(Icons.savings_outlined,color:emerald),
+      leading:const Icon(Icons.account_balance_wallet_outlined,color:emerald),
       title:WaffraText(waffraIsEnglish?
        'You could allocate part of your surplus to ${goals.first.name}; nothing is moved automatically.':
        'ممكن تخصص جزءًا من الفائض لهدف «${goals.first.name}»، ولن نضيف أي مبالغ تلقائيًا.')),
@@ -15701,7 +15789,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           label:WaffraText(waffraIsEnglish?'Edit':'تعديل')),
          if(g.saved>0)OutlinedButton.icon(
           onPressed:WaffraHaptics.tap(()=>unawaited(_handleGoalCardAction(g,'release'))),
-          icon:const Icon(Icons.savings_outlined,size:17),
+          icon:const Icon(Icons.account_balance_wallet_outlined,size:17),
           label:WaffraText(waffraIsEnglish?'Release savings':'سحب المدخرات')),
          OutlinedButton.icon(
           onPressed:WaffraHaptics.tap(()=>unawaited(_handleGoalCardAction(g,'delete'))),
@@ -17734,7 +17822,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   });
  }
  bool _consumeHomeBack(){
-  if(!mounted)return false;
+  if(!mounted||!widget.postAuthVisible)return false;
   // Go back one UI layer at a time, without rebuilding earlier forms.
   if(addFabExpanded){setState(()=>addFabExpanded=false);return true;}
   if(accountOpened){

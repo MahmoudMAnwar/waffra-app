@@ -58,7 +58,8 @@ class WaffraAccountTransactionForm extends StatefulWidget {
   this.onCreateSmsAccount,
   this.incomeCategories=const [],this.expenseCategories=const [],
   this.availableBudgets=const {},this.requireKnownCategory=false,
-  this.initialSmsTransfer,
+  this.initialSmsTransfer,this.originalSmsText,
+  this.requireSmsDateConfirmation=false,
   this.initialOperation=WaffraAccountOperation.income,
  });
  final List<WaffraAccountBalance> accounts;
@@ -66,6 +67,10 @@ class WaffraAccountTransactionForm extends StatefulWidget {
  final Map<String,String> availableBudgets;
  final bool requireKnownCategory;
  final WaffraInternalTransferDraft? initialSmsTransfer;
+ /// The reviewed, immutable source SMS; preview only, never user-editable.
+ final String? originalSmsText;
+ /// Unknown/ambiguous SMS dates require an explicit in-form date selection.
+ final bool requireSmsDateConfirmation;
  final WaffraAccountOperation initialOperation;
  final bool english;
  final Future<void> Function(WaffraAccountTransactionDraft)? onConfirmEntry;
@@ -93,6 +98,7 @@ class _WaffraAccountTransactionFormState extends State<WaffraAccountTransactionF
  String? sourceProvider,destinationProvider;
  late List<WaffraAccountBalance> liveAccounts;
  bool creatingAccount=false;
+ late bool smsDateConfirmed=!widget.requireSmsDateConfirmation;
  int sourceProviderRevision=0,destinationProviderRevision=0;
  int sourceChildRevision=0,destinationChildRevision=0;
  List<String> get choices=>mode==WaffraAccountOperation.income?
@@ -157,10 +163,10 @@ class _WaffraAccountTransactionFormState extends State<WaffraAccountTransactionF
     liveAccounts=refreshed;
     if(isDestination){
      destinationProvider=newGroup;
-     destination=createProvider?null:created.id;
+     destination=created.id; // Creation confirmed the exact account, not just its bank.
     }else{
      sourceProvider=newGroup;
-     source=createProvider?null:created.id;
+     source=created.id; // The first new account is immediately available.
      if(source==destination)destination=null;
     }
     error=null;
@@ -184,6 +190,11 @@ class _WaffraAccountTransactionFormState extends State<WaffraAccountTransactionF
  }
  Future<void> submit()async{
   if(saving||saved||creatingAccount)return;
+  if(widget.initialSmsTransfer!=null&&!smsDateConfirmed){
+   setState(()=>error=tr('أكد تاريخ التحويل من زر التاريخ أولًا',
+    'Confirm the transfer date with the date picker first'));
+   return;
+  }
   final value=waffraSarAmountMinor(amount.text);
   if(value==null){
    setState(()=>error=tr('أدخل مبلغًا صحيحًا بالريال','Enter a valid SAR amount'));
@@ -335,10 +346,24 @@ class _WaffraAccountTransactionFormState extends State<WaffraAccountTransactionF
   return SafeArea(child:SingleChildScrollView(
    padding:const EdgeInsets.all(16),
    child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-    Text(tr('معاملة جديدة','New transaction'),
+    Text(widget.initialSmsTransfer!=null?
+     tr('مراجعة حوالة بنكية','Review bank transfer'):
+     tr('معاملة جديدة','New transaction'),
      style:Theme.of(context).textTheme.titleLarge),
+    if(widget.initialSmsTransfer!=null&&widget.originalSmsText!=null)...[
+     const SizedBox(height:8),
+     Card(child:ExpansionTile(
+      key:const Key('m662-transfer-original-sms-expand'),
+      initiallyExpanded:true,
+      title:Text(tr('نص الرسالة البنكية الأصلية','Original bank SMS')),
+      children:[Padding(padding:const EdgeInsets.fromLTRB(12,4,12,12),
+       child:SelectableText(widget.originalSmsText!,
+        key:const Key('m662-transfer-original-sms-text'),
+        textAlign:TextAlign.start))],
+     )),
+    ],
     const SizedBox(height:12),
-    SegmentedButton<WaffraAccountOperation>(
+    if(widget.initialSmsTransfer==null)SegmentedButton<WaffraAccountOperation>(
      showSelectedIcon:false,
      segments:[
       ButtonSegment(value:WaffraAccountOperation.income,
@@ -373,9 +398,28 @@ class _WaffraAccountTransactionFormState extends State<WaffraAccountTransactionF
         context:context,initialDate:transferDate,
         firstDate:DateTime(2000),lastDate:DateTime(2100));
        if(picked!=null&&mounted){
-        setState(()=>transferDate=DateTime(picked.year,picked.month,picked.day,
-         transferDate.hour,transferDate.minute,transferDate.second,
-         transferDate.millisecond,transferDate.microsecond));
+        // An SMS received-at time is not the transfer execution time.
+        // Require deliberate time selection as well as date on uncertain SMS.
+        TimeOfDay? confirmedTime;
+        if(widget.requireSmsDateConfirmation){
+         confirmedTime=await showTimePicker(
+          context:context,initialTime:TimeOfDay.fromDateTime(transferDate));
+         if(confirmedTime==null||!mounted)return;
+        }
+        final pickedDate=DateTime(picked.year,picked.month,picked.day,
+         confirmedTime?.hour??transferDate.hour,
+         confirmedTime?.minute??transferDate.minute);
+        if(widget.initialSmsTransfer!=null&&
+           pickedDate.isAfter(DateTime.now())){
+         setState(()=>error=tr('تاريخ التحويل لا يمكن أن يكون في المستقبل',
+          'Transfer date cannot be in the future'));
+         return;
+        }
+        setState((){
+         transferDate=pickedDate;
+         smsDateConfirmed=true;
+         error=null;
+        });
        }
       },
       icon:const Icon(Icons.calendar_today_outlined),
@@ -384,11 +428,16 @@ class _WaffraAccountTransactionFormState extends State<WaffraAccountTransactionF
        '${transferDate.month.toString().padLeft(2,'0')}/'
        '${transferDate.year}'),
      ),
+     if(widget.initialSmsTransfer!=null&&!smsDateConfirmed)
+      Padding(padding:const EdgeInsets.symmetric(vertical:5),
+       child:Text(tr('تاريخ الرسالة غير مؤكد؛ اختر التاريخ قبل الحفظ.',
+        'SMS transaction date is unverified. Choose the date before saving.'),
+        style:TextStyle(color:Theme.of(context).colorScheme.error))),
      if(widget.initialSmsTransfer!=null)
-      Padding(padding:const EdgeInsets.symmetric(vertical:8),
-       child:Text(tr(
-        'راجع المبلغ وحدد حساب المصدر والوجهة بنفسك. الرسالة لا تختار حساباتك تلقائيًا.',
-        'Check the amount and choose both accounts. SMS never selects accounts silently.'))),
+      Padding(padding:const EdgeInsets.symmetric(vertical:4),
+       child:Text(tr('حدد حساب المصدر والوجهة وراجع المبلغ.',
+        'Choose the source and destination accounts and verify the amount.'),
+        style:const TextStyle(fontSize:12))),
      const SizedBox(height:12),
      accountField(destination,tr('إلى حساب','To account'),(v){
       setState((){destination=v;error=null;});

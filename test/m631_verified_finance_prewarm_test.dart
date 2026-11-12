@@ -33,15 +33,17 @@ void main() {
   expect(app,isNot(contains('unawaited(_m467RefreshHomeAccounts().then(')));
  });
 
- test('prewarm is claimed only by exact active profile/session after biometric',(){
+ test('prewarm is claimed only by exact active profile/session, while visibility requires biometric',(){
   expect(app,contains('Future<WaffraProductionFinanceAuthorityBinding?>? _m631ClaimFinancePrewarm('));
   expect(app,contains('_m631PrewarmSession!=_m627HomeSession'));
   expect(app,contains('_m631PrewarmClaimed=true;'));
   expect(root,contains('if(canMountHome)KeyedSubtree('));
   expect(root,contains('prewarmedFinanceBinding:_m631ClaimFinancePrewarm(account)'));
-  expect(root,contains('child:Offstage(offstage:!_m623HomeReady,'));
+  expect(root,contains('child:Offstage(offstage:!homeInteractive,'));
   expect(root,contains('onVerifiedReady:()=>_m623HomeLoaded(account)'));
-  expect(root,contains('final canMountHome=!needsLogin&&!firstConsent&&!needsGate&&'));
+  expect(root,contains('final canShowHome=!needsLogin&&!firstConsent&&!needsGate&&'));
+  expect(root,contains('final canMountHome=canShowHome||'));
+  expect(root,contains('postAuthVisible:homeInteractive'));
   expect(app,isNot(contains('final canMountHome=profile!=null;')));
  });
 
@@ -91,7 +93,7 @@ void main() {
   expect(load.indexOf('setState(()=>ready=true);'),
     lessThan(load.indexOf('Duration(milliseconds:400)')));
   expect(load,contains('if(!_m630SmsSessionCurrent(startupEpoch))return;'));
-  expect(home,contains('mounted&&ready&&!_m627ClosingSession&&_financeLoadFailure==null&&'));
+  expect(home,contains('mounted&&ready&&widget.postAuthVisible&&'));
   expect(home,contains('epoch==_m630HomeStartupEpoch;'));
   expect(load,contains('_m630PostFrameFinanceWork=postFrameFinance;'));
   expect(load,contains('if(!verifiedEncryptedStartup)await applyRecurring();'));

@@ -40,12 +40,12 @@ void main() {
   expect(route,contains('_smsConsentAfterVerifiedSignIn;'));
   expect(route,contains('final needsGate=!needsLogin&&!firstConsent&&locked;'));
   expect(route,contains('final laterConsent=!needsLogin&&!firstConsent&&!needsGate&&autoSmsConsentPending;'));
-  expect(route,contains('final canMountHome=!needsLogin&&!firstConsent&&!needsGate&&'));
+  expect(route,contains('final canShowHome=!needsLogin&&!firstConsent&&!needsGate&&'));
   expect(route,contains('child:LoginScreen(onSave:saveUser,'));
   expect(route,contains('child:WaffraAutoSmsConsentPage('));
   expect(route,contains('child:WaffraMandatoryBiometricGate('));
   expect(route,contains('onSignOut:logout'));
-  expect(route,contains('child:Offstage(offstage:!_m623HomeReady,'));
+  expect(route,contains('child:Offstage(offstage:!homeInteractive,'));
   expect(route,contains('onVerifiedReady:()=>_m623HomeLoaded(account)'));
   expect(route,contains('profile:account,'));
   expect(route,isNot(contains('onVerifiedReady:()=>_m623HomeLoaded(account!)')));

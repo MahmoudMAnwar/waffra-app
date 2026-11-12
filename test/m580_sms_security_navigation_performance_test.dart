@@ -250,14 +250,20 @@ void main(){
   final review=app.split(
    ' Future<void> _reviewAutoSmsCandidates({String? targetId})async {')[1]
    .split(' void _receiveSharedSms(){')[0];
-  expect(review,contains("const <String>['income','expense','transfer']"));
-  expect(review,contains("Key('m595-review-type-'+option)"));
-  expect(review,contains("Key('m595-review-type-continue')"));
+  // M662: the old top chips were an unnecessary second choice. The three
+  // explicit type corrections remain below the reviewed message for unknown
+  // SMS. Known transfers retain Confirm / No / Exclude below original text.
+  expect(review,contains("for(final kind in const <String>['income','expense','transfer'])"));
+  expect(review,contains("Key('m662-unknown-correct-to-'+kind)"));
+  expect(review,isNot(contains("Key('m595-review-type-'+option)")));
+  expect(review,isNot(contains("Key('m595-review-type-continue')")));
+  expect(review,contains("Key('m587-sms-transfer-yes')"));
+  expect(review,contains("Key('m587-sms-transfer-no')"));
+  expect(review,contains("Key('m587-sms-transfer-exclude')"));
   expect(review,contains("Key('m595-review-single-exclude')"));
-  expect(review,contains("reviewType=option;"));
-  expect(review,contains("reviewedAccount=null;"));
-  expect(review,contains("reviewedAccountName=null;"));
+  expect(review,contains("reviewType=decision.substring('m662-type-'.length);"));
   expect(review,contains("if(decision=='correct-type'&&mounted&&reviewType!=null)"));
+  expect(review,contains("WaffraAutoSms.excludeMessages([id])"));
  });
 
  test('M595 correction must not auto-post, guess a transfer, or auto ACK',(){
@@ -305,7 +311,15 @@ void main(){
   expect(review,contains("Key('m587-sms-transfer-exclude')"));
   expect(review,contains("Navigator.pop(dialog,'transfer-manual')"));
   expect(review,contains("await _reviewSmsAccountTransfer(item:selected,facts:facts)"));
-  expect(review,contains("await entrySheet(manualIncomeOverride:kind=='income')"));
+  // M664: No means a separate manual transaction. The pending transfer
+  // SMS stays unacknowledged and is visible in the editor as a reference.
+  final manual=review.split("}else if(decision=='transfer-manual'&&mounted){")[1]
+   .split("}else if(decision=='yes'&&mounted")[0];
+  expect(manual,contains("await entrySheet(manualIncomeOverride:kind=='income',"));
+  expect(manual,contains('reviewedOriginalSms:body);'));
+  expect(manual,contains("kind=='income'||kind=='expense'"));
+  expect(manual,isNot(contains('acknowledgeCompletedTransfer(')));
+  expect(manual,isNot(contains('acknowledgeCommitted(')));
   expect(review,isNot(contains('scannedIncome:')),
    reason:'Retired OCR-era argument must never be reintroduced.');
   expect(review,contains("await WaffraAutoSms.excludeMessages([id])"));
@@ -364,8 +378,15 @@ void main(){
   expect(writer,contains('Existing transfer must never be double charged.'));
   expect(main,contains('transferReviewedSmsWithFee('));
   expect(main,contains('messageHash:id'));
-  expect(main,contains('showDatePicker('));
-  expect(main,contains('showTimePicker('));
+  // M662: the new verified transfer form owns its own date/time pickers,
+  // so Review opens on first tap even when the bank timestamp is unknown.
+  // Confirmation remains blocked until explicit date AND time selection.
+  final form=File('lib/waffra_account_transaction_form.dart')
+   .readAsStringSync();
+  expect(main,contains('requireSmsDateConfirmation:needsDateConfirmation'));
+  expect(form,contains('showDatePicker('));
+  expect(form,contains('showTimePicker('));
+  expect(form,contains('if(widget.initialSmsTransfer!=null&&!smsDateConfirmed)'));
   expect(main.indexOf('transferReviewedSmsWithFee('),
    lessThan(main.indexOf('acknowledgeCompletedTransfer([id])')));
  });

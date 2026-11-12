@@ -54,7 +54,7 @@ void main(){
    lessThan(startup.indexOf('await _refreshAutoSmsInbox(importMonth:!_autoSmsHistoryComplete)')));
   expect(startup,contains('Duration(milliseconds:900)'));
   expect(startup,contains('if(!_m630SmsSessionCurrent(startupEpoch))return;'));
-  expect(source,contains('mounted&&ready&&!_m627ClosingSession&&_financeLoadFailure==null&&'));
+  expect(source,contains('mounted&&ready&&widget.postAuthVisible&&'));
   expect(source,contains('epoch==_m630HomeStartupEpoch;'));
  });
 }
