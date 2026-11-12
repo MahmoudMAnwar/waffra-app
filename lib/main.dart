@@ -4247,7 +4247,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  int _m630HomeStartupEpoch=0;
  Future<void>? _m630PostFrameFinanceWork;
  bool _m630SmsSessionCurrent(int epoch)=>
-  mounted&&ready&&!_m627ClosingSession&&_financeLoadFailure==null&&
+  mounted&&ready&&widget.postAuthVisible&&
+  !_m627ClosingSession&&_financeLoadFailure==null&&
   epoch==_m630HomeStartupEpoch;
  // A signout must not close SQLCipher while a Home load still owns a read.
  Completer<void>? _m627HomeLoadCompletion;
@@ -4781,16 +4782,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  final Map<String,Map<String,Object?>> _m492SmsEditorDrafts={};
  bool _m486ResumeQueued=false;
  void _m468OnResume(){
-  _m621OnFinanceNoticeTap();
-  if(!mounted||!ready||
+  if(!mounted||!ready||!widget.postAuthVisible||
      WaffraExternalMediaSession.shouldSkipResumeBackgroundWork)return;
+  _m621OnFinanceNoticeTap();
   // M486 #419: biometrics/OS resume must render a frame before expensive
   // SQLCipher/widget and SMS I/O start. Collapse repeated lifecycle events.
   if(_m486ResumeQueued)return;
   _m486ResumeQueued=true;
   WidgetsBinding.instance.addPostFrameCallback((_){
    _m486ResumeQueued=false;
-   if(!mounted||!ready||
+   if(!mounted||!ready||!widget.postAuthVisible||
       WaffraExternalMediaSession.shouldSkipResumeBackgroundWork)return;
    // Verified finance/widget read is still required, merely deferred one
    // frame. Never infer cash from an unverified snapshot.
@@ -4813,7 +4814,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  @override void initState(){super.initState();WaffraBackNavigation.onHomeBack=_registeredBackHandler;_dashboardScrollController.addListener(_handleDashboardScroll);_tourGlow=AnimationController(vsync:this,duration:waffraMotion(1150));waffraReturnHome.addListener(_returnToHome);waffraIncomingSms.addListener(_receiveSharedSms);waffraAutoSmsUpdates.addListener(_receiveAutoSmsNotice);waffraFinanceNoticeTap.addListener(_m621OnFinanceNoticeTap);waffraWidgetAction.addListener(_receiveWidgetAction);_widgetReloadListener=AppLifecycleListener(onResume:_m468OnResume);unawaited(_loadFinanceSafely());}
  void _returnToHome(){if(mounted)setState((){_tabBackStack.clear();tab=0;accountOpened=false;goalsOpened=false;addFabExpanded=false;});}
  void _receiveWidgetAction(){
-  if(!mounted||!ready||waffraWidgetAction.value!='add')return;
+  if(!mounted||!ready||!widget.postAuthVisible||
+     waffraWidgetAction.value!='add')return;
   waffraWidgetAction.value=null;
   setState((){tab=0;goalsOpened=false;addFabExpanded=false;});
   WidgetsBinding.instance.addPostFrameCallback((_){if(mounted)unawaited(entrySheet());});
@@ -5015,13 +5017,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
  Timer? _m632SmsNoticeTimer;
  void _receiveAutoSmsNotice(){
-  if(!mounted||!ready||_m627ClosingSession)return;
+  if(!mounted||!ready||!widget.postAuthVisible||
+     _m627ClosingSession)return;
   // One refresh per notification BURST, not one full 2k-message reparse
   // for each new or repeated Android receiver callback.
   _m632SmsNoticeTimer?.cancel();
   _m632SmsNoticeTimer=Timer(const Duration(milliseconds:900),(){
    _m632SmsNoticeTimer=null;
-   if(mounted&&ready&&!_m627ClosingSession){
+   if(mounted&&ready&&widget.postAuthVisible&&!_m627ClosingSession){
     unawaited(_refreshAutoSmsInbox());
    }
   });
@@ -7274,7 +7277,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  // money. Deferred across cold start and biometric/credential verification.
  bool _m621NoticeOpening=false;
  void _m621OnFinanceNoticeTap(){
-  if(!mounted||!ready||_financeLoadFailure!=null||
+  if(!mounted||!ready||!widget.postAuthVisible||_financeLoadFailure!=null||
      _m621NoticeOpening||_autoSmsReviewOpen)return;
   final target=waffraFinanceNoticeTap.value;
   if(target==null)return;
@@ -17814,7 +17817,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   });
  }
  bool _consumeHomeBack(){
-  if(!mounted)return false;
+  if(!mounted||!widget.postAuthVisible)return false;
   // Go back one UI layer at a time, without rebuilding earlier forms.
   if(addFabExpanded){setState(()=>addFabExpanded=false);return true;}
   if(accountOpened){
