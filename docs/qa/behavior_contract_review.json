@@ -1970,7 +1970,8 @@
         "lib/waffra_smart_analysis.part.dart",
         "lib/waffra_smart_features.dart",
         "scripts/qa/m206_ui_sms_scope_review.py",
-        "scripts/qa/m385_approved_change_guard.py"
+        "scripts/qa/m385_approved_change_guard.py",
+        ".github/workflows/m282-combined-candidate.yml"
       ],
       "test_paths": [
         "test/m671_tour_retirement_snackbar_tap_test.dart",
@@ -1982,20 +1983,23 @@
         "test/m277_ux_accessibility_quality_test.dart",
         "test/qa/m385_approved_scope_guard_test.py",
         "test/m668_footer_edge_snackbar_test.dart",
-        "test/waffra_footer_notice_test.dart"
+        "test/waffra_footer_notice_test.dart",
+        "test/m274_responsive_ui_journeys_test.dart"
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/m174-main-sha-postmerge.yml",
         ".github/workflows/m550-behavior-contract-preflight.yml",
         ".github/workflows/m449-release-notes-ancestry.yml",
-        ".github/workflows/m147-final-main-review-gate.yml"
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/m282-combined-candidate.yml"
       ],
       "safety_invariants": [
         "No unrelated file removal: M385 adds only the exact owner-approved tour source path to the code-deletion exception; no wildcard, no general guard bypass.",
         "Original click target, screen navigation, FAB, Undo and dialog action execute normally even when dismissing notice; do not intercept or swallow pointer gestures.",
         "Keep existing 5s passive Snackbar timers; a tap dismisses immediately, without waiting; do not dismiss a newly replaced notice from a stale tap.",
         "No modification to protected money posting paths, SMS original data, biometric gate, SQLCipher persistence, notifications, goals or recurring calculations.",
-        "Restyle the tour-only positive tests to assert the tour absent but finance, settings About, Home/tools, startup and accessibility retained; do not weaken unrelated tests."
+        "Restyle the tour-only positive tests to assert the tour absent but finance, settings About, Home/tools, startup and accessibility retained; do not weaken unrelated tests.",
+        "M282's 48dp accessible-Undo check replaces the exact legacy X-only literal; all other source-completeness and fail-closed finance cutover tests are retained."
       ]
     }
   ]
