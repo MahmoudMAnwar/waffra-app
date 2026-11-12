@@ -307,3 +307,9 @@ M647/M649/M652 provenance labels — PR #575, 2026-11-11
 - Changed production paths since previous complete review: lib/main.dart (goal_due smart/PDF grouping and scoped finance display), lib/waffra_goal_recurring_actions.part.dart (neutral linked due category), lib/storage/waffra_fresh_finance_domain_repository.dart (no machine notes in new records), lib/waffra_sms_local_rules.dart (confirmed nonmoney SMS patterns), lib/waffra_approved_notifications.dart and lib/waffra_sms_rule_settings_page.dart (approved UI).
 - M385 exact-file reconciliation: Remove a stale declared but unmodified M528 test from the manifest; no tests or workflows were skipped or bypassed. All tests and physical Android/SQLCipher checks remain required before merge.
 - Verification: exact-head CI still ongoing/required; this source review and note alone are not proof of Android or SQLCipher test success, signing, or physical acceptance.
+
+[M449 REVIEWED M665.7 GOAL LINK GUARD FOLLOW-UP — ISSUE #594 — DRAFT PR #595]
+- Reviewed latest source SHA: 22cb9728da05ab890ad06db04a0ce9974ec1c1b2
+- Approved targeted fix: goal-linked recurring item Edit stays visually muted and read-only on every path even when the historical parent goal was deleted or not loaded, using source `linkedGoalId` rather than currently resolved `goal` for button opacity and Semantics. The explanatory tap still instructs editing the goal, and standalone dues retain their enabled Edit button. No SQLCipher account, wallet, posting, finance source, biometric preload or SMS logic changed.
+- Changed production path: lib/main.dart. Positive test: test/m665_goal_due_display_and_linked_edit_test.dart now guards orphaned link visual behavior.
+- Verification: exact-head CI and device acceptance must be checked after this commit. No previous-run success is claimed as evidence for this new source SHA.
