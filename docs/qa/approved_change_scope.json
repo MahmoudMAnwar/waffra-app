@@ -92,7 +92,15 @@
       },
       {
         "start": " Widget goalsPage(){",
+        "end": " Future<void> recurringDialog("
+      },
+      {
+        "start": " Future<void> recurringDialog(",
         "end": " Widget recurringPage(){"
+      },
+      {
+        "start": " Widget recurringPage(){",
+        "end": " Future<void> showWaffraFinancialCalendar("
       }
     ],
     "lib/waffra_approved_notifications.dart": [
