@@ -7029,8 +7029,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         ])),
        // M662: no duplicate type picker above the original SMS. Uncertain
        // SMS keeps explicit user-driven choices BELOW the message.
-       if(!sensitive&&!understood&&
-          facts.kind!=WaffraBankOperationKind.transfer)Padding(
+       // M669: all actual financial SMS review confirmations show the
+       // UNCHANGED original message, not just a parser's summary. This
+       // shared dialog serves sender inbox, notification tap and per-message
+       // review. A genuine OTP/security challenge must remain hidden.
+       if(!sensitive)Padding(
         padding:const EdgeInsets.only(top:10),
         child:Card(
          color:Theme.of(dialog).colorScheme.surfaceContainerLow,
@@ -7040,8 +7043,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          title:WaffraText(waffraIsEnglish?
           'Read original bank message':'عرض نص الرسالة البنكية الأصلي'),
          children:[Padding(padding:const EdgeInsets.all(14),
-          child:SelectableText(body,textAlign:TextAlign.start))],
-        ))),
+          child:KeyedSubtree(
+           key:const Key('m669-review-original-sms-text'),
+           child:SelectableText(body,textAlign:TextAlign.start)))],
+        )))
+       else Card(child:Padding(
+        padding:const EdgeInsets.all(12),
+        child:WaffraText(waffraIsEnglish?
+         'Verification SMS content is hidden for your safety.':
+         'نص رسالة التحقق مخفي لحمايتك.'))),
        if(!sensitive&&!understood&&
           facts.kind!=WaffraBankOperationKind.transfer)...[
         const SizedBox(height:8),
