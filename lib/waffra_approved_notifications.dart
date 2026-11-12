@@ -157,14 +157,8 @@ class _WaffraApprovedNotificationsPageState
        ()=>run(widget.onReviewAll):()=>setState((){
         selecting=!selecting;selectedIds.clear();
        }),
-      icon:Icon(selecting?Icons.close_rounded:Icons.fact_check_outlined)),
-     IconButton(
-      tooltip:widget.english?'Refresh bank messages':'إعادة فحص الرسائل',
-      onPressed:busy||!widget.canRescan()?null:()=>run(widget.onRescan),
-      icon:busy?
-       const SizedBox(width:21,height:21,child:CircularProgressIndicator(
-        strokeWidth:2,color:Colors.white)):
-       const Icon(Icons.refresh_rounded))],
+      icon:Icon(selecting?Icons.close_rounded:Icons.checklist_rounded)),
+],
     ),
     body:Column(children:[
      if(busy)const LinearProgressIndicator(minHeight:2),
@@ -187,7 +181,7 @@ class _WaffraApprovedNotificationsPageState
         key:const Key('m592-select-all-visible'),
         icon:Icon(shown.isNotEmpty&&
          shown.every((row)=>selectedIds.contains(row.id))?
-          Icons.deselect_rounded:Icons.select_all_rounded),
+          Icons.check_box_rounded:Icons.check_box_outline_blank_rounded),
         label:Text(shown.isNotEmpty&&
           shown.every((row)=>selectedIds.contains(row.id))?
          (widget.english?'Deselect all':'إلغاء التحديد'):
@@ -204,16 +198,31 @@ class _WaffraApprovedNotificationsPageState
         style:const TextStyle(color:green,fontWeight:FontWeight.w700)),
       ]),
      ),
-     Expanded(child:shown.isEmpty?
-      Center(child:Text(widget.english?'No messages to review':
-       'لا توجد رسائل تحتاج للمراجعة',
-       style:const TextStyle(color:Color(0xFF708177)))):
-      ListView.builder(
-       key:const Key('m549-notification-list'),itemCount:shown.length,
-       itemBuilder:(ctx,index)=>RepaintBoundary(
-        key:ValueKey('m580-notice-'+shown[index].id),
-        child:noticeTile(shown[index])),
-      )),
+     Expanded(child:RefreshIndicator(
+      key:const Key('m665-notification-pull-refresh'),
+      onRefresh:()async{
+       // Incremental native cursor; never re-import SMS history on a pull.
+       if(busy||!widget.canRescan())return;
+       await run(widget.onRescan);
+       if(mounted)setState((){});
+      },
+      child:shown.isEmpty?
+       ListView(
+        physics:const AlwaysScrollableScrollPhysics(),
+        children:[SizedBox(
+         height:MediaQuery.sizeOf(context).height*0.45,
+         child:Center(child:Text(widget.english?'No messages to review':
+          'لا توجد رسائل تحتاج للمراجعة',
+          style:const TextStyle(color:Color(0xFF708177)))))],
+       ):
+       ListView.builder(
+        key:const Key('m549-notification-list'),
+        physics:const AlwaysScrollableScrollPhysics(),
+        itemCount:shown.length,
+        itemBuilder:(ctx,index)=>RepaintBoundary(
+         key:ValueKey('m580-notice-'+shown[index].id),
+         child:noticeTile(shown[index])),
+       ))),
      if(selecting&&widget.onBulkExclude!=null&&liveSelected.isNotEmpty)
       SafeArea(top:false,child:Padding(
        padding:const EdgeInsets.fromLTRB(12,8,12,10),
