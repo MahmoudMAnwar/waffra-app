@@ -270,3 +270,9 @@ M647/M649/M652 provenance labels — PR #575, 2026-11-11
 - Approved change: Enable native encrypted and reversible 30-day automatic SMS exclusion for the 14 ready-made excluded-kind rules only when there is no completed debit/credit/purchase/transfer evidence. Preserve confirmed and failed/ambiguous finance review, custom sender-scoped templates, identity/hash anti-replay, SMS no-autopost and owner-verified finance state. Remove only the bank-review three-dot Optional AI / Not a transaction menu, the now-inaccessible per-message cloud request method and AI decision; explicit Exclude and correction/transfer controls remain. Existing cloud service and settings are not altered.
 - Changed production paths: lib/main.dart, lib/waffra_sms_local_rules.dart
 - Verification: M385 bounded scope, M550 behavior review, full native/Flutter/SQLCipher/Android and on-device 30-day rollback evidence remain separate. Tests have been updated to preserve positive security and finance guards rather than disabled. Exact-head CI not claimed complete by these notes.
+
+[M449 VERIFIED-SOURCE FOLLOW-UP — ISSUE #594 — PR #595 — M665.6]
+- Reviewed source SHA: ded2d1c95027ed5e56cf7b1c85d73ae489226590
+- Approved change: Fixed first-party ready exclusion for marketing discount / payment-reminder wording, which older bank parser marked as generic expense even when no money moved. Stronger independent completed-movement guard preserves real SAR-priced income/expense, card purchase, local/wire transfer and mixed OTP/offer + posted salary/transfer; ambiguous financial evidence stays in review. Only lib/waffra_sms_local_rules.dart changed after the prior M665.6 app-source stamp. Exact isolate/positive finance regressions added; no feature test skipped or weakened.
+- Changed production paths: lib/waffra_sms_local_rules.dart
+- Verification: exact new SHA CI and two-device Android performance/rollback review still required; no APK release on a draft feature branch.
