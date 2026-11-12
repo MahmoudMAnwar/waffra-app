@@ -30,13 +30,20 @@ class WaffraCurrencyMark extends StatelessWidget {
           style: TextStyle(fontFamily: 'Tajawal', fontSize: size * .7,
               fontWeight: FontWeight.w700, color: effectiveColor));
     }
-    return Image.asset(waffraRiyalAsset, width: size, height: size,
-        fit: BoxFit.contain, color: effectiveColor,
-        colorBlendMode: BlendMode.srcIn,
+    // M673: the official PNG has optical space beneath its painted mark.
+    // Lift only its painted pixels (not the text line box) to center with
+    // Tajawal numerals across all shared Flutter SAR amount components.
+    // The proportional offset scales safely for accessibility font sizes.
+    return Transform.translate(
+      offset: Offset(0, -size * .09),
+      child: Image.asset(waffraRiyalAsset, width: size, height: size,
+        alignment: Alignment.center, fit: BoxFit.contain,
+        color: effectiveColor, colorBlendMode: BlendMode.srcIn,
         semanticLabel: 'رمز الريال السعودي',
         errorBuilder: (_, __, ___) => Text('ريال',
             style: TextStyle(fontFamily: 'Tajawal',
-                fontSize: size * .7, color: effectiveColor)));
+                fontSize: size * .7, color: effectiveColor))),
+    );
   }
 }
 
