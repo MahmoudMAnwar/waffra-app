@@ -267,14 +267,14 @@ class RiyalAmount extends StatelessWidget {
   return ValueListenableBuilder<bool>(
    valueListenable:hideWaffraAmounts,
    builder:(context,hidden,_)=>Row(mainAxisSize:MainAxisSize.min,textDirection:TextDirection.ltr,children:[
-    WaffraText(hidden?'***':'$prefix${WaffraDisplayCurrency.amount(amount)}',style:effective),
     if(!hidden)...[
-     const SizedBox(width:4),
      WaffraCurrencyMark(english:waffraIsEnglish,
       currencyCode:WaffraDisplayCurrency.country.code,
       arabicLabel:WaffraDisplayCurrency.country.symbolAr,
       size:size*.9,color:color),
+     const SizedBox(width:4),
     ],
+    WaffraText(hidden?'***':'$prefix${WaffraDisplayCurrency.amount(amount)}',style:effective),
    ]));
  }
 }
@@ -4060,16 +4060,16 @@ class WaffraCurrencyAmount extends StatelessWidget {
    builder:(context,hidden,_)=>Directionality(
     textDirection:TextDirection.ltr,
     child:Row(mainAxisSize:MainAxisSize.min,children:[
-     WaffraText(hidden?'***':WaffraDisplayCurrency.amount(amount),
-      style:TextStyle(fontFamily:'Tajawal',fontSize:fontSize,
-       fontWeight:weight,color:color)),
      if(!hidden)...[
-      const SizedBox(width:5),
       WaffraCurrencyMark(english:waffraIsEnglish,
        currencyCode:WaffraDisplayCurrency.country.code,
        arabicLabel:WaffraDisplayCurrency.country.symbolAr,
        size:fontSize*.78,color:color),
-     ]
+      const SizedBox(width:5),
+     ],
+     WaffraText(hidden?'***':WaffraDisplayCurrency.amount(amount),
+      style:TextStyle(fontFamily:'Tajawal',fontSize:fontSize,
+       fontWeight:weight,color:color))
     ])));
 }
 // Collapse the balance as the user scrolls, then let it scroll AWAY
@@ -11051,18 +11051,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final pdfRiyalIcon=pw.MemoryImage(
     (await rootBundle.load(waffraRiyalAsset)).buffer.asUint8List());
    pw.Widget pdfCurrencyMark({double size=9,PdfColor color=PdfColors.teal900}) {
-    if(!english&&pdfCurrency=='SAR')return pw.Image(pdfRiyalIcon,
+    if(pdfCurrency=='SAR')return pw.Image(pdfRiyalIcon,
      width:size,height:size,fit:pw.BoxFit.contain);
     return pw.Text(english?pdfCurrency:pdfCurrencyAr,
      style:pw.TextStyle(font:bold,fontSize:size*.8,color:color));
    }
    pw.Widget pdfMoney(String text,{double size=9,
-      PdfColor color=PdfColors.teal900})=>pw.Row(
-    mainAxisSize:pw.MainAxisSize.min,
-    mainAxisAlignment:pw.MainAxisAlignment.center,children:[
-     pw.Text(text,style:pw.TextStyle(font:bold,fontSize:size,color:color)),
-     pw.SizedBox(width:3),pdfCurrencyMark(size:size,color:color),
-    ]);
+      PdfColor color=PdfColors.teal900})=>pw.Directionality(
+    textDirection:pw.TextDirection.ltr,
+    child:pw.Row(
+     mainAxisSize:pw.MainAxisSize.min,
+     mainAxisAlignment:pw.MainAxisAlignment.center,children:[
+      pdfCurrencyMark(size:size,color:color),
+      pw.SizedBox(width:3),
+      pw.Text(text,style:pw.TextStyle(font:bold,fontSize:size,color:color),
+       textDirection:pw.TextDirection.ltr),
+     ]));
    pw.Widget pdfMoneyHeader(String header,{double size=9,
       PdfColor color=PdfColors.white}){
     if(english||pdfCurrency!='SAR')return pw.Text(header,
