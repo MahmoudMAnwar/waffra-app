@@ -75,7 +75,11 @@ void main() {
    const Color(0xFFE67B81));
   expect(find.byWidgetPredicate((w)=>w is WaffraText&&w.data=='تعذر إتمام العملية'),findsOneWidget);
   expect(find.byKey(const Key('waffra-snackbar-close')),findsNothing);
-  // With no manual X, the regular notice still expires after 5 seconds.
+  // The 5-second timeout starts once Flutter's entrance animation
+  // completes. Finish that animation before advancing the fake test clock;
+  // one 6-second jump during entry could start (not expire) the timer.
+  await tester.pumpAndSettle();
+  expect(find.byType(SnackBar),findsOneWidget);
   await tester.pump(const Duration(seconds:6));
   await tester.pumpAndSettle();
   expect(find.byType(SnackBar),findsNothing);
