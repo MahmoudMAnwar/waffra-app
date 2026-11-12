@@ -2,15 +2,16 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_new_account_dialog.dart';
+import 'package:waffra/waffra_centered_dropdown.dart';
 
 void main(){
  testWidgets('M470 #11 bank SMS suggestion never saves without user name and consent',(tester)async{
   await tester.pumpWidget(const MaterialApp(home:Scaffold(body:
    WaffraNewAccountDialog(english:true,suggestedProviderId:'rajhi'))));
-  final type=tester.widget<DropdownButtonFormField<String>>(
+  final type=tester.widget<WaffraCenteredDropdownFormField<String>>(
    find.byKey(const Key('m470-new-account-kind')));
   expect(type.initialValue,'bank');
-  final provider=tester.widget<DropdownButtonFormField<String>>(
+  final provider=tester.widget<WaffraCenteredDropdownFormField<String>>(
    find.byKey(const Key('m470-new-account-provider')));
   expect(provider.initialValue,'rajhi');
   final opening=tester.widget<TextField>(

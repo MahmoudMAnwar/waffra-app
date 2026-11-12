@@ -19,6 +19,13 @@ void main(){
   await tester.ensureVisible(selector);
   await tester.tap(selector);
   await tester.pumpAndSettle();
+  // The centered menu is lazy-built. Filter first so the command is
+  // actually rendered; searching must not mutate the committed subtype.
+  final search=find.byKey(const Key('waffra-centered-dropdown-search'));
+  expect(search,findsOneWidget);
+  await tester.enterText(search,'Add account subtype');
+  await tester.pumpAndSettle();
+  expect(find.text('Add account subtype'),findsWidgets);
   await tester.tap(find.text('Add account subtype').last);
   await tester.pumpAndSettle();
   await tester.enterText(
@@ -51,6 +58,10 @@ void main(){
   await tester.ensureVisible(selector);
   await tester.tap(selector);
   await tester.pumpAndSettle();
+  final search=find.byKey(const Key('waffra-centered-dropdown-search'));
+  expect(search,findsOneWidget);
+  await tester.enterText(search,'Rewards Account');
+  await tester.pumpAndSettle();
   expect(find.text('Rewards Account'),findsWidgets);
   await tester.tap(find.text('Rewards Account').last);
   await tester.pumpAndSettle();
@@ -67,6 +78,16 @@ void main(){
   expect(tester.state<FormFieldState<String>>(selector).value,'current');
   await tester.tap(selector);
   await tester.pumpAndSettle();
+  // The centered menu is lazy-built. Filter first so the command is
+  // actually rendered; searching must not mutate the committed subtype.
+  final search=find.byKey(const Key('waffra-centered-dropdown-search'));
+  expect(search,findsOneWidget);
+  await tester.enterText(search,'This is not a financial subtype');
+  await tester.pumpAndSettle();
+  expect(find.byKey(const Key('waffra-centered-dropdown-no-results')),findsOneWidget);
+  await tester.enterText(search,'Add account subtype');
+  await tester.pumpAndSettle();
+  expect(find.text('Add account subtype'),findsWidgets);
   await tester.tap(find.text('Add account subtype').last);
   await tester.pumpAndSettle();
   await tester.tap(find.text('Cancel').last);

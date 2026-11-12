@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'waffra_centered_dropdown.dart';
 import 'waffra_account_transaction_form.dart';
 import 'waffra_saudi_financial_providers.dart';
 
@@ -150,7 +151,7 @@ class _WaffraNewAccountDialogState extends State<WaffraNewAccountDialog> {
      'Choose the account type and opening balance.'),
      style:Theme.of(context).textTheme.bodySmall),
     const SizedBox(height:14),
-    DropdownButtonFormField<String>(
+    WaffraCenteredDropdownFormField<String>(
      key:const Key('m470-new-account-kind'),
      initialValue:kind,isExpanded:true,
      decoration:InputDecoration(
@@ -170,7 +171,7 @@ class _WaffraNewAccountDialogState extends State<WaffraNewAccountDialog> {
     ),
     if(kind=='bank')...[
      const SizedBox(height:12),
-     DropdownButtonFormField<String>(
+     WaffraCenteredDropdownFormField<String>(
       key:ValueKey('m638-bank-category-$bankCategory'),
       initialValue:bankCategory,isExpanded:true,
       decoration:InputDecoration(labelText:t('نوع البنك *','Bank category *'),
@@ -190,7 +191,7 @@ class _WaffraNewAccountDialogState extends State<WaffraNewAccountDialog> {
      const SizedBox(height:12),
      KeyedSubtree(
       key:ValueKey('m638-provider-category-${kind=='bank'?bankCategory:'wallet'}'),
-      child:DropdownButtonFormField<String>(
+      child:WaffraCenteredDropdownFormField<String>(
       key:const Key('m470-new-account-provider'),
       initialValue:provider,isExpanded:true,
       decoration:InputDecoration(
@@ -211,7 +212,7 @@ class _WaffraNewAccountDialogState extends State<WaffraNewAccountDialog> {
      const SizedBox(height:12),
      KeyedSubtree(
       key:ValueKey('m487-subtype-$kind-${customSubtypeLabel??subtype}-$subtypeRevision'),
-      child:DropdownButtonFormField<String>(
+      child:WaffraCenteredDropdownFormField<String>(
        key:const Key('m470-new-account-subtype'),
        initialValue:customSubtypeLabel==null?subtype:
         'custom:$customSubtypeLabel',

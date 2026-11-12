@@ -9,8 +9,16 @@ class SmsYesNoTest(unittest.TestCase):
   for value in ('هل العملية صحيحة؟',"Key('m565-sms-no-edit')",
    "Key('m565-sms-yes-confirm')",'onPressed:canConfirm&&reviewedAccount?.ids?.single!=null&&',
    "decision=='yes'", "decision=='no'",'originalDate=bankSmsDate(body)',
-   "originalAmount.currency=='SAR'",'previewLeaves=categories.where((c)=>',
-   'previewLeaves.length==1&&', 'previewParents.length==1'):
+   "originalAmount.currency=='SAR'",
+   'previewHint=waffraResolveSmsReviewCategory(categories,',
+   'reviewedCategory=previewHint.leaf?.name??',
+   'reviewCategoryValid=previewHint.leaf!=null&&',
+   'previewHint.parent!=null',
+   'reviewedAccount?.generation!=null',
+   'reviewBlockers()',
+   "Key('m669-sms-review-blockers')",
+   "Key('m669-review-original-sms-text')"):
+
    self.assertIn(value,SOURCE)
  def test_authoritative_commit(self):
   body=SOURCE.split('Future<void> _m565ConfirmSms(',1)[1].split('Future<void> _reviewAutoSmsCandidates(',1)[0]
