@@ -134,8 +134,10 @@ void main() {
    expect(end, greaterThan(start));
    final isolate = home.substring(start,end);
    expect(isolate, contains(
-    "local['kind']=='excluded'&&local['defaultSeed']!=true"));
+    "if(local['kind']=='excluded'){"));
    expect(isolate, contains('excluded.add(id)'));
+   expect(isolate, contains('retainOnAckFailure.add(annotated)'));
+   expect(isolate, isNot(contains('commitConfirmedManual(')));
    expect(isolate, isNot(contains('commitConfirmedSms(')));
    final native = File('native/WaffraAutoSmsStore.kt').readAsStringSync();
    expect(native, contains('fun excludeMessages(context: Context, ids: Set<String>)'));
