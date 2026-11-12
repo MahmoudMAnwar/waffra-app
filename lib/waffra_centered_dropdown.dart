@@ -200,7 +200,7 @@ String _waffraChoiceSearchText(Widget widget){
  if(widget is RichText)return widget.text.toPlainText();
  if(widget is Row)return widget.children.map(_waffraChoiceSearchText).join(' ');
  if(widget is Column)return widget.children.map(_waffraChoiceSearchText).join(' ');
- if(widget is Padding)return _waffraChoiceSearchText(widget.child);
+ if(widget is Padding&&widget.child!=null)return _waffraChoiceSearchText(widget.child!);
  if(widget is Align&&widget.child!=null)return _waffraChoiceSearchText(widget.child!);
  if(widget is Expanded)return _waffraChoiceSearchText(widget.child);
  if(widget is Flexible)return _waffraChoiceSearchText(widget.child);
