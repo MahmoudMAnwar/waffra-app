@@ -242,7 +242,8 @@ void main() {
     // M671: owner removed the X. The text and footer remain interactive
     // at 200% text scale; normal tap elsewhere dismisses the notice.
     expect(find.byKey(const Key('waffra-snackbar-close')), findsNothing);
-    expect(find.text('هذا الحقل مطلوب'), findsOneWidget);
+    expect(find.byWidgetPredicate((widget)=>widget is WaffraText&&
+      widget.data=='هذا الحقل مطلوب'), findsOneWidget);
     notice.value=null;
     await tester.pumpAndSettle();
     expect(find.byType(WaffraNoticeContent),findsNothing);
