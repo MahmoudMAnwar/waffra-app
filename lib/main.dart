@@ -14,7 +14,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'waffra_financial_tools.dart';
 import 'waffra_smart_features.dart';
-import 'waffra_tour_plan.dart';
 import 'waffra_today_picker.dart';
 import 'waffra_action_layout.dart';
 import 'waffra_centered_dropdown.dart';
@@ -4105,13 +4104,12 @@ class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
  final String? heading;
  final bool goalWallet;
  final bool compact;
- final GlobalKey? focusKey;
  final double? monthlyChangePercent;
  final String? selectedAccountLabel;
  final VoidCallback? onAccountTap;
  final Future<void> Function() refreshVerifiedWidgetBalance;
  const WaffraBalanceHeader({
-  required this.balance,required this.english,this.focusKey,this.heading,this.goalWallet=false,this.compact=false,
+  required this.balance,required this.english,this.heading,this.goalWallet=false,this.compact=false,
   required this.refreshVerifiedWidgetBalance,this.monthlyChangePercent,
   this.selectedAccountLabel,this.onAccountTap,
  });
@@ -4128,7 +4126,6 @@ class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
   final validCompare=compare!=null&&compare.isFinite;
   final comparisonValue=validCompare?compare:0.0;
   return Container(
-   key:focusKey,
    color:waveColor,
    padding:const EdgeInsets.fromLTRB(14,0,14,4),
    child:Container(
@@ -4789,12 +4786,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    if(mounted&&tab==0&&compact!=_headerCompact)setState(()=>_headerCompact=compact);
   });
  }
- late final AnimationController _tourGlow;
  Future<void> setAnimationLevel(String next)async {
   if(!{'full','balanced','reduced','off'}.contains(next))return;
   waffraAnimationLevel.value=next;
-  _tourGlow.duration=waffraMotion(1150);
-  if(tourActive){_tourGlow.stop();if(next!='off')_tourGlow.repeat(reverse:true);}
   if(mounted)setState((){});
   final p=await SharedPreferences.getInstance();
   await p.setString('waffra_animation_level',next);
@@ -4824,12 +4818,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   _m528CloudConsentFuture??=WaffraSmsCloudService.hasConsent();
  String? _accountOpenSection;
  String accountSearch='';
- final _tourKeys=List<GlobalKey>.generate(7,(_)=>GlobalKey());
- bool tourActive=false;
- bool tourTargetReady=false;
- int tourStep=0;
- static const tourTabs=WaffraTourPlan.tabs;
- static const tourTargetKeys=WaffraTourPlan.targetKeys;
  bool addFabExpanded=false;
  final LayerLink _fabOverlayAnchor=LayerLink();
  bool quickActionsExpanded=false;
@@ -4891,7 +4879,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    unawaited(_refreshAutoSmsInbox());
   });
  }
- @override void initState(){super.initState();WaffraBackNavigation.onHomeBack=_registeredBackHandler;_dashboardScrollController.addListener(_handleDashboardScroll);_tourGlow=AnimationController(vsync:this,duration:waffraMotion(1150));waffraReturnHome.addListener(_returnToHome);waffraIncomingSms.addListener(_receiveSharedSms);waffraAutoSmsUpdates.addListener(_receiveAutoSmsNotice);waffraFinanceNoticeTap.addListener(_m621OnFinanceNoticeTap);waffraWidgetAction.addListener(_receiveWidgetAction);_widgetReloadListener=AppLifecycleListener(onResume:_m468OnResume);unawaited(_loadFinanceSafely());}
+ @override void initState(){super.initState();WaffraBackNavigation.onHomeBack=_registeredBackHandler;_dashboardScrollController.addListener(_handleDashboardScroll);waffraReturnHome.addListener(_returnToHome);waffraIncomingSms.addListener(_receiveSharedSms);waffraAutoSmsUpdates.addListener(_receiveAutoSmsNotice);waffraFinanceNoticeTap.addListener(_m621OnFinanceNoticeTap);waffraWidgetAction.addListener(_receiveWidgetAction);_widgetReloadListener=AppLifecycleListener(onResume:_m468OnResume);unawaited(_loadFinanceSafely());}
  void _returnToHome(){if(mounted)setState((){_tabBackStack.clear();tab=0;accountOpened=false;goalsOpened=false;addFabExpanded=false;});}
  void _receiveWidgetAction(){
   // New pre-auth barrier. Preserve the original owner/action guard below
@@ -7389,7 +7377,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }
   });
  }
- @override void dispose(){if(!_m663FirstInteractiveFrame.isCompleted)_m663FirstInteractiveFrame.complete();_m632SmsNoticeTimer?.cancel();if(identical(WaffraBackNavigation.onHomeBack,_registeredBackHandler))WaffraBackNavigation.onHomeBack=null;_dashboardScrollController.dispose();_categoryScrollController.dispose();_goalsScrollController.dispose();_recurringScrollController.dispose();_tourGlow.dispose();waffraReturnHome.removeListener(_returnToHome);waffraIncomingSms.removeListener(_receiveSharedSms);waffraAutoSmsUpdates.removeListener(_receiveAutoSmsNotice);waffraFinanceNoticeTap.removeListener(_m621OnFinanceNoticeTap);waffraWidgetAction.removeListener(_receiveWidgetAction);_widgetReloadListener?.dispose();_saveProgress.dispose();final binding=_financeBinding;if(binding!=null)unawaited(_financialWriteQueue.drain().whenComplete(binding.close));super.dispose();}
+ @override void dispose(){if(!_m663FirstInteractiveFrame.isCompleted)_m663FirstInteractiveFrame.complete();_m632SmsNoticeTimer?.cancel();if(identical(WaffraBackNavigation.onHomeBack,_registeredBackHandler))WaffraBackNavigation.onHomeBack=null;_dashboardScrollController.dispose();_categoryScrollController.dispose();_goalsScrollController.dispose();_recurringScrollController.dispose();waffraReturnHome.removeListener(_returnToHome);waffraIncomingSms.removeListener(_receiveSharedSms);waffraAutoSmsUpdates.removeListener(_receiveAutoSmsNotice);waffraFinanceNoticeTap.removeListener(_m621OnFinanceNoticeTap);waffraWidgetAction.removeListener(_receiveWidgetAction);_widgetReloadListener?.dispose();_saveProgress.dispose();final binding=_financeBinding;if(binding!=null)unawaited(_financialWriteQueue.drain().whenComplete(binding.close));super.dispose();}
  Future<void> _syncWidgetTransactions()async{
   if(!mounted||!ready)return;
   try{
@@ -7886,15 +7874,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        _m630PostFrameFinanceWork=null;
       }
      }());
-     if(!(p.getBool('waffra_in_app_tour_seen_v2')??false)&&mounted){
-      setState((){
-       tourActive=true;tourStep=0;tab=0;accountOpened=false;
-       _headerCompact=false;goalsOpened=false;addFabExpanded=false;
-       tourTargetReady=false;
-      });
-      if(waffraAnimationLevel.value!='off')_tourGlow.repeat(reverse:true);
-      scheduleTourFocus();
-     }
     }());
    });
   // An explicit Google onboarding notification consent may be pending;
@@ -13502,7 +13481,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          balance:_m467ShownBalance(),english:waffraIsEnglish,
          heading:waffraIsEnglish?'Total balance':'إجمالي الرصيد',
          compact:true,
-         focusKey:_tourKeys[0],
          monthlyChangePercent:_m467SelectedAccount=='all'&&
           _m467AccountContext==null?monthChange:null,
          refreshVerifiedWidgetBalance:_refreshWidget)),
@@ -15813,7 +15791,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     title:waffraIsEnglish?'Savings goals':'أهداف الادخار',
     subtitle:waffraIsEnglish?'Plan your future and follow every milestone':
      'حوّل أحلامك إلى أهداف وتابع تقدّمك خطوة بخطوة.',
-    icon:Icons.flag_outlined,titleKey:_tourKeys[6]),
+    icon:Icons.flag_outlined),
    const SizedBox(height:10),
    TextField(
     key:const Key('waffra-goals-search'),
@@ -16368,7 +16346,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     title:waffraIsEnglish?'Recurring transactions':'العمليات المتكررة',
     subtitle:waffraIsEnglish?'Track recurring payments and due dates':
      'نظّم عملياتك الشهرية ومواعيد استحقاقها بسهولة.',
-    icon:Icons.event_repeat_rounded,titleKey:_tourKeys[4]),
+    icon:Icons.event_repeat_rounded),
    const SizedBox(height:10),
    TextField(
     key:const Key('waffra-recurring-search'),
@@ -17203,156 +17181,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }
   }
  }
- void scheduleTourFocus(){
-  final expectedStep=tourStep,expectedTab=tab;
-  WidgetsBinding.instance.addPostFrameCallback((_)async {
-   if(!mounted||!tourActive||tourStep!=expectedStep||tab!=expectedTab)return;
-   // Reset lazily built list pages before focusing a possibly recycled
-   // sliver header (e.g. Home balance after scrolling down).
-   final ScrollController? pageScroll=switch(expectedTab){
-    0=>_dashboardScrollController,
-    1=>_categoryScrollController,
-    3=>_goalsScrollController,
-    4=>_recurringScrollController,
-    _=>null,
-   };
-   if(pageScroll!=null&&pageScroll.hasClients&&pageScroll.offset!=0){
-    pageScroll.jumpTo(0);
-   }
-   BuildContext? focus=tourTargetKeys[expectedStep]<0?null:
-    _tourKeys[tourTargetKeys[expectedStep]].currentContext;
-   // The selected tab is built lazily, so allow the next animation frame
-   // to mount its heading before calculating the coach-mark target.
-   if(focus==null&&expectedStep>0){
-    await Future<void>.delayed(waffraMotion(120));
-    if(!mounted||!tourActive||tourStep!=expectedStep||tab!=expectedTab)return;
-    focus=_tourKeys[tourTargetKeys[expectedStep]].currentContext;
-   }
-   if(focus!=null){
-    try{await Scrollable.ensureVisible(focus,
-     duration:waffraMotion(250),alignment:.16,
-     curve:Curves.easeOutCubic);}catch(e){debugPrint('Tour focus: $e');}
-   }
-   await Future<void>.delayed(waffraMotion(120));
-   if(mounted&&tourActive&&tourStep==expectedStep&&tab==expectedTab){
-    // Keep controls accessible even if a lazy child is momentarily absent.
-    setState(()=>tourTargetReady=true);
-   }
-  });
- }
- Future<void> completeTour()async {
-  _tourGlow.stop();
-  if(mounted)setState((){_tabBackStack.clear();tourActive=false;tourTargetReady=false;addFabExpanded=false;tab=0;goalsOpened=false;});
-  final p=await SharedPreferences.getInstance();
-  await p.setBool('waffra_in_app_tour_seen_v2',true);
- }
- void beginTour(){
-  setState((){_tabBackStack.clear();tourStep=0;tourActive=true;tourTargetReady=false;tab=0;accountOpened=false;_headerCompact=false;goalsOpened=false;addFabExpanded=false;});
-  if(waffraAnimationLevel.value!='off')_tourGlow.repeat(reverse:true);
-  scheduleTourFocus();
- }
- void advanceTour(){
-  if(tourStep>=tourTabs.length-1){completeTour();return;}
-  setState((){tourStep++;tab=tourTabs[tourStep];tourTargetReady=false;addFabExpanded=false;});
-  scheduleTourFocus();
- }
- void previousTour(){
-  if(tourStep<=0)return;
-  setState((){tourStep--;tab=tourTabs[tourStep];tourTargetReady=false;addFabExpanded=false;});
-  scheduleTourFocus();
- }
- Widget tourOverlay()=>LayoutBuilder(builder:(overlayCtx,area){
-  const ar=WaffraTourPlan.titlesAr;
-  const en=WaffraTourPlan.titlesEn;
-  const arHelp=WaffraTourPlan.helpAr;
-  const enHelp=WaffraTourPlan.helpEn;
-  final element=tourTargetKeys[tourStep]<0?null:_tourKeys[tourTargetKeys[tourStep]].currentContext?.findRenderObject();
-  final layer=overlayCtx.findRenderObject();
-  // Intro doesn't spotlight the header; its first card is centered.
-   Rect target=tourStep==0?Rect.fromLTWH(-40,-40,1,1):
-    Rect.fromLTWH(16,12,area.maxWidth-32,65);
-  if(element is RenderBox&&layer is RenderBox&&element.hasSize){
-   final offset=element.localToGlobal(Offset.zero)-layer.localToGlobal(Offset.zero);
-   target=Rect.fromLTWH(offset.dx,offset.dy,element.size.width,element.size.height).inflate(5);
-   target=Rect.fromLTRB(
-    target.left.clamp(4.0,area.maxWidth-4).toDouble(),
-    target.top.clamp(4.0,area.maxHeight-4).toDouble(),
-    target.right.clamp(4.0,area.maxWidth-4).toDouble(),
-    target.bottom.clamp(4.0,area.maxHeight-4).toDouble());
-  }
-  // Headings use intrinsic text bounds rather than a full-width row.
-  // Other tour steps retain their actual button/icon target.
-  final headingFocus=tourStep>=3;
-  final headingText=tourStep==3?(waffraIsEnglish?'Categories & budgets':'أقسامك وميزانياتك'):(waffraIsEnglish?en[tourStep]:ar[tourStep]);
-  if(headingFocus){
-   final style=Theme.of(context).textTheme.titleLarge??const TextStyle(fontSize:23);
-   final painter=TextPainter(text:TextSpan(text:headingText,style:style.copyWith(fontWeight:FontWeight.bold)),
-    textDirection:waffraIsEnglish?TextDirection.ltr:TextDirection.rtl,maxLines:1)..layout(maxWidth:area.maxWidth-40);
-   final desiredWidth=(painter.width+30).clamp(90.0,area.maxWidth-24).toDouble();
-   final right=waffraIsEnglish?target.left+desiredWidth:target.right;
-   target=Rect.fromLTWH((right-desiredWidth).clamp(8.0,area.maxWidth-desiredWidth-8).toDouble(),
-    target.top,desiredWidth,target.height);
-  }
-  final width=min(340.0,area.maxWidth-24);
-   final popupHeight=tourStep==0?min(250.0,max(160.0,area.maxHeight*.46)):
-    min(225.0,max(130.0,area.maxHeight*.56));
-   final spaceBelow=area.maxHeight-target.bottom-12;
-   final spaceAbove=target.top-12;
-   final below=spaceBelow>=popupHeight||(spaceBelow>=spaceAbove&&spaceAbove<popupHeight);
-   final suggestedTop=tourStep==0?(area.maxHeight-popupHeight)*.44:
-    (below?target.bottom+12:target.top-popupHeight-12);
-   final top=suggestedTop.clamp(12.0,max(12.0,area.maxHeight-popupHeight-12)).toDouble();
-   final suggestedLeft=tourStep==0?(area.maxWidth-width)/2:target.center.dx-width/2;
-   final left=suggestedLeft.clamp(12.0,max(12.0,area.maxWidth-width-12)).toDouble();
-  return Stack(children:[
-   Positioned.fill(child:AnimatedBuilder(animation:_tourGlow,
-    builder:(ctx,_)=>CustomPaint(painter:WaffraTourShade(target,glow:_tourGlow.value)))),
-   if(headingFocus)Positioned.fromRect(rect:target,child:IgnorePointer(child:
-    AnimatedBuilder(animation:_tourGlow,builder:(ctx,_){
-     final zoom=waffraAnimationLevel.value=='off'?1.0:1.0+.09*_tourGlow.value;
-     return Center(child:Transform.scale(scale:zoom,child:Container(
-      padding:const EdgeInsets.symmetric(horizontal:12,vertical:6),
-      decoration:BoxDecoration(color:const Color(0xFFF7FFF9),
-       borderRadius:BorderRadius.circular(18),border:Border.all(color:const Color(0xFF7EDAB0),width:1.4),
-       boxShadow:[BoxShadow(color:const Color(0xFF66DDA3).withValues(alpha:.24+.20*_tourGlow.value),
-        blurRadius:15+10*_tourGlow.value)]),
-      child:FittedBox(fit:BoxFit.scaleDown,child:WaffraText(headingText,
-       style:const TextStyle(fontSize:22,fontWeight:FontWeight.bold,color:forest))))));
-    }))),
-   AnimatedPositioned(
-    duration:waffraMotion(250),
-    curve:Curves.easeInOutCubic,top:top,left:left,width:width,
-    child:Material(elevation:12,color:Theme.of(context).cardColor,
-     borderRadius:BorderRadius.circular(18),
-     child:ConstrainedBox(constraints:BoxConstraints(maxHeight:popupHeight),
-      child:SingleChildScrollView(padding:const EdgeInsets.all(12),child:Column(
-      mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-       Row(children:[
-        const Icon(Icons.lightbulb_outline,color:emerald,size:18),
-        const SizedBox(width:5),
-        Expanded(child:AnimatedSwitcher(duration:waffraMotion(250),
-         transitionBuilder:(child,animation)=>FadeTransition(opacity:animation,
-          child:SlideTransition(position:Tween<Offset>(begin:const Offset(0,.18),end:Offset.zero).animate(animation),child:child)),
-         child:WaffraText(waffraIsEnglish?en[tourStep]:ar[tourStep],key:ValueKey(tourStep),
-          style:const TextStyle(fontSize:15,fontWeight:FontWeight.bold)))),
-        WaffraText('${tourStep+1}/${tourTabs.length}',style:const TextStyle(color:emerald,fontSize:11)),
-       ]),
-       const SizedBox(height:6),
-       WaffraText(waffraIsEnglish?enHelp[tourStep]:arHelp[tourStep],
-        style:const TextStyle(fontSize:12)),
-       const SizedBox(height:8),
-       Wrap(alignment:WrapAlignment.spaceBetween,spacing:5,runSpacing:6,children:[
-        TextButton(onPressed:WaffraHaptics.tap(completeTour),child:WaffraText(waffraIsEnglish?'Skip':'تخطي')),
-        if(tourStep>0)TextButton(onPressed:WaffraHaptics.tap(previousTour),
-         child:WaffraText(waffraIsEnglish?'Back':'السابق')),
-        FilledButton(onPressed:WaffraHaptics.tap(advanceTour),
-         child:WaffraText(tourStep==tourTabs.length-1?
-          (waffraIsEnglish?'Finish':'إنهاء'):(waffraIsEnglish?'Next':'التالي'))),
-       ]),
-      ])))),
-   ),
-  ]);
- });
  Future<void> changePin()async {
   if(!widget.pinEnabled)return;
   final p=await SharedPreferences.getInstance();
@@ -17482,7 +17310,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final liveBudgetIds=namedBudgets.where((b)=>!b.deleted).map((b)=>b.id).toSet();
   return WaffraSmartFeaturesPage(
    key:const Key('waffra-m268-footer-page'),
-   tourHeadingKey:_tourKeys[3],
    embedded:true,english:waffraIsEnglish,
    onNotice:(message)=>snack(context,message),
    analysisBuilder:(_)=>Column(crossAxisAlignment:CrossAxisAlignment.stretch,
@@ -17874,9 +17701,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        english:waffraIsEnglish,onAccountDeleted:widget.onLogout))))),
    ]),
    _accountSection(waffraIsEnglish?'Help & about':'المساعدة وعن وفرة',Icons.help_outline_rounded,[
-    _accountTile(waffraIsEnglish?'Replay app tour':'إعادة الجولة التعريفية',
-     waffraIsEnglish?'Learn Waffra features':'تعرف على خصائص وفرة',
-     Icons.help_outline,onTap:WaffraHaptics.tap(beginTour)),
     _accountTile(waffraIsEnglish?'About Waffra':'عن وفرة',
      waffraIsEnglish?'On-device financial management':'إدارة مالية تحفظ بياناتك محليًا',
      Icons.info_outline,onTap:WaffraHaptics.tap(()=>showAboutDialog(context:context,applicationName:'وفرة | Waffra',
@@ -18021,7 +17845,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
  }
  void _swipeBetweenSections(DragEndDetails details){
-  if(!ready||goalsOpened||accountOpened||tourActive)return;
+  if(!ready||goalsOpened||accountOpened)return;
   final velocity=details.primaryVelocity??0;
   final dx=_swipeTravel.abs()>50?_swipeTravel:velocity/10;
   if(dx.abs()<65)return;
@@ -18141,8 +17965,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          border:Border.all(color:accountOpened?const Color(0xFF65E5AD):Colors.transparent,
           width:2),
          color:accountOpened?Colors.white.withValues(alpha:.13):Colors.transparent),
-        child:KeyedSubtree(key:_tourKeys[5],
-         child:waffraAvatar(widget.profile.gender,widget.profile.avatar,radius:18)))))),
+        child:waffraAvatar(widget.profile.gender,widget.profile.avatar,radius:18))))),
     const SizedBox(width:7),
    ]),
   // Instant content swap avoids building/animating the previous heavy tab
@@ -18179,7 +18002,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    width:58,height:58,
    child:
     Material(
-      key:_tourKeys[1],
       color:forest,elevation:7,
      shadowColor:Colors.black26,
      shape:const CircleBorder(),
@@ -18221,7 +18043,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     }),
    ),
   ])),
-  if(addFabExpanded&&!accountOpened&&!tourActive)...[
+  if(addFabExpanded&&!accountOpened)...[
    Positioned.fill(
     key:const Key('waffra-fullscreen-fab-blur'),
     child:GestureDetector(
@@ -18299,28 +18121,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          child:Icon(Icons.close_rounded,color:Colors.white,size:28)))))),
    ),
   ],
-  if(tourActive&&tourTargetReady)Positioned.fill(child:tourOverlay()),
   // Outside Scaffold so the loading status never rebuilds the finance list.
   Positioned.fill(child:WaffraSmoothConfirmationOverlay(
    controller:_saveProgress,english:waffraIsEnglish)),
   ]));
-}
-/// Tour focus remains tied to the same floating add button across both locales.
-/// A coach-mark scrim with a transparent focus over the current page.
-class WaffraTourShade extends CustomPainter {
- final Rect focus;
- final double glow;
- const WaffraTourShade(this.focus,{this.glow=0});
- @override void paint(Canvas canvas,Size size){
-  final border=RRect.fromRectAndRadius(focus,const Radius.circular(20));
-  final shade=Path()..fillType=PathFillType.evenOdd
-   ..addRect(Offset.zero & size)..addRRect(border);
-  canvas.drawPath(shade,Paint()..color=Colors.black.withValues(alpha:.61));
-  canvas.drawRRect(border,Paint()..color=const Color(0xFF65E5AD).withValues(alpha:.15+.30*glow)
-   ..style=PaintingStyle.stroke..strokeWidth=7+5*glow..maskFilter=const MaskFilter.blur(BlurStyle.normal,7));
-  canvas.drawRRect(border,Paint()..color=Colors.white..style=PaintingStyle.stroke..strokeWidth=2+glow);
- }
- @override bool shouldRepaint(covariant WaffraTourShade old)=>old.focus!=focus||old.glow!=glow;
 }
 class WaffraDeletedItemsButton extends StatelessWidget {
  final VoidCallback onPressed;
