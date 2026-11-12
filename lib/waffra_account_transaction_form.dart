@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'waffra_centered_dropdown.dart';
 
 import 'storage/waffra_accounts_repository.dart';
 import 'waffra_recurring_account_groups.dart';
@@ -280,7 +281,7 @@ class _WaffraAccountTransactionFormState extends State<WaffraAccountTransactionF
    final parentRevision=isDestination?destinationProviderRevision:sourceProviderRevision;
    final childRevision=isDestination?destinationChildRevision:sourceChildRevision;
    return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-    DropdownButtonFormField<String>(
+    WaffraCenteredDropdownFormField<String>(
      key:Key('m470-'+(isDestination?'target':'source')+
       '-provider-'+(group??'none')+'-$parentRevision'),
      initialValue:group,isExpanded:true,
@@ -314,7 +315,7 @@ class _WaffraAccountTransactionFormState extends State<WaffraAccountTransactionF
      },
     ),
     const SizedBox(height:10),
-    DropdownButtonFormField<String>(
+    WaffraCenteredDropdownFormField<String>(
      key:Key('m470-'+(isDestination?'target':'source')+
       '-account-'+(group??'none')+'-$childRevision'),
      isExpanded:true,
@@ -453,7 +454,7 @@ class _WaffraAccountTransactionFormState extends State<WaffraAccountTransactionF
        border:const OutlineInputBorder())),
      const SizedBox(height:12),
      if(widget.requireKnownCategory)
-      DropdownButtonFormField<String>(
+      WaffraCenteredDropdownFormField<String>(
        key:const Key('m440-category-picker'),isExpanded:true,
        initialValue:choices.contains(category.text)?category.text:null,
        decoration:InputDecoration(labelText:tr('القسم','Category'),
@@ -473,7 +474,7 @@ class _WaffraAccountTransactionFormState extends State<WaffraAccountTransactionF
         style:TextStyle(color:Theme.of(context).colorScheme.error))),
      if(mode==WaffraAccountOperation.expense && widget.availableBudgets.isNotEmpty)...[
       const SizedBox(height:12),
-      DropdownButtonFormField<String>(key:const Key('m440-budget-picker'),
+      WaffraCenteredDropdownFormField<String>(key:const Key('m440-budget-picker'),
        isExpanded:true,initialValue:selectedBudgetId??'none',
        decoration:InputDecoration(labelText:tr('تسجيل في أي ميزانية؟','Budget'),
         border:const OutlineInputBorder()),
