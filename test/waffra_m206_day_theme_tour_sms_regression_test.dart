@@ -17,8 +17,9 @@ void main() {
 
   test('AR/EN changes direction instantly without whole-page slide or Navigator replacement', () {
     final source=File('lib/main.dart').readAsStringSync();
-    final root=source.substring(source.indexOf('builder:(context,child)=>WaffraIdleBiometricOverlay('),
-      source.indexOf('theme:ThemeData(',source.indexOf('builder:(context,child)=>WaffraIdleBiometricOverlay(')));
+    final root=source.substring(source.indexOf('builder:(context,child)=>WaffraNoticeTapDismissArea('),
+      source.indexOf('theme:ThemeData(',source.indexOf('builder:(context,child)=>WaffraNoticeTapDismissArea(')));
+    expect(root,contains('child:WaffraIdleBiometricOverlay('));
     // M470 retains the live Navigator and RTL tree below the biometric overlay.
     expect(root,contains('child:ValueListenableBuilder<bool>('));
     expect(root,contains("english:language=='en',onSignOut:logout"));
