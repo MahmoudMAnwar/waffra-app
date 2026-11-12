@@ -1,6 +1,6 @@
 ## M616 — Android legacy backup V24 staging / real-device regression (2026-11-12)
 
-- **Issue:** [#616](https://github.com/MahmoudMAnwar/waffra-app/issues/616). **PR:** to be linked before implementation.
+- **Issue:** [#616](https://github.com/MahmoudMAnwar/waffra-app/issues/616). **PR:** [#617](https://github.com/MahmoudMAnwar/waffra-app/pull/617) (Draft).
 - **Status:** Missing (P0). The merged PR #615's 42 green CI checks did not prevent a real Android V24 restore failure. Root cause is under investigation; mobile global temporary path is a probable defect, not yet verified on the user's handset.
 - **Approved fix:** Use a private app-owned temporary directory for BOTH V24 conversion and verified cold restore preflight on Android/iOS. Preserve disposable SQLCipher keys/cleanup, no plaintext files, preflight/rescue/biometric/rollback. Expose a non-sensitive phase identifier on failure, never paths, passwords or financial contents.
 - **QA:** 1056-category / 19-entry / 2-budget / 4-goal / 3 recurring / 11-hash **synthetic** regression; negative corrupted backup and missing image consent; private temp path contract; exact-HEAD CI; physical Android signed APK owner re-test pending. Do not update spouse device until proof.
