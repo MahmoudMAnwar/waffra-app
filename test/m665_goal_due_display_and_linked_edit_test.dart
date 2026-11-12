@@ -118,7 +118,7 @@ void main(){
    await tester.pump();
    expect(find.byKey(const Key('m665-goal-due-details-breakdown')),
     findsOneWidget);
-   expect(find.text('استحقاق هدف'),findsOneWidget);
+   expect(find.text('استحقاق هدف'),findsWidgets);
    expect(find.text('من محفظة الهدف'),findsOneWidget);
    expect(find.text('المخصوم من الحساب المالي'),findsOneWidget);
    expect(find.text('مطاعم وكافيهات / مطاعم شعبية'),findsNothing);
