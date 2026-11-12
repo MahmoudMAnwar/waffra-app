@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'waffra_sms_local_rules.dart';
 import 'waffra_bank_sms_facts.dart';
+import 'waffra_centered_dropdown.dart';
 
 /// Rules configure offline review suggestions only. This screen has no ledger,
 /// bank-account, SMS-permission, or cloud-provider write capability.
@@ -216,7 +217,7 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
         ]),
         const SizedBox(height:12),
         if(financial)...[
-         DropdownButtonFormField<String>(
+         WaffraCenteredDropdownFormField<String>(
           key:ValueKey('sms-rule-category-$kind'),
           initialValue:category,
           isExpanded:true,
@@ -326,7 +327,7 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
           onChanged:widget.bankAccounts.isEmpty?null:
            (v)=>refresh(()=>autoPost=v)),
          if(autoPost)...[
-          DropdownButtonFormField<String>(
+          WaffraCenteredDropdownFormField<String>(
            key:ValueKey('waffra-sms-rule-account-$accountId'),
            initialValue:widget.bankAccounts.containsKey(accountId)?
             accountId:null,
