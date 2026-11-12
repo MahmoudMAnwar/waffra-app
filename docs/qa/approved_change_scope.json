@@ -30,13 +30,13 @@
     ],
     "lib/storage/waffra_accounts_finance_history.dart": [
       {
-        "start": "      // SQLCipher's parent trigger requires category roots first.",
+        "start": "      final recorded = (records[table] as List).cast<Map<String, dynamic>>();",
         "end": "      for (final row in ordered) {"
       }
     ],
     "lib/storage/waffra_verified_active_restore_preflight.dart": [
       {
-        "start": "/// This stage code never contains a password",
+        "start": "import 'waffra_restore_staging_directory.dart';",
         "end": "/// A deliberately read-only decision."
       },
       {
