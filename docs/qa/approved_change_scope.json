@@ -21,8 +21,11 @@
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
+    "lib/waffra_categories_page.part.dart",
+    "lib/waffra_smart_analysis.part.dart",
     "lib/waffra_smart_features.dart",
     "lib/waffra_tour_plan.dart",
+    "scripts/qa/m206_ui_sms_scope_review.py",
     "scripts/qa/m385_approved_change_guard.py",
     "test/m127_ui_tour_backup_acceptance_test.dart",
     "test/m277_ux_accessibility_quality_test.dart",
@@ -260,6 +263,24 @@
       {
         "start": "void main() {",
         "end": null
+      }
+    ],
+    "lib/waffra_categories_page.part.dart": [
+      {
+        "start": "   ()=>WaffraPageHero(",
+        "end": "   ()=>Row(children:["
+      }
+    ],
+    "lib/waffra_smart_analysis.part.dart": [
+      {
+        "start": "  final dark=Theme.of(context).brightness==Brightness.dark;",
+        "end": "    color:dark?const Color(0xFF15221D)"
+      }
+    ],
+    "scripts/qa/m206_ui_sms_scope_review.py": [
+      {
+        "start": "    for marker in (\n        \"String appearance=",
+        "end": "    for marker in (\"Online\\\\s+Purchase\""
       }
     ]
   }
