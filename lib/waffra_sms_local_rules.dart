@@ -216,8 +216,8 @@ abstract final class WaffraSmsLocalRules {
   // An actual Arabic purchase with an explicit SAR amount is a posted
   // movement even if an unrelated OTP phrase marks the combined SMS pending.
   // Marketing discounts / payment reminders have no such purchase evidence.
-  if(RegExp(r'(?:^|\\s)(?:شراء|عملية\\s+شراء)\\s+(?:بمبلغ|بقيمة)\\s*'
-   r'[0-9٠-٩]+(?:[.,][0-9٠-٩]+)?\\s*(?:ريال|SAR)',
+  if(RegExp(r'(?:^|\s)(?:شراء|عملية\s+شراء)\s+(?:بمبلغ|بقيمة)\s*'
+   r'[0-9٠-٩]+(?:[.,][0-9٠-٩]+)?\s*(?:ريال|SAR)',
    caseSensitive:false).hasMatch(body))return true;
   // A failed or still-pending notice alone is not a settled movement.
   if(facts.pending)return false;
