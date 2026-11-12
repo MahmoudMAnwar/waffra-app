@@ -8,7 +8,7 @@ void main() {
     expect(File('assets/Saudi_Riyal_Symbol-1.png').existsSync(), isTrue);
     final source = File('native/WaffraWidget.kt').readAsStringSync();
     expect(source, contains('currency.trim() in setOf("ريال", "SAR")'));
-    expect(source, contains('!hidden && currency.trim()'));
+    expect(source, contains('val showSaudiRiyal = !hidden &&'));
     expect(source, contains('R.id.widget_riyal_icon'));
     expect(source, contains('R.id.widget_currency'));
     expect(source, contains('if (showSaudiRiyal) View.VISIBLE else View.GONE'));
