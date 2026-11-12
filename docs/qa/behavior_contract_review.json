@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "pr": "#597",
-  "issue": "#596, #598",
+  "issue": "#596, #598, #599",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "58a79a51094523e4506776130fedbd842efc7e87",
   "reviewed_at": "2026-11-12",
@@ -1894,6 +1894,35 @@
         "Both Arabic and English My Accounts button calls show exactly the same parent-owned Home editor, including cancel/Back and verified balance refresh.",
         "Existing standalone account composer is a fallback only when a Home parent has not provided the callback; the production account route always injects it.",
         "No bypass or disabling of exact-head Flutter, native, source-scope, SQLCipher and release-note QA gates."
+      ]
+    },
+    {
+      "id": "M668-GLOBAL-EDGE-CARD-RTL-LTR-SNACKBAR-SAFE-FOOTER",
+      "issue": "Issue #599; existing Draft PR #597; approved option #3 by owner 2026-11-12",
+      "previous_behavior": "Global WaffraFooterNoticeHost and ScaffoldMessenger fallback painted entire Snackbar background in saturated/tinted green/red/yellow/blue and surrounded icons/text/close/Undo. There was no fixed 5dp colored leading-edge status rail.",
+      "approved_behavior": "Both footer-reserved notice and single global floating fallback now show the same small neutral light-white or dark-neutral card with 5dp semantic-color stripe at Directional.start (Arabic physical right, English physical left), neutral stroke, original status icon/text, 48dp close and optional Undo action. Existing four notice kinds, timer, requireDismissal, action callback, reserved footer height, up to two-line copy, scrolling, no overlapping footer, fade/animated size and one-notice routing are unchanged. No new snack presenters or finance functionality.",
+      "source_paths": [
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m668_footer_edge_snackbar_test.dart",
+        "test/waffra_footer_notice_test.dart",
+        "test/m277_ux_accessibility_quality_test.dart",
+        "test/m274_responsive_ui_journeys_test.dart",
+        "test/m278_system_bars_responsive_matrix_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/m282-combined-qa-features.yml"
+      ],
+      "safety_invariants": [
+        "Do not change Snackbar message lifetime, requirement-to-dismiss, callback semantics, undo exactly once, optional close or single global queue behavior.",
+        "Do not cover footer tabs or financial rows; no in-screen overlay reflow stutter, preserve responsive 320dp and 200% a11y tappable 48dp close/action.",
+        "No SMS, money posting, wallet, due, accounts, encryption or biometric code edits as part of the Snackbar restyling.",
+        "RTL/English direction leading edge is visual and must mirror physical position; all four current icons/colors remain differentiable for colorblind and screen reader users.",
+        "Standalone fallback uses the same body and light/dark neutral palette; no second presenter, MaterialBanner, or bypass of M385/M449/M550 exact-head CI."
       ]
     }
   ]
