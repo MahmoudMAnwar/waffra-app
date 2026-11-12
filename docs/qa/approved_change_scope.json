@@ -14,7 +14,8 @@
     "Keep notifications SMS rescan regression aligned with the new screen-local feedback callback while preserving the guarded incremental scan behavior.",
     "M671 Issue #605: Retire the entire onboarding/replay seven-step tour and its persisted startup trigger, overlay and My Settings entry, including exact tour-only source asset; preserve normal splash and About/settings behavior.",
     "M671 Issue #605: Tap anywhere once to dismiss a visible Snackbar immediately without losing the tapped widget action, an Undo callback, or passive notice expiry; do not treat scrolling as a tap.",
-    "M671: Update obsolete M274 Snackbar-close UX test and M282 accessible action-size proof to the owner-approved X-free notice and nonblocking global tap-to-dismiss, keeping footer navigation and minimum 48dp action checks active."
+    "M671: Update obsolete M274 Snackbar-close UX test and M282 accessible action-size proof to the owner-approved X-free notice and nonblocking global tap-to-dismiss, keeping footer navigation and minimum 48dp action checks active.",
+    "M671 reconcile the old two test source markers for the MaterialApp builder: WaffraNoticeTapDismissArea is an outer nonblocking wrapper, while WaffraIdleBiometricOverlay remains the existing inner lifecycle gate with all original background and privacy assertions unchanged."
   ],
   "allowed_changed_files": [
     ".github/workflows/m282-combined-candidate.yml",
@@ -35,6 +36,8 @@
     "test/m286_tour_navigation_test.dart",
     "test/m296_monthly_budget_and_transactions_test.dart",
     "test/m374_transaction_dialog_ux_test.dart",
+    "test/m440_biometric_resume_regression_test.dart",
+    "test/m443_merchant_screenshot_regression_test.dart",
     "test/m464_sms_bulk_rescan_regression_test.dart",
     "test/m514_sms_review_regressions_test.dart",
     "test/m547_sms_incremental_jank_regression_test.dart",
@@ -316,6 +319,18 @@
       {
         "start": "              'M277': ('lib/main.dart',",
         "end": "              'M278': ('test/m278_system_bars_responsive_matrix_test.dart'"
+      }
+    ],
+    "test/m440_biometric_resume_regression_test.dart": [
+      {
+        "start": "  test('Real background transition invalidates verification; inactive alone does not relock',",
+        "end": null
+      }
+    ],
+    "test/m443_merchant_screenshot_regression_test.dart": [
+      {
+        "start": "  test('M443 Home retains biometric lock on actual background only',",
+        "end": "  test('M443 no merchant selection, brand logos or remote logo assets in active UI',"
       }
     ]
   }
