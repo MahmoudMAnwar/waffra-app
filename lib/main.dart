@@ -4706,13 +4706,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final api=WaffraVerifiedAccountsApi(bridge:bridge);
    final accounts=await api.balances();
    if(!mounted)return;
-   if(accounts.where((a)=>!a.archived).length<2){
-    snack(context,waffraIsEnglish?
-     'Create two accounts first to transfer between them.':
-     'أنشئ حسابين أولًا عشان تحول بينهم.');
-    await openVerifiedAccounts();
-    return;
-   }
+   // Two different verified accounts are checked only on final submit.
+   final knownIds=accounts.map((a)=>a.id).toSet();
    await Navigator.of(context).push<void>(MaterialPageRoute(
     builder:(transferContext)=>Scaffold(
      appBar:AppBar(title:WaffraText(waffraIsEnglish?
@@ -4720,6 +4715,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      body:WaffraAccountTransactionForm(
       accounts:accounts,english:waffraIsEnglish,
       initialOperation:WaffraAccountOperation.transfer,
+      onCreateAccount:(group,createProvider)async{
+       await openVerifiedAccounts();
+       if(!mounted)return null;
+       final updated=await api.balances();
+       final created=updated.where((a)=>
+        !a.archived&&!knownIds.contains(a.id)).toList();
+       knownIds.addAll(updated.map((a)=>a.id));
+       return created.length==1?created.single:null;
+      },
       onConfirmTransfer:(draft)async{
        await api.transfer(id:draft.requestId,
         fromAccountId:draft.fromId,toAccountId:draft.toId,
@@ -6231,7 +6235,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  })async{
   final id=item['id'],body=item['body'];
   if(id is! String||body is! String||
-     facts.kind!=WaffraBankOperationKind.transfer||facts.pending)return;
+     facts.kind!=WaffraBankOperationKind.transfer)return;
   // Verify the main transfer amount independently from fees/balances.
   // Never use a fee's currency as proof of a SAR account transfer.
   final sourceAmount=WaffraSmsCurrencies.originalAmount(body);
@@ -6242,7 +6246,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     'لن تُسجّل الرسوم أو عملة مجهولة كتحويل.',isError:true);
    return;
   }
-  final verifiedMinor=sourceAmount==null?0:
+  final verifiedMinor=facts.pending||sourceAmount==null?0:
    (waffraSarAmountMinor(sourceAmount.amount.toStringAsFixed(2))??0);
   final feeTotalMinor=facts.fee==null?null:
    WaffraBankSmsFactsParser.extraDebitMinor(
@@ -6263,11 +6267,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final api=WaffraVerifiedAccountsApi(bridge:bridge);
    final accounts=await api.balances();
    if(!mounted)return;
-   if(accounts.where((a)=>!a.archived).length<2){
-    // The editor offers inline creation of a bank provider and child account.
-    // Previously returning here made the transfer CTA look unresponsive.
-    snack(context,'اختار أو أضف حسابين مختلفين داخل شاشة المراجعة.');
-   }
    final arrived=DateTime.fromMillisecondsSinceEpoch(
     item['receivedAt'] is int?item['receivedAt'] as int:
      DateTime.now().millisecondsSinceEpoch);
@@ -7132,12 +7131,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     final kind=await showWaffraDialog<String>(context:context,
      builder:(dialog)=>AlertDialog(
       title:WaffraText(waffraIsEnglish?
-       'Add a separate manual transaction':'إضافة عملية يدوية منفصلة'),
-      content:WaffraText(waffraIsEnglish?
-       'The bank transfer SMS will remain pending. Choose an independent '
-       'income or expense, enter its true amount, and confirm its own account.':
-       'رسالة التحويل هتفضل للمراجعة. اختار دخل أو مصروف منفصل، '
-       'واكتب مبلغه الحقيقي وأكّد الحساب المالي قبل الحفظ.'),
+       'Choose the type of transaction to add:':
+       'اختر نوع العملية التي تريد إضافتها:'),
       actions:[
        TextButton(onPressed:()=>Navigator.pop(dialog),
         child:WaffraText(waffraIsEnglish?'Back':'العودة')),
@@ -9267,6 +9262,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      }
     }
     Widget operationPicker(){
+     // Manual income/expense selected from SMS: one template, no three-mode switch.
+     if(manualIncomeOverride!=null&&initial==null&&!sms){
+      return const SizedBox.shrink();
+     }
      if(initial!=null||sms){
       return SegmentedButton<bool>(
        segments:const [
