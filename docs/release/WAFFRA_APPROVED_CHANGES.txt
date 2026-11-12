@@ -264,3 +264,9 @@ M647/M649/M652 provenance labels — PR #575, 2026-11-11
 - Approved change: Rename ready-made bank SMS rule heading to «القواعد الجاهزة» / Ready-made rules and remove only the explanatory paragraph below it in both languages. All four expandable read-only default rule groups, their counts and matching behavior are unchanged. The existing initial SMS scan classification still applies built-in and learned rules without automatic financial posting.
 - Changed production paths: lib/waffra_sms_rule_settings_page.dart
 - Verification: exact-head CI and physical Android evidence remain separate, not approved merely by these notes.
+
+[M449 REVIEWED UPDATE — ISSUE #594 — PR #595 — M665.6]
+- Reviewed source SHA: 4e37f1425fae07e58eb918913997916bc22f8c84
+- Approved change: Enable native encrypted and reversible 30-day automatic SMS exclusion for the 14 ready-made excluded-kind rules only when there is no completed debit/credit/purchase/transfer evidence. Preserve confirmed and failed/ambiguous finance review, custom sender-scoped templates, identity/hash anti-replay, SMS no-autopost and owner-verified finance state. Remove only the bank-review three-dot Optional AI / Not a transaction menu, the now-inaccessible per-message cloud request method and AI decision; explicit Exclude and correction/transfer controls remain. Existing cloud service and settings are not altered.
+- Changed production paths: lib/main.dart, lib/waffra_sms_local_rules.dart
+- Verification: M385 bounded scope, M550 behavior review, full native/Flutter/SQLCipher/Android and on-device 30-day rollback evidence remain separate. Tests have been updated to preserve positive security and finance guards rather than disabled. Exact-head CI not claimed complete by these notes.
