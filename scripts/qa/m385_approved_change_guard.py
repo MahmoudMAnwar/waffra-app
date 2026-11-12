@@ -130,6 +130,9 @@ def audit_scope(manifest: dict, changed: set[str],
         "test/m332_ai_ocr_hang_and_six_for_three_test.dart",
         "test/m332_live_bank_image_sms_hang_regression_test.dart",
         "test/m329_ai_model_restart_and_visible_analysis_test.dart",
+        # M671 #605: owner explicitly retired the seven-step onboarding tour.
+        # Exact file only; the general M385 fail-closed policy is unchanged.
+        "lib/waffra_tour_plan.dart",
     }
     for p in deletions:
         if p not in explicitly_retired:
