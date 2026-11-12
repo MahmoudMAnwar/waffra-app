@@ -34,7 +34,7 @@ void main() {
   final restart=native.split(
    'fun restartCompletedHistory(context: Context): Boolean')[1]
    .split('private data class HistoricalSmsRow')[0];
-  final rescan=main.split('Future<void> _rescanAutoSmsInbox()async{')[1]
+  final rescan=main.split('Future<void> _rescanAutoSmsInbox({BuildContext? feedbackContext})async{')[1]
    .split('Future<void>? _autoSmsRefreshInFlight;')[0];
   expect(restart,isNot(contains('.remove(historyCursorAt)')));
   expect(restart,isNot(contains('.remove(historyCursorId)')));
