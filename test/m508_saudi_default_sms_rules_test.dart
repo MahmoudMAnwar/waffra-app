@@ -90,7 +90,7 @@ void main() {
     }
   });
 
-  test('M508 exclusions are hints only and never target an expense', () {
+  test('M665 default exclusions safely use native ACK, never financial posting', () {
     for(final text in <String>[
       'رمز التحقق الخاص بك لإتمام العملية',
       'Your verification code for the app',
@@ -110,7 +110,9 @@ void main() {
       body:'Card Purchase declined SAR 42.50 at Netflix',
       sender:'Bank',bankKind:WaffraBankOperationKind.expense),isNull);
     final source=File('lib/main.dart').readAsStringSync();
-    expect(source,contains("local['defaultSeed']!=true"));
+    expect(source,contains("if(local['kind']=='excluded'){"));
+    expect(source,contains('excluded.add(id)'));
+    expect(source,isNot(contains("local['defaultSeed']!=true")));
     expect(source,contains("'defaultSeed':special.builtIn"));
   });
 
