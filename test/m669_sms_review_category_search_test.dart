@@ -191,6 +191,29 @@ void main() {
     expect(main,contains('WaffraAutoSms.acknowledgeCommitted'));
   });
 
+  test('M669 all non-command production dropdowns use centralized search', () {
+    final files=<String>[
+      'lib/waffra_goal_recurring_account_picker.dart',
+      'lib/waffra_new_account_dialog.dart',
+      'lib/waffra_account_context_page.dart',
+      'lib/waffra_account_context_settings.dart',
+      'lib/waffra_account_transaction_form.dart',
+      'lib/waffra_sms_rule_settings_page.dart',
+    ];
+    for(final path in files){
+      final src=File(path).readAsStringSync();
+      expect(src,isNot(contains('DropdownButtonFormField<String>(')),
+        reason:'$path must not contain unsearchable Material dropdowns');
+      expect(src,contains('WaffraCenteredDropdownFormField<String>('),
+        reason:'$path must share the tested live-search picker');
+      expect(src,contains("import 'waffra_centered_dropdown.dart';"));
+    }
+    final picker=File('lib/waffra_centered_dropdown.dart').readAsStringSync();
+    expect(picker,contains("Key('waffra-centered-dropdown-search')"));
+    expect(picker,contains('waffraSearchAny('));
+    expect(picker,contains('waffraTr('));
+  });
+
   test('M669 SMS rules have searchable category and account selectors',(){
     final src=File('lib/waffra_sms_rule_settings_page.dart')
       .readAsStringSync();
@@ -198,6 +221,7 @@ void main() {
     expect(src,isNot(contains('DropdownButtonFormField<String>')));
     expect(src,contains('category='));
     expect(src,contains('accountId='));
+    expect(src,contains("Key('m669-sms-rule-original-text')"));
   });
 
   test('M669 all account, goal, recurring and transfer dropdowns use shared search',(){
@@ -228,10 +252,10 @@ void main() {
     final facts=WaffraBankSmsFactsParser.parse(internal);
     expect(facts.kind,WaffraBankOperationKind.transfer);
     expect(facts.canAutoPostAsIncomeExpense,isFalse);
-    const outgoing='شراء نقاط بيع\\nالمبلغ: 1900 ريال';
+    const outgoing='شراء نقاط بيع\nالمبلغ: 1900 ريال';
     final expense=WaffraBankSmsFactsParser.parse(outgoing);
     expect(expense.kind,WaffraBankOperationKind.expense);
-    const bankTransfer='حوالة صادرة\\nالمبلغ: 1900 ريال';
+    const bankTransfer='حوالة صادرة\nالمبلغ: 1900 ريال';
     expect(WaffraBankSmsFactsParser.parse(bankTransfer).kind,
       WaffraBankOperationKind.transfer,
       reason:'Bank transfer is not automatically an everyday expense');
