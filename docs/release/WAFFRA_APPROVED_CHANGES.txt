@@ -258,3 +258,9 @@ M647/M649/M652 provenance labels — PR #575, 2026-11-11
 - Approved change: The previous partial M665 summary remains applicable; after four CI workflows failed on a shared Dart analyzer error in reviewed SMS Yes, a positive nonnull original-amount and original-date branch guard was added before the source-authorized finance commit. No ledger logic, biometric Home prewarm or test was weakened.
 - Changed production paths: lib/main.dart
 - Verification: exact-head analyzer, whole Flutter CI and Android evidence remain independently required; the four failures belong to the older PR SHA.
+
+[M449 REVIEWED UPDATE — ISSUE #594 — PR #595 — M665.5]
+- Reviewed source SHA: d0ac5d02f8dc32fb4ef06e2063c994cd86738016
+- Approved change: Rename ready-made bank SMS rule heading to «القواعد الجاهزة» / Ready-made rules and remove only the explanatory paragraph below it in both languages. All four expandable read-only default rule groups, their counts and matching behavior are unchanged. The existing initial SMS scan classification still applies built-in and learned rules without automatic financial posting.
+- Changed production paths: lib/waffra_sms_rule_settings_page.dart
+- Verification: exact-head CI and physical Android evidence remain separate, not approved merely by these notes.
