@@ -106,7 +106,11 @@ void main(){
    main.indexOf('   if(recurring.isEmpty)Padding',
     main.indexOf(' Widget recurringPage(){')));
   expect(card,contains("key:Key('m665-recurring-edit-'+r.id)"));
-  expect(card,contains('Opacity(opacity:goal!=null?0.46:1'));
+  expect(card,contains('Opacity(opacity:r.linkedGoalId!=null?0.46:1'));
+  expect(card,contains('enabled:r.linkedGoalId==null'));
+  expect(card,contains('hint:r.linkedGoalId!=null?'));
+  // An orphaned linked due is still controlled by the goal editor; only
+  // a standalone recurring item can open a direct edit sheet.
  });
 
  testWidgets('M665.7 widget shows labelled wallet and bank, never tech notes/restaurant',
