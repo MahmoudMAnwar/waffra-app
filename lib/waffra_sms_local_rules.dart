@@ -104,9 +104,9 @@ abstract final class WaffraSmsLocalRules {
  static bool _beneficiaryManagement(String body){
   final text=normalized(body);
   return RegExp(
-   r'(?:تم|تمت)\\s+(?:اضافه|تنشيط|تفعيل|تحديث|تعديل|حذف|الغاء)\\s+'
-   r'(?:بيانات\\s+)?(?:ال)?مستفيد|'
-   r'(?:beneficiary|payee)\\s+(?:added|activated|updated|removed)',
+   r'(?:تم|تمت)\s+(?:اضافه|تنشيط|تفعيل|تحديث|تعديل|حذف|الغاء)\s+'
+   r'(?:بيانات\s+)?(?:ال)?مستفيد|'
+   r'(?:beneficiary|payee)\s+(?:added|activated|updated|removed)',
    caseSensitive:false).hasMatch(text);
  }
 
@@ -131,11 +131,17 @@ abstract final class WaffraSmsLocalRules {
   final beneficiary=_beneficiaryManagement(body);
   if((!verification&&!beneficiary)||_hasCompletedFinanceCue(body))return null;
   final family=verification?'verification':'beneficiary_management';
+  final t=normalized(body);
+  final anchor=verification?
+   const <String>['رمز التحقق','رمز التفعيل','رمز الدخول','رمز مؤقت',
+    'verification code','security code','one time code','otp']
+    .firstWhere((p)=>t.contains(normalized(p)),orElse:()=> 'رمز التحقق'):
+   'المستفيد';
   final rule=WaffraSmsLocalRule(
    id:'template_${sha256.convert(utf8.encode(
     '${normalized(sender)}|excluded|$family')).toString().substring(0,32)}',
    name:verification?'رسائل تحقق':'إدارة المستفيدين',
-   keywords:[verification?'رمز التحقق':'المستفيد'],
+   keywords:[anchor],
    kind:'excluded',income:false,category:'',sender:sender.trim(),
    matchAll:true,autoPost:false,templateFamily:family,
    contextFragments:_safeContextFragments(body),
