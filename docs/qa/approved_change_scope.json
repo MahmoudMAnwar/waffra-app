@@ -10,7 +10,8 @@
     "Regression coverage for repeated valid account/category selection, main-only hint, income vs expense, outgoing transfer vs two-sided transfer, original body visibility, picker empty search and no auto posting.",
     "Every remaining native DropdownButtonFormField in five financial-account/goal/recurring/account-edit routes uses the already-approved searchable centered picker, preserving current selection and avoiding surprise commits.",
     "Convert all remaining native DropdownButtonFormField<String> selectors in verified accounts, transfer, account creation, goals, recurring and account settings to the centrally searchable category/bank/account/budget picker while retaining selected value and save behavior.",
-    "Reconcile stale M565/M574 review regression assertions with M669 typed active parent/leaf, original SMS visibility and confirmed account while keeping finance writer and no-guess safety assertions."
+    "Reconcile stale M565/M574 review regression assertions with M669 typed active parent/leaf, original SMS visibility and confirmed account while keeping finance writer and no-guess safety assertions.",
+    "Issue #604 CI migration: retain all existing functional tests after global searchable centered selector; update M470/M495 widget types and disabled-state assertion, and M487 modal choice lookup via live search before selecting Add/persisted subtype. Do not skip tests, downgrade dropdowns, or modify finance writes."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -27,7 +28,10 @@
     "lib/waffra_sms_rule_settings_page.dart",
     "test/m669_sms_review_category_search_test.dart",
     "test/qa/m565_sms_yes_no_test.py",
-    "test/qa/m574_sms_confirmation_full_fields_test.py"
+    "test/qa/m574_sms_confirmation_full_fields_test.py",
+    "test/m470_sms_first_sender_account_test.dart",
+    "test/m487_custom_subtype_dialog_test.dart",
+    "test/m495_pr402_ui_performance_regression_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
