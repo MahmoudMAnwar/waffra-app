@@ -100,6 +100,7 @@ import 'storage/waffra_live_account_write_authority.dart';
 import 'storage/waffra_home_finance_persistence.dart';
 import 'storage/waffra_verified_finance_authority.dart';
 import 'storage/waffra_accounts_portable_backup_v3.dart';
+import 'storage/waffra_legacy_v24_sqlcipher_converter.dart';
 import 'storage/waffra_verified_active_restore_preflight.dart';
 import 'storage/waffra_verified_pull_refresh_source.dart';
 import 'storage/waffra_production_finance_authority_binding.dart';
@@ -17075,10 +17076,44 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      }
      if(stagedBackup==null||stagedBackup!.isEmpty)return;
      update(()=>restoring=true);
+     var backupDecrypted=false;
+     var sqlcipherRestoreCommitted=false;
      try{
-      final raw=await compute(waffraDecodeBackupInIsolate,<String,String>{
-       'payload':stagedBackup!,'password':restoreSecret.text,
+      var restoreArchive=stagedBackup!;
+      var raw=await compute(waffraDecodeBackupInIsolate,<String,String>{
+       'payload':restoreArchive,'password':restoreSecret.text,
       });
+      backupDecrypted=true;
+      var omittedLegacyReceiptCount=0;
+      // Old V24 password-authenticated exports use legacy finance JSON, not
+      // the account-aware SQLCipher V3 layout. Build a disposable encrypted V3
+      // candidate; the existing rescue/preflight/atomic restore then applies.
+      // An in-place upgrade on legacy storage continues down its old route.
+      if(raw['format']=='waffra-backup'&&raw['version']==24){
+       final source=await _financeAuthority.load(
+        route:WaffraFinanceRoute.backupRestore);
+       if(source.encryptedWitness!=null){
+        final unavailable=
+         WaffraLegacyV24SqlCipherConverter.unavailableReceiptCount(raw);
+        if(unavailable>0){
+         final approvedMissing=await confirm(
+          waffraIsEnglish?'Unavailable old receipt images':
+           'مرفقات غير موجودة داخل النسخة',
+          waffraIsEnglish?
+           'This old backup contains $unavailable receipt image reference(s) but not the image bytes. Restoring transactions will omit these unavailable photos. Amounts, dates and other records stay unchanged. Do you explicitly agree to continue without those images?':
+           'النسخة القديمة فيها $unavailable مرفق صورة محفوظ كمسار فقط، بدون ملف الصورة نفسه. عند الاستعادة ستبقى العمليات والمبالغ والتواريخ، لكن الصور دي لن تنتقل. هل توافق صراحةً على الاستعادة بدون المرفقات دي؟');
+         if(approvedMissing!=true||!ctx.mounted||!mounted)return;
+        }
+        final candidate=await WaffraLegacyV24SqlCipherConverter.prepare(
+         payload:raw,password:restoreSecret.text,
+         userApprovedMissingReceipts:true);
+        omittedLegacyReceiptCount=candidate.unavailableReceiptCount;
+        restoreArchive=candidate.encryptedV3;
+        raw=<String,dynamic>{
+         'format':WaffraAccountsPortableBackupV3.format,
+        };
+       }
+      }
       if(raw['format']==WaffraAccountsPortableBackupV3.format){
        final source=await _financeAuthority.load(route:WaffraFinanceRoute.backupRestore);
        if(source.encryptedWitness==null){
@@ -17089,7 +17124,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        }
        final result=await WaffraVerifiedActiveRestorePreflight(
         authority:_financeAuthority,experimentalEnabled:true,
-       ).inspect(selectedSource:source,encryptedArchive:stagedBackup!,
+       ).inspect(selectedSource:source,encryptedArchive:restoreArchive,
         password:restoreSecret.text,userConfirmed:true,accountArchive:true);
        if(!ctx.mounted||!mounted)return;
        final approved=await confirm(
@@ -17116,10 +17151,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        }
        final applied=await bridge.applyVerifiedV3Restore(
         baseline:source.encryptedWitness!,
-        encryptedArchive:stagedBackup!,password:restoreSecret.text,
+        encryptedArchive:restoreArchive,password:restoreSecret.text,
         savedRescueArchive:rescue,rescuePassword:restoreSecret.text,
         preflightChecksum:result.archiveChecksum,
         userConfirmed:true,externallySavedRescueConfirmed:true);
+       sqlcipherRestoreCommitted=true;
        if(!mounted)return;
        // The authoritative encrypted snapshot, not a decoded backup in
        // memory, becomes the source for Home and widget after one commit.
@@ -17128,8 +17164,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        if(mounted)await syncRecurringReminders();
        if(ctx.mounted)Navigator.pop(ctx);
        if(mounted)snackSuccess(context,waffraIsEnglish
-        ?'Encrypted restore verified: ${applied.transactionCount} transactions and ${applied.receiptCount} receipts. Your previous encrypted backup was saved separately.'
-        :'اكتملت الاستعادة المشفرة لـ${applied.transactionCount} معاملة و${applied.receiptCount} مرفق. احتفظ بنسخة الأمان السابقة خارج التطبيق.');
+        ?'Encrypted restore verified: ${applied.transactionCount} transactions and ${applied.receiptCount} receipts. '
+          '${omittedLegacyReceiptCount>0?"Warning: "+omittedLegacyReceiptCount.toString()+" old receipt image(s) were unavailable in this backup and were not restored. ":""}'
+          'Your previous encrypted backup was saved separately.'
+        :'اكتملت استعادة ${applied.transactionCount} معاملة و${applied.receiptCount} مرفق. '
+         '${omittedLegacyReceiptCount>0?"تنبيه: "+omittedLegacyReceiptCount.toString()+" من صور المرفقات القديمة غير موجودة داخل الباكب ولم تُستعد. ":""}'
+         'احتفظ بنسخة الأمان السابقة خارج التطبيق.');
        return;
       }
       if(raw['format']!='waffra-backup'||raw['entries'] is! List||
@@ -17243,9 +17283,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       if(ctx.mounted)Navigator.pop(ctx);
       if(mounted)snackSuccess(context,'تمت استعادة البيانات بنجاح');
      }catch(e){
-      if(ctx.mounted)update(()=>restoreError=waffraIsEnglish?
-       'Restore failed. Check the original password and complete backup.':
-       'فشلت الاستعادة. تأكد من كلمة المرور الأصلية واكتمال النسخة.');
+      // Once the AEAD archive decrypted successfully, a later schema or
+      // SQLCipher failure is NOT a bad password. Keep detailed errors in QA
+      // logs only; never echo secrets or user finance values in UI.
+      debugPrint('Waffra restore failed after authentication: '
+       +backupDecrypted.toString()+' / '+e.runtimeType.toString());
+      if(ctx.mounted)update(()=>restoreError=sqlcipherRestoreCommitted?
+       (waffraIsEnglish
+        ?'The encrypted restore committed, but screen refresh failed. Reopen Waffra to verify the restored records and retain the external rescue copy.'
+        :'تم حفظ البيانات المستعادة في SQLCipher، لكن تعذر تحديث الشاشة. افتح وفرة مجددًا للتحقق من البيانات واحتفظ بنسخة الأمان.'):
+       backupDecrypted?
+       (waffraIsEnglish
+        ?'The backup password was accepted, but the data could not be migrated safely. Inspect the current records and keep the encrypted rescue copy.'
+        :'كلمة مرور النسخة صحيحة، لكن تعذر ترحيل البيانات بأمان. راجع البيانات الحالية واحتفظ بنسخة الأمان المشفرة.'):
+       (waffraIsEnglish
+        ?'Could not authenticate this encrypted backup. Check its original password and file integrity.'
+        :'تعذر التحقق من تشفير النسخة. راجع كلمة مرور النسخة الأصلية وسلامة الملف.'));
      }finally{
       if(ctx.mounted)update(()=>restoring=false);
      }
