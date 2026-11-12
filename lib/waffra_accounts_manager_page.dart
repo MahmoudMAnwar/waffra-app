@@ -8,6 +8,7 @@ import 'waffra_account_transaction_form.dart';
 import 'waffra_account_context_page.dart';
 import 'waffra_new_account_dialog.dart';
 import 'waffra_saudi_financial_providers.dart';
+import 'waffra_i18n.dart';
 
 /// M440 optional SQLCipher account page. A production Home route must only
 /// open this after the same certified finance source is active for SMS/widget.
@@ -356,7 +357,7 @@ class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {
     return Column(children:[
      Card(child:ListTile(
       title:Text(t('إجمالي أرصدة حساباتي','Total account balances')),
-      subtitle:Text(amount(sum),textDirection:TextDirection.ltr))),
+      subtitle:WaffraText(amount(sum),currencyEnglish:widget.english,textDirection:TextDirection.ltr))),
      Expanded(child:accounts.isEmpty?
       Center(child:Text(t('أضف حسابًا أولًا','Add your first account'))):
       ListView.builder(itemCount:accounts.length,itemBuilder:(ctx,i){
@@ -371,7 +372,7 @@ class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {
           Text(t('نوع الحساب: ','Account subtype: ')+a.customSubtypeLabel!,
            key:Key('m497-custom-subtype-${a.id}'),
            style:Theme.of(ctx).textTheme.bodySmall),
-         Text(amount(a.balanceMinor),textDirection:TextDirection.ltr),
+         WaffraText(amount(a.balanceMinor),currencyEnglish:widget.english,textDirection:TextDirection.ltr),
         ]),
         trailing:PopupMenuButton<String>(
          onSelected:(action){
