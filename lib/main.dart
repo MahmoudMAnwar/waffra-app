@@ -6769,12 +6769,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    String reviewedMainName=previewMainName;
    bool reviewCategoryValid=previewHint.leaf!=null&&
     previewHint.parent!=null;
+   // M669: an independent conservative BankParser may decline to extract
+   // an amount even when verified original SAR facts did extract one.
+   // The atomic writer validates original facts, NOT that optional second
+   // parser. A present conflicting parsed amount/direction still blocks Yes.
    bool canConfirm=understood&&facts.canAutoPostAsIncomeExpense&&
     originalAmount!=null&&originalAmount.currency=='SAR'&&
     originalDate!=null&&!bankSmsHasUnverifiedTimestamp(body)&&
-    parsed.amount!=null&&
-    (parsed.amount!-originalAmount.amount).abs()<0.00001&&
-    parsed.income==expectedIncome&&reviewCategoryValid;
+    (parsed.amount==null||
+     (parsed.amount!-originalAmount.amount).abs()<0.00001)&&
+    (parsed.amount==null||parsed.income==expectedIncome)&&
+    reviewCategoryValid;
    // A type selection in compact review is only a requested correction;
    // it must never ACK or post money until the verified ledger editor saves.
    String? reviewType=sensitive?null:switch(facts.kind){
@@ -6791,6 +6796,35 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    ({List<String?>? ids,int? generation})? reviewedAccount;
    String? reviewedAccountName;
    bool choosingAccount=false;
+   // M669: a disabled Yes must say WHY and offer the safe editor. The
+   // conditions mirror the verified atomic writer; choosing a category or
+   // account alone never bypasses currency, source and timestamp checks.
+   List<String> reviewBlockers(){
+    final missing=<String>[];
+    if(!reviewCategoryValid)missing.add(waffraIsEnglish?
+     'Choose one active main and subcategory.':
+     'اختار قسمًا رئيسيًا وفرعيًا صالحين وغير مكررين.');
+    if(reviewedAccount?.ids?.single==null||
+       reviewedAccount?.generation==null)missing.add(waffraIsEnglish?
+     'Confirm the financial account.':'أكّد الحساب المالي.');
+    if(!understood||!facts.canAutoPostAsIncomeExpense)missing.add(
+     waffraIsEnglish?'Transaction type must be reviewed.':
+      'نوع العملية يحتاج مراجعة.');
+    if(originalAmount==null||originalAmount.currency!='SAR')missing.add(
+     waffraIsEnglish?'Original SAR amount needs verification.':
+      'مبلغ الريال الأصلي يحتاج مراجعة.');
+    if(originalDate==null||bankSmsHasUnverifiedTimestamp(body))missing.add(
+     waffraIsEnglish?'Original transaction date/time needs verification.':
+      'تاريخ ووقت العملية الأصليان يحتاجان مراجعة.');
+    if(parsed.amount!=null&&originalAmount!=null&&
+      (parsed.amount!-originalAmount.amount).abs()>0.00001)missing.add(
+     waffraIsEnglish?'Parsed amount conflicts with original SMS.':
+      'المبلغ المقروء مختلف عن المبلغ الأصلي في الرسالة.');
+    if(parsed.amount!=null&&parsed.income!=expectedIncome)missing.add(
+     waffraIsEnglish?'Bank SMS direction needs review.':
+      'اتجاه العملية البنكية يحتاج مراجعة.');
+    return missing;
+   }
    Future<void> selectReviewCategory(StateSetter redraw,BuildContext dialog)async{
     // M669: the SMS hint is only a suggestion. Choose a real ACTIVE parent
     // and then one of its ACTIVE children; both steps are searchable.
@@ -7094,9 +7128,46 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          Expanded(child:FilledButton(
           key:const Key('m565-sms-yes-confirm'),
           onPressed:canConfirm&&reviewedAccount?.ids?.single!=null&&
+           reviewedAccount?.generation!=null&&
            !choosingAccount?()=>Navigator.pop(dialog,'yes'):null,
           child:WaffraText(waffraIsEnglish?'Yes':'نعم'))),
         ]),
+        if(!canConfirm||reviewedAccount?.ids?.single==null||
+           reviewedAccount?.generation==null)...[
+         const SizedBox(height:8),
+         Container(
+          key:const Key('m669-sms-review-blockers'),
+          padding:const EdgeInsets.all(10),
+          decoration:BoxDecoration(
+           color:Theme.of(dialog).colorScheme.surfaceContainerLow,
+           borderRadius:BorderRadius.circular(12)),
+          child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+           WaffraText(waffraIsEnglish?
+            'To enable Yes, complete these checks:':
+            'لتفعيل نعم، راجع المطلوب:'),
+           const SizedBox(height:5),
+           ...reviewBlockers().map((reason)=>Padding(
+            padding:const EdgeInsets.symmetric(vertical:2),
+            child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
+             const Icon(Icons.info_outline_rounded,size:16,color:emerald),
+             const SizedBox(width:5),
+             Expanded(child:WaffraText(reason,
+              style:const TextStyle(fontSize:12))),
+            ]))),
+           if(reviewBlockers().any((reason)=>
+             !reason.contains('قسم')&&!reason.contains('category')&&
+             !reason.contains('حساب')&&!reason.contains('account')))...[
+            const SizedBox(height:6),
+            TextButton.icon(
+             key:const Key('m669-sms-review-safe-editor'),
+             onPressed:()=>Navigator.pop(dialog,'review'),
+             icon:const Icon(Icons.edit_note_outlined),
+             label:WaffraText(waffraIsEnglish?
+              'Review details in editor':'راجع البيانات في شاشة التعديل')),
+           ],
+          ]),
+         ),
+        ],
        ],
        // Exclude is a separate, reversible action BELOW Yes/No.
        if(!sensitive&&facts.kind!=WaffraBankOperationKind.transfer)
