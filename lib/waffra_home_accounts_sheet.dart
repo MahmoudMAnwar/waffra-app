@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'storage/waffra_accounts_repository.dart';
+import 'waffra_i18n.dart';
 
 /// Viewing another account NEVER changes the default money source used by
 /// manual capture, SMS, goals or recurring payments.
@@ -53,7 +54,7 @@ class WaffraHomeAccountsSheet extends StatelessWidget{
     leading:Icon(icon,color:const Color(0xFF087A54)),
     title:Text(title,maxLines:1,overflow:TextOverflow.ellipsis,
      style:const TextStyle(fontWeight:FontWeight.w700)),
-    subtitle:Text(caption,maxLines:1,overflow:TextOverflow.ellipsis),
+    subtitle:WaffraText(caption,currencyEnglish:english,maxLines:1,overflow:TextOverflow.ellipsis),
     trailing:Icon(active?Icons.check_circle_rounded:Icons.circle_outlined,
      color:active?const Color(0xFF087A54):Colors.grey),
     onTap:()=>Navigator.pop(context,id),
