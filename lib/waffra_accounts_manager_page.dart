@@ -36,7 +36,17 @@ class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {
  late Future<List<WaffraAccountBalance>> current;
  String t(String ar,String en)=>widget.english?en:ar;
  @override void initState(){super.initState();current=widget.repository.balances();}
- void reload(){if(mounted)setState(()=>current=widget.repository.balances());}
+ void reload(){
+  // M667: an assignment expression to a Future returns the Future from the
+  // setState callback, which Flutter rejects after closing the Home editor.
+  // Trigger the verified refresh outside setState and publish only its
+  // already-created Future synchronously; FutureBuilder owns its completion.
+  if(!mounted)return;
+  final pending=widget.repository.balances();
+  setState((){
+   current=pending;
+  });
+ }
  void failed(){
   if(mounted)snack(context,
    t('تعذر التحقق من الحفظ. الرصيد لم يتغير.',
