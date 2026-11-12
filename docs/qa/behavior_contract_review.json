@@ -1804,7 +1804,8 @@
         "test/m665_goal_due_display_and_linked_edit_test.dart",
         "test/storage/m665_goal_due_note_and_split_test.dart",
         "test/m647_m652_financial_activity_regression_test.dart",
-        "test/m641_goal_recurring_account_binding_test.dart"
+        "test/m641_goal_recurring_account_binding_test.dart",
+        "test/m495_pr402_ui_performance_regression_test.dart"
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/m550-behavior-contract-preflight.yml",
@@ -1817,7 +1818,8 @@
         "Metadata migration is display-only for previous entries; notes changes use typed verified split already present, preserve backward compatibility.",
         "An immutable paid goal due can neither be saved as manual nor independently changed; no bypass from deep link.",
         "Goal edit persists account, due, target through atomic linked schedule path; already paid replay guard remains.",
-        "Goals/recurring/home and prewarm remain responsive; SQLCipher/backup/finance exact-head test suite mandatory."
+        "Goals/recurring/home and prewarm remain responsive; SQLCipher/backup/finance exact-head test suite mandatory.",
+        "M495 historical unassigned manual entries still reach entrySheet through transaction Actions; only previously settled goal_due receipts are guarded from direct edits."
       ]
     }
   ]
