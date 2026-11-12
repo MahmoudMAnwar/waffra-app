@@ -84,9 +84,11 @@ void main(){
 
  test('M665.7 linked due edit explains without changing finance; standalone still editable',(){
   final main=File('lib/main.dart').readAsStringSync();
-  final handler=main.substring(
-   main.indexOf(' Future<void> _handleRecurringCardAction('),
-   main.indexOf(' DateTime nextRecurringDue('));
+  final handlerStart=main.indexOf(' Future<void> _handleRecurringCardAction(');
+  final handlerEnd=main.indexOf(' Widget recurringPage(){',handlerStart);
+  expect(handlerStart,greaterThanOrEqualTo(0));
+  expect(handlerEnd,greaterThan(handlerStart));
+  final handler=main.substring(handlerStart,handlerEnd);
   expect(handler,contains("if(r.linkedGoalId!=null)"));
   expect(handler,contains('_m665ExplainLinkedGoalEdit()'));
   expect(handler,contains('await recurringDialog(initial:r)'));
@@ -123,8 +125,13 @@ void main(){
    expect(find.byKey(const Key('m665-goal-due-details-breakdown')),
     findsOneWidget);
    expect(find.text('استحقاق هدف'),findsWidgets);
-   expect(find.text('من محفظة الهدف'),findsOneWidget);
-   expect(find.text('المخصوم من الحساب المالي'),findsOneWidget);
+   // WaffraText intentionally composes an inner Text, so Flutter's
+   // text finder observes both wrapper and child for one visual label.
+   final breakdown=find.byKey(const Key('m665-goal-due-details-breakdown'));
+   expect(find.descendant(of:breakdown,
+    matching:find.text('من محفظة الهدف')),findsWidgets);
+   expect(find.descendant(of:breakdown,
+    matching:find.text('المخصوم من الحساب المالي')),findsWidgets);
    expect(find.text('مطاعم وكافيهات / مطاعم شعبية'),findsNothing);
    expect(find.textContaining('goal_wallet_minor'),findsNothing);
   });
