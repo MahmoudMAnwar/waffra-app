@@ -15,7 +15,7 @@ void main() {
   final load = home.split(' Future<void> load()async {')[1]
     .split(' Future<void> _refreshWidget()async{')[0];
   final sms = home.split(' Future<void> _runAutoSmsRefresh(')[1]
-    .split(' Future<void> _analyzeAmbiguousSmsOnDemand(')[0];
+    .split(' Future<void> _scanPreviousBankSmsFromSettings()async{')[0];
 
   test('only verified encrypted source and real account balances reveal Home', () {
     expect(load, contains('await _ensureFinanceBound();'));
