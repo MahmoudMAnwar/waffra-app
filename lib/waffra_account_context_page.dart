@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'main.dart' show snack;
 import 'waffra_account_context_settings.dart';
+import 'waffra_i18n.dart';
 
 import 'storage/waffra_account_context_read.dart';
 import 'storage/waffra_accounts_repository.dart';
@@ -130,7 +131,7 @@ class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {
         style:Theme.of(context).textTheme.titleMedium)),
       ...data.goals.map((goal)=>Card(child:ListTile(
        title:Text(goal.name),
-       subtitle:Text(accountId==null
+       subtitle:WaffraText(accountId==null
         ?t('إجمالي الادخار: ','Total saved: ')+money(goal.totalSavedMinor)
         :t('مساهمة الحساب: ','Account contribution: ')+
           money(goal.selectedAccountNetMinor)+'\n'+
@@ -143,7 +144,7 @@ class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {
         style:Theme.of(context).textTheme.titleMedium)),
       ...data.budgets.map((item)=>Card(child:ListTile(
        title:Text(item.name),
-       subtitle:Text(accountId==null
+       subtitle:WaffraText(accountId==null
         ?t('إجمالي المصروف: ','Overall spent: ')+
          money(item.usage.globalSpentMinor)+' / '+money(item.usage.limitMinor)
         :t('من هذا الحساب: ','From this account: ')+
@@ -165,8 +166,8 @@ class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {
         labels[entry.accountId]??t('حساب سابق','Previous account'))),
       trailing:Column(mainAxisSize:MainAxisSize.min,
        mainAxisAlignment:MainAxisAlignment.center,children:[
-       Text((entry.income?'+':'-')+money(entry.amountMinor),
-        textDirection:TextDirection.ltr),
+       WaffraText((entry.income?'+':'-')+money(entry.amountMinor),
+        currencyEnglish:widget.english,textDirection:TextDirection.ltr),
        if(entry.accountId==null)Text(t('ربط','Link'),
         style:Theme.of(context).textTheme.labelSmall),
       ]),
