@@ -136,6 +136,18 @@
       {
         "start": " @override Widget build(BuildContext context)=>PopScope(",
         "end": "class WaffraDeletedItemsButton extends StatelessWidget {"
+      },
+      {
+        "start": " @override void dispose(){if(!_m663FirstInteractiveFrame.isCompleted)",
+        "end": " Future<void> _syncWidgetTransactions()async{"
+      },
+      {
+        "start": " Widget _smartToolsTab(){",
+        "end": " void openSmartFeatures(){"
+      },
+      {
+        "start": " @override Widget build(BuildContext context,double shrinkOffset,bool overlapsContent){",
+        "end": " @override bool shouldRebuild(covariant WaffraBalanceHeader oldDelegate)=>true;"
       }
     ],
     "test/m296_monthly_budget_and_transactions_test.dart": [
