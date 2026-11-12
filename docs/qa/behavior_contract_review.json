@@ -1634,6 +1634,43 @@
         "The previous M595 regression now positively asserts revised lower type choices and unchanged exclusion/confirmed finance logic; no unrelated M580 security checks are removed.",
         "M662.8 changes manual new entry initial category only; prevents any implicit expense Other parent and does not clear existing saved edits, SMS classification, budget/finance authority or account selection."
       ]
+    },
+    {
+      "id": "M663-VERIFIED-FIRST-INSTALL-HOME-PREASSEMBLY-PR592",
+      "issue": "Issue #591 M663, Draft PR #592, owner approved first-install and re-login handoff on 2026-11-12",
+      "previous_behavior": "HomeScreen is mounted only after new-registration consent and biometrics finish; a slow SQLCipher catalog/account read then leaves the biometric UI retained and non-interactive, creating a perceived freeze. Existing M631 prewarm opens a BIND-only source while the owner is signing in, but does not prepare the actual first Home in the permissions window. Optional native SMS and lifecycle listeners may begin work as soon as an offstage Home reports ready.",
+      "approved_behavior": "Only an authenticated, first-time new registration (new profile, first-run Android SMS permission, not ordinary verified phone relogin) may mount the one real Home beneath an interactive consent/biometric stage after password and profile persistence. Home uses original SQLCipher authority, verifies source integrity and balances, caches readiness while locked, and is revealed after biometric succeeds without re-mount/re-load. PostauthVisible first-frame barrier blocks SMS, widget, notification, recurring, tour, lifecycle and back callbacks until visible. Logout invalidates owner-scoped Home/finance and retains source-close guards. Existing/relogged-in accounts still wait for verified exact-owner finance, never fake zero.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_large_json_decode.dart",
+        "lib/storage/waffra_verified_finance_authority.dart"
+      ],
+      "test_paths": [
+        "test/m663_home_prewarm_auth_handoff_test.dart",
+        "test/m623_verified_home_handoff_no_black_frame_test.dart",
+        "test/m624_deferred_sms_after_verified_home_test.dart",
+        "test/m631_verified_finance_prewarm_test.dart",
+        "test/m625_single_verified_home_read_login_handoff_test.dart",
+        "test/m463_auth_first_one_page_test.dart",
+        "test/m622_immediate_home_without_loader_test.dart",
+        "test/m627_home_handoff_timeout_and_session_reset_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/m174-main-sha-postmerge.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/android.yml"
+      ],
+      "safety_invariants": [
+        "No speculative Home mount for a restored, logged-out, or different owner; first install only after verified credential and persisted profile.",
+        "No fake empty financial state: verified SQLCipher finance.requireIntegrity and accounts still gate Home-ready; no permissive legacy fallback.",
+        "Consent and biometrics retain accessible top-level UI and mandatory authentication; hidden Home is Offstage and TickerMode disabled until user verified.",
+        "Every optional native SMS scan, native resume, widget, notification, recurring, tour and lifecycle callback stays deferred until the first actually visible Home frame.",
+        "No asset/owner balance, credentials or SMS content logged; profile logs are elapsed times only.",
+        "Logout still drains owner-bound Home I/O, suspends SMS and closes the exact finance binding; relogin never reuses closed handles or stale balances.",
+        "M385 bounded source diff and existing positive security/finance tests remain enabled; exact SHA CI and physical Android acceptance pending."
+      ]
     }
   ]
 }
