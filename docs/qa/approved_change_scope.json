@@ -151,6 +151,14 @@
       {
         "start": " @override Widget build(BuildContext context,double shrinkOffset,bool overlapsContent){",
         "end": " @override bool shouldRebuild(covariant WaffraBalanceHeader oldDelegate)=>true;"
+      },
+      {
+        "start": "class WaffraFooterNoticeHost extends StatefulWidget {",
+        "end": "/// The only public way to display transient system feedback."
+      },
+      {
+        "start": "void snack(BuildContext context,String text,{",
+        "end": "void snackSuccess(BuildContext context,String text)=>"
       }
     ],
     "test/m296_monthly_budget_and_transactions_test.dart": [
