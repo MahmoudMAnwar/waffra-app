@@ -2202,6 +2202,34 @@
         "Never claim Android validation from a source commit; run exact-head CI and verified physical UI before calling Done.",
         "No new financial posting, deleted transfer leg or bank identity inference without user confirmation."
       ]
+    },
+    {
+      "id": "M679-CI-REGRESSION-FOUR-ROOT-CAUSES",
+      "issue": "Owner explicit fix + merge, Issue #613, PR #603 head 0e01eb4, M160 and Full Offline exact logs on 2026-11-12",
+      "previous_behavior": "Four positive regressions failed: goal due old exact caption replaced with combined label; directional footer test still expects retired close X; a Snackbar persists past its passive expiry during dark-mode fallback; dialog tap test mounts footer notice as the entire bottom bar and loses clickable route during transient layout collapse.",
+      "approved_behavior": "Keep exact 'إجمالي الاستحقاق' caption and adjacent new 'المبلغ' label; regression must verify status icon mirrors with Arabic/English and NO X. Ensure fallback SnackBar passive expiration via generation-bound timer without dismissing a newly replaced notice or action callbacks. Tap-dismiss and modal routing test uses actual stable 76dp footer navigation like production and checks real AlertDialog push and its action, not warnIfMissed suppression.",
+      "source_paths": [
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m665_goal_due_display_and_linked_edit_test.dart",
+        "test/m671_tour_retirement_snackbar_tap_test.dart",
+        "test/waffra_footer_notice_test.dart",
+        "test/waffra_directional_fab_receipt_corner_test.dart",
+        "test/m672_m678_activity_account_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m160-main-reconciliation.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "No code deletes accounts, SMS, changes verified goal dues or replaces protected finance tests.",
+        "No X restored; original Undo, tap gesture, accessibility and passive expiry remain.",
+        "Keep tests meaningful: no skips, no warnIfMissed:false, no exceptions suppressed.",
+        "Only true exact-head rerun success supports merge, not stale older green jobs."
+      ]
     }
   ]
 }
