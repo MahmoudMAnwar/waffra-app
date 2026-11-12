@@ -149,4 +149,46 @@ void main() {
    expect(main,contains("local['kind']=='excluded'&&local['defaultSeed']!=true"));
   });
  });
+
+ test('M665.5 built-in ready-rule UI keeps four expandable groups but no essay',(){
+  final page=File('lib/waffra_sms_rule_settings_page.dart').readAsStringSync();
+  expect(page,contains("'Ready-made rules':'القواعد الجاهزة'"));
+  expect(page,isNot(contains("'Built-in Saudi rules':'القواعد السعودية الجاهزة'")));
+  expect(page,isNot(contains('قواعد عربية وإنجليزية محلية شغالة من أول تثبيت')));
+  expect(page,isNot(contains('Offline Arabic/English suggestions active on every installation')));
+  final start=page.indexOf("Text(widget.english?'Ready-made rules':'القواعد الجاهزة'");
+  expect(start,greaterThanOrEqualTo(0));
+  final group=page.substring(start);
+  expect(group,contains("for(final kind in const <String>['income','expense','transfer','excluded'])"));
+  expect(group,contains('_defaultRuleBucket(kind)'));
+  expect(page,contains("Key('waffra-sms-default-rule-bucket-\$kind')"));
+  expect(page,contains('values.length'));
+  expect(page,contains('rule.keywords.join'));
+ });
+
+ test('M665.5 initial scan applies four ready-rule kinds without auto finance posting',(){
+  for(final kind in const ['income','expense','transfer','excluded']){
+   expect(WaffraSmsLocalRules.allDefaultRules
+    .where((rule)=>rule.resolvedKind==kind),isNotEmpty,
+    reason:'Ready-made \$kind bucket is active on first install');
+  }
+  final main=File('lib/main.dart').readAsStringSync();
+  final begin=main.indexOf('Map<String,Object?> waffraM632ClassifySmsQueue(');
+  final end=main.indexOf('List<String> splitBankMessages(',begin);
+  expect(begin,greaterThanOrEqualTo(0));
+  expect(end,greaterThan(begin));
+  final worker=main.substring(begin,end);
+  expect(worker,contains('WaffraSmsLocalRules.resolveSpecial('));
+  expect(worker,contains('WaffraSmsLocalRules.resolve('));
+  expect(worker,contains("local['kind']=='excluded'&&local['defaultSeed']!=true"));
+  expect(worker,contains('waiting.add(annotated);'));
+  expect(worker,isNot(contains('commitConfirmedSms(')));
+  expect(worker,isNot(contains('commitConfirmedManual(')));
+  final refresh=main.substring(
+   main.indexOf(' Future<void> _runAutoSmsRefresh({'),
+   main.indexOf(' Future<void> _analyzeAmbiguousSmsOnDemand('));
+  expect(refresh,contains('WaffraSmsLocalRuleStore().read('));
+  expect(refresh,contains('await compute(waffraM632ClassifySmsQueue'));
+  expect(refresh,contains("WaffraAutoSms.excludeMessages(batch)"));
+ });
 }
