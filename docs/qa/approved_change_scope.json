@@ -135,6 +135,10 @@
       {
         "start": " bool _consumeHomeBack(){",
         "end": " @override Widget build(BuildContext context)=>PopScope("
+      },
+      {
+        "start": " void _receiveSharedSms(){",
+        "end": " Future<void> _loadFinanceSafely()async{"
       }
     ],
     "lib/waffra_account_transaction_form.dart": [
