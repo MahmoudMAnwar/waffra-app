@@ -41,7 +41,7 @@ jobs:
               'M274': ('test/m274_responsive_ui_journeys_test.dart',''),
               'M275': ('lib/main.dart','WaffraSmoothConfirmationOverlay('),
               'M276': ('tool/performance/m276_finance_microbench_test.dart',''),
-              'M277': ('lib/main.dart','BoxConstraints(minWidth:48,minHeight:48)'),
+              'M277': ('lib/main.dart','minimumSize:const Size(64,48)'),
               'M278': ('test/m278_system_bars_responsive_matrix_test.dart',''),
               'M279': ('scripts/qa/m279_app_security_gate.py',''),
               'M280': ('lib/main.dart',r'Online\s+Pre[-\s]?Auth(?:ori[sz]ation)?'),
