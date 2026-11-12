@@ -3500,6 +3500,40 @@ class WaffraNoticeData {
  }
 }
 
+/// M668 approved design #3: a shared neutral card with a semantic leading
+/// stripe, not a fully tinted notification. Both footer and floating fallback
+/// reuse this exact card surface and keep all existing notice semantics.
+Color waffraNoticeSurfaceColor(BuildContext context)=>
+ Theme.of(context).brightness==Brightness.dark?
+  const Color(0xFF1D2B25):const Color(0xFFFFFFFF);
+
+Color waffraNoticeOutlineColor(BuildContext context)=>
+ Theme.of(context).brightness==Brightness.dark?
+  const Color(0xFF4D6659):const Color(0xFFD6E2DA);
+
+class WaffraNoticeEdgeBody extends StatelessWidget {
+ const WaffraNoticeEdgeBody({
+  super.key,required this.notice,required this.onDismiss,
+ });
+ final WaffraNoticeData notice;
+ final VoidCallback onDismiss;
+ @override Widget build(BuildContext context){
+  final palette=waffraNoticePalette(context,notice.kind);
+  // PositionedDirectional.start is the RIGHT edge in Arabic and LEFT in
+  // English; keep the background/stripe a single clipped card.
+  // Avoid IntrinsicHeight and overlays to preserve scroll and footer speed.
+  return Stack(children:[
+   PositionedDirectional(
+    start:0,top:0,bottom:0,
+    child:Container(key:const Key('waffra-snackbar-edge'),
+     width:5,color:palette.$3)),
+   Padding(
+    padding:const EdgeInsetsDirectional.fromSTEB(13,4,6,4),
+    child:WaffraNoticeContent(notice:notice,onDismiss:onDismiss)),
+  ]);
+ }
+}
+
 class WaffraNoticeContent extends StatelessWidget {
  const WaffraNoticeContent({
   super.key,required this.notice,required this.onDismiss,
@@ -3629,18 +3663,15 @@ class _WaffraFooterNoticeHostState extends State<WaffraFooterNoticeHost> {
       child:Center(child:SizedBox(
        width:min(MediaQuery.sizeOf(ctx).width*0.87,440.0),
        child:Builder(builder:(panelContext){
-        final palette=waffraNoticePalette(panelContext,notice.kind);
         return Material(
-         color:palette.$1,elevation:2,
+         color:waffraNoticeSurfaceColor(panelContext),elevation:2,
          shadowColor:Colors.black.withValues(alpha:0.13),
          clipBehavior:Clip.antiAlias,
          shape:RoundedRectangleBorder(
           borderRadius:BorderRadius.circular(14),
-          side:BorderSide(color:palette.$3,width:1)),
-         child:Padding(
-          padding:const EdgeInsets.symmetric(horizontal:9,vertical:5),
-          child:WaffraNoticeContent(
-           notice:notice,onDismiss:widget.onDismiss??waffraDismissFooterNotice)),
+          side:BorderSide(color:waffraNoticeOutlineColor(panelContext),width:1)),
+         child:WaffraNoticeEdgeBody(
+          notice:notice,onDismiss:widget.onDismiss??waffraDismissFooterNotice),
         );
        }),
       )),
@@ -3684,18 +3715,17 @@ void snack(BuildContext context,String text,{
  if(messenger==null)return;
  messenger.hideCurrentMaterialBanner();
  messenger.hideCurrentSnackBar();
- final palette=waffraNoticePalette(context,notice.kind);
  messenger.showSnackBar(SnackBar(
   behavior:SnackBarBehavior.floating,
   margin:const EdgeInsets.only(left:12,right:12,bottom:8),
   duration:requireDismissal?const Duration(days:1):duration,
-  backgroundColor:palette.$1,
+  backgroundColor:waffraNoticeSurfaceColor(context),
   elevation:2,
-  padding:const EdgeInsets.symmetric(horizontal:9,vertical:5),
+  padding:EdgeInsets.zero,
   shape:RoundedRectangleBorder(
    borderRadius:BorderRadius.circular(14),
-   side:BorderSide(color:palette.$3,width:1)),
-  content:WaffraNoticeContent(
+   side:BorderSide(color:waffraNoticeOutlineColor(context),width:1)),
+  content:WaffraNoticeEdgeBody(
    notice:notice,onDismiss:()=>messenger.hideCurrentSnackBar()),
  ));
 }
