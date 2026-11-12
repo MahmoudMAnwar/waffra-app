@@ -1773,7 +1773,8 @@
         "test/m548_review_grouping_and_signup_perf_test.dart",
         "test/m603_app_wide_lag_source_regression_test.dart",
         "test/m638_sms_inbox_delete_sync_test.dart",
-        "test/m632_sms_account_splash_isolate_contract_test.dart"
+        "test/m632_sms_account_splash_isolate_contract_test.dart",
+        "test/m514_sms_review_regressions_test.dart"
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/m550-behavior-contract-preflight.yml",
@@ -1785,7 +1786,8 @@
         "Do not use raw keyword fragments alone to discard a posted movement; reject bank evidence collisions, including financial+OTP and transfer+beneficiary.",
         "Auto excludes only native pending IDs through existing bounded durable encrypted ACK; no whole-sender block, no financial hash ACK, no cloud request, no money/account update; 30 day undo and 31 day durable anti-replay intact.",
         "Never weaken existing OTP security or privacy tests; existing cloud backend safety tests remain positive even though review menu is explicitly retired.",
-        "Defer SMS work until first interactive Home frame; do not touch M663 prewarm/biometrics and startup; exact-head CI + on-device performance outstanding."
+        "Defer SMS work until first interactive Home frame; do not touch M663 prewarm/biometrics and startup; exact-head CI + on-device performance outstanding.",
+        "M514 negative regression must reject retired per-message AI prompt but still positively assert explicit reversible bank SMS exclusion and local no-auto-post disclosure; no unrelated financial-source assertion removed."
       ]
     }
   ]
