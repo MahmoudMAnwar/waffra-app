@@ -15,7 +15,7 @@ void main(){
  final loader=source.split(' Future<void> _loadFinanceSafely()async{')[1]
   .split(' Widget _financialRecoveryScreen()')[0];
  final refresher=source.split(' Future<void> _runAutoSmsRefresh(')[1]
-  .split(' Future<void> _analyzeAmbiguousSmsOnDemand(')[0];
+  .split(' Future<void> _scanPreviousBankSmsFromSettings()async{')[0];
 
  testWidgets('splash is readable until genuine completion, once only',(tester)async{
   var completions=0;
