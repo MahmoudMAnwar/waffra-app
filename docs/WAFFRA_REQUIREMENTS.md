@@ -2,7 +2,7 @@
 ## WAFFRA-614 — Legacy V24 encrypted backup -> fresh SQLCipher restore (2026-11-12)
 
 - **Issue:** [#614](https://github.com/MahmoudMAnwar/waffra-app/issues/614)
-- **PR:** pending, will be linked before implementation.
+- **PR:** [#615](https://github.com/MahmoudMAnwar/waffra-app/pull/615) (Draft).
 - **Status:** Missing; implementation not started. Device acceptance **Pending**.
 - **Scope:** decrypt/authenticate legacy `.waffra` V24; strict schema/content preflight, no silent receipt loss, user confirmation, disposable validation + atomic SQLCipher restore, preserve IDs, categories, named budgets, goals, recurring, trash, SMS hashes; historical entries remain unlinked until user review. Prevent mistaken password error for incompatible SQLCipher route.
 - **Tests required:** synthetic legacy export/import on clean encrypted vault, parity on reopen, wrong key/tampering/unsupported format, non-empty destination rescue, rejected path-only receipt, rollback and signed Android test on expendable phone. Never commit live backup/password/real data.
