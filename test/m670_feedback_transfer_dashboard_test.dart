@@ -66,7 +66,7 @@ void main() {
   expect(rescan,contains('final feedback=feedbackContext??context;'));
   expect(rescan,contains("snackSuccess(feedback,waffraIsEnglish?"));
   expect(rescan,contains('لا توجد رسائل جديدة للمراجعة.'));
-  expect(rescan,contains('تمت إضافة $added رسالة جديدة للمراجعة.'));
+  expect(rescan,contains('تمت إضافة \$added رسالة جديدة للمراجعة.'));
   expect(rescan,isNot(contains('snackSuccess(context,')));
   expect(rescan,isNot(contains('snack(context,')));
  });
