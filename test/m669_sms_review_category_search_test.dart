@@ -173,6 +173,11 @@ void main() {
     final part=main.substring(
       main.indexOf(' Future<void> _reviewAutoSmsCandidates('),
       main.indexOf(' void _receiveSharedSms('));
+    // Analyzer regression: the typed parent/leaf resolver replaces both
+    // obsolete preview scratch lists, including their unused-local warning.
+    expect(part,contains('final previewHint=waffraResolveSmsReviewCategory('));
+    expect(part,isNot(contains('final previewLeaves=')));
+    expect(part,isNot(contains('final previewParents=')));
     expect(part,contains("Key('m669-review-original-sms-text')"));
     expect(part,contains('SelectableText(body,'));
     expect(part,contains('WaffraBankSmsFactsParser.isVerificationChallenge'));
