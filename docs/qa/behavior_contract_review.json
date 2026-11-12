@@ -1777,7 +1777,8 @@
         "test/m514_sms_review_regressions_test.dart",
         "test/m528_settings_async_cache_regression_test.dart",
         "test/m461_sms_exclusion_and_history_scan_test.dart",
-        "test/m470_financial_currency_word_boundary_regression_test.dart"
+        "test/m470_financial_currency_word_boundary_regression_test.dart",
+        "test/m528_settings_async_cache_regression_test.dart"
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/m550-behavior-contract-preflight.yml",
@@ -1791,7 +1792,8 @@
         "Never weaken existing OTP security or privacy tests; existing cloud backend safety tests remain positive even though review menu is explicitly retired.",
         "Defer SMS work until first interactive Home frame; do not touch M663 prewarm/biometrics and startup; exact-head CI + on-device performance outstanding.",
         "M514 negative regression must reject retired per-message AI prompt but still positively assert explicit reversible bank SMS exclusion and local no-auto-post disclosure; no unrelated financial-source assertion removed.",
-        "Real Arabic purchase with numeric SAR amount + OTP phrase is completed finance, never excluded. Preserve existing M461/M470 positive tests; remove ambiguous bare ر س currency regex rather than weakening M470."
+        "Real Arabic purchase with numeric SAR amount + OTP phrase is completed finance, never excluded. Preserve existing M461/M470 positive tests; remove ambiguous bare ر س currency regex rather than weakening M470.",
+        "Obsolete M528 test must assert no per-message cloud AI review/consent bypass while still verifying explicit manual Exclude and encrypted settings consent updates."
       ]
     },
     {
@@ -1824,7 +1826,8 @@
         "Goal edit persists account, due, target through atomic linked schedule path; already paid replay guard remains.",
         "Goals/recurring/home and prewarm remain responsive; SQLCipher/backup/finance exact-head test suite mandatory.",
         "M495 historical unassigned manual entries still reach entrySheet through transaction Actions; only previously settled goal_due receipts are guarded from direct edits.",
-        "Only category presentation grouping changes; total spending, goal wallet, current account balance and goal receipt identity are immutable."
+        "Only category presentation grouping changes; total spending, goal wallet, current account balance and goal receipt identity are immutable.",
+        "Keep real widget breakdown visual labels with one container and both Arabic text descendants; do not require Flutter's wrapper and nested Text to collapse into one finder."
       ]
     }
   ]
