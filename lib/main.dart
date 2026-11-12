@@ -3730,11 +3730,11 @@ class _WaffraFooterNoticeHostState extends State<WaffraFooterNoticeHost> {
  @override Widget build(BuildContext context)=>
   ValueListenableBuilder<WaffraNoticeData?>(
    valueListenable:_source,
-   builder:(ctx,notice,_)=>AnimatedSize(
-    duration:Duration.zero, // A notice must disappear in the same frame.
-    curve:Curves.easeOutCubic,
-    alignment:Alignment.bottomCenter,
-    child:notice==null?const SizedBox(width:double.infinity,height:0):
+   // Instantly remove a dismissed notice. An AnimatedSize with a
+   // zero-duration swap can mutate its own RenderAnimatedSize during layout
+   // when the user's tap and the footer change arrive in the same frame.
+   builder:(ctx,notice,_)=>notice==null?
+    const SizedBox(width:double.infinity,height:0):
      Padding(
       padding:const EdgeInsets.only(top:4,bottom:8),
       child:Center(child:SizedBox(
@@ -3753,7 +3753,6 @@ class _WaffraFooterNoticeHostState extends State<WaffraFooterNoticeHost> {
        }),
       )),
      ),
-   ),
   );
 }
 
