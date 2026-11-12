@@ -98,7 +98,7 @@ void main() {
   expect(learning, contains('_receiveAutoSmsNotice()'));
   expect(learning, isNot(contains('_refreshAutoSmsInbox(importMonth:true)')));
   final start = app.indexOf('void _receiveAutoSmsNotice()');
-  final end = app.indexOf(' Future<void> _rescanAutoSmsInbox()',start);
+  final end = app.indexOf(' Future<void> _rescanAutoSmsInbox({BuildContext? feedbackContext})',start);
   final notice = app.substring(start,end);
   expect(notice, contains('Duration(milliseconds:900)'));
   expect(notice, contains('unawaited(_refreshAutoSmsInbox())'));
