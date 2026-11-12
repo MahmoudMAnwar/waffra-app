@@ -53,6 +53,10 @@
       {
         "start": "Map<String,Object?> waffraM632ClassifySmsQueue(",
         "end": "List<String> splitBankMessages("
+      },
+      {
+        "start": "import 'waffra_sms_cloud_service.dart';",
+        "end": "import 'waffra_sms_local_rules.dart';"
       }
     ],
     "lib/waffra_approved_notifications.dart": [
