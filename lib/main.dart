@@ -4932,6 +4932,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  // Account settings open from the app bar instead of a footer destination.
  bool accountOpened=false;
  bool showAllTransactions=false,showTransactionFilters=false,showTransactionSearch=false;
+ bool financialActivityExpanded=false; // M676: collapsed until explicit tap.
  DateTime? _m468LastResumeSmsScan;
  // #410: only ephemeral user-edited SMS form fields, keyed by message hash;
  // never persist a duplicate raw SMS outside the verified encrypted source.
@@ -13506,6 +13507,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    (darkMode?const Color(0xFF244C3A):const Color(0xFFB2D5C2)):
    (darkMode?const Color(0xFF49302C):const Color(0xFFFCECE8));
   return Padding(padding:const EdgeInsets.symmetric(vertical:3),child:Container(
+   constraints:const BoxConstraints(minHeight:144),
    decoration:BoxDecoration(color:rowColor,borderRadius:BorderRadius.circular(17),
     border:Border.all(color:forest.withValues(alpha:darkMode ? 0.18 : 0.08))),
    clipBehavior:Clip.antiAlias,child:Stack(children:[
@@ -13587,14 +13589,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        if(entry.sourceType=='goal_due')
         Row(children:[
          Expanded(child:WaffraText(waffraIsEnglish?
-          'Total goal due':'إجمالي الاستحقاق',
+          'Amount · Total goal due':'المبلغ · إجمالي الاستحقاق',
           style:TextStyle(fontSize:11,fontWeight:FontWeight.w700,color:valueColor))),
          Flexible(child:WaffraCurrencyAmount(
           entry.amount,fontSize:15,color:valueColor)),
         ])
        else Align(alignment:AlignmentDirectional.centerStart,
-        child:WaffraCurrencyAmount(entry.income?entry.amount:-entry.amount,
-         fontSize:15,color:valueColor)),
+        child:Row(mainAxisSize:MainAxisSize.min,children:[
+         WaffraText(waffraIsEnglish?'Amount':'المبلغ',style:TextStyle(color:valueColor,fontSize:11)),
+         const SizedBox(width:5),
+         WaffraCurrencyAmount(entry.income?entry.amount:-entry.amount,
+          fontSize:15,color:valueColor),
+        ])),
       ]))),
      const SizedBox(width:2),
      IconButton(tooltip:waffraIsEnglish?'Transaction options':'خيارات المعاملة',
@@ -13803,56 +13809,41 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            borderRadius:BorderRadius.circular(20),
            border:Border.all(color:forest.withValues(alpha:0.10))),
           child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-           Row(children:[
-            const Icon(Icons.receipt_long_outlined,color:emerald),
-            const SizedBox(width:7),
-            Expanded(child:WaffraText(waffraIsEnglish?
-             'Your transactions':'عملياتك المالية',
-             style:const TextStyle(fontSize:19,fontWeight:FontWeight.bold))),
+           Semantics(button:true,toggled:financialActivityExpanded,
+            child:InkWell(
+             key:const Key('waffra-financial-activity-toggle'),
+             borderRadius:BorderRadius.circular(15),
+             onTap:WaffraHaptics.tap(()=>setState(
+              ()=>financialActivityExpanded=!financialActivityExpanded)),
+             child:Padding(padding:const EdgeInsets.symmetric(vertical:3),
+              child:Row(children:[
+               const Icon(Icons.receipt_long_outlined,color:emerald),
+               const SizedBox(width:7),
+               Expanded(child:WaffraText(waffraIsEnglish?
+                'Your transactions':'عملياتك المالية',
+                style:const TextStyle(fontSize:19,fontWeight:FontWeight.bold))),
+               WaffraText(financialActivityExpanded?
+                (waffraIsEnglish?'Hide':'إخفاء'):
+                (waffraIsEnglish?'Show':'عرض'),
+                style:const TextStyle(fontSize:12,color:emerald)),
+               AnimatedRotation(turns:financialActivityExpanded?0.5:0,
+                duration:waffraMotion(180),
+                child:const Icon(Icons.keyboard_arrow_down_rounded,color:emerald)),
+              ]))),
+            ),
+           if(financialActivityExpanded)...[
             if(waffraCanExpandDashboardTransactions(visible.length)&&
                (!_m468VerifiedAccountsLoaded||
                 (typeFilter!='التحويلات'&&typeFilter!='الادخار'&&
                  typeFilter!='الكل')))
-             TextButton(
-              key:const Key('waffra-dashboard-transactions-expand'),
-              onPressed:WaffraHaptics.tap(
-               ()=>setState(()=>showAllTransactions=!showAllTransactions)),
-              child:WaffraText(showAllTransactions?
-               (waffraIsEnglish?'Show less':'عرض أقل'):
-               (waffraIsEnglish?'Show more':'عرض أكثر'))),
-           ]),
-           const SizedBox(height:9),
-           Row(children:[
-            Expanded(child:Container(
-             padding:const EdgeInsets.all(12),
-             decoration:BoxDecoration(
-              color:Theme.of(context).brightness==Brightness.dark?
-               const Color(0xFF244C3A):const Color(0xFFE4F4EB),
-              borderRadius:BorderRadius.circular(15)),
-             child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-              WaffraText(waffraIsEnglish?'Income':'الدخل',
-               style:TextStyle(color:Theme.of(context).brightness==Brightness.dark?const Color(0xFFA8E8C7):const Color(0xFF075B43),fontWeight:FontWeight.bold)),
-              const SizedBox(height:5),
-              FittedBox(fit:BoxFit.scaleDown,child:WaffraCurrencyAmount(
-               sum(visible.where((e)=>e.income),true),fontSize:18,
-               color:Theme.of(context).brightness==Brightness.dark?const Color(0xFFA8E8C7):const Color(0xFF075B43))),
-             ]))),
-            const SizedBox(width:9),
-            Expanded(child:Container(
-             padding:const EdgeInsets.all(12),
-             decoration:BoxDecoration(
-              color:Theme.of(context).brightness==Brightness.dark?
-               const Color(0xFF49302C):const Color(0xFFFCECE8),
-              borderRadius:BorderRadius.circular(15)),
-             child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-              WaffraText(waffraIsEnglish?'Expenses':'المصروفات',
-               style:TextStyle(color:Theme.of(context).brightness==Brightness.dark?const Color(0xFFFFBAB0):const Color(0xFFB34E3C),fontWeight:FontWeight.bold)),
-              const SizedBox(height:5),
-              FittedBox(fit:BoxFit.scaleDown,child:WaffraCurrencyAmount(
-               sum(visible.where((e)=>!e.income),false),fontSize:18,
-               color:Theme.of(context).brightness==Brightness.dark?const Color(0xFFFFBAB0):const Color(0xFFB34E3C))),
-             ]))),
-           ]),
+             Align(alignment:AlignmentDirectional.centerEnd,
+              child:TextButton(
+               key:const Key('waffra-dashboard-transactions-expand'),
+               onPressed:WaffraHaptics.tap(
+                ()=>setState(()=>showAllTransactions=!showAllTransactions)),
+               child:WaffraText(showAllTransactions?
+                (waffraIsEnglish?'Show less':'عرض أقل'):
+                (waffraIsEnglish?'Show more':'عرض أكثر')))),
            const SizedBox(height:10),
            Wrap(spacing:6,runSpacing:6,children:[
             for(final choice in ['الكل','الدخل','المصروفات','التحويلات','الادخار','الاستحقاقات'])
@@ -14084,6 +14075,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                label:WaffraText(waffraIsEnglish?'Export PDF':'تصدير PDF')),
              ])),
            ],
+           ], // M676: expanded controls including deferred verified history.
           ])),
         ]))),
      ],
