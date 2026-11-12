@@ -166,7 +166,7 @@ void main() {
     expect(source, contains('notice.onAction?.call()'));
     expect(source, contains('WaffraFooterNoticeHost'));
     expect(source, contains('content:WaffraNoticeEdgeBody('));
-    expect(RegExp(r'\\.showSnackBar\\s*\\(').allMatches(source).length, 1);
-    expect(RegExp(r'\\bSnackBar\\s*\\(').allMatches(source).length, 1);
+    expect(RegExp(r'\.showSnackBar\s*\(').allMatches(source).length, 1);
+    expect(RegExp(r'\bSnackBar\s*\(').allMatches(source).length, 1);
   });
 }
