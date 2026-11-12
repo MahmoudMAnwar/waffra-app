@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "pr": "PR #590 draft M661 saved exclusion-rule refresh on merged main with M647–M652, M658/M659 protected",
-  "issue": "Issues #569–#574 plus previously merged #566/#567/#576, #579 and #582; Issue #583 M656; Issues #585/#587 (M658/M659 merged main before PR #575); Issue #589 M661; Issue #588 M660 is tracked separately but not implemented by PR #590",
+  "pr": "#592",
+  "issue": "#591",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main",
   "reviewed_at": "2026-11-12",
@@ -1600,6 +1600,36 @@
         "Custom excluded rules may only exclude parser-uncertain SMS with safe keyword/sender match. Never exclude completed finance messages based on phrase overlap.",
         "Exact individual excluded SMS retains encrypted ID anti-replay indefinitely, label recovery 30 days; rule storage separate; M660 broad templates remain unimplemented.",
         "Test actual Android and real owner APK; PR draft stays unmerged without exact-head mandatory CI."
+      ]
+    },
+    {
+      "id": "M662-REVIEW-EDITORS-ACCOUNTS-CARDS-PDF-PR592",
+      "issue": "Issue #591, Draft PR #592, owner Android screenshots 2026-11-12",
+      "previous_behavior": "SMS review presents duplicate top kind selector plus long transfer disclaimer; reviewed transfer does not show original bank SMS in verified form and date is asked before entry; manual income/expense alternatives drop original transfer message. Inline account add uses possibly stale Home balance cache and clears first created child's selected id. Savings piggy icon and verbose goal/settled-due cards create RTL SAR overlap. Transfer and goal PDF tables force separate new pages leaving avoidable blank areas.",
+      "approved_behavior": "Preserve lower SMS review transfer/correct/exclude actions; remove duplicate type control and overly long text. Transfer review always opens verified account-to-account form with read-only SMS original, both verified accounts may be independently created and selected, uncertain SMS timestamp requires deliberate date+time selection before confirmed write. Separate manual correction shows original transfer text without acknowledging transfer SMS. Income/expense SMS editor expands original source. All new accounts are reread directly from verified SQLCipher balances and child selected. Compact goals/paid-dues with full readable SAR inside card, neutral wallet icon. Nonanalytics PDF collects transfer/savings and transaction sections in a single auto-paginated MultiPage rather than forcing extra pages.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_account_transaction_form.dart"
+      ],
+      "test_paths": [
+        "test/m662_sms_review_activity_pdf_regression_test.dart",
+        "test/m514_sms_review_regressions_test.dart",
+        "test/m495_pr402_ui_performance_regression_test.dart",
+        "test/m647_m652_financial_activity_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/m174-main-sha-postmerge.yml",
+        ".github/workflows/android.yml"
+      ],
+      "safety_invariants": [
+        "Review/excluded SMS never posts or ACKs transfer automatically; only explicit verified account IDs, confirmed amount/date/fee and SQLCipher authority create financial movement.",
+        "Bank SMS provenance and source body remain read-only (not public test data); transfer SMS manual alternative is independent and must not relabel SMS as committed.",
+        "New account selection must come from a verified authoritative balances() witness, with existing provider identity rules and two distinct transfer IDs.",
+        "Goal contributions and due payments are presentation-only in this PR; retain actual verified source, privacy-masked amounts, no duplicate ledger debit.",
+        "PDF must preserve all source ledger rows with stable amounts, multilingual RTL and branded background; long reports still paginate safely.",
+        "No existing security, SMS, Flutter, Android, PDF, account or finance suite disabled; exact-head CI and real Android remain required."
       ]
     }
   ]
