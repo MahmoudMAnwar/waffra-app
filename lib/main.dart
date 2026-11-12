@@ -6648,13 +6648,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final previewDateTime=originalDate==null?
     (waffraIsEnglish?'Date/time needs review':'التاريخ والوقت يحتاجان مراجعة'):
     originalDate.toIso8601String().replaceFirst('T',' ').substring(0,16);
-   final canConfirm=understood&&facts.canAutoPostAsIncomeExpense&&
+   // The SMS category can be corrected inline without re-opening a money-account
+   // selector. A verified account alone never bypasses mandatory category checks.
+   String reviewedCategory=proposedCategory;
+   String reviewedMainName=previewMainName;
+   bool reviewCategoryValid=previewLeaves.length==1&&previewParents.length==1;
+   bool canConfirm=understood&&facts.canAutoPostAsIncomeExpense&&
     originalAmount!=null&&originalAmount.currency=='SAR'&&
     originalDate!=null&&!bankSmsHasUnverifiedTimestamp(body)&&
     parsed.amount!=null&&
     (parsed.amount!-originalAmount.amount).abs()<0.00001&&
-    parsed.income==expectedIncome&&previewLeaves.length==1&&
-    previewParents.length==1;
+    parsed.income==expectedIncome&&reviewCategoryValid;
    // A type selection in compact review is only a requested correction;
    // it must never ACK or post money until the verified ledger editor saves.
    String? reviewType=sensitive?null:switch(facts.kind){
@@ -6671,6 +6675,56 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    ({List<String?>? ids,int? generation})? reviewedAccount;
    String? reviewedAccountName;
    bool choosingAccount=false;
+   Future<void> selectReviewCategory(StateSetter redraw,BuildContext dialog)async{
+    // First-time account creation must not force a second account picker just
+    // because the SMS's inferred main category is missing.
+    final mainChoices=categories.where((c)=>
+     !c.isSubcategory&&c.income==expectedIncome).toList();
+    BudgetCategory? chosenMain;
+    final chosen=await showWaffraDialog<BudgetCategory>(
+     context:dialog,builder:(picker)=>
+      StatefulBuilder(builder:(picker,choose)=>AlertDialog(
+       title:WaffraText(waffraIsEnglish?
+        'Choose main and subcategory':'اختيار القسم الرئيسي والفرعي'),
+       content:SizedBox(width:360,height:320,child:ListView(
+        children:chosenMain==null?[
+         for(final parent in mainChoices)ListTile(
+          title:WaffraText(parent.displayName),
+          trailing:const Icon(Icons.chevron_left_rounded),
+          onTap:()=>choose(()=>chosenMain=parent)),
+        ]:[
+         ListTile(
+          leading:const Icon(Icons.arrow_back_rounded),
+          title:WaffraText(chosenMain!.displayName),
+          onTap:()=>choose(()=>chosenMain=null)),
+         for(final leaf in categories.where((c)=>
+          c.isSubcategory&&c.income==expectedIncome&&
+          c.parentId==chosenMain!.id&&
+          waffraCategoryAvailableForNewEntry(categories,c)))
+          ListTile(title:WaffraText(leaf.displayName),
+           onTap:()=>Navigator.pop(picker,leaf)),
+        ],
+       )),
+       actions:[TextButton(
+        onPressed:()=>Navigator.pop(picker),
+        child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء'))],
+      )));
+    if(chosen==null||!mounted||!dialog.mounted)return;
+    final parent=categories.where((c)=>!c.isSubcategory&&
+      c.id==chosen.parentId&&c.income==expectedIncome).toList();
+    if(parent.length!=1)return;
+    redraw((){
+     reviewedCategory=chosen.name;
+     reviewedMainName=parent.single.displayName;
+     reviewCategoryValid=true;
+     canConfirm=understood&&facts.canAutoPostAsIncomeExpense&&
+      originalAmount!=null&&originalAmount.currency=='SAR'&&
+      originalDate!=null&&!bankSmsHasUnverifiedTimestamp(body)&&
+      parsed.amount!=null&&
+      (parsed.amount!-originalAmount.amount).abs()<0.00001&&
+      parsed.income==expectedIncome&&reviewCategoryValid;
+    });
+   }
    Future<void> selectAccountBeforeYes(StateSetter redraw,BuildContext dialog)async{
     // Account setup/selection may happen BEFORE category/date corrections;
     // only Yes authorizes posting and retains the full canConfirm guard.
@@ -6781,7 +6835,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         ])),
        // M662: no duplicate type picker above the original SMS. Uncertain
        // SMS keeps explicit user-driven choices BELOW the message.
-       if(!sensitive)Padding(
+       if(!sensitive&&!understood&&
+          facts.kind!=WaffraBankOperationKind.transfer)Padding(
         padding:const EdgeInsets.only(top:10),
         child:Card(
          color:Theme.of(dialog).colorScheme.surfaceContainerLow,
@@ -6831,9 +6886,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            _m615ReviewDetail(waffraIsEnglish?'Description':'الوصف',
             parsed.title,Icons.edit_note_outlined),
            _m615ReviewDetail(waffraIsEnglish?'Main category':'القسم الرئيسي',
-            previewMainName,Icons.grid_view_outlined),
+            reviewedMainName,Icons.grid_view_outlined),
            _m615ReviewDetail(waffraIsEnglish?'Subcategory':'القسم الفرعي',
-            proposedCategory,Icons.list_alt_outlined),
+            reviewedCategory,Icons.list_alt_outlined),
            _m615ReviewDetail(waffraIsEnglish?'Sender':'المرسل',
             sender,Icons.account_balance_outlined),
            _m615ReviewDetail(waffraIsEnglish?'Money account':'الحساب المالي',
@@ -6847,6 +6902,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            _m615ReviewDetail(waffraIsEnglish?'Original date/time':'تاريخ ووقت العملية',
             previewDateTime,Icons.calendar_month_outlined),
           ]))),
+        const SizedBox(height:8),
+        OutlinedButton.icon(
+         key:const Key('m665-review-pick-category'),
+         onPressed:()=>selectReviewCategory(redraw,dialog),
+         icon:const Icon(Icons.category_outlined),
+         label:WaffraText(reviewCategoryValid?
+          (waffraIsEnglish?'Change category':'تغيير القسم الرئيسي والفرعي'):
+          (waffraIsEnglish?'Choose category':'اختيار القسم الرئيسي والفرعي')),
+        ),
         const SizedBox(height:8),
         OutlinedButton.icon(
          key:const Key('m590-sms-choose-account-before-yes'),
@@ -6873,9 +6937,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            !choosingAccount?()=>Navigator.pop(dialog,'yes'):null,
           child:WaffraText(waffraIsEnglish?'Yes':'نعم'))),
         ]),
-        if(!canConfirm)WaffraText(waffraIsEnglish?
-         'Edit missing amount, date or category to continue.':
-         'راجع البيانات الناقصة من شاشة التعديل قبل الحفظ.'),
        ],
        // Exclude is a separate, reversible action BELOW Yes/No.
        if(!sensitive&&facts.kind!=WaffraBankOperationKind.transfer)
@@ -7079,7 +7140,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }else if(decision=='yes'&&mounted&&canConfirm&&
              reviewedAccount!=null){
     await _m565ConfirmSms(id:id,body:body,sender:sender,
-     category:proposedCategory,income:expectedIncome,
+     category:reviewedCategory,income:expectedIncome,
      value:originalAmount.amount,date:originalDate,
      selectedAccount:reviewedAccount!);
    }else if(decision=='no'&&mounted){
