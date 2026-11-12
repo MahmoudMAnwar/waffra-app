@@ -11043,15 +11043,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    pw.Widget heading(String ar,String en)=>pw.Padding(
     padding:const pw.EdgeInsets.only(bottom:10),
     child:pw.Text(english?en:ar,style:pw.TextStyle(font:bold,fontSize:15,color:PdfColors.teal900)));
+   // M662: collect all non-analytics sections in ONE flowing MultiPage.
+   // Separate addPage calls forced goals/recurring onto new half-empty sheets.
+   final reportSections=<pw.Widget>[];
    if(!analytics&&items.isNotEmpty){
     final ordered=items.toList()..sort((a,b)=>b.date.compareTo(a.date));
     final descriptions=<(pw.MemoryImage,double)>[];
     for(final e in ordered){descriptions.add(await pdfDescriptionArtwork(e.title));}
-    doc.addPage(pw.MultiPage(
-     pageTheme:pageTheme,
-     footer:(ctx)=>pw.Align(alignment:pw.Alignment.centerRight,
-      child:pw.Text('${ctx.pageNumber} / ${ctx.pagesCount}',style:pw.TextStyle(font:font,fontSize:9,color:PdfColors.teal900))),
-     build:(ctx)=>[
+    reportSections.addAll([
       heading('تقرير الدخل والمصروفات','Income & Expenses Report'),
       pw.Row(children:[summary('إجمالي الدخل',totalIncome,PdfColors.green50),pw.SizedBox(width:8),
        summary('إجمالي المصروفات',totalExpenses,PdfColors.red50),pw.SizedBox(width:8),
@@ -11103,7 +11102,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         }),
        ],
       ),
-     ]));
+     ]);
    }else if(analytics){
     // "Financial Analytics" and "Smart Analysis" now render the very
     // same chart datasets shown by their respective Flutter screens.
@@ -11303,7 +11302,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     final labels={for(final a in _m467Accounts)a.id:_m647VerifiedAccountLabel(a)};
     final ordered=pdfTransfers.toList()
      ..sort((a,b)=>b.occurredIso.compareTo(a.occurredIso));
-    doc.addPage(pw.MultiPage(pageTheme:pageTheme,build:(ctx)=>[
+    reportSections.addAll([
+     pw.SizedBox(height:8),
      heading('التحويلات بين حساباتي','Transfers between my accounts'),
      pw.Padding(padding:const pw.EdgeInsets.only(bottom:10),
       child:pw.Text(english?
@@ -11336,13 +11336,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          children:english?cells:cells.reversed.toList());
        }),
       ]),
-    ]));
+    ]);
    }
    if(!analytics&&pdfSavings.isNotEmpty){
     final labels={for(final a in _m467Accounts)a.id:_m647VerifiedAccountLabel(a)};
     final ordered=pdfSavings.toList()
      ..sort((a,b)=>b.occurredIso.compareTo(a.occurredIso));
-    doc.addPage(pw.MultiPage(pageTheme:pageTheme,build:(ctx)=>[
+    reportSections.addAll([
+     pw.SizedBox(height:8),
      heading('حركات الادخار','Savings goal movements'),
      pw.Padding(padding:const pw.EdgeInsets.only(bottom:10),
       child:pw.Text(english?
@@ -11377,7 +11378,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          children:english?cells:cells.reversed.toList());
        }),
       ]),
-    ]));
+    ]);
+   }
+   if(!analytics&&reportSections.isNotEmpty){
+    doc.addPage(pw.MultiPage(
+     pageTheme:pageTheme,
+     footer:(ctx)=>pw.Align(alignment:pw.Alignment.centerRight,
+      child:pw.Text('${ctx.pageNumber} / ${ctx.pagesCount}',
+       style:pw.TextStyle(font:font,fontSize:9,color:PdfColors.teal900))),
+     build:(ctx)=>reportSections));
    }
    final bytes=await doc.save();
    if(exportDialogOpen&&exportNavigator.mounted){exportNavigator.pop();exportDialogOpen=false;}
