@@ -8839,6 +8839,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  Future<void> entrySheet({MoneyEntry? initial,bool sms=false,String? initialSms,
   String? reviewedSender,bool? reviewedIncomeOverride,bool? manualIncomeOverride,
   String? reviewedOriginalSms})async {
+  // A paid goal due is an immutable verified two-source settlement.
+  // There is no independent edit path that can rewrite its wallet/bank split.
+  if(initial?.sourceType=='goal_due'){
+   await _m665ExplainLinkedGoalEdit(paid:true);
+   return;
+  }
   // Cold-start money selection needs a verified, non-Home-header account list.
   if(!_m468VerifiedAccountsLoaded){
    await _m467RefreshHomeAccounts();
@@ -11815,7 +11821,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   if(!mounted)return;
   switch(action){
    case 'open':await transactionDetails(entry);break;
-   case 'edit':await entrySheet(initial:entry);break;
+   case 'edit':
+    if(entry.sourceType=='goal_due'){
+     await _m665ExplainLinkedGoalEdit(paid:true);
+    }else{
+     await entrySheet(initial:entry);
+    }
+    break;
    case 'delete':await deleteEntry(entry);break;
   }
  }
@@ -15926,6 +15938,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   ]));
  }
  Future<void> recurringDialog({String? suggestedTitle,double? suggestedAmount,RecurringBill? initial,RecurringBill? duplicate})async {
+  // Linked schedules are projections of a goal; never open a second editor.
+  if(initial?.linkedGoalId!=null){
+   await _m665ExplainLinkedGoalEdit();
+   return;
+  }
   // M641: the editor opens even on a fresh install with ZERO accounts.
   // Account selection remains mandatory at SAVE, not before opening.
   final verifiedRecurringAccounts=await _m641VerifiedGoalRecurringAccounts();
@@ -16169,8 +16186,32 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        await syncRecurringReminders();
 
  }
+ Future<void> _m665ExplainLinkedGoalEdit({bool paid=false})async{
+  if(!mounted)return;
+  await showWaffraDialog<void>(context:context,
+   builder:(dialog)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?
+     'Edit the linked goal first':'عدّل الهدف المرتبط أولًا'),
+    content:WaffraText(paid?
+     (waffraIsEnglish?
+      'This is an already paid goal settlement. Its saved wallet and bank debit cannot be edited as an ordinary transaction. Change goal settings in Goals; this does not rewrite a paid receipt.':
+      'ده استحقاق هدف مدفوع ومحفوظ. لا يمكن تعديل مبلغ محفظة الهدف أو خصم الحساب كعملية عادية. عدّل بيانات الهدف من صفحة الأهداف، بدون تغيير سجل الدفع السابق.'):
+     (waffraIsEnglish?
+      'This due date belongs to a savings goal. Edit the goal in Goals first; the linked due will follow that change automatically.':
+      'الاستحقاق ده مربوط بهدف ادخاري. عدّل الهدف من صفحة الأهداف أولًا، والتعديل هينعكس على الاستحقاق المرتبط تلقائيًا.')),
+    actions:[TextButton(
+     onPressed:()=>Navigator.pop(dialog),
+     child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))]));
+ }
  Future<void> _handleRecurringCardAction(RecurringBill r,String v)async{
-       if(v=='edit'){await recurringDialog(initial:r);return;}
+       if(v=='edit'){
+        if(r.linkedGoalId!=null){
+         await _m665ExplainLinkedGoalEdit();
+         return;
+        }
+        await recurringDialog(initial:r);
+        return;
+       }
        if(v!='delete')return;
        final hasHistory=entries.any((e)=>e.id.startsWith('rec_${r.id}_'));
        final ok=await confirmDeletion(waffraIsEnglish?'Delete recurring transaction?':'حذف العملية المتكررة',
@@ -16386,10 +16427,23 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        style:const TextStyle(fontSize:13,fontWeight:FontWeight.w700)),
       children:[
        Row(children:[
-        Expanded(child:OutlinedButton.icon(
-         onPressed:WaffraHaptics.tap(()=>unawaited(_handleRecurringCardAction(r,'edit'))),
-         icon:const Icon(Icons.edit_outlined,size:17),
-         label:WaffraText(waffraIsEnglish?'Edit':'تعديل',maxLines:1))),
+        Expanded(child:Tooltip(
+         message:goal!=null?
+          (waffraIsEnglish?'Edit the linked goal first':'عدّل الهدف المرتبط أولًا'):
+          (waffraIsEnglish?'Edit recurring due':'تعديل الاستحقاق'),
+         child:Semantics(
+          enabled:goal==null,
+          hint:goal!=null?(waffraIsEnglish?
+           'Tap for the reason this due cannot be edited here':
+           'اضغط لمعرفة سبب عدم إمكانية تعديل الاستحقاق هنا'):null,
+          child:Opacity(opacity:goal!=null?0.46:1,
+           child:OutlinedButton.icon(
+            key:Key('m665-recurring-edit-'+r.id),
+            // Visually disabled but tap still explains where to edit.
+            onPressed:WaffraHaptics.tap(()=>
+             unawaited(_handleRecurringCardAction(r,'edit'))),
+            icon:const Icon(Icons.edit_outlined,size:17),
+            label:WaffraText(waffraIsEnglish?'Edit':'تعديل',maxLines:1))))),
         const SizedBox(width:7),
         Expanded(child:OutlinedButton.icon(
          onPressed:WaffraHaptics.tap(()=>unawaited(_handleRecurringCardAction(r,'delete'))),
