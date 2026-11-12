@@ -370,8 +370,15 @@ void main(){
   expect(writer,contains('Existing transfer must never be double charged.'));
   expect(main,contains('transferReviewedSmsWithFee('));
   expect(main,contains('messageHash:id'));
-  expect(main,contains('showDatePicker('));
-  expect(main,contains('showTimePicker('));
+  // M662: the new verified transfer form owns its own date/time pickers,
+  // so Review opens on first tap even when the bank timestamp is unknown.
+  // Confirmation remains blocked until explicit date AND time selection.
+  final form=File('lib/waffra_account_transaction_form.dart')
+   .readAsStringSync();
+  expect(main,contains('requireSmsDateConfirmation:needsDateConfirmation'));
+  expect(form,contains('showDatePicker('));
+  expect(form,contains('showTimePicker('));
+  expect(form,contains('if(widget.initialSmsTransfer!=null&&!smsDateConfirmed)'));
   expect(main.indexOf('transferReviewedSmsWithFee('),
    lessThan(main.indexOf('acknowledgeCompletedTransfer([id])')));
  });
