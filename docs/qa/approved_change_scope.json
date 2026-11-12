@@ -221,8 +221,8 @@
         "end": "class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{"
       },
       {
-        "start": "  @override Widget build(BuildContext context){",
-        "end": null
+        "start": "   key:const Key('waffra-m268-tools-scroll'),",
+        "end": "     margin:const EdgeInsets.only(bottom:11),"
       }
     ],
     "scripts/qa/m385_approved_change_guard.py": [
