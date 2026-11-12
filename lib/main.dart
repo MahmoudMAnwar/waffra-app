@@ -6173,19 +6173,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      DateTime.now().millisecondsSinceEpoch);
    // M597: received-at is only a picker hint, never a fabricated bank
    // transaction timestamp. Unknown dates require an explicit day AND time.
-   DateTime? date=bankSmsDate(body,referenceDate:arrived);
-   if(date==null||bankSmsHasUnverifiedTimestamp(body)){
-    final pickedDay=await showDatePicker(context:context,
-     initialDate:arrived,firstDate:DateTime(2000),
-     lastDate:DateTime.now().add(const Duration(days:1)));
-    if(pickedDay==null||!mounted)return;
-    final pickedTime=await showTimePicker(context:context,
-     initialTime:TimeOfDay.fromDateTime(arrived));
-    if(pickedTime==null||!mounted)return;
-    date=DateTime(pickedDay.year,pickedDay.month,pickedDay.day,
-     pickedTime.hour,pickedTime.minute);
-   }
-   // Source timestamp or explicit picker has already established a date.
+   final smsDate=bankSmsDate(body,referenceDate:arrived);
+   final needsDateConfirmation=smsDate==null||
+    bankSmsHasUnverifiedTimestamp(body);
+   // Open the transfer form immediately. A received-at fallback is only a
+   // visible hint: the editor refuses commit until the user picks a date.
+   final date=needsDateConfirmation?arrived:smsDate!;
    final prefill=WaffraInternalTransferDraft(
     // Native fingerprint includes sender, body AND receivedAt; two distinct
     // identical-body SMS must not share a single SQLCipher transfer ID.
@@ -6217,6 +6210,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       Expanded(child:WaffraAccountTransactionForm(
        accounts:accounts,english:waffraIsEnglish,
        initialSmsTransfer:prefill,originalSmsText:body,
+       requireSmsDateConfirmation:needsDateConfirmation,
        onCreateSmsAccount:(group,createProvider,isDestination)async{
         // #416: never infer transfer source or destination from SMS sender.
         final existing=await api.balances();
