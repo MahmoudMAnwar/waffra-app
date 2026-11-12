@@ -4118,8 +4118,8 @@ class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
  // Reserve space for multiline account names rather than trimming them.
  int get _accountLabelExtraLines=>goalWallet||onAccountTap==null?0:
   (((selectedAccountLabel?.runes.length??0)-25).clamp(0,150)/25).ceil();
- @override double get minExtent=>goalWallet?130.0:(compact?127.0:164.0+20.0*_accountLabelExtraLines);
- @override double get maxExtent=>goalWallet?148.0:(compact?138.0:182.0+20.0*_accountLabelExtraLines);
+ @override double get minExtent=>goalWallet?127.0:(compact?127.0:164.0+20.0*_accountLabelExtraLines);
+ @override double get maxExtent=>goalWallet?138.0:(compact?138.0:182.0+20.0*_accountLabelExtraLines);
  @override Widget build(BuildContext context,double shrinkOffset,bool overlapsContent){
   final progress=(shrinkOffset/(maxExtent-minExtent)).clamp(0.0,1.0);
   final dark=Theme.of(context).brightness==Brightness.dark;
@@ -15807,12 +15807,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      border:OutlineInputBorder(borderRadius:BorderRadius.circular(14))),
    ),
    const SizedBox(height:12),
-   SizedBox(height:148,
-    child:WaffraBalanceHeader(
-     balance:waffraGoalWalletBalance(goals),
-     english:waffraIsEnglish,goalWallet:true,
-     heading:waffraIsEnglish?'Goals wallet':'محفظة الأهداف',
-     refreshVerifiedWidgetBalance:_refreshWidget).build(context,0,false)),
+   SizedBox(height:138,child:LayoutBuilder(builder:(heroContext,limits)=>
+    OverflowBox(alignment:Alignment.center,
+     minWidth:limits.maxWidth+32,maxWidth:limits.maxWidth+32,
+     child:WaffraBalanceHeader(
+      balance:waffraGoalWalletBalance(goals),
+      english:waffraIsEnglish,goalWallet:true,compact:true,
+      heading:waffraIsEnglish?'Goals wallet':'محفظة الأهداف',
+      refreshVerifiedWidgetBalance:_refreshWidget)
+      .build(heroContext,0,false)))),
    Padding(padding:const EdgeInsets.symmetric(horizontal:14,vertical:7),
     child:WaffraText(waffraIsEnglish?
      'Your goals wallet is separate. Confirmed funding debits the selected bank account once; goal progress is not an expense.':
@@ -15838,8 +15841,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     const SizedBox(height:14),
    ],
    Row(children:[
-    Expanded(flex:3,child:WaffraOutlinedItemsCount(
-     label:waffraIsEnglish?'Current goals':'عدد الأهداف الحالية',count:goals.length)),
+    Expanded(flex:3,child:_compactCategoryStat(
+     waffraIsEnglish?'Current goals':'عدد الأهداف الحالية',
+     goals.length.toString(),Icons.flag_outlined,emerald)),
     const SizedBox(width:9),
     Flexible(flex:2,fit:FlexFit.loose,child:WaffraDeletedItemsButton(
      onPressed:WaffraHaptics.tapRequired(deletedGoalsDialog),
@@ -16377,27 +16381,25 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    ]),
    const SizedBox(height:10),
    Row(children:[
-    Expanded(child:WaffraOutlinedItemsCount(
+    Expanded(child:SizedBox(height:52,child:KeyedSubtree(
      key:const Key('waffra-recurring-count-badge'),
-     label:waffraIsEnglish?'Recurring count':'عدد العمليات المتكررة',
-     count:recurring.length)),
+     child:_compactCategoryStat(
+      waffraIsEnglish?'Recurring count':'عدد العمليات المتكررة',
+      recurring.length.toString(),Icons.event_repeat_rounded,emerald)))),
     const SizedBox(width:9),
     Expanded(child:Container(
-     padding:const EdgeInsets.symmetric(horizontal:7,vertical:7),
+     height:52,padding:const EdgeInsets.symmetric(horizontal:7),
      decoration:BoxDecoration(
       color:Theme.of(context).cardColor,
       border:Border.all(color:Theme.of(context).dividerColor.withValues(alpha:.5)),
       borderRadius:BorderRadius.circular(16)),
      child:Row(children:[
-      Expanded(child:Column(mainAxisSize:MainAxisSize.min,
-       crossAxisAlignment:CrossAxisAlignment.start,children:[
-       WaffraText(waffraIsEnglish?'Reminders':'التذكير',
-        maxLines:1,style:const TextStyle(fontSize:12,fontWeight:FontWeight.bold)),
-       WaffraText(waffraIsEnglish?'1 day before • 9 AM':'قبل الموعد بيوم',
-        maxLines:2,style:const TextStyle(fontSize:10)),
-      ])),
-      Transform.scale(scale:.82,child:Switch.adaptive(value:recurringRemindersEnabled,
-       onChanged:WaffraHaptics.selection(toggleRecurringReminders))),
+      Expanded(child:WaffraText(waffraIsEnglish?'Reminders':'التذكير',
+       maxLines:1,style:const TextStyle(fontSize:12,fontWeight:FontWeight.bold))),
+      Tooltip(message:waffraIsEnglish?'1 day before • 9 AM':'قبل الموعد بيوم',
+       child:Transform.scale(scale:.82,
+        child:Switch.adaptive(value:recurringRemindersEnabled,
+         onChanged:WaffraHaptics.selection(toggleRecurringReminders)))),
      ]))),
    ]),
    const SizedBox(height:9),
