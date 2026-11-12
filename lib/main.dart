@@ -82,7 +82,6 @@ import 'waffra_auto_sms.dart';
 import 'waffra_auto_sms_policy.dart';
 import 'waffra_bank_sms_facts.dart';
 import 'waffra_sms_cloud_service.dart';
-import 'waffra_sms_cloud_review_analyzer.dart';
 import 'waffra_sms_local_rules.dart';
 import 'waffra_sms_review_groups.dart';
 import 'waffra_sms_account_learning.dart';
@@ -1066,7 +1065,9 @@ Map<String,Object?> waffraM632ClassifySmsQueue(Map<String,Object?> input){
   }
   if(local!=null){
    annotated['local']=local;
-   if(local['kind']=='excluded'&&local['defaultSeed']!=true){
+   if(local['kind']=='excluded'){
+    // Only a safe ready or user-confirmed rule may reach this path.
+    // Native pending IDs are excluded, never ledger-finance ACKs.
     excluded.add(id);
     retainOnAckFailure.add(annotated);
     continue;
@@ -4824,7 +4825,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
  bool _autoSmsReviewOpen=false;
  bool _autoSmsReviewExpanded=false; // Presentation-only: collapsed by default.
- bool _cloudReviewStageRunning=false;
  bool _autoSmsStatusChecked=false;
  bool _autoSmsHistoryComplete=false;
  bool _autoSmsRescanRunning=false;
@@ -5291,63 +5291,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    _autoSmsHistoryComplete=progress?['historyComplete']==true;
    _autoSmsPending..clear()..addAll(waiting);
   });
-  // Foreground intake is always local-only. Even a standing cloud consent
-  // never authorizes processing a specific message off-device.
-  // The explicit ambiguous-message action owns cloud requests.
- }
- Future<void> _analyzeAmbiguousSmsOnDemand(
-  Map<String,Object?> selected)async{
-  if(_cloudReviewStageRunning||!mounted||selected['id'] is! String||
-     selected['body'] is! String||selected['sensitiveOtp']==true)return;
-  final accepted=await showWaffraDialog<bool>(context:context,
-   builder:(dialog)=>AlertDialog(
-    title:WaffraText(waffraIsEnglish?
-     'Analyze this unclear message with AI?':
-     'تحليل هذه الرسالة التي تحتاج مراجعة بالذكاء الاصطناعي؟'),
-    content:WaffraText(waffraIsEnglish?
-     'The financial text will be redacted locally before sending it to '
-     'OpenRouter through an external service. Processing may occur outside '
-     'Saudi Arabia. Only this message is sent, and nothing is saved as money.':
-     'هنحجب المعرفات الحساسة من الرسالة محليًا قبل إرسال بياناتها المالية '
-     'إلى OpenRouter عبر خدمة خارجية. ممكن تتم المعالجة خارج السعودية. '
-     'هنرسل الرسالة دي فقط، ومش هنسجل أي مبلغ تلقائيًا.'),
-    actions:[
-     TextButton(onPressed:()=>Navigator.pop(dialog,false),
-      child:WaffraText(waffraIsEnglish?'Review myself':'أراجع بنفسي')),
-     FilledButton(onPressed:()=>Navigator.pop(dialog,true),
-      child:WaffraText(waffraIsEnglish?'Send this message':'أرسل هذه الرسالة')),
-    ]));
-  if(accepted!=true||!mounted)return;
-  _cloudReviewStageRunning=true;
-  try{
-   if(!await WaffraSmsCloudService.setConsent(true)){
-    if(mounted)snack(context,waffraIsEnglish?
-     'Cloud analysis is unavailable. Review the message manually.':
-     'التحليل السحابي غير متاح. راجع الرسالة بنفسك.',isError:true);
-    return;
-   }
-   // M528: this explicit owner consent also changes the Account switch.
-   // Re-read it on the next profile build; no extra finance/UI work now.
-   _m528CloudConsentFuture=null;
-   final staged=await WaffraSmsCloudReviewAnalyzer.stagePending(
-    [selected],maxPerRun:1,explicitlyRequested:true);
-   if(!mounted)return;
-   if(staged==0){
-    snack(context,waffraIsEnglish?
-     'No AI suggestion returned. The message remains awaiting review.':
-     'ما رجعش اقتراح من الذكاء الاصطناعي. الرسالة لسه للمراجعة.',
-     isError:true);
-   }else{
-    snackSuccess(context,waffraIsEnglish?
-     'AI suggestion is ready. Verify it before saving.':
-     'اقتراح الذكاء الاصطناعي جاهز. راجعه قبل الحفظ.');
-   }
-   await _refreshAutoSmsInbox();
-  }catch(_){
-   if(mounted)snack(context,waffraIsEnglish?
-    'Could not analyze the message. Manual review is still available.':
-    'تعذر تحليل الرسالة. المراجعة اليدوية متاحة.',isError:true);
-  }finally{_cloudReviewStageRunning=false;}
+  // Passive SMS review is local-only; it never sends a message to
+  // cloud analysis or posts money from an unconfirmed match.
  }
  Future<void> _scanPreviousBankSmsFromSettings()async{
   if(!await WaffraAutoSms.enabled()){
@@ -7000,19 +6945,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       if(facts.kind!=WaffraBankOperationKind.transfer)
        TextButton(onPressed:()=>Navigator.pop(dialog),
         child:WaffraText(waffraIsEnglish?'Later':'لاحقًا')),
-      if(!sensitive&&facts.kind!=WaffraBankOperationKind.transfer&&
-          localFacts==null&&cloudFacts==null)
-       PopupMenuButton<String>(
-        tooltip:waffraIsEnglish?'More options':'خيارات أخرى',
-        icon:const Icon(Icons.more_horiz),
-        onSelected:(value)=>Navigator.pop(dialog,value),
-        itemBuilder:(_)=>[
-         PopupMenuItem(value:'ai',child:WaffraText(waffraIsEnglish?
-          'Optional AI review':'تحليل اختياري بالذكاء الاصطناعي')),
-         PopupMenuItem(value:'exclude',child:WaffraText(waffraIsEnglish?
-          'Not a transaction':'ليست عملية مالية')),
-        ],
-       ),
      ])));
    reviewScroll.dispose();
    if(decision=='no'&&understood&&!sensitive&&
@@ -7174,8 +7106,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        isError:true);
      }
     }
-   }else if(decision=='ai'&&mounted){
-    await _analyzeAmbiguousSmsOnDemand(selected);
    }else if(decision=='review'&&mounted){
     // M636: the verified SMS editor remains, while the paste template is retired.
     await entrySheet(sms:true,initialSms:body,reviewedSender:sender);
@@ -7239,7 +7169,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }
    // A simple Back/Cancel only inspected an already loaded SMS. Reloading
    // and reclassifying 1000 encrypted messages after every closed dialog
-   // caused avoidable jank. Successful exclusion, AI stage, transfer and
+   // caused avoidable jank. Successful exclusion, transfer and
    // finance-save paths already update the live queue or refresh explicitly.
    // An unchanged review never posts, ACKs, or invalidates the snapshot.
   }
