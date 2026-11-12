@@ -37,7 +37,7 @@ void main(){
   expect(explicit,contains('WaffraAutoSms.reconcilePendingWithAndroidInboxChecked()'));
   expect(explicit,contains('await _refreshAutoSmsInbox(importMonth:true)'));
   final passive=main.substring(main.indexOf(' Future<void> _runAutoSmsRefresh('),
-   main.indexOf(' Future<void> _analyzeAmbiguousSmsOnDemand('));
+   main.indexOf(' Future<void> _scanPreviousBankSmsFromSettings()async{'));
   expect(passive,isNot(contains('reconcilePendingWithAndroidInboxChecked()')));
   expect(bridge,contains("'reconcilePendingAutoBankSmsWithAndroidInbox'"));
   final route=activity.substring(activity.indexOf(

@@ -77,7 +77,7 @@ void main() {
     expect(delay, greaterThan(defer));
     expect(scan, greaterThan(delay));
     final refresh = mainSource.split(' Future<void> _runAutoSmsRefresh({bool importMonth=false})async{')[1]
-        .split(' Future<void> _analyzeAmbiguousSmsOnDemand(')[0];
+        .split(' Future<void> _scanPreviousBankSmsFromSettings()async{')[0];
     expect(refresh, contains('for(var page=0;page<4;page++)'));
     expect(refresh, contains('const Duration(milliseconds:500)'));
     expect(refresh, contains('WaffraAutoSms.importConsentMonthChecked()'));

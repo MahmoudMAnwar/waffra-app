@@ -17,11 +17,15 @@ class WaffraSmsLocalRule {
   this.matchAll=true,this.sender='',this.builtIn=false,
   this.kind='',this.autoPost=false,this.accountId='',this.accountSuffix='',
   this.keywordCategories=const <String,String>{},
+  this.templateFamily='',this.contextFragments=const <String>[],
  });
  final String id,name,category,sender;
  final List<String> keywords;
  final bool income,matchAll,builtIn,autoPost;
- final String kind,accountId,accountSuffix;
+ final String kind,accountId,accountSuffix,templateFamily;
+ /// Only fixed, personal-data-free context phrases are stored; they never
+ /// become independent OR conditions for classification or SMS exclusion.
+ final List<String> contextFragments;
  /// Category associated with each normalized phrase in an auto-learned bucket.
  /// Existing encrypted rules without this field keep their original category.
  final Map<String,String> keywordCategories;
@@ -34,6 +38,8 @@ class WaffraSmsLocalRule {
   'kind':resolvedKind,'autoPost':autoPost,'accountId':accountId,
   'accountSuffix':accountSuffix,
   if(keywordCategories.isNotEmpty)'keywordCategories':keywordCategories,
+  if(templateFamily.isNotEmpty)'templateFamily':templateFamily,
+  if(contextFragments.isNotEmpty)'contextFragments':contextFragments,
  };
  factory WaffraSmsLocalRule.fromJson(Map<String,dynamic> j){
   final keywords=(j['keywords'] as List?)
@@ -50,6 +56,9 @@ class WaffraSmsLocalRule {
    keywordCategories:j['keywordCategories']==null
     ?const <String,String>{}
     :Map<String,String>.from(j['keywordCategories'] as Map),
+   templateFamily:(j['templateFamily']??'').toString(),
+   contextFragments:(j['contextFragments'] as List?)
+    ?.whereType<String>().toList(growable:false)??const <String>[],
   );
  }
 }
@@ -90,12 +99,70 @@ abstract final class WaffraSmsLocalRules {
   return true;
  }
 
+ // Learn only event-shaped patterns, never arbitrary personal-name,
+ // amount or account fragments from a one-message exclusion.
+ static bool _beneficiaryManagement(String body){
+  final text=normalized(body);
+  return RegExp(
+   r'(?:تم|تمت)\s+(?:اضافه|تنشيط|تفعيل|تحديث|تعديل|حذف|الغاء)\s+'
+   r'(?:بيانات\s+)?(?:ال)?مستفيد|'
+   r'(?:beneficiary|payee)\s+(?:added|activated|updated|removed)',
+   caseSensitive:false).hasMatch(text);
+ }
+
+ static List<String> _safeContextFragments(String body){
+  final text=normalized(body);
+  const fragments=<String>[
+   'رمز التحقق','رمز التفعيل','رمز الدخول','رمز مؤقت',
+   'verification code','security code','one time code',
+   'اضافة المستفيد','تنشيط المستفيد','تفعيل المستفيد',
+   'حوالة صادرة','حوالة واردة','تحويل صادر','تحويل وارد',
+   'تم الخصم','تم الايداع','رسوم','salary','payroll',
+   'purchase','payment','transfer','beneficiary',
+  ];
+  return fragments.where((p)=>text.contains(normalized(p))&&
+   safeRuleKeyword(p,'excluded')).take(12).toList(growable:false);
+ }
+
+ static WaffraSmsLocalRule? _excludedStructuralTemplate({
+  required String body,required String sender,
+ }){
+  final verification=WaffraBankSmsFactsParser.isVerificationChallenge(body);
+  final beneficiary=_beneficiaryManagement(body);
+  if((!verification&&!beneficiary)||_hasCompletedFinanceCue(body))return null;
+  final family=verification?'verification':'beneficiary_management';
+  final t=normalized(body);
+  final anchor=verification?
+   const <String>['رمز التحقق','رمز التفعيل','رمز الدخول','رمز مؤقت',
+    'verification code','security code','one time code','otp']
+    .firstWhere((p)=>t.contains(normalized(p)),orElse:()=> 'رمز التحقق'):
+   'المستفيد';
+  final rule=WaffraSmsLocalRule(
+   id:'template_${sha256.convert(utf8.encode(
+    '${normalized(sender)}|excluded|$family')).toString().substring(0,32)}',
+   name:verification?'رسائل تحقق':'إدارة المستفيدين',
+   keywords:[anchor],
+   kind:'excluded',income:false,category:'',sender:sender.trim(),
+   matchAll:true,autoPost:false,templateFamily:family,
+   contextFragments:_safeContextFragments(body),
+  );
+  validate(rule);
+  return rule;
+ }
+
  static bool matches(WaffraSmsLocalRule rule,String body,{String sender=''}) {
   final trustedSeed=rule.builtIn&&rule.id.startsWith('sa_');
   if(rule.keywords.isEmpty||rule.keywords.any((word)=>
     trustedSeed?!_safeSaudiSeedKeyword(word,rule.resolvedKind):
     !safeRuleKeyword(word,rule.resolvedKind)))return false;
   if(rule.sender.isNotEmpty&&normalized(rule.sender)!=normalized(sender))return false;
+  if(rule.templateFamily=='verification'){
+   return WaffraBankSmsFactsParser.isVerificationChallenge(body)&&
+    !_hasCompletedFinanceCue(body);
+  }
+  if(rule.templateFamily=='beneficiary_management'){
+   return _beneficiaryManagement(body)&&!_hasCompletedFinanceCue(body);
+  }
   final source=' ${normalized(body)} ';
   bool has(String keyword){
    final safe=normalized(keyword);
@@ -112,8 +179,61 @@ abstract final class WaffraSmsLocalRules {
  /// OTP plus a completed purchase/debit must remain in financial review.
  static bool _hasCompletedFinanceCue(String body)=>RegExp(
   r'\b(?:purchase|debited|credited|withdrawal|payment|paid|pos)\b|'
-  r'شراء|خصم|سحب|دفع|إيداع|ايداع|راتب',
+  r'شراء|خصم|سحب|دفع|إيداع|ايداع|راتب|'
+  r'(?:تم|تمت)\s+(?:تحويل|ارسال|إرسال)\s+|'
+  r'حوالة صادرة|حوالة واردة|'
+  r'\b(?:transfer completed|transfer successful|funds transferred)\b',
   caseSensitive:false).hasMatch(body);
+
+ /// Unlike generic bank words ("payment reminder" or "exclusive discount"),
+ /// these are independent, affirmative signs of a COMPLETED bank movement.
+ /// A ready-made exclusion must never ACK a message containing such evidence.
+ static bool _hasPostedMoneyEvidence(String body){
+  final facts=WaffraBankSmsFactsParser.parse(body);
+  final posted=RegExp(
+   r'\b(?:debited|credited|withdrawn|withdrawal|paid|pos)\b|'
+   r'\b(?:transfer\s+(?:sent|received|completed|successful)|'
+   r'funds\s+transferred|payment\s+(?:completed|successful|posted)|'
+   r'purchase\s+(?:completed|successful|posted))\b|'
+   r'\b(?:salary\s+(?:deposit|credited|payment)|cash\s+deposit|'
+   r'deposit(?:ed)?|refund\s+received|funds\s+received|'
+   r'(?:credit|debit)\s+transfer|account\s+credited|'
+   r'payment\s+received|money\s+received|credit\s+card\s+payment|'
+   r'card\s+(?:balance|bill)\s+payment|card\s+settlement)\b|'
+   r'(?:تم|تمت)\s+(?:خصم|سحب|إيداع|ايداع|تحويل|ارسال|إرسال|استلام|دفع|سداد|شراء)(?:\s|[:،.,]|$)|'
+   r'حوال[ةه]\s+(?:(?:محلي[ةه]|دولي[ةه]|مالي[ةه])\s+)?(?:صادر[ةه]|وارد[ةه])|'
+   r'تحويل\s+(?:بنكي\s+)?(?:صادر|وارد)|'
+   r'(?:إيداع|ايداع)\s+(?:راتب|مالي)|'
+   r'خصم\s+(?:من\s+(?:الحساب|البطاقة)|مبلغ|بقيمة)',
+   caseSensitive:false,
+  ).hasMatch(body);
+  if(posted)return true;
+  // An independent bank purchase headline plus actual amount may NOT be
+  // hidden by OTP wording. Detect it BEFORE the generic pending check.
+  if(RegExp(r'\b(?:card\s+purchase|online\s+purchase|'
+   r'purchase\s+card)\b',caseSensitive:false).hasMatch(body)&&
+   RegExp(r'[0-9٠-٩]+(?:[.,][0-9٠-٩]+)?').hasMatch(body))return true;
+  // An actual Arabic purchase with an explicit SAR amount is a posted
+  // movement even if an unrelated OTP phrase marks the combined SMS pending.
+  // Marketing discounts / payment reminders have no such purchase evidence.
+  if(RegExp(r'(?:^|\s)(?:شراء|عملية\s+شراء)\s+(?:بمبلغ|بقيمة)\s*'
+   r'[0-9٠-٩]+(?:[.,][0-9٠-٩]+)?\s*(?:ريال|SAR)',
+   caseSensitive:false).hasMatch(body))return true;
+  // A failed or still-pending notice alone is not a settled movement.
+  if(facts.pending)return false;
+  // Explicit bank income/expense + a real posted currency amount is not a
+  // discount coupon or a reminder. This also protects salary/credit notices
+  // that lack the English "debited/credited" verb.
+  if(facts.kind==WaffraBankOperationKind.cardSettlement)return true;
+  if(!facts.pending&&
+     (facts.kind==WaffraBankOperationKind.income||
+      facts.kind==WaffraBankOperationKind.expense)&&
+     RegExp(r'(?:\bSAR\b|ريال)',caseSensitive:false)
+      .hasMatch(body)&&
+     RegExp(r'[0-9٠-٩]').hasMatch(body))return true;
+  // Bank-facts transfer evidence outweighs any unrelated promo/OTP phrase.
+  return facts.kind==WaffraBankOperationKind.transfer;
+ }
 
  /// Transfers cannot create ledger income/expense entries; exclude rules
  /// only operate on unconfirmed, non-financial messages.
@@ -122,15 +242,19 @@ abstract final class WaffraSmsLocalRules {
   required WaffraBankOperationKind bankKind,
   Iterable<WaffraSmsLocalRule> custom=const <WaffraSmsLocalRule>[],
  }) {
-  if(bankKind==WaffraBankOperationKind.uncertain&&
-     WaffraBankSmsFactsParser.isVerificationChallenge(body)&&
-     _hasCompletedFinanceCue(body))return null;
+  final posted=_hasPostedMoneyEvidence(body);
+  // Custom exclusions remain conservative and owner-confirmed; curated ready
+  // exclusions may safely override a naive "expense" direction based ONLY
+  // on words like "خصم حصري" / "payment reminder", not a posted debit.
   final eligible=<WaffraSmsLocalRule>[
-   ...custom,
+   ...custom.where((rule)=>rule.resolvedKind!='excluded'||
+    !_hasCompletedFinanceCue(body)),
    ...waffraSaudiSpecialSeedRules,
   ].where((rule)=>
    ((rule.resolvedKind=='transfer'&&bankKind==WaffraBankOperationKind.transfer)||
-    (rule.resolvedKind=='excluded'&&bankKind==WaffraBankOperationKind.uncertain))&&
+    (rule.resolvedKind=='excluded'&&!posted&&
+     (bankKind==WaffraBankOperationKind.uncertain||
+      (rule.builtIn&&rule.id.startsWith('sa_excluded_')))))&&
    matches(rule,body,sender:sender)).toList(growable:false);
   if(eligible.isEmpty)return null;
   if(eligible.map((r)=>r.resolvedKind).toSet().length>1)return null;
@@ -280,6 +404,10 @@ abstract final class WaffraSmsLocalRules {
    normalized(category).contains('غير محدد')||
    normalized(category).contains('uncategorized')))return null;
   final normalizedBody=normalized(body);
+  if(kind=='excluded'){
+   final family=_excludedStructuralTemplate(body:body,sender:sender);
+   if(family!=null&&matches(family,body,sender:sender))return family;
+  }
   final safe=<String>[];
   if(kind=='excluded'){
    for(final term in const <String>[
@@ -321,7 +449,8 @@ abstract final class WaffraSmsLocalRules {
    name:names[kind]!,kind:kind,income:isIncome,
    category:(isIncome||isExpense)?category:'',
    sender:sender.trim(),keywords:safe.toSet().take(6).toList(),
-   matchAll:false,autoPost:false,
+   matchAll:true,autoPost:false,
+   contextFragments:_safeContextFragments(body),
   );
   try{
    validate(rule);
@@ -451,7 +580,7 @@ abstract final class WaffraSmsLocalRules {
     (other)=>normalized(word)==normalized(other))))){
    return existing;
   }
-  final index=existing.indexWhere((rule)=>
+  final index=candidate.matchAll?-1:existing.indexWhere((rule)=>
    !rule.autoPost&&!rule.matchAll&&
    (rule.id.startsWith('smart_')||rule.id.startsWith('manual_'))&&
    rule.resolvedKind==candidate.resolvedKind&&
@@ -504,6 +633,13 @@ abstract final class WaffraSmsLocalRules {
        rule.keywordCategories.entries.any((e)=>
         !rule.keywords.any((word)=>normalized(word)==e.key)||
         e.value.trim().isEmpty||e.value.length>130)))||
+     rule.contextFragments.length>12||
+     rule.contextFragments.any((p)=>!safeRuleKeyword(p,rule.resolvedKind))||
+     (rule.templateFamily.isNotEmpty&&
+      (!rule.id.startsWith('template_')||rule.resolvedKind!='excluded'||
+       rule.sender.trim().isEmpty||!rule.matchAll||rule.autoPost||
+       !const {'verification','beneficiary_management'}
+        .contains(rule.templateFamily)))||
      rule.accountId.length>128||
      (rule.accountSuffix.isNotEmpty&&
       !RegExp(r'^[0-9]{4}$').hasMatch(rule.accountSuffix))||

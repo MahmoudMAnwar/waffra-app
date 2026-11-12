@@ -54,7 +54,7 @@ void main() {
  test('SMS classification runs outside UI isolate; native ACK stays checked',(){
   final main=File('lib/main.dart').readAsStringSync();
   final refresh=main.split(' Future<void> _runAutoSmsRefresh(')[1]
-   .split(' Future<void> _analyzeAmbiguousSmsOnDemand(')[0];
+   .split(' Future<void> _scanPreviousBankSmsFromSettings()async{')[0];
   final worker=main.split('Map<String,Object?> waffraM632ClassifySmsQueue(')[1]
    .split('List<String> splitBankMessages(')[0];
   expect(refresh,contains('await compute(waffraM632ClassifySmsQueue,'));

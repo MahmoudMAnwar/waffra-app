@@ -63,13 +63,23 @@ void main() {
    expect(special?.resolvedKind, isNot('excluded'));
   });
 
-  test('single beneficiary notice exclusion does not silently learn M660', () {
+  test('M665 implements recorded M660 sender-scoped beneficiary template', () {
    final candidate = WaffraSmsLocalRules.suggestedRule(
     body: 'تمت إضافة المستفيد: محمد صابر خليل محمد',
     sender: 'AlRajhiBank', kind: 'excluded', confidentOnly: true,
    );
-   expect(candidate, isNull,
-    reason: 'M660 structural template learning is not implemented in M661');
+   expect(candidate, isNotNull);
+   expect(candidate!.templateFamily, 'beneficiary_management');
+   expect(candidate.autoPost, isFalse);
+   expect(candidate.matchAll, isTrue);
+   expect(candidate.toJson().toString(), isNot(contains('محمد صابر')));
+   expect(WaffraSmsLocalRules.matches(candidate,
+    'تم تنشيط المستفيد: أحمد علي',sender:'AlRajhiBank'), isTrue);
+   expect(WaffraSmsLocalRules.matches(candidate,
+    'تم تنشيط المستفيد: أحمد علي',sender:'OtherBank'), isFalse);
+   expect(WaffraSmsLocalRules.matches(candidate,
+    'تم خصم 200 ريال، تمت إضافة المستفيد: أحمد علي',
+    sender:'AlRajhiBank'), isFalse);
   });
  });
 
@@ -124,8 +134,10 @@ void main() {
    expect(end, greaterThan(start));
    final isolate = home.substring(start,end);
    expect(isolate, contains(
-    "local['kind']=='excluded'&&local['defaultSeed']!=true"));
+    "if(local['kind']=='excluded'){"));
    expect(isolate, contains('excluded.add(id)'));
+   expect(isolate, contains('retainOnAckFailure.add(annotated)'));
+   expect(isolate, isNot(contains('commitConfirmedManual(')));
    expect(isolate, isNot(contains('commitConfirmedSms(')));
    final native = File('native/WaffraAutoSmsStore.kt').readAsStringSync();
    expect(native, contains('fun excludeMessages(context: Context, ids: Set<String>)'));

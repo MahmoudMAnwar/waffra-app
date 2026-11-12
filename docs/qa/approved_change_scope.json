@@ -1,20 +1,18 @@
 {
   "contract_version": 1,
-  "change_id": "M662-20261112-SMS-REVIEW-ACCOUNTS-CARDS-PDF-PR592",
-  "human_scope_review": "Issue #591 owner supplied 4 Android screenshots and explicitly requested review UI simplification; fresh-account verified transfer and income/expense source context; inline account refresh; compact goal and settled-due cards, no piggy savings icon, and less wasted PDF pagination. Only the specific source functions bounded below may change; SQLCipher financial writer and anti-replay behaviors must remain unchanged. Human device signoff and exact-head CI outstanding; Draft PR #592. M662.8 follow-up screenshots explicitly authorize fixing implicit expense/Other selection in the already scoped entrySheet() initializer. Parent/child pickers, finance writers and existing data otherwise unchanged. M663 approved user request: preload the real owner-verified Home while first registration consent/biometric screen remains visible; delay every optional SMS/widget/recurring and navigation callback until Home's first actual interactive frame. Explicit Logout closes and invalidates owner state. Relogin retains existing credential-and-SQLCipher read flow, no fabricated zero. Existing auth tests are updated only where old Offstage/code location assumptions changed. M664 Issue #593 owner requests repair of 6 repeatedly failing full-suite CI workflows; three obsolete source-string assertions may be repaired ONLY to check current independently verified behavior (M587 manual SMS reference, M494 verified account refresh, M663 guarded back handler), without changing financial production code, disabling checks or reducing their positive safety guarantees.",
+  "change_id": "M665-20261112-SMS-REVIEW-CATEGORY-NOTICES-TEMPLATES-PR595",
+  "human_scope_review": "Owner approved four changes from four Android screenshots on 2026-11-12, Issue #594 Draft PR #595: retain verified child account after inline add; inline main/subcategory correction so Yes reflects existing mandatory finance/category guards; replace notification refresh with pull and clear bulk checkbox; remove top-level duplicate SMS original and redundant copy; extend M660 issue #588 sender-specific nonfinancial OTP/beneficiary structural learning without exposing PII or auto-posting. No auth/Home prewarm change, SQLCipher writer change, or main-only signed release change. Exact-head CI, M449 and Android evidence still pending. M665.5 owner screenshot 2026-11-12 narrows only ready-rules label and paragraph, preserving 4 accordions and native matching; register before source modification. M665.6 screenshot and explicit 2026-11-12 instruction: auto-exclude only safe first-party excluded notice patterns with completed-finance conflict guard; retire SMS review overflow AI/Not-a-transaction choices and orphan on-demand handler while retaining explicit Exclude. Existing bank SMS core privacy/finance still mandatory. M665.7 owner screenshot goal car 5000 due split 2000 wallet/3000 current bank, first-category fallback restaurant, visible goal SQL metadata and controls; code may change only scoped goal/due presentation, verified source notes formatting, approved tests/docs; no account-balance arithmetic or paid settlement confirmation mutated. M665.7 late M385 expansion explicitly covers pure display-only goal due cash/legacy notes helpers and linked recurring toggle guard. No bank debit policy or committed finance writer changed. M665.7: data from owner screenshot also appears in Smart Analytics/PDF category rankings; scope specifically one pure category chart model and already-approved PDF export, mapping existing goal_due sourceType to goal purpose without rewriting history or budget totals. M665.6 exact-head M160 found obsolete M528 per-message cloud handler source expectation after owner removed bank-review AI menu, plus genuine Arabic posted purchase+OTP collision and M470 ambiguous Riyal abbreviation. Repair existing M528 assertion narrowly, strengthen real finance override and retain M470 safety test unchanged; never skip a test.Owner approved four changes from four Android screenshots on 2026-11-12, Issue #594 Draft PR #595: retain verified child account after inline add; inline main/subcategory correction so Yes reflects existing mandatory finance/category guards; replace notification refresh with pull and clear bulk checkbox; remove top-level duplicate SMS original and redundant copy; extend M660 issue #588 sender-specific nonfinancial OTP/beneficiary structural learning without exposing PII or auto-posting. No auth/Home prewarm change, SQLCipher writer change, or main-only signed release change. Exact-head CI, M449 and Android evidence still pending. M665.5 owner screenshot 2026-11-12 narrows only ready-rules label and paragraph, preserving 4 accordions and native matching; register before source modification. M665.6 screenshot and explicit 2026-11-12 instruction: auto-exclude only safe first-party excluded notice patterns with completed-finance conflict guard; retire SMS review overflow AI/Not-a-transaction choices and orphan on-demand handler while retaining explicit Exclude. Existing bank SMS core privacy/finance still mandatory. M665.7 owner screenshot goal car 5000 due split 2000 wallet/3000 current bank, first-category fallback restaurant, visible goal SQL metadata and controls; code may change only scoped goal/due presentation, verified source notes formatting, approved tests/docs; no account-balance arithmetic or paid settlement confirmation mutated. M665.7 late M385 expansion explicitly covers pure display-only goal due cash/legacy notes helpers and linked recurring toggle guard. No bank debit policy or committed finance writer changed. M665.7: data from owner screenshot also appears in Smart Analytics/PDF category rankings; scope specifically one pure category chart model and already-approved PDF export, mapping existing goal_due sourceType to goal purpose without rewriting history or budget totals. M665.6 exact-head M160 found obsolete M528 per-message cloud handler source expectation after owner removed bank-review AI menu, plus genuine Arabic posted purchase+OTP collision and M470 ambiguous Riyal abbreviation. Repair existing M528 assertion narrowly, strengthen real finance override and retain M470 safety test unchanged; never skip a test. Scope verification 2026-11-12: M528 was declared but never changed vs PR base; remove stale allowance instead of modifying an unrelated test. Regression repair 2026-11-12: full M282 suite failed on stale M528 test referencing the intentionally removed per-message AI route, and two M665 goal UI tests used invalid source/finder assumptions. Permit only the named bounded M528 test, in addition to already declared M665 test; do not bypass any tests.",
   "user_requested_changes": [
-    "Remove duplicate transaction-type chip choices and verbose SMS transfer disclaimer while preserving three lower review choices plus explicit exclusion/confirmation.",
-    "Open original SMS bank transfer in editable source/target verified-account form on fresh install; allow user creation and selection of distinct accounts, preserve original SMS as read-only, require confirmed bank date/time where missing.",
-    "When correcting a transfer as separate income or expense preserve original transfer SMS for reference without falsely posting or ACKing it; ordinary SMS income/expense editor also visibly preserves read-only original.",
-    "After creating a provider or linked account inside an entry form refresh from authoritative verified account balances; show and select newly created provider/child immediately.",
-    "Compact verified savings goal and settled due cards without losing amounts, provenances, SAR/currency privacy and RTL accessibility; replace piggy-bank imagery with neutral wallet symbol.",
-    "Prevent forced new-page breaks between income/expense, transfer, savings PDF table sections while keeping row integrity and auto-pagination, preserve analytics pages and safety checks.",
-    "M662: update the exact single M595 source regression that required the removed duplicate top type chips; retain positive assertions for lower income/expense/transfer choices, original SMS and exclusion/no-post security.",
-    "M662.8: new manual expense must show empty main and subcategory pickers exactly like new manual income; never auto-select 'أخرى'. Explicit saved edit and trusted SMS category suggestions remain unchanged.",
-    "M662 source-test correction: M597 positive transfer fee test now verifies required Date+Time selection inside the actual reviewed transfer editor rather than old pre-editor date dialogs; preserve exact SQLCipher fee+hash transaction and ACK-order contracts.",
-    "M663: after first verified signup, preload hidden real Home through exact SQLCipher authority during permissions and biometric gating, then reveal immediately on successful authentication without reloading; defer heavy native SMS, widget, notifications, tours and recurring until first real interactive Home frame.",
-    "M663: logout and subsequent phone relogin must not reuse closed Home owner bindings or old balances; preserve one-minute biometric policy and existing public startup category preload, with no double Home finance loads.",
-    "M664 Issue #593: reconcile exactly three failing obsolete source assertions while retaining verified SQLCipher account selection, pending transfer SMS non-ACK, hidden Home guard, and full mandatory Flutter regression. Six red workflows depend on these three failing cases."
+    "After a first-time created and verified sender/provider/child account is selected on SMS review, never force selecting it a second time; enable Yes only after independent finance/category/date checks.",
+    "Remove the top notifications AppBar refresh glyph and replace it with accessible pull-to-refresh; clarify select-all with checkbox and preserve sender-filter selections.",
+    "Remove the duplicate original SMS card on finance review and redundant missing-fields copy, retaining original SMS on separate edit/correction route.",
+    "Use confirmed sender-scoped encrypted event templates for OTP, beneficiary management, income, expense and transfer, refresh pending after durable save and never use generic single fragments to silently exclude actual financial transactions.",
+    "Shorten built-in bank SMS ready rules header to القواعد الجاهزة / Ready-made rules, remove only its redundant description, keep all four groups and their matching unchanged.",
+    "Automatically exclude first-install ready-made nonfinancial SMS excluded rules using conservative completed-finance conflict checks and native 30-day reversible idempotent ACK, without auto-posting or excluding an entire sender.",
+    "Remove all bank-message review three-dot overflow AI/not-financial options and now-dead cloud route, while preserving explicit Exclude, manual correction and verified finance write safety.",
+    "Make linked goal 5000 due show 2000 from goal wallet and 3000 from bank as a clearly labeled breakdown across card/details/PDF and hide internal notes; do not double debit or reclassify as restaurant.",
+    "Goal quick actions switch-only as recurring; goal-linked due edit visually disabled but tap explains edit goal first; standalone recurring remains editable; immutable paid goal settlement cannot be edited as an ordinary expense.",
+    "Map historical sourceType goal_due expenses to the purpose category استحقاق هدف in Smart Analysis and PDF category totals, not a stored restaurant category, while retaining total expense amounts and immutable encrypted source."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -22,183 +20,193 @@
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
-    "lib/waffra_account_transaction_form.dart",
-    "test/m463_auth_first_one_page_test.dart",
-    "test/m486_sms_back_navigation_source_test.dart",
-    "test/m580_sms_security_navigation_performance_test.dart",
-    "test/m622_immediate_home_without_loader_test.dart",
-    "test/m623_verified_home_handoff_no_black_frame_test.dart",
-    "test/m624_deferred_sms_after_verified_home_test.dart",
-    "test/m625_single_verified_home_read_login_handoff_test.dart",
-    "test/m631_verified_finance_prewarm_test.dart",
-    "test/m662_sms_review_activity_pdf_regression_test.dart",
-    "test/m663_home_prewarm_auth_handoff_test.dart"
+    "lib/storage/waffra_fresh_finance_domain_repository.dart",
+    "lib/waffra_approved_notifications.dart",
+    "lib/waffra_goal_recurring_actions.part.dart",
+    "lib/waffra_sms_local_rules.dart",
+    "lib/waffra_sms_rule_settings_page.dart",
+    "test/m436_cloud_review_pipeline_test.dart",
+    "test/m495_pr402_ui_performance_regression_test.dart",
+    "test/m508_saudi_default_sms_rules_test.dart",
+    "test/m514_sms_review_regressions_test.dart",
+    "test/m528_settings_async_cache_regression_test.dart",
+    "test/m548_review_grouping_and_signup_perf_test.dart",
+    "test/m603_app_wide_lag_source_regression_test.dart",
+    "test/m630_home_first_frame_contention_test.dart",
+    "test/m632_sms_account_splash_isolate_contract_test.dart",
+    "test/m638_sms_inbox_delete_sync_test.dart",
+    "test/m661_exclusion_rule_apply_regression_test.dart",
+    "test/m665_goal_due_display_and_linked_edit_test.dart",
+    "test/m665_sms_review_structural_learning_test.dart",
+    "test/storage/m665_goal_due_note_and_split_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
   "bounded_sections": {
     "lib/main.dart": [
       {
-        "start": " Future<void> _reviewSmsAccountTransfer({",
-        "end": " /// M593:"
+        "start": "import 'waffra_sms_cloud_service.dart';",
+        "end": "import 'waffra_sms_local_rules.dart';"
+      },
+      {
+        "start": "double waffraGoalWalletBalance(Iterable<SavingGoal> goals)=>",
+        "end": "/// Fresh per-paste summary"
+      },
+      {
+        "start": "Map<String,Object?> waffraM632ClassifySmsQueue(",
+        "end": "List<String> splitBankMessages("
+      },
+      {
+        "start": "class WaffraTransactionDetailsDialog extends StatelessWidget {",
+        "end": "class HomeScreen extends StatefulWidget"
+      },
+      {
+        "start": " bool _autoSmsReviewOpen=false;",
+        "end": " void _receiveAutoSmsNotice(){"
+      },
+      {
+        "start": " Future<void> _runAutoSmsRefresh({bool importMonth=false})async{",
+        "end": " Future<void> _scanPreviousBankSmsFromSettings()async{"
+      },
+      {
+        "start": " Future<bool> _m592ExcludeNotificationSelection(",
+        "end": " Future<void> _m549OpenNotifications()async{"
       },
       {
         "start": " Future<void> _reviewAutoSmsCandidates({",
-        "end": " Future<void> _loadFinanceSafely()"
+        "end": " void _receiveSharedSms(){"
       },
       {
-        "start": " Future<void> entrySheet({MoneyEntry? initial",
+        "start": " Future<void> entrySheet(",
         "end": " Future<void> showReceipt("
       },
       {
-        "start": "   final pageTheme=pw.PageTheme(",
-        "end": "   final bytes=await doc.save();"
+        "start": " Future<void> exportEntriesPdf(",
+        "end": " Future<void> _deleteVerifiedEntry("
       },
       {
-        "start": " Widget _m649SavingsCard(",
-        "end": " /// M647: content-sized sheet"
+        "start": " Future<void> transactionActions(MoneyEntry entry)async {",
+        "end": " Widget _transactionActionTile("
       },
       {
         "start": " Widget compactTransaction(MoneyEntry entry){",
         "end": " Widget _m549HomeFinanceAction("
       },
       {
-        "start": "if(goals.isNotEmpty&&income>spending)ListTile(",
-        "end": "     ListTile(leading:const Icon(Icons.track_changes_outlined"
+        "start": " Widget goalsPage(){",
+        "end": " Future<void> recurringDialog("
       },
       {
-        "start": "if(g.saved>0)OutlinedButton.icon(",
-        "end": "         OutlinedButton.icon(\n          onPressed:WaffraHaptics.tap(()=>unawaited(_handleGoalCardAction(g,'delete'))),"
+        "start": " Future<void> recurringDialog(",
+        "end": " Widget recurringPage(){"
       },
       {
-        "start": " // M623: Keep the actual preceding authenticated screen mounted",
-        "end": " // Profile-mode handoff timings;"
+        "start": " Widget recurringPage(){",
+        "end": " Future<void> showWaffraFinancialCalendar("
       },
       {
-        "start": " void _m623HomeLoaded(Person expectedOwner){",
-        "end": " String appearance='light';"
-      },
-      {
-        "start": " @override void didChangeAppLifecycleState(AppLifecycleState state){",
-        "end": " @override void dispose(){WaffraRegionalCopy.countryIso.removeListener"
-      },
-      {
-        "start": " Future<void> saveUser(Person u)async {",
-        "end": " Future<void> setUiCountry(String? iso)async{"
-      },
-      {
-        "start": " Future<void> logout()async {",
-        "end": " bool _logoutInProgress=false;"
-      },
-      {
-        "start": " Future<void> setPin(String? value)async {",
-        "end": " Future<void> setLanguage(String next)async {"
-      },
-      {
-        "start": " Widget _m623RootContent(BuildContext rootContext){",
-        "end": " @override Widget build(BuildContext context)=>MaterialApp("
-      },
-      {
-        "start": "class HomeScreen extends StatefulWidget {",
-        "end": "// Scroll-linked, pinned balance summary."
-      },
-      {
-        "start": "class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {",
-        "end": " // Stable callback identity"
-      },
-      {
-        "start": " bool _m630SmsSessionCurrent(int epoch)=>",
-        "end": " // A signout must not close SQLCipher while a Home load still owns a read."
-      },
-      {
-        "start": "void _m468OnResume(){",
-        "end": " @override void initState(){super.initState();WaffraBackNavigation.onHomeBack="
-      },
-      {
-        "start": " void _receiveWidgetAction(){",
-        "end": " bool _autoSmsReviewOpen=false;"
-      },
-      {
-        "start": "void _receiveAutoSmsNotice(){",
-        "end": " Future<void> _rescanAutoSmsInbox()async{"
-      },
-      {
-        "start": " Future<void> _loadFinanceSafely()async{",
-        "end": " Widget _financialRecoveryScreen()=>"
-      },
-      {
-        "start": " void _m621OnFinanceNoticeTap(){",
-        "end": " Future<void> _syncWidgetTransactions()async{"
-      },
-      {
-        "start": "  traceHomeStep('before_sharedPreferences');",
-        "end": " Future<void> _refreshWidget()async{"
-      },
-      {
-        "start": " bool _consumeHomeBack(){",
-        "end": " @override Widget build(BuildContext context)=>PopScope("
+        "start": "WaffraSmartChartData waffraSmartChartData(",
+        "end": "class ChartPoint {"
       }
     ],
-    "lib/waffra_account_transaction_form.dart": [
+    "lib/waffra_approved_notifications.dart": [
       {
-        "start": "class WaffraAccountTransactionForm extends StatefulWidget {",
+        "start": "class _WaffraApprovedNotificationsPageState",
         "end": null
       }
     ],
-    "test/m580_sms_security_navigation_performance_test.dart": [
+    "lib/waffra_sms_local_rules.dart": [
       {
-        "start": " test('M595 compact review has exact three selectable transaction types',(){",
-        "end": " test('M595 correction must not auto-post, guess a transfer, or auto ACK',(){"
+        "start": "class WaffraSmsLocalRule {",
+        "end": null
+      }
+    ],
+    "test/m661_exclusion_rule_apply_regression_test.dart": [
+      {
+        "start": " group('M661 manual excluded rule application', () {",
+        "end": " group('M661 source and routing safety contract', () {"
       },
       {
-        "start": " test('M597 source SMS transfer, fee expense and hash commit atomically',(){",
-        "end": null
-      },
-      {
-        "start": " test('M587 bank transfer shows exactly three non-posting choices',(){",
-        "end": " test('notification center never repeats a second review hero',(){"
-      }
-    ],
-    "test/m623_verified_home_handoff_no_black_frame_test.dart": [
-      {
-        "start": " test('M623 keeps prior authenticated UI until one complete verified Home',(){",
+        "start": " group('M661 source and routing safety contract', () {",
         "end": null
       }
     ],
-    "test/m624_deferred_sms_after_verified_home_test.dart": [
+    "lib/waffra_sms_rule_settings_page.dart": [
       {
-        "start": " test('M624: after-first-frame native work then sequential inbox review',(){",
+        "start": " @override Widget build(BuildContext context)=>Scaffold(",
         "end": null
       }
     ],
-    "test/m631_verified_finance_prewarm_test.dart": [
+    "test/m508_saudi_default_sms_rules_test.dart": [
       {
-        "start": " test('verified phone profile persistence precedes BIND-only background start',(){",
+        "start": "void main() {",
         "end": null
       }
     ],
-    "test/m625_single_verified_home_read_login_handoff_test.dart": [
+    "test/m436_cloud_review_pipeline_test.dart": [
       {
-        "start": "  test('verified biometric and relogin meet identical complete-Home contract', () {",
+        "start": "void main() {",
         "end": null
       }
     ],
-    "test/m463_auth_first_one_page_test.dart": [
+    "test/m630_home_first_frame_contention_test.dart": [
       {
-        "start": " test('M623 authentication and permissions precede verified Home reveal',(){",
-        "end": " test('M463 first clean install has only one account creation form',(){"
-      }
-    ],
-    "test/m622_immediate_home_without_loader_test.dart": [
-      {
-        "start": " test('M622 SMS scan is deferred until after verified Home frame',(){",
+        "start": "void main() {",
         "end": null
       }
     ],
-    "test/m486_sms_back_navigation_source_test.dart": [
+    "test/m548_review_grouping_and_signup_perf_test.dart": [
       {
-        "start": " test('M494 #405 #416 inline creation is verified and preserves editor',(){",
-        "end": " test('M494 #409 original SMS visible in editor but OTP guarded',(){"
+        "start": "void main() {",
+        "end": null
+      }
+    ],
+    "test/m603_app_wide_lag_source_regression_test.dart": [
+      {
+        "start": "void main() {",
+        "end": null
+      }
+    ],
+    "test/m638_sms_inbox_delete_sync_test.dart": [
+      {
+        "start": "void main(){",
+        "end": null
+      }
+    ],
+    "test/m632_sms_account_splash_isolate_contract_test.dart": [
+      {
+        "start": "void main(){",
+        "end": null
+      }
+    ],
+    "test/m514_sms_review_regressions_test.dart": [
+      {
+        "start": " test('M514 per-button scanned number is never native history total',(){",
+        "end": " test('M514 excluded queue items use dedicated encrypted fingerprints',(){"
+      }
+    ],
+    "lib/waffra_goal_recurring_actions.part.dart": [
+      {
+        "start": "extension WaffraGoalRecurringActions on _HomeScreenState {",
+        "end": null
+      }
+    ],
+    "lib/storage/waffra_fresh_finance_domain_repository.dart": [
+      {
+        "start": "  Future<WaffraGoalDueSqlReceipt> settleLinkedGoalDue({",
+        "end": null
+      }
+    ],
+    "test/m495_pr402_ui_performance_regression_test.dart": [
+      {
+        "start": " test('M500 #420 Details Edit enables verified retroactive account link',(){",
+        "end": null
+      }
+    ],
+    "test/m528_settings_async_cache_regression_test.dart": [
+      {
+        "start": "  test('M528 refreshes state only after setting changes and profile entry', () {",
+        "end": "  test('M636 removes model settings while retaining protected finance deletion',(){"
       }
     ]
   }

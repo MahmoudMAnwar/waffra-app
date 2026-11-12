@@ -78,11 +78,21 @@ extension WaffraGoalRecurringActions on _HomeScreenState {
      'أضف قسم مصروف فرعي مفعّل قبل ربط الاستحقاق.');
     return false;
    }
-   final chosen=available.firstWhere(
-    (c)=>updated.name.contains('إيجار')&&c.name=='سكن / إيجار شهري',
-    orElse:()=>available.first);
+   // The due belongs to the goal, NOT to the first expense category in
+   // the catalogue (which could otherwise be «مطاعم شعبية» for a car).
+   // Use a deliberate budget-unlinked neutral ledger category; presentation
+   // identifies the transaction by its verified goal_due source type.
+   final neutral=available.where(
+    (c)=>c.name=='أخرى / مصروف غير مصنف').toList();
+   if(neutral.length!=1){
+    if(mounted)snack(context,waffraIsEnglish?
+     'Enable Other / Uncategorized expense before linking a goal due.':
+     'فعّل قسم «أخرى / مصروف غير مصنف» قبل ربط استحقاق الهدف.',
+     isError:true);
+    return false;
+   }
    next=RecurringBill(id:newId(),title:'استحقاق '+updated.name,
-    category:chosen.name,amount:updated.target,income:false,
+    category:neutral.single.name,amount:updated.target,income:false,
     day:date.day,startAt:date,linkedGoalId:updated.id,
     accountId:updated.accountId);
   }

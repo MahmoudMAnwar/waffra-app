@@ -104,7 +104,13 @@ void main(){
   expect(from,greaterThanOrEqualTo(0));
   expect(to,greaterThan(from));
   final edit=src.substring(from,to);
-  expect(src,contains("case 'edit':await entrySheet(initial:entry);break;"));
+  // M665.7: preserve historical account re-link for ordinary entries, but
+  // never send a paid goal settlement through the independent entry editor.
+  expect(src,contains("case 'edit':"));
+  expect(src,contains("if(entry.sourceType=='goal_due')"));
+  expect(src,contains("_m665ExplainLinkedGoalEdit(paid:true)"));
+  expect(src,contains('await entrySheet(initial:entry);'));
+  expect(edit,contains("if(initial?.sourceType=='goal_due')"));
   expect(edit,contains('readExistingEntryAccount(entryId:initial.id)'));
   expect(edit,contains('if(initial==null||canLinkExistingAccount)...['));
   // Verified historical association is locked by each live picker;

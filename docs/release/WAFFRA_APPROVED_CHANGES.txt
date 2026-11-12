@@ -245,3 +245,77 @@ M647/M649/M652 provenance labels — PR #575, 2026-11-11
 - M663: positive hidden-Home back-navigation regression now checks the existing postAuthVisible guard in its actual _consumeHomeBack function (outside the truncated startup source segment). No auth/finance/source behavior changed.
 - Scope/boundaries, positive behavioral review and permanent requirements recorded BEFORE changing the three tests: docs/WAFFRA_REQUIREMENTS.md, docs/qa/approved_change_scope.json and docs/qa/behavior_contract_review.json. All tests remain enabled. Issue https://github.com/MahmoudMAnwar/waffra-app/issues/593, implementation Draft https://github.com/MahmoudMAnwar/waffra-app/pull/592.
 - Status: focused source assertion repair committed; EXACT NEW PR HEAD mandatory CI and physical Android proof not yet verified; DO NOT treat the original failed SHA as the new result.
+
+[M449 REVIEWED UPDATE — ISSUE #594 — PR #595]
+- Reviewed source SHA: 512dbb6fc611d4481895cf279698988a5772f8a8
+- Approved change: Owner-requested partial M665 source: notifications refresh by pull and clearer checkbox; bank review retains verified account, allows in-place required category correction, hides redundant original panel and hint; encrypted sender-specific verification and beneficiary templates refresh pending rules, with completed-finance guards. Full M660 generic cross-category fragment learning remains incomplete.
+- Changed production paths: lib/main.dart, lib/waffra_approved_notifications.dart, lib/waffra_sms_local_rules.dart
+- Verification: exact-head CI and physical Android evidence remain separate, not approved merely by these notes.
+- Tooling note: M449 helper script could not be executed in this connector-only environment; this reviewed entry records the exact latest application-source commit, and required ancestry/quality gates must still execute on CI.
+
+[M449 FOLLOW-UP — ISSUE #594 — PR #595]
+- Reviewed source SHA: 01bc3c3de9f1331173ad969677c7b94872dedfcc
+- Approved change: The previous partial M665 summary remains applicable; after four CI workflows failed on a shared Dart analyzer error in reviewed SMS Yes, a positive nonnull original-amount and original-date branch guard was added before the source-authorized finance commit. No ledger logic, biometric Home prewarm or test was weakened.
+- Changed production paths: lib/main.dart
+- Verification: exact-head analyzer, whole Flutter CI and Android evidence remain independently required; the four failures belong to the older PR SHA.
+
+[M449 REVIEWED UPDATE — ISSUE #594 — PR #595 — M665.5]
+- Reviewed source SHA: d0ac5d02f8dc32fb4ef06e2063c994cd86738016
+- Approved change: Rename ready-made bank SMS rule heading to «القواعد الجاهزة» / Ready-made rules and remove only the explanatory paragraph below it in both languages. All four expandable read-only default rule groups, their counts and matching behavior are unchanged. The existing initial SMS scan classification still applies built-in and learned rules without automatic financial posting.
+- Changed production paths: lib/waffra_sms_rule_settings_page.dart
+- Verification: exact-head CI and physical Android evidence remain separate, not approved merely by these notes.
+
+[M449 REVIEWED UPDATE — ISSUE #594 — PR #595 — M665.6]
+- Reviewed source SHA: 4e37f1425fae07e58eb918913997916bc22f8c84
+- Approved change: Enable native encrypted and reversible 30-day automatic SMS exclusion for the 14 ready-made excluded-kind rules only when there is no completed debit/credit/purchase/transfer evidence. Preserve confirmed and failed/ambiguous finance review, custom sender-scoped templates, identity/hash anti-replay, SMS no-autopost and owner-verified finance state. Remove only the bank-review three-dot Optional AI / Not a transaction menu, the now-inaccessible per-message cloud request method and AI decision; explicit Exclude and correction/transfer controls remain. Existing cloud service and settings are not altered.
+- Changed production paths: lib/main.dart, lib/waffra_sms_local_rules.dart
+- Verification: M385 bounded scope, M550 behavior review, full native/Flutter/SQLCipher/Android and on-device 30-day rollback evidence remain separate. Tests have been updated to preserve positive security and finance guards rather than disabled. Exact-head CI not claimed complete by these notes.
+
+[M449 VERIFIED-SOURCE FOLLOW-UP — ISSUE #594 — PR #595 — M665.6]
+- Reviewed source SHA: ded2d1c95027ed5e56cf7b1c85d73ae489226590
+- Approved change: Fixed first-party ready exclusion for marketing discount / payment-reminder wording, which older bank parser marked as generic expense even when no money moved. Stronger independent completed-movement guard preserves real SAR-priced income/expense, card purchase, local/wire transfer and mixed OTP/offer + posted salary/transfer; ambiguous financial evidence stays in review. Only lib/waffra_sms_local_rules.dart changed after the prior M665.6 app-source stamp. Exact isolate/positive finance regressions added; no feature test skipped or weakened.
+- Changed production paths: lib/waffra_sms_local_rules.dart
+- Verification: exact new SHA CI and two-device Android performance/rollback review still required; no APK release on a draft feature branch.
+
+[M449 SAFETY FOLLOW-UP — ISSUE #594 — PR #595 — M665.6]
+- Reviewed source SHA: 0608f5fa584fe323aa5588cbd991348816c948fc
+- Approved change: Strengthened the ready-seed automatic exclusion collision guard so verified bank-card purchase amounts are detected **before** a separate OTP marks a message pending, and completed Arabic paid/purchase, salary/credit transfer and credit-card settlement signals cannot be hidden by a matching offer or verification notice. Ready marketing discounts and reminders without completed money evidence still auto-exclude through encrypted native IDs; no finance-authority, account/biometric/Home or ledger write changed.
+- Changed production paths: lib/waffra_sms_local_rules.dart
+- Verification: exact-head full test/Android/SQLCipher/physical-device QA pending. This review records what changed, not completed CI.
+
+[M449 VERIFIED SOURCE UPDATE — ISSUE #594 — DRAFT PR #595 — M665.7]
+- Reviewed source SHA: 4e6235b2ff11253ed6866f0b4ed04a9b53719bea
+- Approved change: Goal due UI/record integrity fix for owner screenshots (2026-11-12). 5,000 SAR paid due now identifies 2,000 SAR source goal wallet and 3,000 SAR actual linked account debit on Home paid card, recurring card, verified detail dialog, and transaction PDF. Existing historical «مطاعم» category is displayed as goal due based on immutable goal_due sourceType. New goal-linked due chooses intentional, nonbudget neutral expense category instead of arbitrary first «مطاعم». No new goal due writes technical goal_wallet_minor/current_cash_minor into user notes, and historical exact technical notes are hidden from user UI but preserved without ciphertext rewriting. Goal Quick actions are switch-only, and goal-linked recurring edits are disabled-looking with explicit explain-on-tap. Standalone dues remain editable. Paid goal_due direct ledger edit is refused without touching wallet/account source. Guarded goal/recurring settlement amount and SQLCipher cash/wallet source arithmetic are unchanged.
+- Changed production paths: lib/main.dart, lib/waffra_goal_recurring_actions.part.dart, lib/storage/waffra_fresh_finance_domain_repository.dart.
+- Verification: new source/UI and pure 5000/2000/3000 accounting tests. Exact-head Flutter, owner-vault SQLCipher, PDF, M385/M550 and physical Android acceptance remain independently required; this entry claims no completed device testing and no release APK from Draft.
+
+[M449 SOURCE-LEVEL COMPILER FOLLOW-UP — ISSUE #594 — DRAFT PR #595]
+- Reviewed source SHA: d120fd38c2c61c73fd55dc6acefc86c691f1297a
+- Approved change: Fixed one missing close parenthesis in the new linked-due Edit button Tooltip/Semantics/Opacity wrapper. Behavior remains goal-linked Edit visually muted with explanatory tap and standalone Edit active. No money, SQLCipher, SMS rules, biometric or Home preload behavior changed; literal regression ID assertion and uniquely bounded M385 entry editor scope updated separately after test/build feedback.
+- Changed production paths: lib/main.dart
+- Verification: source compiler correction recorded, full latest-SHA Flutter/Android/SQLCipher/finance CI still required; no claim of device acceptance or release.
+
+[M449 SOURCE FOLLOW-UP — ISSUE #594 — PR #595 — M665.7 CATEGORY ANALYTICS]
+- Reviewed source SHA: 75ed35064cc5cb80199753cfff5c01d76848462e
+- Approved source change: Category reports and Smart Analysis group historical typed paid goal_due entries under «استحقاق هدف» instead of old incorrectly assigned «مطاعم» or other random expense leaf, without rewriting persisted expense source, amount, income/expense totals, account-specific cash debit or goal wallet settlement. PDF summary and Smart chart now share the same pure presentation label. Existing 5,000 total, 2,000 earmark and 3,000 bank debit presentation and idempotent SQLCipher flow are unchanged.
+- Changed production paths: lib/main.dart
+- Test and validation: test/m665_goal_due_display_and_linked_edit_test.dart contains direct 5,000 goal-vs-150 restaurant categorization; latest-head CI and physical RTL/Android remain required.
+
+[M449 REVIEWED FINAL SOURCE FOLLOW-UP — ISSUE #594 — DRAFT PR #595 — 2026-11-12]
+- Reviewed latest application-source SHA: 48c77a86cf3d9212f1ab3a5d9380ab8418e387fc
+- Scope of owner-requested M665.1–M665.7 features reviewed: bank-SMS account and category confirmation, RTL and incremental notification pull, safe default and user-confirmed SMS exclusion without posted-money collisions, removal of redundant AI/not-financial review menu, compact ready rules, goal-linked due account-wallet breakdown, goal Quick actions, protected paid-goal/linked-recurring edit, neutral category display and typed note/source safety. Latest app-level follow-up strictly affects existing M665.7 goal_due category analytics presentation, assigning report/display category by sourceType without rewriting historical verified category or touching account/SQLCipher arithmetic.
+- Changed production paths since previous complete review: lib/main.dart (goal_due smart/PDF grouping and scoped finance display), lib/waffra_goal_recurring_actions.part.dart (neutral linked due category), lib/storage/waffra_fresh_finance_domain_repository.dart (no machine notes in new records), lib/waffra_sms_local_rules.dart (confirmed nonmoney SMS patterns), lib/waffra_approved_notifications.dart and lib/waffra_sms_rule_settings_page.dart (approved UI).
+- M385 exact-file reconciliation: Remove a stale declared but unmodified M528 test from the manifest; no tests or workflows were skipped or bypassed. All tests and physical Android/SQLCipher checks remain required before merge.
+- Verification: exact-head CI still ongoing/required; this source review and note alone are not proof of Android or SQLCipher test success, signing, or physical acceptance.
+
+[M449 REVIEWED M665.7 GOAL LINK GUARD FOLLOW-UP — ISSUE #594 — DRAFT PR #595]
+- Reviewed latest source SHA: 22cb9728da05ab890ad06db04a0ce9974ec1c1b2
+- Approved targeted fix: goal-linked recurring item Edit stays visually muted and read-only on every path even when the historical parent goal was deleted or not loaded, using source `linkedGoalId` rather than currently resolved `goal` for button opacity and Semantics. The explanatory tap still instructs editing the goal, and standalone dues retain their enabled Edit button. No SQLCipher account, wallet, posting, finance source, biometric preload or SMS logic changed.
+- Changed production path: lib/main.dart. Positive test: test/m665_goal_due_display_and_linked_edit_test.dart now guards orphaned link visual behavior.
+- Verification: exact-head CI and device acceptance must be checked after this commit. No previous-run success is claimed as evidence for this new source SHA.
+
+[M449 QA REGRESSION FOLLOW-UP — ISSUE #594 — DRAFT PR #595]
+- Reviewed feature source SHA: 22cb9728da05ab890ad06db04a0ce9974ec1c1b2 (unchanged by this test-only follow-up).
+- Exact-head M282 full Flutter run previously found three active test failures: obsolete M528 optional-AI-handler source lookup, a M665 linked recurring handler substring whose end precedes its start, and duplicate Flutter find.text matches because WaffraText composes a Text child. Repaired only those exact regression tests; kept explicit SMS Exclude and no review cloud request, linked-goal edit prohibition including orphaned linked goal, goal wallet and cash breakdown, no technical notes, and standalone recurring edit acceptance.
+- Changed test paths: test/m528_settings_async_cache_regression_test.dart, test/m665_goal_due_display_and_linked_edit_test.dart. M385 exact file manifest was updated before test change, M550 behavior contract remains active. No security test or CI job disabled.
+- Verification: latest-head full Flutter, Android and SQLCipher workflows must now pass. No claim of green based on older SHA.

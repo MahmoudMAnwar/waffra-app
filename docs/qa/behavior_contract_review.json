@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "pr": "#592",
-  "issue": "#591",
+  "pr": "#595",
+  "issue": "#594",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main",
   "reviewed_at": "2026-11-12",
@@ -1696,6 +1696,138 @@
         "M587: transfer remains pending when user instead adds a separate manual income/expense; reviewedOriginalSms stays read-only and no automatic transfer ACK; known transfer still requires source+destination confirmed by owner.",
         "M663: hidden/offstage preloaded Home cannot process back navigation until user-visible first frame; guard remains in actual _consumeHomeBack function.",
         "No skipped, removed, commented-out or selectively hidden unit/widget/security tests; all mandatory PR checks must execute against exact new head."
+      ]
+    },
+    {
+      "id": "M665-SMS-REVIEW-ACCOUNT-CATEGORY-PULL-STRUCTURAL-LEARNING-ISSUE594",
+      "issue": "Issue #594 Draft PR #595, related M660 #588, owner-approved four screenshots 2026-11-12",
+      "previous_behavior": "SMS review can show a verified newly created account but Yes remains disabled from unknown main category; original SMS expansion duplicates compact summary and validation note adds noise. Notifications expose AppBar refresh and ambiguous bulk icon. Excluded SMS rules learn only fixed snippets and subsequent beneficiary/OTP messages may not match; notification bulk rule writes do not refresh the pending queue.",
+      "approved_behavior": "Preserve the freshly chosen owner-verified account without a second picker and allow immediate main/child correction in review; Yes requires known actual SAR amount/date, category and authoritative account generation and no duplicate write. Notifications use pull-to-refresh and clear checkbox glyph with sender-persistent selection. In top-level finance review hide duplicate original SMS and missing-fields note, but retain original in explicit editor/transfer correction. Under previously recorded M660, confirmed sender-bound OTP and beneficiary event templates redact secrets and names and block bank-financial collisions; income/expense/transfer learned hints remain review-only, pending queue refresh after successful encrypted rule write without full history rescan; full arbitrary-fragment M660 engine remains incomplete.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_approved_notifications.dart",
+        "lib/waffra_sms_local_rules.dart"
+      ],
+      "test_paths": [
+        "test/m665_sms_review_structural_learning_test.dart",
+        "test/m661_exclusion_rule_apply_regression_test.dart",
+        "test/m462_smart_sms_rule_review_test.dart",
+        "test/m549_approved_home_notifications_test.dart",
+        "test/m580_sms_security_navigation_performance_test.dart",
+        "test/m662_sms_review_activity_pdf_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/android.yml"
+      ],
+      "safety_invariants": [
+        "No finance posting/ACK from only rule matching, even same sender and amount; anti-replay and SQLCipher writer unchanged.",
+        "Never expand exclusion matching using arbitrary OR fragments, arbitrary name, account digits or OTP; only strong sender-scoped event families and negative completed movement evidence.",
+        "Entire verification bank message and SMS account digits never persist in learned JSON; owner-scoped encrypted store, restored legacy records remain valid.",
+        "Per-category and verified account generation, amount, date and sender guards preserved; account selection cannot override invalid category or amount.",
+        "First Home paint/background SMS work and biometric/login prewarm unmodified. Mandatory tests and signed APK only main.",
+        "PR #595 remains draft until latest-head M385/M550/M449, Flutter/Android/SQLCipher CI and physical acceptance separately confirmed."
+      ]
+    },
+    {
+      "id": "M665-5-COMPACT-READY-RULES-HEADER-ISSUE594",
+      "issue": "Issue #594, Draft PR #595, owner screenshot 2026-11-12",
+      "previous_behavior": "The built-in Saudi section heading was long and included a redundant descriptive paragraph above the four expandable rule buckets.",
+      "approved_behavior": "Rename only the heading to القواعد الجاهزة (Ready-made rules) and remove the immediately following explanatory copy in both locales. Keep all four built-in buckets, their rule counts and keywords, learned rules, native scan and classification behavior identical.",
+      "source_paths": [
+        "lib/waffra_sms_rule_settings_page.dart",
+        "lib/main.dart",
+        "lib/waffra_sms_local_rules.dart"
+      ],
+      "test_paths": [
+        "test/m665_sms_review_structural_learning_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "UI text-only change. No native SMS import, classifier, store/SQLCipher, learned rules or finance auto-post authorization changes.",
+        "Four enabled default buckets must remain accessible in English and Arabic; custom rules have distinct secure owner state.",
+        "M385 and all original finance, security and Android UI gates stay enabled; exact-head CI required."
+      ]
+    },
+    {
+      "id": "M665-6-AUTO-EXCLUDE-READY-NONFINANCE-AND-REMOVE-REVIEW-OVERFLOW",
+      "issue": "Issue #594, same Draft PR #595, owner screenshot 2026-11-12, superseding UI portion of old optional cloud offer and ready-seed review-only behavior",
+      "previous_behavior": "Ready-made excluded seeds created review suggestions but did not native-ACK their matching SMS; only confirmed custom exclusions were automatically removed. The bank-review dialog contained an optional three-dot menu with AI and duplicate Not a transaction action; an on-demand cloud staging route remained reachable there.",
+      "approved_behavior": "When a ready excluded seed matches a nonfinancial message and strict completed-finance guard passes, safely add native SMS ID to existing encrypted 30-day reversible exclusion batch. Never post money, infer an account, exclude a completed transfer/purchase/debit, or block the whole sender. Remove bank review 3-dot AI/Not-financial menu plus unreachable AI request handler, preserve explicit Exclude and manual correction/transfer/finance review. Existing cloud data-safety infrastructure may remain for settings or external contracts but no review AI request UI exists.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_sms_local_rules.dart"
+      ],
+      "test_paths": [
+        "test/m665_sms_review_structural_learning_test.dart",
+        "test/m508_saudi_default_sms_rules_test.dart",
+        "test/m661_exclusion_rule_apply_regression_test.dart",
+        "test/m436_cloud_review_pipeline_test.dart",
+        "test/m630_home_first_frame_contention_test.dart",
+        "test/m548_review_grouping_and_signup_perf_test.dart",
+        "test/m603_app_wide_lag_source_regression_test.dart",
+        "test/m638_sms_inbox_delete_sync_test.dart",
+        "test/m632_sms_account_splash_isolate_contract_test.dart",
+        "test/m514_sms_review_regressions_test.dart",
+        "test/m528_settings_async_cache_regression_test.dart",
+        "test/m461_sms_exclusion_and_history_scan_test.dart",
+        "test/m470_financial_currency_word_boundary_regression_test.dart",
+        "test/m528_settings_async_cache_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/android.yml"
+      ],
+      "safety_invariants": [
+        "Do not use raw keyword fragments alone to discard a posted movement; reject bank evidence collisions, including financial+OTP and transfer+beneficiary.",
+        "Auto excludes only native pending IDs through existing bounded durable encrypted ACK; no whole-sender block, no financial hash ACK, no cloud request, no money/account update; 30 day undo and 31 day durable anti-replay intact.",
+        "Never weaken existing OTP security or privacy tests; existing cloud backend safety tests remain positive even though review menu is explicitly retired.",
+        "Defer SMS work until first interactive Home frame; do not touch M663 prewarm/biometrics and startup; exact-head CI + on-device performance outstanding.",
+        "M514 negative regression must reject retired per-message AI prompt but still positively assert explicit reversible bank SMS exclusion and local no-auto-post disclosure; no unrelated financial-source assertion removed.",
+        "Real Arabic purchase with numeric SAR amount + OTP phrase is completed finance, never excluded. Preserve existing M461/M470 positive tests; remove ambiguous bare ر س currency regex rather than weakening M470.",
+        "Obsolete M528 test must assert no per-message cloud AI review/consent bypass while still verifying explicit manual Exclude and encrypted settings consent updates."
+      ]
+    },
+    {
+      "id": "M665-7-GOAL-DUE-SPLIT-IMMUTABLE-LINKED-EDIT-SWITCH-ONLY",
+      "issue": "Issue #594, Draft PR #595, owner three screenshots 2026-11-12",
+      "previous_behavior": "Goal due saved a random first expense category and internal split markers in personal notes; Home displayed -5000 and only one small 2000 wallet caption, while editable recurring due could still be opened despite goal ownership and goal quick switch had redundant long label.",
+      "approved_behavior": "Total expense 5000 remains a single committed purchase; only 3000 cash bank debit and 2000 wallet draw are shown separately with labels on paid due recurring/home/details/report. Stop raw internal-note persistence and redact historic markers without rewriting finance source. Goal-linked schedules cannot edit directly; tapping disabled-like action shows edit-goal prompt, standalone editable. Paid goal_due entry similarly immutable. Goal quick switch has no redundant label. New linked due has deliberate neutral nonbudget category, but source-type goal due is displayed as purpose in card/detail/PDF. Category breakdowns in Smart Analysis and PDF must use goal-due purpose labels for existing typed goal receipts, not historically misassigned restaurant category, preserving gross expense totals.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_goal_recurring_actions.part.dart",
+        "lib/storage/waffra_fresh_finance_domain_repository.dart"
+      ],
+      "test_paths": [
+        "test/m665_goal_due_display_and_linked_edit_test.dart",
+        "test/storage/m665_goal_due_note_and_split_test.dart",
+        "test/m647_m652_financial_activity_regression_test.dart",
+        "test/m641_goal_recurring_account_binding_test.dart",
+        "test/m495_pr402_ui_performance_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/android.yml"
+      ],
+      "safety_invariants": [
+        "Never change verified account balance debit policy or goal due writer allocation; cash 3000 and wallet 2000, total 5000, no double charge.",
+        "Metadata migration is display-only for previous entries; notes changes use typed verified split already present, preserve backward compatibility.",
+        "An immutable paid goal due can neither be saved as manual nor independently changed; no bypass from deep link.",
+        "Goal edit persists account, due, target through atomic linked schedule path; already paid replay guard remains.",
+        "Goals/recurring/home and prewarm remain responsive; SQLCipher/backup/finance exact-head test suite mandatory.",
+        "M495 historical unassigned manual entries still reach entrySheet through transaction Actions; only previously settled goal_due receipts are guarded from direct edits.",
+        "Only category presentation grouping changes; total spending, goal wallet, current account balance and goal receipt identity are immutable.",
+        "Keep real widget breakdown visual labels with one container and both Arabic text descendants; do not require Flutter's wrapper and nested Text to collapse into one finder."
       ]
     }
   ]

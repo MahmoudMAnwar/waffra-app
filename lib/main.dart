@@ -82,7 +82,6 @@ import 'waffra_auto_sms.dart';
 import 'waffra_auto_sms_policy.dart';
 import 'waffra_bank_sms_facts.dart';
 import 'waffra_sms_cloud_service.dart';
-import 'waffra_sms_cloud_review_analyzer.dart';
 import 'waffra_sms_local_rules.dart';
 import 'waffra_sms_review_groups.dart';
 import 'waffra_sms_account_learning.dart';
@@ -769,6 +768,27 @@ double waffraNamedBudgetSpent(Iterable<MoneyEntry> records,
 /// paid amount to the wallet, with any uncovered remainder paid from cash.
 double waffraGoalWalletBalance(Iterable<SavingGoal> goals)=>
  goals.fold<double>(0,(sum,g)=>sum+g.saved);
+
+/// Source-attested goal wallet attribution is integer halalas; only the
+/// remainder of this single payment debits an actual money account.
+int waffraGoalDueCashMinor(MoneyEntry entry){
+ final gross=WaffraRecurringPolicy.toHalalas(entry.amount);
+ final wallet=entry.sourceType=='goal_due'
+  ?entry.goalWalletPaidMinor.clamp(0,gross).toInt():0;
+ return gross-wallet;
+}
+String waffraEntryReportCategory(MoneyEntry entry)=>
+ entry.sourceType=='goal_due'?'استحقاق هدف':entry.category;
+/// Historical goal dues encoded internal split markers in personal notes.
+/// Hide only this exact machine format; keep actual user-written notes.
+String waffraGoalDueVisibleNotes(MoneyEntry entry){
+ final notes=entry.sourceType=='sms'?entry.personalNotes:entry.notes;
+ if(entry.sourceType=='goal_due'&&RegExp(
+  r'^goal_wallet_minor=[0-9]+;current_cash_minor=[0-9]+$')
+  .hasMatch(notes.trim()))return '';
+ return notes;
+}
+
 double waffraAvailableCash(Iterable<MoneyEntry> ledger,Iterable<SavingGoal> goals)=>
  ledger.fold<double>(0,(total,e){
   if(e.income)return total+e.amount;
@@ -1066,7 +1086,9 @@ Map<String,Object?> waffraM632ClassifySmsQueue(Map<String,Object?> input){
   }
   if(local!=null){
    annotated['local']=local;
-   if(local['kind']=='excluded'&&local['defaultSeed']!=true){
+   if(local['kind']=='excluded'){
+    // Only a safe ready or user-confirmed rule may reach this path.
+    // Native pending IDs are excluded, never ledger-finance ACKs.
     excluded.add(id);
     retainOnAckFailure.add(annotated);
     continue;
@@ -3781,7 +3803,7 @@ class WaffraTransactionDetailsDialog extends StatelessWidget {
   final lightTone=entry.income?const Color(0xFFE4F4EB):const Color(0xFFFCECE8);
   final darkTone=entry.income?const Color(0xFF244C3A):const Color(0xFF49302C);
   final muted=Theme.of(context).colorScheme.onSurface.withValues(alpha:.73);
-  final displayNotes=entry.sourceType=='sms'?entry.personalNotes:entry.notes;
+  final displayNotes=waffraGoalDueVisibleNotes(entry);
   // Historical encrypted SMS entries used notes for their source text.
   // Display such content as a bank SMS only, not a personal note.
   final displayOriginalSms=(protectedOriginalSms?.trim().isNotEmpty??false)?
@@ -3845,9 +3867,12 @@ class WaffraTransactionDetailsDialog extends StatelessWidget {
        ],
        const SizedBox(height:15),
        Row(children:[
-        Icon(Icons.category_outlined,color:dark?const Color(0xFF74D8A9):emerald,size:20),
+        Icon(entry.sourceType=='goal_due'?Icons.flag_outlined:Icons.category_outlined,
+         color:dark?const Color(0xFF74D8A9):emerald,size:20),
         const SizedBox(width:8),
-        Expanded(child:WaffraText(waffraTr(entry.category),
+        Expanded(child:WaffraText(entry.sourceType=='goal_due'?
+         (waffraIsEnglish?'Savings goal payment':'استحقاق هدف'):
+         waffraTr(entry.category),
          textDirection:rtl?TextDirection.rtl:TextDirection.ltr,
          textAlign:TextAlign.start,
          style:const TextStyle(fontWeight:FontWeight.bold))),
@@ -3861,7 +3886,7 @@ class WaffraTransactionDetailsDialog extends StatelessWidget {
          textDirection:rtl?TextDirection.rtl:TextDirection.ltr,
          style:TextStyle(color:muted,fontSize:13))),
        ]),
-       if(!entry.income&&showBudgetInfo)...[
+       if(!entry.income&&showBudgetInfo&&entry.sourceType!='goal_due')...[
         const SizedBox(height:12),
         if(entry.budgetId==null)
          Container(
@@ -3904,9 +3929,11 @@ class WaffraTransactionDetailsDialog extends StatelessWidget {
         decoration:BoxDecoration(color:dark?darkTone:lightTone,
          borderRadius:BorderRadius.circular(15)),
         child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-         WaffraText(entry.income?
-          (waffraIsEnglish?'Income':'الدخل'):
-          (waffraIsEnglish?'Expense':'المصروف'),
+         WaffraText(entry.sourceType=='goal_due'?
+          (waffraIsEnglish?'Total goal payment':'إجمالي استحقاق الهدف'):
+          entry.income?
+           (waffraIsEnglish?'Income':'الدخل'):
+           (waffraIsEnglish?'Expense':'المصروف'),
           style:TextStyle(fontSize:12,fontWeight:FontWeight.bold,
            color:dark?Colors.white:accent)),
          const SizedBox(height:5),
@@ -3916,6 +3943,29 @@ class WaffraTransactionDetailsDialog extends StatelessWidget {
            fontSize:22,color:dark?Colors.white:accent)),
         ]),
        ),
+       if(entry.sourceType=='goal_due')...[
+        const SizedBox(height:11),
+        Container(key:const Key('m665-goal-due-details-breakdown'),
+         padding:const EdgeInsets.all(12),
+         decoration:BoxDecoration(borderRadius:BorderRadius.circular(13),
+          color:dark?const Color(0xFF19382F):const Color(0xFFE9F5EF)),
+         child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+          Row(children:[
+           Expanded(child:WaffraText(waffraIsEnglish?
+            'From saved goal wallet':'من محفظة الهدف')),
+           WaffraCurrencyAmount(entry.goalWalletPaidMinor/100,
+            fontSize:15,color:emerald),
+          ]),
+          const SizedBox(height:8),
+          Row(children:[
+           Expanded(child:WaffraText(waffraIsEnglish?
+            'Debited from money account':'المخصوم من الحساب المالي')),
+           WaffraCurrencyAmount(waffraGoalDueCashMinor(entry)/100,
+            fontSize:15,color:emerald),
+          ]),
+         ]),
+        ),
+       ],
        // Personal notes are separate from the original SMS in the UI and
        // canonical JSON. The historical bank SMS field stays encrypted.
        if(displayNotes.trim().isNotEmpty)...[
@@ -4824,7 +4874,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
  bool _autoSmsReviewOpen=false;
  bool _autoSmsReviewExpanded=false; // Presentation-only: collapsed by default.
- bool _cloudReviewStageRunning=false;
  bool _autoSmsStatusChecked=false;
  bool _autoSmsHistoryComplete=false;
  bool _autoSmsRescanRunning=false;
@@ -5291,63 +5340,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    _autoSmsHistoryComplete=progress?['historyComplete']==true;
    _autoSmsPending..clear()..addAll(waiting);
   });
-  // Foreground intake is always local-only. Even a standing cloud consent
-  // never authorizes processing a specific message off-device.
-  // The explicit ambiguous-message action owns cloud requests.
- }
- Future<void> _analyzeAmbiguousSmsOnDemand(
-  Map<String,Object?> selected)async{
-  if(_cloudReviewStageRunning||!mounted||selected['id'] is! String||
-     selected['body'] is! String||selected['sensitiveOtp']==true)return;
-  final accepted=await showWaffraDialog<bool>(context:context,
-   builder:(dialog)=>AlertDialog(
-    title:WaffraText(waffraIsEnglish?
-     'Analyze this unclear message with AI?':
-     'تحليل هذه الرسالة التي تحتاج مراجعة بالذكاء الاصطناعي؟'),
-    content:WaffraText(waffraIsEnglish?
-     'The financial text will be redacted locally before sending it to '
-     'OpenRouter through an external service. Processing may occur outside '
-     'Saudi Arabia. Only this message is sent, and nothing is saved as money.':
-     'هنحجب المعرفات الحساسة من الرسالة محليًا قبل إرسال بياناتها المالية '
-     'إلى OpenRouter عبر خدمة خارجية. ممكن تتم المعالجة خارج السعودية. '
-     'هنرسل الرسالة دي فقط، ومش هنسجل أي مبلغ تلقائيًا.'),
-    actions:[
-     TextButton(onPressed:()=>Navigator.pop(dialog,false),
-      child:WaffraText(waffraIsEnglish?'Review myself':'أراجع بنفسي')),
-     FilledButton(onPressed:()=>Navigator.pop(dialog,true),
-      child:WaffraText(waffraIsEnglish?'Send this message':'أرسل هذه الرسالة')),
-    ]));
-  if(accepted!=true||!mounted)return;
-  _cloudReviewStageRunning=true;
-  try{
-   if(!await WaffraSmsCloudService.setConsent(true)){
-    if(mounted)snack(context,waffraIsEnglish?
-     'Cloud analysis is unavailable. Review the message manually.':
-     'التحليل السحابي غير متاح. راجع الرسالة بنفسك.',isError:true);
-    return;
-   }
-   // M528: this explicit owner consent also changes the Account switch.
-   // Re-read it on the next profile build; no extra finance/UI work now.
-   _m528CloudConsentFuture=null;
-   final staged=await WaffraSmsCloudReviewAnalyzer.stagePending(
-    [selected],maxPerRun:1,explicitlyRequested:true);
-   if(!mounted)return;
-   if(staged==0){
-    snack(context,waffraIsEnglish?
-     'No AI suggestion returned. The message remains awaiting review.':
-     'ما رجعش اقتراح من الذكاء الاصطناعي. الرسالة لسه للمراجعة.',
-     isError:true);
-   }else{
-    snackSuccess(context,waffraIsEnglish?
-     'AI suggestion is ready. Verify it before saving.':
-     'اقتراح الذكاء الاصطناعي جاهز. راجعه قبل الحفظ.');
-   }
-   await _refreshAutoSmsInbox();
-  }catch(_){
-   if(mounted)snack(context,waffraIsEnglish?
-    'Could not analyze the message. Manual review is still available.':
-    'تعذر تحليل الرسالة. المراجعة اليدوية متاحة.',isError:true);
-  }finally{_cloudReviewStageRunning=false;}
+  // Passive SMS review is local-only; it never sends a message to
+  // cloud analysis or posts money from an unconfirmed match.
  }
  Future<void> _scanPreviousBankSmsFromSettings()async{
   if(!await WaffraAutoSms.enabled()){
@@ -5633,7 +5627,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        existing:rules,candidate:rule);
       if(!identical(next,rules)){changed=true;rules=next;}
      }
-     if(changed)await store.write(_smsRuleOwnerKey,rules);
+     if(changed){
+      await store.write(_smsRuleOwnerKey,rules);
+      // Reclassify existing pending messages after the confirmed encrypted
+      // rule write; never trigger full SMS history import or financial post.
+      _receiveAutoSmsNotice();
+     }
     }catch(_){
      // A failed optional learning update cannot undo durable exclusion.
     }
@@ -6648,13 +6647,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final previewDateTime=originalDate==null?
     (waffraIsEnglish?'Date/time needs review':'التاريخ والوقت يحتاجان مراجعة'):
     originalDate.toIso8601String().replaceFirst('T',' ').substring(0,16);
-   final canConfirm=understood&&facts.canAutoPostAsIncomeExpense&&
+   // The SMS category can be corrected inline without re-opening a money-account
+   // selector. A verified account alone never bypasses mandatory category checks.
+   String reviewedCategory=proposedCategory;
+   String reviewedMainName=previewMainName;
+   bool reviewCategoryValid=previewLeaves.length==1&&previewParents.length==1;
+   bool canConfirm=understood&&facts.canAutoPostAsIncomeExpense&&
     originalAmount!=null&&originalAmount.currency=='SAR'&&
     originalDate!=null&&!bankSmsHasUnverifiedTimestamp(body)&&
     parsed.amount!=null&&
     (parsed.amount!-originalAmount.amount).abs()<0.00001&&
-    parsed.income==expectedIncome&&previewLeaves.length==1&&
-    previewParents.length==1;
+    parsed.income==expectedIncome&&reviewCategoryValid;
    // A type selection in compact review is only a requested correction;
    // it must never ACK or post money until the verified ledger editor saves.
    String? reviewType=sensitive?null:switch(facts.kind){
@@ -6671,6 +6674,56 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    ({List<String?>? ids,int? generation})? reviewedAccount;
    String? reviewedAccountName;
    bool choosingAccount=false;
+   Future<void> selectReviewCategory(StateSetter redraw,BuildContext dialog)async{
+    // First-time account creation must not force a second account picker just
+    // because the SMS's inferred main category is missing.
+    final mainChoices=categories.where((c)=>
+     !c.isSubcategory&&c.income==expectedIncome).toList();
+    BudgetCategory? chosenMain;
+    final chosen=await showWaffraDialog<BudgetCategory>(
+     context:dialog,builder:(picker)=>
+      StatefulBuilder(builder:(picker,choose)=>AlertDialog(
+       title:WaffraText(waffraIsEnglish?
+        'Choose main and subcategory':'اختيار القسم الرئيسي والفرعي'),
+       content:SizedBox(width:360,height:320,child:ListView(
+        children:chosenMain==null?[
+         for(final parent in mainChoices)ListTile(
+          title:WaffraText(parent.displayName),
+          trailing:const Icon(Icons.chevron_left_rounded),
+          onTap:()=>choose(()=>chosenMain=parent)),
+        ]:[
+         ListTile(
+          leading:const Icon(Icons.arrow_back_rounded),
+          title:WaffraText(chosenMain!.displayName),
+          onTap:()=>choose(()=>chosenMain=null)),
+         for(final leaf in categories.where((c)=>
+          c.isSubcategory&&c.income==expectedIncome&&
+          c.parentId==chosenMain!.id&&
+          waffraCategoryAvailableForNewEntry(categories,c)))
+          ListTile(title:WaffraText(leaf.displayName),
+           onTap:()=>Navigator.pop(picker,leaf)),
+        ],
+       )),
+       actions:[TextButton(
+        onPressed:()=>Navigator.pop(picker),
+        child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء'))],
+      )));
+    if(chosen==null||!mounted||!dialog.mounted)return;
+    final parent=categories.where((c)=>!c.isSubcategory&&
+      c.id==chosen.parentId&&c.income==expectedIncome).toList();
+    if(parent.length!=1)return;
+    redraw((){
+     reviewedCategory=chosen.name;
+     reviewedMainName=parent.single.displayName;
+     reviewCategoryValid=true;
+     canConfirm=understood&&facts.canAutoPostAsIncomeExpense&&
+      originalAmount!=null&&originalAmount.currency=='SAR'&&
+      originalDate!=null&&!bankSmsHasUnverifiedTimestamp(body)&&
+      parsed.amount!=null&&
+      (parsed.amount!-originalAmount.amount).abs()<0.00001&&
+      parsed.income==expectedIncome&&reviewCategoryValid;
+    });
+   }
    Future<void> selectAccountBeforeYes(StateSetter redraw,BuildContext dialog)async{
     // Account setup/selection may happen BEFORE category/date corrections;
     // only Yes authorizes posting and retains the full canConfirm guard.
@@ -6781,7 +6834,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         ])),
        // M662: no duplicate type picker above the original SMS. Uncertain
        // SMS keeps explicit user-driven choices BELOW the message.
-       if(!sensitive)Padding(
+       if(!sensitive&&!understood&&
+          facts.kind!=WaffraBankOperationKind.transfer)Padding(
         padding:const EdgeInsets.only(top:10),
         child:Card(
          color:Theme.of(dialog).colorScheme.surfaceContainerLow,
@@ -6831,9 +6885,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            _m615ReviewDetail(waffraIsEnglish?'Description':'الوصف',
             parsed.title,Icons.edit_note_outlined),
            _m615ReviewDetail(waffraIsEnglish?'Main category':'القسم الرئيسي',
-            previewMainName,Icons.grid_view_outlined),
+            reviewedMainName,Icons.grid_view_outlined),
            _m615ReviewDetail(waffraIsEnglish?'Subcategory':'القسم الفرعي',
-            proposedCategory,Icons.list_alt_outlined),
+            reviewedCategory,Icons.list_alt_outlined),
            _m615ReviewDetail(waffraIsEnglish?'Sender':'المرسل',
             sender,Icons.account_balance_outlined),
            _m615ReviewDetail(waffraIsEnglish?'Money account':'الحساب المالي',
@@ -6847,6 +6901,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            _m615ReviewDetail(waffraIsEnglish?'Original date/time':'تاريخ ووقت العملية',
             previewDateTime,Icons.calendar_month_outlined),
           ]))),
+        const SizedBox(height:8),
+        OutlinedButton.icon(
+         key:const Key('m665-review-pick-category'),
+         onPressed:()=>selectReviewCategory(redraw,dialog),
+         icon:const Icon(Icons.category_outlined),
+         label:WaffraText(reviewCategoryValid?
+          (waffraIsEnglish?'Change category':'تغيير القسم الرئيسي والفرعي'):
+          (waffraIsEnglish?'Choose category':'اختيار القسم الرئيسي والفرعي')),
+        ),
         const SizedBox(height:8),
         OutlinedButton.icon(
          key:const Key('m590-sms-choose-account-before-yes'),
@@ -6873,9 +6936,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            !choosingAccount?()=>Navigator.pop(dialog,'yes'):null,
           child:WaffraText(waffraIsEnglish?'Yes':'نعم'))),
         ]),
-        if(!canConfirm)WaffraText(waffraIsEnglish?
-         'Edit missing amount, date or category to continue.':
-         'راجع البيانات الناقصة من شاشة التعديل قبل الحفظ.'),
        ],
        // Exclude is a separate, reversible action BELOW Yes/No.
        if(!sensitive&&facts.kind!=WaffraBankOperationKind.transfer)
@@ -6934,19 +6994,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       if(facts.kind!=WaffraBankOperationKind.transfer)
        TextButton(onPressed:()=>Navigator.pop(dialog),
         child:WaffraText(waffraIsEnglish?'Later':'لاحقًا')),
-      if(!sensitive&&facts.kind!=WaffraBankOperationKind.transfer&&
-          localFacts==null&&cloudFacts==null)
-       PopupMenuButton<String>(
-        tooltip:waffraIsEnglish?'More options':'خيارات أخرى',
-        icon:const Icon(Icons.more_horiz),
-        onSelected:(value)=>Navigator.pop(dialog,value),
-        itemBuilder:(_)=>[
-         PopupMenuItem(value:'ai',child:WaffraText(waffraIsEnglish?
-          'Optional AI review':'تحليل اختياري بالذكاء الاصطناعي')),
-         PopupMenuItem(value:'exclude',child:WaffraText(waffraIsEnglish?
-          'Not a transaction':'ليست عملية مالية')),
-        ],
-       ),
      ])));
    reviewScroll.dispose();
    if(decision=='no'&&understood&&!sensitive&&
@@ -7077,9 +7124,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       reviewedOriginalSms:body);
     }
    }else if(decision=='yes'&&mounted&&canConfirm&&
-             reviewedAccount!=null){
+             reviewedAccount!=null&&originalAmount!=null&&
+             originalDate!=null){
     await _m565ConfirmSms(id:id,body:body,sender:sender,
-     category:proposedCategory,income:expectedIncome,
+     category:reviewedCategory,income:expectedIncome,
      value:originalAmount.amount,date:originalDate,
      selectedAccount:reviewedAccount!);
    }else if(decision=='no'&&mounted){
@@ -7107,8 +7155,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        isError:true);
      }
     }
-   }else if(decision=='ai'&&mounted){
-    await _analyzeAmbiguousSmsOnDemand(selected);
    }else if(decision=='review'&&mounted){
     // M636: the verified SMS editor remains, while the paste template is retired.
     await entrySheet(sms:true,initialSms:body,reviewedSender:sender);
@@ -7172,7 +7218,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }
    // A simple Back/Cancel only inspected an already loaded SMS. Reloading
    // and reclassifying 1000 encrypted messages after every closed dialog
-   // caused avoidable jank. Successful exclusion, AI stage, transfer and
+   // caused avoidable jank. Successful exclusion, transfer and
    // finance-save paths already update the live queue or refresh explicitly.
    // An unchanged review never posts, ACKs, or invalidates the snapshot.
   }
@@ -8795,6 +8841,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  Future<void> entrySheet({MoneyEntry? initial,bool sms=false,String? initialSms,
   String? reviewedSender,bool? reviewedIncomeOverride,bool? manualIncomeOverride,
   String? reviewedOriginalSms})async {
+  // A paid goal due is an immutable verified two-source settlement.
+  // There is no independent edit path that can rewrite its wallet/bank split.
+  if(initial?.sourceType=='goal_due'){
+   await _m665ExplainLinkedGoalEdit(paid:true);
+   return;
+  }
   // Cold-start money selection needs a verified, non-Home-header account list.
   if(!_m468VerifiedAccountsLoaded){
    await _m467RefreshHomeAccounts();
@@ -11060,7 +11112,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final doc=pw.Document();
    final totalIncome=sum(items,true),totalExpenses=sum(items,false);
    final categoryTotals=<String,double>{};
-   for(final e in items.where((e)=>!e.income)){categoryTotals[e.category]=(categoryTotals[e.category]??0)+e.amount;}
+   for(final e in items.where((e)=>!e.income)){
+    final label=waffraEntryReportCategory(e);
+    categoryTotals[label]=(categoryTotals[label]??0)+e.amount;
+   }
    pw.Widget summary(String label,double value,PdfColor bg)=>pw.Expanded(child:pw.Container(
     padding:const pw.EdgeInsets.all(10),decoration:pw.BoxDecoration(color:bg,borderRadius:pw.BorderRadius.circular(7)),
     child:pw.Column(crossAxisAlignment:pw.CrossAxisAlignment.start,children:[
@@ -11131,7 +11186,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    if(!analytics&&items.isNotEmpty){
     final ordered=items.toList()..sort((a,b)=>b.date.compareTo(a.date));
     final descriptions=<(pw.MemoryImage,double)>[];
-    for(final e in ordered){descriptions.add(await pdfDescriptionArtwork(e.title));}
+    for(final e in ordered){
+     // The 5,000 goal purchase includes a 2,000 earmark and only a 3,000
+     // cash debit. Preserve that typed attribution in PDF without raw notes.
+     final description=e.sourceType=='goal_due'?
+      e.title+'\n'+(english?'Goal wallet: ':'محفظة الهدف: ')+
+      fmt(e.goalWalletPaidMinor/100)+' | '+
+      (english?'Money account: ':'الحساب المالي: ')+
+      fmt(waffraGoalDueCashMinor(e)/100):e.title;
+     descriptions.add(await pdfDescriptionArtwork(description));
+    }
     reportSections.addAll([
       heading('تقرير الدخل والمصروفات','Income & Expenses Report'),
       pw.Row(children:[summary('إجمالي الدخل',totalIncome,PdfColors.green50),pw.SizedBox(width:8),
@@ -11163,7 +11227,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            (english?'Paid due':'استحقاق مدفوع'):
            (english?(e.income?'Income':'Expense'):(e.income?'دخل':'مصروف')),
            rtl:!english),
-          pdfCell(waffraTr(e.category),rtl:!english),
+          pdfCell(e.sourceType=='goal_due'?
+           (english?'Goal due':'استحقاق هدف'):
+           waffraTr(e.category),rtl:!english),
           pw.Container(
            alignment:english?pw.Alignment.centerLeft:pw.Alignment.centerRight,
            padding:const pw.EdgeInsets.symmetric(horizontal:6,vertical:7),
@@ -11771,7 +11837,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   if(!mounted)return;
   switch(action){
    case 'open':await transactionDetails(entry);break;
-   case 'edit':await entrySheet(initial:entry);break;
+   case 'edit':
+    if(entry.sourceType=='goal_due'){
+     await _m665ExplainLinkedGoalEdit(paid:true);
+    }else{
+     await entrySheet(initial:entry);
+    }
+    break;
    case 'delete':await deleteEntry(entry);break;
   }
  }
@@ -13208,8 +13280,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    clipBehavior:Clip.antiAlias,child:Stack(children:[
     Padding(padding:EdgeInsets.fromLTRB(10,attachmentCount>0?20:9,10,9),child:Row(children:[
      CircleAvatar(radius:16,
-      backgroundColor:Color(cat.color).withValues(alpha:0.13),
-      child:WaffraIllustration(topic:cat.icon,size:36)),
+      backgroundColor:(entry.sourceType=='goal_due'?valueColor:Color(cat.color))
+       .withValues(alpha:0.13),
+      child:entry.sourceType=='goal_due'?
+       Icon(Icons.flag_outlined,color:valueColor,size:21):
+       WaffraIllustration(topic:cat.icon,size:36)),
      const SizedBox(width:8),
      Expanded(child:InkWell(onTap:WaffraHaptics.tap(()=>transactionDetails(entry)),
       child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
@@ -13224,7 +13299,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           maxLines:2,style:const TextStyle(
            fontSize:10,color:Colors.deepOrange,fontWeight:FontWeight.w600))),
        const SizedBox(height:2),
-       WaffraText(waffraTr(entry.category)+' • '+dayText(entry.date),
+       WaffraText((entry.sourceType=='goal_due'?
+        (waffraIsEnglish?'Savings goal due':'استحقاق هدف'):
+        waffraTr(entry.category))+' • '+dayText(entry.date),
         maxLines:1,style:const TextStyle(fontSize:11,color:Colors.grey)),
         const SizedBox(height:2),
         if(!paidDue)Row(children:[
@@ -13245,6 +13322,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            if(snapshot.connectionState!=ConnectionState.done){
             return const SizedBox.shrink();
            }
+           if(entry.sourceType=='goal_due'){
+            return Padding(padding:const EdgeInsets.only(top:5),
+             child:Row(children:[
+              Expanded(child:WaffraText(
+               (waffraIsEnglish?'From money account: ':'من الحساب المالي: ')+
+               (snapshot.data??(waffraIsEnglish?
+                'Unverified account':'حساب غير محدد')),
+               maxLines:2,style:TextStyle(color:valueColor,fontSize:11))),
+              const SizedBox(width:5),
+              Flexible(child:WaffraCurrencyAmount(
+               waffraGoalDueCashMinor(entry)/100,fontSize:12,color:valueColor)),
+             ]));
+           }
            return Padding(padding:const EdgeInsets.only(top:4),
             child:WaffraText(
              (waffraIsEnglish?'Paid from: ':'تم السداد من: ')+
@@ -13253,7 +13343,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
              maxLines:2,style:TextStyle(
               color:valueColor,fontSize:11,fontWeight:FontWeight.w600)));
           }),
-        if(entry.sourceType=='goal_due'&&entry.goalWalletPaidMinor>0)
+        if(entry.sourceType=='goal_due')
          Padding(padding:const EdgeInsets.only(top:3),
           child:Row(mainAxisSize:MainAxisSize.min,children:[
            WaffraText(waffraIsEnglish?
@@ -13263,7 +13353,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             entry.goalWalletPaidMinor/100,fontSize:11,color:valueColor)),
           ])),
        const SizedBox(height:4),
-       Align(alignment:AlignmentDirectional.centerStart,
+       if(entry.sourceType=='goal_due')
+        Row(children:[
+         Expanded(child:WaffraText(waffraIsEnglish?
+          'Total goal due':'إجمالي الاستحقاق',
+          style:TextStyle(fontSize:11,fontWeight:FontWeight.w700,color:valueColor))),
+         Flexible(child:WaffraCurrencyAmount(
+          entry.amount,fontSize:15,color:valueColor)),
+        ])
+       else Align(alignment:AlignmentDirectional.centerStart,
         child:WaffraCurrencyAmount(entry.income?entry.amount:-entry.amount,
          fontSize:15,color:valueColor)),
       ]))),
@@ -15782,32 +15880,32 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        title:WaffraText(waffraIsEnglish?'Quick actions':'إجراءات سريعة',
         style:const TextStyle(fontSize:13,fontWeight:FontWeight.w700)),
        children:[
-        Wrap(spacing:8,runSpacing:8,alignment:WrapAlignment.start,children:[
-         OutlinedButton.icon(
-          onPressed:WaffraHaptics.tap(()=>unawaited(_handleGoalCardAction(g,'edit'))),
-          icon:const Icon(Icons.edit_outlined,size:17),
-          label:WaffraText(waffraIsEnglish?'Edit':'تعديل')),
-         if(g.saved>0)OutlinedButton.icon(
-          onPressed:WaffraHaptics.tap(()=>unawaited(_handleGoalCardAction(g,'release'))),
-          icon:const Icon(Icons.account_balance_wallet_outlined,size:17),
-          label:WaffraText(waffraIsEnglish?'Release savings':'سحب المدخرات')),
-         OutlinedButton.icon(
-          onPressed:WaffraHaptics.tap(()=>unawaited(_handleGoalCardAction(g,'delete'))),
-          icon:const Icon(Icons.delete_outline_rounded,color:Colors.deepOrange,size:17),
-          label:WaffraText(waffraIsEnglish?'Delete':'حذف')),
+        Row(children:[
+         Expanded(child:Wrap(spacing:7,runSpacing:7,children:[
+          OutlinedButton.icon(
+           onPressed:WaffraHaptics.tap(()=>unawaited(_handleGoalCardAction(g,'edit'))),
+           icon:const Icon(Icons.edit_outlined,size:17),
+           label:WaffraText(waffraIsEnglish?'Edit':'تعديل')),
+          if(g.saved>0)OutlinedButton.icon(
+           onPressed:WaffraHaptics.tap(()=>unawaited(_handleGoalCardAction(g,'release'))),
+           icon:const Icon(Icons.account_balance_wallet_outlined,size:17),
+           label:WaffraText(waffraIsEnglish?'Release savings':'سحب المدخرات')),
+          OutlinedButton.icon(
+           onPressed:WaffraHaptics.tap(()=>unawaited(_handleGoalCardAction(g,'delete'))),
+           icon:const Icon(Icons.delete_outline_rounded,color:Colors.deepOrange,size:17),
+           label:WaffraText(waffraIsEnglish?'Delete':'حذف')),
+         ])),
+         const SizedBox(width:6),
+         Tooltip(message:g.active?
+          (waffraIsEnglish?'Pause goal':'إيقاف الهدف'):
+          (waffraIsEnglish?'Activate goal':'تفعيل الهدف'),
+          child:Semantics(label:waffraIsEnglish?'Goal active switch':'زر تفعيل الهدف',
+           child:Switch.adaptive(
+            key:Key('waffra-goal-active-switch-'+g.id),
+            activeTrackColor:emerald,value:g.active,
+            onChanged:WaffraHaptics.selection((enabled)=>
+             unawaited(setGoalActive(g,enabled)))))),
         ]),
-        SwitchListTile.adaptive(
-         key:Key('waffra-goal-active-switch-'+g.id),
-         contentPadding:EdgeInsets.zero,
-         title:WaffraText(
-          (waffraIsEnglish?'Goal enabled':'تفعيل الهدف')+'  •  '+
-          (g.active?(waffraIsEnglish?'Active':'مفعّل'):
-           (waffraIsEnglish?'Paused':'متوقف')),
-          maxLines:1,style:const TextStyle(fontSize:13,fontWeight:FontWeight.w600)),
-         activeTrackColor:emerald,
-         value:g.active,
-         onChanged:WaffraHaptics.selection((enabled)=>
-          unawaited(setGoalActive(g,enabled)))),
        ],
       )),
       if(g.dueDate!=null)Padding(padding:const EdgeInsets.only(top:8),
@@ -15882,6 +15980,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   ]));
  }
  Future<void> recurringDialog({String? suggestedTitle,double? suggestedAmount,RecurringBill? initial,RecurringBill? duplicate})async {
+  // Linked schedules are projections of a goal; never open a second editor.
+  if(initial?.linkedGoalId!=null){
+   await _m665ExplainLinkedGoalEdit();
+   return;
+  }
   // M641: the editor opens even on a fresh install with ZERO accounts.
   // Account selection remains mandatory at SAVE, not before opening.
   final verifiedRecurringAccounts=await _m641VerifiedGoalRecurringAccounts();
@@ -16108,6 +16211,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    postponedUntil:DateTime.tryParse(recurringPostponed[monthId]??''));
  }
  Future<void> _setRecurringActiveFromCard(RecurringBill r,bool enabled)async{
+  // The linked schedule is a projection of its goal. Changing it here
+  // would bypass the goal's atomic target/date/account and paid replay guard.
+  if(r.linkedGoalId!=null){
+   await _m665ExplainLinkedGoalEdit();
+   return;
+  }
        final index=recurring.indexWhere((item)=>item.id==r.id);
        if(index<0)return;
        if(enabled){
@@ -16125,8 +16234,32 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        await syncRecurringReminders();
 
  }
+ Future<void> _m665ExplainLinkedGoalEdit({bool paid=false})async{
+  if(!mounted)return;
+  await showWaffraDialog<void>(context:context,
+   builder:(dialog)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?
+     'Edit the linked goal first':'عدّل الهدف المرتبط أولًا'),
+    content:WaffraText(paid?
+     (waffraIsEnglish?
+      'This is an already paid goal settlement. Its saved wallet and bank debit cannot be edited as an ordinary transaction. Change goal settings in Goals; this does not rewrite a paid receipt.':
+      'ده استحقاق هدف مدفوع ومحفوظ. لا يمكن تعديل مبلغ محفظة الهدف أو خصم الحساب كعملية عادية. عدّل بيانات الهدف من صفحة الأهداف، بدون تغيير سجل الدفع السابق.'):
+     (waffraIsEnglish?
+      'This due date belongs to a savings goal. Edit the goal in Goals first; the linked due will follow that change automatically.':
+      'الاستحقاق ده مربوط بهدف ادخاري. عدّل الهدف من صفحة الأهداف أولًا، والتعديل هينعكس على الاستحقاق المرتبط تلقائيًا.')),
+    actions:[TextButton(
+     onPressed:()=>Navigator.pop(dialog),
+     child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))]));
+ }
  Future<void> _handleRecurringCardAction(RecurringBill r,String v)async{
-       if(v=='edit'){await recurringDialog(initial:r);return;}
+       if(v=='edit'){
+        if(r.linkedGoalId!=null){
+         await _m665ExplainLinkedGoalEdit();
+         return;
+        }
+        await recurringDialog(initial:r);
+        return;
+       }
        if(v!='delete')return;
        final hasHistory=entries.any((e)=>e.id.startsWith('rec_${r.id}_'));
        final ok=await confirmDeletion(waffraIsEnglish?'Delete recurring transaction?':'حذف العملية المتكررة',
@@ -16283,7 +16416,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    ...shown.map((r){
     final linked=goals.where((g)=>g.id==r.linkedGoalId).toList();
     final goal=linked.isEmpty?null:linked.single;
-    final color=Color(categoryFor(r.category,r.income).color);
+    final settledId=WaffraRecurringPolicy.entryId(r.id,
+     DateTime(r.startAt.year,r.startAt.month,r.startAt.day));
+    final paid=entries.where((e)=>e.id==settledId&&
+     e.sourceType=='goal_due').toList(growable:false);
+    final paidGoalDue=goal!=null&&paid.length==1?paid.single:null;
+    final color=paidGoalDue!=null?const Color(0xFF7653AA):
+     goal!=null?emerald:Color(categoryFor(r.category,r.income).color);
     final when=nextRecurringDue(r);
     final activeAccounts=r.accountId==null?const <WaffraAccountBalance>[]:
      _m467Accounts.where((a)=>a.id==r.accountId&&!a.archived).toList();
@@ -16298,15 +16437,29 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      child:Padding(padding:const EdgeInsets.symmetric(horizontal:12,vertical:13),child:Column(children:[
      Row(children:[
       CircleAvatar(backgroundColor:color.withValues(alpha:.13),
-       child:Icon(categoryIcon(categoryFor(r.category,r.income).icon),color:color)),
+       child:Icon(goal!=null?Icons.flag_outlined:
+        categoryIcon(categoryFor(r.category,r.income).icon),color:color)),
       const SizedBox(width:10),
       Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
        WaffraText(r.title,style:const TextStyle(fontSize:15,fontWeight:FontWeight.bold)),
-       WaffraText(cash(r.amount),style:const TextStyle(fontSize:14)),
+       WaffraText((paidGoalDue!=null?
+        (waffraIsEnglish?'Total due: ':'إجمالي الاستحقاق: '):'')+
+        cash(r.amount),style:const TextStyle(fontSize:14)),
        if(accountLabel!=null)WaffraText(
         (waffraIsEnglish?'Linked account: ':'الحساب المرتبط: ')+accountLabel,
         maxLines:2,style:const TextStyle(fontSize:11,color:emerald)),
-       if(goal!=null)...[
+       if(paidGoalDue!=null)...[
+        const SizedBox(height:7),
+        WaffraText(waffraIsEnglish?
+         'From goal wallet: ${cash(paidGoalDue.goalWalletPaidMinor/100)}':
+         'من محفظة الهدف: ${cash(paidGoalDue.goalWalletPaidMinor/100)}',
+         style:const TextStyle(fontSize:12,fontWeight:FontWeight.w600,color:Color(0xFF7653AA))),
+        const SizedBox(height:4),
+        WaffraText(waffraIsEnglish?
+         'From money account: ${cash(waffraGoalDueCashMinor(paidGoalDue)/100)}':
+         'من الحساب المالي: ${cash(waffraGoalDueCashMinor(paidGoalDue)/100)}',
+         style:const TextStyle(fontSize:12,fontWeight:FontWeight.w600,color:Color(0xFF7653AA))),
+       ]else if(goal!=null)...[
         const SizedBox(height:7),
         if(goal.target>0)LinearProgressIndicator(
          value:goal.target<=0?0:(goal.saved/goal.target).clamp(0.0,1.0),
@@ -16321,9 +16474,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          style:const TextStyle(fontSize:11,color:emerald)),
        ],
        const SizedBox(height:3),
-       WaffraText(r.active?
-        (waffraIsEnglish?'Next due: ${dayText(when)}':'الاستحقاق القادم: ${dayText(when)}'):
-        (waffraIsEnglish?'Paused':'متوقفة'),
+       WaffraText(paidGoalDue!=null?
+        (waffraIsEnglish?'Paid goal due':'استحقاق هدف مدفوع'):
+        r.active?
+         (waffraIsEnglish?'Next due: ${dayText(when)}':'الاستحقاق القادم: ${dayText(when)}'):
+         (waffraIsEnglish?'Paused':'متوقفة'),
         style:TextStyle(fontSize:11,color:r.active?Theme.of(context).hintColor:Colors.deepOrange)),
       ])),
      ]),
@@ -16342,10 +16497,23 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        style:const TextStyle(fontSize:13,fontWeight:FontWeight.w700)),
       children:[
        Row(children:[
-        Expanded(child:OutlinedButton.icon(
-         onPressed:WaffraHaptics.tap(()=>unawaited(_handleRecurringCardAction(r,'edit'))),
-         icon:const Icon(Icons.edit_outlined,size:17),
-         label:WaffraText(waffraIsEnglish?'Edit':'تعديل',maxLines:1))),
+        Expanded(child:Tooltip(
+         message:r.linkedGoalId!=null?
+          (waffraIsEnglish?'Edit the linked goal first':'عدّل الهدف المرتبط أولًا'):
+          (waffraIsEnglish?'Edit recurring due':'تعديل الاستحقاق'),
+         child:Semantics(
+          enabled:r.linkedGoalId==null,
+          hint:r.linkedGoalId!=null?(waffraIsEnglish?
+           'Tap for the reason this due cannot be edited here':
+           'اضغط لمعرفة سبب عدم إمكانية تعديل الاستحقاق هنا'):null,
+          child:Opacity(opacity:r.linkedGoalId!=null?0.46:1,
+           child:OutlinedButton.icon(
+            key:Key('m665-recurring-edit-'+r.id),
+            // Visually disabled but tap still explains where to edit.
+            onPressed:WaffraHaptics.tap(()=>
+             unawaited(_handleRecurringCardAction(r,'edit'))),
+            icon:const Icon(Icons.edit_outlined,size:17),
+            label:WaffraText(waffraIsEnglish?'Edit':'تعديل',maxLines:1)))))),
         const SizedBox(width:7),
         Expanded(child:OutlinedButton.icon(
          onPressed:WaffraHaptics.tap(()=>unawaited(_handleRecurringCardAction(r,'delete'))),
@@ -18295,7 +18463,8 @@ WaffraSmartChartData waffraSmartChartData(List<MoneyEntry> items,DateTime now){
  });
  final byCategory=<String,double>{};
  for(final e in valid.where((e)=>!e.income)){
-  byCategory[e.category]=(byCategory[e.category]??0)+e.amount;
+  final label=waffraEntryReportCategory(e);
+  byCategory[label]=(byCategory[label]??0)+e.amount;
  }
  final top=byCategory.entries.toList()
   ..sort((a,b)=>b.value.compareTo(a.value));

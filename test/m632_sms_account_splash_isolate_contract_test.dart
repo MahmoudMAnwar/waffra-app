@@ -15,7 +15,7 @@ void main(){
  final loader=source.split(' Future<void> _loadFinanceSafely()async{')[1]
   .split(' Widget _financialRecoveryScreen()')[0];
  final refresher=source.split(' Future<void> _runAutoSmsRefresh(')[1]
-  .split(' Future<void> _analyzeAmbiguousSmsOnDemand(')[0];
+  .split(' Future<void> _scanPreviousBankSmsFromSettings()async{')[0];
 
  testWidgets('splash is readable until genuine completion, once only',(tester)async{
   var completions=0;
@@ -87,9 +87,12 @@ void main(){
   final waiting=(result['waiting'] as List).cast<Map<String,Object?>>();
   final restore=(result['retainOnAckFailure'] as List).cast<Map<String,Object?>>();
   expect(committed,['dupe']);
-  expect(waiting.map((m)=>m['id']),containsAll(['fresh','new']));
-  expect(restore.single['id'],'dupe');
-  expect(waiting.any((m)=>m['id']=='fresh'&&m['sensitiveOtp']==true),isTrue);
+  // Ready-made verification rules now exclude pending native OTP IDs while
+  // never treating a committed hash as a newly excluded SMS.
+  expect((result['excluded'] as List).cast<String>(),['fresh']);
+  expect(waiting.map((m)=>m['id']),contains('new'));
+  expect(waiting.any((m)=>m['id']=='fresh'),isFalse);
+  expect(restore.map((m)=>m['id']),containsAll(['dupe','fresh']));
   // Background classification cannot authorize or post an account debit.
   expect(result.keys.toSet(),{'waiting','excluded','committed','retainOnAckFailure'});
  });
@@ -119,4 +122,35 @@ void main(){
   expect(loader,contains('const Duration(milliseconds:1200)'));
   expect(source,contains('_m632SmsNoticeTimer?.cancel();'));
  });
+
+ test('M665.6 ready excluded notices ACK natively, posted finance remains pending',()async{
+  final messages=<Map<String,Object?>>[
+   {'id':'otp','body':'Your verification code is 123456','sender':'TestBank'},
+   {'id':'promo','body':'Promotional offer for loyal customers','sender':'TestBank'},
+   {'id':'reminder','body':'payment reminder','sender':'TestBank'},
+   {'id':'marketing-discount','body':'خصم حصري اليوم','sender':'TestBank'},
+   {'id':'salary-plus-promo','body':'Salary deposit SAR 5000. promo code','sender':'TestBank'},
+   {'id':'salary-plus-otp','body':'Salary deposit SAR 5000. OTP code 123456','sender':'TestBank'},
+   {'id':'expense-plus-otp','body':'Card Purchase SAR 75.00 OTP verification code 123456','sender':'TestBank'},
+   {'id':'credit-plus-promo','body':'تم إيداع 400 ريال. عرض خاص','sender':'TestBank'},
+  ];
+  final result=await compute(waffraM632ClassifySmsQueue,<String,Object?>{
+   'results':messages,'rules':<Map<String,Object?>>[],
+   'categories':<String>[], 'hashes':<String>[],
+  });
+  final excluded=(result['excluded'] as List).cast<String>();
+  final waiting=(result['waiting'] as List).cast<Map<String,Object?>>();
+  expect(excluded,containsAll(<String>['otp','promo','reminder','marketing-discount']));
+  expect(excluded,isNot(contains('salary-plus-promo')));
+  expect(excluded,isNot(contains('salary-plus-otp')));
+  expect(excluded,isNot(contains('expense-plus-otp')));
+  expect(excluded,isNot(contains('credit-plus-promo')));
+  expect(waiting.map((row)=>row['id']),
+    containsAll(<String>['expense-plus-otp','credit-plus-promo','salary-plus-promo','salary-plus-otp']));
+  // An immutable seed doesn't create a money entry or sender-wide block.
+  expect(result.keys.toSet(),{'waiting','excluded','committed','retainOnAckFailure'});
+  expect((result['committed'] as List),isEmpty);
+ });
+
+
 }

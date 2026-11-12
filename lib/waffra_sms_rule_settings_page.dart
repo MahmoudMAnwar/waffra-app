@@ -530,11 +530,8 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
       ],
      )),
     const SizedBox(height:18),
-    Text(widget.english?'Built-in Saudi rules':'القواعد السعودية الجاهزة',
+    Text(widget.english?'Ready-made rules':'القواعد الجاهزة',
      style:Theme.of(context).textTheme.titleMedium),
-    Text(widget.english?
-     'Offline Arabic/English suggestions active on every installation. Read-only; your saved learning is kept separately and transactions always need approval.':
-     'قواعد عربية وإنجليزية محلية شغالة من أول تثبيت. جاهزة للعرض فقط، وقواعدك المتعلّمة محفوظة لوحدها، وأي عملية محتاجة موافقتك.'),
     const SizedBox(height:8),
     for(final kind in const <String>['income','expense','transfer','excluded'])
      _defaultRuleBucket(kind),
