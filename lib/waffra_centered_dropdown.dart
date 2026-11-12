@@ -1,5 +1,7 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'waffra_search.dart';
+import 'waffra_i18n.dart' show waffraTr;
 
 /// Centered dropdown used in Waffra forms. Unlike Material's anchored popup,
 /// this keeps actions legible above IME and Android navigation in RTL and LTR.
@@ -48,11 +50,24 @@ class WaffraCenteredDropdownFormField<T> extends FormField<T> {
           borderRadius:BorderRadius.circular(13),
           onTap:!enabled?null:()async {
             FocusScope.of(field.context).unfocus();
+            var searchQuery='';
             final choice=await showDialog<_WaffraChoice<T>>(
               context:field.context,
               barrierDismissible:true,
               barrierColor:Colors.black.withValues(alpha:.28),
-              builder:(dialogContext)=>BackdropFilter(
+              builder:(dialogContext)=>StatefulBuilder(
+               builder:(dialogContext,redraw){
+                // Empty search has zero additional list allocations; filled
+                // search matches only, never normalizes persisted values.
+                final matched=searchQuery.isEmpty?null:<int>[
+                 for(var i=0;i<items.length;i++)
+                  if(waffraSearchAny([
+                   _waffraChoiceSearchText(items[i].child),
+                   waffraTr(_waffraChoiceSearchText(items[i].child)),
+                   items[i].value?.toString()??'',
+                  ],searchQuery))i,
+                ];
+                return BackdropFilter(
                 // Keep a subtle blur; respect system reduced-animations mode
                 // without a costly sigma-6 full-screen raster pass.
                 filter:ui.ImageFilter.blur(
@@ -87,11 +102,33 @@ class WaffraCenteredDropdownFormField<T> extends FormField<T> {
                             onPressed:()=>Navigator.pop(dialogContext)),
                         ]),
                       ),
-                      Flexible(child:ListView.builder(
+                      Padding(
+                       padding:const EdgeInsets.fromLTRB(12,0,12,8),
+                       child:TextField(
+                        key:const Key('waffra-centered-dropdown-search'),
+                        onChanged:(text)=>redraw(()=>searchQuery=text),
+                        decoration:InputDecoration(
+                         isDense:true,
+                         prefixIcon:const Icon(Icons.search_rounded),
+                         hintText:Directionality.of(dialogContext)==
+                           TextDirection.rtl?'ابحث في القائمة':'Search options',
+                         border:const OutlineInputBorder()),
+                       ),
+                      ),
+                      Flexible(child:matched!=null&&matched.isEmpty?
+                       Center(child:Padding(
+                        padding:const EdgeInsets.all(14),
+                        child:Text(
+                         Directionality.of(dialogContext)==TextDirection.rtl?
+                          'لا توجد نتائج مطابقة':'No matching results',
+                         key:const Key('waffra-centered-dropdown-no-results'),
+                         textAlign:TextAlign.center))):
+                       ListView.builder(
                         shrinkWrap:true,
-                        itemCount:items.length,
+                        itemCount:matched?.length??items.length,
                         itemBuilder:(ctx,index) {
-                          final item=items[index];
+                          final actualIndex=matched==null?index:matched[index];
+                          final item=items[actualIndex];
                           final chosen=item.value==field.value;
                           return Padding(
                            padding:const EdgeInsets.symmetric(
@@ -107,7 +144,7 @@ class WaffraCenteredDropdownFormField<T> extends FormField<T> {
                             clipBehavior:Clip.antiAlias,
                             child:ListTile(
                              enabled:item.enabled,
-                             key:Key('waffra-modal-choice-$index'),
+                             key:Key('waffra-modal-choice-$actualIndex'),
                              minVerticalPadding:12,
                              contentPadding:const EdgeInsets.symmetric(
                               horizontal:15,vertical:2),
@@ -128,7 +165,8 @@ class WaffraCenteredDropdownFormField<T> extends FormField<T> {
                     ]),
                   ),
                 )),
-              ),
+              );
+               }),
             );
             if(choice==null||!field.mounted)return;
             field.didChange(choice.value);
@@ -155,4 +193,21 @@ class WaffraCenteredDropdownFormField<T> extends FormField<T> {
 class _WaffraChoice<T> {
   const _WaffraChoice(this.value);
   final T? value;
+}
+
+String _waffraChoiceSearchText(Widget widget){
+ if(widget is Text)return widget.data??widget.textSpan?.toPlainText()??'';
+ if(widget is RichText)return widget.text.toPlainText();
+ if(widget is Row)return widget.children.map(_waffraChoiceSearchText).join(' ');
+ if(widget is Column)return widget.children.map(_waffraChoiceSearchText).join(' ');
+ if(widget is Padding&&widget.child!=null)return _waffraChoiceSearchText(widget.child!);
+ if(widget is Align&&widget.child!=null)return _waffraChoiceSearchText(widget.child!);
+ if(widget is Expanded)return _waffraChoiceSearchText(widget.child);
+ if(widget is Flexible)return _waffraChoiceSearchText(widget.child);
+ if(widget is ListTile){
+  return [if(widget.title!=null)_waffraChoiceSearchText(widget.title!),
+   if(widget.subtitle!=null)_waffraChoiceSearchText(widget.subtitle!)]
+   .join(' ');
+ }
+ return '';
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'waffra_centered_dropdown.dart';
 import 'package:flutter/services.dart';
 import 'main.dart' show snack, snackSuccess;
 
@@ -63,7 +64,7 @@ class _WaffraAccountContextSettingsState
       mainAxisSize:MainAxisSize.min,children:[
        Text(item.title),
        const SizedBox(height:12),
-       DropdownButtonFormField<String>(
+       WaffraCenteredDropdownFormField<String>(
         key:ValueKey('m470-recurring-provider-'+(selectedProvider??'none')),
         initialValue:selectedProvider,isExpanded:true,
         decoration:InputDecoration(
@@ -79,7 +80,7 @@ class _WaffraAccountContextSettingsState
         }),
        ),
        const SizedBox(height:12),
-       DropdownButtonFormField<String>(
+       WaffraCenteredDropdownFormField<String>(
         key:ValueKey('m470-recurring-account-'+(selectedProvider??'none')),
         initialValue:chosen,isExpanded:true,
         decoration:InputDecoration(
@@ -145,7 +146,7 @@ class _WaffraAccountContextSettingsState
           'Choose a bank account to review or correct its saved last four digits. '
           'Unmatched messages require an explicit account choice.')),
         const SizedBox(height:10),
-        DropdownButtonFormField<String>(
+        WaffraCenteredDropdownFormField<String>(
          key:ValueKey('m481-verified-bank-select-'+(selected??'none')),
          initialValue:selected,isExpanded:true,
          decoration:InputDecoration(labelText:t('الحساب البنكي','Bank account'),

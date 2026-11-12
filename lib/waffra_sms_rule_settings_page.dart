@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'waffra_sms_local_rules.dart';
 import 'waffra_bank_sms_facts.dart';
+import 'waffra_centered_dropdown.dart';
 
 /// Rules configure offline review suggestions only. This screen has no ledger,
 /// bank-account, SMS-permission, or cloud-provider write capability.
@@ -184,6 +185,23 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
             'Waffra filled this rule from the message. Review and confirm.':
             'وفرة جهّز القاعدة من الرسالة. راجع البيانات واحفظ.')),
           ])),
+         const SizedBox(height:8),
+         // M669: even the suggested-rule review must expose the original
+         // message verbatim. Genuine verification/OTP text is redacted.
+         Card(child:Padding(
+          padding:const EdgeInsets.all(12),
+          child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+           Text(widget.english?'Original bank SMS':'نص الرسالة البنكية الأصلي',
+            style:Theme.of(ctx).textTheme.titleSmall),
+           const SizedBox(height:6),
+           WaffraBankSmsFactsParser.isVerificationChallenge(seed)?
+            Text(widget.english?'Verification content is hidden.':
+             'نص التحقق مخفي لحمايتك.'):
+            SelectableText(seed,
+             key:const Key('m669-sms-rule-original-text'),
+             textAlign:TextAlign.start),
+          ]),
+         )),
         ],
         const SizedBox(height:10),
         TextField(controller:name,textInputAction:TextInputAction.next,
@@ -216,7 +234,7 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
         ]),
         const SizedBox(height:12),
         if(financial)...[
-         DropdownButtonFormField<String>(
+         WaffraCenteredDropdownFormField<String>(
           key:ValueKey('sms-rule-category-$kind'),
           initialValue:category,
           isExpanded:true,
@@ -326,7 +344,7 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
           onChanged:widget.bankAccounts.isEmpty?null:
            (v)=>refresh(()=>autoPost=v)),
          if(autoPost)...[
-          DropdownButtonFormField<String>(
+          WaffraCenteredDropdownFormField<String>(
            key:ValueKey('waffra-sms-rule-account-$accountId'),
            initialValue:widget.bankAccounts.containsKey(accountId)?
             accountId:null,

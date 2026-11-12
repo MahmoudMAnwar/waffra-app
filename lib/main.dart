@@ -568,6 +568,48 @@ bool waffraCanAssignManualCategory(Iterable<BudgetCategory> values,
    waffraCategoryAvailableForNewEntry(all,c));
 }
 
+/// M669: bank SMS suggestions are NOT category selections. A root-only
+/// candidate, notably "تحويلات", may suggest the main heading but must
+/// never be displayed or committed as a child. Name-only matches across
+/// parents/directions are ambiguous, so require explicit user selection.
+({BudgetCategory? parent,BudgetCategory? leaf})
+waffraResolveSmsReviewCategory(Iterable<BudgetCategory> categories,{
+ required bool income,required String proposed,
+}){
+ final all=categories.toList(growable:false);
+ final hint=proposed.trim();
+ if(hint.isEmpty)return (parent:null,leaf:null);
+ final roots=all.where((c)=>!c.isSubcategory&&c.income==income&&
+  c.categoryActive).toList();
+ final leaves=all.where((c)=>c.isSubcategory&&c.income==income&&
+  waffraCategoryAvailableForNewEntry(all,c)).toList();
+ final parts=hint.split(RegExp(r'\s*/\s*'));
+ if(parts.length==2){
+  final matchingParents=roots.where((p)=>p.name==parts.first||
+   p.displayName==parts.first).toList();
+  if(matchingParents.length!=1)return (parent:null,leaf:null);
+  final parent=matchingParents.single;
+  final matchingChildren=leaves.where((c)=>c.parentId==parent.id&&
+   (c.name==hint||c.name==parts.last||
+    c.displayName==parts.last)).toList();
+  return (parent:parent,
+    leaf:matchingChildren.length==1?matchingChildren.single:null);
+ }
+ // A catalog root always takes priority over a same-name leaf hint.
+ final parents=roots.where((p)=>p.name==hint||
+  p.displayName==hint).toList();
+ if(parents.length==1)return (parent:parents.single,leaf:null);
+ if(parents.isNotEmpty)return (parent:null,leaf:null);
+ final matchingChildren=leaves.where((c)=>c.name==hint||
+  c.displayName==hint).toList();
+ if(matchingChildren.length!=1)return (parent:null,leaf:null);
+ final leaf=matchingChildren.single;
+ final matches=roots.where((p)=>p.id==leaf.parentId).toList();
+ return (parent:matches.length==1?matches.single:null,
+   leaf:matches.length==1?leaf:null);
+}
+
+
 class SavingGoal {
  final String id,name;
  /// Stable, user-approved verified funding account; null only for old goals.
@@ -6689,15 +6731,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final proposedCategory=localFacts?['category'] is String?
     localFacts!['category'] as String:parsed.category;
    final expectedIncome=facts.kind==WaffraBankOperationKind.income;
-   final previewLeaves=categories.where((c)=>
-    c.income==expectedIncome&&c.isSubcategory&&
-    c.name==proposedCategory&&
-    waffraCategoryAvailableForNewEntry(categories,c)).toList();
-   final previewParents=previewLeaves.length==1?
-    categories.where((c)=>!c.isSubcategory&&
-     c.id==previewLeaves.single.parentId).toList():<BudgetCategory>[];
-   final previewMainName=previewParents.length==1?
-    previewParents.single.displayName:
+   // M669: a bank classifier can suggest a ROOT (e.g. تحويلات) without
+   // providing any leaf. The root is shown as MAIN only; a user must pick
+   // an actual child. Same-name/legacy hints need exact parent validation.
+   final previewHint=waffraResolveSmsReviewCategory(categories,
+    income:expectedIncome,proposed:proposedCategory);
+   final previewMainName=previewHint.parent?.displayName??
     (waffraIsEnglish?'Choose main category':'يحتاج اختيار القسم الرئيسي');
    // The first account is an independent setup step, NOT a valid-category
    // confirmation. A user must be able to create it before fixing category.
@@ -6712,15 +6751,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     originalDate.toIso8601String().replaceFirst('T',' ').substring(0,16);
    // The SMS category can be corrected inline without re-opening a money-account
    // selector. A verified account alone never bypasses mandatory category checks.
-   String reviewedCategory=proposedCategory;
+   String reviewedCategory=previewHint.leaf?.name??
+    (waffraIsEnglish?'Choose subcategory':'يحتاج اختيار القسم الفرعي');
    String reviewedMainName=previewMainName;
-   bool reviewCategoryValid=previewLeaves.length==1&&previewParents.length==1;
+   bool reviewCategoryValid=previewHint.leaf!=null&&
+    previewHint.parent!=null;
+   // M669: an independent conservative BankParser may decline to extract
+   // an amount even when verified original SAR facts did extract one.
+   // The atomic writer validates original facts, NOT that optional second
+   // parser. A present conflicting parsed amount/direction still blocks Yes.
    bool canConfirm=understood&&facts.canAutoPostAsIncomeExpense&&
     originalAmount!=null&&originalAmount.currency=='SAR'&&
     originalDate!=null&&!bankSmsHasUnverifiedTimestamp(body)&&
-    parsed.amount!=null&&
-    (parsed.amount!-originalAmount.amount).abs()<0.00001&&
-    parsed.income==expectedIncome&&reviewCategoryValid;
+    (parsed.amount==null||
+     (parsed.amount!-originalAmount.amount).abs()<0.00001)&&
+    (parsed.amount==null||parsed.income==expectedIncome)&&
+    reviewCategoryValid;
    // A type selection in compact review is only a requested correction;
    // it must never ACK or post money until the verified ledger editor saves.
    String? reviewType=sensitive?null:switch(facts.kind){
@@ -6737,54 +6783,127 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    ({List<String?>? ids,int? generation})? reviewedAccount;
    String? reviewedAccountName;
    bool choosingAccount=false;
+   // M669: a disabled Yes must say WHY and offer the safe editor. The
+   // conditions mirror the verified atomic writer; choosing a category or
+   // account alone never bypasses currency, source and timestamp checks.
+   List<String> reviewBlockers(){
+    final missing=<String>[];
+    if(!reviewCategoryValid)missing.add(waffraIsEnglish?
+     'Choose one active main and subcategory.':
+     'اختار قسمًا رئيسيًا وفرعيًا صالحين وغير مكررين.');
+    if(reviewedAccount?.ids?.single==null||
+       reviewedAccount?.generation==null)missing.add(waffraIsEnglish?
+     'Confirm the financial account.':'أكّد الحساب المالي.');
+    if(!understood||!facts.canAutoPostAsIncomeExpense)missing.add(
+     waffraIsEnglish?'Transaction type must be reviewed.':
+      'نوع العملية يحتاج مراجعة.');
+    if(originalAmount==null||originalAmount.currency!='SAR')missing.add(
+     waffraIsEnglish?'Original SAR amount needs verification.':
+      'مبلغ الريال الأصلي يحتاج مراجعة.');
+    if(originalDate==null||bankSmsHasUnverifiedTimestamp(body))missing.add(
+     waffraIsEnglish?'Original transaction date/time needs verification.':
+      'تاريخ ووقت العملية الأصليان يحتاجان مراجعة.');
+    if(parsed.amount!=null&&originalAmount!=null&&
+      (parsed.amount!-originalAmount.amount).abs()>0.00001)missing.add(
+     waffraIsEnglish?'Parsed amount conflicts with original SMS.':
+      'المبلغ المقروء مختلف عن المبلغ الأصلي في الرسالة.');
+    if(parsed.amount!=null&&parsed.income!=expectedIncome)missing.add(
+     waffraIsEnglish?'Bank SMS direction needs review.':
+      'اتجاه العملية البنكية يحتاج مراجعة.');
+    return missing;
+   }
    Future<void> selectReviewCategory(StateSetter redraw,BuildContext dialog)async{
-    // First-time account creation must not force a second account picker just
-    // because the SMS's inferred main category is missing.
+    // M669: the SMS hint is only a suggestion. Choose a real ACTIVE parent
+    // and then one of its ACTIVE children; both steps are searchable.
+    // No category, bank balance or SMS is modified on cancel/back.
     final mainChoices=categories.where((c)=>
-     !c.isSubcategory&&c.income==expectedIncome).toList();
+     !c.isSubcategory&&c.income==expectedIncome&&
+     c.categoryActive).toList();
     BudgetCategory? chosenMain;
+    var query='';
     final chosen=await showWaffraDialog<BudgetCategory>(
      context:dialog,builder:(picker)=>
-      StatefulBuilder(builder:(picker,choose)=>AlertDialog(
+      StatefulBuilder(builder:(picker,choose){
+       final children=chosenMain==null?<BudgetCategory>[]:
+        waffraManualCategoryChildren(categories,expectedIncome,chosenMain!.id);
+       final mainMatches=mainChoices.where((parent)=>
+        waffraSearchAny([parent.name,parent.displayName,
+         waffraTr(parent.name)],query)||
+        categories.any((child)=>child.isSubcategory&&
+         child.parentId==parent.id&&child.income==expectedIncome&&
+         waffraCategoryAvailableForNewEntry(categories,child)&&
+         waffraSearchAny([child.name,child.displayName,
+          waffraTr(child.displayName)],query))).toList();
+       final leafMatches=children.where((leaf)=>
+        waffraSearchAny([leaf.name,leaf.displayName,
+         waffraTr(leaf.displayName)],query)).toList();
+       return AlertDialog(
        title:WaffraText(waffraIsEnglish?
         'Choose main and subcategory':'اختيار القسم الرئيسي والفرعي'),
-       content:SizedBox(width:360,height:320,child:ListView(
-        children:chosenMain==null?[
-         for(final parent in mainChoices)ListTile(
-          title:WaffraText(parent.displayName),
-          trailing:const Icon(Icons.chevron_left_rounded),
-          onTap:()=>choose(()=>chosenMain=parent)),
-        ]:[
-         ListTile(
+       content:SizedBox(width:360,height:350,child:Column(children:[
+        TextField(
+         key:ValueKey('m669-review-category-search-${chosenMain?.id??'main'}'),
+         onChanged:(value)=>choose(()=>query=value),
+         decoration:InputDecoration(
+          prefixIcon:const Icon(Icons.search_rounded),
+          hintText:waffraIsEnglish?'Search categories':'ابحث في الأقسام',
+          border:const OutlineInputBorder())),
+        const SizedBox(height:8),
+        Expanded(child:ListView(children:[
+         if(chosenMain!=null)ListTile(
           leading:const Icon(Icons.arrow_back_rounded),
           title:WaffraText(chosenMain!.displayName),
-          onTap:()=>choose(()=>chosenMain=null)),
-         for(final leaf in categories.where((c)=>
-          c.isSubcategory&&c.income==expectedIncome&&
-          c.parentId==chosenMain!.id&&
-          waffraCategoryAvailableForNewEntry(categories,c)))
-          ListTile(title:WaffraText(leaf.displayName),
+          onTap:()=>choose((){
+           chosenMain=null;query='';
+          })),
+         if(chosenMain==null)...[
+          for(final parent in mainMatches)ListTile(
+           title:WaffraText(parent.displayName),
+           trailing:const Icon(Icons.chevron_left_rounded),
+           onTap:()=>choose((){
+            chosenMain=parent;query='';
+           })),
+          if(mainMatches.isEmpty)ListTile(
+           key:const Key('m669-review-category-no-results'),
+           title:WaffraText(waffraIsEnglish?
+            'No matching main categories':'لا توجد أقسام رئيسية مطابقة')),
+         ]else...[
+          for(final leaf in leafMatches)ListTile(
+           title:WaffraText(leaf.displayName),
            onTap:()=>Navigator.pop(picker,leaf)),
-        ],
-       )),
+          if(leafMatches.isEmpty)ListTile(
+           key:const Key('m669-review-category-no-results'),
+           title:WaffraText(waffraIsEnglish?
+            'No matching subcategories':'لا توجد أقسام فرعية مطابقة')),
+         ],
+        ])),
+       ])),
        actions:[TextButton(
         onPressed:()=>Navigator.pop(picker),
         child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء'))],
-      )));
+      );
+      }));
     if(chosen==null||!mounted||!dialog.mounted)return;
     final parent=categories.where((c)=>!c.isSubcategory&&
-      c.id==chosen.parentId&&c.income==expectedIncome).toList();
+      c.id==chosen.parentId&&c.income==expectedIncome&&
+      c.categoryActive).toList();
     if(parent.length!=1)return;
+    // The persisted finance record still stores category name. Do not
+    // falsely enable Yes when two active children share the same name.
+    final unambiguous=categories.where((c)=>c.isSubcategory&&
+      c.income==expectedIncome&&c.name==chosen.name&&
+      waffraCategoryAvailableForNewEntry(categories,c)).length==1;
     redraw((){
      reviewedCategory=chosen.name;
      reviewedMainName=parent.single.displayName;
-     reviewCategoryValid=true;
+     reviewCategoryValid=unambiguous;
      canConfirm=understood&&facts.canAutoPostAsIncomeExpense&&
       originalAmount!=null&&originalAmount.currency=='SAR'&&
       originalDate!=null&&!bankSmsHasUnverifiedTimestamp(body)&&
-      parsed.amount!=null&&
-      (parsed.amount!-originalAmount.amount).abs()<0.00001&&
-      parsed.income==expectedIncome&&reviewCategoryValid;
+      (parsed.amount==null||
+       (parsed.amount!-originalAmount.amount).abs()<0.00001)&&
+      (parsed.amount==null||parsed.income==expectedIncome)&&
+      reviewCategoryValid;
     });
    }
    Future<void> selectAccountBeforeYes(StateSetter redraw,BuildContext dialog)async{
@@ -6897,8 +7016,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         ])),
        // M662: no duplicate type picker above the original SMS. Uncertain
        // SMS keeps explicit user-driven choices BELOW the message.
-       if(!sensitive&&!understood&&
-          facts.kind!=WaffraBankOperationKind.transfer)Padding(
+       // M669: all actual financial SMS review confirmations show the
+       // UNCHANGED original message, not just a parser's summary. This
+       // shared dialog serves sender inbox, notification tap and per-message
+       // review. A genuine OTP/security challenge must remain hidden.
+       if(!sensitive)Padding(
         padding:const EdgeInsets.only(top:10),
         child:Card(
          color:Theme.of(dialog).colorScheme.surfaceContainerLow,
@@ -6908,8 +7030,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          title:WaffraText(waffraIsEnglish?
           'Read original bank message':'عرض نص الرسالة البنكية الأصلي'),
          children:[Padding(padding:const EdgeInsets.all(14),
-          child:SelectableText(body,textAlign:TextAlign.start))],
-        ))),
+          child:KeyedSubtree(
+           key:const Key('m669-review-original-sms-text'),
+           child:SelectableText(body,textAlign:TextAlign.start)))],
+        )))
+       else Card(child:Padding(
+        padding:const EdgeInsets.all(12),
+        child:WaffraText(waffraIsEnglish?
+         'Verification SMS content is hidden for your safety.':
+         'نص رسالة التحقق مخفي لحمايتك.'))),
        if(!sensitive&&!understood&&
           facts.kind!=WaffraBankOperationKind.transfer)...[
         const SizedBox(height:8),
@@ -6996,9 +7125,46 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          Expanded(child:FilledButton(
           key:const Key('m565-sms-yes-confirm'),
           onPressed:canConfirm&&reviewedAccount?.ids?.single!=null&&
+           reviewedAccount?.generation!=null&&
            !choosingAccount?()=>Navigator.pop(dialog,'yes'):null,
           child:WaffraText(waffraIsEnglish?'Yes':'نعم'))),
         ]),
+        if(!canConfirm||reviewedAccount?.ids?.single==null||
+           reviewedAccount?.generation==null)...[
+         const SizedBox(height:8),
+         Container(
+          key:const Key('m669-sms-review-blockers'),
+          padding:const EdgeInsets.all(10),
+          decoration:BoxDecoration(
+           color:Theme.of(dialog).colorScheme.surfaceContainerLow,
+           borderRadius:BorderRadius.circular(12)),
+          child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+           WaffraText(waffraIsEnglish?
+            'To enable Yes, complete these checks:':
+            'لتفعيل نعم، راجع المطلوب:'),
+           const SizedBox(height:5),
+           ...reviewBlockers().map((reason)=>Padding(
+            padding:const EdgeInsets.symmetric(vertical:2),
+            child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
+             const Icon(Icons.info_outline_rounded,size:16,color:emerald),
+             const SizedBox(width:5),
+             Expanded(child:WaffraText(reason,
+              style:const TextStyle(fontSize:12))),
+            ]))),
+           if(reviewBlockers().any((reason)=>
+             !reason.contains('قسم')&&!reason.contains('category')&&
+             !reason.contains('حساب')&&!reason.contains('account')))...[
+            const SizedBox(height:6),
+            TextButton.icon(
+             key:const Key('m669-sms-review-safe-editor'),
+             onPressed:()=>Navigator.pop(dialog,'review'),
+             icon:const Icon(Icons.edit_note_outlined),
+             label:WaffraText(waffraIsEnglish?
+              'Review details in editor':'راجع البيانات في شاشة التعديل')),
+           ],
+          ]),
+         ),
+        ],
        ],
        // Exclude is a separate, reversible action BELOW Yes/No.
        if(!sensitive&&facts.kind!=WaffraBankOperationKind.transfer)

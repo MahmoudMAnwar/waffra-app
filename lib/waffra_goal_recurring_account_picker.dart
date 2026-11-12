@@ -1,5 +1,6 @@
 
 import 'package:flutter/material.dart';
+import 'waffra_centered_dropdown.dart';
 
 import 'storage/waffra_accounts_repository.dart';
 import 'waffra_recurring_account_groups.dart';
@@ -106,7 +107,7 @@ class _WaffraGoalRecurringAccountPickerState
   final chosenAccount=linked.any((a)=>a.id==accountId)?accountId:null;
   return Column(crossAxisAlignment:CrossAxisAlignment.stretch,
    mainAxisSize:MainAxisSize.min,children:[
-   DropdownButtonFormField<String>(
+   WaffraCenteredDropdownFormField<String>(
     key:ValueKey(widget.idPrefix.toString()+'-category-'+(category??'none')),
     initialValue:category,isExpanded:true,
     decoration:InputDecoration(
@@ -125,7 +126,7 @@ class _WaffraGoalRecurringAccountPickerState
     onChanged:_chooseCategory,
    ),
    const SizedBox(height:10),
-   DropdownButtonFormField<String>(
+   WaffraCenteredDropdownFormField<String>(
     key:ValueKey(widget.idPrefix.toString()+'-provider-'+(groupId??'none')),
     initialValue:matching.any((g)=>g.id==groupId)?groupId:null,
     isExpanded:true,
@@ -138,7 +139,7 @@ class _WaffraGoalRecurringAccountPickerState
     onChanged:category==null?null:_chooseProvider,
    ),
    const SizedBox(height:10),
-   DropdownButtonFormField<String>(
+   WaffraCenteredDropdownFormField<String>(
     key:ValueKey(widget.idPrefix.toString()+'-account-'+(chosenAccount??'none')),
     initialValue:chosenAccount,isExpanded:true,
     decoration:InputDecoration(
