@@ -111,38 +111,35 @@ void main() {
 
   testWidgets('M274 error notice closes without covering footer actions',
       (tester) async {
-    final source = ValueNotifier<WaffraNoticeData?>(WaffraNoticeData(
-      text: 'هذا الحقل مطلوب',
-      kind: WaffraSnackKind.error,
-      duration: const Duration(seconds: 5),
-      requireDismissal: true,
-    ));
-    addTearDown(source.dispose);
+    var selected=0;
     await tester.pumpWidget(MaterialApp(
-      home: Scaffold(
-        body: const SizedBox.expand(),
-        bottomNavigationBar: Column(mainAxisSize: MainAxisSize.min, children: [
-          WaffraFooterNoticeHost(
-            listenable: source,
-            onDismiss: () => source.value = null,
-          ),
-          WaffraFooterNavigation(
-            selectedIndex: 0, english: false, onSelected: (_) {},
-          ),
+      builder:(ctx,child)=>WaffraNoticeTapDismissArea(child:child!),
+      home:Scaffold(
+        body:Builder(builder:(ctx)=>TextButton(
+          onPressed:()=>snack(ctx,'هذا الحقل مطلوب',
+           preferFooter:true,kind:WaffraSnackKind.error,
+           requireDismissal:true),
+          child:const Text('Show error'))),
+        bottomNavigationBar:Column(mainAxisSize:MainAxisSize.min,children:[
+         const WaffraFooterNoticeHost(),
+         WaffraFooterNavigation(
+          selectedIndex:0,english:false,onSelected:(_)=>selected++),
         ]),
       ),
     ));
+    await tester.tap(find.text('Show error'));
     await tester.pumpAndSettle();
-    expect(find.byKey(const Key('waffra-modern-footer')), findsOneWidget);
-    expect(find.byType(WaffraNoticeContent), findsOneWidget);
-    final notice = tester.getRect(find.byType(WaffraNoticeContent));
-    final footer = tester.getRect(
-        find.byKey(const Key('waffra-modern-footer')));
-    expect(notice.bottom, lessThanOrEqualTo(footer.top + 1));
-    await tester.tap(find.byTooltip('إغلاق'));
+    expect(find.byKey(const Key('waffra-modern-footer')),findsOneWidget);
+    expect(find.byType(WaffraNoticeContent),findsOneWidget);
+    expect(find.byKey(const Key('waffra-snackbar-close')),findsNothing);
+    final notice=tester.getRect(find.byType(WaffraNoticeContent));
+    final footer=tester.getRect(find.byKey(const Key('waffra-modern-footer')));
+    expect(notice.bottom,lessThanOrEqualTo(footer.top+1));
+    // The footer action must still run, and that tap clears the Snackbar.
+    await tester.tap(find.byKey(const Key('waffra-nav-2')));
     await tester.pumpAndSettle();
-    expect(source.value, isNull);
-    expect(find.byType(WaffraNoticeContent), findsNothing);
-    expect(tester.takeException(), isNull);
+    expect(selected,1);
+    expect(find.byType(WaffraNoticeContent),findsNothing);
+    expect(tester.takeException(),isNull);
   });
 }
