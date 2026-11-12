@@ -1944,7 +1944,6 @@
       ],
       "test_paths": [
         "test/m669_sms_review_category_search_test.dart",
-        "test/m402_budget_month_centered_dropdown_test.dart",
         "test/m401_m402_budget_month_centered_dropdown_test.dart",
         "test/m529_centered_dropdown_smoothness_test.dart",
         "test/m665_sms_review_structural_learning_test.dart",
