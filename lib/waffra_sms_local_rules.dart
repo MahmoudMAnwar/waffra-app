@@ -185,6 +185,33 @@ abstract final class WaffraSmsLocalRules {
   r'\b(?:transfer completed|transfer successful|funds transferred)\b',
   caseSensitive:false).hasMatch(body);
 
+ /// Unlike generic bank words ("payment reminder" or "exclusive discount"),
+ /// these are independent, affirmative signs of a COMPLETED bank movement.
+ /// A ready-made exclusion must never ACK a message containing such evidence.
+ static bool _hasPostedMoneyEvidence(String body){
+  final facts=WaffraBankSmsFactsParser.parse(body);
+  final posted=RegExp(
+   r'\b(?:debited|credited|withdrawn|withdrawal|paid|pos)\b|'
+   r'\b(?:transfer\s+(?:sent|received|completed|successful)|'
+   r'funds\s+transferred|payment\s+(?:completed|successful|posted)|'
+   r'purchase\s+(?:completed|successful|posted))\b|'
+   r'(?:تم|تمت)\s+(?:خصم|سحب|إيداع|ايداع|تحويل|ارسال|إرسال|استلام)\b|'
+   r'حوالة\s+(?:صادرة|واردة)|تحويل\s+(?:صادر|وارد)|'
+   r'خصم\s+(?:من\s+(?:الحساب|البطاقة)|مبلغ|بقيمة)',
+   caseSensitive:false,
+  ).hasMatch(body);
+  if(posted)return true;
+  // A rejected/pending purchase is not evidence that money moved.
+  if(facts.pending)return false;
+  // A bank purchase headline with a numeric amount remains REVIEW, even if
+  // the same SMS also says "OTP", "special offer" or "card activated".
+  if(RegExp(r'\b(?:card\s+purchase|online\s+purchase|'
+   r'purchase\s+card)\b',caseSensitive:false).hasMatch(body)&&
+   RegExp(r'\d+(?:[.,]\d+)?').hasMatch(body))return true;
+  // Bank-facts transfer evidence outweighs any unrelated promo/OTP phrase.
+  return facts.kind==WaffraBankOperationKind.transfer;
+ }
+
  /// Transfers cannot create ledger income/expense entries; exclude rules
  /// only operate on unconfirmed, non-financial messages.
  static WaffraSmsLocalRule? resolveSpecial({
@@ -193,9 +220,13 @@ abstract final class WaffraSmsLocalRules {
   Iterable<WaffraSmsLocalRule> custom=const <WaffraSmsLocalRule>[],
  }) {
   if(bankKind==WaffraBankOperationKind.uncertain&&
-     _hasCompletedFinanceCue(body))return null;
+     _hasPostedMoneyEvidence(body))return null;
+  // Keep manually learned exclusions fail-closed on generic finance cues.
+  // First-party immutable ready-made notices use the more specific posted-
+  // movement guard so reminders/discount codes aren't confused with debits.
   final eligible=<WaffraSmsLocalRule>[
-   ...custom,
+   ...custom.where((rule)=>rule.resolvedKind!='excluded'||
+    !_hasCompletedFinanceCue(body)),
    ...waffraSaudiSpecialSeedRules,
   ].where((rule)=>
    ((rule.resolvedKind=='transfer'&&bankKind==WaffraBankOperationKind.transfer)||
