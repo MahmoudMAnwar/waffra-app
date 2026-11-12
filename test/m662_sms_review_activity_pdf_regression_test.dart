@@ -94,4 +94,28 @@ void main() {
   expect(home,isNot(contains('🐷')));
   expect(home,contains('Icons.account_balance_wallet_outlined'));
  });
+ test('M662.8 fresh manual expense and income never preselect expense Other',(){
+  final entryStart=home.indexOf(' Future<void> entrySheet({MoneyEntry? initial');
+  final entryEnd=home.indexOf(' Future<void> showReceipt(',entryStart);
+  expect(entryStart,greaterThan(0));
+  final editor=home.substring(entryStart,entryEnd);
+  final init=editor.substring(
+   editor.indexOf('String category=(smsEditorDraft?'),
+   editor.indexOf('String? selectedParentId;'));
+  // Existing transaction edits and trusted bank-SMS proposals retain
+  // their own category; only a NEW MANUAL expense/income is blank.
+  expect(init,contains("initial?.category??(sms?"));
+  expect(init,contains("(trustedSms?(editorLearnedCategory??parsedSms.category):'أخرى'):'');"));
+  expect(init,isNot(contains("initial?.category??(trustedSms?")));
+  expect(editor,contains('String? selectedParentId;'));
+  expect(editor,contains("mainCategories.where((c)=>c.id==selectedParentId)"));
+  expect(editor,contains("selectedParentId=legacyParent.isEmpty?null:legacyParent.first.id;"));
+  expect(editor,contains("'Choose a main category':'اختر القسم الرئيسي'"));
+  expect(editor,contains("'Choose or add a subcategory'"));
+  expect(editor,contains("onTap:selectedParentId==null?null:"));
+  expect(editor,contains("category='';suggestion=null;"));
+  final catalog=File('lib/waffra_category_catalog.dart').readAsStringSync();
+  expect(catalog,contains("id:'other',name:'أخرى'"));
+ });
+
 }
