@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
   "change_id": "M665-20261112-SMS-REVIEW-CATEGORY-NOTICES-TEMPLATES-PR595",
-  "human_scope_review": "Owner approved four changes from four Android screenshots on 2026-11-12, Issue #594 Draft PR #595: retain verified child account after inline add; inline main/subcategory correction so Yes reflects existing mandatory finance/category guards; replace notification refresh with pull and clear bulk checkbox; remove top-level duplicate SMS original and redundant copy; extend M660 issue #588 sender-specific nonfinancial OTP/beneficiary structural learning without exposing PII or auto-posting. No auth/Home prewarm change, SQLCipher writer change, or main-only signed release change. Exact-head CI, M449 and Android evidence still pending. M665.5 owner screenshot 2026-11-12 narrows only ready-rules label and paragraph, preserving 4 accordions and native matching; register before source modification. M665.6 screenshot and explicit 2026-11-12 instruction: auto-exclude only safe first-party excluded notice patterns with completed-finance conflict guard; retire SMS review overflow AI/Not-a-transaction choices and orphan on-demand handler while retaining explicit Exclude. Existing bank SMS core privacy/finance still mandatory.",
+  "human_scope_review": "Owner approved four changes from four Android screenshots on 2026-11-12, Issue #594 Draft PR #595: retain verified child account after inline add; inline main/subcategory correction so Yes reflects existing mandatory finance/category guards; replace notification refresh with pull and clear bulk checkbox; remove top-level duplicate SMS original and redundant copy; extend M660 issue #588 sender-specific nonfinancial OTP/beneficiary structural learning without exposing PII or auto-posting. No auth/Home prewarm change, SQLCipher writer change, or main-only signed release change. Exact-head CI, M449 and Android evidence still pending. M665.5 owner screenshot 2026-11-12 narrows only ready-rules label and paragraph, preserving 4 accordions and native matching; register before source modification. M665.6 screenshot and explicit 2026-11-12 instruction: auto-exclude only safe first-party excluded notice patterns with completed-finance conflict guard; retire SMS review overflow AI/Not-a-transaction choices and orphan on-demand handler while retaining explicit Exclude. Existing bank SMS core privacy/finance still mandatory. M665.7 owner screenshot goal car 5000 due split 2000 wallet/3000 current bank, first-category fallback restaurant, visible goal SQL metadata and controls; code may change only scoped goal/due presentation, verified source notes formatting, approved tests/docs; no account-balance arithmetic or paid settlement confirmation mutated.",
   "user_requested_changes": [
     "After a first-time created and verified sender/provider/child account is selected on SMS review, never force selecting it a second time; enable Yes only after independent finance/category/date checks.",
     "Remove the top notifications AppBar refresh glyph and replace it with accessible pull-to-refresh; clarify select-all with checkbox and preserve sender-filter selections.",
@@ -9,7 +9,9 @@
     "Use confirmed sender-scoped encrypted event templates for OTP, beneficiary management, income, expense and transfer, refresh pending after durable save and never use generic single fragments to silently exclude actual financial transactions.",
     "Shorten built-in bank SMS ready rules header to القواعد الجاهزة / Ready-made rules, remove only its redundant description, keep all four groups and their matching unchanged.",
     "Automatically exclude first-install ready-made nonfinancial SMS excluded rules using conservative completed-finance conflict checks and native 30-day reversible idempotent ACK, without auto-posting or excluding an entire sender.",
-    "Remove all bank-message review three-dot overflow AI/not-financial options and now-dead cloud route, while preserving explicit Exclude, manual correction and verified finance write safety."
+    "Remove all bank-message review three-dot overflow AI/not-financial options and now-dead cloud route, while preserving explicit Exclude, manual correction and verified finance write safety.",
+    "Make linked goal 5000 due show 2000 from goal wallet and 3000 from bank as a clearly labeled breakdown across card/details/PDF and hide internal notes; do not double debit or reclassify as restaurant.",
+    "Goal quick actions switch-only as recurring; goal-linked due edit visually disabled but tap explains edit goal first; standalone recurring remains editable; immutable paid goal settlement cannot be edited as an ordinary expense."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -17,7 +19,9 @@
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
+    "lib/storage/waffra_fresh_finance_domain_repository.dart",
     "lib/waffra_approved_notifications.dart",
+    "lib/waffra_goal_recurring_actions.part.dart",
     "lib/waffra_sms_local_rules.dart",
     "lib/waffra_sms_rule_settings_page.dart",
     "test/m436_cloud_review_pipeline_test.dart",
@@ -29,7 +33,9 @@
     "test/m632_sms_account_splash_isolate_contract_test.dart",
     "test/m638_sms_inbox_delete_sync_test.dart",
     "test/m661_exclusion_rule_apply_regression_test.dart",
-    "test/m665_sms_review_structural_learning_test.dart"
+    "test/m665_goal_due_display_and_linked_edit_test.dart",
+    "test/m665_sms_review_structural_learning_test.dart",
+    "test/storage/m665_goal_due_note_and_split_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
@@ -58,6 +64,38 @@
       {
         "start": "import 'waffra_sms_cloud_service.dart';",
         "end": "import 'waffra_sms_local_rules.dart';"
+      },
+      {
+        "start": "class WaffraTransactionDetailsDialog extends StatelessWidget {",
+        "end": "class HomeScreen extends StatefulWidget"
+      },
+      {
+        "start": " Future<void> entrySheet(",
+        "end": " Future<void> "
+      },
+      {
+        "start": " Future<void> transactionActions(MoneyEntry entry)async {",
+        "end": " Widget _transactionActionTile("
+      },
+      {
+        "start": " Widget compactTransaction(MoneyEntry entry){",
+        "end": " Widget _m549HomeFinanceAction("
+      },
+      {
+        "start": " Future<void> exportEntriesPdf(",
+        "end": " Future<void> _deleteVerifiedEntry("
+      },
+      {
+        "start": " Widget savingsPage(){",
+        "end": " Widget recurringPage(){"
+      },
+      {
+        "start": " Future<void> recurringDialog(",
+        "end": " DateTime nextRecurringDue("
+      },
+      {
+        "start": " Future<void> _handleRecurringCardAction(",
+        "end": " Widget recurringPage(){"
       }
     ],
     "lib/waffra_approved_notifications.dart": [
@@ -134,6 +172,18 @@
       {
         "start": " test('M514 per-button scanned number is never native history total',(){",
         "end": " test('M514 excluded queue items use dedicated encrypted fingerprints',(){"
+      }
+    ],
+    "lib/waffra_goal_recurring_actions.part.dart": [
+      {
+        "start": "extension WaffraGoalRecurringActions on _HomeScreenState {",
+        "end": null
+      }
+    ],
+    "lib/storage/waffra_fresh_finance_domain_repository.dart": [
+      {
+        "start": "  Future<WaffraGoalDueSqlReceipt> settleLinkedGoalDue({",
+        "end": null
       }
     ]
   }
