@@ -43,6 +43,10 @@ void main() {
    expect(WaffraSmsLocalRules.matches(rule,
     'تم تحويل 100 ريال إلى المستفيد أحمد',
     sender:'AlRajhiBank'),isFalse);
+   expect(WaffraSmsLocalRules.matches(rule,
+    'تم تحويل 100 ريال. تم تنشيط المستفيد: أحمد',
+    sender:'AlRajhiBank'),isFalse,
+    reason:'A completed transfer event must defeat an exclusion template');
    final facts=WaffraBankSmsFactsParser.parse(next);
    expect(facts.kind,WaffraBankOperationKind.uncertain);
    final resolved=WaffraSmsLocalRules.resolveSpecial(
