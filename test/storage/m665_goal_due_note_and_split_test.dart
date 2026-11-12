@@ -33,7 +33,7 @@ void main(){
   expect(method,contains('alreadySettled: true'));
   expect(method,contains('fromGoal = saved < amountMinor ? saved : amountMinor'));
   expect(method,contains('fromCurrent = amountMinor - fromGoal'));
-  expect(method,contains("'due-debit:$dueKey'"));
+  expect(method,contains("'due-debit:\$dueKey'"));
   // Same receipt, no different second payment for an already settled ID.
   expect(method,contains('Conflicting settlement for previously paid due.'));
  });
