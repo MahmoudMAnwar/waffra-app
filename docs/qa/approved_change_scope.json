@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
   "change_id": "M662-20261112-SMS-REVIEW-ACCOUNTS-CARDS-PDF-PR592",
-  "human_scope_review": "Issue #591 owner supplied 4 Android screenshots and explicitly requested review UI simplification; fresh-account verified transfer and income/expense source context; inline account refresh; compact goal and settled-due cards, no piggy savings icon, and less wasted PDF pagination. Only the specific source functions bounded below may change; SQLCipher financial writer and anti-replay behaviors must remain unchanged. Human device signoff and exact-head CI outstanding; Draft PR #592. M662.8 follow-up screenshots explicitly authorize fixing implicit expense/Other selection in the already scoped entrySheet() initializer. Parent/child pickers, finance writers and existing data otherwise unchanged. M663 approved user request: preload the real owner-verified Home while first registration consent/biometric screen remains visible; delay every optional SMS/widget/recurring and navigation callback until Home's first actual interactive frame. Explicit Logout closes and invalidates owner state. Relogin retains existing credential-and-SQLCipher read flow, no fabricated zero. Existing auth tests are updated only where old Offstage/code location assumptions changed.",
+  "human_scope_review": "Issue #591 owner supplied 4 Android screenshots and explicitly requested review UI simplification; fresh-account verified transfer and income/expense source context; inline account refresh; compact goal and settled-due cards, no piggy savings icon, and less wasted PDF pagination. Only the specific source functions bounded below may change; SQLCipher financial writer and anti-replay behaviors must remain unchanged. Human device signoff and exact-head CI outstanding; Draft PR #592. M662.8 follow-up screenshots explicitly authorize fixing implicit expense/Other selection in the already scoped entrySheet() initializer. Parent/child pickers, finance writers and existing data otherwise unchanged. M663 approved user request: preload the real owner-verified Home while first registration consent/biometric screen remains visible; delay every optional SMS/widget/recurring and navigation callback until Home's first actual interactive frame. Explicit Logout closes and invalidates owner state. Relogin retains existing credential-and-SQLCipher read flow, no fabricated zero. Existing auth tests are updated only where old Offstage/code location assumptions changed. M664 Issue #593 owner requests repair of 6 repeatedly failing full-suite CI workflows; three obsolete source-string assertions may be repaired ONLY to check current independently verified behavior (M587 manual SMS reference, M494 verified account refresh, M663 guarded back handler), without changing financial production code, disabling checks or reducing their positive safety guarantees.",
   "user_requested_changes": [
     "Remove duplicate transaction-type chip choices and verbose SMS transfer disclaimer while preserving three lower review choices plus explicit exclusion/confirmation.",
     "Open original SMS bank transfer in editable source/target verified-account form on fresh install; allow user creation and selection of distinct accounts, preserve original SMS as read-only, require confirmed bank date/time where missing.",
@@ -13,7 +13,8 @@
     "M662.8: new manual expense must show empty main and subcategory pickers exactly like new manual income; never auto-select 'أخرى'. Explicit saved edit and trusted SMS category suggestions remain unchanged.",
     "M662 source-test correction: M597 positive transfer fee test now verifies required Date+Time selection inside the actual reviewed transfer editor rather than old pre-editor date dialogs; preserve exact SQLCipher fee+hash transaction and ACK-order contracts.",
     "M663: after first verified signup, preload hidden real Home through exact SQLCipher authority during permissions and biometric gating, then reveal immediately on successful authentication without reloading; defer heavy native SMS, widget, notifications, tours and recurring until first real interactive Home frame.",
-    "M663: logout and subsequent phone relogin must not reuse closed Home owner bindings or old balances; preserve one-minute biometric policy and existing public startup category preload, with no double Home finance loads."
+    "M663: logout and subsequent phone relogin must not reuse closed Home owner bindings or old balances; preserve one-minute biometric policy and existing public startup category preload, with no double Home finance loads.",
+    "M664 Issue #593: reconcile exactly three failing obsolete source assertions while retaining verified SQLCipher account selection, pending transfer SMS non-ACK, hidden Home guard, and full mandatory Flutter regression. Six red workflows depend on these three failing cases."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -23,6 +24,7 @@
     "lib/main.dart",
     "lib/waffra_account_transaction_form.dart",
     "test/m463_auth_first_one_page_test.dart",
+    "test/m486_sms_back_navigation_source_test.dart",
     "test/m580_sms_security_navigation_performance_test.dart",
     "test/m622_immediate_home_without_loader_test.dart",
     "test/m623_verified_home_handoff_no_black_frame_test.dart",
@@ -151,6 +153,10 @@
       {
         "start": " test('M597 source SMS transfer, fee expense and hash commit atomically',(){",
         "end": null
+      },
+      {
+        "start": " test('M587 bank transfer shows exactly three non-posting choices',(){",
+        "end": " test('notification center never repeats a second review hero',(){"
       }
     ],
     "test/m623_verified_home_handoff_no_black_frame_test.dart": [
@@ -187,6 +193,12 @@
       {
         "start": " test('M622 SMS scan is deferred until after verified Home frame',(){",
         "end": null
+      }
+    ],
+    "test/m486_sms_back_navigation_source_test.dart": [
+      {
+        "start": " test('M494 #405 #416 inline creation is verified and preserves editor',(){",
+        "end": " test('M494 #409 original SMS visible in editor but OTP guarded',(){"
       }
     ]
   }
