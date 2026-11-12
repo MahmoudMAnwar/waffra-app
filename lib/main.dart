@@ -3991,7 +3991,7 @@ class HomeScreen extends StatefulWidget {
   required this.onSetPin,required this.onTheme,required this.onLanguage,required this.onLogout,required this.onProfile,
    required this.appearance,required this.onAppearance,
    required this.greetingIndex,this.onVerifiedReady,
-   this.postAuthVisible=false,
+   this.postAuthVisible=true, // Standalone Home remains interactive; root overrides for preload.
    this.prewarmedFinanceBinding,this.onVerifiedHomeSmsResume});
  @override State<HomeScreen> createState()=>_HomeScreenState();
 }
