@@ -1,13 +1,15 @@
 {
   "contract_version": 1,
   "change_id": "M665-20261112-SMS-REVIEW-CATEGORY-NOTICES-TEMPLATES-PR595",
-  "human_scope_review": "Owner approved four changes from four Android screenshots on 2026-11-12, Issue #594 Draft PR #595: retain verified child account after inline add; inline main/subcategory correction so Yes reflects existing mandatory finance/category guards; replace notification refresh with pull and clear bulk checkbox; remove top-level duplicate SMS original and redundant copy; extend M660 issue #588 sender-specific nonfinancial OTP/beneficiary structural learning without exposing PII or auto-posting. No auth/Home prewarm change, SQLCipher writer change, or main-only signed release change. Exact-head CI, M449 and Android evidence still pending. M665.5 owner screenshot 2026-11-12 narrows only ready-rules label and paragraph, preserving 4 accordions and native matching; register before source modification.",
+  "human_scope_review": "Owner approved four changes from four Android screenshots on 2026-11-12, Issue #594 Draft PR #595: retain verified child account after inline add; inline main/subcategory correction so Yes reflects existing mandatory finance/category guards; replace notification refresh with pull and clear bulk checkbox; remove top-level duplicate SMS original and redundant copy; extend M660 issue #588 sender-specific nonfinancial OTP/beneficiary structural learning without exposing PII or auto-posting. No auth/Home prewarm change, SQLCipher writer change, or main-only signed release change. Exact-head CI, M449 and Android evidence still pending. M665.5 owner screenshot 2026-11-12 narrows only ready-rules label and paragraph, preserving 4 accordions and native matching; register before source modification. M665.6 screenshot and explicit 2026-11-12 instruction: auto-exclude only safe first-party excluded notice patterns with completed-finance conflict guard; retire SMS review overflow AI/Not-a-transaction choices and orphan on-demand handler while retaining explicit Exclude. Existing bank SMS core privacy/finance still mandatory.",
   "user_requested_changes": [
     "After a first-time created and verified sender/provider/child account is selected on SMS review, never force selecting it a second time; enable Yes only after independent finance/category/date checks.",
     "Remove the top notifications AppBar refresh glyph and replace it with accessible pull-to-refresh; clarify select-all with checkbox and preserve sender-filter selections.",
     "Remove the duplicate original SMS card on finance review and redundant missing-fields copy, retaining original SMS on separate edit/correction route.",
     "Use confirmed sender-scoped encrypted event templates for OTP, beneficiary management, income, expense and transfer, refresh pending after durable save and never use generic single fragments to silently exclude actual financial transactions.",
-    "Shorten built-in bank SMS ready rules header to القواعد الجاهزة / Ready-made rules, remove only its redundant description, keep all four groups and their matching unchanged."
+    "Shorten built-in bank SMS ready rules header to القواعد الجاهزة / Ready-made rules, remove only its redundant description, keep all four groups and their matching unchanged.",
+    "Automatically exclude first-install ready-made nonfinancial SMS excluded rules using conservative completed-finance conflict checks and native 30-day reversible idempotent ACK, without auto-posting or excluding an entire sender.",
+    "Remove all bank-message review three-dot overflow AI/not-financial options and now-dead cloud route, while preserving explicit Exclude, manual correction and verified finance write safety."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -18,6 +20,13 @@
     "lib/waffra_approved_notifications.dart",
     "lib/waffra_sms_local_rules.dart",
     "lib/waffra_sms_rule_settings_page.dart",
+    "test/m436_cloud_review_pipeline_test.dart",
+    "test/m508_saudi_default_sms_rules_test.dart",
+    "test/m548_review_grouping_and_signup_perf_test.dart",
+    "test/m603_app_wide_lag_source_regression_test.dart",
+    "test/m630_home_first_frame_contention_test.dart",
+    "test/m632_sms_account_splash_isolate_contract_test.dart",
+    "test/m638_sms_inbox_delete_sync_test.dart",
     "test/m661_exclusion_rule_apply_regression_test.dart",
     "test/m665_sms_review_structural_learning_test.dart"
   ],
@@ -32,6 +41,18 @@
       {
         "start": " Future<void> _reviewAutoSmsCandidates({",
         "end": " void _receiveSharedSms(){"
+      },
+      {
+        "start": " bool _autoSmsReviewOpen=false;",
+        "end": " void _receiveAutoSmsNotice(){"
+      },
+      {
+        "start": " Future<void> _runAutoSmsRefresh({bool importMonth=false})async{",
+        "end": " Future<void> _scanPreviousBankSmsFromSettings()async{"
+      },
+      {
+        "start": "Map<String,Object?> waffraM632ClassifySmsQueue(",
+        "end": "List<String> splitBankMessages("
       }
     ],
     "lib/waffra_approved_notifications.dart": [
@@ -50,11 +71,57 @@
       {
         "start": " group('M661 manual excluded rule application', () {",
         "end": " group('M661 source and routing safety contract', () {"
+      },
+      {
+        "start": " group('M661 source and routing safety contract', () {",
+        "end": null
       }
     ],
     "lib/waffra_sms_rule_settings_page.dart": [
       {
         "start": " @override Widget build(BuildContext context)=>Scaffold(",
+        "end": null
+      }
+    ],
+    "test/m508_saudi_default_sms_rules_test.dart": [
+      {
+        "start": "void main() {",
+        "end": null
+      }
+    ],
+    "test/m436_cloud_review_pipeline_test.dart": [
+      {
+        "start": "void main() {",
+        "end": null
+      }
+    ],
+    "test/m630_home_first_frame_contention_test.dart": [
+      {
+        "start": "void main() {",
+        "end": null
+      }
+    ],
+    "test/m548_review_grouping_and_signup_perf_test.dart": [
+      {
+        "start": "void main() {",
+        "end": null
+      }
+    ],
+    "test/m603_app_wide_lag_source_regression_test.dart": [
+      {
+        "start": "void main() {",
+        "end": null
+      }
+    ],
+    "test/m638_sms_inbox_delete_sync_test.dart": [
+      {
+        "start": "void main(){",
+        "end": null
+      }
+    ],
+    "test/m632_sms_account_splash_isolate_contract_test.dart": [
+      {
+        "start": "void main(){",
         "end": null
       }
     ]
