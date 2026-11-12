@@ -11181,7 +11181,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    if(!analytics&&items.isNotEmpty){
     final ordered=items.toList()..sort((a,b)=>b.date.compareTo(a.date));
     final descriptions=<(pw.MemoryImage,double)>[];
-    for(final e in ordered){descriptions.add(await pdfDescriptionArtwork(e.title));}
+    for(final e in ordered){
+     // The 5,000 goal purchase includes a 2,000 earmark and only a 3,000
+     // cash debit. Preserve that typed attribution in PDF without raw notes.
+     final description=e.sourceType=='goal_due'?
+      e.title+'\n'+(english?'Goal wallet: ':'محفظة الهدف: ')+
+      fmt(e.goalWalletPaidMinor/100)+' | '+
+      (english?'Money account: ':'الحساب المالي: ')+
+      fmt(waffraGoalDueCashMinor(e)/100):e.title;
+     descriptions.add(await pdfDescriptionArtwork(description));
+    }
     reportSections.addAll([
       heading('تقرير الدخل والمصروفات','Income & Expenses Report'),
       pw.Row(children:[summary('إجمالي الدخل',totalIncome,PdfColors.green50),pw.SizedBox(width:8),
@@ -11213,7 +11222,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            (english?'Paid due':'استحقاق مدفوع'):
            (english?(e.income?'Income':'Expense'):(e.income?'دخل':'مصروف')),
            rtl:!english),
-          pdfCell(waffraTr(e.category),rtl:!english),
+          pdfCell(e.sourceType=='goal_due'?
+           (english?'Goal due':'استحقاق هدف'):
+           waffraTr(e.category),rtl:!english),
           pw.Container(
            alignment:english?pw.Alignment.centerLeft:pw.Alignment.centerRight,
            padding:const pw.EdgeInsets.symmetric(horizontal:6,vertical:7),
