@@ -1,12 +1,13 @@
 {
   "contract_version": 1,
   "change_id": "M665-20261112-SMS-REVIEW-CATEGORY-NOTICES-TEMPLATES-PR595",
-  "human_scope_review": "Owner approved four changes from four Android screenshots on 2026-11-12, Issue #594 Draft PR #595: retain verified child account after inline add; inline main/subcategory correction so Yes reflects existing mandatory finance/category guards; replace notification refresh with pull and clear bulk checkbox; remove top-level duplicate SMS original and redundant copy; extend M660 issue #588 sender-specific nonfinancial OTP/beneficiary structural learning without exposing PII or auto-posting. No auth/Home prewarm change, SQLCipher writer change, or main-only signed release change. Exact-head CI, M449 and Android evidence still pending.",
+  "human_scope_review": "Owner approved four changes from four Android screenshots on 2026-11-12, Issue #594 Draft PR #595: retain verified child account after inline add; inline main/subcategory correction so Yes reflects existing mandatory finance/category guards; replace notification refresh with pull and clear bulk checkbox; remove top-level duplicate SMS original and redundant copy; extend M660 issue #588 sender-specific nonfinancial OTP/beneficiary structural learning without exposing PII or auto-posting. No auth/Home prewarm change, SQLCipher writer change, or main-only signed release change. Exact-head CI, M449 and Android evidence still pending. M665.5 owner screenshot 2026-11-12 narrows only ready-rules label and paragraph, preserving 4 accordions and native matching; register before source modification.",
   "user_requested_changes": [
     "After a first-time created and verified sender/provider/child account is selected on SMS review, never force selecting it a second time; enable Yes only after independent finance/category/date checks.",
     "Remove the top notifications AppBar refresh glyph and replace it with accessible pull-to-refresh; clarify select-all with checkbox and preserve sender-filter selections.",
     "Remove the duplicate original SMS card on finance review and redundant missing-fields copy, retaining original SMS on separate edit/correction route.",
-    "Use confirmed sender-scoped encrypted event templates for OTP, beneficiary management, income, expense and transfer, refresh pending after durable save and never use generic single fragments to silently exclude actual financial transactions."
+    "Use confirmed sender-scoped encrypted event templates for OTP, beneficiary management, income, expense and transfer, refresh pending after durable save and never use generic single fragments to silently exclude actual financial transactions.",
+    "Shorten built-in bank SMS ready rules header to القواعد الجاهزة / Ready-made rules, remove only its redundant description, keep all four groups and their matching unchanged."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -16,6 +17,7 @@
     "lib/main.dart",
     "lib/waffra_approved_notifications.dart",
     "lib/waffra_sms_local_rules.dart",
+    "lib/waffra_sms_rule_settings_page.dart",
     "test/m661_exclusion_rule_apply_regression_test.dart",
     "test/m665_sms_review_structural_learning_test.dart"
   ],
@@ -48,6 +50,12 @@
       {
         "start": " group('M661 manual excluded rule application', () {",
         "end": " group('M661 source and routing safety contract', () {"
+      }
+    ],
+    "lib/waffra_sms_rule_settings_page.dart": [
+      {
+        "start": " @override Widget build(BuildContext context)=>Scaffold(",
+        "end": null
       }
     ]
   }
