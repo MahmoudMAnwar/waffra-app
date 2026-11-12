@@ -569,6 +569,47 @@ bool waffraCanAssignManualCategory(Iterable<BudgetCategory> values,
    waffraCategoryAvailableForNewEntry(all,c));
 }
 
+/// M669: bank SMS suggestions are NOT category selections. A root-only
+/// candidate, notably "تحويلات", may suggest the main heading but must
+/// never be displayed or committed as a child. Name-only matches across
+/// parents/directions are ambiguous, so require explicit user selection.
+({BudgetCategory? parent,BudgetCategory? leaf})
+waffraResolveSmsReviewCategory(Iterable<BudgetCategory> categories,{
+ required bool income,required String proposed,
+}){
+ final all=categories.toList(growable:false);
+ final hint=proposed.trim();
+ if(hint.isEmpty)return (parent:null,leaf:null);
+ final roots=all.where((c)=>!c.isSubcategory&&c.income==income&&
+  c.categoryActive).toList();
+ final leaves=all.where((c)=>c.isSubcategory&&c.income==income&&
+  waffraCategoryAvailableForNewEntry(all,c)).toList();
+ final parts=hint.split(RegExp(r'\s*/\s*'));
+ if(parts.length==2){
+  final matchingParents=roots.where((p)=>p.name==parts.first||
+   p.displayName==parts.first).toList();
+  if(matchingParents.length!=1)return (parent:null,leaf:null);
+  final parent=matchingParents.single;
+  final matchingChildren=leaves.where((c)=>c.parentId==parent.id&&
+   (c.name==hint||c.name==parts.last||
+    c.displayName==parts.last)).toList();
+  return (parent:parent,
+    leaf:matchingChildren.length==1?matchingChildren.single:null);
+ }
+ // A catalog root always takes priority over a same-name leaf hint.
+ final parents=roots.where((p)=>p.name==hint||
+  p.displayName==hint).toList();
+ if(parents.length==1)return (parent:parents.single,leaf:null);
+ if(parents.isNotEmpty)return (parent:null,leaf:null);
+ final matchingChildren=leaves.where((c)=>c.name==hint||
+  c.displayName==hint).toList();
+ if(matchingChildren.length!=1)return (parent:null,leaf:null);
+ final leaf=matchingChildren.single;
+ final matches=roots.where((p)=>p.id==leaf.parentId).toList();
+ return (parent:matches.length==1?matches.single:null,
+   leaf:matches.length==1?leaf:null);
+}
+
 class SavingGoal {
  final String id,name;
  /// Stable, user-approved verified funding account; null only for old goals.
@@ -6666,8 +6707,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final previewParents=previewLeaves.length==1?
     categories.where((c)=>!c.isSubcategory&&
      c.id==previewLeaves.single.parentId).toList():<BudgetCategory>[];
-   final previewMainName=previewParents.length==1?
-    previewParents.single.displayName:
+   // M669: a bank classifier can suggest a ROOT (e.g. تحويلات) without
+   // providing any leaf. The root is shown as MAIN only; a user must pick
+   // an actual child. Same-name/legacy hints need exact parent validation.
+   final previewHint=waffraResolveSmsReviewCategory(categories,
+    income:expectedIncome,proposed:proposedCategory);
+   final previewMainName=previewHint.parent?.displayName??
     (waffraIsEnglish?'Choose main category':'يحتاج اختيار القسم الرئيسي');
    // The first account is an independent setup step, NOT a valid-category
    // confirmation. A user must be able to create it before fixing category.
@@ -6682,9 +6727,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     originalDate.toIso8601String().replaceFirst('T',' ').substring(0,16);
    // The SMS category can be corrected inline without re-opening a money-account
    // selector. A verified account alone never bypasses mandatory category checks.
-   String reviewedCategory=proposedCategory;
+   String reviewedCategory=previewHint.leaf?.name??
+    (waffraIsEnglish?'Choose subcategory':'يحتاج اختيار القسم الفرعي');
    String reviewedMainName=previewMainName;
-   bool reviewCategoryValid=previewLeaves.length==1&&previewParents.length==1;
+   bool reviewCategoryValid=previewHint.leaf!=null&&
+    previewHint.parent!=null;
    bool canConfirm=understood&&facts.canAutoPostAsIncomeExpense&&
     originalAmount!=null&&originalAmount.currency=='SAR'&&
     originalDate!=null&&!bankSmsHasUnverifiedTimestamp(body)&&
