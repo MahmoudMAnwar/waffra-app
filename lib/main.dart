@@ -6701,13 +6701,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final proposedCategory=localFacts?['category'] is String?
     localFacts!['category'] as String:parsed.category;
    final expectedIncome=facts.kind==WaffraBankOperationKind.income;
-   final previewLeaves=categories.where((c)=>
-    c.income==expectedIncome&&c.isSubcategory&&
-    c.name==proposedCategory&&
-    waffraCategoryAvailableForNewEntry(categories,c)).toList();
-   final previewParents=previewLeaves.length==1?
-    categories.where((c)=>!c.isSubcategory&&
-     c.id==previewLeaves.single.parentId).toList():<BudgetCategory>[];
    // M669: a bank classifier can suggest a ROOT (e.g. تحويلات) without
    // providing any leaf. The root is shown as MAIN only; a user must pick
    // an actual child. Same-name/legacy hints need exact parent validation.
