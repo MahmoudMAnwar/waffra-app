@@ -6149,6 +6149,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     principalMinor:verifiedMinor,feeSar:facts.fee);
   // No confirmed principal means an EMPTY editable field, never the fee.
   // The verified form refuses zero amounts on submit.
+  // The first reviewed transfer on a clean install must bootstrap the same
+  // verified finance bridge used by manual entry, before showing the form.
+  await _ensureFinanceBound();
+  if(!mounted)return;
   final bridge=_financeBinding?.accountsBridge;
   if(bridge==null){
    if(mounted)snack(context,'الحسابات الموثقة غير متاحة.',
@@ -6212,7 +6216,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          style:const TextStyle(color:emerald,fontSize:12))),
       Expanded(child:WaffraAccountTransactionForm(
        accounts:accounts,english:waffraIsEnglish,
-       initialSmsTransfer:prefill,
+       initialSmsTransfer:prefill,originalSmsText:body,
        onCreateSmsAccount:(group,createProvider,isDestination)async{
         // #416: never infer transfer source or destination from SMS sender.
         final existing=await api.balances();
@@ -6709,39 +6713,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           (localFacts['category']?.toString()??'')),
          if(cloudSummary.isNotEmpty)WaffraText(cloudSummary),
         ])),
-       if(!sensitive&&!understood)...[
-        const SizedBox(height:11),
-        WaffraText(waffraIsEnglish?'Transaction type':'نوع العملية',
-         style:const TextStyle(fontWeight:FontWeight.w800,fontSize:13)),
-        const SizedBox(height:6),
-        Wrap(spacing:8,runSpacing:6,children:[
-         for(final option in const <String>['income','expense','transfer'])
-          ChoiceChip(
-           key:Key('m595-review-type-'+option),
-           showCheckmark:false,
-           selected:reviewType==option,
-           label:WaffraText(switch(option){
-            'income'=>waffraIsEnglish?'Income':'دخل',
-            'expense'=>waffraIsEnglish?'Expense':'مصروف',
-            _=>waffraIsEnglish?'Transfer':'تحويل',
-           }),
-           onSelected:(_)=>redraw((){
-            // A type change invalidates a previously reviewed money account.
-            reviewType=option;
-            reviewedAccount=null;
-            reviewedAccountName=null;
-           })),
-        ]),
-        const SizedBox(height:6),
-        if(reviewType!=null&&
-           !(reviewType==(expectedIncome?'income':'expense')&&understood)&&
-           !(reviewType=='transfer'&&facts.kind==WaffraBankOperationKind.transfer))
-         FilledButton(
-          key:const Key('m595-review-type-continue'),
-          onPressed:()=>Navigator.pop(dialog,'correct-type'),
-          child:WaffraText(waffraIsEnglish?'Continue to review':'متابعة المراجعة'),
-         ),
-       ],
+       // M662: no duplicate type picker above the original SMS. Uncertain
+       // SMS keeps explicit user-driven choices BELOW the message.
        if(!sensitive)Padding(
         padding:const EdgeInsets.only(top:10),
         child:Card(
@@ -6754,6 +6727,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          children:[Padding(padding:const EdgeInsets.all(14),
           child:SelectableText(body,textAlign:TextAlign.start))],
         ))),
+       if(!sensitive&&!understood&&
+          facts.kind!=WaffraBankOperationKind.transfer)...[
+        const SizedBox(height:8),
+        for(final kind in const <String>['income','expense','transfer'])
+         Padding(padding:const EdgeInsets.only(bottom:6),
+          child:OutlinedButton(
+           key:Key('m662-unknown-correct-to-'+kind),
+           onPressed:()=>Navigator.pop(dialog,'m662-type-'+kind),
+           child:WaffraText(switch(kind){
+            'income'=>waffraIsEnglish?'Income':'دخل',
+            'expense'=>waffraIsEnglish?'Expense':'مصروف',
+            _=>waffraIsEnglish?'Transfer':'تحويل',
+           }))),
+       ],
        if(understood&&!sensitive&&
           reviewType==(expectedIncome?'income':'expense'))...[
         const SizedBox(height:10),
@@ -6839,14 +6826,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        if(facts.kind==WaffraBankOperationKind.transfer&&!sensitive&&
           reviewType=='transfer')
         Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-         WaffraText(waffraIsEnglish?
-          'A transfer is not automatically income or expense. '
-          'Choose two verified accounts and confirm the principal amount. '
-          'Any transfer fee remains separate and unposted.':
-          'التحويل مش دخل أو مصروف تلقائيًا. اختار حسابين موثّقين '
-          'وراجع مبلغ التحويل الأساسي. أي رسوم تفضل منفصلة ولا تُخصم تلقائيًا.',
-          style:const TextStyle(fontSize:12,height:1.5)),
-         const SizedBox(height:9),
          FilledButton.icon(
           key:const Key('m587-sms-transfer-yes'),
           onPressed:()=>Navigator.pop(dialog,'transfer'),
@@ -6937,6 +6916,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     if(corrected!=null){reviewType=corrected;decision='correct-type';}
     else decision=null;
    }
+   if(decision!=null&&decision.startsWith('m662-type-')){
+    reviewType=decision.substring('m662-type-'.length);
+    decision='correct-type';
+   }
    if(decision=='correct-type'&&mounted&&reviewType!=null){
     if(reviewType=='transfer'){
      // A correction from unknown/income/expense to internal transfer cannot
@@ -7022,7 +7005,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         child:WaffraText(waffraIsEnglish?'Income':'دخل')),
       ]));
     if(mounted&&(kind=='income'||kind=='expense')){
-     await entrySheet(manualIncomeOverride:kind=='income');
+     // The chosen entry is a genuinely separate MANUAL operation: show
+     // the original transfer SMS for reference, but never ACK or relabel it.
+     await entrySheet(manualIncomeOverride:kind=='income',
+      reviewedOriginalSms:body);
     }
    }else if(decision=='yes'&&mounted&&canConfirm&&
              reviewedAccount!=null){
@@ -8735,7 +8721,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
 
  Future<void> entrySheet({MoneyEntry? initial,bool sms=false,String? initialSms,
-  String? reviewedSender,bool? reviewedIncomeOverride,bool? manualIncomeOverride})async {
+  String? reviewedSender,bool? reviewedIncomeOverride,bool? manualIncomeOverride,
+  String? reviewedOriginalSms})async {
   // Cold-start money selection needs a verified, non-Home-header account list.
   if(!_m468VerifiedAccountsLoaded){
    await _m467RefreshHomeAccounts();
@@ -9070,9 +9057,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        lastFour:draft.lastFour,
        customSubtypeLabel:draft.customSubtypeLabel,
        userConfirmed:true);
-      await _m467RefreshHomeAccounts();
+      // Read the authoritative SQLCipher result directly. A concurrent
+      // Home refresh can lag behind this route, leaving both dropdowns empty.
+      final refreshed=(await api.balances()).where((a)=>!a.archived).toList();
       if(!sheetContext.mounted)return;
-      final refreshed=_m467Accounts.where((a)=>!a.archived).toList();
+      unawaited(_m467RefreshHomeAccounts());
       final created=refreshed.where((a)=>a.id==id).toList();
       if(created.length!=1)throw StateError(
        'Account creation has no verified refreshed balance');
@@ -9103,7 +9092,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        }else if(mainProvider){
         chosenManualProvider=related.single.id;
         chosenManualProviderCategory=related.single.category;
-        chosenManualAccount=null;
+        chosenManualAccount=id; // Creating a provider also created its first child.
        }else if(related.single.id==selectedProviderBefore){
         chosenManualProviderCategory=related.single.category;
         chosenManualAccount=id;
@@ -9427,6 +9416,25 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          'الرسالة البنكية الأصلية المحمية موجودة في تفاصيل المعاملة.',
          style:const TextStyle(fontSize:12))),
       ],
+      if(!sms&&reviewedOriginalSms!=null)...[
+       Card(child:ExpansionTile(
+        key:const Key('m662-manual-correction-original-expand'),
+        initiallyExpanded:true,
+        title:WaffraText(waffraIsEnglish?
+         'Original transfer message (reference only)':
+         'نص رسالة التحويل الأصلية (للمراجعة فقط)'),
+        children:[Padding(padding:const EdgeInsets.all(12),
+         child:SelectableText(reviewedOriginalSms,
+          key:const Key('m662-manual-correction-original-text'),
+          textAlign:TextAlign.start))],
+       )),
+       const SizedBox(height:10),
+       WaffraText(waffraIsEnglish?
+        'This is a separate manual entry; the transfer SMS stays in Review.':
+        'هذه عملية يدوية منفصلة؛ رسالة التحويل ستظل في المراجعة.',
+        style:const TextStyle(fontSize:12,color:emerald)),
+       const SizedBox(height:10),
+      ],
       if(sms&&initialSms==null)...[
        TextField(controller:message,minLines:3,maxLines:6,
         // Reviewed Android SMS provenance must remain byte-for-byte original.
@@ -9579,6 +9587,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        // #409: readable, read-only original SMS while editing; verification
        // and pending SMS remain hidden to avoid exposing private codes.
        ExpansionTile(
+        initiallyExpanded:true,
         key:const Key('waffra-entry-original-sms-expand'),
         tilePadding:const EdgeInsets.symmetric(horizontal:9),
         title:WaffraText(waffraIsEnglish?
