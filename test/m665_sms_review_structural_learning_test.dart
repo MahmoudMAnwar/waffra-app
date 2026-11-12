@@ -119,6 +119,16 @@ void main() {
    expect(result?.resolvedKind,'excluded',reason:'${rule.id}: $message');
    expect(result?.autoPost,isFalse);
   }
+  // Generic finance verbs in non-posted coupons/reminders cannot override
+  // a curated exclusion; only independently posted-money evidence can.
+  for(final benign in const <String>[
+   'خصم حصري', 'payment reminder',
+  ]){
+   final result=WaffraSmsLocalRules.resolveSpecial(
+    body:benign,sender:'TestBank',
+    bankKind:WaffraBankOperationKind.expense);
+   expect(result?.resolvedKind,'excluded',reason:benign);
+  }
   for(final benign in const <String>[
    'خصم حصري اليوم', 'payment reminder', 'عرض خاص اليوم',
    'كود خصم', 'Your verification code is 123456',
