@@ -3978,6 +3978,7 @@ class HomeScreen extends StatefulWidget {
  final Person profile;final bool dark,pinEnabled;final String appearance;
  final Future<WaffraProductionFinanceAuthorityBinding?>? prewarmedFinanceBinding;
  final int greetingIndex;
+ final bool postAuthVisible;
  final VoidCallback? onVerifiedReady;
  final Future<bool> Function()? onVerifiedHomeSmsResume;
  final Future<void> Function(String) onAppearance;
@@ -3990,6 +3991,7 @@ class HomeScreen extends StatefulWidget {
   required this.onSetPin,required this.onTheme,required this.onLanguage,required this.onLogout,required this.onProfile,
    required this.appearance,required this.onAppearance,
    required this.greetingIndex,this.onVerifiedReady,
+   this.postAuthVisible=false,
    this.prewarmedFinanceBinding,this.onVerifiedHomeSmsResume});
  @override State<HomeScreen> createState()=>_HomeScreenState();
 }
@@ -4173,6 +4175,31 @@ Future<bool> waffraConfirmUnlinkedBudgetSave({
 }
 
 class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
+ // M663: separate a verified, hidden first-run Home preload from actual
+ // owner-visible first paint. No optional SMS/native/widget I/O during gate.
+ final Completer<void> _m663FirstInteractiveFrame=Completer<void>();
+ @override void didUpdateWidget(covariant HomeScreen oldWidget){
+  super.didUpdateWidget(oldWidget);
+  if(widget.postAuthVisible&&!oldWidget.postAuthVisible&&
+     !_m663FirstInteractiveFrame.isCompleted){
+   WidgetsBinding.instance.addPostFrameCallback((_){
+    if(mounted&&widget.postAuthVisible&&
+       !_m663FirstInteractiveFrame.isCompleted){
+     _m663FirstInteractiveFrame.complete();
+    }
+   });
+  }
+ }
+ Future<bool> _m663AwaitVisible(int epoch)async{
+  if(widget.postAuthVisible){
+   // Actual layout is allowed to finish before optional I/O.
+   await WidgetsBinding.instance.endOfFrame;
+  }else{
+   await _m663FirstInteractiveFrame.future;
+  }
+  return mounted&&widget.postAuthVisible&&
+   epoch==_m630HomeStartupEpoch&&!_m627ClosingSession;
+ }
  // Stable callback identity ensures an old locale-specific Home disposal
  // cannot clear the replacement Home's back handler.
  late final bool Function() _registeredBackHandler=_consumeHomeBack;
@@ -7184,7 +7211,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }
    // Account balances were verified before ready=true; no second startup read.
    WidgetsBinding.instance.addPostFrameCallback((_) {
-    if(!_m630SmsSessionCurrent(startupEpoch))return;
+    unawaited(()async{
+    if(!await _m663AwaitVisible(startupEpoch)||
+       !_m630SmsSessionCurrent(startupEpoch))return;
     if(kProfileMode&&startupClock!=null){
      debugPrint('WAFFRA_FINANCE_PERF first_home_frame_ms='
       '${startupClock.elapsedMilliseconds}');
@@ -7204,6 +7233,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      await Future<void>.delayed(const Duration(milliseconds:1200));
      if(!_m630SmsSessionCurrent(startupEpoch))return;
      await _refreshAutoSmsInbox(importMonth:!_autoSmsHistoryComplete);
+    }());
     }());
    });
   }catch(e){
@@ -7281,7 +7311,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }
   });
  }
- @override void dispose(){_m632SmsNoticeTimer?.cancel();if(identical(WaffraBackNavigation.onHomeBack,_registeredBackHandler))WaffraBackNavigation.onHomeBack=null;_dashboardScrollController.dispose();_categoryScrollController.dispose();_goalsScrollController.dispose();_recurringScrollController.dispose();_tourGlow.dispose();waffraReturnHome.removeListener(_returnToHome);waffraIncomingSms.removeListener(_receiveSharedSms);waffraAutoSmsUpdates.removeListener(_receiveAutoSmsNotice);waffraFinanceNoticeTap.removeListener(_m621OnFinanceNoticeTap);waffraWidgetAction.removeListener(_receiveWidgetAction);_widgetReloadListener?.dispose();_saveProgress.dispose();final binding=_financeBinding;if(binding!=null)unawaited(_financialWriteQueue.drain().whenComplete(binding.close));super.dispose();}
+ @override void dispose(){if(!_m663FirstInteractiveFrame.isCompleted)_m663FirstInteractiveFrame.complete();_m632SmsNoticeTimer?.cancel();if(identical(WaffraBackNavigation.onHomeBack,_registeredBackHandler))WaffraBackNavigation.onHomeBack=null;_dashboardScrollController.dispose();_categoryScrollController.dispose();_goalsScrollController.dispose();_recurringScrollController.dispose();_tourGlow.dispose();waffraReturnHome.removeListener(_returnToHome);waffraIncomingSms.removeListener(_receiveSharedSms);waffraAutoSmsUpdates.removeListener(_receiveAutoSmsNotice);waffraFinanceNoticeTap.removeListener(_m621OnFinanceNoticeTap);waffraWidgetAction.removeListener(_receiveWidgetAction);_widgetReloadListener?.dispose();_saveProgress.dispose();final binding=_financeBinding;if(binding!=null)unawaited(_financialWriteQueue.drain().whenComplete(binding.close));super.dispose();}
  Future<void> _syncWidgetTransactions()async{
   if(!mounted||!ready)return;
   try{
@@ -7746,6 +7776,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    // asynchronous widget reads and incoming SMS callbacks begin.
    WidgetsBinding.instance.addPostFrameCallback((_){
     unawaited(()async{
+     // First-install preload is intentionally hidden during consent+biometric.
+     if(!await _m663AwaitVisible(startupEpoch)||
+        !_m630SmsSessionCurrent(startupEpoch))return;
      // Load returns before the retained biometric/login stage is dismissed.
      // Let its FIRST genuinely verified Home frame render before optional I/O.
      await Future<void>.delayed(const Duration(milliseconds:400));
