@@ -163,7 +163,25 @@ void main(){
    await tester.tap(find.byKey(const Key('waffra-m268-feature-simulation')));
    await tester.pumpAndSettle();
    expect(find.text('Hypothetical purchase (SAR) — 3500'),findsOneWidget);
-   expect(find.text('-2,350.00 SAR'),findsOneWidget);
+   // M666 source-verified correction: the value is still signed -2350 SAR,
+   // but SAMA's official Riyal asset is now a physically left-hand sibling
+   // of the signed digits, not an obsolete trailing SAR text suffix.
+   final signedAmount=find.text('-2,350.00');
+   expect(signedAmount,findsOneWidget);
+   final amountRow=find.ancestor(
+    of:signedAmount,matching:find.byType(Row)).first;
+   final officialMark=find.descendant(
+    of:amountRow,
+    matching:find.byWidgetPredicate((widget)=>
+     widget is Image&&widget.image is AssetImage&&
+     (widget.image as AssetImage).assetName==
+      'assets/Saudi_Riyal_Symbol-1.png'));
+   expect(officialMark,findsOneWidget,
+    reason:'Simulation must show official SAR mark, never old EGP or suffix');
+   expect(tester.getTopRight(officialMark).dx,
+    lessThan(tester.getTopLeft(signedAmount).dx),
+    reason:'SAMA mark is physically LEFT of the signed -2,350.00 number');
+   expect(find.text('-2,350.00 SAR'),findsNothing);
    expect(waffraSmartBalance(sample),original);
    expect(WaffraDisplayCurrency.toLedgerSar(1000),1000);
   });
