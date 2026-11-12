@@ -182,8 +182,14 @@ void main() {
    expect(review,contains('generation:fresh.witness.generation);'));
    expect(review,contains('reviewCategoryValid'));
    expect(review,contains('category:reviewedCategory,income:expectedIncome,'));
+   // M669 all financial SMS review paths show the immutable original body;
+   // OTP/security content is redacted and type correction stays explicit.
+   expect(review,contains('if(!sensitive)Padding('));
+   expect(review,contains("Key('m669-review-original-sms-text')"));
+   expect(review,contains('SelectableText(body,textAlign:TextAlign.start)'));
+   expect(review,contains('else Card(child:Padding('));
    expect(review,contains(
-    'if(!sensitive&&!understood&&\n          facts.kind!=WaffraBankOperationKind.transfer)Padding('));
+    'if(!sensitive&&!understood&&\n          facts.kind!=WaffraBankOperationKind.transfer)...['));
    expect(review,isNot(contains('راجع البيانات الناقصة من شاشة التعديل')));
    expect(main,contains("Key('waffra-entry-original-sms-expand')"));
   });

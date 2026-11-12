@@ -31,7 +31,8 @@
     "test/qa/m574_sms_confirmation_full_fields_test.py",
     "test/m470_sms_first_sender_account_test.dart",
     "test/m487_custom_subtype_dialog_test.dart",
-    "test/m495_pr402_ui_performance_regression_test.dart"
+    "test/m495_pr402_ui_performance_regression_test.dart",
+    "test/m665_sms_review_structural_learning_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
