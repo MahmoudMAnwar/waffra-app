@@ -2009,7 +2009,6 @@
       "approved_behavior": "Completely retire seven-step tour from runtime, initial startup and My Settings. Delete only its unused source file, remove all tour keys/overlay/painter/timer/auto-start and dedicated tools heading fields; preserve animated splash, animation-level setting, Home tabs, FAB, About Waffra and verified finance. An app-wide non-blocking Listener inside the existing MaterialApp builder recognizes small-movement touch-up (actual tap) anywhere, including routes and dialogs, and dismisses visible footer or fallback Snackbar via microtask after intended button action. Preserve Undo once, passive timers, full text and color semantics. Genuine scroll swipes should not count as taps.",
       "source_paths": [
         "lib/main.dart",
-        "lib/waffra_tour_plan.dart",
         "lib/waffra_categories_page.part.dart",
         "lib/waffra_smart_analysis.part.dart",
         "lib/waffra_smart_features.dart",
@@ -2043,7 +2042,8 @@
         "Keep existing 5s passive Snackbar timers; a tap dismisses immediately, without waiting; do not dismiss a newly replaced notice from a stale tap.",
         "No modification to protected money posting paths, SMS original data, biometric gate, SQLCipher persistence, notifications, goals or recurring calculations.",
         "Restyle the tour-only positive tests to assert the tour absent but finance, settings About, Home/tools, startup and accessibility retained; do not weaken unrelated tests.",
-        "M282's 48dp accessible-Undo check replaces the exact legacy X-only literal; all other source-completeness and fail-closed finance cutover tests are retained."
+        "M282's 48dp accessible-Undo check replaces the exact legacy X-only literal; all other source-completeness and fail-closed finance cutover tests are retained.",
+        "The deleted lib/waffra_tour_plan.dart is intentionally absent and remains inventoried exclusively by M385 approved_deleted_files, not as an extant M550 source_paths item."
       ]
     }
   ]
