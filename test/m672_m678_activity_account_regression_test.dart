@@ -51,7 +51,7 @@ void main() {
       expect(card, contains('BoxConstraints(minHeight:144)'));
       expect(card, contains("'Amount':'المبلغ'"));
     }
-    expect(compact, contains("'Amount · Total goal due':'المبلغ · إجمالي الاستحقاق'"));
+    expect(compact, contains("'Total goal due':'إجمالي الاستحقاق'"));
     expect(compact, contains("entry.income?entry.amount:-entry.amount"));
     expect(transfer, contains('_m467SelectedAccount==t.fromAccountId'));
     expect(transfer, contains('_m467SelectedAccount==t.toAccountId'));
