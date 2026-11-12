@@ -148,6 +148,9 @@ void main() {
    'تم تحويل 100 ريال إلى المستفيد أحمد. رمز التحقق 999999',
    'حوالة صادرة بقيمة 1900 ريال. عرض خاص',
    'Payment completed SAR 250. promo code',
+   'Salary deposit SAR 5000. OTP code 882233',
+   'Credit Transfer via Alinma Bank Amount SAR 1900. OTP 123456',
+   'حوالة محلية صادرة بقيمة 1900 ريال. رمز التحقق 123456',
   ]){
    final matched=WaffraSmsLocalRules.resolveSpecial(
     body:posted,sender:'TestBank',
