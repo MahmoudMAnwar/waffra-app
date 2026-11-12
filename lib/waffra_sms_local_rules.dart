@@ -213,6 +213,12 @@ abstract final class WaffraSmsLocalRules {
   if(RegExp(r'\b(?:card\s+purchase|online\s+purchase|'
    r'purchase\s+card)\b',caseSensitive:false).hasMatch(body)&&
    RegExp(r'[0-9٠-٩]+(?:[.,][0-9٠-٩]+)?').hasMatch(body))return true;
+  // An actual Arabic purchase with an explicit SAR amount is a posted
+  // movement even if an unrelated OTP phrase marks the combined SMS pending.
+  // Marketing discounts / payment reminders have no such purchase evidence.
+  if(RegExp(r'(?:^|\\s)(?:شراء|عملية\\s+شراء)\\s+(?:بمبلغ|بقيمة)\\s*'
+   r'[0-9٠-٩]+(?:[.,][0-9٠-٩]+)?\\s*(?:ريال|SAR)',
+   caseSensitive:false).hasMatch(body))return true;
   // A failed or still-pending notice alone is not a settled movement.
   if(facts.pending)return false;
   // Explicit bank income/expense + a real posted currency amount is not a
@@ -222,7 +228,7 @@ abstract final class WaffraSmsLocalRules {
   if(!facts.pending&&
      (facts.kind==WaffraBankOperationKind.income||
       facts.kind==WaffraBankOperationKind.expense)&&
-     RegExp(r'(?:\bSAR\b|ريال|ر\.?\s*س)',caseSensitive:false)
+     RegExp(r'(?:\bSAR\b|ريال)',caseSensitive:false)
       .hasMatch(body)&&
      RegExp(r'[0-9٠-٩]').hasMatch(body))return true;
   // Bank-facts transfer evidence outweighs any unrelated promo/OTP phrase.
