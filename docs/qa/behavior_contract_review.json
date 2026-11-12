@@ -1940,11 +1940,6 @@
         "lib/waffra_new_account_dialog.dart",
         "lib/waffra_account_context_page.dart",
         "lib/waffra_account_context_settings.dart",
-        "lib/waffra_account_transaction_form.dart",
-        "lib/waffra_goal_recurring_account_picker.dart",
-        "lib/waffra_new_account_dialog.dart",
-        "lib/waffra_account_context_page.dart",
-        "lib/waffra_account_context_settings.dart",
         "lib/waffra_account_transaction_form.dart"
       ],
       "test_paths": [
