@@ -22,6 +22,8 @@ void main() {
   expect(route,contains('child:Offstage(offstage:!homeInteractive,'));
   expect(route,contains('child:TickerMode(enabled:homeInteractive,child:HomeScreen('));
   expect(route,contains('postAuthVisible:homeInteractive,'));
+  expect(app,contains('this.postAuthVisible=true, // Standalone Home remains interactive; root overrides for preload.'));
+
   expect(route,contains('child:WaffraMandatoryBiometricGate('));
   expect(route,contains('child:WaffraAutoSmsConsentPage('));
   expect(route,contains('child:IgnorePointer(ignoring:!needsGate,'));
