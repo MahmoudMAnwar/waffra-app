@@ -446,3 +446,10 @@ M647/M649/M652 provenance labels — PR #575, 2026-11-11
 - Replace old directional expectation for the deleted close X with a positive status-icon versus message RTL/LTR comparison plus explicit no-X assertion; this is required by owner Issue #605, not an untested deletion of a check.
 - Correct modal tap regression fixture to use the actual fixed-height footer-navigation context while opening a dialog; verify that the original tap pushes AlertDialog and the inner dialog button receives its tap; no hit-test warning suppression and no skipped test.
 - Existing M385 scope and exact 40 PR paths, M550 behavior contract, M665 historic target, M671 tap routing and M449 ancestry remain protected. Confirm current-head M160, Full Offline, M282, M147 and other original tests before any merge; physical Android deletion/device outcomes remain a separate unresolved risk.
+
+
+[M679 CORRECTED LIFECYCLE REVIEW — 2026-11-12]
+- The source code commit a8206231783f41189ec000bb0ad15f1d71f7f709 removes the temporary duplicate fallback-expiry Timer introduced during initial investigation. Rely instead on the original Flutter ScaffoldMessenger duration/animation lifecycle: a separate timer outside widget disposal could itself leave pending fakeAsync timers and create more flaky regressions.
+- The exact dark fallback test now settles the SnackBar entrance animation before advancing six fake-clock seconds (test commit 3e6833fe3e464ab5a9866c8be8af6a5042f1f4ab). This verifies real passive expiry with no X, no extra runtime timers, and leaves the user's requested tap-to-dismiss untouched.
+- Keep the previous root-cause fixes: original goal due caption plus separate amount, status icon RTL/LTR without retired X, fixed-height production-like footer when pushing modal. The M679 updated M550 behavior contract explicitly rejects timer leaks and test warning suppression.
+- Same-head full Flutter, M160 and Full Offline pass on final source/QA commit remains mandatory before any merge. Device-level deletion/source accounting validation remains open in Issue #609; no false hardware acceptance claim.
