@@ -114,6 +114,25 @@ class NoUnrequestedChangesTest(unittest.TestCase):
             guard.audit_scope(manifest, {path, MANIFEST},
                               {path: original}, {path: modified, MANIFEST: "scope"}, {path})
 
+    def test_m671_tour_retirement_is_one_exact_explicit_file(self):
+        # The owner retired only the legacy onboard-tour source in #605.
+        # M385 still rejects unrelated code deletion or wildcards.
+        source = SCRIPT.read_text(encoding="utf-8")
+        self.assertIn('"lib/waffra_tour_plan.dart",', source)
+        self.assertNotIn('path.startswith("lib/waffra_")', source)
+        manifest = contract(allowed=[MANIFEST, "lib/waffra_tour_plan.dart"])
+        manifest["approved_deleted_files"] = ["lib/waffra_tour_plan.dart"]
+        self.assertEqual(manifest["approved_deleted_files"],
+                         ["lib/waffra_tour_plan.dart"])
+        with self.assertRaisesRegex(guard.ScopeViolation, "Every removed source"):
+            guard.audit_scope(
+                {**manifest, "approved_deleted_files": []},
+                set(manifest["allowed_changed_files"]),
+                {"lib/waffra_tour_plan.dart": "class OldTour {}"},
+                {MANIFEST: "scope"},
+                {"lib/waffra_tour_plan.dart"},
+            )
+
     def test_existing_regression_test_cannot_be_rewritten_wholesale(self):
         path = "test/legacy_accepted_feature_test.dart"
         manifest = contract(allowed=[path, MANIFEST], sections={})
