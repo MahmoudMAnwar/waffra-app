@@ -16394,7 +16394,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    ...shown.map((r){
     final linked=goals.where((g)=>g.id==r.linkedGoalId).toList();
     final goal=linked.isEmpty?null:linked.single;
-    final color=Color(categoryFor(r.category,r.income).color);
+    final settledId=WaffraRecurringPolicy.entryId(r.id,
+     DateTime(r.startAt.year,r.startAt.month,r.startAt.day));
+    final paid=entries.where((e)=>e.id==settledId&&
+     e.sourceType=='goal_due').toList(growable:false);
+    final paidGoalDue=goal!=null&&paid.length==1?paid.single:null;
+    final color=paidGoalDue!=null?const Color(0xFF7653AA):
+     goal!=null?emerald:Color(categoryFor(r.category,r.income).color);
     final when=nextRecurringDue(r);
     final activeAccounts=r.accountId==null?const <WaffraAccountBalance>[]:
      _m467Accounts.where((a)=>a.id==r.accountId&&!a.archived).toList();
@@ -16409,15 +16415,29 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      child:Padding(padding:const EdgeInsets.symmetric(horizontal:12,vertical:13),child:Column(children:[
      Row(children:[
       CircleAvatar(backgroundColor:color.withValues(alpha:.13),
-       child:Icon(categoryIcon(categoryFor(r.category,r.income).icon),color:color)),
+       child:Icon(goal!=null?Icons.flag_outlined:
+        categoryIcon(categoryFor(r.category,r.income).icon),color:color)),
       const SizedBox(width:10),
       Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
        WaffraText(r.title,style:const TextStyle(fontSize:15,fontWeight:FontWeight.bold)),
-       WaffraText(cash(r.amount),style:const TextStyle(fontSize:14)),
+       WaffraText((paidGoalDue!=null?
+        (waffraIsEnglish?'Total due: ':'إجمالي الاستحقاق: '):'')+
+        cash(r.amount),style:const TextStyle(fontSize:14)),
        if(accountLabel!=null)WaffraText(
         (waffraIsEnglish?'Linked account: ':'الحساب المرتبط: ')+accountLabel,
         maxLines:2,style:const TextStyle(fontSize:11,color:emerald)),
-       if(goal!=null)...[
+       if(paidGoalDue!=null)...[
+        const SizedBox(height:7),
+        WaffraText(waffraIsEnglish?
+         'From goal wallet: ${cash(paidGoalDue.goalWalletPaidMinor/100)}':
+         'من محفظة الهدف: ${cash(paidGoalDue.goalWalletPaidMinor/100)}',
+         style:const TextStyle(fontSize:12,fontWeight:FontWeight.w600,color:Color(0xFF7653AA))),
+        const SizedBox(height:4),
+        WaffraText(waffraIsEnglish?
+         'From money account: ${cash(waffraGoalDueCashMinor(paidGoalDue)/100)}':
+         'من الحساب المالي: ${cash(waffraGoalDueCashMinor(paidGoalDue)/100)}',
+         style:const TextStyle(fontSize:12,fontWeight:FontWeight.w600,color:Color(0xFF7653AA))),
+       ]else if(goal!=null)...[
         const SizedBox(height:7),
         if(goal.target>0)LinearProgressIndicator(
          value:goal.target<=0?0:(goal.saved/goal.target).clamp(0.0,1.0),
@@ -16432,9 +16452,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          style:const TextStyle(fontSize:11,color:emerald)),
        ],
        const SizedBox(height:3),
-       WaffraText(r.active?
-        (waffraIsEnglish?'Next due: ${dayText(when)}':'الاستحقاق القادم: ${dayText(when)}'):
-        (waffraIsEnglish?'Paused':'متوقفة'),
+       WaffraText(paidGoalDue!=null?
+        (waffraIsEnglish?'Paid goal due':'استحقاق هدف مدفوع'):
+        r.active?
+         (waffraIsEnglish?'Next due: ${dayText(when)}':'الاستحقاق القادم: ${dayText(when)}'):
+         (waffraIsEnglish?'Paused':'متوقفة'),
         style:TextStyle(fontSize:11,color:r.active?Theme.of(context).hintColor:Colors.deepOrange)),
       ])),
      ]),
