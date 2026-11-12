@@ -1,62 +1,65 @@
 {
   "contract_version": 1,
-  "change_id": "M661-20261112-EXCLUSION-RULE-APPLY-PR590",
-  "human_scope_review": "Issue #589 owner-reported real Android saved custom excluded SMS rules not reflected after refresh. M661 PR #590 only patches manual save notification, paired sender preview, visible encrypted vault read failure and honest single-message vs reusable-rule feedback. No M660 feature implementation, no finance-posting changes, no Android history rescan; retain all original test and CI gates. PR #590 54c484f exact-head full Flutter suites failed on exactly two test assertions: an M618 source literal requiring an obsolete snackbar text and a newly authored M661 assertion with a wrong native ID guard variable. Owner explicitly requires every regression to reflect the now-approved behavior, not old UI text. Permit only those two narrow positive test corrections; preserve all M618 No/Edit/30-day checks and M661 durable native anti-replay checks. No application or native source edits authorized.",
+  "change_id": "M662-20261112-SMS-REVIEW-ACCOUNTS-CARDS-PDF-PR592",
+  "human_scope_review": "Issue #591 owner supplied 4 Android screenshots and explicitly requested review UI simplification; fresh-account verified transfer and income/expense source context; inline account refresh; compact goal and settled-due cards, no piggy savings icon, and less wasted PDF pagination. Only the specific source functions bounded below may change; SQLCipher financial writer and anti-replay behaviors must remain unchanged. Human device signoff and exact-head CI outstanding; Draft PR #592.",
   "user_requested_changes": [
-    "Issue #589: owner's current APK still shows similar excluded SMS and does not visibly apply saved manual excluded rules after refreshing; ensure saved rule changes are reapplied to queued nonfinancial sender-matching SMS with explicit failure diagnostics.",
-    "After excluding one SMS, report accurately whether a durable generic rule was learned, and preserve exact message anti-replay and 30-day recoverable display labels. Full template learning remains pending M660 #588.",
-    "M661 follow-up: reflect accurate learned-vs-single-only 30-day SMS snackbar in the existing M618 source contract and assert the actual native per-ID anti-replay guard with original logic preserved; repair only the two failing source assertions without weakening finance safety."
+    "Remove duplicate transaction-type chip choices and verbose SMS transfer disclaimer while preserving three lower review choices plus explicit exclusion/confirmation.",
+    "Open original SMS bank transfer in editable source/target verified-account form on fresh install; allow user creation and selection of distinct accounts, preserve original SMS as read-only, require confirmed bank date/time where missing.",
+    "When correcting a transfer as separate income or expense preserve original transfer SMS for reference without falsely posting or ACKing it; ordinary SMS income/expense editor also visibly preserves read-only original.",
+    "After creating a provider or linked account inside an entry form refresh from authoritative verified account balances; show and select newly created provider/child immediately.",
+    "Compact verified savings goal and settled due cards without losing amounts, provenances, SAR/currency privacy and RTL accessibility; replace piggy-bank imagery with neutral wallet symbol.",
+    "Prevent forced new-page breaks between income/expense, transfer, savings PDF table sections while keeping row integrity and auto-pagination, preserve analytics pages and safety checks."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
-    "docs/qa/M661_EXCLUSION_RULE_REFRESH_REGRESSION.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
-    "lib/waffra_sms_rule_settings_page.dart",
-    "test/m661_exclusion_rule_apply_regression_test.dart",
-    "test/m615_m618_sms_review_retention_perf_contract_test.dart"
+    "lib/waffra_account_transaction_form.dart",
+    "test/m662_sms_review_activity_pdf_regression_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
   "bounded_sections": {
     "lib/main.dart": [
       {
-        "start": " String? _autoSmsStatusProblem;",
-        "end": " String get _smsRuleOwnerKey=>"
+        "start": " Future<void> _reviewSmsAccountTransfer({",
+        "end": " /// M593:"
       },
       {
-        "start": " Future<void> _openSmsRules({",
-        "end": " Future<void> _recordConfirmedSmsAccountAssociation({"
+        "start": " Future<void> _reviewAutoSmsCandidates({",
+        "end": " Future<void> _loadFinanceSafely()"
       },
       {
-        "start": " Future<void> _runAutoSmsRefresh({",
-        "end": " Future<void> _analyzeAmbiguousSmsOnDemand("
+        "start": " Future<void> entrySheet({MoneyEntry? initial",
+        "end": " Future<void> showReceipt("
       },
       {
-        "start": "   }else if(decision=='exclude'&&mounted){",
-        "end": "   }else if(decision=='transfer'&&mounted){"
+        "start": "   final pageTheme=pw.PageTheme(",
+        "end": "   final bytes=await doc.save();"
+      },
+      {
+        "start": " Widget _m649SavingsCard(",
+        "end": " /// M647: content-sized sheet"
+      },
+      {
+        "start": " Widget compactTransaction(MoneyEntry entry){",
+        "end": " Widget _m549HomeFinanceAction("
+      },
+      {
+        "start": "if(goals.isNotEmpty&&income>spending)ListTile(",
+        "end": "     ListTile(leading:const Icon(Icons.track_changes_outlined"
+      },
+      {
+        "start": "if(g.saved>0)OutlinedButton.icon(",
+        "end": "         OutlinedButton.icon(\n          onPressed:WaffraHaptics.tap(()=>unawaited(_handleGoalCardAction(g,'delete'))),"
       }
     ],
-    "lib/waffra_sms_rule_settings_page.dart": [
+    "lib/waffra_account_transaction_form.dart": [
       {
-        "start": "class WaffraSmsRuleSettingsPage extends StatefulWidget {",
-        "end": "class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{"
-      },
-      {
-        "start": " Future<bool> _persist(List<WaffraSmsLocalRule> next)async{",
-        "end": " Future<void> _remove(WaffraSmsLocalRule rule)async{"
-      },
-      {
-        "start": "     final previewMessages=seed!=null?<String>{seed}:",
-        "end": "     return SafeArea(top:false,child:Padding("
-      }
-    ],
-    "test/m615_m618_sms_review_retention_perf_contract_test.dart": [
-      {
-        "start": " test('M618 No/Edit alternatives are source-correct and must not auto-post',(){",
-        "end": " test('M616 30d reversible encrypted labels are distinct from immutable rescan denial',(){"
+        "start": "class WaffraAccountTransactionForm extends StatefulWidget {",
+        "end": null
       }
     ]
   }
