@@ -6792,53 +6792,97 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    String? reviewedAccountName;
    bool choosingAccount=false;
    Future<void> selectReviewCategory(StateSetter redraw,BuildContext dialog)async{
-    // First-time account creation must not force a second account picker just
-    // because the SMS's inferred main category is missing.
+    // M669: the SMS hint is only a suggestion. Choose a real ACTIVE parent
+    // and then one of its ACTIVE children; both steps are searchable.
+    // No category, bank balance or SMS is modified on cancel/back.
     final mainChoices=categories.where((c)=>
-     !c.isSubcategory&&c.income==expectedIncome).toList();
+     !c.isSubcategory&&c.income==expectedIncome&&
+     c.categoryActive).toList();
     BudgetCategory? chosenMain;
+    var query='';
     final chosen=await showWaffraDialog<BudgetCategory>(
      context:dialog,builder:(picker)=>
-      StatefulBuilder(builder:(picker,choose)=>AlertDialog(
+      StatefulBuilder(builder:(picker,choose){
+       final children=chosenMain==null?<BudgetCategory>[]:
+        waffraManualCategoryChildren(categories,expectedIncome,chosenMain!.id);
+       final mainMatches=mainChoices.where((parent)=>
+        waffraSearchAny([parent.name,parent.displayName,
+         waffraTr(parent.name)],query)||
+        categories.any((child)=>child.isSubcategory&&
+         child.parentId==parent.id&&child.income==expectedIncome&&
+         waffraCategoryAvailableForNewEntry(categories,child)&&
+         waffraSearchAny([child.name,child.displayName,
+          waffraTr(child.displayName)],query))).toList();
+       final leafMatches=children.where((leaf)=>
+        waffraSearchAny([leaf.name,leaf.displayName,
+         waffraTr(leaf.displayName)],query)).toList();
+       return AlertDialog(
        title:WaffraText(waffraIsEnglish?
         'Choose main and subcategory':'اختيار القسم الرئيسي والفرعي'),
-       content:SizedBox(width:360,height:320,child:ListView(
-        children:chosenMain==null?[
-         for(final parent in mainChoices)ListTile(
-          title:WaffraText(parent.displayName),
-          trailing:const Icon(Icons.chevron_left_rounded),
-          onTap:()=>choose(()=>chosenMain=parent)),
-        ]:[
-         ListTile(
+       content:SizedBox(width:360,height:350,child:Column(children:[
+        TextField(
+         key:ValueKey('m669-review-category-search-${chosenMain?.id??'main'}'),
+         onChanged:(value)=>choose(()=>query=value),
+         decoration:InputDecoration(
+          prefixIcon:const Icon(Icons.search_rounded),
+          hintText:waffraIsEnglish?'Search categories':'ابحث في الأقسام',
+          border:const OutlineInputBorder())),
+        const SizedBox(height:8),
+        Expanded(child:ListView(children:[
+         if(chosenMain!=null)ListTile(
           leading:const Icon(Icons.arrow_back_rounded),
           title:WaffraText(chosenMain!.displayName),
-          onTap:()=>choose(()=>chosenMain=null)),
-         for(final leaf in categories.where((c)=>
-          c.isSubcategory&&c.income==expectedIncome&&
-          c.parentId==chosenMain!.id&&
-          waffraCategoryAvailableForNewEntry(categories,c)))
-          ListTile(title:WaffraText(leaf.displayName),
+          onTap:()=>choose((){
+           chosenMain=null;query='';
+          })),
+         if(chosenMain==null)...[
+          for(final parent in mainMatches)ListTile(
+           title:WaffraText(parent.displayName),
+           trailing:const Icon(Icons.chevron_left_rounded),
+           onTap:()=>choose((){
+            chosenMain=parent;query='';
+           })),
+          if(mainMatches.isEmpty)ListTile(
+           key:const Key('m669-review-category-no-results'),
+           title:WaffraText(waffraIsEnglish?
+            'No matching main categories':'لا توجد أقسام رئيسية مطابقة')),
+         ]else...[
+          for(final leaf in leafMatches)ListTile(
+           title:WaffraText(leaf.displayName),
            onTap:()=>Navigator.pop(picker,leaf)),
-        ],
-       )),
+          if(leafMatches.isEmpty)ListTile(
+           key:const Key('m669-review-category-no-results'),
+           title:WaffraText(waffraIsEnglish?
+            'No matching subcategories':'لا توجد أقسام فرعية مطابقة')),
+         ],
+        ])),
+       ])),
        actions:[TextButton(
         onPressed:()=>Navigator.pop(picker),
         child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء'))],
-      )));
+      );
+      }));
     if(chosen==null||!mounted||!dialog.mounted)return;
     final parent=categories.where((c)=>!c.isSubcategory&&
-      c.id==chosen.parentId&&c.income==expectedIncome).toList();
+      c.id==chosen.parentId&&c.income==expectedIncome&&
+      c.categoryActive).toList();
     if(parent.length!=1)return;
+    // The persisted finance record still stores category name. Do not
+    // falsely enable Yes when two active children share the same name.
+    final unambiguous=categories.where((c)=>c.isSubcategory&&
+      c.income==expectedIncome&&c.name==chosen.name&&
+      waffraCategoryAvailableForNewEntry(categories,c)).length==1;
     redraw((){
      reviewedCategory=chosen.name;
      reviewedMainName=parent.single.displayName;
-     reviewCategoryValid=true;
+     reviewCategoryValid=unambiguous;
      canConfirm=understood&&facts.canAutoPostAsIncomeExpense&&
       originalAmount!=null&&originalAmount.currency=='SAR'&&
       originalDate!=null&&!bankSmsHasUnverifiedTimestamp(body)&&
-      parsed.amount!=null&&
-      (parsed.amount!-originalAmount.amount).abs()<0.00001&&
-      parsed.income==expectedIncome&&reviewCategoryValid;
+      (parsed.amount==null||
+       (parsed.amount!-originalAmount.amount).abs()<0.00001)&&
+      (parsed.amount==null||parsed.income==expectedIncome)&&
+      reviewCategoryValid;
     });
    }
    Future<void> selectAccountBeforeYes(StateSetter redraw,BuildContext dialog)async{
