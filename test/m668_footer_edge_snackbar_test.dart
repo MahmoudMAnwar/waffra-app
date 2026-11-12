@@ -132,7 +132,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('waffra-snackbar-close')), findsNothing);
-    expect(find.text('راجع المبلغ'), findsOneWidget);
+    expect(find.byWidgetPredicate((w)=>w is WaffraText&&w.data=='راجع المبلغ'), findsOneWidget);
     notice.value = null;
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
