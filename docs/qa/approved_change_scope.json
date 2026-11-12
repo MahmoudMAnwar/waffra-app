@@ -1,211 +1,51 @@
 {
   "contract_version": 1,
-  "change_id": "M666-M667-M668-20261112-SAMA-ACCOUNTS-EDGE-SNACK-PR597",
-  "human_scope_review": "The owner explicitly requested a new PR auditing SAMA official Saudi Riyal symbol usage across all Waffra amount surfaces and fixes for physical left/right placement in Arabic/English (SAMA Guidelines pp. 16-17). Scope corresponds to Issue #596, Draft PR #597, requirements and the M666 audit matrix. This author records specific bounded production fragments and focused original regression tests only. Do not interpret author scope recording as separate human approval or hardware QA. Never touch SQLCipher posting, bank SMS evidence, performance/biometrics, account security, or foreign currency underlying values. Mandatory workflow/visual acceptance still required. M667 owner explicitly requested on 2026-11-12 that My Accounts button 'معاملة جديدة' must invoke the identical existing three-tab Home entrySheet instead of its separate WaffraAccountTransactionForm. Issue #598; only bounded Home page route and account-manager dispatch, no new finance writer, with own regression test and maintenance of all existing QA gates. M668 explicit owner acceptance 2026-11-12: replace entire-app Snackbar visual design with option #3 edge-accent neutral card, retaining existing error/success/warning/info, dismissal, Undo, footer placement and fallback, Arabic/English and dark mode, under Issue #599 and same PR #597. Test-first changes to new M668 widget/geometry regressions plus existing footer expectations; protected production edit limited to original notice block. Exact-head M147/M160/M282/M103 evidence at 5007992 shows independent root causes: M667 reload Future inside setState and M666 M268 older SAR literal assertion despite official symbol WidgetSpan. Owner demanded both fixed permanently without bypass; only M667 reload and narrowly scoped M268 positive widget expectation plus dedicated M667 regression are in approved fixes; see permanent requirements M666/M667 follow-up 2026-11-12.",
+  "change_id": "M669-20261112-SMS-REVIEW-HIERARCHY-SEARCH-YES-ORIGINAL-PR601",
+  "human_scope_review": "Owner supplied three screenshots on 2026-11-12 and demanded (1) no root category as child, (2) searchable dropdowns throughout app including SMS category root/leaf selectors, (3) Yes explains all unmet verified fields and enables when valid, (4) unchanged original bank SMS visible in every review. Issue #600, Draft PR #601, requirements recorded before production implementation. Only bounded review route, pure category resolver, shared centered picker and SMS rule selector upgrades; existing finance writer, source SMS/OTP and bank authentication untouched. No skipped CI or presumed hardware validation.",
   "user_requested_changes": [
-    "Use official, non-mirrored Saudi Riyal PNG physically to the left of signed amount, with consistent gap and alignment in Arabic RTL and English LTR across Waffra Home, history, goals, budgets, accounts and paid due surfaces.",
-    "Make existing money inline replacement bind code prefix or suffix and numeral into one directional visual run, preserving SMS original, ordinary prose, other FX currency symbols and semantically correct negative/positive/zero values.",
-    "Fix app financial tools, account chooser, account history and utility balances that bypassed the official mark or showed the symbol on another line.",
-    "Ensure generated Arabic and English PDF figures embed official Riyal asset before signed numeral, and preserve full report/financial integrity and print clarity.",
-    "Make Android home widget fixed icon-left horizontal with clear gap for both Saudi locale choices and maintain source-gated private balances.",
-    "Make saved finance notifications show clear left-of-amount U+20C1 where Android font supports it, with safe SAR fallback, LTR isolation and private content redaction.",
-    "Keep original bank SMS bodies, verified signed SQLCipher balances, two-sided transfers, API currency codes and non-SAR conversion intact; no global raw-string rewrite.",
-    "Add real Flutter widget geometry and static PDF/native regression tests; evaluate whole exact-head CI and actual device, not disable CI or bypass guards.",
-    "Route My Accounts new transaction action through the identical Home entrySheet three-mode income/expense/transfer modal with existing verified provider/child category/budget and two-sided transfer commit, without duplicate entry form and with refresh after closing.",
-    "Adopt option 3 edge-accent Snackbar throughout Waffra: neutral white/dark card, colored 5dp leading-edge stripe (RTL right/LTR left), four existing statuses and icon, same footer/floating fallback, 48dp close and Undo, same timer/one-notice behavior, preserve source money/navigation and app performance.",
-    "Fix confirmed M667 My Accounts Future-returning setState callback on reload after three-mode Home editor, and strengthen tested reopen/cancel/refresh behavior for both locales without any second finance write.",
-    "Reconcile M268 Smart Features simulated SAR negative amount widget test with physical-left official Saudi symbol and correct numeric sign in both legacy foreign-display selection and current Saudi display; do not loosen arithmetic or return SAR suffix."
+    "Validate SMS reviewed category by canonical root/child hierarchy, direction and active status; main 'تحويلات' never appears as child, and never guesses a matching subcategory.",
+    "Provide live normalized Arabic/English search in the existing shared centered dropdown and two-level SMS category picker, maintaining explicit select/cancel and no financial writes.",
+    "Recompute/label Yes eligibility after both category and verified account, show exact blockers for source/date/currency/amount/direction and link to safe editor instead of unexplained disabled buttons.",
+    "Display immutable read-only original SMS prominently in the actual bank SMS review confirmation for income and expense, protecting genuine OTP messages, and preserve existing original text in manual SMS and transfer editor; verify all review entry paths.",
+    "Regression coverage for repeated valid account/category selection, main-only hint, income vs expense, outgoing transfer vs two-sided transfer, original body visibility, picker empty search and no auto posting."
   ],
   "allowed_changed_files": [
-    ".github/workflows/android-full-smoke.yml",
-    ".github/workflows/android.yml",
     "docs/WAFFRA_REQUIREMENTS.md",
-    "docs/qa/M666_SAMA_RIYAL_AUDIT.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
-    "lib/waffra_account_context_page.dart",
-    "lib/waffra_accounts_manager_page.dart",
-    "lib/waffra_financial_tools.dart",
-    "lib/waffra_home_accounts_sheet.dart",
-    "lib/waffra_oil_market_section.dart",
-    "lib/waffra_practical_tools_page.dart",
-    "lib/waffra_riyal_symbol.dart",
-    "native/WaffraAutoSmsNotifications.kt",
-    "native/WaffraWidget.kt",
-    "test/m268_smart_features_ten_calendar_art_test.dart",
-    "test/m270_native_riyal_widget_contract_test.dart",
-    "test/m270_original_riyal_currency_presentation_test.dart",
-    "test/m470_arabic_currency_word_boundary_test.dart",
-    "test/m666_sama_riyal_visual_position_test.dart",
-    "test/m667_accounts_use_home_composer_test.dart",
-    "test/m668_footer_edge_snackbar_test.dart",
-    "test/waffra_footer_notice_test.dart"
+    "lib/waffra_centered_dropdown.dart",
+    "lib/waffra_sms_rule_settings_page.dart",
+    "test/m669_sms_review_category_search_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
   "bounded_sections": {
     "lib/main.dart": [
       {
-        "start": "class RiyalAmount extends StatelessWidget {",
-        "end": "/// Preserve older single-receipt records"
+        "start": "bool waffraCanAssignManualCategory(",
+        "end": "class SavingGoal {"
       },
       {
-        "start": "class WaffraCurrencyAmount extends StatelessWidget {",
-        "end": "// Collapse the balance as the user scrolls"
-      },
-      {
-        "start": "pw.Widget pdfCurrencyMark({",
-        "end": "pw.Widget pdfMoneyHeader("
-      },
-      {
-        "start": " Widget tile(MoneyEntry e){",
-        "end": " String get greeting=>"
-      },
-      {
-        "start": " Future<void> openVerifiedAccounts()async{",
-        "end": " /// Internal transfers use the verified account ledger, never expense."
-      },
-      {
-        "start": "enum WaffraSnackKind { success, error, warning, info }",
-        "end": "/// Consistent outlined item count even when there are no records."
+        "start": " Future<void> _reviewAutoSmsCandidates({String? targetId})async {",
+        "end": " void _receiveSharedSms("
       }
     ],
-    "lib/waffra_riyal_symbol.dart": [
+    "lib/waffra_centered_dropdown.dart": [
       {
-        "start": "class WaffraCurrencyMark extends StatelessWidget {",
-        "end": "/// Inline money displays only."
-      },
-      {
-        "start": "/// Inline money displays only.",
+        "start": "import 'dart:ui' as ui;",
         "end": null
       }
     ],
-    "lib/waffra_financial_tools.dart": [
+    "lib/waffra_sms_rule_settings_page.dart": [
       {
-        "start": "Widget transactionCard(WaffraCalendarItem item,bool dark){",
-        "end": " final first=DateTime(selected.year,selected.month);"
-      }
-    ],
-    "lib/waffra_home_accounts_sheet.dart": [
-      {
-        "start": "import 'package:flutter/material.dart';",
-        "end": "/// Viewing another account"
+        "start": "        if(financial)...[",
+        "end": "        TextField(controller:sender,"
       },
       {
-        "start": "class WaffraHomeAccountsSheet extends StatelessWidget{",
-        "end": null
-      }
-    ],
-    "lib/waffra_account_context_page.dart": [
-      {
-        "start": "import 'package:flutter/material.dart';",
-        "end": "/// Account-aware ledger review"
-      },
-      {
-        "start": "if(data.goals.isNotEmpty)...[",
-        "end": "if(entries.length>visibleCount)Padding("
-      }
-    ],
-    "lib/waffra_accounts_manager_page.dart": [
-      {
-        "start": "import 'package:flutter/material.dart';",
-        "end": "/// M440 optional SQLCipher account page"
-      },
-      {
-        "start": "final accounts=snapshot.data??",
-        "end": "trailing:PopupMenuButton<String>("
-      },
-      {
-        "start": "class WaffraAccountsManagerPage extends StatefulWidget {",
-        "end": "class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {"
-      },
-      {
-        "start": " Future<void> compose(List<WaffraAccountBalance> accounts)async{",
-        "end": " @override Widget build(BuildContext context)=>Scaffold("
-      },
-      {
-        "start": " @override void initState(){super.initState();current=widget.repository.balances();}",
-        "end": " void failed(){"
-      }
-    ],
-    "lib/waffra_practical_tools_page.dart": [
-      {
-        "start": "import 'package:flutter/material.dart';",
-        "end": "/// Four read-only tools"
-      },
-      {
-        "start": "if (summary == null) Text(t('أدخل رصيدًا صحيحًا.'",
-        "end": "  Widget diagnostics() {"
-      }
-    ],
-    "lib/waffra_oil_market_section.dart": [
-      {
-        "start": "import 'dart:async';",
-        "end": "/// Crude oil display"
-      },
-      {
-        "start": "if(fxLoading)const SizedBox(width:19,height:19,",
-        "end": "if(total==null)Padding(padding:const EdgeInsets.only(top:7),"
-      }
-    ],
-    "native/WaffraWidget.kt": [
-      {
-        "start": "view.setTextViewText(R.id.widget_balance, balance)",
-        "end": "view.setTextColor(R.id.widget_balance, color)"
-      }
-    ],
-    "native/WaffraAutoSmsNotifications.kt": [
-      {
-        "start": "val title = if (income)",
-        "end": "val notification = NotificationCompat.Builder(context, channel)"
-      },
-      {
-        "start": "import android.net.Uri",
-        "end": "import android.os.Build"
-      }
-    ],
-    ".github/workflows/android.yml": [
-      {
-        "start": "<TextView android:id=\"@+id/widget_sparkle\"",
-        "end": "<TextView android:id=\"@+id/widget_currency\""
-      }
-    ],
-    ".github/workflows/android-full-smoke.yml": [
-      {
-        "start": "<TextView android:id=\"@+id/widget_sparkle\"",
-        "end": "<TextView android:id=\"@+id/widget_currency\""
-      }
-    ],
-    "test/m270_native_riyal_widget_contract_test.dart": [
-      {
-        "start": "void main() {",
-        "end": null
-      }
-    ],
-    "test/m270_original_riyal_currency_presentation_test.dart": [
-      {
-        "start": "void main() {",
-        "end": null
-      }
-    ],
-    "test/m470_arabic_currency_word_boundary_test.dart": [
-      {
-        "start": "void main() {",
-        "end": null
-      }
-    ],
-    "test/waffra_footer_notice_test.dart": [
-      {
-        "start": " testWidgets('Arabic error is red and pinned directly above footer'",
-        "end": null
-      }
-    ],
-    "test/m268_smart_features_ten_calendar_art_test.dart": [
-      {
-        "start": "  testWidgets('Saudi smart tools show SAR even when old Global display unit differs'",
-        "end": "  testWidgets('third footer smart tools expand inline and keep siblings visible'"
+        "start": "         if(autoPost)...[",
+        "end": "         if(financial)Text("
       }
     ]
   }
