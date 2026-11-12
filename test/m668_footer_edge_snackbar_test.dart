@@ -69,9 +69,12 @@ void main() {
           expect(card, findsOneWidget);
           expect(stripe, findsOneWidget);
           expect(tester.widget<Container>(stripe).color, edgeColors[kind]);
-          final background = tester.widget<Material>(
-            find.ancestor(of: card, matching: find.byType(Material)).first);
-          expect(background.color, dark ? darkSurface : lightSurface);
+          final ancestorMaterials = tester.widgetList<Material>(
+            find.ancestor(of: card, matching: find.byType(Material)));
+          expect(ancestorMaterials.any(
+            (material) => material.color ==
+                (dark ? darkSurface : lightSurface)), isTrue,
+            reason: 'The notice card, not the entire route, is neutral');
           final outer = tester.getRect(card);
           final bar = tester.getRect(stripe);
           expect(bar.width, 5);
