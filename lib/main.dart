@@ -3550,8 +3550,8 @@ class WaffraNoticeContent extends StatelessWidget {
     Icon(palette.$4,color:palette.$2,size:19),
     const SizedBox(width:8),
     Expanded(child:Tooltip(message:notice.text,
-     child:WaffraText(notice.text,maxLines:2,
-      overflow:TextOverflow.ellipsis,style:TextStyle(
+     child:WaffraText(notice.text,
+      style:TextStyle(
        color:palette.$2,fontSize:12,height:1.2,
        fontWeight:FontWeight.w700)))),
     if(notice.onAction!=null)...[
@@ -3574,14 +3574,7 @@ class WaffraNoticeContent extends StatelessWidget {
        maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(
         color:palette.$2,fontSize:12,fontWeight:FontWeight.bold))),
     ],
-    const SizedBox(width:6),
-    SizedBox(width:48,height:48,child:IconButton(
-     key:const Key('waffra-snackbar-close'),
-     tooltip:waffraIsEnglish?'Close':'إغلاق',
-     icon:Icon(Icons.close_rounded,color:palette.$2,size:18),
-     padding:EdgeInsets.zero,
-     constraints:const BoxConstraints(minWidth:48,minHeight:48),
-     onPressed:WaffraHaptics.tap(onDismiss))),
+
    ]));
  }
 }
@@ -5116,8 +5109,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }
   });
  }
- Future<void> _rescanAutoSmsInbox()async{
+ Future<void> _rescanAutoSmsInbox({BuildContext? feedbackContext})async{
   if(_autoSmsRescanRunning||!mounted)return;
+  final feedback=feedbackContext??context;
   setState(()=>_autoSmsRescanRunning=true);
   try{
    // Do not rewind the durable month cursor after it has completed.
@@ -5153,14 +5147,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     (after!['added'] as num).toInt():previous;
    final added=(current-previous).clamp(0,2147483647);
    if(_autoSmsStatusProblem!=null){
-    snack(context,_autoSmsStatusProblem!,isError:true);
+    snack(feedback,_autoSmsStatusProblem!,isError:true);
    }else if(after?['complete']!=true){
     final continuation=continuingInitialHistory?
      (waffraIsEnglish?'Continuing first history scan.':
       'جارٍ استكمال الفحص الأول للرسائل السابقة.'):
      (waffraIsEnglish?'More newly received messages remain to scan.':
       'لسه فيه رسائل جديدة محتاجة استكمال الفحص.');
-    snack(context,waffraIsEnglish?
+    snack(feedback,waffraIsEnglish?
      'Examined $scanned new inbox rows • $added added • '
       '$removedFromPhone deleted from phone removed from review • '
       '${_autoSmsPending.length} awaiting review. $continuation':
@@ -5168,16 +5162,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       '$removedFromPhone اتحذفت من المراجعة بعد حذفها من الهاتف • '
       '${_autoSmsPending.length} بانتظار المراجعة. $continuation');
    }else{
-    snackSuccess(context,waffraIsEnglish?
-     'Scan completed: $scanned newly examined • $added added for review • '
-      '$removedFromPhone deleted from phone removed from review • '
-      '${_autoSmsPending.length} awaiting review.':
-     'اكتمل الفحص: $scanned رسالة جديدة فُحصت • $added اتضافت للمراجعة • '
-      '$removedFromPhone اتحذفت من المراجعة بعد حذفها من الهاتف • '
-      '${_autoSmsPending.length} بانتظار المراجعة.');
+    if(feedbackContext!=null&&!feedbackContext.mounted)return;
+    if(added==0){
+     snackSuccess(feedback,waffraIsEnglish?
+      'No new messages to review.':'لا توجد رسائل جديدة للمراجعة.');
+    }else{
+     snackSuccess(feedback,waffraIsEnglish?
+      '$added new messages added for review.':
+      'تمت إضافة $added رسالة جديدة للمراجعة.');
+    }
    }
   }catch(_){
-   if(mounted)snack(context,waffraIsEnglish?
+   if(mounted&&(feedbackContext==null||feedbackContext.mounted))snack(feedback,waffraIsEnglish?
     'SMS rescan failed. Pending messages were not deleted.':
     'تعذر إعادة الفحص. لم تُحذف الرسائل المعلقة.',isError:true);
   }finally{
@@ -5694,7 +5690,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     onReviewAll:_openAutoSmsInbox,
     onBulkExclude:_m592ExcludeNotificationSelection,
     onReviewOne:(id)=>_reviewAutoSmsCandidates(targetId:id),
-    onRescan:_rescanAutoSmsInbox,
+    onRescan:()=>_rescanAutoSmsInbox(feedbackContext:route),
     // A user refresh always checks the real incremental native cursor;
     // a false rescanNeeded hint must not make the button inert.
     canRescan:()=>!_autoSmsRescanRunning,
