@@ -197,8 +197,10 @@ abstract final class WaffraSmsLocalRules {
    r'purchase\s+(?:completed|successful|posted))\b|'
    r'\b(?:salary\s+(?:deposit|credited|payment)|cash\s+deposit|'
    r'deposit(?:ed)?|refund\s+received|funds\s+received|'
-   r'(?:credit|debit)\s+transfer|account\s+credited)\b|'
-   r'(?:تم|تمت)\s+(?:خصم|سحب|إيداع|ايداع|تحويل|ارسال|إرسال|استلام)(?:\s|[:،.,]|$)|'
+   r'(?:credit|debit)\s+transfer|account\s+credited|'
+   r'payment\s+received|money\s+received|credit\s+card\s+payment|'
+   r'card\s+(?:balance|bill)\s+payment|card\s+settlement)\b|'
+   r'(?:تم|تمت)\s+(?:خصم|سحب|إيداع|ايداع|تحويل|ارسال|إرسال|استلام|دفع|سداد|شراء)(?:\s|[:،.,]|$)|'
    r'حوال[ةه]\s+(?:(?:محلي[ةه]|دولي[ةه]|مالي[ةه])\s+)?(?:صادر[ةه]|وارد[ةه])|'
    r'تحويل\s+(?:بنكي\s+)?(?:صادر|وارد)|'
    r'(?:إيداع|ايداع)\s+(?:راتب|مالي)|'
@@ -206,20 +208,20 @@ abstract final class WaffraSmsLocalRules {
    caseSensitive:false,
   ).hasMatch(body);
   if(posted)return true;
-  // A rejected/pending purchase is not evidence that money moved.
-  if(facts.pending)return false;
-  // A bank purchase headline with a numeric amount remains REVIEW, even if
-  // the same SMS also says "OTP", "special offer" or "card activated".
+  // An independent bank purchase headline plus actual amount may NOT be
+  // hidden by OTP wording. Detect it BEFORE the generic pending check.
   if(RegExp(r'\b(?:card\s+purchase|online\s+purchase|'
    r'purchase\s+card)\b',caseSensitive:false).hasMatch(body)&&
-   RegExp(r'\d+(?:[.,]\d+)?').hasMatch(body))return true;
+   RegExp(r'[0-9٠-٩]+(?:[.,][0-9٠-٩]+)?').hasMatch(body))return true;
+  // A failed or still-pending notice alone is not a settled movement.
+  if(facts.pending)return false;
   // Explicit bank income/expense + a real posted currency amount is not a
   // discount coupon or a reminder. This also protects salary/credit notices
   // that lack the English "debited/credited" verb.
+  if(facts.kind==WaffraBankOperationKind.cardSettlement)return true;
   if(!facts.pending&&
      (facts.kind==WaffraBankOperationKind.income||
-      facts.kind==WaffraBankOperationKind.expense||
-      facts.kind==WaffraBankOperationKind.cardSettlement)&&
+      facts.kind==WaffraBankOperationKind.expense)&&
      RegExp(r'(?:\bSAR\b|ريال|ر\.?\s*س)',caseSensitive:false)
       .hasMatch(body)&&
      RegExp(r'[0-9٠-٩]').hasMatch(body))return true;
