@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "pr": "#597",
-  "issue": "#596",
+  "issue": "#596, #598",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "58a79a51094523e4506776130fedbd842efc7e87",
   "reviewed_at": "2026-11-12",
@@ -1866,6 +1866,34 @@
         "SMS parser and original financial message source and native saved account identifiers must not be rewritten by display regex. Other currencies including USD, AED and EGP keep their units.",
         "Existing image asset is reused without replacing icon bytes. Official Riyal left-of-minus geometry is required in both locales; privacy eye remains hidden without leaking symbol or amount.",
         "M385, M449, M550 and native/Flutter source analyzers plus full app tests remain mandatory; mobile device and PDF page validation are not claimed by static CI."
+      ]
+    },
+    {
+      "id": "M667-MY-ACCOUNTS-REUSE-HOME-ENTRY-SHEET-3-MODES",
+      "issue": "Issue #598; Draft PR #597; owner four screenshots 2026-11-12",
+      "previous_behavior": "The My Accounts new transaction footer called compose(accounts), which independently pushed WaffraAccountTransactionForm with distinct income/expense/transfer layout and validation, so it did not match Home + manual transaction entrySheet.",
+      "approved_behavior": "The Home openVerifiedAccounts route injects its exact entrySheet callback into WaffraAccountsManagerPage. The My Accounts button first delegates to the canonical Home-owned three-mode bottom sheet, then refreshes verified account list upon return, and never executes the duplicate account-only form on this path. Existing income/expense and two-sided transfer writers, categories, selected account validation, attachments, date and budget behavior stay within the Home owner; no new posting path or extra debit.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_accounts_manager_page.dart"
+      ],
+      "test_paths": [
+        "test/m667_accounts_use_home_composer_test.dart",
+        "test/m495_pr402_ui_performance_regression_test.dart",
+        "test/m470_arabic_currency_word_boundary_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/m282-combined-qa-features.yml"
+      ],
+      "safety_invariants": [
+        "One user-confirmed Home-authoritative SQLCipher writer is used to post manual income/expense, with no account manager duplicate append or alias into legacy storage.",
+        "Internal transfers are exactly two-sided account movements with no independent expense posting or duplicate budget consumption.",
+        "Both Arabic and English My Accounts button calls show exactly the same parent-owned Home editor, including cancel/Back and verified balance refresh.",
+        "Existing standalone account composer is a fallback only when a Home parent has not provided the callback; the production account route always injects it.",
+        "No bypass or disabling of exact-head Flutter, native, source-scope, SQLCipher and release-note QA gates."
       ]
     }
   ]
