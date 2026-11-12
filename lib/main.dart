@@ -1263,6 +1263,18 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
  // M623: Keep the actual preceding authenticated screen mounted until the
  // complete owner-verified Home can paint. Never replace its wait with black.
  bool _m623HomeReady=false;
+ // M663: first credential-verified registration can prepare the real hidden
+ // Home while consent/biometric UI is active. No root data/zero is fabricated.
+ bool _m663OnboardingHomePreload=false;
+ bool _m663PreloadedFinanceReady=false;
+ void _m663RevealPreloadedHome(){
+  // Only a signed-in, foreground-authenticated owner can show verified Home.
+  if(!mounted||locked||showLogin||autoSmsConsentPending||
+     (googleFirstRunSetup&&WaffraSaudiRelease.locationCountryOnboarding))return;
+  if(_m663PreloadedFinanceReady){
+   setState((){_m623HomeReady=true;_m623RetainedStage=null;});
+  }
+ }
  String? _m623RetainedStage;
  // M627: one Home State per authenticated session, stable across locale.
  int _m627HomeSession=0;
@@ -1365,9 +1377,18 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     '${_m625HandoffClock?.elapsedMilliseconds??-1}');
   }
   final current=profile;
-  if(!mounted||current==null||showLogin||locked||
+  if(!mounted||current==null||showLogin||
      current.provider!=expectedOwner.provider||
      current.phone!=expectedOwner.phone||current.email!=expectedOwner.email)return;
+  // The hidden, owner-verified Home may finish while first-run permission
+  // and biometric UI is still active. Remember readiness but NEVER reveal
+  // it until the biometric gate and every consent step were completed.
+  if(_m663OnboardingHomePreload&&(locked||autoSmsConsentPending)){
+   _m663PreloadedFinanceReady=true;
+   if(kProfileMode)debugPrint('WAFFRA_AUTH_PERF m663_hidden_home_ready=true');
+   return;
+  }
+  if(locked||autoSmsConsentPending)return;
   setState((){_m623HomeReady=true;_m623RetainedStage=null;});
   final stopwatch=_m625HandoffClock;
   final origin=_m625HandoffOrigin;
@@ -1415,6 +1436,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     if(mounted&&locked&&profile!=null&&!showLogin){
      _m625TraceHandoff('biometric');
      setState(()=>locked=false);
+     _m663RevealPreloadedHome();
     }
    }
    return;
@@ -1602,6 +1624,12 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    if(freshSession){
     _m623HomeReady=false;
     _m623RetainedStage=locked?'biometric':'login';
+    _m663PreloadedFinanceReady=false;
+    // A credential-verified first registration is the ONLY time we may
+    // prepare the hidden owner Home before the first biometric gate.
+    // Explicit logout/login and restored sessions never use this path.
+    _m663OnboardingHomePreload=needsSmsAccessAfterRegistration&&
+     !ordinaryPhoneRelogin;
    }
   });
   // Password verification and protected profile write have succeeded.
@@ -1749,6 +1777,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   if(mounted)setState((){
    profile=null;showLogin=true;locked=true;googleFirstRunSetup=false;
    _m623HomeReady=false;_m623RetainedStage=null;
+   _m663OnboardingHomePreload=false;_m663PreloadedFinanceReady=false;
    _m627HomeSession++;
    _m631PrewarmBinding=null;_m631PrewarmOwner=null;
    _m631PrewarmSession=null;_m631PrewarmClaimed=false;
@@ -1802,6 +1831,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
    pinHash=hash;
    locked=false;
   });
+  _m663RevealPreloadedHome();
  }
  Future<void> setLanguage(String next)async {
   if((next!='ar'&&next!='en')||next==language)return;
@@ -1838,9 +1868,14 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   final laterConsent=!needsLogin&&!firstConsent&&!needsGate&&autoSmsConsentPending;
   final needsCountry=!needsLogin&&!firstConsent&&!needsGate&&!laterConsent&&
    googleFirstRunSetup&&WaffraSaudiRelease.locationCountryOnboarding;
-  final canMountHome=!needsLogin&&!firstConsent&&!needsGate&&
+  final canShowHome=!needsLogin&&!firstConsent&&!needsGate&&
    !laterConsent&&!needsCountry;
-  final beforeReady=canMountHome&&!_m623HomeReady;
+  // M663: offstage mount is restricted to a NEW credential-verified signup.
+  // The visible gate remains mounted and receives every user interaction.
+  final canMountHome=canShowHome||
+   (_m663OnboardingHomePreload&&!needsLogin&&!needsCountry);
+  final homeInteractive=canShowHome&&_m623HomeReady;
+  final beforeReady=canShowHome&&!_m623HomeReady;
   final showLoginScreen=needsLogin||(beforeReady&&_m623RetainedStage=='login');
   final showConsent=firstConsent||laterConsent||
    (beforeReady&&_m623RetainedStage=='consent');
@@ -1871,6 +1906,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
         _biometricVerifiedAwaitingResume=false;
         _m625TraceHandoff('biometric');
         setState(()=>locked=false);
+        _m663RevealPreloadedHome();
        }else if(lifecycle==AppLifecycleState.inactive){
         _biometricVerifiedAwaitingResume=true;
        }
@@ -1884,19 +1920,20 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
       onCountryConfirmed:setUiCountry))),
    if(canMountHome)KeyedSubtree(
     key:ValueKey('home-$_m627HomeSession'),
-    child:Offstage(offstage:!_m623HomeReady,
-     child:HomeScreen(
+    child:Offstage(offstage:!homeInteractive,
+     child:TickerMode(enabled:homeInteractive,child:HomeScreen(
       // Stable across language changes; rotated on explicit sign-out only.
       key:_m627HomeKey,
       profile:account,
       prewarmedFinanceBinding:_m631ClaimFinancePrewarm(account),
       onVerifiedReady:()=>_m623HomeLoaded(account),
+      postAuthVisible:homeInteractive,
       onVerifiedHomeSmsResume:()=>_m624ResumeSmsAfterRealHome(account),
       dark:appearance=='dark'||(appearance=='system'&&
        MediaQuery.platformBrightnessOf(rootContext)==Brightness.dark),
       appearance:appearance,onAppearance:setAppearance,onTheme:theme,
       onLanguage:setLanguage,onLogout:logout,onProfile:saveUser,onSetPin:setPin,
-      pinEnabled:pinHash!=null,greetingIndex:_greetingCycle))),
+      pinEnabled:pinHash!=null,greetingIndex:_greetingCycle)))),
   ]);
  }
  @override Widget build(BuildContext context)=>MaterialApp(
