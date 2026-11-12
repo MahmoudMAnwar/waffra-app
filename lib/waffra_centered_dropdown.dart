@@ -119,9 +119,9 @@ class WaffraCenteredDropdownFormField<T> extends FormField<T> {
                        Center(child:Padding(
                         padding:const EdgeInsets.all(14),
                         child:Text(
-                         key:const Key('waffra-centered-dropdown-no-results'),
                          Directionality.of(dialogContext)==TextDirection.rtl?
                           'لا توجد نتائج مطابقة':'No matching results',
+                         key:const Key('waffra-centered-dropdown-no-results'),
                          textAlign:TextAlign.center))):
                        ListView.builder(
                         shrinkWrap:true,
