@@ -55,7 +55,7 @@
         "end": "        TextField(controller:name,"
       },
       {
-        "start": "        if(financial)...[\n         WaffraCenteredDropdownFormField<String>(",
+        "start": "        const SizedBox(height:12),\n        if(financial)...[",
         "end": "        TextField(controller:sender,"
       },
       {
