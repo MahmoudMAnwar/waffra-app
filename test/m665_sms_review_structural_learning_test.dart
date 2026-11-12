@@ -107,6 +107,45 @@ void main() {
   });
  });
 
+ test('M665.6 all 14 ready excluded templates match but never post money',(){
+  final seeds=WaffraSmsLocalRules.allDefaultRules.where(
+   (r)=>r.builtIn&&r.id.startsWith('sa_excluded_')).toList();
+  expect(seeds,hasLength(14));
+  for(final rule in seeds){
+   final message=rule.keywords.first;
+   final result=WaffraSmsLocalRules.resolveSpecial(
+    body:message,sender:'TestBank',
+    bankKind:WaffraBankOperationKind.uncertain);
+   expect(result?.resolvedKind,'excluded',reason:'${rule.id}: $message');
+   expect(result?.autoPost,isFalse);
+  }
+  for(final benign in const <String>[
+   'خصم حصري اليوم', 'payment reminder', 'عرض خاص اليوم',
+   'كود خصم', 'Your verification code is 123456',
+   'New login detected on your account',
+  ]){
+   final matched=WaffraSmsLocalRules.resolveSpecial(
+    body:benign,sender:'TestBank',
+    bankKind:WaffraBankOperationKind.uncertain);
+   expect(matched?.resolvedKind,'excluded',reason:benign);
+  }
+ });
+
+ test('M665.6 completed bank movements override generic ready exclusions',(){
+  for(final posted in const <String>[
+   'Card Purchase SAR 75.00 OTP verification code 123456',
+   'تم خصم 300 ريال. رمز التحقق 889100',
+   'تم تحويل 100 ريال إلى المستفيد أحمد. رمز التحقق 999999',
+   'حوالة صادرة بقيمة 1900 ريال. عرض خاص',
+   'Payment completed SAR 250. promo code',
+  ]){
+   final matched=WaffraSmsLocalRules.resolveSpecial(
+    body:posted,sender:'TestBank',
+    bankKind:WaffraBankOperationKind.uncertain);
+   expect(matched?.resolvedKind,isNot('excluded'),reason:posted);
+  }
+ });
+
  group('M665 visual and event lifecycle source guards', () {
   test('compact review retains main and child correction on current sheet', () {
    final main=File('lib/main.dart').readAsStringSync();
@@ -114,6 +153,15 @@ void main() {
    final end=main.indexOf(' void _receiveSharedSms(',start);
    final review=main.substring(start,end);
    expect(review,contains("Key('m665-review-pick-category')"));
+   expect(review,isNot(contains('PopupMenuButton<String>(')));
+   expect(review,isNot(contains('Optional AI review')));
+   expect(review,isNot(contains('تحليل اختياري بالذكاء الاصطناعي')));
+   expect(review,isNot(contains('ليست عملية مالية')));
+   expect(review,isNot(contains("decision=='ai'")));
+   expect(review,contains("Key('m595-review-single-exclude')"));
+   expect(review,contains("Key('m587-sms-transfer-exclude')"));
+   expect(main,isNot(contains('Future<void> _analyzeAmbiguousSmsOnDemand(')));
+
    expect(review,contains('reviewedCategory=chosen.name;'));
    expect(review,contains('reviewedAccount=(ids:<String?>[pickedId],'));
    expect(review,contains('generation:fresh.witness.generation);'));
@@ -146,7 +194,7 @@ void main() {
    expect(fragment,contains('_receiveAutoSmsNotice();'));
    expect(fragment,isNot(contains('importConsentMonthChecked()')));
    expect(main,contains('await compute(waffraM632ClassifySmsQueue'));
-   expect(main,contains("local['kind']=='excluded'&&local['defaultSeed']!=true"));
+   expect(main,contains("if(local['kind']=='excluded'){"));
   });
  });
 
@@ -180,13 +228,13 @@ void main() {
   final worker=main.substring(begin,end);
   expect(worker,contains('WaffraSmsLocalRules.resolveSpecial('));
   expect(worker,contains('WaffraSmsLocalRules.resolve('));
-  expect(worker,contains("local['kind']=='excluded'&&local['defaultSeed']!=true"));
+  expect(worker,contains("if(local['kind']=='excluded'){"));
   expect(worker,contains('waiting.add(annotated);'));
   expect(worker,isNot(contains('commitConfirmedSms(')));
   expect(worker,isNot(contains('commitConfirmedManual(')));
   final refresh=main.substring(
    main.indexOf(' Future<void> _runAutoSmsRefresh({'),
-   main.indexOf(' Future<void> _analyzeAmbiguousSmsOnDemand('));
+   main.indexOf(' Future<void> _scanPreviousBankSmsFromSettings()async{'));
   expect(refresh,contains('WaffraSmsLocalRuleStore().read('));
   expect(refresh,contains('await compute(waffraM632ClassifySmsQueue'));
   expect(refresh,contains("WaffraAutoSms.excludeMessages(batch)"));
