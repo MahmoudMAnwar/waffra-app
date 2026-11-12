@@ -16508,7 +16508,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             onPressed:WaffraHaptics.tap(()=>
              unawaited(_handleRecurringCardAction(r,'edit'))),
             icon:const Icon(Icons.edit_outlined,size:17),
-            label:WaffraText(waffraIsEnglish?'Edit':'تعديل',maxLines:1))))),
+            label:WaffraText(waffraIsEnglish?'Edit':'تعديل',maxLines:1)))))),
         const SizedBox(width:7),
         Expanded(child:OutlinedButton.icon(
          onPressed:WaffraHaptics.tap(()=>unawaited(_handleRecurringCardAction(r,'delete'))),
