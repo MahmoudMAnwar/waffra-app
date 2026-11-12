@@ -1671,6 +1671,32 @@
         "Logout still drains owner-bound Home I/O, suspends SMS and closes the exact finance binding; relogin never reuses closed handles or stale balances.",
         "M385 bounded source diff and existing positive security/finance tests remain enabled; exact SHA CI and physical Android acceptance pending."
       ]
+    },
+    {
+      "id": "M664-FULL-FLUTTER-TEST-ASSERTION-DRIFT-ISSUE593",
+      "issue": "Issue #593, same Draft PR #592, 2026-11-12",
+      "previous_behavior": "Six full-suite CI jobs were red on dc6ec5c from three stale source-test expectations (M587 one-line manual entry call, M494 blocking Home reload, M663 back handler outside truncated test source window). Complete Flutter app executed and all other tests succeeded; the M340 quality-verdict failure was downstream, not an extra root error.",
+      "approved_behavior": "Retain complete Flutter test suite and production source unchanged. Positively check manual entry opens with separate transfer SMS reference without ACK, newly created account appears only after direct verified SQLCipher balances read and both pickers/selection update while Home refresh remains nonblocking, and hidden Home back handling is gated by postAuthVisible at its real function location. Never reduce finance, OTP, authorization, anti-replay or SMS confirmation assertions.",
+      "source_paths": [
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m486_sms_back_navigation_source_test.dart",
+        "test/m580_sms_security_navigation_performance_test.dart",
+        "test/m663_home_prewarm_auth_handoff_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/m160-main-reconciliation.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "M494: authoritative api.balances() read after createTypedAccountWithIdentity, one created ID and one matching bank group, inline provider+child state update and selected financial account, plus nonblocking Home list sync.",
+        "M587: transfer remains pending when user instead adds a separate manual income/expense; reviewedOriginalSms stays read-only and no automatic transfer ACK; known transfer still requires source+destination confirmed by owner.",
+        "M663: hidden/offstage preloaded Home cannot process back navigation until user-visible first frame; guard remains in actual _consumeHomeBack function.",
+        "No skipped, removed, commented-out or selectively hidden unit/widget/security tests; all mandatory PR checks must execute against exact new head."
+      ]
     }
   ]
 }
