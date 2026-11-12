@@ -777,6 +777,8 @@ int waffraGoalDueCashMinor(MoneyEntry entry){
   ?entry.goalWalletPaidMinor.clamp(0,gross).toInt():0;
  return gross-wallet;
 }
+String waffraEntryReportCategory(MoneyEntry entry)=>
+ entry.sourceType=='goal_due'?'استحقاق هدف':entry.category;
 /// Historical goal dues encoded internal split markers in personal notes.
 /// Hide only this exact machine format; keep actual user-written notes.
 String waffraGoalDueVisibleNotes(MoneyEntry entry){
@@ -11110,7 +11112,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final doc=pw.Document();
    final totalIncome=sum(items,true),totalExpenses=sum(items,false);
    final categoryTotals=<String,double>{};
-   for(final e in items.where((e)=>!e.income)){categoryTotals[e.category]=(categoryTotals[e.category]??0)+e.amount;}
+   for(final e in items.where((e)=>!e.income)){
+    final label=waffraEntryReportCategory(e);
+    categoryTotals[label]=(categoryTotals[label]??0)+e.amount;
+   }
    pw.Widget summary(String label,double value,PdfColor bg)=>pw.Expanded(child:pw.Container(
     padding:const pw.EdgeInsets.all(10),decoration:pw.BoxDecoration(color:bg,borderRadius:pw.BorderRadius.circular(7)),
     child:pw.Column(crossAxisAlignment:pw.CrossAxisAlignment.start,children:[
@@ -18458,7 +18463,8 @@ WaffraSmartChartData waffraSmartChartData(List<MoneyEntry> items,DateTime now){
  });
  final byCategory=<String,double>{};
  for(final e in valid.where((e)=>!e.income)){
-  byCategory[e.category]=(byCategory[e.category]??0)+e.amount;
+  final label=waffraEntryReportCategory(e);
+  byCategory[label]=(byCategory[label]??0)+e.amount;
  }
  final top=byCategory.entries.toList()
   ..sort((a,b)=>b.value.compareTo(a.value));
