@@ -22,6 +22,7 @@
     "lib/waffra_sms_rule_settings_page.dart",
     "test/m436_cloud_review_pipeline_test.dart",
     "test/m508_saudi_default_sms_rules_test.dart",
+    "test/m514_sms_review_regressions_test.dart",
     "test/m548_review_grouping_and_signup_perf_test.dart",
     "test/m603_app_wide_lag_source_regression_test.dart",
     "test/m630_home_first_frame_contention_test.dart",
@@ -127,6 +128,12 @@
       {
         "start": "void main(){",
         "end": null
+      }
+    ],
+    "test/m514_sms_review_regressions_test.dart": [
+      {
+        "start": " test('M514 per-button scanned number is never native history total',(){",
+        "end": " test('M514 excluded queue items use dedicated encrypted fingerprints',(){"
       }
     ]
   }
