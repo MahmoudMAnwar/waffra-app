@@ -7173,7 +7173,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
  }
  void _receiveSharedSms(){
-  if(!mounted||!ready)return;
+  if(!mounted||!ready||!widget.postAuthVisible)return;
   final shared=waffraIncomingSms.value;
   if(shared==null||shared.trim().isEmpty)return;
   // M636: never resurrect the removed SMS paste/review screen.
