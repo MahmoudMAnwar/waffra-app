@@ -8,13 +8,15 @@
     "Change both old V24 converter and cold verified backup preflight to app-private temporary cache with randomized directories and guaranteed cleanup.",
     "Expose a privacy-safe restore failure stage identifier so further errors are distinguishable without logging user financial information.",
     "Test the same record counts and parent-child topology as the reported older backup using purely synthetic records: 1056 categories, 2 budgets, 19 transactions, 4 goals, 3 recurring, 11 hashes.",
-    "Retain password authentication, independent external rescue, biometric approval, source witness, rollback, opt-in missing receipt handling, and no fabricated bank-account links."
+    "Retain password authentication, independent external rescue, biometric approval, source witness, rollback, opt-in missing receipt handling, and no fabricated bank-account links.",
+    "Prove app-private SQLCipher candidate creation, cold reopen, ciphertext-at-rest and recursive deletion on a real Android emulator in the existing encrypted storage integration workflow."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
+    "integration_test/encrypted_storage_android_test.dart",
     "lib/main.dart",
     "lib/storage/waffra_legacy_v24_sqlcipher_converter.dart",
     "lib/storage/waffra_restore_staging_directory.dart",
@@ -55,6 +57,16 @@
       {
         "start": "    check(code, [",
         "end": "    check(tests, ["
+      }
+    ],
+    "integration_test/encrypted_storage_android_test.dart": [
+      {
+        "start": "import 'package:waffra/storage/waffra_encrypted_store.dart';",
+        "end": "void main() {"
+      },
+      {
+        "start": "    await reopened.close();\n  });",
+        "end": null
       }
     ]
   }
