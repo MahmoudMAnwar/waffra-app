@@ -38,10 +38,13 @@ void main() {
             launches++;
             await showModalBottomSheet<void>(
               context: homeContext,
-              builder: (_) => const SizedBox(
-                key: Key('m667-canonical-home-entry-sheet'),
+              builder: (sheetContext) => SizedBox(
+                key: const Key('m667-canonical-home-entry-sheet'),
                 height: 200,
-                child: Text('Same Home sheet'),
+                child: Center(child: TextButton(
+                  onPressed: () => Navigator.of(sheetContext).pop(),
+                  child: const Text('Return to My Accounts'),
+                )),
               ),
             );
           },
@@ -60,7 +63,7 @@ void main() {
       expect(fake.balanceReads, 1,
           reason: 'No extra financial reads before Home editor closes');
 
-      await tester.pageBack();
+      await tester.tap(find.text('Return to My Accounts'));
       await tester.pumpAndSettle();
       expect(find.text(english ? 'My accounts' : 'حساباتي'), findsOneWidget);
       expect(fake.balanceReads, greaterThanOrEqualTo(2),
