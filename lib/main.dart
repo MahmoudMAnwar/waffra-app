@@ -11928,8 +11928,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    ]),
    trailing:Row(mainAxisSize:MainAxisSize.min,children:[
     Column(mainAxisSize:MainAxisSize.min,children:[
-     Text('${e.income?'+':'-'}${cash(e.amount)}',style:TextStyle(fontFamily:'Tajawal',fontSize:18,fontWeight:FontWeight.w800,color:e.income?const Color(0xFF075C40):waffraInk)),
-     WaffraText(WaffraDisplayCurrency.label(waffraIsEnglish),style:TextStyle(fontSize:13,fontWeight:FontWeight.bold,color:e.income?const Color(0xFF075C40):waffraInk)),
+     FittedBox(fit:BoxFit.scaleDown,child:RiyalAmount(e.amount,
+      prefix:e.income?'+':'-',style:TextStyle(fontFamily:'Tajawal',fontSize:18,
+       fontWeight:FontWeight.w800,color:e.income?const Color(0xFF075C40):waffraInk))),
     ]),
     IconButton(tooltip:waffraIsEnglish?'Transaction options':'خيارات المعاملة',
      onPressed:WaffraHaptics.tap(()=>transactionActions(e)),icon:const Icon(Icons.more_vert,color:forest)),
