@@ -16206,6 +16206,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    postponedUntil:DateTime.tryParse(recurringPostponed[monthId]??''));
  }
  Future<void> _setRecurringActiveFromCard(RecurringBill r,bool enabled)async{
+  // The linked schedule is a projection of its goal. Changing it here
+  // would bypass the goal's atomic target/date/account and paid replay guard.
+  if(r.linkedGoalId!=null){
+   await _m665ExplainLinkedGoalEdit();
+   return;
+  }
        final index=recurring.indexWhere((item)=>item.id==r.id);
        if(index<0)return;
        if(enabled){
