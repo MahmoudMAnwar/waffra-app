@@ -1794,7 +1794,7 @@
       "id": "M665-7-GOAL-DUE-SPLIT-IMMUTABLE-LINKED-EDIT-SWITCH-ONLY",
       "issue": "Issue #594, Draft PR #595, owner three screenshots 2026-11-12",
       "previous_behavior": "Goal due saved a random first expense category and internal split markers in personal notes; Home displayed -5000 and only one small 2000 wallet caption, while editable recurring due could still be opened despite goal ownership and goal quick switch had redundant long label.",
-      "approved_behavior": "Total expense 5000 remains a single committed purchase; only 3000 cash bank debit and 2000 wallet draw are shown separately with labels on paid due recurring/home/details/report. Stop raw internal-note persistence and redact historic markers without rewriting finance source. Goal-linked schedules cannot edit directly; tapping disabled-like action shows edit-goal prompt, standalone editable. Paid goal_due entry similarly immutable. Goal quick switch has no redundant label. New linked due has deliberate neutral nonbudget category, but source-type goal due is displayed as purpose in card/detail/PDF.",
+      "approved_behavior": "Total expense 5000 remains a single committed purchase; only 3000 cash bank debit and 2000 wallet draw are shown separately with labels on paid due recurring/home/details/report. Stop raw internal-note persistence and redact historic markers without rewriting finance source. Goal-linked schedules cannot edit directly; tapping disabled-like action shows edit-goal prompt, standalone editable. Paid goal_due entry similarly immutable. Goal quick switch has no redundant label. New linked due has deliberate neutral nonbudget category, but source-type goal due is displayed as purpose in card/detail/PDF. Category breakdowns in Smart Analysis and PDF must use goal-due purpose labels for existing typed goal receipts, not historically misassigned restaurant category, preserving gross expense totals.",
       "source_paths": [
         "lib/main.dart",
         "lib/waffra_goal_recurring_actions.part.dart",
@@ -1819,7 +1819,8 @@
         "An immutable paid goal due can neither be saved as manual nor independently changed; no bypass from deep link.",
         "Goal edit persists account, due, target through atomic linked schedule path; already paid replay guard remains.",
         "Goals/recurring/home and prewarm remain responsive; SQLCipher/backup/finance exact-head test suite mandatory.",
-        "M495 historical unassigned manual entries still reach entrySheet through transaction Actions; only previously settled goal_due receipts are guarded from direct edits."
+        "M495 historical unassigned manual entries still reach entrySheet through transaction Actions; only previously settled goal_due receipts are guarded from direct edits.",
+        "Only category presentation grouping changes; total spending, goal wallet, current account balance and goal receipt identity are immutable."
       ]
     }
   ]
