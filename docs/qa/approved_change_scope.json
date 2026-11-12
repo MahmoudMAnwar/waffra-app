@@ -251,6 +251,10 @@
     ],
     "test/m286_tour_navigation_test.dart": [
       {
+        "start": "import 'dart:io';",
+        "end": "void main() {"
+      },
+      {
         "start": "void main() {",
         "end": null
       }
@@ -263,11 +267,19 @@
     ],
     "test/waffra_m206_day_theme_tour_sms_regression_test.dart": [
       {
+        "start": "import 'dart:io';",
+        "end": "void main() {"
+      },
+      {
         "start": "void main() {",
         "end": null
       }
     ],
     "test/waffra_oct21_regression_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "void main() {"
+      },
       {
         "start": "void main() {",
         "end": null
