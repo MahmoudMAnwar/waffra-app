@@ -13864,25 +13864,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 (waffraIsEnglish?'Show less':'عرض أقل'):
                 (waffraIsEnglish?'Show more':'عرض أكثر')))),
            const SizedBox(height:10),
-           Wrap(spacing:6,runSpacing:6,children:[
-            for(final choice in ['الكل','الدخل','المصروفات','التحويلات','الادخار','الاستحقاقات'])
-             ChoiceChip(
-              label:WaffraText(waffraIsEnglish?switch(choice){
-               'الدخل'=>'Income','المصروفات'=>'Expenses',
-               'التحويلات'=>'Transfers','الادخار'=>'Savings',
-               'الاستحقاقات'=>'Paid dues',
-               _=>'All',
-              }:choice,style:TextStyle(fontSize:12,
-               color:typeFilter==choice?Colors.white:null)),
-              selected:typeFilter==choice,selectedColor:emerald,
-              showCheckmark:false,
-              onSelected:WaffraHaptics.selection((_)=>setState((){
-               typeFilter=choice;categoryFilter='الكل';
-               showAllTransactions=false;
-              })),
-             ),
-           ]),
-           const SizedBox(height:7),
            Divider(color:forest.withValues(alpha:0.10)),
            Row(children:[
             IconButton(
@@ -13935,8 +13916,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             ),
            ]),
            if(showTransactionFilters)...[
-            const SizedBox(height:8),
-            Wrap(spacing:6,runSpacing:6,
+            const SizedBox(height:12),
+            Wrap(
+             key:const Key('waffra-activity-single-filter-chips'),
+             spacing:10,runSpacing:12,
              children:['الكل','الدخل','المصروفات','التحويلات','الادخار','الاستحقاقات']
               .map((choice)=>ChoiceChip(
               selected:typeFilter==choice,
@@ -13950,6 +13933,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                typeFilter=choice;categoryFilter='الكل';
                showAllTransactions=false;
               })))).toList()),
+            const SizedBox(height:14), // M677: separated outlined filter from chip borders.
             WaffraCenteredDropdownFormField<String>(
              key:ValueKey(typeFilter+'-'+selected),initialValue:selected,
              decoration:InputDecoration(labelText:waffraIsEnglish?
