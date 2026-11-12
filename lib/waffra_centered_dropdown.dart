@@ -1,6 +1,7 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'waffra_search.dart';
+import 'waffra_i18n.dart' show waffraTr;
 
 /// Centered dropdown used in Waffra forms. Unlike Material's anchored popup,
 /// this keeps actions legible above IME and Android navigation in RTL and LTR.
@@ -62,6 +63,7 @@ class WaffraCenteredDropdownFormField<T> extends FormField<T> {
                  for(var i=0;i<items.length;i++)
                   if(waffraSearchAny([
                    _waffraChoiceSearchText(items[i].child),
+                   waffraTr(_waffraChoiceSearchText(items[i].child)),
                    items[i].value?.toString()??'',
                   ],searchQuery))i,
                 ];
