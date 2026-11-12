@@ -43,8 +43,10 @@ void main() {
   expect(auto,contains('WaffraProductionFinanceAuthorityBinding.bind('));
   expect(auto,contains('commitConfirmedSms('));
   expect(auto,isNot(contains('WaffraSmsCloudReviewAnalyzer.stagePending(')));
-  expect(main,contains('Future<void> _analyzeAmbiguousSmsOnDemand('));
-  expect(main,contains('explicitlyRequested:true'));
+  // Owner retired the orphan per-message AI menu, not the protected cloud
+  // service's redaction, permission and no-autopost safety contracts.
+  expect(main,isNot(contains('Future<void> _analyzeAmbiguousSmsOnDemand(')));
+  expect(main,isNot(contains('explicitlyRequested:true')));
   expect(main,contains('await entrySheet(sms:true,initialSms:body,reviewedSender:sender);'));
   expect(main,contains('reviewSmsBudgetLinks([record])'));
  });
@@ -66,16 +68,18 @@ void main() {
   expect(build,isNot(contains('OPENROUTER_API_KEY')));
  });
 
- test('M452 no cloud choice on signup; explicit per-message consent only',(){
+ test('M452 no unsolicited cloud choice on signup or SMS review',(){
   final ui=File('lib/waffra_auto_sms_consent.dart').readAsStringSync();
   final main=File('lib/main.dart').readAsStringSync();
   final cloud=File('lib/waffra_sms_cloud_service.dart').readAsStringSync();
   expect(ui,contains('await WaffraSmsCloudService.setConsent(false)'));
   expect(ui,contains('await WaffraAutoSms.optIn()'));
   expect(ui,isNot(contains('allow(cloud:true)')));
-  expect(main,contains('Analyze this unclear message with AI?'));
-  expect(main,contains('Send this message'));
-  expect(main,contains('WaffraSmsCloudService.setConsent(true)'));
+  expect(main,isNot(contains('Analyze this unclear message with AI?')));
+  expect(main,isNot(contains('Send this message')));
+  expect(main,isNot(contains('WaffraSmsCloudService.setConsent(true)')));
+  expect(main,isNot(contains('Optional AI review')));
+  expect(main,isNot(contains('ليست عملية مالية')));
   expect(cloud,contains('FirebaseAppCheck.instance.getToken()'));
   expect(cloud,contains('WaffraCloudflareSmsGateway.analyze('));
   expect(cloud,contains('WaffraSmsCloudRedactor.redact(source)'));
