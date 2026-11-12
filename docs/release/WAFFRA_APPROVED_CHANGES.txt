@@ -313,3 +313,9 @@ M647/M649/M652 provenance labels — PR #575, 2026-11-11
 - Approved targeted fix: goal-linked recurring item Edit stays visually muted and read-only on every path even when the historical parent goal was deleted or not loaded, using source `linkedGoalId` rather than currently resolved `goal` for button opacity and Semantics. The explanatory tap still instructs editing the goal, and standalone dues retain their enabled Edit button. No SQLCipher account, wallet, posting, finance source, biometric preload or SMS logic changed.
 - Changed production path: lib/main.dart. Positive test: test/m665_goal_due_display_and_linked_edit_test.dart now guards orphaned link visual behavior.
 - Verification: exact-head CI and device acceptance must be checked after this commit. No previous-run success is claimed as evidence for this new source SHA.
+
+[M449 QA REGRESSION FOLLOW-UP — ISSUE #594 — DRAFT PR #595]
+- Reviewed feature source SHA: 22cb9728da05ab890ad06db04a0ce9974ec1c1b2 (unchanged by this test-only follow-up).
+- Exact-head M282 full Flutter run previously found three active test failures: obsolete M528 optional-AI-handler source lookup, a M665 linked recurring handler substring whose end precedes its start, and duplicate Flutter find.text matches because WaffraText composes a Text child. Repaired only those exact regression tests; kept explicit SMS Exclude and no review cloud request, linked-goal edit prohibition including orphaned linked goal, goal wallet and cash breakdown, no technical notes, and standalone recurring edit acceptance.
+- Changed test paths: test/m528_settings_async_cache_regression_test.dart, test/m665_goal_due_display_and_linked_edit_test.dart. M385 exact file manifest was updated before test change, M550 behavior contract remains active. No security test or CI job disabled.
+- Verification: latest-head full Flutter, Android and SQLCipher workflows must now pass. No claim of green based on older SHA.
