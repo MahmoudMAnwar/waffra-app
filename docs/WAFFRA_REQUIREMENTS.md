@@ -3,7 +3,7 @@
 
 - **Issue:** [#614](https://github.com/MahmoudMAnwar/waffra-app/issues/614)
 - **PR:** [#615](https://github.com/MahmoudMAnwar/waffra-app/pull/615) (Draft).
-- **Status:** Missing; implementation not started. Device acceptance **Pending**.
+- **Status:** Partial — importer and in-app V24-to-SQLCipher/V3 routing committed, synthetic regression committed, exact-head CI and Android signed APK acceptance pending. Path-only images are explicitly opt-in omissions, NOT recoverable from the old archive.
 - **Scope:** decrypt/authenticate legacy `.waffra` V24; strict schema/content preflight, no silent receipt loss, user confirmation, disposable validation + atomic SQLCipher restore, preserve IDs, categories, named budgets, goals, recurring, trash, SMS hashes; historical entries remain unlinked until user review. Prevent mistaken password error for incompatible SQLCipher route.
 - **Tests required:** synthetic legacy export/import on clean encrypted vault, parity on reopen, wrong key/tampering/unsupported format, non-empty destination rescue, rejected path-only receipt, rollback and signed Android test on expendable phone. Never commit live backup/password/real data.
 
