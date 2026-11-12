@@ -12,6 +12,7 @@ import 'waffra_production_finance_routing_gate.dart';
 import 'waffra_restored_finance_receipt_attestor.dart';
 import 'waffra_runtime_finance_route_contract.dart';
 import 'waffra_verified_finance_authority.dart';
+import 'waffra_restore_staging_directory.dart';
 
 /// A deliberately read-only decision. It cannot replace, swap, wipe,
 /// migrate, update a source marker or activate an encrypted finance vault.
@@ -111,8 +112,8 @@ class WaffraVerifiedActiveRestorePreflight {
 
     // These bytes live only in a uniquely generated temporary SQLCipher file.
     // The user cannot select an active vault path or provide its secure key.
-    final stagingDirectory = await Directory.systemTemp.createTemp(
-      'waffra-verified-restore-preflight-',
+    final stagingDirectory = await WaffraRestoreStagingDirectory.create(
+      prefix: 'waffra-verified-restore-preflight-',
     );
     final keyBytes = List<int>.generate(
       32, (_) => Random.secure().nextInt(256),
