@@ -285,7 +285,7 @@ extension WaffraCategoryScreen on _HomeScreenState {
     title:waffraIsEnglish?'Your categories':'أقسامك',
     subtitle:waffraIsEnglish?'All income and expense types with subcategories':
      'كل أنواع الدخل والمصروفات في أقسام رئيسية وفرعية منظمة.',
-    icon:Icons.category_outlined,titleKey:_tourKeys[2]),
+    icon:Icons.category_outlined),
    ()=>Row(children:[
     Expanded(child:_compactCategoryStat(waffraIsEnglish?'Main categories':'الأقسام الرئيسية',
      roots.length.toString(),Icons.layers,emerald)),
