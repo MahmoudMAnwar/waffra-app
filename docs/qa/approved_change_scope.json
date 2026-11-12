@@ -43,12 +43,20 @@
   "bounded_sections": {
     "lib/main.dart": [
       {
-        "start": " Future<bool> _m592ExcludeNotificationSelection(",
-        "end": " Future<void> _m549OpenNotifications()async{"
+        "start": "import 'waffra_sms_cloud_service.dart';",
+        "end": "import 'waffra_sms_local_rules.dart';"
       },
       {
-        "start": " Future<void> _reviewAutoSmsCandidates({",
-        "end": " void _receiveSharedSms(){"
+        "start": "double waffraGoalWalletBalance(Iterable<SavingGoal> goals)=>",
+        "end": "/// Fresh per-paste summary"
+      },
+      {
+        "start": "Map<String,Object?> waffraM632ClassifySmsQueue(",
+        "end": "List<String> splitBankMessages("
+      },
+      {
+        "start": "class WaffraTransactionDetailsDialog extends StatelessWidget {",
+        "end": "class HomeScreen extends StatefulWidget"
       },
       {
         "start": " bool _autoSmsReviewOpen=false;",
@@ -59,20 +67,20 @@
         "end": " Future<void> _scanPreviousBankSmsFromSettings()async{"
       },
       {
-        "start": "Map<String,Object?> waffraM632ClassifySmsQueue(",
-        "end": "List<String> splitBankMessages("
+        "start": " Future<bool> _m592ExcludeNotificationSelection(",
+        "end": " Future<void> _m549OpenNotifications()async{"
       },
       {
-        "start": "import 'waffra_sms_cloud_service.dart';",
-        "end": "import 'waffra_sms_local_rules.dart';"
-      },
-      {
-        "start": "class WaffraTransactionDetailsDialog extends StatelessWidget {",
-        "end": "class HomeScreen extends StatefulWidget"
+        "start": " Future<void> _reviewAutoSmsCandidates({",
+        "end": " void _receiveSharedSms(){"
       },
       {
         "start": " Future<void> entrySheet(",
         "end": " Future<void> showReceipt("
+      },
+      {
+        "start": " Future<void> exportEntriesPdf(",
+        "end": " Future<void> _deleteVerifiedEntry("
       },
       {
         "start": " Future<void> transactionActions(MoneyEntry entry)async {",
@@ -83,28 +91,8 @@
         "end": " Widget _m549HomeFinanceAction("
       },
       {
-        "start": " Future<void> exportEntriesPdf(",
-        "end": " Future<void> _deleteVerifiedEntry("
-      },
-      {
         "start": " Widget goalsPage(){",
         "end": " Widget recurringPage(){"
-      },
-      {
-        "start": " Future<void> recurringDialog(",
-        "end": " DateTime nextRecurringDue("
-      },
-      {
-        "start": " Future<void> _handleRecurringCardAction(",
-        "end": " Widget recurringPage(){"
-      },
-      {
-        "start": "double waffraGoalWalletBalance(Iterable<SavingGoal> goals)=>",
-        "end": "/// Fresh per-paste summary"
-      },
-      {
-        "start": " Future<void> _setRecurringActiveFromCard(RecurringBill r,bool enabled)async{",
-        "end": " Future<void> _handleRecurringCardAction("
       }
     ],
     "lib/waffra_approved_notifications.dart": [
