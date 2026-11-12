@@ -111,7 +111,7 @@ void main() {
   expect(editor,contains("mainCategories.where((c)=>c.id==selectedParentId)"));
   expect(editor,contains("selectedParentId=legacyParent.isEmpty?null:legacyParent.first.id;"));
   expect(editor,contains("'Choose a main category':'اختر القسم الرئيسي'"));
-  expect(editor,contains("'Choose or add a subcategory'"));
+  expect(editor,contains("'Choose or create a subcategory'"));
   expect(editor,contains("onTap:selectedParentId==null?null:"));
   expect(editor,contains("category='';suggestion=null;"));
   final catalog=File('lib/waffra_category_catalog.dart').readAsStringSync();
