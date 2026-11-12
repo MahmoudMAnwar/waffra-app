@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
-  "pr": "#603",
-  "issue": "#600; #602 (M670); previous #596/#598/#599 history retained; #605 M671",
+  "pr": "#615",
+  "issue": "#614",
   "workflow_review_policy": "scan-all-registered-workflows",
-  "baseline": "58a79a51094523e4506776130fedbd842efc7e87",
+  "baseline": "cca778e17eb6daa2576b33ad302c3d04d779834b",
   "reviewed_at": "2026-11-12",
-  "review_policy": "Review changed behavior against all GitHub Actions workflow scripts, all Dart and Python QA test files, and the original tests' protected security assertions; never edit tests merely to silence red jobs. PR #575 merge with main preserves every M645/M646/M647/M653/M654 contract; original PR-specific positive finance tests and approved fallback/owner-authority remain in effect. M661 source changes must not weaken existing fail-closed encryption, verified-bank account, OTP or anti-replay checks, must preserve all original tests and route review pending rules non-posting. M672-M678 owner-visible corrections (#606-#612) must preserve financial/account safety and separate Android visual/deletion persistence testing.",
+  "review_policy": "Review changed behavior against all GitHub Actions workflow scripts, all Dart and Python QA test files, and the original tests' protected security assertions; never edit tests merely to silence red jobs. PR #575 merge with main preserves every M645/M646/M647/M653/M654 contract; original PR-specific positive finance tests and approved fallback/owner-authority remain in effect. M661 source changes must not weaken existing fail-closed encryption, verified-bank account, OTP or anti-replay checks, must preserve all original tests and route review pending rules non-posting. M672-M678 owner-visible corrections (#606-#612) must preserve financial/account safety and separate Android visual/deletion persistence testing. M614 legacy user archive migration: existing V24 decryption is correct but SQLCipher backupRestore writer cannot accept old map; stage in disposable encrypted source and reuse V3 full-source rescue/attestation. Existing tests unchanged, end-to-end Android and signed same-sha checks required.",
   "contracts": [
     {
       "id": "M601-AUTH-PENDING-BUTTON-AND-VERIFIER-LATENCY",
@@ -2230,6 +2230,30 @@
         "Keep tests meaningful: no skips, no warnIfMissed:false, no exceptions suppressed.",
         "Only true exact-head rerun success supports merge, not stale older green jobs.",
         "Do not install an extra asynchronous timer just to satisfy a fake-clock test; check entrance animation duration first, preserve built-in accessible notice lifecycle."
+      ]
+    },
+    {
+      "id": "M614-V24-AUTHENTICATED-SQLCIPHER-RESTORE",
+      "issue": "Issue #614, PR #615, user requested immediate restore compatibility on noncritical Android test handset",
+      "previous_behavior": "A correct-password encrypted V24 archive decodes to legacy finance JSON but the active SQLCipher backend rejects the legacy saveCaptured backupRestore route. Generic error wrongly tells user to recheck password. Old backups contain only paths, not bytes, for some receipt images.",
+      "approved_behavior": "Prepare a fully authenticated V24 finance archive in a disposable SQLCipher staging vault, convert to authenticated V3 containing typed accountless finance history, and call existing verified V3 cold preflight, external rescue and atomic restore. Historical entries are preserved with original IDs, values, budget references and explicitly restored typed budget associations, with no fabricated bank account. When images are absent, warn and require separate positive confirmation before omission; clearly state omissions on success. Post-decrypt migration errors never claim wrong password.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/storage/waffra_legacy_v24_sqlcipher_converter.dart"
+      ],
+      "test_paths": [
+        "test/storage/m614_legacy_v24_restore_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Do not log or commit user archive contents, passwords, financial records, secrets or old receipt filenames.",
+        "A wrong password or malformed backup never mutates finance or decrypts into persistent plaintext.",
+        "No historic transactions may be re-posted or auto-linked to guessed banking accounts.",
+        "No existing SQLCipher vault is replaced until cold verification, explicit consent, external rescue and native-lock witness; every failure rolls back."
       ]
     }
   ]
