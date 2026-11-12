@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
-  "change_id": "M666-20261112-SAMA-SAR-LEFT-OF-SIGNED-AMOUNT-PR597",
-  "human_scope_review": "The owner explicitly requested a new PR auditing SAMA official Saudi Riyal symbol usage across all Waffra amount surfaces and fixes for physical left/right placement in Arabic/English (SAMA Guidelines pp. 16-17). Scope corresponds to Issue #596, Draft PR #597, requirements and the M666 audit matrix. This author records specific bounded production fragments and focused original regression tests only. Do not interpret author scope recording as separate human approval or hardware QA. Never touch SQLCipher posting, bank SMS evidence, performance/biometrics, account security, or foreign currency underlying values. Mandatory workflow/visual acceptance still required.",
+  "change_id": "M666-M667-20261112-SAMA-RIYAL-AND-MY-ACCOUNTS-HOME-SHEET-PR597",
+  "human_scope_review": "The owner explicitly requested a new PR auditing SAMA official Saudi Riyal symbol usage across all Waffra amount surfaces and fixes for physical left/right placement in Arabic/English (SAMA Guidelines pp. 16-17). Scope corresponds to Issue #596, Draft PR #597, requirements and the M666 audit matrix. This author records specific bounded production fragments and focused original regression tests only. Do not interpret author scope recording as separate human approval or hardware QA. Never touch SQLCipher posting, bank SMS evidence, performance/biometrics, account security, or foreign currency underlying values. Mandatory workflow/visual acceptance still required. M667 owner explicitly requested on 2026-11-12 that My Accounts button 'معاملة جديدة' must invoke the identical existing three-tab Home entrySheet instead of its separate WaffraAccountTransactionForm. Issue #598; only bounded Home page route and account-manager dispatch, no new finance writer, with own regression test and maintenance of all existing QA gates.",
   "user_requested_changes": [
     "Use official, non-mirrored Saudi Riyal PNG physically to the left of signed amount, with consistent gap and alignment in Arabic RTL and English LTR across Waffra Home, history, goals, budgets, accounts and paid due surfaces.",
     "Make existing money inline replacement bind code prefix or suffix and numeral into one directional visual run, preserving SMS original, ordinary prose, other FX currency symbols and semantically correct negative/positive/zero values.",
@@ -10,7 +10,8 @@
     "Make Android home widget fixed icon-left horizontal with clear gap for both Saudi locale choices and maintain source-gated private balances.",
     "Make saved finance notifications show clear left-of-amount U+20C1 where Android font supports it, with safe SAR fallback, LTR isolation and private content redaction.",
     "Keep original bank SMS bodies, verified signed SQLCipher balances, two-sided transfers, API currency codes and non-SAR conversion intact; no global raw-string rewrite.",
-    "Add real Flutter widget geometry and static PDF/native regression tests; evaluate whole exact-head CI and actual device, not disable CI or bypass guards."
+    "Add real Flutter widget geometry and static PDF/native regression tests; evaluate whole exact-head CI and actual device, not disable CI or bypass guards.",
+    "Route My Accounts new transaction action through the identical Home entrySheet three-mode income/expense/transfer modal with existing verified provider/child category/budget and two-sided transfer commit, without duplicate entry form and with refresh after closing."
   ],
   "allowed_changed_files": [
     ".github/workflows/android-full-smoke.yml",
@@ -33,7 +34,8 @@
     "test/m270_native_riyal_widget_contract_test.dart",
     "test/m270_original_riyal_currency_presentation_test.dart",
     "test/m470_arabic_currency_word_boundary_test.dart",
-    "test/m666_sama_riyal_visual_position_test.dart"
+    "test/m666_sama_riyal_visual_position_test.dart",
+    "test/m667_accounts_use_home_composer_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
@@ -54,6 +56,10 @@
       {
         "start": " Widget tile(MoneyEntry e){",
         "end": " String get greeting=>"
+      },
+      {
+        "start": " Future<void> openVerifiedAccounts()async{",
+        "end": " /// Internal transfers use the verified account ledger, never expense."
       }
     ],
     "lib/waffra_riyal_symbol.dart": [
@@ -100,6 +106,14 @@
       {
         "start": "final accounts=snapshot.data??",
         "end": "trailing:PopupMenuButton<String>("
+      },
+      {
+        "start": "class WaffraAccountsManagerPage extends StatefulWidget {",
+        "end": "class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {"
+      },
+      {
+        "start": " Future<void> compose(List<WaffraAccountBalance> accounts)async{",
+        "end": " @override Widget build(BuildContext context)=>Scaffold("
       }
     ],
     "lib/waffra_practical_tools_page.dart": [
