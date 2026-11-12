@@ -151,6 +151,8 @@ void main() {
    'Salary deposit SAR 5000. OTP code 882233',
    'Credit Transfer via Alinma Bank Amount SAR 1900. OTP 123456',
    'حوالة محلية صادرة بقيمة 1900 ريال. رمز التحقق 123456',
+   'تم دفع 200 ريال. كود خصم اليوم',
+   'Credit Card Payment SAR 190. OTP 829910',
   ]){
    final matched=WaffraSmsLocalRules.resolveSpecial(
     body:posted,sender:'TestBank',
