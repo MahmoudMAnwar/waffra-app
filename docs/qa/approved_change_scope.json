@@ -60,7 +60,7 @@
       },
       {
         "start": "         if(autoPost)...[",
-        "end": "         if(financial)Text("
+        "end": "        if(validation!=null)Padding("
       }
     ],
     "lib/waffra_goal_recurring_account_picker.dart": [
