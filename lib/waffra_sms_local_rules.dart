@@ -180,9 +180,9 @@ abstract final class WaffraSmsLocalRules {
  static bool _hasCompletedFinanceCue(String body)=>RegExp(
   r'\b(?:purchase|debited|credited|withdrawal|payment|paid|pos)\b|'
   r'شراء|خصم|سحب|دفع|إيداع|ايداع|راتب|'
-  r'(?:تم|تمت)\\s+(?:تحويل|ارسال|إرسال)\\s+|'
+  r'(?:تم|تمت)\s+(?:تحويل|ارسال|إرسال)\s+|'
   r'حوالة صادرة|حوالة واردة|'
-  r'\\b(?:transfer completed|transfer successful|funds transferred)\\b',
+  r'\b(?:transfer completed|transfer successful|funds transferred)\b',
   caseSensitive:false).hasMatch(body);
 
  /// Transfers cannot create ledger income/expense entries; exclude rules
