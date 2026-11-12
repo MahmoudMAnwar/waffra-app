@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
-  "change_id": "M670-20261112-ISSUE602-PR603-INDEPENDENT-UI-SMS-TRANSFER - M671-ISSUE605-TOUR-RETIREMENT-AND-TAP-DISMISS - M672-M678 ISSUES 606-612 OWNER FOLLOWUP",
-  "human_scope_review": "Owner requested eight UI/SMS/transfer dashboard corrections in a separate PR from #601 on 2026-11-12; Issue #602 and docs/WAFFRA_REQUIREMENTS.md recorded before code. Exactly these bounded sections and original regression assertions were reviewed; no SQLCipher writer or SMS account inference changes. This manifest is scope declaration only, not device sign-off; preserve all original quality gates. 2026-11-12: five owner follow-ups #606-#610 and filter/account #611-#612 recorded in permanent register before code; only verified transaction activity presentation, existing verified transaction delete/undo witness/recovery, shared official SAR asset presentation and My Accounts edit entry are approved. No new account writer, SMS parser or ledger mutation. User screenshot and verification on real Android remain required.",
+  "change_id": "M670-20261112-ISSUE602-PR603-INDEPENDENT-UI-SMS-TRANSFER - M671-ISSUE605-TOUR-RETIREMENT-AND-TAP-DISMISS - M672-M678 ISSUES 606-612 OWNER FOLLOWUP - M679-ISSUE613-FOUR-CI-REGRESSIONS",
+  "human_scope_review": "Owner requested eight UI/SMS/transfer dashboard corrections in a separate PR from #601 on 2026-11-12; Issue #602 and docs/WAFFRA_REQUIREMENTS.md recorded before code. Exactly these bounded sections and original regression assertions were reviewed; no SQLCipher writer or SMS account inference changes. This manifest is scope declaration only, not device sign-off; preserve all original quality gates. 2026-11-12: five owner follow-ups #606-#610 and filter/account #611-#612 recorded in permanent register before code; only verified transaction activity presentation, existing verified transaction delete/undo witness/recovery, shared official SAR asset presentation and My Accounts edit entry are approved. No new account writer, SMS parser or ledger mutation. User screenshot and verification on real Android remain required. M679: newly reported failed exact-head regression from #603 runs M160 and Full Offline. Existing main.dart goal due and snack method scopes, old scoped footer/RTL tests; explicitly extend whole M671 test function boundary for real dialog tap regression. No financial storage or security guard change.",
   "user_requested_changes": [
     "Remove X from all Snackbars and display long feedback without truncation while retaining Undo and accessible styling.",
     "Show Notifications pull-to-refresh bank-message scan feedback inside Notifications, including concise no-new-messages wording.",
@@ -23,7 +23,8 @@
     "M675/Issue #609 CRITICAL: after confirmation, re-read fresh encrypted delete and receipt witnesses; prevent failed delete/undo from resetting Home and painting a black screen; preserve 30-day recycle and all finance integrity guards.",
     "M676/Issue #610: remove duplicated income/expense summary blocks, make last Home activity panel collapsed by default and expand without eager verified history I/O.",
     "M677/Issue #611: remove upper duplicate finance filters; use the single true filter row and add gap between chips and outlined inputs.",
-    "M678/Issue #612: make saved verified account name and bank last-four correction discoverable from an Edit action, reuse existing SQLCipher witnessed atomic writer."
+    "M678/Issue #612: make saved verified account name and bank last-four correction discoverable from an Edit action, reuse existing SQLCipher witnessed atomic writer.",
+    "M679 Issue #613: Fix exact 4 CI tests at source. Preserve standalone Goal due caption next to new amount label, eliminate stale close-X expectations, ensure passive fallback Snackbar expiry, and make dialog-route tap regression represent actual persistent footer without suppressing pointer hit-test warnings."
   ],
   "allowed_changed_files": [
     ".github/workflows/m282-combined-candidate.yml",
@@ -406,6 +407,12 @@
       {
         "start": "class WaffraCurrencyMark extends StatelessWidget {",
         "end": "/// Inline money displays only."
+      }
+    ],
+    "test/m671_tour_retirement_snackbar_tap_test.dart": [
+      {
+        "start": "void main() {",
+        "end": null
       }
     ]
   }
