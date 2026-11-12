@@ -89,7 +89,16 @@ void main(){
   expect(section,contains('bankFacts.destinationSuffix:bankFacts.sourceSuffix'));
   expect(section,contains('await api.balances()'));
   expect(section,contains('await api.createTypedAccountWithIdentity('));
-  expect(section,contains('await _m467RefreshHomeAccounts()'));
+  // M664: inline creation must use an authoritative SQLCipher read to
+  // populate THIS still-open editor; Home reconciliation is nonblocking.
+  expect(section,contains('final refreshed=(await api.balances()).where((a)=>!a.archived).toList();'));
+  expect(section,contains('final created=refreshed.where((a)=>a.id==id).toList();'));
+  expect(section,contains('if(created.length!=1)throw StateError('));
+  expect(section,contains('unawaited(_m467RefreshHomeAccounts());'));
+  expect(section.indexOf('final refreshed=(await api.balances())'),
+   lessThan(section.indexOf('unawaited(_m467RefreshHomeAccounts());')));
+  expect(section,contains('entryAccounts=refreshed;'));
+  expect(section,contains('entryProviders=WaffraRecurringAccountGroups.withBankProviderChoices(refreshed);'));
   expect(section,contains('chosenManualAccount=id'));
   expect(section,isNot(contains('await openVerifiedAccounts()')));
  });
