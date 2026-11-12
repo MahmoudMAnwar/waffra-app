@@ -4651,6 +4651,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    builder:(_)=>WaffraAccountsManagerPage(
     repository:WaffraVerifiedAccountsApi(bridge:verifiedBridge),
     english:waffraIsEnglish,
+    // M667: the Accounts button enters the *same* Home three-mode sheet as +.
+    // Keep the Home-owned verified finance and transfer save paths intact.
+    onCreateHomeTransaction:()=>entrySheet(),
     incomeCategories:categories.where((item)=>item.income&&item.isSubcategory&&
       waffraCategoryAvailableForNewEntry(categories,item))
       .map((item)=>item.name).toList(growable:false),
