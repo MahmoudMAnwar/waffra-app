@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
-  "change_id": "M670-20261112-ISSUE602-PR603-INDEPENDENT-UI-SMS-TRANSFER - M671-ISSUE605-TOUR-RETIREMENT-AND-TAP-DISMISS",
-  "human_scope_review": "Owner requested eight UI/SMS/transfer dashboard corrections in a separate PR from #601 on 2026-11-12; Issue #602 and docs/WAFFRA_REQUIREMENTS.md recorded before code. Exactly these bounded sections and original regression assertions were reviewed; no SQLCipher writer or SMS account inference changes. This manifest is scope declaration only, not device sign-off; preserve all original quality gates.",
+  "change_id": "M670-20261112-ISSUE602-PR603-INDEPENDENT-UI-SMS-TRANSFER - M671-ISSUE605-TOUR-RETIREMENT-AND-TAP-DISMISS - M672-M678 ISSUES 606-612 OWNER FOLLOWUP",
+  "human_scope_review": "Owner requested eight UI/SMS/transfer dashboard corrections in a separate PR from #601 on 2026-11-12; Issue #602 and docs/WAFFRA_REQUIREMENTS.md recorded before code. Exactly these bounded sections and original regression assertions were reviewed; no SQLCipher writer or SMS account inference changes. This manifest is scope declaration only, not device sign-off; preserve all original quality gates. 2026-11-12: five owner follow-ups #606-#610 and filter/account #611-#612 recorded in permanent register before code; only verified transaction activity presentation, existing verified transaction delete/undo witness/recovery, shared official SAR asset presentation and My Accounts edit entry are approved. No new account writer, SMS parser or ledger mutation. User screenshot and verification on real Android remain required.",
   "user_requested_changes": [
     "Remove X from all Snackbars and display long feedback without truncation while retaining Undo and accessible styling.",
     "Show Notifications pull-to-refresh bank-message scan feedback inside Notifications, including concise no-new-messages wording.",
@@ -16,7 +16,14 @@
     "M671 Issue #605: Tap anywhere once to dismiss a visible Snackbar immediately without losing the tapped widget action, an Undo callback, or passive notice expiry; do not treat scrolling as a tap.",
     "M671: Update obsolete M274 Snackbar-close UX test and M282 accessible action-size proof to the owner-approved X-free notice and nonblocking global tap-to-dismiss, keeping footer navigation and minimum 48dp action checks active.",
     "M671 reconcile the old two test source markers for the MaterialApp builder: WaffraNoticeTapDismissArea is an outer nonblocking wrapper, while WaffraIdleBiometricOverlay remains the existing inner lifecycle gate with all original background and privacy assertions unchanged.",
-    "M670/M671 exact-head CI fixes: preserve behavior while migrating M461/M548/M638/M647 positive SMS scan and rule-learning regression method anchors to `_rescanAutoSmsInbox({BuildContext? feedbackContext})`; repair immediate edge notice layout so it never mutates RenderAnimatedSize during a frame; update M206 root listener and M670 message-specific clipping expectation while preserving existing financial checks."
+    "M670/M671 exact-head CI fixes: preserve behavior while migrating M461/M548/M638/M647 positive SMS scan and rule-learning regression method anchors to `_rescanAutoSmsInbox({BuildContext? feedbackContext})`; repair immediate edge notice layout so it never mutates RenderAnimatedSize during a frame; update M206 root listener and M670 message-specific clipping expectation while preserving existing financial checks.",
+    "M672/Issue #606: shrink verified internal-transfer card and ensure physical arrow points source account to destination in Arabic and English, preserving verified from/to IDs.",
+    "M673/Issue #607: optically align approved official Saudi Riyal image to numeric text in the shared Flutter currency mark; preserve raw original SMS and all financial facts.",
+    "M674/Issue #608: consistent compact activity card minimum height and an Amount label on income/expense/transfer/settled due/goal savings, allowing adaptive growth for accessibility.",
+    "M675/Issue #609 CRITICAL: after confirmation, re-read fresh encrypted delete and receipt witnesses; prevent failed delete/undo from resetting Home and painting a black screen; preserve 30-day recycle and all finance integrity guards.",
+    "M676/Issue #610: remove duplicated income/expense summary blocks, make last Home activity panel collapsed by default and expand without eager verified history I/O.",
+    "M677/Issue #611: remove upper duplicate finance filters; use the single true filter row and add gap between chips and outlined inputs.",
+    "M678/Issue #612: make saved verified account name and bank last-four correction discoverable from an Edit action, reuse existing SQLCipher witnessed atomic writer."
   ],
   "allowed_changed_files": [
     ".github/workflows/m282-combined-candidate.yml",
@@ -25,7 +32,9 @@
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
+    "lib/waffra_accounts_manager_page.dart",
     "lib/waffra_categories_page.part.dart",
+    "lib/waffra_riyal_symbol.dart",
     "lib/waffra_smart_analysis.part.dart",
     "lib/waffra_smart_features.dart",
     "lib/waffra_tour_plan.dart",
@@ -50,6 +59,7 @@
     "test/m668_footer_edge_snackbar_test.dart",
     "test/m670_feedback_transfer_dashboard_test.dart",
     "test/m671_tour_retirement_snackbar_tap_test.dart",
+    "test/m672_m678_activity_account_regression_test.dart",
     "test/qa/m385_approved_scope_guard_test.py",
     "test/qa/m452_sms_review_signup_regression_test.py",
     "test/waffra_directional_fab_receipt_corner_test.dart",
@@ -170,6 +180,30 @@
       {
         "start": "void snack(BuildContext context,String text,{",
         "end": "void snackSuccess(BuildContext context,String text)=>"
+      },
+      {
+        "start": " Widget _m647TransferCard(",
+        "end": " Widget _m649SavingsCard("
+      },
+      {
+        "start": " Widget _m649SavingsCard(",
+        "end": " Future<void> _m647ShowInternalTransfers("
+      },
+      {
+        "start": " Widget compactTransaction(",
+        "end": " Widget _m549HomeFinanceAction("
+      },
+      {
+        "start": " Future<void> _deleteVerifiedEntry(",
+        "end": " Future<void> _undoVerifiedDeletedEntry("
+      },
+      {
+        "start": " Future<void> _undoVerifiedDeletedEntry(",
+        "end": " Future<void> _showVerifiedDeletedTransactions("
+      },
+      {
+        "start": " bool showAllTransactions=false",
+        "end": " DateTime? _m468LastResumeSmsScan;"
       }
     ],
     "test/m296_monthly_budget_and_transactions_test.dart": [
@@ -360,6 +394,18 @@
       {
         "start": "void main() {",
         "end": null
+      }
+    ],
+    "lib/waffra_accounts_manager_page.dart": [
+      {
+        "start": "       return Card(child:ListTile(",
+        "end": "     SafeArea(top:false"
+      }
+    ],
+    "lib/waffra_riyal_symbol.dart": [
+      {
+        "start": "class WaffraCurrencyMark extends StatelessWidget {",
+        "end": "/// Inline money displays only."
       }
     ]
   }
