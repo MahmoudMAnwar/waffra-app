@@ -13612,9 +13612,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             Expanded(child:WaffraText(waffraIsEnglish?
              'Your transactions':'عملياتك المالية',
              style:const TextStyle(fontSize:19,fontWeight:FontWeight.bold))),
-            if(waffraCanExpandDashboardTransactions(visible.length)||
-               (_m468VerifiedAccountsLoaded&&
-                (typeFilter=='التحويلات'||typeFilter=='الادخار'||typeFilter=='الكل')))
+            if(waffraCanExpandDashboardTransactions(visible.length)&&
+               (!_m468VerifiedAccountsLoaded||
+                (typeFilter!='التحويلات'&&typeFilter!='الادخار'&&
+                 typeFilter!='الكل')))
              TextButton(
               key:const Key('waffra-dashboard-transactions-expand'),
               onPressed:WaffraHaptics.tap(
@@ -13670,6 +13671,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               showCheckmark:false,
               onSelected:WaffraHaptics.selection((_)=>setState((){
                typeFilter=choice;categoryFilter='الكل';
+               showAllTransactions=false;
               })),
              ),
            ]),
@@ -13739,6 +13741,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               }:choice),
               onSelected:WaffraHaptics.selection((_)=>setState((){
                typeFilter=choice;categoryFilter='الكل';
+               showAllTransactions=false;
               })))).toList()),
             WaffraCenteredDropdownFormField<String>(
              key:ValueKey(typeFilter+'-'+selected),initialValue:selected,
@@ -13746,7 +13749,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               'Category':'تصفية حسب القسم'),
              items:filterCats.map((value)=>DropdownMenuItem(
               value:value,child:WaffraText(waffraTr(value)))).toList(),
-             onChanged:WaffraHaptics.selection((value)=>setState(()=>categoryFilter=value??'الكل'))),
+             onChanged:WaffraHaptics.selection((value)=>setState((){
+              categoryFilter=value??'الكل';
+              showAllTransactions=false;
+             }))),
             Align(alignment:AlignmentDirectional.centerStart,
              child:TextButton.icon(onPressed:WaffraHaptics.tap(editTransactionFilters),
               icon:const Icon(Icons.date_range),
@@ -13812,6 +13818,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               final maxShown=waffraDashboardTransactionDisplayCount(
                history.length,expanded:showAllTransactions);
               return Column(children:[
+               // Count the verified unified timeline (not just money entries).
+               // Applies to All, Transfers and Savings alike.
+               if(waffraCanExpandDashboardTransactions(history.length))
+                Align(alignment:AlignmentDirectional.centerEnd,
+                 child:TextButton(
+                  key:const Key('waffra-dashboard-unified-activity-expand'),
+                  onPressed:WaffraHaptics.tap(
+                   ()=>setState(()=>showAllTransactions=!showAllTransactions)),
+                  child:WaffraText(showAllTransactions?
+                   (waffraIsEnglish?'Show less':'عرض أقل'):
+                   (waffraIsEnglish?'Show more':'عرض أكثر')))),
                if(history.isEmpty)Padding(
                 padding:const EdgeInsets.symmetric(vertical:26),
                 child:WaffraText(waffraIsEnglish?
