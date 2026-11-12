@@ -2,8 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
-import 'package:crypto/crypto.dart';
-
 import 'legacy_financial_snapshot.dart' show WaffraLegacySnapshotInspector;
 import 'waffra_accounts_finance_history.dart';
 import 'waffra_accounts_portable_backup_v3.dart';
@@ -239,12 +237,39 @@ abstract final class WaffraLegacyV24SqlCipherConverter {
           );
         }
       }
-      final migrated = await WaffraFinanceDomainLegacyImporter(
+      await WaffraFinanceDomainLegacyImporter(
         store: db, experimentalEnabled: true,
       ).importCapturedDomain(explicitlyAuthorized: true, importedAtIso: stamp);
-      if (migrated.unresolvedBudgetLinks != 0) {
-        // Historical opt-in budget association can happen later. The original
-        // unassigned link remains in each source_json without a duplicate debit.
+      // V24 budgetId is a prior user-confirmed association, not a new guess.
+      // Recreate exact historical links in typed SQL without a second expense.
+      // The same source_json retains every old budgetId for parity checks.
+      final budgetsById = <String, Map<String, Object?>>{
+        for (final raw in legacy['namedBudgets'] as List)
+          (raw as Map)['id'] as String: Map<String, Object?>.from(raw),
+      };
+      for (final row in normalizedEntries) {
+        final budgetId = row['budgetId'];
+        if (budgetId == null || budgetId == '') continue;
+        if (budgetId is! String || !budgetsById.containsKey(budgetId) ||
+            row['income'] != false || row['id'] is! String) {
+          throw const FormatException('Historical budget association is not verifiable.');
+        }
+        final budget = budgetsById[budgetId]!;
+        final minor = _minor(row['amount']);
+        final isStandalone = (budget['parentId'] as String? ?? '').isEmpty;
+        if (isStandalone) {
+          await db.customStatement(
+            'INSERT INTO fresh_finance_standalone_allocations '
+            '(allocation_id,budget_id,entry_id,amount_minor,assigned_at_iso,'
+            'explicitly_confirmed) VALUES (?,?,?,?,?,1)',
+            ['v24-standalone:${row['id']}',budgetId,row['id'],minor,stamp]);
+        } else {
+          await db.customStatement(
+            'INSERT INTO fresh_finance_budget_allocations '
+            '(allocation_id,budget_id,entry_id,amount_minor,'
+            'explicitly_confirmed,assigned_at_iso) VALUES (?,?,?,?,1,?)',
+            ['v24-named:${row['id']}',budgetId,row['id'],minor,stamp]);
+        }
       }
       final history = await WaffraAccountsFinanceHistory.capture(db);
       final candidate = await WaffraAccountsPortableBackupV3.bundle(
