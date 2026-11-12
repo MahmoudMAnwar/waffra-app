@@ -130,6 +130,7 @@ void main(){
    {'id':'reminder','body':'payment reminder','sender':'TestBank'},
    {'id':'marketing-discount','body':'خصم حصري اليوم','sender':'TestBank'},
    {'id':'salary-plus-promo','body':'Salary deposit SAR 5000. promo code','sender':'TestBank'},
+   {'id':'salary-plus-otp','body':'Salary deposit SAR 5000. OTP code 123456','sender':'TestBank'},
    {'id':'expense-plus-otp','body':'Card Purchase SAR 75.00 OTP verification code 123456','sender':'TestBank'},
    {'id':'credit-plus-promo','body':'تم إيداع 400 ريال. عرض خاص','sender':'TestBank'},
   ];
@@ -141,10 +142,11 @@ void main(){
   final waiting=(result['waiting'] as List).cast<Map<String,Object?>>();
   expect(excluded,containsAll(<String>['otp','promo','reminder','marketing-discount']));
   expect(excluded,isNot(contains('salary-plus-promo')));
+  expect(excluded,isNot(contains('salary-plus-otp')));
   expect(excluded,isNot(contains('expense-plus-otp')));
   expect(excluded,isNot(contains('credit-plus-promo')));
   expect(waiting.map((row)=>row['id']),
-    containsAll(<String>['expense-plus-otp','credit-plus-promo','salary-plus-promo']));
+    containsAll(<String>['expense-plus-otp','credit-plus-promo','salary-plus-promo','salary-plus-otp']));
   // An immutable seed doesn't create a money entry or sender-wide block.
   expect(result.keys.toSet(),{'waiting','excluded','committed','retainOnAckFailure'});
   expect((result['committed'] as List),isEmpty);
