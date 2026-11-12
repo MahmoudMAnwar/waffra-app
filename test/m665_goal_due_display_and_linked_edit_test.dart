@@ -125,4 +125,22 @@ void main(){
    expect(find.textContaining('goal_wallet_minor'),findsNothing);
   });
 
+
+ test('M665.7 old goal due never becomes restaurant category in Smart/PDF rankings',(){
+  final payment=_settled();
+  final dinner=MoneyEntry(id:'dinner',title:'عشاء',category:payment.category,
+   amount:150,income:false,date:DateTime(2026,11,12));
+  expect(waffraEntryReportCategory(payment),'استحقاق هدف');
+  expect(waffraEntryReportCategory(dinner),dinner.category);
+  final report=waffraSmartChartData([payment,dinner],DateTime(2026,11,13));
+  final summary=Map<String,double>.fromEntries(report.topCategories);
+  expect(summary['استحقاق هدف'],5000);
+  expect(summary['مطاعم وكافيهات / مطاعم شعبية'],150);
+  final pdf=File('lib/main.dart').readAsStringSync();
+  final export=pdf.substring(pdf.indexOf(' Future<void> exportEntriesPdf('),
+    pdf.indexOf(' Future<void> _deleteVerifiedEntry('));
+  expect(export,contains('final label=waffraEntryReportCategory(e);'));
+  expect(export,contains('categoryTotals[label]=(categoryTotals[label]??0)+e.amount'));
+ });
+
 }
