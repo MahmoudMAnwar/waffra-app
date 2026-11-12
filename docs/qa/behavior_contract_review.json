@@ -5,7 +5,7 @@
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "58a79a51094523e4506776130fedbd842efc7e87",
   "reviewed_at": "2026-11-12",
-  "review_policy": "Review changed behavior against all GitHub Actions workflow scripts, all Dart and Python QA test files, and the original tests' protected security assertions; never edit tests merely to silence red jobs. PR #575 merge with main preserves every M645/M646/M647/M653/M654 contract; original PR-specific positive finance tests and approved fallback/owner-authority remain in effect. M661 source changes must not weaken existing fail-closed encryption, verified-bank account, OTP or anti-replay checks, must preserve all original tests and route review pending rules non-posting.",
+  "review_policy": "Review changed behavior against all GitHub Actions workflow scripts, all Dart and Python QA test files, and the original tests' protected security assertions; never edit tests merely to silence red jobs. PR #575 merge with main preserves every M645/M646/M647/M653/M654 contract; original PR-specific positive finance tests and approved fallback/owner-authority remain in effect. M661 source changes must not weaken existing fail-closed encryption, verified-bank account, OTP or anti-replay checks, must preserve all original tests and route review pending rules non-posting. M672-M678 owner-visible corrections (#606-#612) must preserve financial/account safety and separate Android visual/deletion persistence testing.",
   "contracts": [
     {
       "id": "M601-AUTH-PENDING-BUTTON-AND-VERIFIER-LATENCY",
@@ -2047,6 +2047,160 @@
         "M282's 48dp accessible-Undo check replaces the exact legacy X-only literal; all other source-completeness and fail-closed finance cutover tests are retained.",
         "The deleted lib/waffra_tour_plan.dart is intentionally absent and remains inventoried exclusively by M385 approved_deleted_files, not as an extant M550 source_paths item.",
         "M440 and M443 still affirm the 60-second biometric lock, background privacy shield and no relock on screenshot/inactive; only the expected literal nesting of the MaterialApp builder changes."
+      ]
+    },
+    {
+      "id": "M672-COMPACT-VERIFIED-INTERNAL-TRANSFER-DIRECTION",
+      "issue": "Issue #606 / Draft PR #603",
+      "previous_behavior": "Blue transfer card is taller than related financial cards; Arabic source(right) to destination(left) arrow appeared reversed.",
+      "approved_behavior": "Compact verified source/destination, physical left-facing arrow in Arabic and right-facing in English; IDs, note, amount and source evidence preserved.",
+      "source_paths": [
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m672_m678_activity_account_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/m282-combined-candidate.yml"
+      ],
+      "safety_invariants": [
+        "Retain immutable source SMS, authenticated SQLCipher ledger integrity and account IDs.",
+        "Never claim Android validation from a source commit; run exact-head CI and verified physical UI before calling Done.",
+        "No new financial posting, deleted transfer leg or bank identity inference without user confirmation."
+      ]
+    },
+    {
+      "id": "M673-OFFICIAL-SAR-MARK-OPTICAL-CENTER",
+      "issue": "Issue #607 / Draft PR #603",
+      "previous_behavior": "Official SAR asset appears too low relative to digits in activity cards.",
+      "approved_behavior": "Align official painted pixels optically without changing value/parser; inspect PDF and Android native separately.",
+      "source_paths": [
+        "lib/waffra_riyal_symbol.dart"
+      ],
+      "test_paths": [
+        "test/m672_m678_activity_account_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/m282-combined-candidate.yml"
+      ],
+      "safety_invariants": [
+        "Retain immutable source SMS, authenticated SQLCipher ledger integrity and account IDs.",
+        "Never claim Android validation from a source commit; run exact-head CI and verified physical UI before calling Done.",
+        "No new financial posting, deleted transfer leg or bank identity inference without user confirmation."
+      ]
+    },
+    {
+      "id": "M674-FIVE-KIND-ACTIVITY-AMOUNT-HEIGHT",
+      "issue": "Issue #608 / Draft PR #603",
+      "previous_behavior": "The five financial card kinds have inconsistent heights and often no Amount text.",
+      "approved_behavior": "Each card shows Amount/المبلغ and uses shared compact min-height that can grow for lengthy text and accessibility.",
+      "source_paths": [
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m672_m678_activity_account_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/m282-combined-candidate.yml"
+      ],
+      "safety_invariants": [
+        "Retain immutable source SMS, authenticated SQLCipher ledger integrity and account IDs.",
+        "Never claim Android validation from a source commit; run exact-head CI and verified physical UI before calling Done.",
+        "No new financial posting, deleted transfer leg or bank identity inference without user confirmation."
+      ]
+    },
+    {
+      "id": "M675-CRITICAL-DELETE-PRESERVE-HOME-AND-WITNESSES",
+      "issue": "Issue #609 / Draft PR #603",
+      "previous_behavior": "Confirmed delete shows black screen and item persists.",
+      "approved_behavior": "Keep Home rendered on failure; refresh verified source without startup reset; after consent reacquire fresh financial and receipt witnesses in write queue; retain 30-day recycle and undo; protected linked movements need dedicated accounting reversal, never fake delete.",
+      "source_paths": [
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m672_m678_activity_account_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/m282-combined-candidate.yml"
+      ],
+      "safety_invariants": [
+        "Retain immutable source SMS, authenticated SQLCipher ledger integrity and account IDs.",
+        "Never claim Android validation from a source commit; run exact-head CI and verified physical UI before calling Done.",
+        "No new financial posting, deleted transfer leg or bank identity inference without user confirmation."
+      ]
+    },
+    {
+      "id": "M676-LAST-COLLAPSED-HOME-ACTIVITY-PANEL",
+      "issue": "Issue #610 / Draft PR #603",
+      "previous_behavior": "Financial Activity duplicates monthly Income/Expense totals and is always expanded.",
+      "approved_behavior": "Remove duplicate totals; last Home panel starts collapsed; expanded search/filter/ledger cards retain verified history and show-more.",
+      "source_paths": [
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m672_m678_activity_account_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/m282-combined-candidate.yml"
+      ],
+      "safety_invariants": [
+        "Retain immutable source SMS, authenticated SQLCipher ledger integrity and account IDs.",
+        "Never claim Android validation from a source commit; run exact-head CI and verified physical UI before calling Done.",
+        "No new financial posting, deleted transfer leg or bank identity inference without user confirmation."
+      ]
+    },
+    {
+      "id": "M677-SINGLE-FILTER-ROW-AND-SPACING",
+      "issue": "Issue #611 / Draft PR #603",
+      "previous_behavior": "Two duplicate chip groups and bottom chip/input outline collision.",
+      "approved_behavior": "One real type-filter chip row with explicit spacing and nonzero gap before category input; retain all six filters.",
+      "source_paths": [
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m672_m678_activity_account_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/m282-combined-candidate.yml"
+      ],
+      "safety_invariants": [
+        "Retain immutable source SMS, authenticated SQLCipher ledger integrity and account IDs.",
+        "Never claim Android validation from a source commit; run exact-head CI and verified physical UI before calling Done.",
+        "No new financial posting, deleted transfer leg or bank identity inference without user confirmation."
+      ]
+    },
+    {
+      "id": "M678-EDIT-ACCOUNT-NAME-AND-SAVED-BANK-FOUR",
+      "issue": "Issue #612 / Draft PR #603",
+      "previous_behavior": "Account name and bank last-four editor exists but is hidden behind overflow.",
+      "approved_behavior": "Visible direct edit for each active account, keep existing witnessed rename/suffix update, reject stale/archived; no ID or balance change.",
+      "source_paths": [
+        "lib/waffra_accounts_manager_page.dart"
+      ],
+      "test_paths": [
+        "test/m672_m678_activity_account_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/m282-combined-candidate.yml"
+      ],
+      "safety_invariants": [
+        "Retain immutable source SMS, authenticated SQLCipher ledger integrity and account IDs.",
+        "Never claim Android validation from a source commit; run exact-head CI and verified physical UI before calling Done.",
+        "No new financial posting, deleted transfer leg or bank identity inference without user confirmation."
       ]
     }
   ]
