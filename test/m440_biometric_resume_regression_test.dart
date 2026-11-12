@@ -34,7 +34,8 @@ void main() {
     expect(lifecycle, contains('WaffraBiometricSessionGuard.mustLockOn(state)'));
     expect(lifecycle, contains('_biometricVerifiedAwaitingResume=false;'));
     expect(lifecycle, isNot(contains('setState(()=>locked=true);')));
-    expect(source, contains('builder:(context,child)=>WaffraIdleBiometricOverlay('));
+    expect(source, contains('builder:(context,child)=>WaffraNoticeTapDismissArea('));
+    expect(source, contains('child:WaffraIdleBiometricOverlay('));
     expect(overlay, contains('state==AppLifecycleState.hidden||'));
     expect(overlay, contains('state==AppLifecycleState.paused||'));
     expect(overlay, contains('state==AppLifecycleState.detached){'));

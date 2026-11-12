@@ -29,7 +29,7 @@ void main(){
   final main=File('lib/main.dart').readAsStringSync();
   final bridge=File('lib/waffra_auto_sms.dart').readAsStringSync();
   final activity=File('native/WaffraMainActivity.kt').readAsStringSync();
-  final begin=main.indexOf(' Future<void> _rescanAutoSmsInbox()async{');
+  final begin=main.indexOf(' Future<void> _rescanAutoSmsInbox({BuildContext? feedbackContext})async{');
   final end=main.indexOf(' Future<void>? _autoSmsRefreshInFlight;',begin);
   expect(begin,greaterThan(0));
   expect(end,greaterThan(begin));

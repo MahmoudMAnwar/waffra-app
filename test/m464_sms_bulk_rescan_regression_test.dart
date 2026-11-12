@@ -23,7 +23,7 @@ void main() {
  test('M464 rescan signals active state and returns cumulative counts',(){
   final app=File('lib/main.dart').readAsStringSync();
   expect(app,contains('bool _autoSmsRescanRunning=false;'));
-  expect(app,contains('Future<void> _rescanAutoSmsInbox()async{'));
+  expect(app,contains('Future<void> _rescanAutoSmsInbox({BuildContext? feedbackContext})async{'));
   expect(app,contains('await _refreshAutoSmsInbox(importMonth:true);'));
   expect(app,contains('await WaffraAutoSms.importConsentMonthChecked()'));
   expect(app,contains('waffra-auto-sms-review-refresh'));

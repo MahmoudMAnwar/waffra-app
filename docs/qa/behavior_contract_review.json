@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
-  "pr": "#601",
-  "issue": "#600",
+  "pr": "#603",
+  "issue": "#600; #602 (M670); previous #596/#598/#599 history retained; #605 M671",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "58a79a51094523e4506776130fedbd842efc7e87",
   "reviewed_at": "2026-11-12",
-  "review_policy": "Review changed behavior against all GitHub Actions workflow scripts, all Dart and Python QA test files, and the original tests' protected security assertions; never edit tests merely to silence red jobs. PR #575 merge with main preserves every M645/M646/M647/M653/M654 contract; original PR-specific positive finance tests and approved fallback/owner-authority remain in effect. M661 source changes must not weaken existing fail-closed encryption, verified-bank account, OTP or anti-replay checks, must preserve all original tests and route review pending rules non-posting.",
+  "review_policy": "Review changed behavior against all GitHub Actions workflow scripts, all Dart and Python QA test files, and the original tests' protected security assertions; never edit tests merely to silence red jobs. PR #575 merge with main preserves every M645/M646/M647/M653/M654 contract; original PR-specific positive finance tests and approved fallback/owner-authority remain in effect. M661 source changes must not weaken existing fail-closed encryption, verified-bank account, OTP or anti-replay checks, must preserve all original tests and route review pending rules non-posting. M672-M678 owner-visible corrections (#606-#612) must preserve financial/account safety and separate Android visual/deletion persistence testing.",
   "contracts": [
     {
       "id": "M601-AUTH-PENDING-BUTTON-AND-VERIFIER-LATENCY",
@@ -1969,6 +1969,267 @@
         "Search normalizes matching only, not stored labels, account IDs, category IDs, amounts or source text; dismissing search/dialog never changes selection.",
         "Preserve existing common dropdown blur, bounded max height, touch targets, popup placement and no extra financial writes; unit/widget regression plus exact-head CI remain mandatory.",
         "Every previously native DropdownButtonFormField in five touched account, goals, recurring, context and transaction routes must have no native remnant and must use the common live searchable centered picker, preserving source-level keys and callbacks."
+      ]
+    },
+    {
+      "id": "M670-SNACKBAR-IN-ROUTE-SMS-TRANSFER-AND-DASHBOARD",
+      "issue": "Issue #602; independent Draft PR #603; explicitly owner requested 2026-11-12; supersedes M668 X and 2-line-text limits only",
+      "previous_behavior": "Shared neutral-edge Snackbars had visible X and 2-line ellipsis; scanning from Notifications showed Home footer notice; one-account transfer could bounce to Accounts or appear inactive; separate income/expense dialog had unnecessary copy and three-mode choice; goal/recurring stat layout differed from category stat; goal wallet hero too short/narrow; recurring reminder oversized; Show more/less used only MoneyEntry count instead of verified mixed activity list.",
+      "approved_behavior": "One shared severity-colored edge card with full wrapping accessible text and no X, retaining Undo and timeout; manual Notifications pull-to-refresh reports new/zero count on the same route, not Home; all approved bank SMS transfers open verified dual-account editor even when a second account must first be created, with explicit distinct IDs before commit; independent income and expense flows open only selected template and do not ACK transfer SMS; goals and recurring counts reuse category stat visual; goals wallet matches compact Home balance card width/height; reminder fits adjacent controls; Show more/less uses selected filtered activity timeline for all/income/expense/transfers/savings/dues.",
+      "source_paths": [
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m670_feedback_transfer_dashboard_test.dart",
+        "test/m668_footer_edge_snackbar_test.dart",
+        "test/waffra_footer_notice_test.dart",
+        "test/m374_transaction_dialog_ux_test.dart",
+        "test/waffra_directional_fab_receipt_corner_test.dart",
+        "test/m580_sms_security_navigation_performance_test.dart",
+        "test/m615_m618_sms_review_retention_perf_contract_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/m282-combined-qa-features.yml"
+      ],
+      "safety_invariants": [
+        "M670 X-free and untruncated notice supersedes only those two older M668 appearance restrictions; keep single presenter/Undo/four colors/animation/RTL/LTR.",
+        "Original SMS stays unacknowledged when choosing a separate manual income or expense; preserve source text and never infer account ownership.",
+        "Two distinct verified accounts, affirmative financial transfer authorization and canonical SQLCipher writer are still mandatory; never post on dialog entry.",
+        "Every Home filter applies preview limit only when needed and permits Show less; no lost entries or altered totals.",
+        "Keep every original QA gate active and show CI/device acceptance as separate from code commits."
+      ]
+    },
+    {
+      "id": "M671-RETIRE-ONBOARDING-TOUR-AND-TAP-DISMISS-SNACKBAR",
+      "issue": "Owner-approved 2026-11-12; Issue #605; extend independent Draft PR #603 (not PR #601)",
+      "previous_behavior": "After the initial app launch the seven-step onboarding tour could auto-run, appear over Home with blur/spotlight animation and be replayed from My Settings. Tours used private _tourKeys, _tourGlow, WaffraTourPlan and a persisted seen flag. Neutral-edge Snackbar had no X after M670 but dismissed only by passive timeout or specific onAction; tapping elsewhere did not dismiss it.",
+      "approved_behavior": "Completely retire seven-step tour from runtime, initial startup and My Settings. Delete only its unused source file, remove all tour keys/overlay/painter/timer/auto-start and dedicated tools heading fields; preserve animated splash, animation-level setting, Home tabs, FAB, About Waffra and verified finance. An app-wide non-blocking Listener inside the existing MaterialApp builder recognizes small-movement touch-up (actual tap) anywhere, including routes and dialogs, and dismisses visible footer or fallback Snackbar via microtask after intended button action. Preserve Undo once, passive timers, full text and color semantics. Genuine scroll swipes should not count as taps.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_categories_page.part.dart",
+        "lib/waffra_smart_analysis.part.dart",
+        "lib/waffra_smart_features.dart",
+        "scripts/qa/m206_ui_sms_scope_review.py",
+        "scripts/qa/m385_approved_change_guard.py",
+        ".github/workflows/m282-combined-candidate.yml"
+      ],
+      "test_paths": [
+        "test/m671_tour_retirement_snackbar_tap_test.dart",
+        "test/m286_tour_navigation_test.dart",
+        "test/m127_ui_tour_backup_acceptance_test.dart",
+        "test/waffra_m206_day_theme_tour_sms_regression_test.dart",
+        "test/waffra_oct21_regression_test.dart",
+        "test/m631_verified_finance_prewarm_test.dart",
+        "test/m277_ux_accessibility_quality_test.dart",
+        "test/qa/m385_approved_scope_guard_test.py",
+        "test/m668_footer_edge_snackbar_test.dart",
+        "test/waffra_footer_notice_test.dart",
+        "test/m274_responsive_ui_journeys_test.dart",
+        "test/m440_biometric_resume_regression_test.dart",
+        "test/m443_merchant_screenshot_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m174-main-sha-postmerge.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/m282-combined-candidate.yml"
+      ],
+      "safety_invariants": [
+        "No unrelated file removal: M385 adds only the exact owner-approved tour source path to the code-deletion exception; no wildcard, no general guard bypass.",
+        "Original click target, screen navigation, FAB, Undo and dialog action execute normally even when dismissing notice; do not intercept or swallow pointer gestures.",
+        "Keep existing 5s passive Snackbar timers; a tap dismisses immediately, without waiting; do not dismiss a newly replaced notice from a stale tap.",
+        "No modification to protected money posting paths, SMS original data, biometric gate, SQLCipher persistence, notifications, goals or recurring calculations.",
+        "Restyle the tour-only positive tests to assert the tour absent but finance, settings About, Home/tools, startup and accessibility retained; do not weaken unrelated tests.",
+        "M282's 48dp accessible-Undo check replaces the exact legacy X-only literal; all other source-completeness and fail-closed finance cutover tests are retained.",
+        "The deleted lib/waffra_tour_plan.dart is intentionally absent and remains inventoried exclusively by M385 approved_deleted_files, not as an extant M550 source_paths item.",
+        "M440 and M443 still affirm the 60-second biometric lock, background privacy shield and no relock on screenshot/inactive; only the expected literal nesting of the MaterialApp builder changes."
+      ]
+    },
+    {
+      "id": "M672-COMPACT-VERIFIED-INTERNAL-TRANSFER-DIRECTION",
+      "issue": "Issue #606 / Draft PR #603",
+      "previous_behavior": "Blue transfer card is taller than related financial cards; Arabic source(right) to destination(left) arrow appeared reversed.",
+      "approved_behavior": "Compact verified source/destination, physical left-facing arrow in Arabic and right-facing in English; IDs, note, amount and source evidence preserved.",
+      "source_paths": [
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m672_m678_activity_account_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/m282-combined-candidate.yml"
+      ],
+      "safety_invariants": [
+        "Retain immutable source SMS, authenticated SQLCipher ledger integrity and account IDs.",
+        "Never claim Android validation from a source commit; run exact-head CI and verified physical UI before calling Done.",
+        "No new financial posting, deleted transfer leg or bank identity inference without user confirmation."
+      ]
+    },
+    {
+      "id": "M673-OFFICIAL-SAR-MARK-OPTICAL-CENTER",
+      "issue": "Issue #607 / Draft PR #603",
+      "previous_behavior": "Official SAR asset appears too low relative to digits in activity cards.",
+      "approved_behavior": "Align official painted pixels optically without changing value/parser; inspect PDF and Android native separately.",
+      "source_paths": [
+        "lib/waffra_riyal_symbol.dart"
+      ],
+      "test_paths": [
+        "test/m672_m678_activity_account_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/m282-combined-candidate.yml"
+      ],
+      "safety_invariants": [
+        "Retain immutable source SMS, authenticated SQLCipher ledger integrity and account IDs.",
+        "Never claim Android validation from a source commit; run exact-head CI and verified physical UI before calling Done.",
+        "No new financial posting, deleted transfer leg or bank identity inference without user confirmation."
+      ]
+    },
+    {
+      "id": "M674-FIVE-KIND-ACTIVITY-AMOUNT-HEIGHT",
+      "issue": "Issue #608 / Draft PR #603",
+      "previous_behavior": "The five financial card kinds have inconsistent heights and often no Amount text.",
+      "approved_behavior": "Each card shows Amount/المبلغ and uses shared compact min-height that can grow for lengthy text and accessibility.",
+      "source_paths": [
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m672_m678_activity_account_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/m282-combined-candidate.yml"
+      ],
+      "safety_invariants": [
+        "Retain immutable source SMS, authenticated SQLCipher ledger integrity and account IDs.",
+        "Never claim Android validation from a source commit; run exact-head CI and verified physical UI before calling Done.",
+        "No new financial posting, deleted transfer leg or bank identity inference without user confirmation."
+      ]
+    },
+    {
+      "id": "M675-CRITICAL-DELETE-PRESERVE-HOME-AND-WITNESSES",
+      "issue": "Issue #609 / Draft PR #603",
+      "previous_behavior": "Confirmed delete shows black screen and item persists.",
+      "approved_behavior": "Keep Home rendered on failure; refresh verified source without startup reset; after consent reacquire fresh financial and receipt witnesses in write queue; retain 30-day recycle and undo; protected linked movements need dedicated accounting reversal, never fake delete.",
+      "source_paths": [
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m672_m678_activity_account_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/m282-combined-candidate.yml"
+      ],
+      "safety_invariants": [
+        "Retain immutable source SMS, authenticated SQLCipher ledger integrity and account IDs.",
+        "Never claim Android validation from a source commit; run exact-head CI and verified physical UI before calling Done.",
+        "No new financial posting, deleted transfer leg or bank identity inference without user confirmation."
+      ]
+    },
+    {
+      "id": "M676-LAST-COLLAPSED-HOME-ACTIVITY-PANEL",
+      "issue": "Issue #610 / Draft PR #603",
+      "previous_behavior": "Financial Activity duplicates monthly Income/Expense totals and is always expanded.",
+      "approved_behavior": "Remove duplicate totals; last Home panel starts collapsed; expanded search/filter/ledger cards retain verified history and show-more.",
+      "source_paths": [
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m672_m678_activity_account_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/m282-combined-candidate.yml"
+      ],
+      "safety_invariants": [
+        "Retain immutable source SMS, authenticated SQLCipher ledger integrity and account IDs.",
+        "Never claim Android validation from a source commit; run exact-head CI and verified physical UI before calling Done.",
+        "No new financial posting, deleted transfer leg or bank identity inference without user confirmation."
+      ]
+    },
+    {
+      "id": "M677-SINGLE-FILTER-ROW-AND-SPACING",
+      "issue": "Issue #611 / Draft PR #603",
+      "previous_behavior": "Two duplicate chip groups and bottom chip/input outline collision.",
+      "approved_behavior": "One real type-filter chip row with explicit spacing and nonzero gap before category input; retain all six filters.",
+      "source_paths": [
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m672_m678_activity_account_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/m282-combined-candidate.yml"
+      ],
+      "safety_invariants": [
+        "Retain immutable source SMS, authenticated SQLCipher ledger integrity and account IDs.",
+        "Never claim Android validation from a source commit; run exact-head CI and verified physical UI before calling Done.",
+        "No new financial posting, deleted transfer leg or bank identity inference without user confirmation."
+      ]
+    },
+    {
+      "id": "M678-EDIT-ACCOUNT-NAME-AND-SAVED-BANK-FOUR",
+      "issue": "Issue #612 / Draft PR #603",
+      "previous_behavior": "Account name and bank last-four editor exists but is hidden behind overflow.",
+      "approved_behavior": "Visible direct edit for each active account, keep existing witnessed rename/suffix update, reject stale/archived; no ID or balance change.",
+      "source_paths": [
+        "lib/waffra_accounts_manager_page.dart"
+      ],
+      "test_paths": [
+        "test/m672_m678_activity_account_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/m282-combined-candidate.yml"
+      ],
+      "safety_invariants": [
+        "Retain immutable source SMS, authenticated SQLCipher ledger integrity and account IDs.",
+        "Never claim Android validation from a source commit; run exact-head CI and verified physical UI before calling Done.",
+        "No new financial posting, deleted transfer leg or bank identity inference without user confirmation."
+      ]
+    },
+    {
+      "id": "M679-CI-REGRESSION-FOUR-ROOT-CAUSES",
+      "issue": "Owner explicit fix + merge, Issue #613, PR #603 head 0e01eb4, M160 and Full Offline exact logs on 2026-11-12",
+      "previous_behavior": "Four positive regressions failed: goal due old exact caption replaced with combined label; directional footer test still expects retired close X; a Snackbar persists past its passive expiry during dark-mode fallback; dialog tap test mounts footer notice as the entire bottom bar and loses clickable route during transient layout collapse.",
+      "approved_behavior": "Retain exact 'إجمالي الاستحقاق' caption and adjacent new 'المبلغ' label; status icon mirrors Arabic/English with NO close X. Preserve Flutter ScaffoldMessenger native passive 5s Snackbar timeout; regression waits for entrance animation to settle before advancing fake clock, avoiding both premature assertions and uncancelled duplicate timers. Modal tap fixture uses real fixed 76dp footer context and asserts AlertDialog push and button action. No hit-test suppression or test skip.",
+      "source_paths": [
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m665_goal_due_display_and_linked_edit_test.dart",
+        "test/m671_tour_retirement_snackbar_tap_test.dart",
+        "test/waffra_footer_notice_test.dart",
+        "test/waffra_directional_fab_receipt_corner_test.dart",
+        "test/m672_m678_activity_account_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m160-main-reconciliation.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "No code deletes accounts, SMS, changes verified goal dues or replaces protected finance tests.",
+        "No X restored; original Undo, tap gesture, accessibility and passive expiry remain.",
+        "Keep tests meaningful: no skips, no warnIfMissed:false, no exceptions suppressed.",
+        "Only true exact-head rerun success supports merge, not stale older green jobs.",
+        "Do not install an extra asynchronous timer just to satisfy a fake-clock test; check entrance animation duration first, preserve built-in accessible notice lifecycle."
       ]
     }
   ]

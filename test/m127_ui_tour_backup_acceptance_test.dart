@@ -12,7 +12,7 @@ void main() {
     expect(source,contains("label:waffraIsEnglish?'New savings goal':'إضافة هدف جديد'"));
     expect(source,contains('bool noTarget=openEnded||(duplicate!=null&&duplicate.target<=0);'));
     expect(source,contains("label:waffraIsEnglish?'Duplicate recurring transaction':'تكرار عملية متكررة موجودة'"));
-    expect(source,contains('key:_tourKeys[1],'));
+    expect(source,isNot(contains('key:_tourKeys[1]')));
     expect(source.contains('onTap:()=>setState(()=>addFabExpanded=!addFabExpanded)'),
         isFalse);
     final goalsStart=source.indexOf('Widget goalsPage()');
@@ -28,12 +28,12 @@ void main() {
     expect(recurringSection.contains('OutlinedButton.icon(onPressed:recurringDialog'),false);
   });
 
-  test('tour intro no longer cuts through the top header', () {
+  test('M671 no tour startup/overlay, ordinary Home actions unchanged',(){
     final source=File('lib/main.dart').readAsStringSync();
-    expect(source,contains('tourStep==0?Rect.fromLTWH(-40,-40,1,1)'));
-    expect(source,contains('final suggestedTop=tourStep==0?'));
-    expect(source,contains('final suggestedLeft=tourStep==0?'));
-    expect(source,contains('if(tourActive&&tourTargetReady)Positioned.fill(child:tourOverlay())'));
+    expect(source,isNot(contains('tourOverlay()')));
+    expect(source,isNot(contains('tourActive')));
+    expect(source,isNot(contains('waffra_in_app_tour_seen_v2')));
+    expect(source,contains('WaffraStationaryFabAnimator()'));
   });
 
   test('new backups use 12–256 character passwords and retain legacy import', () {

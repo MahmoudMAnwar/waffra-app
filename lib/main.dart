@@ -14,7 +14,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'waffra_financial_tools.dart';
 import 'waffra_smart_features.dart';
-import 'waffra_tour_plan.dart';
 import 'waffra_today_picker.dart';
 import 'waffra_action_layout.dart';
 import 'waffra_centered_dropdown.dart';
@@ -2015,7 +2014,8 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   ],
   // One existing MaterialApp.builder: keep finance masking and RTL/LTR,
   // and place idle biometric overlay ABOVE every Navigator route.
-  builder:(context,child)=>WaffraIdleBiometricOverlay(
+  builder:(context,child)=>WaffraNoticeTapDismissArea(
+   child:WaffraIdleBiometricOverlay(
    enabled:profile!=null&&!locked&&!showLogin&&
     !loading&&introDone&&startupError==null&&
     !autoSmsConsentPending&&
@@ -2027,7 +2027,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     textDirection:language=='ar'?TextDirection.rtl:TextDirection.ltr,
     // Language is an immediate LTR/RTL layout change, never a
     // navigator replacement or whole-screen slide of the FAB.
-    child:child??const SizedBox.shrink()))),
+    child:child??const SizedBox.shrink())))),
 
   theme:ThemeData(
    useMaterial3:true,
@@ -3592,8 +3592,8 @@ class WaffraNoticeContent extends StatelessWidget {
     Icon(palette.$4,color:palette.$2,size:19),
     const SizedBox(width:8),
     Expanded(child:Tooltip(message:notice.text,
-     child:WaffraText(notice.text,maxLines:2,
-      overflow:TextOverflow.ellipsis,style:TextStyle(
+     child:WaffraText(notice.text,
+      style:TextStyle(
        color:palette.$2,fontSize:12,height:1.2,
        fontWeight:FontWeight.w700)))),
     if(notice.onAction!=null)...[
@@ -3616,20 +3616,55 @@ class WaffraNoticeContent extends StatelessWidget {
        maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(
         color:palette.$2,fontSize:12,fontWeight:FontWeight.bold))),
     ],
-    const SizedBox(width:6),
-    SizedBox(width:48,height:48,child:IconButton(
-     key:const Key('waffra-snackbar-close'),
-     tooltip:waffraIsEnglish?'Close':'إغلاق',
-     icon:Icon(Icons.close_rounded,color:palette.$2,size:18),
-     padding:EdgeInsets.zero,
-     constraints:const BoxConstraints(minWidth:48,minHeight:48),
-     onPressed:WaffraHaptics.tap(onDismiss))),
+
    ]));
  }
 }
 
+/// Captures taps without joining the gesture arena: original navigation,
+/// buttons and Undo receive their tap before the notice is hidden.
+class WaffraNoticeTapDismissArea extends StatefulWidget {
+ const WaffraNoticeTapDismissArea({super.key,required this.child});
+ final Widget child;
+ @override State<WaffraNoticeTapDismissArea> createState()=>
+  _WaffraNoticeTapDismissAreaState();
+}
+class _WaffraNoticeTapDismissAreaState extends State<WaffraNoticeTapDismissArea> {
+ final Map<int,Offset> _touchOrigins=<int,Offset>{};
+ @override Widget build(BuildContext context)=>Listener(
+  behavior:HitTestBehavior.translucent,
+  onPointerDown:(event)=>_touchOrigins[event.pointer]=event.position,
+  onPointerCancel:(event)=>_touchOrigins.remove(event.pointer),
+  onPointerUp:(event){
+   final origin=_touchOrigins.remove(event.pointer);
+   if(origin==null||(event.position-origin).distance>18)return;
+   final shownFooter=_waffraFooterNotice.value;
+   final shownFallback=_waffraFallbackNoticeMessenger;
+   final fallbackGeneration=_waffraFallbackNoticeGeneration;
+   if(shownFooter==null&&shownFallback==null)return;
+   // Allow the *same* tap to activate its real target first, including Undo.
+   // A newly shown replacement notice must not be dismissed by an older tap.
+   scheduleMicrotask((){
+    if(!mounted)return;
+    if(shownFooter!=null&&identical(_waffraFooterNotice.value,shownFooter)){
+     waffraDismissFooterNotice();
+    }
+    if(shownFallback!=null&&shownFallback.mounted&&
+       fallbackGeneration==_waffraFallbackNoticeGeneration){
+     shownFallback.removeCurrentSnackBar();
+     if(identical(_waffraFallbackNoticeMessenger,shownFallback)){
+      _waffraFallbackNoticeMessenger=null;
+     }
+    }
+   });
+  },
+  child:widget.child);
+}
+
 final ValueNotifier<WaffraNoticeData?> _waffraFooterNotice=
  ValueNotifier<WaffraNoticeData?>(null);
+ScaffoldMessengerState? _waffraFallbackNoticeMessenger;
+int _waffraFallbackNoticeGeneration=0;
 Timer? _waffraFooterNoticeTimer;
 int _waffraFooterNoticeGeneration=0;
 int _waffraFooterHostCount=0;
@@ -3695,11 +3730,11 @@ class _WaffraFooterNoticeHostState extends State<WaffraFooterNoticeHost> {
  @override Widget build(BuildContext context)=>
   ValueListenableBuilder<WaffraNoticeData?>(
    valueListenable:_source,
-   builder:(ctx,notice,_)=>AnimatedSize(
-    duration:waffraMotion(170),
-    curve:Curves.easeOutCubic,
-    alignment:Alignment.bottomCenter,
-    child:notice==null?const SizedBox(width:double.infinity,height:0):
+   // Instantly remove a dismissed notice. An AnimatedSize with a
+   // zero-duration swap can mutate its own RenderAnimatedSize during layout
+   // when the user's tap and the footer change arrive in the same frame.
+   builder:(ctx,notice,_)=>notice==null?
+    const SizedBox(width:double.infinity,height:0):
      Padding(
       padding:const EdgeInsets.only(top:4,bottom:8),
       child:Center(child:SizedBox(
@@ -3718,7 +3753,6 @@ class _WaffraFooterNoticeHostState extends State<WaffraFooterNoticeHost> {
        }),
       )),
      ),
-   ),
   );
 }
 
@@ -3748,6 +3782,8 @@ void snack(BuildContext context,String text,{
  if(_waffraFooterHostCount>0&&(preferFooter||inHome||inHomeDialog)){
   // Switching from a non-footer route must never leave two notices stacked.
   ScaffoldMessenger.maybeOf(context)?.hideCurrentSnackBar();
+  _waffraFallbackNoticeMessenger=null;
+  _waffraFallbackNoticeGeneration++;
   _waffraShowFooterNotice(notice);
   return;
  }
@@ -3757,6 +3793,8 @@ void snack(BuildContext context,String text,{
  if(messenger==null)return;
  messenger.hideCurrentMaterialBanner();
  messenger.hideCurrentSnackBar();
+ _waffraFallbackNoticeMessenger=messenger;
+ _waffraFallbackNoticeGeneration++;
  messenger.showSnackBar(SnackBar(
   behavior:SnackBarBehavior.floating,
   margin:const EdgeInsets.only(left:12,right:12,bottom:8),
@@ -3770,6 +3808,7 @@ void snack(BuildContext context,String text,{
   content:WaffraNoticeEdgeBody(
    notice:notice,onDismiss:()=>messenger.hideCurrentSnackBar()),
  ));
+
 }
 void snackSuccess(BuildContext context,String text)=>snack(context,text,isError:false);
 
@@ -4154,21 +4193,20 @@ class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
  final String? heading;
  final bool goalWallet;
  final bool compact;
- final GlobalKey? focusKey;
  final double? monthlyChangePercent;
  final String? selectedAccountLabel;
  final VoidCallback? onAccountTap;
  final Future<void> Function() refreshVerifiedWidgetBalance;
  const WaffraBalanceHeader({
-  required this.balance,required this.english,this.focusKey,this.heading,this.goalWallet=false,this.compact=false,
+  required this.balance,required this.english,this.heading,this.goalWallet=false,this.compact=false,
   required this.refreshVerifiedWidgetBalance,this.monthlyChangePercent,
   this.selectedAccountLabel,this.onAccountTap,
  });
  // Reserve space for multiline account names rather than trimming them.
  int get _accountLabelExtraLines=>goalWallet||onAccountTap==null?0:
   (((selectedAccountLabel?.runes.length??0)-25).clamp(0,150)/25).ceil();
- @override double get minExtent=>goalWallet?130.0:(compact?127.0:164.0+20.0*_accountLabelExtraLines);
- @override double get maxExtent=>goalWallet?148.0:(compact?138.0:182.0+20.0*_accountLabelExtraLines);
+ @override double get minExtent=>goalWallet?127.0:(compact?127.0:164.0+20.0*_accountLabelExtraLines);
+ @override double get maxExtent=>goalWallet?138.0:(compact?138.0:182.0+20.0*_accountLabelExtraLines);
  @override Widget build(BuildContext context,double shrinkOffset,bool overlapsContent){
   final progress=(shrinkOffset/(maxExtent-minExtent)).clamp(0.0,1.0);
   final dark=Theme.of(context).brightness==Brightness.dark;
@@ -4177,7 +4215,6 @@ class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
   final validCompare=compare!=null&&compare.isFinite;
   final comparisonValue=validCompare?compare:0.0;
   return Container(
-   key:focusKey,
    color:waveColor,
    padding:const EdgeInsets.fromLTRB(14,0,14,4),
    child:Container(
@@ -4755,13 +4792,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final api=WaffraVerifiedAccountsApi(bridge:bridge);
    final accounts=await api.balances();
    if(!mounted)return;
-   if(accounts.where((a)=>!a.archived).length<2){
-    snack(context,waffraIsEnglish?
-     'Create two accounts first to transfer between them.':
-     'أنشئ حسابين أولًا عشان تحول بينهم.');
-    await openVerifiedAccounts();
-    return;
-   }
+   // Two different verified accounts are checked only on final submit.
+   final knownIds=accounts.map((a)=>a.id).toSet();
    await Navigator.of(context).push<void>(MaterialPageRoute(
     builder:(transferContext)=>Scaffold(
      appBar:AppBar(title:WaffraText(waffraIsEnglish?
@@ -4769,6 +4801,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      body:WaffraAccountTransactionForm(
       accounts:accounts,english:waffraIsEnglish,
       initialOperation:WaffraAccountOperation.transfer,
+      onCreateAccount:(group,createProvider)async{
+       await openVerifiedAccounts();
+       if(!mounted)return null;
+       final updated=await api.balances();
+       final created=updated.where((a)=>
+        !a.archived&&!knownIds.contains(a.id)).toList();
+       knownIds.addAll(updated.map((a)=>a.id));
+       return created.length==1?created.single:null;
+      },
       onConfirmTransfer:(draft)async{
        await api.transfer(id:draft.requestId,
         fromAccountId:draft.fromId,toAccountId:draft.toId,
@@ -4834,12 +4875,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    if(mounted&&tab==0&&compact!=_headerCompact)setState(()=>_headerCompact=compact);
   });
  }
- late final AnimationController _tourGlow;
  Future<void> setAnimationLevel(String next)async {
   if(!{'full','balanced','reduced','off'}.contains(next))return;
   waffraAnimationLevel.value=next;
-  _tourGlow.duration=waffraMotion(1150);
-  if(tourActive){_tourGlow.stop();if(next!='off')_tourGlow.repeat(reverse:true);}
   if(mounted)setState((){});
   final p=await SharedPreferences.getInstance();
   await p.setString('waffra_animation_level',next);
@@ -4869,12 +4907,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   _m528CloudConsentFuture??=WaffraSmsCloudService.hasConsent();
  String? _accountOpenSection;
  String accountSearch='';
- final _tourKeys=List<GlobalKey>.generate(7,(_)=>GlobalKey());
- bool tourActive=false;
- bool tourTargetReady=false;
- int tourStep=0;
- static const tourTabs=WaffraTourPlan.tabs;
- static const tourTargetKeys=WaffraTourPlan.targetKeys;
  bool addFabExpanded=false;
  final LayerLink _fabOverlayAnchor=LayerLink();
  bool quickActionsExpanded=false;
@@ -4901,6 +4933,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  // Account settings open from the app bar instead of a footer destination.
  bool accountOpened=false;
  bool showAllTransactions=false,showTransactionFilters=false,showTransactionSearch=false;
+ bool financialActivityExpanded=false; // M676: collapsed until explicit tap.
  DateTime? _m468LastResumeSmsScan;
  // #410: only ephemeral user-edited SMS form fields, keyed by message hash;
  // never persist a duplicate raw SMS outside the verified encrypted source.
@@ -4936,7 +4969,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    unawaited(_refreshAutoSmsInbox());
   });
  }
- @override void initState(){super.initState();WaffraBackNavigation.onHomeBack=_registeredBackHandler;_dashboardScrollController.addListener(_handleDashboardScroll);_tourGlow=AnimationController(vsync:this,duration:waffraMotion(1150));waffraReturnHome.addListener(_returnToHome);waffraIncomingSms.addListener(_receiveSharedSms);waffraAutoSmsUpdates.addListener(_receiveAutoSmsNotice);waffraFinanceNoticeTap.addListener(_m621OnFinanceNoticeTap);waffraWidgetAction.addListener(_receiveWidgetAction);_widgetReloadListener=AppLifecycleListener(onResume:_m468OnResume);unawaited(_loadFinanceSafely());}
+ @override void initState(){super.initState();WaffraBackNavigation.onHomeBack=_registeredBackHandler;_dashboardScrollController.addListener(_handleDashboardScroll);waffraReturnHome.addListener(_returnToHome);waffraIncomingSms.addListener(_receiveSharedSms);waffraAutoSmsUpdates.addListener(_receiveAutoSmsNotice);waffraFinanceNoticeTap.addListener(_m621OnFinanceNoticeTap);waffraWidgetAction.addListener(_receiveWidgetAction);_widgetReloadListener=AppLifecycleListener(onResume:_m468OnResume);unawaited(_loadFinanceSafely());}
  void _returnToHome(){if(mounted)setState((){_tabBackStack.clear();tab=0;accountOpened=false;goalsOpened=false;addFabExpanded=false;});}
  void _receiveWidgetAction(){
   // New pre-auth barrier. Preserve the original owner/action guard below
@@ -5158,8 +5191,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }
   });
  }
- Future<void> _rescanAutoSmsInbox()async{
+ Future<void> _rescanAutoSmsInbox({BuildContext? feedbackContext})async{
   if(_autoSmsRescanRunning||!mounted)return;
+  final feedback=feedbackContext??context;
   setState(()=>_autoSmsRescanRunning=true);
   try{
    // Do not rewind the durable month cursor after it has completed.
@@ -5195,14 +5229,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     (after!['added'] as num).toInt():previous;
    final added=(current-previous).clamp(0,2147483647);
    if(_autoSmsStatusProblem!=null){
-    snack(context,_autoSmsStatusProblem!,isError:true);
+    snack(feedback,_autoSmsStatusProblem!,isError:true);
    }else if(after?['complete']!=true){
     final continuation=continuingInitialHistory?
      (waffraIsEnglish?'Continuing first history scan.':
       'جارٍ استكمال الفحص الأول للرسائل السابقة.'):
      (waffraIsEnglish?'More newly received messages remain to scan.':
       'لسه فيه رسائل جديدة محتاجة استكمال الفحص.');
-    snack(context,waffraIsEnglish?
+    snack(feedback,waffraIsEnglish?
      'Examined $scanned new inbox rows • $added added • '
       '$removedFromPhone deleted from phone removed from review • '
       '${_autoSmsPending.length} awaiting review. $continuation':
@@ -5210,16 +5244,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       '$removedFromPhone اتحذفت من المراجعة بعد حذفها من الهاتف • '
       '${_autoSmsPending.length} بانتظار المراجعة. $continuation');
    }else{
-    snackSuccess(context,waffraIsEnglish?
-     'Scan completed: $scanned newly examined • $added added for review • '
-      '$removedFromPhone deleted from phone removed from review • '
-      '${_autoSmsPending.length} awaiting review.':
-     'اكتمل الفحص: $scanned رسالة جديدة فُحصت • $added اتضافت للمراجعة • '
-      '$removedFromPhone اتحذفت من المراجعة بعد حذفها من الهاتف • '
-      '${_autoSmsPending.length} بانتظار المراجعة.');
+    if(feedbackContext!=null&&!feedbackContext.mounted)return;
+    if(added==0){
+     snackSuccess(feedback,waffraIsEnglish?
+      'No new messages to review.':'لا توجد رسائل جديدة للمراجعة.');
+    }else{
+     snackSuccess(feedback,waffraIsEnglish?
+      '$added new messages added for review.':
+      'تمت إضافة $added رسالة جديدة للمراجعة.');
+    }
    }
   }catch(_){
-   if(mounted)snack(context,waffraIsEnglish?
+   if(mounted&&(feedbackContext==null||feedbackContext.mounted))snack(feedback,waffraIsEnglish?
     'SMS rescan failed. Pending messages were not deleted.':
     'تعذر إعادة الفحص. لم تُحذف الرسائل المعلقة.',isError:true);
   }finally{
@@ -5736,7 +5772,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     onReviewAll:_openAutoSmsInbox,
     onBulkExclude:_m592ExcludeNotificationSelection,
     onReviewOne:(id)=>_reviewAutoSmsCandidates(targetId:id),
-    onRescan:_rescanAutoSmsInbox,
+    onRescan:()=>_rescanAutoSmsInbox(feedbackContext:route),
     // A user refresh always checks the real incremental native cursor;
     // a false rescanNeeded hint must not make the button inert.
     canRescan:()=>!_autoSmsRescanRunning,
@@ -6277,7 +6313,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  })async{
   final id=item['id'],body=item['body'];
   if(id is! String||body is! String||
-     facts.kind!=WaffraBankOperationKind.transfer||facts.pending)return;
+     facts.kind!=WaffraBankOperationKind.transfer)return;
   // Verify the main transfer amount independently from fees/balances.
   // Never use a fee's currency as proof of a SAR account transfer.
   final sourceAmount=WaffraSmsCurrencies.originalAmount(body);
@@ -6288,7 +6324,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     'لن تُسجّل الرسوم أو عملة مجهولة كتحويل.',isError:true);
    return;
   }
-  final verifiedMinor=sourceAmount==null?0:
+  final verifiedMinor=facts.pending||sourceAmount==null?0:
    (waffraSarAmountMinor(sourceAmount.amount.toStringAsFixed(2))??0);
   final feeTotalMinor=facts.fee==null?null:
    WaffraBankSmsFactsParser.extraDebitMinor(
@@ -6309,11 +6345,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final api=WaffraVerifiedAccountsApi(bridge:bridge);
    final accounts=await api.balances();
    if(!mounted)return;
-   if(accounts.where((a)=>!a.archived).length<2){
-    // The editor offers inline creation of a bank provider and child account.
-    // Previously returning here made the transfer CTA look unresponsive.
-    snack(context,'اختار أو أضف حسابين مختلفين داخل شاشة المراجعة.');
-   }
    final arrived=DateTime.fromMillisecondsSinceEpoch(
     item['receivedAt'] is int?item['receivedAt'] as int:
      DateTime.now().millisecondsSinceEpoch);
@@ -7302,12 +7333,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     final kind=await showWaffraDialog<String>(context:context,
      builder:(dialog)=>AlertDialog(
       title:WaffraText(waffraIsEnglish?
-       'Add a separate manual transaction':'إضافة عملية يدوية منفصلة'),
-      content:WaffraText(waffraIsEnglish?
-       'The bank transfer SMS will remain pending. Choose an independent '
-       'income or expense, enter its true amount, and confirm its own account.':
-       'رسالة التحويل هتفضل للمراجعة. اختار دخل أو مصروف منفصل، '
-       'واكتب مبلغه الحقيقي وأكّد الحساب المالي قبل الحفظ.'),
+       'Choose the type of transaction to add:':
+       'اختر نوع العملية التي تريد إضافتها:'),
       actions:[
        TextButton(onPressed:()=>Navigator.pop(dialog),
         child:WaffraText(waffraIsEnglish?'Back':'العودة')),
@@ -7564,7 +7591,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }
   });
  }
- @override void dispose(){if(!_m663FirstInteractiveFrame.isCompleted)_m663FirstInteractiveFrame.complete();_m632SmsNoticeTimer?.cancel();if(identical(WaffraBackNavigation.onHomeBack,_registeredBackHandler))WaffraBackNavigation.onHomeBack=null;_dashboardScrollController.dispose();_categoryScrollController.dispose();_goalsScrollController.dispose();_recurringScrollController.dispose();_tourGlow.dispose();waffraReturnHome.removeListener(_returnToHome);waffraIncomingSms.removeListener(_receiveSharedSms);waffraAutoSmsUpdates.removeListener(_receiveAutoSmsNotice);waffraFinanceNoticeTap.removeListener(_m621OnFinanceNoticeTap);waffraWidgetAction.removeListener(_receiveWidgetAction);_widgetReloadListener?.dispose();_saveProgress.dispose();final binding=_financeBinding;if(binding!=null)unawaited(_financialWriteQueue.drain().whenComplete(binding.close));super.dispose();}
+ @override void dispose(){if(!_m663FirstInteractiveFrame.isCompleted)_m663FirstInteractiveFrame.complete();_m632SmsNoticeTimer?.cancel();if(identical(WaffraBackNavigation.onHomeBack,_registeredBackHandler))WaffraBackNavigation.onHomeBack=null;_dashboardScrollController.dispose();_categoryScrollController.dispose();_goalsScrollController.dispose();_recurringScrollController.dispose();waffraReturnHome.removeListener(_returnToHome);waffraIncomingSms.removeListener(_receiveSharedSms);waffraAutoSmsUpdates.removeListener(_receiveAutoSmsNotice);waffraFinanceNoticeTap.removeListener(_m621OnFinanceNoticeTap);waffraWidgetAction.removeListener(_receiveWidgetAction);_widgetReloadListener?.dispose();_saveProgress.dispose();final binding=_financeBinding;if(binding!=null)unawaited(_financialWriteQueue.drain().whenComplete(binding.close));super.dispose();}
  Future<void> _syncWidgetTransactions()async{
   if(!mounted||!ready)return;
   try{
@@ -8061,15 +8088,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        _m630PostFrameFinanceWork=null;
       }
      }());
-     if(!(p.getBool('waffra_in_app_tour_seen_v2')??false)&&mounted){
-      setState((){
-       tourActive=true;tourStep=0;tab=0;accountOpened=false;
-       _headerCompact=false;goalsOpened=false;addFabExpanded=false;
-       tourTargetReady=false;
-      });
-      if(waffraAnimationLevel.value!='off')_tourGlow.repeat(reverse:true);
-      scheduleTourFocus();
-     }
     }());
    });
   // An explicit Google onboarding notification consent may be pending;
@@ -9437,6 +9455,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      }
     }
     Widget operationPicker(){
+     // Manual income/expense selected from SMS: one template, no three-mode switch.
+     if(manualIncomeOverride!=null&&initial==null&&!sms){
+      return const SizedBox.shrink();
+     }
      if(initial!=null||sms){
       return SegmentedButton<bool>(
        segments:const [
@@ -11873,9 +11895,27 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      'هل تريد نقل المعاملة «${entry.title}» وفواتيرها إلى المحذوفات لمدة 30 يومًا؟');
    if(approved!=true||!mounted)return;
    await _financialWriteQueue.submit(<String,Object>{'id':entry.id},(_)async{
+    // M675: a concurrent SMS/Widget writer may have changed the source
+    // generation while the user was reading the confirmation dialog.
+    // Re-open and verify all witnesses under the serialized write queue.
+    final current=await _financeAuthority.load(
+     route:WaffraFinanceRoute.transactionDeleteAndUndo);
+    if(current.source!=WaffraRuntimeFinanceBackend.verifiedEncrypted||
+       current.encryptedWitness==null){
+     throw StateError('Current encrypted deletion source unavailable.');
+    }
+    WaffraVerifiedTransactionUiGuard.requireUnchangedSelected(
+     ledgerRaw:current.ledgerRaw,selected:entry.toJson());
+    final receipt=await _financeAuthority.loadVerifiedReceiptScreen(
+     route:WaffraFinanceRoute.receiptView,entryId:entry.id);
+    if(receipt.entryId!=entry.id||
+       receipt.generation!=current.encryptedWitness!.generation||
+       receipt.isInRecycleBin){
+     throw StateError('Encrypted receipt changed during deletion.');
+    }
     final committed=await _financeAuthority.deleteVerifiedTransactionToRecycle(
-     baseline:baseline,entryId:entry.id,
-     expectedImageHashes:screen.imageSha256,
+     baseline:current,entryId:entry.id,
+     expectedImageHashes:receipt.imageSha256,
      userConfirmed:true,now:DateTime.now().toUtc());
     _publishVerifiedTransactionLedger(committed);
    });
@@ -11892,7 +11932,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     snack(context,waffraIsEnglish?
      'Deletion could not be verified. Your saved financial data was not reset. Reload before retrying.':
      'تعذر التحقق من الحذف. لم يتم تصفير بياناتك المالية. أعد تحميل المعاملات قبل المحاولة.');
-    unawaited(_loadFinanceSafely());
+    // No full startup reset or transient black screen on failed deletion.
+    unawaited(_refreshFromVerifiedFinance());
    }
   }
  }
@@ -11919,7 +11960,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     snack(context,waffraIsEnglish?
      'Could not restore safely. Reload Recently Deleted and try again.':
      'تعذر الاسترجاع الآمن. أعد فتح المحذوفات وحاول مجددًا.');
-    unawaited(_loadFinanceSafely());
+    unawaited(_refreshFromVerifiedFinance());
    }
   }
  }
@@ -13252,20 +13293,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   Widget endpoint(String label,String name)=>Expanded(child:Column(
    crossAxisAlignment:CrossAxisAlignment.start,children:[
     WaffraText(label,style:TextStyle(color:textColor,fontSize:11)),
-    const SizedBox(height:4),
-    WaffraText(name,maxLines:2,overflow:TextOverflow.ellipsis,
+    const SizedBox(height:2),
+    WaffraText(name,maxLines:compact?2:3,overflow:TextOverflow.ellipsis,
      style:TextStyle(fontSize:compact?12:15,fontWeight:FontWeight.bold)),
    ]));
   return Container(
    key:Key('m647-verified-transfer-'+t.id),
-   margin:const EdgeInsets.symmetric(vertical:5),
-   padding:EdgeInsets.all(compact?12:15),
+   constraints:const BoxConstraints(minHeight:144),
+   margin:const EdgeInsets.symmetric(vertical:3),
+   padding:EdgeInsets.symmetric(horizontal:12,vertical:compact?9:11),
    decoration:BoxDecoration(
     color:bg,borderRadius:BorderRadius.circular(17),
     border:Border.all(color:accent.withValues(alpha:.32))),
    child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
     Row(children:[
-     const Icon(Icons.swap_horiz_rounded,color:accent,size:22),
+     const Icon(Icons.swap_horiz_rounded,color:accent,size:18),
      const SizedBox(width:7),
      Expanded(child:WaffraText(waffraIsEnglish?
       'Between my accounts':'تحويل بين حساباتي',
@@ -13274,6 +13316,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      // either involved account; All Accounts remains one unsigned event.
      Flexible(child:FittedBox(fit:BoxFit.scaleDown,
       child:Row(mainAxisSize:MainAxisSize.min,children:[
+       WaffraText(waffraIsEnglish?'Amount':'المبلغ',style:TextStyle(color:textColor,fontSize:11)),
+       const SizedBox(width:5),
        if(_m467SelectedAccount==t.fromAccountId)
         WaffraText('−',style:TextStyle(color:textColor,
          fontWeight:FontWeight.bold,fontSize:compact?14:18))
@@ -13294,16 +13338,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        'وارد إلى الحساب المحدد'),
       style:TextStyle(color:textColor,fontSize:11)),
     ],
-    const SizedBox(height:13),
+    const SizedBox(height:7),
     Row(textDirection:waffraIsEnglish?TextDirection.ltr:TextDirection.rtl,
      children:[
       endpoint(waffraIsEnglish?'From':'من الحساب',from),
       Padding(padding:const EdgeInsets.symmetric(horizontal:8),
        child:Icon(waffraIsEnglish?Icons.arrow_forward_rounded:
-        Icons.arrow_back_rounded,color:accent,size:24)),
+        Icons.arrow_back_rounded,textDirection:TextDirection.ltr,
+        color:accent,size:24)),
       endpoint(waffraIsEnglish?'To':'إلى الحساب',to),
      ]),
-    const SizedBox(height:9),
+    const SizedBox(height:5),
     Row(children:[
      Icon(Icons.event_outlined,size:15,color:textColor),
      const SizedBox(width:5),
@@ -13335,6 +13380,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final accent=dark?const Color(0xFFF4D790):const Color(0xFF866017);
   return Container(
    key:Key('m649-verified-saving-'+movement.id),
+   constraints:const BoxConstraints(minHeight:144),
    margin:const EdgeInsets.symmetric(vertical:3),
    padding:const EdgeInsets.symmetric(horizontal:12,vertical:9),
    decoration:BoxDecoration(
@@ -13349,6 +13395,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       (waffraIsEnglish?'Savings contribution':'إضافة مبلغ للهدف الادخاري'):
       (waffraIsEnglish?'Savings withdrawal':'سحب من الادخار'),
       style:TextStyle(fontWeight:FontWeight.bold,color:accent,fontSize:12))),
+     WaffraText(waffraIsEnglish?'Amount':'المبلغ',style:TextStyle(color:accent,fontSize:11)),
+     const SizedBox(width:5),
      WaffraCurrencyAmount(movement.amountMinor/100,fontSize:13,color:accent),
     ]),
     const SizedBox(height:4),
@@ -13479,6 +13527,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    (darkMode?const Color(0xFF244C3A):const Color(0xFFB2D5C2)):
    (darkMode?const Color(0xFF49302C):const Color(0xFFFCECE8));
   return Padding(padding:const EdgeInsets.symmetric(vertical:3),child:Container(
+   constraints:const BoxConstraints(minHeight:144),
    decoration:BoxDecoration(color:rowColor,borderRadius:BorderRadius.circular(17),
     border:Border.all(color:forest.withValues(alpha:darkMode ? 0.18 : 0.08))),
    clipBehavior:Clip.antiAlias,child:Stack(children:[
@@ -13562,12 +13611,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          Expanded(child:WaffraText(waffraIsEnglish?
           'Total goal due':'إجمالي الاستحقاق',
           style:TextStyle(fontSize:11,fontWeight:FontWeight.w700,color:valueColor))),
+         WaffraText(waffraIsEnglish?'Amount':'المبلغ',
+          style:TextStyle(fontSize:11,color:valueColor)),
+         const SizedBox(width:5),
          Flexible(child:WaffraCurrencyAmount(
           entry.amount,fontSize:15,color:valueColor)),
         ])
        else Align(alignment:AlignmentDirectional.centerStart,
-        child:WaffraCurrencyAmount(entry.income?entry.amount:-entry.amount,
-         fontSize:15,color:valueColor)),
+        child:Row(mainAxisSize:MainAxisSize.min,children:[
+         WaffraText(waffraIsEnglish?'Amount':'المبلغ',style:TextStyle(color:valueColor,fontSize:11)),
+         const SizedBox(width:5),
+         WaffraCurrencyAmount(entry.income?entry.amount:-entry.amount,
+          fontSize:15,color:valueColor),
+        ])),
       ]))),
      const SizedBox(width:2),
      IconButton(tooltip:waffraIsEnglish?'Transaction options':'خيارات المعاملة',
@@ -13673,7 +13729,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          balance:_m467ShownBalance(),english:waffraIsEnglish,
          heading:waffraIsEnglish?'Total balance':'إجمالي الرصيد',
          compact:true,
-         focusKey:_tourKeys[0],
          monthlyChangePercent:_m467SelectedAccount=='all'&&
           _m467AccountContext==null?monthChange:null,
          refreshVerifiedWidgetBalance:_refreshWidget)),
@@ -13777,74 +13832,42 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            borderRadius:BorderRadius.circular(20),
            border:Border.all(color:forest.withValues(alpha:0.10))),
           child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-           Row(children:[
-            const Icon(Icons.receipt_long_outlined,color:emerald),
-            const SizedBox(width:7),
-            Expanded(child:WaffraText(waffraIsEnglish?
-             'Your transactions':'عملياتك المالية',
-             style:const TextStyle(fontSize:19,fontWeight:FontWeight.bold))),
-            if(waffraCanExpandDashboardTransactions(visible.length)||
-               (_m468VerifiedAccountsLoaded&&
-                (typeFilter=='التحويلات'||typeFilter=='الادخار'||typeFilter=='الكل')))
-             TextButton(
-              key:const Key('waffra-dashboard-transactions-expand'),
-              onPressed:WaffraHaptics.tap(
-               ()=>setState(()=>showAllTransactions=!showAllTransactions)),
-              child:WaffraText(showAllTransactions?
-               (waffraIsEnglish?'Show less':'عرض أقل'):
-               (waffraIsEnglish?'Show more':'عرض أكثر'))),
-           ]),
-           const SizedBox(height:9),
-           Row(children:[
-            Expanded(child:Container(
-             padding:const EdgeInsets.all(12),
-             decoration:BoxDecoration(
-              color:Theme.of(context).brightness==Brightness.dark?
-               const Color(0xFF244C3A):const Color(0xFFE4F4EB),
-              borderRadius:BorderRadius.circular(15)),
-             child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-              WaffraText(waffraIsEnglish?'Income':'الدخل',
-               style:TextStyle(color:Theme.of(context).brightness==Brightness.dark?const Color(0xFFA8E8C7):const Color(0xFF075B43),fontWeight:FontWeight.bold)),
-              const SizedBox(height:5),
-              FittedBox(fit:BoxFit.scaleDown,child:WaffraCurrencyAmount(
-               sum(visible.where((e)=>e.income),true),fontSize:18,
-               color:Theme.of(context).brightness==Brightness.dark?const Color(0xFFA8E8C7):const Color(0xFF075B43))),
-             ]))),
-            const SizedBox(width:9),
-            Expanded(child:Container(
-             padding:const EdgeInsets.all(12),
-             decoration:BoxDecoration(
-              color:Theme.of(context).brightness==Brightness.dark?
-               const Color(0xFF49302C):const Color(0xFFFCECE8),
-              borderRadius:BorderRadius.circular(15)),
-             child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-              WaffraText(waffraIsEnglish?'Expenses':'المصروفات',
-               style:TextStyle(color:Theme.of(context).brightness==Brightness.dark?const Color(0xFFFFBAB0):const Color(0xFFB34E3C),fontWeight:FontWeight.bold)),
-              const SizedBox(height:5),
-              FittedBox(fit:BoxFit.scaleDown,child:WaffraCurrencyAmount(
-               sum(visible.where((e)=>!e.income),false),fontSize:18,
-               color:Theme.of(context).brightness==Brightness.dark?const Color(0xFFFFBAB0):const Color(0xFFB34E3C))),
-             ]))),
-           ]),
+           Semantics(button:true,toggled:financialActivityExpanded,
+            child:InkWell(
+             key:const Key('waffra-financial-activity-toggle'),
+             borderRadius:BorderRadius.circular(15),
+             onTap:WaffraHaptics.tap(()=>setState(
+              ()=>financialActivityExpanded=!financialActivityExpanded)),
+             child:Padding(padding:const EdgeInsets.symmetric(vertical:3),
+              child:Row(children:[
+               const Icon(Icons.receipt_long_outlined,color:emerald),
+               const SizedBox(width:7),
+               Expanded(child:WaffraText(waffraIsEnglish?
+                'Your transactions':'عملياتك المالية',
+                style:const TextStyle(fontSize:19,fontWeight:FontWeight.bold))),
+               WaffraText(financialActivityExpanded?
+                (waffraIsEnglish?'Hide':'إخفاء'):
+                (waffraIsEnglish?'Show':'عرض'),
+                style:const TextStyle(fontSize:12,color:emerald)),
+               AnimatedRotation(turns:financialActivityExpanded?0.5:0,
+                duration:waffraMotion(180),
+                child:const Icon(Icons.keyboard_arrow_down_rounded,color:emerald)),
+              ]))),
+            ),
+           if(financialActivityExpanded)...[
+            if(waffraCanExpandDashboardTransactions(visible.length)&&
+               (!_m468VerifiedAccountsLoaded||
+                (typeFilter!='التحويلات'&&typeFilter!='الادخار'&&
+                 typeFilter!='الكل')))
+             Align(alignment:AlignmentDirectional.centerEnd,
+              child:TextButton(
+               key:const Key('waffra-dashboard-transactions-expand'),
+               onPressed:WaffraHaptics.tap(
+                ()=>setState(()=>showAllTransactions=!showAllTransactions)),
+               child:WaffraText(showAllTransactions?
+                (waffraIsEnglish?'Show less':'عرض أقل'):
+                (waffraIsEnglish?'Show more':'عرض أكثر')))),
            const SizedBox(height:10),
-           Wrap(spacing:6,runSpacing:6,children:[
-            for(final choice in ['الكل','الدخل','المصروفات','التحويلات','الادخار','الاستحقاقات'])
-             ChoiceChip(
-              label:WaffraText(waffraIsEnglish?switch(choice){
-               'الدخل'=>'Income','المصروفات'=>'Expenses',
-               'التحويلات'=>'Transfers','الادخار'=>'Savings',
-               'الاستحقاقات'=>'Paid dues',
-               _=>'All',
-              }:choice,style:TextStyle(fontSize:12,
-               color:typeFilter==choice?Colors.white:null)),
-              selected:typeFilter==choice,selectedColor:emerald,
-              showCheckmark:false,
-              onSelected:WaffraHaptics.selection((_)=>setState((){
-               typeFilter=choice;categoryFilter='الكل';
-              })),
-             ),
-           ]),
-           const SizedBox(height:7),
            Divider(color:forest.withValues(alpha:0.10)),
            Row(children:[
             IconButton(
@@ -13897,8 +13920,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             ),
            ]),
            if(showTransactionFilters)...[
-            const SizedBox(height:8),
-            Wrap(spacing:6,runSpacing:6,
+            const SizedBox(height:12),
+            Wrap(
+             key:const Key('waffra-activity-single-filter-chips'),
+             spacing:10,runSpacing:12,
              children:['الكل','الدخل','المصروفات','التحويلات','الادخار','الاستحقاقات']
               .map((choice)=>ChoiceChip(
               selected:typeFilter==choice,
@@ -13910,14 +13935,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               }:choice),
               onSelected:WaffraHaptics.selection((_)=>setState((){
                typeFilter=choice;categoryFilter='الكل';
+               showAllTransactions=false;
               })))).toList()),
+            const SizedBox(height:14), // M677: separated outlined filter from chip borders.
             WaffraCenteredDropdownFormField<String>(
              key:ValueKey(typeFilter+'-'+selected),initialValue:selected,
              decoration:InputDecoration(labelText:waffraIsEnglish?
               'Category':'تصفية حسب القسم'),
              items:filterCats.map((value)=>DropdownMenuItem(
               value:value,child:WaffraText(waffraTr(value)))).toList(),
-             onChanged:WaffraHaptics.selection((value)=>setState(()=>categoryFilter=value??'الكل'))),
+             onChanged:WaffraHaptics.selection((value)=>setState((){
+              categoryFilter=value??'الكل';
+              showAllTransactions=false;
+             }))),
             Align(alignment:AlignmentDirectional.centerStart,
              child:TextButton.icon(onPressed:WaffraHaptics.tap(editTransactionFilters),
               icon:const Icon(Icons.date_range),
@@ -13983,6 +14013,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               final maxShown=waffraDashboardTransactionDisplayCount(
                history.length,expanded:showAllTransactions);
               return Column(children:[
+               // Count the verified unified timeline (not just money entries).
+               // Applies to All, Transfers and Savings alike.
+               if(waffraCanExpandDashboardTransactions(history.length))
+                Align(alignment:AlignmentDirectional.centerEnd,
+                 child:TextButton(
+                  key:const Key('waffra-dashboard-unified-activity-expand'),
+                  onPressed:WaffraHaptics.tap(
+                   ()=>setState(()=>showAllTransactions=!showAllTransactions)),
+                  child:WaffraText(showAllTransactions?
+                   (waffraIsEnglish?'Show less':'عرض أقل'):
+                   (waffraIsEnglish?'Show more':'عرض أكثر')))),
                if(history.isEmpty)Padding(
                 padding:const EdgeInsets.symmetric(vertical:26),
                 child:WaffraText(waffraIsEnglish?
@@ -14041,6 +14082,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                label:WaffraText(waffraIsEnglish?'Export PDF':'تصدير PDF')),
              ])),
            ],
+           ], // M676: expanded controls including deferred verified history.
           ])),
         ]))),
      ],
@@ -15967,7 +16009,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     title:waffraIsEnglish?'Savings goals':'أهداف الادخار',
     subtitle:waffraIsEnglish?'Plan your future and follow every milestone':
      'حوّل أحلامك إلى أهداف وتابع تقدّمك خطوة بخطوة.',
-    icon:Icons.flag_outlined,titleKey:_tourKeys[6]),
+    icon:Icons.flag_outlined),
    const SizedBox(height:10),
    TextField(
     key:const Key('waffra-goals-search'),
@@ -15978,12 +16020,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      border:OutlineInputBorder(borderRadius:BorderRadius.circular(14))),
    ),
    const SizedBox(height:12),
-   SizedBox(height:148,
-    child:WaffraBalanceHeader(
-     balance:waffraGoalWalletBalance(goals),
-     english:waffraIsEnglish,goalWallet:true,
-     heading:waffraIsEnglish?'Goals wallet':'محفظة الأهداف',
-     refreshVerifiedWidgetBalance:_refreshWidget).build(context,0,false)),
+   SizedBox(height:138,child:LayoutBuilder(builder:(heroContext,limits)=>
+    OverflowBox(alignment:Alignment.center,
+     minWidth:limits.maxWidth+32,maxWidth:limits.maxWidth+32,
+     child:WaffraBalanceHeader(
+      balance:waffraGoalWalletBalance(goals),
+      english:waffraIsEnglish,goalWallet:true,compact:true,
+      heading:waffraIsEnglish?'Goals wallet':'محفظة الأهداف',
+      refreshVerifiedWidgetBalance:_refreshWidget)
+      .build(heroContext,0,false)))),
    Padding(padding:const EdgeInsets.symmetric(horizontal:14,vertical:7),
     child:WaffraText(waffraIsEnglish?
      'Your goals wallet is separate. Confirmed funding debits the selected bank account once; goal progress is not an expense.':
@@ -16009,8 +16054,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     const SizedBox(height:14),
    ],
    Row(children:[
-    Expanded(flex:3,child:WaffraOutlinedItemsCount(
-     label:waffraIsEnglish?'Current goals':'عدد الأهداف الحالية',count:goals.length)),
+    Expanded(flex:3,child:_compactCategoryStat(
+     waffraIsEnglish?'Current goals':'عدد الأهداف الحالية',
+     goals.length.toString(),Icons.flag_outlined,emerald)),
     const SizedBox(width:9),
     Flexible(flex:2,fit:FlexFit.loose,child:WaffraDeletedItemsButton(
      onPressed:WaffraHaptics.tapRequired(deletedGoalsDialog),
@@ -16518,7 +16564,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     title:waffraIsEnglish?'Recurring transactions':'العمليات المتكررة',
     subtitle:waffraIsEnglish?'Track recurring payments and due dates':
      'نظّم عملياتك الشهرية ومواعيد استحقاقها بسهولة.',
-    icon:Icons.event_repeat_rounded,titleKey:_tourKeys[4]),
+    icon:Icons.event_repeat_rounded),
    const SizedBox(height:10),
    TextField(
     key:const Key('waffra-recurring-search'),
@@ -16548,27 +16594,25 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    ]),
    const SizedBox(height:10),
    Row(children:[
-    Expanded(child:WaffraOutlinedItemsCount(
+    Expanded(child:SizedBox(height:52,child:KeyedSubtree(
      key:const Key('waffra-recurring-count-badge'),
-     label:waffraIsEnglish?'Recurring count':'عدد العمليات المتكررة',
-     count:recurring.length)),
+     child:_compactCategoryStat(
+      waffraIsEnglish?'Recurring count':'عدد العمليات المتكررة',
+      recurring.length.toString(),Icons.event_repeat_rounded,emerald)))),
     const SizedBox(width:9),
     Expanded(child:Container(
-     padding:const EdgeInsets.symmetric(horizontal:7,vertical:7),
+     height:52,padding:const EdgeInsets.symmetric(horizontal:7),
      decoration:BoxDecoration(
       color:Theme.of(context).cardColor,
       border:Border.all(color:Theme.of(context).dividerColor.withValues(alpha:.5)),
       borderRadius:BorderRadius.circular(16)),
      child:Row(children:[
-      Expanded(child:Column(mainAxisSize:MainAxisSize.min,
-       crossAxisAlignment:CrossAxisAlignment.start,children:[
-       WaffraText(waffraIsEnglish?'Reminders':'التذكير',
-        maxLines:1,style:const TextStyle(fontSize:12,fontWeight:FontWeight.bold)),
-       WaffraText(waffraIsEnglish?'1 day before • 9 AM':'قبل الموعد بيوم',
-        maxLines:2,style:const TextStyle(fontSize:10)),
-      ])),
-      Transform.scale(scale:.82,child:Switch.adaptive(value:recurringRemindersEnabled,
-       onChanged:WaffraHaptics.selection(toggleRecurringReminders))),
+      Expanded(child:WaffraText(waffraIsEnglish?'Reminders':'التذكير',
+       maxLines:1,style:const TextStyle(fontSize:12,fontWeight:FontWeight.bold))),
+      Tooltip(message:waffraIsEnglish?'1 day before • 9 AM':'قبل الموعد بيوم',
+       child:Transform.scale(scale:.82,
+        child:Switch.adaptive(value:recurringRemindersEnabled,
+         onChanged:WaffraHaptics.selection(toggleRecurringReminders)))),
      ]))),
    ]),
    const SizedBox(height:9),
@@ -17355,156 +17399,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }
   }
  }
- void scheduleTourFocus(){
-  final expectedStep=tourStep,expectedTab=tab;
-  WidgetsBinding.instance.addPostFrameCallback((_)async {
-   if(!mounted||!tourActive||tourStep!=expectedStep||tab!=expectedTab)return;
-   // Reset lazily built list pages before focusing a possibly recycled
-   // sliver header (e.g. Home balance after scrolling down).
-   final ScrollController? pageScroll=switch(expectedTab){
-    0=>_dashboardScrollController,
-    1=>_categoryScrollController,
-    3=>_goalsScrollController,
-    4=>_recurringScrollController,
-    _=>null,
-   };
-   if(pageScroll!=null&&pageScroll.hasClients&&pageScroll.offset!=0){
-    pageScroll.jumpTo(0);
-   }
-   BuildContext? focus=tourTargetKeys[expectedStep]<0?null:
-    _tourKeys[tourTargetKeys[expectedStep]].currentContext;
-   // The selected tab is built lazily, so allow the next animation frame
-   // to mount its heading before calculating the coach-mark target.
-   if(focus==null&&expectedStep>0){
-    await Future<void>.delayed(waffraMotion(120));
-    if(!mounted||!tourActive||tourStep!=expectedStep||tab!=expectedTab)return;
-    focus=_tourKeys[tourTargetKeys[expectedStep]].currentContext;
-   }
-   if(focus!=null){
-    try{await Scrollable.ensureVisible(focus,
-     duration:waffraMotion(250),alignment:.16,
-     curve:Curves.easeOutCubic);}catch(e){debugPrint('Tour focus: $e');}
-   }
-   await Future<void>.delayed(waffraMotion(120));
-   if(mounted&&tourActive&&tourStep==expectedStep&&tab==expectedTab){
-    // Keep controls accessible even if a lazy child is momentarily absent.
-    setState(()=>tourTargetReady=true);
-   }
-  });
- }
- Future<void> completeTour()async {
-  _tourGlow.stop();
-  if(mounted)setState((){_tabBackStack.clear();tourActive=false;tourTargetReady=false;addFabExpanded=false;tab=0;goalsOpened=false;});
-  final p=await SharedPreferences.getInstance();
-  await p.setBool('waffra_in_app_tour_seen_v2',true);
- }
- void beginTour(){
-  setState((){_tabBackStack.clear();tourStep=0;tourActive=true;tourTargetReady=false;tab=0;accountOpened=false;_headerCompact=false;goalsOpened=false;addFabExpanded=false;});
-  if(waffraAnimationLevel.value!='off')_tourGlow.repeat(reverse:true);
-  scheduleTourFocus();
- }
- void advanceTour(){
-  if(tourStep>=tourTabs.length-1){completeTour();return;}
-  setState((){tourStep++;tab=tourTabs[tourStep];tourTargetReady=false;addFabExpanded=false;});
-  scheduleTourFocus();
- }
- void previousTour(){
-  if(tourStep<=0)return;
-  setState((){tourStep--;tab=tourTabs[tourStep];tourTargetReady=false;addFabExpanded=false;});
-  scheduleTourFocus();
- }
- Widget tourOverlay()=>LayoutBuilder(builder:(overlayCtx,area){
-  const ar=WaffraTourPlan.titlesAr;
-  const en=WaffraTourPlan.titlesEn;
-  const arHelp=WaffraTourPlan.helpAr;
-  const enHelp=WaffraTourPlan.helpEn;
-  final element=tourTargetKeys[tourStep]<0?null:_tourKeys[tourTargetKeys[tourStep]].currentContext?.findRenderObject();
-  final layer=overlayCtx.findRenderObject();
-  // Intro doesn't spotlight the header; its first card is centered.
-   Rect target=tourStep==0?Rect.fromLTWH(-40,-40,1,1):
-    Rect.fromLTWH(16,12,area.maxWidth-32,65);
-  if(element is RenderBox&&layer is RenderBox&&element.hasSize){
-   final offset=element.localToGlobal(Offset.zero)-layer.localToGlobal(Offset.zero);
-   target=Rect.fromLTWH(offset.dx,offset.dy,element.size.width,element.size.height).inflate(5);
-   target=Rect.fromLTRB(
-    target.left.clamp(4.0,area.maxWidth-4).toDouble(),
-    target.top.clamp(4.0,area.maxHeight-4).toDouble(),
-    target.right.clamp(4.0,area.maxWidth-4).toDouble(),
-    target.bottom.clamp(4.0,area.maxHeight-4).toDouble());
-  }
-  // Headings use intrinsic text bounds rather than a full-width row.
-  // Other tour steps retain their actual button/icon target.
-  final headingFocus=tourStep>=3;
-  final headingText=tourStep==3?(waffraIsEnglish?'Categories & budgets':'أقسامك وميزانياتك'):(waffraIsEnglish?en[tourStep]:ar[tourStep]);
-  if(headingFocus){
-   final style=Theme.of(context).textTheme.titleLarge??const TextStyle(fontSize:23);
-   final painter=TextPainter(text:TextSpan(text:headingText,style:style.copyWith(fontWeight:FontWeight.bold)),
-    textDirection:waffraIsEnglish?TextDirection.ltr:TextDirection.rtl,maxLines:1)..layout(maxWidth:area.maxWidth-40);
-   final desiredWidth=(painter.width+30).clamp(90.0,area.maxWidth-24).toDouble();
-   final right=waffraIsEnglish?target.left+desiredWidth:target.right;
-   target=Rect.fromLTWH((right-desiredWidth).clamp(8.0,area.maxWidth-desiredWidth-8).toDouble(),
-    target.top,desiredWidth,target.height);
-  }
-  final width=min(340.0,area.maxWidth-24);
-   final popupHeight=tourStep==0?min(250.0,max(160.0,area.maxHeight*.46)):
-    min(225.0,max(130.0,area.maxHeight*.56));
-   final spaceBelow=area.maxHeight-target.bottom-12;
-   final spaceAbove=target.top-12;
-   final below=spaceBelow>=popupHeight||(spaceBelow>=spaceAbove&&spaceAbove<popupHeight);
-   final suggestedTop=tourStep==0?(area.maxHeight-popupHeight)*.44:
-    (below?target.bottom+12:target.top-popupHeight-12);
-   final top=suggestedTop.clamp(12.0,max(12.0,area.maxHeight-popupHeight-12)).toDouble();
-   final suggestedLeft=tourStep==0?(area.maxWidth-width)/2:target.center.dx-width/2;
-   final left=suggestedLeft.clamp(12.0,max(12.0,area.maxWidth-width-12)).toDouble();
-  return Stack(children:[
-   Positioned.fill(child:AnimatedBuilder(animation:_tourGlow,
-    builder:(ctx,_)=>CustomPaint(painter:WaffraTourShade(target,glow:_tourGlow.value)))),
-   if(headingFocus)Positioned.fromRect(rect:target,child:IgnorePointer(child:
-    AnimatedBuilder(animation:_tourGlow,builder:(ctx,_){
-     final zoom=waffraAnimationLevel.value=='off'?1.0:1.0+.09*_tourGlow.value;
-     return Center(child:Transform.scale(scale:zoom,child:Container(
-      padding:const EdgeInsets.symmetric(horizontal:12,vertical:6),
-      decoration:BoxDecoration(color:const Color(0xFFF7FFF9),
-       borderRadius:BorderRadius.circular(18),border:Border.all(color:const Color(0xFF7EDAB0),width:1.4),
-       boxShadow:[BoxShadow(color:const Color(0xFF66DDA3).withValues(alpha:.24+.20*_tourGlow.value),
-        blurRadius:15+10*_tourGlow.value)]),
-      child:FittedBox(fit:BoxFit.scaleDown,child:WaffraText(headingText,
-       style:const TextStyle(fontSize:22,fontWeight:FontWeight.bold,color:forest))))));
-    }))),
-   AnimatedPositioned(
-    duration:waffraMotion(250),
-    curve:Curves.easeInOutCubic,top:top,left:left,width:width,
-    child:Material(elevation:12,color:Theme.of(context).cardColor,
-     borderRadius:BorderRadius.circular(18),
-     child:ConstrainedBox(constraints:BoxConstraints(maxHeight:popupHeight),
-      child:SingleChildScrollView(padding:const EdgeInsets.all(12),child:Column(
-      mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-       Row(children:[
-        const Icon(Icons.lightbulb_outline,color:emerald,size:18),
-        const SizedBox(width:5),
-        Expanded(child:AnimatedSwitcher(duration:waffraMotion(250),
-         transitionBuilder:(child,animation)=>FadeTransition(opacity:animation,
-          child:SlideTransition(position:Tween<Offset>(begin:const Offset(0,.18),end:Offset.zero).animate(animation),child:child)),
-         child:WaffraText(waffraIsEnglish?en[tourStep]:ar[tourStep],key:ValueKey(tourStep),
-          style:const TextStyle(fontSize:15,fontWeight:FontWeight.bold)))),
-        WaffraText('${tourStep+1}/${tourTabs.length}',style:const TextStyle(color:emerald,fontSize:11)),
-       ]),
-       const SizedBox(height:6),
-       WaffraText(waffraIsEnglish?enHelp[tourStep]:arHelp[tourStep],
-        style:const TextStyle(fontSize:12)),
-       const SizedBox(height:8),
-       Wrap(alignment:WrapAlignment.spaceBetween,spacing:5,runSpacing:6,children:[
-        TextButton(onPressed:WaffraHaptics.tap(completeTour),child:WaffraText(waffraIsEnglish?'Skip':'تخطي')),
-        if(tourStep>0)TextButton(onPressed:WaffraHaptics.tap(previousTour),
-         child:WaffraText(waffraIsEnglish?'Back':'السابق')),
-        FilledButton(onPressed:WaffraHaptics.tap(advanceTour),
-         child:WaffraText(tourStep==tourTabs.length-1?
-          (waffraIsEnglish?'Finish':'إنهاء'):(waffraIsEnglish?'Next':'التالي'))),
-       ]),
-      ])))),
-   ),
-  ]);
- });
  Future<void> changePin()async {
   if(!widget.pinEnabled)return;
   final p=await SharedPreferences.getInstance();
@@ -17634,7 +17528,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final liveBudgetIds=namedBudgets.where((b)=>!b.deleted).map((b)=>b.id).toSet();
   return WaffraSmartFeaturesPage(
    key:const Key('waffra-m268-footer-page'),
-   tourHeadingKey:_tourKeys[3],
    embedded:true,english:waffraIsEnglish,
    onNotice:(message)=>snack(context,message),
    analysisBuilder:(_)=>Column(crossAxisAlignment:CrossAxisAlignment.stretch,
@@ -18026,9 +17919,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        english:waffraIsEnglish,onAccountDeleted:widget.onLogout))))),
    ]),
    _accountSection(waffraIsEnglish?'Help & about':'المساعدة وعن وفرة',Icons.help_outline_rounded,[
-    _accountTile(waffraIsEnglish?'Replay app tour':'إعادة الجولة التعريفية',
-     waffraIsEnglish?'Learn Waffra features':'تعرف على خصائص وفرة',
-     Icons.help_outline,onTap:WaffraHaptics.tap(beginTour)),
     _accountTile(waffraIsEnglish?'About Waffra':'عن وفرة',
      waffraIsEnglish?'On-device financial management':'إدارة مالية تحفظ بياناتك محليًا',
      Icons.info_outline,onTap:WaffraHaptics.tap(()=>showAboutDialog(context:context,applicationName:'وفرة | Waffra',
@@ -18173,7 +18063,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
  }
  void _swipeBetweenSections(DragEndDetails details){
-  if(!ready||goalsOpened||accountOpened||tourActive)return;
+  if(!ready||goalsOpened||accountOpened)return;
   final velocity=details.primaryVelocity??0;
   final dx=_swipeTravel.abs()>50?_swipeTravel:velocity/10;
   if(dx.abs()<65)return;
@@ -18293,8 +18183,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          border:Border.all(color:accountOpened?const Color(0xFF65E5AD):Colors.transparent,
           width:2),
          color:accountOpened?Colors.white.withValues(alpha:.13):Colors.transparent),
-        child:KeyedSubtree(key:_tourKeys[5],
-         child:waffraAvatar(widget.profile.gender,widget.profile.avatar,radius:18)))))),
+        child:waffraAvatar(widget.profile.gender,widget.profile.avatar,radius:18))))),
     const SizedBox(width:7),
    ]),
   // Instant content swap avoids building/animating the previous heavy tab
@@ -18331,7 +18220,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    width:58,height:58,
    child:
     Material(
-      key:_tourKeys[1],
       color:forest,elevation:7,
      shadowColor:Colors.black26,
      shape:const CircleBorder(),
@@ -18373,7 +18261,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     }),
    ),
   ])),
-  if(addFabExpanded&&!accountOpened&&!tourActive)...[
+  if(addFabExpanded&&!accountOpened)...[
    Positioned.fill(
     key:const Key('waffra-fullscreen-fab-blur'),
     child:GestureDetector(
@@ -18451,28 +18339,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          child:Icon(Icons.close_rounded,color:Colors.white,size:28)))))),
    ),
   ],
-  if(tourActive&&tourTargetReady)Positioned.fill(child:tourOverlay()),
   // Outside Scaffold so the loading status never rebuilds the finance list.
   Positioned.fill(child:WaffraSmoothConfirmationOverlay(
    controller:_saveProgress,english:waffraIsEnglish)),
   ]));
-}
-/// Tour focus remains tied to the same floating add button across both locales.
-/// A coach-mark scrim with a transparent focus over the current page.
-class WaffraTourShade extends CustomPainter {
- final Rect focus;
- final double glow;
- const WaffraTourShade(this.focus,{this.glow=0});
- @override void paint(Canvas canvas,Size size){
-  final border=RRect.fromRectAndRadius(focus,const Radius.circular(20));
-  final shade=Path()..fillType=PathFillType.evenOdd
-   ..addRect(Offset.zero & size)..addRRect(border);
-  canvas.drawPath(shade,Paint()..color=Colors.black.withValues(alpha:.61));
-  canvas.drawRRect(border,Paint()..color=const Color(0xFF65E5AD).withValues(alpha:.15+.30*glow)
-   ..style=PaintingStyle.stroke..strokeWidth=7+5*glow..maskFilter=const MaskFilter.blur(BlurStyle.normal,7));
-  canvas.drawRRect(border,Paint()..color=Colors.white..style=PaintingStyle.stroke..strokeWidth=2+glow);
- }
- @override bool shouldRepaint(covariant WaffraTourShade old)=>old.focus!=focus||old.glow!=glow;
 }
 class WaffraDeletedItemsButton extends StatelessWidget {
  final VoidCallback onPressed;

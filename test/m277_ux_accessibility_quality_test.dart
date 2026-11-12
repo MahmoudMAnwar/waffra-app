@@ -185,7 +185,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('M277: dismissible validation error stays above tappable '
+  testWidgets('M671: X-free validation error stays above tappable '
       'footer under dark theme at 200% text', (tester) async {
     tester.view.physicalSize = const Size(320, 760);
     tester.view.devicePixelRatio = 1;
@@ -239,31 +239,14 @@ void main() {
     await tester.tap(find.byKey(const Key('waffra-nav-2')));
     await tester.pumpAndSettle();
     expect(selected, 2, reason: 'An error may not trap footer navigation');
-    final closeButton = find.ancestor(
-      of: find.descendant(
-        of: alert, matching: find.byIcon(Icons.close_rounded)),
-      matching: find.byType(IconButton),
-    );
-    expect(closeButton, findsOneWidget);
-    final closeSize = tester.getSize(closeButton);
-    expect(closeSize.width, greaterThanOrEqualTo(48),
-        reason: 'Error dismissal must have an accessible 48dp target');
-    expect(closeSize.height, greaterThanOrEqualTo(48),
-        reason: 'Error dismissal must have an accessible 48dp target');
-    final closeAction = tester.widget<IconButton>(closeButton);
-    expect(closeAction.onPressed, isNotNull,
-        reason: 'The visible dismiss button must not become disabled after '
-            'switching footer destinations');
-    final closeRect = tester.getRect(closeButton);
-    final noticeHost = tester.getRect(find.byType(WaffraFooterNoticeHost));
-    // These geometry checks isolate a clipped/not-hit-testable notice even
-    // when the close button is visually present at the expected coordinates.
-    expect(noticeHost.contains(closeRect.center), isTrue,
-        reason: 'Close target must lie inside the notice-host hit region');
-    await tester.tap(closeButton);
+    // M671: owner removed the X. The text and footer remain interactive
+    // at 200% text scale; normal tap elsewhere dismisses the notice.
+    expect(find.byKey(const Key('waffra-snackbar-close')), findsNothing);
+    expect(find.byWidgetPredicate((widget)=>widget is WaffraText&&
+      widget.data=='هذا الحقل مطلوب'), findsOneWidget);
+    notice.value=null;
     await tester.pumpAndSettle();
-    expect(notice.value, isNull);
-    expect(alert, findsNothing);
+    expect(find.byType(WaffraNoticeContent),findsNothing);
     expect(tester.takeException(), isNull);
   });
 }

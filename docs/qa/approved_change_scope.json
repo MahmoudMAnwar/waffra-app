@@ -1,153 +1,418 @@
 {
   "contract_version": 1,
-  "change_id": "M669-20261112-SMS-REVIEW-HIERARCHY-SEARCH-YES-ORIGINAL-PR601",
-  "human_scope_review": "Owner supplied three screenshots on 2026-11-12 and demanded (1) no root category as child, (2) searchable dropdowns throughout app including SMS category root/leaf selectors, (3) Yes explains all unmet verified fields and enables when valid, (4) unchanged original bank SMS visible in every review. Issue #600, Draft PR #601, requirements recorded before production implementation. Only bounded review route, pure category resolver, shared centered picker and SMS rule selector upgrades; existing finance writer, source SMS/OTP and bank authentication untouched. No skipped CI or presumed hardware validation. M669 owner standing global searchable-dropdown requirement extends explicitly to remaining native DropdownButtonFormField routes: verified recurring/goal institution/account, new-account institution/subtype, finance context filters/links, account settings/default recurring, and older account transaction form. All replacements are mechanical opt-in shared centered picker + import only, retaining keys, callback semantics, item lists and financial writers, with source scan/test coverage. No new finance source or accounting writer. Follow-up owner reiterates searchable dropdown in EVERY app selection surface. Source audit found last direct Material DropdownButtonFormField<String> usages in 5 account/goal/recurring/transfer screens; narrowly replace those constructors with existing tested WaffraCenteredDropdownFormField<String> (plus shared picker import) while keeping every key/value/item/onChanged/validation and no writer changes. Files listed and exact whole-file diff reviewed before code. M174 exact-head Python review tests M565/M574 require obsolete previewLeaves/previewParents positive source substrings. Scoped their existing assertions for replacement by stricter typed parent/leaf review + visible source + verified account evidence; no test removal, no guards bypassed, and original writer assertions preserved.",
+  "change_id": "M670-20261112-ISSUE602-PR603-INDEPENDENT-UI-SMS-TRANSFER - M671-ISSUE605-TOUR-RETIREMENT-AND-TAP-DISMISS - M672-M678 ISSUES 606-612 OWNER FOLLOWUP - M679-ISSUE613-FOUR-CI-REGRESSIONS",
+  "human_scope_review": "Owner requested eight UI/SMS/transfer dashboard corrections in a separate PR from #601 on 2026-11-12; Issue #602 and docs/WAFFRA_REQUIREMENTS.md recorded before code. Exactly these bounded sections and original regression assertions were reviewed; no SQLCipher writer or SMS account inference changes. This manifest is scope declaration only, not device sign-off; preserve all original quality gates. 2026-11-12: five owner follow-ups #606-#610 and filter/account #611-#612 recorded in permanent register before code; only verified transaction activity presentation, existing verified transaction delete/undo witness/recovery, shared official SAR asset presentation and My Accounts edit entry are approved. No new account writer, SMS parser or ledger mutation. User screenshot and verification on real Android remain required. M679: newly reported failed exact-head regression from #603 runs M160 and Full Offline. Existing main.dart goal due and snack method scopes, old scoped footer/RTL tests; explicitly extend whole M671 test function boundary for real dialog tap regression. No financial storage or security guard change.",
   "user_requested_changes": [
-    "Validate SMS reviewed category by canonical root/child hierarchy, direction and active status; main 'تحويلات' never appears as child, and never guesses a matching subcategory.",
-    "Provide live normalized Arabic/English search in the existing shared centered dropdown and two-level SMS category picker, maintaining explicit select/cancel and no financial writes.",
-    "Recompute/label Yes eligibility after both category and verified account, show exact blockers for source/date/currency/amount/direction and link to safe editor instead of unexplained disabled buttons.",
-    "Display immutable read-only original SMS prominently in the actual bank SMS review confirmation for income and expense, protecting genuine OTP messages, and preserve existing original text in manual SMS and transfer editor; verify all review entry paths.",
-    "Regression coverage for repeated valid account/category selection, main-only hint, income vs expense, outgoing transfer vs two-sided transfer, original body visibility, picker empty search and no auto posting.",
-    "Every remaining native DropdownButtonFormField in five financial-account/goal/recurring/account-edit routes uses the already-approved searchable centered picker, preserving current selection and avoiding surprise commits.",
-    "Convert all remaining native DropdownButtonFormField<String> selectors in verified accounts, transfer, account creation, goals, recurring and account settings to the centrally searchable category/bank/account/budget picker while retaining selected value and save behavior.",
-    "Reconcile stale M565/M574 review regression assertions with M669 typed active parent/leaf, original SMS visibility and confirmed account while keeping finance writer and no-guess safety assertions.",
-    "Issue #604 CI migration: retain all existing functional tests after global searchable centered selector; update M470/M495 widget types and disabled-state assertion, and M487 modal choice lookup via live search before selecting Add/persisted subtype. Do not skip tests, downgrade dropdowns, or modify finance writes.",
-    "Issue #604 bounded M385 audit of four legacy regression test updates: centered dropdown cast and disabled semantics, virtualized searchable subtype choice, and expanded immutable original SMS correction list. Each modification is constrained to the affected test code with no wholesale test replacement."
+    "Remove X from all Snackbars and display long feedback without truncation while retaining Undo and accessible styling.",
+    "Show Notifications pull-to-refresh bank-message scan feedback inside Notifications, including concise no-new-messages wording.",
+    "Open verified transfer form when one account exists, supporting second-account creation while requiring distinct owned accounts.",
+    "Shorten alternative bank SMS manual income/expense decision and route straight to the selected entry template.",
+    "Make savings goal and recurring-count cards follow the categories main/subcategory stat visual and count style.",
+    "Match goals wallet hero card width and height to the Home balance hero on the same screen.",
+    "Reduce recurring reminder switch card height to match adjacent recurring controls.",
+    "Apply Show more and Show less to all Home activity filters using true filtered event counts.",
+    "Keep notifications SMS rescan regression aligned with the new screen-local feedback callback while preserving the guarded incremental scan behavior.",
+    "M671 Issue #605: Retire the entire onboarding/replay seven-step tour and its persisted startup trigger, overlay and My Settings entry, including exact tour-only source asset; preserve normal splash and About/settings behavior.",
+    "M671 Issue #605: Tap anywhere once to dismiss a visible Snackbar immediately without losing the tapped widget action, an Undo callback, or passive notice expiry; do not treat scrolling as a tap.",
+    "M671: Update obsolete M274 Snackbar-close UX test and M282 accessible action-size proof to the owner-approved X-free notice and nonblocking global tap-to-dismiss, keeping footer navigation and minimum 48dp action checks active.",
+    "M671 reconcile the old two test source markers for the MaterialApp builder: WaffraNoticeTapDismissArea is an outer nonblocking wrapper, while WaffraIdleBiometricOverlay remains the existing inner lifecycle gate with all original background and privacy assertions unchanged.",
+    "M670/M671 exact-head CI fixes: preserve behavior while migrating M461/M548/M638/M647 positive SMS scan and rule-learning regression method anchors to `_rescanAutoSmsInbox({BuildContext? feedbackContext})`; repair immediate edge notice layout so it never mutates RenderAnimatedSize during a frame; update M206 root listener and M670 message-specific clipping expectation while preserving existing financial checks.",
+    "M672/Issue #606: shrink verified internal-transfer card and ensure physical arrow points source account to destination in Arabic and English, preserving verified from/to IDs.",
+    "M673/Issue #607: optically align approved official Saudi Riyal image to numeric text in the shared Flutter currency mark; preserve raw original SMS and all financial facts.",
+    "M674/Issue #608: consistent compact activity card minimum height and an Amount label on income/expense/transfer/settled due/goal savings, allowing adaptive growth for accessibility.",
+    "M675/Issue #609 CRITICAL: after confirmation, re-read fresh encrypted delete and receipt witnesses; prevent failed delete/undo from resetting Home and painting a black screen; preserve 30-day recycle and all finance integrity guards.",
+    "M676/Issue #610: remove duplicated income/expense summary blocks, make last Home activity panel collapsed by default and expand without eager verified history I/O.",
+    "M677/Issue #611: remove upper duplicate finance filters; use the single true filter row and add gap between chips and outlined inputs.",
+    "M678/Issue #612: make saved verified account name and bank last-four correction discoverable from an Edit action, reuse existing SQLCipher witnessed atomic writer.",
+    "M679 Issue #613: Fix exact 4 CI tests at source. Preserve standalone Goal due caption next to new amount label, eliminate stale close-X expectations, ensure passive fallback Snackbar expiry, and make dialog-route tap regression represent actual persistent footer without suppressing pointer hit-test warnings."
   ],
   "allowed_changed_files": [
+    ".github/workflows/m282-combined-candidate.yml",
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
-    "lib/waffra_account_context_page.dart",
-    "lib/waffra_account_context_settings.dart",
-    "lib/waffra_account_transaction_form.dart",
-    "lib/waffra_centered_dropdown.dart",
-    "lib/waffra_goal_recurring_account_picker.dart",
-    "lib/waffra_new_account_dialog.dart",
-    "lib/waffra_sms_rule_settings_page.dart",
-    "test/m669_sms_review_category_search_test.dart",
-    "test/qa/m565_sms_yes_no_test.py",
-    "test/qa/m574_sms_confirmation_full_fields_test.py",
-    "test/m470_sms_first_sender_account_test.dart",
-    "test/m487_custom_subtype_dialog_test.dart",
-    "test/m495_pr402_ui_performance_regression_test.dart",
-    "test/m665_sms_review_structural_learning_test.dart"
+    "lib/waffra_accounts_manager_page.dart",
+    "lib/waffra_categories_page.part.dart",
+    "lib/waffra_riyal_symbol.dart",
+    "lib/waffra_smart_analysis.part.dart",
+    "lib/waffra_smart_features.dart",
+    "lib/waffra_tour_plan.dart",
+    "scripts/qa/m206_ui_sms_scope_review.py",
+    "scripts/qa/m385_approved_change_guard.py",
+    "test/m127_ui_tour_backup_acceptance_test.dart",
+    "test/m274_responsive_ui_journeys_test.dart",
+    "test/m277_ux_accessibility_quality_test.dart",
+    "test/m286_tour_navigation_test.dart",
+    "test/m296_monthly_budget_and_transactions_test.dart",
+    "test/m374_transaction_dialog_ux_test.dart",
+    "test/m440_biometric_resume_regression_test.dart",
+    "test/m443_merchant_screenshot_regression_test.dart",
+    "test/m461_sms_exclusion_and_history_scan_test.dart",
+    "test/m464_sms_bulk_rescan_regression_test.dart",
+    "test/m514_sms_review_regressions_test.dart",
+    "test/m547_sms_incremental_jank_regression_test.dart",
+    "test/m548_source_method_boundary_guard_test.dart",
+    "test/m631_verified_finance_prewarm_test.dart",
+    "test/m638_sms_inbox_delete_sync_test.dart",
+    "test/m647_m652_financial_activity_regression_test.dart",
+    "test/m668_footer_edge_snackbar_test.dart",
+    "test/m670_feedback_transfer_dashboard_test.dart",
+    "test/m671_tour_retirement_snackbar_tap_test.dart",
+    "test/m672_m678_activity_account_regression_test.dart",
+    "test/qa/m385_approved_scope_guard_test.py",
+    "test/qa/m452_sms_review_signup_regression_test.py",
+    "test/waffra_directional_fab_receipt_corner_test.dart",
+    "test/waffra_footer_notice_test.dart",
+    "test/waffra_m206_day_theme_tour_sms_regression_test.dart",
+    "test/waffra_oct21_regression_test.dart"
   ],
-  "approved_deleted_files": [],
+  "approved_deleted_files": [
+    "lib/waffra_tour_plan.dart"
+  ],
   "approved_full_test_replacements": [],
   "bounded_sections": {
     "lib/main.dart": [
       {
-        "start": "bool waffraCanAssignManualCategory(",
-        "end": "class SavingGoal {"
+        "start": "import 'waffra_smart_features.dart';",
+        "end": "import 'waffra_today_picker.dart';"
       },
       {
-        "start": " Future<void> _reviewAutoSmsCandidates({String? targetId})async {",
-        "end": " void _receiveSharedSms("
-      }
-    ],
-    "lib/waffra_centered_dropdown.dart": [
-      {
-        "start": "import 'dart:ui' as ui;",
-        "end": null
-      }
-    ],
-    "lib/waffra_sms_rule_settings_page.dart": [
-      {
-        "start": "import 'package:flutter/material.dart';",
-        "end": "/// Rules configure offline review suggestions only."
+        "start": " @override Widget build(BuildContext context)=>MaterialApp(",
+        "end": "  theme:ThemeData("
       },
       {
-        "start": "        if(seed!=null)...[",
-        "end": "        TextField(controller:name,"
+        "start": "class WaffraNoticeContent extends StatelessWidget {",
+        "end": "final ValueNotifier<WaffraNoticeData?> _waffraFooterNotice="
       },
       {
-        "start": "        const SizedBox(height:12),\n        if(financial)...[",
-        "end": "        TextField(controller:sender,"
+        "start": "final ValueNotifier<WaffraNoticeData?> _waffraFooterNotice=",
+        "end": "/// This sits INSIDE bottomNavigationBar"
       },
       {
-        "start": "         if(autoPost)...[",
-        "end": "        if(validation!=null)Padding("
-      }
-    ],
-    "lib/waffra_goal_recurring_account_picker.dart": [
-      {
-        "start": "import 'package:flutter/material.dart';",
-        "end": null
-      }
-    ],
-    "lib/waffra_new_account_dialog.dart": [
-      {
-        "start": "import 'package:flutter/material.dart';",
-        "end": null
-      }
-    ],
-    "lib/waffra_account_context_page.dart": [
-      {
-        "start": "import 'package:flutter/material.dart';",
-        "end": null
-      }
-    ],
-    "lib/waffra_account_context_settings.dart": [
-      {
-        "start": "import 'package:flutter/material.dart';",
-        "end": null
-      }
-    ],
-    "lib/waffra_account_transaction_form.dart": [
-      {
-        "start": "import 'package:flutter/material.dart';",
-        "end": null
-      }
-    ],
-    "test/qa/m565_sms_yes_no_test.py": [
-      {
-        "start": " def test_yes_no_with_preview_and_no_guessing(self):",
-        "end": " def test_authoritative_commit(self):"
-      }
-    ],
-    "test/qa/m574_sms_confirmation_full_fields_test.py": [
-      {
-        "start": "  # M615 approved review replaced one opaque paragraph with accessible",
-        "end": "if __name__=='__main__':unittest.main()"
-      }
-    ],
-    "test/m470_sms_first_sender_account_test.dart": [
-      {
-        "start": "import 'package:waffra/waffra_new_account_dialog.dart';",
-        "end": " testWidgets('M470 #11 sender name is prefilled; only opening balance is needed'"
-      }
-    ],
-    "test/m495_pr402_ui_performance_regression_test.dart": [
-      {
-        "start": "import 'package:waffra/waffra_account_transaction_form.dart';",
-        "end": "import 'package:waffra/waffra_home_accounts_sheet.dart';"
+        "start": "class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {",
+        "end": " @override Widget build(BuildContext context,double shrinkOffset,bool overlapsContent){"
       },
       {
-        "start": " testWidgets('M499 #416 child picker is disabled without provider, cancel preserves amount',",
+        "start": " Future<void> openVerifiedTransfer()async{",
+        "end": " WaffraFinanceAuthorityRead? _lastFinanceAuthorityRead;"
+      },
+      {
+        "start": " void _handleDashboardScroll(){",
+        "end": " String search='',typeFilter="
+      },
+      {
+        "start": " String accountSearch='';",
+        "end": " bool addFabExpanded=false;"
+      },
+      {
+        "start": " @override void initState(){super.initState();WaffraBackNavigation",
+        "end": " void _returnToHome(){"
+      },
+      {
+        "start": " Timer? _m632SmsNoticeTimer;",
+        "end": " Future<void>? _autoSmsRefreshInFlight;"
+      },
+      {
+        "start": " Future<void> _m549OpenNotifications()async{",
+        "end": " Future<void> _openAutoSmsInbox()async{"
+      },
+      {
+        "start": " Future<void> _reviewSmsAccountTransfer({",
+        "end": "   final arrived=DateTime.fromMillisecondsSinceEpoch("
+      },
+      {
+        "start": "   }else if(decision=='transfer-manual'&&mounted){",
+        "end": "   }else if(decision=='yes'&&mounted&&canConfirm&&"
+      },
+      {
+        "start": "     _m630PostFrameFinanceWork=postFrameFinance;",
+        "end": "  // An explicit Google onboarding notification consent"
+      },
+      {
+        "start": "    Widget operationPicker(){",
+        "end": "    if(transferSelected){"
+      },
+      {
+        "start": " Widget dashboard(){",
+        "end": " List<MoneyEntry> get analysisEntries=>"
+      },
+      {
+        "start": " Widget goalsPage(){",
+        "end": " Widget recurringPage(){"
+      },
+      {
+        "start": " Widget recurringPage(){",
+        "end": "   const SizedBox(height:9),\n   if(nextBill!=null)...["
+      },
+      {
+        "start": " Future<void> configurePin()",
+        "end": " Future<void> changePin()"
+      },
+      {
+        "start": "   _accountSection(waffraIsEnglish?'Help & about':'المساعدة وعن وفرة',Icons.help_outline_rounded,[",
+        "end": "    _accountTile(waffraIsEnglish?'About Waffra'"
+      },
+      {
+        "start": " void _swipeBetweenSections(DragEndDetails details){",
+        "end": " Future<void> selectFooter(int target)async {"
+      },
+      {
+        "start": " @override Widget build(BuildContext context)=>PopScope(",
+        "end": "class WaffraDeletedItemsButton extends StatelessWidget {"
+      },
+      {
+        "start": " @override void dispose(){if(!_m663FirstInteractiveFrame.isCompleted)",
+        "end": " Future<void> _syncWidgetTransactions()async{"
+      },
+      {
+        "start": " Widget _smartToolsTab(){",
+        "end": " void openSmartFeatures(){"
+      },
+      {
+        "start": " @override Widget build(BuildContext context,double shrinkOffset,bool overlapsContent){",
+        "end": " @override bool shouldRebuild(covariant WaffraBalanceHeader oldDelegate)=>true;"
+      },
+      {
+        "start": "class WaffraFooterNoticeHost extends StatefulWidget {",
+        "end": "/// The only public way to display transient system feedback."
+      },
+      {
+        "start": "void snack(BuildContext context,String text,{",
+        "end": "void snackSuccess(BuildContext context,String text)=>"
+      },
+      {
+        "start": " Widget _m647TransferCard(",
+        "end": " Widget _m649SavingsCard("
+      },
+      {
+        "start": " Widget _m649SavingsCard(",
+        "end": " Future<void> _m647ShowInternalTransfers("
+      },
+      {
+        "start": " Widget compactTransaction(",
+        "end": " Widget _m549HomeFinanceAction("
+      },
+      {
+        "start": " Future<void> _deleteVerifiedEntry(",
+        "end": " Future<void> _undoVerifiedDeletedEntry("
+      },
+      {
+        "start": " Future<void> _undoVerifiedDeletedEntry(",
+        "end": " Future<void> _showVerifiedDeletedTransactions("
+      },
+      {
+        "start": " bool showAllTransactions=false",
+        "end": " DateTime? _m468LastResumeSmsScan;"
+      }
+    ],
+    "test/m296_monthly_budget_and_transactions_test.dart": [
+      {
+        "start": "void main(){",
         "end": null
       }
     ],
-    "test/m487_custom_subtype_dialog_test.dart": [
+    "test/m374_transaction_dialog_ux_test.dart": [
       {
-        "start": " testWidgets('M487 user adds and selects custom bank subtype',",
-        "end": " testWidgets('M487 persisted labels can be selected in later bank dialog',"
-      },
-      {
-        "start": " testWidgets('M487 persisted labels can be selected in later bank dialog',",
-        "end": " testWidgets('M487 cancel Add restores the selected canonical subtype',"
-      },
-      {
-        "start": " testWidgets('M487 cancel Add restores the selected canonical subtype',",
+        "start": "void main() {",
         "end": null
       }
     ],
-    "test/m665_sms_review_structural_learning_test.dart": [
+    "test/m464_sms_bulk_rescan_regression_test.dart": [
       {
-        "start": "  test('compact review retains main and child correction on current sheet', () {",
-        "end": "  test('notification rescan moved to pull; bulk select stays sender-sticky', () {"
+        "start": "void main() {",
+        "end": null
+      }
+    ],
+    "test/m514_sms_review_regressions_test.dart": [
+      {
+        "start": "void main(){",
+        "end": null
+      }
+    ],
+    "test/m547_sms_incremental_jank_regression_test.dart": [
+      {
+        "start": "void main() {",
+        "end": null
+      }
+    ],
+    "test/m668_footer_edge_snackbar_test.dart": [
+      {
+        "start": "void main() {",
+        "end": null
+      }
+    ],
+    "test/waffra_directional_fab_receipt_corner_test.dart": [
+      {
+        "start": "void main() {",
+        "end": null
+      }
+    ],
+    "test/waffra_footer_notice_test.dart": [
+      {
+        "start": "void main() {",
+        "end": null
+      }
+    ],
+    "test/qa/m452_sms_review_signup_regression_test.py": [
+      {
+        "start": "    def test_sms_review_is_collapsible_and_count_remains_visible(self):",
+        "end": "    def test_registration_has_single_submit_and_avatar_choices(self):"
+      }
+    ],
+    "lib/waffra_smart_features.dart": [
+      {
+        "start": "class WaffraSmartFeaturesPage extends StatefulWidget{",
+        "end": "class _WaffraSmartFeaturesPageState extends State<WaffraSmartFeaturesPage>{"
+      },
+      {
+        "start": "   key:const Key('waffra-m268-tools-scroll'),",
+        "end": "     margin:const EdgeInsets.only(bottom:11),"
+      }
+    ],
+    "scripts/qa/m385_approved_change_guard.py": [
+      {
+        "start": "    explicitly_retired = {",
+        "end": "    for p in deletions:"
+      }
+    ],
+    "test/qa/m385_approved_scope_guard_test.py": [
+      {
+        "start": "class NoUnrequestedChangesTest(unittest.TestCase):",
+        "end": "if __name__ == \"__main__\":"
+      }
+    ],
+    "test/m127_ui_tour_backup_acceptance_test.dart": [
+      {
+        "start": "void main() {",
+        "end": null
+      }
+    ],
+    "test/m277_ux_accessibility_quality_test.dart": [
+      {
+        "start": "void main() {",
+        "end": null
+      }
+    ],
+    "test/m286_tour_navigation_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "void main() {"
+      },
+      {
+        "start": "void main() {",
+        "end": null
+      }
+    ],
+    "test/m631_verified_finance_prewarm_test.dart": [
+      {
+        "start": "void main() {",
+        "end": null
+      }
+    ],
+    "test/waffra_m206_day_theme_tour_sms_regression_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "void main() {"
+      },
+      {
+        "start": "void main() {",
+        "end": null
+      }
+    ],
+    "test/waffra_oct21_regression_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "void main() {"
+      },
+      {
+        "start": "void main() {",
+        "end": null
+      }
+    ],
+    "lib/waffra_categories_page.part.dart": [
+      {
+        "start": "   ()=>WaffraPageHero(",
+        "end": "   ()=>Row(children:["
+      }
+    ],
+    "lib/waffra_smart_analysis.part.dart": [
+      {
+        "start": "  final dark=Theme.of(context).brightness==Brightness.dark;",
+        "end": "    color:dark?const Color(0xFF15221D)"
+      }
+    ],
+    "scripts/qa/m206_ui_sms_scope_review.py": [
+      {
+        "start": "    for marker in (\n        \"String appearance=",
+        "end": "    for marker in (\"Online\\\\s+Purchase\""
+      }
+    ],
+    "test/m274_responsive_ui_journeys_test.dart": [
+      {
+        "start": "  testWidgets('M274 error notice closes without covering footer actions',",
+        "end": null
+      }
+    ],
+    ".github/workflows/m282-combined-candidate.yml": [
+      {
+        "start": "              'M277': ('lib/main.dart',",
+        "end": "              'M278': ('test/m278_system_bars_responsive_matrix_test.dart'"
+      }
+    ],
+    "test/m440_biometric_resume_regression_test.dart": [
+      {
+        "start": "  test('Real background transition invalidates verification; inactive alone does not relock',",
+        "end": null
+      }
+    ],
+    "test/m443_merchant_screenshot_regression_test.dart": [
+      {
+        "start": "  test('M443 Home retains biometric lock on actual background only',",
+        "end": "  test('M443 no merchant selection, brand logos or remote logo assets in active UI',"
+      }
+    ],
+    "test/m461_sms_exclusion_and_history_scan_test.dart": [
+      {
+        "start": "void main() {",
+        "end": null
+      }
+    ],
+    "test/m548_source_method_boundary_guard_test.dart": [
+      {
+        "start": "void main(){",
+        "end": null
+      }
+    ],
+    "test/m638_sms_inbox_delete_sync_test.dart": [
+      {
+        "start": "void main(){",
+        "end": null
+      }
+    ],
+    "test/m647_m652_financial_activity_regression_test.dart": [
+      {
+        "start": "void main() {",
+        "end": null
+      }
+    ],
+    "lib/waffra_accounts_manager_page.dart": [
+      {
+        "start": "       return Card(child:ListTile(",
+        "end": "     SafeArea(top:false"
+      }
+    ],
+    "lib/waffra_riyal_symbol.dart": [
+      {
+        "start": "class WaffraCurrencyMark extends StatelessWidget {",
+        "end": "/// Inline money displays only."
+      }
+    ],
+    "test/m671_tour_retirement_snackbar_tap_test.dart": [
+      {
+        "start": "void main() {",
+        "end": null
       }
     ]
   }

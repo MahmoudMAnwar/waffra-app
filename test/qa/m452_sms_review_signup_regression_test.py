@@ -36,10 +36,10 @@ class M452ReviewAndRegistration(unittest.TestCase):
         self.assertIn("final scanned=(nowScanned-priorScanned)", home)
         self.assertNotIn("if(_autoSmsProgress['scanned'] is num)", card)
         self.assertIn(
-            " Future<void> _rescanAutoSmsInbox()async{", home
+            " Future<void> _rescanAutoSmsInbox({BuildContext? feedbackContext})async{", home
         )
         wrapper = home.split(
-            " Future<void> _rescanAutoSmsInbox()async{", 1
+            " Future<void> _rescanAutoSmsInbox({BuildContext? feedbackContext})async{", 1
         )[1].split(" Future<void>? _autoSmsRefreshInFlight;", 1)[0]
         self.assertIn("await _refreshAutoSmsInbox(importMonth:true);", wrapper)
         self.assertIn("_autoSmsRescanRunning=false", wrapper)

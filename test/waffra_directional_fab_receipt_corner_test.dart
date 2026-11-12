@@ -71,7 +71,7 @@ void main() {
   test('goals keep outlined counter, recurring uses compact count badge', () {
     final source=File('lib/main.dart').readAsStringSync();
     expect(source,contains('class WaffraOutlinedItemsCount'));
-    expect(source,contains('count:goals.length'));
+    expect(source,contains('goals.length.toString(),Icons.flag_outlined,emerald'));
     expect(source,contains("Key('waffra-recurring-count-badge')"));
     expect(source,contains('nextRecurringDue(nextBill)'));
     expect(source,isNot(contains("WaffraOutlinedItemsCount(label:waffraIsEnglish?'Recurring transactions'")));
@@ -163,7 +163,7 @@ void main() {
     notice.dispose();
   });
 
-  testWidgets('the same footer notice mirrors icon and close in Arabic and English',
+  testWidgets('M679 footer status icon mirrors with Arabic and English, no X',
       (tester) async {
     final notice=ValueNotifier<WaffraNoticeData?>(
       const WaffraNoticeData(
@@ -182,9 +182,13 @@ void main() {
       ));
       await tester.pumpAndSettle();
       final statusX=tester.getCenter(find.byIcon(Icons.check_circle_rounded)).dx;
-      final closeX=tester.getCenter(find.byIcon(Icons.close_rounded)).dx;
-      expect(direction==TextDirection.rtl?statusX>closeX:statusX<closeX,isTrue,
-        reason:'Status icon and close action must follow the current direction.');
+      final textX=tester.getCenter(find.byWidgetPredicate(
+        (w)=>w is WaffraText&&w.data=='رسالة اختبار')).dx;
+      expect(direction==TextDirection.rtl?statusX>textX:statusX<textX,isTrue,
+        reason:'Status icon and label must mirror with locale.');
+      expect(find.byIcon(Icons.close_rounded),findsNothing,
+        reason:'User explicitly retired every passive Snackbar X.');
+      expect(find.byKey(const Key('waffra-snackbar-close')),findsNothing);
     }
     await tester.pumpWidget(const SizedBox.shrink());
     notice.dispose();
@@ -306,7 +310,7 @@ void main() {
     expect(animator.getRotationAnimation(parent:incoming).value,1);
   });
 
-  testWidgets('RTL and LTR undo and close share a centered 40dp touch row',
+  testWidgets('RTL and LTR Undo keeps accessible touch target without X',
       (tester) async {
     await tester.binding.setSurfaceSize(const Size(320,640));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -334,10 +338,8 @@ void main() {
       ));
       await tester.pumpAndSettle();
       final undo=tester.getRect(find.byKey(const Key('waffra-snackbar-action')));
-      final close=tester.getRect(find.byKey(const Key('waffra-snackbar-close')));
-      expect((undo.center.dy-close.center.dy).abs(),lessThanOrEqualTo(2));
+      expect(find.byKey(const Key('waffra-snackbar-close')),findsNothing);
       expect(undo.height,greaterThanOrEqualTo(40));
-      expect(close.height,greaterThanOrEqualTo(40));
       expect(tester.takeException(),isNull);
     }
     await tester.pumpWidget(const SizedBox.shrink());

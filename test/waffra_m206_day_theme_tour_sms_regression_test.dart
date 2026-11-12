@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/main.dart';
 import 'package:waffra/waffra_merchant_rules.dart';
-import 'package:waffra/waffra_tour_plan.dart';
 
 void main() {
   test('new installs start in light mode while an explicit choice persists', () {
@@ -18,8 +17,9 @@ void main() {
 
   test('AR/EN changes direction instantly without whole-page slide or Navigator replacement', () {
     final source=File('lib/main.dart').readAsStringSync();
-    final root=source.substring(source.indexOf('builder:(context,child)=>WaffraIdleBiometricOverlay('),
-      source.indexOf('theme:ThemeData(',source.indexOf('builder:(context,child)=>WaffraIdleBiometricOverlay(')));
+    final root=source.substring(source.indexOf('builder:(context,child)=>WaffraNoticeTapDismissArea('),
+      source.indexOf('theme:ThemeData(',source.indexOf('builder:(context,child)=>WaffraNoticeTapDismissArea(')));
+    expect(root,contains('child:WaffraIdleBiometricOverlay('));
     // M470 retains the live Navigator and RTL tree below the biometric overlay.
     expect(root,contains('child:ValueListenableBuilder<bool>('));
     expect(root,contains("english:language=='en',onSignOut:logout"));
@@ -31,18 +31,13 @@ void main() {
     expect(source,contains('floatingActionButtonAnimator:const WaffraStationaryFabAnimator()'));
   });
 
-  test('replayable tour includes seven approved screens and smart tools', () {
-    final source = File('lib/main.dart').readAsStringSync();
-    expect(source, contains('static const tourTabs=WaffraTourPlan.tabs;'));
-    expect(WaffraTourPlan.tabs, <int>[0,0,0,1,2,3,4]);
-    expect(source, contains('static const tourTargetKeys=WaffraTourPlan.targetKeys;'));
-    expect(WaffraTourPlan.targetKeys, <int>[-1,0,1,2,3,6,4]);
-    final tour = source.substring(source.indexOf('Widget tourOverlay()=>'),
-      source.indexOf('Future<void> changePin()', source.indexOf('Widget tourOverlay()=>')));
-    expect(WaffraTourPlan.titlesAr, contains('الأدوات المالية'));
-    expect(tour, isNot(contains('التحليل المالي الذكي')));
-    expect(tour, isNot(contains('حسابي وإعداداتي')));
-    expect(tour, contains(r"'${tourStep+1}/${tourTabs.length}'"));
+  test('M671 tour removed, but tool accordion and appearance remain',(){
+    final source=File('lib/main.dart').readAsStringSync();
+    expect(source,isNot(contains('WaffraTourPlan')));
+    expect(source,isNot(contains('Widget tourOverlay()=>')));
+    expect(source,isNot(contains('beginTour()')));
+    expect(source,contains('Widget _smartToolsTab(){'));
+    expect(source,contains("String appearance='light';"));
   });
 
   test('M636 verified SMS keeps source text encrypted and date/fingerprint exact',(){
@@ -76,7 +71,7 @@ void main() {
     expect(source, contains('if(mounted)await action();'));
     expect(source, contains('if(!_acceptFabTap())return;'));
     expect(source, contains('splashFactory:NoSplash.splashFactory'));
-    expect(source, contains('key:_tourKeys[1]'));
+    expect(source, contains('customBorder:const CircleBorder()'));
     expect(source, contains('scale:_fabPressed?0.96:1.0'));
     expect(source, contains('duration:waffraMotion(320)'));
     expect(source, contains('duration:waffraMotion(220)'));

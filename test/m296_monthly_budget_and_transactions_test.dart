@@ -58,8 +58,8 @@ void main(){
   final source=File('lib/main.dart').readAsStringSync();
   // M648: the entry preview remains capped at ten, while the same
   // activity list also exposes verified transfer/savings cards.
-  expect(source,contains('if(waffraCanExpandDashboardTransactions(visible.length)||'));
-  expect(source,contains("typeFilter=='التحويلات'||typeFilter=='الادخار'||typeFilter=='الكل'"));
+  expect(source,contains('if(waffraCanExpandDashboardTransactions(visible.length)&&'));
+  expect(source,contains("waffraCanExpandDashboardTransactions(history.length)"));
   expect(source,contains('visible.length,expanded:showAllTransactions'));
   expect(source,contains("'Show more':'عرض أكثر'"));
   expect(source,contains("'Show less':'عرض أقل'"));

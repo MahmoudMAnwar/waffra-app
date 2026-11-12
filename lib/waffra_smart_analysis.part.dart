@@ -19,7 +19,6 @@ extension WaffraSmartAnalysisCard on _HomeScreenState {
       'اكتشف اتجاهات الدخل والمصروفات المسجلة.');
   final dark=Theme.of(context).brightness==Brightness.dark;
   return Container(
-   key:_tourKeys[3],
    decoration:BoxDecoration(
     color:dark?const Color(0xFF15221D):Theme.of(context).cardColor,
     borderRadius:BorderRadius.circular(23),

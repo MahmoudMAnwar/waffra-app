@@ -88,17 +88,15 @@ void main() {
               tester.getRect(find.byKey(const Key('m668-footer'))).top + 1),
             reason: 'Reserved footer must not be covered by the card');
           expect(find.byType(WaffraNoticeContent), findsOneWidget);
-          expect(find.byKey(const Key('waffra-snackbar-close')), findsOneWidget);
-          expect(tester.getSize(
-            find.byKey(const Key('waffra-snackbar-close'))).width,
-            greaterThanOrEqualTo(48));
+          expect(find.byKey(const Key('waffra-snackbar-close')), findsNothing,
+            reason: 'M670 removes X from every notice, not just the footer');
           expect(tester.takeException(), isNull);
         });
       }
     }
   }
 
-  testWidgets('M668 Undo fires exactly once and close dismisses the edge card',
+  testWidgets('M670 Undo fires exactly once and notices never show X',
       (tester) async {
     var undoCalls = 0;
     final notice = ValueNotifier<WaffraNoticeData?>(
@@ -133,9 +131,10 @@ void main() {
       duration: Duration(seconds: 5), requireDismissal: true,
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('waffra-snackbar-close')));
+    expect(find.byKey(const Key('waffra-snackbar-close')), findsNothing);
+    expect(find.byWidgetPredicate((w)=>w is WaffraText&&w.data=='راجع المبلغ'), findsOneWidget);
+    notice.value = null;
     await tester.pumpAndSettle();
-    expect(notice.value, isNull);
     expect(tester.takeException(), isNull);
   });
 

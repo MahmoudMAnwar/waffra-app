@@ -60,7 +60,7 @@ void main() {
    reason:'Error toast must appear immediately above footer navigation');
  });
 
- testWidgets('Dark mode error stays red and supports dismiss', (tester) async {
+ testWidgets('Dark mode error stays red and auto-dismisses without an X', (tester) async {
   await tester.pumpWidget(MaterialApp(
    theme:ThemeData.dark(),
    home:Scaffold(body:Builder(builder:(ctx)=>TextButton(
@@ -74,13 +74,14 @@ void main() {
   expect(tester.widget<Container>(find.byKey(const Key('waffra-snackbar-edge'))).color,
    const Color(0xFFE67B81));
   expect(find.byWidgetPredicate((w)=>w is WaffraText&&w.data=='تعذر إتمام العملية'),findsOneWidget);
-  // Trigger the actual close-button callback directly: Tooltip wrappers do
-  // not offer a stable hit-test target in every Flutter test viewport.
-  final closeButton=tester.widget<IconButton>(
-   find.widgetWithIcon(IconButton,Icons.close_rounded));
-  closeButton.onPressed!();
-  await tester.pump();
-  await tester.pump(const Duration(milliseconds:450));
+  expect(find.byKey(const Key('waffra-snackbar-close')),findsNothing);
+  // The 5-second timeout starts once Flutter's entrance animation
+  // completes. Finish that animation before advancing the fake test clock;
+  // one 6-second jump during entry could start (not expire) the timer.
+  await tester.pumpAndSettle();
+  expect(find.byType(SnackBar),findsOneWidget);
+  await tester.pump(const Duration(seconds:6));
+  await tester.pumpAndSettle();
   expect(find.byType(SnackBar),findsNothing);
  });
 

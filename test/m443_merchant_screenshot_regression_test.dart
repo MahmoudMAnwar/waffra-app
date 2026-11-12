@@ -32,7 +32,8 @@ void main() {
     // M470 deliberately keeps the existing Navigator/draft alive while away.
     // Background gets a green privacy shield; biometric is required at >=60s.
     expect(lifecycle, isNot(contains('setState(()=>locked=true);')));
-    expect(home, contains('builder:(context,child)=>WaffraIdleBiometricOverlay('));
+    expect(home, contains('builder:(context,child)=>WaffraNoticeTapDismissArea('));
+    expect(home, contains('child:WaffraIdleBiometricOverlay('));
     final overlay = File('lib/waffra_idle_biometric_overlay.dart').readAsStringSync();
     expect(overlay, contains('state==AppLifecycleState.hidden||'));
     expect(overlay, contains('state==AppLifecycleState.paused||'));

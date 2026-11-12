@@ -79,8 +79,6 @@ def main() -> None:
     for marker in (
         "String appearance='light';",
         "p.getString('waffra_appearance_mode_v1')",
-        "static const tourTabs=<int>[0,0,0,1,2,3];",
-        "static const tourTargetKeys=<int>[-1,0,1,2,6,4];",
         "date:bankSmsDate(raw)??DateTime.now(),notes:raw,sourceType:'sms'",
         "notes:sms?message.text:notes.text",
         "child:SelectableText(entry.notes",
@@ -90,7 +88,7 @@ def main() -> None:
         "if(!_acceptFabTap())return;",
         "scale:_fabPressed?0.96:1.0",
         "showWaffraSmoothDialog<SavingGoal>",
-        "key:_tourKeys[1]",
+        "floatingActionButton:!ready||accountOpened||tab==2?null:CompositedTransformTarget("
     ):
         require(marker in app, "missing approved UI/SMS guard " + marker)
 

@@ -398,16 +398,27 @@ class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {
            style:Theme.of(ctx).textTheme.bodySmall),
          WaffraText(amount(a.balanceMinor),currencyEnglish:widget.english,textDirection:TextDirection.ltr),
         ]),
-        trailing:PopupMenuButton<String>(
-         onSelected:(action){
-          if(action=='rename')rename(a);
-          if(action=='archive')archive(a);
-         },
-         itemBuilder:(ctx)=>[
-          PopupMenuItem(value:'rename',child:Text(t('تعديل','Rename'))),
-          if(!a.archived)PopupMenuItem(value:'archive',
-           child:Text(t('أرشفة','Archive'))),
-         ]),
+        // M678: editing a mistyped name / bank suffix must not be hidden
+        // in a three-dot menu. Keep the existing overflow for archive actions.
+        trailing:Row(mainAxisSize:MainAxisSize.min,children:[
+         IconButton(
+          key:Key('waffra-edit-account-details-'+a.id),
+          tooltip:t('تعديل بيانات الحساب','Edit account details'),
+          onPressed:a.archived?null:()=>rename(a),
+          icon:const Icon(Icons.edit_outlined)),
+         PopupMenuButton<String>(
+          tooltip:t('خيارات الحساب','Account options'),
+          onSelected:(action){
+           if(action=='rename'&&!a.archived)rename(a);
+           if(action=='archive')archive(a);
+          },
+          itemBuilder:(ctx)=>[
+           if(!a.archived)PopupMenuItem(value:'rename',
+            child:Text(t('تعديل بيانات الحساب','Edit account details'))),
+           if(!a.archived)PopupMenuItem(value:'archive',
+            child:Text(t('أرشفة','Archive'))),
+          ]),
+        ]),
        ));
       })),
      SafeArea(top:false,child:Padding(padding:const EdgeInsets.all(12),

@@ -83,7 +83,7 @@ void main(){
   expect(home,contains('(bank==null||bank==detectedBank)?'));
   expect(home,contains('WaffraSmsAccountLearning.suffix4(facts.sourceSuffix):null;'));
   expect(home,contains("appBar:AppBar(title:const WaffraText('مراجعة حوالة بنكية'))"));
-  expect(home,contains('final verifiedMinor=sourceAmount==null?0:'));
+  expect(home,contains('final verifiedMinor=facts.pending||sourceAmount==null?0:'));
   expect(home,contains("'attach-verified-existing-receipt'"));
   expect(authority,contains('Future<WaffraFinanceAuthorityRead> attachReceiptsToExisting('));
   expect(bridge,contains('Future<WaffraFinanceSnapshotState> attachReceiptsToExisting('));
