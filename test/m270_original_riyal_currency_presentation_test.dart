@@ -26,7 +26,7 @@ void main() {
       home: Scaffold(body: WaffraText('1,234.50 ريال')),
     ));
     expect(find.byType(WaffraCurrencyMark), findsOneWidget);
-    final icon = tester.widget<Image>(find.byType(Image).single);
+    final icon = tester.widget<Image>(find.byType(Image));
     expect((icon.image as AssetImage).assetName, waffraRiyalAsset);
   });
 
