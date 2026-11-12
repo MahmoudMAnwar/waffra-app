@@ -473,3 +473,8 @@ M616 (2026-11-12; Issue #616 / Draft PR #617): Android-specific legacy V24 resto
 - No device-success claim until exact HEAD CI plus signed main APK owner test; spouse's phone must not be updated before acceptance.
 
 M616 QA addition: existing encrypted-storage Android emulator integration now exercises private cache restoration candidate creation, SQLCipher cold reopening, encrypted bytes at rest, and disposal. This is emulator evidence only; original private .waffra on physical handset remains untested after fix.
+
+M618 (2026-11-13; Issue #618 / Draft PR #619): V24 SQL_PREFLIGHT history preservation (NOT MERGED; device validation pending).
+- Correct-password original backup is blocked at R616:SQL_PREFLIGHT despite successful V24 conversion. Restore of SQLCipher V3 categorical history previously sorted roots/subcategories with an unstable comparator, potentially changing rowid-ordered history against the authenticated V3 archive. Use a stable partition preserving within-group order, without skipping any history checks.
+- Add synthetic 1056-category mixed-income/expense, 19-entry, 2-budget, 4-goal, 3-linked-recurring, 11-hash regression asserting exact full SQL history DeepCollectionEquality before/after encrypted cold reopen. No personal source material in repository.
+- Error shows safe SQL_PREFLIGHT substage (hydrate, manifest, warm/cold attest, history parity or source witness) for further device triage; no raw errors or sensitive contents. Original rescue, biometric, rollback and source-witness rules remain.
