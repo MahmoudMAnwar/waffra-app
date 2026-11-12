@@ -8807,9 +8807,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    (trustedSms?(parsedSms.income):false),
    analyzing=false,hasParsed=initialSms!=null;
   bool submitTapped=false;
+  // M662.8: manual new entry must have NO default parent/category.
+  // 'أخرى' exists as an expense parent but not as an income parent; using
+  // it here silently selected expense/Other before the owner chose a category.
+  // Keep existing edit categories and previously-approved SMS suggestions.
   String category=(smsEditorDraft?['category'] as String?)??
-   initial?.category??(trustedSms?
-    (editorLearnedCategory??parsedSms.category):'أخرى');
+   initial?.category??(sms?
+    (trustedSms?(editorLearnedCategory??parsedSms.category):'أخرى'):'');
   String? selectedParentId;
   String? selectedBudgetId=(smsEditorDraft?['budget'] as String?)??initial?.budgetId;
   var entryAccounts=_m467Accounts.where((a)=>!a.archived).toList();
