@@ -3731,7 +3731,7 @@ class _WaffraFooterNoticeHostState extends State<WaffraFooterNoticeHost> {
   ValueListenableBuilder<WaffraNoticeData?>(
    valueListenable:_source,
    builder:(ctx,notice,_)=>AnimatedSize(
-    duration:notice==null?Duration.zero:waffraMotion(170),
+    duration:Duration.zero, // A notice must disappear in the same frame.
     curve:Curves.easeOutCubic,
     alignment:Alignment.bottomCenter,
     child:notice==null?const SizedBox(width:double.infinity,height:0):
