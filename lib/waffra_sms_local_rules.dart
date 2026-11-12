@@ -195,8 +195,13 @@ abstract final class WaffraSmsLocalRules {
    r'\b(?:transfer\s+(?:sent|received|completed|successful)|'
    r'funds\s+transferred|payment\s+(?:completed|successful|posted)|'
    r'purchase\s+(?:completed|successful|posted))\b|'
+   r'\b(?:salary\s+(?:deposit|credited|payment)|cash\s+deposit|'
+   r'deposit(?:ed)?|refund\s+received|funds\s+received|'
+   r'(?:credit|debit)\s+transfer|account\s+credited)\b|'
    r'(?:تم|تمت)\s+(?:خصم|سحب|إيداع|ايداع|تحويل|ارسال|إرسال|استلام)(?:\s|[:،.,]|$)|'
-   r'حوالة\s+(?:صادرة|واردة)|تحويل\s+(?:صادر|وارد)|'
+   r'حوال[ةه]\s+(?:(?:محلي[ةه]|دولي[ةه]|مالي[ةه])\s+)?(?:صادر[ةه]|وارد[ةه])|'
+   r'تحويل\s+(?:بنكي\s+)?(?:صادر|وارد)|'
+   r'(?:إيداع|ايداع)\s+(?:راتب|مالي)|'
    r'خصم\s+(?:من\s+(?:الحساب|البطاقة)|مبلغ|بقيمة)',
    caseSensitive:false,
   ).hasMatch(body);
