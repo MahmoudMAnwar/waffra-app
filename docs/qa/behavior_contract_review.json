@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "pr": "#597",
-  "issue": "#596, #598, #599",
+  "pr": "#601",
+  "issue": "#600",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "58a79a51094523e4506776130fedbd842efc7e87",
   "reviewed_at": "2026-11-12",
@@ -1925,6 +1925,38 @@
         "No SMS, money posting, wallet, due, accounts, encryption or biometric code edits as part of the Snackbar restyling.",
         "RTL/English direction leading edge is visual and must mirror physical position; all four current icons/colors remain differentiable for colorblind and screen reader users.",
         "Standalone fallback uses the same body and light/dark neutral palette; no second presenter, MaterialBanner, or bypass of M385/M449/M550 exact-head CI."
+      ]
+    },
+    {
+      "id": "M669-SMS-REVIEW-ROOT-CHILD-SEARCH-VALID-YES-ORIGINAL",
+      "issue": "Issue #600; Draft PR #601; owner 3 screenshots and explicit original-message requirement on 2026-11-12",
+      "previous_behavior": "Incoming and outgoing SMS review render raw inferred category string as a child label even if category is a root (e.g. 'تحويلات'). SMS category hierarchy is an unsearchable AlertDialog. Yes silently disables on account/category/source hidden mismatch. The original bank SMS text is hidden in successful understood income/expense confirmation (only displayed when uncertain); SMS rules use anchored, unsearchable DropdownButtonFormField.",
+      "approved_behavior": "Resolve proposed category by active typed parent/leaf with unique unambiguous child, parent ID and income direction. Never display root as child or select first matching child; show parent root suggestion and explicit choose leaf prompt. Add live normalized Arabic/English search in all shared centered pickers and SMS category hierarchy with no selection on cancel. After choosing a valid active leaf and current verified account, expose positive source evidence or clear blocker, not a silent disabled Yes, with secure edit path for ambiguous source. Show read-only unchanged original bank SMS in every actual review confirmation, preserve safe redaction for OTP, and existing reviewed original text in transfer/manual editor. No extra auto debit, no replacement of SQLCipher source or bank message.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_centered_dropdown.dart",
+        "lib/waffra_sms_rule_settings_page.dart"
+      ],
+      "test_paths": [
+        "test/m669_sms_review_category_search_test.dart",
+        "test/m402_budget_month_centered_dropdown_test.dart",
+        "test/m401_m402_budget_month_centered_dropdown_test.dart",
+        "test/m529_centered_dropdown_smoothness_test.dart",
+        "test/m665_sms_review_structural_learning_test.dart",
+        "test/waffra_bank_sms_facts_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/m282-combined-qa-features.yml"
+      ],
+      "safety_invariants": [
+        "The user may only commit a confirmed income/expense transaction after original SAR amount, trusted bank direction/date, typed child category and exact account witness validation; no Yes bypass.",
+        "Actual internal transfers remain two-sided verified transactions and may not be reclassified as expenses based on the word 'تحويلات' or any inferred first category.",
+        "Original SMS text is immutable while in review, not copied to logs, clipboard or a new plaintext store; OTP and security challenges must remain hidden.",
+        "Search normalizes matching only, not stored labels, account IDs, category IDs, amounts or source text; dismissing search/dialog never changes selection.",
+        "Preserve existing common dropdown blur, bounded max height, touch targets, popup placement and no extra financial writes; unit/widget regression plus exact-head CI remain mandatory."
       ]
     }
   ]
