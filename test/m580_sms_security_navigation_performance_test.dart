@@ -311,7 +311,15 @@ void main(){
   expect(review,contains("Key('m587-sms-transfer-exclude')"));
   expect(review,contains("Navigator.pop(dialog,'transfer-manual')"));
   expect(review,contains("await _reviewSmsAccountTransfer(item:selected,facts:facts)"));
-  expect(review,contains("await entrySheet(manualIncomeOverride:kind=='income')"));
+  // M664: No means a separate manual transaction. The pending transfer
+  // SMS stays unacknowledged and is visible in the editor as a reference.
+  final manual=review.split("}else if(decision=='transfer-manual'&&mounted){")[1]
+   .split("}else if(decision=='yes'&&mounted")[0];
+  expect(manual,contains("await entrySheet(manualIncomeOverride:kind=='income',"));
+  expect(manual,contains('reviewedOriginalSms:body);'));
+  expect(manual,contains("kind=='income'||kind=='expense'"));
+  expect(manual,isNot(contains('acknowledgeCompletedTransfer(')));
+  expect(manual,isNot(contains('acknowledgeCommitted(')));
   expect(review,isNot(contains('scannedIncome:')),
    reason:'Retired OCR-era argument must never be reintroduced.');
   expect(review,contains("await WaffraAutoSms.excludeMessages([id])"));
