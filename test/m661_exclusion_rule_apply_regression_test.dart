@@ -129,7 +129,9 @@ void main() {
    expect(isolate, isNot(contains('commitConfirmedSms(')));
    final native = File('native/WaffraAutoSmsStore.kt').readAsStringSync();
    expect(native, contains('fun excludeMessages(context: Context, ids: Set<String>)'));
-   expect(native, contains('isExcludedMessageLocked(context, id)'));
+   // The native exclusion batch checks each requested fingerprint using `it`,
+   // never accepting an ID unless it is queued or already excluded.
+   expect(native, contains('!isExcludedMessageLocked(context, it)'));
    expect(native, contains('excludedLabelRetentionMs = 30L * 24 * 60 * 60 * 1000'));
   });
  });
