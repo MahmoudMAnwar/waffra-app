@@ -294,3 +294,9 @@ M647/M649/M652 provenance labels — PR #575, 2026-11-11
 - Approved change: Fixed one missing close parenthesis in the new linked-due Edit button Tooltip/Semantics/Opacity wrapper. Behavior remains goal-linked Edit visually muted with explanatory tap and standalone Edit active. No money, SQLCipher, SMS rules, biometric or Home preload behavior changed; literal regression ID assertion and uniquely bounded M385 entry editor scope updated separately after test/build feedback.
 - Changed production paths: lib/main.dart
 - Verification: source compiler correction recorded, full latest-SHA Flutter/Android/SQLCipher/finance CI still required; no claim of device acceptance or release.
+
+[M449 SOURCE FOLLOW-UP — ISSUE #594 — PR #595 — M665.7 CATEGORY ANALYTICS]
+- Reviewed source SHA: 75ed35064cc5cb80199753cfff5c01d76848462e
+- Approved source change: Category reports and Smart Analysis group historical typed paid goal_due entries under «استحقاق هدف» instead of old incorrectly assigned «مطاعم» or other random expense leaf, without rewriting persisted expense source, amount, income/expense totals, account-specific cash debit or goal wallet settlement. PDF summary and Smart chart now share the same pure presentation label. Existing 5,000 total, 2,000 earmark and 3,000 bank debit presentation and idempotent SQLCipher flow are unchanged.
+- Changed production paths: lib/main.dart
+- Test and validation: test/m665_goal_due_display_and_linked_edit_test.dart contains direct 5,000 goal-vs-150 restaurant categorization; latest-head CI and physical RTL/Android remain required.
