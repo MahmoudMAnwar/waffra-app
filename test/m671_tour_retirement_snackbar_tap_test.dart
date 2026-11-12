@@ -115,7 +115,11 @@ void main() {
         child:const Text('Dialog action')))),
       child:const Text('Show dialog')),
     ])),
-    bottomNavigationBar:const WaffraFooterNoticeHost(),
+    // Match the actual Home: footer notice is never the whole navigation bar.
+    // Fixed navigation area must remain during a notice-dismiss/modal push.
+    bottomNavigationBar:const Column(mainAxisSize:MainAxisSize.min,children:[
+     WaffraFooterNoticeHost(),SizedBox(height:76),
+    ]),
    ),
   ));
   await tester.tap(find.text('Show notice'));
@@ -123,6 +127,8 @@ void main() {
   expect(find.byType(WaffraNoticeContent),findsOneWidget);
   await tester.tap(find.text('Show dialog'));
   await tester.pumpAndSettle();
+  expect(find.byType(AlertDialog),findsOneWidget,
+   reason:'The actual tap must open a modal while dismissing the notice.');
   // Opening a dialog is itself a tap, and must already clear the old notice.
   expect(find.byType(WaffraNoticeContent),findsNothing);
   await tester.tap(find.text('Dialog action'));
