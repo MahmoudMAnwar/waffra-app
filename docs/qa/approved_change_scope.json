@@ -15,7 +15,8 @@
     "M671 Issue #605: Retire the entire onboarding/replay seven-step tour and its persisted startup trigger, overlay and My Settings entry, including exact tour-only source asset; preserve normal splash and About/settings behavior.",
     "M671 Issue #605: Tap anywhere once to dismiss a visible Snackbar immediately without losing the tapped widget action, an Undo callback, or passive notice expiry; do not treat scrolling as a tap.",
     "M671: Update obsolete M274 Snackbar-close UX test and M282 accessible action-size proof to the owner-approved X-free notice and nonblocking global tap-to-dismiss, keeping footer navigation and minimum 48dp action checks active.",
-    "M671 reconcile the old two test source markers for the MaterialApp builder: WaffraNoticeTapDismissArea is an outer nonblocking wrapper, while WaffraIdleBiometricOverlay remains the existing inner lifecycle gate with all original background and privacy assertions unchanged."
+    "M671 reconcile the old two test source markers for the MaterialApp builder: WaffraNoticeTapDismissArea is an outer nonblocking wrapper, while WaffraIdleBiometricOverlay remains the existing inner lifecycle gate with all original background and privacy assertions unchanged.",
+    "M670/M671 exact-head CI fixes: preserve behavior while migrating M461/M548/M638/M647 positive SMS scan and rule-learning regression method anchors to `_rescanAutoSmsInbox({BuildContext? feedbackContext})`; repair immediate edge notice layout so it never mutates RenderAnimatedSize during a frame; update M206 root listener and M670 message-specific clipping expectation while preserving existing financial checks."
   ],
   "allowed_changed_files": [
     ".github/workflows/m282-combined-candidate.yml",
@@ -38,10 +39,14 @@
     "test/m374_transaction_dialog_ux_test.dart",
     "test/m440_biometric_resume_regression_test.dart",
     "test/m443_merchant_screenshot_regression_test.dart",
+    "test/m461_sms_exclusion_and_history_scan_test.dart",
     "test/m464_sms_bulk_rescan_regression_test.dart",
     "test/m514_sms_review_regressions_test.dart",
     "test/m547_sms_incremental_jank_regression_test.dart",
+    "test/m548_source_method_boundary_guard_test.dart",
     "test/m631_verified_finance_prewarm_test.dart",
+    "test/m638_sms_inbox_delete_sync_test.dart",
+    "test/m647_m652_financial_activity_regression_test.dart",
     "test/m668_footer_edge_snackbar_test.dart",
     "test/m670_feedback_transfer_dashboard_test.dart",
     "test/m671_tour_retirement_snackbar_tap_test.dart",
@@ -331,6 +336,30 @@
       {
         "start": "  test('M443 Home retains biometric lock on actual background only',",
         "end": "  test('M443 no merchant selection, brand logos or remote logo assets in active UI',"
+      }
+    ],
+    "test/m461_sms_exclusion_and_history_scan_test.dart": [
+      {
+        "start": "void main(){",
+        "end": null
+      }
+    ],
+    "test/m548_source_method_boundary_guard_test.dart": [
+      {
+        "start": "void main(){",
+        "end": null
+      }
+    ],
+    "test/m638_sms_inbox_delete_sync_test.dart": [
+      {
+        "start": "void main(){",
+        "end": null
+      }
+    ],
+    "test/m647_m652_financial_activity_regression_test.dart": [
+      {
+        "start": "void main(){",
+        "end": null
       }
     ]
   }
