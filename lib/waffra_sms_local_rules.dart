@@ -208,6 +208,16 @@ abstract final class WaffraSmsLocalRules {
   if(RegExp(r'\b(?:card\s+purchase|online\s+purchase|'
    r'purchase\s+card)\b',caseSensitive:false).hasMatch(body)&&
    RegExp(r'\d+(?:[.,]\d+)?').hasMatch(body))return true;
+  // Explicit bank income/expense + a real posted currency amount is not a
+  // discount coupon or a reminder. This also protects salary/credit notices
+  // that lack the English "debited/credited" verb.
+  if(!facts.pending&&
+     (facts.kind==WaffraBankOperationKind.income||
+      facts.kind==WaffraBankOperationKind.expense||
+      facts.kind==WaffraBankOperationKind.cardSettlement)&&
+     RegExp(r'(?:\bSAR\b|ريال|ر\.?\s*س)',caseSensitive:false)
+      .hasMatch(body)&&
+     RegExp(r'[0-9٠-٩]').hasMatch(body))return true;
   // Bank-facts transfer evidence outweighs any unrelated promo/OTP phrase.
   return facts.kind==WaffraBankOperationKind.transfer;
  }
@@ -219,18 +229,19 @@ abstract final class WaffraSmsLocalRules {
   required WaffraBankOperationKind bankKind,
   Iterable<WaffraSmsLocalRule> custom=const <WaffraSmsLocalRule>[],
  }) {
-  if(bankKind==WaffraBankOperationKind.uncertain&&
-     _hasPostedMoneyEvidence(body))return null;
-  // Keep manually learned exclusions fail-closed on generic finance cues.
-  // First-party immutable ready-made notices use the more specific posted-
-  // movement guard so reminders/discount codes aren't confused with debits.
+  final posted=_hasPostedMoneyEvidence(body);
+  // Custom exclusions remain conservative and owner-confirmed; curated ready
+  // exclusions may safely override a naive "expense" direction based ONLY
+  // on words like "خصم حصري" / "payment reminder", not a posted debit.
   final eligible=<WaffraSmsLocalRule>[
    ...custom.where((rule)=>rule.resolvedKind!='excluded'||
     !_hasCompletedFinanceCue(body)),
    ...waffraSaudiSpecialSeedRules,
   ].where((rule)=>
    ((rule.resolvedKind=='transfer'&&bankKind==WaffraBankOperationKind.transfer)||
-    (rule.resolvedKind=='excluded'&&bankKind==WaffraBankOperationKind.uncertain))&&
+    (rule.resolvedKind=='excluded'&&!posted&&
+     (bankKind==WaffraBankOperationKind.uncertain||
+      (rule.builtIn&&rule.id.startsWith('sa_excluded_')))))&&
    matches(rule,body,sender:sender)).toList(growable:false);
   if(eligible.isEmpty)return null;
   if(eligible.map((r)=>r.resolvedKind).toSet().length>1)return null;
