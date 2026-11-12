@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'diagnostics/waffra_private_release_diagnostics.dart';
 import 'waffra_practical_ledger_engine.dart';
 import 'waffra_amount_formatter.dart';
+import 'waffra_i18n.dart';
 
 /// Four read-only tools opened from an already verified Home snapshot.
 /// Neither bank SMS nor receipts are uploaded or written to any ledger here.
@@ -231,12 +232,12 @@ class _WaffraPracticalToolsPageState extends State<WaffraPracticalToolsPage> {
       const SizedBox(height: 8),
       if (summary == null) Text(t('أدخل رصيدًا صحيحًا.', 'Enter a valid balance.'))
       else ...[
-        Text(t('الدخل: ', 'Income: ') + cash(summary.incomeMinor)),
-        Text(t('المصروفات: ', 'Expenses: ') + cash(summary.expenseMinor)),
+        WaffraText(t('الدخل: ', 'Income: ') + cash(summary.incomeMinor),currencyEnglish:widget.english),
+        WaffraText(t('المصروفات: ', 'Expenses: ') + cash(summary.expenseMinor),currencyEnglish:widget.english),
         Text(t('عدد المعاملات: ', 'Transactions: ') +
           summary.transactionCount.toString()),
-        Text(t('المتوقع: ', 'Expected closing: ') +
-          cash(summary.expectedCloseMinor),
+        WaffraText(t('المتوقع: ', 'Expected closing: ') +
+          cash(summary.expectedCloseMinor),currencyEnglish:widget.english,
           key: const Key('m281-close-expected')),
         const SizedBox(height: 8),
         TextField(controller: actual, onChanged: (_) => setState(() {}),
@@ -244,8 +245,8 @@ class _WaffraPracticalToolsPageState extends State<WaffraPracticalToolsPage> {
           decoration: InputDecoration(labelText: t('الرصيد الفعلي', 'Actual balance'),
             border: const OutlineInputBorder())),
         if (actualMinor != null)
-          Text(t('فرق المطابقة: ', 'Reconciliation difference: ') +
-            cash(summary.differenceMinor(actualMinor))),
+          WaffraText(t('فرق المطابقة: ', 'Reconciliation difference: ') +
+            cash(summary.differenceMinor(actualMinor)),currencyEnglish:widget.english),
       ],
     ]);
   }
