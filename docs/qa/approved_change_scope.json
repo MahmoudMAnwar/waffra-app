@@ -25,6 +25,7 @@
     "lib/waffra_sms_local_rules.dart",
     "lib/waffra_sms_rule_settings_page.dart",
     "test/m436_cloud_review_pipeline_test.dart",
+    "test/m495_pr402_ui_performance_regression_test.dart",
     "test/m508_saudi_default_sms_rules_test.dart",
     "test/m514_sms_review_regressions_test.dart",
     "test/m548_review_grouping_and_signup_perf_test.dart",
@@ -71,7 +72,7 @@
       },
       {
         "start": " Future<void> entrySheet(",
-        "end": " Future<void> "
+        "end": " Future<void> showReceipt("
       },
       {
         "start": " Future<void> transactionActions(MoneyEntry entry)async {",
@@ -191,6 +192,12 @@
     "lib/storage/waffra_fresh_finance_domain_repository.dart": [
       {
         "start": "  Future<WaffraGoalDueSqlReceipt> settleLinkedGoalDue({",
+        "end": null
+      }
+    ],
+    "test/m495_pr402_ui_performance_regression_test.dart": [
+      {
+        "start": " test('M500 #420 Details Edit enables verified retroactive account link',(){",
         "end": null
       }
     ]
