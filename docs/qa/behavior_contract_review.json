@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
-  "pr": "PR #575 rebased via 2-parent merge on merged #586 main; preserves M647–M652 + M656 source behavior and M658/M659 CI contracts",
-  "issue": "Issues #569–#574 plus previously merged #566/#567/#576, #579 and #582; Issue #583 M656; Issues #585/#587 (M658/M659 merged main before PR #575)",
+  "pr": "PR #590 draft M661 saved exclusion-rule refresh on merged main with M647–M652, M658/M659 protected",
+  "issue": "Issues #569–#574 plus previously merged #566/#567/#576, #579 and #582; Issue #583 M656; Issues #585/#587 (M658/M659 merged main before PR #575); Issue #589 M661; Issue #588 M660 is tracked separately but not implemented by PR #590",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main",
-  "reviewed_at": "2026-11-11",
-  "review_policy": "Review changed behavior against all GitHub Actions workflow scripts, all Dart and Python QA test files, and the original tests' protected security assertions; never edit tests merely to silence red jobs. PR #575 merge with main preserves every M645/M646/M647/M653/M654 contract; original PR-specific positive finance tests and approved fallback/owner-authority remain in effect.",
+  "reviewed_at": "2026-11-12",
+  "review_policy": "Review changed behavior against all GitHub Actions workflow scripts, all Dart and Python QA test files, and the original tests' protected security assertions; never edit tests merely to silence red jobs. PR #575 merge with main preserves every M645/M646/M647/M653/M654 contract; original PR-specific positive finance tests and approved fallback/owner-authority remain in effect. M661 source changes must not weaken existing fail-closed encryption, verified-bank account, OTP or anti-replay checks, must preserve all original tests and route review pending rules non-posting.",
   "contracts": [
     {
       "id": "M601-AUTH-PENDING-BUTTON-AND-VERIFIER-LATENCY",
@@ -1570,6 +1570,36 @@
         "Checkout and assertions use the exact PR head SHA, never a stale branch tip or merge SHA.",
         "Terminal job always runs and fails if either required source job is skipped, failed or cancelled; no continue-on-error.",
         "M340/finance, M174/SQLCipher, M449/notes, M550 preflight and existing full Flutter regression remain independently mandatory."
+      ]
+    },
+    {
+      "id": "M661-SAVED-EXCLUSION-APPLY-AND-TRANSPARENT-LEARNING-PR590",
+      "issue": "Issue #589, related M660 #588",
+      "previous_behavior": "Manual unseeded SMS rule saved in encrypted settings but Navigator return null prevents intended pending queue refresh. Sender-specific custom rule preview evaluated against senderless text. Encrypted custom rule load exceptions silently fall back to built-ins. Single-SMS excluded success is shown even when no learned pattern is created.",
+      "approved_behavior": "After any verified local custom rule write, trigger a debounced on-device pending queue refresh; on Android nonfinancial same-sender keyword matches are excluded by existing durable native anti-replay IDs without touching financial history. Preview custom rule using paired live body/sender metadata; report unreadable encrypted rule storage visibly; show whether exclusion learned a reusable pattern, and never treat one excluded message as a learned template without rule persistence.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_sms_rule_settings_page.dart",
+        "lib/waffra_sms_local_rules.dart",
+        "native/WaffraAutoSmsStore.kt"
+      ],
+      "test_paths": [
+        "test/m661_exclusion_rule_apply_regression_test.dart",
+        "test/waffra_sms_rule_reuse_test.dart",
+        "test/m462_smart_sms_rule_review_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m417-auto-bank-sms.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/android.yml"
+      ],
+      "safety_invariants": [
+        "Only the new settings callback and app already-pending isolate classification can apply manual custom rules; no full Android history scan on save.",
+        "If custom rules fail decryption, user must be warned and no user-specific classification is silently asserted successful.",
+        "Custom excluded rules may only exclude parser-uncertain SMS with safe keyword/sender match. Never exclude completed finance messages based on phrase overlap.",
+        "Exact individual excluded SMS retains encrypted ID anti-replay indefinitely, label recovery 30 days; rule storage separate; M660 broad templates remain unimplemented.",
+        "Test actual Android and real owner APK; PR draft stays unmerged without exact-head mandatory CI."
       ]
     }
   ]

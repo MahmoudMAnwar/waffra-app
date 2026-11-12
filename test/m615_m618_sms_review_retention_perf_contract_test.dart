@@ -37,7 +37,12 @@ void main(){
   expect(s,contains("reviewedIncomeOverride:reviewType=='income'"));
   expect(s,contains('await WaffraAutoSms.acknowledgeCommitted([id])'));
   expect(s,contains("await WaffraAutoSms.excludeMessages([id])"));
-  expect(s,contains('الرسالة بقت في قائمة المستبعدة لمدة 30 يوم'));
+  // M661 keeps the 30-day promise while distinguishing a single excluded
+  // message from a genuinely persisted reusable safe rule.
+  expect(s,contains('تم استبعاد الرسالة دي فقط لمدة 30 يوم'));
+  expect(s,contains('تم استبعاد الرسالة لمدة 30 يوم'));
+  expect(s,contains('لم يتم تعلّم قاعدة للرسائل المشابهة'));
+  expect(s,contains('var learned=false;'));
  });
 
  test('M616 30d reversible encrypted labels are distinct from immutable rescan denial',(){

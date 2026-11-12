@@ -4765,6 +4765,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  int? _autoSmsLastRescanScanned;
  DateTime? _autoSmsLastChecked;
  String? _autoSmsStatusProblem;
+ // M661: warn once while saved encrypted custom rules are unavailable.
+ bool _m661RuleLoadErrorNotified=false;
  final List<Map<String,Object?>> _autoSmsPending=<Map<String,Object?>>[];
 
  String get _smsRuleOwnerKey=>WaffraSmsLocalRuleStore.ownerKey(
@@ -4804,6 +4806,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     seedAccountSuffix:suffix,bankAccounts:bankAccounts,
     scannedMessages:_autoSmsPending.map((row)=>
      row['body'] is String?row['body'] as String:'').toList(),
+    scannedSenders:_autoSmsPending.map((row)=>
+     row['sender'] is String?row['sender'] as String:'').toList(),
     incomeCategories:categories.where((c)=>c.income&&c.isSubcategory&&
      waffraCategoryAvailableForNewEntry(categories,c))
      .map((c)=>c.name).toList(),
@@ -4812,6 +4816,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      .map((c)=>c.name).toList(),
     seedMessage:seedMessage,
     onNotice:(message)=>snack(context,message),
+    // M661: manual (+) rule saves also reclassify the current native queue.
+    onRulesChanged:()=>_receiveAutoSmsNotice(),
    )));
   // Apply saved local rules to the already queued SMS only. Never perform
   // hidden Android history paging during the rule editor's return animation.
@@ -5126,9 +5132,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   // On a vault error keep SMS review available with built-in rules.
   var customRules=<WaffraSmsLocalRule>[];
   if(_smsRuleOwnerKey.isNotEmpty){
-   try{customRules=await const WaffraSmsLocalRuleStore().read(
-    _smsRuleOwnerKey);}
-   catch(_){ /* No bank SMS in logs. Built-ins remain usable. */ }
+   try{
+    customRules=await const WaffraSmsLocalRuleStore().read(
+     _smsRuleOwnerKey);
+    _m661RuleLoadErrorNotified=false;
+   }catch(_){
+    // M661: built-ins are safe fallback, but never silently claim the
+    // owner's saved custom rules ran when encrypted storage is unreadable.
+    if(_m630SmsSessionCurrent(smsEpoch)&&!_m661RuleLoadErrorNotified){
+     _m661RuleLoadErrorNotified=true;
+     snack(context,waffraIsEnglish?
+      'Saved SMS rules could not be loaded. Custom exclusions are not active. Try refreshing.':
+      'تعذر تحميل قواعد الرسائل المحفوظة. قواعد الاستبعاد المضافة غير نشطة حاليًا. حاول التحديث.',
+      isError:true);
+    }
+   }
   }
   if(!_m630SmsSessionCurrent(smsEpoch))return;
   // Heavy SHA256, bank parser, OTP detection and local-rule matching now
@@ -6961,13 +6979,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     final acknowledged=await WaffraAutoSms.excludeMessages([id]);
     if(acknowledged&&mounted){
      setState(()=>_autoSmsPending.removeWhere((item)=>item['id']==id));
-     snackSuccess(context,waffraIsEnglish?
-      'Message added to Excluded for 30 days. Restore it from there.':
-      'الرسالة بقت في قائمة المستبعدة لمدة 30 يوم، وتقدر ترجعها من هناك.');
-     // Learn safe sender-scoped exclusion patterns only after acknowledgement.
-     try{await _learnSafeSmsRule(
+     // M661: a durable single-message exclusion is NOT a learned pattern.
+     // The user sees the distinction instead of a misleading silent success.
+     var learned=false;
+     try{learned=await _learnSafeSmsRule(
       body:body,sender:sender,kind:'excluded');}catch(_){}
-     unawaited(_refreshAutoSmsInbox());
+     if(mounted){
+      snackSuccess(context,learned?
+       (waffraIsEnglish?
+        'Message excluded for 30 days; a reusable safe rule was saved.':
+        'تم استبعاد الرسالة لمدة 30 يوم، واتحفظت قاعدة آمنة للرسائل المشابهة.'):
+       (waffraIsEnglish?
+        'Only this message was excluded for 30 days. No reusable rule was learned.':
+        'تم استبعاد الرسالة دي فقط لمدة 30 يوم. لم يتم تعلّم قاعدة للرسائل المشابهة.'));
+      unawaited(_refreshAutoSmsInbox());
+     }
     }else if(mounted){
      snack(context,waffraIsEnglish?
       'Could not exclude the message safely. Try again.':

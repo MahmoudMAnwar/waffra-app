@@ -1,121 +1,62 @@
 {
   "contract_version": 1,
-  "change_id": "M647-M652-20261111-FINANCIAL-ACTIVITY-SMS-REFRESH-PR575",
-  "human_scope_review": "Owner explicitly requested in chat 2026-11-11: transfer visual clarification, blue internal transfer and gold savings and violet paid recurring cards, refreshed local SMS classification and PDF color parity. Prior PR #558 manifest belongs to another branch and must not be copied into #575. Only newly approved paths and exact M647–M652 function sections are allowed. M652 CI run #43075376491 exposed one obsolete PDF two-color source assertion in test/waffra_oct21_regression_test.dart; only the named original color test scope may change, with positive red/green/violet assertions. PR #575 M550 run 43076285421 found one obsolete M296 assert; only the existing 11+ expansion test may change, no budgets or count policy alterations. M648 follow-up on PR #575: original M296 test still checks old exact CTA condition before the new transfer/savings support; replace only this exact asserted source line with checks of the widened trigger and preserve all numeric pagination assertions. M296 exact M385 source anchor corrected after the assertion text changed; keep original numerical assertions and anchor the single Eleven-or-more test only, never overwrite another test. Latest PR #575 exact-head 33316ee8 Flutter full-run failure was one M611 test requiring readInternalTransferHistory inside the click handler despite the owner-approved M647/M648 verified cached adapter. Permit only the last M611 transfer-history test to assert the complete UI -> cache -> witnessed SQLCipher read chain; no test deletion, no finance source changes or relaxed account checks. Issue #583 was created and docs/WAFFRA_REQUIREMENTS.md was updated on prior commit cd1fb465 before source changes. Exact current-head M429 run 43094172937 and M417 43094173032 are red ONLY on deprecated_member_use informational Flutter stable lint, no warnings/errors. These two exact analyzer lines change within minimal bounded source sections; no app/finance/security/tests disabled.",
+  "change_id": "M661-20261112-EXCLUSION-RULE-APPLY-PR590",
+  "human_scope_review": "Issue #589 owner-reported real Android saved custom excluded SMS rules not reflected after refresh. M661 PR #590 only patches manual save notification, paired sender preview, visible encrypted vault read failure and honest single-message vs reusable-rule feedback. No M660 feature implementation, no finance-posting changes, no Android history rescan; retain all original test and CI gates. PR #590 54c484f exact-head full Flutter suites failed on exactly two test assertions: an M618 source literal requiring an obsolete snackbar text and a newly authored M661 assertion with a wrong native ID guard variable. Owner explicitly requires every regression to reflect the now-approved behavior, not old UI text. Permit only those two narrow positive test corrections; preserve all M618 No/Edit/30-day checks and M661 durable native anti-replay checks. No application or native source edits authorized.",
   "user_requested_changes": [
-    "Replace oversized transfer history modal with readable verified from/to accounts and balance-safe amount, date and optional notes.",
-    "Show verified internal transfers as distinct blue Home activity cards and never treat the transferred principal as income or expense.",
-    "Use distinct visual presentation for paid recurring/goal-due entries, without additional database posting or double counting.",
-    "After durably saving a new local classification rule, refresh pending SMS suggestions off the first Home rendering path.",
-    "Keep color conventions consistent for financial PDF exporting and preserve all transaction and account safety guards.",
-    "Document new six numbered issues and acceptance tests before completing implementation.",
-    "Read traceable goal-funding movements directly from the encrypted account-linked goal wallet journal and present savings movements without fictional entries.",
-    "M652 owner-requested violet settled due PDF rows extend the former two-color transaction PDF row assertion; update only the exact legacy color test while preserving income and expense color assertions and all other financial tests.",
-    "Reconcile the obsolete PDF regression assertion with the newly requested violet paid-due color branch while preserving income, expense, all other PDF checks and protected test functions.",
-    "M648 revised Home Show more respects verified transfer/savings activity; adjust only M296 existing 11+ matching transactions test to assert the newly expanded activity controls while preserving original zero-through-ten count logic.",
-    "M648 verified Home activity list expansion now covers transfer and goal-wallet activity as well as MoneyEntry, so M296's obsolete single-category expansion source assertion must be updated without weakening its numeric 0-to-10 and 11-plus tests.",
-    "Confirmed sender-specific income, expense, transfer and excluded SMS rules must invalidate pending suggestions immediately after durable local rule store write through the existing debounced non-posting refresh.",
-    "PR #575 exact-head failures in M282 and full Flutter suite exposed M611's obsolete direct UI storage invocation assertion; update only M611 verified transfer history test to validate UI -> cached verified API -> encrypted journal, preserving account scoping and read-only failure behavior.",
-    "M656 Issue #583: exact-head M429/M417 strict Flutter 3.50 analyzer falsely fails on info-only material.dart/localizations deprecations. Align only those two analyzers to --no-fatal-infos, keep all existing source paths, Flutter tests, warnings/errors fatal and M385 review; new M656 source QA contract."
+    "Issue #589: owner's current APK still shows similar excluded SMS and does not visibly apply saved manual excluded rules after refreshing; ensure saved rule changes are reapplied to queued nonfinancial sender-matching SMS with explicit failure diagnostics.",
+    "After excluding one SMS, report accurately whether a durable generic rule was learned, and preserve exact message anti-replay and 30-day recoverable display labels. Full template learning remains pending M660 #588.",
+    "M661 follow-up: reflect accurate learned-vs-single-only 30-day SMS snackbar in the existing M618 source contract and assert the actual native per-ID anti-replay guard with original logic preserved; repair only the two failing source assertions without weakening finance safety."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
-    "docs/qa/M647_M652_FINANCIAL_ACTIVITY_AND_SMS_RULE_REFRESH.md",
+    "docs/qa/M661_EXCLUSION_RULE_REFRESH_REGRESSION.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
-    "test/m647_m652_financial_activity_regression_test.dart",
-    "lib/storage/waffra_account_context_repository.dart",
-    "lib/storage/waffra_verified_accounts_api.dart",
-    "test/waffra_oct21_regression_test.dart",
-    "test/m296_monthly_budget_and_transactions_test.dart",
-    "test/m611_manual_home_finance_regression_test.dart",
-    ".github/workflows/m429-integration-smoke.yml",
-    ".github/workflows/m417-auto-bank-sms.yml",
-    "test/qa/m656_flutter_analyzer_info_gate_test.py"
+    "lib/waffra_sms_rule_settings_page.dart",
+    "test/m661_exclusion_rule_apply_regression_test.dart",
+    "test/m615_m618_sms_review_retention_perf_contract_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
   "bounded_sections": {
     "lib/main.dart": [
       {
-        "start": " List<WaffraAccountBalance> _m467Accounts=const <WaffraAccountBalance>[];",
-        "end": " String get _m467ChoiceKey{"
+        "start": " String? _autoSmsStatusProblem;",
+        "end": " String get _smsRuleOwnerKey=>"
       },
       {
-        "start": " Future<void> _m468ReadVerifiedAccountsOnce()async{",
-        "end": " String get _m467AccountLabel{"
+        "start": " Future<void> _openSmsRules({",
+        "end": " Future<void> _recordConfirmedSmsAccountAssociation({"
       },
       {
-        "start": " Future<void> _learnManualTransferPreference()async{",
-        "end": " // Reuse one senderless review-only category bucket"
+        "start": " Future<void> _runAutoSmsRefresh({",
+        "end": " Future<void> _analyzeAmbiguousSmsOnDemand("
       },
       {
-        "start": " Future<void> _learnManualCategoryPreference(MoneyEntry record)async{",
-        "end": " // Retained single-message reference for on-demand review"
-      },
-      {
-        "start": " Future<void> showInternalTransferTransactions()async{",
-        "end": " Widget _dashboardShortcut("
-      },
-      {
-        "start": " Widget compactTransaction(MoneyEntry entry){",
-        "end": " Widget _m549HomeFinanceAction({"
-      },
-      {
-        "start": " Widget dashboard(){",
-        "end": " List<MoneyEntry> get analysisEntries"
-      },
-      {
-        "start": " Future<void> exportEntriesPdf(",
-        "end": " Future<void> _deleteVerifiedEntry(MoneyEntry entry)async {"
-      },
-      {
-        "start": " Future<bool> _learnSafeSmsRule({",
-        "end": " /// Manual entries have no bank SMS sender."
+        "start": "   }else if(decision=='exclude'&&mounted){",
+        "end": "   }else if(decision=='transfer'&&mounted){"
       }
     ],
-    "lib/storage/waffra_account_context_repository.dart": [
+    "lib/waffra_sms_rule_settings_page.dart": [
       {
-        "start": " /// M611: read the actual encrypted two-sided transfer ledger",
-        "end": null
+        "start": "class WaffraSmsRuleSettingsPage extends StatefulWidget {",
+        "end": "class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{"
+      },
+      {
+        "start": " Future<bool> _persist(List<WaffraSmsLocalRule> next)async{",
+        "end": " Future<void> _remove(WaffraSmsLocalRule rule)async{"
+      },
+      {
+        "start": "     final previewMessages=seed!=null?<String>{seed}:",
+        "end": "     return SafeArea(top:false,child:Padding("
       }
     ],
-    "lib/storage/waffra_verified_accounts_api.dart": [
+    "test/m615_m618_sms_review_retention_perf_contract_test.dart": [
       {
-        "start": " /// M611: owner-scoped verified read; transfers never enter income/expense.",
-        "end": " /// A witnessed, bounded read for existing entry Edit."
-      }
-    ],
-    "test/waffra_oct21_regression_test.dart": [
-      {
-        "start": " test('Income and expense PDF rows reuse exact transaction color constants', () {",
-        "end": " test('M384 restored receipt corner on cards and retained details access', () {"
-      }
-    ],
-    "test/m296_monthly_budget_and_transactions_test.dart": [
-      {
-        "start": " test('Eleven or more matching transactions start at ten and can expand',(){",
-        "end": "  expect(source,contains('visible.length,expanded:showAllTransactions'));"
-      }
-    ],
-    "test/m611_manual_home_finance_regression_test.dart": [
-      {
-        "start": " test('M611 transfer history reads real encrypted rows under owner witness', () {",
-        "end": null
-      }
-    ],
-    ".github/workflows/m429-integration-smoke.yml": [
-      {
-        "start": "      - name: Analyzer combined app\n",
-        "end": "      - name: Enforce exactly approved main source boundaries\n"
-      }
-    ],
-    ".github/workflows/m417-auto-bank-sms.yml": [
-      {
-        "start": "      - run: flutter pub get\n",
-        "end": "      - name: Test foreground opt-in and strict income/expense decision matrix\n"
+        "start": " test('M618 No/Edit alternatives are source-correct and must not auto-post',(){",
+        "end": " test('M616 30d reversible encrypted labels are distinct from immutable rescan denial',(){"
       }
     ]
   }
