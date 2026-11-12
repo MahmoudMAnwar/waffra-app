@@ -67,14 +67,23 @@ abstract final class WaffraAccountsFinanceHistory {
       final columns = schema.map((c) => c.read<String>('name')).toList();
       final placeholders = List.filled(columns.length, '?').join(',');
       final recorded = (records[table] as List).cast<Map<String, dynamic>>();
+      // SQLCipher's parent trigger requires category roots first. A previous
+      // List.sort grouped roots and children with a comparator returning zero
+      // within each group. Dart's sort is NOT stable, so large genuine legacy
+      // inventories could be silently reordered. The V3 cold preflight then
+      // rejected an otherwise exact restore because history is captured by
+      // rowid and compared against the authenticated archive in original order.
+      //
+      // Stable partition: preserve the original order of *every* root and
+      // child, while still guaranteeing all root rows precede dependent rows.
+      // For a well-formed source (already root-first) this is an identity.
       final ordered = table == 'fresh_finance_categories'
-          ? (List<Map<String, dynamic>>.of(recorded)..sort((a, b) {
-              // A restored subcategory must never precede its parent when
-              // new SQLCipher parent-consistency triggers are installed.
-              final aChild = (a['parent_id'] as String? ?? '').isNotEmpty;
-              final bChild = (b['parent_id'] as String? ?? '').isNotEmpty;
-              return (aChild ? 1 : 0).compareTo(bChild ? 1 : 0);
-            }))
+          ? <Map<String, dynamic>>[
+              for (final row in recorded)
+                if ((row['parent_id'] as String? ?? '').isEmpty) row,
+              for (final row in recorded)
+                if ((row['parent_id'] as String? ?? '').isNotEmpty) row,
+            ]
           : recorded;
       for (final row in ordered) {
         if (row.length != columns.length || !columns.every(row.containsKey)) {
