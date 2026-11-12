@@ -1,13 +1,14 @@
 {
   "contract_version": 1,
   "change_id": "M669-20261112-SMS-REVIEW-HIERARCHY-SEARCH-YES-ORIGINAL-PR601",
-  "human_scope_review": "Owner supplied three screenshots on 2026-11-12 and demanded (1) no root category as child, (2) searchable dropdowns throughout app including SMS category root/leaf selectors, (3) Yes explains all unmet verified fields and enables when valid, (4) unchanged original bank SMS visible in every review. Issue #600, Draft PR #601, requirements recorded before production implementation. Only bounded review route, pure category resolver, shared centered picker and SMS rule selector upgrades; existing finance writer, source SMS/OTP and bank authentication untouched. No skipped CI or presumed hardware validation.",
+  "human_scope_review": "Owner supplied three screenshots on 2026-11-12 and demanded (1) no root category as child, (2) searchable dropdowns throughout app including SMS category root/leaf selectors, (3) Yes explains all unmet verified fields and enables when valid, (4) unchanged original bank SMS visible in every review. Issue #600, Draft PR #601, requirements recorded before production implementation. Only bounded review route, pure category resolver, shared centered picker and SMS rule selector upgrades; existing finance writer, source SMS/OTP and bank authentication untouched. No skipped CI or presumed hardware validation. M669 owner standing global searchable-dropdown requirement extends explicitly to remaining native DropdownButtonFormField routes: verified recurring/goal institution/account, new-account institution/subtype, finance context filters/links, account settings/default recurring, and older account transaction form. All replacements are mechanical opt-in shared centered picker + import only, retaining keys, callback semantics, item lists and financial writers, with source scan/test coverage. No new finance source or accounting writer.",
   "user_requested_changes": [
     "Validate SMS reviewed category by canonical root/child hierarchy, direction and active status; main 'تحويلات' never appears as child, and never guesses a matching subcategory.",
     "Provide live normalized Arabic/English search in the existing shared centered dropdown and two-level SMS category picker, maintaining explicit select/cancel and no financial writes.",
     "Recompute/label Yes eligibility after both category and verified account, show exact blockers for source/date/currency/amount/direction and link to safe editor instead of unexplained disabled buttons.",
     "Display immutable read-only original SMS prominently in the actual bank SMS review confirmation for income and expense, protecting genuine OTP messages, and preserve existing original text in manual SMS and transfer editor; verify all review entry paths.",
-    "Regression coverage for repeated valid account/category selection, main-only hint, income vs expense, outgoing transfer vs two-sided transfer, original body visibility, picker empty search and no auto posting."
+    "Regression coverage for repeated valid account/category selection, main-only hint, income vs expense, outgoing transfer vs two-sided transfer, original body visibility, picker empty search and no auto posting.",
+    "Every remaining native DropdownButtonFormField in five financial-account/goal/recurring/account-edit routes uses the already-approved searchable centered picker, preserving current selection and avoiding surprise commits."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -15,7 +16,12 @@
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
+    "lib/waffra_account_context_page.dart",
+    "lib/waffra_account_context_settings.dart",
+    "lib/waffra_account_transaction_form.dart",
     "lib/waffra_centered_dropdown.dart",
+    "lib/waffra_goal_recurring_account_picker.dart",
+    "lib/waffra_new_account_dialog.dart",
     "lib/waffra_sms_rule_settings_page.dart",
     "test/m669_sms_review_category_search_test.dart"
   ],
@@ -54,6 +60,36 @@
       {
         "start": "         if(autoPost)...[",
         "end": "         if(financial)Text("
+      }
+    ],
+    "lib/waffra_goal_recurring_account_picker.dart": [
+      {
+        "start": "import 'package:flutter/material.dart';",
+        "end": null
+      }
+    ],
+    "lib/waffra_new_account_dialog.dart": [
+      {
+        "start": "import 'package:flutter/material.dart';",
+        "end": null
+      }
+    ],
+    "lib/waffra_account_context_page.dart": [
+      {
+        "start": "import 'package:flutter/material.dart';",
+        "end": null
+      }
+    ],
+    "lib/waffra_account_context_settings.dart": [
+      {
+        "start": "import 'package:flutter/material.dart';",
+        "end": null
+      }
+    ],
+    "lib/waffra_account_transaction_form.dart": [
+      {
+        "start": "import 'package:flutter/material.dart';",
+        "end": null
       }
     ]
   }
