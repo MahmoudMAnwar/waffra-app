@@ -52,13 +52,14 @@ void main() {
   expect(startup,contains('final activeOwner=(await widget.onVerifiedHomeSmsResume?.call())??true;'));
   expect(startup,contains('if(!activeOwner||!_m630SmsSessionCurrent(startupEpoch))return;'));
   expect(source,contains('epoch==_m630HomeStartupEpoch;'));
-  expect(source,contains('mounted&&ready&&!_m627ClosingSession&&_financeLoadFailure==null&&'));
+  expect(source,contains('mounted&&ready&&widget.postAuthVisible&&'));
   expect(startup.indexOf('final activeOwner=(await widget.onVerifiedHomeSmsResume?.call())??true;'),
    lessThan(startup.indexOf('await _refreshAutoSmsInbox(importMonth:')));
  });
 
  test('M624: do not replace genuine complete finance Home with fake values',(){
-  expect(root,contains('child:Offstage(offstage:!_m623HomeReady,'));
+  expect(root,contains('child:Offstage(offstage:!homeInteractive,'));
+  expect(root,contains('postAuthVisible:homeInteractive'));
   expect(root,contains('onVerifiedReady:()=>_m623HomeLoaded(account)'));
   expect(root,isNot(contains('CircularProgressIndicator(')));
   expect(root,isNot(contains('بنفتح الرئيسية')));
