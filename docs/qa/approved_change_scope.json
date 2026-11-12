@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
   "change_id": "M665-20261112-SMS-REVIEW-CATEGORY-NOTICES-TEMPLATES-PR595",
-  "human_scope_review": "Owner approved four changes from four Android screenshots on 2026-11-12, Issue #594 Draft PR #595: retain verified child account after inline add; inline main/subcategory correction so Yes reflects existing mandatory finance/category guards; replace notification refresh with pull and clear bulk checkbox; remove top-level duplicate SMS original and redundant copy; extend M660 issue #588 sender-specific nonfinancial OTP/beneficiary structural learning without exposing PII or auto-posting. No auth/Home prewarm change, SQLCipher writer change, or main-only signed release change. Exact-head CI, M449 and Android evidence still pending. M665.5 owner screenshot 2026-11-12 narrows only ready-rules label and paragraph, preserving 4 accordions and native matching; register before source modification. M665.6 screenshot and explicit 2026-11-12 instruction: auto-exclude only safe first-party excluded notice patterns with completed-finance conflict guard; retire SMS review overflow AI/Not-a-transaction choices and orphan on-demand handler while retaining explicit Exclude. Existing bank SMS core privacy/finance still mandatory. M665.7 owner screenshot goal car 5000 due split 2000 wallet/3000 current bank, first-category fallback restaurant, visible goal SQL metadata and controls; code may change only scoped goal/due presentation, verified source notes formatting, approved tests/docs; no account-balance arithmetic or paid settlement confirmation mutated. M665.7 late M385 expansion explicitly covers pure display-only goal due cash/legacy notes helpers and linked recurring toggle guard. No bank debit policy or committed finance writer changed. M665.7: data from owner screenshot also appears in Smart Analytics/PDF category rankings; scope specifically one pure category chart model and already-approved PDF export, mapping existing goal_due sourceType to goal purpose without rewriting history or budget totals.",
+  "human_scope_review": "Owner approved four changes from four Android screenshots on 2026-11-12, Issue #594 Draft PR #595: retain verified child account after inline add; inline main/subcategory correction so Yes reflects existing mandatory finance/category guards; replace notification refresh with pull and clear bulk checkbox; remove top-level duplicate SMS original and redundant copy; extend M660 issue #588 sender-specific nonfinancial OTP/beneficiary structural learning without exposing PII or auto-posting. No auth/Home prewarm change, SQLCipher writer change, or main-only signed release change. Exact-head CI, M449 and Android evidence still pending. M665.5 owner screenshot 2026-11-12 narrows only ready-rules label and paragraph, preserving 4 accordions and native matching; register before source modification. M665.6 screenshot and explicit 2026-11-12 instruction: auto-exclude only safe first-party excluded notice patterns with completed-finance conflict guard; retire SMS review overflow AI/Not-a-transaction choices and orphan on-demand handler while retaining explicit Exclude. Existing bank SMS core privacy/finance still mandatory. M665.7 owner screenshot goal car 5000 due split 2000 wallet/3000 current bank, first-category fallback restaurant, visible goal SQL metadata and controls; code may change only scoped goal/due presentation, verified source notes formatting, approved tests/docs; no account-balance arithmetic or paid settlement confirmation mutated. M665.7 late M385 expansion explicitly covers pure display-only goal due cash/legacy notes helpers and linked recurring toggle guard. No bank debit policy or committed finance writer changed. M665.7: data from owner screenshot also appears in Smart Analytics/PDF category rankings; scope specifically one pure category chart model and already-approved PDF export, mapping existing goal_due sourceType to goal purpose without rewriting history or budget totals. M665.6 exact-head M160 found obsolete M528 per-message cloud handler source expectation after owner removed bank-review AI menu, plus genuine Arabic posted purchase+OTP collision and M470 ambiguous Riyal abbreviation. Repair existing M528 assertion narrowly, strengthen real finance override and retain M470 safety test unchanged; never skip a test.",
   "user_requested_changes": [
     "After a first-time created and verified sender/provider/child account is selected on SMS review, never force selecting it a second time; enable Yes only after independent finance/category/date checks.",
     "Remove the top notifications AppBar refresh glyph and replace it with accessible pull-to-refresh; clarify select-all with checkbox and preserve sender-filter selections.",
@@ -29,6 +29,7 @@
     "test/m495_pr402_ui_performance_regression_test.dart",
     "test/m508_saudi_default_sms_rules_test.dart",
     "test/m514_sms_review_regressions_test.dart",
+    "test/m528_settings_async_cache_regression_test.dart",
     "test/m548_review_grouping_and_signup_perf_test.dart",
     "test/m603_app_wide_lag_source_regression_test.dart",
     "test/m630_home_first_frame_contention_test.dart",
@@ -200,6 +201,12 @@
       {
         "start": " test('M500 #420 Details Edit enables verified retroactive account link',(){",
         "end": null
+      }
+    ],
+    "test/m528_settings_async_cache_regression_test.dart": [
+      {
+        "start": "  test('M528 refreshes state only after setting changes and profile entry', () {",
+        "end": "  test('M636 removes model settings while retaining protected finance deletion',(){"
       }
     ]
   }
