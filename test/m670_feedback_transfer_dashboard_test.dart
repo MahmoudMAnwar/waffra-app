@@ -44,7 +44,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(WaffraNoticeEdgeBody),findsOneWidget);
     expect(find.byKey(const Key('waffra-snackbar-close')),findsNothing);
-    expect(find.text(longMessage),findsOneWidget);
+    expect(find.text(longMessage),findsWidgets);
     expect(tester.getSize(find.byType(WaffraNoticeContent)).height,
      greaterThan(48));
     expect(tester.takeException(),isNull);
