@@ -3,8 +3,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/main.dart' show
-    BudgetCategory, waffraResolveSmsReviewCategory;
+    BudgetCategory, defaultCategories, waffraResolveSmsReviewCategory;
 import 'package:waffra/waffra_centered_dropdown.dart';
+import 'package:waffra/waffra_category_catalog.dart';
 import 'package:waffra/waffra_bank_sms_facts.dart';
 
 /// Owner issue #600: a root like "تحويلات" must never appear as a leaf,
@@ -31,6 +32,30 @@ void main() {
     category('paused','قسم متوقف',active:false),
     category('paused-child','فرعي متوقف',parentId:'paused'),
   ];
+
+  test('M669 entire seeded income/expense taxonomy has verified parents', () {
+    final all=defaultCategories();
+    final roots=all.where((c)=>!c.isSubcategory).toList();
+    final children=all.where((c)=>c.isSubcategory).toList();
+    expect(roots.length,waffraCategoryCatalog.length);
+    expect(children.length,greaterThan(700));
+    final ids=<String>{};
+    for(final c in all){
+      expect(ids.add(c.id),isTrue,reason:'Duplicate category ID: ${c.id}');
+      if(!c.isSubcategory)continue;
+      final parent=roots.where((r)=>r.id==c.parentId).toList();
+      expect(parent.length,1,reason:'Orphan category: ${c.name}');
+      expect(parent.single.income,c.income);
+      expect(c.name,startsWith('${parent.single.name} / '));
+      expect(c.displayName,isNot(parent.single.name));
+    }
+    for(final root in roots){
+      final hint=waffraResolveSmsReviewCategory(all,
+        income:root.income,proposed:root.name);
+      expect(hint.parent?.id,root.id);
+      expect(hint.leaf,isNull);
+    }
+  });
 
   test('M669 root-only transfer hint is a main suggestion, never a leaf', () {
     final r=waffraResolveSmsReviewCategory(catalog,
@@ -180,8 +205,12 @@ void main() {
     final facts=WaffraBankSmsFactsParser.parse(internal);
     expect(facts.kind,WaffraBankOperationKind.transfer);
     expect(facts.canAutoPostAsIncomeExpense,isFalse);
-    const outgoing='حوالة صادرة\nالمبلغ: 1900 ريال';
+    const outgoing='شراء نقاط بيع\\nالمبلغ: 1900 ريال';
     final expense=WaffraBankSmsFactsParser.parse(outgoing);
     expect(expense.kind,WaffraBankOperationKind.expense);
+    const bankTransfer='حوالة صادرة\\nالمبلغ: 1900 ريال';
+    expect(WaffraBankSmsFactsParser.parse(bankTransfer).kind,
+      WaffraBankOperationKind.transfer,
+      reason:'Bank transfer is not automatically an everyday expense');
   });
 }
