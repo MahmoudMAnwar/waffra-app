@@ -17,8 +17,13 @@ class WaffraAccountsManagerPage extends StatefulWidget {
   super.key,required this.repository,this.english=false,this.onConfirmEntry,
   this.incomeCategories=const [],this.expenseCategories=const [],
   this.availableBudgets=const {},this.onTransferConfirmed,
+  this.onCreateHomeTransaction,
  });
  final Future<void> Function(WaffraInternalTransferDraft)? onTransferConfirmed;
+ /// M667: the Home parent injects its real three-mode entrySheet, not a
+ /// cloned form or a second financial writer. Standalone clients keep the
+ /// existing verified composer until they can provide the Home entry owner.
+ final Future<void> Function()? onCreateHomeTransaction;
  final WaffraAccountOperations repository;
  final bool english;
  final List<String> incomeCategories,expenseCategories;
@@ -269,6 +274,15 @@ class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {
  }
 
  Future<void> compose(List<WaffraAccountBalance> accounts)async{
+  // M667: My Accounts in the app must open exactly the SAME Home form as +.
+  // The callback owns all income/expense/transfer validation and commits.
+  // Never run the older account-only composer after this route returns.
+  final homeComposer=widget.onCreateHomeTransaction;
+  if(homeComposer!=null){
+   await homeComposer();
+   if(mounted)reload();
+   return;
+  }
   await Navigator.of(context).push<void>(MaterialPageRoute(builder:(ctx)=>
    Scaffold(appBar:AppBar(title:Text(t('معاملة جديدة','New transaction'))),
     body:WaffraAccountTransactionForm(
