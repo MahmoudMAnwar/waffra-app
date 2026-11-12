@@ -90,7 +90,7 @@ void main(){
   // Ready-made verification rules now exclude pending native OTP IDs while
   // never treating a committed hash as a newly excluded SMS.
   expect((result['excluded'] as List).cast<String>(),['fresh']);
-  expect(waiting.map((m)=>m['id'],contains('new'));
+  expect(waiting.map((m)=>m['id']),contains('new'));
   expect(waiting.any((m)=>m['id']=='fresh'),isFalse);
   expect(restore.map((m)=>m['id']),containsAll(['dupe','fresh']));
   // Background classification cannot authorize or post an account debit.
