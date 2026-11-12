@@ -17077,6 +17077,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      if(stagedBackup==null||stagedBackup!.isEmpty)return;
      update(()=>restoring=true);
      var backupDecrypted=false;
+     var sqlcipherRestoreCommitted=false;
      try{
       var restoreArchive=stagedBackup!;
       var raw=await compute(waffraDecodeBackupInIsolate,<String,String>{
@@ -17154,6 +17155,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         savedRescueArchive:rescue,rescuePassword:restoreSecret.text,
         preflightChecksum:result.archiveChecksum,
         userConfirmed:true,externallySavedRescueConfirmed:true);
+       sqlcipherRestoreCommitted=true;
        if(!mounted)return;
        // The authoritative encrypted snapshot, not a decoded backup in
        // memory, becomes the source for Home and widget after one commit.
@@ -17162,7 +17164,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        if(mounted)await syncRecurringReminders();
        if(ctx.mounted)Navigator.pop(ctx);
        if(mounted)snackSuccess(context,waffraIsEnglish
-        ?'Encrypted restore verified: ${applied.transactionCount} transactions and ${applied.receiptCount} receipts. Your previous encrypted backup was saved separately.'
+        ?'Encrypted restore verified: ${applied.transactionCount} transactions and ${applied.receiptCount} receipts. '
+          '${omittedLegacyReceiptCount>0?"Warning: "+omittedLegacyReceiptCount.toString()+" old receipt image(s) were unavailable in this backup and were not restored. ":""}'
+          'Your previous encrypted backup was saved separately.'
         :'اكتملت استعادة ${applied.transactionCount} معاملة و${applied.receiptCount} مرفق. '
          '${omittedLegacyReceiptCount>0?"تنبيه: "+omittedLegacyReceiptCount.toString()+" من صور المرفقات القديمة غير موجودة داخل الباكب ولم تُستعد. ":""}'
          'احتفظ بنسخة الأمان السابقة خارج التطبيق.');
@@ -17284,10 +17288,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       // logs only; never echo secrets or user finance values in UI.
       debugPrint('Waffra restore failed after authentication: '
        +backupDecrypted.toString()+' / '+e.runtimeType.toString());
-      if(ctx.mounted)update(()=>restoreError=backupDecrypted?
+      if(ctx.mounted)update(()=>restoreError=sqlcipherRestoreCommitted?
        (waffraIsEnglish
-        ?'The backup password was accepted, but the data could not be migrated safely. No changes were applied. Check legacy format/receipts or SQLCipher compatibility.'
-        :'كلمة مرور النسخة صحيحة، لكن تعذر ترحيل البيانات بأمان. لم تُطبّق أي تغييرات. راجع توافق النسخة والمرفقات وقاعدة البيانات.'):
+        ?'The encrypted restore committed, but screen refresh failed. Reopen Waffra to verify the restored records and retain the external rescue copy.'
+        :'تم حفظ البيانات المستعادة في SQLCipher، لكن تعذر تحديث الشاشة. افتح وفرة مجددًا للتحقق من البيانات واحتفظ بنسخة الأمان.'):
+       backupDecrypted?
+       (waffraIsEnglish
+        ?'The backup password was accepted, but the data could not be migrated safely. Inspect the current records and keep the encrypted rescue copy.'
+        :'كلمة مرور النسخة صحيحة، لكن تعذر ترحيل البيانات بأمان. راجع البيانات الحالية واحتفظ بنسخة الأمان المشفرة.'):
        (waffraIsEnglish
         ?'Could not authenticate this encrypted backup. Check its original password and file integrity.'
         :'تعذر التحقق من تشفير النسخة. راجع كلمة مرور النسخة الأصلية وسلامة الملف.'));
