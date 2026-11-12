@@ -40,6 +40,14 @@
     ],
     "lib/waffra_sms_rule_settings_page.dart": [
       {
+        "start": "import 'package:flutter/material.dart';",
+        "end": "/// Rules configure offline review suggestions only."
+      },
+      {
+        "start": "        if(seed!=null)...[",
+        "end": "        TextField(controller:name,"
+      },
+      {
         "start": "        if(financial)...[",
         "end": "        TextField(controller:sender,"
       },
