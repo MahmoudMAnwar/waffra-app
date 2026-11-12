@@ -55,7 +55,7 @@
         "end": "        TextField(controller:name,"
       },
       {
-        "start": "        if(financial)...[",
+        "start": "        if(financial)...[\n         WaffraCenteredDropdownFormField<String>(",
         "end": "        TextField(controller:sender,"
       },
       {
