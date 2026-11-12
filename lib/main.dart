@@ -6250,7 +6250,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     bankSmsHasUnverifiedTimestamp(body);
    // Open the transfer form immediately. A received-at fallback is only a
    // visible hint: the editor refuses commit until the user picks a date.
-   final date=needsDateConfirmation?arrived:smsDate!;
+   final date=needsDateConfirmation?arrived:smsDate;
    final prefill=WaffraInternalTransferDraft(
     // Native fingerprint includes sender, body AND receivedAt; two distinct
     // identical-body SMS must not share a single SQLCipher transfer ID.
