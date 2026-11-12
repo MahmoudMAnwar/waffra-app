@@ -17105,7 +17105,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         }
         final candidate=await WaffraLegacyV24SqlCipherConverter.prepare(
          payload:raw,password:restoreSecret.text,
-         userApprovedMissingReceipts:unavailable==0||unavailable>0);
+         userApprovedMissingReceipts:true);
         omittedLegacyReceiptCount=candidate.unavailableReceiptCount;
         restoreArchive=candidate.encryptedV3;
         raw=<String,dynamic>{
