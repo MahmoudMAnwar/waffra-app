@@ -3801,7 +3801,7 @@ class WaffraTransactionDetailsDialog extends StatelessWidget {
   final lightTone=entry.income?const Color(0xFFE4F4EB):const Color(0xFFFCECE8);
   final darkTone=entry.income?const Color(0xFF244C3A):const Color(0xFF49302C);
   final muted=Theme.of(context).colorScheme.onSurface.withValues(alpha:.73);
-  final displayNotes=entry.sourceType=='sms'?entry.personalNotes:entry.notes;
+  final displayNotes=waffraGoalDueVisibleNotes(entry);
   // Historical encrypted SMS entries used notes for their source text.
   // Display such content as a bank SMS only, not a personal note.
   final displayOriginalSms=(protectedOriginalSms?.trim().isNotEmpty??false)?
@@ -3865,9 +3865,12 @@ class WaffraTransactionDetailsDialog extends StatelessWidget {
        ],
        const SizedBox(height:15),
        Row(children:[
-        Icon(Icons.category_outlined,color:dark?const Color(0xFF74D8A9):emerald,size:20),
+        Icon(entry.sourceType=='goal_due'?Icons.flag_outlined:Icons.category_outlined,
+         color:dark?const Color(0xFF74D8A9):emerald,size:20),
         const SizedBox(width:8),
-        Expanded(child:WaffraText(waffraTr(entry.category),
+        Expanded(child:WaffraText(entry.sourceType=='goal_due'?
+         (waffraIsEnglish?'Savings goal payment':'استحقاق هدف'):
+         waffraTr(entry.category),
          textDirection:rtl?TextDirection.rtl:TextDirection.ltr,
          textAlign:TextAlign.start,
          style:const TextStyle(fontWeight:FontWeight.bold))),
@@ -3881,7 +3884,7 @@ class WaffraTransactionDetailsDialog extends StatelessWidget {
          textDirection:rtl?TextDirection.rtl:TextDirection.ltr,
          style:TextStyle(color:muted,fontSize:13))),
        ]),
-       if(!entry.income&&showBudgetInfo)...[
+       if(!entry.income&&showBudgetInfo&&entry.sourceType!='goal_due')...[
         const SizedBox(height:12),
         if(entry.budgetId==null)
          Container(
@@ -3924,9 +3927,11 @@ class WaffraTransactionDetailsDialog extends StatelessWidget {
         decoration:BoxDecoration(color:dark?darkTone:lightTone,
          borderRadius:BorderRadius.circular(15)),
         child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-         WaffraText(entry.income?
-          (waffraIsEnglish?'Income':'الدخل'):
-          (waffraIsEnglish?'Expense':'المصروف'),
+         WaffraText(entry.sourceType=='goal_due'?
+          (waffraIsEnglish?'Total goal payment':'إجمالي استحقاق الهدف'):
+          entry.income?
+           (waffraIsEnglish?'Income':'الدخل'):
+           (waffraIsEnglish?'Expense':'المصروف'),
           style:TextStyle(fontSize:12,fontWeight:FontWeight.bold,
            color:dark?Colors.white:accent)),
          const SizedBox(height:5),
@@ -3936,6 +3941,29 @@ class WaffraTransactionDetailsDialog extends StatelessWidget {
            fontSize:22,color:dark?Colors.white:accent)),
         ]),
        ),
+       if(entry.sourceType=='goal_due')...[
+        const SizedBox(height:11),
+        Container(key:const Key('m665-goal-due-details-breakdown'),
+         padding:const EdgeInsets.all(12),
+         decoration:BoxDecoration(borderRadius:BorderRadius.circular(13),
+          color:dark?const Color(0xFF19382F):const Color(0xFFE9F5EF)),
+         child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+          Row(children:[
+           Expanded(child:WaffraText(waffraIsEnglish?
+            'From saved goal wallet':'من محفظة الهدف')),
+           WaffraCurrencyAmount(entry.goalWalletPaidMinor/100,
+            fontSize:15,color:emerald),
+          ]),
+          const SizedBox(height:8),
+          Row(children:[
+           Expanded(child:WaffraText(waffraIsEnglish?
+            'Debited from money account':'المخصوم من الحساب المالي')),
+           WaffraCurrencyAmount(waffraGoalDueCashMinor(entry)/100,
+            fontSize:15,color:emerald),
+          ]),
+         ]),
+        ),
+       ],
        // Personal notes are separate from the original SMS in the UI and
        // canonical JSON. The historical bank SMS field stays encrypted.
        if(displayNotes.trim().isNotEmpty)...[
