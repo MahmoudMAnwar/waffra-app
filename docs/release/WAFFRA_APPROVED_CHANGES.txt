@@ -276,3 +276,9 @@ M647/M649/M652 provenance labels — PR #575, 2026-11-11
 - Approved change: Fixed first-party ready exclusion for marketing discount / payment-reminder wording, which older bank parser marked as generic expense even when no money moved. Stronger independent completed-movement guard preserves real SAR-priced income/expense, card purchase, local/wire transfer and mixed OTP/offer + posted salary/transfer; ambiguous financial evidence stays in review. Only lib/waffra_sms_local_rules.dart changed after the prior M665.6 app-source stamp. Exact isolate/positive finance regressions added; no feature test skipped or weakened.
 - Changed production paths: lib/waffra_sms_local_rules.dart
 - Verification: exact new SHA CI and two-device Android performance/rollback review still required; no APK release on a draft feature branch.
+
+[M449 SAFETY FOLLOW-UP — ISSUE #594 — PR #595 — M665.6]
+- Reviewed source SHA: 0608f5fa584fe323aa5588cbd991348816c948fc
+- Approved change: Strengthened the ready-seed automatic exclusion collision guard so verified bank-card purchase amounts are detected **before** a separate OTP marks a message pending, and completed Arabic paid/purchase, salary/credit transfer and credit-card settlement signals cannot be hidden by a matching offer or verification notice. Ready marketing discounts and reminders without completed money evidence still auto-exclude through encrypted native IDs; no finance-authority, account/biometric/Home or ledger write changed.
+- Changed production paths: lib/waffra_sms_local_rules.dart
+- Verification: exact-head full test/Android/SQLCipher/physical-device QA pending. This review records what changed, not completed CI.
