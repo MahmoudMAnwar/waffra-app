@@ -398,10 +398,25 @@ class _WaffraAccountTransactionFormState extends State<WaffraAccountTransactionF
         context:context,initialDate:transferDate,
         firstDate:DateTime(2000),lastDate:DateTime(2100));
        if(picked!=null&&mounted){
+        // An SMS received-at time is not the transfer execution time.
+        // Require deliberate time selection as well as date on uncertain SMS.
+        TimeOfDay? confirmedTime;
+        if(widget.requireSmsDateConfirmation){
+         confirmedTime=await showTimePicker(
+          context:context,initialTime:TimeOfDay.fromDateTime(transferDate));
+         if(confirmedTime==null||!mounted)return;
+        }
+        final pickedDate=DateTime(picked.year,picked.month,picked.day,
+         confirmedTime?.hour??transferDate.hour,
+         confirmedTime?.minute??transferDate.minute);
+        if(widget.initialSmsTransfer!=null&&
+           pickedDate.isAfter(DateTime.now())){
+         setState(()=>error=tr('تاريخ التحويل لا يمكن أن يكون في المستقبل',
+          'Transfer date cannot be in the future'));
+         return;
+        }
         setState((){
-         transferDate=DateTime(picked.year,picked.month,picked.day,
-          transferDate.hour,transferDate.minute,transferDate.second,
-          transferDate.millisecond,transferDate.microsecond);
+         transferDate=pickedDate;
          smsDateConfirmed=true;
          error=null;
         });
