@@ -81,7 +81,7 @@ void main() {
   final b=home.indexOf('final bytes=await doc.save();',a);
   expect(a,greaterThan(0));
   final pdf=home.substring(a,b);
-  expect(RegExp(r'reportSections\\.addAll\\(').allMatches(pdf).length,3);
+  expect(pdf.split('reportSections.addAll(').length-1,3);
   expect(pdf,contains('build:(ctx)=>reportSections'));
   expect(pdf,contains("heading('حركات الادخار'"));
   expect(pdf,contains("heading('التحويلات بين حساباتي'"));
