@@ -13264,8 +13264,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    clipBehavior:Clip.antiAlias,child:Stack(children:[
     Padding(padding:EdgeInsets.fromLTRB(10,attachmentCount>0?20:9,10,9),child:Row(children:[
      CircleAvatar(radius:16,
-      backgroundColor:Color(cat.color).withValues(alpha:0.13),
-      child:WaffraIllustration(topic:cat.icon,size:36)),
+      backgroundColor:(entry.sourceType=='goal_due'?valueColor:Color(cat.color))
+       .withValues(alpha:0.13),
+      child:entry.sourceType=='goal_due'?
+       Icon(Icons.flag_outlined,color:valueColor,size:21):
+       WaffraIllustration(topic:cat.icon,size:36)),
      const SizedBox(width:8),
      Expanded(child:InkWell(onTap:WaffraHaptics.tap(()=>transactionDetails(entry)),
       child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
@@ -13280,7 +13283,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           maxLines:2,style:const TextStyle(
            fontSize:10,color:Colors.deepOrange,fontWeight:FontWeight.w600))),
        const SizedBox(height:2),
-       WaffraText(waffraTr(entry.category)+' • '+dayText(entry.date),
+       WaffraText((entry.sourceType=='goal_due'?
+        (waffraIsEnglish?'Savings goal due':'استحقاق هدف'):
+        waffraTr(entry.category))+' • '+dayText(entry.date),
         maxLines:1,style:const TextStyle(fontSize:11,color:Colors.grey)),
         const SizedBox(height:2),
         if(!paidDue)Row(children:[
@@ -13301,6 +13306,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            if(snapshot.connectionState!=ConnectionState.done){
             return const SizedBox.shrink();
            }
+           if(entry.sourceType=='goal_due'){
+            return Padding(padding:const EdgeInsets.only(top:5),
+             child:Row(children:[
+              Expanded(child:WaffraText(
+               (waffraIsEnglish?'From money account: ':'من الحساب المالي: ')+
+               (snapshot.data??(waffraIsEnglish?
+                'Unverified account':'حساب غير محدد')),
+               maxLines:2,style:TextStyle(color:valueColor,fontSize:11))),
+              const SizedBox(width:5),
+              Flexible(child:WaffraCurrencyAmount(
+               waffraGoalDueCashMinor(entry)/100,fontSize:12,color:valueColor)),
+             ]));
+           }
            return Padding(padding:const EdgeInsets.only(top:4),
             child:WaffraText(
              (waffraIsEnglish?'Paid from: ':'تم السداد من: ')+
@@ -13309,7 +13327,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
              maxLines:2,style:TextStyle(
               color:valueColor,fontSize:11,fontWeight:FontWeight.w600)));
           }),
-        if(entry.sourceType=='goal_due'&&entry.goalWalletPaidMinor>0)
+        if(entry.sourceType=='goal_due')
          Padding(padding:const EdgeInsets.only(top:3),
           child:Row(mainAxisSize:MainAxisSize.min,children:[
            WaffraText(waffraIsEnglish?
@@ -13319,7 +13337,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             entry.goalWalletPaidMinor/100,fontSize:11,color:valueColor)),
           ])),
        const SizedBox(height:4),
-       Align(alignment:AlignmentDirectional.centerStart,
+       if(entry.sourceType=='goal_due')
+        Row(children:[
+         Expanded(child:WaffraText(waffraIsEnglish?
+          'Total goal due':'إجمالي الاستحقاق',
+          style:TextStyle(fontSize:11,fontWeight:FontWeight.w700,color:valueColor))),
+         Flexible(child:WaffraCurrencyAmount(
+          entry.amount,fontSize:15,color:valueColor)),
+        ])
+       else Align(alignment:AlignmentDirectional.centerStart,
         child:WaffraCurrencyAmount(entry.income?entry.amount:-entry.amount,
          fontSize:15,color:valueColor)),
       ]))),
