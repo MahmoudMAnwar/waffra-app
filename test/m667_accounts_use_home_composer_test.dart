@@ -69,6 +69,18 @@ void main() {
       expect(fake.balanceReads, greaterThanOrEqualTo(2),
           reason: 'Verified account balances are reloaded after returning');
       expect(tester.takeException(), isNull);
+
+      // M667 exact-head repair: repeat the return after an already-refreshed
+      // account list. A Future returned by setState used to crash BOTH
+      // locales; it must never be hidden by an older green workflow result.
+      await tester.tap(find.text(english ? 'New transaction' : 'معاملة جديدة'));
+      await tester.pumpAndSettle();
+      expect(launches, 2);
+      expect(find.byType(WaffraAccountTransactionForm), findsNothing);
+      await tester.tap(find.text('Return to My Accounts'));
+      await tester.pumpAndSettle();
+      expect(fake.balanceReads, greaterThanOrEqualTo(3));
+      expect(tester.takeException(), isNull);
     });
   }
 
@@ -92,6 +104,12 @@ void main() {
     final body = accounts.substring(compose, build);
     expect(body, contains('await homeComposer();'));
     expect(body, contains('if(mounted)reload();'));
+    // Flutter setState callback must be synchronous. The future is created
+    // before entering it; a one-line Future-returning expression is forbidden.
+    expect(accounts, isNot(contains(
+      'setState(()=>current=widget.repository.balances())')));
+    expect(accounts, contains('final pending=widget.repository.balances();'));
+    expect(accounts, contains('setState((){'));
     expect(body.indexOf('return;'),
       lessThan(body.indexOf('WaffraAccountTransactionForm(')),
       reason: 'Home callback path returns before legacy account form opens');
