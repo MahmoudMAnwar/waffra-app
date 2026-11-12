@@ -176,7 +176,7 @@ void main() {
     expect(part,contains("Key('m669-review-original-sms-text')"));
     expect(part,contains('SelectableText(body,'));
     expect(part,contains('WaffraBankSmsFactsParser.isVerificationChallenge'));
-    expect(part,contains("Key('m669-review-category-search')"));
+    expect(part,contains("m669-review-category-search-"));
     expect(part,contains('waffraSearchAny('));
     expect(part,contains("Key('m669-sms-review-blockers')"));
     expect(part,contains("Key('m565-sms-yes-confirm')"));
@@ -198,6 +198,29 @@ void main() {
     expect(src,isNot(contains('DropdownButtonFormField<String>')));
     expect(src,contains('category='));
     expect(src,contains('accountId='));
+  });
+
+  test('M669 all account, goal, recurring and transfer dropdowns use shared search',(){
+    for(final path in <String>[
+      'lib/waffra_goal_recurring_account_picker.dart',
+      'lib/waffra_new_account_dialog.dart',
+      'lib/waffra_account_context_page.dart',
+      'lib/waffra_account_context_settings.dart',
+      'lib/waffra_account_transaction_form.dart',
+      'lib/waffra_sms_rule_settings_page.dart',
+    ]){
+      final source=File(path).readAsStringSync();
+      expect(source,contains("import 'waffra_centered_dropdown.dart';"),
+        reason:'$path must inherit live shared search');
+      expect(source,contains('WaffraCenteredDropdownFormField<String>'),
+        reason:'$path should use accessible centered options');
+      expect(source,isNot(contains('DropdownButtonFormField<')),
+        reason:'$path may not leave any unsearchable native dropdown');
+    }
+    final shared=File('lib/waffra_centered_dropdown.dart').readAsStringSync();
+    expect(shared,contains("Key('waffra-centered-dropdown-search')"));
+    expect(shared,contains("Key('waffra-centered-dropdown-no-results')"));
+    expect(shared,contains('waffraSearchAny('));
   });
 
   test('M669 actual bank transfer is never treated as automatic expense',(){
