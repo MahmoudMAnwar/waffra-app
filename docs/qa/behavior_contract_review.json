@@ -1953,9 +1953,8 @@
         "test/m529_centered_dropdown_smoothness_test.dart",
         "test/m665_sms_review_structural_learning_test.dart",
         "test/waffra_bank_sms_facts_test.dart",
-        "test/m669_sms_review_category_search_test.dart",
-        "test/m641_goal_recurring_account_picker_test.dart",
-        "test/m499_account_transaction_form_test.dart"
+        "test/m470_sms_transfer_fee_firsttap_category_test.dart",
+        "test/m647_m652_financial_activity_regression_test.dart"
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/m550-behavior-contract-preflight.yml",
