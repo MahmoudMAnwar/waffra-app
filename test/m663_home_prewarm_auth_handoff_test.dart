@@ -71,7 +71,12 @@ void main() {
    lessThan(startup.indexOf('await widget.onVerifiedHomeSmsResume?.call()')));
   expect(loadOptional(home),contains('if(!await _m663AwaitVisible(startupEpoch)||'));
   expect(home,contains('if(!mounted||!ready||!widget.postAuthVisible||'));
-  expect(home,contains('if(!mounted||!widget.postAuthVisible)return false;'));
+  // M664: the back handler is later in the same Home state class, after
+  // compactTransaction(), which terminates the source window above.
+  final back=app.substring(app.indexOf(' bool _consumeHomeBack(){'),
+   app.indexOf(' @override Widget build(BuildContext context)=>PopScope(',
+    app.indexOf(' bool _consumeHomeBack(){')));
+  expect(back,contains('if(!mounted||!widget.postAuthVisible)return false;'));
   expect(home,contains('epoch==_m630HomeStartupEpoch&&!_m627ClosingSession;'));
   expect(home,contains('if(!_m663FirstInteractiveFrame.isCompleted)_m663FirstInteractiveFrame.complete();'));
  });
