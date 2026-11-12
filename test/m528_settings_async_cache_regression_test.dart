@@ -49,12 +49,18 @@ void main() {
     expect(resume, contains('if(accountOpened&&mounted)setState((){'));
     expect(resume, contains('_m528CloudConsentFuture=null'));
 
-    // A separate, owner-approved one-message cloud analysis can also change
-    // the same privacy switch; never leave its cached setting stale.
-    final reviewed = between('Future<void> _analyzeAmbiguousSmsOnDemand(',
-        'Future<void> _scanPreviousBankSmsFromSettings()async{');
-    expect(reviewed, contains('WaffraSmsCloudService.setConsent(true)'));
-    expect(reviewed, contains('_m528CloudConsentFuture=null;'));
+    // M665.6 retired the per-message AI/Not-financial popup entirely.
+    // The actual consent toggle still invalidates its cached setting,
+    // but no bank SMS review is allowed to silently change cloud consent.
+    final review=between(' Future<void> _reviewAutoSmsCandidates({',
+        ' void _receiveSharedSms(){');
+    expect(source,isNot(contains('Future<void> _analyzeAmbiguousSmsOnDemand(')));
+    expect(review,isNot(contains('WaffraSmsCloudService.setConsent(true)')));
+    expect(review,isNot(contains('Optional AI review')));
+    expect(review,isNot(contains('تحليل اختياري بالذكاء الاصطناعي')));
+    expect(review,contains("Key('m595-review-single-exclude')"));
+    expect(profile,contains('await WaffraSmsCloudService.setConsent(enabled)'));
+    expect(resume,contains('_m528CloudConsentFuture=null'));
   });
 
   test('M636 removes model settings while retaining protected finance deletion',(){
