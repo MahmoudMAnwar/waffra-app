@@ -7143,7 +7143,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       reviewedOriginalSms:body);
     }
    }else if(decision=='yes'&&mounted&&canConfirm&&
-             reviewedAccount!=null){
+             reviewedAccount!=null&&originalAmount!=null&&
+             originalDate!=null){
     await _m565ConfirmSms(id:id,body:body,sender:sender,
      category:reviewedCategory,income:expectedIncome,
      value:originalAmount.amount,date:originalDate,
