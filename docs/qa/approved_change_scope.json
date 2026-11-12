@@ -10,7 +10,8 @@
     "Make savings goal and recurring-count cards follow the categories main/subcategory stat visual and count style.",
     "Match goals wallet hero card width and height to the Home balance hero on the same screen.",
     "Reduce recurring reminder switch card height to match adjacent recurring controls.",
-    "Apply Show more and Show less to all Home activity filters using true filtered event counts."
+    "Apply Show more and Show less to all Home activity filters using true filtered event counts.",
+    "Keep notifications SMS rescan regression aligned with the new screen-local feedback callback while preserving the guarded incremental scan behavior."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -25,6 +26,7 @@
     "test/m547_sms_incremental_jank_regression_test.dart",
     "test/m668_footer_edge_snackbar_test.dart",
     "test/m670_feedback_transfer_dashboard_test.dart",
+    "test/qa/m452_sms_review_signup_regression_test.py",
     "test/waffra_directional_fab_receipt_corner_test.dart",
     "test/waffra_footer_notice_test.dart"
   ],
@@ -123,6 +125,12 @@
       {
         "start": "void main() {",
         "end": null
+      }
+    ],
+    "test/qa/m452_sms_review_signup_regression_test.py": [
+      {
+        "start": "    def test_sms_review_is_collapsible_and_count_remains_visible(self):",
+        "end": "    def test_registration_has_single_submit_and_avatar_choices(self):"
       }
     ]
   }
