@@ -13272,20 +13272,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   Widget endpoint(String label,String name)=>Expanded(child:Column(
    crossAxisAlignment:CrossAxisAlignment.start,children:[
     WaffraText(label,style:TextStyle(color:textColor,fontSize:11)),
-    const SizedBox(height:4),
-    WaffraText(name,maxLines:2,overflow:TextOverflow.ellipsis,
+    const SizedBox(height:2),
+    WaffraText(name,maxLines:compact?2:3,overflow:TextOverflow.ellipsis,
      style:TextStyle(fontSize:compact?12:15,fontWeight:FontWeight.bold)),
    ]));
   return Container(
    key:Key('m647-verified-transfer-'+t.id),
-   margin:const EdgeInsets.symmetric(vertical:5),
-   padding:EdgeInsets.all(compact?12:15),
+   constraints:const BoxConstraints(minHeight:144),
+   margin:const EdgeInsets.symmetric(vertical:3),
+   padding:EdgeInsets.symmetric(horizontal:12,vertical:compact?9:11),
    decoration:BoxDecoration(
     color:bg,borderRadius:BorderRadius.circular(17),
     border:Border.all(color:accent.withValues(alpha:.32))),
    child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
     Row(children:[
-     const Icon(Icons.swap_horiz_rounded,color:accent,size:22),
+     const Icon(Icons.swap_horiz_rounded,color:accent,size:18),
      const SizedBox(width:7),
      Expanded(child:WaffraText(waffraIsEnglish?
       'Between my accounts':'تحويل بين حساباتي',
@@ -13294,6 +13295,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      // either involved account; All Accounts remains one unsigned event.
      Flexible(child:FittedBox(fit:BoxFit.scaleDown,
       child:Row(mainAxisSize:MainAxisSize.min,children:[
+       WaffraText(waffraIsEnglish?'Amount':'المبلغ',style:TextStyle(color:textColor,fontSize:11)),
+       const SizedBox(width:5),
        if(_m467SelectedAccount==t.fromAccountId)
         WaffraText('−',style:TextStyle(color:textColor,
          fontWeight:FontWeight.bold,fontSize:compact?14:18))
@@ -13314,16 +13317,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        'وارد إلى الحساب المحدد'),
       style:TextStyle(color:textColor,fontSize:11)),
     ],
-    const SizedBox(height:13),
+    const SizedBox(height:7),
     Row(textDirection:waffraIsEnglish?TextDirection.ltr:TextDirection.rtl,
      children:[
       endpoint(waffraIsEnglish?'From':'من الحساب',from),
       Padding(padding:const EdgeInsets.symmetric(horizontal:8),
        child:Icon(waffraIsEnglish?Icons.arrow_forward_rounded:
-        Icons.arrow_back_rounded,color:accent,size:24)),
+        Icons.arrow_back_rounded,textDirection:TextDirection.ltr,
+        color:accent,size:24)),
       endpoint(waffraIsEnglish?'To':'إلى الحساب',to),
      ]),
-    const SizedBox(height:9),
+    const SizedBox(height:5),
     Row(children:[
      Icon(Icons.event_outlined,size:15,color:textColor),
      const SizedBox(width:5),
@@ -13355,6 +13359,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final accent=dark?const Color(0xFFF4D790):const Color(0xFF866017);
   return Container(
    key:Key('m649-verified-saving-'+movement.id),
+   constraints:const BoxConstraints(minHeight:144),
    margin:const EdgeInsets.symmetric(vertical:3),
    padding:const EdgeInsets.symmetric(horizontal:12,vertical:9),
    decoration:BoxDecoration(
@@ -13369,6 +13374,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       (waffraIsEnglish?'Savings contribution':'إضافة مبلغ للهدف الادخاري'):
       (waffraIsEnglish?'Savings withdrawal':'سحب من الادخار'),
       style:TextStyle(fontWeight:FontWeight.bold,color:accent,fontSize:12))),
+     WaffraText(waffraIsEnglish?'Amount':'المبلغ',style:TextStyle(color:accent,fontSize:11)),
+     const SizedBox(width:5),
      WaffraCurrencyAmount(movement.amountMinor/100,fontSize:13,color:accent),
     ]),
     const SizedBox(height:4),
