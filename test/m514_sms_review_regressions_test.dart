@@ -40,7 +40,13 @@ void main(){
   expect(home,isNot(contains('عملية غامضة')));
   expect(home,isNot(contains('الرسالة الغامضة')));
   expect(home,isNot(contains('الرسائل الغامضة')));
-  expect(home,contains('تحليل هذه الرسالة التي تحتاج مراجعة بالذكاء الاصطناعي؟'));
+  // Owner-approved retirement: no duplicate AI / Not-financial overflow.
+  expect(home,isNot(contains('تحليل هذه الرسالة التي تحتاج مراجعة بالذكاء الاصطناعي؟')));
+  expect(home,isNot(contains('تحليل اختياري بالذكاء الاصطناعي')));
+  expect(home,isNot(contains('ليست عملية مالية')));
+  // Reversible native message exclusion remains the explicit user action.
+  expect(home,contains("Key('m595-review-single-exclude')"));
+  expect(home,contains('WaffraAutoSms.excludeMessages([id])'));
   expect(home,contains('الرسائل التي تحتاج مراجعة لا تُسجَّل تلقائيًا.'));
  });
 
