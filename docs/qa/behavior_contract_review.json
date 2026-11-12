@@ -1699,37 +1699,61 @@
       ]
     },
     {
-        "id": "M665-SMS-REVIEW-ACCOUNT-CATEGORY-PULL-STRUCTURAL-LEARNING-ISSUE594",
-        "issue": "Issue #594 Draft PR #595, related M660 #588, owner-approved four screenshots 2026-11-12",
-        "previous_behavior": "SMS review can show a verified newly created account but Yes remains disabled from unknown main category; original SMS expansion duplicates compact summary and validation note adds noise. Notifications expose AppBar refresh and ambiguous bulk icon. Excluded SMS rules learn only fixed snippets and subsequent beneficiary/OTP messages may not match; notification bulk rule writes do not refresh the pending queue.",
-        "approved_behavior": "Preserve the freshly chosen owner-verified account without a second picker and allow immediate main/child correction in review; Yes requires known actual SAR amount/date, category and authoritative account generation and no duplicate write. Notifications use pull-to-refresh and clear checkbox glyph with sender-persistent selection. In top-level finance review hide duplicate original SMS and missing-fields note, but retain original in explicit editor/transfer correction. Under previously recorded M660, confirmed sender-bound OTP and beneficiary event templates redact secrets and names and block bank-financial collisions; income/expense/transfer learned hints remain review-only, pending queue refresh after successful encrypted rule write without full history rescan; full arbitrary-fragment M660 engine remains incomplete.",
-        "source_paths": [
-              "lib/main.dart",
-              "lib/waffra_approved_notifications.dart",
-              "lib/waffra_sms_local_rules.dart"
-        ],
-        "test_paths": [
-              "test/m665_sms_review_structural_learning_test.dart",
-              "test/m661_exclusion_rule_apply_regression_test.dart",
-              "test/m462_smart_sms_rule_review_test.dart",
-              "test/m549_approved_home_notifications_test.dart",
-              "test/m580_sms_security_navigation_performance_test.dart",
-              "test/m662_sms_review_activity_pdf_regression_test.dart"
-        ],
-        "ci_workflows_to_watch": [
-              ".github/workflows/m550-behavior-contract-preflight.yml",
-              ".github/workflows/m449-release-notes-ancestry.yml",
-              ".github/workflows/m147-final-main-review-gate.yml",
-              ".github/workflows/android.yml"
-        ],
-        "safety_invariants": [
-              "No finance posting/ACK from only rule matching, even same sender and amount; anti-replay and SQLCipher writer unchanged.",
-              "Never expand exclusion matching using arbitrary OR fragments, arbitrary name, account digits or OTP; only strong sender-scoped event families and negative completed movement evidence.",
-              "Entire verification bank message and SMS account digits never persist in learned JSON; owner-scoped encrypted store, restored legacy records remain valid.",
-              "Per-category and verified account generation, amount, date and sender guards preserved; account selection cannot override invalid category or amount.",
-              "First Home paint/background SMS work and biometric/login prewarm unmodified. Mandatory tests and signed APK only main.",
-              "PR #595 remains draft until latest-head M385/M550/M449, Flutter/Android/SQLCipher CI and physical acceptance separately confirmed."
-        ]
-  }
+      "id": "M665-SMS-REVIEW-ACCOUNT-CATEGORY-PULL-STRUCTURAL-LEARNING-ISSUE594",
+      "issue": "Issue #594 Draft PR #595, related M660 #588, owner-approved four screenshots 2026-11-12",
+      "previous_behavior": "SMS review can show a verified newly created account but Yes remains disabled from unknown main category; original SMS expansion duplicates compact summary and validation note adds noise. Notifications expose AppBar refresh and ambiguous bulk icon. Excluded SMS rules learn only fixed snippets and subsequent beneficiary/OTP messages may not match; notification bulk rule writes do not refresh the pending queue.",
+      "approved_behavior": "Preserve the freshly chosen owner-verified account without a second picker and allow immediate main/child correction in review; Yes requires known actual SAR amount/date, category and authoritative account generation and no duplicate write. Notifications use pull-to-refresh and clear checkbox glyph with sender-persistent selection. In top-level finance review hide duplicate original SMS and missing-fields note, but retain original in explicit editor/transfer correction. Under previously recorded M660, confirmed sender-bound OTP and beneficiary event templates redact secrets and names and block bank-financial collisions; income/expense/transfer learned hints remain review-only, pending queue refresh after successful encrypted rule write without full history rescan; full arbitrary-fragment M660 engine remains incomplete.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_approved_notifications.dart",
+        "lib/waffra_sms_local_rules.dart"
+      ],
+      "test_paths": [
+        "test/m665_sms_review_structural_learning_test.dart",
+        "test/m661_exclusion_rule_apply_regression_test.dart",
+        "test/m462_smart_sms_rule_review_test.dart",
+        "test/m549_approved_home_notifications_test.dart",
+        "test/m580_sms_security_navigation_performance_test.dart",
+        "test/m662_sms_review_activity_pdf_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/android.yml"
+      ],
+      "safety_invariants": [
+        "No finance posting/ACK from only rule matching, even same sender and amount; anti-replay and SQLCipher writer unchanged.",
+        "Never expand exclusion matching using arbitrary OR fragments, arbitrary name, account digits or OTP; only strong sender-scoped event families and negative completed movement evidence.",
+        "Entire verification bank message and SMS account digits never persist in learned JSON; owner-scoped encrypted store, restored legacy records remain valid.",
+        "Per-category and verified account generation, amount, date and sender guards preserved; account selection cannot override invalid category or amount.",
+        "First Home paint/background SMS work and biometric/login prewarm unmodified. Mandatory tests and signed APK only main.",
+        "PR #595 remains draft until latest-head M385/M550/M449, Flutter/Android/SQLCipher CI and physical acceptance separately confirmed."
+      ]
+    },
+    {
+      "id": "M665-5-COMPACT-READY-RULES-HEADER-ISSUE594",
+      "issue": "Issue #594, Draft PR #595, owner screenshot 2026-11-12",
+      "previous_behavior": "The built-in Saudi section heading was long and included a redundant descriptive paragraph above the four expandable rule buckets.",
+      "approved_behavior": "Rename only the heading to القواعد الجاهزة (Ready-made rules) and remove the immediately following explanatory copy in both locales. Keep all four built-in buckets, their rule counts and keywords, learned rules, native scan and classification behavior identical.",
+      "source_paths": [
+        "lib/waffra_sms_rule_settings_page.dart",
+        "lib/main.dart",
+        "lib/waffra_sms_local_rules.dart"
+      ],
+      "test_paths": [
+        "test/m665_sms_review_structural_learning_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "UI text-only change. No native SMS import, classifier, store/SQLCipher, learned rules or finance auto-post authorization changes.",
+        "Four enabled default buckets must remain accessible in English and Arabic; custom rules have distinct secure owner state.",
+        "M385 and all original finance, security and Android UI gates stay enabled; exact-head CI required."
+      ]
+    }
   ]
 }
