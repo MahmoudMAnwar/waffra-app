@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "pr": "#597",
-  "issue": "#596, #598, #599",
+  "pr": "#603",
+  "issue": "#602 (M670); previous #596/#598/#599 history retained",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "58a79a51094523e4506776130fedbd842efc7e87",
   "reviewed_at": "2026-11-12",
@@ -1925,6 +1925,37 @@
         "No SMS, money posting, wallet, due, accounts, encryption or biometric code edits as part of the Snackbar restyling.",
         "RTL/English direction leading edge is visual and must mirror physical position; all four current icons/colors remain differentiable for colorblind and screen reader users.",
         "Standalone fallback uses the same body and light/dark neutral palette; no second presenter, MaterialBanner, or bypass of M385/M449/M550 exact-head CI."
+      ]
+    },
+    {
+      "id": "M670-SNACKBAR-IN-ROUTE-SMS-TRANSFER-AND-DASHBOARD",
+      "issue": "Issue #602; independent Draft PR #603; explicitly owner requested 2026-11-12; supersedes M668 X and 2-line-text limits only",
+      "previous_behavior": "Shared neutral-edge Snackbars had visible X and 2-line ellipsis; scanning from Notifications showed Home footer notice; one-account transfer could bounce to Accounts or appear inactive; separate income/expense dialog had unnecessary copy and three-mode choice; goal/recurring stat layout differed from category stat; goal wallet hero too short/narrow; recurring reminder oversized; Show more/less used only MoneyEntry count instead of verified mixed activity list.",
+      "approved_behavior": "One shared severity-colored edge card with full wrapping accessible text and no X, retaining Undo and timeout; manual Notifications pull-to-refresh reports new/zero count on the same route, not Home; all approved bank SMS transfers open verified dual-account editor even when a second account must first be created, with explicit distinct IDs before commit; independent income and expense flows open only selected template and do not ACK transfer SMS; goals and recurring counts reuse category stat visual; goals wallet matches compact Home balance card width/height; reminder fits adjacent controls; Show more/less uses selected filtered activity timeline for all/income/expense/transfers/savings/dues.",
+      "source_paths": [
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m670_feedback_transfer_dashboard_test.dart",
+        "test/m668_footer_edge_snackbar_test.dart",
+        "test/waffra_footer_notice_test.dart",
+        "test/m374_transaction_dialog_ux_test.dart",
+        "test/waffra_directional_fab_receipt_corner_test.dart",
+        "test/m580_sms_security_navigation_performance_test.dart",
+        "test/m615_m618_sms_review_retention_perf_contract_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/m282-combined-qa-features.yml"
+      ],
+      "safety_invariants": [
+        "M670 X-free and untruncated notice supersedes only those two older M668 appearance restrictions; keep single presenter/Undo/four colors/animation/RTL/LTR.",
+        "Original SMS stays unacknowledged when choosing a separate manual income or expense; preserve source text and never infer account ownership.",
+        "Two distinct verified accounts, affirmative financial transfer authorization and canonical SQLCipher writer are still mandatory; never post on dialog entry.",
+        "Every Home filter applies preview limit only when needed and permits Show less; no lost entries or altered totals.",
+        "Keep every original QA gate active and show CI/device acceptance as separate from code commits."
       ]
     }
   ]
