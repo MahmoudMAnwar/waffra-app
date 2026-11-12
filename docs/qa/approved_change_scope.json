@@ -86,7 +86,7 @@
         "end": " Future<void> _deleteVerifiedEntry("
       },
       {
-        "start": " Widget savingsPage(){",
+        "start": " Widget goalsPage(){",
         "end": " Widget recurringPage(){"
       },
       {
