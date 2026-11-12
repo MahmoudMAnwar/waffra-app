@@ -3808,6 +3808,21 @@ void snack(BuildContext context,String text,{
   content:WaffraNoticeEdgeBody(
    notice:notice,onDismiss:()=>messenger.hideCurrentSnackBar()),
  ));
+ // M679: fallback notices must still expire if the ScaffoldMessenger
+ // route timer is interrupted by a modal transition. Generation-bound:
+ // never dismiss a newly replaced notification from an old expiry.
+ if(!requireDismissal){
+  final generation=_waffraFallbackNoticeGeneration;
+  Timer(duration,(){
+   if(messenger.mounted&&
+      generation==_waffraFallbackNoticeGeneration){
+    messenger.removeCurrentSnackBar();
+    if(identical(_waffraFallbackNoticeMessenger,messenger)){
+     _waffraFallbackNoticeMessenger=null;
+    }
+   }
+  });
+ }
 }
 void snackSuccess(BuildContext context,String text)=>snack(context,text,isError:false);
 
@@ -13608,8 +13623,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        if(entry.sourceType=='goal_due')
         Row(children:[
          Expanded(child:WaffraText(waffraIsEnglish?
-          'Amount · Total goal due':'المبلغ · إجمالي الاستحقاق',
+          'Total goal due':'إجمالي الاستحقاق',
           style:TextStyle(fontSize:11,fontWeight:FontWeight.w700,color:valueColor))),
+         WaffraText(waffraIsEnglish?'Amount':'المبلغ',
+          style:TextStyle(fontSize:11,color:valueColor)),
+         const SizedBox(width:5),
          Flexible(child:WaffraCurrencyAmount(
           entry.amount,fontSize:15,color:valueColor)),
         ])
