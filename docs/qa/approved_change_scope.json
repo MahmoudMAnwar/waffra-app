@@ -340,7 +340,7 @@
     ],
     "test/m461_sms_exclusion_and_history_scan_test.dart": [
       {
-        "start": "void main(){",
+        "start": "void main() {",
         "end": null
       }
     ],
@@ -358,7 +358,7 @@
     ],
     "test/m647_m652_financial_activity_regression_test.dart": [
       {
-        "start": "void main(){",
+        "start": "void main() {",
         "end": null
       }
     ]
