@@ -680,9 +680,12 @@ class WaffraFreshFinanceDomainRepository {
         'category':category,'amount':amountMinor / 100,
         'income':false,'date':confirmedAtIso,
         'sourceType':'goal_due','budgetId':null,
-        // Integer halalas are the authoritative split; never parse notes.
+        // The authoritative integer split lives in the typed settlement
+        // and goalWalletPaidMinor, never in user-editable personal notes.
+        // Historical note strings remain readable in old snapshots but
+        // must never be emitted by any new settlement.
         'goalWalletPaidMinor':fromGoal,
-        'notes':'goal_wallet_minor=$fromGoal;current_cash_minor=$fromCurrent',
+        'notes':'',
       };
       await store.customStatement(
         'INSERT INTO fresh_finance_entries '
