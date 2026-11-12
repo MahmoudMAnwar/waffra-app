@@ -49,7 +49,9 @@ void main() {
   await tester.pump(const Duration(milliseconds:350));
   final toast=tester.widget<SnackBar>(find.byType(SnackBar));
   expect(toast.behavior,SnackBarBehavior.floating);
-  expect(toast.backgroundColor,const Color(0xFFFFE1E2));
+  expect(toast.backgroundColor,const Color(0xFFFFFFFF));
+  expect(tester.widget<Container>(find.byKey(const Key('waffra-snackbar-edge'))).color,
+   const Color(0xFFE67B81));
   expect(find.byWidgetPredicate((w)=>w is WaffraText&&w.data==message),findsOneWidget);
   expect(find.byType(MaterialBanner),findsNothing);
   final toastBottom=tester.getBottomLeft(find.byType(SnackBar)).dy;
@@ -68,7 +70,9 @@ void main() {
   await tester.tap(find.text('Open error'));
   await tester.pump(const Duration(milliseconds:350));
   expect(tester.widget<SnackBar>(find.byType(SnackBar)).backgroundColor,
-   const Color(0xFF4A2429));
+   const Color(0xFF1D2B25));
+  expect(tester.widget<Container>(find.byKey(const Key('waffra-snackbar-edge'))).color,
+   const Color(0xFFE67B81));
   expect(find.byWidgetPredicate((w)=>w is WaffraText&&w.data=='تعذر إتمام العملية'),findsOneWidget);
   // Trigger the actual close-button callback directly: Tooltip wrappers do
   // not offer a stable hit-test target in every Flutter test viewport.
@@ -92,7 +96,9 @@ void main() {
   await tester.tap(find.text('Show success'));
   await tester.pump(const Duration(milliseconds:350));
   final notice=tester.widget<SnackBar>(find.byType(SnackBar));
-  expect(notice.backgroundColor,const Color(0xFFE6F5EB));
+  expect(notice.backgroundColor,const Color(0xFFFFFFFF));
+  expect(tester.widget<Container>(find.byKey(const Key('waffra-snackbar-edge'))).color,
+   const Color(0xFF0C7957));
   expect(find.byWidgetPredicate((w)=>w is WaffraText&&w.data=='تم الحفظ بنجاح'),findsOneWidget);
   expect(tester.getBottomLeft(find.byType(SnackBar)).dy,
    lessThanOrEqualTo(tester.getTopLeft(find.byKey(const Key('waffra-footer'))).dy+1));

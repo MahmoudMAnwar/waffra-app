@@ -8,6 +8,7 @@ import 'waffra_account_transaction_form.dart';
 import 'waffra_account_context_page.dart';
 import 'waffra_new_account_dialog.dart';
 import 'waffra_saudi_financial_providers.dart';
+import 'waffra_i18n.dart';
 
 /// M440 optional SQLCipher account page. A production Home route must only
 /// open this after the same certified finance source is active for SMS/widget.
@@ -16,8 +17,13 @@ class WaffraAccountsManagerPage extends StatefulWidget {
   super.key,required this.repository,this.english=false,this.onConfirmEntry,
   this.incomeCategories=const [],this.expenseCategories=const [],
   this.availableBudgets=const {},this.onTransferConfirmed,
+  this.onCreateHomeTransaction,
  });
  final Future<void> Function(WaffraInternalTransferDraft)? onTransferConfirmed;
+ /// M667: the Home parent injects its real three-mode entrySheet, not a
+ /// cloned form or a second financial writer. Standalone clients keep the
+ /// existing verified composer until they can provide the Home entry owner.
+ final Future<void> Function()? onCreateHomeTransaction;
  final WaffraAccountOperations repository;
  final bool english;
  final List<String> incomeCategories,expenseCategories;
@@ -30,7 +36,17 @@ class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {
  late Future<List<WaffraAccountBalance>> current;
  String t(String ar,String en)=>widget.english?en:ar;
  @override void initState(){super.initState();current=widget.repository.balances();}
- void reload(){if(mounted)setState(()=>current=widget.repository.balances());}
+ void reload(){
+  // M667: an assignment expression to a Future returns the Future from the
+  // setState callback, which Flutter rejects after closing the Home editor.
+  // Trigger the verified refresh outside setState and publish only its
+  // already-created Future synchronously; FutureBuilder owns its completion.
+  if(!mounted)return;
+  final pending=widget.repository.balances();
+  setState((){
+   current=pending;
+  });
+ }
  void failed(){
   if(mounted)snack(context,
    t('تعذر التحقق من الحفظ. الرصيد لم يتغير.',
@@ -268,6 +284,15 @@ class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {
  }
 
  Future<void> compose(List<WaffraAccountBalance> accounts)async{
+  // M667: My Accounts in the app must open exactly the SAME Home form as +.
+  // The callback owns all income/expense/transfer validation and commits.
+  // Never run the older account-only composer after this route returns.
+  final homeComposer=widget.onCreateHomeTransaction;
+  if(homeComposer!=null){
+   await homeComposer();
+   if(mounted)reload();
+   return;
+  }
   await Navigator.of(context).push<void>(MaterialPageRoute(builder:(ctx)=>
    Scaffold(appBar:AppBar(title:Text(t('معاملة جديدة','New transaction'))),
     body:WaffraAccountTransactionForm(
@@ -356,7 +381,7 @@ class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {
     return Column(children:[
      Card(child:ListTile(
       title:Text(t('إجمالي أرصدة حساباتي','Total account balances')),
-      subtitle:Text(amount(sum),textDirection:TextDirection.ltr))),
+      subtitle:WaffraText(amount(sum),currencyEnglish:widget.english,textDirection:TextDirection.ltr))),
      Expanded(child:accounts.isEmpty?
       Center(child:Text(t('أضف حسابًا أولًا','Add your first account'))):
       ListView.builder(itemCount:accounts.length,itemBuilder:(ctx,i){
@@ -371,7 +396,7 @@ class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {
           Text(t('نوع الحساب: ','Account subtype: ')+a.customSubtypeLabel!,
            key:Key('m497-custom-subtype-${a.id}'),
            style:Theme.of(ctx).textTheme.bodySmall),
-         Text(amount(a.balanceMinor),textDirection:TextDirection.ltr),
+         WaffraText(amount(a.balanceMinor),currencyEnglish:widget.english,textDirection:TextDirection.ltr),
         ]),
         trailing:PopupMenuButton<String>(
          onSelected:(action){

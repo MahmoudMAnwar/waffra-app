@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "pr": "#595",
-  "issue": "#594",
+  "pr": "#597",
+  "issue": "#596, #598, #599",
   "workflow_review_policy": "scan-all-registered-workflows",
-  "baseline": "main",
+  "baseline": "58a79a51094523e4506776130fedbd842efc7e87",
   "reviewed_at": "2026-11-12",
   "review_policy": "Review changed behavior against all GitHub Actions workflow scripts, all Dart and Python QA test files, and the original tests' protected security assertions; never edit tests merely to silence red jobs. PR #575 merge with main preserves every M645/M646/M647/M653/M654 contract; original PR-specific positive finance tests and approved fallback/owner-authority remain in effect. M661 source changes must not weaken existing fail-closed encryption, verified-bank account, OTP or anti-replay checks, must preserve all original tests and route review pending rules non-posting.",
   "contracts": [
@@ -1828,6 +1828,103 @@
         "M495 historical unassigned manual entries still reach entrySheet through transaction Actions; only previously settled goal_due receipts are guarded from direct edits.",
         "Only category presentation grouping changes; total spending, goal wallet, current account balance and goal receipt identity are immutable.",
         "Keep real widget breakdown visual labels with one container and both Arabic text descendants; do not require Flutter's wrapper and nested Text to collapse into one finder."
+      ]
+    },
+    {
+      "id": "M666-SAMA-LEFT-OF-MONEY-AR-EN-PDF-WIDGET-NOTICES",
+      "issue": "Issue #596; Draft PR #597; owner official SAMA Guidelines.pdf 12 Nov 2026",
+      "previous_behavior": "Several Waffra signed amounts used a physically right-of-digits icon, currency after amount or stacked label: Home and PDF printed number before mark; Android widget stacked icon beneath value; English used ISO SAR rather than approved icon; account and tool Text widgets bypassed SAR mark renderer.",
+      "approved_behavior": "Display user-facing SAR symbol original official artwork to PHYSICAL LEFT of signed numeric values, including to left of negative sign, in both Arabic RTL and English LTR; stable gap and geometry, no mirroring. Keep foreign currencies, raw bank SMS, financial source, ISO/API labels and encrypted persistence unchanged. M666 change is UI/PDF/Android native display only. Notification must isolate glyph to left and use SAR fallback if unsupported. Exact-head regression: simulation negative signed SAR remains -2,350.00 with visually left official WaffraCurrencyMark even if previous global selection is EGP; M268 assertion must inspect rendered symbol and amount separately rather than expecting text suffix SAR. Unmodified cash math and hypothetical-only policy remain asserted.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_riyal_symbol.dart",
+        "lib/waffra_financial_tools.dart",
+        "lib/waffra_account_context_page.dart",
+        "lib/waffra_accounts_manager_page.dart",
+        "lib/waffra_home_accounts_sheet.dart",
+        "lib/waffra_practical_tools_page.dart",
+        "lib/waffra_oil_market_section.dart",
+        "native/WaffraWidget.kt",
+        "native/WaffraAutoSmsNotifications.kt"
+      ],
+      "test_paths": [
+        "test/m666_sama_riyal_visual_position_test.dart",
+        "test/m270_original_riyal_currency_presentation_test.dart",
+        "test/m270_native_riyal_widget_contract_test.dart",
+        "test/m470_arabic_currency_word_boundary_test.dart",
+        "test/m273_production_user_journey_regression_test.dart",
+        "test/m268_smart_features_ten_calendar_art_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/m282-combined-qa-features.yml",
+        ".github/workflows/android.yml"
+      ],
+      "safety_invariants": [
+        "All amount values, SQLCipher account postings, wallet and bank splits, anti-replay and signed transaction receipts remain byte-identical; only their visual presentation and locale symbol positioning can change.",
+        "SMS parser and original financial message source and native saved account identifiers must not be rewritten by display regex. Other currencies including USD, AED and EGP keep their units.",
+        "Existing image asset is reused without replacing icon bytes. Official Riyal left-of-minus geometry is required in both locales; privacy eye remains hidden without leaking symbol or amount.",
+        "M385, M449, M550 and native/Flutter source analyzers plus full app tests remain mandatory; mobile device and PDF page validation are not claimed by static CI."
+      ]
+    },
+    {
+      "id": "M667-MY-ACCOUNTS-REUSE-HOME-ENTRY-SHEET-3-MODES",
+      "issue": "Issue #598; Draft PR #597; owner four screenshots 2026-11-12",
+      "previous_behavior": "The My Accounts new transaction footer called compose(accounts), which independently pushed WaffraAccountTransactionForm with distinct income/expense/transfer layout and validation, so it did not match Home + manual transaction entrySheet.",
+      "approved_behavior": "The Home openVerifiedAccounts route injects its exact entrySheet callback into WaffraAccountsManagerPage. The My Accounts button first delegates to the canonical Home-owned three-mode bottom sheet, then refreshes verified account list upon return, and never executes the duplicate account-only form on this path. Existing income/expense and two-sided transfer writers, categories, selected account validation, attachments, date and budget behavior stay within the Home owner; no new posting path or extra debit. Exact-head M667 Android/UI tests found a genuine runtime exception due to setState expression returning widget.repository.balances() Future. Repair source reload by assigning Future before sync callback; verify modal cancel/return and repeated refresh in both locales without duplicate financial mutations.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_accounts_manager_page.dart"
+      ],
+      "test_paths": [
+        "test/m667_accounts_use_home_composer_test.dart",
+        "test/m495_pr402_ui_performance_regression_test.dart",
+        "test/m470_arabic_currency_word_boundary_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/m282-combined-qa-features.yml"
+      ],
+      "safety_invariants": [
+        "One user-confirmed Home-authoritative SQLCipher writer is used to post manual income/expense, with no account manager duplicate append or alias into legacy storage.",
+        "Internal transfers are exactly two-sided account movements with no independent expense posting or duplicate budget consumption.",
+        "Both Arabic and English My Accounts button calls show exactly the same parent-owned Home editor, including cancel/Back and verified balance refresh.",
+        "Existing standalone account composer is a fallback only when a Home parent has not provided the callback; the production account route always injects it.",
+        "No bypass or disabling of exact-head Flutter, native, source-scope, SQLCipher and release-note QA gates.",
+        "No Future or async function may ever be returned from setState reload callback, and repeated composer returns must not cause exceptions or false balance updates; always read verified accounts, retain fallback failure behavior."
+      ]
+    },
+    {
+      "id": "M668-GLOBAL-EDGE-CARD-RTL-LTR-SNACKBAR-SAFE-FOOTER",
+      "issue": "Issue #599; existing Draft PR #597; approved option #3 by owner 2026-11-12",
+      "previous_behavior": "Global WaffraFooterNoticeHost and ScaffoldMessenger fallback painted entire Snackbar background in saturated/tinted green/red/yellow/blue and surrounded icons/text/close/Undo. There was no fixed 5dp colored leading-edge status rail.",
+      "approved_behavior": "Both footer-reserved notice and single global floating fallback now show the same small neutral light-white or dark-neutral card with 5dp semantic-color stripe at Directional.start (Arabic physical right, English physical left), neutral stroke, original status icon/text, 48dp close and optional Undo action. Existing four notice kinds, timer, requireDismissal, action callback, reserved footer height, up to two-line copy, scrolling, no overlapping footer, fade/animated size and one-notice routing are unchanged. No new snack presenters or finance functionality.",
+      "source_paths": [
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m668_footer_edge_snackbar_test.dart",
+        "test/waffra_footer_notice_test.dart",
+        "test/m277_ux_accessibility_quality_test.dart",
+        "test/m274_responsive_ui_journeys_test.dart",
+        "test/m278_system_bars_responsive_matrix_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/m282-combined-qa-features.yml"
+      ],
+      "safety_invariants": [
+        "Do not change Snackbar message lifetime, requirement-to-dismiss, callback semantics, undo exactly once, optional close or single global queue behavior.",
+        "Do not cover footer tabs or financial rows; no in-screen overlay reflow stutter, preserve responsive 320dp and 200% a11y tappable 48dp close/action.",
+        "No SMS, money posting, wallet, due, accounts, encryption or biometric code edits as part of the Snackbar restyling.",
+        "RTL/English direction leading edge is visual and must mirror physical position; all four current icons/colors remain differentiable for colorblind and screen reader users.",
+        "Standalone fallback uses the same body and light/dark neutral palette; no second presenter, MaterialBanner, or bypass of M385/M449/M550 exact-head CI."
       ]
     }
   ]

@@ -32,7 +32,7 @@ void main() {
     expect(spans!.whereType<WidgetSpan>().length, 1);
     final words = spans.whereType<TextSpan>()
         .map((span) => span.text ?? '').join();
-    expect(words, contains('رسوم مستقلة: 0.58 '));
+    expect(words, contains('رسوم مستقلة: '));
     expect(words, contains('9288'));
   });
 
@@ -81,12 +81,12 @@ void main() {
     addTearDown(() => waffraLanguage.value = 'ar');
   });
 
-  test('M470 English currency text is preserved as SAR', () {
+  test('M666 English money also uses visual official SAR mark', () {
     final spans = waffraMoneyCurrencySpans(
         'Amount 135.00 SAR', english: true, style: style);
     expect(spans, isNotNull);
-    expect(spans!.whereType<WidgetSpan>(), isEmpty);
+    expect(spans!.whereType<WidgetSpan>().length, 1);
     expect(spans.whereType<TextSpan>()
-        .map((span) => span.text ?? '').join(), 'Amount 135.00 SAR');
+        .map((span) => span.text ?? '').join(), 'Amount ');
   });
 }

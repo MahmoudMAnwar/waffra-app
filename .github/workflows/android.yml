@@ -548,18 +548,28 @@ jobs:
                   <TextView android:id="@+id/widget_sparkle"
                       android:layout_width="wrap_content" android:layout_height="wrap_content"
                       android:text="✦" android:gravity="center" android:textColor="#FFFFFF" android:textSize="12sp"/>
-                  <TextView android:id="@+id/widget_balance" android:layout_width="match_parent"
-                      android:layout_height="wrap_content" android:text="0.00"
-                      android:textSize="14sp" android:textStyle="bold" android:gravity="center"
-                      android:singleLine="true" android:autoSizeTextType="uniform"
-                      android:autoSizeMinTextSize="6sp" android:autoSizeMaxTextSize="14sp"
-                      android:autoSizeStepGranularity="1sp"
-                      android:textColor="#B8F5D6"/>
-                  <ImageView android:id="@+id/widget_riyal_icon"
-                      android:layout_width="14dp" android:layout_height="14dp"
-                      android:src="@drawable/waffra_sar_symbol"
-                      android:tint="#FFFFFF" android:visibility="gone"
-                      android:contentDescription="Saudi Riyal" />
+                  <!-- Fixed physical left-of-number SAR mark regardless of
+                       launcher/widget locale (SAMA use rules 1, 2, 4). -->
+                  <LinearLayout android:layout_width="match_parent"
+                      android:layout_height="wrap_content"
+                      android:orientation="horizontal" android:layoutDirection="ltr"
+                      android:gravity="center">
+                      <ImageView android:id="@+id/widget_riyal_icon"
+                          android:layout_width="12dp" android:layout_height="12dp"
+                          android:layout_marginEnd="3dp"
+                          android:src="@drawable/waffra_sar_symbol"
+                          android:tint="#FFFFFF" android:visibility="gone"
+                          android:contentDescription="Saudi Riyal" />
+                      <TextView android:id="@+id/widget_balance"
+                          android:layout_width="wrap_content" android:maxWidth="55dp"
+                          android:layout_height="wrap_content" android:text="0.00"
+                          android:textDirection="ltr" android:textSize="14sp"
+                          android:textStyle="bold" android:gravity="center"
+                          android:singleLine="true" android:autoSizeTextType="uniform"
+                          android:autoSizeMinTextSize="6sp" android:autoSizeMaxTextSize="14sp"
+                          android:autoSizeStepGranularity="1sp"
+                          android:textColor="#B8F5D6"/>
+                  </LinearLayout>
                   <TextView android:id="@+id/widget_currency"
                       android:layout_width="wrap_content" android:layout_height="wrap_content"
                       android:text="ريال" android:textColor="#FFFFFF"

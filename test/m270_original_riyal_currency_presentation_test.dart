@@ -19,16 +19,15 @@ void main() {
     expect((image.image as AssetImage).assetName, waffraRiyalAsset);
   });
 
-  testWidgets('English money writes SAR without rendering a Riyal icon',
+  testWidgets('M666 English money uses approved Saudi mark, not plain SAR',
       (tester) async {
     waffraLanguage.value = 'en';
     await tester.pumpWidget(const MaterialApp(
       home: Scaffold(body: WaffraText('1,234.50 ريال')),
     ));
-    expect(find.byType(Image), findsNothing);
-    final rich = tester.widget<Text>(find.byType(Text).last);
-    expect(rich.textSpan!.toPlainText(), contains('SAR'));
-    expect(rich.textSpan!.toPlainText(), isNot(contains('ريال')));
+    expect(find.byType(WaffraCurrencyMark), findsOneWidget);
+    final icon = tester.widget<Image>(find.byType(Image));
+    expect((icon.image as AssetImage).assetName, waffraRiyalAsset);
   });
 
   testWidgets('Ordinary prose is not changed into a money icon',

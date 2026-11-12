@@ -9,6 +9,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.graphics.Paint
 import android.os.Build
 import androidx.core.app.NotificationCompat
 
@@ -74,8 +75,14 @@ object WaffraAutoSmsNotifications {
             entryId.any { it.isISOControl() }) return false
         ensureChannel(context)
         val title = if (income) "وفرة — تم تسجيل دخل" else "وفرة — تم تسجيل مصروف"
+        // Android 17+ can draw U+20C1 from the system font. Use readable
+        // ISO SAR on older fonts rather than displaying a missing-glyph box.
+        // LTR isolate guarantees that symbol and minus sign remain left of
+        // the digits even when the Arabic notification itself is RTL.
+        val sarMark = if (Paint().hasGlyph("\u20C1")) "\u20C1" else "SAR"
+        val amountRun = "\u2066$sarMark $amount\u2069"
         val message = if (amount.isNotEmpty())
-            "$amount ر.س • " + if (linkedBudget) "مربوط بميزانية" else "بدون ميزانية"
+            "$amountRun • " + if (linkedBudget) "مربوط بميزانية" else "بدون ميزانية"
             else "تم تسجيل عملية مالية"
         val notification = NotificationCompat.Builder(context, channel)
             .setSmallIcon(R.drawable.waffra_notification_wallet)
