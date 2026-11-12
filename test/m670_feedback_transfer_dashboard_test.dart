@@ -143,7 +143,12 @@ void main() {
    .split('final ValueNotifier<WaffraNoticeData?> _waffraFooterNotice=')[0];
   expect(body,isNot(contains('waffra-snackbar-close')));
   expect(body,isNot(contains('maxLines:2')));
-  expect(body,isNot(contains('TextOverflow.ellipsis')));
+  // Message body wraps completely; the separate Undo chip may elide its
+  // own short label without clipping the actual notice text.
+  final messageBody=body.split('child:WaffraText(notice.text,')[1]
+   .split('if(notice.onAction!=null)')[0];
+  expect(messageBody,isNot(contains('TextOverflow.ellipsis')));
+  expect(messageBody,isNot(contains('maxLines:')));
   expect(body,contains("Key('waffra-snackbar-action')"),
    reason:'Undo remains an explicit reversible action');
  });
