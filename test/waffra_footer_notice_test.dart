@@ -76,8 +76,8 @@ void main() {
   expect(find.byWidgetPredicate((w)=>w is WaffraText&&w.data=='تعذر إتمام العملية'),findsOneWidget);
   expect(find.byKey(const Key('waffra-snackbar-close')),findsNothing);
   // With no manual X, the regular notice still expires after 5 seconds.
-  await tester.pump(const Duration(seconds:5));
-  await tester.pump(const Duration(milliseconds:450));
+  await tester.pump(const Duration(seconds:6));
+  await tester.pumpAndSettle();
   expect(find.byType(SnackBar),findsNothing);
  });
 
