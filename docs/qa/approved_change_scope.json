@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
   "change_id": "M662-20261112-SMS-REVIEW-ACCOUNTS-CARDS-PDF-PR592",
-  "human_scope_review": "Issue #591 owner supplied 4 Android screenshots and explicitly requested review UI simplification; fresh-account verified transfer and income/expense source context; inline account refresh; compact goal and settled-due cards, no piggy savings icon, and less wasted PDF pagination. Only the specific source functions bounded below may change; SQLCipher financial writer and anti-replay behaviors must remain unchanged. Human device signoff and exact-head CI outstanding; Draft PR #592.",
+  "human_scope_review": "Issue #591 owner supplied 4 Android screenshots and explicitly requested review UI simplification; fresh-account verified transfer and income/expense source context; inline account refresh; compact goal and settled-due cards, no piggy savings icon, and less wasted PDF pagination. Only the specific source functions bounded below may change; SQLCipher financial writer and anti-replay behaviors must remain unchanged. Human device signoff and exact-head CI outstanding; Draft PR #592. M662.8 follow-up screenshots explicitly authorize fixing implicit expense/Other selection in the already scoped entrySheet() initializer. Parent/child pickers, finance writers and existing data otherwise unchanged.",
   "user_requested_changes": [
     "Remove duplicate transaction-type chip choices and verbose SMS transfer disclaimer while preserving three lower review choices plus explicit exclusion/confirmation.",
     "Open original SMS bank transfer in editable source/target verified-account form on fresh install; allow user creation and selection of distinct accounts, preserve original SMS as read-only, require confirmed bank date/time where missing.",
@@ -9,7 +9,8 @@
     "After creating a provider or linked account inside an entry form refresh from authoritative verified account balances; show and select newly created provider/child immediately.",
     "Compact verified savings goal and settled due cards without losing amounts, provenances, SAR/currency privacy and RTL accessibility; replace piggy-bank imagery with neutral wallet symbol.",
     "Prevent forced new-page breaks between income/expense, transfer, savings PDF table sections while keeping row integrity and auto-pagination, preserve analytics pages and safety checks.",
-    "M662: update the exact single M595 source regression that required the removed duplicate top type chips; retain positive assertions for lower income/expense/transfer choices, original SMS and exclusion/no-post security."
+    "M662: update the exact single M595 source regression that required the removed duplicate top type chips; retain positive assertions for lower income/expense/transfer choices, original SMS and exclusion/no-post security.",
+    "M662.8: new manual expense must show empty main and subcategory pickers exactly like new manual income; never auto-select 'أخرى'. Explicit saved edit and trusted SMS category suggestions remain unchanged."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
