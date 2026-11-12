@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/main.dart' show WaffraBalanceHeader;
 import 'package:waffra/waffra_account_transaction_form.dart';
+import 'package:waffra/waffra_centered_dropdown.dart';
 import 'package:waffra/waffra_home_accounts_sheet.dart';
 import 'package:waffra/storage/waffra_accounts_repository.dart';
 
@@ -146,7 +147,11 @@ void main(){
   await tester.pump();
   final child=find.byKey(const Key('m470-source-account-none-0'));
   expect(child,findsOneWidget);
-  expect(tester.widget<DropdownButtonFormField<String>>(child).onChanged,isNull);
+  expect(tester.widget<WaffraCenteredDropdownFormField<String>>(child).initialValue,isNull);
+  // The new centered selector is a FormField; disabled state lives on its
+  // InkWell, not the removed DropdownButtonFormField.onChanged property.
+  expect(tester.widget<InkWell>(find.descendant(
+   of:child,matching:find.byType(InkWell)).first).onTap,isNull);
   await tester.enterText(find.byKey(const Key('m440-amount')),'12.50');
   final provider=find.byKey(const Key('m470-source-provider-none-0'));
   await tester.ensureVisible(provider);
@@ -157,7 +162,11 @@ void main(){
   expect(addCalls,1);
   expect(tester.widget<TextField>(find.byKey(const Key('m440-amount')))
    .controller!.text,'12.50');
-  expect(tester.widget<DropdownButtonFormField<String>>(child).onChanged,isNull);
+  expect(tester.widget<WaffraCenteredDropdownFormField<String>>(child).initialValue,isNull);
+  // The new centered selector is a FormField; disabled state lives on its
+  // InkWell, not the removed DropdownButtonFormField.onChanged property.
+  expect(tester.widget<InkWell>(find.descendant(
+   of:child,matching:find.byType(InkWell)).first).onTap,isNull);
   expect(tester.takeException(),isNull);
  });
 }
