@@ -47,7 +47,7 @@ void main(){
    start:' Future<void> _openSmsRules({',
    end:' Future<void> _recordConfirmedSmsAccountAssociation({');
   final rescan=waffraSourceMethodSection(main,
-   start:' Future<void> _rescanAutoSmsInbox()async{',
+   start:' Future<void> _rescanAutoSmsInbox({BuildContext? feedbackContext})async{',
    end:' Future<void>? _autoSmsRefreshInFlight;');
   expect(review,isNot(contains('importMonth:true')));
   expect(rules,isNot(contains('importMonth:true')));
