@@ -1,10 +1,30 @@
 import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:waffra/waffra_approved_notifications.dart';
 import 'package:waffra/waffra_bank_sms_facts.dart';
 import 'package:waffra/waffra_sms_local_rules.dart';
 
 void main() {
+ testWidgets('M665 notification pull triggers one incremental rescan, no AppBar refresh', (tester)async{
+  var rescans=0;
+  await tester.pumpWidget(MaterialApp(home:WaffraApprovedNotificationsPage(
+   english:false,
+   readPending:()=>[const WaffraReviewNotice(
+    id:'pull_sms',sender:'SyntheticBank',preview:'Review only')],
+   onReviewAll:()async{},onReviewOne:(id)async{},
+   onRescan:()async{rescans++;},canRescan:()=>true,
+  )));
+  expect(find.byKey(const Key('m665-notification-pull-refresh')),findsOneWidget);
+  expect(find.byIcon(Icons.refresh_rounded),findsNothing);
+  await tester.drag(find.byKey(const Key('m549-notification-list')),
+   const Offset(0,420));
+  await tester.pump();
+  await tester.pump(const Duration(seconds:1));
+  expect(rescans,1);
+ });
+
  group('M665 / M660 safe, sender-scoped SMS template learning', () {
   test('one approved OTP covers other verification wording, not financial debit', () {
    const first='رمز التفعيل الخاص بك هو 482913، لا تشارك الرمز';
