@@ -466,3 +466,10 @@ M614 (2026-11-12, Issue #614 / Draft PR #615) — LEGACY V24 RESTORE COMPATIBILI
 - A password verified by authenticated decryption is no longer incorrectly blamed for later database migration failure. Synthetic regression/CI and physical Android APK acceptance remain mandatory. No real user's data was committed to this repository.
 
 M614 exact-head release note refresh (2026-11-12; PR #615): migrated backup pathway now also reports post-commit screen-refresh failures distinctly from pre-commit migration errors, and explicitly warns in Arabic and English when old image bytes are absent. QA source/test and Android device acceptance still pending; no release-ready assertion.
+
+M616 (2026-11-12; Issue #616 / Draft PR #617): Android-specific legacy V24 restore staging fix — NOT RELEASED / not physically accepted.
+- Following #615's 42 green CI checks, owner reported a real Android restore failing after password authentication. This PR routes both disposable SQLCipher conversion and cold preflight candidates to an app-private cache on Android/iOS rather than OS-global Directory.systemTemp. Keeps random isolated keys and cleanup; original backup and current source unchanged on error.
+- Adds privacy-safe phase code to visible restore error (never a key, old path or transaction amount) and synthetic 1056-category / 19-entry / 2-budget / linked-goal recurring regression. Historic accountless records remain unlinked. No owner's actual archive is in source, test, or artifact.
+- No device-success claim until exact HEAD CI plus signed main APK owner test; spouse's phone must not be updated before acceptance.
+
+M616 QA addition: existing encrypted-storage Android emulator integration now exercises private cache restoration candidate creation, SQLCipher cold reopening, encrypted bytes at rest, and disposal. This is emulator evidence only; original private .waffra on physical handset remains untested after fix.

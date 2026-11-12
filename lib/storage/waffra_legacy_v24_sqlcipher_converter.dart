@@ -10,6 +10,7 @@ import 'waffra_finance_domain_legacy_importer.dart';
 import 'waffra_fresh_finance_modules_repository.dart';
 import 'waffra_portable_backup_v2.dart';
 import 'waffra_portable_encrypted_vault_restorer.dart';
+import 'waffra_restore_staging_directory.dart';
 
 /// A cold-verifiable, accountless V3 restore candidate built from an already
 /// authenticated V24 user backup. Never touches the live financial source.
@@ -166,7 +167,7 @@ abstract final class WaffraLegacyV24SqlCipherConverter {
       receipts: const <WaffraReceiptBackupPart>[],
       password: password,
     );
-    final staging = await Directory.systemTemp.createTemp('waffra-v24-to-v3-');
+    final staging = await WaffraRestoreStagingDirectory.create(prefix: 'waffra-v24-to-v3-');
     final key = base64UrlEncode(List<int>.generate(
       32, (_) => Random.secure().nextInt(256)));
     WaffraEncryptedStore? db;

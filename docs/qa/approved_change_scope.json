@@ -1,34 +1,72 @@
 {
   "contract_version": 1,
-  "change_id": "M614-20261112-LEGACY-V24-TO-SQLCIPHER-PR615",
-  "human_scope_review": "Owner explicitly requested a NEW PR after verified decryption of a legacy V24 .waffra and failed fresh-install SQLCipher import on an expendable Android handset. Only old backup->V3 staging, approved path-only receipt omission, main Restore dialog route and error explanation, and synthetic tests are authorized. No data from the owner's private archive/password may enter GitHub. Human phone QA and merge review still pending.",
+  "change_id": "M616-20261112-ISSUE616-PR617-ANDROID-PRIVATE-RESTORE-STAGING",
+  "human_scope_review": "Owner reported authentic V24 backup restore failure AFTER merge of #615 on an expendable Android handset; Issue #616 and permanent requirements were recorded before coding. Approved scope is BOTH production restore staging locations, safe stage-code feedback, app-private staging helper, 1056-category synthetic regression, and an updated positive M187 security marker without disabling its assertions. No user archive/password/content may enter GitHub. Physical acceptance pending.",
   "user_requested_changes": [
-    "Support authenticating and importing legacy V24 password-encrypted Waffra backups to the existing fresh SQLCipher database through independently verified V3 restore logic.",
-    "Keep original historical entry identifiers, amounts, dates, income/expense, categories, goals, budgets, recurring and SMS fingerprint deduplication; do not infer new bank-account links or post duplicate money.",
-    "Clearly warn and request explicit user approval when historical backup stores only receipt file paths and cannot restore the actual image bytes.",
-    "Differentiate a correct authenticated backup password from a later incompatible SQLCipher import or failed restore; retain rescue rollback and user biometric consent.",
-    "Test a synthetic historic 19-transaction backup with budget, goal, recurring and 11 SMS hashes, plus tamper, missing attachments and cold-reopen checks."
+    "Repair legacy V24 .waffra restore that fails after correct password on Android, preserving the original financial records and secure migration safeguards.",
+    "Prevent Android-installed Waffra from writing disposable SQLCipher staging databases to global Directory.systemTemp when Android may deny /data/local/tmp.",
+    "Change both old V24 converter and cold verified backup preflight to app-private temporary cache with randomized directories and guaranteed cleanup.",
+    "Expose a privacy-safe restore failure stage identifier so further errors are distinguishable without logging user financial information.",
+    "Test the same record counts and parent-child topology as the reported older backup using purely synthetic records: 1056 categories, 2 budgets, 19 transactions, 4 goals, 3 recurring, 11 hashes.",
+    "Retain password authentication, independent external rescue, biometric approval, source witness, rollback, opt-in missing receipt handling, and no fabricated bank-account links.",
+    "Prove app-private SQLCipher candidate creation, cold reopen, ciphertext-at-rest and recursive deletion on a real Android emulator in the existing encrypted storage integration workflow."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
+    "integration_test/encrypted_storage_android_test.dart",
     "lib/main.dart",
     "lib/storage/waffra_legacy_v24_sqlcipher_converter.dart",
-    "test/storage/m614_legacy_v24_restore_test.dart"
+    "lib/storage/waffra_restore_staging_directory.dart",
+    "lib/storage/waffra_verified_active_restore_preflight.dart",
+    "scripts/qa/m187_active_restore_scope_review.py",
+    "test/storage/m616_android_v24_restore_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
   "bounded_sections": {
     "lib/main.dart": [
       {
-        "start": "import 'storage/waffra_accounts_portable_backup_v3.dart';",
-        "end": "import 'storage/waffra_verified_active_restore_preflight.dart';"
-      },
-      {
         "start": " Future<void> backupDialog()async {",
         "end": " Future<String?> _askForPin({"
+      }
+    ],
+    "lib/storage/waffra_legacy_v24_sqlcipher_converter.dart": [
+      {
+        "start": "import 'waffra_portable_encrypted_vault_restorer.dart';",
+        "end": "/// A cold-verifiable, accountless V3 restore candidate"
+      },
+      {
+        "start": "    final staging = await ",
+        "end": "    final key = base64UrlEncode("
+      }
+    ],
+    "lib/storage/waffra_verified_active_restore_preflight.dart": [
+      {
+        "start": "import 'waffra_verified_finance_authority.dart';",
+        "end": "/// A deliberately read-only decision."
+      },
+      {
+        "start": "    final stagingDirectory = await ",
+        "end": "    final keyBytes = List<int>.generate("
+      }
+    ],
+    "scripts/qa/m187_active_restore_scope_review.py": [
+      {
+        "start": "    check(code, [",
+        "end": "    check(tests, ["
+      }
+    ],
+    "integration_test/encrypted_storage_android_test.dart": [
+      {
+        "start": "import 'package:waffra/storage/waffra_encrypted_store.dart';",
+        "end": "void main() {"
+      },
+      {
+        "start": "    await reopened.close();\n  });",
+        "end": null
       }
     ]
   }

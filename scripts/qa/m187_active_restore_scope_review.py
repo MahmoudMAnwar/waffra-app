@@ -51,7 +51,7 @@ def main() -> None:
         "witness.generation != selected.generation",
         "witness.digest != selected.digest",
         "WaffraPortableBackupV2.verifyAndPreview(",
-        "Directory.systemTemp.createTemp(",
+        "WaffraRestoreStagingDirectory.create(",
         "Random.secure()",
         "WaffraEncryptedStore.openAt(",
         "WaffraPortableEncryptedVaultRestorer(",
@@ -63,6 +63,17 @@ def main() -> None:
         "bool get activeSourceReplaced => false;",
         "bool get requiresIndependentDeviceRecovery => true;",
     ], "backup staging")
+    # M616: Android systemTemp can be /data/local/tmp (permission denied).
+    # Enforce app-sandbox staging without dropping original witness / rollback tests.
+    private_helper = Path(
+        "lib/storage/waffra_restore_staging_directory.dart").read_text()
+    check(private_helper, [
+        "Platform.isAndroid || Platform.isIOS",
+        "await getTemporaryDirectory()",
+        "parent.createTemp(prefix)",
+    ], "app-private encrypted restore sandbox")
+    if "Directory.systemTemp.createTemp(" in code:
+        raise SystemExit("M187: Android restore must not use global systemTemp")
     check(tests, [
         "receipt cold-stages without replacing active ledger",
         "zero-receipt authenticated restore preview is read-only",

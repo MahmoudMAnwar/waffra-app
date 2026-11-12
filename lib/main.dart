@@ -17078,12 +17078,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      update(()=>restoring=true);
      var backupDecrypted=false;
      var sqlcipherRestoreCommitted=false;
+     var restoreStage='AUTH';
      try{
       var restoreArchive=stagedBackup!;
       var raw=await compute(waffraDecodeBackupInIsolate,<String,String>{
        'payload':restoreArchive,'password':restoreSecret.text,
       });
       backupDecrypted=true;
+      restoreStage='SOURCE';
       var omittedLegacyReceiptCount=0;
       // Old V24 password-authenticated exports use legacy finance JSON, not
       // the account-aware SQLCipher V3 layout. Build a disposable encrypted V3
@@ -17104,6 +17106,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            'النسخة القديمة فيها $unavailable مرفق صورة محفوظ كمسار فقط، بدون ملف الصورة نفسه. عند الاستعادة ستبقى العمليات والمبالغ والتواريخ، لكن الصور دي لن تنتقل. هل توافق صراحةً على الاستعادة بدون المرفقات دي؟');
          if(approvedMissing!=true||!ctx.mounted||!mounted)return;
         }
+        restoreStage='V24_STAGING';
         final candidate=await WaffraLegacyV24SqlCipherConverter.prepare(
          payload:raw,password:restoreSecret.text,
          userApprovedMissingReceipts:true);
@@ -17122,6 +17125,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          'استعادة هذا الملف تتطلب تفعيل قاعدة SQLCipher.');
         return;
        }
+       restoreStage='SQL_PREFLIGHT';
        final result=await WaffraVerifiedActiveRestorePreflight(
         authority:_financeAuthority,experimentalEnabled:true,
        ).inspect(selectedSource:source,encryptedArchive:restoreArchive,
@@ -17140,6 +17144,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        await _financialWriteQueue.drain();
        final bridge=_financeBinding?.accountsBridge;
        if(bridge==null)throw StateError('Active finance source is unavailable.');
+       restoreStage='RESCUE';
        final rescue=await bridge.exportPortableBackup(restoreSecret.text);
        final rescueSaved=await WaffraBackupFiles.saveEncryptedArchive(rescue,
         name:'Waffra_Rescue_Before_Restore_${DateTime.now().millisecondsSinceEpoch}.waffra');
@@ -17149,6 +17154,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          'تم إلغاء الاستعادة: احفظ نسخة أمان مشفرة لبياناتك الحالية أولًا.');
         return;
        }
+       restoreStage='SQL_APPLY';
        final applied=await bridge.applyVerifiedV3Restore(
         baseline:source.encryptedWitness!,
         encryptedArchive:restoreArchive,password:restoreSecret.text,
@@ -17156,6 +17162,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         preflightChecksum:result.archiveChecksum,
         userConfirmed:true,externallySavedRescueConfirmed:true);
        sqlcipherRestoreCommitted=true;
+       restoreStage='HOME_REFRESH';
        if(!mounted)return;
        // The authoritative encrypted snapshot, not a decoded backup in
        // memory, becomes the source for Home and widget after one commit.
@@ -17286,9 +17293,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       // Once the AEAD archive decrypted successfully, a later schema or
       // SQLCipher failure is NOT a bad password. Keep detailed errors in QA
       // logs only; never echo secrets or user finance values in UI.
-      debugPrint('Waffra restore failed after authentication: '
-       +backupDecrypted.toString()+' / '+e.runtimeType.toString());
-      if(ctx.mounted)update(()=>restoreError=sqlcipherRestoreCommitted?
+      debugPrint('Waffra restore failed: stage='+restoreStage+
+        ' authenticated='+backupDecrypted.toString()+
+        ' type='+e.runtimeType.toString());
+      if(ctx.mounted)update(() {
+       restoreError=sqlcipherRestoreCommitted?
        (waffraIsEnglish
         ?'The encrypted restore committed, but screen refresh failed. Reopen Waffra to verify the restored records and retain the external rescue copy.'
         :'تم حفظ البيانات المستعادة في SQLCipher، لكن تعذر تحديث الشاشة. افتح وفرة مجددًا للتحقق من البيانات واحتفظ بنسخة الأمان.'):
@@ -17298,7 +17307,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         :'كلمة مرور النسخة صحيحة، لكن تعذر ترحيل البيانات بأمان. راجع البيانات الحالية واحتفظ بنسخة الأمان المشفرة.'):
        (waffraIsEnglish
         ?'Could not authenticate this encrypted backup. Check its original password and file integrity.'
-        :'تعذر التحقق من تشفير النسخة. راجع كلمة مرور النسخة الأصلية وسلامة الملف.'));
+        :'تعذر التحقق من تشفير النسخة. راجع كلمة مرور النسخة الأصلية وسلامة الملف.');
+       // Privacy-safe code for support: no password, paths, sender or amounts.
+       restoreError='${restoreError ?? ''} [R616:$restoreStage]';
+      });
      }finally{
       if(ctx.mounted)update(()=>restoring=false);
      }

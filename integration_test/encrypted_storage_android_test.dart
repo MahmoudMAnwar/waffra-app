@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:waffra/storage/waffra_encrypted_store.dart';
+import 'package:waffra/storage/waffra_restore_staging_directory.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -68,5 +69,45 @@ void main() {
     expect(again.sourceSha256, imported.sourceSha256);
     expect(await reopened.stagedRowCount('android-ci-vault'), imported.recordCount);
     await reopened.close();
+  });
+
+  testWidgets('M616 Android app-private restore candidates create, encrypt, '
+      'cold-open and erase within application cache', (tester) async {
+    expect(Platform.isAndroid, isTrue);
+    final cache = await getTemporaryDirectory();
+    final first = await WaffraRestoreStagingDirectory.create(
+        prefix:'waffra-v24-to-v3-');
+    final second = await WaffraRestoreStagingDirectory.create(
+        prefix:'waffra-verified-restore-preflight-');
+    final key = 'm616-android-emulator-disposable-cipher-key';
+    WaffraEncryptedStore? staging;
+    try {
+      expect(first.path,startsWith('${cache.path}${Platform.pathSeparator}'));
+      expect(second.path,startsWith('${cache.path}${Platform.pathSeparator}'));
+      expect(first.path,isNot(second.path));
+      final encrypted = File('${first.path}/candidate.sqlite');
+      staging = WaffraEncryptedStore.openAt(encrypted,key:key);
+      await staging.customStatement(
+          'CREATE TABLE m616_staging_probe(value INTEGER NOT NULL)');
+      await staging.customStatement(
+          'INSERT INTO m616_staging_probe(value) VALUES (616)');
+      await staging.close();
+      staging = null;
+      staging = WaffraEncryptedStore.openAt(encrypted,key:key);
+      final row = await staging.customSelect(
+          'SELECT value FROM m616_staging_probe').getSingle();
+      expect(row.read<int>('value'),616);
+      await staging.close();
+      staging = null;
+      final header=await encrypted.openRead(0,16).fold<List<int>>(
+          <int>[], (buffer,bytes)=>buffer..addAll(bytes));
+      expect(header,isNot(utf8.encode('SQLite format 3\\u0000')));
+    } finally {
+      await staging?.close();
+      if(await first.exists())await first.delete(recursive:true);
+      if(await second.exists())await second.delete(recursive:true);
+    }
+    expect(await first.exists(),isFalse);
+    expect(await second.exists(),isFalse);
   });
 }

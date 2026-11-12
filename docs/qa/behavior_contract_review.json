@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
-  "pr": "#615",
-  "issue": "#614",
+  "pr": "#617",
+  "issue": "#616",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "cca778e17eb6daa2576b33ad302c3d04d779834b",
   "reviewed_at": "2026-11-12",
-  "review_policy": "Review changed behavior against all GitHub Actions workflow scripts, all Dart and Python QA test files, and the original tests' protected security assertions; never edit tests merely to silence red jobs. PR #575 merge with main preserves every M645/M646/M647/M653/M654 contract; original PR-specific positive finance tests and approved fallback/owner-authority remain in effect. M661 source changes must not weaken existing fail-closed encryption, verified-bank account, OTP or anti-replay checks, must preserve all original tests and route review pending rules non-posting. M672-M678 owner-visible corrections (#606-#612) must preserve financial/account safety and separate Android visual/deletion persistence testing. M614 legacy user archive migration: existing V24 decryption is correct but SQLCipher backupRestore writer cannot accept old map; stage in disposable encrypted source and reuse V3 full-source rescue/attestation. Existing tests unchanged, end-to-end Android and signed same-sha checks required.",
+  "review_policy": "Review changed behavior against all GitHub Actions workflow scripts, all Dart and Python QA test files, and the original tests' protected security assertions; never edit tests merely to silence red jobs. PR #575 merge with main preserves every M645/M646/M647/M653/M654 contract; original PR-specific positive finance tests and approved fallback/owner-authority remain in effect. M661 source changes must not weaken existing fail-closed encryption, verified-bank account, OTP or anti-replay checks, must preserve all original tests and route review pending rules non-posting. M672-M678 owner-visible corrections (#606-#612) must preserve financial/account safety and separate Android visual/deletion persistence testing. M614 legacy user archive migration: existing V24 decryption is correct but SQLCipher backupRestore writer cannot accept old map; stage in disposable encrypted source and reuse V3 full-source rescue/attestation. Existing tests unchanged, end-to-end Android and signed same-sha checks required. M616 review: previously successful host CI did not prove Android global temporary directory write permission; app-private encrypted staging and user-visible phase code must be reviewed alongside M187/M385/M550 original tests.",
   "contracts": [
     {
       "id": "M601-AUTH-PENDING-BUTTON-AND-VERIFIER-LATENCY",
@@ -2254,6 +2254,35 @@
         "A wrong password or malformed backup never mutates finance or decrypts into persistent plaintext.",
         "No historic transactions may be re-posted or auto-linked to guessed banking accounts.",
         "No existing SQLCipher vault is replaced until cold verification, explicit consent, external rescue and native-lock witness; every failure rolls back."
+      ]
+    },
+    {
+      "id": "M616-ANDROID-PRIVATE-RESTORE-STAGING",
+      "issue": "Issue #616, Draft PR #617: real-owner mobile V24 .waffra restore fails after 42 green CI jobs on #615",
+      "previous_behavior": "Two live encrypted-restore code paths used Directory.systemTemp.createTemp, which can resolve to unwritable Android /data/local/tmp. The prior synthetic fixture included three categories, one budget and no recurring-goal links, unlike the authenticated private archive. The UI only showed a generic migration rejection after successful password verification.",
+      "approved_behavior": "Both Android/iOS restore phases create unique, disposable SQLCipher candidates beneath getTemporaryDirectory() in private app cache while host tests retain their isolated temporary base. Full source verification, cold reopen, native lock, user biometric consent, external rescue, receipts integrity and rollback are unchanged. A safe AUTH/SOURCE/V24_STAGING/SQL_PREFLIGHT/RESCUE/SQL_APPLY/HOME_REFRESH stage code is shown after failures. A separate synthetic high-cardinality regression covers 1056 categories, 79 roots, 977 direct children, two budgets, 19 entries, 4 goals, 3 linked recurring and 11 hashes, without disclosing private data. Existing Android emulator storage integration additionally checks both private restore phases, a real encrypted SQLite roundtrip, and sandbox cleanup without touching live user data.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/storage/waffra_legacy_v24_sqlcipher_converter.dart",
+        "lib/storage/waffra_verified_active_restore_preflight.dart",
+        "lib/storage/waffra_restore_staging_directory.dart"
+      ],
+      "test_paths": [
+        "test/storage/m616_android_v24_restore_test.dart",
+        "test/storage/m614_legacy_v24_restore_test.dart",
+        "test/storage/m187_active_restore_preflight_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Never allow untrusted names/paths to select the restored SQLCipher staging root, key or database filename.",
+        "Never report successful restore before verified atomic persistence, source witness and cold reopen; old live data and rescue remain untouched after failure.",
+        "Do not expose user-specific data, passwords, decrypted archives, bank identifiers or absolute file paths through logs or diagnostics.",
+        "Never allow historical records to auto-post or be linked to speculative bank accounts; missing image bytes remain explicit-consent omissions.",
+        "Physical Android signed-APK restore with real archive remains required before claiming customer compatibility."
       ]
     }
   ]
