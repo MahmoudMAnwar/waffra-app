@@ -16498,15 +16498,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       children:[
        Row(children:[
         Expanded(child:Tooltip(
-         message:goal!=null?
+         message:r.linkedGoalId!=null?
           (waffraIsEnglish?'Edit the linked goal first':'عدّل الهدف المرتبط أولًا'):
           (waffraIsEnglish?'Edit recurring due':'تعديل الاستحقاق'),
          child:Semantics(
-          enabled:goal==null,
-          hint:goal!=null?(waffraIsEnglish?
+          enabled:r.linkedGoalId==null,
+          hint:r.linkedGoalId!=null?(waffraIsEnglish?
            'Tap for the reason this due cannot be edited here':
            'اضغط لمعرفة سبب عدم إمكانية تعديل الاستحقاق هنا'):null,
-          child:Opacity(opacity:goal!=null?0.46:1,
+          child:Opacity(opacity:r.linkedGoalId!=null?0.46:1,
            child:OutlinedButton.icon(
             key:Key('m665-recurring-edit-'+r.id),
             // Visually disabled but tap still explains where to edit.
