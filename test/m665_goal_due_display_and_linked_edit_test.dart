@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/main.dart';
 
@@ -107,4 +108,21 @@ void main(){
   expect(card,contains("key:Key('m665-recurring-edit-'+r.id)"));
   expect(card,contains('Opacity(opacity:goal!=null?0.46:1'));
  });
+
+ testWidgets('M665.7 widget shows labelled wallet and bank, never tech notes/restaurant',
+  (tester)async{
+   final due=_settled();
+   await tester.pumpWidget(MaterialApp(
+    home:Scaffold(body:WaffraTransactionDetailsDialog(
+     entry:due,onClose:(){}))));
+   await tester.pump();
+   expect(find.byKey(const Key('m665-goal-due-details-breakdown')),
+    findsOneWidget);
+   expect(find.text('استحقاق هدف'),findsOneWidget);
+   expect(find.text('من محفظة الهدف'),findsOneWidget);
+   expect(find.text('المخصوم من الحساب المالي'),findsOneWidget);
+   expect(find.text('مطاعم وكافيهات / مطاعم شعبية'),findsNothing);
+   expect(find.textContaining('goal_wallet_minor'),findsNothing);
+  });
+
 }
