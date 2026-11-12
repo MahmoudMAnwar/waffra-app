@@ -1834,7 +1834,7 @@
       "id": "M666-SAMA-LEFT-OF-MONEY-AR-EN-PDF-WIDGET-NOTICES",
       "issue": "Issue #596; Draft PR #597; owner official SAMA Guidelines.pdf 12 Nov 2026",
       "previous_behavior": "Several Waffra signed amounts used a physically right-of-digits icon, currency after amount or stacked label: Home and PDF printed number before mark; Android widget stacked icon beneath value; English used ISO SAR rather than approved icon; account and tool Text widgets bypassed SAR mark renderer.",
-      "approved_behavior": "Display user-facing SAR symbol original official artwork to PHYSICAL LEFT of signed numeric values, including to left of negative sign, in both Arabic RTL and English LTR; stable gap and geometry, no mirroring. Keep foreign currencies, raw bank SMS, financial source, ISO/API labels and encrypted persistence unchanged. M666 change is UI/PDF/Android native display only. Notification must isolate glyph to left and use SAR fallback if unsupported.",
+      "approved_behavior": "Display user-facing SAR symbol original official artwork to PHYSICAL LEFT of signed numeric values, including to left of negative sign, in both Arabic RTL and English LTR; stable gap and geometry, no mirroring. Keep foreign currencies, raw bank SMS, financial source, ISO/API labels and encrypted persistence unchanged. M666 change is UI/PDF/Android native display only. Notification must isolate glyph to left and use SAR fallback if unsupported. Exact-head regression: simulation negative signed SAR remains -2,350.00 with visually left official WaffraCurrencyMark even if previous global selection is EGP; M268 assertion must inspect rendered symbol and amount separately rather than expecting text suffix SAR. Unmodified cash math and hypothetical-only policy remain asserted.",
       "source_paths": [
         "lib/main.dart",
         "lib/waffra_riyal_symbol.dart",
@@ -1852,7 +1852,8 @@
         "test/m270_original_riyal_currency_presentation_test.dart",
         "test/m270_native_riyal_widget_contract_test.dart",
         "test/m470_arabic_currency_word_boundary_test.dart",
-        "test/m273_production_user_journey_regression_test.dart"
+        "test/m273_production_user_journey_regression_test.dart",
+        "test/m268_smart_features_ten_calendar_art_test.dart"
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/m550-behavior-contract-preflight.yml",
@@ -1872,7 +1873,7 @@
       "id": "M667-MY-ACCOUNTS-REUSE-HOME-ENTRY-SHEET-3-MODES",
       "issue": "Issue #598; Draft PR #597; owner four screenshots 2026-11-12",
       "previous_behavior": "The My Accounts new transaction footer called compose(accounts), which independently pushed WaffraAccountTransactionForm with distinct income/expense/transfer layout and validation, so it did not match Home + manual transaction entrySheet.",
-      "approved_behavior": "The Home openVerifiedAccounts route injects its exact entrySheet callback into WaffraAccountsManagerPage. The My Accounts button first delegates to the canonical Home-owned three-mode bottom sheet, then refreshes verified account list upon return, and never executes the duplicate account-only form on this path. Existing income/expense and two-sided transfer writers, categories, selected account validation, attachments, date and budget behavior stay within the Home owner; no new posting path or extra debit.",
+      "approved_behavior": "The Home openVerifiedAccounts route injects its exact entrySheet callback into WaffraAccountsManagerPage. The My Accounts button first delegates to the canonical Home-owned three-mode bottom sheet, then refreshes verified account list upon return, and never executes the duplicate account-only form on this path. Existing income/expense and two-sided transfer writers, categories, selected account validation, attachments, date and budget behavior stay within the Home owner; no new posting path or extra debit. Exact-head M667 Android/UI tests found a genuine runtime exception due to setState expression returning widget.repository.balances() Future. Repair source reload by assigning Future before sync callback; verify modal cancel/return and repeated refresh in both locales without duplicate financial mutations.",
       "source_paths": [
         "lib/main.dart",
         "lib/waffra_accounts_manager_page.dart"
@@ -1893,7 +1894,8 @@
         "Internal transfers are exactly two-sided account movements with no independent expense posting or duplicate budget consumption.",
         "Both Arabic and English My Accounts button calls show exactly the same parent-owned Home editor, including cancel/Back and verified balance refresh.",
         "Existing standalone account composer is a fallback only when a Home parent has not provided the callback; the production account route always injects it.",
-        "No bypass or disabling of exact-head Flutter, native, source-scope, SQLCipher and release-note QA gates."
+        "No bypass or disabling of exact-head Flutter, native, source-scope, SQLCipher and release-note QA gates.",
+        "No Future or async function may ever be returned from setState reload callback, and repeated composer returns must not cause exceptions or false balance updates; always read verified accounts, retain fallback failure behavior."
       ]
     },
     {
