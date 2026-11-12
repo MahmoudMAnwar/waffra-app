@@ -245,3 +245,10 @@ M647/M649/M652 provenance labels — PR #575, 2026-11-11
 - M663: positive hidden-Home back-navigation regression now checks the existing postAuthVisible guard in its actual _consumeHomeBack function (outside the truncated startup source segment). No auth/finance/source behavior changed.
 - Scope/boundaries, positive behavioral review and permanent requirements recorded BEFORE changing the three tests: docs/WAFFRA_REQUIREMENTS.md, docs/qa/approved_change_scope.json and docs/qa/behavior_contract_review.json. All tests remain enabled. Issue https://github.com/MahmoudMAnwar/waffra-app/issues/593, implementation Draft https://github.com/MahmoudMAnwar/waffra-app/pull/592.
 - Status: focused source assertion repair committed; EXACT NEW PR HEAD mandatory CI and physical Android proof not yet verified; DO NOT treat the original failed SHA as the new result.
+
+[M449 REVIEWED UPDATE — ISSUE #594 — PR #595]
+- Reviewed source SHA: 512dbb6fc611d4481895cf279698988a5772f8a8
+- Approved change: Owner-requested partial M665 source: notifications refresh by pull and clearer checkbox; bank review retains verified account, allows in-place required category correction, hides redundant original panel and hint; encrypted sender-specific verification and beneficiary templates refresh pending rules, with completed-finance guards. Full M660 generic cross-category fragment learning remains incomplete.
+- Changed production paths: lib/main.dart, lib/waffra_approved_notifications.dart, lib/waffra_sms_local_rules.dart
+- Verification: exact-head CI and physical Android evidence remain separate, not approved merely by these notes.
+- Tooling note: M449 helper script could not be executed in this connector-only environment; this reviewed entry records the exact latest application-source commit, and required ancestry/quality gates must still execute on CI.
