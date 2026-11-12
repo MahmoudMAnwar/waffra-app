@@ -1972,7 +1972,8 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   ],
   // One existing MaterialApp.builder: keep finance masking and RTL/LTR,
   // and place idle biometric overlay ABOVE every Navigator route.
-  builder:(context,child)=>WaffraIdleBiometricOverlay(
+  builder:(context,child)=>WaffraNoticeTapDismissArea(
+   child:WaffraIdleBiometricOverlay(
    enabled:profile!=null&&!locked&&!showLogin&&
     !loading&&introDone&&startupError==null&&
     !autoSmsConsentPending&&
@@ -1984,7 +1985,7 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     textDirection:language=='ar'?TextDirection.rtl:TextDirection.ltr,
     // Language is an immediate LTR/RTL layout change, never a
     // navigator replacement or whole-screen slide of the FAB.
-    child:child??const SizedBox.shrink()))),
+    child:child??const SizedBox.shrink())))),
 
   theme:ThemeData(
    useMaterial3:true,
@@ -3578,8 +3579,50 @@ class WaffraNoticeContent extends StatelessWidget {
  }
 }
 
+/// Captures taps without joining the gesture arena: original navigation,
+/// buttons and Undo receive their tap before the notice is hidden.
+class WaffraNoticeTapDismissArea extends StatefulWidget {
+ const WaffraNoticeTapDismissArea({super.key,required this.child});
+ final Widget child;
+ @override State<WaffraNoticeTapDismissArea> createState()=>
+  _WaffraNoticeTapDismissAreaState();
+}
+class _WaffraNoticeTapDismissAreaState extends State<WaffraNoticeTapDismissArea> {
+ final Map<int,Offset> _touchOrigins=<int,Offset>{};
+ @override Widget build(BuildContext context)=>Listener(
+  behavior:HitTestBehavior.translucent,
+  onPointerDown:(event)=>_touchOrigins[event.pointer]=event.position,
+  onPointerCancel:(event)=>_touchOrigins.remove(event.pointer),
+  onPointerUp:(event){
+   final origin=_touchOrigins.remove(event.pointer);
+   if(origin==null||(event.position-origin).distance>18)return;
+   final shownFooter=_waffraFooterNotice.value;
+   final shownFallback=_waffraFallbackNoticeMessenger;
+   final fallbackGeneration=_waffraFallbackNoticeGeneration;
+   if(shownFooter==null&&shownFallback==null)return;
+   // Allow the *same* tap to activate its real target first, including Undo.
+   // A newly shown replacement notice must not be dismissed by an older tap.
+   scheduleMicrotask((){
+    if(!mounted)return;
+    if(shownFooter!=null&&identical(_waffraFooterNotice.value,shownFooter)){
+     waffraDismissFooterNotice();
+    }
+    if(shownFallback!=null&&shownFallback.mounted&&
+       fallbackGeneration==_waffraFallbackNoticeGeneration){
+     shownFallback.removeCurrentSnackBar();
+     if(identical(_waffraFallbackNoticeMessenger,shownFallback)){
+      _waffraFallbackNoticeMessenger=null;
+     }
+    }
+   });
+  },
+  child:widget.child);
+}
+
 final ValueNotifier<WaffraNoticeData?> _waffraFooterNotice=
  ValueNotifier<WaffraNoticeData?>(null);
+ScaffoldMessengerState? _waffraFallbackNoticeMessenger;
+int _waffraFallbackNoticeGeneration=0;
 Timer? _waffraFooterNoticeTimer;
 int _waffraFooterNoticeGeneration=0;
 int _waffraFooterHostCount=0;
@@ -3646,7 +3689,7 @@ class _WaffraFooterNoticeHostState extends State<WaffraFooterNoticeHost> {
   ValueListenableBuilder<WaffraNoticeData?>(
    valueListenable:_source,
    builder:(ctx,notice,_)=>AnimatedSize(
-    duration:waffraMotion(170),
+    duration:notice==null?Duration.zero:waffraMotion(170),
     curve:Curves.easeOutCubic,
     alignment:Alignment.bottomCenter,
     child:notice==null?const SizedBox(width:double.infinity,height:0):
@@ -3698,6 +3741,8 @@ void snack(BuildContext context,String text,{
  if(_waffraFooterHostCount>0&&(preferFooter||inHome||inHomeDialog)){
   // Switching from a non-footer route must never leave two notices stacked.
   ScaffoldMessenger.maybeOf(context)?.hideCurrentSnackBar();
+  _waffraFallbackNoticeMessenger=null;
+  _waffraFallbackNoticeGeneration++;
   _waffraShowFooterNotice(notice);
   return;
  }
@@ -3707,6 +3752,8 @@ void snack(BuildContext context,String text,{
  if(messenger==null)return;
  messenger.hideCurrentMaterialBanner();
  messenger.hideCurrentSnackBar();
+ _waffraFallbackNoticeMessenger=messenger;
+ _waffraFallbackNoticeGeneration++;
  messenger.showSnackBar(SnackBar(
   behavior:SnackBarBehavior.floating,
   margin:const EdgeInsets.only(left:12,right:12,bottom:8),
