@@ -195,7 +195,7 @@ abstract final class WaffraSmsLocalRules {
    r'\b(?:transfer\s+(?:sent|received|completed|successful)|'
    r'funds\s+transferred|payment\s+(?:completed|successful|posted)|'
    r'purchase\s+(?:completed|successful|posted))\b|'
-   r'(?:تم|تمت)\s+(?:خصم|سحب|إيداع|ايداع|تحويل|ارسال|إرسال|استلام)\b|'
+   r'(?:تم|تمت)\s+(?:خصم|سحب|إيداع|ايداع|تحويل|ارسال|إرسال|استلام)(?:\s|[:،.,]|$)|'
    r'حوالة\s+(?:صادرة|واردة)|تحويل\s+(?:صادر|وارد)|'
    r'خصم\s+(?:من\s+(?:الحساب|البطاقة)|مبلغ|بقيمة)',
    caseSensitive:false,
