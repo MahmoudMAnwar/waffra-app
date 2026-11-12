@@ -1,6 +1,6 @@
 ## M618 — Authenticated V24 to SQLCipher V3 cold preflight fidelity (2026-11-13)
 - **Issue:** [#618](https://github.com/MahmoudMAnwar/waffra-app/issues/618).
-- **PR:** pending, link before code.
+- **PR:** [#619](https://github.com/MahmoudMAnwar/waffra-app/pull/619) Draft.
 - **Status:** Missing: the owner's correct-password V24 archive passes V24 staging but fails at `R616:SQL_PREFLIGHT` on physical Android after merged #617.
 - **Required:** Determine independently whether failure is V3 envelope validation, V2 restore, SQL/history hydration, warm/cold attestation, exact typed account/context/history comparison, or concurrent Home/Widget source drift; fix proven defect with **no bypass** of source isolation, biometric/rescue or rollback. Keep historic accountless rows unlinked, ledger+budgets+goals+recurring+SMS hashes, and warn for unavailable images. No real archive/key/user content in repo.
 - **Tests:** actual-backup *local* schema diagnostics only; synthetic 1056-category mixed income/expense, 19-entry/2-budget/4-goal/3-goal-linked recurring/11-hash, restore, cold reopen and history parity. Exact-HEAD CI and owner Android device acceptance pending.
