@@ -250,14 +250,20 @@ void main(){
   final review=app.split(
    ' Future<void> _reviewAutoSmsCandidates({String? targetId})async {')[1]
    .split(' void _receiveSharedSms(){')[0];
-  expect(review,contains("const <String>['income','expense','transfer']"));
-  expect(review,contains("Key('m595-review-type-'+option)"));
-  expect(review,contains("Key('m595-review-type-continue')"));
+  // M662: the old top chips were an unnecessary second choice. The three
+  // explicit type corrections remain below the reviewed message for unknown
+  // SMS. Known transfers retain Confirm / No / Exclude below original text.
+  expect(review,contains("for(final kind in const <String>['income','expense','transfer'])"));
+  expect(review,contains("Key('m662-unknown-correct-to-'+kind)"));
+  expect(review,isNot(contains("Key('m595-review-type-'+option)")));
+  expect(review,isNot(contains("Key('m595-review-type-continue')")));
+  expect(review,contains("Key('m587-sms-transfer-yes')"));
+  expect(review,contains("Key('m587-sms-transfer-no')"));
+  expect(review,contains("Key('m587-sms-transfer-exclude')"));
   expect(review,contains("Key('m595-review-single-exclude')"));
-  expect(review,contains("reviewType=option;"));
-  expect(review,contains("reviewedAccount=null;"));
-  expect(review,contains("reviewedAccountName=null;"));
+  expect(review,contains("reviewType=decision.substring('m662-type-'.length);"));
   expect(review,contains("if(decision=='correct-type'&&mounted&&reviewType!=null)"));
+  expect(review,contains("WaffraAutoSms.excludeMessages([id])"));
  });
 
  test('M595 correction must not auto-post, guess a transfer, or auto ACK',(){
