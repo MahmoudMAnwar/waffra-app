@@ -163,7 +163,7 @@ void main() {
     notice.dispose();
   });
 
-  testWidgets('the same footer notice mirrors icon and close in Arabic and English',
+  testWidgets('M679 footer status icon mirrors with Arabic and English, no X',
       (tester) async {
     final notice=ValueNotifier<WaffraNoticeData?>(
       const WaffraNoticeData(
@@ -182,9 +182,13 @@ void main() {
       ));
       await tester.pumpAndSettle();
       final statusX=tester.getCenter(find.byIcon(Icons.check_circle_rounded)).dx;
-      final closeX=tester.getCenter(find.byIcon(Icons.close_rounded)).dx;
-      expect(direction==TextDirection.rtl?statusX>closeX:statusX<closeX,isTrue,
-        reason:'Status icon and close action must follow the current direction.');
+      final textX=tester.getCenter(find.byWidgetPredicate(
+        (w)=>w is WaffraText&&w.data=='رسالة اختبار')).dx;
+      expect(direction==TextDirection.rtl?statusX>textX:statusX<textX,isTrue,
+        reason:'Status icon and label must mirror with locale.');
+      expect(find.byIcon(Icons.close_rounded),findsNothing,
+        reason:'User explicitly retired every passive Snackbar X.');
+      expect(find.byKey(const Key('waffra-snackbar-close')),findsNothing);
     }
     await tester.pumpWidget(const SizedBox.shrink());
     notice.dispose();
