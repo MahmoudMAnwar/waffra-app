@@ -1754,6 +1754,39 @@
         "Four enabled default buckets must remain accessible in English and Arabic; custom rules have distinct secure owner state.",
         "M385 and all original finance, security and Android UI gates stay enabled; exact-head CI required."
       ]
+    },
+    {
+      "id": "M665-6-AUTO-EXCLUDE-READY-NONFINANCE-AND-REMOVE-REVIEW-OVERFLOW",
+      "issue": "Issue #594, same Draft PR #595, owner screenshot 2026-11-12, superseding UI portion of old optional cloud offer and ready-seed review-only behavior",
+      "previous_behavior": "Ready-made excluded seeds created review suggestions but did not native-ACK their matching SMS; only confirmed custom exclusions were automatically removed. The bank-review dialog contained an optional three-dot menu with AI and duplicate Not a transaction action; an on-demand cloud staging route remained reachable there.",
+      "approved_behavior": "When a ready excluded seed matches a nonfinancial message and strict completed-finance guard passes, safely add native SMS ID to existing encrypted 30-day reversible exclusion batch. Never post money, infer an account, exclude a completed transfer/purchase/debit, or block the whole sender. Remove bank review 3-dot AI/Not-financial menu plus unreachable AI request handler, preserve explicit Exclude and manual correction/transfer/finance review. Existing cloud data-safety infrastructure may remain for settings or external contracts but no review AI request UI exists.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_sms_local_rules.dart"
+      ],
+      "test_paths": [
+        "test/m665_sms_review_structural_learning_test.dart",
+        "test/m508_saudi_default_sms_rules_test.dart",
+        "test/m661_exclusion_rule_apply_regression_test.dart",
+        "test/m436_cloud_review_pipeline_test.dart",
+        "test/m630_home_first_frame_contention_test.dart",
+        "test/m548_review_grouping_and_signup_perf_test.dart",
+        "test/m603_app_wide_lag_source_regression_test.dart",
+        "test/m638_sms_inbox_delete_sync_test.dart",
+        "test/m632_sms_account_splash_isolate_contract_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/android.yml"
+      ],
+      "safety_invariants": [
+        "Do not use raw keyword fragments alone to discard a posted movement; reject bank evidence collisions, including financial+OTP and transfer+beneficiary.",
+        "Auto excludes only native pending IDs through existing bounded durable encrypted ACK; no whole-sender block, no financial hash ACK, no cloud request, no money/account update; 30 day undo and 31 day durable anti-replay intact.",
+        "Never weaken existing OTP security or privacy tests; existing cloud backend safety tests remain positive even though review menu is explicitly retired.",
+        "Defer SMS work until first interactive Home frame; do not touch M663 prewarm/biometrics and startup; exact-head CI + on-device performance outstanding."
+      ]
     }
   ]
 }
