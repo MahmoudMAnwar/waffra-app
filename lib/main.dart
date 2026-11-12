@@ -15826,32 +15826,32 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        title:WaffraText(waffraIsEnglish?'Quick actions':'إجراءات سريعة',
         style:const TextStyle(fontSize:13,fontWeight:FontWeight.w700)),
        children:[
-        Wrap(spacing:8,runSpacing:8,alignment:WrapAlignment.start,children:[
-         OutlinedButton.icon(
-          onPressed:WaffraHaptics.tap(()=>unawaited(_handleGoalCardAction(g,'edit'))),
-          icon:const Icon(Icons.edit_outlined,size:17),
-          label:WaffraText(waffraIsEnglish?'Edit':'تعديل')),
-         if(g.saved>0)OutlinedButton.icon(
-          onPressed:WaffraHaptics.tap(()=>unawaited(_handleGoalCardAction(g,'release'))),
-          icon:const Icon(Icons.account_balance_wallet_outlined,size:17),
-          label:WaffraText(waffraIsEnglish?'Release savings':'سحب المدخرات')),
-         OutlinedButton.icon(
-          onPressed:WaffraHaptics.tap(()=>unawaited(_handleGoalCardAction(g,'delete'))),
-          icon:const Icon(Icons.delete_outline_rounded,color:Colors.deepOrange,size:17),
-          label:WaffraText(waffraIsEnglish?'Delete':'حذف')),
+        Row(children:[
+         Expanded(child:Wrap(spacing:7,runSpacing:7,children:[
+          OutlinedButton.icon(
+           onPressed:WaffraHaptics.tap(()=>unawaited(_handleGoalCardAction(g,'edit'))),
+           icon:const Icon(Icons.edit_outlined,size:17),
+           label:WaffraText(waffraIsEnglish?'Edit':'تعديل')),
+          if(g.saved>0)OutlinedButton.icon(
+           onPressed:WaffraHaptics.tap(()=>unawaited(_handleGoalCardAction(g,'release'))),
+           icon:const Icon(Icons.account_balance_wallet_outlined,size:17),
+           label:WaffraText(waffraIsEnglish?'Release savings':'سحب المدخرات')),
+          OutlinedButton.icon(
+           onPressed:WaffraHaptics.tap(()=>unawaited(_handleGoalCardAction(g,'delete'))),
+           icon:const Icon(Icons.delete_outline_rounded,color:Colors.deepOrange,size:17),
+           label:WaffraText(waffraIsEnglish?'Delete':'حذف')),
+         ])),
+         const SizedBox(width:6),
+         Tooltip(message:g.active?
+          (waffraIsEnglish?'Pause goal':'إيقاف الهدف'):
+          (waffraIsEnglish?'Activate goal':'تفعيل الهدف'),
+          child:Semantics(label:waffraIsEnglish?'Goal active switch':'زر تفعيل الهدف',
+           child:Switch.adaptive(
+            key:Key('waffra-goal-active-switch-'+g.id),
+            activeTrackColor:emerald,value:g.active,
+            onChanged:WaffraHaptics.selection((enabled)=>
+             unawaited(setGoalActive(g,enabled)))))),
         ]),
-        SwitchListTile.adaptive(
-         key:Key('waffra-goal-active-switch-'+g.id),
-         contentPadding:EdgeInsets.zero,
-         title:WaffraText(
-          (waffraIsEnglish?'Goal enabled':'تفعيل الهدف')+'  •  '+
-          (g.active?(waffraIsEnglish?'Active':'مفعّل'):
-           (waffraIsEnglish?'Paused':'متوقف')),
-          maxLines:1,style:const TextStyle(fontSize:13,fontWeight:FontWeight.w600)),
-         activeTrackColor:emerald,
-         value:g.active,
-         onChanged:WaffraHaptics.selection((enabled)=>
-          unawaited(setGoalActive(g,enabled)))),
        ],
       )),
       if(g.dueDate!=null)Padding(padding:const EdgeInsets.only(top:8),
