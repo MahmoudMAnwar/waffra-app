@@ -3808,21 +3808,7 @@ void snack(BuildContext context,String text,{
   content:WaffraNoticeEdgeBody(
    notice:notice,onDismiss:()=>messenger.hideCurrentSnackBar()),
  ));
- // M679: fallback notices must still expire if the ScaffoldMessenger
- // route timer is interrupted by a modal transition. Generation-bound:
- // never dismiss a newly replaced notification from an old expiry.
- if(!requireDismissal){
-  final generation=_waffraFallbackNoticeGeneration;
-  Timer(duration,(){
-   if(messenger.mounted&&
-      generation==_waffraFallbackNoticeGeneration){
-    messenger.removeCurrentSnackBar();
-    if(identical(_waffraFallbackNoticeMessenger,messenger)){
-     _waffraFallbackNoticeMessenger=null;
-    }
-   }
-  });
- }
+
 }
 void snackSuccess(BuildContext context,String text)=>snack(context,text,isError:false);
 
