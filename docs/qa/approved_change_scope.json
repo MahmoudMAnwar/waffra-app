@@ -77,11 +77,11 @@
         "end": " WaffraFinanceAuthorityRead? _lastFinanceAuthorityRead;"
       },
       {
-        "start": " late final AnimationController _tourGlow;",
+        "start": " void _handleDashboardScroll(){",
         "end": " String search='',typeFilter="
       },
       {
-        "start": " final _tourKeys=List<GlobalKey>.generate(7,(_)=>GlobalKey());",
+        "start": " String accountSearch='';",
         "end": " bool addFabExpanded=false;"
       },
       {
@@ -105,7 +105,7 @@
         "end": "   }else if(decision=='yes'&&mounted&&canConfirm&&"
       },
       {
-        "start": "     if(!(p.getBool('waffra_in_app_tour_seen_v2')??false)&&mounted){",
+        "start": "     _m630PostFrameFinanceWork=postFrameFinance;",
         "end": "  // An explicit Google onboarding notification consent"
       },
       {
@@ -129,7 +129,7 @@
         "end": " Future<void> changePin()"
       },
       {
-        "start": "    _accountTile(waffraIsEnglish?'Replay app tour'",
+        "start": "   _accountSection(waffraIsEnglish?'Help & about':'المساعدة وعن وفرة',Icons.help_outline_rounded,[",
         "end": "    _accountTile(waffraIsEnglish?'About Waffra'"
       },
       {
