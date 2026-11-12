@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'waffra_centered_dropdown.dart';
 import 'main.dart' show snack;
 import 'waffra_account_context_settings.dart';
 import 'waffra_i18n.dart';
@@ -50,7 +51,7 @@ class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {
      content:Column(mainAxisSize:MainAxisSize.min,children:[
       Text(entry.title),
       const SizedBox(height:12),
-      DropdownButtonFormField<String>(
+      WaffraCenteredDropdownFormField<String>(
        isExpanded:true,initialValue:selected,
        decoration:InputDecoration(
         labelText:t('اختر الحساب','Select account'),
@@ -106,7 +107,7 @@ class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {
     }).toList();
     return ListView(children:[
      Padding(padding:const EdgeInsets.all(12),
-      child:DropdownButtonFormField<String>(
+      child:WaffraCenteredDropdownFormField<String>(
        key:ValueKey(filter),initialValue:filter,isExpanded:true,
        decoration:InputDecoration(
         labelText:t('فلتر الحساب','Account filter'),
