@@ -1,10 +1,11 @@
 {
   "contract_version": 1,
   "change_id": "M661-20261112-EXCLUSION-RULE-APPLY-PR590",
-  "human_scope_review": "Issue #589 owner-reported real Android saved custom excluded SMS rules not reflected after refresh. M661 PR #590 only patches manual save notification, paired sender preview, visible encrypted vault read failure and honest single-message vs reusable-rule feedback. No M660 feature implementation, no finance-posting changes, no Android history rescan; retain all original test and CI gates.",
+  "human_scope_review": "Issue #589 owner-reported real Android saved custom excluded SMS rules not reflected after refresh. M661 PR #590 only patches manual save notification, paired sender preview, visible encrypted vault read failure and honest single-message vs reusable-rule feedback. No M660 feature implementation, no finance-posting changes, no Android history rescan; retain all original test and CI gates. PR #590 54c484f exact-head full Flutter suites failed on exactly two test assertions: an M618 source literal requiring an obsolete snackbar text and a newly authored M661 assertion with a wrong native ID guard variable. Owner explicitly requires every regression to reflect the now-approved behavior, not old UI text. Permit only those two narrow positive test corrections; preserve all M618 No/Edit/30-day checks and M661 durable native anti-replay checks. No application or native source edits authorized.",
   "user_requested_changes": [
     "Issue #589: owner's current APK still shows similar excluded SMS and does not visibly apply saved manual excluded rules after refreshing; ensure saved rule changes are reapplied to queued nonfinancial sender-matching SMS with explicit failure diagnostics.",
-    "After excluding one SMS, report accurately whether a durable generic rule was learned, and preserve exact message anti-replay and 30-day recoverable display labels. Full template learning remains pending M660 #588."
+    "After excluding one SMS, report accurately whether a durable generic rule was learned, and preserve exact message anti-replay and 30-day recoverable display labels. Full template learning remains pending M660 #588.",
+    "M661 follow-up: reflect accurate learned-vs-single-only 30-day SMS snackbar in the existing M618 source contract and assert the actual native per-ID anti-replay guard with original logic preserved; repair only the two failing source assertions without weakening finance safety."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -14,7 +15,8 @@
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
     "lib/waffra_sms_rule_settings_page.dart",
-    "test/m661_exclusion_rule_apply_regression_test.dart"
+    "test/m661_exclusion_rule_apply_regression_test.dart",
+    "test/m615_m618_sms_review_retention_perf_contract_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
@@ -49,6 +51,12 @@
       {
         "start": "     final previewMessages=seed!=null?<String>{seed}:",
         "end": "     return SafeArea(top:false,child:Padding("
+      }
+    ],
+    "test/m615_m618_sms_review_retention_perf_contract_test.dart": [
+      {
+        "start": " test('M618 No/Edit alternatives are source-correct and must not auto-post',(){",
+        "end": " test('M616 30d reversible encrypted labels are distinct from immutable rescan denial',(){"
       }
     ]
   }
