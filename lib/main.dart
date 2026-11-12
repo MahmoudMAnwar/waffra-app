@@ -4814,8 +4814,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  @override void initState(){super.initState();WaffraBackNavigation.onHomeBack=_registeredBackHandler;_dashboardScrollController.addListener(_handleDashboardScroll);_tourGlow=AnimationController(vsync:this,duration:waffraMotion(1150));waffraReturnHome.addListener(_returnToHome);waffraIncomingSms.addListener(_receiveSharedSms);waffraAutoSmsUpdates.addListener(_receiveAutoSmsNotice);waffraFinanceNoticeTap.addListener(_m621OnFinanceNoticeTap);waffraWidgetAction.addListener(_receiveWidgetAction);_widgetReloadListener=AppLifecycleListener(onResume:_m468OnResume);unawaited(_loadFinanceSafely());}
  void _returnToHome(){if(mounted)setState((){_tabBackStack.clear();tab=0;accountOpened=false;goalsOpened=false;addFabExpanded=false;});}
  void _receiveWidgetAction(){
-  if(!mounted||!ready||!widget.postAuthVisible||
-     waffraWidgetAction.value!='add')return;
+  // New pre-auth barrier. Preserve the original owner/action guard below
+  // because existing Widgets/source regressions depend on its semantics.
+  if(!mounted||!ready||!widget.postAuthVisible)return;
+  if(!mounted||!ready||waffraWidgetAction.value!='add')return;
   waffraWidgetAction.value=null;
   setState((){tab=0;goalsOpened=false;addFabExpanded=false;});
   WidgetsBinding.instance.addPostFrameCallback((_){if(mounted)unawaited(entrySheet());});
@@ -5024,7 +5026,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   _m632SmsNoticeTimer?.cancel();
   _m632SmsNoticeTimer=Timer(const Duration(milliseconds:900),(){
    _m632SmsNoticeTimer=null;
-   if(mounted&&ready&&widget.postAuthVisible&&!_m627ClosingSession){
+   if(mounted&&ready&&!_m627ClosingSession){
+    // A received native notice can queue during first-run biometric setup.
+    // Do not start encrypted history work until real Home is interactive.
+    if(!widget.postAuthVisible)return;
     unawaited(_refreshAutoSmsInbox());
    }
   });
