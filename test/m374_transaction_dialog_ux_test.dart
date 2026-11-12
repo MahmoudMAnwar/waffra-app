@@ -41,7 +41,7 @@ void main() {
   expect(opened,1);
  });
 
- testWidgets('M374 close and undo are separate, independently working controls',
+ testWidgets('M670 no X, Undo still works',
      (tester) async {
   var closed=0,undone=0;
   await tester.pumpWidget(MaterialApp(home:Scaffold(body:Center(
@@ -53,19 +53,12 @@ void main() {
       actionLabel:'تراجع',onAction:()=>undone++),
      onDismiss:()=>closed++),
    ))))));
-  final close=find.byIcon(Icons.close_rounded);
   final undo=find.byKey(const Key('waffra-snackbar-action'));
-  expect(close,findsOneWidget);
+  expect(find.byKey(const Key('waffra-snackbar-close')),findsNothing);
   expect(undo,findsOneWidget);
-  expect(tester.getRect(close).overlaps(tester.getRect(undo)),isFalse);
-  expect(tester.getSize(find.byKey(const Key('waffra-snackbar-close'))).height,
-   greaterThanOrEqualTo(48));
   expect(tester.getSize(undo).height,greaterThanOrEqualTo(48));
-  await tester.tap(close);
-  expect(closed,1);
-  expect(undone,0);
   await tester.tap(undo);
-  expect(closed,2);
+  expect(closed,1);
   expect(undone,1);
  });
 
