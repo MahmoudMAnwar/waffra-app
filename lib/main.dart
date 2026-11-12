@@ -5633,7 +5633,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        existing:rules,candidate:rule);
       if(!identical(next,rules)){changed=true;rules=next;}
      }
-     if(changed)await store.write(_smsRuleOwnerKey,rules);
+     if(changed){
+      await store.write(_smsRuleOwnerKey,rules);
+      // Reclassify existing pending messages after the confirmed encrypted
+      // rule write; never trigger full SMS history import or financial post.
+      _receiveAutoSmsNotice();
+     }
     }catch(_){
      // A failed optional learning update cannot undo durable exclusion.
     }
