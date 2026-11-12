@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'waffra_amount_formatter.dart';
 import 'waffra_display_currency.dart';
 import 'waffra_oil_market_data.dart';
+import 'waffra_i18n.dart';
 
 import 'waffra_haptic_feedback.dart';
 /// Crude oil display is isolated from the transaction database.
@@ -190,7 +191,8 @@ class _WaffraOilMarketSectionState extends State<WaffraOilMarketSection>{
      if(fxLoading)const SizedBox(width:19,height:19,
       child:CircularProgressIndicator(strokeWidth:2))
      else FittedBox(fit:BoxFit.scaleDown,
-      child:Text(total==null?'—':formatWaffraMoney(total,decimalPlaces:waffraCurrencyMinorDigits(currency))+' '+currency,
+      child:WaffraText(total==null?'—':formatWaffraMoney(total,decimalPlaces:waffraCurrencyMinorDigits(currency))+' '+currency,
+       currencyEnglish:widget.english,
        key:const Key('waffra-oil-total'),
        style:const TextStyle(fontSize:17,fontWeight:FontWeight.w900))),
     ]),
