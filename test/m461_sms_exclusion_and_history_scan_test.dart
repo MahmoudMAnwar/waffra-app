@@ -82,7 +82,7 @@ void main() {
     expect(bulk,contains('unawaited(_refreshAutoSmsInbox());'));
     expect(bulk,isNot(contains('importMonth:true')));
     final explicitRescan=app.substring(
-      app.indexOf(' Future<void> _rescanAutoSmsInbox()async{'),
+      app.indexOf(' Future<void> _rescanAutoSmsInbox({BuildContext? feedbackContext})async{'),
       app.indexOf(' Future<void>? _autoSmsRefreshInFlight;'));
     expect(explicitRescan,contains('_refreshAutoSmsInbox(importMonth:true)'));
   });
