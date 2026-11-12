@@ -611,42 +611,6 @@ waffraResolveSmsReviewCategory(Iterable<BudgetCategory> categories,{
 }
 
 
-/// Resolve a bank SMS category suggestion against the actual active typed tree.
-/// A root name (e.g. "تحويلات") is ONLY a parent suggestion, never a leaf.
-/// Ambiguous leaf labels and cross-direction hints are not auto-selected.
-({BudgetCategory? parent,BudgetCategory? leaf})
-waffraResolveSmsReviewCategory(Iterable<BudgetCategory> values,{
- required bool income,required String proposed,
-}){
- final hint=proposed.trim();
- if(hint.isEmpty)return (parent:null,leaf:null);
- final all=values.toList(growable:false);
- final roots=all.where((c)=>!c.isSubcategory&&
-  c.income==income&&c.categoryActive).toList(growable:false);
- final directRoots=roots.where((p)=>p.name==hint||
-  p.displayName==hint).toList(growable:false);
- // Exact root names override fuzzy matches to prevent showing a main
- // category under "Subcategory" even if a legacy child has that name.
- if(directRoots.length==1)return (parent:directRoots.single,leaf:null);
- if(directRoots.isNotEmpty)return (parent:null,leaf:null);
- final leaves=all.where((c)=>c.isSubcategory&&
-  c.income==income&&waffraCategoryAvailableForNewEntry(all,c)).toList();
- final qualified=<({BudgetCategory parent,BudgetCategory leaf})>[];
- for(final leaf in leaves){
-  final parent=roots.where((root)=>root.id==leaf.parentId).toList();
-  if(parent.length!=1)continue;
-  final root=parent.single;
-  final childLabel=leaf.displayName;
-  final fullName='${root.displayName} / $childLabel';
-  if(leaf.name==hint||childLabel==hint||fullName==hint){
-   qualified.add((parent:root,leaf:leaf));
-  }
- }
- // A duplicated child label must not silently attach to any root.
- if(qualified.length!=1)return (parent:null,leaf:null);
- return (parent:qualified.single.parent,leaf:qualified.single.leaf);
-}
-
 class SavingGoal {
  final String id,name;
  /// Stable, user-approved verified funding account; null only for old goals.
