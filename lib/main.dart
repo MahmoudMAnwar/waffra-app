@@ -12968,41 +12968,35 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final accent=dark?const Color(0xFFF4D790):const Color(0xFF866017);
   return Container(
    key:Key('m649-verified-saving-'+movement.id),
-   margin:const EdgeInsets.symmetric(vertical:5),
-   padding:const EdgeInsets.all(13),
+   margin:const EdgeInsets.symmetric(vertical:3),
+   padding:const EdgeInsets.symmetric(horizontal:12,vertical:9),
    decoration:BoxDecoration(
     color:dark?const Color(0xFF3C3223):const Color(0xFFF8F0D9),
     borderRadius:BorderRadius.circular(17),
     border:Border.all(color:accent.withValues(alpha:.36))),
    child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
     Row(children:[
-     Icon(Icons.savings_outlined,color:accent,size:22),
-     const SizedBox(width:7),
+     Icon(Icons.account_balance_wallet_outlined,color:accent,size:22),
+     const SizedBox(width:5),
      Expanded(child:WaffraText(funded?
       (waffraIsEnglish?'Savings contribution':'إضافة مبلغ للهدف الادخاري'):
       (waffraIsEnglish?'Savings withdrawal':'سحب من الادخار'),
       style:TextStyle(fontWeight:FontWeight.bold,color:accent,fontSize:12))),
-     WaffraCurrencyAmount(movement.amountMinor/100,fontSize:14,color:accent),
+     WaffraCurrencyAmount(movement.amountMinor/100,fontSize:13,color:accent),
     ]),
-    const SizedBox(height:7),
+    const SizedBox(height:4),
     WaffraText(movement.goalName,maxLines:2,
-     style:const TextStyle(fontWeight:FontWeight.w700,fontSize:14)),
-    const SizedBox(height:6),
-    Row(children:[
-     Expanded(child:WaffraText(funded?
-      (waffraIsEnglish?'From: ':'من: ')+accountName:
-      (waffraIsEnglish?'From goal: ':'من الهدف: ')+movement.goalName,
-      maxLines:2,style:const TextStyle(fontSize:11))),
-     Padding(padding:const EdgeInsets.symmetric(horizontal:6),
-      child:Icon(Icons.swap_horiz_rounded,size:16,color:accent)),
-     Expanded(child:WaffraText(funded?
-      (waffraIsEnglish?'Goal wallet':'محفظة الهدف'):
-      (waffraIsEnglish?'To: ':'إلى: ')+accountName,
-      maxLines:2,style:const TextStyle(fontSize:11))),
-    ]),
-    const SizedBox(height:5),
+     style:const TextStyle(fontWeight:FontWeight.w700,fontSize:13)),
+    const SizedBox(height:3),
+    WaffraText(funded?
+     (waffraIsEnglish?'From: ':'من: ')+accountName+
+      (waffraIsEnglish?'  →  Goal wallet':'  ←  محفظة الهدف'):
+     (waffraIsEnglish?'Goal wallet  →  ':'محفظة الهدف  ←  ')+accountName,
+     maxLines:2,overflow:TextOverflow.ellipsis,
+     style:const TextStyle(fontSize:11,height:1.25)),
+    const SizedBox(height:3),
     WaffraText(when==null?movement.occurredIso:dayText(when),
-     style:TextStyle(color:accent,fontSize:11)),
+     style:TextStyle(color:accent,fontSize:10)),
    ]));
  }
 
@@ -13117,12 +13111,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    const Color(0xFFEFE9F8)):entry.income?
    (darkMode?const Color(0xFF244C3A):const Color(0xFFB2D5C2)):
    (darkMode?const Color(0xFF49302C):const Color(0xFFFCECE8));
-  return Padding(padding:const EdgeInsets.symmetric(vertical:5),child:Container(
+  return Padding(padding:const EdgeInsets.symmetric(vertical:3),child:Container(
    decoration:BoxDecoration(color:rowColor,borderRadius:BorderRadius.circular(17),
     border:Border.all(color:forest.withValues(alpha:darkMode ? 0.18 : 0.08))),
    clipBehavior:Clip.antiAlias,child:Stack(children:[
-    Padding(padding:EdgeInsets.fromLTRB(11,attachmentCount>0?23:12,11,12),child:Row(children:[
-     CircleAvatar(radius:18,
+    Padding(padding:EdgeInsets.fromLTRB(10,attachmentCount>0?20:9,10,9),child:Row(children:[
+     CircleAvatar(radius:16,
       backgroundColor:Color(cat.color).withValues(alpha:0.13),
       child:WaffraIllustration(topic:cat.icon,size:36)),
      const SizedBox(width:8),
@@ -13142,7 +13136,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        WaffraText(waffraTr(entry.category)+' • '+dayText(entry.date),
         maxLines:1,style:const TextStyle(fontSize:11,color:Colors.grey)),
         const SizedBox(height:2),
-        Row(children:[
+        if(!paidDue)Row(children:[
          Icon(entry.sourceType=='sms'?Icons.sms_outlined:
           Icons.edit_note_outlined,size:13,color:Colors.grey),
          const SizedBox(width:4),
@@ -13177,12 +13171,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            Flexible(child:WaffraCurrencyAmount(
             entry.goalWalletPaidMinor/100,fontSize:11,color:valueColor)),
           ])),
+       const SizedBox(height:4),
+       Align(alignment:AlignmentDirectional.centerStart,
+        child:WaffraCurrencyAmount(entry.income?entry.amount:-entry.amount,
+         fontSize:15,color:valueColor)),
       ]))),
-     const SizedBox(width:5),
-     ConstrainedBox(constraints:const BoxConstraints(maxWidth:119),
-      child:FittedBox(fit:BoxFit.scaleDown,
-       child:WaffraCurrencyAmount(entry.income?entry.amount:-entry.amount,
-        fontSize:15,color:valueColor))),
+     const SizedBox(width:2),
      IconButton(tooltip:waffraIsEnglish?'Transaction options':'خيارات المعاملة',
       onPressed:WaffraHaptics.tap(()=>transactionActions(entry)),icon:const Icon(Icons.more_vert,size:18)),
     ])),
@@ -13999,7 +13993,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        'Reduce spending on ${waffraTr(top.first.key)} by 15% to save roughly ${cash(top.first.value*.15)} over this period.':
        'تقليل مصروفات «${waffraTr(top.first.key)}» بنسبة 15% قد يوفر حوالي ${cash(top.first.value*.15)} خلال فترة التحليل.')),
      if(goals.isNotEmpty&&income>spending)ListTile(
-      leading:const Icon(Icons.savings_outlined,color:emerald),
+      leading:const Icon(Icons.account_balance_wallet_outlined,color:emerald),
       title:WaffraText(waffraIsEnglish?
        'You could allocate part of your surplus to ${goals.first.name}; nothing is moved automatically.':
        'ممكن تخصص جزءًا من الفائض لهدف «${goals.first.name}»، ولن نضيف أي مبالغ تلقائيًا.')),
@@ -15704,7 +15698,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           label:WaffraText(waffraIsEnglish?'Edit':'تعديل')),
          if(g.saved>0)OutlinedButton.icon(
           onPressed:WaffraHaptics.tap(()=>unawaited(_handleGoalCardAction(g,'release'))),
-          icon:const Icon(Icons.savings_outlined,size:17),
+          icon:const Icon(Icons.account_balance_wallet_outlined,size:17),
           label:WaffraText(waffraIsEnglish?'Release savings':'سحب المدخرات')),
          OutlinedButton.icon(
           onPressed:WaffraHaptics.tap(()=>unawaited(_handleGoalCardAction(g,'delete'))),
