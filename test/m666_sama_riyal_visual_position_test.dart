@@ -117,6 +117,6 @@ void main() {
     final notice = File('native/WaffraAutoSmsNotifications.kt').readAsStringSync();
     expect(notice, contains('Paint().hasGlyph'));
     expect(notice, contains('val amountRun = '));
-    expect(notice, isNot(contains('"$amount ر.س • "')));
+    expect(notice, isNot(contains(r'"$amount ر.س • "')));
   });
 }
