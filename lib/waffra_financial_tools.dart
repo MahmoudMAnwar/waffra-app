@@ -80,15 +80,17 @@ class _WaffraFinancialCalendarState extends State<WaffraFinancialCalendar> {
     ])),
     const SizedBox(width:6),
     ConstrainedBox(constraints:const BoxConstraints(maxWidth:110),
-     child:Column(crossAxisAlignment:CrossAxisAlignment.end,children:[
-      FittedBox(fit:BoxFit.scaleDown,child:Text(
-       '${item.income?'+':'-'}${item.amount.toStringAsFixed(2)}',
-       textDirection:TextDirection.ltr,
-       style:TextStyle(fontSize:17,fontWeight:FontWeight.bold,
-        color:dark?Colors.white:ink))),
-      WaffraCurrencyMark(english:widget.english,
-       size:13,color:dark?Colors.white70:ink),
-     ])),
+     child:FittedBox(fit:BoxFit.scaleDown,child:Row(
+      mainAxisSize:MainAxisSize.min,textDirection:TextDirection.ltr,
+      children:[
+       WaffraCurrencyMark(english:widget.english,
+        size:13,color:dark?Colors.white70:ink),
+       const SizedBox(width:4),
+       Text('${item.income?'+':'-'}${item.amount.toStringAsFixed(2)}',
+        textDirection:TextDirection.ltr,
+        style:TextStyle(fontSize:17,fontWeight:FontWeight.bold,
+         color:dark?Colors.white:ink)),
+      ]))),
    ]),
   );
  }
