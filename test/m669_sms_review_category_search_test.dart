@@ -117,7 +117,7 @@ void main() {
             ),
           ))),
         ),
-      ));
+      );
       await tester.tap(find.byKey(const Key('m669-any-picker')));
       await tester.pumpAndSettle();
       final search=find.byKey(const Key('waffra-centered-dropdown-search'));
