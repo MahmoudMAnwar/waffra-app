@@ -2027,7 +2027,9 @@
         "test/qa/m385_approved_scope_guard_test.py",
         "test/m668_footer_edge_snackbar_test.dart",
         "test/waffra_footer_notice_test.dart",
-        "test/m274_responsive_ui_journeys_test.dart"
+        "test/m274_responsive_ui_journeys_test.dart",
+        "test/m440_biometric_resume_regression_test.dart",
+        "test/m443_merchant_screenshot_regression_test.dart"
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/m174-main-sha-postmerge.yml",
@@ -2043,7 +2045,8 @@
         "No modification to protected money posting paths, SMS original data, biometric gate, SQLCipher persistence, notifications, goals or recurring calculations.",
         "Restyle the tour-only positive tests to assert the tour absent but finance, settings About, Home/tools, startup and accessibility retained; do not weaken unrelated tests.",
         "M282's 48dp accessible-Undo check replaces the exact legacy X-only literal; all other source-completeness and fail-closed finance cutover tests are retained.",
-        "The deleted lib/waffra_tour_plan.dart is intentionally absent and remains inventoried exclusively by M385 approved_deleted_files, not as an extant M550 source_paths item."
+        "The deleted lib/waffra_tour_plan.dart is intentionally absent and remains inventoried exclusively by M385 approved_deleted_files, not as an extant M550 source_paths item.",
+        "M440 and M443 still affirm the 60-second biometric lock, background privacy shield and no relock on screenshot/inactive; only the expected literal nesting of the MaterialApp builder changes."
       ]
     }
   ]
