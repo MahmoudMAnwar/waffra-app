@@ -11894,9 +11894,27 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      'هل تريد نقل المعاملة «${entry.title}» وفواتيرها إلى المحذوفات لمدة 30 يومًا؟');
    if(approved!=true||!mounted)return;
    await _financialWriteQueue.submit(<String,Object>{'id':entry.id},(_)async{
+    // M675: a concurrent SMS/Widget writer may have changed the source
+    // generation while the user was reading the confirmation dialog.
+    // Re-open and verify all witnesses under the serialized write queue.
+    final current=await _financeAuthority.load(
+     route:WaffraFinanceRoute.transactionDeleteAndUndo);
+    if(current.source!=WaffraRuntimeFinanceBackend.verifiedEncrypted||
+       current.encryptedWitness==null){
+     throw StateError('Current encrypted deletion source unavailable.');
+    }
+    WaffraVerifiedTransactionUiGuard.requireUnchangedSelected(
+     ledgerRaw:current.ledgerRaw,selected:entry.toJson());
+    final receipt=await _financeAuthority.loadVerifiedReceiptScreen(
+     route:WaffraFinanceRoute.receiptView,entryId:entry.id);
+    if(receipt.entryId!=entry.id||
+       receipt.generation!=current.encryptedWitness!.generation||
+       receipt.isInRecycleBin){
+     throw StateError('Encrypted receipt changed during deletion.');
+    }
     final committed=await _financeAuthority.deleteVerifiedTransactionToRecycle(
-     baseline:baseline,entryId:entry.id,
-     expectedImageHashes:screen.imageSha256,
+     baseline:current,entryId:entry.id,
+     expectedImageHashes:receipt.imageSha256,
      userConfirmed:true,now:DateTime.now().toUtc());
     _publishVerifiedTransactionLedger(committed);
    });
@@ -11913,7 +11931,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     snack(context,waffraIsEnglish?
      'Deletion could not be verified. Your saved financial data was not reset. Reload before retrying.':
      'تعذر التحقق من الحذف. لم يتم تصفير بياناتك المالية. أعد تحميل المعاملات قبل المحاولة.');
-    unawaited(_loadFinanceSafely());
+    // No full startup reset or transient black screen on failed deletion.
+    unawaited(_refreshFromVerifiedFinance());
    }
   }
  }
@@ -11940,7 +11959,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     snack(context,waffraIsEnglish?
      'Could not restore safely. Reload Recently Deleted and try again.':
      'تعذر الاسترجاع الآمن. أعد فتح المحذوفات وحاول مجددًا.');
-    unawaited(_loadFinanceSafely());
+    unawaited(_refreshFromVerifiedFinance());
    }
   }
  }
