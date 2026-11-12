@@ -768,6 +768,25 @@ double waffraNamedBudgetSpent(Iterable<MoneyEntry> records,
 /// paid amount to the wallet, with any uncovered remainder paid from cash.
 double waffraGoalWalletBalance(Iterable<SavingGoal> goals)=>
  goals.fold<double>(0,(sum,g)=>sum+g.saved);
+
+/// Source-attested goal wallet attribution is integer halalas; only the
+/// remainder of this single payment debits an actual money account.
+int waffraGoalDueCashMinor(MoneyEntry entry){
+ final gross=WaffraRecurringPolicy.toHalalas(entry.amount);
+ final wallet=entry.sourceType=='goal_due'
+  ?entry.goalWalletPaidMinor.clamp(0,gross).toInt():0;
+ return gross-wallet;
+}
+/// Historical goal dues encoded internal split markers in personal notes.
+/// Hide only this exact machine format; keep actual user-written notes.
+String waffraGoalDueVisibleNotes(MoneyEntry entry){
+ final notes=entry.sourceType=='sms'?entry.personalNotes:entry.notes;
+ if(entry.sourceType=='goal_due'&&RegExp(
+  r'^goal_wallet_minor=[0-9]+;current_cash_minor=[0-9]+$')
+  .hasMatch(notes.trim()))return '';
+ return notes;
+}
+
 double waffraAvailableCash(Iterable<MoneyEntry> ledger,Iterable<SavingGoal> goals)=>
  ledger.fold<double>(0,(total,e){
   if(e.income)return total+e.amount;
