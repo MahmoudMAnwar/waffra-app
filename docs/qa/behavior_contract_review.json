@@ -2955,7 +2955,9 @@
         "test/m417_sms_first_run_test.dart",
         "test/m429_sms_phone_integration_test.dart",
         "test/m436_cloud_review_pipeline_test.dart",
-        "test/qa/m417_sms_permission_acceptance_test.py"
+        "test/qa/m417_sms_permission_acceptance_test.py",
+        "test/m463_auth_first_one_page_test.dart",
+        "test/m639_permissions_onboarding_plain_copy_test.dart"
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/m417-auto-bank-sms.yml",
