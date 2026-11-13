@@ -154,6 +154,22 @@ void main(){
   expect(await balances(),{'old-account':100000});
  });
 
+ test('M623 SQLCipher injection after delete rolls back original account',()async{
+  final proof=await archives();
+  // A synthetic write failure DURING incoming SQL hydration, after the old
+  // accounts have been deleted inside the transaction, must restore originals.
+  await live.customStatement(
+   'CREATE TRIGGER m623_injected_restore_failure '
+   'BEFORE INSERT ON fresh_finance_money_accounts '
+   "BEGIN SELECT RAISE(ABORT, 'synthetic injected restore failure'); END",
+  );
+  await expectLater(apply(proof),throwsA(anything));
+  expect(await balances(),{'old-account':100000});
+  final after=await state(live).read();
+  expect(after.values,isNotEmpty);
+  expect((await live.customSelect('PRAGMA foreign_key_check').get()),isEmpty);
+ });
+
  test('unarchived typed SMS fingerprint prevents data loss on restore',()async{
   final proof=await archives();
   await live.customStatement(
