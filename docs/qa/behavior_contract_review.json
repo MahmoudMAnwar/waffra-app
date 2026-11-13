@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
-  "pr": "#617",
-  "issue": "#616",
+  "pr": "#619",
+  "issue": "#618",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "cca778e17eb6daa2576b33ad302c3d04d779834b",
-  "reviewed_at": "2026-11-12",
-  "review_policy": "Review changed behavior against all GitHub Actions workflow scripts, all Dart and Python QA test files, and the original tests' protected security assertions; never edit tests merely to silence red jobs. PR #575 merge with main preserves every M645/M646/M647/M653/M654 contract; original PR-specific positive finance tests and approved fallback/owner-authority remain in effect. M661 source changes must not weaken existing fail-closed encryption, verified-bank account, OTP or anti-replay checks, must preserve all original tests and route review pending rules non-posting. M672-M678 owner-visible corrections (#606-#612) must preserve financial/account safety and separate Android visual/deletion persistence testing. M614 legacy user archive migration: existing V24 decryption is correct but SQLCipher backupRestore writer cannot accept old map; stage in disposable encrypted source and reuse V3 full-source rescue/attestation. Existing tests unchanged, end-to-end Android and signed same-sha checks required. M616 review: previously successful host CI did not prove Android global temporary directory write permission; app-private encrypted staging and user-visible phase code must be reviewed alongside M187/M385/M550 original tests.",
+  "reviewed_at": "2026-11-13",
+  "review_policy": "Review changed behavior against all GitHub Actions workflow scripts, all Dart and Python QA test files, and the original tests' protected security assertions; never edit tests merely to silence red jobs. PR #575 merge with main preserves every M645/M646/M647/M653/M654 contract; original PR-specific positive finance tests and approved fallback/owner-authority remain in effect. M661 source changes must not weaken existing fail-closed encryption, verified-bank account, OTP or anti-replay checks, must preserve all original tests and route review pending rules non-posting. M672-M678 owner-visible corrections (#606-#612) must preserve financial/account safety and separate Android visual/deletion persistence testing. M614 legacy user archive migration: existing V24 decryption is correct but SQLCipher backupRestore writer cannot accept old map; stage in disposable encrypted source and reuse V3 full-source rescue/attestation. Existing tests unchanged, end-to-end Android and signed same-sha checks required. M616 review: previously successful host CI did not prove Android global temporary directory write permission; app-private encrypted staging and user-visible phase code must be reviewed alongside M187/M385/M550 original tests. M618: exact-HEAD review of verified restore deep-history parity after old V24 backup; category rows must not reorder with unstable sort; phase codes do not expose data; all auth/rescue/rollback original guards retained.",
   "contracts": [
     {
       "id": "M601-AUTH-PENDING-BUTTON-AND-VERIFIER-LATENCY",
@@ -2283,6 +2283,33 @@
         "Do not expose user-specific data, passwords, decrypted archives, bank identifiers or absolute file paths through logs or diagnostics.",
         "Never allow historical records to auto-post or be linked to speculative bank accounts; missing image bytes remain explicit-consent omissions.",
         "Physical Android signed-APK restore with real archive remains required before claiming customer compatibility."
+      ]
+    },
+    {
+      "id": "M618-V3-COLD-PREFLIGHT-CATEGORY-HISTORY-PARITY",
+      "issue": "Issue #618 / Draft PR #619: owner physical Android authenticated V24 backup fails at R616:SQL_PREFLIGHT after #617",
+      "previous_behavior": "Production V24 converter builds encrypted accountless V3 with typed financeHistoryV1. Verified preflight cold-restores into a new SQLCipher candidate and rejects when full rowid-ordered financeHistory differs. WaffraAccountsFinanceHistory.restore sorted 1056 categories with comparator treating all roots/children as equal; Dart sort is not stable, changing restored rowid order even when all records and amounts match. Earlier synthetic tests checked counts, not strict DeepCollectionEquality warm/cold history.",
+      "approved_behavior": "Use stable root-first partition that retains within-root and within-child order (identity for valid root-first SQL history). Preserve all original IDs, source_json, typed values and dependencies. A new synthetic high-cardinality regression asserts exact full history equality before and after encrypted cold reopen, matching real preflight semantics. Label SQL preflight hydrate/manifest/attestation/history parity/source witness error stage in UI without printing the exception, paths, passwords or financial values. M616 regression source assertions must verify the new safeStage decision and all protected AUTH/V24/SQL_APPLY plus seven SQL preflight substage labels without weakening the encrypted staging directory checks.",
+      "source_paths": [
+        "lib/storage/waffra_accounts_finance_history.dart",
+        "lib/storage/waffra_verified_active_restore_preflight.dart",
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/storage/m618_v24_preflight_history_parity_test.dart",
+        "test/storage/m616_android_v24_restore_test.dart",
+        "test/storage/m187_active_restore_preflight_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Never discard or fake a category record, row ID, hierarchy, budget allocation, goal opening balance, recurring-goal link, SMS fingerprint or account association.",
+        "Never weaken AES-GCM authentication, V2/V3 nested digest, SQLCipher transaction, source witness, biometric confirmation, external rescue, cold reopen or rollback.",
+        "Do not expose actual backup content/password or record data in diagnostics or test fixtures.",
+        "Original owner Android APK restore remains unverified until manual device acceptance."
       ]
     }
   ]

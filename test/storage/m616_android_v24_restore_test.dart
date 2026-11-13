@@ -111,7 +111,25 @@ void main() {
     expect(ui,contains("restoreStage='V24_STAGING'"));
     expect(ui,contains("restoreStage='SQL_PREFLIGHT'"));
     expect(ui,contains("restoreStage='SQL_APPLY'"));
-    expect(ui,contains(r'R616:$restoreStage'));
+    // M618 keeps the original AUTH/V24/SQL_APPLY stage markers but adds an
+    // independently checked SQL_PREFLIGHT substage. The old assertion must
+    // verify the displayed *resolved* code, not demand an obsolete variable.
+    expect(ui,contains("restoreStage='V24_STAGING'"));
+    expect(ui,contains("restoreStage='SQL_PREFLIGHT'"));
+    expect(ui,contains("restoreStage='SQL_APPLY'"));
+    expect(ui,contains('e is WaffraRestorePreflightStageError'));
+    expect(ui,contains(r"'SQL_PREFLIGHT/${e.stage}'"));
+    expect(ui,contains(r'R616:$safeStage'));
+    final preflight=File(
+      'lib/storage/waffra_verified_active_restore_preflight.dart',
+    ).readAsStringSync();
+    for(final code in [
+      'SQL_HYDRATE', 'V2_MANIFEST', 'WARM_ATTEST', 'COLD_REOPEN',
+      'COLD_ATTEST', 'HISTORY_PARITY', 'SOURCE_WITNESS',
+    ]) {
+      expect(preflight,contains(code));
+    }
+
   });
 
   test('1056-category V24, two historical budgets and goal-linked recurring '

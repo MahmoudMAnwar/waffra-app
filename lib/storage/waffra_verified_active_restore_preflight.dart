@@ -14,6 +14,14 @@ import 'waffra_runtime_finance_route_contract.dart';
 import 'waffra_verified_finance_authority.dart';
 import 'waffra_restore_staging_directory.dart';
 
+/// This stage code never contains a password, financial payload, disk path,
+/// account number or message body. The outer UI may display it for support.
+class WaffraRestorePreflightStageError extends StateError {
+  WaffraRestorePreflightStageError(this.stage)
+    : super('Encrypted restore preflight rejected at $stage');
+  final String stage;
+}
+
 /// A deliberately read-only decision. It cannot replace, swap, wipe,
 /// migrate, update a source marker or activate an encrypted finance vault.
 class WaffraVerifiedRestorePreflightResult {
@@ -122,6 +130,7 @@ class WaffraVerifiedActiveRestorePreflight {
     final disposableKey = base64UrlEncode(keyBytes);
     final candidateFile = File('${stagingDirectory.path}/candidate.sqlite');
     WaffraEncryptedStore? candidate;
+    var stage = 'SQL_HYDRATE';
     try {
       candidate = WaffraEncryptedStore.openAt(
         candidateFile, key: disposableKey,
@@ -139,24 +148,29 @@ class WaffraVerifiedActiveRestorePreflight {
         encryptedArchive: encryptedArchive,
         password: password,
       );
+      stage = 'V2_MANIFEST';
       if (result.sourceChecksum != preview.sourceChecksum ||
           result.receiptCount != preview.receiptCount) {
         throw StateError('Staged backup and authenticated receipt manifest disagree.');
       }
+      stage = 'WARM_ATTEST';
       await WaffraRestoredFinanceReceiptAttestor(
         store: candidate, experimentalEnabled: true,
       ).attest(authenticatedArchive: preview, reported: result);
 
+      stage = 'COLD_REOPEN';
       // Durable DB reopen proves nothing lived only in a warm SQLite cache.
       await candidate.close();
       candidate = null;
       candidate = WaffraEncryptedStore.openAt(
         candidateFile, key: disposableKey,
       );
+      stage = 'COLD_ATTEST';
       await WaffraRestoredFinanceReceiptAttestor(
         store: candidate, experimentalEnabled: true,
       ).attest(authenticatedArchive: preview, reported: result);
 
+      stage = 'HISTORY_PARITY';
       if (accounts != null) {
         const equality = DeepCollectionEquality();
         final actual = await WaffraAccountsPortableBackupV3.capture(candidate);
@@ -183,6 +197,7 @@ class WaffraVerifiedActiveRestorePreflight {
       }
       // Another Home/Widget write during the expensive archive validation
       // invalidates this preflight. Never overwrite or update that live source.
+      stage = 'SOURCE_WITNESS';
       final after = await fresh();
       after.finance.requireIntegrity();
       final latest = after.encryptedWitness;
@@ -201,6 +216,10 @@ class WaffraVerifiedActiveRestorePreflight {
         receiptCount: result.receiptCount,
         receiptBytes: result.receiptBytes,
       );
+    } on Object catch (_) {
+      // UI-visible stage only; underlying exception may include sensitive
+      // database context and must never be interpolated into a message.
+      throw WaffraRestorePreflightStageError(stage);
     } finally {
       try {
         if (candidate != null) await candidate.close();

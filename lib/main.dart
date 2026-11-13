@@ -17297,6 +17297,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         ' authenticated='+backupDecrypted.toString()+
         ' type='+e.runtimeType.toString());
       if(ctx.mounted)update(() {
+       // Additional phase is populated only by the authenticated SQLCipher
+       // staging validator; never include exception text or user records.
+       final safeStage=e is WaffraRestorePreflightStageError
+        ? 'SQL_PREFLIGHT/${e.stage}' : restoreStage;
        restoreError=sqlcipherRestoreCommitted?
        (waffraIsEnglish
         ?'The encrypted restore committed, but screen refresh failed. Reopen Waffra to verify the restored records and retain the external rescue copy.'
@@ -17309,7 +17313,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         ?'Could not authenticate this encrypted backup. Check its original password and file integrity.'
         :'تعذر التحقق من تشفير النسخة. راجع كلمة مرور النسخة الأصلية وسلامة الملف.');
        // Privacy-safe code for support: no password, paths, sender or amounts.
-       restoreError='${restoreError ?? ''} [R616:$restoreStage]';
+       restoreError='${restoreError ?? ''} [R616:$safeStage]';
       });
      }finally{
       if(ctx.mounted)update(()=>restoring=false);
