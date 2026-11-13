@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "change_id": "M690-M699-ISSUES632-637-20261113",
+  "change_id": "M690-M700-ISSUES632-637-20261113",
   "human_scope_review": "Issue #629 completes prior PR #628 only after user-visible acceptance; #631 explicitly authorizes three exact screenshots for Goals/Dues/SMS Review, permanently visible financial activity, non-moving FAB-aligned notice, and savings/goal-due cash safety. Existing tests replace outdated visual assumptions without deleting financial safety assertions. Device screenshots/old restore still require external device evidence.",
   "user_requested_changes": [
     "M690 #632 permanently disable third-party AI bank SMS uploads and opt-in on previously installed versions, remove Settings toggle and signed Android staging worker, retain local encrypted SMS Review and money writer.",
@@ -12,7 +12,8 @@
     "M696 #633 repair ten original positive budget/goal/forecast source contract tests after same-library Home-card extraction: read actual source from declared part via source helper; retain all assertions, no skipped tests.",
     "M697 #634 delete unused retired Cloudflare redactor import after fail-closed transport; update exact-head release notes for all source commits after `lib/main.dart` extraction.",
     "M698 #634 permanently retire the unreachable cloud SMS staging analyzer after code-search import audit, prevent build-time WAFFRA_SMS_WORKER_URL from exposing a configured gateway, and add negative regression checks. Keep test-only finance truth/currency verification helpers while still referenced by safety regression tests.",
-    "M699 #634/#637 remove obsolete cloud/AI suggestion labels and counters from the local SMS review inbox while retaining original SMS text, existing local classification and manual confirmation; historical untrusted proposal data is never shown as a verified financial amount."
+    "M699 #634/#637 remove obsolete cloud/AI suggestion labels and counters from the local SMS review inbox while retaining original SMS text, existing local classification and manual confirmation; historical untrusted proposal data is never shown as a verified financial amount.",
+    "M700 #634: explicitly scope the owner-requested retirement of lib/waffra_sms_cloud_review_analyzer.dart in the exact-path M385 deletion allowlist, preserving fail-closed rejection for every other path; repair M550 references to use still-existing transport safety code and keep all no-upload regressions."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -51,7 +52,8 @@
     "test/m467_account_header_test.dart",
     "test/m470_account_monthly_budget_policy_test.dart",
     "test/m684_finance_period_index_test.dart",
-    "lib/waffra_sms_cloud_review_analyzer.dart"
+    "lib/waffra_sms_cloud_review_analyzer.dart",
+    "scripts/qa/m385_approved_change_guard.py"
   ],
   "approved_deleted_files": [
     "lib/waffra_sms_cloud_review_analyzer.dart"
@@ -230,6 +232,12 @@
     "test/m684_finance_period_index_test.dart": [
       {
         "start": "import 'dart:io';"
+      }
+    ],
+    "scripts/qa/m385_approved_change_guard.py": [
+      {
+        "start": "    explicitly_retired = {",
+        "end": "    for p in deletions:"
       }
     ]
   }
