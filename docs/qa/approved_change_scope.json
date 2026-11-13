@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "change_id": "M685-M689-ISSUES629-631-20261113-M687-M688-REGRESSION-PLUS-LAYOUT",
+  "change_id": "M685-M689-ISSUES629-631-20261113-M687-FIVE-LEGACY-SOURCE-TESTS",
   "human_scope_review": "Issue #629 completes prior PR #628 only after user-visible acceptance; #631 explicitly authorizes three exact screenshots for Goals/Dues/SMS Review, permanently visible financial activity, non-moving FAB-aligned notice, and savings/goal-due cash safety. Existing tests replace outdated visual assumptions without deleting financial safety assertions. Device screenshots/old restore still require external device evidence.",
   "user_requested_changes": [
     "M685: preserve the original authenticated accountless-transaction review, owner-selected account link, attested opening balance and idempotent SQLCipher associations.",
@@ -13,7 +13,8 @@
     "M689 no piggy-bank glyph appears in the accepted Finance/Goals/Due screens; use neutral coin-stack icon. Existing legacy M644, M363 and M388 expectations must assert protected insufficient-cash rejection and safe open-ended goals rather than the superseded continue-despite-insufficient-money UI.",
     "M687 Home state continued: isolate byte-identical PDF report export and Profile page methods into same-library Dart extensions without altering money, backup, FAB, or Snackbar behavior; update source-based tests to read the original moved code without removing assertions.",
     "M687 regression follow-up: keep every positive test/workflow source assertion against actual same-library Dart part code, retain the M550 static stale-contract detection for moved PDF/Profile methods, and update Python/Dart original tests to read both real source locations without removing expectations.",
-    "M688 device-matrix precursor: test approved savings metrics, progress/amount legibility and stationary 58dp plus with short and multiline Snackbar across 320/360/390dp, RTL/LTR, light/dark, 1.3 text scale. Clearly mark Flutter widget CI as not physical Android acceptance."
+    "M688 device-matrix precursor: test approved savings metrics, progress/amount legibility and stationary 58dp plus with short and multiline Snackbar across 320/360/390dp, RTL/LTR, light/dark, 1.3 text scale. Clearly mark Flutter widget CI as not physical Android acceptance.",
+    "M687 repair five exact-SHA Flutter regressions M374 M479 M513 M662 M671 after same-library PDF/Profile extraction; preserve every original test assertion and inspect the actual relocated method bodies."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -67,7 +68,12 @@
     "scripts/qa/m550_behavior_contract_preflight.py",
     "test/m424_mandatory_biometrics_test.dart",
     "test/waffra_oct21_regression_test.dart",
-    "test/m688_approved_android_screens_matrix_test.dart"
+    "test/m688_approved_android_screens_matrix_test.dart",
+    "test/m374_transaction_dialog_ux_test.dart",
+    "test/m479_login_logout_and_back_test.dart",
+    "test/m513_logout_confirmation_test.dart",
+    "test/m662_sms_review_activity_pdf_regression_test.dart",
+    "test/m671_tour_retirement_snackbar_tap_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
@@ -316,6 +322,31 @@
       }
     ],
     "test/waffra_oct21_regression_test.dart": [
+      {
+        "start": "import 'dart:io';"
+      }
+    ],
+    "test/m374_transaction_dialog_ux_test.dart": [
+      {
+        "start": "import 'dart:io';"
+      }
+    ],
+    "test/m479_login_logout_and_back_test.dart": [
+      {
+        "start": "import 'dart:io';"
+      }
+    ],
+    "test/m513_logout_confirmation_test.dart": [
+      {
+        "start": "import 'dart:io';"
+      }
+    ],
+    "test/m662_sms_review_activity_pdf_regression_test.dart": [
+      {
+        "start": "import 'dart:io';"
+      }
+    ],
+    "test/m671_tour_retirement_snackbar_tap_test.dart": [
       {
         "start": "import 'dart:io';"
       }

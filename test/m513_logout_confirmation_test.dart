@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -7,7 +8,7 @@ import 'package:waffra/waffra_mandatory_biometric_gate.dart';
 
 void main() {
   test('M513 home asks one Yes/No question, no password or duplicate confirmation', () {
-    final source=File('lib/main.dart').readAsStringSync();
+    final source=readWaffraMainSourceForContracts();
     final start=source.indexOf('   OutlinedButton.icon(style:OutlinedButton.styleFrom(\n    foregroundColor:(isGuest)?emerald:Colors.red,');
     final end=source.indexOf("   const SizedBox(height:13),\n   WaffraText(waffraIsEnglish?\n    'Your data stays on this device.",start);
     expect(start,greaterThan(0));
@@ -83,7 +84,7 @@ void main() {
   });
 
   test('M513 password verifier exists before creating phone session and remains unchanged on logout', () {
-    final src=File('lib/main.dart').readAsStringSync();
+    final src=readWaffraMainSourceForContracts();
     final profile=src.substring(src.indexOf(' Future<void> saveUser(Person u)async {'),
       src.indexOf(' Future<void> setUiCountry('));
     expect(profile,contains("u.provider.toLowerCase().trim()=='phone'"));

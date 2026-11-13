@@ -1,9 +1,10 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
- final home=File('lib/main.dart').readAsStringSync();
+ final home=readWaffraMainSourceForContracts();
  final form=File('lib/waffra_account_transaction_form.dart')
   .readAsStringSync();
 

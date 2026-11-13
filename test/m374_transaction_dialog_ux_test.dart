@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,7 +10,7 @@ void main() {
  TestWidgetsFlutterBinding.ensureInitialized();
 
  test('M374 attachment button is not duplicated in quick actions', () {
-  final source=File('lib/main.dart').readAsStringSync();
+  final source=readWaffraMainSourceForContracts();
   final start=source.indexOf('Future<void> transactionActions(MoneyEntry entry)');
   final end=source.indexOf('Widget _transactionActionTile(',start);
   expect(start,greaterThanOrEqualTo(0));
@@ -88,7 +89,7 @@ void main() {
  });
 
  test('M374 PDF open and share have responsive matching action widths', () {
-  final source=File('lib/main.dart').readAsStringSync();
+  final source=readWaffraMainSourceForContracts();
   final start=source.indexOf("key:const Key('waffra-report-open')");
   final share=source.indexOf("key:const Key('waffra-report-share')",start);
   expect(start,greaterThanOrEqualTo(0));

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -21,7 +22,7 @@ void main(){
  });
 
  test('M479 sign-in is minimal and Back returns to original auth choice',(){
-   final s=File('lib/main.dart').readAsStringSync();
+   final s=readWaffraMainSourceForContracts();
    final login=s.substring(s.indexOf('class _LoginScreenState extends State<LoginScreen> {'),
      s.indexOf('class ProfileForm extends StatefulWidget {'));
    expect(login,contains("key:const Key('m479-login-back-to-choice')"));
@@ -47,7 +48,7 @@ void main(){
  });
 
  test('M545 logout is only Yes/No; never shows password recovery',(){
-   final s=File('lib/main.dart').readAsStringSync();
+   final s=readWaffraMainSourceForContracts();
    final signout=s.substring(s.indexOf(' Future<void> logout()async {'),
      s.indexOf(' Future<void> setPin('));
    final login=s.substring(s.indexOf('class _LoginScreenState extends State<LoginScreen> {'),
