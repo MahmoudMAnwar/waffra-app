@@ -2876,6 +2876,50 @@
         "Existing helper currency/OTP validation assertions remain enforced.",
         "No Settings or app startup cloud opt-in."
       ]
+    },
+    {
+      "id": "M698-UNCONFIGURABLE-CLOUD-REVIEW-ISSUE634",
+      "issue": "Issue #634 / Draft PR #638",
+      "previous_behavior": "The obsolete Cloudflare helper still exposed an environment configured URL, and the unused message-stage module remained in lib.",
+      "approved_behavior": "Return configured=false and empty configuredUrl regardless of stale builds, remove only the unreachable old cloud message staging module, preserve review-only currency/OTP and native protected SMS parsing.",
+      "source_paths": [
+        "lib/waffra_cloudflare_sms_gateway.dart",
+        "lib/waffra_sms_cloud_review_analyzer.dart"
+      ],
+      "test_paths": [
+        "test/m690_retired_cloud_sms_contract_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/android.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "No external SMS submission can be enabled by build-time define.",
+        "Manual review, original SMS and authenticated SQLCipher writer are unchanged.",
+        "Historical pure validation tests retain their original financial rejection assertions."
+      ]
+    },
+    {
+      "id": "M699-LEGACY-CLOUD-UI-RETIREMENT-ISSUES634-637",
+      "issue": "Issues #634 and #637 / Draft PR #638",
+      "previous_behavior": "Old inbox items carrying a cloud proposal rendered 'AI suggestion' with unverified amount and a separate external suggestion counter.",
+      "approved_behavior": "Treat historical proposals as needing manual review. Hide obsolete external model labels and untrusted suggestion amounts while retaining the original full SMS and local bank rules.",
+      "source_paths": [
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m690_retired_cloud_sms_contract_test.dart",
+        "test/m436_cloud_review_pipeline_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/android.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Original SMS history remains visible to the user.",
+        "No unchecked external recommendation becomes posted money.",
+        "The no-network policy does not alter stored SQLCipher balances, receipts or account selection."
+      ]
     }
   ]
 }
