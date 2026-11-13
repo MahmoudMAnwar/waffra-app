@@ -2881,10 +2881,11 @@
       "id": "M698-UNCONFIGURABLE-CLOUD-REVIEW-ISSUE634",
       "issue": "Issue #634 / Draft PR #638",
       "previous_behavior": "The obsolete Cloudflare helper still exposed an environment configured URL, and the unused message-stage module remained in lib.",
-      "approved_behavior": "Return configured=false and empty configuredUrl regardless of stale builds, remove only the unreachable old cloud message staging module, preserve review-only currency/OTP and native protected SMS parsing. The removed staging module is declared in the exact approved-deletion manifest; M550 references only surviving production sources and the no-network test.",
+      "approved_behavior": "Return configured=false and empty configuredUrl regardless of stale builds, remove only the unreachable old cloud message staging module, preserve review-only currency/OTP and native protected SMS parsing. The removed staging module is declared in the exact approved-deletion manifest; M550 references only surviving production sources and the no-network test. M701 M550 now verifies deleted paths are explicitly M385-declared, covered by this review contract, with retained no-network tests; an unapproved deletion is rejected.",
       "source_paths": [
         "lib/waffra_cloudflare_sms_gateway.dart",
-        "lib/waffra_sms_cloud_service.dart"
+        "lib/waffra_sms_cloud_service.dart",
+        "lib/waffra_sms_cloud_review_analyzer.dart"
       ],
       "test_paths": [
         "test/m690_retired_cloud_sms_contract_test.dart"
