@@ -9,7 +9,8 @@
     "M688: keep exact-head CI, narrow 320/360/390dp RTL/dark Overflow, cold SQLCipher Backup/Restore parity and physical owner Android checks as distinct acceptance requirements; no automatic merging.",
     "M689 preserve exactly the three owner-approved 2026-11-13 reference screenshots for savings goals, due dates and SMS review, without removing original SMS or any valid money/action handler.",
     "M689 all financial activity displayed without extra global hide toggle; snackbar anchored beside fixed + in RTL/LTR, multi-line grows upwards.",
-    "M689 reject savings amount greater than verified available source cash before writing, and reject linked goal due if remaining cash exceeds available balance with atomic rollback, once-only wallet split."
+    "M689 reject savings amount greater than verified available source cash before writing, and reject linked goal due if remaining cash exceeds available balance with atomic rollback, once-only wallet split.",
+    "M689 no piggy-bank glyph appears in the accepted Finance/Goals/Due screens; use neutral coin-stack icon. Existing legacy M644, M363 and M388 expectations must assert protected insufficient-cash rejection and safe open-ended goals rather than the superseded continue-despite-insufficient-money UI."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -25,8 +26,11 @@
     "test/m268_approved_emerald_balance_card_test.dart",
     "test/m343_goal_recurring_named_budgets_test.dart",
     "test/m345_goal_budget_forecast_test.dart",
+    "test/m363_transaction_category_inline_creation_test.dart",
     "test/m371_goal_wallet_and_budgets_regression_test.dart",
+    "test/m388_m390_approved_goal_recurring_receipt_test.dart",
     "test/m392_m395_budget_quick_actions_goal_ui_test.dart",
+    "test/m644_goal_notice_funding_contract_test.dart",
     "test/m665_goal_due_display_and_linked_edit_test.dart",
     "test/m669_sms_review_category_search_test.dart",
     "test/m670_feedback_transfer_dashboard_test.dart",
@@ -176,6 +180,22 @@
       {
         "start": "test('Recurring section has count chip, compact reminders and nearest bill'",
         "end": "test('Currency converter searchable currencies, directional swap, financial tools'"
+      }
+    ],
+    "test/m644_goal_notice_funding_contract_test.dart": [
+      {
+        "start": " test('M644 savings success only occurs after source-verified atomic posting'"
+      }
+    ],
+    "test/m363_transaction_category_inline_creation_test.dart": [
+      {
+        "start": " test('M362 a short available balance warns and permits funding'"
+      }
+    ],
+    "test/m388_m390_approved_goal_recurring_receipt_test.dart": [
+      {
+        "start": " test('M388: open-ended goal never divided by zero or marked achieved'",
+        "end": " test('M390: restored receipt references open the same existing gallery'"
       }
     ]
   }
