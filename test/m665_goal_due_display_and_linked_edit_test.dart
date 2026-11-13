@@ -70,16 +70,21 @@ void main(){
   expect(card,contains("goal!=null?Icons.flag_outlined"));
  });
 
- test('M665.7 goal quick-actions have only the toggle, no redundant label',(){
+ test('M689 goal action sheet retains fund/edit/release/delete/active',(){
   final main=File('lib/main.dart').readAsStringSync();
-  final start=main.indexOf("key:PageStorageKey<String>('waffra-goal-quick-actions-'");
-  final end=main.indexOf('if(g.dueDate!=null)',start);
+  final start=main.indexOf(' Future<void> _m689GoalActions(');
+  final end=main.indexOf(' Widget goalsPage(){',start);
   final quick=main.substring(start,end);
-  expect(quick,contains('Switch.adaptive('));
+  expect(quick,contains('SwitchListTile.adaptive('));
   expect(quick,contains("Key('waffra-goal-active-switch-'+g.id)"));
   expect(quick,contains('setGoalActive(g,enabled)'));
-  expect(quick,isNot(contains('SwitchListTile.adaptive(')));
-  expect(quick,isNot(contains("(g.active?(waffraIsEnglish?'Active':'مفعّل')")));
+  expect(quick,contains("fundGoal(g)"));
+  expect(quick,contains("_handleGoalCardAction(g,'edit')"));
+  expect(quick,contains("_handleGoalCardAction(g,'release')"));
+  expect(quick,contains("_handleGoalCardAction(g,'delete')"));
+  final goals=main.substring(end,main.indexOf(' Future<void> recurringDialog(',end));
+  expect(goals,contains("Key('m689-goal-card-'+g.id)"));
+  expect(goals,isNot(contains("'View':'عرض'")));
  });
 
  test('M665.7 linked due edit explains without changing finance; standalone still editable',(){
@@ -108,9 +113,11 @@ void main(){
    main.indexOf('   if(recurring.isEmpty)Padding',
     main.indexOf(' Widget recurringPage(){')));
   expect(card,contains("key:Key('m665-recurring-edit-'+r.id)"));
-  expect(card,contains('Opacity(opacity:r.linkedGoalId!=null?0.46:1'));
-  expect(card,contains('enabled:r.linkedGoalId==null'));
-  expect(card,contains('hint:r.linkedGoalId!=null?'));
+  // In M689 the linked goal may only be edited through its own verified route.
+  expect(card,contains("_handleGoalCardAction(goal,'edit')"));
+  expect(card,contains('waffraGoalDueCashMinor(paidGoalDue)/100'));
+  expect(card,contains("Key('m689-due-card-'+r.id)"));
+  expect(card,isNot(contains("PageStorageKey<String>('waffra-recurring-quick-actions-'")));
   // An orphaned linked due is still controlled by the goal editor; only
   // a standalone recurring item can open a direct edit sheet.
  });
