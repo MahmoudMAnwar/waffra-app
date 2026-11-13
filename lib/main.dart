@@ -16092,7 +16092,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    if(goals.isNotEmpty)...[
     WaffraApprovedMetrics(metrics:[
      WaffraApprovedMetric(
-      waffraIsEnglish?'Saved':'المدخرات',cash(saved),Icons.savings_outlined),
+      waffraIsEnglish?'Saved':'المدخرات',cash(saved),Icons.account_balance_wallet_outlined),
      WaffraApprovedMetric(
       waffraIsEnglish?'Active goals':'أهداف نشطة',
       goals.where((g)=>g.active).length.toString(),Icons.flag_outlined),
