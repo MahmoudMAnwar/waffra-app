@@ -334,10 +334,18 @@ class WaffraFreshModulesRepository {
               [id,linkedId,DateTime.now().toIso8601String()],
             );
           }else if(replaceExisting){
-            // A cleared account must not survive as an old typed default.
-            await store.customStatement(
-              'DELETE FROM fresh_finance_recurring_account_defaults '
-              'WHERE recurring_id=?',[id]);
+            // Older due ledgers may predate the optional M448 account
+            // context table. If it exists, delete the stale association;
+            // if absent, there cannot be an association to delete.
+            final defaultsTable=await store.customSelect(
+              "SELECT name FROM sqlite_master WHERE type='table' "
+              "AND name='fresh_finance_recurring_account_defaults'"
+            ).get();
+            if(defaultsTable.isNotEmpty){
+              await store.customStatement(
+                'DELETE FROM fresh_finance_recurring_account_defaults '
+                'WHERE recurring_id=?',[id]);
+            }
           }
           break;
       }
