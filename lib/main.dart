@@ -6577,32 +6577,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final facts=WaffraBankSmsFactsParser.parse(body);
    final sensitive=selected['sensitiveOtp']==true||
     WaffraBankSmsFactsParser.isVerificationChallenge(body);
-   final operationName=switch(facts.kind){
-    WaffraBankOperationKind.transfer=>waffraIsEnglish?'Bank transfer':'تحويل بنكي',
-    WaffraBankOperationKind.cardSettlement=>waffraIsEnglish?'Card settlement':'سداد بطاقة',
-    WaffraBankOperationKind.income=>waffraIsEnglish?'Income':'دخل',
-    WaffraBankOperationKind.expense=>waffraIsEnglish?'Expense':'مصروف',
-    WaffraBankOperationKind.uncertain=>waffraIsEnglish?'Unknown':'غير محدد',
-   };
-   final source=facts.sourceSuffix;
-   final destination=facts.destinationSuffix;
-   final summary=<String>[
-    (waffraIsEnglish?'Detected type: ':'نوع العملية: ')+operationName,
-    if(source!=null)(waffraIsEnglish?'From account: ':'من الحساب: ')+'••••'+source,
-    if(destination!=null)(waffraIsEnglish?'To account: ':'إلى الحساب: ')+'••••'+destination,
-    if(facts.fee!=null&&facts.fee!>0)
-     (waffraIsEnglish?'Separate fee: ':'رسوم مستقلة: ')+facts.fee!.toStringAsFixed(2)+' SAR',
-   ].join('\n');
-   final cloud=selected['cloud'];
-   final cloudFacts=cloud is Map ? cloud : null;
    final localMatches=_autoSmsPending.where((row)=>row['id']==id);
    final local=localMatches.isEmpty?null:localMatches.first['local'];
    final localFacts=local is Map?local:null;
-   final cloudAmount=cloudFacts?['amount'];
-   final cloudKind=cloudFacts?['kind'];
-   final cloudSummary=cloudKind is String ?
-    '\n'+(waffraIsEnglish?'Cloud AI suggests: ':'اقتراح الذكاء الاصطناعي: ')+
-    cloudKind+(cloudAmount is num?' • '+cloudAmount.toStringAsFixed(2):''):'';
    final understood=facts.kind==WaffraBankOperationKind.income||
     facts.kind==WaffraBankOperationKind.expense;
    final originalAmount=WaffraSmsCurrencies.originalAmount(body);
@@ -14817,8 +14794,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    )));
  }
  Widget categoriesPage()=>categoriesPageV2();
- Widget _recurringBenefit(String label,IconData icon)=>
-  this._m684RecurringBenefit(label,icon);
  Widget _summaryBox(String heading,String number,IconData icon,Color color)=>Container(
   padding:const EdgeInsets.all(12),
   decoration:BoxDecoration(
@@ -16266,7 +16241,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
  Widget recurringPage(){
   final today=DateUtils.dateOnly(DateTime.now());
-  final now=DateTime.now();
   final shown=recurring.where((r){
    final goalDue=r.linkedGoalId!=null;
    final due=goalDue?r.startAt:nextRecurringDue(r);
