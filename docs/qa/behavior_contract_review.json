@@ -2768,7 +2768,17 @@
         "test/m549_approved_home_notifications_test.dart",
         "test/m611_manual_home_finance_regression_test.dart",
         "test/m580_sms_security_navigation_performance_test.dart",
-        "test/qa/m444_notification_safety_test.py"
+        "test/qa/m444_notification_safety_test.py",
+        "test/m343_goal_recurring_named_budgets_test.dart",
+        "test/m345_goal_budget_forecast_test.dart",
+        "test/m357_budget_hierarchy_and_filter_layout_test.dart",
+        "test/m359_budget_directory_and_templates_test.dart",
+        "test/m360_budget_category_quick_actions_test.dart",
+        "test/m392_m395_budget_quick_actions_goal_ui_test.dart",
+        "test/m414_percentage_alert_controls_test.dart",
+        "test/m467_account_header_test.dart",
+        "test/m470_account_monthly_budget_policy_test.dart",
+        "test/m684_finance_period_index_test.dart"
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/finance-full-regression.yml",

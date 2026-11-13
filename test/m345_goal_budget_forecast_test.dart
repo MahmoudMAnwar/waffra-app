@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_goal_budget_forecast.dart';
 
@@ -64,7 +65,7 @@ void main(){
  });
 
  test('M345 actual goal and budget UI consume forecast without finance writes',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   expect(main,contains("Key('m689-goal-card-'"));
   expect(main,contains('WaffraBudgetPace('));
   expect(main,contains('selected?.alertPercent??80'));

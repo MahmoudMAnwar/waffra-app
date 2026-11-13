@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/main.dart' show MoneyEntry,WaffraFinancePeriodIndex;
@@ -96,7 +97,7 @@ void main(){
  });
 
  test('M684 shared period reads are wired to Home, Budgets, Analytics and forecast',(){
-  final s=File('lib/main.dart').readAsStringSync();
+  final s=readWaffraMainSourceForContracts();
   expect(s,contains("part 'waffra_finance_period_index.part.dart';"));
   expect(s,contains('_m684ScopedMonthEntries(now.year,now.month)'));
   expect(s,contains('_m684ScopedMonthEntries(\n   viewedMonth.year,viewedMonth.month)'));
@@ -117,7 +118,7 @@ void main(){
  });
 
  test('M684 index invalidation covers insert/edit/delete, restore and reset',(){
-  final s=File('lib/main.dart').readAsStringSync();
+  final s=readWaffraMainSourceForContracts();
   expect(s,contains('_m684InvalidatePeriodRead();\n  entries.clear()'));
   expect(s,contains("traceHomeStep('after_batch_json_decode');\n  _m684InvalidatePeriodRead();"));
   expect(s,contains('_m684InvalidatePeriodRead();\n       entries.insert(0,MoneyEntry('));

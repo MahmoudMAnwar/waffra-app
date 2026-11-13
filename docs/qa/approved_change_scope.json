@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "change_id": "M690-M695-ISSUES632-637-20261113",
+  "change_id": "M690-M696-ISSUES632-637-20261113",
   "human_scope_review": "Issue #629 completes prior PR #628 only after user-visible acceptance; #631 explicitly authorizes three exact screenshots for Goals/Dues/SMS Review, permanently visible financial activity, non-moving FAB-aligned notice, and savings/goal-due cash safety. Existing tests replace outdated visual assumptions without deleting financial safety assertions. Device screenshots/old restore still require external device evidence.",
   "user_requested_changes": [
     "M690 #632 permanently disable third-party AI bank SMS uploads and opt-in on previously installed versions, remove Settings toggle and signed Android staging worker, retain local encrypted SMS Review and money writer.",
@@ -8,7 +8,8 @@
     "M691 #633 extract 416 original lines of budget, monthly summary and insight cards to same-library Home State extension, preserve all existing finance and UI assertions through source helper.",
     "M692 #636 2400-row disposable SQLCipher month read and pages with cold reopen and no account balance drift. M693 #635 Goals/Dues/SMS review owner-approved widget composition layout matrix at 320/360/390 LTR/RTL dark/light while physical device proof remains distinct.",
     "M694 #634 remove four stale unused cloud-consent cache fields/getters/reset paths from Home State while retaining local SMS opt-in cache and finance settings; add regression asserts.",
-    "M695 #634 hard-disable orphan historical Cloudflare gateway direct HTTP transport in addition to public cloud service; remove unused main import and retain review-only currency/OTP validators with no-network tests."
+    "M695 #634 hard-disable orphan historical Cloudflare gateway direct HTTP transport in addition to public cloud service; remove unused main import and retain review-only currency/OTP validators with no-network tests.",
+    "M696 #633 repair ten original positive budget/goal/forecast source contract tests after same-library Home-card extraction: read actual source from declared part via source helper; retain all assertions, no skipped tests."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -36,7 +37,17 @@
     "scripts/qa/m550_behavior_contract_preflight.py",
     "test/m687_home_state_extraction_test.dart",
     "lib/waffra_cloudflare_sms_gateway.dart",
-    "test/m423_cloudflare_sms_gateway_test.dart"
+    "test/m423_cloudflare_sms_gateway_test.dart",
+    "test/m343_goal_recurring_named_budgets_test.dart",
+    "test/m345_goal_budget_forecast_test.dart",
+    "test/m357_budget_hierarchy_and_filter_layout_test.dart",
+    "test/m359_budget_directory_and_templates_test.dart",
+    "test/m360_budget_category_quick_actions_test.dart",
+    "test/m392_m395_budget_quick_actions_goal_ui_test.dart",
+    "test/m414_percentage_alert_controls_test.dart",
+    "test/m467_account_header_test.dart",
+    "test/m470_account_monthly_budget_policy_test.dart",
+    "test/m684_finance_period_index_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
@@ -159,6 +170,56 @@
     "test/m423_cloudflare_sms_gateway_test.dart": [
       {
         "start": "import 'dart:convert';"
+      }
+    ],
+    "test/m343_goal_recurring_named_budgets_test.dart": [
+      {
+        "start": "import 'dart:io';"
+      }
+    ],
+    "test/m345_goal_budget_forecast_test.dart": [
+      {
+        "start": "import 'dart:io';"
+      }
+    ],
+    "test/m357_budget_hierarchy_and_filter_layout_test.dart": [
+      {
+        "start": "import 'dart:io';"
+      }
+    ],
+    "test/m359_budget_directory_and_templates_test.dart": [
+      {
+        "start": "import 'dart:io';"
+      }
+    ],
+    "test/m360_budget_category_quick_actions_test.dart": [
+      {
+        "start": "import 'dart:io';"
+      }
+    ],
+    "test/m392_m395_budget_quick_actions_goal_ui_test.dart": [
+      {
+        "start": "import 'dart:io';"
+      }
+    ],
+    "test/m414_percentage_alert_controls_test.dart": [
+      {
+        "start": "import 'dart:io';"
+      }
+    ],
+    "test/m467_account_header_test.dart": [
+      {
+        "start": "import 'dart:io';"
+      }
+    ],
+    "test/m470_account_monthly_budget_policy_test.dart": [
+      {
+        "start": "import 'dart:io';"
+      }
+    ],
+    "test/m684_finance_period_index_test.dart": [
+      {
+        "start": "import 'dart:io';"
       }
     ]
   }

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -65,7 +66,7 @@ void main() {
  });
 
  test('M414 SavingGoal factory and class close before SavingChallenge',(){
-  final source=File('lib/main.dart').readAsStringSync();
+  final source=readWaffraMainSourceForContracts();
   final model=source.split('class SavingGoal {').last
    .split('class SavingChallenge {').first;
   expect(model,contains("progressAlertPercent:j['progressAlertPercent'] as int? ??80);\n }\n}\n"));
@@ -98,7 +99,7 @@ void main() {
  });
 
  test('M414 budget and goal notification handling stays user-controlled',(){
-  final source=File('lib/main.dart').readAsStringSync();
+  final source=readWaffraMainSourceForContracts();
   final budgetAlert=source.split('Future<void> budgetAlert(').last
    .split('/// Draw the same category-colored donut').first;
   expect(budgetAlert,contains('b.budgetActive&&b.alertsEnabled'));

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 
@@ -21,7 +22,7 @@ void main() {
 
  test('M360 saved budget actions are in My Budgets only',(){
   final budgets=File('lib/waffra_budget_directory.part.dart').readAsStringSync();
-  final app=File('lib/main.dart').readAsStringSync();
+  final app=readWaffraMainSourceForContracts();
   expect(budgets,contains("'waffra-budget-quick-actions-'"));
   expect(budgets,contains('editBudgetForCategory(b)'));
   expect(budgets,contains('setNamedBudgetActive(b,enabled)'));
@@ -32,7 +33,7 @@ void main() {
  });
 
  test('M360 bank SMS batch review also permits creating a new budget',(){
-  final app=File('lib/main.dart').readAsStringSync();
+  final app=readWaffraMainSourceForContracts();
   expect(app,contains("'__create_budget__'"));
   expect(app,contains("'waffra-sms-batch-create-budget-'"));
   expect(app,contains('assigned[n]=id;'));
@@ -40,7 +41,7 @@ void main() {
  });
 
  test('M360 overall budget and allowance are projections of saved budgets',(){
-  final app=File('lib/main.dart').readAsStringSync();
+  final app=readWaffraMainSourceForContracts();
   expect(app,contains('final overallLimit=allBudgets.fold<double>'));
   expect(app,contains('final overallSpent=monthEntries.where('));
   expect(app,contains('final activeCap=activeBudgets.fold<double>'));

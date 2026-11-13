@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_home_accounts_sheet.dart';
@@ -20,7 +21,7 @@ void main(){
   expect(find.byKey(const Key('m467-manage-accounts')),findsOneWidget);
  });
  test('M467 Home header scope is verified and never passed into finance commits',(){
-  final src=File('lib/main.dart').readAsStringSync();
+  final src=readWaffraMainSourceForContracts();
   // M549 final approved UI: the account selector lives in the compact
   // monthly summary, never inside the balance card.
   expect(src,isNot(contains("Key('m470-balance-account-picker')")));
