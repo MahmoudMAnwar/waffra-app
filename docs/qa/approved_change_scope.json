@@ -1,14 +1,17 @@
 {
   "contract_version": 1,
-  "change_id": "M618-20261113-ISSUE618-PR619-SQL_PREFLIGHT_HISTORY_FIDELITY",
-  "human_scope_review": "Owner supplied screenshot from newest Android main APK: [R616:SQL_PREFLIGHT] after correct-password V24 backup authentication and conversion. No actual archive, financial names, numbers, password or personal data uploaded. Verified old source's structure locally; M618 explicitly fixes unstable V3 category history reordering that can fail deep equality when restored after large inventories, adds cold V3 fidelity regression and privacy-safe phase code. Original encrypted backup intact. Android acceptance pending. The seven observed failing CI workflows were all traced to one M616 source-text regression still expecting old R616:$restoreStage after approved code now renders R616:$safeStage. Keep all original tests and add positive assertions for the new preflight phase codes, rather than disabling tests.",
+  "change_id": "M620-M622-M623-20261113-ISSUES620_622_623-PR621-RESTORE_PARITY_PERFORMANCE_NO_RESCUE",
+  "human_scope_review": "Owner's original encrypted old V24 archive was authenticated locally (never committed); 19 unique IDs, 17 expenses and 2 income. After successful main restore (post #619), Android Home showed exactly 38 rows, with each financial total doubled and account-only balance 0. New PR is limited to independent postcommit ID parity, stale Home rehydration using a verified source, explaining historic accountless net and external encrypted rescue. Never auto-delete by name/date/amount or fake balances. CI and expendable device acceptance pending. Owner additionally requested faster restore in SAME PR; Issue #622 approved atomic disposable SQLCipher category/goal/recurring/budget staging and reuse of selected source read, with independent fresh preflight witness unchanged. Owner requested M623: remove mandatory creation/saving of an extra encrypted rescue copy from restore; explicit irreversible-success notice; preserve atomic rollback on error, input file, verified source and manual backup elsewhere. Owner clarified: no additional warning/explanation in confirmation. Keep existing concise Yes/No confirmation.",
   "user_requested_changes": [
-    "Fix genuine legacy .waffra V24 restore failure in SQL_PREFLIGHT after previous merged fixes; user specifically requested Draft PR and permanent regression prevention.",
-    "Make SQLCipher category history restoration stable (roots before children but original within-group rowid order preserved) so authenticated 1056-category history matches across cold SQLCipher reopen.",
-    "Test real preflight history comparison with synthetic 1056 categories, mixed income/expense, 19 transactions, 2 budgets, 4 goals, 3 linked recurring and 11 SMS fingerprints — never add private backup/password to GitHub.",
-    "Publish privacy-safe SQL preflight substage code to distinguish SQL hydration, warm/cold attestation, historical parity, and source witness failures; do not display exception text or user data.",
-    "Keep authenticated archive/V2 and V3 hashes, external rescue, biometric authorisation, source witness, SQLCipher safe rollback, and historical accounts unlinked.",
-    "Keep original M616 Android restore staging contract active while updating its UI error-code assertion to verify the new SQL_PREFLIGHT substage resolver, every original stage, and seven privacy-safe preflight substage labels."
+    "Detect post-V24-restore display doubling (19 authenticated unique transaction IDs vs 38 displayed) and distinguish active canonical SQLCipher duplication from stale Home presentation.",
+    "After source-witnessed restore, require exact source-vs-canonical-vs-Home transaction ID/direction/minor amount/timestamp parity; rehydrate UI from single verified source only if canonical IDs match; never remove actual same-looking financial records.",
+    "Keep account-only balance separate from historic recorded net and explain clearly when 0 appears because no active accounts are registered; never fabricate money-account links or bank balances.",
+    "Explain before replacement that the separately saved rescue is the OLD encrypted device snapshot, not the incoming backup, so the owner can safely roll back.",
+    "Add a synthetic regression with 19 unique IDs, duplicates/error paths, distinct legitimate same-amount records, byte-preserving finance/rescue paths, and distinct legacy net vs verified account balance; owner phone test pending.",
+    "M622: avoid per-category SQLite commit in V24 conversion (1056 categories) through one outer disposable encrypted transaction retaining each record's validation and any-error rollback; reuse already loaded verified source before fresh preflight.",
+    "M622: retain archived source encryption, external rescue, biometrics, cold restore and postcommit M620 parity; require synthetic 1056 category integration/cold reopen and new source-contract tests; only device stopwatch can quantify speedup.",
+    "M623: remove automatic pre-restore rescue export, UI save dialog, and associated external-file arguments from verified V3 replace only; keep native SQLCipher all-or-nothing transaction rollback, source witness and original backup unchanged.",
+    "M623: no extra caution or rescue message in confirmation; preserve existing biometric and compact user confirmation, verify no rescue file created, and synthetic stale/corrupt/error rollback tests."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -16,40 +19,72 @@
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
-    "lib/storage/waffra_accounts_finance_history.dart",
-    "lib/storage/waffra_verified_active_restore_preflight.dart",
+    "lib/storage/waffra_restored_ledger_identity_guard.dart",
+    "test/storage/m620_restored_home_ledger_parity_test.dart",
+    "lib/storage/waffra_legacy_v24_sqlcipher_converter.dart",
     "test/storage/m616_android_v24_restore_test.dart",
-    "test/storage/m618_v24_preflight_history_parity_test.dart"
+    "lib/storage/waffra_verified_active_accounts_restore.dart",
+    "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
+    "test/storage/m448_verified_active_accounts_restore_test.dart",
+    "test/storage/m614_legacy_v24_restore_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
   "bounded_sections": {
     "lib/main.dart": [
       {
+        "start": "import 'storage/waffra_legacy_v24_sqlcipher_converter.dart';",
+        "end": "import 'storage/waffra_verified_active_restore_preflight.dart';"
+      },
+      {
+        "start": "      SliverPadding(padding:const EdgeInsets.fromLTRB(14,10,14,96),",
+        "end": "         Row(key:const Key('m549-three-home-finance-actions'),children:["
+      },
+      {
         "start": " Future<void> backupDialog()async {",
         "end": " Future<String?> _askForPin({"
       }
     ],
-    "lib/storage/waffra_accounts_finance_history.dart": [
+    "lib/storage/waffra_legacy_v24_sqlcipher_converter.dart": [
       {
-        "start": "      final recorded = (records[table] as List).cast<Map<String, dynamic>>();",
-        "end": "      for (final row in ordered) {"
+        "start": "    WaffraEncryptedStore? db;\n    try {",
+        "end": "      final history = await WaffraAccountsFinanceHistory.capture(db);"
       }
     ],
-    "lib/storage/waffra_verified_active_restore_preflight.dart": [
+    "lib/storage/waffra_verified_active_accounts_restore.dart": [
       {
-        "start": "import 'waffra_restore_staging_directory.dart';",
-        "end": "/// A deliberately read-only decision."
-      },
+        "start": "/// Apply a cold-attested V3 to the ALREADY ACTIVE SQLCipher source.",
+        "end": "   final all=await store.customSelect("
+      }
+    ],
+    "lib/storage/waffra_verified_encrypted_finance_bridge.dart": [
       {
-        "start": "    WaffraEncryptedStore? candidate;",
-        "end": "  }\n}"
+        "start": "  /// Restore is permitted ONLY on an already active verified encrypted vault.",
+        "end": "  Future<String> exportPortableBackup("
+      }
+    ],
+    "test/storage/m448_verified_active_accounts_restore_test.dart": [
+      {
+        "start": " Future<String> export(WaffraEncryptedStore store) =>",
+        "end": " test('unarchived typed SMS fingerprint prevents data loss on restore'"
+      }
+    ],
+    "test/storage/m614_legacy_v24_restore_test.dart": [
+      {
+        "start": "  test('UI routes legacy authenticated backups through separate V3 restore '",
+        "end": null
+      }
+    ],
+    "test/storage/m620_restored_home_ledger_parity_test.dart": [
+      {
+        "start": "  test('M620 restored V24 checks canonical SQLCipher before repainting '",
+        "end": null
       }
     ],
     "test/storage/m616_android_v24_restore_test.dart": [
       {
-        "start": "    final ui=File('lib/main.dart').readAsStringSync();",
-        "end": "  test('1056-category V24, two historical budgets and goal-linked recurring '"
+        "start": "  test('M616 Android and iOS use app-private cache instead of systemTemp, '",
+        "end": null
       }
     ]
   }

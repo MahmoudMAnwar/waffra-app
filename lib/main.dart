@@ -101,6 +101,7 @@ import 'storage/waffra_home_finance_persistence.dart';
 import 'storage/waffra_verified_finance_authority.dart';
 import 'storage/waffra_accounts_portable_backup_v3.dart';
 import 'storage/waffra_legacy_v24_sqlcipher_converter.dart';
+import 'storage/waffra_restored_ledger_identity_guard.dart';
 import 'storage/waffra_verified_active_restore_preflight.dart';
 import 'storage/waffra_verified_pull_refresh_source.dart';
 import 'storage/waffra_production_finance_authority_binding.dart';
@@ -13736,6 +13737,24 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       SliverPadding(padding:const EdgeInsets.fromLTRB(14,10,14,96),
        sliver:SliverToBoxAdapter(child:Column(
         crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+         if(_m467SelectedAccount=='all'&&_m468VerifiedAccountsLoaded&&
+            _m467Accounts.isEmpty&&entries.isNotEmpty)...[
+          Container(
+           key:const Key('m620-accountless-legacy-net-explanation'),
+           margin:const EdgeInsets.only(bottom:10),
+           padding:const EdgeInsets.symmetric(horizontal:12,vertical:10),
+           decoration:BoxDecoration(
+            borderRadius:BorderRadius.circular(12),
+            border:Border.all(color:emerald.withValues(alpha:.28))),
+           child:WaffraText(waffraIsEnglish?
+            'No active financial accounts exist, so verified account balance is 0. '
+            'Net recorded transactions: ${cash(sum(entries,true)-sum(entries,false))}. '
+            'This is NOT an available bank balance. Review accounts before linking old transactions.':
+            'لا توجد حسابات مالية نشطة، لذلك رصيد الحسابات صفر. '
+            'صافي العمليات المسجلة: ${cash(sum(entries,true)-sum(entries,false))}. '
+            'هذا ليس رصيدًا بنكيًا متاحًا. راجع الحسابات قبل ربط العمليات القديمة.'),
+          ),
+         ],
          // M549: user-approved screenshot: three compact, equal-width
          // direct finance actions, no duplicated large income/expense tiles.
          // This is NOT the floating + and never changes its geometry.
@@ -17079,6 +17098,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      var backupDecrypted=false;
      var sqlcipherRestoreCommitted=false;
      var restoreStage='AUTH';
+     List<dynamic>? authenticatedLegacyRows;
+     // M622: reuse the already-selected encrypted source. The independent
+     // preflight re-reads its generation/digest before approving any write.
+     WaffraFinanceAuthorityRead? inspectedRestoreSource;
      try{
       var restoreArchive=stagedBackup!;
       var raw=await compute(waffraDecodeBackupInIsolate,<String,String>{
@@ -17095,6 +17118,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        final source=await _financeAuthority.load(
         route:WaffraFinanceRoute.backupRestore);
        if(source.encryptedWitness!=null){
+        inspectedRestoreSource=source;
+        authenticatedLegacyRows=List<dynamic>.of(raw['entries'] as List);
         final unavailable=
          WaffraLegacyV24SqlCipherConverter.unavailableReceiptCount(raw);
         if(unavailable>0){
@@ -17118,7 +17143,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        }
       }
       if(raw['format']==WaffraAccountsPortableBackupV3.format){
-       final source=await _financeAuthority.load(route:WaffraFinanceRoute.backupRestore);
+       final source=inspectedRestoreSource??
+        await _financeAuthority.load(route:WaffraFinanceRoute.backupRestore);
        if(source.encryptedWitness==null){
         if(ctx.mounted)update(()=>restoreError=waffraIsEnglish?
          'This file requires an active SQLCipher vault.':
@@ -17134,8 +17160,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        final approved=await confirm(
         waffraIsEnglish?'Replace encrypted finance?':'استبدال البيانات المالية؟',
         waffraIsEnglish
-         ?'Verified ${result.transactionCount} transactions and ${result.receiptCount} receipt images. This will replace your current accounts, transfers, goals, budgets and transaction history. First you MUST save an encrypted rescue copy of your current data outside Waffra. Continue?'
-         :'تم التحقق من ${result.transactionCount} معاملة و${result.receiptCount} مرفق. سيتم استبدال الحسابات والتحويلات والأهداف والميزانيات والعمليات الحالية بالكامل. يجب أولًا حفظ نسخة أمان مشفرة لبياناتك الحالية خارج وفرة. هل تريد المتابعة؟');
+         ?'Restore ${result.transactionCount} transactions and ${result.receiptCount} receipts?'
+         :'هل تريد استعادة ${result.transactionCount} معاملة و${result.receiptCount} مرفق؟');
        if(approved!=true||!mounted||!ctx.mounted)return;
        if(!await _authorizeSensitiveAction('replacing encrypted finance')||
           !mounted||!ctx.mounted)return;
@@ -17144,39 +17170,62 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        await _financialWriteQueue.drain();
        final bridge=_financeBinding?.accountsBridge;
        if(bridge==null)throw StateError('Active finance source is unavailable.');
-       restoreStage='RESCUE';
-       final rescue=await bridge.exportPortableBackup(restoreSecret.text);
-       final rescueSaved=await WaffraBackupFiles.saveEncryptedArchive(rescue,
-        name:'Waffra_Rescue_Before_Restore_${DateTime.now().millisecondsSinceEpoch}.waffra');
-       if(!rescueSaved){
-        if(ctx.mounted)update(()=>restoreError=waffraIsEnglish?
-         'Restore cancelled: save the current encrypted rescue file first.':
-         'تم إلغاء الاستعادة: احفظ نسخة أمان مشفرة لبياناتك الحالية أولًا.');
-        return;
-       }
        restoreStage='SQL_APPLY';
        final applied=await bridge.applyVerifiedV3Restore(
         baseline:source.encryptedWitness!,
         encryptedArchive:restoreArchive,password:restoreSecret.text,
-        savedRescueArchive:rescue,rescuePassword:restoreSecret.text,
         preflightChecksum:result.archiveChecksum,
-        userConfirmed:true,externallySavedRescueConfirmed:true);
+        userConfirmed:true);
        sqlcipherRestoreCommitted=true;
        restoreStage='HOME_REFRESH';
        if(!mounted)return;
        // The authoritative encrypted snapshot, not a decoded backup in
        // memory, becomes the source for Home and widget after one commit.
        await _loadFinanceSafely();
+       if(authenticatedLegacyRows!=null&&mounted){
+        // M620: preflight attests an isolated candidate; verify live SQLCipher
+        // AGAIN after the transaction and compare stable IDs, money and dates.
+        restoreStage='CANONICAL_PARITY';
+        final verified=await _financeAuthority.load(
+         route:WaffraFinanceRoute.dashboardRead);
+        verified.finance.requireIntegrity();
+        final canonicalRaw=verified.ledgerRaw;
+        if(canonicalRaw==null){
+         throw StateError('M620_MISSING_CANONICAL_LEDGER');
+        }
+        final canonicalRows=await WaffraLargeJsonDecode.parse(canonicalRaw);
+        if(canonicalRows is! List){
+         throw StateError('M620_INVALID_CANONICAL_LEDGER');
+        }
+        WaffraRestoredLedgerIdentityGuard.verify(
+         authenticatedSource:authenticatedLegacyRows,
+         verifiedSnapshot:canonicalRows);
+        restoreStage='HOME_PARITY';
+        try{
+         WaffraRestoredLedgerIdentityGuard.verify(
+          authenticatedSource:authenticatedLegacyRows,
+          verifiedSnapshot:entries.map((e)=>e.toJson()).toList());
+        }on StateError{
+         // Correct a stale presentation from ONE VERIFIED canonical source.
+         // Never delete same-looking entries from a financial database.
+         final exact=await _m593BuildVerifiedEntries(canonicalRows);
+         if(!mounted)return;
+         setState((){entries..clear()..addAll(exact);});
+         WaffraRestoredLedgerIdentityGuard.verify(
+          authenticatedSource:authenticatedLegacyRows,
+          verifiedSnapshot:entries.map((e)=>e.toJson()).toList());
+        }
+       }
        if(mounted)await _refreshWidget();
        if(mounted)await syncRecurringReminders();
        if(ctx.mounted)Navigator.pop(ctx);
        if(mounted)snackSuccess(context,waffraIsEnglish
         ?'Encrypted restore verified: ${applied.transactionCount} transactions and ${applied.receiptCount} receipts. '
           '${omittedLegacyReceiptCount>0?"Warning: "+omittedLegacyReceiptCount.toString()+" old receipt image(s) were unavailable in this backup and were not restored. ":""}'
-          'Your previous encrypted backup was saved separately.'
+          ''
         :'اكتملت استعادة ${applied.transactionCount} معاملة و${applied.receiptCount} مرفق. '
          '${omittedLegacyReceiptCount>0?"تنبيه: "+omittedLegacyReceiptCount.toString()+" من صور المرفقات القديمة غير موجودة داخل الباكب ولم تُستعد. ":""}'
-         'احتفظ بنسخة الأمان السابقة خارج التطبيق.');
+         '');
        return;
       }
       if(raw['format']!='waffra-backup'||raw['entries'] is! List||
@@ -17216,7 +17265,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       if(!mounted)return;
       final ok=await confirm(
        waffraIsEnglish?'Confirm backup restore':'تأكيد الاستعادة',
-       waffraIsEnglish?'This will replace all current transactions, categories, savings goals and recurring items with the backup. Make a backup of current data first. Continue?':'سيتم استبدال جميع المعاملات والأقسام وأهداف الادخار والعمليات المتكررة الحالية بمحتويات النسخة الاحتياطية. احفظ نسخة من بياناتك الحالية قبل المتابعة. هل تريد الاستمرار؟');
+       waffraIsEnglish?'Restore this backup?':'هل تريد استعادة النسخة الاحتياطية؟');
       if(ok!=true||!mounted)return;
       if(!await _authorizeSensitiveAction('restoring data')||!mounted)return;
       // Build the complete restored finance image without mutating Home
@@ -17303,8 +17352,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         ? 'SQL_PREFLIGHT/${e.stage}' : restoreStage;
        restoreError=sqlcipherRestoreCommitted?
        (waffraIsEnglish
-        ?'The encrypted restore committed, but screen refresh failed. Reopen Waffra to verify the restored records and retain the external rescue copy.'
-        :'تم حفظ البيانات المستعادة في SQLCipher، لكن تعذر تحديث الشاشة. افتح وفرة مجددًا للتحقق من البيانات واحتفظ بنسخة الأمان.'):
+        ?'The restore was committed, but the transaction ID parity or Home refresh needs review. Do NOT delete transactions. Keep the rescue and reopen Waffra.'
+        :'تم حفظ الاستعادة، لكن مطابقة معرّفات العمليات أو تحديث الشاشة يحتاج مراجعة. لا تحذف أي عملية، واحتفظ بنسخة الأمان وأعد فتح وفرة.'):
        backupDecrypted?
        (waffraIsEnglish
         ?'The backup password was accepted, but the data could not be migrated safely. Inspect the current records and keep the encrypted rescue copy.'

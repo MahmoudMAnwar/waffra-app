@@ -101,18 +101,16 @@ class WaffraVerifiedEncryptedFinanceBridge {
   }
 
   /// Restore is permitted ONLY on an already active verified encrypted vault.
-  /// Caller must first cold-attest the new archive, obtain explicit biometric
-  /// consent and save the old vault's encrypted rescue outside the app.
+  /// Caller must first cold-attest the incoming archive and obtain explicit
+  /// biometric consent. An error rolls back the single SQLite transaction;
+  /// successful replacement is final without an automatic external rescue.
   Future<WaffraVerifiedAccountsRestoreReceipt> applyVerifiedV3Restore({
     required WaffraEncryptedHomeWitness baseline,
     required String encryptedArchive,required String password,
-    required String savedRescueArchive,required String rescuePassword,
     required String preflightChecksum,required bool userConfirmed,
-    required bool externallySavedRescueConfirmed,
   }) async {
-    if(!experimentalEnabled||!userConfirmed||
-       !externallySavedRescueConfirmed) {
-      throw StateError('Verified restore needs an external rescue and approval.');
+    if(!experimentalEnabled||!userConfirmed) {
+      throw StateError('Verified restore requires explicit approval.');
     }
     return WaffraExperimentalWriterGate(
       disposableDirectory:writerDirectory,experimentalEnabled:true,
@@ -122,12 +120,9 @@ class WaffraVerifiedEncryptedFinanceBridge {
         store:snapshot.store,snapshot:snapshot,experimentalEnabled:true,
       ).restore(
         encryptedArchive:encryptedArchive,password:password,
-        savedRescueArchive:savedRescueArchive,
-        rescuePassword:rescuePassword,
         expectedGeneration:baseline.generation,
         expectedDigest:baseline.digest,
         preflightChecksum:preflightChecksum,userConfirmed:true,
-        externallySavedRescueConfirmed:true,
       );
     });
   }

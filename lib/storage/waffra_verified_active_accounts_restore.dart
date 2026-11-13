@@ -21,7 +21,9 @@ class WaffraVerifiedAccountsRestoreReceipt {
 
 /// Apply a cold-attested V3 to the ALREADY ACTIVE SQLCipher source.
 /// A caller must hold the active Home/Widget writer lock, verify source
-/// activation and save an EXTERNAL encrypted rescue archive first.
+/// activation, authenticate the incoming archive and obtain user consent.
+/// The *existing* source is protected by the outermost SQLite transaction:
+/// failed/aborted restores roll back, without exporting a second backup.
 /// This never changes keys, source pointers, credentials or Firebase.
 /// Unsupported retained records cause failure before any deletion.
 /// A failure anywhere restores the original rows, typed histories, SMS hashes,
@@ -52,28 +54,21 @@ class WaffraVerifiedActiveAccountsRestore {
 
  Future<WaffraVerifiedAccountsRestoreReceipt> restore({
   required String encryptedArchive,required String password,
-  required String savedRescueArchive,required String rescuePassword,
   required int expectedGeneration,required String expectedDigest,
   required String preflightChecksum,required bool userConfirmed,
-  required bool externallySavedRescueConfirmed,
  }) async {
   if(!experimentalEnabled||!userConfirmed||
-      !externallySavedRescueConfirmed||password.isEmpty||
-      rescuePassword.isEmpty||preflightChecksum.isEmpty) {
-   throw StateError('Restore needs biometric consent and an external rescue file.');
+      password.isEmpty||preflightChecksum.isEmpty) {
+   throw StateError('Restore requires authenticated user consent and checksum.');
   }
-  // Authenticate both archives before opening a transaction with live money.
+  // Authenticate the supplied archive before opening a transaction with live money.
   final archive=await WaffraAccountsPortableBackupV3.verifyAndPreview(
    encryptedArchive:encryptedArchive,password:password);
-  final rescue=await WaffraAccountsPortableBackupV3.verifyAndPreview(
-   encryptedArchive:savedRescueArchive,password:rescuePassword);
   if(archive.history==null) {
    throw StateError('Legacy V3 lacks authenticated finance history; restore refused.');
   }
   final preview=await WaffraPortableBackupV2.verifyAndPreview(
    encryptedArchive:archive.encryptedV2,password:password);
-  final rescuePreview=await WaffraPortableBackupV2.verifyAndPreview(
-   encryptedArchive:rescue.encryptedV2,password:rescuePassword);
   if(preview.sourceChecksum!=preflightChecksum) {
    throw StateError('Archive no longer matches its cold-restore preview.');
   }
@@ -85,17 +80,10 @@ class WaffraVerifiedActiveAccountsRestore {
       before.digest!=expectedDigest){
     throw StateError('Active money changed since restore preflight.');
    }
-   // The rescue is authenticated and must match the EXACT same live source
-   // before any money or receipt row is removed.
-   final rescueFinance=rescuePreview.financialSnapshot;
-   for(final key in before.values.keys) {
-    final actual=before.values[key], saved=rescueFinance[key];
-    if(jsonEncode(actual)!=jsonEncode(saved)) {
-     throw StateError('Saved rescue archive does not match live finance.');
-    }
-   }
-   // The source's typed SMS deduplication index must be represented in its
-   // authenticated rescue. Never silently discard existing message hashes.
+   // Independently attest current snapshot versus typed SQL under the
+   // protected writer transaction. No second encrypted rescue is generated;
+   // a failure rolls back every live row to its original state.
+   // Never silently discard existing SMS deduplication fingerprints.
    final hashesBefore=before.values['waffra_sms_hashes_v1'];
    if(hashesBefore!=null&&hashesBefore is! List<String>){
     throw StateError('Invalid canonical SMS hash snapshot.');
@@ -108,15 +96,11 @@ class WaffraVerifiedActiveAccountsRestore {
     throw StateError('SMS duplicate ledger is not fully backed up.');
    }
    const same=DeepCollectionEquality();
-   final active=await WaffraAccountsPortableBackupV3.capture(store);
-   if(!same.equals(active['accounts'],rescue.accounts)||
-      !same.equals(active['links'],rescue.links)||
-      !same.equals(active['transfers'],rescue.transfers)||
-      !same.equals(active['contextV1'],rescue.context)||
-      !same.equals(
-       await WaffraAccountsFinanceHistory.capture(store),rescue.history)) {
-    throw StateError('Account history changed after external rescue.');
-   }
+   // Read active typed history before replacing any rows, so malformed
+   // relations or unsupported retained records fail closed. There is no
+   // plaintext backup, export, or external rescue side effect.
+   await WaffraAccountsPortableBackupV3.capture(store);
+   await WaffraAccountsFinanceHistory.capture(store);
    final all=await store.customSelect(
     "SELECT name FROM sqlite_master WHERE type='table' "
     "AND name LIKE 'fresh_finance_%'").get();

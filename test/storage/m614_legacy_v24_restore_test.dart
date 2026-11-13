@@ -158,6 +158,8 @@ void main() {
     expect(code,contains('backupDecrypted=true;'));
     expect(code,contains('كلمة مرور النسخة صحيحة'));
     expect(code,contains('الصور دي لن تنتقل'));
-    expect(code,contains('externallySavedRescueConfirmed:true'));
+    expect(code,isNot(contains('externallySavedRescueConfirmed:true')));
+    expect(code,isNot(contains('Waffra_Rescue_Before_Restore_')));
+    expect(code,contains('preflightChecksum:result.archiveChecksum'));
   });
 }
