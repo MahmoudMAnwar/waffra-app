@@ -2574,7 +2574,7 @@
       "id": "M689-OWNER-APPROVED-SMS-GOAL-DUE-AND-HOME-VISUAL-SCREENS",
       "issue": "Issue #631, owner's three approved Arabic screen references, 2026-11-13, PR #630",
       "previous_behavior": "Goal and due pages had long banners, duplicated controls and oversized quick-action rows; the SMS review repeated sender/type summary and an instructional blockers panel; Home could collapse the financial activity section.",
-      "approved_behavior": "Replace visible goal and due pages with owner-approved compact metrics, filters, amount/date/account/progress cards, preserve existing goal and recurring action handlers through compact controls. In SMS review remove ONLY the duplicated preview and blockers panel; retain selectable unmodified original SMS, complete finance detail rows, active category/account/date validation and verified Yes state. Home financial activity always visible and independently filterable, with floating add button stationary and Snackbar composited beside it.",
+      "approved_behavior": "Replace visible goal and due pages with owner-approved compact metrics, filters, amount/date/account/progress cards, preserve existing goal and recurring action handlers through compact controls. In SMS review remove ONLY the duplicated preview and blockers panel; retain selectable unmodified original SMS, complete finance detail rows, active category/account/date validation and verified Yes state. Home financial activity always visible and independently filterable, with floating add button stationary and Snackbar composited beside it. Use neutral coin-stack icon in savings metric/goal action/linked movement rather than the previously disallowed piggy-bank glyph.",
       "source_paths": [
         "lib/main.dart",
         "lib/waffra_home_finance_tiles.part.dart"
@@ -2593,7 +2593,9 @@
         "test/qa/m565_sms_yes_no_test.py",
         "test/qa/m574_sms_confirmation_full_fields_test.py",
         "test/waffra_directional_fab_receipt_corner_test.dart",
-        "test/waffra_m208_bundle_regression_test.dart"
+        "test/waffra_m208_bundle_regression_test.dart",
+        "test/m388_m390_approved_goal_recurring_receipt_test.dart",
+        "test/m662_sms_review_activity_pdf_regression_test.dart"
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/m550-behavior-contract-preflight.yml",
@@ -2611,7 +2613,7 @@
       "id": "M689-INSUFFICIENT-CASH-GUARDS-WALLET-DUE-TRANSACTIONS",
       "issue": "Issue #631, 2026-11-13 goal deposit error and linked-goal due account debit verification",
       "previous_behavior": "UI offered an invalid Continue action when requested savings exceeded the verified bank account balance, but SQLCipher still rejected the write. Goal due typed split was idempotent but did not enforce available cash before committing a due's cash shortage.",
-      "approved_behavior": "Check displayed verified cash before committing an over-balance savings transfer; do not offer a confirmation bypass. In the snapshot writer under the same authenticated SQLCipher transaction, recalculate cash shortage from canonical wallet savings and verify selected account ID, active status and actual available money balance before any goal due debit; continue using one idempotent typed receipt and atomic snapshot transaction.",
+      "approved_behavior": "Check displayed verified cash before committing an over-balance savings transfer; do not offer a confirmation bypass. In the snapshot writer under the same authenticated SQLCipher transaction, recalculate cash shortage from canonical wallet savings and verify selected account ID, active status and actual available money balance before any goal due debit; continue using one idempotent typed receipt and atomic snapshot transaction. Preserve open-ended target=0 goals without dividing by zero or falsely setting completed, and reject shortages without presenting a Continue-overdraft dialog.",
       "source_paths": [
         "lib/main.dart",
         "lib/storage/waffra_verified_goal_due_snapshot_writer.dart"
@@ -2620,7 +2622,9 @@
         "test/storage/m665_goal_due_note_and_split_test.dart",
         "test/m665_goal_due_display_and_linked_edit_test.dart",
         "test/m371_goal_wallet_and_budgets_regression_test.dart",
-        "test/storage/m364_sqlcipher_finance_domain_test.dart"
+        "test/storage/m364_sqlcipher_finance_domain_test.dart",
+        "test/m644_goal_notice_funding_contract_test.dart",
+        "test/m363_transaction_category_inline_creation_test.dart"
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/finance-full-regression.yml",
