@@ -1765,3 +1765,5 @@ Audit of remaining production direct Material `DropdownButtonFormField<String>` 
 - Selected account Home obtains month-only SQL context plus lightweight all-time linked entry IDs for existing Home, monthly budget and report views. Older linked entries remain visible; unassigned historical entries stay unassigned. No backup or finance write change.
 - Fixed inverted summaryOnly predicate, tested October/November all-time membership and adjusted old tests to enforce wallet-only savings and historical opening-balance attestation. Narrow 320/360/390dp RTL/LTR dark widget smoke now exercises 1.3x text scale.
 - Physical Android Overflow, owner backup/restore and exact balance/report parity remain separate acceptance gates; none are claimed here.
+
+- M684 CI follow-up / M550: refreshed the old M470 positive account-source assertion to verify SQLCipher all-time linked-entry IDs instead of the removed row-by-row `item.accountId` predicate. Negative cases, existing SMS transfer checks and account safety remain intact.

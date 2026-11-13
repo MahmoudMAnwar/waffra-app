@@ -545,3 +545,5 @@ M684 account-context CI and shared Home-filter follow-up (2026-11-13; same Draft
 - Fixed SQL month-only predicate and optimized selected-account Home by reading only all-time linked entry IDs plus the current month's budget/goal summary, preserving older filtered transactions and financial data.
 - Updated old wallet-edit test fixtures to assert savings cannot change via metadata and M500 linking to require nonzero-opening consent. Added October selected-account ID projection test and 1.3x text-scale RTL/LTR narrow widget coverage.
 - Exact-head CI, real physical Android Overflow and user-owned Backup/Restore balance/report parity remain unverified release gates.
+
+M684 M550 contract correction (same Draft PR #628, 2026-11-13): obsolete M470 source assertion now verifies selected-account all-time SQL ID membership and continuing exclusion of the unassigned picker. No old negative test was suppressed; exact-head CI to be rerun.

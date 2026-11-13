@@ -60,6 +60,9 @@ void main() {
     expect(source, isNot(contains("selected=='none'")));
     expect(source, contains("if(chosen!='all'&&"));
     expect(source, contains("chosen=p.getString(_m467ChoiceKey)??'all'"));
-    expect(source, contains("item.accountId==selected"));
+    // Historic account membership now comes from a light SQL ID projection.
+    expect(source, contains('final ids=_m684ScopedEntryIds;'));
+    expect(source, contains('entries.where((entry)=>ids.contains(entry.id))'));
+    expect(source, contains('api.readAccountEntryIds(accountId:chosen)'));
   });
 }
