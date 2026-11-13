@@ -540,3 +540,8 @@ M679–M684 CI correctness follow-up (2026-11-13, PR #628, not merged):
 - M681 accountless legacy history remains immutable until the user chooses an account and confirms the history/opening-balance distinction. This does not create another entry or double-charge savings, and explicit same-ID retries remain idempotent.
 - M684 corrected inverted month-only SQL mode: Account Context's month-scoped summary only loads selected-month ledger entries, while legacy full-history readers still return every authenticated entry for parity/restore checks. Added October-versus-November SQLCipher regression alongside unassigned net and no-balance-mutation assertions.
 - M385 declared API scope was corrected for the already-approved historical-link confirmation field. All protected paths were checked against original main to ensure no out-of-scope app code change. App Android/CI tests and real-device acceptance are separate.
+
+M684 account-context CI and shared Home-filter follow-up (2026-11-13; same Draft PR #628):
+- Fixed SQL month-only predicate and optimized selected-account Home by reading only all-time linked entry IDs plus the current month's budget/goal summary, preserving older filtered transactions and financial data.
+- Updated old wallet-edit test fixtures to assert savings cannot change via metadata and M500 linking to require nonzero-opening consent. Added October selected-account ID projection test and 1.3x text-scale RTL/LTR narrow widget coverage.
+- Exact-head CI, real physical Android Overflow and user-owned Backup/Restore balance/report parity remain unverified release gates.

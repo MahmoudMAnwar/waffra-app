@@ -79,7 +79,7 @@ WHERE (?=0 OR (e.occurred_iso>=? AND e.occurred_iso<?))
 ORDER BY e.occurred_iso DESC, e.entry_id DESC
 ''',variables:[
  // Legacy callers retain all history; summaryOnly pages scan this month.
- Variable.withInt(summaryOnly?0:1),
+ Variable.withInt(summaryOnly?1:0),
  Variable.withString(monthIso+'-01'),
  Variable.withString(_nextMonthIso(monthIso)),
 ]).get();
@@ -139,6 +139,19 @@ ORDER BY g.name,g.goal_id
        selectedAccountNetMinor:row.read<int>('own_minor'),
       )));
     return WaffraAccountContextReadResult(entries,summed,goals:goals);
+  }
+
+  /// M684: lightweight all-time account entry IDs for Home/report filters.
+  static Future<Set<String>> loadAccountEntryIds({
+    required WaffraEncryptedStore store,required String accountId,
+  })async{
+    await WaffraAccountsSchema.requireReady(store);
+    if(accountId.trim().isEmpty)throw ArgumentError('Account required.');
+    final rows=await store.customSelect(
+      'SELECT entry_id FROM fresh_finance_account_entry_links WHERE account_id=?',
+      variables:[Variable.withString(accountId)]).get();
+    return Set<String>.unmodifiable(
+     rows.map((r)=>r.read<String>('entry_id')));
   }
 
   /// M681: preview imported accountless entries without changing money.

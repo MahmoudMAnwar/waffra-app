@@ -155,5 +155,12 @@ void main(){
   expect(unlinked.netMinor,-5000);
   expect((await WaffraAccountsRepository(
    db:db,experimentalEnabled:true).balances()).single.balanceMinor,100000);
+  await WaffraAccountContextRead.attachPreviouslyUnassigned(
+   store:db,entryId:'oct-legacy',accountId:'rajhi',
+   confirmedIso:stamp,userConfirmed:true,openingExcludesHistory:true);
+  expect(await WaffraAccountContextRead.loadAccountEntryIds(
+   store:db,accountId:'rajhi'),{'oct-legacy'});
+  expect(await WaffraAccountContextRead.loadAccountEntryIds(
+   store:db,accountId:'unknown'),isEmpty);
  });
 }

@@ -225,6 +225,9 @@ void main(){
     tester.view.devicePixelRatio=1;
     await tester.pumpWidget(MaterialApp(
      theme:ThemeData.dark(),
+     builder:(ctx,child)=>MediaQuery(
+      data:MediaQuery.of(ctx).copyWith(
+       textScaler:const TextScaler.linear(1.3)),child:child!),
      home:Directionality(
       textDirection:english?TextDirection.ltr:TextDirection.rtl,
       child:Scaffold(body:SingleChildScrollView(child:Column(children:[

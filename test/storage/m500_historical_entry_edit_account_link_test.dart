@@ -65,10 +65,10 @@ void main(){
 
   await WaffraAccountContextRead.attachPreviouslyUnassigned(
    store:store,entryId:'old-2018-expense',accountId:'rajhi',
-   confirmedIso:now,userConfirmed:true);
+   confirmedIso:now,userConfirmed:true,openingExcludesHistory:true);
   await WaffraAccountContextRead.attachPreviouslyUnassigned(
    store:store,entryId:'old-2018-expense',accountId:'rajhi',
-   confirmedIso:now,userConfirmed:true);
+   confirmedIso:now,userConfirmed:true,openingExcludesHistory:true);
   final linked=await context.readExistingEntryAccount(
    entryId:'old-2018-expense');
   expect(linked.exists,true);

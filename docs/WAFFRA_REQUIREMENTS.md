@@ -1760,3 +1760,8 @@ Audit of remaining production direct Material `DropdownButtonFormField<String>` 
 - **M681 QA correction:** An account may have a legitimate nonzero opening balance before a historic entry. UI requires separate checkbox confirming old entry is excluded from opening. Without attestation, SQLCipher refuses the assignment; with it, original entry ID remains and account changes once. M448 legacy test retains original expected 80,000 → 75,000 cents and independent budget totals.
 
 - **M681 discovery:** Accounts overview now has a full-width "مراجعة وربط العمليات القديمة بدون حساب" action in addition to its original toolbar icon. Both routes open the same read-only SQLCipher reconciliation and per-entry confirmation; no extra writer or menu changes.
+
+### M684 — shared Home verified account-read follow-up (2026-11-13; Draft PR #628)
+- Selected account Home obtains month-only SQL context plus lightweight all-time linked entry IDs for existing Home, monthly budget and report views. Older linked entries remain visible; unassigned historical entries stay unassigned. No backup or finance write change.
+- Fixed inverted summaryOnly predicate, tested October/November all-time membership and adjusted old tests to enforce wallet-only savings and historical opening-balance attestation. Narrow 320/360/390dp RTL/LTR dark widget smoke now exercises 1.3x text scale.
+- Physical Android Overflow, owner backup/restore and exact balance/report parity remain separate acceptance gates; none are claimed here.

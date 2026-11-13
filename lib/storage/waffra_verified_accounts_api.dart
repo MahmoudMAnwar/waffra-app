@@ -245,6 +245,12 @@ class WaffraVerifiedAccountsApi implements WaffraAccountOperations {
   monthIso:monthIso,selectedAccountId:selectedAccountId,
   summaryOnly:summaryOnly);
 
+ /// M684: all-time account entry IDs without full historical SQL detail.
+ Future<Set<String>> readAccountEntryIds({required String accountId})=>
+  bridge.readVerifiedAccountMetadata((context)=>
+   WaffraAccountContextRead.loadAccountEntryIds(
+    store:context.store,accountId:accountId));
+
  /// M681: user-owned read-only preview and all-time legacy link queue.
  Future<({int count,int netMinor})> readUnassignedSummary()=>
   bridge.readVerifiedAccountMetadata((context)=>

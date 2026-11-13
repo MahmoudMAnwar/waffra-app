@@ -4561,6 +4561,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   return _m652ActivityRead!;
  }
  WaffraAccountContextReadResult? _m467AccountContext;
+ Set<String>? _m684ScopedEntryIds;
  String _m467SelectedAccount='all';
  bool _m467AccountChoiceRestored=false;
  bool _m468VerifiedAccountsLoaded=false;
@@ -4618,11 +4619,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final now=DateTime.now();
    final month=now.year.toString().padLeft(4,'0')+'-'+
     now.month.toString().padLeft(2,'0');
-   // "All accounts" already uses verified account balances + Home ledger.
-   // Don't scan the full SQLCipher account context after every save or pull.
+   // Month-only context plus lightweight all-time account membership.
    final contextView=chosen=='all'?null:await api.readAccountContext(
     monthIso:month,
-    selectedAccountId:chosen);
+    selectedAccountId:chosen,summaryOnly:true);
+   final scopedIds=chosen=='all'?null:
+    await api.readAccountEntryIds(accountId:chosen);
    if(!mounted||_m627ClosingSession||readEpoch!=_m627AccountEpoch)return;
    // A user may switch accounts while this async SQL projection is running.
    // Never repaint that newly chosen view with a stale older selection.
@@ -4636,6 +4638,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    setState((){
     _m467Accounts=accounts.where((a)=>!a.archived).toList();
     _m467AccountContext=contextView;
+    _m684ScopedEntryIds=scopedIds;
     _m467SelectedAccount=chosen;
     _m467AccountChoiceRestored=true;
     _m468VerifiedAccountsLoaded=true;
@@ -4647,6 +4650,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    setState((){
     _m467Accounts=const <WaffraAccountBalance>[];
     _m467AccountContext=null;
+    _m684ScopedEntryIds=null;
     _m467SelectedAccount='all';
     _m467AccountChoiceRestored=false;
     _m468VerifiedAccountsLoaded=false;
@@ -4665,10 +4669,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  Iterable<MoneyEntry> _m467ScopedEntries(){
   final selected=_m467SelectedAccount;
   if(selected=='all')return entries;
-  final contextView=_m467AccountContext;
-  if(contextView==null)return const <MoneyEntry>[];
-  final ids=contextView.entries.where((item)=>
-   item.accountId==selected).map((item)=>item.id).toSet();
+  final ids=_m684ScopedEntryIds;
+  if(ids==null)return const <MoneyEntry>[];
   return entries.where((entry)=>ids.contains(entry.id));
  }
 

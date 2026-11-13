@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
   "change_id": "M679-M684-20261113-ISSUE627-PR628-INTEGRITY-ACCOUNT-RECONCILIATION-PAGED-SQL-UI-MODULES",
-  "human_scope_review": "Owner explicitly authorized all three phases from the 2026-11-13 finance code audit plus six annotated screenshots, in ONE new Draft PR: protect goal-source accounting, prevent unlinked modern posts and forged goal savings, ensure recurring account-default parity, preserve legacy V24 data, compact Home/Goals/Recurring cards, correct Accounts navigation, display real financial activity counts, legible goal chart and entire SAR money values. Preserve every global + FAB action, anchor and geometry, stationary Snackbar, backups and historic ledger identities. Production finance writers and UI are changed only in explicitly bounded locations. Signed device evidence remains pending. Follow-up explicit user approval 2026-11-13 12:31:07Z requires completing unassigned historical UI, wiring month-paged SQL to screen and extracting large main.dart widgets. M684 moved visual-only tile layout into part file; the global + and money writers remain untouched. Historic unassigned transactions only attach with user-selected account and zero opening balance. CI M448 revealed a legitimate source with a nonzero account opening. Do not weaken protection or block all such mappings. Explicit nonzero-opening attestation is mandatory, and the original M448 link/budget test checks its positive and negative paths.",
+  "human_scope_review": "Owner explicitly authorized all three phases from the 2026-11-13 finance code audit plus six annotated screenshots, in ONE new Draft PR: protect goal-source accounting, prevent unlinked modern posts and forged goal savings, ensure recurring account-default parity, preserve legacy V24 data, compact Home/Goals/Recurring cards, correct Accounts navigation, display real financial activity counts, legible goal chart and entire SAR money values. Preserve every global + FAB action, anchor and geometry, stationary Snackbar, backups and historic ledger identities. Production finance writers and UI are changed only in explicitly bounded locations. Signed device evidence remains pending. Follow-up explicit user approval 2026-11-13 12:31:07Z requires completing unassigned historical UI, wiring month-paged SQL to screen and extracting large main.dart widgets. M684 moved visual-only tile layout into part file; the global + and money writers remain untouched. Historic unassigned transactions only attach with user-selected account and zero opening balance. CI M448 revealed a legitimate source with a nonzero account opening. Do not weaken protection or block all such mappings. Explicit nonzero-opening attestation is mandatory, and the original M448 link/budget test checks its positive and negative paths. Owner 2026-11-13 follow-up authorizes M684 Home optimized read and fixing full-regression failures while retaining old backup/history and financial writer protections.",
   "user_requested_changes": [
     "Enforce correct verified funding account and sufficient source cash under one SQLCipher goal wallet commit, with negative-path rollback tests.",
     "Do not allow metadata-only goal updates to forge savings; keep recurring typed account defaults consistent with accountId edits while preserving older legacy data.",
@@ -17,7 +17,8 @@
     "Extract visual Home and Recurring card widgets into a new part file, retaining widget identities and callbacks and preserving globally stationary plus/Snackbar.",
     "M681 reconciliation on nonzero-opening accounts must require explicit per-entry user attestation that opening balance excludes that entry; a missing attestation or reassignment to a different account must roll back. Preserve the old positive SQLCipher balance test after confirmed consent.",
     "Expose a visible Accounts overview button to the existing witnessed Account Context reconciliation screen, not just a top-right receipts icon; do not alter data or existing account edit/creation flows.",
-    "Safely extend API boundary to cover the user-requested historical link confirmation parameter (openingExcludesHistory); continue guarding all goal/default/balance code."
+    "Safely extend API boundary to cover the user-requested historical link confirmation parameter (openingExcludesHistory); continue guarding all goal/default/balance code.",
+    "M684 follow-up: SQL monthly summary with all-time lightweight account-entry IDs used by Home/budget/report filters, financial integrity test fixture updates and narrow UI text scaling."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -41,7 +42,10 @@
     "test/storage/m440_account_linked_entry_writer_test.dart",
     "test/storage/m448_account_context_read_test.dart",
     "test/storage/m641_goal_account_integrity_test.dart",
-    "test/storage/verified_encrypted_finance_bridge_test.dart"
+    "test/storage/verified_encrypted_finance_bridge_test.dart",
+    "test/storage/fresh_finance_modules_repository_test.dart",
+    "test/storage/m500_historical_entry_edit_account_link_test.dart",
+    "test/m467_account_header_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
@@ -78,6 +82,10 @@
       {
         "start": " Widget _recurringBenefit(",
         "end": " Future<void> goalDialog({"
+      },
+      {
+        "start": " WaffraAccountContextReadResult? _m467AccountContext;",
+        "end": " Future<void> _m467PickHomeAccount()async{"
       }
     ],
     "lib/storage/waffra_fresh_finance_modules_repository.dart": [
@@ -205,6 +213,24 @@
       },
       {
         "start": " @override Widget build(BuildContext context)=>Scaffold(",
+        "end": null
+      }
+    ],
+    "test/storage/fresh_finance_modules_repository_test.dart": [
+      {
+        "start": "  test('M394 zero-target open savings",
+        "end": "  test('unknown ID cannot be treated as a successful update'"
+      }
+    ],
+    "test/storage/m500_historical_entry_edit_account_link_test.dart": [
+      {
+        "start": " test('M500 historical expense links once;",
+        "end": " test('M500 explicit confirmation required;"
+      }
+    ],
+    "test/m467_account_header_test.dart": [
+      {
+        "start": " test('M467 Home header scope is verified",
         "end": null
       }
     ]
