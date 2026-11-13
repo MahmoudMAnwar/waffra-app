@@ -151,4 +151,16 @@ void main(){
   expect((await WaffraAccountsRepository(db:db,experimentalEnabled:true)
    .balances()).single.balanceMinor,5000);
  });
+
+ test('M679 production-gated writer refuses a new accountless entry',()async{
+  await initialize();
+  final verifiedWriter=WaffraUnifiedFinanceWriter(
+   writerDirectory:dir,snapshot:snapshot(),experimentalEnabled:true,
+   verifySourceUnderLock:()async{});
+  await expectLater(verifiedWriter.appendTransactions(
+   records:[income('missing-account')],messageHashes:[null],
+   userConfirmed:true),throwsA(isA<StateError>()));
+  expect(await count('fresh_finance_entries'),0);
+  expect(await count('fresh_finance_account_entry_links'),0);
+ });
 }
