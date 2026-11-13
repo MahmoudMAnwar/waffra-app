@@ -8,6 +8,32 @@
   "review_policy": "Review changed behavior against all GitHub Actions workflow scripts, all Dart and Python QA test files, and the original tests' protected security assertions; never edit tests merely to silence red jobs. PR #575 merge with main preserves every M645/M646/M647/M653/M654 contract; original PR-specific positive finance tests and approved fallback/owner-authority remain in effect. M661 source changes must not weaken existing fail-closed encryption, verified-bank account, OTP or anti-replay checks, must preserve all original tests and route review pending rules non-posting. M672-M678 owner-visible corrections (#606-#612) must preserve financial/account safety and separate Android visual/deletion persistence testing. M614 legacy user archive migration: existing V24 decryption is correct but SQLCipher backupRestore writer cannot accept old map; stage in disposable encrypted source and reuse V3 full-source rescue/attestation. Existing tests unchanged, end-to-end Android and signed same-sha checks required. M616 review: previously successful host CI did not prove Android global temporary directory write permission; app-private encrypted staging and user-visible phase code must be reviewed alongside M187/M385/M550 original tests. M618: exact-HEAD review of verified restore deep-history parity after old V24 backup; category rows must not reorder with unstable sort; phase codes do not expose data; all auth/rescue/rollback original guards retained. M620 physical old archive restore happened after a previous 43-green CI; do not infer data correctness from UI totals or bypass active SQLCipher witness/rollback; stage independent canonical and Home identity parity. Distinguish account-only funds from historical recorded net.",
   "contracts": [
     {
+      "id": "M622-LEGACY-V24-BATCHED-STAGING-PERFORMANCE",
+      "issue": "Issue #622; owner requested faster V24 restore in same Draft PR #621",
+      "previous_behavior": "During V24 to V3 staging, 1056 category rows plus goals and recurring each call a separately committed WaffraFreshModulesRepository.save, repeating schema checks and nested transactions. Before V3 preflight the already-read backupRestore authority is loaded again.",
+      "approved_behavior": "Wrap disposable SQLCipher category/goal/recurring/budget/association staging writes inside ONE outer atomic transaction to reduce durable commits; preserve per-row validation, parent-before-child order, FK checks and nested repository guard; fail closed and discard staging on error. Reuse the previously selected encrypted authority read for initial preflight handoff; independently re-read witness before and after preflight, with unchanged key derivation, archive authentication, cold attestations, rescue, biometrics, verified apply, rollback, and M620 Home parity.",
+      "source_paths": [
+        "lib/storage/waffra_legacy_v24_sqlcipher_converter.dart",
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/storage/m616_android_v24_restore_test.dart",
+        "test/storage/m618_v24_preflight_history_parity_test.dart",
+        "test/storage/m620_restored_home_ledger_parity_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "No skipping authenticated V2/V3 decrypt, KDF rounds, SQLCipher encrypted temporary staging or cold-reopen.",
+        "All source ID/category/budget/wallet associations exactly preserved; no double charging, guessed account assignment or silent deletion.",
+        "A failure before apply never changes active ledger; a failed apply still requires saved external rescue and safe rollback.",
+        "Only physical signed Android elapsed timings can establish restore speedup."
+      ]
+    },
+    {
       "id": "M601-AUTH-PENDING-BUTTON-AND-VERIFIER-LATENCY",
       "issue": "Issue #506 P0 owner-reported Android sign-in disappearing CTA and app-wide jank",
       "previous_behavior": "On tap, the sign-in FilledButton was disabled by its request guard but no explicit disabled background/foreground was set; Material3 selected a low-contrast dark disabled surface so login and progress became visually empty. Sign-in also issued an extra OS-keystore hasRegisteredCredentials read before the already-required phone probe and real full-strength challenge, increasing serialized storage latency. After sign-out Yes the app waits for credential, SMS suspension, AI teardown and account authority writes without visible in-progress feedback, so users perceive a frozen signout.",
