@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_local_account_migration.dart';
@@ -15,7 +16,7 @@ void main(){
   expect(find.textContaining('matching'),findsOneWidget);
  });
  test('M428 preserves legacy profile fields and does not touch ledger',(){
-  final s=File('lib/main.dart').readAsStringSync();
+  final s=readWaffraMainSourceForContracts();
   final part=s.substring(s.indexOf(" Widget profilePage(){"),
    s.indexOf("   _accountSection(waffraIsEnglish?'App settings'"));
   expect(part,contains("provider=='google'||provider=='apple'"));

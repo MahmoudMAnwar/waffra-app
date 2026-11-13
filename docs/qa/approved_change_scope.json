@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "change_id": "M685-M689-ISSUES629-631-20261113-OWNER-APPROVED-THREE-SCREENS-INTEGRITY",
+  "change_id": "M685-M689-ISSUES629-631-20261113-M687-HOME-REPORTS-PROFILE-MODULES",
   "human_scope_review": "Issue #629 completes prior PR #628 only after user-visible acceptance; #631 explicitly authorizes three exact screenshots for Goals/Dues/SMS Review, permanently visible financial activity, non-moving FAB-aligned notice, and savings/goal-due cash safety. Existing tests replace outdated visual assumptions without deleting financial safety assertions. Device screenshots/old restore still require external device evidence.",
   "user_requested_changes": [
     "M685: preserve the original authenticated accountless-transaction review, owner-selected account link, attested opening balance and idempotent SQLCipher associations.",
@@ -10,7 +10,8 @@
     "M689 preserve exactly the three owner-approved 2026-11-13 reference screenshots for savings goals, due dates and SMS review, without removing original SMS or any valid money/action handler.",
     "M689 all financial activity displayed without extra global hide toggle; snackbar anchored beside fixed + in RTL/LTR, multi-line grows upwards.",
     "M689 reject savings amount greater than verified available source cash before writing, and reject linked goal due if remaining cash exceeds available balance with atomic rollback, once-only wallet split.",
-    "M689 no piggy-bank glyph appears in the accepted Finance/Goals/Due screens; use neutral coin-stack icon. Existing legacy M644, M363 and M388 expectations must assert protected insufficient-cash rejection and safe open-ended goals rather than the superseded continue-despite-insufficient-money UI."
+    "M689 no piggy-bank glyph appears in the accepted Finance/Goals/Due screens; use neutral coin-stack icon. Existing legacy M644, M363 and M388 expectations must assert protected insufficient-cash rejection and safe open-ended goals rather than the superseded continue-despite-insufficient-money UI.",
+    "M687 Home state continued: isolate byte-identical PDF report export and Profile page methods into same-library Dart extensions without altering money, backup, FAB, or Snackbar behavior; update source-based tests to read the original moved code without removing assertions."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -41,7 +42,17 @@
     "test/storage/m364_sqlcipher_finance_domain_test.dart",
     "test/storage/m448_account_context_read_test.dart",
     "test/waffra_directional_fab_receipt_corner_test.dart",
-    "test/waffra_m208_bundle_regression_test.dart"
+    "test/waffra_m208_bundle_regression_test.dart",
+    "lib/waffra_home_pdf_reports.part.dart",
+    "lib/waffra_home_profile.part.dart",
+    "test/support/waffra_main_source.dart",
+    "test/m224_pdf_verified_display_currency_test.dart",
+    "test/m647_m652_financial_activity_regression_test.dart",
+    "test/m428_local_account_migration_test.dart",
+    "test/m528_settings_async_cache_regression_test.dart",
+    "test/waffra_concept2_final_visual_test.dart",
+    "test/waffra_design_preservation_test.dart",
+    "test/m687_home_state_extraction_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
@@ -116,8 +127,7 @@
     ],
     "test/m665_goal_due_display_and_linked_edit_test.dart": [
       {
-        "start": "test('M665.7 recurring goal payment shows paid split, not zero saved progress'",
-        "end": "testWidgets('M665.7 widget shows labelled wallet and bank, never tech notes/restaurant'"
+        "start": "import 'dart:io';"
       }
     ],
     "test/m669_sms_review_category_search_test.dart": [
@@ -196,6 +206,36 @@
       {
         "start": " test('M388: open-ended goal never divided by zero or marked achieved'",
         "end": " test('M390: restored receipt references open the same existing gallery'"
+      }
+    ],
+    "test/m224_pdf_verified_display_currency_test.dart": [
+      {
+        "start": "import 'dart:io';"
+      }
+    ],
+    "test/m647_m652_financial_activity_regression_test.dart": [
+      {
+        "start": "import 'dart:io';"
+      }
+    ],
+    "test/m428_local_account_migration_test.dart": [
+      {
+        "start": "import 'dart:io';"
+      }
+    ],
+    "test/m528_settings_async_cache_regression_test.dart": [
+      {
+        "start": "import 'dart:io';"
+      }
+    ],
+    "test/waffra_concept2_final_visual_test.dart": [
+      {
+        "start": "import 'dart:io';"
+      }
+    ],
+    "test/waffra_design_preservation_test.dart": [
+      {
+        "start": "import 'dart:io';"
       }
     ]
   }

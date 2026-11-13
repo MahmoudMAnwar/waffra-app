@@ -1,9 +1,10 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  final source = File('lib/main.dart').readAsStringSync();
+  final source = readWaffraMainSourceForContracts();
   String between(String start, String end) {
     final a = source.indexOf(start);
     final b = source.indexOf(end, a);

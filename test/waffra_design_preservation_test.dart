@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -7,7 +8,7 @@ import 'package:waffra/waffra_financial_tools.dart';
 void main() {
   group('Waffra visual redesign regression safeguards', () {
     test('All original sections, actions and local data contracts remain', () {
-      final source = File('lib/main.dart').readAsStringSync();
+      final source = readWaffraMainSourceForContracts();
       // Changes to the design must never delete routes, features, or user data.
       const required = <String>[
         'Widget dashboard()',

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -32,7 +33,7 @@ void main(){
  });
 
  test('M665.7 paid goal due is purposeful in all financial presentations',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   final details=main.substring(
    main.indexOf('class WaffraTransactionDetailsDialog'),
    main.indexOf('class HomeScreen extends StatefulWidget'));
@@ -57,7 +58,7 @@ void main(){
  });
 
  test('M665.7 recurring goal payment shows paid split, not zero saved progress',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   final start=main.indexOf(' Widget recurringPage(){');
   final end=main.indexOf('   if(recurring.isEmpty)Padding',start);
   final card=main.substring(start,end);
@@ -71,7 +72,7 @@ void main(){
  });
 
  test('M689 goal action sheet retains fund/edit/release/delete/active',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   final start=main.indexOf(' Future<void> _m689GoalActions(');
   final end=main.indexOf(' Widget goalsPage(){',start);
   final quick=main.substring(start,end);
@@ -88,7 +89,7 @@ void main(){
  });
 
  test('M665.7 linked due edit explains without changing finance; standalone still editable',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   final handlerStart=main.indexOf(' Future<void> _handleRecurringCardAction(');
   final handlerEnd=main.indexOf(' Widget recurringPage(){',handlerStart);
   expect(handlerStart,greaterThanOrEqualTo(0));
@@ -154,7 +155,7 @@ void main(){
   final summary=Map<String,double>.fromEntries(report.topCategories);
   expect(summary['استحقاق هدف'],5000);
   expect(summary['مطاعم وكافيهات / مطاعم شعبية'],150);
-  final pdf=File('lib/main.dart').readAsStringSync();
+  final pdf=readWaffraMainSourceForContracts();
   final export=pdf.substring(pdf.indexOf(' Future<void> exportEntriesPdf('),
     pdf.indexOf(' Future<void> _deleteVerifiedEntry('));
   expect(export,contains('final label=waffraEntryReportCategory(e);'));

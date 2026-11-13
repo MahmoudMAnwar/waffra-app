@@ -2635,6 +2635,37 @@
         "Do not debit wallet-funded cents from the bank twice: cash = dueAmount - min(walletSavings,dueAmount).",
         "A stale/rejected/insufficient-cash request must preserve previously committed ledger, goal, recurring and account amounts unchanged."
       ]
+    },
+    {
+      "id": "M687-EXTRACT-HOME-PDF-PROFILE-UNCHANGED-ISSUE629",
+      "issue": "Issue #629 / Draft #630",
+      "previous_behavior": "Report and profile methods embedded in oversized Home State.",
+      "approved_behavior": "Move exact existing method bodies into same-library Dart parts; source assertions reconstitute those methods at original positions; no runtime route, money writer, PDF arithmetic, user Profile callback, backup, FAB or Snackbar change.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_pdf_reports.part.dart",
+        "lib/waffra_home_profile.part.dart"
+      ],
+      "test_paths": [
+        "test/m687_home_state_extraction_test.dart",
+        "test/support/waffra_main_source.dart",
+        "test/m224_pdf_verified_display_currency_test.dart",
+        "test/m665_goal_due_display_and_linked_edit_test.dart",
+        "test/m647_m652_financial_activity_regression_test.dart",
+        "test/m428_local_account_migration_test.dart",
+        "test/m528_settings_async_cache_regression_test.dart",
+        "test/waffra_concept2_final_visual_test.dart",
+        "test/waffra_design_preservation_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "No original PDF calculations or settings callbacks are rewritten.",
+        "All prior source-test expectations retained.",
+        "No physical device or owner-backup restore falsely certified."
+      ]
     }
   ]
 }
