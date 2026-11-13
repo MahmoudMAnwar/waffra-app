@@ -161,7 +161,7 @@ void main() {
   });
 
   test('M622 V24 to V3 reuses same selected finance source but fresh '
-      'preflight still detects drift and preserves rescue', () {
+      'preflight still detects source drift without a rescue file', () {
     final ui=File('lib/main.dart').readAsStringSync();
     expect(ui,contains('inspectedRestoreSource=source;'));
     expect(ui,contains('final source=inspectedRestoreSource??'));
@@ -171,7 +171,8 @@ void main() {
     expect(preflight,contains('final current = await fresh();'));
     expect(preflight,contains('final after = await fresh();'));
     expect(preflight,contains('latest.generation != witness.generation'));
-    expect(ui,contains('externallySavedRescueConfirmed:true'));
+    expect(ui,isNot(contains('externallySavedRescueConfirmed:true')));
+    expect(ui,isNot(contains('Waffra_Rescue_Before_Restore_')));
     expect(ui,contains("restoreStage='CANONICAL_PARITY'"));
   });
 
