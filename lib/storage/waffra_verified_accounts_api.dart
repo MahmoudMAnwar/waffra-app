@@ -240,9 +240,30 @@ class WaffraVerifiedAccountsApi implements WaffraAccountOperations {
  /// Return the complete ledger (including unassigned entries) and the
  /// independent monthly budget totals for the selected account context.
  Future<WaffraAccountContextReadResult> readAccountContext({
-  required String monthIso,String? selectedAccountId,
+  required String monthIso,String? selectedAccountId,bool summaryOnly=false,
  })=>bridge.readVerifiedAccountContext(
-  monthIso:monthIso,selectedAccountId:selectedAccountId);
+  monthIso:monthIso,selectedAccountId:selectedAccountId,
+  summaryOnly:summaryOnly);
+
+ /// M681: user-owned read-only preview and all-time legacy link queue.
+ Future<({int count,int netMinor})> readUnassignedSummary()=>
+  bridge.readVerifiedAccountMetadata((context)=>
+   WaffraAccountContextRead.unassignedSummary(store:context.store));
+
+ Future<List<WaffraAccountLedgerRow>> readUnassignedPage({
+  int limit=50,int offset=0,
+ })=>bridge.readVerifiedAccountMetadata((context)=>
+  WaffraAccountContextRead.loadUnassignedEntries(
+   store:context.store,limit:limit,offset:offset));
+
+ /// M684: actual bounded SQL read. No historical ledger mutation.
+ Future<List<WaffraAccountLedgerRow>> readMonthlyPage({
+  required String monthIso,String? selectedAccountId,
+  int limit=50,int offset=0,
+ })=>bridge.readVerifiedAccountMetadata((context)=>
+  WaffraAccountContextRead.loadMonthEntries(
+   store:context.store,monthIso:monthIso,
+   selectedAccountId:selectedAccountId,limit:limit,offset:offset));
 
  /// Attach a past unassigned entry only AFTER the account screen has a
  /// witnessed generation and the user explicitly confirms. This does not
