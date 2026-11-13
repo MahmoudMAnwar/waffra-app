@@ -116,7 +116,8 @@ void main() {
   final finish=main.substring(
    main.indexOf(' Future<void> finishSmsPermissionChoice()async{'),
    main.indexOf(' Future<void> intro()async {'));
-  expect(consent,contains('await WaffraSmsCloudService.setConsent(false)'));
+  expect(consent,contains("await prefs.remove('waffra_cloud_sms_installation_consent_v2');"));
+  expect(consent,isNot(contains('WaffraSmsCloudService')));
   expect(consent,contains('final smsAllowed=await WaffraAutoSms.optIn();'));
   expect(consent,contains('await WaffraAutoSms.requestNotificationPermission();'));
   expect(consent,contains('await widget.onComplete();'));
