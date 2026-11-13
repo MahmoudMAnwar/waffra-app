@@ -159,6 +159,7 @@ void main(){
    verifySourceUnderLock:()async{});
   await expectLater(verifiedWriter.appendTransactions(
    records:[income('missing-account')],messageHashes:[null],
+   selectedAccountIds:[null],
    userConfirmed:true),throwsA(isA<StateError>()));
   expect(await count('fresh_finance_entries'),0);
   expect(await count('fresh_finance_account_entry_links'),0);
