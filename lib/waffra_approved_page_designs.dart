@@ -207,7 +207,7 @@ class WaffraApprovedGoalProgressBars extends StatelessWidget {
            color:i==n-1?WaffraApprovedPalette.forest:
             WaffraApprovedPalette.emerald.withValues(alpha:.46),
            borderRadius:const BorderRadius.vertical(
-            top:Radius.circular(5)))))))),
+            top:Radius.circular(5))))))),
         const SizedBox(height:5),
         Text(labels[i],maxLines:1,overflow:TextOverflow.ellipsis,
          style:const TextStyle(fontSize:9)),
