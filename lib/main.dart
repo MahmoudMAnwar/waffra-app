@@ -5787,37 +5787,23 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          final id=item['id'],at=item['receivedAt'];
          final date=at is int?DateTime.fromMillisecondsSinceEpoch(at)
           .toLocal().toString().substring(0,16):'';
-         final proposal=item['cloud'];
-         final suggestion=proposal is Map?proposal:null;
+         // Legacy external guesses remain untrusted; the user reviews SMS text.
          final local=item['local'] is Map?item['local'] as Map:null;
-         final amount=suggestion?['amount'];
-         final currency=suggestion?['currency'];
-         final kind=suggestion?['kind'];
-         final suggestionLabel=kind=='income'?
-          (waffraIsEnglish?'Income':'دخل'):
-          kind=='expense'?(waffraIsEnglish?'Expense':'مصروف'):
-          (waffraIsEnglish?'Needs checking':'تحتاج تحقق');
          return ListTile(
           key:Key('waffra-sms-sender-message-'+index.toString()),
           leading:const Icon(Icons.sms_outlined,color:emerald),
-          title:WaffraText(suggestion==null?
-           (local==null?
-            (waffraIsEnglish?'Needs review':
-             'عملية تحتاج مراجعة'):
-            (waffraIsEnglish?'Local rule • ':'قاعدة محلية • ')+
-             (local['kind']=='transfer'?
-              (waffraIsEnglish?'Transfer':'تحويل'):
-              local['kind']=='excluded'?
-              (waffraIsEnglish?'Excluded':'مستثناة'):
-              local['income']==true?
-               (waffraIsEnglish?'Income':'دخل'):
-               (waffraIsEnglish?'Expense':'مصروف'))):
-           (waffraIsEnglish?'AI suggestion • ':'اقتراح AI • ')+
-            suggestionLabel+
-            (amount is num?' • '+amount.toStringAsFixed(2):'')+
-            (currency is String?' '+currency:'')),
+          title:WaffraText(local==null?
+           (waffraIsEnglish?'Needs review':'عملية تحتاج مراجعة'):
+           (waffraIsEnglish?'Local rule • ':'قاعدة محلية • ')+
+            (local['kind']=='transfer'?
+             (waffraIsEnglish?'Transfer':'تحويل'):
+             local['kind']=='excluded'?
+             (waffraIsEnglish?'Excluded':'مستبعدة'):
+             local['income']==true?
+              (waffraIsEnglish?'Income':'دخل'):
+              (waffraIsEnglish?'Expense':'مصروف'))),
           // Preserve the real original SMS text in the history review, with
-          // sender and date, while the cloud analysis remains a suggestion.
+          // sender and date without presenting untrusted suggestions.
           subtitle:WaffraText(
            ((item['body'] as String?)??'')+'\n'+
            (local!=null?"${local['category']} • ":'')+
@@ -6046,9 +6032,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  // ignore: unused_element
  Widget _autoSmsReviewCard(){
   final count=_autoSmsPending.length;
-  final analyzed=_autoSmsPending.where((row)=>row['cloud'] is Map).length;
   final localCount=_autoSmsPending.where((row)=>row['local'] is Map).length;
-  final ambiguous=count-localCount-analyzed;
+  final ambiguous=count-localCount;
   final canRescan=!_autoSmsRescanRunning&&
    (_autoSmsStatusProblem!=null||_autoSmsProgress['rescanNeeded']==true);
   return Container(
@@ -6109,14 +6094,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        WaffraText(waffraIsEnglish?
         '$localCount classified locally • ${ambiguous<0?0:ambiguous} need review':
         '$localCount مصنفة محليًا • ${ambiguous<0?0:ambiguous} تحتاج مراجعة',
-        style:const TextStyle(color:emerald,fontSize:12,
-         fontWeight:FontWeight.w600)),
-      ],
-      if(analyzed>0)...[
-       const SizedBox(height:5),
-       WaffraText(waffraIsEnglish?
-        '$analyzed cloud AI suggestions ready for your review.':
-        '$analyzed اقتراحات من الذكاء الاصطناعي جاهزة لمراجعتك.',
         style:const TextStyle(color:emerald,fontSize:12,
          fontWeight:FontWeight.w600)),
       ],
