@@ -27,6 +27,13 @@ void main(){
   final fund=code.substring(a,b);
   expect(fund,contains('final verifiedFundingAccounts=await _m641VerifiedGoalRecurringAccounts();'));
   expect(fund,contains('final available=source.single.balanceMinor/100;'));
+  // A visibly unaffordable amount is explained inside the open dialog,
+  // disabling Add rather than dismissing into a generic funding failure.
+  expect(fund,contains('final fundingExceedsBalance='));
+  expect(fund,contains('errorText:fundingExceedsBalance?'));
+  expect(fund,contains(
+   'onPressed:fundingExceedsBalance?null:WaffraHaptics.tap('));
+  expect(fund,contains('The encrypted writer checks cash again at commit time.'));
   expect(fund,contains('if(n>available){'));
   // M689: insufficient cash cannot be bypassed by a confirmation dialog.
   expect(fund,contains('if(n>available){'));

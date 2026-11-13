@@ -15265,6 +15265,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      final dark=theme.brightness==Brightness.dark;
      final accent=dark?const Color(0xFF82E2B4):emerald;
      final currentProgress=g.target<=0?0.0:(g.saved/g.target).clamp(0.0,1.0);
+     // M689: do not let an unaffordable amount dismiss the dialog.
+     // The encrypted writer checks cash again at commit time.
+     final selectedFundingAccounts=fundingAccounts.where((a)=>
+      a.id==chosenSource&&!a.archived).toList();
+     final enteredFundingAmount=amountOfDisplay(amount.text);
+     final fundingExceedsBalance=enteredFundingAmount!=null&&
+      selectedFundingAccounts.length==1&&
+      (enteredFundingAmount*100).round()>selectedFundingAccounts.single.balanceMinor;
+     final availableFundingText=selectedFundingAccounts.length==1?
+      cash(selectedFundingAccounts.single.balanceMinor/100):'';
      void addQuickAmount(double increment){
       final current=amountOf(amount.text)??0;
       amount.text=formatWaffraMoney(current+increment);
@@ -15323,7 +15333,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          decoration:InputDecoration(
           hintText:'0.00',
           suffixText:WaffraDisplayCurrency.label(waffraIsEnglish),
-          errorText:attempted?waffraAmountFieldError(amount.text):null,
+          errorText:fundingExceedsBalance?
+           (waffraIsEnglish
+            ?'Insufficient account balance. Available: $availableFundingText.'
+            :'رصيد الحساب غير كافٍ. المتاح: $availableFundingText.')
+           :attempted?waffraAmountFieldError(amount.text):null,
           errorMaxLines:2,
           enabledBorder:OutlineInputBorder(
            borderRadius:BorderRadius.circular(15),
@@ -15393,7 +15407,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       actions:[SizedBox(width:double.infinity,
        child:Column(children:[
         SizedBox(width:double.infinity,child:FilledButton(
-         onPressed:WaffraHaptics.tap((){
+         onPressed:fundingExceedsBalance?null:WaffraHaptics.tap((){
           update(()=>attempted=true);
           if(waffraAmountFieldError(amount.text)!=null)return;
           final value=amountOfDisplay(amount.text);
