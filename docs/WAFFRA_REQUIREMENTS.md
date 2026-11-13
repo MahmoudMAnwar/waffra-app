@@ -1827,3 +1827,5 @@ Audit of remaining production direct Material `DropdownButtonFormField<String>` 
 - **Issue #636 (P1):** large-ledger SQLCipher month/paging performance and finance parity — pending.
 - **Issue #637 (P2):** retire stale cloud-positive tests, requirements and release notes — partial; core test assertions retained.
 - CI/widget tests do not establish real Android/old-owner-backup parity.
+
+- **M691/M692/M693 follow-up:** Budget/summary/insight Home source moved to `lib/waffra_home_budget_cards.part.dart`; 2400 synthetic SQLCipher monthly/paging/cold-open test added; 3 approved UI widget-composition matrices added. Old original budget-alert assertions preserved by reading real relocated Dart part. Exact-head CI remains mandatory.
