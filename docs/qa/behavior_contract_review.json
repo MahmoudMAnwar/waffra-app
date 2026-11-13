@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "pr": "Draft PR pending",
-  "issue": "#624",
+  "pr": "#625",
+  "issue": "#624 and #626",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at new branch start",
   "reviewed_at": "2026-11-13",
@@ -2397,7 +2397,7 @@
     },
     {
       "id": "M674_APPROVED_THREE_PAGE_DESIGNS_NO_FINANCE_MUTATION",
-      "issue": "#624",
+      "issue": "Issues #624 and #626",
       "previous_behavior": "Home summary, Goals and Recurring used earlier dense layouts; finance models, dashboard balance, account selection, goal wallet, linked goal due and recurring settlement already use verified SQLCipher.",
       "approved_behavior": "Display Home #1, user-supplied Goals screenshot and Recurring #3 using solely real existing source records. Keep global + UI/handlers absolutely unchanged, existing verified account selection and all account/goal/recurring save paths intact.",
       "source_paths": [
@@ -2420,6 +2420,30 @@
         "Recurring linkedGoalId remains single due linked to its parent goal, never monthly duplicate.",
         "No new fields or migrations; all accountId and finance identifiers survive toJson/fromJson exactly.",
         "All financial changes still use existing encrypted SQLCipher verified write paths."
+      ]
+    },
+    {
+      "id": "M675_STATIONARY_FAB_ADJACENT_MULTILINE_SNACKBAR",
+      "issue": "Issue #626 in Draft PR #625",
+      "previous_behavior": "Footer notice lived inside bottomNavigationBar Column, so any new or wrapped notice changed Scaffold contentBottom and moved the global +.",
+      "approved_behavior": "Notice overlays and follows the existing CompositedTransformTarget anchor alongside +, bottom-aligned so multiline notice grows upward. No change to plus/position/menu/verified finance; tab without + shows fixed safe notice.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_approved_page_designs.dart"
+      ],
+      "test_paths": [
+        "test/m674_approved_page_designs_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "The global physical-left Arabic / physical-right English FAB remains byte-identical to main outside approved M385 sections.",
+        "The snackbar must not grow bottomNavigationBar height or obscure or capture + button pointer events.",
+        "A one-line or two-line notice stays bottom-aligned beside +; text wraps upwards only.",
+        "Undo, tap-to-dismiss, notice kind and accessibility remain unchanged."
       ]
     }
   ]
