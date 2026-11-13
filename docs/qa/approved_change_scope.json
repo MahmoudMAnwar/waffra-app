@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
   "change_id": "M674-M675-20261113-ISSUES624_626-PR625-APPROVED-PAGES-AND-FIXED-FAB-SNACK",
-  "human_scope_review": "User explicitly approved Home concept #1, attached Goals reference screenshot, Recurring concept #3 and required the cross-page + button stay entirely unmodified. Scope is view-only presentation wiring of verified existing account/goal/recurring sources plus regression checks; no database migrations or financial write-path changes. Include original Home actions, Goal and Recurring safeguards; confirm via CI and real-phone test separately. Owner subsequently requested M675 in same PR: on all tabs, Snackbar must finish alongside the stationary + FAB, and multiple text lines grow above it without moving +. Header appbar, FAB, FAB location, footer navigation and all action callbacks are outside M385 approved regions and must remain byte-identical to main.",
+  "human_scope_review": "User explicitly approved Home concept #1, attached Goals reference screenshot, Recurring concept #3 and required the cross-page + button stay entirely unmodified. Scope is view-only presentation wiring of verified existing account/goal/recurring sources plus regression checks; no database migrations or financial write-path changes. Include original Home actions, Goal and Recurring safeguards; confirm via CI and real-phone test separately. Owner subsequently requested M675 in same PR: on all tabs, Snackbar must finish alongside the stationary + FAB, and multiple text lines grow above it without moving +. Header appbar, FAB, FAB location, footer navigation and all action callbacks are outside M385 approved regions and must remain byte-identical to main. M385's snackbar section begins at the unchanged final FAB icon line because the old Snackbar comment was removed; that icon and all action/location logic remain byte-identical and are also checked by M675 tests.",
   "user_requested_changes": [
     "Apply the approved Home #1 premium dashboard presentation using only verified current balance and actual financial counts.",
     "Apply the user-supplied Goals screenshot with real target, saved progress, linked account, due date, nearest-goal and existing verified actions.",
@@ -42,7 +42,7 @@
         "end": " Future<void> showWaffraFinancialCalendar()async{"
       },
       {
-        "start": "  // The notice reserves real layout height above the bottom footer.",
+        "start": "       child:const Icon(Icons.add,color:Colors.white,size:28)))),",
         "end": "  if(addFabExpanded&&!accountOpened)...["
       }
     ],
