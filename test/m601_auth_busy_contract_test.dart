@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -58,7 +59,7 @@ void main() {
 
   test('M601 source keeps a readable painted spinner and no extra secure-store read',
       () {
-    final source = File('lib/main.dart').readAsStringSync();
+    final source = readWaffraMainSourceForContracts();
     final login = source.split(' Future<void> _signIn()async{')[1]
         .split(' String get maskedLastPhone{')[0];
     final ui = source.split('FilledButton(onPressed:WaffraHaptics.tap(signingIn?null:_signIn)')[1]
@@ -80,7 +81,7 @@ void main() {
 
   test('M601 never loosens phone, biometric recovery, ledger or logout Yes/No',
       () {
-    final source = File('lib/main.dart').readAsStringSync();
+    final source = readWaffraMainSourceForContracts();
     final login = source.split(' Future<void> _signIn()async{')[1]
         .split(' String get maskedLastPhone{')[0];
     final signout = source.split(' Future<void> logout()async {')[1]
@@ -99,7 +100,7 @@ void main() {
 
   test('M601 sign-out Yes paints progress, blocks extra taps, and always clears it',
       () {
-    final source = File('lib/main.dart').readAsStringSync();
+    final source = readWaffraMainSourceForContracts();
     final signout = source.split(' Future<void> logout()async {')[1]
         .split(' Future<void> setPin(')[0];
     expect(signout, contains('if(_logoutInProgress)return;'));

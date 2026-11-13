@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -128,7 +129,7 @@ void main(){
   expect(model.weeklySpend.last,42);
   expect(model.topCategories.first.key,'بقالة وتموين / سوبرماركت');
   expect(model.topCategories.first.value,72);
-  final code=File('lib/main.dart').readAsStringSync();
+  final code=readWaffraMainSourceForContracts();
   expect(code,contains('weeklySpendSvg(smartData!.weeklySpend.map(pdfAmount).toList())'));
   expect(code,contains('expensePieSvg(chartSlices)'));
   expect(code,contains(r'pairedBarChartSvg(buckets.map((p)=>(pdfAmount(p.$1),pdfAmount(p.$2))).toList())'));

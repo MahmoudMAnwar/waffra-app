@@ -1,8 +1,9 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 void main(){
  test('M429 integrates single SMS opt-in, phone login and OS biometrics',(){
-  final src=File('lib/main.dart').readAsStringSync();
+  final src=readWaffraMainSourceForContracts();
   expect(src,contains('final laterConsent=!needsLogin&&!firstConsent&&!needsGate&&autoSmsConsentPending;'));
   expect(src,contains('child:WaffraMandatoryBiometricGate'));
   expect(src,contains('WaffraLocalPhoneCredentials.verify('));
@@ -49,7 +50,7 @@ void main(){
   expect(poster,isNot(contains('WaffraSmsCloudReviewAnalyzer.stagePending(')));
  });
  test('M433 Home has stable review inbox count and per-SMS manual review',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   expect(main,contains("Key('waffra-auto-sms-review-card')"));
   expect(main,contains("Key('waffra-auto-sms-review-count')"));
   expect(main,contains("Key('waffra-auto-sms-review-open')"));
@@ -75,7 +76,7 @@ void main(){
 
 
  test('M434 encrypted SMS inbox groups real sender and displays count',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   final inbox=main.substring(
    main.indexOf('Future<void> _openAutoSmsInbox()async{'),
    main.indexOf('Widget _autoSmsReviewCard(){'));
@@ -100,7 +101,7 @@ void main(){
   expect(inbox,isNot(contains('commitConfirmedSms(')));
  });
  test('M434 saved transactions preserve genuine SMS versus manual origin',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   final details=main.substring(
    main.indexOf('class WaffraTransactionDetailsDialog'),
    main.indexOf('class HomeScreen extends StatefulWidget'));
@@ -120,7 +121,7 @@ void main(){
 
 
  test('M443 merchant and logo UI removed without deleting finance history',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   expect(main,isNot(contains("import 'waffra_merchant_brands.dart';")));
   expect(main,isNot(contains('WaffraMerchantLogo(')));
   expect(main,isNot(contains('WaffraMerchantBrands.match(')));

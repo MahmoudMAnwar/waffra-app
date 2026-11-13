@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -6,7 +7,7 @@ import 'package:waffra/waffra_smart_features.dart';
 
 void main() {
  test('M671 tour removed from source, startup and settings; five-tab UI retained',(){
-  final source=File('lib/main.dart').readAsStringSync();
+  final source=readWaffraMainSourceForContracts();
   final plan=File('lib/waffra_tour_plan.dart');
   expect(plan.existsSync(),isFalse);
   for(final retired in <String>[

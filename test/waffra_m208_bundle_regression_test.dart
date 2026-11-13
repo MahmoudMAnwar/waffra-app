@@ -1,11 +1,12 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Scope-only guard. Full Flutter, PDF rendering and Android ARM64 CI must
 /// separately succeed before this branch is eligible for review or merge.
 void main() {
   test('Waffra approved PDF analytics keeps chart content and real data together', () {
-    final app=File('lib/main.dart').readAsStringSync();
+    final app=readWaffraMainSourceForContracts();
     expect(app,contains('final chartPanels=parts.skip(1).toList(growable:false)'));
     expect(app,contains('dataTable(valueHeaders,periodValues)'));
     expect(app,contains('smartData.weeklySpend.length'));
@@ -17,7 +18,7 @@ void main() {
   });
 
   test('Recurring section has count chip, compact reminders and nearest bill', () {
-    final app=File('lib/main.dart').readAsStringSync();
+    final app=readWaffraMainSourceForContracts();
     expect(app,contains("Key('m689-due-card-'"));
     expect(app,contains("Key('m689-due-settings')"));
     expect(app,contains("unawaited(toggleRecurringReminders(!recurringRemindersEnabled))"));
@@ -26,7 +27,7 @@ void main() {
   });
 
   test('Currency converter searchable currencies, directional swap, financial tools', () {
-    final app=File('lib/main.dart').readAsStringSync();
+    final app=readWaffraMainSourceForContracts();
     final converter=File('lib/currency_converter.dart').readAsStringSync();
     expect(app,contains("Financial tools':'الأدوات المالية'"));
     expect(app,contains('case 2:return _smartToolsTab();'));

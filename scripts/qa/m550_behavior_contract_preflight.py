@@ -34,6 +34,12 @@ BINDING_DART = re.compile(
     r"(?P<q>['\"])(?P<path>(?:lib|native|android|ios|firebase|assets)/[^'\"]+)\2\s*\)"
     r"\.readAsStringSync\(\s*\)",
 )
+# M687: explicit source-inspection helper still targets the actual main.dart
+# library and its declared Dart parts, not an unverified mock of the source.
+BINDING_MAIN_RECON = re.compile(
+    r"\\b(?:final|var)\\s+(?P<var>[A-Za-z_]\\w*)\\s*=\\s*"
+    r"readWaffraMainSourceForContracts\\(\\s*\\)",
+)
 BINDING_SHELL = re.compile(
     r"\b(?P<var>[A-Za-z_]\w*)\s*=\s*Path\(\s*"
     r"(?P<q>['\"])(?P<path>(?:lib|native|android|ios|firebase|assets)/[^'\"]+)\2\s*\)"
@@ -142,6 +148,8 @@ def _positive_python(text: str, path: str) -> list[tuple[str, str, int, str]]:
 
 def _positive_dart(text: str) -> list[tuple[str, str, int, str]]:
     bindings = {m["var"]: m["path"] for m in BINDING_DART.finditer(text)}
+    bindings.update({m["var"]: "lib/main.dart"
+                     for m in BINDING_MAIN_RECON.finditer(text)})
     found = []
     for kind, pat in (("expect contains", POSITIVE_DART),
                       ("source split anchor", ANCHOR_DART)):
@@ -296,6 +304,26 @@ def build_report(base: str, head: str, root: Path = ROOT) -> dict:
         except ContractError:
             continue  # New source path: no deleted baseline assertion.
         new_sources[p] = (root / p).read_text(encoding="utf-8")
+    # M687: same-library part moves are NOT code deletions. Check that every
+    # extracted part is declared by main.dart, says 'part of main.dart', and
+    # exists in the head tree before allowing any old source assertion to
+    # match the moved text. Keep the original baseline unchanged: a dropped
+    # or unregistered implementation still fails the exact-head scan.
+    home_path = "lib/main.dart"
+    expected_parts = (
+        "lib/waffra_home_pdf_reports.part.dart",
+        "lib/waffra_home_profile.part.dart",
+    )
+    if home_path in new_sources:
+        main_source = new_sources[home_path]
+        for part_path in expected_parts:
+            filename = Path(part_path).name
+            if f"part '{filename}';" not in main_source:
+                continue
+            part_source = (root / part_path).read_text(encoding="utf-8")
+            if not part_source.startswith("part of 'main.dart';"):
+                raise ContractError(f"Unregistered or foreign Dart part: {part_path}")
+            new_sources[home_path] += "\\n" + part_source
     stale, count = detect_stale(target_tests, old_sources, new_sources, sources)
     impacted = [j for j in inv["jobs"] if
                 any("flutter test test/" in cmd or

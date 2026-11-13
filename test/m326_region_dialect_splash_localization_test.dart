@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -27,7 +28,7 @@ void main(){
   });
 
   test('M326 slogan is universal Arabic and translated when English selected',(){
-    final source=File('lib/main.dart').readAsStringSync();
+    final source=readWaffraMainSourceForContracts();
     expect(source,contains('وفرة… فلوسك بوضوح'));
     expect(source,contains('Your money, made clear'));
     expect(source,isNot(contains('وفرة.. يعلّمك وين فلوسك تروح')));
@@ -99,7 +100,7 @@ void main(){
   });
 
   test('M326 locale, greeting, exit and profile settings use same UI country',(){
-    final source=File('lib/main.dart').readAsStringSync();
+    final source=readWaffraMainSourceForContracts();
     expect(source,contains('WaffraRegionalCopy.initialize(p)'));
     expect(source,contains('WaffraRegionalCopy.arabicCountrySubtag'));
     expect(source,contains('WaffraRegionalCopy.exitHint(english:waffraIsEnglish)'));

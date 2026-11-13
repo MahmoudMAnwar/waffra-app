@@ -2666,6 +2666,42 @@
         "All prior source-test expectations retained.",
         "No physical device or owner-backup restore falsely certified."
       ]
+    },
+    {
+      "id": "M687-FULL-SOURCE-ASSERTIONS-ACROSS-PART-EXTRACTION-ISSUE629",
+      "issue": "Issue #629 / Draft #630",
+      "previous_behavior": "M550 and legacy source-level tests assumed all PDF/Profile methods remained in main.dart, falsely flagging source relocation as deletion.",
+      "approved_behavior": "Read verified same-library imported part source for M550 only if main.dart references that exact part and it has the correct part-of marker. Source test helper reconstitutes real method text at original locations, retaining every test expectation unchanged. Missing, unregistered, absent, or renamed finance requirements must still fail.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_pdf_reports.part.dart",
+        "lib/waffra_home_profile.part.dart"
+      ],
+      "test_paths": [
+        "test/m687_home_state_extraction_test.dart",
+        "test/support/waffra_main_source.dart",
+        "test/m286_tour_navigation_test.dart",
+        "test/m326_region_dialect_splash_localization_test.dart",
+        "test/m429_sms_phone_integration_test.dart",
+        "test/m437_bank_sms_settings_unknown_test.dart",
+        "test/m514_sms_review_regressions_test.dart",
+        "test/m601_auth_busy_contract_test.dart",
+        "test/m666_sama_riyal_visual_position_test.dart",
+        "test/waffra_directional_fab_receipt_corner_test.dart",
+        "test/waffra_footer_pdf_navigation_test.dart",
+        "test/waffra_m208_bundle_regression_test.dart",
+        "test/qa/m417_sms_permission_acceptance_test.py"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-merge-readiness.yml",
+        ".github/workflows/m174-main-sqlcipher-regression.yml"
+      ],
+      "safety_invariants": [
+        "No financial validation removed.",
+        "Source contract checks validate the actual part code and check origin and registration.",
+        "Existing test assertions remain identical."
+      ]
     }
   ]
 }

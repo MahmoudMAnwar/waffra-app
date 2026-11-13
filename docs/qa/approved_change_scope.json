@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "change_id": "M685-M689-ISSUES629-631-20261113-M687-HOME-REPORTS-PROFILE-MODULES",
+  "change_id": "M685-M689-ISSUES629-631-20261113-M687-CONTRACT-PART-COMPAT",
   "human_scope_review": "Issue #629 completes prior PR #628 only after user-visible acceptance; #631 explicitly authorizes three exact screenshots for Goals/Dues/SMS Review, permanently visible financial activity, non-moving FAB-aligned notice, and savings/goal-due cash safety. Existing tests replace outdated visual assumptions without deleting financial safety assertions. Device screenshots/old restore still require external device evidence.",
   "user_requested_changes": [
     "M685: preserve the original authenticated accountless-transaction review, owner-selected account link, attested opening balance and idempotent SQLCipher associations.",
@@ -11,7 +11,8 @@
     "M689 all financial activity displayed without extra global hide toggle; snackbar anchored beside fixed + in RTL/LTR, multi-line grows upwards.",
     "M689 reject savings amount greater than verified available source cash before writing, and reject linked goal due if remaining cash exceeds available balance with atomic rollback, once-only wallet split.",
     "M689 no piggy-bank glyph appears in the accepted Finance/Goals/Due screens; use neutral coin-stack icon. Existing legacy M644, M363 and M388 expectations must assert protected insufficient-cash rejection and safe open-ended goals rather than the superseded continue-despite-insufficient-money UI.",
-    "M687 Home state continued: isolate byte-identical PDF report export and Profile page methods into same-library Dart extensions without altering money, backup, FAB, or Snackbar behavior; update source-based tests to read the original moved code without removing assertions."
+    "M687 Home state continued: isolate byte-identical PDF report export and Profile page methods into same-library Dart extensions without altering money, backup, FAB, or Snackbar behavior; update source-based tests to read the original moved code without removing assertions.",
+    "M687 regression follow-up: keep every positive test/workflow source assertion against actual same-library Dart part code, retain the M550 static stale-contract detection for moved PDF/Profile methods, and update Python/Dart original tests to read both real source locations without removing expectations."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -52,7 +53,17 @@
     "test/m528_settings_async_cache_regression_test.dart",
     "test/waffra_concept2_final_visual_test.dart",
     "test/waffra_design_preservation_test.dart",
-    "test/m687_home_state_extraction_test.dart"
+    "test/m687_home_state_extraction_test.dart",
+    "test/m286_tour_navigation_test.dart",
+    "test/m326_region_dialect_splash_localization_test.dart",
+    "test/m429_sms_phone_integration_test.dart",
+    "test/m437_bank_sms_settings_unknown_test.dart",
+    "test/m514_sms_review_regressions_test.dart",
+    "test/m601_auth_busy_contract_test.dart",
+    "test/m666_sama_riyal_visual_position_test.dart",
+    "test/waffra_footer_pdf_navigation_test.dart",
+    "test/qa/m417_sms_permission_acceptance_test.py",
+    "scripts/qa/m550_behavior_contract_preflight.py"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
@@ -182,14 +193,12 @@
     ],
     "test/waffra_directional_fab_receipt_corner_test.dart": [
       {
-        "start": "test('goals keep outlined counter, recurring uses compact count badge'",
-        "end": "test('all snackbar entry points share one footer-aware presenter'"
+        "start": "import 'dart:io';"
       }
     ],
     "test/waffra_m208_bundle_regression_test.dart": [
       {
-        "start": "test('Recurring section has count chip, compact reminders and nearest bill'",
-        "end": "test('Currency converter searchable currencies, directional swap, financial tools'"
+        "start": "import 'dart:io';"
       }
     ],
     "test/m644_goal_notice_funding_contract_test.dart": [
@@ -236,6 +245,65 @@
     "test/waffra_design_preservation_test.dart": [
       {
         "start": "import 'dart:io';"
+      }
+    ],
+    "test/m286_tour_navigation_test.dart": [
+      {
+        "start": "import 'dart:io';"
+      }
+    ],
+    "test/m326_region_dialect_splash_localization_test.dart": [
+      {
+        "start": "import 'dart:io';"
+      }
+    ],
+    "test/m429_sms_phone_integration_test.dart": [
+      {
+        "start": "import 'dart:io';"
+      }
+    ],
+    "test/m437_bank_sms_settings_unknown_test.dart": [
+      {
+        "start": "import 'dart:io';"
+      }
+    ],
+    "test/m514_sms_review_regressions_test.dart": [
+      {
+        "start": "import 'dart:io';"
+      }
+    ],
+    "test/m601_auth_busy_contract_test.dart": [
+      {
+        "start": "import 'dart:io';"
+      }
+    ],
+    "test/m666_sama_riyal_visual_position_test.dart": [
+      {
+        "start": "import 'dart:io';"
+      }
+    ],
+    "test/waffra_footer_pdf_navigation_test.dart": [
+      {
+        "start": "import 'dart:io';"
+      }
+    ],
+    "test/qa/m417_sms_permission_acceptance_test.py": [
+      {
+        "start": "class M417AutoSmsContractTest"
+      }
+    ],
+    "scripts/qa/m550_behavior_contract_preflight.py": [
+      {
+        "start": "BINDING_DART = re.compile(",
+        "end": "BINDING_SHELL = re.compile("
+      },
+      {
+        "start": "def _positive_dart(",
+        "end": "def _positive_workflow("
+      },
+      {
+        "start": "    old_sources: dict[str, str] = {}",
+        "end": "    stale, count = detect_stale("
       }
     ]
   }

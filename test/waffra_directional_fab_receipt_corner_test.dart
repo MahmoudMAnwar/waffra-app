@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -69,7 +70,7 @@ void main() {
   });
 
   test('goals keep outlined counter, recurring uses compact count badge', () {
-    final source=File('lib/main.dart').readAsStringSync();
+    final source=readWaffraMainSourceForContracts();
     expect(source,contains('class WaffraOutlinedItemsCount'));
     expect(source,contains("Key('m689-goal-card-'"));
     expect(source,contains("Key('m689-due-card-'"));
@@ -79,7 +80,7 @@ void main() {
   });
 
   test('all snackbar entry points share one footer-aware presenter', () {
-    final source=File('lib/main.dart').readAsStringSync();
+    final source=readWaffraMainSourceForContracts();
     expect(source,contains('enum WaffraSnackKind { success, error, warning, info }'));
     expect(source,contains('class WaffraNoticeContent extends StatelessWidget'));
     expect(source,contains('class WaffraFooterNoticeHost extends StatefulWidget'));
@@ -197,7 +198,7 @@ void main() {
   });
 
   test('M384 restores corner count and keeps details attachments action', () {
-    final source=File('lib/main.dart').readAsStringSync();
+    final source=readWaffraMainSourceForContracts();
     final listCard=source.split('Widget tile(MoneyEntry e)').last
         .split('String get greeting').first;
     final dashboardCard=source.split('Widget compactTransaction(MoneyEntry entry)').last
@@ -218,7 +219,7 @@ void main() {
 
   test('Home, Categories, Goals and Recurring plus actions preserve locale switch, with no fixed-left anchor',
       () {
-    final source = File('lib/main.dart').readAsStringSync();
+    final source = readWaffraMainSourceForContracts();
     expect(source, contains(
       'floatingActionButtonLocation:WaffraDirectionalFabLocation(english:waffraIsEnglish)',
     ));
@@ -242,7 +243,7 @@ void main() {
   });
 
   test('M384 transaction cards use persisted references, never alter old photos', () {
-    final source=File('lib/main.dart').readAsStringSync();
+    final source=readWaffraMainSourceForContracts();
     final listCard=source.split('Widget tile(MoneyEntry e)').last
       .split('String get greeting').first;
     final dashboardCard=source.split('Widget compactTransaction(MoneyEntry entry)').last
@@ -349,7 +350,7 @@ void main() {
   });
 
   test('report confirmation actions have adaptive non-overlapping layout', () {
-    final source=File('lib/main.dart').readAsStringSync();
+    final source=readWaffraMainSourceForContracts();
     expect(source,contains("Key('waffra-report-open')"));
     expect(source,contains("Key('waffra-report-share')"));
     expect(source,contains('if(limits.maxWidth<300)return Column('));
