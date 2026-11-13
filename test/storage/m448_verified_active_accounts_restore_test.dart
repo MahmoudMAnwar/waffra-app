@@ -156,6 +156,7 @@ void main(){
 
  test('M623 SQLCipher injection after delete rolls back original account',()async{
   final proof=await archives();
+  final before=await state(live).read();
   // A synthetic write failure DURING incoming SQL hydration, after the old
   // accounts have been deleted inside the transaction, must restore originals.
   await live.customStatement(
@@ -166,7 +167,9 @@ void main(){
   await expectLater(apply(proof),throwsA(anything));
   expect(await balances(),{'old-account':100000});
   final after=await state(live).read();
-  expect(after.values,isNotEmpty);
+  expect(after.generation,before.generation);
+  expect(after.digest,before.digest);
+  expect(after.values,before.values);
   expect((await live.customSelect('PRAGMA foreign_key_check').get()),isEmpty);
  });
 
