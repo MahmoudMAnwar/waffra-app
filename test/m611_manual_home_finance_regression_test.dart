@@ -28,9 +28,10 @@ void main() {
   expect(home,contains('showInternalTransferTransactions()'));
   expect(home,isNot(contains('entrySheet(')));
   expect(home,isNot(contains('openVerifiedTransfer()')));
-  final tile=src.substring(src.indexOf('Widget _m549HomeFinanceAction({'),
-   src.indexOf('Widget dashboard(){'));
-  expect(tile,contains('height:68,'));
+  final tile=File('lib/waffra_home_finance_tiles.part.dart').readAsStringSync();
+  expect(src,contains('this._m684HomeFinanceAction('));
+  expect(tile,contains("key:Key('m549-home-action-'"));
+  expect(tile,contains('height:60,'));
  });
 
  test('M611 account selection is readable and mandatory for manual save', () {
