@@ -531,3 +531,5 @@ M681/M684 implementation follow-up (2026-11-13; Issue #627, Draft PR #628 — NO
 - Added negative-path SQLCipher tests for historic duplicate link, opening-balance attestation guard, selected-month/account paging, and static contract checks for page and unchanged global +. These are code and test commitments, not an assertion that physical-phone acceptance or exact-head CI has passed.
 
 - M681 correction following live M448 CI regression: a legitimate nonzero-opening account may receive a historic unassigned entry only after an extra user checkbox confirming that old operation was not already in the opening cash. The original M448 SQLCipher budget/ledger fixture is preserved and now tests refusal without that extra attestation, successful consent-based association, idempotent retry and wrong-account refusal. No silent opening-balance edits.
+
+- M681 discoverability: Accounts overview now shows a direct Review and link unassigned historical transactions control; the previous top-right icon remains available and points to the same authenticated account-context screen. No finance records are automatically changed by opening this screen.
