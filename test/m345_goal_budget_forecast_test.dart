@@ -65,10 +65,10 @@ void main(){
 
  test('M345 actual goal and budget UI consume forecast without finance writes',(){
   final main=File('lib/main.dart').readAsStringSync();
-  expect(main,contains('WaffraGoalPlan('));
+  expect(main,contains("Key('m689-goal-card-'"));
   expect(main,contains('WaffraBudgetPace('));
   expect(main,contains('selected?.alertPercent??80'));
-  expect(main,contains('monthlyRequired/100'));
+  expect(main,contains('g.saved/g.target'));
   expect(main,contains('حسب متوسط الصرف الحالي'));
  });
 }
