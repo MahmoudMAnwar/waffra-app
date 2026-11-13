@@ -6160,6 +6160,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    ]),
   );
  }
+ /// Explicit, idempotent account-to-account transfer from reviewed bank SMS.
+ // M703: implementation moved byte-identically to registered Home part.
  /// M593: even with JSON decoded on a worker isolate, creating thousands
  /// of MoneyEntry models synchronously can stall the progress animation.
  /// Convert bounded chunks and yield to the next Flutter event loop frame
