@@ -189,7 +189,7 @@
     ],
     "test/m363_transaction_category_inline_creation_test.dart": [
       {
-        "start": " test('M362 a short available balance warns and permits funding'"
+        "start": " test('M362 verified encrypted goal spend uses one atomic wallet-and-ledger writer'"
       }
     ],
     "test/m388_m390_approved_goal_recurring_receipt_test.dart": [
