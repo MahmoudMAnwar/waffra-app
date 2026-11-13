@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "change_id": "M690-M696-ISSUES632-637-20261113",
+  "change_id": "M690-M697-ISSUES632-637-20261113",
   "human_scope_review": "Issue #629 completes prior PR #628 only after user-visible acceptance; #631 explicitly authorizes three exact screenshots for Goals/Dues/SMS Review, permanently visible financial activity, non-moving FAB-aligned notice, and savings/goal-due cash safety. Existing tests replace outdated visual assumptions without deleting financial safety assertions. Device screenshots/old restore still require external device evidence.",
   "user_requested_changes": [
     "M690 #632 permanently disable third-party AI bank SMS uploads and opt-in on previously installed versions, remove Settings toggle and signed Android staging worker, retain local encrypted SMS Review and money writer.",
@@ -9,7 +9,8 @@
     "M692 #636 2400-row disposable SQLCipher month read and pages with cold reopen and no account balance drift. M693 #635 Goals/Dues/SMS review owner-approved widget composition layout matrix at 320/360/390 LTR/RTL dark/light while physical device proof remains distinct.",
     "M694 #634 remove four stale unused cloud-consent cache fields/getters/reset paths from Home State while retaining local SMS opt-in cache and finance settings; add regression asserts.",
     "M695 #634 hard-disable orphan historical Cloudflare gateway direct HTTP transport in addition to public cloud service; remove unused main import and retain review-only currency/OTP validators with no-network tests.",
-    "M696 #633 repair ten original positive budget/goal/forecast source contract tests after same-library Home-card extraction: read actual source from declared part via source helper; retain all assertions, no skipped tests."
+    "M696 #633 repair ten original positive budget/goal/forecast source contract tests after same-library Home-card extraction: read actual source from declared part via source helper; retain all assertions, no skipped tests.",
+    "M697 #634 delete unused retired Cloudflare redactor import after fail-closed transport; update exact-head release notes for all source commits after `lib/main.dart` extraction."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -159,6 +160,10 @@
       }
     ],
     "lib/waffra_cloudflare_sms_gateway.dart": [
+      {
+        "start": "import 'waffra_bank_sms_facts.dart';",
+        "end": "/// M423:"
+      },
       {
         "start": "  static Map<String, Object?>? validateSuggestion(",
         "end": "  static Future<Map<String, Object?>?> analyze({"

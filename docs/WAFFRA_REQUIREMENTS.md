@@ -1829,3 +1829,5 @@ Audit of remaining production direct Material `DropdownButtonFormField<String>` 
 - CI/widget tests do not establish real Android/old-owner-backup parity.
 
 - **M691/M692/M693 follow-up:** Budget/summary/insight Home source moved to `lib/waffra_home_budget_cards.part.dart`; 2400 synthetic SQLCipher monthly/paging/cold-open test added; 3 approved UI widget-composition matrices added. Old original budget-alert assertions preserved by reading real relocated Dart part. Exact-head CI remains mandatory.
+
+- **M694–M697 final code audit:** dead cloud-consent Home futures/getter removed; direct historical Cloudflare transport also hard-disabled, not only the UI. Ten original source-guard tests now validate real same-library moved budget-card methods; never weaken financial checks. The 2400-row encrypted ledger fixture and 3×12 visual component matrix await exact-head CI. Several test-only historical AI helper files remain in lib and physical-device tests are not independently complete, so Issue #634/#635 cannot be marked fully Done on this evidence.
