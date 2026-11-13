@@ -257,15 +257,15 @@ void main(){
    .split('const SizedBox(height:12)')[0];
   expect(shortcuts,contains('onTap:()=>unawaited(openVerifiedAccounts())'));
   expect(shortcuts,isNot(contains('accountOpened=true')));
-  final goalStart=src.indexOf("final percent=g.target<=0");
-  final goalEnd=src.indexOf('if(goals.isEmpty)',goalStart);
+  final goalStart=src.indexOf(" Future<void> _m689GoalActions(");
+  final goalEnd=src.indexOf(' Future<void> recurringDialog(',goalStart);
   expect(goalStart,greaterThan(0));
   expect(goalEnd,greaterThan(goalStart));
   final goalCard=src.substring(goalStart,goalEnd);
   expect(goalCard,contains("_handleGoalCardAction(g,'edit')"));
   expect(goalCard,isNot(contains('unawaited(editGoal(g))')));
-  expect(src,contains('snapshot.data!.savings.length'));
-  expect(src,contains('snapshot.data!.transfers.length'));
+  expect(src,contains('event.activity is WaffraVerifiedGoalMovement'));
+  expect(src,contains('event.activity is WaffraInternalTransferHistory'));
  });
  test('M675 immutable + source contract and existing finance write routing',(){
   final code=File('lib/main.dart').readAsStringSync();
