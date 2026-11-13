@@ -1817,3 +1817,13 @@ Audit of remaining production direct Material `DropdownButtonFormField<String>` 
 - **M688 / Issue #629:** extend responsive Flutter regression matrix to 320, 360 and 390dp for RTL/LTR, light/dark, 130% text, accurate amount/progress and stationary fixed 58dp FAB across single/multiline notices. This is a deterministic widget/emulator preflight only, NOT the physical Android screenshots. M424/M208 legacy tests must continue testing actual Home/Profile code after M687 part extraction.
 
 - **M687 / PR #630 regression continuation:** five legacy source-inspection tests (M374, M479, M513, M662, M671) read actual same-library relocated PDF/Profile methods through the source reconstruction helper, retaining all original assertions. No runtime production code altered; real-device and owner-backup parity remain outstanding.
+
+## M690 — Six-point source audit after PR #630 (2026-11-13)
+- **Draft PR #638**: https://github.com/MahmoudMAnwar/waffra-app/pull/638 — no merge.
+- **Issue #632 (P0):** retire cloud SMS consent, settings UI, and staging worker APK build argument; preserve local parsing, OTP, financial ledger and manual review. Code and negative tests pushed; exact-head CI pending.
+- **Issue #633 (P1):** continue bounded HomeScreenState modularization — pending.
+- **Issue #634 (P1):** remove unused legacy AI dependencies after import/test audit — pending.
+- **Issue #635 (P1):** approved Goals/Dues/SMS Review 320/360/390 RTL/LTR light/dark real widget matrix — pending.
+- **Issue #636 (P1):** large-ledger SQLCipher month/paging performance and finance parity — pending.
+- **Issue #637 (P2):** retire stale cloud-positive tests, requirements and release notes — partial; core test assertions retained.
+- CI/widget tests do not establish real Android/old-owner-backup parity.
