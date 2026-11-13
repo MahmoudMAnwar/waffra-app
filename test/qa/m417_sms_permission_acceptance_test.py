@@ -93,7 +93,8 @@ class M417AutoSmsContractTest(unittest.TestCase):
         ui=self.read("lib/waffra_auto_sms_consent.dart")
         # Account creation is followed by Android SMS then notifications.
         # Cloud disclosure must be separate and tied to a specific message.
-        self.assertIn("await WaffraSmsCloudService.setConsent(false)",ui)
+        self.assertIn("await prefs.remove('waffra_cloud_sms_installation_consent_v2');",ui)
+        self.assertNotIn("waffra_sms_cloud_service.dart",ui)
         self.assertIn("await WaffraAutoSms.optIn()",ui)
         self.assertIn("await WaffraAutoSms.requestNotificationPermission()",ui)
         self.assertNotIn("allow(cloud:true)",ui)
