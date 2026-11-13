@@ -126,13 +126,19 @@ class WaffraVerifiedGoalDueSnapshotWriter {
         throw StateError('Canonical and typed recurring schedules differ.');
       }
 
-      // M689: a linked goal due may use previously saved wallet funds, but
-      // only the cash shortfall is charged to its verified active account.
-      // This preflight runs inside the SAME encrypted SQL transaction,
-      // before any ledger, wallet, recurring or account association write.
+      // M689: distinguish a fresh due from an idempotent retry BEFORE
+      // checking current cash. A previously settled due reduced both the
+      // wallet and the bank, so checking cash again would reject a valid
+      // duplicate instead of returning its durable receipt.
+      final existing=ledger.where((entry)=>entry['id']==dueKey).toList();
+      if (existing.length>1) {
+        throw StateError('Duplicate due event in canonical ledger.');
+      }
+      // Only a fresh settlement may require new money. This check runs under
+      // the same authenticated SQLCipher transaction before any money write.
       final cashRequired=amountMinor-
        (savedBefore<amountMinor?savedBefore:amountMinor);
-      if(cashRequired>0){
+      if(existing.isEmpty&&cashRequired>0){
         if(selectedAccountId==null||
            selectedAccountId.trim().isEmpty||
            (goalAccountId is String&&selectedAccountId!=goalAccountId)){
@@ -145,10 +151,6 @@ class WaffraVerifiedGoalDueSnapshotWriter {
         if(eligible.length!=1||eligible.single.balanceMinor<cashRequired){
           throw StateError('Insufficient verified cash for goal due settlement.');
         }
-      }
-      final existing=ledger.where((entry)=>entry['id']==dueKey).toList();
-      if (existing.length>1) {
-        throw StateError('Duplicate due event in canonical ledger.');
       }
       if (existing.isEmpty && recurring['active']!=true) {
         throw StateError('Inactive canonical recurring event cannot post.');
