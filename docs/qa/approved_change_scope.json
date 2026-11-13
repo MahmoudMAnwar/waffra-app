@@ -15,7 +15,8 @@
     "Finish owner-approved historical account matching screen using read-only all-time unassigned SQL preview; allow link only after choosing verified active zero-opening account and confirming no new transaction.",
     "Make account ledger display use true SQL month-bound pages (50/page) and current-month budget/goal projection instead of decoding all history, keeping existing Home full ledger contract for old parity.",
     "Extract visual Home and Recurring card widgets into a new part file, retaining widget identities and callbacks and preserving globally stationary plus/Snackbar.",
-    "M681 reconciliation on nonzero-opening accounts must require explicit per-entry user attestation that opening balance excludes that entry; a missing attestation or reassignment to a different account must roll back. Preserve the old positive SQLCipher balance test after confirmed consent."
+    "M681 reconciliation on nonzero-opening accounts must require explicit per-entry user attestation that opening balance excludes that entry; a missing attestation or reassignment to a different account must roll back. Preserve the old positive SQLCipher balance test after confirmed consent.",
+    "Expose a visible Accounts overview button to the existing witnessed Account Context reconciliation screen, not just a top-right receipts icon; do not alter data or existing account edit/creation flows."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -30,6 +31,7 @@
     "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
     "lib/storage/waffra_verified_goal_funding_writer.dart",
     "lib/waffra_account_context_page.dart",
+    "lib/waffra_accounts_manager_page.dart",
     "lib/waffra_approved_page_designs.dart",
     "lib/waffra_home_finance_tiles.part.dart",
     "test/m611_manual_home_finance_regression_test.dart",
@@ -192,6 +194,16 @@
     "test/storage/m448_account_context_read_test.dart": [
       {
         "start": " test('all/unassigned budget and balance are independent of account header',()async{",
+        "end": null
+      }
+    ],
+    "lib/waffra_accounts_manager_page.dart": [
+      {
+        "start": " void failed(){",
+        "end": " Future<void> addAccount()async{"
+      },
+      {
+        "start": " @override Widget build(BuildContext context)=>Scaffold(",
         "end": null
       }
     ]
