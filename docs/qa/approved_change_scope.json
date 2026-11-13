@@ -176,6 +176,10 @@
       {
         "start": "    for p in sorted(sources):",
         "end": "    # M687: same-library part moves are NOT code deletions."
+      },
+      {
+        "start": "    expected_parts = (",
+        "end": "    if home_path in new_sources:"
       }
     ],
     "test/m687_home_state_extraction_test.dart": [
