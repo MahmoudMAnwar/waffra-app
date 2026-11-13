@@ -3,19 +3,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_sms_cloud_redactor.dart';
 
 void main() {
- test('M436 cloud suggestions are consented and budgeted, never posted',(){
-  final src=File('lib/waffra_sms_cloud_review_analyzer.dart')
-   .readAsStringSync();
-  expect(src,contains('WaffraSmsCloudService.hasConsent()'));
-  expect(src,contains('WaffraSmsCloudRedactor.redact(body)==null'));
-  expect(src,contains('WaffraAutoSms.claimCloudAttempt(id)'));
-  expect(src,contains('WaffraSmsCloudService.analyzeIfConsented(body)'));
-  expect(src,contains('WaffraAutoSms.stageCloudAnalysis(id,safe)'));
-  expect(src,contains("..['requiresReview']=true"));
-  expect(src,contains('perInstallationDailyLimit=8'));
-  expect(src,contains('await prefs.setInt(_usedKey,used)'));
-  expect(src,isNot(contains('commitConfirmedSms(')));
-  expect(src,isNot(contains('writeFinance(')));
+ test('M690 retired external SMS service fails closed before staging',(){
+  final cloud=File('lib/waffra_sms_cloud_service.dart').readAsStringSync();
+  expect(cloud,contains('hasConsent()async=>false'));
+  expect(cloud,contains('analyzeIfConsented(String source)async=>null'));
+  expect(cloud,isNot(contains('http.Client')));
  });
 
  test('M436 native queue claim is atomic and withholds future retries',(){
@@ -51,21 +43,11 @@ void main() {
   expect(main,contains('reviewSmsBudgetLinks([record])'));
  });
 
- test('M436 signed main QA APK enables protected staging, not Play AAB',(){
+ test('M690 Android release has no Cloudflare staging configuration',(){
   final build=File('.github/workflows/android.yml').readAsStringSync();
-  final apk=build.substring(
-   build.indexOf('      - name: Build optimized ARM64 Release APK'),
-   build.indexOf('      - name: Measure release APK size'));
-  final aab=build.substring(
-   build.indexOf('      - name: Build Android App Bundle candidate for Google Play internal testing'),
-   build.indexOf('      - name: Validate signed AAB archive'));
-  expect(apk,contains('github.event_name'));
-  expect(apk,contains('"push"'));
-  expect(apk,contains('refs/heads/main'));
-  expect(apk,contains('WAFFRA_SMS_WORKER_URL=https://waffra-sms-appcheck-staging.'));
-  expect(apk,contains('"\${sms_define[@]}"'));
-  expect(aab,isNot(contains('sms_define')));
-  expect(build,isNot(contains('OPENROUTER_API_KEY')));
+  expect(build,isNot(contains('WAFFRA_SMS_WORKER_URL=')));
+  expect(build,isNot(contains('sms_define')));
+  expect(build,isNot(contains('sms_staging_worker:')));
  });
 
  test('M452 no unsolicited cloud choice on signup or SMS review',(){
@@ -80,9 +62,9 @@ void main() {
   expect(main,isNot(contains('WaffraSmsCloudService.setConsent(true)')));
   expect(main,isNot(contains('Optional AI review')));
   expect(main,isNot(contains('ليست عملية مالية')));
-  expect(cloud,contains('FirebaseAppCheck.instance.getToken()'));
-  expect(cloud,contains('WaffraCloudflareSmsGateway.analyze('));
-  expect(cloud,contains('WaffraSmsCloudRedactor.redact(source)'));
+  expect(cloud,contains('hasConsent()async=>false'));
+  expect(cloud,contains('analyzeIfConsented(String source)async=>null'));
+  expect(cloud,isNot(contains('FirebaseAppCheck')));
  });
 
  test('M436 redactor accepts compact English multi-currency SMS',(){
