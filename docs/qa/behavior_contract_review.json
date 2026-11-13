@@ -2942,6 +2942,31 @@
         "Preserve the original SMS text and explicit user confirmation.",
         "Never double debit on historical SMS replay or bank fee ambiguity."
       ]
+    },
+    {
+      "id": "M705-NO-RETIRED-CLOUD-RUNTIME-PERMISSIONS-ISSUE634",
+      "issue": "Issue #634 / Draft PR #638",
+      "previous_behavior": "Live SMS onboarding imported the retired cloud bank-SMS service solely to clear an obsolete consent preference; that transitive dependency retained cloud transport/AI code in the installed runtime path.",
+      "approved_behavior": "Live Android SMS onboarding erases the exact obsolete consent preference using local SharedPreferences and never imports or calls the retired cloud service. User SMS and notification permission order, decline behavior and encrypted manual review stay intact.",
+      "source_paths": [
+        "lib/waffra_auto_sms_consent.dart"
+      ],
+      "test_paths": [
+        "test/m417_sms_first_run_test.dart",
+        "test/m429_sms_phone_integration_test.dart",
+        "test/m436_cloud_review_pipeline_test.dart",
+        "test/qa/m417_sms_permission_acceptance_test.py"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m417-auto-bank-sms.yml",
+        ".github/workflows/android.yml"
+      ],
+      "safety_invariants": [
+        "Previously stored cloud consent is removed locally and cannot enable a transport.",
+        "No cloud service or third-party model import is reachable from onboarding.",
+        "SMS/notification permissions remain an explicit OS user action.",
+        "No bank message or verified amount is transmitted to a third party."
+      ]
     }
   ]
 }
