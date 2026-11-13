@@ -8,6 +8,7 @@ void main() {
 
   test('Approved concept 2 keeps every original feature and its empty state', () {
     final source = File('lib/main.dart').readAsStringSync();
+    final header = File('lib/waffra_home_balance_header.part.dart').readAsStringSync();
 
     // This release may change the UI, not persisted records or existing routes.
     const preserved = <String>[
@@ -45,7 +46,7 @@ void main() {
     expect(source.contains('إضافة معاملة'), isTrue);
     expect(source.contains('scaffoldBackgroundColor:const Color(0xFF080A09)'),
       isTrue);
-    expect(source.contains('CustomPaint(size:Size(compact?65.0:78.0'), isTrue);
+    expect(header.contains('CustomPaint(size:Size(compact?65.0:78.0'), isTrue);
   });
 
   for (final brightness in [Brightness.light, Brightness.dark]) {
