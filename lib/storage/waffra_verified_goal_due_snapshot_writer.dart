@@ -4,6 +4,7 @@ import 'package:drift/drift.dart';
 
 import 'waffra_atomic_finance_snapshot.dart';
 import 'waffra_accounts_schema.dart';
+import 'waffra_accounts_repository.dart';
 import 'waffra_encrypted_store.dart';
 import 'waffra_fresh_finance_domain_repository.dart';
 
@@ -125,6 +126,26 @@ class WaffraVerifiedGoalDueSnapshotWriter {
         throw StateError('Canonical and typed recurring schedules differ.');
       }
 
+      // M689: a linked goal due may use previously saved wallet funds, but
+      // only the cash shortfall is charged to its verified active account.
+      // This preflight runs inside the SAME encrypted SQL transaction,
+      // before any ledger, wallet, recurring or account association write.
+      final cashRequired=amountMinor-
+       (savedBefore<amountMinor?savedBefore:amountMinor);
+      if(cashRequired>0){
+        if(selectedAccountId==null||
+           selectedAccountId.trim().isEmpty||
+           (goalAccountId is String&&selectedAccountId!=goalAccountId)){
+          throw StateError('Goal due cash needs the verified linked account.');
+        }
+        final cashAccounts=await WaffraAccountsRepository(
+         db:store,experimentalEnabled:true).balances();
+        final eligible=cashAccounts.where((a)=>
+         a.id==selectedAccountId&&!a.archived).toList();
+        if(eligible.length!=1||eligible.single.balanceMinor<cashRequired){
+          throw StateError('Insufficient verified cash for goal due settlement.');
+        }
+      }
       final existing=ledger.where((entry)=>entry['id']==dueKey).toList();
       if (existing.length>1) {
         throw StateError('Duplicate due event in canonical ledger.');
