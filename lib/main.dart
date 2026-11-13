@@ -15264,6 +15264,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final fundingBridge=_financeBinding?.accountsBridge;
   if(fundingBridge==null||verifiedFundingAccounts==null||!mounted)return;
   List<WaffraAccountBalance> fundingAccounts=verifiedFundingAccounts;
+  // M689: verified linked goals never offer another bank as a debit source.
+  if(g.accountId!=null &&
+     !fundingAccounts.any((a)=>a.id==g.accountId&&!a.archived)){
+   snack(context,waffraIsEnglish?
+    'The linked goal account is unavailable. Edit the goal account first.':
+    'الحساب المرتبط بالهدف غير متاح. عدّل حساب الهدف أولًا قبل الادخار.');
+   return;
+  }
   String? chosenSource=g.accountId;
   if(!fundingAccounts.any((a)=>a.id==chosenSource&&!a.archived)){
    chosenSource=null; // old goals need explicit source choice
@@ -15346,7 +15354,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           border:OutlineInputBorder(borderRadius:BorderRadius.circular(15)),
          )),
         const SizedBox(height:12),
-        WaffraGoalRecurringAccountPicker(
+        if(g.accountId!=null)
+         InputDecorator(
+          decoration:InputDecoration(
+           labelText:waffraIsEnglish?'Linked funding account':'الحساب المرتبط بالهدف',
+           border:const OutlineInputBorder()),
+          child:WaffraText(fundingAccounts
+           .where((a)=>a.id==g.accountId&&!a.archived)
+           .map((a)=>a.name).first,
+           maxLines:2),
+         )
+        else WaffraGoalRecurringAccountPicker(
          key:const Key('m641-goal-funding-account-cascade'),
          idPrefix:'m641-fund-goal',english:waffraIsEnglish,
          accounts:fundingAccounts,selectedAccountId:chosenSource,
@@ -15436,28 +15454,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }
    final available=source.single.balanceMinor/100;
    if(n>available){
-    final acknowledged=await showWaffraDialog<bool>(
-     context:context,builder:(dialog)=>AlertDialog(
-      title:WaffraText(waffraIsEnglish?
-       'Savings exceed available balance':'تنبيه: مبلغ الادخار أكبر من الرصيد المتاح'),
-      content:WaffraText(waffraIsEnglish?
-       'Selected account balance: ${cash(available)}. Requested: ${cash(n)}. '
-       'The goals wallet is separate. Your verified account will be debited once '
-       'if you continue. This is an informational warning only.':
-       'رصيد الحساب المختار: ${cash(available)}، والادخار المطلوب: ${cash(n)}. '
-       'محفظة الأهداف منفصلة؛ سيتم خصم المبلغ من الحساب المختار مرة واحدة عند المتابعة. '
-       'هذا تنبيه توضيحي فقط.'),
-      actions:[SizedBox(width:double.maxFinite,child:Row(children:[
-       Expanded(child:OutlinedButton(
-        onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialog,false)),
-        child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء',maxLines:2))),
-       const SizedBox(width:8),
-       Expanded(child:FilledButton(
-        onPressed:WaffraHaptics.tap(()=>Navigator.pop(dialog,true)),
-        child:WaffraText(waffraIsEnglish?'Continue':'متابعة',maxLines:2))),
-      ]))],
-     ));
-    if(acknowledged!=true||!mounted)return;
+    // M689: never offer Continue for a payment SQLCipher must reject.
+    // This is informational and fail-closed; no wallet/account mutation.
+    snack(context,waffraIsEnglish?
+     'Available verified account balance is ${cash(available)}. Savings of ${cash(n)} cannot be added.':
+     'رصيد الحساب المتاح ${cash(available)}، ولا يمكن إضافة ادخار بقيمة ${cash(n)}. اختر مبلغًا لا يتجاوز الرصيد.',
+     isError:true);
+    return;
    }
    // Never overwrite concurrent edits to this goal after a warning dialog.
    final matching=goals.where((x)=>x.id==g.id).toList();
