@@ -4763,7 +4763,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  String categorySearch='',categoryDisplay='all',categoryTypeFilter='all',goalDisplay='all',recurringDisplay='all';
  String categorySort='default'; // Presentation-only; never rewrites finance categories.
  String goalSearch='',recurringSearch='';
- bool _m689GoalSearchOpen=false; // Presentation-only queries.
+ bool _m689GoalSearchOpen=false;
+ bool _m689DueSearchOpen=false; // Presentation-only queries.
  bool categoryMineOnly=false;
  bool categoryFiltersOpen=false; // Compact category-filter accordion; UI-only state.
  bool monthlyBudgetDetailsOpen=false; // Monthly budget accordion, presentation only.
@@ -16261,312 +16262,306 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
  }
  Widget recurringPage(){
-  final active=recurring.where((r)=>r.active).toList();
-  final orderedActive=active.toList()..sort((a,b)=>
-   nextRecurringDue(a).compareTo(nextRecurringDue(b)));
-  final nextBill=orderedActive.isEmpty?null:orderedActive.first;
-  final lastOfCurrentMonth=DateTime(DateTime.now().year,DateTime.now().month+1,0);
-  // Linked goals are one-time obligations, not repeating monthly bills.
-  final monthly=active.where((r)=>!r.income&&
-   !r.startAt.isAfter(lastOfCurrentMonth)&&
-   (r.linkedGoalId==null||
-    (r.startAt.year==lastOfCurrentMonth.year&&
-     r.startAt.month==lastOfCurrentMonth.month)))
-   .fold<double>(0,(v,r)=>v+r.amount);
-  // M674 due-first ordering is view-only and never generates a settlement.
   final today=DateUtils.dateOnly(DateTime.now());
-  final monthlyIncome=active.where((r)=>r.income&&
-   r.linkedGoalId==null&&!r.startAt.isAfter(lastOfCurrentMonth))
-   .fold<double>(0,(v,r)=>v+r.amount);
+  final now=DateTime.now();
   final shown=recurring.where((r){
-   final due=DateUtils.dateOnly(nextRecurringDue(r));
-   final days=due.difference(today).inDays;
-   final inView=recurringDisplay=='today'?r.active&&days==0:
-    recurringDisplay=='week'?r.active&&days>=0&&days<=7:
-    recurringDisplay=='all'||(recurringDisplay=='active'?r.active:!r.active);
-   return inView&&
-    waffraSearchAny([r.title,r.category,waffraTr(r.category)],recurringSearch);
-  }).toList()..sort((a,b)=>nextRecurringDue(a).compareTo(nextRecurringDue(b)));
-  final upcoming=active.where((r){
-   final days=nextRecurringDue(r).difference(DateTime(DateTime.now().year,DateTime.now().month,DateTime.now().day)).inDays;
-   return days>=0&&days<=3;
-  }).length;
+   final goalDue=r.linkedGoalId!=null;
+   final due=goalDue?r.startAt:nextRecurringDue(r);
+   final date=DateUtils.dateOnly(due);
+   final days=date.difference(today).inDays;
+   final inView=switch(recurringDisplay){
+    'today'=>r.active&&days==0,
+    'week'=>r.active&&days>=0&&days<=7,
+    'month'=>date.year==today.year&&date.month==today.month,
+    'overdue'=>r.active&&days<0,
+    'active'=>r.active,
+    'paused'=>!r.active,
+    _=>true,
+   };
+   return inView&&waffraSearchAny(
+    [r.title,r.category,waffraTr(r.category)],recurringSearch);
+  }).toList()..sort((a,b){
+   final aa=a.linkedGoalId==null?nextRecurringDue(a):a.startAt;
+   final bb=b.linkedGoalId==null?nextRecurringDue(b):b.startAt;
+   return aa.compareTo(bb);
+  });
   return Scrollbar(
    controller:_recurringScrollController,thumbVisibility:true,
    thickness:3,radius:const Radius.circular(8),
    child:ListView(controller:_recurringScrollController,
-   physics:const ClampingScrollPhysics(parent:AlwaysScrollableScrollPhysics()),
-   padding:const EdgeInsets.fromLTRB(16,14,16,28),children:[
-   WaffraApprovedPageHero(
-    title:waffraIsEnglish?'Recurring transactions':'العمليات المتكررة',
-    subtitle:waffraIsEnglish?'Track recurring payments and due dates':
-     'نظّم عملياتك الشهرية ومواعيد استحقاقها بسهولة.',
-    icon:Icons.event_repeat_rounded),
-   const SizedBox(height:10),
-   TextField(
-    key:const Key('waffra-recurring-search'),
-    onChanged:(query)=>setState(()=>recurringSearch=query),
-    decoration:InputDecoration(
-     hintText:waffraIsEnglish?'Search recurring transactions':'ابحث في العمليات المتكررة',
-     prefixIcon:const Icon(Icons.search_rounded),
-     border:OutlineInputBorder(borderRadius:BorderRadius.circular(14))),
-   ),
-   const SizedBox(height:9),
-   Row(children:[
-    Expanded(child:OutlinedButton.icon(
-     onPressed:WaffraHaptics.tap(showWaffraFinancialCalendar),
-     style:OutlinedButton.styleFrom(minimumSize:WaffraActionLayout.minimumSize,
-      padding:const EdgeInsets.symmetric(horizontal:9,vertical:12),
-      side:BorderSide(color:Theme.of(context).colorScheme.primary,width:1.2),
-      shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(15))),
-     icon:const Icon(Icons.calendar_month,size:18),
-     label:WaffraText(waffraIsEnglish?'Financial calendar':'التقويم المالي',
-      maxLines:2,textAlign:TextAlign.center,
-      style:const TextStyle(fontSize:11.5,fontWeight:FontWeight.bold)))),
-    const SizedBox(width:9),
-    Flexible(fit:FlexFit.loose,child:WaffraDeletedItemsButton(
-     onPressed:WaffraHaptics.tapRequired(deletedRecurringDialog),
-     label:waffraIsEnglish?'Deleted recurring (${deletedRecurring.length})':
-      'المتكررة المحذوفة (${deletedRecurring.length})')),
-   ]),
-   const SizedBox(height:10),
-   Row(children:[
-    Expanded(child:SizedBox(height:52,child:KeyedSubtree(
-     key:const Key('waffra-recurring-count-badge'),
-     child:_compactCategoryStat(
-      waffraIsEnglish?'Recurring count':'عدد العمليات المتكررة',
-      recurring.length.toString(),Icons.event_repeat_rounded,emerald)))),
-    const SizedBox(width:9),
-    Expanded(child:Container(
-     height:52,padding:const EdgeInsets.symmetric(horizontal:7),
-     decoration:BoxDecoration(
-      color:Theme.of(context).cardColor,
-      border:Border.all(color:Theme.of(context).dividerColor.withValues(alpha:.5)),
-      borderRadius:BorderRadius.circular(16)),
-     child:Row(children:[
-      Expanded(child:WaffraText(waffraIsEnglish?'Reminders':'التذكير',
-       maxLines:1,style:const TextStyle(fontSize:12,fontWeight:FontWeight.bold))),
-      Tooltip(message:waffraIsEnglish?'1 day before • 9 AM':'قبل الموعد بيوم',
-       child:Transform.scale(scale:.82,
-        child:Switch.adaptive(value:recurringRemindersEnabled,
-         onChanged:WaffraHaptics.selection(toggleRecurringReminders)))),
-     ]))),
-   ]),
-   const SizedBox(height:9),
-   if(nextBill!=null)...[
-    const SizedBox(height:9),
-    Card(child:ListTile(
-     dense:true,
-     leading:const Icon(Icons.event_available_rounded,color:emerald),
-     title:WaffraText(waffraIsEnglish?'Next due date':'أقرب استحقاق',
-      style:const TextStyle(fontWeight:FontWeight.bold)),
-     subtitle:WaffraText('${nextBill.title} • ${dayText(nextRecurringDue(nextBill))}',
-      maxLines:2),
-     trailing:WaffraText(cash(nextBill.amount),
-      style:const TextStyle(fontWeight:FontWeight.bold)),
-    )),
-   ],
-   const SizedBox(height:9),
-   if(recurring.isNotEmpty)...[
-    WaffraApprovedMetrics(metrics:[
-     WaffraApprovedMetric(
-      waffraIsEnglish?'Scheduled expenses':'التزامات الشهر',
-      cash(monthly),Icons.north_east_rounded),
-     WaffraApprovedMetric(
-      waffraIsEnglish?'Scheduled income':'دخل متكرر',
-      cash(monthlyIncome),Icons.south_west_rounded),
-     WaffraApprovedMetric(
-      waffraIsEnglish?'Active items':'عمليات نشطة',
-      active.length.toString(),Icons.event_repeat_rounded),
-    ]),
-    if(upcoming>0)Padding(padding:const EdgeInsets.only(top:10),
-     child:Card(color:Colors.amber.withValues(alpha:.13),child:ListTile(
-      leading:const Icon(Icons.notifications_active_outlined,color:Colors.orange),
-      title:WaffraText(waffraIsEnglish?'Upcoming obligations':'التزامات قريبة'),
-      subtitle:WaffraText(waffraIsEnglish?'$upcoming due within 3 days':
-       '$upcoming عملية مستحقة خلال 3 أيام'),
-     ))),
-    const SizedBox(height:12),
-   ],
-
-   // Recurring additions use the same physical-left circular +.
-   const SizedBox(height:13),
-   if(recurring.isNotEmpty)...[
-    Wrap(spacing:8,runSpacing:6,children:[
-     _filterChip(waffraIsEnglish?'Today':'اليوم',recurringDisplay=='today',()=>setState(()=>recurringDisplay='today')),
-     _filterChip(waffraIsEnglish?'This week':'هذا الأسبوع',recurringDisplay=='week',()=>setState(()=>recurringDisplay='week')),
-     _filterChip(waffraIsEnglish?'All':'الكل',recurringDisplay=='all',()=>setState(()=>recurringDisplay='all')),
-     _filterChip(waffraIsEnglish?'Active':'نشطة',recurringDisplay=='active',()=>setState(()=>recurringDisplay='active')),
-     _filterChip(waffraIsEnglish?'Paused':'متوقفة',recurringDisplay=='paused',()=>setState(()=>recurringDisplay='paused')),
-    ]),
-    const SizedBox(height:11),
-   ],
-   if(shown.isNotEmpty)WaffraApprovedSectionTitle(
-    waffraIsEnglish?'Due dates and scheduled items':'الاستحقاقات والعمليات القادمة',
-    icon:Icons.calendar_month_outlined),
-   ...shown.map((r){
-    final linked=goals.where((g)=>g.id==r.linkedGoalId).toList();
-    final goal=linked.isEmpty?null:linked.single;
-    final settledId=WaffraRecurringPolicy.entryId(r.id,
-     DateTime(r.startAt.year,r.startAt.month,r.startAt.day));
-    final paid=entries.where((e)=>e.id==settledId&&
-     e.sourceType=='goal_due').toList(growable:false);
-    final paidGoalDue=goal!=null&&paid.length==1?paid.single:null;
-    final color=paidGoalDue!=null?const Color(0xFF7653AA):
-     goal!=null?emerald:Color(categoryFor(r.category,r.income).color);
-    final when=nextRecurringDue(r);
-    final activeAccounts=r.accountId==null?const <WaffraAccountBalance>[]:
-     _m467Accounts.where((a)=>a.id==r.accountId&&!a.archived).toList();
-    final accountLabel=activeAccounts.length==1?activeAccounts.single.name:
-     (r.accountId==null?null:
-      (waffraIsEnglish?'Account requires verification':'الحساب يحتاج مراجعة'));
-    return Card(elevation:0,margin:const EdgeInsets.only(bottom:11),
-     color:Theme.of(context).brightness==Brightness.dark?Theme.of(context).cardColor:
-      (r.income?const Color(0xFFEAF6EF):const Color(0xFFFFF0ED)),
-     shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(21),
-      side:BorderSide(color:r.income?const Color(0xFFBBDCC9):const Color(0xFFF3DCD7))),
-     child:Padding(padding:const EdgeInsets.symmetric(horizontal:10,vertical:8),child:Column(children:[
-     Align(alignment:AlignmentDirectional.centerStart,
-      child:WaffraApprovedStatusPill(
-       label:paidGoalDue!=null?
-        (waffraIsEnglish?'Paid goal due':'استحقاق هدف مدفوع'):
-        !r.active?(waffraIsEnglish?'Paused':'متوقفة'):
-        goal!=null?(waffraIsEnglish?'Goal due':'استحقاق هدف'):
-        r.income?(waffraIsEnglish?'Recurring income':'دخل متكرر'):
-        (waffraIsEnglish?'Recurring expense':'مصروف متكرر'),
-       icon:paidGoalDue!=null?Icons.verified:goal!=null?
-        Icons.track_changes_rounded:r.income?
-        Icons.arrow_downward_rounded:Icons.arrow_upward_rounded,
-       attention:!r.active)),
-     const SizedBox(height:4),
-      Row(children:[
-       CircleAvatar(radius:16,backgroundColor:color.withValues(alpha:.13),
-       child:Icon(goal!=null?Icons.flag_outlined:
-        categoryIcon(categoryFor(r.category,r.income).icon),color:color)),
-      const SizedBox(width:10),
-      Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-       WaffraText(r.title,style:const TextStyle(fontSize:15,fontWeight:FontWeight.bold)),
-       WaffraText((paidGoalDue!=null?
-        (waffraIsEnglish?'Total due: ':'إجمالي الاستحقاق: '):'')+
-        cash(r.amount),style:const TextStyle(fontSize:14)),
-       if(accountLabel!=null)WaffraText(
-        (waffraIsEnglish?'Linked account: ':'الحساب المرتبط: ')+accountLabel,
-        maxLines:2,style:const TextStyle(fontSize:11,color:emerald)),
-       if(paidGoalDue!=null)...[
-        const SizedBox(height:7),
-        WaffraText(waffraIsEnglish?
-         'From goal wallet: ${cash(paidGoalDue.goalWalletPaidMinor/100)}':
-         'من محفظة الهدف: ${cash(paidGoalDue.goalWalletPaidMinor/100)}',
-         style:const TextStyle(fontSize:12,fontWeight:FontWeight.w600,color:Color(0xFF7653AA))),
-        const SizedBox(height:4),
-        WaffraText(waffraIsEnglish?
-         'From money account: ${cash(waffraGoalDueCashMinor(paidGoalDue)/100)}':
-         'من الحساب المالي: ${cash(waffraGoalDueCashMinor(paidGoalDue)/100)}',
-         style:const TextStyle(fontSize:12,fontWeight:FontWeight.w600,color:Color(0xFF7653AA))),
-       ]else if(goal!=null)...[
-        const SizedBox(height:7),
-        if(goal.target>0)LinearProgressIndicator(
-         value:goal.target<=0?0:(goal.saved/goal.target).clamp(0.0,1.0),
-         minHeight:6,borderRadius:BorderRadius.circular(8),
-         color:emerald,backgroundColor:emerald.withValues(alpha:.12)),
-        const SizedBox(height:4),
-        WaffraText(goal.target<=0?(waffraIsEnglish?'Saved '+cash(goal.saved)+' · Open-ended':'ادخرت '+cash(goal.saved)+' · ادخار مفتوح'):(waffraIsEnglish?
-         'Saved '+cash(goal.saved)+' of '+cash(goal.target)+
-         ' • Remaining '+cash(max(0,goal.target-goal.saved)):
-         'ادخرت '+cash(goal.saved)+' من '+cash(goal.target)+
-         ' • المتبقي '+cash(max(0,goal.target-goal.saved))),
-         style:const TextStyle(fontSize:11,color:emerald)),
-       ],
-       const SizedBox(height:3),
-       WaffraText(paidGoalDue!=null?
-        (waffraIsEnglish?'Paid goal due':'استحقاق هدف مدفوع'):
-        r.active?
-         (waffraIsEnglish?'Next due: ${dayText(when)}':'الاستحقاق القادم: ${dayText(when)}'):
-         (waffraIsEnglish?'Paused':'متوقفة'),
-        style:TextStyle(fontSize:11,color:r.active?Theme.of(context).hintColor:Colors.deepOrange)),
-      ])),
-     ]),
-     Container(
-      decoration:BoxDecoration(
-       border:Border.all(color:emerald.withValues(alpha:.4)),
-       borderRadius:BorderRadius.circular(15)),
-      clipBehavior:Clip.antiAlias,
-      child:ExpansionTile(
-      key:PageStorageKey<String>('waffra-recurring-quick-actions-'+r.id),
-      initiallyExpanded:false,
-      tilePadding:EdgeInsets.zero,
-      childrenPadding:const EdgeInsets.only(bottom:4),
-       leading:const Icon(Icons.bolt_outlined,color:emerald,size:20),
-      title:WaffraText(waffraIsEnglish?'Quick actions':'إجراءات سريعة',
-       style:const TextStyle(fontSize:13,fontWeight:FontWeight.w700)),
-      children:[
-       Row(children:[
-        Expanded(child:Tooltip(
-         message:r.linkedGoalId!=null?
-          (waffraIsEnglish?'Edit the linked goal first':'عدّل الهدف المرتبط أولًا'):
-          (waffraIsEnglish?'Edit recurring due':'تعديل الاستحقاق'),
-         child:Semantics(
-          enabled:r.linkedGoalId==null,
-          hint:r.linkedGoalId!=null?(waffraIsEnglish?
-           'Tap for the reason this due cannot be edited here':
-           'اضغط لمعرفة سبب عدم إمكانية تعديل الاستحقاق هنا'):null,
-          child:Opacity(opacity:r.linkedGoalId!=null?0.46:1,
-           child:OutlinedButton.icon(
-            key:Key('m665-recurring-edit-'+r.id),
-            // Visually disabled but tap still explains where to edit.
-            onPressed:WaffraHaptics.tap(()=>
-             unawaited(_handleRecurringCardAction(r,'edit'))),
-            icon:const Icon(Icons.edit_outlined,size:17),
-            label:WaffraText(waffraIsEnglish?'Edit':'تعديل',maxLines:1)))))),
-        const SizedBox(width:7),
-        Expanded(child:OutlinedButton.icon(
-         onPressed:WaffraHaptics.tap(()=>unawaited(_handleRecurringCardAction(r,'delete'))),
-         icon:const Icon(Icons.delete_outline_rounded,color:Colors.deepOrange,size:17),
-         label:WaffraText(waffraIsEnglish?'Delete':'حذف',maxLines:1))),
-        const SizedBox(width:6),
-        Tooltip(message:r.active?
-         (waffraIsEnglish?'Pause recurring':'إيقاف العملية المتكررة'):
-         (waffraIsEnglish?'Enable recurring':'تفعيل العملية المتكررة'),
-         child:Semantics(label:waffraIsEnglish?'Recurring enabled':'تفعيل المتكررة',
-          child:Switch.adaptive(
-           key:Key('waffra-recurring-active-switch-'+r.id),
-           activeTrackColor:emerald,value:r.active,
-           onChanged:WaffraHaptics.selection((value)=>
-            unawaited(_setRecurringActiveFromCard(r,value)))))),
-       ]),
-      ],
-     )),
-     ])));
-   }),
-   if(recurring.isEmpty)Padding(padding:const EdgeInsets.only(top:18),
-    child:Column(children:[
-     Container(width:105,height:105,decoration:BoxDecoration(
-      borderRadius:BorderRadius.circular(54),color:emerald.withValues(alpha:.10)),
-      child:const Icon(Icons.event_repeat_rounded,size:56,color:emerald)),
-     const SizedBox(height:12),
-     WaffraText(waffraIsEnglish?'No recurring transactions yet':'ما عندك عمليات متكررة',
-      style:Theme.of(context).textTheme.titleLarge,textAlign:TextAlign.center),
-     const SizedBox(height:12),
-     WaffraText(waffraIsEnglish?'Add a recurring transaction to organize monthly finances':
-      'أضف عملية متكررة لتنظيم مصروفاتك الشهرية ومتابعتها بسهولة.',
-      textAlign:TextAlign.center),
-     const SizedBox(height:19),
-
-     // Empty state keeps the shared left + available.
-     const SizedBox(height:22),
+    physics:const ClampingScrollPhysics(parent:AlwaysScrollableScrollPhysics()),
+    padding:const EdgeInsets.fromLTRB(12,14,12,28),children:[
      Row(children:[
-      Expanded(child:_recurringBenefit(waffraIsEnglish?'Save time':'توفير الوقت',Icons.bolt)),
-      const SizedBox(width:8),
-      Expanded(child:_recurringBenefit(waffraIsEnglish?'Stay organized':'تنظيم أفضل',Icons.analytics)),
-      const SizedBox(width:8),
-      Expanded(child:_recurringBenefit(waffraIsEnglish?'Due reminders':'تذكير بالمواعيد',Icons.notifications_none)),
+      IconButton(
+       tooltip:waffraIsEnglish?'Financial calendar':'التقويم المالي',
+       onPressed:WaffraHaptics.tap(showWaffraFinancialCalendar),
+       icon:const Icon(Icons.calendar_month_outlined,size:29,color:emerald)),
+      const SizedBox(width:7),
+      Expanded(child:WaffraText(waffraIsEnglish?'Due dates':'الاستحقاقات',
+       style:const TextStyle(fontWeight:FontWeight.w800,fontSize:25))),
      ]),
-    ])),
-   if(recurring.isNotEmpty&&shown.isEmpty)Padding(padding:const EdgeInsets.all(32),
-    child:WaffraText(waffraIsEnglish?'No items match this filter':'لا توجد عمليات في هذا التصنيف',
-     textAlign:TextAlign.center)),
-   const SizedBox(height:20),
-  ]));
+     Padding(padding:const EdgeInsetsDirectional.only(start:5),
+      child:WaffraText(waffraIsEnglish?
+       'Your upcoming obligations and related transactions':
+       'التزاماتك القادمة والعمليات المرتبطة بها',
+       style:TextStyle(fontSize:12,color:Theme.of(context).hintColor))),
+     const SizedBox(height:16),
+     SingleChildScrollView(scrollDirection:Axis.horizontal,
+      child:Row(children:[
+       _filterChip(waffraIsEnglish?'All':'الكل',recurringDisplay=='all',
+        ()=>setState(()=>recurringDisplay='all')),
+       const SizedBox(width:8),
+       _filterChip(waffraIsEnglish?'This week':'هذا الأسبوع',
+        recurringDisplay=='week',()=>setState(()=>recurringDisplay='week')),
+       const SizedBox(width:8),
+       _filterChip(waffraIsEnglish?'This month':'هذا الشهر',
+        recurringDisplay=='month',()=>setState(()=>recurringDisplay='month')),
+       const SizedBox(width:8),
+       _filterChip(waffraIsEnglish?'Overdue':'متأخرة',
+        recurringDisplay=='overdue',()=>setState(()=>recurringDisplay='overdue')),
+       IconButton(
+        key:const Key('m689-recurring-search-toggle'),
+        tooltip:waffraIsEnglish?'Search due dates':'بحث في الاستحقاقات',
+        onPressed:()=>setState(()=>_m689DueSearchOpen=!_m689DueSearchOpen),
+        icon:const Icon(Icons.search_rounded,color:emerald)),
+       PopupMenuButton<String>(
+        key:const Key('m689-due-settings'),
+        tooltip:waffraIsEnglish?'More due actions':'إجراءات إضافية',
+        icon:const Icon(Icons.more_vert_rounded,color:emerald),
+        onSelected:(v){
+         if(v=='trash')unawaited(deletedRecurringDialog());
+         if(v=='reminders')unawaited(toggleRecurringReminders(!recurringRemindersEnabled));
+        },
+        itemBuilder:(ctx)=>[
+         PopupMenuItem(value:'trash',
+          child:WaffraText(waffraIsEnglish?'Deleted recurring':'المتكررة المحذوفة')),
+         PopupMenuItem(value:'reminders',
+          child:WaffraText(recurringRemindersEnabled?
+           (waffraIsEnglish?'Turn reminders off':'إيقاف التذكيرات'):
+           (waffraIsEnglish?'Turn reminders on':'تفعيل التذكيرات'))),
+        ]),
+      ])),
+     if(_m689DueSearchOpen)...[
+      const SizedBox(height:10),
+      TextField(key:const Key('waffra-recurring-search'),
+       onChanged:(value)=>setState(()=>recurringSearch=value),
+       decoration:InputDecoration(
+        prefixIcon:const Icon(Icons.search_rounded),
+        hintText:waffraIsEnglish?'Search due dates':'ابحث في الاستحقاقات',
+        border:OutlineInputBorder(borderRadius:BorderRadius.circular(14)))),
+     ],
+     const SizedBox(height:14),
+     ...shown.map((r){
+      final linked=goals.where((g)=>g.id==r.linkedGoalId).toList();
+      final goal=linked.isEmpty?null:linked.single;
+      final due=goal==null?nextRecurringDue(r):r.startAt;
+      final settledId=WaffraRecurringPolicy.entryId(r.id,
+       DateTime(r.startAt.year,r.startAt.month,r.startAt.day));
+      final paid=entries.where((e)=>e.id==settledId&&
+       e.sourceType=='goal_due').toList(growable:false);
+      final paidGoalDue=goal!=null&&paid.length==1?paid.single:null;
+      final activeAccounts=r.accountId==null?const <WaffraAccountBalance>[]:
+       _m467Accounts.where((a)=>a.id==r.accountId&&!a.archived).toList();
+      final accountLabel=activeAccounts.length==1?activeAccounts.single.name:
+       (r.accountId==null?null:
+        (waffraIsEnglish?'Account needs verification':'الحساب يحتاج مراجعة'));
+      final savedDue=goal==null?0.0:min(r.amount,max(0,goal.saved));
+      final remainingDue=max(0,r.amount-savedDue);
+      final dueProgress=goal==null||r.amount<=0?0.0:
+       (savedDue/r.amount).clamp(0.0,1.0);
+      final status=paidGoalDue!=null?
+       (waffraIsEnglish?'Paid goal due':'استحقاق هدف مدفوع'):
+       goal!=null?(waffraIsEnglish?'Goal due':'استحقاق هدف'):
+       r.income?(waffraIsEnglish?'Recurring income':'دخل متكرر'):
+       (waffraIsEnglish?'Recurring expense':'مصروف متكرر');
+      Widget amountLabel(String label,double amount){
+       return Expanded(child:Column(children:[
+        SizedBox(width:double.infinity,child:FittedBox(
+         fit:BoxFit.scaleDown,child:WaffraText(cash(amount),maxLines:1,
+          style:const TextStyle(fontSize:19,fontWeight:FontWeight.bold)))),
+        WaffraText(label,style:const TextStyle(fontSize:11)),
+       ]));
+      }
+      return Card(
+       key:Key('m689-due-card-'+r.id),
+       elevation:0,margin:const EdgeInsets.only(bottom:13),
+       color:Theme.of(context).cardColor,
+       shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(22),
+        side:BorderSide(color:const Color(0xFFD8BA78).withValues(alpha:.64))),
+       child:Padding(padding:const EdgeInsets.all(13),
+        child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+         Row(children:[
+          WaffraIllustration(topic:goal?.name??r.title,size:43),
+          const SizedBox(width:9),
+          Expanded(child:WaffraText(r.title,maxLines:2,
+           style:const TextStyle(fontSize:18,fontWeight:FontWeight.w800))),
+          WaffraApprovedStatusPill(label:status,
+           icon:goal!=null?Icons.track_changes:Icons.event_repeat_rounded),
+         ]),
+         const SizedBox(height:14),
+         Row(children:[
+          amountLabel(waffraIsEnglish?'Due amount':'المبلغ المستحق',r.amount),
+          Container(height:48,width:1,color:Theme.of(context).dividerColor),
+          Expanded(child:Column(children:[
+           WaffraText(dayText(due),textDirection:TextDirection.ltr,
+            style:const TextStyle(fontSize:16,fontWeight:FontWeight.bold)),
+           WaffraText(waffraIsEnglish?'Due date':'تاريخ الاستحقاق',
+            style:const TextStyle(fontSize:11)),
+          ])),
+         ]),
+         if(accountLabel!=null)...[
+          const SizedBox(height:11),
+          Row(children:[
+           const Icon(Icons.account_balance_wallet_outlined,
+            color:emerald,size:18),
+           const SizedBox(width:6),
+           Expanded(child:WaffraText(
+            (waffraIsEnglish?'Linked account: ':'الحساب المرتبط: ')+accountLabel,
+            maxLines:2,style:const TextStyle(
+             color:emerald,fontWeight:FontWeight.w600,fontSize:12))),
+          ]),
+         ],
+         if(goal!=null)...[
+          const SizedBox(height:11),
+          Container(
+           padding:const EdgeInsets.all(9),
+           decoration:BoxDecoration(
+            borderRadius:BorderRadius.circular(15),
+            border:Border.all(color:Theme.of(context).dividerColor)),
+           child:Column(children:[
+            Row(children:[
+             Expanded(child:WaffraText(
+              (waffraIsEnglish?'Saved: ':'المدخر: ')+cash(savedDue),
+              maxLines:2,style:const TextStyle(fontSize:12))),
+             const SizedBox(width:6),
+             Expanded(child:WaffraText(
+              (waffraIsEnglish?'Remaining: ':'المتبقي: ')+cash(remainingDue),
+              maxLines:2,style:const TextStyle(fontSize:12))),
+            ]),
+            const SizedBox(height:7),
+            Row(children:[
+             Expanded(child:LinearProgressIndicator(
+              value:dueProgress,minHeight:8,
+              borderRadius:BorderRadius.circular(8),
+              backgroundColor:emerald.withValues(alpha:.12),
+              color:emerald)),
+             const SizedBox(width:7),
+             WaffraText(((dueProgress*100).round()).toString()+'%',
+              style:const TextStyle(fontWeight:FontWeight.w800,color:emerald)),
+            ]),
+           ])),
+          if(paidGoalDue!=null)...[
+           const SizedBox(height:7),
+           WaffraText(waffraIsEnglish?
+            'From goal wallet: '+cash(paidGoalDue.goalWalletPaidMinor/100):
+            'من محفظة الهدف: '+cash(paidGoalDue.goalWalletPaidMinor/100),
+            style:const TextStyle(color:emerald,fontSize:11)),
+           WaffraText(waffraIsEnglish?
+            'From money account: '+cash(waffraGoalDueCashMinor(paidGoalDue)/100):
+            'من الحساب المالي: '+cash(waffraGoalDueCashMinor(paidGoalDue)/100),
+            style:const TextStyle(color:emerald,fontSize:11)),
+          ],
+          const SizedBox(height:10),
+          Row(children:[
+           Expanded(child:TextButton.icon(
+            onPressed:goal.active&&(goal.target<=0||goal.saved<goal.target)?
+             WaffraHaptics.tap(()=>unawaited(fundGoal(goal))):null,
+            icon:const Icon(Icons.bolt_outlined,size:17),
+            label:FittedBox(fit:BoxFit.scaleDown,child:WaffraText(
+             waffraIsEnglish?'Quick deposit':'إيداع سريع',
+             style:const TextStyle(fontSize:11,fontWeight:FontWeight.bold))))),
+           Expanded(child:TextButton.icon(
+            onPressed:WaffraHaptics.tap(
+             ()=>unawaited(_handleGoalCardAction(goal,'edit'))),
+            icon:const Icon(Icons.edit_outlined,size:17),
+            label:FittedBox(fit:BoxFit.scaleDown,child:WaffraText(
+             waffraIsEnglish?'Edit goal':'تعديل الهدف',
+             style:const TextStyle(fontSize:11,fontWeight:FontWeight.bold))))),
+           Expanded(child:TextButton.icon(
+            onPressed:WaffraHaptics.tap(()=>unawaited(openVerifiedAccounts())),
+            icon:const Icon(Icons.account_balance_wallet_outlined,size:17),
+            label:FittedBox(fit:BoxFit.scaleDown,child:WaffraText(
+             waffraIsEnglish?'Account details':'تفاصيل الحساب',
+             style:const TextStyle(fontSize:11,fontWeight:FontWeight.bold))))),
+          ]),
+         ]else...[
+          const SizedBox(height:11),
+          Row(children:[
+           Expanded(child:TextButton.icon(
+            key:Key('m665-recurring-edit-'+r.id),
+            onPressed:WaffraHaptics.tap(
+             ()=>unawaited(_handleRecurringCardAction(r,'edit'))),
+            icon:const Icon(Icons.edit_outlined,size:17),
+            label:WaffraText(waffraIsEnglish?'Edit':'تعديل'))),
+           Expanded(child:TextButton.icon(
+            onPressed:WaffraHaptics.tap(
+             ()=>unawaited(_handleRecurringCardAction(r,'delete'))),
+            icon:const Icon(Icons.delete_outline_rounded,size:17),
+            label:WaffraText(waffraIsEnglish?'Delete':'حذف'))),
+           Switch.adaptive(
+            key:Key('waffra-recurring-active-switch-'+r.id),
+            value:r.active,activeTrackColor:emerald,
+            onChanged:WaffraHaptics.selection(
+             (value)=>unawaited(_setRecurringActiveFromCard(r,value)))),
+          ]),
+         ],
+        ])),
+      );
+     }),
+     if(recurring.isEmpty)Padding(padding:const EdgeInsets.all(26),
+      child:WaffraText(waffraIsEnglish?
+       'No due payments yet':'ما عندك استحقاقات حتى الآن',
+       textAlign:TextAlign.center)),
+     if(recurring.isNotEmpty&&shown.isEmpty)Padding(
+      padding:const EdgeInsets.all(26),
+      child:WaffraText(waffraIsEnglish?
+       'No items match this filter':'لا توجد عمليات في هذا التصنيف',
+       textAlign:TextAlign.center)),
+     if(_m468VerifiedAccountsLoaded&&
+        recurring.any((r)=>r.linkedGoalId!=null))...[
+      WaffraApprovedSectionTitle(waffraIsEnglish?
+       'Linked transactions':'العمليات المرتبطة',
+       icon:Icons.layers_outlined),
+      WaffraText(waffraIsEnglish?
+       'Only verified savings movements tied to these goals':
+       'حركات الادخار المؤكدة المرتبطة بهذه الأهداف',
+       style:TextStyle(color:Theme.of(context).hintColor,fontSize:11)),
+      const SizedBox(height:8),
+      FutureBuilder<List<WaffraVerifiedGoalMovement>>(
+       future:_m649HomeSavings('all'),
+       builder:(ctx,snapshot){
+        if(snapshot.hasError)return WaffraText(waffraIsEnglish?
+         'Savings history could not be verified. Refresh to retry.':
+         'تعذر التحقق من حركات الادخار. أعد التحديث.');
+        if(!snapshot.hasData)return const SizedBox(
+         height:28,child:Center(child:CircularProgressIndicator(strokeWidth:2)));
+        final goalIds=recurring.where((r)=>r.linkedGoalId!=null)
+         .map((r)=>r.linkedGoalId).toSet();
+        final movements=snapshot.data!.where(
+         (m)=>goalIds.contains(m.goalId)).take(8).toList();
+        if(movements.isEmpty)return WaffraText(waffraIsEnglish?
+         'No linked savings movements yet':
+         'لا توجد حركات ادخار مرتبطة مؤكدة بعد.');
+        return Card(elevation:0,
+         shape:RoundedRectangleBorder(
+          borderRadius:BorderRadius.circular(18),
+          side:BorderSide(color:Theme.of(context).dividerColor)),
+         child:Column(children:[
+          for(final movement in movements)ListTile(
+           dense:true,
+           leading:const Icon(Icons.savings_outlined,color:emerald),
+           title:WaffraText(movement.goalName,maxLines:2),
+           subtitle:WaffraText(movement.occurredIso.substring(0,10)),
+           trailing:WaffraText(
+            (movement.kind=='release'?'-':'+')+
+             cash(movement.amountMinor/100),
+            style:const TextStyle(fontWeight:FontWeight.bold,color:emerald)),
+          ),
+         ]));
+       }),
+     ],
+     const SizedBox(height:20),
+    ]));
  }
  Future<void> showWaffraFinancialCalendar()async{
   DateTime selected=DateTime.now();
