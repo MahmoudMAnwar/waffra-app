@@ -7,6 +7,7 @@ import 'package:waffra/storage/waffra_atomic_finance_snapshot.dart';
 import 'package:waffra/storage/waffra_fresh_encrypted_vault_bootstrap.dart';
 import 'package:waffra/storage/waffra_accounts_schema.dart';
 import 'package:waffra/storage/waffra_accounts_repository.dart';
+import 'package:waffra/storage/waffra_account_context_read.dart';
 import 'package:waffra/storage/waffra_unified_finance_writer.dart';
 
 void main(){
@@ -163,5 +164,33 @@ void main(){
    userConfirmed:true),throwsA(isA<StateError>()));
   expect(await count('fresh_finance_entries'),0);
   expect(await count('fresh_finance_account_entry_links'),0);
+ });
+
+ test('M681-M684 month pages and unassigned preview preserve source balances',()async{
+  await initialize();
+  final initial=await snapshot().read();
+  await writer().appendTransactions(
+   records:[income('m684-nov')],messageHashes:[null],
+   userConfirmed:true,accountId:'bank',
+   expectedAccountGeneration:initial.generation);
+  final all=await WaffraAccountContextRead.loadMonthEntries(
+   store:db,monthIso:'2026-11',limit:1);
+  expect(all.map((e)=>e.id),contains('m684-nov'));
+  final filtered=await WaffraAccountContextRead.loadMonthEntries(
+   store:db,monthIso:'2026-11',selectedAccountId:'bank',limit:1);
+  expect(filtered.single.accountId,'bank');
+  final next=await WaffraAccountContextRead.loadMonthEntries(
+   store:db,monthIso:'2026-11',limit:1,offset:1);
+  expect(next,isEmpty);
+  final wrong=await WaffraAccountContextRead.loadMonthEntries(
+   store:db,monthIso:'2026-12');
+  expect(wrong,isEmpty);
+  final unassigned=await WaffraAccountContextRead.unassignedSummary(store:db);
+  expect(unassigned.count,0);
+  expect(unassigned.netMinor,0);
+  expect((await WaffraAccountsRepository(
+   db:db,experimentalEnabled:true).balances()).single.balanceMinor,5000);
+  await expectLater(WaffraAccountContextRead.loadMonthEntries(
+   store:db,monthIso:'2026-13'),throwsArgumentError);
  });
 }
