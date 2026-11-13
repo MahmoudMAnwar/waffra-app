@@ -18,7 +18,8 @@ void main(){
 
  test('M417 permissions follow signup without unsolicited cloud consent',(){
   final src=File('lib/waffra_auto_sms_consent.dart').readAsStringSync();
-  expect(src,contains('await WaffraSmsCloudService.setConsent(false)'));
+  expect(src,contains("await prefs.remove('waffra_cloud_sms_installation_consent_v2');"));
+  expect(src,isNot(contains('WaffraSmsCloudService')));
   expect(src,contains('await WaffraAutoSms.optIn()'));
   expect(src,contains('await WaffraAutoSms.requestNotificationPermission()'));
   expect(src,contains('await widget.onComplete()'));
