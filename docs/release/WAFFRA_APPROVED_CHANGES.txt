@@ -606,3 +606,5 @@ M705 runtime cloud dependency retirement (Issues #634/#637, Draft PR #638): the 
 M707 #633/#635 Home State refactor: moved the existing 770-line production Goals and Recurring page implementations byte-identically into registered same-library part `lib/waffra_home_goals_recurring_pages.part.dart`. Original UI, verified accounting callbacks, linked due split and FAB remain unchanged. Existing M302/M388/M665/M693 tests inspect reconstructed actual part source. Physical Android and original encrypted backup not attested; Draft #638 remains unmerged.
 
 M708 source guard parity: retained original M298 category validation, M302 recurring due and M283 compact budget checks against real extracted source. No weakened negative no-edit check. Exact-head CI and device acceptance remain distinct.
+
+M709 real-source regression parity: M176 module write-route counts, M670 verified UI/FAB notice safety and M127 no-tour/backup guards now read registered Home Dart parts instead of assuming relocated code still resides in main.dart. No financial writes modified; physical Android remains independent.

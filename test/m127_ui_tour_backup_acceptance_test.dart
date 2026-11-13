@@ -2,11 +2,12 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'support/waffra_main_source.dart';
 import 'package:waffra/main.dart';
 
 void main() {
   test('four finance action destinations share one language-aware circular action', () {
-    final source=File('lib/main.dart').readAsStringSync();
+    final source=readWaffraMainSourceForContracts();
     expect(source,contains('floatingActionButtonLocation:WaffraDirectionalFabLocation(english:waffraIsEnglish)'));
     expect(source,contains('floatingActionButton:!ready||accountOpened||tab==2?null:CompositedTransformTarget('));
     expect(source,contains("label:waffraIsEnglish?'New savings goal':'إضافة هدف جديد'"));
@@ -29,7 +30,7 @@ void main() {
   });
 
   test('M671 no tour startup/overlay, ordinary Home actions unchanged',(){
-    final source=File('lib/main.dart').readAsStringSync();
+    final source=readWaffraMainSourceForContracts();
     expect(source,isNot(contains('tourOverlay()')));
     expect(source,isNot(contains('tourActive')));
     expect(source,isNot(contains('waffra_in_app_tour_seen_v2')));
@@ -37,7 +38,7 @@ void main() {
   });
 
   test('new backups use 12–256 character passwords and retain legacy import', () {
-    final source=File('lib/main.dart').readAsStringSync();
+    final source=readWaffraMainSourceForContracts();
     expect(source,contains("key:const Key('waffra-new-backup-password')"));
     expect(source,contains('LengthLimitingTextInputFormatter(256)'));
     expect(source,contains('Backup password (12+ characters)'));

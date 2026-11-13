@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "change_id": "M690-M708-ISSUES632-637-20261113",
+  "change_id": "M690-M709-ISSUES632-637-20261113",
   "human_scope_review": "Issue #629 completes prior PR #628 only after user-visible acceptance; #631 explicitly authorizes three exact screenshots for Goals/Dues/SMS Review, permanently visible financial activity, non-moving FAB-aligned notice, and savings/goal-due cash safety. Existing tests replace outdated visual assumptions without deleting financial safety assertions. Device screenshots/old restore still require external device evidence.",
   "user_requested_changes": [
     "M690 #632 permanently disable third-party AI bank SMS uploads and opt-in on previously installed versions, remove Settings toggle and signed Android staging worker, retain local encrypted SMS Review and money writer.",
@@ -21,7 +21,8 @@
     "M705 #634/#637 remove retired cloud service import and call from runtime SMS permission screen, still clear exact historical opt-in preference locally and require no cloud analysis; preserve OS permissions, local SMS review, no-upload tests, and historical safety fixture file.",
     "M706 #634 reconcile original M463/M639 strict source assertions with M705 onboarding local retirement of cloud consent; preserve full SMS permission, native opt-in sequence, retry behavior and no external AI.",
     "M707 #633/#635 byte-identical extraction of the real 770-line Goals+Recurring page methods from Home State into a same-library part; preserve linked goal-due wallet/cash UI, verified callbacks, approved visual layout and all original source assertions via true production-source reconstruction.",
-    "M708 #633 preserve M298 required-category and M302 recurring due source contracts by using true M707 production part reconstruction; M283 workflow must inspect the registered budget-card part while keeping the no-redundant-edit negative guard."
+    "M708 #633 preserve M298 required-category and M302 recurring due source contracts by using true M707 production part reconstruction; M283 workflow must inspect the registered budget-card part while keeping the no-redundant-edit negative guard.",
+    "M709 #633 keep original mandatory M176 route tagging, M670 verified goals/recurring/card/Snackbar UI and M127 no-tour/backup/FAB tests observing real registered Home parts after extraction, without weakening finance or UX assertions."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -75,7 +76,10 @@
     "test/m707_home_goals_recurring_extraction_test.dart",
     "test/m298_required_finance_field_validation_test.dart",
     "test/m302_recurring_first_due_regression_test.dart",
-    ".github/workflows/m283-compact-layout-tools-back-greetings.yml"
+    ".github/workflows/m283-compact-layout-tools-back-greetings.yml",
+    "test/storage/m176_module_finance_route_intent_test.dart",
+    "test/m670_feedback_transfer_dashboard_test.dart",
+    "test/m127_ui_tour_backup_acceptance_test.dart"
   ],
   "approved_deleted_files": [
     "lib/waffra_sms_cloud_review_analyzer.dart"
@@ -398,6 +402,65 @@
       {
         "start": "          must=[",
         "end": "            (\"two-back\", \"WaffraDoubleBackExit\" in app),"
+      }
+    ],
+    "test/storage/m176_module_finance_route_intent_test.dart": [
+      {
+        "start": "import 'package:flutter_test/flutter_test.dart';",
+        "end": "void main() {"
+      },
+      {
+        "start": "  test('M176 every existing category, goal, recurring and budget save is tagged', () {",
+        "end": "  test('M176 all module mutation intents continue using guarded legacy safely', () {"
+      },
+      {
+        "start": "  test('M176 route tagging never authorizes full finance production cutover', () {"
+      }
+    ],
+    "test/m670_feedback_transfer_dashboard_test.dart": [
+      {
+        "start": "import 'package:flutter_test/flutter_test.dart';",
+        "end": "void main() {"
+      },
+      {
+        "start": " test('M670 SMS rescan feedback belongs to the requesting route',(){",
+        "end": " test('M670 transfer always opens verified editor; second account is required',(){"
+      },
+      {
+        "start": " test('M670 transfer always opens verified editor; second account is required',(){",
+        "end": " test('M670 separate SMS alternative opens only selected income/expense editor',(){"
+      },
+      {
+        "start": " test('M670 separate SMS alternative opens only selected income/expense editor',(){",
+        "end": " test('M670 all Home filters have a real limit and reversible expansion',(){"
+      },
+      {
+        "start": " test('M670 all Home filters have a real limit and reversible expansion',(){",
+        "end": " test('M670 goals, recurring and category stats share layout geometry',(){"
+      },
+      {
+        "start": " test('M670 goals, recurring and category stats share layout geometry',(){",
+        "end": " test('M670 Snackbar central presenter has no visible X nor 2-line clipping',(){"
+      },
+      {
+        "start": " test('M670 Snackbar central presenter has no visible X nor 2-line clipping',(){"
+      }
+    ],
+    "test/m127_ui_tour_backup_acceptance_test.dart": [
+      {
+        "start": "import 'package:flutter_test/flutter_test.dart';",
+        "end": "void main() {"
+      },
+      {
+        "start": "  test('four finance action destinations share one language-aware circular action', () {",
+        "end": "  test('M671 no tour startup/overlay, ordinary Home actions unchanged',(){"
+      },
+      {
+        "start": "  test('M671 no tour startup/overlay, ordinary Home actions unchanged',(){",
+        "end": "  test('new backups use 12–256 character passwords and retain legacy import', () {"
+      },
+      {
+        "start": "  test('new backups use 12–256 character passwords and retain legacy import', () {"
       }
     ]
   }

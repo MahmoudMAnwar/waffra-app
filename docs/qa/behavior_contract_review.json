@@ -2986,7 +2986,10 @@
         "test/m665_goal_due_display_and_linked_edit_test.dart",
         "test/m693_three_approved_pages_layout_matrix_test.dart",
         "test/m298_required_finance_field_validation_test.dart",
-        "test/m302_recurring_first_due_regression_test.dart"
+        "test/m302_recurring_first_due_regression_test.dart",
+        "test/storage/m176_module_finance_route_intent_test.dart",
+        "test/m670_feedback_transfer_dashboard_test.dart",
+        "test/m127_ui_tour_backup_acceptance_test.dart"
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/android.yml",
