@@ -23,7 +23,8 @@ void main(){
   final bridge=File('lib/waffra_auto_sms.dart').readAsStringSync();
   final consent=File('lib/waffra_auto_sms_consent.dart').readAsStringSync();
   expect(bridge,isNot(contains("channel.invokeMethod<int>('importRecentBankSms')")));
-  expect(consent,contains('await WaffraSmsCloudService.setConsent(false)'));
+  expect(consent,contains("await prefs.remove('waffra_cloud_sms_installation_consent_v2');"));
+  expect(consent,isNot(contains('waffra_sms_cloud_service.dart')));
   expect(consent,contains('await WaffraAutoSms.optIn()'));
  });
 
