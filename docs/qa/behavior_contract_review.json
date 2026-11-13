@@ -2576,7 +2576,8 @@
       "previous_behavior": "Goal and due pages had long banners, duplicated controls and oversized quick-action rows; the SMS review repeated sender/type summary and an instructional blockers panel; Home could collapse the financial activity section.",
       "approved_behavior": "Replace visible goal and due pages with owner-approved compact metrics, filters, amount/date/account/progress cards, preserve existing goal and recurring action handlers through compact controls. In SMS review remove ONLY the duplicated preview and blockers panel; retain selectable unmodified original SMS, complete finance detail rows, active category/account/date validation and verified Yes state. Home financial activity always visible and independently filterable, with floating add button stationary and Snackbar composited beside it.",
       "source_paths": [
-        "lib/main.dart"
+        "lib/main.dart",
+        "lib/waffra_home_finance_tiles.part.dart"
       ],
       "test_paths": [
         "test/m149_backup_pin_localized_fab_trash_uat_test.dart",
@@ -2618,7 +2619,8 @@
       "test_paths": [
         "test/storage/m665_goal_due_note_and_split_test.dart",
         "test/m665_goal_due_display_and_linked_edit_test.dart",
-        "test/m371_goal_wallet_and_budgets_regression_test.dart"
+        "test/m371_goal_wallet_and_budgets_regression_test.dart",
+        "test/storage/m364_sqlcipher_finance_domain_test.dart"
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/finance-full-regression.yml",
