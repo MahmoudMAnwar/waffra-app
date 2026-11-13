@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_approved_page_designs.dart';
@@ -115,7 +115,7 @@ void main(){
   }
  });
  test('M693 production Goals/Dues/SMS Review still route to real widgets',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   expect(main,contains('Widget goalsPage(){'));
   expect(main,contains('Widget recurringPage(){'));
   expect(main,contains('Future<void> _reviewAutoSmsCandidates({'));

@@ -22,5 +22,9 @@ String readWaffraMainSourceForContracts(){
  if(s.split(r).length!=2)throw StateError('Missing M691 budget-card part marker');
  s=s.replaceFirst(r,_method('lib/waffra_home_budget_cards.part.dart',
   ' Widget monthlyBudgetCard(){'));
+ const t=' // M707: approved Goals and Recurring pages moved to registered Home part.\n';
+ if(s.split(t).length!=2)throw StateError('Missing or repeated M707 page marker');
+ s=s.replaceFirst(t,_method('lib/waffra_home_goals_recurring_pages.part.dart',
+  ' Widget goalsPage(){'));
  return s;
 }

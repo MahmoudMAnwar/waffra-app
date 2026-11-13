@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -81,7 +82,7 @@ void main() {
  });
 
  test('M388: open-ended goal never divided by zero or marked achieved',(){
-  final source=File('lib/main.dart').readAsStringSync();
+  final source=readWaffraMainSourceForContracts();
   final actions=source.split('Future<void> _m689GoalActions(').last
    .split('Widget goalsPage(){').first;
   final card=source.split('Widget goalsPage(){').last

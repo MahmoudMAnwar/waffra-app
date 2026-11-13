@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'support/waffra_main_source.dart';
 
 void main() {
  test('M302 all optimistic module writes must recover authoritative finance state',(){
@@ -82,7 +83,7 @@ void main() {
  });
 
  test('M302 recurring reminders are not scheduled for rejected mutations',(){
-  final code=File('lib/main.dart').readAsStringSync();
+  final code=readWaffraMainSourceForContracts();
   final actionStart=code.indexOf('Future<void> _setRecurringActiveFromCard(');
   final actionEnd=code.indexOf('Widget recurringPage(){',actionStart);
   expect(actionStart,greaterThan(0));
