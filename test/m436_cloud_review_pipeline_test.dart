@@ -54,7 +54,8 @@ void main() {
   final ui=File('lib/waffra_auto_sms_consent.dart').readAsStringSync();
   final main=File('lib/main.dart').readAsStringSync();
   final cloud=File('lib/waffra_sms_cloud_service.dart').readAsStringSync();
-  expect(ui,contains('await WaffraSmsCloudService.setConsent(false)'));
+  expect(ui,contains("await prefs.remove('waffra_cloud_sms_installation_consent_v2');"));
+  expect(ui,isNot(contains('WaffraSmsCloudService')));
   expect(ui,contains('await WaffraAutoSms.optIn()'));
   expect(ui,isNot(contains('allow(cloud:true)')));
   expect(main,isNot(contains('Analyze this unclear message with AI?')));
