@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
-  "change_id": "M620-M622-20261113-ISSUES620_622-PR621-RESTORE_PARITY_AND_BATCHED_STAGING",
-  "human_scope_review": "Owner's original encrypted old V24 archive was authenticated locally (never committed); 19 unique IDs, 17 expenses and 2 income. After successful main restore (post #619), Android Home showed exactly 38 rows, with each financial total doubled and account-only balance 0. New PR is limited to independent postcommit ID parity, stale Home rehydration using a verified source, explaining historic accountless net and external encrypted rescue. Never auto-delete by name/date/amount or fake balances. CI and expendable device acceptance pending. Owner additionally requested faster restore in SAME PR; Issue #622 approved atomic disposable SQLCipher category/goal/recurring/budget staging and reuse of selected source read, with independent fresh preflight witness unchanged.",
+  "change_id": "M620-M622-M623-20261113-ISSUES620_622_623-PR621-RESTORE_PARITY_PERFORMANCE_NO_RESCUE",
+  "human_scope_review": "Owner's original encrypted old V24 archive was authenticated locally (never committed); 19 unique IDs, 17 expenses and 2 income. After successful main restore (post #619), Android Home showed exactly 38 rows, with each financial total doubled and account-only balance 0. New PR is limited to independent postcommit ID parity, stale Home rehydration using a verified source, explaining historic accountless net and external encrypted rescue. Never auto-delete by name/date/amount or fake balances. CI and expendable device acceptance pending. Owner additionally requested faster restore in SAME PR; Issue #622 approved atomic disposable SQLCipher category/goal/recurring/budget staging and reuse of selected source read, with independent fresh preflight witness unchanged. Owner requested M623: remove mandatory creation/saving of an extra encrypted rescue copy from restore; explicit irreversible-success notice; preserve atomic rollback on error, input file, verified source and manual backup elsewhere.",
   "user_requested_changes": [
     "Detect post-V24-restore display doubling (19 authenticated unique transaction IDs vs 38 displayed) and distinguish active canonical SQLCipher duplication from stale Home presentation.",
     "After source-witnessed restore, require exact source-vs-canonical-vs-Home transaction ID/direction/minor amount/timestamp parity; rehydrate UI from single verified source only if canonical IDs match; never remove actual same-looking financial records.",
@@ -9,7 +9,9 @@
     "Explain before replacement that the separately saved rescue is the OLD encrypted device snapshot, not the incoming backup, so the owner can safely roll back.",
     "Add a synthetic regression with 19 unique IDs, duplicates/error paths, distinct legitimate same-amount records, byte-preserving finance/rescue paths, and distinct legacy net vs verified account balance; owner phone test pending.",
     "M622: avoid per-category SQLite commit in V24 conversion (1056 categories) through one outer disposable encrypted transaction retaining each record's validation and any-error rollback; reuse already loaded verified source before fresh preflight.",
-    "M622: retain archived source encryption, external rescue, biometrics, cold restore and postcommit M620 parity; require synthetic 1056 category integration/cold reopen and new source-contract tests; only device stopwatch can quantify speedup."
+    "M622: retain archived source encryption, external rescue, biometrics, cold restore and postcommit M620 parity; require synthetic 1056 category integration/cold reopen and new source-contract tests; only device stopwatch can quantify speedup.",
+    "M623: remove automatic pre-restore rescue export, UI save dialog, and associated external-file arguments from verified V3 replace only; keep native SQLCipher all-or-nothing transaction rollback, source witness and original backup unchanged.",
+    "M623: confirmed successful restore replaces current app content without automatic undo; preserve biometric and user confirmation, verify no rescue file created, and synthetic stale/corrupt/error rollback tests."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -20,7 +22,11 @@
     "lib/storage/waffra_restored_ledger_identity_guard.dart",
     "test/storage/m620_restored_home_ledger_parity_test.dart",
     "lib/storage/waffra_legacy_v24_sqlcipher_converter.dart",
-    "test/storage/m616_android_v24_restore_test.dart"
+    "test/storage/m616_android_v24_restore_test.dart",
+    "lib/storage/waffra_verified_active_accounts_restore.dart",
+    "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
+    "test/storage/m448_verified_active_accounts_restore_test.dart",
+    "test/storage/m614_legacy_v24_restore_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
@@ -43,6 +49,18 @@
       {
         "start": "      final module = WaffraFreshModulesRepository(",
         "end": "      final history = await WaffraAccountsFinanceHistory.capture(db);"
+      }
+    ],
+    "lib/storage/waffra_verified_active_accounts_restore.dart": [
+      {
+        "start": "/// Apply a cold-attested V3 to the ALREADY ACTIVE SQLCipher source.",
+        "end": "   final all=await store.customSelect("
+      }
+    ],
+    "lib/storage/waffra_verified_encrypted_finance_bridge.dart": [
+      {
+        "start": "  /// Restore is permitted ONLY on an already active verified encrypted vault.",
+        "end": "  Future<String> exportPortableBackup("
       }
     ]
   }
