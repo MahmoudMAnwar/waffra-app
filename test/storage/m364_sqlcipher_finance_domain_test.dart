@@ -444,7 +444,7 @@ void main() {
     await WaffraAccountsSchema.install(db);
     final accounts=WaffraAccountsRepository(db:db,experimentalEnabled:true);
     await accounts.createAccount(
-      id:'car-cash',name:'Verified cash',kind:'bank',openingMinor:100000,
+      id:'car-cash',name:'Verified cash',kind:'bank',openingMinor:7000,
       createdIso:'2026-11-02T00:00:00',userConfirmed:true);
     final snapshot=WaffraAtomicFinanceSnapshot(
       store:db,experimentalEnabled:true);
@@ -476,8 +476,8 @@ void main() {
     expect(receipt.alreadySettled,false);
     expect(receipt.fromGoalMinor,15000);
     expect(receipt.fromCurrentMinor,5000);
-    expect((await accounts.balances()).single.balanceMinor,95000,
-      reason:'The bank is debited only by 50 cash, not the 200 full due.');
+    expect((await accounts.balances()).single.balanceMinor,2000,
+      reason:'The bank paid 50 out of 70; on retry only 20 remains, below the full 200 due.');
     expect(await count('fresh_finance_entries'),1);
     expect(await count('fresh_finance_goal_due_settlements'),1);
     final after=await snapshot.read();
@@ -496,9 +496,12 @@ void main() {
       userConfirmed:true,selectedAccountId:'car-cash',
     );
     expect(repeated.alreadySettled,true);
+    // Rechecking the same ID must not demand another 200 after first payment.
+    // Current bank cash is only 20; previous wallet/ledger receipt is authoritative.
+    expect((await accounts.balances()).single.balanceMinor,2000);
     expect((await snapshot.read()).generation,2);
     expect(await count('fresh_finance_entries'),1);
-    expect((await accounts.balances()).single.balanceMinor,95000);
+    expect((await accounts.balances()).single.balanceMinor,2000);
   });
 
   test('M365 stale snapshot denies goal due and leaves both stores unchanged',
