@@ -1,13 +1,14 @@
 {
   "contract_version": 1,
-  "change_id": "M674-20261113-ISSUE624-APPROVED-HOME1-GOALS-REFERENCE-RECURRING3",
-  "human_scope_review": "User explicitly approved Home concept #1, attached Goals reference screenshot, Recurring concept #3 and required the cross-page + button stay entirely unmodified. Scope is view-only presentation wiring of verified existing account/goal/recurring sources plus regression checks; no database migrations or financial write-path changes. Include original Home actions, Goal and Recurring safeguards; confirm via CI and real-phone test separately.",
+  "change_id": "M674-M675-20261113-ISSUES624_626-PR625-APPROVED-PAGES-AND-FIXED-FAB-SNACK",
+  "human_scope_review": "User explicitly approved Home concept #1, attached Goals reference screenshot, Recurring concept #3 and required the cross-page + button stay entirely unmodified. Scope is view-only presentation wiring of verified existing account/goal/recurring sources plus regression checks; no database migrations or financial write-path changes. Include original Home actions, Goal and Recurring safeguards; confirm via CI and real-phone test separately. Owner subsequently requested M675 in same PR: on all tabs, Snackbar must finish alongside the stationary + FAB, and multiple text lines grow above it without moving +. Header appbar, FAB, FAB location, footer navigation and all action callbacks are outside M385 approved regions and must remain byte-identical to main.",
   "user_requested_changes": [
     "Apply the approved Home #1 premium dashboard presentation using only verified current balance and actual financial counts.",
     "Apply the user-supplied Goals screenshot with real target, saved progress, linked account, due date, nearest-goal and existing verified actions.",
     "Apply Recurring concept #3 with honest income/expense/goal dues, due date ordering and existing linked-goal edit guard.",
     "Never modify global + button styling, position, overlay, route handlers, action labels or hit targets on any page.",
-    "Verify schema field roundtrips, linked money accounts and goals, financial read parity, and preserve existing encrypted SQLCipher writer behavior."
+    "Verify schema field roundtrips, linked money accounts and goals, financial read parity, and preserve existing encrypted SQLCipher writer behavior.",
+    "M675: move the transient footer notice out of the Scaffold bottomNavigationBar layout and overlay it adjacent to the existing stationary + for each finance tab, anchored by existing LayerLink. Ensure two lines only grow upward without any FAB movement."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -37,6 +38,10 @@
       {
         "start": " Widget recurringPage(){",
         "end": " Future<void> showWaffraFinancialCalendar()async{"
+      },
+      {
+        "start": "  // The notice reserves real layout height above the bottom footer.",
+        "end": "  if(addFabExpanded&&!accountOpened)...["
       }
     ]
   }
