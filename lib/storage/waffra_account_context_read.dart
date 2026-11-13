@@ -78,7 +78,8 @@ LEFT JOIN fresh_finance_standalone_allocations a ON a.entry_id=e.entry_id
 WHERE (?=0 OR (e.occurred_iso>=? AND e.occurred_iso<?))
 ORDER BY e.occurred_iso DESC, e.entry_id DESC
 ''',variables:[
- Variable.withInt(summaryOnly?1:0),
+ // Legacy callers retain all history; summaryOnly pages scan this month.
+ Variable.withInt(summaryOnly?0:1),
  Variable.withString(monthIso+'-01'),
  Variable.withString(_nextMonthIso(monthIso)),
 ]).get();
