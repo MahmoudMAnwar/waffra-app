@@ -24,6 +24,14 @@ void main(){
   expect(WaffraCloudflareSmsGateway.configuredUrl,isEmpty);
   expect(File('lib/waffra_sms_cloud_review_analyzer.dart').existsSync(),isFalse);
  });
+ test('M699 legacy cloud suggestions do not return in the SMS inbox',(){
+  final inbox=File('lib/main.dart').readAsStringSync();
+  expect(inbox,isNot(contains('AI suggestion •')));
+  expect(inbox,isNot(contains('اقتراح AI •')));
+  expect(inbox,isNot(contains('cloud AI suggestions ready')));
+  expect(inbox,contains('final ambiguous=count-localCount;'));
+  expect(inbox,contains("((item['body'] as String?)??'')"));
+ });
  test('M690 build and Settings never activate a cloud bank SMS model',(){
   final build=File('.github/workflows/android.yml').readAsStringSync();
   final profile=File('lib/waffra_home_profile.part.dart').readAsStringSync();
