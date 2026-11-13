@@ -13302,7 +13302,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    ]));
   return Container(
    key:Key('m647-verified-transfer-'+t.id),
-   constraints:const BoxConstraints(minHeight:144),
+   constraints:const BoxConstraints(minHeight:98),
    margin:const EdgeInsets.symmetric(vertical:3),
    padding:EdgeInsets.symmetric(horizontal:12,vertical:compact?9:11),
    decoration:BoxDecoration(
@@ -13383,7 +13383,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final accent=dark?const Color(0xFFF4D790):const Color(0xFF866017);
   return Container(
    key:Key('m649-verified-saving-'+movement.id),
-   constraints:const BoxConstraints(minHeight:144),
+   constraints:const BoxConstraints(minHeight:96),
    margin:const EdgeInsets.symmetric(vertical:3),
    padding:const EdgeInsets.symmetric(horizontal:12,vertical:9),
    decoration:BoxDecoration(
@@ -13530,7 +13530,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    (darkMode?const Color(0xFF244C3A):const Color(0xFFB2D5C2)):
    (darkMode?const Color(0xFF49302C):const Color(0xFFFCECE8));
   return Padding(padding:const EdgeInsets.symmetric(vertical:3),child:Container(
-   constraints:const BoxConstraints(minHeight:144),
+   constraints:const BoxConstraints(minHeight:98),
    decoration:BoxDecoration(color:rowColor,borderRadius:BorderRadius.circular(17),
     border:Border.all(color:forest.withValues(alpha:darkMode ? 0.18 : 0.08))),
    clipBehavior:Clip.antiAlias,child:Stack(children:[
@@ -13652,7 +13652,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     child:Container(
      key:Key('m549-home-action-'+(icon==Icons.swap_horiz_rounded?'transfer':
       icon==Icons.north_east_rounded?'expense':'income')),
-     height:68,
+     height:60,
      decoration:BoxDecoration(
       borderRadius:BorderRadius.circular(18),
       border:Border.all(color:iconColor.withValues(alpha:.18))),
@@ -13774,9 +13774,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            title:waffraIsEnglish?'Accounts':'الحسابات',
            count:_m467Accounts.where((a)=>!a.archived).length.toString(),
            icon:Icons.account_balance_wallet_outlined,
-           onTap:()=>setState((){
-            accountOpened=true;goalsOpened=false;addFabExpanded=false;
-           })),
+           onTap:()=>unawaited(openVerifiedAccounts())),
          ]),
          const SizedBox(height:12),
          // M549: user-approved screenshot: three compact, equal-width
@@ -13889,9 +13887,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                Expanded(child:WaffraText(waffraIsEnglish?
                 'Your transactions':'عملياتك المالية',
                 style:const TextStyle(fontSize:19,fontWeight:FontWeight.bold))),
-               WaffraText(financialActivityExpanded?
-                (waffraIsEnglish?'Hide':'إخفاء'):
-                (waffraIsEnglish?'Show':'عرض'),
+               if(_m468VerifiedAccountsLoaded)
+                FutureBuilder(
+                 future:_m652UnifiedActivities(_m467SelectedAccount),
+                 builder:(ctx,snapshot){
+                  final extra=snapshot.hasData?
+                   ((typeFilter=='الكل'||typeFilter=='التحويلات'?
+                     snapshot.data!.transfers.length:0)+
+                    (typeFilter=='الكل'||typeFilter=='الادخار'?
+                     snapshot.data!.savings.length:0)):0;
+                  return WaffraText(financialActivityExpanded?
+                   (waffraIsEnglish?'Hide':'إخفاء'):
+                   '${visible.length+extra}',
+                   style:const TextStyle(fontSize:12,color:emerald));
+                 })
+               else WaffraText(financialActivityExpanded?
+                (waffraIsEnglish?'Hide':'إخفاء'):'${visible.length}',
                 style:const TextStyle(fontSize:12,color:emerald)),
                AnimatedRotation(turns:financialActivityExpanded?0.5:0,
                 duration:waffraMotion(180),
@@ -16163,9 +16174,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       side:BorderSide(color:ordered.first.id==g.id?
        WaffraApprovedPalette.gold:const Color(0xFFCFDFD5),
        width:ordered.first.id==g.id?1.6:1)),
-     child:Padding(padding:const EdgeInsets.all(15),child:Column(children:[
-      Row(children:[
-       WaffraIllustration(topic:g.name,size:44),
+     child:Padding(padding:const EdgeInsets.all(10),child:Column(children:[
+       Row(children:[
+        WaffraIllustration(topic:g.name,size:40),
        const SizedBox(width:10),
        Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
         WaffraText(g.name,style:const TextStyle(fontWeight:FontWeight.bold,fontSize:17)),
@@ -16196,7 +16207,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        key:PageStorageKey<String>('waffra-goal-quick-actions-'+g.id),
        initiallyExpanded:false,
        tilePadding:EdgeInsets.zero,
-       childrenPadding:const EdgeInsets.only(bottom:8),
+       childrenPadding:const EdgeInsets.only(bottom:4),
        leading:const Icon(Icons.bolt_outlined,color:emerald,size:20),
        title:WaffraText(waffraIsEnglish?'Quick actions':'إجراءات سريعة',
         style:const TextStyle(fontSize:13,fontWeight:FontWeight.w700)),
@@ -16293,9 +16304,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))],
          )))),
         child:WaffraText(waffraIsEnglish?'View':'عرض')),
-       OutlinedButton(
-        onPressed:WaffraHaptics.tap(()=>unawaited(editGoal(g))),
-        child:WaffraText(waffraIsEnglish?'Edit':'تعديل')),
+       
       ]),
       if(g.target>0&&g.saved>=g.target)WaffraText(waffraIsEnglish?'Goal achieved!':'🎉 تم تحقيق الهدف!',
        style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)),
@@ -16798,7 +16807,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       (r.income?const Color(0xFFEAF6EF):const Color(0xFFFFF0ED)),
      shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(21),
       side:BorderSide(color:r.income?const Color(0xFFBBDCC9):const Color(0xFFF3DCD7))),
-     child:Padding(padding:const EdgeInsets.symmetric(horizontal:12,vertical:13),child:Column(children:[
+     child:Padding(padding:const EdgeInsets.symmetric(horizontal:10,vertical:8),child:Column(children:[
      Align(alignment:AlignmentDirectional.centerStart,
       child:WaffraApprovedStatusPill(
        label:paidGoalDue!=null?
@@ -16811,9 +16820,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         Icons.track_changes_rounded:r.income?
         Icons.arrow_downward_rounded:Icons.arrow_upward_rounded,
        attention:!r.active)),
-     const SizedBox(height:8),
-     Row(children:[
-      CircleAvatar(backgroundColor:color.withValues(alpha:.13),
+     const SizedBox(height:4),
+      Row(children:[
+       CircleAvatar(radius:16,backgroundColor:color.withValues(alpha:.13),
        child:Icon(goal!=null?Icons.flag_outlined:
         categoryIcon(categoryFor(r.category,r.income).icon),color:color)),
       const SizedBox(width:10),
@@ -16868,8 +16877,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       key:PageStorageKey<String>('waffra-recurring-quick-actions-'+r.id),
       initiallyExpanded:false,
       tilePadding:EdgeInsets.zero,
-      childrenPadding:const EdgeInsets.only(bottom:8),
-      leading:const Icon(Icons.bolt_outlined,color:emerald,size:20),
+      childrenPadding:const EdgeInsets.only(bottom:4),
+       leading:const Icon(Icons.bolt_outlined,color:emerald,size:20),
       title:WaffraText(waffraIsEnglish?'Quick actions':'إجراءات سريعة',
        style:const TextStyle(fontSize:13,fontWeight:FontWeight.w700)),
       children:[
