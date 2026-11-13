@@ -1758,3 +1758,5 @@ Audit of remaining production direct Material `DropdownButtonFormField<String>` 
 - **Owner acceptance still gated:** exact-head Flutter/SQLCipher/Android CI and physical Android 320–390dp screenshot/narrow amount proof are separate from code completion. Do not mark complete on test-only results, and do not merge without reporting final run status.
 
 - **M681 QA correction:** An account may have a legitimate nonzero opening balance before a historic entry. UI requires separate checkbox confirming old entry is excluded from opening. Without attestation, SQLCipher refuses the assignment; with it, original entry ID remains and account changes once. M448 legacy test retains original expected 80,000 → 75,000 cents and independent budget totals.
+
+- **M681 discovery:** Accounts overview now has a full-width "مراجعة وربط العمليات القديمة بدون حساب" action in addition to its original toolbar icon. Both routes open the same read-only SQLCipher reconciliation and per-entry confirmation; no extra writer or menu changes.
