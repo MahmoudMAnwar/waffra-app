@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'support/waffra_main_source.dart';
 import 'package:waffra/main.dart' show SavingGoal, RecurringBill;
 import 'package:waffra/waffra_approved_page_designs.dart';
 import 'package:waffra/storage/waffra_accounts_repository.dart';
@@ -252,7 +253,7 @@ void main(){
  });
 
  test('M682 owner screenshot UI has no duplicate Edit and Accounts opens manager',(){
-  final src=File('lib/main.dart').readAsStringSync();
+  final src=readWaffraMainSourceForContracts();
   final shortcuts=src.split("key:const Key('m674-home-approved-shortcuts')")[1]
    .split('const SizedBox(height:12)')[0];
   expect(shortcuts,contains('onTap:()=>unawaited(openVerifiedAccounts())'));
@@ -268,7 +269,7 @@ void main(){
   expect(src,contains('event.activity is WaffraInternalTransferHistory'));
  });
  test('M675 immutable + source contract and existing finance write routing',(){
-  final code=File('lib/main.dart').readAsStringSync();
+  final code=readWaffraMainSourceForContracts();
   final a=code.indexOf(
    '  // A fixed 58x58 FAB: pop-up menu is an independent body overlay.');
   final b=code.indexOf('  // M675: footer height stays invariant.',a);

@@ -608,3 +608,5 @@ M707 #633/#635 Home State refactor: moved the existing 770-line production Goals
 M708 source guard parity: retained original M298 category validation, M302 recurring due and M283 compact budget checks against real extracted source. No weakened negative no-edit check. Exact-head CI and device acceptance remain distinct.
 
 M709 real-source regression parity: M176 module write-route counts, M670 verified UI/FAB notice safety and M127 no-tour/backup guards now read registered Home Dart parts instead of assuming relocated code still resides in main.dart. No financial writes modified; physical Android remains independent.
+
+M710 preserved M674/M675 approved-page and fixed 58px FAB source assertions, including the linked recurring account ID, by reading actual registered Dart part in original order. Do not infer physical Android proof from Flutter tests.

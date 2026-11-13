@@ -2989,7 +2989,8 @@
         "test/m302_recurring_first_due_regression_test.dart",
         "test/storage/m176_module_finance_route_intent_test.dart",
         "test/m670_feedback_transfer_dashboard_test.dart",
-        "test/m127_ui_tour_backup_acceptance_test.dart"
+        "test/m127_ui_tour_backup_acceptance_test.dart",
+        "test/m674_approved_page_designs_test.dart"
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/android.yml",

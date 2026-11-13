@@ -1844,3 +1844,5 @@ Audit of remaining production direct Material `DropdownButtonFormField<String>` 
 - **M708 (same Draft #638):** Original M298 mandatory-category, M302 recurring-due and M283 approved compact-budget source witnesses now inspect the *actual* registered production Dart parts after approved M691/M707 extraction. No safety assertion or finance writer removed. Exact-head CI and physical Android proof pending.
 
 - **M709 (same Draft #638):** Retained strict M176 module-intent finance writer counts, M670 Home/goal/recurring/Snackbar layout and M127 FAB/no-tour/backup assertions after extraction. Tests now reconstruct registered *actual* Dart parts in original source order. No assertions or security checks skipped. Exact-head Flutter CI still required.
+
+- **M710 / #635 (same Draft #638):** Preserve all M674/M675 real owner-approved page, linked recurring account and fixed global FAB source checks after the 770-line Goals/Recurring extraction; no assertions removed. Exact-head CI still required.
