@@ -12,10 +12,10 @@ import 'waffra_bank_sms_facts.dart';
 ///
 /// Nothing here can persist a transaction. Every result requires user review.
 abstract final class WaffraCloudflareSmsGateway {
-  static const configuredUrl = String.fromEnvironment(
-    'WAFFRA_SMS_WORKER_URL', defaultValue: '',
-  );
-  static bool get configured => configuredUrl.isNotEmpty;
+  // M698 / #634: a retired transport is NEVER configured, including when a
+  // stale release or local build still passes WAFFRA_SMS_WORKER_URL.
+  static const String configuredUrl = '';
+  static bool get configured => false;
 
   static Uri? validEndpoint(String value) {
     final uri = Uri.tryParse(value);
