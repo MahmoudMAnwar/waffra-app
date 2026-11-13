@@ -296,11 +296,11 @@
     ],
     "lib/waffra_auto_sms_consent.dart": [
       {
-        "start": "import 'waffra_sms_cloud_service.dart';",
+        "start": "import 'waffra_auto_sms.dart';",
         "end": "/// Follow-up to account creation:"
       },
       {
-        "start": "   // Never opt in to the external AI on behalf of the user.",
+        "start": "  try{\n",
         "end": "   // WaffraAutoSms.optIn first requests READ_SMS and RECEIVE_SMS;"
       }
     ],
