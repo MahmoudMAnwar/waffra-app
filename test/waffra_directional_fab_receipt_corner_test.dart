@@ -83,7 +83,9 @@ void main() {
     expect(source,contains('enum WaffraSnackKind { success, error, warning, info }'));
     expect(source,contains('class WaffraNoticeContent extends StatelessWidget'));
     expect(source,contains('class WaffraFooterNoticeHost extends StatefulWidget'));
-    expect(source,contains('bottomNavigationBar:accountOpened?null:Column(mainAxisSize:MainAxisSize.min,children:['));
+    expect(source,contains('bottomNavigationBar:accountOpened?null:WaffraFooterNavigation('));
+    expect(source,contains('WaffraApprovedFixedFabNoticePosition('));
+    expect(source,isNot(contains('bottomNavigationBar:accountOpened?null:Column(mainAxisSize:MainAxisSize.min')));
     expect(source,contains('if(mounted&&addFabExpanded)setState(()=>addFabExpanded=false)'));
     expect(source,contains('maxLines:2,'));
     expect(source,contains('width:min(MediaQuery.sizeOf(ctx).width*0.87,440.0)'));
