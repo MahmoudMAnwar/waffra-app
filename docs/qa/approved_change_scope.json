@@ -38,6 +38,12 @@
         "start": " Future<void> backupDialog()async {",
         "end": " Future<String?> _askForPin({"
       }
+    ],
+    "lib/storage/waffra_legacy_v24_sqlcipher_converter.dart": [
+      {
+        "start": "      final module = WaffraFreshModulesRepository(",
+        "end": "      final history = await WaffraAccountsFinanceHistory.capture(db);"
+      }
     ]
   }
 }
