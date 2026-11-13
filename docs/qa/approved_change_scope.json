@@ -20,6 +20,7 @@
     "lib/storage/waffra_account_context_read.dart",
     "lib/storage/waffra_verified_goal_due_snapshot_writer.dart",
     "lib/waffra_home_balance_header.part.dart",
+    "lib/waffra_home_finance_tiles.part.dart",
     "test/m149_backup_pin_localized_fab_trash_uat_test.dart",
     "test/m268_approved_emerald_balance_card_test.dart",
     "test/m343_goal_recurring_named_budgets_test.dart",
@@ -33,6 +34,7 @@
     "test/m674_approved_page_designs_test.dart",
     "test/qa/m565_sms_yes_no_test.py",
     "test/qa/m574_sms_confirmation_full_fields_test.py",
+    "test/storage/m364_sqlcipher_finance_domain_test.dart",
     "test/storage/m448_account_context_read_test.dart",
     "test/waffra_directional_fab_receipt_corner_test.dart",
     "test/waffra_m208_bundle_regression_test.dart"
@@ -68,6 +70,12 @@
       {
         "start": "      final savedBefore=_minor(goal['saved']??0);",
         "end": "      final existing=ledger.where((entry)=>entry['id']==dueKey).toList();"
+      }
+    ],
+    "lib/waffra_home_finance_tiles.part.dart": [
+      {
+        "start": " Widget _m684HomeFinanceAction({",
+        "end": "\n}"
       }
     ]
   }
