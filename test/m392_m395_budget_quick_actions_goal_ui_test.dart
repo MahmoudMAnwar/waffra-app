@@ -45,7 +45,9 @@ void main() {
 
  test('M393 recurring Quick Actions preserve original edit/delete/toggle',(){
   final source=File('lib/main.dart').readAsStringSync();
-  expect(source,contains("'waffra-recurring-quick-actions-'"));
+  // M689: compact due card shows actions directly, no oversized expander.
+  expect(source,contains("'m689-due-card-'"));
+  expect(source,isNot(contains("PageStorageKey<String>('waffra-recurring-quick-actions-'")));
   expect(source,contains("'waffra-recurring-active-switch-'"));
   expect(source,contains("_handleRecurringCardAction(r,'edit')"));
   expect(source,contains("_handleRecurringCardAction(r,'delete')"));
