@@ -2822,6 +2822,26 @@
         "No change to screenshot-approved production widget styling.",
         "No fake physical-device pass from Flutter test composition."
       ]
+    },
+    {
+      "id": "M694-CLOUD-CONSENT-CACHE-RETIREMENT-ISSUE634",
+      "issue": "Issue #634 / Draft PR #638",
+      "previous_behavior": "HomeState retained a cloud-consent cached Future, getter and two reset paths after owner removed third-party SMS model settings.",
+      "approved_behavior": "Remove only now-unused cloud-consent cache/getter/reset; preserve SMS permission Future and refresh on account settings/resume, and all finance/biometric state untouched.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_profile.part.dart"
+      ],
+      "test_paths": [
+        "test/m528_settings_async_cache_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Do not reintroduce third-party model consent on Settings.",
+        "Do not alter bank SMS review or encrypted account state."
+      ]
     }
   ]
 }

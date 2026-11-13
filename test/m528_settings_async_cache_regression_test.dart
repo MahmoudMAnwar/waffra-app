@@ -14,6 +14,7 @@ void main(){
  test('M690 settings keep SMS cache but remove AI/cloud analysis switch',(){
   final state=between('bool protectRecentApps=true;','String? _accountOpenSection;');
   expect(state,contains('_m528SmsEnabledFuture??=WaffraAutoSms.enabled()'));
+  expect(state,isNot(contains('_m528CloudConsentFuture')));
   final profile=between('Widget profilePage(){','Widget _addMenuOption({');
   expect(profile,contains('future:_m528SmsEnabled()'));
   expect(profile,contains('await WaffraAutoSms.disable()'));
@@ -27,9 +28,11 @@ void main(){
   final header=between("key:const Key('waffra-header-account-entry'),",
    'borderRadius:BorderRadius.circular(30),');
   expect(header,contains('_m528SmsEnabledFuture=null'));
+  expect(header,isNot(contains('_m528CloudConsentFuture')));
   final resume=between('void _m468OnResume(){',
    '@override void initState(){super.initState();WaffraBackNavigation');
   expect(resume,contains('if(accountOpened&&mounted)setState((){'));
+  expect(resume,isNot(contains('_m528CloudConsentFuture')));
   final review=between(' Future<void> _reviewAutoSmsCandidates({',
    ' void _receiveSharedSms(){');
   expect(review,contains("Key('m595-review-single-exclude')"));

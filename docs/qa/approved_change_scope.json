@@ -6,7 +6,8 @@
     "M690 #632 permanently disable third-party AI bank SMS uploads and opt-in on previously installed versions, remove Settings toggle and signed Android staging worker, retain local encrypted SMS Review and money writer.",
     "M690 #637 convert obsolete cloud-positive tests to negative no-upload safeguards while retaining OTP/local SMS and finance contracts; issue #633 Home extraction, #634 unused AI modules, #635 real-screen matrix, #636 large ledger remain in Draft PR #638.",
     "M691 #633 extract 416 original lines of budget, monthly summary and insight cards to same-library Home State extension, preserve all existing finance and UI assertions through source helper.",
-    "M692 #636 2400-row disposable SQLCipher month read and pages with cold reopen and no account balance drift. M693 #635 Goals/Dues/SMS review owner-approved widget composition layout matrix at 320/360/390 LTR/RTL dark/light while physical device proof remains distinct."
+    "M692 #636 2400-row disposable SQLCipher month read and pages with cold reopen and no account balance drift. M693 #635 Goals/Dues/SMS review owner-approved widget composition layout matrix at 320/360/390 LTR/RTL dark/light while physical device proof remains distinct.",
+    "M694 #634 remove four stale unused cloud-consent cache fields/getters/reset paths from Home State while retaining local SMS opt-in cache and finance settings; add regression asserts."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -82,8 +83,20 @@
         "end": "part 'waffra_finance_period_index.part.dart';"
       },
       {
+        "start": "Future<bool>? _m528SmsEnabledFuture;",
+        "end": "String? _accountOpenSection;"
+      },
+      {
+        "start": "void _m468OnResume(){",
+        "end": "unawaited(_syncWidgetTransactions());"
+      },
+      {
         "start": "void refreshFromBudgetDirectory()",
         "end": " Future<void> showSummaryTransactions("
+      },
+      {
+        "start": "key:const Key('waffra-header-account-entry'),",
+        "end": "child:AnimatedContainer(duration:waffraMotion(260),"
       }
     ],
     "test/support/waffra_main_source.dart": [

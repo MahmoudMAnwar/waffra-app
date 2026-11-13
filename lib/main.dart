@@ -4782,11 +4782,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  bool protectRecentApps=true;
  // M528: stable permission/consent futures across unrelated profile repaints.
  Future<bool>? _m528SmsEnabledFuture;
- Future<bool>? _m528CloudConsentFuture;
  Future<bool> _m528SmsEnabled()=>
   _m528SmsEnabledFuture??=WaffraAutoSms.enabled();
- Future<bool> _m528CloudConsent()=>
-  _m528CloudConsentFuture??=WaffraSmsCloudService.hasConsent();
  String? _accountOpenSection;
  String accountSearch='';
  bool addFabExpanded=false;
@@ -4837,7 +4834,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    // frame. Never infer cash from an unverified snapshot.
    if(accountOpened&&mounted)setState((){
     _m528SmsEnabledFuture=null;
-    _m528CloudConsentFuture=null;
    });
    unawaited(_syncWidgetTransactions());
    final now=DateTime.now();
@@ -16579,7 +16575,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        onTap:WaffraHaptics.tap(()=>setState((){
         // Device settings might have changed since the previous visit.
         _m528SmsEnabledFuture=null;
-        _m528CloudConsentFuture=null;
         addFabExpanded=false;goalsOpened=false;accountOpened=true;_headerCompact=false;
        })),
        borderRadius:BorderRadius.circular(30),
