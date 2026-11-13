@@ -23,20 +23,26 @@ class WaffraAccountContextPage extends StatefulWidget {
 
 class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {
  String filter='all';
- int visibleCount=100;
+ int pageOffset=0;
+ static const int pageSize=50;
+ DateTime selectedMonth=DateTime(DateTime.now().year,DateTime.now().month,1);
  late Future<WaffraAccountContextReadResult> future;
+ late Future<List<WaffraAccountLedgerRow>> ledgerPage;
+ late Future<({int count,int netMinor})> unassignedPreview;
  String t(String ar,String en)=>widget.english?en:ar;
- String get month {
-  final now=DateTime.now();
-  return now.year.toString().padLeft(4,'0')+'-'+
-   now.month.toString().padLeft(2,'0');
- }
+ String get month=>selectedMonth.year.toString().padLeft(4,'0')+'-'+
+  selectedMonth.month.toString().padLeft(2,'0');
  String? get accountId=>filter.startsWith('account:')?
   filter.substring('account:'.length):null;
  @override void initState(){super.initState();reload();}
  void reload(){
   future=widget.api.readAccountContext(
-    monthIso:month,selectedAccountId:accountId);
+   monthIso:month,selectedAccountId:accountId,summaryOnly:true);
+  ledgerPage=filter=='none'
+   ?widget.api.readUnassignedPage(limit:pageSize,offset:pageOffset)
+   :widget.api.readMonthlyPage(monthIso:month,selectedAccountId:accountId,
+     limit:pageSize,offset:pageOffset);
+  unassignedPreview=widget.api.readUnassignedSummary();
  }
  String money(int minor)=>(minor/100).toStringAsFixed(2)+' SAR';
 
@@ -61,8 +67,11 @@ class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {
        onChanged:(v)=>rebuild(()=>selected=v),
       ),
       const SizedBox(height:12),
-      Text(t('لن نضيف دخلًا أو مصروفًا مرة ثانية. هيتغيّر رصيد الحساب بعد التأكيد فقط.',
-       'No second income or expense will be created. Only the chosen balance changes.')),
+      WaffraText((entry.income?'+':'−')+money(entry.amountMinor),
+       currencyEnglish:widget.english,textDirection:TextDirection.ltr),
+      const SizedBox(height:8),
+      Text(t('الربط بيحصل مرة واحدة مع حساب رصيده الافتتاحي صفر فقط، عشان نتجنب التكرار. مفيش دخل أو مصروف جديد.',
+       'Link once to an account with zero opening balance to prevent double counting. No additional income or expense.')),
      ]),
      actions:[
       TextButton(onPressed:()=>Navigator.pop(ctx),
@@ -121,7 +130,7 @@ class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {
          value:'account:'+account.id,child:Text(account.name))),
        ],
        onChanged:(value){if(value==null)return;setState((){
-        filter=value;visibleCount=100;reload();
+        filter=value;pageOffset=0;reload();
        });},
       )),
      WaffraAccountContextSettings(
