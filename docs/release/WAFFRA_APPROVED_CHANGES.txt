@@ -584,3 +584,5 @@ M687 Home State modularization (Issue #629, Draft #630): report export and Profi
 M687 source-contract repair: all affected Flutter source tests and Python M417 read the same relocated Profile and PDF method bodies, without removing assertions. M550 now includes only registered same-library Dart part code when comparing unchanged positive assertions to the original main.dart baseline; an absent or foreign part cannot satisfy the check. No changes to actual savings, due, SQLCipher, reports, backup, FAB or Snackbar.
 
 M687 M550 regex correction: recognize readWaffraMainSourceForContracts() as a valid source-bound assertion reader, still requiring registered exact Dart part bodies. Existing positive/negative tests remain unchanged.
+
+M687/M688 regression continuation: original M424 security and October PDF/account tests now inspect the actual moved Profile/PDF implementation, preserving assertions. Added 320/360/390dp light/dark RTL/LTR 1.3x text-scale Flutter regression for full money/progress, single/multiline Snackbar and the exact stationary 58dp +. This is not physical Android evidence or an authenticated owner-backup restore.

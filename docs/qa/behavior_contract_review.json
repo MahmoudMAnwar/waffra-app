@@ -2702,6 +2702,28 @@
         "Source contract checks validate the actual part code and check origin and registration.",
         "Existing test assertions remain identical."
       ]
+    },
+    {
+      "id": "M688-FAB-SNACKBAR-NARROW-MATRIX-ISSUE629",
+      "issue": "Issues #629 and #631 / Draft #630",
+      "previous_behavior": "Only some 320/360dp RTL/dark checks were covered; 3-line notice interactions across narrow themes needed explicit widget checks.",
+      "approved_behavior": "Run real Flutter layout tests at 320/360/390dp, light/dark, RTL/LTR, 130%-scaled text, short and long Snackbar, preserving a fixed 58dp + and legible full money. Physical Android pixel and owner-restored-backup verification remain separate gates.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_approved_page_designs.dart"
+      ],
+      "test_paths": [
+        "test/m688_approved_android_screens_matrix_test.dart",
+        "test/m674_approved_page_designs_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m147-merge-readiness.yml"
+      ],
+      "safety_invariants": [
+        "No production UI geometry or finance code changed in this test-only commit.",
+        "Never mark physical-device UI or old-owner-backup parity as complete from simulator/widget data."
+      ]
     }
   ]
 }
