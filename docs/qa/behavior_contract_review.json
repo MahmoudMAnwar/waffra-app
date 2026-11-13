@@ -2462,7 +2462,8 @@
         "test/m672_m678_activity_account_regression_test.dart",
         "test/m674_approved_page_designs_test.dart",
         "test/storage/m440_account_linked_entry_writer_test.dart",
-        "test/storage/m641_goal_account_integrity_test.dart"
+        "test/storage/m641_goal_account_integrity_test.dart",
+        "test/storage/verified_encrypted_finance_bridge_test.dart"
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/m550-behavior-contract-preflight.yml",
@@ -2477,7 +2478,8 @@
         "Never change recorded historic V24 transaction IDs, amounts, dates, owners, or invent bank account links from restored accountless history.",
         "Preserve legacy/widget source compatibility and explicit modern user account choices; reject financial source mutation on stale revision.",
         "No finance backup, decryptor, restore or restore-archive files may change under this UX repair.",
-        "Do not claim physical Android or exact-head CI success until workflows/device have run."
+        "Do not claim physical Android or exact-head CI success until workflows/device have run.",
+        "M67 concurrent widget-vs-Home goal editor regressions still verify no lost widget data, with goal target metadata edits instead of unauthorized saved balance edits."
       ]
     }
   ]
