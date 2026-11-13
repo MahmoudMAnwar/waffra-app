@@ -562,3 +562,5 @@ M684 full shared read-index wiring (2026-11-13, SAME Draft PR #628, not merged):
 M550 obsolete budget-source assertions (2026-11-13, same PR #628): updated the prior M343/M470 positive UI source contracts from the former full-ledger branch to the verified month index, while retaining account attribution, budget calculations, and no-posting negative assertions. No production code changed by this test-only correction.
 
 M684 account-ID lookup completion on PR #628: selected-account Home transaction/PDF listing now uses the cached verified entry-ID index with original historical order and excludes unassigned rows; new test preserves cross-month membership and no financial writers changed.
+
+M470 same-PR exact-head source assertion updated to use the new read-only verified account ID lookup; no behavioral checks or negative validations skipped.

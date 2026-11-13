@@ -1781,3 +1781,5 @@ Audit of remaining production direct Material `DropdownButtonFormField<String>` 
 - Source implementation submitted to same PR; CI and physical-phone acceptance remain separate and must not be claimed before evidence.
 
 - M684 final account-history read refinement (2026-11-13): The Home account-selected activity and PDF projection now use a read-only ID index over the verified hydrated ledger (\`_m684Periods.byIds\`), rather than scanning every MoneyEntry on rebuild. Only SQLCipher-attested all-time account link IDs qualify; unassigned legacy restore entries remain unassigned. A regression covers old linked October entries and current November entries without extra posting or duplicate balances.
+
+- M684 M470 contract follow-up: updated the existing positive source assertion to recognize the indexed SQLCipher account-entry ID scope. Legacy unassigned account choices remain prohibited; original transfer-date behavior and negative assertions stay covered.
