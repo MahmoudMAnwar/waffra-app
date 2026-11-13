@@ -33,7 +33,14 @@ abstract final class WaffraRestoredLedgerIdentityGuard {
           values.containsKey(id)) {
         throw StateError('M620_DUPLICATE_OR_INVALID_TRANSACTION_ID');
       }
-      values[id] = (minor, item['income'] as bool, item['date'] as String);
+      final parsedDate = DateTime.tryParse(item['date'] as String);
+      if (parsedDate == null) {
+        throw StateError('M620_INVALID_TRANSACTION_DATE');
+      }
+      // The legacy JSON can use a UTC suffix or local ISO notation. DateTime
+      // model serialization can normalize formatting without moving money.
+      values[id] = (minor, item['income'] as bool,
+          parsedDate.toUtc().toIso8601String());
     }
     return values;
   }
