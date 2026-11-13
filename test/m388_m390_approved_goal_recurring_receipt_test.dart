@@ -82,13 +82,15 @@ void main() {
 
  test('M388: open-ended goal never divided by zero or marked achieved',(){
   final source=File('lib/main.dart').readAsStringSync();
+  final actions=source.split('Future<void> _m689GoalActions(').last
+   .split('Widget goalsPage(){').first;
   final card=source.split('Widget goalsPage(){').last
    .split('Widget recurringPage(){').first;
   expect(card,contains('g.target<=0?0.0:(g.saved/g.target).clamp(0.0,1.0)'));
-  expect(card,contains('if(g.target>0&&g.saved>=g.target)'));
-  expect(card,contains('if(g.target<=0||g.saved<g.target)'));
+  expect(card,contains('final completed=g.target>0&&g.saved>=g.target;'));
+  expect(actions,contains('if(g.target<=0||g.saved<g.target)'));
   expect(card,contains('g.target>0&&g.saved>=g.target'));
-  expect(card,contains("waffraIsEnglish?'Open-ended savings':'ادخار مفتوح'"));
+  expect(card,contains('max(0,g.target-g.saved)'));
   final edit=File('lib/waffra_goal_recurring_actions.part.dart').readAsStringSync();
   expect(edit,contains('date==null||updated.target<=0||!updated.active'));
   expect(edit,contains('target:noTarget?0.0:v!'));

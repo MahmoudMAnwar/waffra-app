@@ -11,9 +11,10 @@ void main(){
  test('approved balance artwork stays embedded and never uses external images',(){
   final main=File('lib/main.dart').readAsStringSync();
   final artwork=File('lib/waffra_balance_art.dart').readAsStringSync();
-  expect(main,contains('waffra-approved-emerald-balance-card'));
-  expect(main,contains('WaffraBalanceIllustration()'));
-  expect(main,contains('WaffraBalanceWavePainter('));
+  final header=File('lib/waffra_home_balance_header.part.dart').readAsStringSync();
+  expect(header,contains('waffra-approved-emerald-balance-card'));
+  expect(header,contains('WaffraBalanceIllustration()'));
+  expect(header,contains('WaffraBalanceWavePainter('));
   // The M467 verified account header only compares months on the
   // all-account legacy fallback; account-scoped balances cannot invent it.
   expect(main,contains("monthlyChangePercent:_m467SelectedAccount=='all'&&"));

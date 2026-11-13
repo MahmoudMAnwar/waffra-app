@@ -108,7 +108,7 @@ void main() {
   expect(app,contains('onChanged:initial?.linkedGoalId!=null?null'));
   final directory=File('lib/waffra_budget_directory.part.dart').readAsStringSync();
   expect(directory,contains('editBudgetForCategory(b)'));
-  expect(app,contains('goal.saved/goal.target'));
+  expect(app,contains('g.saved/g.target'));
   // M470 narrows the budget preview to the account selected in Home,
   // while 'all' preserves the independent global view.
   expect(app,contains('final relevantEntries=_m684ScopedMonthEntries('));
@@ -125,7 +125,7 @@ void main() {
   expect(app,contains('WaffraNamedBudget.fromLegacy(c)'));
   expect(directory,contains('deleteNamedBudget(b)'));
   expect(app,contains('releaseGoalFunds(SavingGoal goal)'));
-  expect(app,contains('waffraGoalWalletBalance(goals)'));
+  expect(app,contains('final saved=goals.fold<double>'));
   expect(app,contains('waffraAvailableCash(entries,goals)'));
  });
 }

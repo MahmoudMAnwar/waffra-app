@@ -1,9 +1,10 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
- final app = File('lib/main.dart').readAsStringSync();
+ final app = readWaffraMainSourceForContracts();
  final repository = File('lib/storage/waffra_account_context_repository.dart')
      .readAsStringSync();
  final api = File('lib/storage/waffra_verified_accounts_api.dart')

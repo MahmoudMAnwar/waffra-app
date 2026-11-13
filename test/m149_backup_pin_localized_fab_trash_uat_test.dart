@@ -54,12 +54,12 @@ void main() {
   expect(main,contains('const Color(0xFFFF9090)'));
   expect(main,contains('const Color(0xFFB42332)'));
   expect(main,contains('onPressed:WaffraHaptics.tapRequired(deletedGoalsDialog)'));
-  expect(main,contains('onPressed:WaffraHaptics.tapRequired(deletedRecurringDialog)'));
+  expect(main,contains("if(v=='trash')unawaited(deletedRecurringDialog());"));
   // The new compact recurring cards remain adjacent; legacy recycle-bin
   // buttons in other sections stay red and independently accessible.
-  expect(main,contains("Key('waffra-recurring-count-badge')"));
-  expect(main,contains('Expanded(child:OutlinedButton.icon('));
-  expect(main,contains('onPressed:WaffraHaptics.tapRequired(deletedRecurringDialog)'));
+  expect(main,contains("Key('m689-due-settings')"));
+  expect(main,contains('PopupMenuButton<String>('));
+  expect(main,contains("if(v=='trash')unawaited(deletedRecurringDialog());"));
   // Compact buttons retain the 48dp minimum touch target
   // without reintroducing oversized outlines.
   expect(main,contains('minimumSize:WaffraActionLayout.minimumSize'));

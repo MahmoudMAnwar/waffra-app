@@ -38,7 +38,7 @@ class M417AutoSmsContractTest(unittest.TestCase):
         self.assertNotIn("commitConfirmedSms",receiver+queue)
 
     def test_writes_only_from_existing_verified_sms_review(self):
-        home=self.read("lib/main.dart")
+        home=self.read("lib/main.dart")+self.read("lib/waffra_home_profile.part.dart")
         self.assertIn("await entrySheet(sms:true,initialSms:body,reviewedSender:sender);",home)
         self.assertIn("smsHashes.contains(bankSmsHash(body))",home)
         # Income/expense and two-sided transfers have independent durable

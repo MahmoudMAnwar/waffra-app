@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_bank_sms_facts.dart';
@@ -30,7 +31,7 @@ void main(){
  });
 
  test('M514 per-button scanned number is never native history total',(){
-  final home=File('lib/main.dart').readAsStringSync();
+  final home=readWaffraMainSourceForContracts();
   expect(home,contains('final priorScanned=before?'));
   expect(home,contains('final nowScanned=after?'));
   expect(home,contains('final scanned=(nowScanned-priorScanned)'));
@@ -54,7 +55,7 @@ void main(){
   final flutter=File('lib/waffra_auto_sms.dart').readAsStringSync();
   final native=File('native/WaffraAutoSmsStore.kt').readAsStringSync();
   final platform=File('native/WaffraMainActivity.kt').readAsStringSync();
-  final home=File('lib/main.dart').readAsStringSync();
+  final home=readWaffraMainSourceForContracts();
   expect(flutter,contains("return _boolCall('excludeAutoBankSms',ids);"));
   expect(platform,contains('"excludeAutoBankSms" -> {'));
   expect(native,contains('excludedMessageBucketPrefix'));
@@ -67,7 +68,7 @@ void main(){
  });
 
  test('M514 source-specific account digits, actionable transfer and verified receipt edit',(){
-  final home=File('lib/main.dart').readAsStringSync();
+  final home=readWaffraMainSourceForContracts();
   final form=File('lib/waffra_account_transaction_form.dart').readAsStringSync();
   final authority=File('lib/storage/waffra_verified_finance_authority.dart')
     .readAsStringSync();
@@ -108,7 +109,7 @@ void main(){
   final flutter=File('lib/waffra_auto_sms.dart').readAsStringSync();
   final native=File('native/WaffraAutoSmsStore.kt').readAsStringSync();
   final platform=File('native/WaffraMainActivity.kt').readAsStringSync();
-  final home=File('lib/main.dart').readAsStringSync();
+  final home=readWaffraMainSourceForContracts();
   final transfer=home.split('Future<void> _reviewSmsAccountTransfer({').last
    .split('Future<void> _reviewAutoSmsCandidates({').first;
   expect(transfer,contains('WaffraAutoSms.transferIdForMessage(id)'));
@@ -134,7 +135,7 @@ void main(){
  });
 
  test('M517 excluded SMS list keeps per-message count separate from senders',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   final dart=File('lib/waffra_auto_sms.dart').readAsStringSync();
   final native=File('native/WaffraAutoSmsStore.kt').readAsStringSync();
   final activity=File('native/WaffraMainActivity.kt').readAsStringSync();

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,7 +10,7 @@ import 'package:waffra/main.dart';
 void main() {
  test('M671 permanently removes source tour and settings replay',(){
   const root='lib/main.dart';
-  final source=File(root).readAsStringSync();
+  final source=readWaffraMainSourceForContracts();
   expect(File('lib/waffra_tour_plan.dart').existsSync(),isFalse);
   for(final old in <String>[
    'tourActive','tourOverlay','WaffraTourPlan','_tourGlow',

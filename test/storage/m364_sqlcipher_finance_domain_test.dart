@@ -8,6 +8,8 @@ import 'package:waffra/storage/waffra_fresh_finance_domain_schema.dart';
 import 'package:waffra/storage/waffra_fresh_finance_domain_repository.dart';
 import 'package:waffra/storage/waffra_atomic_finance_snapshot.dart';
 import 'package:waffra/storage/waffra_verified_goal_due_snapshot_writer.dart';
+import 'package:waffra/storage/waffra_accounts_schema.dart';
+import 'package:waffra/storage/waffra_accounts_repository.dart';
 
 void main() {
   late Directory directory;
@@ -390,11 +392,60 @@ void main() {
     ).getSingle();
     expect(saved.read<int>('saved_minor'),15000);
   });
+  test('M689 insufficient verified cash rejects linked goal due atomically',
+      () async {
+    await bootstrap();
+    await addGoal(savedMinor:15000);
+    await addRecurring(amountMinor:20000);
+    await WaffraAccountsSchema.install(db);
+    final accounts=WaffraAccountsRepository(db:db,experimentalEnabled:true);
+    await accounts.createAccount(
+      id:'car-cash',name:'Test cash',kind:'bank',openingMinor:3000,
+      createdIso:'2026-11-02T00:00:00',userConfirmed:true);
+    final snapshot=WaffraAtomicFinanceSnapshot(
+      store:db,experimentalEnabled:true);
+    await snapshot.initializeEmpty();
+    final goalRow=(await db.customSelect(
+      "SELECT source_json FROM fresh_finance_goals WHERE goal_id='goal'"
+    ).getSingle()).read<String>('source_json');
+    final dueRow=(await db.customSelect(
+      "SELECT source_json FROM fresh_finance_recurring WHERE recurring_id='rent'"
+    ).getSingle()).read<String>('source_json');
+    await snapshot.commit(expectedGeneration:0,fullFinanceSnapshot:{
+      'entries':'[]',
+      'waffra_goals_v24':jsonEncode([jsonDecode(goalRow)]),
+      'waffra_recurring_v24':jsonEncode([jsonDecode(dueRow)]),
+    });
+    final before=await snapshot.read();
+    final writer=WaffraVerifiedGoalDueSnapshotWriter(
+      store:db,snapshot:snapshot,experimentalEnabled:true);
+    await expectLater(writer.settle(
+      goalId:'goal',recurringId:'rent',dueKey:'rec_rent_2026_11',
+      amountMinor:20000,confirmedAtIso:'2026-11-02T12:00:00',
+      userConfirmed:true,selectedAccountId:'car-cash',
+    ),throwsA(isA<StateError>()));
+    expect((await snapshot.read()).generation,before.generation);
+    expect((await snapshot.read()).digest,before.digest);
+    expect(await count('fresh_finance_entries'),0);
+    expect(await count('fresh_finance_goal_due_settlements'),0);
+    expect(await count('fresh_finance_goal_wallet_movements'),0);
+    expect((await accounts.balances()).single.balanceMinor,3000);
+    final saved=await db.customSelect(
+      "SELECT saved_minor FROM fresh_finance_goals WHERE goal_id='goal'",
+    ).getSingle();
+    expect(saved.read<int>('saved_minor'),15000);
+  });
+
   test('M365 atomic goal due updates typed SQL and Home/Widget snapshot once',
       () async {
     await bootstrap();
     await addGoal();
     await addRecurring();
+    await WaffraAccountsSchema.install(db);
+    final accounts=WaffraAccountsRepository(db:db,experimentalEnabled:true);
+    await accounts.createAccount(
+      id:'car-cash',name:'Verified cash',kind:'bank',openingMinor:7000,
+      createdIso:'2026-11-02T00:00:00',userConfirmed:true);
     final snapshot=WaffraAtomicFinanceSnapshot(
       store:db,experimentalEnabled:true);
     await snapshot.initializeEmpty();
@@ -420,11 +471,13 @@ void main() {
     final receipt=await writer.settle(
       goalId:'goal',recurringId:'rent',dueKey:'rec_rent_2026_11',
       amountMinor:20000,confirmedAtIso:'2026-11-02T12:00:00',
-      userConfirmed:true,
+      userConfirmed:true,selectedAccountId:'car-cash',
     );
     expect(receipt.alreadySettled,false);
     expect(receipt.fromGoalMinor,15000);
     expect(receipt.fromCurrentMinor,5000);
+    expect((await accounts.balances()).single.balanceMinor,2000,
+      reason:'The bank paid 50 out of 70; on retry only 20 remains, below the full 200 due.');
     expect(await count('fresh_finance_entries'),1);
     expect(await count('fresh_finance_goal_due_settlements'),1);
     final after=await snapshot.read();
@@ -440,11 +493,15 @@ void main() {
     final repeated=await writer.settle(
       goalId:'goal',recurringId:'rent',dueKey:'rec_rent_2026_11',
       amountMinor:20000,confirmedAtIso:'2026-11-02T13:00:00',
-      userConfirmed:true,
+      userConfirmed:true,selectedAccountId:'car-cash',
     );
     expect(repeated.alreadySettled,true);
+    // Rechecking the same ID must not demand another 200 after first payment.
+    // Current bank cash is only 20; previous wallet/ledger receipt is authoritative.
+    expect((await accounts.balances()).single.balanceMinor,2000);
     expect((await snapshot.read()).generation,2);
     expect(await count('fresh_finance_entries'),1);
+    expect((await accounts.balances()).single.balanceMinor,2000);
   });
 
   test('M365 stale snapshot denies goal due and leaves both stores unchanged',

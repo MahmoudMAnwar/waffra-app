@@ -27,15 +27,16 @@ void main() {
     expect(dashboard, contains('if(showTransactionFilters)...['));
     expect(dashboard, contains('showAllTransactions=false;'));
     expect(dashboard, contains('typeFilter=choice;categoryFilter='));
-    expect(dashboard, contains("Key('waffra-financial-activity-toggle')"));
-    // The first read renders the collapsed LIVE total; the second read
-    // renders detailed transfer/savings rows when expanded.
+    // M689: the full activity history is visible without another tap.
+    expect(dashboard,isNot(contains("Key('waffra-financial-activity-toggle')")));
+    expect(dashboard,isNot(contains('financialActivityExpanded')));
+    expect(dashboard,contains("'Your transactions':'عملياتك المالية'"));
+    expect(dashboard,contains("if(_m468VerifiedAccountsLoaded&&"));
     final reads='future:_m652UnifiedActivities('
         .allMatches(dashboard).map((m)=>m.start).toList();
-    expect(reads,hasLength(2));
-    final expanded=dashboard.indexOf('if(financialActivityExpanded)...[');
-    expect(reads.first,lessThan(expanded));
-    expect(expanded,lessThan(reads.last));
+    expect(reads,hasLength(1),
+     reason:'Only one expanded/live account-history future is needed');
+    expect(dashboard,contains('for(final event in history.take(maxShown))'));
     expect(dashboard,
         isNot(contains("WaffraText(waffraIsEnglish?'Income':'الدخل'")));
   });

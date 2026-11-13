@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -6,7 +7,7 @@ import 'package:waffra/main.dart';
 
 void main() {
  late String app;
- setUpAll(() => app = File('lib/main.dart').readAsStringSync());
+ setUpAll(() => app = readWaffraMainSourceForContracts());
 
  test('Income and expense PDF rows reuse exact transaction color constants', () {
   expect(waffraIncomeBackground.toARGB32(), 0xFFB2D5C2);

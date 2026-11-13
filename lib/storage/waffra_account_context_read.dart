@@ -75,13 +75,15 @@ SELECT e.entry_id, e.title, e.amount_minor, e.is_income, e.occurred_iso,
 FROM fresh_finance_entries e
 LEFT JOIN fresh_finance_account_entry_links l ON l.entry_id=e.entry_id
 LEFT JOIN fresh_finance_standalone_allocations a ON a.entry_id=e.entry_id
-WHERE (?=0 OR (e.occurred_iso>=? AND e.occurred_iso<?))
+${summaryOnly ? 'WHERE e.occurred_iso>=? AND e.occurred_iso<?' : ''}
 ORDER BY e.occurred_iso DESC, e.entry_id DESC
 ''',variables:[
- // Legacy callers retain all history; summaryOnly pages scan this month.
- Variable.withInt(summaryOnly?1:0),
- Variable.withString(monthIso+'-01'),
- Variable.withString(_nextMonthIso(monthIso)),
+ // Explicit SQL predicate: the existing occurred_iso index stays usable.
+ // All-time reads remain opt-in for historical reconciliation/export.
+ if(summaryOnly) ...[
+  Variable.withString(monthIso+'-01'),
+  Variable.withString(_nextMonthIso(monthIso)),
+ ],
 ]).get();
     final entries = List<WaffraAccountLedgerRow>.unmodifiable(rows.map((r) =>
       WaffraAccountLedgerRow(

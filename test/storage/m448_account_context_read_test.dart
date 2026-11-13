@@ -127,6 +127,37 @@ void main(){
    .read<int>('n'),4);
  });
 
+ test('M686 SQLCipher accounting month uses indexable date predicate',()async{
+  // Keep the month filter inside SQLite rather than an OR expression that
+  // can force a full encrypted-history scan for every summary refresh.
+  final source=File('lib/storage/waffra_account_context_read.dart')
+   .readAsStringSync();
+  expect(source,contains(
+   "summaryOnly ? 'WHERE e.occurred_iso>=? AND e.occurred_iso<?' : ''"));
+  expect(source,isNot(contains('WHERE (?=0 OR')));
+  // Initialize verified account/context projections in this isolated vault.
+  // These rows remain unassigned and must not debit the sample bank account.
+  await createAccount('rajhi');
+  await transaction('month-november',3000);
+  await db.customStatement(
+   'INSERT INTO fresh_finance_entries '
+   '(entry_id,title,category_snapshot,amount_minor,is_income,'
+   'occurred_iso,receipt_count,source_json) VALUES (?,?,?,?,?,?,0,?)',
+   ['month-october','October','Food',2500,0,
+    '2026-10-04T12:00:00','{}']);
+  final month=await WaffraAccountContextRead.load(
+   store:db,monthIso:'2026-11',summaryOnly:true);
+  expect(month.entries.map((e)=>e.id).toList(),['month-november']);
+  final history=await WaffraAccountContextRead.load(
+   store:db,monthIso:'2026-11',summaryOnly:false);
+  expect(history.entries.map((e)=>e.id).toSet(),
+   {'month-october','month-november'});
+  final unassigned=await WaffraAccountContextRead.loadUnassignedEntries(
+   store:db,limit:1,offset:0);
+  expect(unassigned.length,1);
+  expect((await WaffraAccountContextRead.unassignedSummary(store:db)).count,2);
+ });
+
  test('M684 summary reads only chosen month without changing full-history API',()async{
   await createAccount('rajhi');
   await transaction('nov-current',3000);

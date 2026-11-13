@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -122,7 +123,7 @@ void main() {
   });
 
   test('M424: home route no longer exposes optional PIN settings', () {
-    final source = File('lib/main.dart').readAsStringSync();
+    final source = readWaffraMainSourceForContracts();
     expect(source, contains('child:WaffraMandatoryBiometricGate('));
     // M602: explicit signout followed by verified phone/password must not
     // prompt twice; registration, restored and idle sessions stay protected.

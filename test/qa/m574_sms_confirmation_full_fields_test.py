@@ -40,11 +40,12 @@ class FullSmsPreviewTest(unittest.TestCase):
    'previewHint.parent!=null',
    "Key('m669-review-original-sms-text')",
    'SelectableText(body,textAlign:TextAlign.start)',
-   "Key('m669-sms-review-blockers')",
    'reviewedAccount?.generation!=null',
    'onPressed:canConfirm&&reviewedAccount?.ids?.single!=null&&',
   ):
    self.assertIn(evidence,block)
+  self.assertNotIn("Key('m669-sms-review-blockers')",block)
+  self.assertNotIn('لتفعيل نعم، راجع المطلوب',block)
   self.assertNotIn('reviewCategoryValid=previewLeaves.length==1&&',block)
 
 if __name__=='__main__':unittest.main()

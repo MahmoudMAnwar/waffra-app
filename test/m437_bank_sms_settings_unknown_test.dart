@@ -1,9 +1,10 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main(){
  test('M437 account bank SMS settings contain both requested features',(){
-  final ui=File('lib/main.dart').readAsStringSync();
+  final ui=readWaffraMainSourceForContracts();
   final sms=File('lib/waffra_auto_sms.dart').readAsStringSync();
   expect(ui,contains("'Bank SMS':'رسائل SMS البنكية'"));
   expect(ui,contains("'Scan previous SMS':'فحص رسائل SMS السابقة'"));
@@ -50,7 +51,7 @@ void main(){
  test('M437 unknown notice screen shows original and manual-only action',(){
   final view=File('lib/waffra_unknown_financial_sms_page.dart')
    .readAsStringSync();
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   expect(view,contains("Key('waffra-unknown-sms-list')"));
   expect(view,contains("Key('waffra-unknown-sms-create-manual')"));
   expect(view,contains('إشعار مديونية'));

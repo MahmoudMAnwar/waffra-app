@@ -4,6 +4,7 @@ import 'package:drift/drift.dart';
 
 import 'waffra_atomic_finance_snapshot.dart';
 import 'waffra_accounts_schema.dart';
+import 'waffra_accounts_repository.dart';
 import 'waffra_encrypted_store.dart';
 import 'waffra_fresh_finance_domain_repository.dart';
 
@@ -125,9 +126,31 @@ class WaffraVerifiedGoalDueSnapshotWriter {
         throw StateError('Canonical and typed recurring schedules differ.');
       }
 
+      // M689: distinguish a fresh due from an idempotent retry BEFORE
+      // checking current cash. A previously settled due reduced both the
+      // wallet and the bank, so checking cash again would reject a valid
+      // duplicate instead of returning its durable receipt.
       final existing=ledger.where((entry)=>entry['id']==dueKey).toList();
       if (existing.length>1) {
         throw StateError('Duplicate due event in canonical ledger.');
+      }
+      // Only a fresh settlement may require new money. This check runs under
+      // the same authenticated SQLCipher transaction before any money write.
+      final cashRequired=amountMinor-
+       (savedBefore<amountMinor?savedBefore:amountMinor);
+      if(existing.isEmpty&&cashRequired>0){
+        if(selectedAccountId==null||
+           selectedAccountId.trim().isEmpty||
+           (goalAccountId is String&&selectedAccountId!=goalAccountId)){
+          throw StateError('Goal due cash needs the verified linked account.');
+        }
+        final cashAccounts=await WaffraAccountsRepository(
+         db:store,experimentalEnabled:true).balances();
+        final eligible=cashAccounts.where((a)=>
+         a.id==selectedAccountId&&!a.archived).toList();
+        if(eligible.length!=1||eligible.single.balanceMinor<cashRequired){
+          throw StateError('Insufficient verified cash for goal due settlement.');
+        }
       }
       if (existing.isEmpty && recurring['active']!=true) {
         throw StateError('Inactive canonical recurring event cannot post.');

@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
-  "pr": "#628",
-  "issue": "#627",
+  "pr": "Draft #630",
+  "issue": "#629, #631",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at new branch start",
   "reviewed_at": "2026-11-13",
-  "review_policy": "M679–M684: owner-authorized SQLCipher source protection and compact responsive Home/Goals/Recurring UI. Preserve V24 accountless restoration, existing bank/widget writers, SMS dedup and global +. Run all registered source contracts and exact-head CI, do not merge from host-only passes.",
+  "review_policy": "M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending.",
   "contracts": [
     {
       "id": "M623-VERIFIED-RESTORE-NO-SECOND-BACKUP",
@@ -2521,6 +2521,208 @@
         "Month and year filtering preserves exactly the same IDs, signed amounts and source display ordering; duplicate month requests cannot double count.",
         "Mutations invalidate the index prior to render; deleted and restored items cannot linger in reports.",
         "V24/V3 backup/export/restore bytes, global FAB and Snackbar source remain byte-for-byte unchanged."
+      ]
+    },
+    {
+      "id": "M686-SQLCIPHER-INDEXABLE-MONTH-CONTEXT-ISSUE629",
+      "issue": "Issue #629 and owner full-completion correction after #628",
+      "previous_behavior": "Monthly SQLCipher context used a parameterized OR predicate that could defeat the occurred_iso index and scan all historical finance records.",
+      "approved_behavior": "A summaryOnly=true read uses an explicit occurred_iso >= from AND occurred_iso < next-month WHERE with matching bound parameters; summaryOnly=false retains full historical rows, reconciled ID attribution and independent savings/other accounts.",
+      "source_paths": [
+        "lib/storage/waffra_account_context_read.dart"
+      ],
+      "test_paths": [
+        "test/storage/m448_account_context_read_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m160-main-reconciliation-and-backup-regression.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "Financial history remains read-only and unassigned rows never become bank money without separate user-approved SQLCipher link.",
+        "No arithmetic, opening balance, goal savings, SMS hash, transfer posting or finance writer changes."
+      ]
+    },
+    {
+      "id": "M687-HOME-HEADER-PART-CODE-ISOLATION-ISSUE629",
+      "issue": "Issue #629 and owner full-completion correction after #628",
+      "previous_behavior": "Home balance-header rendering and the oversized State class both lived directly inside lib/main.dart.",
+      "approved_behavior": "Relocate the Home sliver header delegate unchanged into a Dart part of main.dart, retaining public WaffraBalanceHeader, source-level layout assertions and 320dp dark/privacy widget regressions.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_balance_header.part.dart"
+      ],
+      "test_paths": [
+        "test/m268_approved_emerald_balance_card_test.dart",
+        "test/waffra_concept2_final_visual_test.dart",
+        "test/m470_balance_header_account_picker_test.dart",
+        "test/m274_responsive_ui_journeys_test.dart",
+        "test/m495_pr402_ui_performance_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "No changes to actual header Dart statements, money/visibility/amount values, RTL/dark styles or header callbacks.",
+        "Global + button, Snackbar anchor, login, encryption, restored data, categories, balances, reports and export paths unchanged.",
+        "No source-contract assertion removed; moved code is asserted in its real module file."
+      ]
+    },
+    {
+      "id": "M689-OWNER-APPROVED-SMS-GOAL-DUE-AND-HOME-VISUAL-SCREENS",
+      "issue": "Issue #631, owner's three approved Arabic screen references, 2026-11-13, PR #630",
+      "previous_behavior": "Goal and due pages had long banners, duplicated controls and oversized quick-action rows; the SMS review repeated sender/type summary and an instructional blockers panel; Home could collapse the financial activity section.",
+      "approved_behavior": "Replace visible goal and due pages with owner-approved compact metrics, filters, amount/date/account/progress cards, preserve existing goal and recurring action handlers through compact controls. In SMS review remove ONLY the duplicated preview and blockers panel; retain selectable unmodified original SMS, complete finance detail rows, active category/account/date validation and verified Yes state. Home financial activity always visible and independently filterable, with floating add button stationary and Snackbar composited beside it. Use neutral coin-stack icon in savings metric/goal action/linked movement rather than the previously disallowed piggy-bank glyph.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_finance_tiles.part.dart"
+      ],
+      "test_paths": [
+        "test/m149_backup_pin_localized_fab_trash_uat_test.dart",
+        "test/m343_goal_recurring_named_budgets_test.dart",
+        "test/m345_goal_budget_forecast_test.dart",
+        "test/m371_goal_wallet_and_budgets_regression_test.dart",
+        "test/m392_m395_budget_quick_actions_goal_ui_test.dart",
+        "test/m665_goal_due_display_and_linked_edit_test.dart",
+        "test/m669_sms_review_category_search_test.dart",
+        "test/m670_feedback_transfer_dashboard_test.dart",
+        "test/m672_m678_activity_account_regression_test.dart",
+        "test/m674_approved_page_designs_test.dart",
+        "test/qa/m565_sms_yes_no_test.py",
+        "test/qa/m574_sms_confirmation_full_fields_test.py",
+        "test/waffra_directional_fab_receipt_corner_test.dart",
+        "test/waffra_m208_bundle_regression_test.dart",
+        "test/m388_m390_approved_goal_recurring_receipt_test.dart",
+        "test/m662_sms_review_activity_pdf_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m417-auto-bank-sms-optin.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Visual changes must not alter MoneyEntry IDs, account UUIDs, wallet amount sources, source/date verification, duplicate-SMS protection, OTP privacy, backed-up amounts or ledger ownership.",
+        "Disabled Yes stays disabled until a valid active main/subcategory and active money account are confirmed with original SAR/date matching.",
+        "Goal and due actions still call their real guarded writers; never simulate deposit or due payment from a card tap.",
+        "One fixed FAB target coordinates for zero/one/multi-line notice, light/dark and RTL/LTR."
+      ]
+    },
+    {
+      "id": "M689-INSUFFICIENT-CASH-GUARDS-WALLET-DUE-TRANSACTIONS",
+      "issue": "Issue #631, 2026-11-13 goal deposit error and linked-goal due account debit verification",
+      "previous_behavior": "UI offered an invalid Continue action when requested savings exceeded the verified bank account balance, but SQLCipher still rejected the write. Goal due typed split was idempotent but did not enforce available cash before committing a due's cash shortage.",
+      "approved_behavior": "Check displayed verified cash before committing an over-balance savings transfer; do not offer a confirmation bypass. In the snapshot writer under the same authenticated SQLCipher transaction, recalculate cash shortage from canonical wallet savings and verify selected account ID, active status and actual available money balance before any goal due debit; continue using one idempotent typed receipt and atomic snapshot transaction. Preserve open-ended target=0 goals without dividing by zero or falsely setting completed, and reject shortages without presenting a Continue-overdraft dialog.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/storage/waffra_verified_goal_due_snapshot_writer.dart"
+      ],
+      "test_paths": [
+        "test/storage/m665_goal_due_note_and_split_test.dart",
+        "test/m665_goal_due_display_and_linked_edit_test.dart",
+        "test/m371_goal_wallet_and_budgets_regression_test.dart",
+        "test/storage/m364_sqlcipher_finance_domain_test.dart",
+        "test/m644_goal_notice_funding_contract_test.dart",
+        "test/m363_transaction_category_inline_creation_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m160-main-reconciliation-and-backup-regression.yml"
+      ],
+      "safety_invariants": [
+        "Never permit negative verified available cash, fake wallet funds or a second due settlement.",
+        "Do not debit wallet-funded cents from the bank twice: cash = dueAmount - min(walletSavings,dueAmount).",
+        "A stale/rejected/insufficient-cash request must preserve previously committed ledger, goal, recurring and account amounts unchanged."
+      ]
+    },
+    {
+      "id": "M687-EXTRACT-HOME-PDF-PROFILE-UNCHANGED-ISSUE629",
+      "issue": "Issue #629 / Draft #630",
+      "previous_behavior": "Report and profile methods embedded in oversized Home State.",
+      "approved_behavior": "Move exact existing method bodies into same-library Dart parts; source assertions reconstitute those methods at original positions; no runtime route, money writer, PDF arithmetic, user Profile callback, backup, FAB or Snackbar change.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_pdf_reports.part.dart",
+        "lib/waffra_home_profile.part.dart"
+      ],
+      "test_paths": [
+        "test/m687_home_state_extraction_test.dart",
+        "test/support/waffra_main_source.dart",
+        "test/m224_pdf_verified_display_currency_test.dart",
+        "test/m665_goal_due_display_and_linked_edit_test.dart",
+        "test/m647_m652_financial_activity_regression_test.dart",
+        "test/m428_local_account_migration_test.dart",
+        "test/m528_settings_async_cache_regression_test.dart",
+        "test/waffra_concept2_final_visual_test.dart",
+        "test/waffra_design_preservation_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "No original PDF calculations or settings callbacks are rewritten.",
+        "All prior source-test expectations retained.",
+        "No physical device or owner-backup restore falsely certified."
+      ]
+    },
+    {
+      "id": "M687-FULL-SOURCE-ASSERTIONS-ACROSS-PART-EXTRACTION-ISSUE629",
+      "issue": "Issue #629 / Draft #630",
+      "previous_behavior": "M550 and legacy source-level tests assumed all PDF/Profile methods remained in main.dart, falsely flagging source relocation as deletion.",
+      "approved_behavior": "Read verified same-library imported part source for M550 only if main.dart references that exact part and it has the correct part-of marker. Source test helper reconstitutes real method text at original locations, retaining every test expectation unchanged. Missing, unregistered, absent, or renamed finance requirements must still fail.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_pdf_reports.part.dart",
+        "lib/waffra_home_profile.part.dart"
+      ],
+      "test_paths": [
+        "test/m687_home_state_extraction_test.dart",
+        "test/support/waffra_main_source.dart",
+        "test/m286_tour_navigation_test.dart",
+        "test/m326_region_dialect_splash_localization_test.dart",
+        "test/m429_sms_phone_integration_test.dart",
+        "test/m437_bank_sms_settings_unknown_test.dart",
+        "test/m514_sms_review_regressions_test.dart",
+        "test/m601_auth_busy_contract_test.dart",
+        "test/m666_sama_riyal_visual_position_test.dart",
+        "test/waffra_directional_fab_receipt_corner_test.dart",
+        "test/waffra_footer_pdf_navigation_test.dart",
+        "test/waffra_m208_bundle_regression_test.dart",
+        "test/qa/m417_sms_permission_acceptance_test.py"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-merge-readiness.yml",
+        ".github/workflows/m174-main-sqlcipher-regression.yml"
+      ],
+      "safety_invariants": [
+        "No financial validation removed.",
+        "Source contract checks validate the actual part code and check origin and registration.",
+        "Existing test assertions remain identical."
+      ]
+    },
+    {
+      "id": "M688-FAB-SNACKBAR-NARROW-MATRIX-ISSUE629",
+      "issue": "Issues #629 and #631 / Draft #630",
+      "previous_behavior": "Only some 320/360dp RTL/dark checks were covered; 3-line notice interactions across narrow themes needed explicit widget checks.",
+      "approved_behavior": "Run real Flutter layout tests at 320/360/390dp, light/dark, RTL/LTR, 130%-scaled text, short and long Snackbar, preserving a fixed 58dp + and legible full money. Physical Android pixel and owner-restored-backup verification remain separate gates.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_approved_page_designs.dart"
+      ],
+      "test_paths": [
+        "test/m688_approved_android_screens_matrix_test.dart",
+        "test/m674_approved_page_designs_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m147-merge-readiness.yml"
+      ],
+      "safety_invariants": [
+        "No production UI geometry or finance code changed in this test-only commit.",
+        "Never mark physical-device UI or old-owner-backup parity as complete from simulator/widget data."
       ]
     }
   ]

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -32,7 +33,7 @@ void main(){
  });
 
  test('M665.7 paid goal due is purposeful in all financial presentations',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   final details=main.substring(
    main.indexOf('class WaffraTransactionDetailsDialog'),
    main.indexOf('class HomeScreen extends StatefulWidget'));
@@ -57,7 +58,7 @@ void main(){
  });
 
  test('M665.7 recurring goal payment shows paid split, not zero saved progress',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   final start=main.indexOf(' Widget recurringPage(){');
   final end=main.indexOf('   if(recurring.isEmpty)Padding',start);
   final card=main.substring(start,end);
@@ -66,24 +67,29 @@ void main(){
   expect(card,contains('waffraGoalDueCashMinor(paidGoalDue)/100'));
   expect(card,contains('paidGoalDue.goalWalletPaidMinor/100'));
   expect(card,contains("'استحقاق هدف مدفوع'"));
-  expect(card,contains(']else if(goal!=null)...['));
-  expect(card,contains("goal!=null?Icons.flag_outlined"));
+  expect(card,contains('if(goal!=null)...['));
+  expect(card,contains('icon:goal!=null?Icons.track_changes:Icons.event_repeat_rounded'));
  });
 
- test('M665.7 goal quick-actions have only the toggle, no redundant label',(){
-  final main=File('lib/main.dart').readAsStringSync();
-  final start=main.indexOf("key:PageStorageKey<String>('waffra-goal-quick-actions-'");
-  final end=main.indexOf('if(g.dueDate!=null)',start);
+ test('M689 goal action sheet retains fund/edit/release/delete/active',(){
+  final main=readWaffraMainSourceForContracts();
+  final start=main.indexOf(' Future<void> _m689GoalActions(');
+  final end=main.indexOf(' Widget goalsPage(){',start);
   final quick=main.substring(start,end);
-  expect(quick,contains('Switch.adaptive('));
+  expect(quick,contains('SwitchListTile.adaptive('));
   expect(quick,contains("Key('waffra-goal-active-switch-'+g.id)"));
   expect(quick,contains('setGoalActive(g,enabled)'));
-  expect(quick,isNot(contains('SwitchListTile.adaptive(')));
-  expect(quick,isNot(contains("(g.active?(waffraIsEnglish?'Active':'مفعّل')")));
+  expect(quick,contains("fundGoal(g)"));
+  expect(quick,contains("_handleGoalCardAction(g,'edit')"));
+  expect(quick,contains("_handleGoalCardAction(g,'release')"));
+  expect(quick,contains("_handleGoalCardAction(g,'delete')"));
+  final goals=main.substring(end,main.indexOf(' Future<void> recurringDialog(',end));
+  expect(goals,contains("Key('m689-goal-card-'+g.id)"));
+  expect(goals,isNot(contains("'View':'عرض'")));
  });
 
  test('M665.7 linked due edit explains without changing finance; standalone still editable',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   final handlerStart=main.indexOf(' Future<void> _handleRecurringCardAction(');
   final handlerEnd=main.indexOf(' Widget recurringPage(){',handlerStart);
   expect(handlerStart,greaterThanOrEqualTo(0));
@@ -108,9 +114,11 @@ void main(){
    main.indexOf('   if(recurring.isEmpty)Padding',
     main.indexOf(' Widget recurringPage(){')));
   expect(card,contains("key:Key('m665-recurring-edit-'+r.id)"));
-  expect(card,contains('Opacity(opacity:r.linkedGoalId!=null?0.46:1'));
-  expect(card,contains('enabled:r.linkedGoalId==null'));
-  expect(card,contains('hint:r.linkedGoalId!=null?'));
+  // In M689 the linked goal may only be edited through its own verified route.
+  expect(card,contains("_handleGoalCardAction(goal,'edit')"));
+  expect(card,contains('waffraGoalDueCashMinor(paidGoalDue)/100'));
+  expect(card,contains("Key('m689-due-card-'+r.id)"));
+  expect(card,isNot(contains("PageStorageKey<String>('waffra-recurring-quick-actions-'")));
   // An orphaned linked due is still controlled by the goal editor; only
   // a standalone recurring item can open a direct edit sheet.
  });
@@ -147,7 +155,7 @@ void main(){
   final summary=Map<String,double>.fromEntries(report.topCategories);
   expect(summary['استحقاق هدف'],5000);
   expect(summary['مطاعم وكافيهات / مطاعم شعبية'],150);
-  final pdf=File('lib/main.dart').readAsStringSync();
+  final pdf=readWaffraMainSourceForContracts();
   final export=pdf.substring(pdf.indexOf(' Future<void> exportEntriesPdf('),
     pdf.indexOf(' Future<void> _deleteVerifiedEntry('));
   expect(export,contains('final label=waffraEntryReportCategory(e);'));

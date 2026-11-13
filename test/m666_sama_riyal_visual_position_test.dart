@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -84,7 +85,7 @@ void main() {
   });
 
   test('M666 PDF money uses official asset and fixed LTR symbol-before-text', () {
-    final main = File('lib/main.dart').readAsStringSync();
+    final main = readWaffraMainSourceForContracts();
     final start = main.indexOf('pw.Widget pdfMoney(String text,');
     final end = main.indexOf('pw.Widget pdfMoneyHeader(', start);
     expect(start, greaterThan(0));

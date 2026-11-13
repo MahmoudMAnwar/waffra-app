@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -70,7 +71,7 @@ void main() {
   expect(unavailable.toSar(100),isNull);
  });
  test('M224: every PDF chart, table, header has the captured verified unit',(){
-  final app=File('lib/main.dart').readAsStringSync();
+  final app=readWaffraMainSourceForContracts();
   final start=app.indexOf('Future<void> exportEntriesPdf(');
   final end=app.indexOf('final bytes=await doc.save()',start);
   expect(start,greaterThanOrEqualTo(0));

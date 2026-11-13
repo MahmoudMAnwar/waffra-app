@@ -84,12 +84,4 @@ extension _WaffraHomeFinanceTileModule on _HomeScreenState {
  }
 
 
- Widget _m684RecurringBenefit(String label,IconData icon)=>Container(
-  padding:const EdgeInsets.symmetric(horizontal:6,vertical:14),
-  decoration:BoxDecoration(color:emerald.withValues(alpha:.08),borderRadius:BorderRadius.circular(18)),
-  child:Column(mainAxisSize:MainAxisSize.min,children:[
-   Icon(icon,color:emerald,size:25),const SizedBox(height:9),
-   WaffraText(label,textAlign:TextAlign.center,style:const TextStyle(fontSize:12,fontWeight:FontWeight.w600)),
-  ]));
-
 }

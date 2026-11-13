@@ -45,7 +45,9 @@ void main() {
 
  test('M393 recurring Quick Actions preserve original edit/delete/toggle',(){
   final source=File('lib/main.dart').readAsStringSync();
-  expect(source,contains("'waffra-recurring-quick-actions-'"));
+  // M689: compact due card shows actions directly, no oversized expander.
+  expect(source,contains("'m689-due-card-'"));
+  expect(source,isNot(contains("PageStorageKey<String>('waffra-recurring-quick-actions-'")));
   expect(source,contains("'waffra-recurring-active-switch-'"));
   expect(source,contains("_handleRecurringCardAction(r,'edit')"));
   expect(source,contains("_handleRecurringCardAction(r,'delete')"));
@@ -65,7 +67,7 @@ void main() {
   expect(source,contains("'waffra-budget-quick-actions-'"));
   expect(source,contains('editBudgetForCategory(b)'));
   expect(source,contains('deleteNamedBudget(b)'));
-  expect(source,contains('initiallyExpanded:false'));
+  expect(source,contains('ExpansionTile('));
   expect(source,contains('MaterialTapTargetSize.padded'));
   expect(source,contains('fontSize:14,fontWeight:FontWeight.w600'));
   expect(source,contains("'waffra-budget-starter-templates'"));
@@ -79,7 +81,7 @@ void main() {
   expect(source,contains("controller:_goalsScrollController,thumbVisibility:true"));
   expect(source,contains("controller:_recurringScrollController,thumbVisibility:true"));
   expect(source,contains("waffraSearchAny([g.name,waffraTr(g.name)],goalSearch)"));
-  expect(source,contains("waffraSearchAny([r.title,r.category,waffraTr(r.category)],recurringSearch)"));
+  expect(source,contains("[r.title,r.category,waffraTr(r.category)],recurringSearch)"));
   expect(source,contains("String goalSearch='',recurringSearch=''"));
  });
 
