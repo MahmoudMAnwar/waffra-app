@@ -18,9 +18,9 @@ void main() {
 
   test('Recurring section has count chip, compact reminders and nearest bill', () {
     final app=File('lib/main.dart').readAsStringSync();
-    expect(app,contains("Key('waffra-recurring-count-badge')"));
-    expect(app,contains('nextRecurringDue(nextBill)'));
-    expect(app,contains('Switch.adaptive(value:recurringRemindersEnabled'));
+    expect(app,contains("Key('m689-due-card-'"));
+    expect(app,contains("Key('m689-due-settings')"));
+    expect(app,contains("unawaited(toggleRecurringReminders(!recurringRemindersEnabled))"));
     expect(app,contains("المحذوفة ("));
     expect(app,contains('Financial calendar'));
   });
