@@ -70,7 +70,7 @@ def git(*args: str) -> str:
 
 
 def changed_paths(base: str, head: str) -> set[str]:
-    return {p for p in git("diff", "--name-only", "--diff-filter=ACMR",
+    return {p for p in git("diff", "--name-only", "--diff-filter=ACMRD",
                             "-z", base, head).split("\x00") if p}
 
 
