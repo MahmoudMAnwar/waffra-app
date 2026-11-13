@@ -1,270 +1,48 @@
 {
   "contract_version": 1,
-  "change_id": "M685-M689-ISSUES629-631-20261113-M687-FIVE-LEGACY-SOURCE-TESTS",
+  "change_id": "M690-20261113-ISSUES632-637-RETIRED-CLOUD-SMS",
   "human_scope_review": "Issue #629 completes prior PR #628 only after user-visible acceptance; #631 explicitly authorizes three exact screenshots for Goals/Dues/SMS Review, permanently visible financial activity, non-moving FAB-aligned notice, and savings/goal-due cash safety. Existing tests replace outdated visual assumptions without deleting financial safety assertions. Device screenshots/old restore still require external device evidence.",
   "user_requested_changes": [
-    "M685: preserve the original authenticated accountless-transaction review, owner-selected account link, attested opening balance and idempotent SQLCipher associations.",
-    "M686: make monthly account context a directly indexed SQLite date WHERE query while retaining all-time historical access, paging, budgets, goal wallet and restored accountless transaction parity.",
-    "M687: extract self-contained Home balance header delegate to a Dart part to reduce the oversized main.dart without changing runtime behavior or weakening existing widget/source regressions.",
-    "M688: keep exact-head CI, narrow 320/360/390dp RTL/dark Overflow, cold SQLCipher Backup/Restore parity and physical owner Android checks as distinct acceptance requirements; no automatic merging.",
-    "M689 preserve exactly the three owner-approved 2026-11-13 reference screenshots for savings goals, due dates and SMS review, without removing original SMS or any valid money/action handler.",
-    "M689 all financial activity displayed without extra global hide toggle; snackbar anchored beside fixed + in RTL/LTR, multi-line grows upwards.",
-    "M689 reject savings amount greater than verified available source cash before writing, and reject linked goal due if remaining cash exceeds available balance with atomic rollback, once-only wallet split.",
-    "M689 no piggy-bank glyph appears in the accepted Finance/Goals/Due screens; use neutral coin-stack icon. Existing legacy M644, M363 and M388 expectations must assert protected insufficient-cash rejection and safe open-ended goals rather than the superseded continue-despite-insufficient-money UI.",
-    "M687 Home state continued: isolate byte-identical PDF report export and Profile page methods into same-library Dart extensions without altering money, backup, FAB, or Snackbar behavior; update source-based tests to read the original moved code without removing assertions.",
-    "M687 regression follow-up: keep every positive test/workflow source assertion against actual same-library Dart part code, retain the M550 static stale-contract detection for moved PDF/Profile methods, and update Python/Dart original tests to read both real source locations without removing expectations.",
-    "M688 device-matrix precursor: test approved savings metrics, progress/amount legibility and stationary 58dp plus with short and multiline Snackbar across 320/360/390dp, RTL/LTR, light/dark, 1.3 text scale. Clearly mark Flutter widget CI as not physical Android acceptance.",
-    "M687 repair five exact-SHA Flutter regressions M374 M479 M513 M662 M671 after same-library PDF/Profile extraction; preserve every original test assertion and inspect the actual relocated method bodies."
+    "M690 #632 permanently disable third-party AI bank SMS uploads and opt-in on previously installed versions, remove Settings toggle and signed Android staging worker, retain local encrypted SMS Review and money writer.",
+    "M690 #637 convert obsolete cloud-positive tests to negative no-upload safeguards while retaining OTP/local SMS and finance contracts; issue #633 Home extraction, #634 unused AI modules, #635 real-screen matrix, #636 large ledger remain in Draft PR #638."
   ],
   "allowed_changed_files": [
-    "docs/WAFFRA_REQUIREMENTS.md",
-    "docs/qa/approved_change_scope.json",
-    "docs/qa/behavior_contract_review.json",
-    "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "lib/main.dart",
-    "lib/storage/waffra_account_context_read.dart",
-    "lib/storage/waffra_verified_goal_due_snapshot_writer.dart",
-    "lib/waffra_home_balance_header.part.dart",
-    "lib/waffra_home_finance_tiles.part.dart",
-    "test/m149_backup_pin_localized_fab_trash_uat_test.dart",
-    "test/m268_approved_emerald_balance_card_test.dart",
-    "test/m343_goal_recurring_named_budgets_test.dart",
-    "test/m345_goal_budget_forecast_test.dart",
-    "test/m363_transaction_category_inline_creation_test.dart",
-    "test/m371_goal_wallet_and_budgets_regression_test.dart",
-    "test/m388_m390_approved_goal_recurring_receipt_test.dart",
-    "test/m392_m395_budget_quick_actions_goal_ui_test.dart",
-    "test/m644_goal_notice_funding_contract_test.dart",
-    "test/m665_goal_due_display_and_linked_edit_test.dart",
-    "test/m669_sms_review_category_search_test.dart",
-    "test/m670_feedback_transfer_dashboard_test.dart",
-    "test/m672_m678_activity_account_regression_test.dart",
-    "test/m674_approved_page_designs_test.dart",
-    "test/qa/m565_sms_yes_no_test.py",
-    "test/qa/m574_sms_confirmation_full_fields_test.py",
-    "test/storage/m364_sqlcipher_finance_domain_test.dart",
-    "test/storage/m448_account_context_read_test.dart",
-    "test/waffra_directional_fab_receipt_corner_test.dart",
-    "test/waffra_m208_bundle_regression_test.dart",
-    "lib/waffra_home_pdf_reports.part.dart",
+    "lib/waffra_sms_cloud_service.dart",
     "lib/waffra_home_profile.part.dart",
-    "test/support/waffra_main_source.dart",
-    "test/m224_pdf_verified_display_currency_test.dart",
-    "test/m647_m652_financial_activity_regression_test.dart",
-    "test/m428_local_account_migration_test.dart",
-    "test/m528_settings_async_cache_regression_test.dart",
-    "test/waffra_concept2_final_visual_test.dart",
-    "test/waffra_design_preservation_test.dart",
-    "test/m687_home_state_extraction_test.dart",
-    "test/m286_tour_navigation_test.dart",
-    "test/m326_region_dialect_splash_localization_test.dart",
+    ".github/workflows/android.yml",
     "test/m429_sms_phone_integration_test.dart",
-    "test/m437_bank_sms_settings_unknown_test.dart",
-    "test/m514_sms_review_regressions_test.dart",
-    "test/m601_auth_busy_contract_test.dart",
-    "test/m666_sama_riyal_visual_position_test.dart",
-    "test/waffra_footer_pdf_navigation_test.dart",
-    "test/qa/m417_sms_permission_acceptance_test.py",
-    "scripts/qa/m550_behavior_contract_preflight.py",
-    "test/m424_mandatory_biometrics_test.dart",
-    "test/waffra_oct21_regression_test.dart",
-    "test/m688_approved_android_screens_matrix_test.dart",
-    "test/m374_transaction_dialog_ux_test.dart",
-    "test/m479_login_logout_and_back_test.dart",
-    "test/m513_logout_confirmation_test.dart",
-    "test/m662_sms_review_activity_pdf_regression_test.dart",
-    "test/m671_tour_retirement_snackbar_tap_test.dart"
+    "test/m436_cloud_review_pipeline_test.dart",
+    "test/m528_settings_async_cache_regression_test.dart",
+    "test/m690_retired_cloud_sms_contract_test.dart",
+    "docs/qa/approved_change_scope.json",
+    "docs/WAFFRA_REQUIREMENTS.md",
+    "docs/release/WAFFRA_APPROVED_CHANGES.txt"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
   "bounded_sections": {
-    "lib/main.dart": [
+    "lib/waffra_sms_cloud_service.dart": [
       {
-        "start": "part 'waffra_home_finance_tiles.part.dart';",
-        "end": "part 'waffra_finance_period_index.part.dart';"
+        "start": "import 'dart:io';"
+      }
+    ],
+    "lib/waffra_home_profile.part.dart": [
+      {
+        "start": "part of 'main.dart';"
+      }
+    ],
+    ".github/workflows/android.yml": [
+      {
+        "start": "  workflow_dispatch:",
+        "end": "# Fast-build concurrency:"
       },
       {
-        "start": "class WaffraCurrencyAmount extends StatelessWidget {",
-        "end": "class _HomeScreenState extends State<HomeScreen>"
+        "start": "          # M436",
+        "end": "          for attempt in 1 2 3 4; do"
       },
       {
-        "start": "class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {",
-        "end": "class WaffraDeletedItemsButton extends StatelessWidget {"
-      }
-    ],
-    "lib/storage/waffra_account_context_read.dart": [
-      {
-        "start": "    final rows = await store.customSelect('''\nSELECT e.entry_id, e.title, e.amount_minor, e.is_income, e.occurred_iso,",
-        "end": "    final entries = List<WaffraAccountLedgerRow>.unmodifiable("
-      }
-    ],
-    "lib/storage/waffra_verified_goal_due_snapshot_writer.dart": [
-      {
-        "start": "import 'waffra_accounts_schema.dart';",
-        "end": "import 'waffra_encrypted_store.dart';"
-      },
-      {
-        "start": "      final savedBefore=_minor(goal['saved']??0);",
-        "end": "      final domain=WaffraFreshFinanceDomainRepository("
-      }
-    ],
-    "lib/waffra_home_finance_tiles.part.dart": [
-      {
-        "start": " Widget _m684HomeFinanceAction({",
-        "end": "\n}"
-      }
-    ],
-    "test/m149_backup_pin_localized_fab_trash_uat_test.dart": [
-      {
-        "start": "test('M149: all recycle-bin CTAs are red and recurring calendar is alongside'",
-        "end": "testWidgets('M149: red deleted button fits narrow half-width in $brightness'"
-      }
-    ],
-    "test/m268_approved_emerald_balance_card_test.dart": [
-      {
-        "start": "test('approved balance artwork stays embedded and never uses external images'"
-      }
-    ],
-    "test/m343_goal_recurring_named_budgets_test.dart": [
-      {
-        "start": "test('M343 goal/recurring UI uses one saved total and budget remains independent'"
-      }
-    ],
-    "test/m345_goal_budget_forecast_test.dart": [
-      {
-        "start": "test('M345 actual goal and budget UI consume forecast without finance writes'"
-      }
-    ],
-    "test/m371_goal_wallet_and_budgets_regression_test.dart": [
-      {
-        "start": "test('M371 goal creation cannot post an expense or negative cash debit'"
-      }
-    ],
-    "test/m392_m395_budget_quick_actions_goal_ui_test.dart": [
-      {
-        "start": "test('M393 recurring Quick Actions preserve original edit/delete/toggle'",
-        "end": "test('M396 new due entries require explicit consent, never silently debit'"
-      }
-    ],
-    "test/m665_goal_due_display_and_linked_edit_test.dart": [
-      {
-        "start": "import 'dart:io';"
-      }
-    ],
-    "test/m669_sms_review_category_search_test.dart": [
-      {
-        "start": "test('M669 all SMS review routes keep original source and explicit reasons'"
-      }
-    ],
-    "test/m670_feedback_transfer_dashboard_test.dart": [
-      {
-        "start": "test('M670 goals, recurring and category stats share layout geometry'",
-        "end": "test('M670 Snackbar central presenter has no visible X nor 2-line clipping'"
-      }
-    ],
-    "test/m672_m678_activity_account_regression_test.dart": [
-      {
-        "start": "test('M677 only one financial activity type chip row remains'",
-        "end": "test('M672 transfer arrow points source to destination in Arabic and English'"
-      }
-    ],
-    "test/m674_approved_page_designs_test.dart": [
-      {
-        "start": "test('M682 owner screenshot UI has no duplicate Edit and Accounts opens manager'",
-        "end": "test('M675 immutable + source contract and existing finance write routing'"
-      }
-    ],
-    "test/qa/m565_sms_yes_no_test.py": [
-      {
-        "start": "def test_yes_no_with_preview_and_no_guessing(self):",
-        "end": "def test_authoritative_commit(self):"
-      }
-    ],
-    "test/qa/m574_sms_confirmation_full_fields_test.py": [
-      {
-        "start": "def test_review_preview_displays_all_495_fields(self):"
-      }
-    ],
-    "test/storage/m364_sqlcipher_finance_domain_test.dart": [
-      {
-        "start": "import 'package:waffra/storage/waffra_verified_goal_due_snapshot_writer.dart';",
-        "end": "void main() {"
-      },
-      {
-        "start": "test('M364 rejected due never writes partial money or disables plan'",
-        "end": "test('M365 stale snapshot denies goal due and leaves both stores unchanged'"
-      }
-    ],
-    "test/storage/m448_account_context_read_test.dart": [
-      {
-        "start": "test('all/unassigned budget and balance are independent of account header'",
-        "end": "test('M684 summary reads only chosen month without changing full-history API'"
-      }
-    ],
-    "test/waffra_directional_fab_receipt_corner_test.dart": [
-      {
-        "start": "import 'dart:io';"
-      }
-    ],
-    "test/waffra_m208_bundle_regression_test.dart": [
-      {
-        "start": "import 'dart:io';"
-      }
-    ],
-    "test/m644_goal_notice_funding_contract_test.dart": [
-      {
-        "start": " test('M644 savings success only occurs after source-verified atomic posting'"
-      }
-    ],
-    "test/m363_transaction_category_inline_creation_test.dart": [
-      {
-        "start": " test('M362 verified encrypted goal spend uses one atomic wallet-and-ledger writer'"
-      }
-    ],
-    "test/m388_m390_approved_goal_recurring_receipt_test.dart": [
-      {
-        "start": " test('M388: open-ended goal never divided by zero or marked achieved'",
-        "end": " test('M390: restored receipt references open the same existing gallery'"
-      }
-    ],
-    "test/m224_pdf_verified_display_currency_test.dart": [
-      {
-        "start": "import 'dart:io';"
-      }
-    ],
-    "test/m647_m652_financial_activity_regression_test.dart": [
-      {
-        "start": "import 'dart:io';"
-      }
-    ],
-    "test/m428_local_account_migration_test.dart": [
-      {
-        "start": "import 'dart:io';"
-      }
-    ],
-    "test/m528_settings_async_cache_regression_test.dart": [
-      {
-        "start": "import 'dart:io';"
-      }
-    ],
-    "test/waffra_concept2_final_visual_test.dart": [
-      {
-        "start": "import 'dart:io';"
-      }
-    ],
-    "test/waffra_design_preservation_test.dart": [
-      {
-        "start": "import 'dart:io';"
-      }
-    ],
-    "test/m286_tour_navigation_test.dart": [
-      {
-        "start": "import 'dart:io';"
-      }
-    ],
-    "test/m326_region_dialect_splash_localization_test.dart": [
-      {
-        "start": "import 'dart:io';"
+        "start": "if flutter build apk --no-pub --release",
+        "end": "echo \"WAFFRA_ARM64_BUILD_SECONDS=$elapsed\""
       }
     ],
     "test/m429_sms_phone_integration_test.dart": [
@@ -272,81 +50,12 @@
         "start": "import 'dart:io';"
       }
     ],
-    "test/m437_bank_sms_settings_unknown_test.dart": [
+    "test/m436_cloud_review_pipeline_test.dart": [
       {
         "start": "import 'dart:io';"
       }
     ],
-    "test/m514_sms_review_regressions_test.dart": [
-      {
-        "start": "import 'dart:io';"
-      }
-    ],
-    "test/m601_auth_busy_contract_test.dart": [
-      {
-        "start": "import 'dart:io';"
-      }
-    ],
-    "test/m666_sama_riyal_visual_position_test.dart": [
-      {
-        "start": "import 'dart:io';"
-      }
-    ],
-    "test/waffra_footer_pdf_navigation_test.dart": [
-      {
-        "start": "import 'dart:io';"
-      }
-    ],
-    "test/qa/m417_sms_permission_acceptance_test.py": [
-      {
-        "start": "class M417AutoSmsContractTest"
-      }
-    ],
-    "scripts/qa/m550_behavior_contract_preflight.py": [
-      {
-        "start": "BINDING_DART = re.compile(",
-        "end": "BINDING_SHELL = re.compile("
-      },
-      {
-        "start": "def _positive_dart(",
-        "end": "def _positive_workflow("
-      },
-      {
-        "start": "    old_sources: dict[str, str] = {}",
-        "end": "    stale, count = detect_stale("
-      }
-    ],
-    "test/m424_mandatory_biometrics_test.dart": [
-      {
-        "start": "import 'dart:io';"
-      }
-    ],
-    "test/waffra_oct21_regression_test.dart": [
-      {
-        "start": "import 'dart:io';"
-      }
-    ],
-    "test/m374_transaction_dialog_ux_test.dart": [
-      {
-        "start": "import 'dart:io';"
-      }
-    ],
-    "test/m479_login_logout_and_back_test.dart": [
-      {
-        "start": "import 'dart:io';"
-      }
-    ],
-    "test/m513_logout_confirmation_test.dart": [
-      {
-        "start": "import 'dart:io';"
-      }
-    ],
-    "test/m662_sms_review_activity_pdf_regression_test.dart": [
-      {
-        "start": "import 'dart:io';"
-      }
-    ],
-    "test/m671_tour_retirement_snackbar_tap_test.dart": [
+    "test/m528_settings_async_cache_regression_test.dart": [
       {
         "start": "import 'dart:io';"
       }
