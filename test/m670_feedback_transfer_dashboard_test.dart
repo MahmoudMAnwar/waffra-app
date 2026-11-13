@@ -128,12 +128,12 @@ void main() {
   final source=File('lib/main.dart').readAsStringSync();
   final cats=File('lib/waffra_categories_page.part.dart').readAsStringSync();
   expect(cats,contains('Widget _compactCategoryStat('));
-  expect(source,contains('goals.length.toString(),Icons.flag_outlined,emerald'));
+  expect(source,contains("Key('m689-goal-card-'"));
   expect(source,contains(
-   'recurring.length.toString(),Icons.event_repeat_rounded,emerald'));
-  expect(source,contains('height:138,child:LayoutBuilder('));
-  expect(source,contains('minWidth:limits.maxWidth+32'));
-  expect(source,contains('height:52,padding:const EdgeInsets.symmetric(horizontal:7)'));
+   "Key('m689-due-card-'"));
+  expect(source,contains("WaffraApprovedMetrics(metrics:["));
+  expect(source,contains("_m689GoalActions(g)"));
+  expect(source,contains("Key('m689-due-settings')"));
   expect(source,contains('Tooltip(message:waffraIsEnglish?'));
  });
 
