@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "change_id": "M690-M702-ISSUES632-637-20261113",
+  "change_id": "M690-M703-ISSUES632-637-20261113",
   "human_scope_review": "Issue #629 completes prior PR #628 only after user-visible acceptance; #631 explicitly authorizes three exact screenshots for Goals/Dues/SMS Review, permanently visible financial activity, non-moving FAB-aligned notice, and savings/goal-due cash safety. Existing tests replace outdated visual assumptions without deleting financial safety assertions. Device screenshots/old restore still require external device evidence.",
   "user_requested_changes": [
     "M690 #632 permanently disable third-party AI bank SMS uploads and opt-in on previously installed versions, remove Settings toggle and signed Android staging worker, retain local encrypted SMS Review and money writer.",
@@ -15,7 +15,8 @@
     "M699 #634/#637 remove obsolete cloud/AI suggestion labels and counters from the local SMS review inbox while retaining original SMS text, existing local classification and manual confirmation; historical untrusted proposal data is never shown as a verified financial amount.",
     "M700 #634: explicitly scope the owner-requested retirement of lib/waffra_sms_cloud_review_analyzer.dart in the exact-path M385 deletion allowlist, preserving fail-closed rejection for every other path; repair M550 references to use still-existing transport safety code and keep all no-upload regressions.",
     "M701 #634: make M550 review declared, exact-path approved source deletions as documented behavior changes without requiring a removed file to exist at HEAD; source assertion scan skips deleted binaries, but fails closed on missing unapproved source and never suppresses extant tests.",
-    "M702 #634 correct M385 exact anchors covering the retired gateway configuration and include Git deletions in M550 diff inventory so approved deleted sources are validated and retained source-test coverage remains mandatory."
+    "M702 #634 correct M385 exact anchors covering the retired gateway configuration and include Git deletions in M550 diff inventory so approved deleted sources are validated and retained source-test coverage remains mandatory.",
+    "M703 #633: extract the actual used bank-SMS account-to-account transfer review UI and its verified fee/idempotent SQLCipher writer callback from monolithic Home State to same-library Dart part byte-identically, keeping original SMS, account choice, acknowledgment and balance refresh; add exact-source safety regression and register same-library part in M550."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -55,7 +56,9 @@
     "test/m470_account_monthly_budget_policy_test.dart",
     "test/m684_finance_period_index_test.dart",
     "lib/waffra_sms_cloud_review_analyzer.dart",
-    "scripts/qa/m385_approved_change_guard.py"
+    "scripts/qa/m385_approved_change_guard.py",
+    "lib/waffra_home_sms_transfer_review.part.dart",
+    "test/m703_home_sms_transfer_extraction_test.dart"
   ],
   "approved_deleted_files": [
     "lib/waffra_sms_cloud_review_analyzer.dart"
@@ -133,6 +136,10 @@
       {
         "start": " Widget _autoSmsReviewCard(){",
         "end": " /// Explicit, idempotent account-to-account transfer from reviewed bank SMS."
+      },
+      {
+        "start": "  /// Explicit, idempotent account-to-account transfer from reviewed bank SMS.",
+        "end": "  /// M593: even with JSON decoded on a worker isolate, creating thousands"
       }
     ],
     "test/support/waffra_main_source.dart": [
