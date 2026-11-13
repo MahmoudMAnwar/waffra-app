@@ -170,7 +170,7 @@
         "end": "def build_report("
       },
       {
-        "start": "    if sources:\n",
+        "start": "    available = {x.relative_to(root).as_posix() for x in root.rglob(\"*\") if x.is_file()}",
         "end": "    # Complete *repository* inventory, not a handpicked list of jobs."
       },
       {
