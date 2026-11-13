@@ -6952,29 +6952,32 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         ),
         const SizedBox(height:6),
         Row(children:[
-         Expanded(child:OutlinedButton(
-          key:const Key('m565-sms-no-edit'),
-          onPressed:()=>Navigator.pop(dialog,'no'),
-          child:WaffraText(waffraIsEnglish?'No, edit':'لا، تعديل'))),
-         const SizedBox(width:8),
-         Expanded(child:FilledButton(
+         Expanded(child:FilledButton.icon(
           key:const Key('m565-sms-yes-confirm'),
           onPressed:canConfirm&&reviewedAccount?.ids?.single!=null&&
            reviewedAccount?.generation!=null&&
            !choosingAccount?()=>Navigator.pop(dialog,'yes'):null,
-          child:WaffraText(waffraIsEnglish?'Yes':'نعم'))),
+          icon:const Icon(Icons.check_rounded,size:18),
+          label:WaffraText(waffraIsEnglish?'Done':'تم',maxLines:1))),
+         const SizedBox(width:6),
+         Expanded(child:OutlinedButton.icon(
+          key:const Key('m565-sms-no-edit'),
+          onPressed:()=>Navigator.pop(dialog,'no'),
+          icon:const Icon(Icons.edit_outlined,size:18),
+          label:WaffraText(waffraIsEnglish?'Edit':'تعديل',maxLines:1))),
+         if(!sensitive&&facts.kind!=WaffraBankOperationKind.transfer)...[
+          const SizedBox(width:6),
+          Expanded(flex:2,child:OutlinedButton.icon(
+           key:const Key('m595-review-single-exclude'),
+           onPressed:()=>Navigator.pop(dialog,'exclude'),
+           icon:const Icon(Icons.block_outlined,size:17),
+           label:WaffraText(waffraIsEnglish?'Exclude':'استبعاد الرسالة',
+            maxLines:2,textAlign:TextAlign.center))),
+         ],
         ]),
        ],
-       // Exclude is a separate, reversible action BELOW Yes/No.
-       if(!sensitive&&facts.kind!=WaffraBankOperationKind.transfer)
-        Padding(padding:const EdgeInsets.only(top:9),
-         child:OutlinedButton.icon(
-          key:const Key('m595-review-single-exclude'),
-          onPressed:()=>Navigator.pop(dialog,'exclude'),
-          icon:const Icon(Icons.block_outlined),
-          label:WaffraText(waffraIsEnglish?
-           'Exclude this message':'استبعاد الرسالة'))),
-
+       // A separate Exclude remains for unknown/transfer review only;
+       // verified income/expense uses the same approved three-button row.
        const SizedBox(height:12),
        const SizedBox(height:8),
        if(facts.kind==WaffraBankOperationKind.transfer&&!sensitive&&
