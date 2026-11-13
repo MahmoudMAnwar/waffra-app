@@ -1,12 +1,15 @@
 {
   "contract_version": 1,
-  "change_id": "M685-M688-20261113-ISSUE629-PR628-FOLLOWUP-INDEXABLE-MONTH-AND-HEADER-EXTRACTION",
-  "human_scope_review": "Owner explicitly rejected merger of #628 as fully complete despite M681/M684 partial status. Follow-up keeps manually selected historic account attribution, improves SQLCipher month index usability, extracts the read-only Home balance header, retains every financial writer, account balance, old backup, global FAB and Snackbar, and requires explicit device proof before final Done.",
+  "change_id": "M685-M689-ISSUES629-631-20261113-OWNER-APPROVED-THREE-SCREENS-INTEGRITY",
+  "human_scope_review": "Issue #629 completes prior PR #628 only after user-visible acceptance; #631 explicitly authorizes three exact screenshots for Goals/Dues/SMS Review, permanently visible financial activity, non-moving FAB-aligned notice, and savings/goal-due cash safety. Existing tests replace outdated visual assumptions without deleting financial safety assertions. Device screenshots/old restore still require external device evidence.",
   "user_requested_changes": [
     "M685: preserve the original authenticated accountless-transaction review, owner-selected account link, attested opening balance and idempotent SQLCipher associations.",
     "M686: make monthly account context a directly indexed SQLite date WHERE query while retaining all-time historical access, paging, budgets, goal wallet and restored accountless transaction parity.",
     "M687: extract self-contained Home balance header delegate to a Dart part to reduce the oversized main.dart without changing runtime behavior or weakening existing widget/source regressions.",
-    "M688: keep exact-head CI, narrow 320/360/390dp RTL/dark Overflow, cold SQLCipher Backup/Restore parity and physical owner Android checks as distinct acceptance requirements; no automatic merging."
+    "M688: keep exact-head CI, narrow 320/360/390dp RTL/dark Overflow, cold SQLCipher Backup/Restore parity and physical owner Android checks as distinct acceptance requirements; no automatic merging.",
+    "M689 preserve exactly the three owner-approved 2026-11-13 reference screenshots for savings goals, due dates and SMS review, without removing original SMS or any valid money/action handler.",
+    "M689 all financial activity displayed without extra global hide toggle; snackbar anchored beside fixed + in RTL/LTR, multi-line grows upwards.",
+    "M689 reject savings amount greater than verified available source cash before writing, and reject linked goal due if remaining cash exceeds available balance with atomic rollback, once-only wallet split."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -14,11 +17,25 @@
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
-    "lib/waffra_home_balance_header.part.dart",
     "lib/storage/waffra_account_context_read.dart",
+    "lib/storage/waffra_verified_goal_due_snapshot_writer.dart",
+    "lib/waffra_home_balance_header.part.dart",
+    "test/m149_backup_pin_localized_fab_trash_uat_test.dart",
     "test/m268_approved_emerald_balance_card_test.dart",
-    "test/waffra_concept2_final_visual_test.dart",
-    "test/storage/m448_account_context_read_test.dart"
+    "test/m343_goal_recurring_named_budgets_test.dart",
+    "test/m345_goal_budget_forecast_test.dart",
+    "test/m371_goal_wallet_and_budgets_regression_test.dart",
+    "test/m392_m395_budget_quick_actions_goal_ui_test.dart",
+    "test/m665_goal_due_display_and_linked_edit_test.dart",
+    "test/m669_sms_review_category_search_test.dart",
+    "test/m670_feedback_transfer_dashboard_test.dart",
+    "test/m672_m678_activity_account_regression_test.dart",
+    "test/m674_approved_page_designs_test.dart",
+    "test/qa/m565_sms_yes_no_test.py",
+    "test/qa/m574_sms_confirmation_full_fields_test.py",
+    "test/storage/m448_account_context_read_test.dart",
+    "test/waffra_directional_fab_receipt_corner_test.dart",
+    "test/waffra_m208_bundle_regression_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
@@ -31,12 +48,26 @@
       {
         "start": "class WaffraCurrencyAmount extends StatelessWidget {",
         "end": "class _HomeScreenState extends State<HomeScreen>"
+      },
+      {
+        "start": "class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {",
+        "end": "class WaffraDeletedItemsButton extends StatelessWidget {"
       }
     ],
     "lib/storage/waffra_account_context_read.dart": [
       {
         "start": "    final rows = await store.customSelect('''\nSELECT e.entry_id, e.title, e.amount_minor, e.is_income, e.occurred_iso,",
         "end": "    final entries = List<WaffraAccountLedgerRow>.unmodifiable("
+      }
+    ],
+    "lib/storage/waffra_verified_goal_due_snapshot_writer.dart": [
+      {
+        "start": "import 'waffra_accounts_schema.dart';",
+        "end": "import 'waffra_encrypted_store.dart';"
+      },
+      {
+        "start": "      final savedBefore=_minor(goal['saved']??0);",
+        "end": "      final existing=ledger.where((entry)=>entry['id']==dueKey).toList();"
       }
     ]
   }
