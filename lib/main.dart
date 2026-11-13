@@ -17204,12 +17204,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          throw StateError('M620_INVALID_CANONICAL_LEDGER');
         }
         WaffraRestoredLedgerIdentityGuard.verify(
-         authenticatedSource:authenticatedLegacyRows!,
+         authenticatedSource:authenticatedLegacyRows,
          verifiedSnapshot:canonicalRows);
         restoreStage='HOME_PARITY';
         try{
          WaffraRestoredLedgerIdentityGuard.verify(
-          authenticatedSource:authenticatedLegacyRows!,
+          authenticatedSource:authenticatedLegacyRows,
           verifiedSnapshot:entries.map((e)=>e.toJson()).toList());
         }on StateError{
          // Correct a stale presentation from ONE VERIFIED canonical source.
@@ -17218,7 +17218,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          if(!mounted)return;
          setState((){entries..clear()..addAll(exact);});
          WaffraRestoredLedgerIdentityGuard.verify(
-          authenticatedSource:authenticatedLegacyRows!,
+          authenticatedSource:authenticatedLegacyRows,
           verifiedSnapshot:entries.map((e)=>e.toJson()).toList());
         }
        }
