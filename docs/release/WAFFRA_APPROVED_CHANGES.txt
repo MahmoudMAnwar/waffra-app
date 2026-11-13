@@ -566,3 +566,5 @@ M684 account-ID lookup completion on PR #628: selected-account Home transaction/
 M470 same-PR exact-head source assertion updated to use the new read-only verified account ID lookup; no behavioral checks or negative validations skipped.
 
 M684 confirmed-source cache freshness: encrypted 30-day trash Delete and Undo now drop the read-only month/year index before the verified ledger is repainted; no balances, transactions, account links or archived data are rewritten by this change. CI and physical Android gates remain separate.
+
+M680 Android encrypted-db-vault mandatory CI regression: repaired obsolete Android integration fixture that illegally increased saved directly in goal metadata. Added explicit negative atomic rollback/snapshot+SMS preservation assertion; positive stale Home goal target-only edit retains saved amount and passes encrypted cold reopen SQL projection. All encrypted Android shards remain mandatory.

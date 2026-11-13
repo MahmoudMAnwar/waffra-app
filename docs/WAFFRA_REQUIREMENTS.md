@@ -1783,3 +1783,8 @@ Audit of remaining production direct Material `DropdownButtonFormField<String>` 
 - M684 final account-history read refinement (2026-11-13): The Home account-selected activity and PDF projection now use a read-only ID index over the verified hydrated ledger (\`_m684Periods.byIds\`), rather than scanning every MoneyEntry on rebuild. Only SQLCipher-attested all-time account link IDs qualify; unassigned legacy restore entries remain unassigned. A regression covers old linked October entries and current November entries without extra posting or duplicate balances.
 
 - M684 M470 contract follow-up: updated the existing positive source assertion to recognize the indexed SQLCipher account-entry ID scope. Legacy unassigned account choices remain prohibited; original transfer-date behavior and negative assertions stay covered.
+
+### M680 Android SQLCipher native integration regression fixed in PR #628 (2026-11-13)
+- Verified fail log on exact SHA d289b273: only `encrypted-db-vault` failed inside `verified_encrypted_finance_bridge_android_test.dart` because stale fixture tried writing goal saved 100→200 via `saveHomeChanges` metadata. This is correctly blocked by the new M680 production wallet-only savings writer.
+- Android integration now negatively tests forbidden goal savings mutation raises StateError, verifies generation remains 2 and previously confirmed widget SMS/hash persist, and then legitimately updates only goal target from 1000→1100 while saved remains 100. Cold SQLCipher close/reopen verifies generation 3, SMS, target, typed goal amount and encryption header.
+- Never bypass or weaken the wallet-only money write invariant, snapshot rollback, source locks, or mandatory encrypted-db-vault shard.
