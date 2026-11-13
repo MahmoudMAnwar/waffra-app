@@ -338,6 +338,7 @@ def build_report(base: str, head: str, root: Path = ROOT) -> dict:
         "lib/waffra_home_pdf_reports.part.dart",
         "lib/waffra_home_profile.part.dart",
         "lib/waffra_home_budget_cards.part.dart",
+        "lib/waffra_home_sms_transfer_review.part.dart",
     )
     if home_path in new_sources:
         main_source = new_sources[home_path]
