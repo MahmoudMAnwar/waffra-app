@@ -79,10 +79,14 @@ class WaffraApprovedMetrics extends StatelessWidget {
       child:Column(mainAxisSize:MainAxisSize.min,children:[
        Icon(metrics[i].icon,color:WaffraApprovedPalette.emerald,size:21),
        const SizedBox(height:4),
-       Text(metrics[i].value,textAlign:TextAlign.center,maxLines:1,
-        overflow:TextOverflow.ellipsis,
-        style:TextStyle(fontWeight:FontWeight.w800,fontSize:17,
-         color:Theme.of(context).colorScheme.onSurface)),
+       // M683: always show the complete authenticated SAR figure, including
+       // decimals and unit. Scale to fit a narrow metric; never ellipsize it.
+       SizedBox(width:double.infinity,child:FittedBox(
+        fit:BoxFit.scaleDown,
+        child:Text(metrics[i].value,softWrap:false,maxLines:1,
+         textAlign:TextAlign.center,
+         style:TextStyle(fontWeight:FontWeight.w800,fontSize:17,
+          color:Theme.of(context).colorScheme.onSurface)))),
        const SizedBox(height:2),
        Text(metrics[i].title,maxLines:2,textAlign:TextAlign.center,
         style:const TextStyle(fontSize:10.5,fontWeight:FontWeight.w600)),
@@ -112,7 +116,7 @@ class WaffraApprovedDashboardLink extends StatelessWidget {
     onTap:onTap,
     borderRadius:BorderRadius.circular(17),
     child:Container(
-     constraints:const BoxConstraints(minHeight:88),
+     constraints:const BoxConstraints(minHeight:74),
      padding:const EdgeInsets.symmetric(horizontal:3,vertical:8),
      decoration:BoxDecoration(
       border:Border.all(color:WaffraApprovedPalette.gold.withValues(alpha:.55)),
@@ -185,36 +189,37 @@ class WaffraApprovedGoalProgressBars extends StatelessWidget {
   final n=labels.length<progress.length?labels.length:progress.length;
   if(n==0)return const SizedBox.shrink();
   final dark=Theme.of(context).brightness==Brightness.dark;
+  final tone=dark?const Color(0xFF78DEAF):WaffraApprovedPalette.emerald;
   return Container(
    key:const Key('m674-real-goal-progress-chart'),
-   padding:const EdgeInsets.fromLTRB(13,13,13,11),
+   padding:const EdgeInsets.fromLTRB(12,11,12,7),
    decoration:BoxDecoration(
     color:dark?Theme.of(context).cardColor:const Color(0xFFE6F1E9),
-    borderRadius:BorderRadius.circular(19)),
-   child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+    borderRadius:BorderRadius.circular(16)),
+   child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
     Text(title,style:const TextStyle(fontSize:13,fontWeight:FontWeight.w800)),
-    const SizedBox(height:11),
-    SizedBox(height:74,child:Row(
-     crossAxisAlignment:CrossAxisAlignment.end,
-     children:[
-      for(var i=0;i<n;i++)Expanded(child:Padding(
-       padding:const EdgeInsets.symmetric(horizontal:4),
-       child:Column(mainAxisAlignment:MainAxisAlignment.end,children:[
-        Expanded(child:Align(alignment:Alignment.bottomCenter,
-         child:FractionallySizedBox(
-          heightFactor:progress[i].clamp(.05,1.0).toDouble(),
-          child:Container(decoration:BoxDecoration(
-           color:i==n-1?WaffraApprovedPalette.forest:
-            WaffraApprovedPalette.emerald.withValues(alpha:.46),
-           borderRadius:const BorderRadius.vertical(
-            top:Radius.circular(5))))))),
-        const SizedBox(height:5),
-        Text(labels[i],maxLines:1,overflow:TextOverflow.ellipsis,
-         style:const TextStyle(fontSize:9)),
+    const SizedBox(height:8),
+    // M683: percentage is legible even for a single goal at 100%.
+    // The previous vertical chart stretched a solid bar across its width.
+    for(var i=0;i<n;i++)
+     Padding(padding:const EdgeInsets.only(bottom:8),
+      child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+       Row(children:[
+        Expanded(child:Text(labels[i],maxLines:1,
+         overflow:TextOverflow.ellipsis,
+         style:const TextStyle(fontSize:12,fontWeight:FontWeight.w700))),
+        const SizedBox(width:8),
+        Text('${(progress[i].clamp(0.0,1.0)*100).round()}%',
+         style:TextStyle(fontSize:12,fontWeight:FontWeight.w800,color:tone)),
        ]),
-      )),
-     ],
-    )),
+       const SizedBox(height:5),
+       ClipRRect(borderRadius:BorderRadius.circular(6),
+        child:LinearProgressIndicator(
+         key:Key('m683-goal-progress-$i'),
+         value:progress[i].clamp(0.0,1.0).toDouble(),
+         minHeight:7,color:tone,
+         backgroundColor:tone.withValues(alpha:.16))),
+      ])),
    ]),
   );
  }
