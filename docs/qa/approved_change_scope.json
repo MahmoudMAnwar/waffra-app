@@ -49,7 +49,7 @@
     "test/storage/m616_android_v24_restore_test.dart": [
       {
         "start": "    final ui=File('lib/main.dart').readAsStringSync();",
-        "end": "   });"
+        "end": "  test('1056-category V24, two historical budgets and goal-linked recurring '"
       }
     ]
   }
