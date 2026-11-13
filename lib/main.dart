@@ -15745,7 +15745,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       subtitle:WaffraText(waffraIsEnglish?
        'Choose an action for this goal':'اختر إجراء للهدف')),
      if(g.target<=0||g.saved<g.target)ListTile(
-      leading:const Icon(Icons.savings_outlined,color:emerald),
+      leading:const Icon(Icons.toll_outlined,color:emerald),
       title:WaffraText(waffraIsEnglish?'Save now':'ادخر الآن'),
       onTap:(){Navigator.pop(sheet);unawaited(fundGoal(g));}),
      ListTile(
@@ -15804,7 +15804,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       WaffraApprovedMetric(waffraIsEnglish?'Total targets':'إجمالي المستهدفات',
        cash(target),Icons.trending_up_rounded),
       WaffraApprovedMetric(waffraIsEnglish?'Total saved':'إجمالي المدخرات',
-       cash(saved),Icons.savings_outlined),
+       cash(saved),Icons.toll_outlined),
       WaffraApprovedMetric(waffraIsEnglish?'Active goals':'أهداف نشطة',
        goals.where((g)=>g.active).length.toString(),Icons.track_changes),
      ]),
@@ -16526,7 +16526,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
          child:Column(children:[
           for(final movement in movements)ListTile(
            dense:true,
-           leading:const Icon(Icons.savings_outlined,color:emerald),
+           leading:const Icon(Icons.toll_outlined,color:emerald),
            title:WaffraText(movement.goalName,maxLines:2),
            subtitle:WaffraText(movement.occurredIso.substring(0,10)),
            trailing:WaffraText(
