@@ -1820,12 +1820,12 @@ Audit of remaining production direct Material `DropdownButtonFormField<String>` 
 
 ## M690 — Six-point source audit after PR #630 (2026-11-13)
 - **Draft PR #638**: https://github.com/MahmoudMAnwar/waffra-app/pull/638 — no merge.
-- **Issue #632 (P0):** retire cloud SMS consent, settings UI, and staging worker APK build argument; preserve local parsing, OTP, financial ledger and manual review. Code and negative tests pushed; exact-head CI pending.
-- **Issue #633 (P1):** continue bounded HomeScreenState modularization — pending.
-- **Issue #634 (P1):** remove unused legacy AI dependencies after import/test audit — pending.
-- **Issue #635 (P1):** approved Goals/Dues/SMS Review 320/360/390 RTL/LTR light/dark real widget matrix — pending.
-- **Issue #636 (P1):** large-ledger SQLCipher month/paging performance and finance parity — pending.
-- **Issue #637 (P2):** retire stale cloud-positive tests, requirements and release notes — partial; core test assertions retained.
+- **Issue #632 (P0): Code Done / exact-head CI pending.** Cloud consent, Settings and worker APK configuration disabled; native parsing/OTP/financial review preserved.
+- **Issue #633 (P1): Bounded extraction Done / complete State split Partial.** Budget, monthly summary and insight methods extracted without finance-writer changes.
+- **Issue #634 (P1): Partial.** Dead cloud cache, transport and orphan staging removed; historical safety-test AI helpers retained until equivalent regression guarantees exist.
+- **Issue #635 (P1): Shared widget matrix Done / actual pages and physical Android Partial.** Three approved component sets × 12 RTL/LTR/light/dark/width combinations checked; not device proof.
+- **Issue #636 (P1): Synthetic SQLCipher test Done / Android latency Partial.** 2400 entries, month paging, all-history IDs, cold reopen and unchanged test account balance.
+- **Issue #637 (P2): Partial.** Obsolete cloud upload expectations and historical SMS suggestions retired; safety assertions retained, legacy test-only AI fixtures and long-lived docs require careful follow-up.
 - CI/widget tests do not establish real Android/old-owner-backup parity.
 
 - **M691/M692/M693 follow-up:** Budget/summary/insight Home source moved to `lib/waffra_home_budget_cards.part.dart`; 2400 synthetic SQLCipher monthly/paging/cold-open test added; 3 approved UI widget-composition matrices added. Old original budget-alert assertions preserved by reading real relocated Dart part. Exact-head CI remains mandatory.
