@@ -137,7 +137,7 @@ void main() {
     final converter=File(
       'lib/storage/waffra_legacy_v24_sqlcipher_converter.dart',
     ).readAsStringSync();
-    final start=converter.indexOf('await db.transaction(() async {');
+    final start=converter.indexOf('await stageDb.transaction(() async {');
     final finish=converter.indexOf(
       'final history = await WaffraAccountsFinanceHistory.capture(db);',
       start,
