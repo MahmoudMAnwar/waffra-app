@@ -66,8 +66,8 @@ void main(){
   expect(card,contains('waffraGoalDueCashMinor(paidGoalDue)/100'));
   expect(card,contains('paidGoalDue.goalWalletPaidMinor/100'));
   expect(card,contains("'استحقاق هدف مدفوع'"));
-  expect(card,contains(']else if(goal!=null)...['));
-  expect(card,contains("goal!=null?Icons.flag_outlined"));
+  expect(card,contains('if(goal!=null)...['));
+  expect(card,contains('icon:goal!=null?Icons.track_changes:Icons.event_repeat_rounded'));
  });
 
  test('M689 goal action sheet retains fund/edit/release/delete/active',(){
