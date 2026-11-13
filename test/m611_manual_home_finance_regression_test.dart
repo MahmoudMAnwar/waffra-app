@@ -93,6 +93,9 @@ void main() {
   final page=File('lib/waffra_account_context_page.dart').readAsStringSync();
   final read=File('lib/storage/waffra_account_context_read.dart').readAsStringSync();
   final api=File('lib/storage/waffra_verified_accounts_api.dart').readAsStringSync();
+  final manager=File('lib/waffra_accounts_manager_page.dart').readAsStringSync();
+  expect(manager,contains('m681-open-historical-account-reconciliation'));
+  expect(manager,contains('onPressed:openAccountReview'));
   expect(page,contains('m681-unassigned-reconciliation-summary'));
   expect(page,contains('m684-ledger-page-next'));
   expect(page,contains('m684-previous-month'));
