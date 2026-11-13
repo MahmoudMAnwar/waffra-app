@@ -37,8 +37,8 @@ BINDING_DART = re.compile(
 # M687: explicit source-inspection helper still targets the actual main.dart
 # library and its declared Dart parts, not an unverified mock of the source.
 BINDING_MAIN_RECON = re.compile(
-    r"\\b(?:final|var)\\s+(?P<var>[A-Za-z_]\\w*)\\s*=\\s*"
-    r"readWaffraMainSourceForContracts\\(\\s*\\)",
+    r"\b(?:final|var)\s+(?P<var>[A-Za-z_]\w*)\s*=\s*"
+    r"readWaffraMainSourceForContracts\(\s*\)",
 )
 BINDING_SHELL = re.compile(
     r"\b(?P<var>[A-Za-z_]\w*)\s*=\s*Path\(\s*"
