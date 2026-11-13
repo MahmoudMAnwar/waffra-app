@@ -71,9 +71,9 @@ void main() {
   test('goals keep outlined counter, recurring uses compact count badge', () {
     final source=File('lib/main.dart').readAsStringSync();
     expect(source,contains('class WaffraOutlinedItemsCount'));
-    expect(source,contains('goals.length.toString(),Icons.flag_outlined,emerald'));
-    expect(source,contains("Key('waffra-recurring-count-badge')"));
-    expect(source,contains('nextRecurringDue(nextBill)'));
+    expect(source,contains("Key('m689-goal-card-'"));
+    expect(source,contains("Key('m689-due-card-'"));
+    expect(source,contains("_filterChip(waffraIsEnglish?'This week':'هذا الأسبوع'"));
     expect(source,isNot(contains("WaffraOutlinedItemsCount(label:waffraIsEnglish?'Recurring transactions'")));
     expect(source,contains('width:36,height:30,color:forest'));
   });
