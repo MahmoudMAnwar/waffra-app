@@ -153,8 +153,8 @@ void main() {
       expect(rejected.generation, 2);
       expect(rejected.finance.getString('waffra_goals_v24'),
           contains('"saved":100'));
-      expect(rejected.values['entries'], contains('android-widget-1'));
-      expect(rejected.values['waffra_sms_hashes_v1'], [hash]);
+      expect(rejected.snapshot.values['entries'], contains('android-widget-1'));
+      expect(rejected.snapshot.values['waffra_sms_hashes_v1'], [hash]);
 
       // A legal goal target edit from an older Home revision still merges
       // a concurrently saved widget SMS; wallet savings remain unchanged.
