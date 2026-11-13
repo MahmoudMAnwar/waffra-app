@@ -533,3 +533,10 @@ M681/M684 implementation follow-up (2026-11-13; Issue #627, Draft PR #628 — NO
 - M681 correction following live M448 CI regression: a legitimate nonzero-opening account may receive a historic unassigned entry only after an extra user checkbox confirming that old operation was not already in the opening cash. The original M448 SQLCipher budget/ledger fixture is preserved and now tests refusal without that extra attestation, successful consent-based association, idempotent retry and wrong-account refusal. No silent opening-balance edits.
 
 - M681 discoverability: Accounts overview now shows a direct Review and link unassigned historical transactions control; the previous top-right icon remains available and points to the same authenticated account-context screen. No finance records are automatically changed by opening this screen.
+
+
+M679–M684 CI correctness follow-up (2026-11-13, PR #628, not merged):
+- M368 older encrypted recurring schedules: clearing an account default now first checks whether the optional account-default SQLCipher table exists. It does not delete a table, invent an account, or reject an earlier schedule simply because the optional table was never installed. Existing defaults are removed atomically when that table actually exists.
+- M681 accountless legacy history remains immutable until the user chooses an account and confirms the history/opening-balance distinction. This does not create another entry or double-charge savings, and explicit same-ID retries remain idempotent.
+- M684 corrected inverted month-only SQL mode: Account Context's month-scoped summary only loads selected-month ledger entries, while legacy full-history readers still return every authenticated entry for parity/restore checks. Added October-versus-November SQLCipher regression alongside unassigned net and no-balance-mutation assertions.
+- M385 declared API scope was corrected for the already-approved historical-link confirmation field. All protected paths were checked against original main to ensure no out-of-scope app code change. App Android/CI tests and real-device acceptance are separate.
