@@ -18,5 +18,9 @@ String readWaffraMainSourceForContracts(){
  s=s.replaceFirst(p,_method('lib/waffra_home_pdf_reports.part.dart',
   ' Future<void> exportEntriesPdf('));
  s=s.replaceFirst(q,_method('lib/waffra_home_profile.part.dart',' Widget profilePage(){'));
+ const r=' // M691: Budget, monthly summary and insight cards moved to same-library State extension.\n';
+ if(s.split(r).length!=2)throw StateError('Missing M691 budget-card part marker');
+ s=s.replaceFirst(r,_method('lib/waffra_home_budget_cards.part.dart',
+  ' Widget monthlyBudgetCard(){'));
  return s;
 }

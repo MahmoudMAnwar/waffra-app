@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_bank_sms_facts.dart';
@@ -55,7 +56,7 @@ void main(){
  });
 
  test('tapping one notice avoids marshalling a full 1000 SMS queue',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   final review=main.split(' Future<void> _reviewAutoSmsCandidates({String? targetId})async {')[1]
    .split(' void _receiveSharedSms(){')[0];
   expect(review,contains('await WaffraAutoSms.pendingById(targetId)'));
@@ -72,7 +73,7 @@ void main(){
  });
 
  test('re-login submit CTA keeps its width and feedback during secure KDF',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   final button=main.split('FilledButton(onPressed:WaffraHaptics.tap(signingIn?null:_signIn)')[1]
    .split("key:const Key('m479-login-back-to-choice')")[0];
   expect(button,contains("Key('m585-login-submit-stable')"));
@@ -82,7 +83,7 @@ void main(){
  });
 
  test('M622 cold Home only displays actual verified balances at once',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   expect(main,contains('child:!ready&&_financeLoadFailure==null?'));
   expect(main,contains('balance:_m467ShownBalance()'));
   expect(main,isNot(contains('Widget _m622ImmediateHomeSurface()=>')));
@@ -92,7 +93,7 @@ void main(){
  });
 
  test('canceling SMS review never triggers a redundant full encrypted SMS reread',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   final review=main.split(' Future<void> _reviewAutoSmsCandidates({String? targetId})async {')[1]
    .split(' void _receiveSharedSms(){')[0];
   final cleanup=review.split('  }finally{').last;
@@ -101,7 +102,7 @@ void main(){
  });
 
  test('monthly summary amount stays centered within the circle at narrow widths',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   final summary=main.split(' Widget monthlySummaryCard(){')[1]
    .split(' Widget smartMoneyInsightsCard(){')[0];
   expect(summary,contains("Key('m584-monthly-summary-circle-value')"));
@@ -111,7 +112,7 @@ void main(){
  });
 
  test('M590 review requires verified account BEFORE Yes, and never opens picker after Yes',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   final preview=main.split(
    ' Future<void> _reviewAutoSmsCandidates({String? targetId})async {')[1]
    .split(' void _receiveSharedSms(){')[0];
@@ -181,7 +182,7 @@ void main(){
  });
 
  test('M594 fee and transfer save together, with review before ACK',(){
-  final src=File('lib/main.dart').readAsStringSync();
+  final src=readWaffraMainSourceForContracts();
   final review=src.split(' Future<void> _reviewSmsAccountTransfer({')[1]
    .split(' /// M593: even with JSON decoded')[0];
   expect(review,contains('feeTotalMinor'));
@@ -223,7 +224,7 @@ void main(){
  });
 
  test('M592 bulk review keeps Waffra native policy, not phone SMS deletion',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   final handler=main.split(
    ' Future<bool> _m592ExcludeNotificationSelection(')[1]
    .split(' Future<void> _m549OpenNotifications()async{')[0];
@@ -237,7 +238,7 @@ void main(){
  });
 
  test('M593 manual and reviewed-SMS verified ledger mapping yields frames',(){
-  final app=File('lib/main.dart').readAsStringSync();
+  final app=readWaffraMainSourceForContracts();
   expect(app,contains('Future<List<MoneyEntry>> _m593BuildVerifiedEntries('));
   expect(app,contains('const batchSize=96;'));
   expect(app,contains('await Future<void>.delayed(Duration.zero)'));
@@ -246,7 +247,7 @@ void main(){
  });
 
  test('M595 compact review has exact three selectable transaction types',(){
-  final app=File('lib/main.dart').readAsStringSync();
+  final app=readWaffraMainSourceForContracts();
   final review=app.split(
    ' Future<void> _reviewAutoSmsCandidates({String? targetId})async {')[1]
    .split(' void _receiveSharedSms(){')[0];
@@ -267,7 +268,7 @@ void main(){
  });
 
  test('M595 correction must not auto-post, guess a transfer, or auto ACK',(){
-  final app=File('lib/main.dart').readAsStringSync();
+  final app=readWaffraMainSourceForContracts();
   final review=app.split(
    ' Future<void> _reviewAutoSmsCandidates({String? targetId})async {')[1]
    .split(' void _receiveSharedSms(){')[0];
@@ -302,7 +303,7 @@ void main(){
  });
 
  test('M587 bank transfer shows exactly three non-posting choices',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   final review=main.split(
    ' Future<void> _reviewAutoSmsCandidates({String? targetId})async {')[1]
    .split(' void _receiveSharedSms(){')[0];
@@ -355,7 +356,7 @@ void main(){
    .split('  /// Called AFTER explicit confirmation')[0];
   final api=File('lib/storage/waffra_verified_accounts_api.dart')
    .readAsStringSync();
-  final main=File('lib/main.dart').readAsStringSync()
+  final main=readWaffraMainSourceForContracts()
    .split(' Future<void> _reviewSmsAccountTransfer({')[1]
    .split(' /// M593: even with JSON')[0];
   expect(bridge,contains('commitReviewedSmsTransferWithFee({'));

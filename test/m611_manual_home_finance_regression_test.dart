@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_account_transaction_form.dart';
@@ -17,7 +18,7 @@ void main() {
  });
 
  test('M611 Home action tiles show read-only histories, never an add form', () {
-  final src = File('lib/main.dart').readAsStringSync();
+  final src = readWaffraMainSourceForContracts();
   final start=src.indexOf("Row(key:const Key('m549-three-home-finance-actions')");
   final end=src.indexOf('          const SizedBox(height:10),',start);
   expect(start,greaterThan(0));
@@ -35,7 +36,7 @@ void main() {
  });
 
  test('M611 account selection is readable and mandatory for manual save', () {
-  final src=File('lib/main.dart').readAsStringSync();
+  final src=readWaffraMainSourceForContracts();
   final start=src.indexOf('Widget monthlySummaryCard()');
   final end=src.indexOf('Future<void> showSummaryTransactions(',start);
   final summary=src.substring(start,end);
@@ -50,7 +51,7 @@ void main() {
  });
 
  test('M611 transfer history reads real encrypted rows under owner witness', () {
-  final src=File('lib/main.dart').readAsStringSync();
+  final src=readWaffraMainSourceForContracts();
   // M647/M648 refactored presentation into a read-only sheet and a
   // cached, verified-account SQLCipher reader. Verify the entire call chain
   // rather than requiring the storage call inside the UI click handler.
@@ -113,7 +114,7 @@ void main() {
  });
 
  test('M684 card extraction preserves original + and compact layout',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   final tiles=File('lib/waffra_home_finance_tiles.part.dart').readAsStringSync();
   expect(main,contains("part 'waffra_home_finance_tiles.part.dart';"));
   expect(main,contains('this._m684HomeFinanceAction('));

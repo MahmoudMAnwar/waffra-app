@@ -1,11 +1,12 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_centered_dropdown.dart';
 
 void main() {
   test('M401 monthly budget card counts user budgets and navigates display month', () {
-    final source=File('lib/main.dart').readAsStringSync();
+    final source=readWaffraMainSourceForContracts();
     final from=source.indexOf('Widget monthlyBudgetCard(){');
     final to=source.indexOf('Widget _budgetFigure(',from);
     expect(from,greaterThan(0));
@@ -86,7 +87,7 @@ void main() {
       'lib/waffra_oil_market_section.dart',
       'lib/waffra_practical_tools_page.dart',
     ]) {
-      final src=File(path).readAsStringSync();
+      final src=path=='lib/main.dart'?readWaffraMainSourceForContracts():File(path).readAsStringSync();
       expect(src,contains('WaffraCenteredDropdownFormField<'),
         reason:'$path must use centered, blurry, bordered dropdowns');
       expect(src,isNot(contains('DropdownButtonFormField<')));

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_approved_notifications.dart';
@@ -130,7 +131,7 @@ void main(){
  });
 
  test('M549 approved Home bell saturated at +999; FAB is unchanged',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   expect(main,contains("Key('m549-header-notification-bell')"));
   expect(main,contains("_autoSmsPending.length>999?'+999'"));
   expect(main,contains('WaffraDirectionalFabLocation(english:waffraIsEnglish)'));
