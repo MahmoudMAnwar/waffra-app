@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "change_id": "M690-M707-ISSUES632-637-20261113",
+  "change_id": "M690-M708-ISSUES632-637-20261113",
   "human_scope_review": "Issue #629 completes prior PR #628 only after user-visible acceptance; #631 explicitly authorizes three exact screenshots for Goals/Dues/SMS Review, permanently visible financial activity, non-moving FAB-aligned notice, and savings/goal-due cash safety. Existing tests replace outdated visual assumptions without deleting financial safety assertions. Device screenshots/old restore still require external device evidence.",
   "user_requested_changes": [
     "M690 #632 permanently disable third-party AI bank SMS uploads and opt-in on previously installed versions, remove Settings toggle and signed Android staging worker, retain local encrypted SMS Review and money writer.",
@@ -20,7 +20,8 @@
     "M704 #633 repair the original strict M417 bank-SMS permission/finance source test to inspect the real registered Home transfer part in its original location after byte-identical extraction, retaining all transfer ID, fee, ACK and verified finance assertions; correct M703 issue metadata.",
     "M705 #634/#637 remove retired cloud service import and call from runtime SMS permission screen, still clear exact historical opt-in preference locally and require no cloud analysis; preserve OS permissions, local SMS review, no-upload tests, and historical safety fixture file.",
     "M706 #634 reconcile original M463/M639 strict source assertions with M705 onboarding local retirement of cloud consent; preserve full SMS permission, native opt-in sequence, retry behavior and no external AI.",
-    "M707 #633/#635 byte-identical extraction of the real 770-line Goals+Recurring page methods from Home State into a same-library part; preserve linked goal-due wallet/cash UI, verified callbacks, approved visual layout and all original source assertions via true production-source reconstruction."
+    "M707 #633/#635 byte-identical extraction of the real 770-line Goals+Recurring page methods from Home State into a same-library part; preserve linked goal-due wallet/cash UI, verified callbacks, approved visual layout and all original source assertions via true production-source reconstruction.",
+    "M708 #633 preserve M298 required-category and M302 recurring due source contracts by using true M707 production part reconstruction; M283 workflow must inspect the registered budget-card part while keeping the no-redundant-edit negative guard."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -71,7 +72,10 @@
     "lib/waffra_home_goals_recurring_pages.part.dart",
     "test/m388_m390_approved_goal_recurring_receipt_test.dart",
     "test/m302_optimistic_module_write_safety_test.dart",
-    "test/m707_home_goals_recurring_extraction_test.dart"
+    "test/m707_home_goals_recurring_extraction_test.dart",
+    "test/m298_required_finance_field_validation_test.dart",
+    "test/m302_recurring_first_due_regression_test.dart",
+    ".github/workflows/m283-compact-layout-tools-back-greetings.yml"
   ],
   "approved_deleted_files": [
     "lib/waffra_sms_cloud_review_analyzer.dart"
@@ -366,6 +370,34 @@
       },
       {
         "start": " test('M302 recurring reminders are not scheduled for rejected mutations',(){"
+      }
+    ],
+    "test/m298_required_finance_field_validation_test.dart": [
+      {
+        "start": "import 'package:flutter_test/flutter_test.dart';",
+        "end": "void main() {"
+      },
+      {
+        "start": " test('M298 all three finance entry points display category error and reject invalid selection',(){"
+      }
+    ],
+    "test/m302_recurring_first_due_regression_test.dart": [
+      {
+        "start": "import 'package:flutter_test/flutter_test.dart';",
+        "end": "void main(){"
+      },
+      {
+        "start": " test('M302 real app overview reads the same verified recurring due policy',(){"
+      }
+    ],
+    ".github/workflows/m283-compact-layout-tools-back-greetings.yml": [
+      {
+        "start": "          app=Path('lib/main.dart').read_text()",
+        "end": "          tools=Path('lib/waffra_smart_features.dart').read_text()"
+      },
+      {
+        "start": "          must=[",
+        "end": "            (\"two-back\", \"WaffraDoubleBackExit\" in app),"
       }
     ]
   }

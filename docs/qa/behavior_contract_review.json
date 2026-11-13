@@ -2984,11 +2984,14 @@
         "test/m388_m390_approved_goal_recurring_receipt_test.dart",
         "test/m302_optimistic_module_write_safety_test.dart",
         "test/m665_goal_due_display_and_linked_edit_test.dart",
-        "test/m693_three_approved_pages_layout_matrix_test.dart"
+        "test/m693_three_approved_pages_layout_matrix_test.dart",
+        "test/m298_required_finance_field_validation_test.dart",
+        "test/m302_recurring_first_due_regression_test.dart"
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/android.yml",
-        ".github/workflows/finance-full-regression.yml"
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m283-compact-layout-tools-back-greetings.yml"
       ],
       "safety_invariants": [
         "No financial data or SQLCipher writers are changed in the extraction.",
