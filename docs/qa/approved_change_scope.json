@@ -22,7 +22,8 @@
     "M550 source-contract correction: M470 confirms all-time selected-account ID projection and never allows unassigned filter, without requiring removed full-history row scan.",
     "M103 exact-head regression: source contract must distinguish collapsed live count from expanded activity history; widget test must assert both 25% metric and 25% goal progress without changing money data or cards.",
     "M684 explicit follow-up: finish shared month/year index across Home, monthly budgets, analytics, reports and forecast; invalidate it after every ledger edit, delete, source reload and restore, preserving all-time history and backup/account parity.",
-    "Update the exact M401 old source contract for month-indexed budget display without weakening date switching, budget owner selection or no-posting checks."
+    "Update the exact M401 old source contract for month-indexed budget display without weakening date switching, budget owner selection or no-posting checks.",
+    "M550 follow-up: update two obsolete budget source-string tests to assert indexed monthly budget read and verified scoped-account IDs; keep all financial and negative-path invariants intact."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -53,7 +54,9 @@
     "test/m470_account_scope_and_transfer_date_test.dart",
     "lib/waffra_finance_period_index.part.dart",
     "test/m684_finance_period_index_test.dart",
-    "test/m401_m402_budget_month_centered_dropdown_test.dart"
+    "test/m401_m402_budget_month_centered_dropdown_test.dart",
+    "test/m343_goal_recurring_named_budgets_test.dart",
+    "test/m470_account_monthly_budget_policy_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
@@ -324,6 +327,18 @@
       {
         "start": "  test('M401 monthly budget card counts user budgets and navigates display month'",
         "end": "  for (final direction in [TextDirection.rtl,TextDirection.ltr]) {"
+      }
+    ],
+    "test/m343_goal_recurring_named_budgets_test.dart": [
+      {
+        "start": " test('M343 goal/recurring UI uses one saved total and budget remains independent'",
+        "end": null
+      }
+    ],
+    "test/m470_account_monthly_budget_policy_test.dart": [
+      {
+        "start": " test('M470 budget creation/edit and monthly Home card read explicit money account'",
+        "end": null
       }
     ]
   }

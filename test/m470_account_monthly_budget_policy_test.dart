@@ -67,8 +67,10 @@ void main(){
   expect(source,contains("Key('m470-budget-edit-account')"));
   expect(source,contains("assignedAccountId:selected.accountId"));
   expect(source,contains("b.assignedAccountId==selectedFinancialAccount"));
-  expect(source,contains("selectedFinancialAccount=='all'?"));
-  expect(source,contains("final relevantEntries=selectedFinancialAccount=='all'?"));
+  expect(source,contains('final relevantEntries=_m684ScopedMonthEntries('));
+  expect(source,contains('viewedMonth.year,viewedMonth.month'));
+  expect(source,contains("if(_m467SelectedAccount=='all')return monthRows;"));
+  expect(source,contains('final ids=_m684ScopedEntryIds;'));
   expect(source,contains("waffraNamedBudgetSpent(relevantEntries.toList()"));
  });
 

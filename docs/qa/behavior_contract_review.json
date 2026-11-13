@@ -2506,7 +2506,9 @@
         "test/m467_account_header_test.dart",
         "test/storage/m448_account_context_read_test.dart",
         "test/storage/m620_restored_home_ledger_parity_test.dart",
-        "test/m401_m402_budget_month_centered_dropdown_test.dart"
+        "test/m401_m402_budget_month_centered_dropdown_test.dart",
+        "test/m343_goal_recurring_named_budgets_test.dart",
+        "test/m470_account_monthly_budget_policy_test.dart"
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/finance-full-regression.yml",
