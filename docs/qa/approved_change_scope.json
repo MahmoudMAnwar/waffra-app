@@ -25,6 +25,10 @@
   "bounded_sections": {
     "lib/main.dart": [
       {
+        "start": "part 'waffra_home_finance_tiles.part.dart';",
+        "end": "part 'waffra_finance_period_index.part.dart';"
+      },
+      {
         "start": "class WaffraCurrencyAmount extends StatelessWidget {",
         "end": "class _HomeScreenState extends State<HomeScreen>"
       }
