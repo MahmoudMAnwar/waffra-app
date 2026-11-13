@@ -111,6 +111,7 @@ import 'waffra_accounts_manager_page.dart';
 import 'waffra_new_account_dialog.dart';
 import 'waffra_account_transaction_form.dart';
 import 'waffra_recurring_account_groups.dart';
+import 'waffra_approved_page_designs.dart';
 import 'waffra_goal_recurring_account_picker.dart';
 import 'waffra_saudi_financial_providers.dart';
 import 'storage/waffra_fresh_finance_modules_repository.dart';
@@ -13719,7 +13720,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      slivers:[
       SliverToBoxAdapter(child:Padding(
        padding:const EdgeInsets.fromLTRB(14,14,14,4),
-       child:WaffraPageHero(
+       child:WaffraApprovedPageHero(
         title:greeting,
         subtitle:waffraIsEnglish?'Your finances at a glance':
          'تابع رصيدك ومعاملاتك وخططك المالية بسهولة.',
@@ -13755,6 +13756,29 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             'هذا ليس رصيدًا بنكيًا متاحًا. راجع الحسابات قبل ربط العمليات القديمة.'),
           ),
          ],
+         // M674 Home concept #1: data-backed navigation tiles, not new ledger writes.
+         Row(key:const Key('m674-home-approved-shortcuts'),children:[
+          WaffraApprovedDashboardLink(
+           title:waffraIsEnglish?'Recurring':'المتكررة',
+           count:recurring.where((r)=>r.active).length.toString(),
+           icon:Icons.event_repeat_rounded,
+           onTap:()=>unawaited(selectFooter(4))),
+          const SizedBox(width:7),
+          WaffraApprovedDashboardLink(
+           title:waffraIsEnglish?'Goals':'الأهداف',
+           count:goals.where((g)=>g.active).length.toString(),
+           icon:Icons.track_changes_outlined,
+           onTap:()=>unawaited(selectFooter(3))),
+          const SizedBox(width:7),
+          WaffraApprovedDashboardLink(
+           title:waffraIsEnglish?'Accounts':'الحسابات',
+           count:_m467Accounts.where((a)=>!a.archived).length.toString(),
+           icon:Icons.account_balance_wallet_outlined,
+           onTap:()=>setState((){
+            accountOpened=true;goalsOpened=false;addFabExpanded=false;
+           })),
+         ]),
+         const SizedBox(height:12),
          // M549: user-approved screenshot: three compact, equal-width
          // direct finance actions, no duplicated large income/expense tiles.
          // This is NOT the floating + and never changes its geometry.
@@ -16019,13 +16043,23 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     (goalDisplay=='done'?(g.target>0&&g.saved>=g.target):
       (g.target<=0||g.saved<g.target)))&&
    waffraSearchAny([g.name,waffraTr(g.name)],goalSearch)).toList();
+  // Approved design orders existing goal IDs once, without duplicating ledger rows.
+  final ordered=filtered.toList()..sort((a,b){
+   if(a.active!=b.active)return a.active?-1:1;
+   final pa=a.target>0?(a.saved/a.target).clamp(0.0,1.0):0.0;
+   final pb=b.target>0?(b.saved/b.target).clamp(0.0,1.0):0.0;
+   final result=pb.compareTo(pa);
+   if(result!=0)return result;
+   return (a.dueDate??DateTime(9999))
+    .compareTo(b.dueDate??DateTime(9999));
+  });
   return Scrollbar(
    controller:_goalsScrollController,thumbVisibility:true,
    thickness:3,radius:const Radius.circular(8),
    child:ListView(controller:_goalsScrollController,
    physics:const ClampingScrollPhysics(parent:AlwaysScrollableScrollPhysics()),
    padding:const EdgeInsets.fromLTRB(16,14,16,28),children:[
-   WaffraPageHero(
+   WaffraApprovedPageHero(
     title:waffraIsEnglish?'Savings goals':'أهداف الادخار',
     subtitle:waffraIsEnglish?'Plan your future and follow every milestone':
      'حوّل أحلامك إلى أهداف وتابع تقدّمك خطوة بخطوة.',
@@ -16056,22 +16090,23 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      textAlign:TextAlign.center,style:const TextStyle(fontSize:12,color:emerald))),
    const SizedBox(height:13),
    if(goals.isNotEmpty)...[
-    Row(children:[
-     Expanded(child:_summaryBox(waffraIsEnglish?'Total target':'إجمالي المستهدف',cash(target),Icons.flag_outlined,emerald)),
-     const SizedBox(width:8),
-     Expanded(child:_summaryBox(waffraIsEnglish?'Saved':'إجمالي المدخرات',cash(saved),Icons.account_balance_wallet_outlined,emerald)),
-     const SizedBox(width:8),
-     Expanded(child:Container(padding:const EdgeInsets.all(8),
-      decoration:BoxDecoration(color:emerald.withValues(alpha:.08),borderRadius:BorderRadius.circular(18)),
-      child:Column(children:[
-       SizedBox(width:48,height:48,child:Stack(alignment:Alignment.center,children:[
-        CircularProgressIndicator(value:pct,strokeWidth:6,backgroundColor:emerald.withValues(alpha:.13)),
-        WaffraText(target<=0?'—':'${(pct*100).round()}%',style:const TextStyle(fontWeight:FontWeight.bold,fontSize:12))])),
-       const SizedBox(height:7),
-       WaffraText(target<=0?(waffraIsEnglish?'Open savings':'ادخار مفتوح'):(waffraIsEnglish?'Progress':'الإنجاز'),style:const TextStyle(fontSize:11)),
-      ]))),
+    WaffraApprovedMetrics(metrics:[
+     WaffraApprovedMetric(
+      waffraIsEnglish?'Saved':'المدخرات',cash(saved),Icons.account_balance_wallet_outlined),
+     WaffraApprovedMetric(
+      waffraIsEnglish?'Active goals':'أهداف نشطة',
+      goals.where((g)=>g.active).length.toString(),Icons.flag_outlined),
+     WaffraApprovedMetric(
+      waffraIsEnglish?'Progress':'الإنجاز',
+      target<=0?'—':'${(pct*100).round()}%',Icons.donut_large_rounded),
     ]),
-    const SizedBox(height:14),
+    const SizedBox(height:11),
+    WaffraApprovedGoalProgressBars(
+     title:waffraIsEnglish?'Your actual goal progress':'تقدّم أهدافك الحالي',
+     labels:[for(final g in ordered.take(5))g.name],
+     progress:[for(final g in ordered.take(5))
+      g.target>0?(g.saved/g.target).clamp(0.0,1.0).toDouble():0.0]),
+    const SizedBox(height:12),
    ],
    Row(children:[
     Expanded(flex:3,child:_compactCategoryStat(
@@ -16095,7 +16130,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     ]),
     const SizedBox(height:10),
    ],
-   ...filtered.map((g){
+   if(ordered.isNotEmpty)WaffraApprovedSectionTitle(
+    waffraIsEnglish?'Closest to completion':'الأقرب للتحقيق',
+    icon:Icons.track_changes_rounded),
+   ...ordered.map((g){
     int? monthlyRequired;
     bool overdue=false;
     if(g.dueDate!=null&&g.target>0){
@@ -16118,16 +16156,29 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      goalIcon(g.name)==Icons.directions_car?const Color(0xFF3867D6):emerald;
     return Card(
      margin:const EdgeInsets.only(bottom:11),
-     color:Theme.of(context).cardColor,
+     color:Theme.of(context).brightness==Brightness.dark?
+      Theme.of(context).cardColor:const Color(0xFFFEFCF6),
      elevation:0,
      shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(22),
-      side:const BorderSide(color:Color(0xFFCFDFD5),width:1)),
+      side:BorderSide(color:ordered.first.id==g.id?
+       WaffraApprovedPalette.gold:const Color(0xFFCFDFD5),
+       width:ordered.first.id==g.id?1.6:1)),
      child:Padding(padding:const EdgeInsets.all(15),child:Column(children:[
       Row(children:[
        WaffraIllustration(topic:g.name,size:44),
        const SizedBox(width:10),
        Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-        WaffraText(g.name,style:const TextStyle(fontWeight:FontWeight.bold,fontSize:16)),
+        WaffraText(g.name,style:const TextStyle(fontWeight:FontWeight.bold,fontSize:17)),
+        const SizedBox(height:4),
+        WaffraApprovedStatusPill(
+         label:g.target>0&&g.saved>=g.target?
+          (waffraIsEnglish?'Completed':'مكتمل'):
+          overdue?(waffraIsEnglish?'Needs attention':'يحتاج اهتمام'):
+          (percent>=.85?(waffraIsEnglish?'Almost there':'قريب من الإنجاز'):
+          g.active?(waffraIsEnglish?'Active':'نشط'):
+          (waffraIsEnglish?'Paused':'متوقف')),
+         icon:overdue?Icons.error_outline:Icons.verified_outlined,
+         attention:overdue),
         WaffraText(g.target<=0?(waffraIsEnglish?'Open-ended savings':'ادخار مفتوح'):(waffraIsEnglish?'Target: ${cash(g.target)}':'المستهدف: ${cash(g.target)}'),
          style:const TextStyle(fontSize:12)),
         if(displayedAccount!=null)WaffraText(
@@ -16214,8 +16265,37 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        if(g.target>0)Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
         WaffraText(waffraIsEnglish?'Remaining':'المتبقي',style:const TextStyle(fontSize:11)),
         WaffraText(cash(max(0,g.target-g.saved)),style:const TextStyle(fontWeight:FontWeight.bold))])),
-       if(g.target<=0||g.saved<g.target)TextButton.icon(onPressed:WaffraHaptics.tap(()=>fundGoal(g)),
-        icon:const Icon(Icons.add,size:18),label:WaffraText(waffraIsEnglish?'Add amount':'إضافة مبلغ')),
+      ]),
+      const SizedBox(height:10),
+      Wrap(spacing:7,runSpacing:7,alignment:WrapAlignment.spaceBetween,children:[
+       if(g.target<=0||g.saved<g.target)FilledButton(
+        onPressed:WaffraHaptics.tap(()=>unawaited(fundGoal(g))),
+        style:FilledButton.styleFrom(backgroundColor:forest,
+         padding:const EdgeInsets.symmetric(horizontal:13)),
+        child:WaffraText(waffraIsEnglish?'Save now':'ادخر الآن')),
+       OutlinedButton(
+        onPressed:WaffraHaptics.tap(()=>unawaited(
+         showWaffraDialog<void>(context:context,builder:(dialog)=>AlertDialog(
+          title:WaffraText(g.name),
+          content:Column(mainAxisSize:MainAxisSize.min,
+           crossAxisAlignment:CrossAxisAlignment.start,children:[
+           WaffraText(waffraIsEnglish?'Target: ${cash(g.target)}':
+            'المستهدف: ${cash(g.target)}'),
+           WaffraText(waffraIsEnglish?'Saved: ${cash(g.saved)}':
+            'المدخر: ${cash(g.saved)}'),
+           if(displayedAccount!=null)WaffraText(
+            (waffraIsEnglish?'Linked account: ':'الحساب المرتبط: ')+displayedAccount),
+           if(g.dueDate!=null)WaffraText(
+            (waffraIsEnglish?'Due: ':'الاستحقاق: ')+dayText(g.dueDate!)),
+          ]),
+          actions:[TextButton(
+           onPressed:()=>Navigator.pop(dialog),
+           child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))],
+         )))),
+        child:WaffraText(waffraIsEnglish?'View':'عرض')),
+       OutlinedButton(
+        onPressed:WaffraHaptics.tap(()=>unawaited(editGoal(g))),
+        child:WaffraText(waffraIsEnglish?'Edit':'تعديل')),
       ]),
       if(g.target>0&&g.saved>=g.target)WaffraText(waffraIsEnglish?'Goal achieved!':'🎉 تم تحقيق الهدف!',
        style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)),
@@ -16566,10 +16646,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     (r.startAt.year==lastOfCurrentMonth.year&&
      r.startAt.month==lastOfCurrentMonth.month)))
    .fold<double>(0,(v,r)=>v+r.amount);
-  final shown=recurring.where((r)=>
-   (recurringDisplay=='all'||
-    (recurringDisplay=='active'?r.active:!r.active))&&
-   waffraSearchAny([r.title,r.category,waffraTr(r.category)],recurringSearch)).toList();
+  // M674 due-first ordering is view-only and never generates a settlement.
+  final today=DateUtils.dateOnly(DateTime.now());
+  final monthlyIncome=active.where((r)=>r.income&&
+   r.linkedGoalId==null&&!r.startAt.isAfter(lastOfCurrentMonth))
+   .fold<double>(0,(v,r)=>v+r.amount);
+  final shown=recurring.where((r){
+   final due=DateUtils.dateOnly(nextRecurringDue(r));
+   final days=due.difference(today).inDays;
+   final inView=recurringDisplay=='today'?r.active&&days==0:
+    recurringDisplay=='week'?r.active&&days>=0&&days<=7:
+    recurringDisplay=='all'||(recurringDisplay=='active'?r.active:!r.active);
+   return inView&&
+    waffraSearchAny([r.title,r.category,waffraTr(r.category)],recurringSearch);
+  }).toList()..sort((a,b)=>nextRecurringDue(a).compareTo(nextRecurringDue(b)));
   final upcoming=active.where((r){
    final days=nextRecurringDue(r).difference(DateTime(DateTime.now().year,DateTime.now().month,DateTime.now().day)).inDays;
    return days>=0&&days<=3;
@@ -16580,7 +16670,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    child:ListView(controller:_recurringScrollController,
    physics:const ClampingScrollPhysics(parent:AlwaysScrollableScrollPhysics()),
    padding:const EdgeInsets.fromLTRB(16,14,16,28),children:[
-   WaffraPageHero(
+   WaffraApprovedPageHero(
     title:waffraIsEnglish?'Recurring transactions':'العمليات المتكررة',
     subtitle:waffraIsEnglish?'Track recurring payments and due dates':
      'نظّم عملياتك الشهرية ومواعيد استحقاقها بسهولة.',
@@ -16651,15 +16741,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    ],
    const SizedBox(height:9),
    if(recurring.isNotEmpty)...[
-    Row(children:[
-     Expanded(child:_summaryBox(waffraIsEnglish?'Transactions':'عدد العمليات',
-      recurring.length.toString(),Icons.calendar_month,emerald)),
-     const SizedBox(width:8),
-     Expanded(child:_summaryBox(waffraIsEnglish?'Monthly expenses':'المبلغ الشهري',
-      cash(monthly),Icons.payments_outlined,emerald)),
-     const SizedBox(width:8),
-     Expanded(child:_summaryBox(waffraIsEnglish?'Active':'النشطة',
-      '${active.length}/${recurring.length}',Icons.donut_large,emerald)),
+    WaffraApprovedMetrics(metrics:[
+     WaffraApprovedMetric(
+      waffraIsEnglish?'Scheduled expenses':'التزامات الشهر',
+      cash(monthly),Icons.north_east_rounded),
+     WaffraApprovedMetric(
+      waffraIsEnglish?'Scheduled income':'دخل متكرر',
+      cash(monthlyIncome),Icons.south_west_rounded),
+     WaffraApprovedMetric(
+      waffraIsEnglish?'Active items':'عمليات نشطة',
+      active.length.toString(),Icons.event_repeat_rounded),
     ]),
     if(upcoming>0)Padding(padding:const EdgeInsets.only(top:10),
      child:Card(color:Colors.amber.withValues(alpha:.13),child:ListTile(
@@ -16675,12 +16766,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    const SizedBox(height:13),
    if(recurring.isNotEmpty)...[
     Wrap(spacing:8,runSpacing:6,children:[
+     _filterChip(waffraIsEnglish?'Today':'اليوم',recurringDisplay=='today',()=>setState(()=>recurringDisplay='today')),
+     _filterChip(waffraIsEnglish?'This week':'هذا الأسبوع',recurringDisplay=='week',()=>setState(()=>recurringDisplay='week')),
      _filterChip(waffraIsEnglish?'All':'الكل',recurringDisplay=='all',()=>setState(()=>recurringDisplay='all')),
      _filterChip(waffraIsEnglish?'Active':'نشطة',recurringDisplay=='active',()=>setState(()=>recurringDisplay='active')),
      _filterChip(waffraIsEnglish?'Paused':'متوقفة',recurringDisplay=='paused',()=>setState(()=>recurringDisplay='paused')),
     ]),
     const SizedBox(height:11),
    ],
+   if(shown.isNotEmpty)WaffraApprovedSectionTitle(
+    waffraIsEnglish?'Due dates and scheduled items':'الاستحقاقات والعمليات القادمة',
+    icon:Icons.calendar_month_outlined),
    ...shown.map((r){
     final linked=goals.where((g)=>g.id==r.linkedGoalId).toList();
     final goal=linked.isEmpty?null:linked.single;
@@ -16703,6 +16799,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(21),
       side:BorderSide(color:r.income?const Color(0xFFBBDCC9):const Color(0xFFF3DCD7))),
      child:Padding(padding:const EdgeInsets.symmetric(horizontal:12,vertical:13),child:Column(children:[
+     Align(alignment:AlignmentDirectional.centerStart,
+      child:WaffraApprovedStatusPill(
+       label:paidGoalDue!=null?
+        (waffraIsEnglish?'Paid goal due':'استحقاق هدف مدفوع'):
+        !r.active?(waffraIsEnglish?'Paused':'متوقفة'):
+        goal!=null?(waffraIsEnglish?'Goal due':'استحقاق هدف'):
+        r.income?(waffraIsEnglish?'Recurring income':'دخل متكرر'):
+        (waffraIsEnglish?'Recurring expense':'مصروف متكرر'),
+       icon:paidGoalDue!=null?Icons.verified:goal!=null?
+        Icons.track_changes_rounded:r.income?
+        Icons.arrow_downward_rounded:Icons.arrow_upward_rounded,
+       attention:!r.active)),
+     const SizedBox(height:8),
      Row(children:[
       CircleAvatar(backgroundColor:color.withValues(alpha:.13),
        child:Icon(goal!=null?Icons.flag_outlined:
@@ -18363,22 +18472,28 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        child:const Icon(Icons.add,color:Colors.white,size:28)))),
      )),
    )),
-  // The notice reserves real layout height above the bottom footer.
-  // The transaction list and the floating + reposition instead of being
-  // covered by an overlay. The expanded + menu closes on feedback.
-  bottomNavigationBar:accountOpened?null:Column(mainAxisSize:MainAxisSize.min,children:[
-   WaffraFooterNoticeHost(onNoticePresented:(){
-    if(mounted&&addFabExpanded)setState(()=>addFabExpanded=false);
+  // M675: footer height stays invariant. The global + is unchanged.
+  // Notice is composited BESIDE its existing anchor, never inside the footer.
+  bottomNavigationBar:accountOpened?null:WaffraFooterNavigation(
+   selectedIndex:tab,
+   english:waffraIsEnglish,
+   onSelected:WaffraHaptics.selectionRequired((selected){
+    waffraDismissFooterNotice();
+    unawaited(selectFooter(selected));
    }),
-   WaffraFooterNavigation(
-    selectedIndex:tab,
-    english:waffraIsEnglish,
-    onSelected:WaffraHaptics.selectionRequired((selected){
-     waffraDismissFooterNotice();
-     unawaited(selectFooter(selected));
+  ),
+  ),
+  if(!accountOpened&&tab!=2)
+   WaffraApprovedFixedFabNoticePosition(
+    key:const Key('m675-snackbar-beside-unchanged-fab'),
+    link:_fabOverlayAnchor,english:waffraIsEnglish,
+    child:WaffraFooterNoticeHost(onNoticePresented:(){
+     if(mounted&&addFabExpanded)setState(()=>addFabExpanded=false);
     }),
    ),
-  ])),
+  if(!accountOpened&&tab==2)
+   PositionedDirectional(start:12,end:12,bottom:90,
+    child:WaffraFooterNoticeHost()),
   if(addFabExpanded&&!accountOpened)...[
    Positioned.fill(
     key:const Key('waffra-fullscreen-fab-blur'),

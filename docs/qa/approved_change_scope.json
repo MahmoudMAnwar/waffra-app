@@ -1,17 +1,15 @@
 {
   "contract_version": 1,
-  "change_id": "M620-M622-M623-20261113-ISSUES620_622_623-PR621-RESTORE_PARITY_PERFORMANCE_NO_RESCUE",
-  "human_scope_review": "Owner's original encrypted old V24 archive was authenticated locally (never committed); 19 unique IDs, 17 expenses and 2 income. After successful main restore (post #619), Android Home showed exactly 38 rows, with each financial total doubled and account-only balance 0. New PR is limited to independent postcommit ID parity, stale Home rehydration using a verified source, explaining historic accountless net and external encrypted rescue. Never auto-delete by name/date/amount or fake balances. CI and expendable device acceptance pending. Owner additionally requested faster restore in SAME PR; Issue #622 approved atomic disposable SQLCipher category/goal/recurring/budget staging and reuse of selected source read, with independent fresh preflight witness unchanged. Owner requested M623: remove mandatory creation/saving of an extra encrypted rescue copy from restore; explicit irreversible-success notice; preserve atomic rollback on error, input file, verified source and manual backup elsewhere. Owner clarified: no additional warning/explanation in confirmation. Keep existing concise Yes/No confirmation.",
+  "change_id": "M674-M675-20261113-ISSUES624_626-PR625-APPROVED-PAGES-AND-FIXED-FAB-SNACK",
+  "human_scope_review": "User explicitly approved Home concept #1, attached Goals reference screenshot, Recurring concept #3 and required the cross-page + button stay entirely unmodified. Scope is view-only presentation wiring of verified existing account/goal/recurring sources plus regression checks; no database migrations or financial write-path changes. Include original Home actions, Goal and Recurring safeguards; confirm via CI and real-phone test separately. Owner subsequently requested M675 in same PR: on all tabs, Snackbar must finish alongside the stationary + FAB, and multiple text lines grow above it without moving +. Header appbar, FAB, FAB location, footer navigation and all action callbacks are outside M385 approved regions and must remain byte-identical to main. M385's snackbar section begins at the unchanged final FAB icon line because the old Snackbar comment was removed; that icon and all action/location logic remain byte-identical and are also checked by M675 tests.",
   "user_requested_changes": [
-    "Detect post-V24-restore display doubling (19 authenticated unique transaction IDs vs 38 displayed) and distinguish active canonical SQLCipher duplication from stale Home presentation.",
-    "After source-witnessed restore, require exact source-vs-canonical-vs-Home transaction ID/direction/minor amount/timestamp parity; rehydrate UI from single verified source only if canonical IDs match; never remove actual same-looking financial records.",
-    "Keep account-only balance separate from historic recorded net and explain clearly when 0 appears because no active accounts are registered; never fabricate money-account links or bank balances.",
-    "Explain before replacement that the separately saved rescue is the OLD encrypted device snapshot, not the incoming backup, so the owner can safely roll back.",
-    "Add a synthetic regression with 19 unique IDs, duplicates/error paths, distinct legitimate same-amount records, byte-preserving finance/rescue paths, and distinct legacy net vs verified account balance; owner phone test pending.",
-    "M622: avoid per-category SQLite commit in V24 conversion (1056 categories) through one outer disposable encrypted transaction retaining each record's validation and any-error rollback; reuse already loaded verified source before fresh preflight.",
-    "M622: retain archived source encryption, external rescue, biometrics, cold restore and postcommit M620 parity; require synthetic 1056 category integration/cold reopen and new source-contract tests; only device stopwatch can quantify speedup.",
-    "M623: remove automatic pre-restore rescue export, UI save dialog, and associated external-file arguments from verified V3 replace only; keep native SQLCipher all-or-nothing transaction rollback, source witness and original backup unchanged.",
-    "M623: no extra caution or rescue message in confirmation; preserve existing biometric and compact user confirmation, verify no rescue file created, and synthetic stale/corrupt/error rollback tests."
+    "Apply the approved Home #1 premium dashboard presentation using only verified current balance and actual financial counts.",
+    "Apply the user-supplied Goals screenshot with real target, saved progress, linked account, due date, nearest-goal and existing verified actions.",
+    "Apply Recurring concept #3 with honest income/expense/goal dues, due date ordering and existing linked-goal edit guard.",
+    "Never modify global + button styling, position, overlay, route handlers, action labels or hit targets on any page.",
+    "Verify schema field roundtrips, linked money accounts and goals, financial read parity, and preserve existing encrypted SQLCipher writer behavior.",
+    "M675: move the transient footer notice out of the Scaffold bottomNavigationBar layout and overlay it adjacent to the existing stationary + for each finance tab, anchored by existing LayerLink. Ensure two lines only grow upward without any FAB movement.",
+    "M675: reconcile original directional FAB/Snackbar regression source assertion with new production fixed-footer behavior; preserve its Undo and warning/info widget tests and separate full geometry regressions."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -19,72 +17,39 @@
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
-    "lib/storage/waffra_restored_ledger_identity_guard.dart",
-    "test/storage/m620_restored_home_ledger_parity_test.dart",
-    "lib/storage/waffra_legacy_v24_sqlcipher_converter.dart",
-    "test/storage/m616_android_v24_restore_test.dart",
-    "lib/storage/waffra_verified_active_accounts_restore.dart",
-    "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
-    "test/storage/m448_verified_active_accounts_restore_test.dart",
-    "test/storage/m614_legacy_v24_restore_test.dart"
+    "lib/waffra_approved_page_designs.dart",
+    "test/m674_approved_page_designs_test.dart",
+    "test/waffra_directional_fab_receipt_corner_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
   "bounded_sections": {
     "lib/main.dart": [
       {
-        "start": "import 'storage/waffra_legacy_v24_sqlcipher_converter.dart';",
-        "end": "import 'storage/waffra_verified_active_restore_preflight.dart';"
+        "start": "import 'waffra_recurring_account_groups.dart';",
+        "end": "import 'waffra_saudi_financial_providers.dart';"
       },
       {
-        "start": "      SliverPadding(padding:const EdgeInsets.fromLTRB(14,10,14,96),",
-        "end": "         Row(key:const Key('m549-three-home-finance-actions'),children:["
+        "start": " Widget dashboard(){",
+        "end": " Widget nextMonthForecast(){"
       },
       {
-        "start": " Future<void> backupDialog()async {",
-        "end": " Future<String?> _askForPin({"
+        "start": " Widget goalsPage(){",
+        "end": " Future<void> recurringDialog({"
+      },
+      {
+        "start": " Widget recurringPage(){",
+        "end": " Future<void> showWaffraFinancialCalendar()async{"
+      },
+      {
+        "start": "       child:const Icon(Icons.add,color:Colors.white,size:28)))),",
+        "end": "  if(addFabExpanded&&!accountOpened)...["
       }
     ],
-    "lib/storage/waffra_legacy_v24_sqlcipher_converter.dart": [
+    "test/waffra_directional_fab_receipt_corner_test.dart": [
       {
-        "start": "    WaffraEncryptedStore? db;\n    try {",
-        "end": "      final history = await WaffraAccountsFinanceHistory.capture(db);"
-      }
-    ],
-    "lib/storage/waffra_verified_active_accounts_restore.dart": [
-      {
-        "start": "/// Apply a cold-attested V3 to the ALREADY ACTIVE SQLCipher source.",
-        "end": "   final all=await store.customSelect("
-      }
-    ],
-    "lib/storage/waffra_verified_encrypted_finance_bridge.dart": [
-      {
-        "start": "  /// Restore is permitted ONLY on an already active verified encrypted vault.",
-        "end": "  Future<String> exportPortableBackup("
-      }
-    ],
-    "test/storage/m448_verified_active_accounts_restore_test.dart": [
-      {
-        "start": " Future<String> export(WaffraEncryptedStore store) =>",
-        "end": " test('unarchived typed SMS fingerprint prevents data loss on restore'"
-      }
-    ],
-    "test/storage/m614_legacy_v24_restore_test.dart": [
-      {
-        "start": "  test('UI routes legacy authenticated backups through separate V3 restore '",
-        "end": null
-      }
-    ],
-    "test/storage/m620_restored_home_ledger_parity_test.dart": [
-      {
-        "start": "  test('M620 restored V24 checks canonical SQLCipher before repainting '",
-        "end": null
-      }
-    ],
-    "test/storage/m616_android_v24_restore_test.dart": [
-      {
-        "start": "  test('M616 Android and iOS use app-private cache instead of systemTemp, '",
-        "end": null
+        "start": "  test('all snackbar entry points share one footer-aware presenter', () {",
+        "end": "  testWidgets('footer notice pushes financial content up and stays above footer',"
       }
     ]
   }
