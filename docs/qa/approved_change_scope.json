@@ -47,7 +47,7 @@
     ],
     "lib/storage/waffra_legacy_v24_sqlcipher_converter.dart": [
       {
-        "start": "      final module = WaffraFreshModulesRepository(",
+        "start": "    WaffraEncryptedStore? db;\n    try {",
         "end": "      final history = await WaffraAccountsFinanceHistory.capture(db);"
       }
     ],
