@@ -15,11 +15,12 @@ class SmsYesNoTest(unittest.TestCase):
    'reviewCategoryValid=previewHint.leaf!=null&&',
    'previewHint.parent!=null',
    'reviewedAccount?.generation!=null',
-   'reviewBlockers()',
-   "Key('m669-sms-review-blockers')",
    "Key('m669-review-original-sms-text')"):
 
    self.assertIn(value,SOURCE)
+  self.assertNotIn("Key('m669-sms-review-blockers')",SOURCE)
+  self.assertNotIn('لتفعيل نعم، راجع المطلوب',SOURCE)
+  self.assertIn("Key('waffra-sms-original-expand')",SOURCE)
  def test_authoritative_commit(self):
   body=SOURCE.split('Future<void> _m565ConfirmSms(',1)[1].split('Future<void> _reviewAutoSmsCandidates(',1)[0]
   for value in ('required ({List<String?>? ids,int? generation}) selectedAccount',
