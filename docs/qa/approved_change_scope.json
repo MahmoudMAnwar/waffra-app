@@ -1,13 +1,14 @@
 {
   "contract_version": 1,
-  "change_id": "M690-M693-ISSUES632-637-20261113",
+  "change_id": "M690-M695-ISSUES632-637-20261113",
   "human_scope_review": "Issue #629 completes prior PR #628 only after user-visible acceptance; #631 explicitly authorizes three exact screenshots for Goals/Dues/SMS Review, permanently visible financial activity, non-moving FAB-aligned notice, and savings/goal-due cash safety. Existing tests replace outdated visual assumptions without deleting financial safety assertions. Device screenshots/old restore still require external device evidence.",
   "user_requested_changes": [
     "M690 #632 permanently disable third-party AI bank SMS uploads and opt-in on previously installed versions, remove Settings toggle and signed Android staging worker, retain local encrypted SMS Review and money writer.",
     "M690 #637 convert obsolete cloud-positive tests to negative no-upload safeguards while retaining OTP/local SMS and finance contracts; issue #633 Home extraction, #634 unused AI modules, #635 real-screen matrix, #636 large ledger remain in Draft PR #638.",
     "M691 #633 extract 416 original lines of budget, monthly summary and insight cards to same-library Home State extension, preserve all existing finance and UI assertions through source helper.",
     "M692 #636 2400-row disposable SQLCipher month read and pages with cold reopen and no account balance drift. M693 #635 Goals/Dues/SMS review owner-approved widget composition layout matrix at 320/360/390 LTR/RTL dark/light while physical device proof remains distinct.",
-    "M694 #634 remove four stale unused cloud-consent cache fields/getters/reset paths from Home State while retaining local SMS opt-in cache and finance settings; add regression asserts."
+    "M694 #634 remove four stale unused cloud-consent cache fields/getters/reset paths from Home State while retaining local SMS opt-in cache and finance settings; add regression asserts.",
+    "M695 #634 hard-disable orphan historical Cloudflare gateway direct HTTP transport in addition to public cloud service; remove unused main import and retain review-only currency/OTP validators with no-network tests."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -33,7 +34,9 @@
     "test/storage/m692_large_ledger_month_read_test.dart",
     "test/support/waffra_main_source.dart",
     "scripts/qa/m550_behavior_contract_preflight.py",
-    "test/m687_home_state_extraction_test.dart"
+    "test/m687_home_state_extraction_test.dart",
+    "lib/waffra_cloudflare_sms_gateway.dart",
+    "test/m423_cloudflare_sms_gateway_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
@@ -97,6 +100,10 @@
       {
         "start": "key:const Key('waffra-header-account-entry'),",
         "end": "child:AnimatedContainer(duration:waffraMotion(260),"
+      },
+      {
+        "start": "import 'waffra_bank_sms_facts.dart';",
+        "end": "import 'waffra_sms_local_rules.dart';"
       }
     ],
     "test/support/waffra_main_source.dart": [
@@ -138,6 +145,20 @@
     "test/qa/m444_notification_safety_test.py": [
       {
         "start": "from pathlib import Path"
+      }
+    ],
+    "lib/waffra_cloudflare_sms_gateway.dart": [
+      {
+        "start": "import 'package:http/http.dart' as http;",
+        "end": "import 'waffra_ai_finance_brain.dart';"
+      },
+      {
+        "start": "  static Future<Map<String, Object?>?> analyze({"
+      }
+    ],
+    "test/m423_cloudflare_sms_gateway_test.dart": [
+      {
+        "start": "import 'dart:convert';"
       }
     ]
   }

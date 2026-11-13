@@ -147,9 +147,8 @@ void main() {
     final item = await WaffraCloudflareSmsGateway.analyze(
       source: english, appCheckToken: 'test.signed.token',
       endpoint: endpoint, client: client);
-    expect(called, 1);
-    expect(item?['requiresReview'], true);
-    expect(item?['verifiedForPosting'], false);
+    expect(called, 0, reason:'Retired cloud transport must not POST');
+    expect(item,isNull);
     client.close();
   });
 
@@ -170,7 +169,7 @@ void main() {
     expect(await WaffraCloudflareSmsGateway.analyze(
       source: english, appCheckToken: 'test.signed.token',
       endpoint: endpoint, client: client), isNull);
-    expect(called, 1);
+    expect(called, 0, reason:'Cloud transport stays disabled');
     client.close();
   });
 }

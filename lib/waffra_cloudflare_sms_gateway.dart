@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import 'waffra_ai_finance_brain.dart';
@@ -114,37 +113,13 @@ abstract final class WaffraCloudflareSmsGateway {
     };
   }
 
+  /// M695 / #634: external worker transport has been retired permanently.
+  /// Keep exact review-only validation helpers for historical safety tests,
+  /// but no client, token or SMS is ever sent off the device.
   static Future<Map<String, Object?>?> analyze({
     required String source,
     required String appCheckToken,
     required Uri endpoint,
     http.Client? client,
-  }) async {
-    if (validEndpoint(endpoint.toString()) == null ||
-        appCheckToken.isEmpty) return null;
-    final redacted = WaffraSmsCloudRedactor.redact(source);
-    if (redacted == null) return null;
-    final owned = client == null;
-    final transport = client ?? http.Client();
-    try {
-      final result = await transport.post(
-        endpoint,
-        headers: <String, String>{
-          'content-type': 'application/json',
-          'X-Firebase-AppCheck': appCheckToken,
-        },
-        body: jsonEncode(<String, Object>{
-          'cloudConsent': true,
-          'text': redacted,
-        }),
-      ).timeout(const Duration(seconds: 18));
-      if (result.statusCode != 200 || result.body.length > 16000) return null;
-      return validateSuggestion(redacted, jsonDecode(result.body));
-    } catch (_) {
-      // Never log bank SMS, tokens, model output or provider errors.
-      return null;
-    } finally {
-      if (owned) transport.close();
-    }
-  }
+  }) async => null;
 }

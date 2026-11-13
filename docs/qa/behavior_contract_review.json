@@ -2842,6 +2842,30 @@
         "Do not reintroduce third-party model consent on Settings.",
         "Do not alter bank SMS review or encrypted account state."
       ]
+    },
+    {
+      "id": "M695-CLOUDFLARE-DIRECT-TRANSPORT-RETIREMENT-ISSUE634",
+      "issue": "Issue #634 / Draft PR #638",
+      "previous_behavior": "Even after settings retirement, an unreferenced old Cloudflare helper retained a callable outbound HTTP POST method; main.dart still imported the disabled service, triggering unused import analyzer warning.",
+      "approved_behavior": "Remove unused main.dart service import and make orphan gateway analyze() always return null without opening a client or contacting a provider. Retain pure strict historical currency/review and OTP validation helper functions as positive security regression test fixtures.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_cloudflare_sms_gateway.dart",
+        "lib/waffra_sms_cloud_service.dart"
+      ],
+      "test_paths": [
+        "test/m423_cloudflare_sms_gateway_test.dart",
+        "test/m690_retired_cloud_sms_contract_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m429-integration-smoke.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "No POST regardless of passed URL, source, fake App Check token or HTTP client.",
+        "Existing helper currency/OTP validation assertions remain enforced.",
+        "No Settings or app startup cloud opt-in."
+      ]
     }
   ]
 }
