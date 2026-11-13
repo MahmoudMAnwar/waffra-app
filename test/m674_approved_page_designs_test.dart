@@ -61,6 +61,20 @@ void main(){
     throwsA(isA<StateError>()));
    expect((await accounts.balances())
     .singleWhere((a)=>a.id=='m674-bank').balanceMinor,balance);
+   // M680: changing wallet savings through an ordinary metadata edit
+   // must fail, and removing the recurring account must clear its typed row.
+   await expectLater(modules.save(WaffraFinanceModule.goals,
+    {...goal.toJson(),'saved':goal.saved+1},replaceExisting:true),
+    throwsA(isA<StateError>()));
+   await modules.save(WaffraFinanceModule.recurring,
+    {...schedule.toJson(),'accountId':null,'linkedGoalId':null},
+    replaceExisting:true);
+   final removed=await db.customSelect(
+    "SELECT account_id FROM fresh_finance_recurring_account_defaults "
+    "WHERE recurring_id='m674-due'").get();
+   expect(removed,isEmpty);
+   await modules.save(WaffraFinanceModule.recurring,
+    {...schedule.toJson(),'day':20},replaceExisting:true);
    await db.close();
    db=null;
    db=WaffraEncryptedStore.openAt(path,key:key);
