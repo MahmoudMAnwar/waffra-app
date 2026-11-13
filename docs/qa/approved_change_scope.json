@@ -77,6 +77,106 @@
         "start": " Widget _m684HomeFinanceAction({",
         "end": "\n}"
       }
+    ],
+    "test/m149_backup_pin_localized_fab_trash_uat_test.dart": [
+      {
+        "start": "test('M149: all recycle-bin CTAs are red and recurring calendar is alongside'",
+        "end": "for (final brightness in [Brightness.light,Brightness.dark])"
+      }
+    ],
+    "test/m268_approved_emerald_balance_card_test.dart": [
+      {
+        "start": "test('approved balance artwork stays embedded and never uses external images'"
+      }
+    ],
+    "test/m343_goal_recurring_named_budgets_test.dart": [
+      {
+        "start": "test('M343 goal/recurring UI uses one saved total and budget remains independent'"
+      }
+    ],
+    "test/m345_goal_budget_forecast_test.dart": [
+      {
+        "start": "test('M345 actual goal and budget UI consume forecast without finance writes'"
+      }
+    ],
+    "test/m371_goal_wallet_and_budgets_regression_test.dart": [
+      {
+        "start": "test('M371 goal creation cannot post an expense or negative cash debit'"
+      }
+    ],
+    "test/m392_m395_budget_quick_actions_goal_ui_test.dart": [
+      {
+        "start": "test('M393 recurring Quick Actions preserve original edit/delete/toggle'",
+        "end": "test('M396 new due entries require explicit consent, never silently debit'"
+      }
+    ],
+    "test/m665_goal_due_display_and_linked_edit_test.dart": [
+      {
+        "start": "test('M665.7 recurring goal payment shows paid split, not zero saved progress'",
+        "end": "testWidgets('M665.7 widget shows labelled wallet and bank, never tech notes/restaurant'"
+      }
+    ],
+    "test/m669_sms_review_category_search_test.dart": [
+      {
+        "start": "test('M669 all SMS review routes keep original source and explicit reasons'"
+      }
+    ],
+    "test/m670_feedback_transfer_dashboard_test.dart": [
+      {
+        "start": "test('M670 goals, recurring and category stats share layout geometry'",
+        "end": "test('M670 Snackbar central presenter has no visible X nor 2-line clipping'"
+      }
+    ],
+    "test/m672_m678_activity_account_regression_test.dart": [
+      {
+        "start": "test('M677 only one financial activity type chip row remains'",
+        "end": "test('M672 transfer arrow points source to destination in Arabic and English'"
+      }
+    ],
+    "test/m674_approved_page_designs_test.dart": [
+      {
+        "start": "test('M682 owner screenshot UI has no duplicate Edit and Accounts opens manager'",
+        "end": "test('M675 immutable + source contract and existing finance write routing'"
+      }
+    ],
+    "test/qa/m565_sms_yes_no_test.py": [
+      {
+        "start": "def test_yes_no_with_preview_and_no_guessing(self):",
+        "end": "def test_authoritative_commit(self):"
+      }
+    ],
+    "test/qa/m574_sms_confirmation_full_fields_test.py": [
+      {
+        "start": "def test_review_preview_displays_all_495_fields(self):"
+      }
+    ],
+    "test/storage/m364_sqlcipher_finance_domain_test.dart": [
+      {
+        "start": "import 'package:waffra/storage/waffra_verified_goal_due_snapshot_writer.dart';",
+        "end": "void main() {"
+      },
+      {
+        "start": "test('M364 rejected due never writes partial money or disables plan'",
+        "end": "test('M365 stale snapshot denies goal due and leaves both stores unchanged'"
+      }
+    ],
+    "test/storage/m448_account_context_read_test.dart": [
+      {
+        "start": "test('all/unassigned budget and balance are independent of account header'",
+        "end": "test('M684 summary reads only chosen month without changing full-history API'"
+      }
+    ],
+    "test/waffra_directional_fab_receipt_corner_test.dart": [
+      {
+        "start": "test('goals keep outlined counter, recurring uses compact count badge'",
+        "end": "test('all snackbar entry points share one footer-aware presenter'"
+      }
+    ],
+    "test/waffra_m208_bundle_regression_test.dart": [
+      {
+        "start": "test('Recurring section has count chip, compact reminders and nearest bill'",
+        "end": "test('Currency converter searchable currencies, directional swap, financial tools'"
+      }
     ]
   }
 }
