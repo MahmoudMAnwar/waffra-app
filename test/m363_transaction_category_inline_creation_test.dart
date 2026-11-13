@@ -61,14 +61,15 @@ void main(){
   expect(source,contains('recurring[scheduleIndex]=currentSchedule.single.copy(active:false)'));
  });
 
- test('M362 a short available balance warns and permits funding',(){
+ test('M689 short available balance rejects unaffordable funding',(){
   final source=File('lib/main.dart').readAsStringSync();
   final start=source.indexOf('Future<void> fundGoal(SavingGoal g)async');
   final end=source.indexOf('IconData goalIcon(',start);
   final fund=source.substring(start,end);
   expect(fund,contains('if(n>available)'));
-  expect(fund,contains('showWaffraDialog<bool>'));
-  expect(fund,contains('if(acknowledged!=true||!mounted)return;'));
+  expect(fund,contains('if(n>available){'));
+  expect(fund,contains('isError:true);'));
+  expect(fund,isNot(contains('if(acknowledged!=true||!mounted)return;')));
   expect(fund,contains('final available=source.single.balanceMinor/100;'));
   expect(fund,contains('sourceAccountId:funding.sourceAccountId,userConfirmed:true'));
   expect(fund,contains('await fundingBridge.fundVerifiedGoal('));
