@@ -183,6 +183,12 @@ abstract final class WaffraLegacyV24SqlCipherConverter {
       }
       final module = WaffraFreshModulesRepository(
         store: db, experimentalEnabled: true);
+      // M622: these rows live only in a disposable encrypted candidate.
+      // One outer SQLite transaction avoids a durable commit per category
+      // (large V24 exports contain 1000+ categories). Existing module.save
+      // validation and its nested savepoints still run for EVERY row.
+      // Any later budget/link failure rolls back the whole staged batch.
+      await db.transaction(() async {
       final categories = (legacy['categories'] as List)
         .map((v) => Map<String, Object?>.from(v as Map))
         .toList(growable: false);
@@ -272,6 +278,7 @@ abstract final class WaffraLegacyV24SqlCipherConverter {
             ['v24-named:${row['id']}',budgetId,row['id'],minor,stamp]);
         }
       }
+      });
       final history = await WaffraAccountsFinanceHistory.capture(db);
       final candidate = await WaffraAccountsPortableBackupV3.bundle(
         encryptedV2: encryptedV2,
