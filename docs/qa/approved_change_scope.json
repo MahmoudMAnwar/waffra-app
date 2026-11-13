@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "change_id": "M690-M700-ISSUES632-637-20261113",
+  "change_id": "M690-M701-ISSUES632-637-20261113",
   "human_scope_review": "Issue #629 completes prior PR #628 only after user-visible acceptance; #631 explicitly authorizes three exact screenshots for Goals/Dues/SMS Review, permanently visible financial activity, non-moving FAB-aligned notice, and savings/goal-due cash safety. Existing tests replace outdated visual assumptions without deleting financial safety assertions. Device screenshots/old restore still require external device evidence.",
   "user_requested_changes": [
     "M690 #632 permanently disable third-party AI bank SMS uploads and opt-in on previously installed versions, remove Settings toggle and signed Android staging worker, retain local encrypted SMS Review and money writer.",
@@ -13,7 +13,8 @@
     "M697 #634 delete unused retired Cloudflare redactor import after fail-closed transport; update exact-head release notes for all source commits after `lib/main.dart` extraction.",
     "M698 #634 permanently retire the unreachable cloud SMS staging analyzer after code-search import audit, prevent build-time WAFFRA_SMS_WORKER_URL from exposing a configured gateway, and add negative regression checks. Keep test-only finance truth/currency verification helpers while still referenced by safety regression tests.",
     "M699 #634/#637 remove obsolete cloud/AI suggestion labels and counters from the local SMS review inbox while retaining original SMS text, existing local classification and manual confirmation; historical untrusted proposal data is never shown as a verified financial amount.",
-    "M700 #634: explicitly scope the owner-requested retirement of lib/waffra_sms_cloud_review_analyzer.dart in the exact-path M385 deletion allowlist, preserving fail-closed rejection for every other path; repair M550 references to use still-existing transport safety code and keep all no-upload regressions."
+    "M700 #634: explicitly scope the owner-requested retirement of lib/waffra_sms_cloud_review_analyzer.dart in the exact-path M385 deletion allowlist, preserving fail-closed rejection for every other path; repair M550 references to use still-existing transport safety code and keep all no-upload regressions.",
+    "M701 #634: make M550 review declared, exact-path approved source deletions as documented behavior changes without requiring a removed file to exist at HEAD; source assertion scan skips deleted binaries, but fails closed on missing unapproved source and never suppresses extant tests."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -152,8 +153,16 @@
     ],
     "scripts/qa/m550_behavior_contract_preflight.py": [
       {
-        "start": "    expected_parts = (",
-        "end": "    if home_path in new_sources:"
+        "start": "def validate_review(",
+        "end": "def build_report("
+      },
+      {
+        "start": "    if sources:\n",
+        "end": "    # Complete *repository* inventory, not a handpicked list of jobs."
+      },
+      {
+        "start": "    for p in sorted(sources):",
+        "end": "    # M687: same-library part moves are NOT code deletions."
       }
     ],
     "test/m687_home_state_extraction_test.dart": [
