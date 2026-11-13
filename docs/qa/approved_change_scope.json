@@ -81,7 +81,7 @@
     "test/m149_backup_pin_localized_fab_trash_uat_test.dart": [
       {
         "start": "test('M149: all recycle-bin CTAs are red and recurring calendar is alongside'",
-        "end": "for (final brightness in [Brightness.light,Brightness.dark])"
+        "end": "testWidgets('M149: red deleted button fits narrow half-width in $brightness'"
       }
     ],
     "test/m268_approved_emerald_balance_card_test.dart": [
