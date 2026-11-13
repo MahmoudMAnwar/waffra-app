@@ -38,7 +38,16 @@ class M417AutoSmsContractTest(unittest.TestCase):
         self.assertNotIn("commitConfirmedSms",receiver+queue)
 
     def test_writes_only_from_existing_verified_sms_review(self):
-        home=self.read("lib/main.dart")+self.read("lib/waffra_home_profile.part.dart")
+        home=self.read("lib/main.dart")
+        # M704: this used, same-library transfer method was extracted
+        # byte-identically. Reconstruct the source at its original anchor
+        # so every existing money/ACK/fee assertion remains unchanged.
+        transfer_part=self.read("lib/waffra_home_sms_transfer_review.part.dart")
+        marker=" // M703: implementation moved byte-identically to registered Home part."
+        self.assertIn(marker,home)
+        self.assertIn("part 'waffra_home_sms_transfer_review.part.dart';",home)
+        home=home.replace(marker,transfer_part,1)
+        home+=self.read("lib/waffra_home_profile.part.dart")
         self.assertIn("await entrySheet(sms:true,initialSms:body,reviewedSender:sender);",home)
         self.assertIn("smsHashes.contains(bankSmsHash(body))",home)
         # Income/expense and two-sided transfers have independent durable
