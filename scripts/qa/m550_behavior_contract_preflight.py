@@ -234,6 +234,7 @@ def validate_review(
     review: dict, changed: set[str], available: set[str],
     *,
     must_be_changed: bool = True,
+    approved_deleted: set[str] | None = None,
 ) -> list[str]:
     if review.get("schema_version") != 1:
         raise ContractError("M550 behavior review missing/invalid schema_version=1")
@@ -245,6 +246,9 @@ def validate_review(
     contracts = review.get("contracts")
     if not isinstance(contracts, list) or not contracts:
         raise ContractError("M550 requires substantive behavior-to-test contracts")
+    # Exact-path deletions must be declared by the M385 scope gate.
+    # M550 still requires a reviewed behavior contract and live QA tests.
+    deleted = approved_deleted or set()
     covered = set()
     summaries = []
     for c in contracts:
@@ -256,8 +260,12 @@ def validate_review(
         paths, tests = c.get("source_paths"), c.get("test_paths")
         if not isinstance(paths, list) or not paths or not isinstance(tests, list) or not tests:
             raise ContractError(f"M550 {c['id']}: provide source_paths and test_paths")
-        if any(not isinstance(p, str) or p not in available for p in paths + tests):
+        if any(not isinstance(p, str) or
+                   (p not in available and p not in deleted)
+                   for p in paths + tests):
             raise ContractError(f"M550 {c['id']}: source/test reference missing from checkout")
+        if any(p in deleted for p in tests):
+            raise ContractError(f"M550 {c['id']}: removed test cannot attest deleted source")
         if any(not p.startswith(("test/", "scripts/qa/test_")) for p in tests):
             raise ContractError(f"M550 {c['id']}: test_paths must be real QA tests")
         safety = c.get("safety_invariants")
@@ -283,12 +291,24 @@ def build_report(base: str, head: str, root: Path = ROOT) -> dict:
     if inv["workflows"] < 1 or not inv["jobs"]:
         raise ContractError("M550 workflow inventory empty; refusing false green")
     available = {x.relative_to(root).as_posix() for x in root.rglob("*") if x.is_file()}
+    # M701: Validate removed production paths against the exact approved
+    # deletion declaration. Never treat a random missing file as approved.
+    deleted_sources = sources - available
+    try:
+        scope = json.loads((root / "docs/qa/approved_change_scope.json").read_text(encoding="utf-8"))
+        approved_deleted = set(scope.get("approved_deleted_files", []))
+    except (OSError, ValueError, TypeError) as e:
+        raise ContractError(f"M550 approved deletion scope unreadable: {e}") from e
+    if deleted_sources - approved_deleted:
+        raise ContractError("M550 undeclared deleted source: " +
+                            ", ".join(sorted(deleted_sources - approved_deleted)))
     if sources:
         try:
             contract = json.loads((root / CONTRACT).read_text(encoding="utf-8"))
         except (OSError, ValueError) as e:
             raise ContractError(f"M550 behavior review unreadable: {e}") from e
-        contracts = validate_review(contract, changed, available)
+        contracts = validate_review(contract, changed, available,
+                                    approved_deleted=deleted_sources)
     else:
         contracts = []
     # Complete *repository* inventory, not a handpicked list of jobs.
@@ -303,7 +323,11 @@ def build_report(base: str, head: str, root: Path = ROOT) -> dict:
             old_sources[p] = git("show", f"{base}:{p}")
         except ContractError:
             continue  # New source path: no deleted baseline assertion.
-        new_sources[p] = (root / p).read_text(encoding="utf-8")
+        # Deleted sources are protected by the M385 exact-path gate.
+        # They cannot be opened at HEAD, and are deliberately not
+        # reconstituted from the baseline as though still executable.
+        if p in available:
+            new_sources[p] = (root / p).read_text(encoding="utf-8")
     # M687: same-library part moves are NOT code deletions. Check that every
     # extracted part is declared by main.dart, says 'part of main.dart', and
     # exists in the head tree before allowing any old source assertion to
