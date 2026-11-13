@@ -1767,3 +1767,8 @@ Audit of remaining production direct Material `DropdownButtonFormField<String>` 
 - Physical Android Overflow, owner backup/restore and exact balance/report parity remain separate acceptance gates; none are claimed here.
 
 - M684 CI follow-up / M550: refreshed the old M470 positive account-source assertion to verify SQLCipher all-time linked-entry IDs instead of the removed row-by-row `item.accountId` predicate. Negative cases, existing SMS transfer checks and account safety remain intact.
+
+### M103 exact-head regression tests (2026-11-13; same Draft PR #628)
+- Updated M677 source test to require exactly two uses of the memoized activity read: collapsed count before the expanded area, and rows inside that area. Previous index assertion accidentally required the collapsed count read not to exist.
+- Updated M674 narrow RTL dark UI test to assert both summary and real goal chart display 25%, plus the other goal's 75%. This is intentional repeated UI data, not a duplicate ledger entry.
+- No production source changes or hidden/discarded tests. All exact-head CI must rerun. Physical Android and owner-backup parity remain separate.

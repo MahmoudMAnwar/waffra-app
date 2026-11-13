@@ -28,8 +28,14 @@ void main() {
     expect(dashboard, contains('showAllTransactions=false;'));
     expect(dashboard, contains('typeFilter=choice;categoryFilter='));
     expect(dashboard, contains("Key('waffra-financial-activity-toggle')"));
-    expect(dashboard.indexOf('if(financialActivityExpanded)...['),
-        lessThan(dashboard.indexOf('future:_m652UnifiedActivities(')));
+    // The first read renders the collapsed LIVE total; the second read
+    // renders detailed transfer/savings rows when expanded.
+    final reads='future:_m652UnifiedActivities('
+        .allMatches(dashboard).map((m)=>m.start).toList();
+    expect(reads,hasLength(2));
+    final expanded=dashboard.indexOf('if(financialActivityExpanded)...[');
+    expect(reads.first,lessThan(expanded));
+    expect(expanded,lessThan(reads.last));
     expect(dashboard,
         isNot(contains("WaffraText(waffraIsEnglish?'Income':'الدخل'")));
   });

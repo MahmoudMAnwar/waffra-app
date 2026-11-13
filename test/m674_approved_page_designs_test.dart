@@ -146,7 +146,10 @@ void main(){
       labels:['هدف أ','هدف ب'],progress:[.25,.75]),
     ]))))));
   expect(find.text('1,250 ر.س'),findsOneWidget);
-  expect(find.text('25%'),findsOneWidget);
+  // 25% deliberately appears in both the metric and Goal A's progress.
+  // Duplicate valid values are not duplicate financial postings.
+  expect(find.text('25%'),findsNWidgets(2));
+  expect(find.text('75%'),findsOneWidget);
   expect(find.byKey(const Key('m674-real-goal-progress-chart')),
    findsOneWidget);
   expect(tester.takeException(),isNull);

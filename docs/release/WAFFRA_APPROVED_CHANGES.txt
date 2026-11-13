@@ -547,3 +547,8 @@ M684 account-context CI and shared Home-filter follow-up (2026-11-13; same Draft
 - Exact-head CI, real physical Android Overflow and user-owned Backup/Restore balance/report parity remain unverified release gates.
 
 M684 M550 contract correction (same Draft PR #628, 2026-11-13): obsolete M470 source assertion now verifies selected-account all-time SQL ID membership and continuing exclusion of the unassigned picker. No old negative test was suppressed; exact-head CI to be rerun.
+
+M103 exact-head fail correction (2026-11-13, same Draft PR #628):
+- M677 test now checks that memoized verified activity reads exist for collapsed numeric counter and detailed cards; no duplicate filter row and no app code change.
+- M674 narrow RTL goal chart test expects 25% in both overview metric and actual bar, and 75% in the second goal, correcting a one-widget assertion that incorrectly rejected valid duplicated text.
+- Do not interpret these focused test updates as physical Android or backup acceptance.
