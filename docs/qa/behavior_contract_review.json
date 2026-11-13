@@ -2921,6 +2921,26 @@
         "No unchecked external recommendation becomes posted money.",
         "The no-network policy does not alter stored SQLCipher balances, receipts or account selection."
       ]
+    },
+    {
+      "id": "M703-HOME-SMS-TRANSFER-REVIEW-EXTRACTION-ISSUE633",
+      "issue": "#633",
+      "previous_behavior": "The live bank-SMS transfer review and its verified SQLCipher transfer/fee acknowledgment code were embedded inside monolithic Home State in lib/main.dart.",
+      "approved_behavior": "The same code is moved without behavior changes to a registered same-library Dart part, with manual SAR amount/date/account confirmation, atomic fee transaction, durable SMS ACK and verified Home/Widget refresh unchanged.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_sms_transfer_review.part.dart"
+      ],
+      "test_paths": [
+        "test/m703_home_sms_transfer_extraction_test.dart",
+        "test/m690_retired_cloud_sms_contract_test.dart"
+      ],
+      "safety_invariants": [
+        "Never infer a bank account or transfer principal from untrusted SMS.",
+        "Never acknowledge a transfer before verified SQLCipher commit.",
+        "Preserve the original SMS text and explicit user confirmation.",
+        "Never double debit on historical SMS replay or bank fee ambiguity."
+      ]
     }
   ]
 }
