@@ -1,7 +1,7 @@
 ## M620 — V24 restore 19-source/38-displayed, accountless historical balance (2026-11-13)
 
 - **Issue:** [#620](https://github.com/MahmoudMAnwar/waffra-app/issues/620). **PR:** [#621](https://github.com/MahmoudMAnwar/waffra-app/pull/621) (Draft).
-- **Status:** Missing / investigating. Original authenticated V24 has 19 distinct IDs (17 expenses, 2 income); owner screenshot after successful SQLCipher restore shows 38 rows, exact doubled totals, and zero account-only balance.
+- **Status:** Partial — new post-commit identity guard, stale Home repair, accountless-net explanation and synthetic tests committed; exact-HEAD CI/Android validation pending. Original authenticated V24 has 19 distinct IDs (17 expenses, 2 income); owner screenshot after successful SQLCipher restore shows 38 rows, exact doubled totals, and zero account-only balance.
 - **Approved behavior:** Check canonical snapshot and typed SQL IDs/counts immediately following restore and separately after Home projection, retaining signed source witness. Never delete visually identical entries, never fabricate accounts or silently move historical unlinked money into a bank. Render clearly separated "historical unassigned net" vs actual verified account balances and explain external encrypted rescue as an optional recovery protection before replacement. No original archive, real financial amounts, names, passwords or personal content in GitHub.
 - **QA:** synthetic 19 distinct row IDs, repeated restore/resume, canonical Home rehydrate, rollback/no data loss, legitimate same-amount different-ID entries, empty bank-account balances, out-of-account historical net and plain safety-copy explanation. Exact-HEAD CI and expendable Android QA pending. Spouse device not approved for updating.
 
