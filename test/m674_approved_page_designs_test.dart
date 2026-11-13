@@ -212,6 +212,55 @@ void main(){
   expect(tester.takeException(),isNull);
  });
 
+
+ testWidgets('M683 narrow Arabic/English money and 100% goal remain legible',
+  (tester)async{
+  addTearDown((){
+   tester.view.resetPhysicalSize();
+   tester.view.resetDevicePixelRatio();
+  });
+  for(final width in <double>[320,360,390]){
+   for(final english in <bool>[false,true]){
+    tester.view.physicalSize=Size(width,720);
+    tester.view.devicePixelRatio=1;
+    await tester.pumpWidget(MaterialApp(
+     theme:ThemeData.dark(),
+     home:Directionality(
+      textDirection:english?TextDirection.ltr:TextDirection.rtl,
+      child:Scaffold(body:SingleChildScrollView(child:Column(children:[
+       const WaffraApprovedMetrics(metrics:[
+        WaffraApprovedMetric('Savings','50,000.00 SAR',Icons.wallet_outlined),
+        WaffraApprovedMetric('Goals','1',Icons.flag_outlined),
+        WaffraApprovedMetric('Progress','100%',Icons.donut_large),
+       ]),
+       const WaffraApprovedGoalProgressBars(
+        title:'Goal progress',labels:['Car'],progress:[1.0]),
+      ]))))));
+    await tester.pumpAndSettle();
+    expect(find.text('50,000.00 SAR'),findsOneWidget);
+    expect(find.text('100%'),findsWidgets);
+    expect(find.byKey(const Key('m683-goal-progress-0')),findsOneWidget);
+    expect(tester.takeException(),isNull);
+   }
+  }
+ });
+
+ test('M682 owner screenshot UI has no duplicate Edit and Accounts opens manager',(){
+  final src=File('lib/main.dart').readAsStringSync();
+  final shortcuts=src.split("key:const Key('m674-home-approved-shortcuts')")[1]
+   .split('const SizedBox(height:12)')[0];
+  expect(shortcuts,contains('onTap:()=>unawaited(openVerifiedAccounts())'));
+  expect(shortcuts,isNot(contains('accountOpened=true')));
+  final goalStart=src.indexOf("final percent=g.target<=0");
+  final goalEnd=src.indexOf('if(goals.isEmpty)',goalStart);
+  expect(goalStart,greaterThan(0));
+  expect(goalEnd,greaterThan(goalStart));
+  final goalCard=src.substring(goalStart,goalEnd);
+  expect(goalCard,contains("_handleGoalCardAction(g,'edit')"));
+  expect(goalCard,isNot(contains('unawaited(editGoal(g))')));
+  expect(src,contains('snapshot.data!.savings.length'));
+  expect(src,contains('snapshot.data!.transfers.length'));
+ });
  test('M675 immutable + source contract and existing finance write routing',(){
   final code=File('lib/main.dart').readAsStringSync();
   final a=code.indexOf(
