@@ -41,14 +41,13 @@ void main(){
    experimentalEnabled:true,
   ).exportV3(password:pass);
 
- Future<({String incoming,String rescue,String checksum})> archives()async{
-  final rescue=await export(live);
+ Future<({String incoming,String checksum})> archives()async{
   final incoming=await export(target);
   final preview=await WaffraAccountsPortableBackupV3.verifyAndPreview(
    encryptedArchive:incoming,password:pass);
   final finance=await WaffraPortableBackupV2.verifyAndPreview(
    encryptedArchive:preview.encryptedV2,password:pass);
-  return (incoming:incoming,rescue:rescue,checksum:finance.sourceChecksum);
+  return (incoming:incoming,checksum:finance.sourceChecksum);
  }
 
  setUp(()async{
@@ -66,18 +65,17 @@ void main(){
  });
 
  Future<WaffraVerifiedAccountsRestoreReceipt> apply(
-  ({String incoming,String rescue,String checksum}) p,{
-  bool saved=true,int? expectedGeneration,
+  ({String incoming,String checksum}) p,{
+  int? expectedGeneration,
  }) async {
   final before=await state(live).read();
   return WaffraVerifiedActiveAccountsRestore(
    store:live,snapshot:state(live),experimentalEnabled:true,
   ).restore(
    encryptedArchive:p.incoming,password:pass,
-   savedRescueArchive:p.rescue,rescuePassword:pass,
    expectedGeneration:expectedGeneration??before.generation,
    expectedDigest:before.digest,preflightChecksum:p.checksum,
-   userConfirmed:true,externallySavedRescueConfirmed:saved,
+   userConfirmed:true,
   );
  }
 
@@ -97,10 +95,18 @@ void main(){
   expect((await live.customSelect('PRAGMA foreign_key_check').get()),isEmpty);
  });
 
- test('missing external rescue refuses any active money mutation',()async{
+ test('M623 restores without generating or requesting an external rescue',()async{
   final p=await archives();
-  await expectLater(apply(p,saved:false),throwsA(isA<StateError>()));
-  expect(await balances(),{'old-account':100000});
+  final result=await apply(p);
+  expect(result.newGeneration,greaterThan(result.previousGeneration));
+  expect(await balances(),{'new-account':300000});
+  final bridge=File('lib/storage/waffra_verified_encrypted_finance_bridge.dart')
+      .readAsStringSync();
+  final active=File('lib/storage/waffra_verified_active_accounts_restore.dart')
+      .readAsStringSync();
+  expect(bridge,contains('applyVerifiedV3Restore({'));
+  expect(active,isNot(contains('savedRescueArchive')));
+  expect(active,isNot(contains('externallySavedRescueConfirmed')));
  });
 
  test('stale source witness refuses replacement',()async{
@@ -131,8 +137,7 @@ void main(){
   decoded.remove('accountContextV1');
   final olderArchive=await WaffraSecureBackup.encryptUserBackup(
    jsonEncode(decoded),pass);
-  final backward=(incoming:olderArchive,rescue:original.rescue,
-   checksum:original.checksum);
+  final backward=(incoming:olderArchive,checksum:original.checksum);
   expect((await apply(backward)).transactionCount,0);
   expect(await balances(),{'new-account':300000});
  });
@@ -144,8 +149,7 @@ void main(){
   decoded.remove('financeHistoryV1');
   final legacy=await WaffraSecureBackup.encryptUserBackup(
    jsonEncode(decoded),pass);
-  final candidate=(incoming:legacy,rescue:original.rescue,
-   checksum:original.checksum);
+  final candidate=(incoming:legacy,checksum:original.checksum);
   await expectLater(apply(candidate),throwsA(isA<StateError>()));
   expect(await balances(),{'old-account':100000});
  });
