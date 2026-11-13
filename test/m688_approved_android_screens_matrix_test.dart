@@ -46,8 +46,7 @@ void main(){
       child:Material(child:Padding(padding:const EdgeInsets.all(8),
        child:Text(notice,key:const Key('m688-multiline-notice'),
         style:const TextStyle(fontSize:12))))),
-    ])))),
-  );
+    ]))));
  }
  testWidgets('M688 320/360/390 light/dark RTL/LTR remain readable and keep + fixed',
   (tester)async{

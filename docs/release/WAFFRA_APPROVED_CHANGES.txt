@@ -586,3 +586,5 @@ M687 source-contract repair: all affected Flutter source tests and Python M417 r
 M687 M550 regex correction: recognize readWaffraMainSourceForContracts() as a valid source-bound assertion reader, still requiring registered exact Dart part bodies. Existing positive/negative tests remain unchanged.
 
 M687/M688 regression continuation: original M424 security and October PDF/account tests now inspect the actual moved Profile/PDF implementation, preserving assertions. Added 320/360/390dp light/dark RTL/LTR 1.3x text-scale Flutter regression for full money/progress, single/multiline Snackbar and the exact stationary 58dp +. This is not physical Android evidence or an authenticated owner-backup restore.
+
+M688 QA compile correction: close MaterialApp/Directionality/Scaffold/Stack exactly once in new responsive widget test. Keep 320/360/390dp, RTL/LTR, dark/light, full value, fixed 58dp FAB and multiline notice validations unchanged. No production code changed.
