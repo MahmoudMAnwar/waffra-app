@@ -102,15 +102,24 @@ void main(){
 
   final before={for(final a in await accounts.balances())a.id:a.balanceMinor};
   expect(before,{'rajhi':80000,'cash':90000});
+  // A nonzero opening may already include old transactions; reject without
+  // a separate explicit attestation, leaving balances and links unchanged.
+  await expectLater(WaffraAccountContextRead.attachPreviouslyUnassigned(
+   store:db,entryId:'unassigned-expense',accountId:'rajhi',
+   confirmedIso:stamp,userConfirmed:true),throwsA(isA<StateError>()));
+  expect((await db.customSelect(
+   "SELECT count(*) AS n FROM fresh_finance_account_entry_links "
+   "WHERE entry_id='unassigned-expense'").getSingle()).read<int>('n'),0);
   await WaffraAccountContextRead.attachPreviouslyUnassigned(
    store:db,entryId:'unassigned-expense',accountId:'rajhi',
-   confirmedIso:stamp,userConfirmed:true);
+   confirmedIso:stamp,userConfirmed:true,openingExcludesHistory:true);
   await WaffraAccountContextRead.attachPreviouslyUnassigned(
    store:db,entryId:'unassigned-expense',accountId:'rajhi',
-   confirmedIso:stamp,userConfirmed:true);
+   confirmedIso:stamp,userConfirmed:true,openingExcludesHistory:true);
   await expectLater(WaffraAccountContextRead.attachPreviouslyUnassigned(
    store:db,entryId:'unassigned-expense',accountId:'cash',
-   confirmedIso:stamp,userConfirmed:true),throwsA(isA<StateError>()));
+   confirmedIso:stamp,userConfirmed:true,openingExcludesHistory:true),
+   throwsA(isA<StateError>()));
   final after={for(final a in await accounts.balances())a.id:a.balanceMinor};
   expect(after,{'rajhi':75000,'cash':90000});
   expect((await db.customSelect(
