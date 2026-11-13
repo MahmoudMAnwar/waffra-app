@@ -129,6 +129,7 @@ part 'waffra_budget_directory.part.dart';
 part 'waffra_smart_analysis.part.dart';
 part 'waffra_recurring_trash.part.dart';
 part 'waffra_goal_recurring_actions.part.dart';
+part 'waffra_home_finance_tiles.part.dart';
 part 'waffra_deleted_item_card.part.dart';
 part 'waffra_auto_sms_autopost.part.dart';
 
@@ -13469,53 +13470,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     ])));
  }
 
- Widget _dashboardShortcut(String title,IconData icon,VoidCallback onTap){
-  final dark=Theme.of(context).brightness==Brightness.dark;
-  return Expanded(child:Material(
-   color:Theme.of(context).cardColor,
-   shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18),
-    side:BorderSide(color:dark?const Color(0xFF354B3E):const Color(0xFFDCEAE1))),
-   child:InkWell(
-    onTap:WaffraHaptics.tap(onTap),borderRadius:BorderRadius.circular(18),
-    child:Padding(padding:const EdgeInsets.symmetric(horizontal:5,vertical:12),
-     child:Column(mainAxisSize:MainAxisSize.min,children:[
-      Container(width:34,height:34,
-       decoration:BoxDecoration(color:dark?const Color(0xFF214E37):waffraMint,
-        borderRadius:BorderRadius.circular(12)),
-       child:Icon(icon,color:dark?const Color(0xFFA2E4C1):forest,size:21)),
-      const SizedBox(height:6),
-      WaffraText(title,maxLines:2,textAlign:TextAlign.center,
-       style:const TextStyle(fontSize:11,fontWeight:FontWeight.bold)),
-     ])),
-   ),
-  ));
- }
+ Widget _dashboardShortcut(String title,IconData icon,VoidCallback onTap)=>
+  this._m684DashboardShortcut(title,icon,onTap);
  Widget homeSummaryCard(String label,double value,IconData symbol,Color color,Color tint)=>
-  Expanded(child:InkWell(
-   onTap:WaffraHaptics.tap(()=>showSummaryTransactions(label=='الدخل'||label=='Income')),
-   borderRadius:BorderRadius.circular(19),
-   child:Container(
-    padding:const EdgeInsets.symmetric(horizontal:11,vertical:9),
-    decoration:BoxDecoration(
-     color:Theme.of(context).brightness==Brightness.dark?
-      (label=='الدخل'||label=='Income'?const Color(0xFF244C3A):const Color(0xFF49302C)):tint,
-     borderRadius:BorderRadius.circular(19),
-     border:Border.all(color:color.withValues(alpha:0.13)),
-     boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:0.04),
-      blurRadius:7,offset:const Offset(0,3))]),
-    child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-     Row(textDirection:TextDirection.rtl,children:[
-      Expanded(child:WaffraText(label,textAlign:TextAlign.right,
-       style:const TextStyle(fontSize:14,fontWeight:FontWeight.bold))),
-      const SizedBox(width:6),
-      CircleAvatar(backgroundColor:color.withValues(alpha:0.12),
-       radius:16,child:Icon(symbol,color:color,size:19)),
-     ]),
-     const SizedBox(height:5),
-     Align(alignment:Alignment.centerRight,
-      child:FittedBox(fit:BoxFit.scaleDown,
-       child:WaffraCurrencyAmount(value,fontSize:17))),
-    ]))));
+  this._m684HomeSummaryCard(label,value,symbol,color,tint);
  Widget compactTransaction(MoneyEntry entry){
   final cat=categoryFor(entry.category,entry.income);
   final attachmentCount=waffraReceiptPaths(entry.receiptPath).length;
@@ -13643,33 +13601,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   required String title,required IconData icon,
   required Color background,required Color iconColor,
   required VoidCallback onTap,
- }){
-  return Expanded(child:Material(
-   color:background,borderRadius:BorderRadius.circular(18),
-   child:InkWell(
-    borderRadius:BorderRadius.circular(18),
-    onTap:WaffraHaptics.tap(onTap),
-    child:Container(
-     key:Key('m549-home-action-'+(icon==Icons.swap_horiz_rounded?'transfer':
-      icon==Icons.north_east_rounded?'expense':'income')),
-     height:60,
-     decoration:BoxDecoration(
-      borderRadius:BorderRadius.circular(18),
-      border:Border.all(color:iconColor.withValues(alpha:.18))),
-     child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
-      Icon(icon,size:21,color:iconColor),
-      const SizedBox(height:3),
-      Padding(padding:const EdgeInsets.symmetric(horizontal:4),
-       child:WaffraText(title,textAlign:TextAlign.center,maxLines:2,
-        style:TextStyle(fontSize:11,fontWeight:FontWeight.w700,
-         color:Theme.of(context).brightness==Brightness.dark?
-          const Color(0xFF173D31):const Color(0xFF183C31)))),
-     ]),
-    ),
-   ),
-  ));
- }
-
+ })=>this._m684HomeFinanceAction(title:title,icon:icon,
+  background:background,iconColor:iconColor,onTap:onTap);
  Widget dashboard(){
   final scopedEntries=_m467ScopedEntries().toList();
   final unverifiedFxEntries=entries.where(waffraNeedsLegacyFxReview).toList();
@@ -15102,13 +15035,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    )));
  }
  Widget categoriesPage()=>categoriesPageV2();
- Widget _recurringBenefit(String label,IconData icon)=>Container(
-  padding:const EdgeInsets.symmetric(horizontal:6,vertical:14),
-  decoration:BoxDecoration(color:emerald.withValues(alpha:.08),borderRadius:BorderRadius.circular(18)),
-  child:Column(mainAxisSize:MainAxisSize.min,children:[
-   Icon(icon,color:emerald,size:25),const SizedBox(height:9),
-   WaffraText(label,textAlign:TextAlign.center,style:const TextStyle(fontSize:12,fontWeight:FontWeight.w600)),
-  ]));
+ Widget _recurringBenefit(String label,IconData icon)=>
+  this._m684RecurringBenefit(label,icon);
  Widget _summaryBox(String heading,String number,IconData icon,Color color)=>Container(
   padding:const EdgeInsets.all(12),
   decoration:BoxDecoration(
