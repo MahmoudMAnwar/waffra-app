@@ -128,4 +128,45 @@ void main(){
    'SELECT count(*) AS n FROM fresh_finance_goals').getSingle();
   expect(goals.read<int>('n'),0);
  });
+
+ test('M679 rejects a different bank for a linked goal with zero postings',()async{
+  await WaffraAccountsRepository(db:db,experimentalEnabled:true)
+   .createAccount(id:'other',name:'Other Bank',kind:'bank',
+    openingMinor:100000,createdIso:'2026-11-11T11:00:00Z',
+    userConfirmed:true);
+  await post(goal,due);
+  final before=await snapshot().read();
+  final writer=WaffraVerifiedGoalFundingWriter(
+   store:db,snapshot:snapshot(),experimentalEnabled:true);
+  await expectLater(writer.fund(
+   expectedGeneration:before.generation,expectedDigest:before.digest,
+   goalId:'car',amountMinor:20000,movementId:'m679-mismatch',
+   occurredIso:'2026-11-13T12:00:00Z',sourceAccountId:'other',
+   userConfirmed:true),throwsA(isA<StateError>()));
+  expect((await snapshot().read()).generation,before.generation);
+  final accounts=await WaffraAccountsRepository(
+   db:db,experimentalEnabled:true).balances();
+  expect(accounts.singleWhere((a)=>a.id=='rajhi').balanceMinor,100000);
+  expect(accounts.singleWhere((a)=>a.id=='other').balanceMinor,100000);
+  final movements=await db.customSelect(
+   'SELECT movement_id FROM fresh_finance_goal_wallet_movements').get();
+  expect(movements,isEmpty);
+ });
+
+ test('M679 rejects saving more than the verified account owns',()async{
+  await post(goal,due);
+  final before=await snapshot().read();
+  final writer=WaffraVerifiedGoalFundingWriter(
+   store:db,snapshot:snapshot(),experimentalEnabled:true);
+  await expectLater(writer.fund(
+   expectedGeneration:before.generation,expectedDigest:before.digest,
+   goalId:'car',amountMinor:5000000,movementId:'m679-overdraw',
+   occurredIso:'2026-11-13T12:00:00Z',sourceAccountId:'rajhi',
+   userConfirmed:true),throwsA(isA<StateError>()));
+  expect((await snapshot().read()).generation,before.generation);
+  expect(await balance(),100000);
+  final money=await db.customSelect(
+   'SELECT movement_id FROM fresh_finance_goal_wallet_movements').get();
+  expect(money,isEmpty);
+ });
 }
