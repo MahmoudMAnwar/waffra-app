@@ -4810,7 +4810,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  // Account settings open from the app bar instead of a footer destination.
  bool accountOpened=false;
  bool showAllTransactions=false,showTransactionFilters=false,showTransactionSearch=false;
- bool financialActivityExpanded=false; // M676: collapsed until explicit tap.
+ // M689: financial activities are always visible; no expand/collapse state.
  DateTime? _m468LastResumeSmsScan;
  // #410: only ephemeral user-edited SMS form fields, keyed by message hash;
  // never persist a duplicate raw SMS outside the verified encrypted source.
@@ -6664,32 +6664,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    // M669: a disabled Yes must say WHY and offer the safe editor. The
    // conditions mirror the verified atomic writer; choosing a category or
    // account alone never bypasses currency, source and timestamp checks.
-   List<String> reviewBlockers(){
-    final missing=<String>[];
-    if(!reviewCategoryValid)missing.add(waffraIsEnglish?
-     'Choose one active main and subcategory.':
-     'اختار قسمًا رئيسيًا وفرعيًا صالحين وغير مكررين.');
-    if(reviewedAccount?.ids?.single==null||
-       reviewedAccount?.generation==null)missing.add(waffraIsEnglish?
-     'Confirm the financial account.':'أكّد الحساب المالي.');
-    if(!understood||!facts.canAutoPostAsIncomeExpense)missing.add(
-     waffraIsEnglish?'Transaction type must be reviewed.':
-      'نوع العملية يحتاج مراجعة.');
-    if(originalAmount==null||originalAmount.currency!='SAR')missing.add(
-     waffraIsEnglish?'Original SAR amount needs verification.':
-      'مبلغ الريال الأصلي يحتاج مراجعة.');
-    if(originalDate==null||bankSmsHasUnverifiedTimestamp(body))missing.add(
-     waffraIsEnglish?'Original transaction date/time needs verification.':
-      'تاريخ ووقت العملية الأصليان يحتاجان مراجعة.');
-    if(parsed.amount!=null&&originalAmount!=null&&
-      (parsed.amount!-originalAmount.amount).abs()>0.00001)missing.add(
-     waffraIsEnglish?'Parsed amount conflicts with original SMS.':
-      'المبلغ المقروء مختلف عن المبلغ الأصلي في الرسالة.');
-    if(parsed.amount!=null&&parsed.income!=expectedIncome)missing.add(
-     waffraIsEnglish?'Bank SMS direction needs review.':
-      'اتجاه العملية البنكية يحتاج مراجعة.');
-    return missing;
-   }
+   // M689: verification remains in canConfirm; no verbose blocking panel.
    Future<void> selectReviewCategory(StateSetter redraw,BuildContext dialog)async{
     // M669: the SMS hint is only a suggestion. Choose a real ACTIVE parent
     // and then one of its ACTIVE children; both steps are searchable.
@@ -6870,28 +6845,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         child:Column(
       mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,
       children:[
-       Container(
-        padding:const EdgeInsets.all(12),
-        decoration:BoxDecoration(borderRadius:BorderRadius.circular(14),
-         color:Theme.of(dialog).colorScheme.surfaceContainerLow),
-        child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-         Row(children:[
-          const Icon(Icons.account_balance_outlined,size:21),
-          const SizedBox(width:8),
-          Expanded(child:WaffraText(sender.isEmpty?
-           (waffraIsEnglish?'Bank sender not confirmed':'مرسل غير محدد'):sender)),
-         ]),
-         const SizedBox(height:8),
-         WaffraText(sensitive?
-          (waffraIsEnglish?
-           'Verification message. The private code is hidden for safety.':
-           'رسالة تحقق. رمز التحقق مخفي لحمايتك.'):
-          summary),
-         if(localFacts!=null)WaffraText(
-          (waffraIsEnglish?'Suggested category: ':'القسم المقترح: ')+
-          (localFacts['category']?.toString()??'')),
-         if(cloudSummary.isNotEmpty)WaffraText(cloudSummary),
-        ])),
+       // M689: the duplicated bank sender/type preview was removed.
+       // Original SMS and review details below stay unchanged.
        // M662: no duplicate type picker above the original SMS. Uncertain
        // SMS keeps explicit user-driven choices BELOW the message.
        // M669: all actual financial SMS review confirmations show the
@@ -7007,42 +6962,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            !choosingAccount?()=>Navigator.pop(dialog,'yes'):null,
           child:WaffraText(waffraIsEnglish?'Yes':'نعم'))),
         ]),
-        if(!canConfirm||reviewedAccount?.ids?.single==null||
-           reviewedAccount?.generation==null)...[
-         const SizedBox(height:8),
-         Container(
-          key:const Key('m669-sms-review-blockers'),
-          padding:const EdgeInsets.all(10),
-          decoration:BoxDecoration(
-           color:Theme.of(dialog).colorScheme.surfaceContainerLow,
-           borderRadius:BorderRadius.circular(12)),
-          child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-           WaffraText(waffraIsEnglish?
-            'To enable Yes, complete these checks:':
-            'لتفعيل نعم، راجع المطلوب:'),
-           const SizedBox(height:5),
-           ...reviewBlockers().map((reason)=>Padding(
-            padding:const EdgeInsets.symmetric(vertical:2),
-            child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
-             const Icon(Icons.info_outline_rounded,size:16,color:emerald),
-             const SizedBox(width:5),
-             Expanded(child:WaffraText(reason,
-              style:const TextStyle(fontSize:12))),
-            ]))),
-           if(reviewBlockers().any((reason)=>
-             !reason.contains('قسم')&&!reason.contains('category')&&
-             !reason.contains('حساب')&&!reason.contains('account')))...[
-            const SizedBox(height:6),
-            TextButton.icon(
-             key:const Key('m669-sms-review-safe-editor'),
-             onPressed:()=>Navigator.pop(dialog,'review'),
-             icon:const Icon(Icons.edit_note_outlined),
-             label:WaffraText(waffraIsEnglish?
-              'Review details in editor':'راجع البيانات في شاشة التعديل')),
-           ],
-          ]),
-         ),
-        ],
        ],
        // Exclude is a separate, reversible action BELOW Yes/No.
        if(!sensitive&&facts.kind!=WaffraBankOperationKind.transfer)
@@ -13689,42 +13608,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            borderRadius:BorderRadius.circular(20),
            border:Border.all(color:forest.withValues(alpha:0.10))),
           child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-           Semantics(button:true,toggled:financialActivityExpanded,
-            child:InkWell(
-             key:const Key('waffra-financial-activity-toggle'),
-             borderRadius:BorderRadius.circular(15),
-             onTap:WaffraHaptics.tap(()=>setState(
-              ()=>financialActivityExpanded=!financialActivityExpanded)),
-             child:Padding(padding:const EdgeInsets.symmetric(vertical:3),
-              child:Row(children:[
-               const Icon(Icons.receipt_long_outlined,color:emerald),
-               const SizedBox(width:7),
-               Expanded(child:WaffraText(waffraIsEnglish?
-                'Your transactions':'عملياتك المالية',
-                style:const TextStyle(fontSize:19,fontWeight:FontWeight.bold))),
-               if(_m468VerifiedAccountsLoaded)
-                FutureBuilder(
-                 future:_m652UnifiedActivities(_m467SelectedAccount),
-                 builder:(ctx,snapshot){
-                  final extra=snapshot.hasData?
-                   ((typeFilter=='الكل'||typeFilter=='التحويلات'?
-                     snapshot.data!.transfers.length:0)+
-                    (typeFilter=='الكل'||typeFilter=='الادخار'?
-                     snapshot.data!.savings.length:0)):0;
-                  return WaffraText(financialActivityExpanded?
-                   (waffraIsEnglish?'Hide':'إخفاء'):
-                   '${visible.length+extra}',
-                   style:const TextStyle(fontSize:12,color:emerald));
-                 })
-               else WaffraText(financialActivityExpanded?
-                (waffraIsEnglish?'Hide':'إخفاء'):'${visible.length}',
-                style:const TextStyle(fontSize:12,color:emerald)),
-               AnimatedRotation(turns:financialActivityExpanded?0.5:0,
-                duration:waffraMotion(180),
-                child:const Icon(Icons.keyboard_arrow_down_rounded,color:emerald)),
-              ]))),
-            ),
-           if(financialActivityExpanded)...[
+           Row(children:[
+            const Icon(Icons.receipt_long_outlined,color:emerald),
+            const SizedBox(width:7),
+            Expanded(child:WaffraText(waffraIsEnglish?
+             'Your transactions':'عملياتك المالية',
+             style:const TextStyle(fontSize:19,fontWeight:FontWeight.bold))),
+           ]),
+           // M689: the financial history and its tools are always mounted.
             if(waffraCanExpandDashboardTransactions(visible.length)&&
                (!_m468VerifiedAccountsLoaded||
                 (typeFilter!='التحويلات'&&typeFilter!='الادخار'&&
@@ -13952,7 +13843,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                label:WaffraText(waffraIsEnglish?'Export PDF':'تصدير PDF')),
              ])),
            ],
-           ], // M676: expanded controls including deferred verified history.
           ])),
         ]))),
      ],
