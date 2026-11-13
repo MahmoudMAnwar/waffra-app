@@ -69,7 +69,7 @@
       },
       {
         "start": "      final savedBefore=_minor(goal['saved']??0);",
-        "end": "      final existing=ledger.where((entry)=>entry['id']==dueKey).toList();"
+        "end": "      final domain=WaffraFreshFinanceDomainRepository("
       }
     ],
     "lib/waffra_home_finance_tiles.part.dart": [
