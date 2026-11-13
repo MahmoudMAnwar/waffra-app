@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
-  "pr": "#625",
-  "issue": "#624 and #626",
+  "pr": "#628",
+  "issue": "#627",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at new branch start",
   "reviewed_at": "2026-11-13",
-  "review_policy": "M674 UI-only approved redesign; require exact-head M385, M550, whole Flutter CI and no changes to global + / SQLCipher writer. Preserve all previous security and financial guards.",
+  "review_policy": "M679–M684: owner-authorized SQLCipher source protection and compact responsive Home/Goals/Recurring UI. Preserve V24 accountless restoration, existing bank/widget writers, SMS dedup and global +. Run all registered source contracts and exact-head CI, do not merge from host-only passes.",
   "contracts": [
     {
       "id": "M623-VERIFIED-RESTORE-NO-SECOND-BACKUP",
@@ -2444,6 +2444,40 @@
         "The snackbar must not grow bottomNavigationBar height or obscure or capture + button pointer events.",
         "A one-line or two-line notice stays bottom-aligned beside +; text wraps upwards only.",
         "Undo, tap-to-dismiss, notice kind and accessibility remain unchanged."
+      ]
+    },
+    {
+      "id": "M679-M684-FINANCE-ACCOUNT-PARITY-COMPACT-APPROVED-SCREENSHOTS",
+      "issue": "Issue #627, Draft PR #628; user-approved all three audit phases and six 2026-11-13 Android screenshots",
+      "previous_behavior": "The goal funding writer relied on goal form account selection instead of rechecking linked account and available balance inside SQLCipher, so adding 50,000 SAR to a goal whose source had 0 could leave Home displaying -50,000 SAR. Recurring schedule JSON accountId could clear without deleting the old typed account default; goal metadata edit could modify saved amount. Home Accounts tile accidentally opened Profile via accountOpened=true. Activity heading displayed Show/عرض with no count. 144dp minimum activity cards and duplicated Goals Edit caused wasted space; Recurring and Goals metrics clipped SAR 50,000, and progress showed an unlabeled green slab.",
+      "approved_behavior": "New verified wallet funding requires matching linked account and sufficient bank balance inside SQLCipher transaction; mismatched/overdrawn saves roll back. Goal saved balance may change only via verified wallet movement, and clearing recurring account association clears typed default in same transaction. Explicit new account-reviewed cash submissions cannot contain null account IDs; legacy bridge accountless fixture and authenticated V24 restores remain compatible. Home Accounts shortcut opens verified Accounts manager; collapsed activity header displays operation count including verified transfers/savings; one Edit action per Goal; compact activity/goal/due cards; percentage-labelled per-goal horizontal progress. Full SAR amounts remain visible with responsive sizing at 320/360/390dp RTL and LTR. All FAB and existing Snackbar code untouched.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_approved_page_designs.dart",
+        "lib/storage/waffra_verified_goal_funding_writer.dart",
+        "lib/storage/waffra_fresh_finance_modules_repository.dart",
+        "lib/storage/waffra_unified_finance_writer.dart"
+      ],
+      "test_paths": [
+        "test/m672_m678_activity_account_regression_test.dart",
+        "test/m674_approved_page_designs_test.dart",
+        "test/storage/m440_account_linked_entry_writer_test.dart",
+        "test/storage/m641_goal_account_integrity_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m440-accounts-v3-finance-regression.yml",
+        ".github/workflows/m174-main-sha-regression.yml"
+      ],
+      "safety_invariants": [
+        "Do not change global plus (FAB) physical location, 58x58 target, open/close gesture, financial routing or M675 Snackbar anchor; keep the static and visual regression guards.",
+        "Goal wallet funding is not a new expense; transfers remain net-zero and due settlement pays only current cash difference once.",
+        "Never change recorded historic V24 transaction IDs, amounts, dates, owners, or invent bank account links from restored accountless history.",
+        "Preserve legacy/widget source compatibility and explicit modern user account choices; reject financial source mutation on stale revision.",
+        "No finance backup, decryptor, restore or restore-archive files may change under this UX repair.",
+        "Do not claim physical Android or exact-head CI success until workflows/device have run."
       ]
     }
   ]
