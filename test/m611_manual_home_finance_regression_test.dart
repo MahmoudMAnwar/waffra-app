@@ -98,6 +98,8 @@ void main() {
   expect(page,contains('m684-previous-month'));
   expect(page,contains('summaryOnly:true'));
   expect(page,contains('linkUnassignedEntry('));
+  expect(page,contains('m681-opening-balance-attestation'));
+  expect(page,contains('openingExcludesHistory:openingVerified'));
   expect(page,contains('readUnassignedPage('));
   expect(page,contains('readMonthlyPage('));
   expect(page,isNot(contains('data.entries.where(')));
