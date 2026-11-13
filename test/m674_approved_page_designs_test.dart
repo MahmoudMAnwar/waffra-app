@@ -123,7 +123,7 @@ void main(){
      const WaffraApprovedPageHero(title:'الأهداف',
       subtitle:'خطط وادخر',icon:Icons.flag_outlined),
      const WaffraApprovedMetrics(metrics:[
-      WaffraApprovedMetric('المدخرات','1,250 ر.س',Icons.savings_outlined),
+      WaffraApprovedMetric('المدخرات','1,250 ر.س',Icons.account_balance_wallet_outlined),
       WaffraApprovedMetric('نشطة','2',Icons.flag_outlined),
       WaffraApprovedMetric('الإنجاز','25%',Icons.donut_large),
      ]),
