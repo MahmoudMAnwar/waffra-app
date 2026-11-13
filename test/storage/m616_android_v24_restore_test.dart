@@ -173,6 +173,15 @@ void main() {
     expect(preflight,contains('latest.generation != witness.generation'));
     expect(ui,isNot(contains('externallySavedRescueConfirmed:true')));
     expect(ui,isNot(contains('Waffra_Rescue_Before_Restore_')));
+    // M623: live restore keeps archive verification, but never requires
+    // generating or providing a separate encrypted rescue archive.
+    final activeRestore=File(
+      'lib/storage/waffra_verified_active_accounts_restore.dart',
+    ).readAsStringSync();
+    expect(activeRestore,contains('WaffraAccountsPortableBackupV3.verifyAndPreview('));
+    expect(activeRestore,contains('preflightChecksum'));
+    expect(activeRestore,isNot(contains('savedRescueArchive')));
+    expect(activeRestore,isNot(contains('externallySavedRescueConfirmed')));
     expect(ui,contains("restoreStage='CANONICAL_PARITY'"));
   });
 
