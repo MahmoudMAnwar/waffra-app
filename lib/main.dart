@@ -17160,8 +17160,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        final approved=await confirm(
         waffraIsEnglish?'Replace encrypted finance?':'استبدال البيانات المالية؟',
         waffraIsEnglish
-         ?'Verified ${result.transactionCount} transactions and ${result.receiptCount} receipt images. This will replace your current accounts, transfers, goals, budgets and transaction history. A rescue is a separate encrypted copy of the data currently on this device before replacement, NOT the old backup you are importing. Save it outside Waffra for rollback. Continue?'
-         :'تم التحقق من ${result.transactionCount} معاملة و${result.receiptCount} مرفق. سيتم استبدال الحسابات والتحويلات والأهداف والميزانيات والعمليات الحالية بالكامل. نسخة الأمان ملف مشفر منفصل يحفظ بيانات جهازك قبل الاستعادة، وليس الباكب القديم. احفظها خارج وفرة لتقدر ترجع لوضع جهازك السابق عند الحاجة. هل تريد المتابعة؟');
+         ?'Restore ${result.transactionCount} transactions and ${result.receiptCount} receipts?'
+         :'هل تريد استعادة ${result.transactionCount} معاملة و${result.receiptCount} مرفق؟');
        if(approved!=true||!mounted||!ctx.mounted)return;
        if(!await _authorizeSensitiveAction('replacing encrypted finance')||
           !mounted||!ctx.mounted)return;
@@ -17170,23 +17170,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        await _financialWriteQueue.drain();
        final bridge=_financeBinding?.accountsBridge;
        if(bridge==null)throw StateError('Active finance source is unavailable.');
-       restoreStage='RESCUE';
-       final rescue=await bridge.exportPortableBackup(restoreSecret.text);
-       final rescueSaved=await WaffraBackupFiles.saveEncryptedArchive(rescue,
-        name:'Waffra_Rescue_Before_Restore_${DateTime.now().millisecondsSinceEpoch}.waffra');
-       if(!rescueSaved){
-        if(ctx.mounted)update(()=>restoreError=waffraIsEnglish?
-         'Restore cancelled: save the current encrypted rescue file first.':
-         'تم إلغاء الاستعادة: احفظ نسخة أمان مشفرة لبياناتك الحالية أولًا.');
-        return;
-       }
        restoreStage='SQL_APPLY';
        final applied=await bridge.applyVerifiedV3Restore(
         baseline:source.encryptedWitness!,
         encryptedArchive:restoreArchive,password:restoreSecret.text,
-        savedRescueArchive:rescue,rescuePassword:restoreSecret.text,
         preflightChecksum:result.archiveChecksum,
-        userConfirmed:true,externallySavedRescueConfirmed:true);
+        userConfirmed:true);
        sqlcipherRestoreCommitted=true;
        restoreStage='HOME_REFRESH';
        if(!mounted)return;
@@ -17233,10 +17222,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        if(mounted)snackSuccess(context,waffraIsEnglish
         ?'Encrypted restore verified: ${applied.transactionCount} transactions and ${applied.receiptCount} receipts. '
           '${omittedLegacyReceiptCount>0?"Warning: "+omittedLegacyReceiptCount.toString()+" old receipt image(s) were unavailable in this backup and were not restored. ":""}'
-          'Your previous encrypted backup was saved separately.'
+          ''
         :'اكتملت استعادة ${applied.transactionCount} معاملة و${applied.receiptCount} مرفق. '
          '${omittedLegacyReceiptCount>0?"تنبيه: "+omittedLegacyReceiptCount.toString()+" من صور المرفقات القديمة غير موجودة داخل الباكب ولم تُستعد. ":""}'
-         'احتفظ بنسخة الأمان السابقة خارج التطبيق.');
+         '');
        return;
       }
       if(raw['format']!='waffra-backup'||raw['entries'] is! List||
@@ -17276,7 +17265,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       if(!mounted)return;
       final ok=await confirm(
        waffraIsEnglish?'Confirm backup restore':'تأكيد الاستعادة',
-       waffraIsEnglish?'This will replace all current transactions, categories, savings goals and recurring items with the backup. Make a backup of current data first. Continue?':'سيتم استبدال جميع المعاملات والأقسام وأهداف الادخار والعمليات المتكررة الحالية بمحتويات النسخة الاحتياطية. احفظ نسخة من بياناتك الحالية قبل المتابعة. هل تريد الاستمرار؟');
+       waffraIsEnglish?'Restore this backup?':'هل تريد استعادة النسخة الاحتياطية؟');
       if(ok!=true||!mounted)return;
       if(!await _authorizeSensitiveAction('restoring data')||!mounted)return;
       // Build the complete restored finance image without mutating Home
