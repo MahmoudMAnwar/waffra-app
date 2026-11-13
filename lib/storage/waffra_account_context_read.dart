@@ -237,6 +237,7 @@ LIMIT ? OFFSET ?
     required String accountId,
     required String confirmedIso,
     required bool userConfirmed,
+    bool openingExcludesHistory=false,
   }) async {
     await WaffraAccountsSchema.requireReady(store);
     if (!userConfirmed || entryId.trim().isEmpty ||
@@ -257,8 +258,12 @@ WHERE account_id=? AND archived=0 AND currency='SAR'
       }
       // A pre-existing opening balance may already include these historic
       // entries; attaching them without reconciliation would double count.
-      if(account.single.read<int>('opening_minor')!=0){
-        throw StateError('Historical linking requires zero opening balance.');
+      if(account.single.read<int>('opening_minor')!=0 &&
+         !openingExcludesHistory){
+        // No inference is safe: the opening could already include this
+        // transaction. User must independently confirm it does not.
+        throw StateError(
+         'Confirm historical entry is excluded from account opening balance.');
       }
       // INSERT .. SELECT WHERE NOT EXISTS is a single SQL decision, so
       // repeated confirmations cannot increase balance a second time.
