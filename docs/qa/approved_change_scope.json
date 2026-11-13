@@ -149,8 +149,8 @@
     ],
     "lib/waffra_cloudflare_sms_gateway.dart": [
       {
-        "start": "import 'package:http/http.dart' as http;",
-        "end": "import 'waffra_ai_finance_brain.dart';"
+        "start": "  static Map<String, Object?>? validateSuggestion(",
+        "end": "  static Future<Map<String, Object?>?> analyze({"
       },
       {
         "start": "  static Future<Map<String, Object?>?> analyze({"

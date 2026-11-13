@@ -2847,7 +2847,7 @@
       "id": "M695-CLOUDFLARE-DIRECT-TRANSPORT-RETIREMENT-ISSUE634",
       "issue": "Issue #634 / Draft PR #638",
       "previous_behavior": "Even after settings retirement, an unreferenced old Cloudflare helper retained a callable outbound HTTP POST method; main.dart still imported the disabled service, triggering unused import analyzer warning.",
-      "approved_behavior": "Remove unused main.dart service import and make orphan gateway analyze() always return null without opening a client or contacting a provider. Retain pure strict historical currency/review and OTP validation helper functions as positive security regression test fixtures.",
+      "approved_behavior": "Remove unused main.dart service import and make orphan gateway analyze() always return null without opening a client or contacting a provider. Retain pure strict historical currency/review and OTP validation helper functions as positive security regression test fixtures. Also reject any oversized/malformed old JSON-like response in pure validation without permitting HTTP.",
       "source_paths": [
         "lib/main.dart",
         "lib/waffra_cloudflare_sms_gateway.dart",

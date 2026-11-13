@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import 'waffra_ai_finance_brain.dart';
@@ -56,6 +57,11 @@ abstract final class WaffraCloudflareSmsGateway {
     if (response is! Map || response['ok'] != true ||
         response['unverified'] != true ||
         response['review_required'] != true) return null;
+    // Retired test-only validator: malformed/oversized provider objects
+    // are never considered financial evidence; no network request occurs.
+    try{
+      if(jsonEncode(response).length>16000)return null;
+    }catch(_){return null;}
     final rows = response['transactions'];
     // A single SMS must resolve to exactly one action or fall back locally.
     if (rows is! List || rows.length != 1 || rows.single is! Map) {
