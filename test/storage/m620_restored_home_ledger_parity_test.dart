@@ -70,7 +70,7 @@ void main() {
   });
 
   test('M620 restored V24 checks canonical SQLCipher before repainting '
-      'Home; old rescue and source-witness guards are still active', () {
+      'Home; SQL rollback and source-witness guards are still active', () {
     final code=File('lib/main.dart').readAsStringSync();
     expect(code,contains("restoreStage='CANONICAL_PARITY'"));
     expect(code,contains("restoreStage='HOME_PARITY'"));
@@ -78,7 +78,9 @@ void main() {
     expect(code,contains("route:WaffraFinanceRoute.dashboardRead"));
     expect(code,contains('verified.finance.requireIntegrity();'));
     expect(code,contains('entries..clear()..addAll(exact)'));
-    expect(code,contains('externallySavedRescueConfirmed:true'));
+    expect(code,isNot(contains('externallySavedRescueConfirmed:true')));
+    expect(code,isNot(contains('Waffra_Rescue_Before_Restore_')));
+    expect(code,contains('preflightChecksum:result.archiveChecksum'));
     expect(code,contains("key:const Key('m620-accountless-legacy-net-explanation')"));
     expect(code,contains("cash(sum(entries,true)-sum(entries,false))"));
     expect(code,contains('هذا ليس رصيدًا بنكيًا متاحًا'));
