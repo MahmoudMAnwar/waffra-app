@@ -183,7 +183,7 @@ void main() {
     expect(part,contains('WaffraBankSmsFactsParser.isVerificationChallenge'));
     expect(part,contains("m669-review-category-search-"));
     expect(part,contains('waffraSearchAny('));
-    expect(part,contains("Key('m669-sms-review-blockers')"));
+    expect(part,isNot(contains("Key('m669-sms-review-blockers')")));
     expect(part,contains("Key('m565-sms-yes-confirm')"));
     expect(part,contains("Key('m590-sms-choose-account-before-yes')"));
     expect(part,contains("category:reviewedCategory,income:expectedIncome"));
