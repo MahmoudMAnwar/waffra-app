@@ -96,13 +96,13 @@
     ],
     "test/m429_sms_phone_integration_test.dart": [
       {
-        "start": "  expect(consent,contains('await WaffraSmsCloudService.setConsent(false)'));",
+        "start": "  final consent=File('lib/waffra_auto_sms_consent.dart').readAsStringSync();",
         "end": "  expect(consent,contains('await WaffraAutoSms.optIn()'));"
       }
     ],
     "test/m436_cloud_review_pipeline_test.dart": [
       {
-        "start": "  expect(ui,contains('await WaffraSmsCloudService.setConsent(false)'));",
+        "start": "  final ui=File('lib/waffra_auto_sms_consent.dart').readAsStringSync();",
         "end": "  expect(ui,contains('await WaffraAutoSms.optIn()'));"
       }
     ],
