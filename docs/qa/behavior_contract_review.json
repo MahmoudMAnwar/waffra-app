@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
-  "pr": "#619",
-  "issue": "#618",
+  "pr": "#621",
+  "issue": "#620",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "cca778e17eb6daa2576b33ad302c3d04d779834b",
   "reviewed_at": "2026-11-13",
-  "review_policy": "Review changed behavior against all GitHub Actions workflow scripts, all Dart and Python QA test files, and the original tests' protected security assertions; never edit tests merely to silence red jobs. PR #575 merge with main preserves every M645/M646/M647/M653/M654 contract; original PR-specific positive finance tests and approved fallback/owner-authority remain in effect. M661 source changes must not weaken existing fail-closed encryption, verified-bank account, OTP or anti-replay checks, must preserve all original tests and route review pending rules non-posting. M672-M678 owner-visible corrections (#606-#612) must preserve financial/account safety and separate Android visual/deletion persistence testing. M614 legacy user archive migration: existing V24 decryption is correct but SQLCipher backupRestore writer cannot accept old map; stage in disposable encrypted source and reuse V3 full-source rescue/attestation. Existing tests unchanged, end-to-end Android and signed same-sha checks required. M616 review: previously successful host CI did not prove Android global temporary directory write permission; app-private encrypted staging and user-visible phase code must be reviewed alongside M187/M385/M550 original tests. M618: exact-HEAD review of verified restore deep-history parity after old V24 backup; category rows must not reorder with unstable sort; phase codes do not expose data; all auth/rescue/rollback original guards retained.",
+  "review_policy": "Review changed behavior against all GitHub Actions workflow scripts, all Dart and Python QA test files, and the original tests' protected security assertions; never edit tests merely to silence red jobs. PR #575 merge with main preserves every M645/M646/M647/M653/M654 contract; original PR-specific positive finance tests and approved fallback/owner-authority remain in effect. M661 source changes must not weaken existing fail-closed encryption, verified-bank account, OTP or anti-replay checks, must preserve all original tests and route review pending rules non-posting. M672-M678 owner-visible corrections (#606-#612) must preserve financial/account safety and separate Android visual/deletion persistence testing. M614 legacy user archive migration: existing V24 decryption is correct but SQLCipher backupRestore writer cannot accept old map; stage in disposable encrypted source and reuse V3 full-source rescue/attestation. Existing tests unchanged, end-to-end Android and signed same-sha checks required. M616 review: previously successful host CI did not prove Android global temporary directory write permission; app-private encrypted staging and user-visible phase code must be reviewed alongside M187/M385/M550 original tests. M618: exact-HEAD review of verified restore deep-history parity after old V24 backup; category rows must not reorder with unstable sort; phase codes do not expose data; all auth/rescue/rollback original guards retained. M620 physical old archive restore happened after a previous 43-green CI; do not infer data correctness from UI totals or bypass active SQLCipher witness/rollback; stage independent canonical and Home identity parity. Distinguish account-only funds from historical recorded net.",
   "contracts": [
     {
       "id": "M601-AUTH-PENDING-BUTTON-AND-VERIFIER-LATENCY",
@@ -2310,6 +2310,34 @@
         "Never weaken AES-GCM authentication, V2/V3 nested digest, SQLCipher transaction, source witness, biometric confirmation, external rescue, cold reopen or rollback.",
         "Do not expose actual backup content/password or record data in diagnostics or test fixtures.",
         "Original owner Android APK restore remains unverified until manual device acceptance."
+      ]
+    },
+    {
+      "id": "M620-LEGACY-RESTORE-ID-PARITY-NO-FABRICATED-BALANCE",
+      "issue": "Issue #620, Draft PR #621; owner reported 19 input V24 records shown twice after successful physical Android restore, and an account-only zero balance.",
+      "previous_behavior": "Owner's authenticated original file contains 19 unique entry IDs, but Home after restore shows 38 records with doubled totals. Prior V3 preflight proved only disposable candidate state, not post-commit canonical SQLCipher versus Home. The balance header sums verified registered accounts and shows 0 for accountless V24 history with no contextual explanation. Rescue consent text does not distinguish the incoming backup from a pre-restore copy of existing device state.",
+      "approved_behavior": "After the committed encrypted restore, independently load the active verified dashboard authority and compare IDs/direction/minor money/semantic timestamps to the authenticated V24 source; separately attest the Home display set. If the authoritative store is exact but the view stale, replace only the in-memory presentation from verified canonical rows. Never auto-delete same-looking purchases. If authoritative IDs fail, display a safe post-commit parity error and preserve the old external rescue. Explain the zero verified-account balance and show separately labeled net recorded transactions without creating fictitious bank money. Describe external rescue plainly as original device state before replacement.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/storage/waffra_restored_ledger_identity_guard.dart"
+      ],
+      "test_paths": [
+        "test/storage/m620_restored_home_ledger_parity_test.dart",
+        "test/storage/m618_v24_preflight_history_parity_test.dart",
+        "test/storage/m616_android_v24_restore_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/storage-android-emulator.yml"
+      ],
+      "safety_invariants": [
+        "Never delete by amount/title/date or assume identical-looking records are redundant; require exact stable identity.",
+        "Never fabricate account linkage or add ledger net to an actual bank balance; label separate unassigned/historic net truthfully.",
+        "All restored entries must pass authenticated V24 versus live verified SQLCipher and Home parity before success is shown.",
+        "Keep original rescue, biometric approval, cold preflight, source witness, rollback and encrypted bytes unchanged.",
+        "Never commit user archive, password, transaction names, bank IDs, amounts, or decrypted private JSON."
       ]
     }
   ]
