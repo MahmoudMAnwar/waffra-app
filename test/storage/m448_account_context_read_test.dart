@@ -135,6 +135,9 @@ void main(){
   expect(source,contains(
    "summaryOnly ? 'WHERE e.occurred_iso>=? AND e.occurred_iso<?' : ''"));
   expect(source,isNot(contains('WHERE (?=0 OR')));
+  // Initialize verified account/context projections in this isolated vault.
+  // These rows remain unassigned and must not debit the sample bank account.
+  await createAccount('rajhi');
   await transaction('month-november',3000);
   await db.customStatement(
    'INSERT INTO fresh_finance_entries '
