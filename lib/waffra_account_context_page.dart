@@ -48,13 +48,15 @@ class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {
 
  Future<void> link(WaffraAccountLedgerRow entry)async{
   String? selected;
+  bool openingVerified=false;
   final active=widget.accounts.where((a)=>!a.archived).toList();
   if(active.isEmpty)return;
   final chosen=await showDialog<String>(
    context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,rebuild)=>
     AlertDialog(
      title:Text(t('ربط العملية بحساب','Assign transaction to account')),
-     content:Column(mainAxisSize:MainAxisSize.min,children:[
+     content:SingleChildScrollView(child:Column(
+      mainAxisSize:MainAxisSize.min,children:[
       Text(entry.title),
       const SizedBox(height:12),
       WaffraCenteredDropdownFormField<String>(
@@ -70,13 +72,23 @@ class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {
       WaffraText((entry.income?'+':'−')+money(entry.amountMinor),
        currencyEnglish:widget.english,textDirection:TextDirection.ltr),
       const SizedBox(height:8),
-      Text(t('الربط بيحصل مرة واحدة مع حساب رصيده الافتتاحي صفر فقط، عشان نتجنب التكرار. مفيش دخل أو مصروف جديد.',
-       'Link once to an account with zero opening balance to prevent double counting. No additional income or expense.')),
-     ]),
+      Text(t('مش هنسجل دخل أو مصروف جديد. لو الحساب له رصيد افتتاحي، تأكد إن العملية القديمة مش محسوبة فيه قبل الربط.',
+       'No new income or expense. If the account has opening cash, confirm it does not already include this historic entry.')),
+      CheckboxListTile(
+       key:const Key('m681-opening-balance-attestation'),
+       contentPadding:EdgeInsets.zero,
+       controlAffinity:ListTileControlAffinity.leading,
+       value:openingVerified,
+       onChanged:(value)=>rebuild(()=>openingVerified=value??false),
+       title:Text(t('تأكدت إن الرصيد الافتتاحي لا يشمل العملية دي',
+        'I confirm this transaction is not included in opening balance'),
+        style:const TextStyle(fontSize:12)),
+      ),
+     ])),
      actions:[
       TextButton(onPressed:()=>Navigator.pop(ctx),
        child:Text(t('إلغاء','Cancel'))),
-      FilledButton(onPressed:selected==null?null:
+      FilledButton(onPressed:selected==null||!openingVerified?null:
        ()=>Navigator.pop(ctx,selected),
        child:Text(t('تأكيد الربط','Confirm'))),
      ],
@@ -87,12 +99,17 @@ class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {
    // before mutating in case this page remained open while widget posted.
    await widget.api.balances();
    await widget.api.linkUnassignedEntry(
-    entryId:entry.id,accountId:chosen,userConfirmed:true);
+    entryId:entry.id,accountId:chosen,userConfirmed:true,
+    openingExcludesHistory:openingVerified);
    if(mounted)setState(reload);
-  }catch(_){
-   if(mounted)snack(context,t(
-    'تعذر تأكيد الربط؛ حدّث الصفحة وحاول مرة أخرى.',
-    'Could not confirm account link. Refresh and retry.'));
+  }catch(error){
+   final opening=error is StateError &&
+    error.toString().contains('opening balance');
+   if(mounted)snack(context,opening?
+    t('راجع الرصيد الافتتاحي وأكّد إن العملية مش محسوبة فيه.',
+      'Verify this entry is excluded from opening balance.'):
+    t('تعذر تأكيد الربط؛ حدّث الصفحة وحاول مرة أخرى.',
+      'Could not confirm account link. Refresh and retry.'));
   }
  }
 
