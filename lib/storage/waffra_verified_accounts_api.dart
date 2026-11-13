@@ -271,11 +271,13 @@ class WaffraVerifiedAccountsApi implements WaffraAccountOperations {
  Future<void> linkUnassignedEntry({
   required String entryId,required String accountId,
   required bool userConfirmed,
+  bool openingExcludesHistory=false,
  })=>_commit<void>((repository)async{
    await WaffraAccountContextRead.attachPreviouslyUnassigned(
     store:repository.db,entryId:entryId,accountId:accountId,
     confirmedIso:DateTime.now().toIso8601String(),
     userConfirmed:true,
+    openingExcludesHistory:openingExcludesHistory,
    );
   },userConfirmed:userConfirmed);
 
