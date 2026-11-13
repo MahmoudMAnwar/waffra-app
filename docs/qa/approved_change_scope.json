@@ -10,7 +10,8 @@
     "Compact Home income/expense/transfer/goal/due cards, and Goals/Recurring detailed cards; remove duplicated Goal edit action while retaining user-accessible actions and immutable global plus.",
     "Replace unreadable opaque goal progress chart with per-goal labeled percentage and bar; show full SAR 50,000.00 in narrow metrics without ellipsis.",
     "Verify SQLCipher rollback, repeat confirmation and 320–390dp RTL/LTR dark widget constraints; don't merge before current exact-head CI and physical Android validation.",
-    "Reconcile former M67 widget-versus-goal regression fixtures to edit goal target metadata without illegally minting savings; retain collision-free concurrent ledger and SMS hash assertions, and add explicit negative wallet-forgery test."
+    "Reconcile former M67 widget-versus-goal regression fixtures to edit goal target metadata without illegally minting savings; retain collision-free concurrent ledger and SMS hash assertions, and add explicit negative wallet-forgery test.",
+    "M681-M684: add non-mutating count/net reconciliation preview for accountless historic entries and bounded month-scoped SQLCipher entry paging without changing old full-ledger restore, balances, or global FAB."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -18,6 +19,7 @@
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
+    "lib/storage/waffra_account_context_read.dart",
     "lib/storage/waffra_fresh_finance_modules_repository.dart",
     "lib/storage/waffra_unified_finance_writer.dart",
     "lib/storage/waffra_verified_goal_funding_writer.dart",
@@ -121,6 +123,12 @@
       {
         "start": "  test('M67 finance port preserves widget entries during a goals editor save',",
         "end": "  test('M67 SMS digest merge never overwrites a widget digest'"
+      }
+    ],
+    "lib/storage/waffra_account_context_read.dart": [
+      {
+        "start": "  /// M681: preview imported accountless entries without changing money.",
+        "end": "  static Future<int> attachPreviouslyUnassigned({"
       }
     ]
   }
