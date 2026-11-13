@@ -84,6 +84,7 @@ void main() {
     expect(code,contains("key:const Key('m620-accountless-legacy-net-explanation')"));
     expect(code,contains("cash(sum(entries,true)-sum(entries,false))"));
     expect(code,contains('هذا ليس رصيدًا بنكيًا متاحًا'));
-    expect(code,contains('نسخة الأمان ملف مشفر منفصل'));
+    // M623 owner-approved restore no longer prompts for a rescue archive.
+    expect(code,isNot(contains('نسخة الأمان ملف مشفر منفصل')));
   });
 }
