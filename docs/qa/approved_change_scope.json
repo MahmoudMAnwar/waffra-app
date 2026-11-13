@@ -127,6 +127,10 @@
       {
         "start": " test('M440 account-link duplicate rollback",
         "end": null
+      },
+      {
+        "start": "import 'package:waffra/storage/waffra_accounts_repository.dart';",
+        "end": "import 'package:waffra/storage/waffra_unified_finance_writer.dart';"
       }
     ],
     "test/storage/m641_goal_account_integrity_test.dart": [
