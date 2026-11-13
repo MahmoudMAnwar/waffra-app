@@ -28,7 +28,10 @@ void main(){
   expect(fund,contains('final verifiedFundingAccounts=await _m641VerifiedGoalRecurringAccounts();'));
   expect(fund,contains('final available=source.single.balanceMinor/100;'));
   expect(fund,contains('if(n>available){'));
-  expect(fund,contains('if(acknowledged!=true||!mounted)return;'));
+  // M689: insufficient cash cannot be bypassed by a confirmation dialog.
+  expect(fund,contains('if(n>available){'));
+  expect(fund,contains('snack(context,waffraIsEnglish?'));
+  expect(fund,isNot(contains('if(acknowledged!=true||!mounted)return;')));
   expect(fund,contains('baseline.source!=WaffraRuntimeFinanceBackend.verifiedEncrypted'));
   final commit=fund.indexOf('await fundingBridge.fundVerifiedGoal(');
   final reload=fund.indexOf('if(mounted)await _refreshFromVerifiedFinance();',commit);
