@@ -9,7 +9,8 @@
     "Home financial-activity header shows a numeric live count when collapsed instead of عرض; Home Accounts shortcut opens WaffraAccountsManagerPage, not profile.",
     "Compact Home income/expense/transfer/goal/due cards, and Goals/Recurring detailed cards; remove duplicated Goal edit action while retaining user-accessible actions and immutable global plus.",
     "Replace unreadable opaque goal progress chart with per-goal labeled percentage and bar; show full SAR 50,000.00 in narrow metrics without ellipsis.",
-    "Verify SQLCipher rollback, repeat confirmation and 320–390dp RTL/LTR dark widget constraints; don't merge before current exact-head CI and physical Android validation."
+    "Verify SQLCipher rollback, repeat confirmation and 320–390dp RTL/LTR dark widget constraints; don't merge before current exact-head CI and physical Android validation.",
+    "Reconcile former M67 widget-versus-goal regression fixtures to edit goal target metadata without illegally minting savings; retain collision-free concurrent ledger and SMS hash assertions, and add explicit negative wallet-forgery test."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -24,7 +25,8 @@
     "test/m672_m678_activity_account_regression_test.dart",
     "test/m674_approved_page_designs_test.dart",
     "test/storage/m440_account_linked_entry_writer_test.dart",
-    "test/storage/m641_goal_account_integrity_test.dart"
+    "test/storage/m641_goal_account_integrity_test.dart",
+    "test/storage/verified_encrypted_finance_bridge_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
@@ -109,6 +111,16 @@
       {
         "start": " test('missing account or mismatched goal/due",
         "end": null
+      }
+    ],
+    "test/storage/verified_encrypted_finance_bridge_test.dart": [
+      {
+        "start": "  test('widget SMS append and stale Home goal edit preserve both values',",
+        "end": "  test('widget write and stale Home ledger edit cannot lose transactions'"
+      },
+      {
+        "start": "  test('M67 finance port preserves widget entries during a goals editor save',",
+        "end": "  test('M67 SMS digest merge never overwrites a widget digest'"
       }
     ]
   }
