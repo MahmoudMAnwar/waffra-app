@@ -132,6 +132,49 @@ void main() {
 
   });
 
+  test('M622 legacy staging uses one rollback-safe outer SQLCipher batch, '
+      'then captures history after commit', () {
+    final converter=File(
+      'lib/storage/waffra_legacy_v24_sqlcipher_converter.dart',
+    ).readAsStringSync();
+    final start=converter.indexOf('await db.transaction(() async {');
+    final finish=converter.indexOf(
+      'final history = await WaffraAccountsFinanceHistory.capture(db);',
+      start,
+    );
+    expect(start,greaterThan(0));
+    expect(finish,greaterThan(start));
+    final staged=converter.substring(start,finish);
+    expect(staged,contains('await module.save(WaffraFinanceModule.categories'));
+    expect(staged,contains('await module.save(WaffraFinanceModule.goals'));
+    expect(staged,contains('await module.save(WaffraFinanceModule.recurring'));
+    expect(staged,contains('importCapturedDomain(explicitlyAuthorized: true'));
+    expect(staged,contains('fresh_finance_standalone_allocations'));
+    expect(staged.trimRight().endsWith('});'),isTrue);
+    // No bypass of existing individually validated nested module writes.
+    final module=File(
+      'lib/storage/waffra_fresh_finance_modules_repository.dart',
+    ).readAsStringSync();
+    expect(module,contains('await _requireReady();'));
+    expect(module,contains('final data = _validate(module, item);'));
+    expect(module,contains('await store.transaction(() async {'));
+  });
+
+  test('M622 V24 to V3 reuses same selected finance source but fresh '
+      'preflight still detects drift and preserves rescue', () {
+    final ui=File('lib/main.dart').readAsStringSync();
+    expect(ui,contains('inspectedRestoreSource=source;'));
+    expect(ui,contains('final source=inspectedRestoreSource??'));
+    final preflight=File(
+      'lib/storage/waffra_verified_active_restore_preflight.dart',
+    ).readAsStringSync();
+    expect(preflight,contains('final current = await fresh();'));
+    expect(preflight,contains('final after = await fresh();'));
+    expect(preflight,contains('latest.generation != witness.generation'));
+    expect(ui,contains('externallySavedRescueConfirmed:true'));
+    expect(ui,contains("restoreStage='CANONICAL_PARITY'"));
+  });
+
   test('1056-category V24, two historical budgets and goal-linked recurring '
       'restore into accountless typed V3 without duplicate charge', () async {
     final candidate=await WaffraLegacyV24SqlCipherConverter.prepare(
