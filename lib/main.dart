@@ -11884,6 +11884,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final hashes=committed.finance.getStringList('waffra_sms_hashes_v1')??const <String>[];
   if(!mounted)return;
   setState((){
+   _m684InvalidatePeriodRead();
    entries..clear()..addAll(loaded);
    smsHashes..clear()..addAll(hashes);
    _lastFinanceAuthorityRead=committed;

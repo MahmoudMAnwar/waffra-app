@@ -564,3 +564,5 @@ M550 obsolete budget-source assertions (2026-11-13, same PR #628): updated the p
 M684 account-ID lookup completion on PR #628: selected-account Home transaction/PDF listing now uses the cached verified entry-ID index with original historical order and excludes unassigned rows; new test preserves cross-month membership and no financial writers changed.
 
 M470 same-PR exact-head source assertion updated to use the new read-only verified account ID lookup; no behavioral checks or negative validations skipped.
+
+M684 confirmed-source cache freshness: encrypted 30-day trash Delete and Undo now drop the read-only month/year index before the verified ledger is repainted; no balances, transactions, account links or archived data are rewritten by this change. CI and physical Android gates remain separate.

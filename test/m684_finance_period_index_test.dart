@@ -127,5 +127,6 @@ void main(){
   expect(s,contains('_m684InvalidatePeriodRead();\n    setState(()=>entries.insert(0,e)'));
   expect(s,contains('_m684InvalidatePeriodRead();entries.clear();smsHashes.clear()'));
   expect(s,contains('_m684InvalidatePeriodRead();\n    entries.clear();'));
+  expect(s,contains('_m684InvalidatePeriodRead();\n   entries..clear()..addAll(loaded);'));
  });
 }
