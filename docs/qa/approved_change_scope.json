@@ -147,7 +147,7 @@
     ],
     "lib/storage/waffra_account_context_read.dart": [
       {
-        "start": "  static Future<WaffraAccountContextReadResult> load(",
+        "start": "abstract final class WaffraAccountContextRead {",
         "end": "  static Future<int> attachPreviouslyUnassigned({"
       },
       {
