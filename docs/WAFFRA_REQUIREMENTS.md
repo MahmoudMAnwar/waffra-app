@@ -1,3 +1,9 @@
+## M623 — No automatic rescue export during restore (2026-11-13)
+
+- **Issue:** [#623](https://github.com/MahmoudMAnwar/waffra-app/issues/623). **Same PR:** [#621](https://github.com/MahmoudMAnwar/waffra-app/pull/621) (Draft). **Status:** Missing — requirement registered before coding; tests/device acceptance pending.
+- **Approved:** Remove automatic encrypted rescue generation and save-confirmation entirely from the Restore action on current SQLCipher app. The selected encrypted source backup is never changed. Keep strict input authentication, biometric approval, source witness and fresh preflight, all-or-nothing SQLCipher transaction/rollback on error, preflight checksum, source/ledger parity, SQL foreign keys and SMS fingerprint integrity. Warn explicitly that a SUCCESSFUL replacement cannot be undone automatically without separately saved prior data. Do not remove the user-initiated manual backup/export, or existing reset/security safeguards in unrelated workflows.
+- **QA:** successful restore without rescue; stale witness and unsupported typed records fail without data change; failed transaction rollback; no automatic backup/save method calls in restore; original 19/1056 fixture and cold attestation; exact-head CI and disposable Android handset. Never update spouse's phone pending acceptance.
+
 ## M622 — Safe V24 restore staging performance (2026-11-13)
 
 - **Issue:** [#622](https://github.com/MahmoudMAnwar/waffra-app/issues/622). **Same PR:** [#621](https://github.com/MahmoudMAnwar/waffra-app/pull/621) (Draft). **Status:** Partial — source changes in #621 commit `12cda1c`, `d2a6909` and M616 contract test `d0fe0cb` added; exact-HEAD CI and Android speed measurements still required.
