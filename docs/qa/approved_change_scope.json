@@ -124,6 +124,14 @@
       {
         "start": "import 'waffra_bank_sms_facts.dart';",
         "end": "import 'waffra_sms_local_rules.dart';"
+      },
+      {
+        "start": "         final item=bySender[selectedSender]![index];",
+        "end": "          trailing:Row(mainAxisSize:MainAxisSize.min,children:[\n           Checkbox(\n            key:Key('waffra-sms-select-message-'"
+      },
+      {
+        "start": " Widget _autoSmsReviewCard(){",
+        "end": " /// Explicit, idempotent account-to-account transfer from reviewed bank SMS."
       }
     ],
     "test/support/waffra_main_source.dart": [
