@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "pr": "Draft #630",
-  "issue": "#629, #631",
+  "pr": 638,
+  "issue": "Issues #632–#637",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at new branch start",
   "reviewed_at": "2026-11-13",
@@ -2723,6 +2723,61 @@
       "safety_invariants": [
         "No production UI geometry or finance code changed in this test-only commit.",
         "Never mark physical-device UI or old-owner-backup parity as complete from simulator/widget data."
+      ]
+    },
+    {
+      "id": "M690-RETIRE-EXTERNAL-SMS-CLOUD-ISSUE632",
+      "issue": "Issue #632 / Draft PR #638",
+      "previous_behavior": "Bank SMS Settings offered a third-party OpenRouter consent switch, Android main APK embedded a staging Cloudflare worker URL and old installations could retain opt-in.",
+      "approved_behavior": "Permanently deny cloud consent and external analysis, clear historical consent when permissions run, remove Settings cloud switch and Android worker build define; retain deterministic on-device SMS Review, OTP protection and encrypted transaction writes.",
+      "source_paths": [
+        "lib/waffra_sms_cloud_service.dart",
+        "lib/waffra_home_profile.part.dart",
+        ".github/workflows/android.yml"
+      ],
+      "test_paths": [
+        "test/m429_sms_phone_integration_test.dart",
+        "test/m436_cloud_review_pipeline_test.dart",
+        "test/m528_settings_async_cache_regression_test.dart",
+        "test/m690_retired_cloud_sms_contract_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "Old consent never permits off-device SMS even on upgraded installations.",
+        "Local SMS review remains accessible and cannot auto-post remote suggestions.",
+        "Never store or log bank SMS in external provider or GitHub.",
+        "Keep physical APK review independent of CI."
+      ]
+    },
+    {
+      "id": "M691-HOME-BUDGET-CARD-MODULARIZATION-ISSUE633",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "HomeScreenState still embedded >400 lines of budget card, monthly summary and financial insight UI, tightly coupling a large main.dart to presentation widgets.",
+      "approved_behavior": "Move existing 416-line presentation block verbatim into a same-library _HomeScreenState extension; test all source constraints against reconstructed original code, including the real budget-alert threshold and recurring due checks. Preserve finance and SQLCipher writers untouched.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_budget_cards.part.dart"
+      ],
+      "test_paths": [
+        "test/m691_home_budget_cards_extraction_test.dart",
+        "test/support/waffra_main_source.dart",
+        "test/m401_m402_budget_month_centered_dropdown_test.dart",
+        "test/m549_approved_home_notifications_test.dart",
+        "test/m611_manual_home_finance_regression_test.dart",
+        "test/m580_sms_security_navigation_performance_test.dart",
+        "test/qa/m444_notification_safety_test.py"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "Do not delete or weaken original financial source assertions.",
+        "No new user-visible layout, ledger side effects or FAB relocation.",
+        "Actual Android overflow cannot be inferred from text/source preflight."
       ]
     }
   ]

@@ -10,6 +10,7 @@ class M444NotificationSafety(unittest.TestCase):
   self.assertIn('oneTimeDueAt',reminders)
  def test_finance_ui_respects_threshold_and_real_due(self):
   main=Path('lib/main.dart').read_text(encoding='utf8')
+  main+=Path('lib/waffra_home_budget_cards.part.dart').read_text(encoding='utf8')
   self.assertIn('WaffraFinancialInsights.reachedBudgetThreshold(',main)
   self.assertIn('budget:b.budget,alertPercent:b.alertPercent',main)
   self.assertIn('WaffraFinancialInsights.pendingCurrentMonth(',main)
