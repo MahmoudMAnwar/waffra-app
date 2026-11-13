@@ -320,13 +320,14 @@ void main() {
       baseline: homeBaseline,
       replacements: const {
         'waffra_goals_v24':
-            '[{"id":"trip","name":"Trip","target":2500,"saved":300}]',
+            '[{"id":"trip","name":"Trip","target":2600,"saved":200}]',
       },
       changedKeys: const {'waffra_goals_v24'},
     );
     expect(homeSave.generation, 3);
     expect(homeSave.values['entries'], contains('sms-1'));
-    expect(homeSave.values['waffra_goals_v24'], contains('"saved":300'));
+    expect(homeSave.values['waffra_goals_v24'], contains('"target":2600'));
+    expect(homeSave.values['waffra_goals_v24'], contains('"saved":200'));
     expect(homeSave.values['waffra_sms_hashes_v1'], [hashA]);
     final reloaded = await bridge().loadForHomeAndWidget();
     expect(reloaded.widgetRevision, '3');
@@ -502,11 +503,12 @@ void main() {
       captured: <String, Object>{
         'entries': witness.ledgerRaw!,
         'waffra_goals_v24':
-            '[{"id":"trip","name":"Trip","target":2500,"saved":400}]',
+            '[{"id":"trip","name":"Trip","target":2700,"saved":200}]',
       },
     );
     expect(persisted.values['entries'], contains('widget-m67'));
-    expect(persisted.values['waffra_goals_v24'], contains('"saved":400'));
+    expect(persisted.values['waffra_goals_v24'], contains('"target":2700'));
+    expect(persisted.values['waffra_goals_v24'], contains('"saved":200'));
     expect(persisted.values['waffra_sms_hashes_v1'], [hashA]);
     expect(persisted.generation, 3);
   });
