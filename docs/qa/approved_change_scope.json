@@ -98,12 +98,28 @@
       {
         "start": "  final consent=File('lib/waffra_auto_sms_consent.dart').readAsStringSync();",
         "end": "  expect(consent,contains('await WaffraAutoSms.optIn()'));"
+      },
+      {
+        "start": " test('M429 integrates single SMS opt-in, phone login and OS biometrics',(){",
+        "end": " test('M430: first-run consent does not reimport historical bank inbox',(){"
+      },
+      {
+        "start": " test('M433 Home has stable review inbox count and per-SMS manual review',(){",
+        "end": " test('M434 encrypted SMS inbox groups real sender and displays count',(){"
       }
     ],
     "test/m436_cloud_review_pipeline_test.dart": [
       {
-        "start": "  final ui=File('lib/waffra_auto_sms_consent.dart').readAsStringSync();",
-        "end": "  expect(ui,contains('await WaffraAutoSms.optIn()'));"
+        "start": "void main() {",
+        "end": " test('M436 native queue claim is atomic and withholds future retries',(){"
+      },
+      {
+        "start": " test('M452 background posts only with account-bound owner rule',(){",
+        "end": " test('M452 no unsolicited cloud choice on signup or SMS review',(){"
+      },
+      {
+        "start": " test('M452 no unsolicited cloud choice on signup or SMS review',(){",
+        "end": " test('M436 redactor accepts compact English multi-currency SMS',(){"
       }
     ],
     "test/m528_settings_async_cache_regression_test.dart": [
