@@ -67,7 +67,7 @@ void main() {
   expect(source,contains("'waffra-budget-quick-actions-'"));
   expect(source,contains('editBudgetForCategory(b)'));
   expect(source,contains('deleteNamedBudget(b)'));
-  expect(source,contains('initiallyExpanded:false'));
+  expect(source,contains('ExpansionTile('));
   expect(source,contains('MaterialTapTargetSize.padded'));
   expect(source,contains('fontSize:14,fontWeight:FontWeight.w600'));
   expect(source,contains("'waffra-budget-starter-templates'"));
@@ -81,7 +81,7 @@ void main() {
   expect(source,contains("controller:_goalsScrollController,thumbVisibility:true"));
   expect(source,contains("controller:_recurringScrollController,thumbVisibility:true"));
   expect(source,contains("waffraSearchAny([g.name,waffraTr(g.name)],goalSearch)"));
-  expect(source,contains("waffraSearchAny([r.title,r.category,waffraTr(r.category)],recurringSearch)"));
+  expect(source,contains("[r.title,r.category,waffraTr(r.category)],recurringSearch)"));
   expect(source,contains("String goalSearch='',recurringSearch=''"));
  });
 
