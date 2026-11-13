@@ -138,8 +138,8 @@
         "end": " /// Explicit, idempotent account-to-account transfer from reviewed bank SMS."
       },
       {
-        "start": "  /// Explicit, idempotent account-to-account transfer from reviewed bank SMS.",
-        "end": "  /// M593: even with JSON decoded on a worker isolate, creating thousands"
+        "start": " /// Explicit, idempotent account-to-account transfer from reviewed bank SMS.",
+        "end": " /// M593: even with JSON decoded on a worker isolate, creating thousands"
       }
     ],
     "test/support/waffra_main_source.dart": [
