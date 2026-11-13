@@ -244,6 +244,17 @@ void main(){
   final balances=await WaffraAccountsRepository(
    db:db,experimentalEnabled:true).balances();
   expect(balances.singleWhere((b)=>b.id=='old-bank').balanceMinor,10000);
+  // When the user explicitly verifies the opening balance excludes this
+  // historic entry, its legitimate bank impact is applied exactly once.
+  await WaffraAccountContextRead.attachPreviouslyUnassigned(
+   store:db,entryId:'legacy-pending',accountId:'old-bank',
+   confirmedIso:'2026-11-13T12:32:00Z',userConfirmed:true,
+   openingExcludesHistory:true);
+  final linked=await WaffraAccountsRepository(
+   db:db,experimentalEnabled:true).balances();
+  expect(linked.singleWhere((a)=>a.id=='old-bank').balanceMinor,15000);
+  expect(await count('fresh_finance_entries'),1);
+  expect(await count('fresh_finance_account_entry_links'),1);
  });
 
  test('M684 only selected month and chosen account enter bounded SQL page',()async{
