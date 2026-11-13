@@ -246,7 +246,7 @@ abstract final class WaffraLegacyV24SqlCipherConverter {
         }
       }
       await WaffraFinanceDomainLegacyImporter(
-        store: db, experimentalEnabled: true,
+        store: stageDb, experimentalEnabled: true,
       ).importCapturedDomain(explicitlyAuthorized: true, importedAtIso: stamp);
       // V24 budgetId is a prior user-confirmed association, not a new guess.
       // Recreate exact historical links in typed SQL without a second expense.
