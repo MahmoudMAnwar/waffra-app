@@ -4672,7 +4672,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   if(selected=='all')return entries;
   final ids=_m684ScopedEntryIds;
   if(ids==null)return const <MoneyEntry>[];
-  return entries.where((entry)=>ids.contains(entry.id));
+  // Read-only exact-ID projection over the authenticated hydrated ledger.
+  return _m684Periods.byIds(ids);
  }
 
  List<MoneyEntry> _m684ScopedMonthEntries(int year,int month){

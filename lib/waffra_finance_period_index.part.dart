@@ -14,18 +14,33 @@ class WaffraFinancePeriodIndex {
    final date=_source[i].date;
    (_byMonth[_monthKey(date.year,date.month)]??=<int>[]).add(i);
    (_byYear[date.year]??=<int>[]).add(i);
+   (_byId[_source[i].id]??=<int>[]).add(i);
   }
  }
 
  final List<MoneyEntry> _source;
  final Map<int,List<int>> _byMonth=<int,List<int>>{};
  final Map<int,List<int>> _byYear=<int,List<int>>{};
+ final Map<String,List<int>> _byId=<String,List<int>>{};
 
  static int _monthKey(int year,int month)=>year*12+month-1;
  List<int> get years=>List<int>.unmodifiable(_byYear.keys);
 
  List<MoneyEntry> _select(Iterable<int> positions)=>
   List<MoneyEntry>.unmodifiable(positions.map((i)=>_source[i]));
+
+ /// Account-specific Home and PDF reads use ONLY IDs witnessed by the
+ /// SQLCipher account-link repository. Never auto-attach old unassigned rows.
+ /// Keep source order (including imported historical rows) exactly intact.
+ List<MoneyEntry> byIds(Set<String> verifiedEntryIds){
+  if(verifiedEntryIds.isEmpty)return const <MoneyEntry>[];
+  final positions=<int>[];
+  for(final id in verifiedEntryIds){
+   positions.addAll(_byId[id]??const <int>[]);
+  }
+  positions.sort();
+  return _select(positions);
+ }
 
  /// A month-specific read only touches the requested monthly bucket.
  List<MoneyEntry> month(int year,int month){

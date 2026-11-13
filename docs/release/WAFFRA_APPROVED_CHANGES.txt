@@ -560,3 +560,5 @@ M684 full shared read-index wiring (2026-11-13, SAME Draft PR #628, not merged):
 - New focused index regression covers date boundaries, time order, 90-day windows, month de-duplication, source snapshot invalidation and all-page source contracts; updated M401 budget test for the new monthly read. Signed physical Android and exact-head CI still separate.
 
 M550 obsolete budget-source assertions (2026-11-13, same PR #628): updated the prior M343/M470 positive UI source contracts from the former full-ledger branch to the verified month index, while retaining account attribution, budget calculations, and no-posting negative assertions. No production code changed by this test-only correction.
+
+M684 account-ID lookup completion on PR #628: selected-account Home transaction/PDF listing now uses the cached verified entry-ID index with original historical order and excludes unassigned rows; new test preserves cross-month membership and no financial writers changed.

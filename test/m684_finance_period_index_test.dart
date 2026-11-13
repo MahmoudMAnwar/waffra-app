@@ -32,6 +32,21 @@ void main(){
   expect(rows.length,5);
  });
 
+ test('M684 selected-account ID lookup retains old entries, ordering and excludes unassigned',(){
+  final source=[
+   entry('unassigned',2026,11,5),
+   entry('linked-october',2026,10,6),
+   entry('other-account',2026,11,5),
+   entry('linked-november',2026,11,18),
+  ];
+  final read=WaffraFinancePeriodIndex(source);
+  expect(read.byIds({'linked-november','linked-october'})
+   .map((e)=>e.id).toList(),['linked-october','linked-november']);
+  expect(read.byIds({'missing-account'}),isEmpty);
+  expect(read.byIds({}),isEmpty);
+  expect(source.length,4);
+ });
+
  test('M684 multi-month forecast never repeats money or changes source order',(){
   final rows=[
    entry('dec',2025,12,1),
@@ -91,6 +106,7 @@ void main(){
   expect(s,contains('final previousRows=_m684Periods.month('));
   expect(s,contains('_m684Periods.before(monthStart)'));
   expect(s,contains('final ids=_m684ScopedEntryIds;'));
+  expect(s,contains('return _m684Periods.byIds(ids);'));
   // No persistent app-authority writes or duplicate financial ledger postings.
   final index=File('lib/waffra_finance_period_index.part.dart')
    .readAsStringSync();
