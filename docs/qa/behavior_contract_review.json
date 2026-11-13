@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
-  "pr": "Follow-up draft to #628",
-  "issue": "#629",
+  "pr": "Draft #630",
+  "issue": "#629, #631",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at new branch start",
   "reviewed_at": "2026-11-13",
-  "review_policy": "M685-M688: verified historical account linking, indexable SQLCipher month reads, safe Home header Dart part extraction; no user-data conversion, no FAB changes and physical device QA outstanding.",
+  "review_policy": "M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending.",
   "contracts": [
     {
       "id": "M623-VERIFIED-RESTORE-NO-SECOND-BACKUP",
@@ -2568,6 +2568,66 @@
         "No changes to actual header Dart statements, money/visibility/amount values, RTL/dark styles or header callbacks.",
         "Global + button, Snackbar anchor, login, encryption, restored data, categories, balances, reports and export paths unchanged.",
         "No source-contract assertion removed; moved code is asserted in its real module file."
+      ]
+    },
+    {
+      "id": "M689-OWNER-APPROVED-SMS-GOAL-DUE-AND-HOME-VISUAL-SCREENS",
+      "issue": "Issue #631, owner's three approved Arabic screen references, 2026-11-13, PR #630",
+      "previous_behavior": "Goal and due pages had long banners, duplicated controls and oversized quick-action rows; the SMS review repeated sender/type summary and an instructional blockers panel; Home could collapse the financial activity section.",
+      "approved_behavior": "Replace visible goal and due pages with owner-approved compact metrics, filters, amount/date/account/progress cards, preserve existing goal and recurring action handlers through compact controls. In SMS review remove ONLY the duplicated preview and blockers panel; retain selectable unmodified original SMS, complete finance detail rows, active category/account/date validation and verified Yes state. Home financial activity always visible and independently filterable, with floating add button stationary and Snackbar composited beside it.",
+      "source_paths": [
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m149_backup_pin_localized_fab_trash_uat_test.dart",
+        "test/m343_goal_recurring_named_budgets_test.dart",
+        "test/m345_goal_budget_forecast_test.dart",
+        "test/m371_goal_wallet_and_budgets_regression_test.dart",
+        "test/m392_m395_budget_quick_actions_goal_ui_test.dart",
+        "test/m665_goal_due_display_and_linked_edit_test.dart",
+        "test/m669_sms_review_category_search_test.dart",
+        "test/m670_feedback_transfer_dashboard_test.dart",
+        "test/m672_m678_activity_account_regression_test.dart",
+        "test/m674_approved_page_designs_test.dart",
+        "test/qa/m565_sms_yes_no_test.py",
+        "test/qa/m574_sms_confirmation_full_fields_test.py",
+        "test/waffra_directional_fab_receipt_corner_test.dart",
+        "test/waffra_m208_bundle_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m417-auto-bank-sms-optin.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Visual changes must not alter MoneyEntry IDs, account UUIDs, wallet amount sources, source/date verification, duplicate-SMS protection, OTP privacy, backed-up amounts or ledger ownership.",
+        "Disabled Yes stays disabled until a valid active main/subcategory and active money account are confirmed with original SAR/date matching.",
+        "Goal and due actions still call their real guarded writers; never simulate deposit or due payment from a card tap.",
+        "One fixed FAB target coordinates for zero/one/multi-line notice, light/dark and RTL/LTR."
+      ]
+    },
+    {
+      "id": "M689-INSUFFICIENT-CASH-GUARDS-WALLET-DUE-TRANSACTIONS",
+      "issue": "Issue #631, 2026-11-13 goal deposit error and linked-goal due account debit verification",
+      "previous_behavior": "UI offered an invalid Continue action when requested savings exceeded the verified bank account balance, but SQLCipher still rejected the write. Goal due typed split was idempotent but did not enforce available cash before committing a due's cash shortage.",
+      "approved_behavior": "Check displayed verified cash before committing an over-balance savings transfer; do not offer a confirmation bypass. In the snapshot writer under the same authenticated SQLCipher transaction, recalculate cash shortage from canonical wallet savings and verify selected account ID, active status and actual available money balance before any goal due debit; continue using one idempotent typed receipt and atomic snapshot transaction.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/storage/waffra_verified_goal_due_snapshot_writer.dart"
+      ],
+      "test_paths": [
+        "test/storage/m665_goal_due_note_and_split_test.dart",
+        "test/m665_goal_due_display_and_linked_edit_test.dart",
+        "test/m371_goal_wallet_and_budgets_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m160-main-reconciliation-and-backup-regression.yml"
+      ],
+      "safety_invariants": [
+        "Never permit negative verified available cash, fake wallet funds or a second due settlement.",
+        "Do not debit wallet-funded cents from the bank twice: cash = dueAmount - min(walletSavings,dueAmount).",
+        "A stale/rejected/insufficient-cash request must preserve previously committed ledger, goal, recurring and account amounts unchanged."
       ]
     }
   ]
