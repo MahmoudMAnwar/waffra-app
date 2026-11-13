@@ -111,7 +111,9 @@ void main() {
   expect(app,contains('goal.saved/goal.target'));
   // M470 narrows the budget preview to the account selected in Home,
   // while 'all' preserves the independent global view.
-  expect(app,contains('final relevantEntries=selectedFinancialAccount==\'all\'?'));
+  expect(app,contains('final relevantEntries=_m684ScopedMonthEntries('));
+  expect(app,contains("if(_m467SelectedAccount=='all')return monthRows;"));
+  expect(app,contains('final ids=_m684ScopedEntryIds;'));
   expect(app,contains('waffraNamedBudgetSpent(relevantEntries.toList(),categories,selected,viewedMonth)'));
   expect(link,contains('linkedGoalId:updated.id'));
   expect(link,contains('operation:\'goal-edit-and-due\''));

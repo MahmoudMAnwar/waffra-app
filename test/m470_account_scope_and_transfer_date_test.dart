@@ -60,6 +60,9 @@ void main() {
     expect(source, isNot(contains("selected=='none'")));
     expect(source, contains("if(chosen!='all'&&"));
     expect(source, contains("chosen=p.getString(_m467ChoiceKey)??'all'"));
-    expect(source, contains("item.accountId==selected"));
+    // Historic account membership comes from SQL IDs, with O(k) indexed reads.
+    expect(source, contains('final ids=_m684ScopedEntryIds;'));
+    expect(source, contains('return _m684Periods.byIds(ids);'));
+    expect(source, contains('api.readAccountEntryIds(accountId:chosen)'));
   });
 }

@@ -1,15 +1,33 @@
 {
   "contract_version": 1,
-  "change_id": "M674-M675-20261113-ISSUES624_626-PR625-APPROVED-PAGES-AND-FIXED-FAB-SNACK",
-  "human_scope_review": "User explicitly approved Home concept #1, attached Goals reference screenshot, Recurring concept #3 and required the cross-page + button stay entirely unmodified. Scope is view-only presentation wiring of verified existing account/goal/recurring sources plus regression checks; no database migrations or financial write-path changes. Include original Home actions, Goal and Recurring safeguards; confirm via CI and real-phone test separately. Owner subsequently requested M675 in same PR: on all tabs, Snackbar must finish alongside the stationary + FAB, and multiple text lines grow above it without moving +. Header appbar, FAB, FAB location, footer navigation and all action callbacks are outside M385 approved regions and must remain byte-identical to main. M385's snackbar section begins at the unchanged final FAB icon line because the old Snackbar comment was removed; that icon and all action/location logic remain byte-identical and are also checked by M675 tests.",
+  "change_id": "M679-M684-20261113-ISSUE627-PR628-INTEGRITY-ACCOUNT-RECONCILIATION-PAGED-SQL-UI-MODULES",
+  "human_scope_review": "Owner explicitly authorized all three phases from the 2026-11-13 finance code audit plus six annotated screenshots, in ONE new Draft PR: protect goal-source accounting, prevent unlinked modern posts and forged goal savings, ensure recurring account-default parity, preserve legacy V24 data, compact Home/Goals/Recurring cards, correct Accounts navigation, display real financial activity counts, legible goal chart and entire SAR money values. Preserve every global + FAB action, anchor and geometry, stationary Snackbar, backups and historic ledger identities. Production finance writers and UI are changed only in explicitly bounded locations. Signed device evidence remains pending. Follow-up explicit user approval 2026-11-13 12:31:07Z requires completing unassigned historical UI, wiring month-paged SQL to screen and extracting large main.dart widgets. M684 moved visual-only tile layout into part file; the global + and money writers remain untouched. Historic unassigned transactions only attach with user-selected account and zero opening balance. CI M448 revealed a legitimate source with a nonzero account opening. Do not weaken protection or block all such mappings. Explicit nonzero-opening attestation is mandatory, and the original M448 link/budget test checks its positive and negative paths. Owner 2026-11-13 follow-up authorizes M684 Home optimized read and fixing full-regression failures while retaining old backup/history and financial writer protections. M103 failing suite 2026-11-13: update only two obsolete test expectations for correct live count + detail reads and same-percentage shown in both summary and progress graph; no production behavior is changed. Owner 2026-11-13 13:52Z explicitly requested completing improved reads in all remaining views in PR #628. Add a source-only month/year projection over the verified hydrated ledger; changes must not touch SQLCipher writer, historic unassigned matching, backup V24/V3 decrypt or global FAB. User 2026-11-13 14:11 explicitly approved completing last M684 account-scoped read step in same PR. Only read-only index/new already-approved test, current Home account scope, and same-PR documentation adjusted. M684 follow-up: after verified encrypted trash delete/undo, invalidate indexed display months before publishing changed MoneyEntry source. No SQLCipher posting/decrypt/backup change. Owner 2026-11-13 14:35 requested final repairs to failing exact-head CI. Actual encrypted Android vault log shows pre-M680 fixture illegally editing saved from 100 to 200 via metadata, correctly rejected by M680. Repair Android test fixture to assert rejection and clean rollback, then allowed target-only edit with original saved=100, SMS merge and cold SQLCipher restart; keep production guard and other shards unchanged.",
   "user_requested_changes": [
-    "Apply the approved Home #1 premium dashboard presentation using only verified current balance and actual financial counts.",
-    "Apply the user-supplied Goals screenshot with real target, saved progress, linked account, due date, nearest-goal and existing verified actions.",
-    "Apply Recurring concept #3 with honest income/expense/goal dues, due date ordering and existing linked-goal edit guard.",
-    "Never modify global + button styling, position, overlay, route handlers, action labels or hit targets on any page.",
-    "Verify schema field roundtrips, linked money accounts and goals, financial read parity, and preserve existing encrypted SQLCipher writer behavior.",
-    "M675: move the transient footer notice out of the Scaffold bottomNavigationBar layout and overlay it adjacent to the existing stationary + for each finance tab, anchored by existing LayerLink. Ensure two lines only grow upward without any FAB movement.",
-    "M675: reconcile original directional FAB/Snackbar regression source assertion with new production fixed-footer behavior; preserve its Undo and warning/info widget tests and separate full geometry regressions."
+    "Enforce correct verified funding account and sufficient source cash under one SQLCipher goal wallet commit, with negative-path rollback tests.",
+    "Do not allow metadata-only goal updates to forge savings; keep recurring typed account defaults consistent with accountId edits while preserving older legacy data.",
+    "Require verified account selection for modern new income/expense while preserving legacy bridge and authenticated V24 accountless restoration without silently assigning money.",
+    "Home financial-activity header shows a numeric live count when collapsed instead of عرض; Home Accounts shortcut opens WaffraAccountsManagerPage, not profile.",
+    "Compact Home income/expense/transfer/goal/due cards, and Goals/Recurring detailed cards; remove duplicated Goal edit action while retaining user-accessible actions and immutable global plus.",
+    "Replace unreadable opaque goal progress chart with per-goal labeled percentage and bar; show full SAR 50,000.00 in narrow metrics without ellipsis.",
+    "Verify SQLCipher rollback, repeat confirmation and 320–390dp RTL/LTR dark widget constraints; don't merge before current exact-head CI and physical Android validation.",
+    "Reconcile former M67 widget-versus-goal regression fixtures to edit goal target metadata without illegally minting savings; retain collision-free concurrent ledger and SMS hash assertions, and add explicit negative wallet-forgery test.",
+    "M681-M684: add non-mutating count/net reconciliation preview for accountless historic entries and bounded month-scoped SQLCipher entry paging without changing old full-ledger restore, balances, or global FAB.",
+    "Finish owner-approved historical account matching screen using read-only all-time unassigned SQL preview; allow link only after choosing verified active zero-opening account and confirming no new transaction.",
+    "Make account ledger display use true SQL month-bound pages (50/page) and current-month budget/goal projection instead of decoding all history, keeping existing Home full ledger contract for old parity.",
+    "Extract visual Home and Recurring card widgets into a new part file, retaining widget identities and callbacks and preserving globally stationary plus/Snackbar.",
+    "M681 reconciliation on nonzero-opening accounts must require explicit per-entry user attestation that opening balance excludes that entry; a missing attestation or reassignment to a different account must roll back. Preserve the old positive SQLCipher balance test after confirmed consent.",
+    "Expose a visible Accounts overview button to the existing witnessed Account Context reconciliation screen, not just a top-right receipts icon; do not alter data or existing account edit/creation flows.",
+    "Safely extend API boundary to cover the user-requested historical link confirmation parameter (openingExcludesHistory); continue guarding all goal/default/balance code.",
+    "M684 follow-up: SQL monthly summary with all-time lightweight account-entry IDs used by Home/budget/report filters, financial integrity test fixture updates and narrow UI text scaling.",
+    "M550 source-contract correction: M470 confirms all-time selected-account ID projection and never allows unassigned filter, without requiring removed full-history row scan.",
+    "M103 exact-head regression: source contract must distinguish collapsed live count from expanded activity history; widget test must assert both 25% metric and 25% goal progress without changing money data or cards.",
+    "M684 explicit follow-up: finish shared month/year index across Home, monthly budgets, analytics, reports and forecast; invalidate it after every ledger edit, delete, source reload and restore, preserving all-time history and backup/account parity.",
+    "Update the exact M401 old source contract for month-indexed budget display without weakening date switching, budget owner selection or no-posting checks.",
+    "M550 follow-up: update two obsolete budget source-string tests to assert indexed monthly budget read and verified scoped-account IDs; keep all financial and negative-path invariants intact.",
+    "Finish the remaining optimized selected-account transaction and PDF source lookup by using only SQLCipher-attested account-linked IDs in a reusable read-only index, preserving old unassigned rows, transaction order, account balances and existing all-time history.",
+    "M470 positive source contract follows the owner's newly completed M684 byIds projection over verified SQLCipher linked account history, retaining all negative assertions and original transfer-date test.",
+    "M684 encrypted transaction trash source freshness: invalidate the monthly display index under the verified ledger publish after successful delete or undo, preserving all account-balance authority and prior historical rows.",
+    "Fix the exact failing Android SQLCipher encrypted-db-vault mandatory integration test in the same PR #628 by preserving M680 rule: illegal direct goal saved balance edit must roll back atomically without losing concurrent widget SMS, legal target-only metadata edit must merge and survive a cold Android restart."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -17,17 +35,45 @@
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
+    "lib/storage/waffra_account_context_read.dart",
+    "lib/storage/waffra_fresh_finance_modules_repository.dart",
+    "lib/storage/waffra_unified_finance_writer.dart",
+    "lib/storage/waffra_verified_accounts_api.dart",
+    "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
+    "lib/storage/waffra_verified_goal_funding_writer.dart",
+    "lib/waffra_account_context_page.dart",
+    "lib/waffra_accounts_manager_page.dart",
     "lib/waffra_approved_page_designs.dart",
+    "lib/waffra_home_finance_tiles.part.dart",
+    "test/m611_manual_home_finance_regression_test.dart",
+    "test/m672_m678_activity_account_regression_test.dart",
     "test/m674_approved_page_designs_test.dart",
-    "test/waffra_directional_fab_receipt_corner_test.dart"
+    "test/storage/m440_account_linked_entry_writer_test.dart",
+    "test/storage/m448_account_context_read_test.dart",
+    "test/storage/m641_goal_account_integrity_test.dart",
+    "test/storage/verified_encrypted_finance_bridge_test.dart",
+    "test/storage/fresh_finance_modules_repository_test.dart",
+    "test/storage/m500_historical_entry_edit_account_link_test.dart",
+    "test/m467_account_header_test.dart",
+    "test/m470_account_scope_and_transfer_date_test.dart",
+    "lib/waffra_finance_period_index.part.dart",
+    "test/m684_finance_period_index_test.dart",
+    "test/m401_m402_budget_month_centered_dropdown_test.dart",
+    "test/m343_goal_recurring_named_budgets_test.dart",
+    "test/m470_account_monthly_budget_policy_test.dart",
+    "integration_test/verified_encrypted_finance_bridge_android_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
   "bounded_sections": {
     "lib/main.dart": [
       {
-        "start": "import 'waffra_recurring_account_groups.dart';",
-        "end": "import 'waffra_saudi_financial_providers.dart';"
+        "start": " Widget _m647TransferCard(",
+        "end": " Future<void> _m647ShowInternalTransfers("
+      },
+      {
+        "start": " Widget compactTransaction(",
+        "end": " Widget dashboard(){"
       },
       {
         "start": " Widget dashboard(){",
@@ -42,14 +88,272 @@
         "end": " Future<void> showWaffraFinancialCalendar()async{"
       },
       {
-        "start": "       child:const Icon(Icons.add,color:Colors.white,size:28)))),",
-        "end": "  if(addFabExpanded&&!accountOpened)...["
+        "start": "part 'waffra_goal_recurring_actions.part.dart';",
+        "end": "part 'waffra_deleted_item_card.part.dart';"
+      },
+      {
+        "start": " Widget _dashboardShortcut(",
+        "end": " Widget compactTransaction("
+      },
+      {
+        "start": " Widget _recurringBenefit(",
+        "end": " Future<void> goalDialog({"
+      },
+      {
+        "start": " WaffraAccountContextReadResult? _m467AccountContext;",
+        "end": " Future<void> _m467PickHomeAccount()async{"
+      },
+      {
+        "start": " final entries=<MoneyEntry>[],categories=<BudgetCategory>[]",
+        "end": " final namedBudgets="
+      },
+      {
+        "start": "  final startupClock=kProfileMode?",
+        "end": "  try{\n   await load();"
+      },
+      {
+        "start": "  traceHomeStep('after_batch_json_decode');",
+        "end": "  try{\n   final raw=financeView.getString('waffra_named_budgets_v1');"
+      },
+      {
+        "start": "       final scheduleIndex=recurring.indexWhere((x)=>x.id==r.id);",
+        "end": "        'من محفظة الهدف: ${cash(allocation.fromGoalWallet)}؛ '"
+      },
+      {
+        "start": "      if(!entries.any((e)=>e.id==id)){",
+        "end": "      // SQLCipher commits the posted due,"
+      },
+      {
+        "start": "   final previousEntries=List<MoneyEntry>.of(entries);",
+        "end": "    // Learn only explicit corrections made by the user"
+      },
+      {
+        "start": "     if(!mounted)return;\n     final index=entries.indexWhere((e)=>e.id==initial.id);",
+        "end": "     if(!await _persistModuleOrReload(\n      WaffraFinanceRoute.transactionEdit,"
+      },
+      {
+        "start": "  // A tentative removal is never success until the source acknowledges it.",
+        "end": "   operation:'transaction-delete'))return;"
+      },
+      {
+        "start": "    if(!mounted||entries.any((x)=>x.id==e.id))return;",
+        "end": "     operation:'transaction-undo'))return;"
+      },
+      {
+        "start": " Future<void> confirmDeleteAllEntries() async {",
+        "end": " Future<void> editMonthlyBudget("
+      },
+      {
+        "start": "  // Dialogs are asynchronous: never rely on stale selection after await.",
+        "end": " Future<void> deleteNamedBudget("
+      },
+      {
+        "start": " Widget monthlyBudgetCard(){",
+        "end": " Widget _budgetFigure("
+      },
+      {
+        "start": " Widget monthlySummaryCard(){",
+        "end": " Widget smartMoneyInsightsCard(){"
+      },
+      {
+        "start": " Widget nextMonthForecast(){",
+        "end": " Widget analytics(){"
+      },
+      {
+        "start": " Widget analytics(){",
+        "end": " Future<BudgetCategory?> categoryDialog("
+      },
+      {
+        "start": " Future<void> eraseFinancialData()async {",
+        "end": " Widget _accountTile("
+      },
+      {
+        "start": " void _publishVerifiedTransactionLedger(",
+        "end": " Future<void> _deleteVerifiedEntry("
       }
     ],
-    "test/waffra_directional_fab_receipt_corner_test.dart": [
+    "lib/storage/waffra_fresh_finance_modules_repository.dart": [
       {
-        "start": "  test('all snackbar entry points share one footer-aware presenter', () {",
-        "end": "  testWidgets('footer notice pushes financial content up and stays above footer',"
+        "start": "  Future<void> save(",
+        "end": "  Future<void> delete("
+      }
+    ],
+    "lib/storage/waffra_unified_finance_writer.dart": [
+      {
+        "start": "  Future<WaffraUnifiedWriteResult> appendTransactions(",
+        "end": null
+      }
+    ],
+    "lib/storage/waffra_verified_goal_funding_writer.dart": [
+      {
+        "start": "import 'dart:convert';",
+        "end": null
+      }
+    ],
+    "lib/waffra_approved_page_designs.dart": [
+      {
+        "start": "class WaffraApprovedMetrics extends StatelessWidget {",
+        "end": "class WaffraApprovedDashboardLink extends StatelessWidget {"
+      },
+      {
+        "start": "class WaffraApprovedDashboardLink extends StatelessWidget {",
+        "end": "class WaffraApprovedSectionTitle extends StatelessWidget {"
+      },
+      {
+        "start": "class WaffraApprovedGoalProgressBars extends StatelessWidget {",
+        "end": "/// Renders the notice NEXT to the existing"
+      }
+    ],
+    "test/m672_m678_activity_account_regression_test.dart": [
+      {
+        "start": "  test('M672 transfer arrow",
+        "end": "  test('M673 shared official"
+      },
+      {
+        "start": "  test('M677 only one financial activity type chip row remains'",
+        "end": "  test('M672 transfer arrow points source to destination"
+      }
+    ],
+    "test/m674_approved_page_designs_test.dart": [
+      {
+        "start": " test('M674 encrypted SQLCipher:",
+        "end": " test('M674 JSON models retain all IDs"
+      },
+      {
+        "start": " testWidgets('M675 English snackbar remains left",
+        "end": " test('M675 immutable + source contract"
+      },
+      {
+        "start": " testWidgets('M674 approved cards render actual metrics",
+        "end": " Widget scene(String message"
+      }
+    ],
+    "test/storage/m440_account_linked_entry_writer_test.dart": [
+      {
+        "start": " test('M440 account-link duplicate rollback",
+        "end": null
+      },
+      {
+        "start": "import 'package:waffra/storage/waffra_accounts_repository.dart';",
+        "end": "import 'package:waffra/storage/waffra_unified_finance_writer.dart';"
+      }
+    ],
+    "test/storage/m641_goal_account_integrity_test.dart": [
+      {
+        "start": " test('missing account or mismatched goal/due",
+        "end": null
+      }
+    ],
+    "test/storage/verified_encrypted_finance_bridge_test.dart": [
+      {
+        "start": "  test('widget SMS append and stale Home goal edit preserve both values',",
+        "end": "  test('widget write and stale Home ledger edit cannot lose transactions'"
+      },
+      {
+        "start": "  test('M67 finance port preserves widget entries during a goals editor save',",
+        "end": "  test('M67 SMS digest merge never overwrites a widget digest'"
+      }
+    ],
+    "lib/storage/waffra_account_context_read.dart": [
+      {
+        "start": "abstract final class WaffraAccountContextRead {",
+        "end": "  static Future<int> attachPreviouslyUnassigned({"
+      },
+      {
+        "start": "  static Future<int> attachPreviouslyUnassigned({",
+        "end": null
+      }
+    ],
+    "lib/storage/waffra_verified_encrypted_finance_bridge.dart": [
+      {
+        "start": "  Future<WaffraAccountContextReadResult> readVerifiedAccountContext({",
+        "end": "  /// Read account balances with a source witness"
+      }
+    ],
+    "lib/storage/waffra_verified_accounts_api.dart": [
+      {
+        "start": " Future<WaffraAccountContextReadResult> readAccountContext({",
+        "end": " /// A goal's overall progress stays independent of the selected account."
+      }
+    ],
+    "lib/waffra_account_context_page.dart": [
+      {
+        "start": "class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {",
+        "end": null
+      }
+    ],
+    "test/m611_manual_home_finance_regression_test.dart": [
+      {
+        "start": " test('M611 Home action tiles show read-only histories, never an add form', () {",
+        "end": " test('M611 account selection is readable and mandatory for manual save', () {"
+      },
+      {
+        "start": " test('M611 transfer history reads real encrypted rows under owner witness', () {",
+        "end": null
+      }
+    ],
+    "test/storage/m448_account_context_read_test.dart": [
+      {
+        "start": " test('all/unassigned budget and balance are independent of account header',()async{",
+        "end": null
+      }
+    ],
+    "lib/waffra_accounts_manager_page.dart": [
+      {
+        "start": " void failed(){",
+        "end": " Future<void> addAccount()async{"
+      },
+      {
+        "start": " @override Widget build(BuildContext context)=>Scaffold(",
+        "end": null
+      }
+    ],
+    "test/storage/fresh_finance_modules_repository_test.dart": [
+      {
+        "start": "  test('M394 zero-target open savings",
+        "end": "  test('unknown ID cannot be treated as a successful update'"
+      }
+    ],
+    "test/storage/m500_historical_entry_edit_account_link_test.dart": [
+      {
+        "start": " test('M500 historical expense links once;",
+        "end": " test('M500 explicit confirmation required;"
+      }
+    ],
+    "test/m467_account_header_test.dart": [
+      {
+        "start": " test('M467 Home header scope is verified",
+        "end": null
+      }
+    ],
+    "test/m470_account_scope_and_transfer_date_test.dart": [
+      {
+        "start": "  test('M470 home account preferences never re-activate legacy unassigned filter'",
+        "end": null
+      }
+    ],
+    "test/m401_m402_budget_month_centered_dropdown_test.dart": [
+      {
+        "start": "  test('M401 monthly budget card counts user budgets and navigates display month'",
+        "end": "  for (final direction in [TextDirection.rtl,TextDirection.ltr]) {"
+      }
+    ],
+    "test/m343_goal_recurring_named_budgets_test.dart": [
+      {
+        "start": " test('M343 goal/recurring UI uses one saved total and budget remains independent'",
+        "end": null
+      }
+    ],
+    "test/m470_account_monthly_budget_policy_test.dart": [
+      {
+        "start": " test('M470 budget creation/edit and monthly Home card read explicit money account'",
+        "end": null
+      }
+    ],
+    "integration_test/verified_encrypted_finance_bridge_android_test.dart": [
+      {
+        "start": "      expect(added.saved, 1);",
+        "end": "      final original = await checkpoint('prefs-check',"
       }
     ]
   }

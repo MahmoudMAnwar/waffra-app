@@ -511,3 +511,60 @@ M675 (2026-11-13; Issue #626 / SAME Draft PR #625): global Snackbar fixed BESIDE
 - Preserve all original FAB safety tests while updating the now obsolete source-positive assertion, plus new RTL/LTR single/multiline geometry widget tests. Physical phone acceptance and latest CI are tracked separately. This is NOT merged.
 
 M674 QA follow-up (2026-11-13; PR #625): Full Offline Regression exposed the existing M662 forbidden savings/piggy-bank icon source contract. Replaced the new Goals saved-total metric's `Icons.savings_outlined` with the app-approved `Icons.account_balance_wallet_outlined`, and aligned the narrow RTL dark widget fixture accordingly. No logic, amount, account, +, Snackbar or SQLCipher changes. Exact-head CI revalidation required.
+
+
+M679–M684 (2026-11-13; Issue #627, Draft PR #628; CODE IN REVIEW, NOT MERGED OR RELEASED):
+- User-approved three-phase finance and UI repair after real Android screenshots. Existing Home concept #1, Goals and Recurring #3 visual hierarchy, 58px global + and adjacent stationary Snackbar must remain unchanged apart from bounded interior card improvements.
+- Savings wallet SQLCipher funding now requires exact matched goal-linked source and confirmed available bank cash at commit; wrong source or insufficient funds abort atomically. Goal name/target/date editing cannot change saved_minor; recurring account defaults no longer remain stale after explicit account unlink during editing.
+- Explicit account-review posting of new income/expense rejects a missing account. The old authenticated V24 accountless restore and existing widget bridge continue to preserve their historical/accountless IDs and data until separate user-confirmed link. Restored unassigned transactions are not spendable bank balance.
+- Home Accounts shortcut routes to verified Accounts manager instead of Profile. Collapsed "عملياتك المالية" shows a count inclusive of verified transferred/savings activity where available, expanded state still says "إخفاء".
+- Home financial activity entries, transfers, savings and primary action cards use compact heights. Savings goal cards remove duplicate bottom Edit while keeping Quick Actions edit, release, delete, active toggle and financial history; recurring/due cards use compact vertical spacing. No verified financial write method added by card redesign.
+- Goal progress chart is now named and percentage-labelled for every displayed goal with slim readable bars. Summary metrics render full 50,000.00 SAR without trailing ellipsis on RTL/LTR narrow devices. Tests added for 320/360/390 logical widths, dark-mode and SQLCipher invalid source/overdraft rollback, metadata tamper refusal and typed account unlink parity.
+- Known limitation: these changes do NOT retrospectively repair -50,000 cash on a user's saved device and do NOT mutate original accountless V24 transactions. CI and signed physical Android acceptance are separate and pending; check exact PR head before any merge.
+
+- M681/M684 follow-up: read-only unassigned V24 count and net preview plus bounded SQLCipher monthly page API (up to 500 entries per page), with tests. No automatic bank assignment or historical mutation. Existing full-history reconciliation remains unchanged; no Home caller migration or main.dart extraction is claimed yet.
+
+M681/M684 implementation follow-up (2026-11-13; Issue #627, Draft PR #628 — NOT MERGED):
+- Accounts > Account transactions now includes historical unassigned-entry count + net preview. "Review" opens the all-time queue; each original entry can only be associated with one explicitly chosen active account after confirmation. For accounts with nonzero opening cash, the user must separately attest the original operation is not already included in that opening; without this, linking is rejected. A stale or already-assigned link never produces a second income/expense. This does NOT automatically fix any pre-existing incorrect balance or map imported transactions to banks.
+- Account transaction history is now fetched by bounded SQLCipher month/account pages (50 rows) with previous/next month and page controls. Unassigned legacy review intentionally covers all dates. Account context budget and goal summary reads use scoped month entries on this screen. The existing full-ledger Home reconciliation remains unchanged for correct historic parity.
+- Extracted four presentation-only tile helpers from giant main.dart into waffra_home_finance_tiles.part.dart (file actually named lib/waffra_home_finance_tiles.part.dart); legacy Home methods delegate without changing callbacks, money writers, or immutable global + and M675 Snackbar anchor.
+- Added negative-path SQLCipher tests for historic duplicate link, opening-balance attestation guard, selected-month/account paging, and static contract checks for page and unchanged global +. These are code and test commitments, not an assertion that physical-phone acceptance or exact-head CI has passed.
+
+- M681 correction following live M448 CI regression: a legitimate nonzero-opening account may receive a historic unassigned entry only after an extra user checkbox confirming that old operation was not already in the opening cash. The original M448 SQLCipher budget/ledger fixture is preserved and now tests refusal without that extra attestation, successful consent-based association, idempotent retry and wrong-account refusal. No silent opening-balance edits.
+
+- M681 discoverability: Accounts overview now shows a direct Review and link unassigned historical transactions control; the previous top-right icon remains available and points to the same authenticated account-context screen. No finance records are automatically changed by opening this screen.
+
+
+M679–M684 CI correctness follow-up (2026-11-13, PR #628, not merged):
+- M368 older encrypted recurring schedules: clearing an account default now first checks whether the optional account-default SQLCipher table exists. It does not delete a table, invent an account, or reject an earlier schedule simply because the optional table was never installed. Existing defaults are removed atomically when that table actually exists.
+- M681 accountless legacy history remains immutable until the user chooses an account and confirms the history/opening-balance distinction. This does not create another entry or double-charge savings, and explicit same-ID retries remain idempotent.
+- M684 corrected inverted month-only SQL mode: Account Context's month-scoped summary only loads selected-month ledger entries, while legacy full-history readers still return every authenticated entry for parity/restore checks. Added October-versus-November SQLCipher regression alongside unassigned net and no-balance-mutation assertions.
+- M385 declared API scope was corrected for the already-approved historical-link confirmation field. All protected paths were checked against original main to ensure no out-of-scope app code change. App Android/CI tests and real-device acceptance are separate.
+
+M684 account-context CI and shared Home-filter follow-up (2026-11-13; same Draft PR #628):
+- Fixed SQL month-only predicate and optimized selected-account Home by reading only all-time linked entry IDs plus the current month's budget/goal summary, preserving older filtered transactions and financial data.
+- Updated old wallet-edit test fixtures to assert savings cannot change via metadata and M500 linking to require nonzero-opening consent. Added October selected-account ID projection test and 1.3x text-scale RTL/LTR narrow widget coverage.
+- Exact-head CI, real physical Android Overflow and user-owned Backup/Restore balance/report parity remain unverified release gates.
+
+M684 M550 contract correction (same Draft PR #628, 2026-11-13): obsolete M470 source assertion now verifies selected-account all-time SQL ID membership and continuing exclusion of the unassigned picker. No old negative test was suppressed; exact-head CI to be rerun.
+
+M103 exact-head fail correction (2026-11-13, same Draft PR #628):
+- M677 test now checks that memoized verified activity reads exist for collapsed numeric counter and detailed cards; no duplicate filter row and no app code change.
+- M674 narrow RTL goal chart test expects 25% in both overview metric and actual bar, and 75% in the second goal, correcting a one-widget assertion that incorrectly rejected valid duplicated text.
+- Do not interpret these focused test updates as physical Android or backup acceptance.
+
+M684 full shared read-index wiring (2026-11-13, SAME Draft PR #628, not merged):
+- Added immutable owner-finance period index (months/years, exact timestamp ranges, cutoff histories) over the single authenticated hydrated ledger, with lazy memoization and explicit invalidation at all recorded MoneyEntry mutations and restore/reset paths.
+- Wired Home budget-month and current-month summary, balance prior-month comparison, yearly/monthly Analytics plus existing PDF exports, 90-day financial insights and multi-month forecast. Historical transaction search/export continues to include all dates; selected-bank views apply only explicitly verified account-ID associations.
+- Retained typed Goals and Recurring sources; did not fabricate income/expense, reapply SMS, change current account balance or alter V24/V3 backup/restore logic.
+- New focused index regression covers date boundaries, time order, 90-day windows, month de-duplication, source snapshot invalidation and all-page source contracts; updated M401 budget test for the new monthly read. Signed physical Android and exact-head CI still separate.
+
+M550 obsolete budget-source assertions (2026-11-13, same PR #628): updated the prior M343/M470 positive UI source contracts from the former full-ledger branch to the verified month index, while retaining account attribution, budget calculations, and no-posting negative assertions. No production code changed by this test-only correction.
+
+M684 account-ID lookup completion on PR #628: selected-account Home transaction/PDF listing now uses the cached verified entry-ID index with original historical order and excludes unassigned rows; new test preserves cross-month membership and no financial writers changed.
+
+M470 same-PR exact-head source assertion updated to use the new read-only verified account ID lookup; no behavioral checks or negative validations skipped.
+
+M684 confirmed-source cache freshness: encrypted 30-day trash Delete and Undo now drop the read-only month/year index before the verified ledger is repainted; no balances, transactions, account links or archived data are rewritten by this change. CI and physical Android gates remain separate.
+
+M680 Android encrypted-db-vault mandatory CI regression: repaired obsolete Android integration fixture that illegally increased saved directly in goal metadata. Added explicit negative atomic rollback/snapshot+SMS preservation assertion; positive stale Home goal target-only edit retains saved amount and passes encrypted cold reopen SQL projection. All encrypted Android shards remain mandatory.

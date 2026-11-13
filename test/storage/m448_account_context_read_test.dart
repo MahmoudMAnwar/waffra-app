@@ -102,19 +102,65 @@ void main(){
 
   final before={for(final a in await accounts.balances())a.id:a.balanceMinor};
   expect(before,{'rajhi':80000,'cash':90000});
+  // A nonzero opening may already include old transactions; reject without
+  // a separate explicit attestation, leaving balances and links unchanged.
+  await expectLater(WaffraAccountContextRead.attachPreviouslyUnassigned(
+   store:db,entryId:'unassigned-expense',accountId:'rajhi',
+   confirmedIso:stamp,userConfirmed:true),throwsA(isA<StateError>()));
+  expect((await db.customSelect(
+   "SELECT count(*) AS n FROM fresh_finance_account_entry_links "
+   "WHERE entry_id='unassigned-expense'").getSingle()).read<int>('n'),0);
   await WaffraAccountContextRead.attachPreviouslyUnassigned(
    store:db,entryId:'unassigned-expense',accountId:'rajhi',
-   confirmedIso:stamp,userConfirmed:true);
+   confirmedIso:stamp,userConfirmed:true,openingExcludesHistory:true);
   await WaffraAccountContextRead.attachPreviouslyUnassigned(
    store:db,entryId:'unassigned-expense',accountId:'rajhi',
-   confirmedIso:stamp,userConfirmed:true);
+   confirmedIso:stamp,userConfirmed:true,openingExcludesHistory:true);
   await expectLater(WaffraAccountContextRead.attachPreviouslyUnassigned(
    store:db,entryId:'unassigned-expense',accountId:'cash',
-   confirmedIso:stamp,userConfirmed:true),throwsA(isA<StateError>()));
+   confirmedIso:stamp,userConfirmed:true,openingExcludesHistory:true),
+   throwsA(isA<StateError>()));
   final after={for(final a in await accounts.balances())a.id:a.balanceMinor};
   expect(after,{'rajhi':75000,'cash':90000});
   expect((await db.customSelect(
    'SELECT count(*) AS n FROM fresh_finance_entries').getSingle())
    .read<int>('n'),4);
+ });
+
+ test('M684 summary reads only chosen month without changing full-history API',()async{
+  await createAccount('rajhi');
+  await transaction('nov-current',3000);
+  await db.customStatement(
+   'INSERT INTO fresh_finance_entries '
+   '(entry_id,title,category_snapshot,amount_minor,is_income,'
+   'occurred_iso,receipt_count,source_json) VALUES (?,?,?,?,?,?,0,?)',
+   ['oct-legacy','October','Food',2000,0,'2026-10-08T12:00:00','{}']);
+  // Legacy callers intentionally retain all authenticated entries.
+  final full=await WaffraAccountContextRead.load(
+   store:db,monthIso:'2026-11');
+  expect(full.entries.map((e)=>e.id).toSet(),{'nov-current','oct-legacy'});
+  // The Account Context screen must NOT read older ledger rows to render
+  // November budget totals; it opens a separate all-time unassigned queue.
+  final month=await WaffraAccountContextRead.load(
+   store:db,monthIso:'2026-11',summaryOnly:true);
+  expect(month.entries.map((e)=>e.id).toList(),['nov-current']);
+  final november=await WaffraAccountContextRead.loadMonthEntries(
+   store:db,monthIso:'2026-11',limit:50);
+  expect(november.map((e)=>e.id).toList(),['nov-current']);
+  final october=await WaffraAccountContextRead.loadMonthEntries(
+   store:db,monthIso:'2026-10',limit:50);
+  expect(october.map((e)=>e.id).toList(),['oct-legacy']);
+  final unlinked=await WaffraAccountContextRead.unassignedSummary(store:db);
+  expect(unlinked.count,2);
+  expect(unlinked.netMinor,-5000);
+  expect((await WaffraAccountsRepository(
+   db:db,experimentalEnabled:true).balances()).single.balanceMinor,100000);
+  await WaffraAccountContextRead.attachPreviouslyUnassigned(
+   store:db,entryId:'oct-legacy',accountId:'rajhi',
+   confirmedIso:stamp,userConfirmed:true,openingExcludesHistory:true);
+  expect(await WaffraAccountContextRead.loadAccountEntryIds(
+   store:db,accountId:'rajhi'),{'oct-legacy'});
+  expect(await WaffraAccountContextRead.loadAccountEntryIds(
+   store:db,accountId:'unknown'),isEmpty);
  });
 }

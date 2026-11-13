@@ -28,8 +28,14 @@ void main() {
     expect(dashboard, contains('showAllTransactions=false;'));
     expect(dashboard, contains('typeFilter=choice;categoryFilter='));
     expect(dashboard, contains("Key('waffra-financial-activity-toggle')"));
-    expect(dashboard.indexOf('if(financialActivityExpanded)...['),
-        lessThan(dashboard.indexOf('future:_m652UnifiedActivities(')));
+    // The first read renders the collapsed LIVE total; the second read
+    // renders detailed transfer/savings rows when expanded.
+    final reads='future:_m652UnifiedActivities('
+        .allMatches(dashboard).map((m)=>m.start).toList();
+    expect(reads,hasLength(2));
+    final expanded=dashboard.indexOf('if(financialActivityExpanded)...[');
+    expect(reads.first,lessThan(expanded));
+    expect(expanded,lessThan(reads.last));
     expect(dashboard,
         isNot(contains("WaffraText(waffraIsEnglish?'Income':'الدخل'")));
   });
@@ -46,9 +52,12 @@ void main() {
     expect(transfer, isNot(contains('api.transfer(')));
   });
 
-  test('M674 five activity cards label amount and share safe minimum height', () {
+  test('M682 activity cards are compact without dropping amount labels', () {
+    expect(transfer, contains('BoxConstraints(minHeight:98)'));
+    expect(savings, contains('BoxConstraints(minHeight:96)'));
+    expect(compact, contains('BoxConstraints(minHeight:98)'));
     for(final card in <String>[transfer,savings,compact]){
-      expect(card, contains('BoxConstraints(minHeight:144)'));
+      expect(card, isNot(contains('BoxConstraints(minHeight:144)')));
       expect(card, contains("'Amount':'المبلغ'"));
     }
     expect(compact, contains("'Total goal due':'إجمالي الاستحقاق'"));

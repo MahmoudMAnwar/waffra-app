@@ -23,32 +23,40 @@ class WaffraAccountContextPage extends StatefulWidget {
 
 class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {
  String filter='all';
- int visibleCount=100;
+ int pageOffset=0;
+ static const int pageSize=50;
+ DateTime selectedMonth=DateTime(DateTime.now().year,DateTime.now().month,1);
  late Future<WaffraAccountContextReadResult> future;
+ late Future<List<WaffraAccountLedgerRow>> ledgerPage;
+ late Future<({int count,int netMinor})> unassignedPreview;
  String t(String ar,String en)=>widget.english?en:ar;
- String get month {
-  final now=DateTime.now();
-  return now.year.toString().padLeft(4,'0')+'-'+
-   now.month.toString().padLeft(2,'0');
- }
+ String get month=>selectedMonth.year.toString().padLeft(4,'0')+'-'+
+  selectedMonth.month.toString().padLeft(2,'0');
  String? get accountId=>filter.startsWith('account:')?
   filter.substring('account:'.length):null;
  @override void initState(){super.initState();reload();}
  void reload(){
   future=widget.api.readAccountContext(
-    monthIso:month,selectedAccountId:accountId);
+   monthIso:month,selectedAccountId:accountId,summaryOnly:true);
+  ledgerPage=filter=='none'
+   ?widget.api.readUnassignedPage(limit:pageSize,offset:pageOffset)
+   :widget.api.readMonthlyPage(monthIso:month,selectedAccountId:accountId,
+     limit:pageSize,offset:pageOffset);
+  unassignedPreview=widget.api.readUnassignedSummary();
  }
  String money(int minor)=>(minor/100).toStringAsFixed(2)+' SAR';
 
  Future<void> link(WaffraAccountLedgerRow entry)async{
   String? selected;
+  bool openingVerified=false;
   final active=widget.accounts.where((a)=>!a.archived).toList();
   if(active.isEmpty)return;
   final chosen=await showDialog<String>(
    context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,rebuild)=>
     AlertDialog(
      title:Text(t('ربط العملية بحساب','Assign transaction to account')),
-     content:Column(mainAxisSize:MainAxisSize.min,children:[
+     content:SingleChildScrollView(child:Column(
+      mainAxisSize:MainAxisSize.min,children:[
       Text(entry.title),
       const SizedBox(height:12),
       WaffraCenteredDropdownFormField<String>(
@@ -61,13 +69,26 @@ class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {
        onChanged:(v)=>rebuild(()=>selected=v),
       ),
       const SizedBox(height:12),
-      Text(t('لن نضيف دخلًا أو مصروفًا مرة ثانية. هيتغيّر رصيد الحساب بعد التأكيد فقط.',
-       'No second income or expense will be created. Only the chosen balance changes.')),
-     ]),
+      WaffraText((entry.income?'+':'−')+money(entry.amountMinor),
+       currencyEnglish:widget.english,textDirection:TextDirection.ltr),
+      const SizedBox(height:8),
+      Text(t('مش هنسجل دخل أو مصروف جديد. لو الحساب له رصيد افتتاحي، تأكد إن العملية القديمة مش محسوبة فيه قبل الربط.',
+       'No new income or expense. If the account has opening cash, confirm it does not already include this historic entry.')),
+      CheckboxListTile(
+       key:const Key('m681-opening-balance-attestation'),
+       contentPadding:EdgeInsets.zero,
+       controlAffinity:ListTileControlAffinity.leading,
+       value:openingVerified,
+       onChanged:(value)=>rebuild(()=>openingVerified=value??false),
+       title:Text(t('تأكدت إن الرصيد الافتتاحي لا يشمل العملية دي',
+        'I confirm this transaction is not included in opening balance'),
+        style:const TextStyle(fontSize:12)),
+      ),
+     ])),
      actions:[
       TextButton(onPressed:()=>Navigator.pop(ctx),
        child:Text(t('إلغاء','Cancel'))),
-      FilledButton(onPressed:selected==null?null:
+      FilledButton(onPressed:selected==null||!openingVerified?null:
        ()=>Navigator.pop(ctx,selected),
        child:Text(t('تأكيد الربط','Confirm'))),
      ],
@@ -78,12 +99,17 @@ class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {
    // before mutating in case this page remained open while widget posted.
    await widget.api.balances();
    await widget.api.linkUnassignedEntry(
-    entryId:entry.id,accountId:chosen,userConfirmed:true);
+    entryId:entry.id,accountId:chosen,userConfirmed:true,
+    openingExcludesHistory:openingVerified);
    if(mounted)setState(reload);
-  }catch(_){
-   if(mounted)snack(context,t(
-    'تعذر تأكيد الربط؛ حدّث الصفحة وحاول مرة أخرى.',
-    'Could not confirm account link. Refresh and retry.'));
+  }catch(error){
+   final opening=error is StateError &&
+    error.toString().contains('opening balance');
+   if(mounted)snack(context,opening?
+    t('راجع الرصيد الافتتاحي وأكّد إن العملية مش محسوبة فيه.',
+      'Verify this entry is excluded from opening balance.'):
+    t('تعذر تأكيد الربط؛ حدّث الصفحة وحاول مرة أخرى.',
+      'Could not confirm account link. Refresh and retry.'));
   }
  }
 
@@ -100,12 +126,47 @@ class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {
     }
     final data=snapshot.data!;
     final labels={for(final a in widget.accounts)a.id:a.name};
-    final entries=data.entries.where((entry){
-     if(filter=='none')return entry.accountId==null;
-     if(filter=='all')return true;
-     return entry.accountId==accountId;
-    }).toList();
     return ListView(children:[
+     FutureBuilder<({int count,int netMinor})>(
+      future:unassignedPreview,builder:(ctx,preview){
+       if(!preview.hasData)return const SizedBox.shrink();
+       final v=preview.data!;
+       return Card(
+        key:const Key('m681-unassigned-reconciliation-summary'),
+        child:ListTile(
+         leading:const Icon(Icons.fact_check_outlined),
+         title:Text(t('عمليات قديمة بدون حساب: ${v.count}',
+          'Historical unassigned entries: ${v.count}')),
+         subtitle:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+          WaffraText(money(v.netMinor),
+           currencyEnglish:widget.english,textDirection:TextDirection.ltr),
+          Text(t('صافي تاريخي، مش رصيد بنكي متاح.',
+           'Historical net, not available bank cash.')),
+         ]),
+         trailing:v.count==0?null:TextButton(
+          onPressed:()=>setState((){filter='none';pageOffset=0;reload();}),
+          child:Text(t('مراجعة','Review'))),
+        ));}),
+     if(filter!='none')Padding(
+      padding:const EdgeInsets.symmetric(horizontal:12,vertical:4),
+      child:Row(children:[
+       IconButton(
+        key:const Key('m684-previous-month'),
+        tooltip:t('الشهر السابق','Previous month'),
+        onPressed:()=>setState((){
+         selectedMonth=DateTime(selectedMonth.year,selectedMonth.month-1,1);
+         pageOffset=0;reload();
+        }),icon:const Icon(Icons.chevron_right)),
+       Expanded(child:Text(month,textAlign:TextAlign.center,
+        style:Theme.of(context).textTheme.titleMedium)),
+       IconButton(
+        key:const Key('m684-next-month'),
+        tooltip:t('الشهر التالي','Next month'),
+        onPressed:()=>setState((){
+         selectedMonth=DateTime(selectedMonth.year,selectedMonth.month+1,1);
+         pageOffset=0;reload();
+        }),icon:const Icon(Icons.chevron_left)),
+      ])),
      Padding(padding:const EdgeInsets.all(12),
       child:WaffraCenteredDropdownFormField<String>(
        key:ValueKey(filter),initialValue:filter,isExpanded:true,
@@ -121,7 +182,7 @@ class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {
          value:'account:'+account.id,child:Text(account.name))),
        ],
        onChanged:(value){if(value==null)return;setState((){
-        filter=value;visibleCount=100;reload();
+        filter=value;pageOffset=0;reload();
        });},
       )),
      WaffraAccountContextSettings(
@@ -157,31 +218,49 @@ class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {
      Padding(padding:const EdgeInsets.all(12),
       child:Text(t('العمليات','Transactions'),
        style:Theme.of(context).textTheme.titleMedium)),
-     if(entries.isEmpty)Padding(padding:const EdgeInsets.all(16),
-      child:Text(t('لا توجد عمليات في هذا الفلتر.',
-       'No entries for this filter.'))),
-     ...entries.take(visibleCount).map((entry)=>Card(child:ListTile(
-      title:Text(entry.title),
-      subtitle:Text(entry.occurredIso.split('T').first+' • '+
-       (entry.accountId==null?t('بدون حساب','Unassigned'):
-        labels[entry.accountId]??t('حساب سابق','Previous account'))),
-      trailing:Column(mainAxisSize:MainAxisSize.min,
-       mainAxisAlignment:MainAxisAlignment.center,children:[
-       WaffraText((entry.income?'+':'-')+money(entry.amountMinor),
-        currencyEnglish:widget.english,textDirection:TextDirection.ltr),
-       if(entry.accountId==null)Text(t('ربط','Link'),
-        style:Theme.of(context).textTheme.labelSmall),
-      ]),
-      onTap:entry.accountId==null?()=>link(entry):null,
-     ))),
-     if(entries.length>visibleCount)Padding(
-      padding:const EdgeInsets.all(12),
-      child:OutlinedButton.icon(
-       onPressed:()=>setState(()=>visibleCount+=100),
-       icon:const Icon(Icons.expand_more),
-       label:Text(t('عرض المزيد من العمليات','Show more transactions')+
-        ' (${entries.length-visibleCount})'),
-      )),
+     FutureBuilder<List<WaffraAccountLedgerRow>>(
+      future:ledgerPage,builder:(ctx,result){
+       if(result.connectionState!=ConnectionState.done){
+        return const Center(child:Padding(padding:EdgeInsets.all(18),
+         child:CircularProgressIndicator()));
+       }
+       if(result.hasError){
+        return Padding(padding:const EdgeInsets.all(16),
+         child:Text(t('تعذر تحميل صفحة العمليات.', 'Failed loading entries.')));
+       }
+       final items=result.data??const <WaffraAccountLedgerRow>[];
+       return Column(children:[
+        if(items.isEmpty)Padding(padding:const EdgeInsets.all(16),
+         child:Text(t('لا توجد عمليات في هذا الفلتر.', 'No entries for this filter.'))),
+        for(final entry in items)Card(
+         key:Key('m681-ledger-row-'+entry.id),
+         child:ListTile(
+          title:Text(entry.title),
+          subtitle:Text(entry.occurredIso.split('T').first+' • '+
+           (entry.accountId==null?t('بدون حساب','Unassigned'):
+            labels[entry.accountId]??t('حساب سابق','Previous account'))),
+          trailing:Column(mainAxisSize:MainAxisSize.min,
+           mainAxisAlignment:MainAxisAlignment.center,children:[
+           WaffraText((entry.income?'+':'-')+money(entry.amountMinor),
+            currencyEnglish:widget.english,textDirection:TextDirection.ltr),
+           if(entry.accountId==null)Text(t('ربط','Link'),
+            style:Theme.of(context).textTheme.labelSmall),
+          ]),
+          onTap:entry.accountId==null?()=>link(entry):null,
+         )),
+        Padding(padding:const EdgeInsets.all(8),child:Row(children:[
+         if(pageOffset>0)TextButton(
+          key:const Key('m684-ledger-page-previous'),
+          onPressed:()=>setState((){pageOffset-=pageSize;reload();}),
+          child:Text(t('السابق','Previous'))),
+         const Spacer(),
+         if(items.length==pageSize)TextButton(
+          key:const Key('m684-ledger-page-next'),
+          onPressed:()=>setState((){pageOffset+=pageSize;reload();}),
+          child:Text(t('التالي','Next'))),
+        ])),
+       ]);
+      }),
     ]);
    },
   ),

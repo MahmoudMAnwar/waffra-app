@@ -76,27 +76,30 @@ void main() {
      variables:[Variable.withString('unlimited')]).getSingle();
     expect(typed.read<int>('target_minor'),0);
     expect(typed.read<int>('saved_minor'),25075);
-    await repo.save(WaffraFinanceModule.goals,{
+    await expectLater(repo.save(WaffraFinanceModule.goals,{
      ...saved,'saved':300.25,
+    },replaceExisting:true),throwsA(isA<StateError>()));
+    await repo.save(WaffraFinanceModule.goals,{
+     ...saved,'name':'ادخار مفتوح بعد التعديل',
     },replaceExisting:true);
-    expect((await repo.list(WaffraFinanceModule.goals)).single['saved'],300.25);
+    expect((await repo.list(WaffraFinanceModule.goals)).single['saved'],250.75);
   });
 
   test('update preserves same identifier and prevents duplicates', () async {
     await initialize();
     final repo = getRepo(true);
     await repo.save(WaffraFinanceModule.goals, goal(saved: 0));
-    await repo.save(
-      WaffraFinanceModule.goals, goal(saved: 200),
-      replaceExisting: true,
-    );
-    expect((await repo.list(WaffraFinanceModule.goals)), hasLength(1));
-    expect((await repo.list(WaffraFinanceModule.goals)).single['saved'], 200);
-    await expectLater(
-      repo.save(WaffraFinanceModule.goals, goal(saved: 1)),
-      throwsA(isA<StateError>()),
-    );
-    expect((await repo.list(WaffraFinanceModule.goals)).single['saved'], 200);
+    await expectLater(repo.save(
+      WaffraFinanceModule.goals,goal(saved:200),replaceExisting:true),
+      throwsA(isA<StateError>()));
+    await repo.save(WaffraFinanceModule.goals,
+      {...goal(saved:0),'target':5500},replaceExisting:true);
+    expect((await repo.list(WaffraFinanceModule.goals)),hasLength(1));
+    expect((await repo.list(WaffraFinanceModule.goals)).single['saved'],0);
+    expect((await repo.list(WaffraFinanceModule.goals)).single['target'],5500);
+    await expectLater(repo.save(WaffraFinanceModule.goals,
+      goal(saved:1)),throwsA(isA<StateError>()));
+    expect((await repo.list(WaffraFinanceModule.goals)).single['saved'],0);
   });
 
   test('unknown ID cannot be treated as a successful update', () async {

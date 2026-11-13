@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
-  "pr": "#625",
-  "issue": "#624 and #626",
+  "pr": "#628",
+  "issue": "#627",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at new branch start",
   "reviewed_at": "2026-11-13",
-  "review_policy": "M674 UI-only approved redesign; require exact-head M385, M550, whole Flutter CI and no changes to global + / SQLCipher writer. Preserve all previous security and financial guards.",
+  "review_policy": "M679–M684: owner-authorized SQLCipher source protection and compact responsive Home/Goals/Recurring UI. Preserve V24 accountless restoration, existing bank/widget writers, SMS dedup and global +. Run all registered source contracts and exact-head CI, do not merge from host-only passes.",
   "contracts": [
     {
       "id": "M623-VERIFIED-RESTORE-NO-SECOND-BACKUP",
@@ -2444,6 +2444,83 @@
         "The snackbar must not grow bottomNavigationBar height or obscure or capture + button pointer events.",
         "A one-line or two-line notice stays bottom-aligned beside +; text wraps upwards only.",
         "Undo, tap-to-dismiss, notice kind and accessibility remain unchanged."
+      ]
+    },
+    {
+      "id": "M679-M684-FINANCE-ACCOUNT-PARITY-COMPACT-APPROVED-SCREENSHOTS",
+      "issue": "Issue #627, Draft PR #628; user-approved all three audit phases and six 2026-11-13 Android screenshots",
+      "previous_behavior": "The goal funding writer relied on goal form account selection instead of rechecking linked account and available balance inside SQLCipher, so adding 50,000 SAR to a goal whose source had 0 could leave Home displaying -50,000 SAR. Recurring schedule JSON accountId could clear without deleting the old typed account default; goal metadata edit could modify saved amount. Home Accounts tile accidentally opened Profile via accountOpened=true. Activity heading displayed Show/عرض with no count. 144dp minimum activity cards and duplicated Goals Edit caused wasted space; Recurring and Goals metrics clipped SAR 50,000, and progress showed an unlabeled green slab.",
+      "approved_behavior": "New verified wallet funding requires matching linked account and sufficient bank balance inside SQLCipher transaction; mismatched/overdrawn saves roll back. Goal saved balance may change only via verified wallet movement, and clearing recurring account association clears typed default in same transaction. Explicit new account-reviewed cash submissions cannot contain null account IDs; legacy bridge accountless fixture and authenticated V24 restores remain compatible. Home Accounts shortcut opens verified Accounts manager; collapsed activity header displays operation count including verified transfers/savings; one Edit action per Goal; compact activity/goal/due cards; percentage-labelled per-goal horizontal progress. Full SAR amounts remain visible with responsive sizing at 320/360/390dp RTL and LTR. All FAB and existing Snackbar code untouched. M681/M684 add a read-only count/net preview for historical unassigned entries and SQL month-filtered bounded paging API, while keeping the existing full ledger load contract and original accountless identities intact. The Account Context UI now uses 50-item SQLCipher monthly pagination with all-time unassigned review; global +/-cash totals, old Home historical ledger parity and authenticated backup remain unchanged. Four presentation methods are moved into a Dart part with unchanged callbacks. Physical device and exact-head CI must still pass. CI regression M448 requires a legitimate nonzero-opening bank to accept historic entry association only after independent confirmation the opening excludes that entry. All old balance and account-link tests remain active; duplicate reassignment still fails. Accounts overview now includes an explicit, discoverable Review and link historic transactions button calling the same verified Account Context page as the original toolbar action. Entry confirmation has a separate opening-exclusion checkbox, and all source cards are non-posting.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_approved_page_designs.dart",
+        "lib/storage/waffra_verified_goal_funding_writer.dart",
+        "lib/storage/waffra_fresh_finance_modules_repository.dart",
+        "lib/storage/waffra_unified_finance_writer.dart",
+        "lib/storage/waffra_account_context_read.dart",
+        "lib/storage/waffra_verified_accounts_api.dart",
+        "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
+        "lib/waffra_account_context_page.dart",
+        "lib/waffra_home_finance_tiles.part.dart",
+        "lib/waffra_accounts_manager_page.dart"
+      ],
+      "test_paths": [
+        "test/m672_m678_activity_account_regression_test.dart",
+        "test/m674_approved_page_designs_test.dart",
+        "test/storage/m440_account_linked_entry_writer_test.dart",
+        "test/storage/m641_goal_account_integrity_test.dart",
+        "test/storage/verified_encrypted_finance_bridge_test.dart",
+        "test/m611_manual_home_finance_regression_test.dart",
+        "test/storage/m448_account_context_read_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m440-accounts-v3-finance-regression.yml",
+        ".github/workflows/m174-main-sha-regression.yml"
+      ],
+      "safety_invariants": [
+        "Do not change global plus (FAB) physical location, 58x58 target, open/close gesture, financial routing or M675 Snackbar anchor; keep the static and visual regression guards.",
+        "Goal wallet funding is not a new expense; transfers remain net-zero and due settlement pays only current cash difference once.",
+        "Never change recorded historic V24 transaction IDs, amounts, dates, owners, or invent bank account links from restored accountless history.",
+        "Preserve legacy/widget source compatibility and explicit modern user account choices; reject financial source mutation on stale revision.",
+        "No finance backup, decryptor, restore or restore-archive files may change under this UX repair.",
+        "Do not claim physical Android or exact-head CI success until workflows/device have run.",
+        "M67 concurrent widget-vs-Home goal editor regressions still verify no lost widget data, with goal target metadata edits instead of unauthorized saved balance edits.",
+        "Read-only account preview and month paging must not run SQL INSERT/UPDATE/DELETE; chosen historical assignment must require an active verified account, explicit user consent, and independent opening-exclusion attestation when opening is nonzero under existing generation/lock.",
+        "Do not replace or alter verified Accounts editor/transfer writer; both historical entry points navigate the same account-context page and never write without chosen account and source witness."
+      ]
+    },
+    {
+      "id": "M684-MONTH-YEAR-REPORT-PROJECTION-PR628",
+      "issue": "Issue #627, owner completion request 2026-11-13, same Draft PR #628",
+      "previous_behavior": "Home monthly budget and summary, analytics, forecasts and historical report views independently traversed and repeatedly filtered the entire hydrated ledger on each widget rebuild. The account transaction page already used SQLCipher month paging.",
+      "approved_behavior": "Build one read-only in-memory month/year index from the already owner-verified SQLCipher ledger. Bind Home monthly summaries, budget month control, analytics year/month and PDF inputs, local 90-day insights, the three-month forecast and the previous-month comparison to only needed index buckets; keep all-time Home transaction search/export accurate. Invalidate index on initial/cold reload, every single entry edit/insert/delete/undo, old budget relink, restore and full delete. Preserve original financial writer, backup, account link and global plus semantics.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_finance_period_index.part.dart"
+      ],
+      "test_paths": [
+        "test/m684_finance_period_index_test.dart",
+        "test/m467_account_header_test.dart",
+        "test/storage/m448_account_context_read_test.dart",
+        "test/storage/m620_restored_home_ledger_parity_test.dart",
+        "test/m401_m402_budget_month_centered_dropdown_test.dart",
+        "test/m343_goal_recurring_named_budgets_test.dart",
+        "test/m470_account_monthly_budget_policy_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m160-main-reconciliation-and-backup-regression.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "No INSERT/UPDATE/DELETE, bank balance computation, goal-wallet update or account guess is performed by an index; authenticated SQLCipher remains the authoritative ledger.",
+        "No historical MoneyEntry is discarded; accountless history remains visible globally and invisible to an unassigned bank selection.",
+        "Month and year filtering preserves exactly the same IDs, signed amounts and source display ordering; duplicate month requests cannot double count.",
+        "Mutations invalidate the index prior to render; deleted and restored items cannot linger in reports.",
+        "V24/V3 backup/export/restore bytes, global FAB and Snackbar source remain byte-for-byte unchanged."
       ]
     }
   ]

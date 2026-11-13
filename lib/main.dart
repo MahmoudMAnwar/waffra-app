@@ -129,6 +129,8 @@ part 'waffra_budget_directory.part.dart';
 part 'waffra_smart_analysis.part.dart';
 part 'waffra_recurring_trash.part.dart';
 part 'waffra_goal_recurring_actions.part.dart';
+part 'waffra_home_finance_tiles.part.dart';
+part 'waffra_finance_period_index.part.dart';
 part 'waffra_deleted_item_card.part.dart';
 part 'waffra_auto_sms_autopost.part.dart';
 
@@ -4560,6 +4562,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   return _m652ActivityRead!;
  }
  WaffraAccountContextReadResult? _m467AccountContext;
+ Set<String>? _m684ScopedEntryIds;
  String _m467SelectedAccount='all';
  bool _m467AccountChoiceRestored=false;
  bool _m468VerifiedAccountsLoaded=false;
@@ -4617,11 +4620,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final now=DateTime.now();
    final month=now.year.toString().padLeft(4,'0')+'-'+
     now.month.toString().padLeft(2,'0');
-   // "All accounts" already uses verified account balances + Home ledger.
-   // Don't scan the full SQLCipher account context after every save or pull.
+   // Month-only context plus lightweight all-time account membership.
    final contextView=chosen=='all'?null:await api.readAccountContext(
     monthIso:month,
-    selectedAccountId:chosen);
+    selectedAccountId:chosen,summaryOnly:true);
+   final scopedIds=chosen=='all'?null:
+    await api.readAccountEntryIds(accountId:chosen);
    if(!mounted||_m627ClosingSession||readEpoch!=_m627AccountEpoch)return;
    // A user may switch accounts while this async SQL projection is running.
    // Never repaint that newly chosen view with a stale older selection.
@@ -4635,6 +4639,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    setState((){
     _m467Accounts=accounts.where((a)=>!a.archived).toList();
     _m467AccountContext=contextView;
+    _m684ScopedEntryIds=scopedIds;
     _m467SelectedAccount=chosen;
     _m467AccountChoiceRestored=true;
     _m468VerifiedAccountsLoaded=true;
@@ -4646,6 +4651,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    setState((){
     _m467Accounts=const <WaffraAccountBalance>[];
     _m467AccountContext=null;
+    _m684ScopedEntryIds=null;
     _m467SelectedAccount='all';
     _m467AccountChoiceRestored=false;
     _m468VerifiedAccountsLoaded=false;
@@ -4664,11 +4670,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  Iterable<MoneyEntry> _m467ScopedEntries(){
   final selected=_m467SelectedAccount;
   if(selected=='all')return entries;
-  final contextView=_m467AccountContext;
-  if(contextView==null)return const <MoneyEntry>[];
-  final ids=contextView.entries.where((item)=>
-   item.accountId==selected).map((item)=>item.id).toSet();
-  return entries.where((entry)=>ids.contains(entry.id));
+  final ids=_m684ScopedEntryIds;
+  if(ids==null)return const <MoneyEntry>[];
+  // Read-only exact-ID projection over the authenticated hydrated ledger.
+  return _m684Periods.byIds(ids);
+ }
+
+ List<MoneyEntry> _m684ScopedMonthEntries(int year,int month){
+  final monthRows=_m684Periods.month(year,month);
+  if(_m467SelectedAccount=='all')return monthRows;
+  final ids=_m684ScopedEntryIds;
+  if(ids==null)return const <MoneyEntry>[];
+  return monthRows.where((e)=>ids.contains(e.id)).toList(growable:false);
  }
 
  double _m467ShownBalance(){
@@ -4835,6 +4848,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  final expandedCategoryIds=<String>{};
  final learnedMerchantCategories=<String,String>{};
  final entries=<MoneyEntry>[],categories=<BudgetCategory>[],goals=<SavingGoal>[],recurring=<RecurringBill>[];
+ // Verified/legacy hydrated entries are immutable only for this read
+ // projection; every ledger mutation invalidates it before the next view.
+ WaffraFinancePeriodIndex? _m684PeriodCache;
+ WaffraFinancePeriodIndex get _m684Periods=>
+  _m684PeriodCache??=WaffraFinancePeriodIndex(entries);
+ void _m684InvalidatePeriodRead(){_m684PeriodCache=null;}
  final namedBudgets=<WaffraNamedBudget>[];
  // One repaint-isolated saving indicator for every confirmed Home finance edit.
  final WaffraSmoothOperationController _saveProgress=WaffraSmoothOperationController();
@@ -7481,6 +7500,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   // M614: measure the real verified finance wait separately from login.
   final startupClock=kProfileMode?(Stopwatch()..start()):null;
   setState((){ready=false;_financeLoadFailure=null;});
+  _m684InvalidatePeriodRead();
   entries.clear();categories.clear();namedBudgets.clear();goals.clear();recurring.clear();challenges.clear();
   deletedCategories.clear();deletedGoals.clear();deletedRecurring.clear();
   recurringPostponed.clear();smsHashes.clear();learnedMerchantCategories.clear();
@@ -7843,6 +7863,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final decodedStartup=await WaffraLargeJsonDecode.parseStartupFields(
    startupSources);
   traceHomeStep('after_batch_json_decode');
+  _m684InvalidatePeriodRead();
   try{final raw=financeView.getString('entries');if(raw!=null)entries.addAll(await _m593BuildVerifiedEntries((decodedStartup.read('entries')) as List));}catch(e){throw StateError('Saved transactions cannot be decoded safely: $e');}
   try{final raw=financeView.getString('waffra_categories_v24');categories.addAll(raw==null?defaultCategories():(decodedStartup.read('waffra_categories_v24') as List).map((x)=>BudgetCategory.fromJson(Map<String,dynamic>.from(x))));}catch(e){throw StateError('Saved categories cannot be decoded safely: $e');}
   try{
@@ -8487,6 +8508,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         saved:allocation.remainingGoalSavings);
        recurring[scheduleIndex]=currentSchedule.single.copy(active:false);
        recurringPostponed.remove(id);
+       _m684InvalidatePeriodRead();
        entries.insert(0,MoneyEntry(
         id:id,title:r.title,category:r.category,
         amount:allocation.amount,income:false,date:DateTime.now(),
@@ -8520,6 +8542,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        recurringId:r.id);
       if(chosen==null)return;
       if(!entries.any((e)=>e.id==id)){
+       _m684InvalidatePeriodRead();
        setState(()=>entries.insert(0,MoneyEntry(
         id:id,title:r.title,category:r.category,amount:r.amount,
         income:r.income,date:DateTime.now(),sourceType:'recurring')));
@@ -10691,6 +10714,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final previousEntries=List<MoneyEntry>.of(entries);
    final previousLearned=Map<String,String>.of(learnedMerchantCategories);
    setState((){
+    _m684InvalidatePeriodRead();
     final i=entries.indexWhere((e)=>e.id==result.id);
     if(i>=0)entries[i]=result;else entries.insert(0,result);
     // Learn only explicit corrections made by the user, not assumptions
@@ -10783,6 +10807,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      if(!mounted)return;
      final index=entries.indexWhere((e)=>e.id==initial.id);
      if(index<0)return;
+     _m684InvalidatePeriodRead();
      setState(()=>entries[index]=initial);
      if(!await _persistModuleOrReload(
       WaffraFinanceRoute.transactionEdit,
@@ -11859,6 +11884,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final hashes=committed.finance.getStringList('waffra_sms_hashes_v1')??const <String>[];
   if(!mounted)return;
   setState((){
+   _m684InvalidatePeriodRead();
    entries..clear()..addAll(loaded);
    smsHashes..clear()..addAll(hashes);
    _lastFinanceAuthorityRead=committed;
@@ -12035,6 +12061,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    waffraIsEnglish?'Delete «'+e.title+'»? You can undo for 6 seconds after deletion.':'هل تريد حذف المعاملة «'+e.title+'»؟ يمكنك التراجع خلال 6 ثوانٍ بعد الحذف.');
   if(yes!=true||!mounted)return;
   // A tentative removal is never success until the source acknowledges it.
+  _m684InvalidatePeriodRead();
   setState(()=>entries.removeWhere((x)=>x.id==e.id));
   if(!await _persistModuleOrReload(
    WaffraFinanceRoute.transactionDeleteAndUndo,
@@ -12045,6 +12072,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    actionLabel:waffraIsEnglish?'Undo':'تراجع',
    onAction:()async{
     if(!mounted||entries.any((x)=>x.id==e.id))return;
+    _m684InvalidatePeriodRead();
     setState(()=>entries.insert(0,e));
     if(!await _persistModuleOrReload(
      WaffraFinanceRoute.transactionDeleteAndUndo,
@@ -12214,7 +12242,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     _lastWidgetRevision=committed.widgetRevision;
    });
    if(!mounted)return;
-   setState((){entries.clear();smsHashes.clear();});
+   setState((){_m684InvalidatePeriodRead();entries.clear();smsHashes.clear();});
    unawaited(_refreshWidget());
    snackSuccess(context,waffraIsEnglish?'All transactions deleted':'تم حذف جميع المعاملات');
   }catch(e){
@@ -12509,6 +12537,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    return;
   }
   setState((){
+   _m684InvalidatePeriodRead();
    final index=entries.indexWhere((e)=>e.id==old.id);
    if(index>=0)entries[index]=entries[index].withBudget(selected.id);
   });
@@ -12762,10 +12791,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final viewedMonth=DateTime(budgetViewedMonth.year,budgetViewedMonth.month,1);
   final viewingToday=viewedMonth.year==today.year&&viewedMonth.month==today.month;
   final selectedFinancialAccount=_m467SelectedAccount;
-  final relevantEntries=selectedFinancialAccount=='all'?
-   entries:_m467ScopedEntries();
-  final monthEntries=relevantEntries.where((e)=>
-   e.date.year==viewedMonth.year&&e.date.month==viewedMonth.month);
+  // Read only the month visible in Budgets, not the full ledger.
+  final relevantEntries=_m684ScopedMonthEntries(
+   viewedMonth.year,viewedMonth.month);
+  final monthEntries=relevantEntries;
   // A shared legacy budget belongs to All only until its owner explicitly
   // assigns an account. One budget ID is counted once, never once per bank.
   final allBudgets=namedBudgets.where((b)=>b.budget>0&&!b.deleted&&
@@ -13010,8 +13039,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   ]);
  Widget monthlySummaryCard(){
   final now=DateTime.now();
-  final month=_m467ScopedEntries().where((e)=>
-   e.date.year==now.year&&e.date.month==now.month).toList();
+  final month=_m684ScopedMonthEntries(now.year,now.month);
   final income=sum(month,true),spent=sum(month,false);
   final difference=income-spent;
   final ratio=income>0?(spent/income).clamp(0.0,1.0):0.0;
@@ -13302,7 +13330,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    ]));
   return Container(
    key:Key('m647-verified-transfer-'+t.id),
-   constraints:const BoxConstraints(minHeight:144),
+   constraints:const BoxConstraints(minHeight:98),
    margin:const EdgeInsets.symmetric(vertical:3),
    padding:EdgeInsets.symmetric(horizontal:12,vertical:compact?9:11),
    decoration:BoxDecoration(
@@ -13383,7 +13411,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final accent=dark?const Color(0xFFF4D790):const Color(0xFF866017);
   return Container(
    key:Key('m649-verified-saving-'+movement.id),
-   constraints:const BoxConstraints(minHeight:144),
+   constraints:const BoxConstraints(minHeight:96),
    margin:const EdgeInsets.symmetric(vertical:3),
    padding:const EdgeInsets.symmetric(horizontal:12,vertical:9),
    decoration:BoxDecoration(
@@ -13469,53 +13497,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     ])));
  }
 
- Widget _dashboardShortcut(String title,IconData icon,VoidCallback onTap){
-  final dark=Theme.of(context).brightness==Brightness.dark;
-  return Expanded(child:Material(
-   color:Theme.of(context).cardColor,
-   shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(18),
-    side:BorderSide(color:dark?const Color(0xFF354B3E):const Color(0xFFDCEAE1))),
-   child:InkWell(
-    onTap:WaffraHaptics.tap(onTap),borderRadius:BorderRadius.circular(18),
-    child:Padding(padding:const EdgeInsets.symmetric(horizontal:5,vertical:12),
-     child:Column(mainAxisSize:MainAxisSize.min,children:[
-      Container(width:34,height:34,
-       decoration:BoxDecoration(color:dark?const Color(0xFF214E37):waffraMint,
-        borderRadius:BorderRadius.circular(12)),
-       child:Icon(icon,color:dark?const Color(0xFFA2E4C1):forest,size:21)),
-      const SizedBox(height:6),
-      WaffraText(title,maxLines:2,textAlign:TextAlign.center,
-       style:const TextStyle(fontSize:11,fontWeight:FontWeight.bold)),
-     ])),
-   ),
-  ));
- }
+ Widget _dashboardShortcut(String title,IconData icon,VoidCallback onTap)=>
+  this._m684DashboardShortcut(title,icon,onTap);
  Widget homeSummaryCard(String label,double value,IconData symbol,Color color,Color tint)=>
-  Expanded(child:InkWell(
-   onTap:WaffraHaptics.tap(()=>showSummaryTransactions(label=='الدخل'||label=='Income')),
-   borderRadius:BorderRadius.circular(19),
-   child:Container(
-    padding:const EdgeInsets.symmetric(horizontal:11,vertical:9),
-    decoration:BoxDecoration(
-     color:Theme.of(context).brightness==Brightness.dark?
-      (label=='الدخل'||label=='Income'?const Color(0xFF244C3A):const Color(0xFF49302C)):tint,
-     borderRadius:BorderRadius.circular(19),
-     border:Border.all(color:color.withValues(alpha:0.13)),
-     boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:0.04),
-      blurRadius:7,offset:const Offset(0,3))]),
-    child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-     Row(textDirection:TextDirection.rtl,children:[
-      Expanded(child:WaffraText(label,textAlign:TextAlign.right,
-       style:const TextStyle(fontSize:14,fontWeight:FontWeight.bold))),
-      const SizedBox(width:6),
-      CircleAvatar(backgroundColor:color.withValues(alpha:0.12),
-       radius:16,child:Icon(symbol,color:color,size:19)),
-     ]),
-     const SizedBox(height:5),
-     Align(alignment:Alignment.centerRight,
-      child:FittedBox(fit:BoxFit.scaleDown,
-       child:WaffraCurrencyAmount(value,fontSize:17))),
-    ]))));
+  this._m684HomeSummaryCard(label,value,symbol,color,tint);
  Widget compactTransaction(MoneyEntry entry){
   final cat=categoryFor(entry.category,entry.income);
   final attachmentCount=waffraReceiptPaths(entry.receiptPath).length;
@@ -13530,7 +13515,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    (darkMode?const Color(0xFF244C3A):const Color(0xFFB2D5C2)):
    (darkMode?const Color(0xFF49302C):const Color(0xFFFCECE8));
   return Padding(padding:const EdgeInsets.symmetric(vertical:3),child:Container(
-   constraints:const BoxConstraints(minHeight:144),
+   constraints:const BoxConstraints(minHeight:98),
    decoration:BoxDecoration(color:rowColor,borderRadius:BorderRadius.circular(17),
     border:Border.all(color:forest.withValues(alpha:darkMode ? 0.18 : 0.08))),
    clipBehavior:Clip.antiAlias,child:Stack(children:[
@@ -13643,33 +13628,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   required String title,required IconData icon,
   required Color background,required Color iconColor,
   required VoidCallback onTap,
- }){
-  return Expanded(child:Material(
-   color:background,borderRadius:BorderRadius.circular(18),
-   child:InkWell(
-    borderRadius:BorderRadius.circular(18),
-    onTap:WaffraHaptics.tap(onTap),
-    child:Container(
-     key:Key('m549-home-action-'+(icon==Icons.swap_horiz_rounded?'transfer':
-      icon==Icons.north_east_rounded?'expense':'income')),
-     height:68,
-     decoration:BoxDecoration(
-      borderRadius:BorderRadius.circular(18),
-      border:Border.all(color:iconColor.withValues(alpha:.18))),
-     child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
-      Icon(icon,size:21,color:iconColor),
-      const SizedBox(height:3),
-      Padding(padding:const EdgeInsets.symmetric(horizontal:4),
-       child:WaffraText(title,textAlign:TextAlign.center,maxLines:2,
-        style:TextStyle(fontSize:11,fontWeight:FontWeight.w700,
-         color:Theme.of(context).brightness==Brightness.dark?
-          const Color(0xFF173D31):const Color(0xFF183C31)))),
-     ]),
-    ),
-   ),
-  ));
- }
-
+ })=>this._m684HomeFinanceAction(title:title,icon:icon,
+  background:background,iconColor:iconColor,onTap:onTap);
  Widget dashboard(){
   final scopedEntries=_m467ScopedEntries().toList();
   final unverifiedFxEntries=entries.where(waffraNeedsLegacyFxReview).toList();
@@ -13678,10 +13638,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final nowBalanceDate=DateTime.now();
   final monthStart=DateTime(nowBalanceDate.year,nowBalanceDate.month);
   final priorMonthStart=DateTime(nowBalanceDate.year,nowBalanceDate.month-1);
-  final hasPreviousMonthEntries=entries.any((e)=>
-   !e.date.isBefore(priorMonthStart)&&e.date.isBefore(monthStart));
+  final hasPreviousMonthEntries=_m684Periods.month(
+   priorMonthStart.year,priorMonthStart.month).isNotEmpty;
   final previousClosingBalance=waffraAvailableCash(
-   entries.where((e)=>e.date.isBefore(monthStart)),goals);
+   _m684Periods.before(monthStart),goals);
   final monthChange=hasPreviousMonthEntries&&previousClosingBalance>0
    ?((waffraAvailableCash(entries,goals)-previousClosingBalance)/previousClosingBalance)*100:null;
   final visible=scopedEntries.where((e){
@@ -13774,9 +13734,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            title:waffraIsEnglish?'Accounts':'الحسابات',
            count:_m467Accounts.where((a)=>!a.archived).length.toString(),
            icon:Icons.account_balance_wallet_outlined,
-           onTap:()=>setState((){
-            accountOpened=true;goalsOpened=false;addFabExpanded=false;
-           })),
+           onTap:()=>unawaited(openVerifiedAccounts())),
          ]),
          const SizedBox(height:12),
          // M549: user-approved screenshot: three compact, equal-width
@@ -13889,9 +13847,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                Expanded(child:WaffraText(waffraIsEnglish?
                 'Your transactions':'عملياتك المالية',
                 style:const TextStyle(fontSize:19,fontWeight:FontWeight.bold))),
-               WaffraText(financialActivityExpanded?
-                (waffraIsEnglish?'Hide':'إخفاء'):
-                (waffraIsEnglish?'Show':'عرض'),
+               if(_m468VerifiedAccountsLoaded)
+                FutureBuilder(
+                 future:_m652UnifiedActivities(_m467SelectedAccount),
+                 builder:(ctx,snapshot){
+                  final extra=snapshot.hasData?
+                   ((typeFilter=='الكل'||typeFilter=='التحويلات'?
+                     snapshot.data!.transfers.length:0)+
+                    (typeFilter=='الكل'||typeFilter=='الادخار'?
+                     snapshot.data!.savings.length:0)):0;
+                  return WaffraText(financialActivityExpanded?
+                   (waffraIsEnglish?'Hide':'إخفاء'):
+                   '${visible.length+extra}',
+                   style:const TextStyle(fontSize:12,color:emerald));
+                 })
+               else WaffraText(financialActivityExpanded?
+                (waffraIsEnglish?'Hide':'إخفاء'):'${visible.length}',
                 style:const TextStyle(fontSize:12,color:emerald)),
                AnimatedRotation(turns:financialActivityExpanded?0.5:0,
                 duration:waffraMotion(180),
@@ -14132,17 +14103,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      ],
     )));
  }
- List<MoneyEntry> get analysisEntries=>entries.where((e)=>e.date.year==year&&
-  (period=='سنوي'||e.date.month==month)).toList();
+ List<MoneyEntry> get analysisEntries=>period=='سنوي'?
+  _m684Periods.year(year):_m684Periods.month(year,month);
 
  Widget nextMonthForecast(){
   final now=DateTime.now();
   final months=List.generate(3,(i)=>DateTime(now.year,now.month-i));
-  final used=months.where((m)=>entries.any((e)=>e.date.year==m.year&&e.date.month==m.month)).toList();
-  final history=entries.where((e)=>used.any((m)=>m.year==e.date.year&&m.month==e.date.month)).toList();
+  final used=months.where((m)=>
+   _m684Periods.month(m.year,m.month).isNotEmpty).toList();
+  final history=_m684Periods.months(used);
   final divisor=max(1,used.length);
   final nextIncome=sum(history,true)/divisor,nextExpenses=sum(history,false)/divisor;
-  final current=entries.where((e)=>e.date.year==now.year&&e.date.month==now.month).toList();
+  final current=_m684Periods.month(now.year,now.month);
   final thisIncome=sum(current,true),thisExpenses=sum(current,false);
   final next=DateTime(now.year,now.month+1);
   final categoryAmounts=<String,double>{};
@@ -14233,7 +14205,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
  Future<void> showAiAnalysis()async {
   final now=DateTime.now();
-  final recent=entries.where((e)=>e.date.isAfter(now.subtract(const Duration(days:90)))&&!e.date.isAfter(now)).toList();
+  final recent=_m684Periods.between(
+   now.subtract(const Duration(days:90)),now,
+   startInclusive:false,endInclusive:true);
   // A clear next step is more helpful than displaying empty charts.
   if(recent.isEmpty){
    if(!mounted)return;
@@ -14268,10 +14242,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final top=smartCharts.topCategories;
   final monthStart=DateTime(now.year,now.month);
   final priorStart=DateTime(now.year,now.month-1);
-  final currentExpense=sum(entries.where((e)=>!e.income&&!e.date.isBefore(monthStart)&&!e.date.isAfter(now)),false);
-  final priorExpense=sum(entries.where((e)=>!e.income&&!e.date.isBefore(priorStart)&&e.date.isBefore(monthStart)),false);
-  final hasPrior=entries.any((e)=>!e.date.isBefore(priorStart)&&e.date.isBefore(monthStart));
-  final thisMonthCount=entries.where((e)=>!e.date.isBefore(monthStart)&&!e.date.isAfter(now)).length;
+  final currentRows=_m684Periods.between(monthStart,now,endInclusive:true);
+  final previousRows=_m684Periods.month(priorStart.year,priorStart.month);
+  final currentExpense=sum(currentRows.where((e)=>!e.income),false);
+  final priorExpense=sum(previousRows.where((e)=>!e.income),false);
+  final hasPrior=previousRows.isNotEmpty;
+  final thisMonthCount=currentRows.length;
   final monthDays=DateTime(now.year,now.month+1,0).day;
   final upcoming=recurring.where((r)=>r.active&&!r.income&&r.day>now.day&&r.day<=monthDays).fold<double>(0,(v,r)=>v+r.amount);
   final forecast=now.day>=5&&thisMonthCount>=3?(currentExpense/now.day*monthDays+upcoming):null;
@@ -14498,7 +14474,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  );
  Widget analytics(){
   final data=analysisEntries,inc=sum(data,true),exp=sum(data,false);
-  final years=<int>{DateTime.now().year,year,...entries.map((e)=>e.date.year)}.toList()..sort((a,b)=>b.compareTo(a));
+  final years=<int>{DateTime.now().year,year,..._m684Periods.years}.toList()..sort((a,b)=>b.compareTo(a));
   final points=period=='شهري'?List.generate(5,(i){
    final v=data.where((e)=>(e.date.day-1)~/7==i);
    return ChartPoint(waffraIsEnglish?'Week ${i+1}':'الأسبوع ${i+1}',sum(v,true),sum(v,false));
@@ -15091,13 +15067,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    )));
  }
  Widget categoriesPage()=>categoriesPageV2();
- Widget _recurringBenefit(String label,IconData icon)=>Container(
-  padding:const EdgeInsets.symmetric(horizontal:6,vertical:14),
-  decoration:BoxDecoration(color:emerald.withValues(alpha:.08),borderRadius:BorderRadius.circular(18)),
-  child:Column(mainAxisSize:MainAxisSize.min,children:[
-   Icon(icon,color:emerald,size:25),const SizedBox(height:9),
-   WaffraText(label,textAlign:TextAlign.center,style:const TextStyle(fontSize:12,fontWeight:FontWeight.w600)),
-  ]));
+ Widget _recurringBenefit(String label,IconData icon)=>
+  this._m684RecurringBenefit(label,icon);
  Widget _summaryBox(String heading,String number,IconData icon,Color color)=>Container(
   padding:const EdgeInsets.all(12),
   decoration:BoxDecoration(
@@ -16163,9 +16134,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       side:BorderSide(color:ordered.first.id==g.id?
        WaffraApprovedPalette.gold:const Color(0xFFCFDFD5),
        width:ordered.first.id==g.id?1.6:1)),
-     child:Padding(padding:const EdgeInsets.all(15),child:Column(children:[
-      Row(children:[
-       WaffraIllustration(topic:g.name,size:44),
+     child:Padding(padding:const EdgeInsets.all(10),child:Column(children:[
+       Row(children:[
+        WaffraIllustration(topic:g.name,size:40),
        const SizedBox(width:10),
        Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
         WaffraText(g.name,style:const TextStyle(fontWeight:FontWeight.bold,fontSize:17)),
@@ -16196,7 +16167,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        key:PageStorageKey<String>('waffra-goal-quick-actions-'+g.id),
        initiallyExpanded:false,
        tilePadding:EdgeInsets.zero,
-       childrenPadding:const EdgeInsets.only(bottom:8),
+       childrenPadding:const EdgeInsets.only(bottom:4),
        leading:const Icon(Icons.bolt_outlined,color:emerald,size:20),
        title:WaffraText(waffraIsEnglish?'Quick actions':'إجراءات سريعة',
         style:const TextStyle(fontSize:13,fontWeight:FontWeight.w700)),
@@ -16293,9 +16264,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
            child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))],
          )))),
         child:WaffraText(waffraIsEnglish?'View':'عرض')),
-       OutlinedButton(
-        onPressed:WaffraHaptics.tap(()=>unawaited(editGoal(g))),
-        child:WaffraText(waffraIsEnglish?'Edit':'تعديل')),
+       
       ]),
       if(g.target>0&&g.saved>=g.target)WaffraText(waffraIsEnglish?'Goal achieved!':'🎉 تم تحقيق الهدف!',
        style:const TextStyle(color:emerald,fontWeight:FontWeight.bold)),
@@ -16798,7 +16767,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       (r.income?const Color(0xFFEAF6EF):const Color(0xFFFFF0ED)),
      shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(21),
       side:BorderSide(color:r.income?const Color(0xFFBBDCC9):const Color(0xFFF3DCD7))),
-     child:Padding(padding:const EdgeInsets.symmetric(horizontal:12,vertical:13),child:Column(children:[
+     child:Padding(padding:const EdgeInsets.symmetric(horizontal:10,vertical:8),child:Column(children:[
      Align(alignment:AlignmentDirectional.centerStart,
       child:WaffraApprovedStatusPill(
        label:paidGoalDue!=null?
@@ -16811,9 +16780,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         Icons.track_changes_rounded:r.income?
         Icons.arrow_downward_rounded:Icons.arrow_upward_rounded,
        attention:!r.active)),
-     const SizedBox(height:8),
-     Row(children:[
-      CircleAvatar(backgroundColor:color.withValues(alpha:.13),
+     const SizedBox(height:4),
+      Row(children:[
+       CircleAvatar(radius:16,backgroundColor:color.withValues(alpha:.13),
        child:Icon(goal!=null?Icons.flag_outlined:
         categoryIcon(categoryFor(r.category,r.income).icon),color:color)),
       const SizedBox(width:10),
@@ -16868,8 +16837,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       key:PageStorageKey<String>('waffra-recurring-quick-actions-'+r.id),
       initiallyExpanded:false,
       tilePadding:EdgeInsets.zero,
-      childrenPadding:const EdgeInsets.only(bottom:8),
-      leading:const Icon(Icons.bolt_outlined,color:emerald,size:20),
+      childrenPadding:const EdgeInsets.only(bottom:4),
+       leading:const Icon(Icons.bolt_outlined,color:emerald,size:20),
       title:WaffraText(waffraIsEnglish?'Quick actions':'إجراءات سريعة',
        style:const TextStyle(fontSize:13,fontWeight:FontWeight.w700)),
       children:[
@@ -17688,6 +17657,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    });
    if(!mounted)return;
    setState((){
+    _m684InvalidatePeriodRead();
     entries.clear();
     categories..clear()..addAll(cleanCategories);
     namedBudgets.clear();

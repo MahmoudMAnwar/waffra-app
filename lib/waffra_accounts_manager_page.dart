@@ -53,6 +53,19 @@ class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {
     'Save was not verified; no change was confirmed.'));
  }
 
+ Future<void> openAccountReview()async{
+  if(widget.repository is! WaffraVerifiedAccountsApi)return;
+  final api=widget.repository as WaffraVerifiedAccountsApi;
+  try{
+   final accounts=await api.balances();
+   if(!mounted)return;
+   await Navigator.of(context).push<void>(MaterialPageRoute(
+    builder:(ctx)=>WaffraAccountContextPage(
+     api:api,accounts:accounts,english:widget.english)));
+   reload();
+  }catch(_){failed();}
+ }
+
  Future<void> addAccount()async{
   try{
    // The form only creates a draft. Existing verified account creation
@@ -327,17 +340,7 @@ class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {
      IconButton(
       tooltip:t('كل الحسابات والعمليات بدون حساب','All and unassigned transactions'),
       icon:const Icon(Icons.receipt_long_outlined),
-      onPressed:()async{
-       final api=widget.repository as WaffraVerifiedAccountsApi;
-       try{
-        final accounts=await api.balances();
-        if(!mounted)return;
-        await Navigator.of(context).push<void>(MaterialPageRoute(
-         builder:(ctx)=>WaffraAccountContextPage(
-          api:api,accounts:accounts,english:widget.english)));
-        reload();
-       }catch(_){failed();}
-      },
+      onPressed:openAccountReview,
      ),
    ],
   ),
@@ -382,6 +385,14 @@ class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {
      Card(child:ListTile(
       title:Text(t('إجمالي أرصدة حساباتي','Total account balances')),
       subtitle:WaffraText(amount(sum),currencyEnglish:widget.english,textDirection:TextDirection.ltr))),
+     if(widget.repository is WaffraVerifiedAccountsApi)
+      Padding(padding:const EdgeInsets.symmetric(horizontal:12,vertical:5),
+       child:SizedBox(width:double.infinity,child:OutlinedButton.icon(
+        key:const Key('m681-open-historical-account-reconciliation'),
+        onPressed:openAccountReview,
+        icon:const Icon(Icons.fact_check_outlined),
+        label:Text(t('مراجعة وربط العمليات القديمة بدون حساب',
+         'Review and link unassigned historical transactions'))))),
      Expanded(child:accounts.isEmpty?
       Center(child:Text(t('أضف حسابًا أولًا','Add your first account'))):
       ListView.builder(itemCount:accounts.length,itemBuilder:(ctx,i){

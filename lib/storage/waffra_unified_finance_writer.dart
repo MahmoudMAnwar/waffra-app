@@ -347,6 +347,13 @@ class WaffraUnifiedFinanceWriter {
       throw ArgumentError('Account choices must match confirmed entries.');
     }
     final hasAccountLinks=confirmedAccounts.any((id)=>id!=null);
+    // M679: a new entry saved through the ACTIVATED production writer must
+    // link to exactly one verified money account. Authenticated legacy
+    // restore is a different path and retains its original accountless IDs.
+    if(verifySourceUnderLock!=null && selectedAccountIds!=null &&
+        confirmedAccounts.any((id)=>id==null)){
+      throw StateError('A verified account is required for each new transaction.');
+    }
     if(frozenReceiptImages!=null && !hasAccountLinks){
       throw StateError('Confirmed receipts require one verified money account.');
     }

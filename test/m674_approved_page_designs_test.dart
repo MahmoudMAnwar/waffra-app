@@ -61,6 +61,20 @@ void main(){
     throwsA(isA<StateError>()));
    expect((await accounts.balances())
     .singleWhere((a)=>a.id=='m674-bank').balanceMinor,balance);
+   // M680: changing wallet savings through an ordinary metadata edit
+   // must fail, and removing the recurring account must clear its typed row.
+   await expectLater(modules.save(WaffraFinanceModule.goals,
+    {...goal.toJson(),'saved':goal.saved+1},replaceExisting:true),
+    throwsA(isA<StateError>()));
+   await modules.save(WaffraFinanceModule.recurring,
+    {...schedule.toJson(),'accountId':null,'linkedGoalId':null},
+    replaceExisting:true);
+   final removed=await db.customSelect(
+    "SELECT account_id FROM fresh_finance_recurring_account_defaults "
+    "WHERE recurring_id='m674-due'").get();
+   expect(removed,isEmpty);
+   await modules.save(WaffraFinanceModule.recurring,
+    {...schedule.toJson(),'day':20},replaceExisting:true);
    await db.close();
    db=null;
    db=WaffraEncryptedStore.openAt(path,key:key);
@@ -132,7 +146,10 @@ void main(){
       labels:['هدف أ','هدف ب'],progress:[.25,.75]),
     ]))))));
   expect(find.text('1,250 ر.س'),findsOneWidget);
-  expect(find.text('25%'),findsOneWidget);
+  // 25% deliberately appears in both the metric and Goal A's progress.
+  // Duplicate valid values are not duplicate financial postings.
+  expect(find.text('25%'),findsNWidgets(2));
+  expect(find.text('75%'),findsOneWidget);
   expect(find.byKey(const Key('m674-real-goal-progress-chart')),
    findsOneWidget);
   expect(tester.takeException(),isNull);
@@ -198,6 +215,58 @@ void main(){
   expect(tester.takeException(),isNull);
  });
 
+
+ testWidgets('M683 narrow Arabic/English money and 100% goal remain legible',
+  (tester)async{
+  addTearDown((){
+   tester.view.resetPhysicalSize();
+   tester.view.resetDevicePixelRatio();
+  });
+  for(final width in <double>[320,360,390]){
+   for(final english in <bool>[false,true]){
+    tester.view.physicalSize=Size(width,720);
+    tester.view.devicePixelRatio=1;
+    await tester.pumpWidget(MaterialApp(
+     theme:ThemeData.dark(),
+     builder:(ctx,child)=>MediaQuery(
+      data:MediaQuery.of(ctx).copyWith(
+       textScaler:const TextScaler.linear(1.3)),child:child!),
+     home:Directionality(
+      textDirection:english?TextDirection.ltr:TextDirection.rtl,
+      child:Scaffold(body:SingleChildScrollView(child:Column(children:[
+       const WaffraApprovedMetrics(metrics:[
+        WaffraApprovedMetric('Savings','50,000.00 SAR',Icons.wallet_outlined),
+        WaffraApprovedMetric('Goals','1',Icons.flag_outlined),
+        WaffraApprovedMetric('Progress','100%',Icons.donut_large),
+       ]),
+       const WaffraApprovedGoalProgressBars(
+        title:'Goal progress',labels:['Car'],progress:[1.0]),
+      ]))))));
+    await tester.pumpAndSettle();
+    expect(find.text('50,000.00 SAR'),findsOneWidget);
+    expect(find.text('100%'),findsWidgets);
+    expect(find.byKey(const Key('m683-goal-progress-0')),findsOneWidget);
+    expect(tester.takeException(),isNull);
+   }
+  }
+ });
+
+ test('M682 owner screenshot UI has no duplicate Edit and Accounts opens manager',(){
+  final src=File('lib/main.dart').readAsStringSync();
+  final shortcuts=src.split("key:const Key('m674-home-approved-shortcuts')")[1]
+   .split('const SizedBox(height:12)')[0];
+  expect(shortcuts,contains('onTap:()=>unawaited(openVerifiedAccounts())'));
+  expect(shortcuts,isNot(contains('accountOpened=true')));
+  final goalStart=src.indexOf("final percent=g.target<=0");
+  final goalEnd=src.indexOf('if(goals.isEmpty)',goalStart);
+  expect(goalStart,greaterThan(0));
+  expect(goalEnd,greaterThan(goalStart));
+  final goalCard=src.substring(goalStart,goalEnd);
+  expect(goalCard,contains("_handleGoalCardAction(g,'edit')"));
+  expect(goalCard,isNot(contains('unawaited(editGoal(g))')));
+  expect(src,contains('snapshot.data!.savings.length'));
+  expect(src,contains('snapshot.data!.transfers.length'));
+ });
  test('M675 immutable + source contract and existing finance write routing',(){
   final code=File('lib/main.dart').readAsStringSync();
   final a=code.indexOf(

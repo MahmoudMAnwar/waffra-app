@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'waffra_account_context_repository.dart';
 import 'waffra_account_context_schema.dart';
 import 'waffra_accounts_schema.dart';
+import 'waffra_accounts_repository.dart';
 import 'waffra_atomic_finance_snapshot.dart';
 import 'waffra_encrypted_store.dart';
 import 'waffra_fresh_finance_domain_repository.dart';
@@ -62,6 +63,13 @@ class WaffraVerifiedGoalFundingWriter {
     final goal=Map<String,dynamic>.from(item);
     if(goal['id']==goalId) {
      matches++;
+     // M679: UI account pickers are not the financial authority. Reject a
+     // different funding source inside this exact SQLCipher transaction.
+     final linkedAccount=goal['accountId'];
+     if(!release && linkedAccount!=null &&
+        (linkedAccount is! String || linkedAccount!=sourceAccountId)){
+      throw StateError('Goal funding account differs from the linked goal.');
+     }
      final old=goal['saved'];
      if(old is! num)throw StateError('Goal saved balance is invalid.');
      final priorMinor=_minor(old);
@@ -74,6 +82,17 @@ class WaffraVerifiedGoalFundingWriter {
     goals.add(goal);
    }
    if(matches!=1)throw StateError('Savings goal no longer exists uniquely.');
+   // M679: a zero-opening account must never manufacture 50,000 SAR of
+   // spendable cash by funding a goal. Recheck *after* the source witness,
+   // under the shared writer lock, rather than relying on a stale dialog.
+   if(!release && sourceAccountId!=null){
+    final balances=await WaffraAccountsRepository(
+      db:store,experimentalEnabled:true).balances();
+    final matching=balances.where((a)=>a.id==sourceAccountId&&!a.archived);
+    if(matching.length!=1 || matching.single.balanceMinor<amountMinor){
+     throw StateError('Insufficient verified balance for goal funding.');
+    }
+   }
    final finance=Map<String,Object?>.from(current.values);
    finance['waffra_goals_v24']=jsonEncode(goals);
    final movement=await WaffraFreshFinanceDomainRepository(

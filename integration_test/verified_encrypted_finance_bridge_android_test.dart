@@ -131,17 +131,46 @@ void main() {
       ));
       expect(added.saved, 1);
 
+      // M680: editing a goal's saved wallet from the Home metadata editor
+      // must fail atomically. Only a verified wallet movement can fund it.
+      await checkpoint('reject-forged-goal-savings', () async {
+        await expectLater(
+          bridge().saveHomeChanges(
+            baseline: home,
+            replacements: const {
+              'waffra_goals_v24':
+                  '[{"id":"vacation","name":"Vacation","target":1000,"saved":200}]',
+            },
+            changedKeys: const {'waffra_goals_v24'},
+          ),
+          throwsA(isA<StateError>()),
+        );
+      });
+      final rejected = await checkpoint(
+        'verify-rejected-goal-is-atomic',
+        () => bridge().loadForHomeAndWidget(),
+      );
+      expect(rejected.generation, 2);
+      expect(rejected.finance.getString('waffra_goals_v24'),
+          contains('"saved":100'));
+      expect(rejected.snapshot.values['entries'], contains('android-widget-1'));
+      expect(rejected.snapshot.values['waffra_sms_hashes_v1'], [hash]);
+
+      // A legal goal target edit from an older Home revision still merges
+      // a concurrently saved widget SMS; wallet savings remain unchanged.
       final edited = await checkpoint('home-goal-save', () => bridge().saveHomeChanges(
         baseline: home,
         replacements: const {
           'waffra_goals_v24':
-              '[{"id":"vacation","name":"Vacation","target":1000,"saved":200}]',
+              '[{"id":"vacation","name":"Vacation","target":1100,"saved":100}]',
         },
         changedKeys: const {'waffra_goals_v24'},
       ));
       expect(edited.generation, 3);
       expect(edited.values['entries'], contains('android-widget-1'));
       expect(edited.values['waffra_sms_hashes_v1'], [hash]);
+      expect(edited.values['waffra_goals_v24'], contains('"target":1100'));
+      expect(edited.values['waffra_goals_v24'], contains('"saved":100'));
 
       await checkpoint('cold-close', () => vault!.close());
       vault = null;
@@ -155,14 +184,16 @@ void main() {
       expect(cold.generation, 3);
       expect((jsonDecode(cold.ledgerRaw!) as List), hasLength(1));
       expect(cold.finance.getString('waffra_goals_v24'),
-          contains('"saved":200'));
+          contains('"target":1100'));
+      expect(cold.finance.getString('waffra_goals_v24'),
+          contains('"saved":100'));
       final persistedGoals = await checkpoint('cold-goal-projection', () =>
           WaffraFreshModulesRepository(
             store: vault!, experimentalEnabled: true,
           ).list(WaffraFinanceModule.goals));
       expect(persistedGoals, [const {
         'id': 'vacation', 'name': 'Vacation',
-        'target': 1000, 'saved': 200,
+        'target': 1100, 'saved': 100,
       }]);
 
       final original = await checkpoint('prefs-check', () => SharedPreferences.getInstance());

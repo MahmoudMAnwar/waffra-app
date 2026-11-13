@@ -226,6 +226,16 @@ class WaffraFreshModulesRepository {
           }
           break;
         case WaffraFinanceModule.goals:
+          // M680: metadata edits must not silently change wallet money.
+          if(replaceExisting){
+            final prior=await store.customSelect(
+              'SELECT saved_minor FROM fresh_finance_goals WHERE goal_id=?',
+              variables:[Variable.withString(id)]).get();
+            if(prior.length!=1 ||
+              prior.single.read<int>('saved_minor')!=_halalas(data['saved']??0)){
+              throw StateError('Goal savings can only change via wallet movements.');
+            }
+          }
           // A real, active SAR account must back any newly linked goal.
           // Old savings with no stored accountId remain readable as-is.
           final linkedGoalAccount=data['accountId'];
@@ -323,6 +333,19 @@ class WaffraFreshModulesRepository {
               'account_id=excluded.account_id,changed_iso=excluded.changed_iso',
               [id,linkedId,DateTime.now().toIso8601String()],
             );
+          }else if(replaceExisting){
+            // Older due ledgers may predate the optional M448 account
+            // context table. If it exists, delete the stale association;
+            // if absent, there cannot be an association to delete.
+            final defaultsTable=await store.customSelect(
+              "SELECT name FROM sqlite_master WHERE type='table' "
+              "AND name='fresh_finance_recurring_account_defaults'"
+            ).get();
+            if(defaultsTable.isNotEmpty){
+              await store.customStatement(
+                'DELETE FROM fresh_finance_recurring_account_defaults '
+                'WHERE recurring_id=?',[id]);
+            }
           }
           break;
       }

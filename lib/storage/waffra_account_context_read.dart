@@ -51,10 +51,18 @@ class WaffraAccountContextReadResult {
 /// All accounts, but contributes ZERO to the balances of individual accounts.
 /// This query does not migrate or create any account link.
 abstract final class WaffraAccountContextRead {
+  static String _nextMonthIso(String monthIso){
+    final date=DateTime.parse(monthIso+'-01');
+    final next=DateTime(date.year,date.month+1,1);
+    return next.year.toString().padLeft(4,'0')+'-'+
+      next.month.toString().padLeft(2,'0')+'-01';
+  }
+
   static Future<WaffraAccountContextReadResult> load({
     required WaffraEncryptedStore store,
     required String monthIso,
     String? selectedAccountId,
+    bool summaryOnly=false,
   }) async {
     await WaffraAccountsSchema.requireReady(store);
     if (!RegExp(r'^[0-9]{4}-[0-9]{2}$').hasMatch(monthIso) ||
@@ -67,8 +75,14 @@ SELECT e.entry_id, e.title, e.amount_minor, e.is_income, e.occurred_iso,
 FROM fresh_finance_entries e
 LEFT JOIN fresh_finance_account_entry_links l ON l.entry_id=e.entry_id
 LEFT JOIN fresh_finance_standalone_allocations a ON a.entry_id=e.entry_id
+WHERE (?=0 OR (e.occurred_iso>=? AND e.occurred_iso<?))
 ORDER BY e.occurred_iso DESC, e.entry_id DESC
-''').get();
+''',variables:[
+ // Legacy callers retain all history; summaryOnly pages scan this month.
+ Variable.withInt(summaryOnly?1:0),
+ Variable.withString(monthIso+'-01'),
+ Variable.withString(_nextMonthIso(monthIso)),
+]).get();
     final entries = List<WaffraAccountLedgerRow>.unmodifiable(rows.map((r) =>
       WaffraAccountLedgerRow(
         id: r.read<String>('entry_id'),
@@ -127,12 +141,117 @@ ORDER BY g.name,g.goal_id
     return WaffraAccountContextReadResult(entries,summed,goals:goals);
   }
 
+  /// M684: lightweight all-time account entry IDs for Home/report filters.
+  static Future<Set<String>> loadAccountEntryIds({
+    required WaffraEncryptedStore store,required String accountId,
+  })async{
+    await WaffraAccountsSchema.requireReady(store);
+    if(accountId.trim().isEmpty)throw ArgumentError('Account required.');
+    final rows=await store.customSelect(
+      'SELECT entry_id FROM fresh_finance_account_entry_links WHERE account_id=?',
+      variables:[Variable.withString(accountId)]).get();
+    return Set<String>.unmodifiable(
+     rows.map((r)=>r.read<String>('entry_id')));
+  }
+
+  /// M681: preview imported accountless entries without changing money.
+  static Future<({int count,int netMinor})> unassignedSummary({
+    required WaffraEncryptedStore store,
+  }) async {
+    await WaffraAccountsSchema.requireReady(store);
+    final row=await store.customSelect('''
+SELECT COUNT(*) AS entry_count,
+ COALESCE(SUM(CASE WHEN e.is_income=1 THEN e.amount_minor
+ ELSE -e.amount_minor END),0) AS net_minor
+FROM fresh_finance_entries e
+WHERE NOT EXISTS (
+ SELECT 1 FROM fresh_finance_account_entry_links l
+ WHERE l.entry_id=e.entry_id)
+''').getSingle();
+    return (count:row.read<int>('entry_count'),
+      netMinor:row.read<int>('net_minor'));
+  }
+
+  /// M684: bounded SQLCipher monthly projection; the existing full-history
+  /// reconciliation contract of load() is unchanged.
+  static Future<List<WaffraAccountLedgerRow>> loadMonthEntries({
+    required WaffraEncryptedStore store,
+    required String monthIso,
+    String? selectedAccountId,
+    int limit=100,
+    int offset=0,
+  }) async {
+    await WaffraAccountsSchema.requireReady(store);
+    if(!RegExp(r'^[0-9]{4}-(0[1-9]|1[0-2])$').hasMatch(monthIso) ||
+       limit<1 || limit>500 || offset<0){
+      throw ArgumentError('Invalid bounded accounting query.');
+    }
+    final from=DateTime.parse('$monthIso-01');
+    final until=DateTime(from.year,from.month+1,1);
+    final next=until.year.toString().padLeft(4,'0')+'-'+
+      until.month.toString().padLeft(2,'0')+'-01';
+    final rows=await store.customSelect('''
+SELECT e.entry_id,e.title,e.amount_minor,e.is_income,e.occurred_iso,
+ l.account_id,a.budget_id,a.amount_minor AS budget_allocated_minor
+FROM fresh_finance_entries e
+LEFT JOIN fresh_finance_account_entry_links l ON l.entry_id=e.entry_id
+LEFT JOIN fresh_finance_standalone_allocations a ON a.entry_id=e.entry_id
+WHERE e.occurred_iso>=? AND e.occurred_iso<?
+ '''+(selectedAccountId==null?'':'AND l.account_id=?')+'''
+ORDER BY e.occurred_iso DESC,e.entry_id DESC
+LIMIT ? OFFSET ?
+''',variables:[
+ Variable.withString(monthIso+'-01'),
+ Variable.withString(next),
+ if(selectedAccountId!=null)Variable.withString(selectedAccountId),
+ Variable.withInt(limit),Variable.withInt(offset),
+ ]).get();
+    return List<WaffraAccountLedgerRow>.unmodifiable(rows.map((r)=>
+      WaffraAccountLedgerRow(
+        id:r.read<String>('entry_id'),
+        title:r.read<String>('title'),
+        occurredIso:r.read<String>('occurred_iso'),
+        amountMinor:r.read<int>('amount_minor'),
+        income:r.read<int>('is_income')==1,
+        accountId:r.readNullable<String>('account_id'),
+        budgetId:r.readNullable<String>('budget_id'),
+        budgetAllocatedMinor:r.readNullable<int>('budget_allocated_minor'),
+      )));
+  }
+
+  /// M681: original accountless history, not only current month. Paged and
+  /// read-only until the user approves a single verified account link.
+  static Future<List<WaffraAccountLedgerRow>> loadUnassignedEntries({
+    required WaffraEncryptedStore store,int limit=50,int offset=0,
+  }) async {
+    await WaffraAccountsSchema.requireReady(store);
+    if(limit<1||limit>500||offset<0){
+      throw ArgumentError('Invalid unassigned ledger page.');
+    }
+    final rows=await store.customSelect('''
+SELECT e.entry_id,e.title,e.amount_minor,e.is_income,e.occurred_iso
+FROM fresh_finance_entries e
+WHERE NOT EXISTS (
+ SELECT 1 FROM fresh_finance_account_entry_links l WHERE l.entry_id=e.entry_id
+)
+ORDER BY e.occurred_iso DESC,e.entry_id DESC
+LIMIT ? OFFSET ?
+''',variables:[Variable.withInt(limit),Variable.withInt(offset)]).get();
+    return List<WaffraAccountLedgerRow>.unmodifiable(rows.map((r)=>
+     WaffraAccountLedgerRow(id:r.read<String>('entry_id'),
+      title:r.read<String>('title'),
+      occurredIso:r.read<String>('occurred_iso'),
+      amountMinor:r.read<int>('amount_minor'),
+      income:r.read<int>('is_income')==1)));
+  }
+
   static Future<int> attachPreviouslyUnassigned({
     required WaffraEncryptedStore store,
     required String entryId,
     required String accountId,
     required String confirmedIso,
     required bool userConfirmed,
+    bool openingExcludesHistory=false,
   }) async {
     await WaffraAccountsSchema.requireReady(store);
     if (!userConfirmed || entryId.trim().isEmpty ||
@@ -145,11 +264,20 @@ ORDER BY g.name,g.goal_id
 SELECT entry_id FROM fresh_finance_entries WHERE entry_id=?
 ''', variables: [Variable.withString(entryId)]).get();
       final account = await store.customSelect('''
-SELECT account_id FROM fresh_finance_money_accounts
+SELECT account_id,opening_minor FROM fresh_finance_money_accounts
 WHERE account_id=? AND archived=0 AND currency='SAR'
 ''', variables: [Variable.withString(accountId)]).get();
       if (matching.length != 1 || account.length != 1) {
         throw StateError('Ledger entry or active account is missing.');
+      }
+      // A pre-existing opening balance may already include these historic
+      // entries; attaching them without reconciliation would double count.
+      if(account.single.read<int>('opening_minor')!=0 &&
+         !openingExcludesHistory){
+        // No inference is safe: the opening could already include this
+        // transaction. User must independently confirm it does not.
+        throw StateError(
+         'Confirm historical entry is excluded from account opening balance.');
       }
       // INSERT .. SELECT WHERE NOT EXISTS is a single SQL decision, so
       // repeated confirmations cannot increase balance a second time.

@@ -28,9 +28,10 @@ void main() {
   expect(home,contains('showInternalTransferTransactions()'));
   expect(home,isNot(contains('entrySheet(')));
   expect(home,isNot(contains('openVerifiedTransfer()')));
-  final tile=src.substring(src.indexOf('Widget _m549HomeFinanceAction({'),
-   src.indexOf('Widget dashboard(){'));
-  expect(tile,contains('height:68,'));
+  final tile=File('lib/waffra_home_finance_tiles.part.dart').readAsStringSync();
+  expect(src,contains('this._m684HomeFinanceAction('));
+  expect(tile,contains("key:Key('m549-home-action-'"));
+  expect(tile,contains('height:60,'));
  });
 
  test('M611 account selection is readable and mandatory for manual save', () {
@@ -88,4 +89,39 @@ void main() {
   expect(api,contains('bridge.readVerifiedAccountMetadata((context)=>'));
   expect(api,contains('context.readInternalTransferHistory('));
  });
+ test('M681-M684 Account review uses SQL page, consent and all-time unassigned',(){
+  final page=File('lib/waffra_account_context_page.dart').readAsStringSync();
+  final read=File('lib/storage/waffra_account_context_read.dart').readAsStringSync();
+  final api=File('lib/storage/waffra_verified_accounts_api.dart').readAsStringSync();
+  final manager=File('lib/waffra_accounts_manager_page.dart').readAsStringSync();
+  expect(manager,contains('m681-open-historical-account-reconciliation'));
+  expect(manager,contains('onPressed:openAccountReview'));
+  expect(page,contains('m681-unassigned-reconciliation-summary'));
+  expect(page,contains('m684-ledger-page-next'));
+  expect(page,contains('m684-previous-month'));
+  expect(page,contains('summaryOnly:true'));
+  expect(page,contains('linkUnassignedEntry('));
+  expect(page,contains('m681-opening-balance-attestation'));
+  expect(page,contains('openingExcludesHistory:openingVerified'));
+  expect(page,contains('readUnassignedPage('));
+  expect(page,contains('readMonthlyPage('));
+  expect(page,isNot(contains('data.entries.where(')));
+  expect(read,contains('loadUnassignedEntries('));
+  expect(read,contains('SELECT COUNT(*) AS entry_count'));
+  expect(read,contains("opening_minor')!=0"));
+  expect(api,contains('readVerifiedAccountMetadata('));
+ });
+
+ test('M684 card extraction preserves original + and compact layout',(){
+  final main=File('lib/main.dart').readAsStringSync();
+  final tiles=File('lib/waffra_home_finance_tiles.part.dart').readAsStringSync();
+  expect(main,contains("part 'waffra_home_finance_tiles.part.dart';"));
+  expect(main,contains('this._m684HomeFinanceAction('));
+  expect(tiles,contains("key:Key('m549-home-action-'"));
+  expect(tiles,contains('WaffraHaptics.tap(onTap)'));
+  expect(tiles,contains('height:60,'));
+  expect(main,contains('floatingActionButtonLocation:WaffraDirectionalFabLocation('));
+  expect(main,contains('floatingActionButtonAnimator:const WaffraStationaryFabAnimator()'));
+ });
+
 }
