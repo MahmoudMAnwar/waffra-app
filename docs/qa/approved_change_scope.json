@@ -1,13 +1,14 @@
 {
   "contract_version": 1,
   "change_id": "M618-20261113-ISSUE618-PR619-SQL_PREFLIGHT_HISTORY_FIDELITY",
-  "human_scope_review": "Owner supplied screenshot from newest Android main APK: [R616:SQL_PREFLIGHT] after correct-password V24 backup authentication and conversion. No actual archive, financial names, numbers, password or personal data uploaded. Verified old source's structure locally; M618 explicitly fixes unstable V3 category history reordering that can fail deep equality when restored after large inventories, adds cold V3 fidelity regression and privacy-safe phase code. Original encrypted backup intact. Android acceptance pending.",
+  "human_scope_review": "Owner supplied screenshot from newest Android main APK: [R616:SQL_PREFLIGHT] after correct-password V24 backup authentication and conversion. No actual archive, financial names, numbers, password or personal data uploaded. Verified old source's structure locally; M618 explicitly fixes unstable V3 category history reordering that can fail deep equality when restored after large inventories, adds cold V3 fidelity regression and privacy-safe phase code. Original encrypted backup intact. Android acceptance pending. The seven observed failing CI workflows were all traced to one M616 source-text regression still expecting old R616:$restoreStage after approved code now renders R616:$safeStage. Keep all original tests and add positive assertions for the new preflight phase codes, rather than disabling tests.",
   "user_requested_changes": [
     "Fix genuine legacy .waffra V24 restore failure in SQL_PREFLIGHT after previous merged fixes; user specifically requested Draft PR and permanent regression prevention.",
     "Make SQLCipher category history restoration stable (roots before children but original within-group rowid order preserved) so authenticated 1056-category history matches across cold SQLCipher reopen.",
     "Test real preflight history comparison with synthetic 1056 categories, mixed income/expense, 19 transactions, 2 budgets, 4 goals, 3 linked recurring and 11 SMS fingerprints — never add private backup/password to GitHub.",
     "Publish privacy-safe SQL preflight substage code to distinguish SQL hydration, warm/cold attestation, historical parity, and source witness failures; do not display exception text or user data.",
-    "Keep authenticated archive/V2 and V3 hashes, external rescue, biometric authorisation, source witness, SQLCipher safe rollback, and historical accounts unlinked."
+    "Keep authenticated archive/V2 and V3 hashes, external rescue, biometric authorisation, source witness, SQLCipher safe rollback, and historical accounts unlinked.",
+    "Keep original M616 Android restore staging contract active while updating its UI error-code assertion to verify the new SQL_PREFLIGHT substage resolver, every original stage, and seven privacy-safe preflight substage labels."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -17,6 +18,7 @@
     "lib/main.dart",
     "lib/storage/waffra_accounts_finance_history.dart",
     "lib/storage/waffra_verified_active_restore_preflight.dart",
+    "test/storage/m616_android_v24_restore_test.dart",
     "test/storage/m618_v24_preflight_history_parity_test.dart"
   ],
   "approved_deleted_files": [],
@@ -42,6 +44,12 @@
       {
         "start": "    WaffraEncryptedStore? candidate;",
         "end": "  }\n}"
+      }
+    ],
+    "test/storage/m616_android_v24_restore_test.dart": [
+      {
+        "start": "    final ui=File('lib/main.dart').readAsStringSync();",
+        "end": "   });"
       }
     ]
   }
