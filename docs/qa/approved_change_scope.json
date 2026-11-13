@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "change_id": "M690-M704-ISSUES632-637-20261113",
+  "change_id": "M690-M705-ISSUES632-637-20261113",
   "human_scope_review": "Issue #629 completes prior PR #628 only after user-visible acceptance; #631 explicitly authorizes three exact screenshots for Goals/Dues/SMS Review, permanently visible financial activity, non-moving FAB-aligned notice, and savings/goal-due cash safety. Existing tests replace outdated visual assumptions without deleting financial safety assertions. Device screenshots/old restore still require external device evidence.",
   "user_requested_changes": [
     "M690 #632 permanently disable third-party AI bank SMS uploads and opt-in on previously installed versions, remove Settings toggle and signed Android staging worker, retain local encrypted SMS Review and money writer.",
@@ -17,7 +17,8 @@
     "M701 #634: make M550 review declared, exact-path approved source deletions as documented behavior changes without requiring a removed file to exist at HEAD; source assertion scan skips deleted binaries, but fails closed on missing unapproved source and never suppresses extant tests.",
     "M702 #634 correct M385 exact anchors covering the retired gateway configuration and include Git deletions in M550 diff inventory so approved deleted sources are validated and retained source-test coverage remains mandatory.",
     "M703 #633: extract the actual used bank-SMS account-to-account transfer review UI and its verified fee/idempotent SQLCipher writer callback from monolithic Home State to same-library Dart part byte-identically, keeping original SMS, account choice, acknowledgment and balance refresh; add exact-source safety regression and register same-library part in M550.",
-    "M704 #633 repair the original strict M417 bank-SMS permission/finance source test to inspect the real registered Home transfer part in its original location after byte-identical extraction, retaining all transfer ID, fee, ACK and verified finance assertions; correct M703 issue metadata."
+    "M704 #633 repair the original strict M417 bank-SMS permission/finance source test to inspect the real registered Home transfer part in its original location after byte-identical extraction, retaining all transfer ID, fee, ACK and verified finance assertions; correct M703 issue metadata.",
+    "M705 #634/#637 remove retired cloud service import and call from runtime SMS permission screen, still clear exact historical opt-in preference locally and require no cloud analysis; preserve OS permissions, local SMS review, no-upload tests, and historical safety fixture file."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -60,7 +61,9 @@
     "scripts/qa/m385_approved_change_guard.py",
     "lib/waffra_home_sms_transfer_review.part.dart",
     "test/m703_home_sms_transfer_extraction_test.dart",
-    "test/qa/m417_sms_permission_acceptance_test.py"
+    "test/qa/m417_sms_permission_acceptance_test.py",
+    "lib/waffra_auto_sms_consent.dart",
+    "test/m417_sms_first_run_test.dart"
   ],
   "approved_deleted_files": [
     "lib/waffra_sms_cloud_review_analyzer.dart"
@@ -93,12 +96,14 @@
     ],
     "test/m429_sms_phone_integration_test.dart": [
       {
-        "start": "import 'dart:io';"
+        "start": "  expect(consent,contains('await WaffraSmsCloudService.setConsent(false)'));",
+        "end": "  expect(consent,contains('await WaffraAutoSms.optIn()'));"
       }
     ],
     "test/m436_cloud_review_pipeline_test.dart": [
       {
-        "start": "import 'dart:io';"
+        "start": "  expect(ui,contains('await WaffraSmsCloudService.setConsent(false)'));",
+        "end": "  expect(ui,contains('await WaffraAutoSms.optIn()'));"
       }
     ],
     "test/m528_settings_async_cache_regression_test.dart": [
@@ -283,6 +288,26 @@
       {
         "start": "    def test_writes_only_from_existing_verified_sms_review(self):",
         "end": "    def test_auto_posting_requires_guarded_finance_and_verified_notification(self):"
+      },
+      {
+        "start": "        # Cloud disclosure must be separate and tied to a specific message.",
+        "end": "        self.assertIn(\"await WaffraAutoSms.optIn()\",ui)"
+      }
+    ],
+    "lib/waffra_auto_sms_consent.dart": [
+      {
+        "start": "import 'waffra_sms_cloud_service.dart';",
+        "end": "/// Follow-up to account creation:"
+      },
+      {
+        "start": "   // Never opt in to the external AI on behalf of the user.",
+        "end": "   // WaffraAutoSms.optIn first requests READ_SMS and RECEIVE_SMS;"
+      }
+    ],
+    "test/m417_sms_first_run_test.dart": [
+      {
+        "start": "  final src=File('lib/waffra_auto_sms_consent.dart').readAsStringSync();",
+        "end": "  expect(src,contains('await WaffraAutoSms.optIn()'));"
       }
     ]
   }
