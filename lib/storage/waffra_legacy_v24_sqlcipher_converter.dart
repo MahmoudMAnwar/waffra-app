@@ -172,8 +172,9 @@ abstract final class WaffraLegacyV24SqlCipherConverter {
       32, (_) => Random.secure().nextInt(256)));
     WaffraEncryptedStore? db;
     try {
-      db = WaffraEncryptedStore.openAt(
+      final stageDb = WaffraEncryptedStore.openAt(
         File('${staging.path}/legacy-candidate.sqlite'), key: key);
+      db = stageDb;
       final restored = await WaffraPortableEncryptedVaultRestorer(
         disposableStore: db, experimentalEnabled: true,
       ).restore(encryptedArchive: encryptedV2, password: password);
@@ -182,13 +183,13 @@ abstract final class WaffraLegacyV24SqlCipherConverter {
         throw StateError('Legacy ledger parity was not preserved.');
       }
       final module = WaffraFreshModulesRepository(
-        store: db, experimentalEnabled: true);
+        store: stageDb, experimentalEnabled: true);
       // M622: these rows live only in a disposable encrypted candidate.
       // One outer SQLite transaction avoids a durable commit per category
       // (large V24 exports contain 1000+ categories). Existing module.save
       // validation and its nested savepoints still run for EVERY row.
       // Any later budget/link failure rolls back the whole staged batch.
-      await db.transaction(() async {
+      await stageDb.transaction(() async {
       final categories = (legacy['categories'] as List)
         .map((v) => Map<String, Object?>.from(v as Map))
         .toList(growable: false);
@@ -226,7 +227,7 @@ abstract final class WaffraLegacyV24SqlCipherConverter {
         }
         final parentId = b['parentId'] as String? ?? '';
         if (parentId.isEmpty) {
-          await db.customStatement(
+          await stageDb.customStatement(
             'INSERT INTO fresh_finance_standalone_budgets '
             '(budget_id,name,monthly_limit_minor,is_active,alert_percent,'
             'created_at_iso,source_json) VALUES (?,?,?,?,?,?,?)',
@@ -234,7 +235,7 @@ abstract final class WaffraLegacyV24SqlCipherConverter {
              alert, stamp, jsonEncode(b)],
           );
         } else {
-          await db.customStatement(
+          await stageDb.customStatement(
             'INSERT INTO fresh_finance_named_budgets '
             '(budget_id,name,category_id,monthly_limit_minor,is_active,'
             'alert_percent,created_at_iso,source_json) '
@@ -265,13 +266,13 @@ abstract final class WaffraLegacyV24SqlCipherConverter {
         final minor = _minor(row['amount']);
         final isStandalone = (budget['parentId'] as String? ?? '').isEmpty;
         if (isStandalone) {
-          await db.customStatement(
+          await stageDb.customStatement(
             'INSERT INTO fresh_finance_standalone_allocations '
             '(allocation_id,budget_id,entry_id,amount_minor,assigned_at_iso,'
             'explicitly_confirmed) VALUES (?,?,?,?,?,1)',
             ['v24-standalone:${row['id']}',budgetId,row['id'],minor,stamp]);
         } else {
-          await db.customStatement(
+          await stageDb.customStatement(
             'INSERT INTO fresh_finance_budget_allocations '
             '(allocation_id,budget_id,entry_id,amount_minor,'
             'explicitly_confirmed,assigned_at_iso) VALUES (?,?,?,?,1,?)',
