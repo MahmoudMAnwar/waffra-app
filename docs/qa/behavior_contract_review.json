@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
-  "pr": "#628",
-  "issue": "#627",
+  "pr": "Follow-up draft to #628",
+  "issue": "#629",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at new branch start",
   "reviewed_at": "2026-11-13",
-  "review_policy": "M679–M684: owner-authorized SQLCipher source protection and compact responsive Home/Goals/Recurring UI. Preserve V24 accountless restoration, existing bank/widget writers, SMS dedup and global +. Run all registered source contracts and exact-head CI, do not merge from host-only passes.",
+  "review_policy": "M685-M688: verified historical account linking, indexable SQLCipher month reads, safe Home header Dart part extraction; no user-data conversion, no FAB changes and physical device QA outstanding.",
   "contracts": [
     {
       "id": "M623-VERIFIED-RESTORE-NO-SECOND-BACKUP",
@@ -2521,6 +2521,53 @@
         "Month and year filtering preserves exactly the same IDs, signed amounts and source display ordering; duplicate month requests cannot double count.",
         "Mutations invalidate the index prior to render; deleted and restored items cannot linger in reports.",
         "V24/V3 backup/export/restore bytes, global FAB and Snackbar source remain byte-for-byte unchanged."
+      ]
+    },
+    {
+      "id": "M686-SQLCIPHER-INDEXABLE-MONTH-CONTEXT-ISSUE629",
+      "issue": "Issue #629 and owner full-completion correction after #628",
+      "previous_behavior": "Monthly SQLCipher context used a parameterized OR predicate that could defeat the occurred_iso index and scan all historical finance records.",
+      "approved_behavior": "A summaryOnly=true read uses an explicit occurred_iso >= from AND occurred_iso < next-month WHERE with matching bound parameters; summaryOnly=false retains full historical rows, reconciled ID attribution and independent savings/other accounts.",
+      "source_paths": [
+        "lib/storage/waffra_account_context_read.dart"
+      ],
+      "test_paths": [
+        "test/storage/m448_account_context_read_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m160-main-reconciliation-and-backup-regression.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "Financial history remains read-only and unassigned rows never become bank money without separate user-approved SQLCipher link.",
+        "No arithmetic, opening balance, goal savings, SMS hash, transfer posting or finance writer changes."
+      ]
+    },
+    {
+      "id": "M687-HOME-HEADER-PART-CODE-ISOLATION-ISSUE629",
+      "issue": "Issue #629 and owner full-completion correction after #628",
+      "previous_behavior": "Home balance-header rendering and the oversized State class both lived directly inside lib/main.dart.",
+      "approved_behavior": "Relocate the Home sliver header delegate unchanged into a Dart part of main.dart, retaining public WaffraBalanceHeader, source-level layout assertions and 320dp dark/privacy widget regressions.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_balance_header.part.dart"
+      ],
+      "test_paths": [
+        "test/m268_approved_emerald_balance_card_test.dart",
+        "test/waffra_concept2_final_visual_test.dart",
+        "test/m470_balance_header_account_picker_test.dart",
+        "test/m274_responsive_ui_journeys_test.dart",
+        "test/m495_pr402_ui_performance_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "No changes to actual header Dart statements, money/visibility/amount values, RTL/dark styles or header callbacks.",
+        "Global + button, Snackbar anchor, login, encryption, restored data, categories, balances, reports and export paths unchanged.",
+        "No source-contract assertion removed; moved code is asserted in its real module file."
       ]
     }
   ]
