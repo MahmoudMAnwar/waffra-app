@@ -130,6 +130,7 @@ part 'waffra_smart_analysis.part.dart';
 part 'waffra_recurring_trash.part.dart';
 part 'waffra_goal_recurring_actions.part.dart';
 part 'waffra_home_finance_tiles.part.dart';
+part 'waffra_finance_period_index.part.dart';
 part 'waffra_deleted_item_card.part.dart';
 part 'waffra_auto_sms_autopost.part.dart';
 
@@ -4674,6 +4675,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   return entries.where((entry)=>ids.contains(entry.id));
  }
 
+ List<MoneyEntry> _m684ScopedMonthEntries(int year,int month){
+  final monthRows=_m684Periods.month(year,month);
+  if(_m467SelectedAccount=='all')return monthRows;
+  final ids=_m684ScopedEntryIds;
+  if(ids==null)return const <MoneyEntry>[];
+  return monthRows.where((e)=>ids.contains(e.id)).toList(growable:false);
+ }
+
  double _m467ShownBalance(){
   if(_m467SelectedAccount=='all'){
    if(!_m468VerifiedAccountsLoaded)return waffraAvailableCash(entries,goals);
@@ -4838,6 +4847,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  final expandedCategoryIds=<String>{};
  final learnedMerchantCategories=<String,String>{};
  final entries=<MoneyEntry>[],categories=<BudgetCategory>[],goals=<SavingGoal>[],recurring=<RecurringBill>[];
+ // Verified/legacy hydrated entries are immutable only for this read
+ // projection; every ledger mutation invalidates it before the next view.
+ WaffraFinancePeriodIndex? _m684PeriodCache;
+ WaffraFinancePeriodIndex get _m684Periods=>
+  _m684PeriodCache??=WaffraFinancePeriodIndex(entries);
+ void _m684InvalidatePeriodRead(){_m684PeriodCache=null;}
  final namedBudgets=<WaffraNamedBudget>[];
  // One repaint-isolated saving indicator for every confirmed Home finance edit.
  final WaffraSmoothOperationController _saveProgress=WaffraSmoothOperationController();
@@ -7484,6 +7499,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   // M614: measure the real verified finance wait separately from login.
   final startupClock=kProfileMode?(Stopwatch()..start()):null;
   setState((){ready=false;_financeLoadFailure=null;});
+  _m684InvalidatePeriodRead();
   entries.clear();categories.clear();namedBudgets.clear();goals.clear();recurring.clear();challenges.clear();
   deletedCategories.clear();deletedGoals.clear();deletedRecurring.clear();
   recurringPostponed.clear();smsHashes.clear();learnedMerchantCategories.clear();
@@ -7846,6 +7862,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final decodedStartup=await WaffraLargeJsonDecode.parseStartupFields(
    startupSources);
   traceHomeStep('after_batch_json_decode');
+  _m684InvalidatePeriodRead();
   try{final raw=financeView.getString('entries');if(raw!=null)entries.addAll(await _m593BuildVerifiedEntries((decodedStartup.read('entries')) as List));}catch(e){throw StateError('Saved transactions cannot be decoded safely: $e');}
   try{final raw=financeView.getString('waffra_categories_v24');categories.addAll(raw==null?defaultCategories():(decodedStartup.read('waffra_categories_v24') as List).map((x)=>BudgetCategory.fromJson(Map<String,dynamic>.from(x))));}catch(e){throw StateError('Saved categories cannot be decoded safely: $e');}
   try{
@@ -8490,6 +8507,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         saved:allocation.remainingGoalSavings);
        recurring[scheduleIndex]=currentSchedule.single.copy(active:false);
        recurringPostponed.remove(id);
+       _m684InvalidatePeriodRead();
        entries.insert(0,MoneyEntry(
         id:id,title:r.title,category:r.category,
         amount:allocation.amount,income:false,date:DateTime.now(),
@@ -8523,6 +8541,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        recurringId:r.id);
       if(chosen==null)return;
       if(!entries.any((e)=>e.id==id)){
+       _m684InvalidatePeriodRead();
        setState(()=>entries.insert(0,MoneyEntry(
         id:id,title:r.title,category:r.category,amount:r.amount,
         income:r.income,date:DateTime.now(),sourceType:'recurring')));
@@ -10694,6 +10713,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    final previousEntries=List<MoneyEntry>.of(entries);
    final previousLearned=Map<String,String>.of(learnedMerchantCategories);
    setState((){
+    _m684InvalidatePeriodRead();
     final i=entries.indexWhere((e)=>e.id==result.id);
     if(i>=0)entries[i]=result;else entries.insert(0,result);
     // Learn only explicit corrections made by the user, not assumptions
@@ -10786,6 +10806,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      if(!mounted)return;
      final index=entries.indexWhere((e)=>e.id==initial.id);
      if(index<0)return;
+     _m684InvalidatePeriodRead();
      setState(()=>entries[index]=initial);
      if(!await _persistModuleOrReload(
       WaffraFinanceRoute.transactionEdit,
@@ -12038,6 +12059,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    waffraIsEnglish?'Delete «'+e.title+'»? You can undo for 6 seconds after deletion.':'هل تريد حذف المعاملة «'+e.title+'»؟ يمكنك التراجع خلال 6 ثوانٍ بعد الحذف.');
   if(yes!=true||!mounted)return;
   // A tentative removal is never success until the source acknowledges it.
+  _m684InvalidatePeriodRead();
   setState(()=>entries.removeWhere((x)=>x.id==e.id));
   if(!await _persistModuleOrReload(
    WaffraFinanceRoute.transactionDeleteAndUndo,
@@ -12048,6 +12070,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    actionLabel:waffraIsEnglish?'Undo':'تراجع',
    onAction:()async{
     if(!mounted||entries.any((x)=>x.id==e.id))return;
+    _m684InvalidatePeriodRead();
     setState(()=>entries.insert(0,e));
     if(!await _persistModuleOrReload(
      WaffraFinanceRoute.transactionDeleteAndUndo,
@@ -12217,7 +12240,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     _lastWidgetRevision=committed.widgetRevision;
    });
    if(!mounted)return;
-   setState((){entries.clear();smsHashes.clear();});
+   setState((){_m684InvalidatePeriodRead();entries.clear();smsHashes.clear();});
    unawaited(_refreshWidget());
    snackSuccess(context,waffraIsEnglish?'All transactions deleted':'تم حذف جميع المعاملات');
   }catch(e){
@@ -12512,6 +12535,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    return;
   }
   setState((){
+   _m684InvalidatePeriodRead();
    final index=entries.indexWhere((e)=>e.id==old.id);
    if(index>=0)entries[index]=entries[index].withBudget(selected.id);
   });
@@ -12765,10 +12789,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final viewedMonth=DateTime(budgetViewedMonth.year,budgetViewedMonth.month,1);
   final viewingToday=viewedMonth.year==today.year&&viewedMonth.month==today.month;
   final selectedFinancialAccount=_m467SelectedAccount;
-  final relevantEntries=selectedFinancialAccount=='all'?
-   entries:_m467ScopedEntries();
-  final monthEntries=relevantEntries.where((e)=>
-   e.date.year==viewedMonth.year&&e.date.month==viewedMonth.month);
+  // Read only the month visible in Budgets, not the full ledger.
+  final relevantEntries=_m684ScopedMonthEntries(
+   viewedMonth.year,viewedMonth.month);
+  final monthEntries=relevantEntries;
   // A shared legacy budget belongs to All only until its owner explicitly
   // assigns an account. One budget ID is counted once, never once per bank.
   final allBudgets=namedBudgets.where((b)=>b.budget>0&&!b.deleted&&
@@ -13013,8 +13037,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   ]);
  Widget monthlySummaryCard(){
   final now=DateTime.now();
-  final month=_m467ScopedEntries().where((e)=>
-   e.date.year==now.year&&e.date.month==now.month).toList();
+  final month=_m684ScopedMonthEntries(now.year,now.month);
   final income=sum(month,true),spent=sum(month,false);
   final difference=income-spent;
   final ratio=income>0?(spent/income).clamp(0.0,1.0):0.0;
@@ -13613,10 +13636,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final nowBalanceDate=DateTime.now();
   final monthStart=DateTime(nowBalanceDate.year,nowBalanceDate.month);
   final priorMonthStart=DateTime(nowBalanceDate.year,nowBalanceDate.month-1);
-  final hasPreviousMonthEntries=entries.any((e)=>
-   !e.date.isBefore(priorMonthStart)&&e.date.isBefore(monthStart));
+  final hasPreviousMonthEntries=_m684Periods.month(
+   priorMonthStart.year,priorMonthStart.month).isNotEmpty;
   final previousClosingBalance=waffraAvailableCash(
-   entries.where((e)=>e.date.isBefore(monthStart)),goals);
+   _m684Periods.before(monthStart),goals);
   final monthChange=hasPreviousMonthEntries&&previousClosingBalance>0
    ?((waffraAvailableCash(entries,goals)-previousClosingBalance)/previousClosingBalance)*100:null;
   final visible=scopedEntries.where((e){
@@ -14078,17 +14101,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      ],
     )));
  }
- List<MoneyEntry> get analysisEntries=>entries.where((e)=>e.date.year==year&&
-  (period=='سنوي'||e.date.month==month)).toList();
+ List<MoneyEntry> get analysisEntries=>period=='سنوي'?
+  _m684Periods.year(year):_m684Periods.month(year,month);
 
  Widget nextMonthForecast(){
   final now=DateTime.now();
   final months=List.generate(3,(i)=>DateTime(now.year,now.month-i));
-  final used=months.where((m)=>entries.any((e)=>e.date.year==m.year&&e.date.month==m.month)).toList();
-  final history=entries.where((e)=>used.any((m)=>m.year==e.date.year&&m.month==e.date.month)).toList();
+  final used=months.where((m)=>
+   _m684Periods.month(m.year,m.month).isNotEmpty).toList();
+  final history=_m684Periods.months(used);
   final divisor=max(1,used.length);
   final nextIncome=sum(history,true)/divisor,nextExpenses=sum(history,false)/divisor;
-  final current=entries.where((e)=>e.date.year==now.year&&e.date.month==now.month).toList();
+  final current=_m684Periods.month(now.year,now.month);
   final thisIncome=sum(current,true),thisExpenses=sum(current,false);
   final next=DateTime(now.year,now.month+1);
   final categoryAmounts=<String,double>{};
@@ -14179,7 +14203,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
  Future<void> showAiAnalysis()async {
   final now=DateTime.now();
-  final recent=entries.where((e)=>e.date.isAfter(now.subtract(const Duration(days:90)))&&!e.date.isAfter(now)).toList();
+  final recent=_m684Periods.between(
+   now.subtract(const Duration(days:90)),now,
+   startInclusive:false,endInclusive:true);
   // A clear next step is more helpful than displaying empty charts.
   if(recent.isEmpty){
    if(!mounted)return;
@@ -14214,10 +14240,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final top=smartCharts.topCategories;
   final monthStart=DateTime(now.year,now.month);
   final priorStart=DateTime(now.year,now.month-1);
-  final currentExpense=sum(entries.where((e)=>!e.income&&!e.date.isBefore(monthStart)&&!e.date.isAfter(now)),false);
-  final priorExpense=sum(entries.where((e)=>!e.income&&!e.date.isBefore(priorStart)&&e.date.isBefore(monthStart)),false);
-  final hasPrior=entries.any((e)=>!e.date.isBefore(priorStart)&&e.date.isBefore(monthStart));
-  final thisMonthCount=entries.where((e)=>!e.date.isBefore(monthStart)&&!e.date.isAfter(now)).length;
+  final currentRows=_m684Periods.between(monthStart,now,endInclusive:true);
+  final previousRows=_m684Periods.month(priorStart.year,priorStart.month);
+  final currentExpense=sum(currentRows.where((e)=>!e.income),false);
+  final priorExpense=sum(previousRows.where((e)=>!e.income),false);
+  final hasPrior=previousRows.isNotEmpty;
+  final thisMonthCount=currentRows.length;
   final monthDays=DateTime(now.year,now.month+1,0).day;
   final upcoming=recurring.where((r)=>r.active&&!r.income&&r.day>now.day&&r.day<=monthDays).fold<double>(0,(v,r)=>v+r.amount);
   final forecast=now.day>=5&&thisMonthCount>=3?(currentExpense/now.day*monthDays+upcoming):null;
@@ -14444,7 +14472,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  );
  Widget analytics(){
   final data=analysisEntries,inc=sum(data,true),exp=sum(data,false);
-  final years=<int>{DateTime.now().year,year,...entries.map((e)=>e.date.year)}.toList()..sort((a,b)=>b.compareTo(a));
+  final years=<int>{DateTime.now().year,year,..._m684Periods.years}.toList()..sort((a,b)=>b.compareTo(a));
   final points=period=='شهري'?List.generate(5,(i){
    final v=data.where((e)=>(e.date.day-1)~/7==i);
    return ChartPoint(waffraIsEnglish?'Week ${i+1}':'الأسبوع ${i+1}',sum(v,true),sum(v,false));
@@ -17627,6 +17655,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    });
    if(!mounted)return;
    setState((){
+    _m684InvalidatePeriodRead();
     entries.clear();
     categories..clear()..addAll(cleanCategories);
     namedBudgets.clear();

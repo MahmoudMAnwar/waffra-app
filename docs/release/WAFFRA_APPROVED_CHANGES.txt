@@ -552,3 +552,9 @@ M103 exact-head fail correction (2026-11-13, same Draft PR #628):
 - M677 test now checks that memoized verified activity reads exist for collapsed numeric counter and detailed cards; no duplicate filter row and no app code change.
 - M674 narrow RTL goal chart test expects 25% in both overview metric and actual bar, and 75% in the second goal, correcting a one-widget assertion that incorrectly rejected valid duplicated text.
 - Do not interpret these focused test updates as physical Android or backup acceptance.
+
+M684 full shared read-index wiring (2026-11-13, SAME Draft PR #628, not merged):
+- Added immutable owner-finance period index (months/years, exact timestamp ranges, cutoff histories) over the single authenticated hydrated ledger, with lazy memoization and explicit invalidation at all recorded MoneyEntry mutations and restore/reset paths.
+- Wired Home budget-month and current-month summary, balance prior-month comparison, yearly/monthly Analytics plus existing PDF exports, 90-day financial insights and multi-month forecast. Historical transaction search/export continues to include all dates; selected-bank views apply only explicitly verified account-ID associations.
+- Retained typed Goals and Recurring sources; did not fabricate income/expense, reapply SMS, change current account balance or alter V24/V3 backup/restore logic.
+- New focused index regression covers date boundaries, time order, 90-day windows, month de-duplication, source snapshot invalidation and all-page source contracts; updated M401 budget test for the new monthly read. Signed physical Android and exact-head CI still separate.

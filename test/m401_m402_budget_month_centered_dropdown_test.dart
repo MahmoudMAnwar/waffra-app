@@ -18,9 +18,11 @@ void main() {
     expect(card,contains("key:const Key('waffra-budget-month-label')"));
     expect(card,contains('ميزانية مضافة'));
     expect(card,contains('MaterialLocalizations.of(context).formatMonthYear(viewedMonth)'));
-    expect(card,contains('e.date.month==viewedMonth.month'));
+    // A month-indexed view returns only the visible budget month.
+    expect(card,contains('_m684ScopedMonthEntries('));
+    expect(card,contains('viewedMonth.year,viewedMonth.month'));
     expect(card,contains('waffraNamedBudgetSpent(relevantEntries.toList(),categories,selected,viewedMonth)'));
-    expect(card,contains("final relevantEntries=selectedFinancialAccount=='all'?"));
+    expect(card,contains('final relevantEntries=_m684ScopedMonthEntries('));
     expect(card,contains('b.assignedAccountId==selectedFinancialAccount'));
     expect(card,contains("waffraIsEnglish?'Budget overview':'متابعة الميزانيات'"));
     expect(card,isNot(contains('(selected.budgetLabel??\'ميزانية \'+selected.displayName),')));

@@ -1772,3 +1772,10 @@ Audit of remaining production direct Material `DropdownButtonFormField<String>` 
 - Updated M677 source test to require exactly two uses of the memoized activity read: collapsed count before the expanded area, and rows inside that area. Previous index assertion accidentally required the collapsed count read not to exist.
 - Updated M674 narrow RTL dark UI test to assert both summary and real goal chart display 25%, plus the other goal's 75%. This is intentional repeated UI data, not a duplicate ledger entry.
 - No production source changes or hidden/discarded tests. All exact-head CI must rerun. Physical Android and owner-backup parity remain separate.
+
+### M684 — completed shared month/year read path (13 November 2026; Draft PR #628)
+- Read-only `WaffraFinancePeriodIndex` is built from the owner-verified hydrated finance ledger once per source revision; no second financial DB, SQLWriter or account assignment.
+- Home prior-month balance comparison; current-month summary; budget controls for any viewed month/selected account; annual and monthly analytics and PDF source lists; last 90-day insights; three-month forecast all use indexed month/year reads rather than repeated full-ledger date scans. Home historical search and exported old transactions retain all-time eligibility. Goals and Recurring use their existing typed metadata projections without a new history scan or cash debit.
+- Every runtime insertion, edit, old budget association, deletion, Undo, login cold load, restore and reset invalidates the snapshot index, including non-current-month edits. Month-deduplication, boundary dates and historical order are covered by new pure unit tests. M401 budget source tests now validate indexed semantics without dropping their original screen/date protections.
+- The original encrypted backup bytes, V24 history, receipts, banks/wallets, derived account balances, global + and stationary Snackbar are unchanged.
+- Source implementation submitted to same PR; CI and physical-phone acceptance remain separate and must not be claimed before evidence.

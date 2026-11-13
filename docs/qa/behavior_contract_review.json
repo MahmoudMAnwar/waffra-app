@@ -2491,6 +2491,35 @@
         "Read-only account preview and month paging must not run SQL INSERT/UPDATE/DELETE; chosen historical assignment must require an active verified account, explicit user consent, and independent opening-exclusion attestation when opening is nonzero under existing generation/lock.",
         "Do not replace or alter verified Accounts editor/transfer writer; both historical entry points navigate the same account-context page and never write without chosen account and source witness."
       ]
+    },
+    {
+      "id": "M684-MONTH-YEAR-REPORT-PROJECTION-PR628",
+      "issue": "Issue #627, owner completion request 2026-11-13, same Draft PR #628",
+      "previous_behavior": "Home monthly budget and summary, analytics, forecasts and historical report views independently traversed and repeatedly filtered the entire hydrated ledger on each widget rebuild. The account transaction page already used SQLCipher month paging.",
+      "approved_behavior": "Build one read-only in-memory month/year index from the already owner-verified SQLCipher ledger. Bind Home monthly summaries, budget month control, analytics year/month and PDF inputs, local 90-day insights, the three-month forecast and the previous-month comparison to only needed index buckets; keep all-time Home transaction search/export accurate. Invalidate index on initial/cold reload, every single entry edit/insert/delete/undo, old budget relink, restore and full delete. Preserve original financial writer, backup, account link and global plus semantics.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_finance_period_index.part.dart"
+      ],
+      "test_paths": [
+        "test/m684_finance_period_index_test.dart",
+        "test/m467_account_header_test.dart",
+        "test/storage/m448_account_context_read_test.dart",
+        "test/storage/m620_restored_home_ledger_parity_test.dart",
+        "test/m401_m402_budget_month_centered_dropdown_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m160-main-reconciliation-and-backup-regression.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "No INSERT/UPDATE/DELETE, bank balance computation, goal-wallet update or account guess is performed by an index; authenticated SQLCipher remains the authoritative ledger.",
+        "No historical MoneyEntry is discarded; accountless history remains visible globally and invisible to an unassigned bank selection.",
+        "Month and year filtering preserves exactly the same IDs, signed amounts and source display ordering; duplicate month requests cannot double count.",
+        "Mutations invalidate the index prior to render; deleted and restored items cannot linger in reports.",
+        "V24/V3 backup/export/restore bytes, global FAB and Snackbar source remain byte-for-byte unchanged."
+      ]
     }
   ]
 }
