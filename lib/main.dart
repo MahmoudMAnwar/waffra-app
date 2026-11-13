@@ -17099,6 +17099,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      var sqlcipherRestoreCommitted=false;
      var restoreStage='AUTH';
      List<dynamic>? authenticatedLegacyRows;
+     // M622: reuse the already-selected encrypted source. The independent
+     // preflight re-reads its generation/digest before approving any write.
+     WaffraFinanceAuthorityRead? inspectedRestoreSource;
      try{
       var restoreArchive=stagedBackup!;
       var raw=await compute(waffraDecodeBackupInIsolate,<String,String>{
@@ -17115,6 +17118,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        final source=await _financeAuthority.load(
         route:WaffraFinanceRoute.backupRestore);
        if(source.encryptedWitness!=null){
+        inspectedRestoreSource=source;
         authenticatedLegacyRows=List<dynamic>.of(raw['entries'] as List);
         final unavailable=
          WaffraLegacyV24SqlCipherConverter.unavailableReceiptCount(raw);
@@ -17139,7 +17143,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
        }
       }
       if(raw['format']==WaffraAccountsPortableBackupV3.format){
-       final source=await _financeAuthority.load(route:WaffraFinanceRoute.backupRestore);
+       final source=inspectedRestoreSource??
+        await _financeAuthority.load(route:WaffraFinanceRoute.backupRestore);
        if(source.encryptedWitness==null){
         if(ctx.mounted)update(()=>restoreError=waffraIsEnglish?
          'This file requires an active SQLCipher vault.':
