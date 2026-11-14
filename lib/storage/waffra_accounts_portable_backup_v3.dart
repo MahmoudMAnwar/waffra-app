@@ -7,6 +7,7 @@ import 'waffra_accounts_schema.dart';
 import 'waffra_account_context_schema.dart';
 import 'waffra_account_context_backup.dart';
 import 'waffra_account_details_backup.dart';
+import 'waffra_custom_institution_links.dart';
 import 'waffra_accounts_finance_history.dart';
 import 'waffra_encrypted_store.dart';
 import 'waffra_portable_backup_v2.dart';
@@ -239,7 +240,8 @@ abstract final class WaffraAccountsPortableBackupV3 {
   final raw=jsonDecode(text);
   if(raw is! Map || raw.keys.any((k)=>k is! String)||
      raw.keys.toSet().difference(const {
-      'format','version','innerV2Sha256','innerV2','accounts','links','transfers','financeHistoryV1','accountContextV1','accountDetailsV1'
+      'format','version','innerV2Sha256','innerV2','accounts','links','transfers','financeHistoryV1','accountContextV1','accountDetailsV1',
+       'customInstitutionLinksV1'
      }).isNotEmpty||
      raw.length!=7+(raw.containsKey('financeHistoryV1')?1:0)+
        (raw.containsKey('accountContextV1')?1:0)+
