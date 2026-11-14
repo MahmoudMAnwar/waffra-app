@@ -2,6 +2,7 @@ import 'waffra_accounts_repository.dart';
 import 'waffra_account_context_read.dart';
 import 'waffra_account_context_repository.dart';
 import 'waffra_account_details_schema.dart';
+import 'waffra_custom_institution_links.dart';
 import 'waffra_custom_account_subtype_schema.dart';
 import 'waffra_account_context_policy.dart';
 import '../waffra_bank_sms_facts.dart';
@@ -86,6 +87,7 @@ class WaffraVerifiedAccountsApi implements WaffraAccountOperations {
   required String providerId,required String subtype,
   required int openingMinor,required String createdIso,
   String? lastFour,String? customSubtypeLabel,
+  String? customInstitutionRootId,
   required bool userConfirmed,
  })=>_commit<void>((accounts)async{
   if(customSubtypeLabel!=null&&
@@ -102,6 +104,10 @@ class WaffraVerifiedAccountsApi implements WaffraAccountOperations {
      !RegExp(r'^[0-9]{4}$').hasMatch(lastFour))){
    throw ArgumentError('Only masked bank last-four is supported.');
   }
+  if(customInstitutionRootId!=null&&
+     (!const {'bank','wallet'}.contains(kind)||providerId!='other'||
+      customInstitutionRootId==id))throw ArgumentError(
+       'Custom institution children must belong to an existing Other root.');
   await WaffraAccountDetailsSchema.install(accounts.db);
   await accounts.createAccount(
    id:id,name:name,kind:kind,openingMinor:openingMinor,
@@ -109,6 +115,11 @@ class WaffraVerifiedAccountsApi implements WaffraAccountOperations {
   await WaffraAccountDetailsSchema.assign(accounts.db,
    accountId:id,kind:kind,providerId:providerId,subtype:subtype,
    confirmedIso:createdIso);
+  if(customInstitutionRootId!=null){
+   await WaffraCustomInstitutionLinks.assign(accounts.db,
+    accountId:id,rootAccountId:customInstitutionRootId,
+    confirmedIso:createdIso,userConfirmed:true);
+  }
   if(customSubtypeLabel!=null){
    await WaffraCustomAccountSubtypeSchema.install(accounts.db);
    await WaffraCustomAccountSubtypeSchema.assign(accounts.db,
