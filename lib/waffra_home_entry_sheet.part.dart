@@ -348,6 +348,8 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
        createdIso:DateTime.now().toUtc().toIso8601String(),
        lastFour:draft.lastFour,
        customSubtypeLabel:draft.customSubtypeLabel,
+       customInstitutionRootId:mainProvider?null:
+        waffraCustomInstitutionRootForGroup(selectedParent),
        userConfirmed:true);
       // Read the authoritative SQLCipher result directly. A concurrent
       // Home refresh can lag behind this route, leaving both dropdowns empty.
