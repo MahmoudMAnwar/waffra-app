@@ -127,6 +127,20 @@ void main() {
           // This deliberately tests a *cold* encrypted database reopen;
           // both trials are independent. It never writes to a real device.
           db=WaffraEncryptedStore.openAt(path,key:key);
+          // A second attempt at restoring to the SAME non-empty vault must
+          // be refused without doubling rows or changing the source digest.
+          final beforeRetry=await WaffraAtomicFinanceSnapshot(
+            store:db,experimentalEnabled:true).read();
+          await expectLater(
+            WaffraAccountsPortableBackupV3.restoreToEmptyEncryptedVault(
+              encryptedArchive:candidate.encryptedV3,
+              password:password,disposableStore:db,
+              userConfirmed:true,experimentalEnabled:true),
+            throwsA(anything));
+          final afterRetry=await WaffraAtomicFinanceSnapshot(
+            store:db,experimentalEnabled:true).read();
+          expect(afterRetry.generation,beforeRetry.generation);
+          expect(afterRetry.digest,beforeRetry.digest);
           final sql=await db.customSelect(
             'SELECT count(*) AS n, '
             'COALESCE(SUM(CASE WHEN is_income=1 THEN amount_minor ELSE 0 END),0) AS inc, '
