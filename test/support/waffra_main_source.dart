@@ -72,5 +72,9 @@ String readWaffraMainSourceForContracts(){
  if(s.split(categoryWorkflowsMarker).length!=2)throw StateError('Missing or duplicate M735 category workflows marker');
  s=s.replaceFirst(categoryWorkflowsMarker,_method('lib/waffra_home_category_workflows.part.dart',
   ' Future<BudgetCategory?> categoryDialog('));
+ const inboxMarker=' // M739: original sender-grouped bank SMS inbox dialog moved to same-library part.\n';
+ if(s.split(inboxMarker).length!=2)throw StateError('Missing or duplicate M739 original inbox marker');
+ s=s.replaceFirst(inboxMarker,_method('lib/waffra_home_sms_inbox.part.dart',
+  ' Future<void> _openAutoSmsInbox()async{'));
  return s;
 }
