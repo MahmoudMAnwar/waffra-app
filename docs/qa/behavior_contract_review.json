@@ -3053,6 +3053,31 @@
         "Budget-only edits and monthly projections cannot mutate an unrelated bank account balance.",
         "Old finance and UI tests observe real production Dart text rather than removed or weakened assertions."
       ]
+    },
+    {
+      "id": "M717-RETIRED-CLOUD-RUNTIME-REACHABILITY",
+      "issue": "Issue #634 and #637 / Draft PR #638; remove unused external AI/Cloud runtime dependency without affecting local SMS financial review",
+      "previous_behavior": "A retired Cloudflare SMS gateway remained in lib with an unused HTTP client type despite its analyze entrypoint always returning null. Test-only model currency validators remain available to old finance safety assertions.",
+      "approved_behavior": "Remove the unused http client compile-time import from this retired transport, retain the named analyze argument and fail-closed null behavior for historical tests, and independently verify that no AI/Cloudflare module is transitively imported by the app's main entrypoint or registered library parts.",
+      "source_paths": [
+        "lib/waffra_cloudflare_sms_gateway.dart",
+        "lib/main.dart",
+        "lib/waffra_sms_cloud_service.dart"
+      ],
+      "test_paths": [
+        "test/m717_no_cloud_runtime_dependency_test.dart",
+        "test/m690_retired_cloud_sms_contract_test.dart",
+        "test/m423_cloudflare_sms_gateway_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "No sensitive SMS or bank data can reach a retired external HTTP transport.",
+        "Local bank SMS parsing and manual review stay available, and encrypted original SMS text stays unchanged.",
+        "Old test-only amount and currency anti-hallucination evidence remains checked."
+      ]
     }
   ]
 }

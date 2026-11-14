@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 
 import 'waffra_ai_finance_brain.dart';
 import 'waffra_bank_sms_facts.dart';
@@ -125,6 +124,6 @@ abstract final class WaffraCloudflareSmsGateway {
     required String source,
     required String appCheckToken,
     required Uri endpoint,
-    http.Client? client,
+    Object? client,
   }) async => null;
 }
