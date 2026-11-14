@@ -15,13 +15,13 @@ void main() {
   expect(main,contains(' Future<void>? _m474PullRefreshInFlight;'));
   expect(part,contains('_m474PullRefreshInFlight'));
   expect(part,contains('_financeAuthority'));
-  expect(part,contains('_m684InvalidatePeriodRead()'));
+  expect(part,contains('WaffraVerifiedPullRefreshSource.fromAuthority(current)'));
   expect(part,isNot(contains('super.dispose()')));
  });
  test('M782 current Home financial refresh source equals real registered Dart-part implementation',(){
   final full=readWaffraMainSourceForContracts();
   final start=full.indexOf(' Future<void> _refreshAndSettle(');
-  final end=full.indexOf(' Future<void> _refreshWidget()async{',start);
+  final end=full.indexOf(' Future<void> load()async {',start);
   final part=File('lib/waffra_home_verified_refresh.part.dart').readAsStringSync();
   final original=part.substring(part.indexOf(' Future<void> _refreshAndSettle('),
    part.lastIndexOf('\n}')+1);
