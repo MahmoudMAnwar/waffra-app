@@ -405,8 +405,8 @@ class WaffraEncryptedFullFinanceReset {
 
   Future<void> _deletePendingExternalReceipts() async {
     final exists = await snapshot.store.customSelect(
-      "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
-      variables: [Variable.withString(_receiptCleanupTable)],
+      "SELECT name FROM sqlite_master WHERE type='table' "
+      "AND name='fresh_finance_reset_receipt_cleanup'",
     ).get();
     if (exists.isEmpty) return;
     final rows = await snapshot.store.customSelect(
