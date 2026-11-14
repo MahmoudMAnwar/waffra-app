@@ -43,7 +43,7 @@ def _registered_home_entry_source(sources: Mapping[str, str], problems: list[str
     declaration = "part 'waffra_home_entry_sheet.part.dart';"
     marker = (
         " // M719: original verified transaction entry form extracted "
-        "to same-library Home part.\\n"
+        "to same-library Home part.\n"
     )
     # This is a source assertion, not a substitute for Dart analyzer checks.
     if main.count(declaration) != 1 or main.count(marker) != 1:
@@ -52,7 +52,7 @@ def _registered_home_entry_source(sources: Mapping[str, str], problems: list[str
     part = sources.get(path, "")
     start_marker = " Future<void> entrySheet("
     start = part.find(start_marker)
-    end = part.rfind("\\n}")
+    end = part.rfind("\n}")
     if (not part.startswith("part of 'main.dart';")
             or "on _HomeScreenState" not in part
             or part.count(start_marker) != 1
