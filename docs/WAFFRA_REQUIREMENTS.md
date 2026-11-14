@@ -1,3 +1,10 @@
+## M937 — Phase Four exact-SHA regression reporting (2026-11-14)
+
+- Issue [#642](https://github.com/MahmoudMAnwar/waffra-app/issues/642); same [Draft PR #640](https://github.com/MahmoudMAnwar/waffra-app/pull/640). Status: Partial, exact-HEAD CI pending.
+- Owner-approved Phase Four: existing full Flutter suite reports real passed, failed, skipped, total and approximate repeated failure symptom groups, not confirmed unique defects. JSON file reporter preserves original expanded output; original test step and source security gates still fail on any error, skipped cases not converted to passed.
+- Safeguards: raw events and error/stack content never uploaded, only sanitized report and Job Summary. Missing runner data fails closed. No financial application code, source authority, Android permissions, keys, release or extra suite changes.
+- QA: [M937 report acceptance](qa/M937_PHASE_FOUR_TEST_REPORTING.md) and test/qa/m937_flutter_test_report_test.py.
+
 ## M936 — Phase Three signed-release source readiness, owner acceptance NO-GO (2026-11-14)
 
 - **Issue:** [#641](https://github.com/MahmoudMAnwar/waffra-app/issues/641). **Same Draft PR:** [#640](https://github.com/MahmoudMAnwar/waffra-app/pull/640). **Status:** Partial — read-only release source inventory and hostile scanner tests added; owner signed-APK/physical Android acceptance and explicit launch approval pending.
