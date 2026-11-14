@@ -105,6 +105,12 @@
         "start": " static Future<void> assign(",
         "end": null
       }
+    ],
+    "test/qa/m447_verified_sms_account_linking_test.py": [
+      {
+        "start": "    def test_verified_source_only_with_no_shadow_db(self):",
+        "end": "    def test_no_guarded_legacy_sms_account_override(self):"
+      }
     ]
   }
 }
