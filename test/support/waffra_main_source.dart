@@ -140,5 +140,9 @@ String readWaffraMainSourceForContracts(){
  if(s.split(verifiedPickersMarker).length!=2)throw StateError('Missing or duplicated M812 bank account/budget selection marker');
  s=s.replaceFirst(verifiedPickersMarker,_method('lib/waffra_home_verified_finance_pickers.part.dart',
   ' /// Read a single authoritative SQLCipher account witness immediately'));
+ const widgetSyncMarker=' // M840: original verified Home/Widget synchronization now in registered Dart part.\n';
+ if(s.split(widgetSyncMarker).length!=2)throw StateError('Missing or duplicate M840 actual Widget sync source');
+ s=s.replaceFirst(widgetSyncMarker,_method('lib/waffra_home_widget_sync.part.dart',
+  ' Future<void> _syncWidgetTransactions()async{'));
  return s;
 }
