@@ -3671,6 +3671,35 @@
         "Single-flight finance source and logout/session fencing remain unchanged.",
         "Preserve all current original positive/negative tests; no actual phone and owner historical encrypted-backup parity claimed."
       ]
+    },
+    {
+      "id": "M770-VERIFIED-SMS-REVIEW-ACCOUNT-SAR-ACK-REGISTERED-PART",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Home State retained original bounded verified SQLCipher row decoding, explicit bank SMS confirmation, exact protected original-message review and full sender-level pending review UI inline.",
+      "approved_behavior": "Byte-identically relocate the original _m593BuildVerifiedEntries, _m565ConfirmSms, _m615ReviewDetail and _reviewAutoSmsCandidates methods into a registered same-library Dart part; old original-source contracts inspect the true parts. No new posting route or behavior change.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_sms_confirmation.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/m770_home_sms_confirmation_extraction_test.dart",
+        "test/m417_sms_first_run_test.dart",
+        "test/m669_sms_review_category_search_test.dart",
+        "test/m632_sms_account_splash_isolate_contract_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "No confirmed bank SMS writes without source SAR and date confirmation, one verified selected account, and explicit userConfirmed:true.",
+        "Duplicate hash and original message ACK and encryption privacy remain enforced and no old finance assertion may be weakened.",
+        "Missing/duplicated registered production Dart part fails source QA, never reconstructed with a stub.",
+        "Exact current-head CI and owner physical Android restored-archive parity required before full acceptance."
+      ]
     }
   ]
 }
