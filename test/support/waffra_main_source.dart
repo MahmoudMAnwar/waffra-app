@@ -60,6 +60,18 @@ String readWaffraMainSourceForContracts(){
  if(s.split(smsMarker).length!=2)throw StateError('Missing or duplicated M703 part marker');
  s=s.replaceFirst(smsMarker,_method('lib/waffra_home_sms_transfer_review.part.dart',
   ' /// Explicit, idempotent account-to-account transfer from reviewed bank SMS.'));
+ const compactActivityMarker=' // M790: original compact financial activity cards live in registered Home part.\n';
+ if(s.split(compactActivityMarker).length!=2)throw StateError('Missing or duplicate M790 verified transaction card marker');
+ s=s.replaceFirst(compactActivityMarker,_method('lib/waffra_home_compact_activity_cards.part.dart',
+  ' Widget compactTransaction(MoneyEntry entry){'));
+ const categoryReceiptMarker=' // M795: Home category selector and protected receipt dialogs moved to registered Dart part.\n';
+ if(s.split(categoryReceiptMarker).length!=2)throw StateError('Missing or duplicate M795 real category and receipts marker');
+ s=s.replaceFirst(categoryReceiptMarker,_method('lib/waffra_home_category_receipt_dialogs.part.dart',
+  ' Future<String?> chooseTransactionCategory('));
+ const financeRecoveryMarker=' // M791: original fail-closed Home finance startup and recovery UI in registered part.\n';
+ if(s.split(financeRecoveryMarker).length!=2)throw StateError('Missing or duplicated M791 recovery source marker');
+ s=s.replaceFirst(financeRecoveryMarker,_method('lib/waffra_home_finance_recovery.part.dart',
+  ' Future<void> _loadFinanceSafely()async{'));
  const dashboardMarker=' // M733: unchanged dashboard, forecast and financial analytics views moved to registered Home part.\n';
  if(s.split(dashboardMarker).length!=2)throw StateError('Missing M733 registered dashboard section');
  s=s.replaceFirst(dashboardMarker,_method('lib/waffra_home_dashboard_analytics.part.dart',
@@ -116,17 +128,5 @@ String readWaffraMainSourceForContracts(){
  if(s.split(managementMarker).length!=2)throw StateError('Missing or duplicated M783 original SMS management marker');
  s=s.replaceFirst(managementMarker,_method('lib/waffra_home_sms_management.part.dart',
   ' Future<void> _scanPreviousBankSmsFromSettings()async{'));
- const compactActivityMarker=' // M790: original compact financial activity cards live in registered Home part.\n';
- if(s.split(compactActivityMarker).length!=2)throw StateError('Missing or duplicate M790 verified transaction card marker');
- s=s.replaceFirst(compactActivityMarker,_method('lib/waffra_home_compact_activity_cards.part.dart',
-  ' Widget compactTransaction(MoneyEntry entry){'));
- const categoryReceiptMarker=' // M795: Home category selector and protected receipt dialogs moved to registered Dart part.\n';
- if(s.split(categoryReceiptMarker).length!=2)throw StateError('Missing or duplicate M795 real category and receipts marker');
- s=s.replaceFirst(categoryReceiptMarker,_method('lib/waffra_home_category_receipt_dialogs.part.dart',
-  ' Future<String?> chooseTransactionCategory('));
- const financeRecoveryMarker=' // M791: original fail-closed Home finance startup and recovery UI in registered part.\n';
- if(s.split(financeRecoveryMarker).length!=2)throw StateError('Missing or duplicated M791 recovery source marker');
- s=s.replaceFirst(financeRecoveryMarker,_method('lib/waffra_home_finance_recovery.part.dart',
-  ' Future<void> _loadFinanceSafely()async{'));
  return s;
 }
