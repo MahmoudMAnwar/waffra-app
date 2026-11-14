@@ -74,7 +74,10 @@ void main() {
     expect(source,contains('class WaffraOutlinedItemsCount'));
     expect(source,contains("Key('m689-goal-card-'"));
     expect(source,contains("Key('m689-due-card-'"));
-    expect(source,contains("_filterChip(waffraIsEnglish?'This week':'هذا الأسبوع'"));
+    expect(source,contains("Key('m938-goals-filter-menu')"));
+    expect(source,contains("Key('m938-dues-filter-menu')"));
+    expect(source,contains('goalCounts[goalDisplay]'));
+    expect(source,contains('dueCounts[recurringDisplay]'));
     expect(source,isNot(contains("WaffraOutlinedItemsCount(label:waffraIsEnglish?'Recurring transactions'")));
     expect(source,contains('width:36,height:30,color:forest'));
   });
@@ -89,7 +92,8 @@ void main() {
     expect(source,isNot(contains('bottomNavigationBar:accountOpened?null:Column(mainAxisSize:MainAxisSize.min')));
     expect(source,contains('if(mounted&&addFabExpanded)setState(()=>addFabExpanded=false)'));
     expect(source,contains('maxLines:2,'));
-    expect(source,contains('width:min(MediaQuery.sizeOf(ctx).width*0.87,440.0)'));
+    expect(source,contains('width:widget.expandToAvailableWidth?double.infinity:'));
+    expect(source,contains('min(MediaQuery.sizeOf(ctx).width*0.87,440.0)'));
     expect(RegExp(r'\.showSnackBar\s*\(').allMatches(source).length,1);
   });
 

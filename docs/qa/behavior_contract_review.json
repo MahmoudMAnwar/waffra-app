@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "pr": 640,
-  "issue": "Issues #639, #641, #642 and #643",
+  "issue": "Issues #639, #641, #642, #643; combined with merged main #644",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at new branch start",
   "reviewed_at": "2026-11-14",
@@ -2881,7 +2881,7 @@
       "id": "M698-UNCONFIGURABLE-CLOUD-REVIEW-ISSUE634",
       "issue": "Issue #634 / Draft PR #638",
       "previous_behavior": "The obsolete Cloudflare helper still exposed an environment configured URL, and the unused message-stage module remained in lib.",
-      "approved_behavior": "Return configured=false and empty configuredUrl regardless of stale builds, remove only the unreachable old cloud message staging module, preserve review-only currency/OTP and native protected SMS parsing. The removed staging module is declared in the exact approved-deletion manifest; M550 references only surviving production sources and the no-network test. M701 M550 now verifies deleted paths are explicitly M385-declared, covered by this review contract, with retained no-network tests; an unapproved deletion is rejected.",
+      "approved_behavior": "Return configured=false and empty configuredUrl regardless of stale builds, remove only the unreachable old cloud message staging module, preserve review-only currency/OTP and native protected SMS parsing. The removed staging module is declared in the exact approved-deletion manifest; M550 references only surviving production sources and the no-network test. M701 M550 now verifies deleted paths are explicitly M385-declared, covered by this review contract, with retained no-network tests; an unapproved deletion is rejected. M644 preflight correction: the historical deleted staging module is not a live source in this current PR diff; keep it in the deletion manifest, but only enumerate existing sources here.",
       "source_paths": [
         "lib/waffra_cloudflare_sms_gateway.dart",
         "lib/waffra_sms_cloud_service.dart"
@@ -2896,8 +2896,7 @@
       "safety_invariants": [
         "No external SMS submission can be enabled by build-time define.",
         "Manual review, original SMS and authenticated SQLCipher writer are unchanged.",
-        "Historical pure validation tests retain their original financial rejection assertions.",
-        "Historical file lib/waffra_sms_cloud_review_analyzer.dart was owner-retired on main before this PR and must remain absent; M698 source evidence points only to existing files, while test/m690_retired_cloud_sms_contract_test.dart validates deletion."
+        "Historical pure validation tests retain their original financial rejection assertions."
       ]
     },
     {
@@ -4615,6 +4614,48 @@
         "No legacy repair may rewrite a financial transaction, cash account, savings funding movement, archived goal's amount or immutable encrypted snapshot.",
         "A backup password and source CAS/SQLCipher restore preflight remain mandatory; remove only the redundant second fingerprint inside an already biometrically authorized still-open dialog.",
         "Full code-side CI cannot substitute for Android screenshots, physical biometric count or owner's historical archive and balance parity."
+      ]
+    },
+    {
+      "id": "M644-BIOMETRIC-ONLY-ATOMIC-RESET-NO-FAB-NOTICE",
+      "issue": "Issue #644 / Draft PR #645",
+      "previous_behavior": "Home uses saveCaptured(fullFinanceReset) even when encrypted SQLCipher refuses destructive snapshot edits; a generic reload error appears. No-FAB Tools notice inherits the narrower 87%-and-440dp footer card even though no + occupies its end.",
+      "approved_behavior": "Financial delete flows from one explicit action directly through device biometric to the dedicated active SQLCipher-only all-finance reset; no forced backup, no extra confirmation, and no legacy fallback. The writer checks fresh source generation, typed ledger/receipt ownership, SQL foreign keys, known finance tables and all-or-nothing native transaction. Preserve account login and nonfinance preferences. No-FAB pages show notice to normal page margins, while existing + FAB notice bottom/position stay unchanged with wrapping upwards. Follow-up CI repair reads exact compiled Home part source instead of obsolete raw main.dart-only checks for Saudi greetings and recurring reminders; uses the installed receipt table when present; preserves complete monetary reset assertions and all original budget/index tests. M644 completion: if no FAB in an opened account detail route, render the wide footer notice with 12dp bottom clearance (no navigation footer); Tools and not-ready routes use original 90dp clearance. For older SQL receipt metadata, accept only exact verified SQLCipher BLOB mirror with matching owner, position, filename, SHA, purge all together; file-only legacy attachments reject before mutation. Completion for real app-owned legacy receipts: verify path ownership confined to the app private Documents/receipts directory, reject symlinks and SHA drift, prepare an encrypted SQLCipher pending-file journal within the same financial reset transaction, then delete verified files only after commit; replay any interrupted cleanup at next activated-source bind, and correctly display pending cleanup instead of claiming the ledger rollback.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_account_tools.part.dart",
+        "lib/storage/waffra_verified_finance_authority.dart",
+        "lib/storage/waffra_encrypted_finance_session.dart",
+        "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
+        "lib/storage/waffra_encrypted_full_finance_reset.dart",
+        ".github/workflows/m283-compact-layout-tools-back-greetings.yml",
+        ".github/workflows/m290-country-reminders-multicurrency.yml",
+        "lib/storage/waffra_production_finance_authority_binding.dart"
+      ],
+      "test_paths": [
+        "test/m644_no_fab_snackbar_width_test.dart",
+        "test/storage/m644_biometric_finance_reset_test.dart",
+        "test/m110_live_finance_authority_writer_test.dart",
+        "test/waffra_directional_fab_receipt_corner_test.dart",
+        "test/m304_cross_source_duplicate_review_test.dart",
+        "test/m373_independent_budgets_finance_test.dart",
+        "test/m684_finance_period_index_test.dart"
+      ],
+      "safety_invariants": [
+        "A failed device biometric always leaves funds, transfers, receipts, goals, budget and auth untouched.",
+        "Stale source or unknown schema aborts before any encrypted writes; failure inside the SQL transaction rolls back all rows.",
+        "Never erase OS encryption key, login identity, app preferences or external files automatically.",
+        "No FAB positional movement, no Snackbar X, no truncated long Arabic/English text; no-FAB notice expands to page margins.",
+        "Exact-HEAD CI, cold reopen and real physical Android checks are pending, do not claim Done until verified.",
+        "Preflight resolves registered part declarations with an origin check; a missing or malformed part still fails the guarded workflow.",
+        "Optional receipt-BLOB SQL table may be physically absent only when no encrypted invoice was ever stored; a present table must have no rows after reset.",
+        "Independent budgets, deleted entries and finance-period indexes remain covered by positive assertions rather than simply deleting tests.",
+        "An opened account route without a '+' renders one full-width notice at 12dp page-bottom margin; other no-FAB routes keep their footer clearance and FAB geometry never changes.",
+        "An old SQL receipt index may be purged only when its bytes are present and hash-attested inside SQLCipher. An external path-only or mismatched receipt stays untouched and blocks the entire SQL reset.",
+        "Only a regular file in the independently constructed private Documents/receipts directory with a verified snapshot owner and matching cryptographic bytes may be deleted; external paths, symlinks, duplicate owners and changed images block the financial reset before commit.",
+        "No external receipt file is deleted before the SQLCipher finance transaction succeeds; pending external cleanup is recorded in the SQLCipher vault before the commit and resumed only under verified source ownership and native writer lock.",
+        "After a committed reset, failed physical-file cleanup must be reported as partial cleanup and must never be represented as a successful SQL rollback; persisted cleanup journal replays without removing unrelated financial data.",
+        "Normal app startup without pending receipt cleanup must skip the writer gate; source cutover and identity credentials remain unchanged."
       ]
     }
   ]

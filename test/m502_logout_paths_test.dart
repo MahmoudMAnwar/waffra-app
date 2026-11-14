@@ -70,7 +70,7 @@ void main() {
     expect(root,contains('_logoutNavigatorKey.currentContext'));
     expect(root,contains('snack(feedbackContext,message,'));
     expect(root,contains('preferFooter:true'));
-    expect(presenter,contains('preferFooter||inHome||inHomeDialog'));
+    expect(presenter,contains('if(inHome||(_waffraFooterHostCount>0&&(preferFooter||inHomeDialog)))'));
     expect(presenter,contains('_waffraShowFooterNotice(notice)'));
     expect(presenter,contains('messenger.showSnackBar(SnackBar('));
     expect(src,contains('waffraDismissFooterNotice();'));

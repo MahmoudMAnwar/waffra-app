@@ -413,7 +413,8 @@ extension _WaffraHomeAccountTools on _HomeScreenState {
        waffraIsEnglish?'Confirm backup restore':'تأكيد الاستعادة',
        waffraIsEnglish?'Restore this backup?':'هل تريد استعادة النسخة الاحتياطية؟');
       if(ok!=true||!mounted)return;
-      if(!await _authorizeSensitiveAction('restoring data')||!mounted)return;
+      // The still-open dialog already required OS biometric on entry.
+      // Explicit replacement consent and verified SQLCipher preflight remain mandatory.
       // Build the complete restored finance image without mutating Home
       // state. A rejected source witness or interrupted writer must NOT
       // show transactions that were never durably committed.
@@ -684,66 +685,54 @@ extension _WaffraHomeAccountTools on _HomeScreenState {
   if(mounted)snackSuccess(context,waffraIsEnglish?'PIN changed':'تم تغيير الرمز بنجاح');
  }
  Future<void> eraseFinancialData()async {
+  // M644: one explicit tap and one successful device biometric are consent.
+  // Never ask for an external backup or a second confirmation afterward.
   if(!await _authorizeSensitiveAction('deleting financial data')||!mounted)return;
-  final ok=await confirmDeletion(
-   waffraIsEnglish?'Permanently delete financial data?':'حذف البيانات المالية نهائيًا',
-   waffraIsEnglish?'This deletes transactions, categories, budgets, goals and recurring schedules. It cannot be undone. Your profile and app settings stay.':
-    'سيتم حذف المعاملات والأقسام والميزانيات والأهداف والجدولة المتكررة نهائيًا. لا يمكن التراجع. سيبقى الملف الشخصي وإعدادات التطبيق.');
-  if(ok!=true||!mounted)return;
-  final cleanCategories=defaultCategories();
-  // Every recognized financial field is reset through ONE crash-recoverable
-  // journal. SMS hashes must NOT be cleared independently before finance
-  // persistence, and non-finance profile/app settings must remain intact.
-  final clean=<String,Object>{
-   'entries':'[]',
-   'waffra_categories_v24':jsonEncode(cleanCategories.map((e)=>e.toJson()).toList()),
-   'waffra_named_budgets_v1':'[]',
-   'waffra_goals_v24':'[]',
-   'waffra_recurring_v24':'[]',
-   'waffra_challenges_v1':'[]',
-   'waffra_deleted_categories_v1':'[]',
-   'waffra_deleted_goals_v1':'[]',
-   'waffra_deleted_recurring_v1':'[]',
-   'waffra_recurring_postponed_v1':'{}',
-   'waffra_monthly_budget_v1':0.0,
-   'waffra_monthly_budget_enabled_v1':false,
-   'waffra_learned_merchants_v1':'{}',
-   'waffra_sms_hashes_v1':<String>[],
-   'waffra_recurring_reminders_enabled_v1':false,
-  };
   try{
-   final baseline=_lastFinanceAuthorityRead;
-   await _financialWriteQueue.submit(clean,(captured)async{
-    if(baseline==null)throw StateError('Finance reset source baseline unavailable.');
-    final committed=await _financeAuthority.saveCaptured(
-     route:WaffraFinanceRoute.fullFinanceReset,
-     baseline:baseline,captured:captured,
-    );
-    _lastFinanceAuthorityRead=committed;
-    _lastLedgerSavedRaw=committed.ledgerRaw;
-    _lastWidgetRevision=committed.widgetRevision;
-   });
+   // Never drop an in-flight SMS/Widget write before it is committed.
+   await _financialWriteQueue.drain();
+   await _ensureFinanceBound();
+   final baseline=await _financeAuthority.load(
+    route:WaffraFinanceRoute.fullFinanceReset);
+   final committed=await _financeAuthority.resetAfterBiometric(
+    route:WaffraFinanceRoute.fullFinanceReset,
+    baseline:baseline,userConfirmed:true,biometricVerified:true);
+   _lastFinanceAuthorityRead=committed;
+   _lastLedgerSavedRaw=committed.ledgerRaw;
+   _lastWidgetRevision=committed.widgetRevision;
    if(!mounted)return;
-   setState((){
-    _m684InvalidatePeriodRead();
-    entries.clear();
-    categories..clear()..addAll(cleanCategories);
-    namedBudgets.clear();
-    goals.clear();challenges.clear();recurring.clear();
-    deletedCategories.clear();deletedGoals.clear();deletedRecurring.clear();
-    recurringPostponed.clear();smsHashes.clear();learnedMerchantCategories.clear();
-    monthlyBudget=0;monthlyBudgetEnabled=false;recurringRemindersEnabled=false;
-   });
-   unawaited(_refreshWidget());
-   try{await WaffraReminders.clear();}catch(e){
-    debugPrint('Could not clear old recurring reminders: $e');
+   await _loadFinanceSafely();
+   if(!mounted)return;
+   // No optimistic success: the Home projection must reflect the fresh
+   // durable empty SQLCipher source before confirming deletion to the user.
+   if(!ready||_financeLoadFailure!=null||
+      entries.isNotEmpty||goals.isNotEmpty||recurring.isNotEmpty||
+      namedBudgets.isNotEmpty||deletedCategories.isNotEmpty||
+      deletedGoals.isNotEmpty||deletedRecurring.isNotEmpty){
+    throw StateError('Financial reset post-read differs from Home modules.');
    }
-   if(mounted)snackSuccess(context,waffraIsEnglish?'Financial data deleted':'تم حذف البيانات المالية');
+   try{await WaffraReminders.clear();}catch(e){
+    debugPrint('Recurring reminder cleanup after reset: $e');
+   }
+   if(mounted)await _refreshWidget();
+   if(mounted)snackSuccess(context,waffraIsEnglish?
+    'Financial data permanently deleted':'تم حذف البيانات المالية بنجاح');
   }catch(e){
-   debugPrint('Financial erase was not fully confirmed: $e');
+   if(e is WaffraReceiptCleanupPending){
+    // Money was already committed as empty. Never falsely claim that the
+    // entire operation rolled back merely because an old app-owned image
+    // failed the post-commit purge; encrypted startup can resume the journal.
+    try{await _loadFinanceSafely();}catch(_){}
+    if(mounted)snack(context,waffraIsEnglish?
+     'Financial records were deleted, but receipt cleanup is pending. The app will retry securely.':
+     'تم حذف البيانات المالية، لكن تنظيف بعض المرفقات لم يكتمل وسيُستأنف بأمان.');
+    return;
+   }
+   // A source or foreign-key mismatch must never trigger a legacy fallback.
+   debugPrint('M644 verified biometric finance reset rejected: $e');
    if(mounted)snack(context,waffraIsEnglish?
-    'Deletion could not be verified. Reload before retrying.':
-    'تعذر تأكيد حذف البيانات. أعد التحميل قبل المحاولة مجددًا.');
+    'Financial deletion was not verified. No retry without checking your data.':
+    'لم يتم تأكيد الحذف الآمن. تحقق من البيانات قبل إعادة المحاولة.');
   }
  }
  Widget _accountTile(String label,String subtitle,IconData icon,{VoidCallback? onTap,Widget? trailing,Color tint=emerald})=>

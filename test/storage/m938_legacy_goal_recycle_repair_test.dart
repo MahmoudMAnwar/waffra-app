@@ -77,9 +77,10 @@ void main(){
  });
 
  test('M938 refuses stale source generation even with explicit consent',()async{
+  // Change an allowed finance key; only the generation, not the domain, changes.
   final changed=await snapshot.commit(
    expectedGeneration:baseline.generation,
-   fullFinanceSnapshot:{...baseline.values,'waffra_custom_goals_v1':<String>[]});
+   fullFinanceSnapshot:{...baseline.values,'waffra_goals_v24':'[ ]'});
   expect(changed.generation,greaterThan(baseline.generation));
   await expectLater(recycle.repairImportedLegacyTrash(
    module:WaffraFinanceModule.goals,baseline:baseline,

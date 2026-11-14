@@ -70,7 +70,9 @@ void main(){
   final dialog=source.substring(start,end);
   expect(dialog,contains('if(mode==0)'));
   expect(dialog,contains('if(mode==1)'));
-  expect(dialog,contains('if(advanced)TextButton.icon('));
+  expect(dialog,isNot(contains('if(advanced)TextButton.icon(')));
+  expect(dialog,contains('WaffraLegacyV24SqlCipherConverter.prepare('));
+  expect(RegExp(r'_authorizeSensitiveAction\(').allMatches(dialog).length,1);
   expect(dialog,contains("Key('waffra-open-backup-file')"));
   expect(dialog,contains('فشل التحقق من صحة الملف'));
   expect(dialog,contains('compute(waffraEncryptBackupInIsolate'));

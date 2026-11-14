@@ -127,7 +127,16 @@ void main(){
   expect(s,contains('_m684InvalidatePeriodRead();\n  setState(()=>entries.removeWhere('));
   expect(s,contains('_m684InvalidatePeriodRead();\n    setState(()=>entries.insert(0,e)'));
   expect(s,contains('_m684InvalidatePeriodRead();entries.clear();smsHashes.clear()'));
-  expect(s,contains('_m684InvalidatePeriodRead();\n    entries.clear();'));
+  // The biometric reset reloads Home through the single verified recovery
+  // path. That path, not the delete tap, invalidates stale period indexes.
+  final reset=File('lib/waffra_home_account_tools.part.dart').readAsStringSync();
+  final recovery=File('lib/waffra_home_finance_recovery.part.dart').readAsStringSync();
+  final deleteStart=reset.indexOf('Future<void> eraseFinancialData()async');
+  final deleteEnd=reset.indexOf('Widget _accountTile(',deleteStart);
+  expect(deleteStart,greaterThan(0));
+  expect(reset.substring(deleteStart,deleteEnd),
+    contains('await _loadFinanceSafely();'));
+  expect(recovery,contains('_m684InvalidatePeriodRead();\n  entries.clear();'));
   expect(s,contains('_m684InvalidatePeriodRead();\n   entries..clear()..addAll(loaded);'));
  });
 }
