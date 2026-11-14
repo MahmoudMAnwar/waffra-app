@@ -1879,3 +1879,7 @@ Code scope: extract the existing Home dashboard, month/forecast widgets and read
 
 ### M733 — #633/#634 / Draft #638: remaining source QA and valid Dart dependency regex
 Preserve five original test files' unchanged assertions by redirecting only their stale Home source readers to actual registered Dart-part reconstruction, with exact M385 method boundaries. Use Dart RegExp's native `multiLine:true` instead of unsupported inline `(?m)` in M717; the dependency graph's matches and prohibited modules remain unchanged. Same-head CI and original Android encrypted backup parity remain acceptance gates.
+
+
+### M733 — Issue #633 / Draft PR #638: real verified transfer and savings cards extraction
+Owner directs completing the remaining code-only part of the Home refactor on the same Draft PR. Extract the original source/destination verified transfer labels/cards, savings contribution/withdrawal cards, and compact transfer-history sheet from `_HomeScreenState` into a same-library registered Dart part. Preserve every account identity, amount, direction, balance, goal amount, layout/FAB and no-write display rule byte-for-byte. Keep secure transfer posting and SQLCipher ledger writers untouched; add a regression asserting source registration, original finance display behavior and part-source reconstruction. Original full-screen physical Android overflow and actual old-archive restore remain separate device acceptance requirements; do not claim 100% until verified.
