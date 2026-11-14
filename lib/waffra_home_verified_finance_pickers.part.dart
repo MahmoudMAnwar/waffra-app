@@ -348,36 +348,66 @@ extension _WaffraHomeVerifiedFinancePickers on _HomeScreenState {
           const SizedBox(height:5),
           WaffraCenteredDropdownFormField<String>(
            key:ValueKey('m470-review-provider-'+n.toString()+'-'+
-            (chosenProviders[n]??'none')),
+            (chosenProviders[n]??'none')+'-'+parentRevisions[n].toString()),
            initialValue:chosenProviders[n],isExpanded:true,
            menuMaxHeight:min(340.0,MediaQuery.sizeOf(ctx).height*.48),
            decoration:InputDecoration(
             labelText:waffraIsEnglish?'Bank or provider':'الجهة أو البنك',
             border:const OutlineInputBorder()),
-           items:providerGroups.map((group)=>DropdownMenuItem<String>(
-            value:group.id,child:WaffraText(waffraIsEnglish?
-             group.labelEn:group.labelAr,maxLines:1))).toList(),
-           onChanged:WaffraHaptics.selection((value)=>update((){
-            chosenProviders[n]=value;
-            assigned[n]=null; // Provider never silently approves an account.
-           })),
+           items:[
+            ...providerGroups.map((group)=>DropdownMenuItem<String>(
+             value:group.id,child:WaffraText(waffraIsEnglish?
+              group.labelEn:group.labelAr,maxLines:1))),
+            DropdownMenuItem<String>(value:'__m942_add_provider__',
+             child:WaffraText(waffraIsEnglish?
+              'Add bank / provider':'إضافة بنك أو جهة')),
+           ],
+           onChanged:WaffraHaptics.selection((value){
+            if(value=='__m942_add_provider__'){
+             update(()=>parentRevisions[n]++);
+             unawaited(Future<void>.delayed(Duration.zero,(){
+              if(ctx.mounted)unawaited(createInlineReviewAccount(
+               ctx,update,n,createProvider:true));
+             }));
+             return;
+            }
+            update((){
+             chosenProviders[n]=value;
+             assigned[n]=null;
+            });
+           }),
           ),
           const SizedBox(height:7),
           WaffraCenteredDropdownFormField<String>(
            key:ValueKey('waffra-sms-account-'+n.toString()+'-'+
-            (assigned[n]??'none')),
+            (assigned[n]??'none')+'-'+childRevisions[n].toString()),
            initialValue:mustSelectAccount?
             assigned[n]:assigned[n]??'none',isExpanded:true,
            menuMaxHeight:min(340.0,MediaQuery.sizeOf(ctx).height*.48),
            decoration:InputDecoration(
             labelText:waffraIsEnglish?'Money account':'الحساب المالي',
             border:const OutlineInputBorder()),
-           items:providerGroups.where((p)=>p.id==chosenProviders[n])
-            .expand((p)=>p.accounts).map((a)=>DropdownMenuItem(
-             value:a.id,child:WaffraText(a.name,maxLines:1))).toList(),
+           items:[
+            ...providerGroups.where((p)=>p.id==chosenProviders[n])
+             .expand((p)=>p.accounts).map((a)=>DropdownMenuItem<String>(
+              value:a.id,child:WaffraText(a.name,maxLines:1))),
+            if(chosenProviders[n]!=null)
+             DropdownMenuItem<String>(value:'__m942_add_child__',
+              child:WaffraText(waffraIsEnglish?
+               'Add linked account':'إضافة حساب تابع')),
+           ],
            onChanged:chosenProviders[n]==null?null:
-            WaffraHaptics.selection((value)=>update(
-             ()=>assigned[n]=value)),
+            WaffraHaptics.selection((value){
+             if(value=='__m942_add_child__'){
+              update(()=>childRevisions[n]++);
+              unawaited(Future<void>.delayed(Duration.zero,(){
+               if(ctx.mounted)unawaited(createInlineReviewAccount(
+                ctx,update,n,createProvider:false));
+              }));
+              return;
+             }
+             update(()=>assigned[n]=value);
+            }),
           ),
          ])),
       ])),
@@ -392,8 +422,11 @@ extension _WaffraHomeVerifiedFinancePickers on _HomeScreenState {
     )));
    if(approved!=true)return null;
    if(mustSelectAccount&&assigned.any((account)=>account==null))return null;
+   final fresh=await bridge.readVerifiedAccounts();
+   final liveIds=fresh.balances.where((a)=>!a.archived).map((a)=>a.id).toSet();
+   if(!assigned.every((id)=>id!=null&&liveIds.contains(id)))return null;
    return (ids:List<String?>.unmodifiable(assigned),
-    generation:verified.witness.generation);
+    generation:fresh.witness.generation);
   }catch(_){
    if(mounted)snack(context,waffraIsEnglish?
     'Accounts could not be verified. Open My accounts before saving.':
