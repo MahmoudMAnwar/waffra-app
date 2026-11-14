@@ -4210,6 +4210,35 @@
         "No app finance, archived data, OS biometrics, original SMS encryption or visual design changes.",
         "Physical Android and owner old encrypted archive parity are separate from source-level CI."
       ]
+    },
+    {
+      "id": "M903-LEGACY-M155-M158-ORIGINAL-SMS-FINANCE-WIDGET-SOURCE",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Original M155/M158 finance and bank SMS/Widget privacy CI checks searched raw main.dart for live authenticated writer, encrypted backup UI and SMS acknowledgment, even after those exact implementations were extracted into real registered same-library Dart parts.",
+      "approved_behavior": "Both workflows use strict production Home source reconstruction from registered part files, preserving all original eight M155 and nine M158 positive/negative finance, private SMS title, widget sender, backup, native import/export and encrypted archive assertions.",
+      "source_paths": [
+        ".github/workflows/m155-approved-features-finance-reconcile.yml",
+        ".github/workflows/m158-widget-sms-title-privacy.yml",
+        "lib/main.dart",
+        "lib/waffra_home_sms_confirmation.part.dart",
+        "lib/waffra_home_account_tools.part.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/qa/m903_legacy_home_finance_workflow_guards_test.py",
+        "test/qa/m900_home_source_reassembly_guard_test.py"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m155-approved-features-finance-reconcile.yml",
+        ".github/workflows/m158-widget-sms-title-privacy.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "Original actual verified financial SMS and backup methods, account identities and encrypted SQLCipher authority remain untouched.",
+        "No original Widget/SMS/merchant/privacy/duplicate/old-backup positive or negative check may be dropped.",
+        "Missing, duplicated, or detached Dart-part source is rejected by the source reassembler.",
+        "Source checks are not physical Android restore/account balance or real-device performance evidence."
+      ]
     }
   ]
 }
