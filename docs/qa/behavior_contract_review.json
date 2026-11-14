@@ -3251,6 +3251,39 @@
         "No hidden/skipped regression.",
         "Real Android and real encrypted backup parity not claimed by tests."
       ]
+    },
+    {
+      "id": "M731-HOME-SOURCE-REGRESSION-BATCH4",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Twelve active source tests were bound to old lib/main.dart text after actual Home functions moved intact to registered Dart parts.",
+      "approved_behavior": "Retain original security, UI, SMS, source-authority and performance assertions, reading strict real code reassembly without copying or weakening any test or changing production behavior.",
+      "source_paths": [
+        "lib/main.dart",
+        "test/support/waffra_main_source.dart"
+      ],
+      "test_paths": [
+        "test/m486_sms_back_navigation_source_test.dart",
+        "test/m506_android_nine_regressions_test.dart",
+        "test/m507_sms_amount_and_continuous_review_test.dart",
+        "test/m547_sms_incremental_jank_regression_test.dart",
+        "test/m603_app_wide_lag_source_regression_test.dart",
+        "test/m638_saudi_provider_catalog_and_cascade_test.dart",
+        "test/m640_receipt_reader_retirement_test.dart",
+        "test/m665_sms_review_structural_learning_test.dart",
+        "test/m667_accounts_use_home_composer_test.dart",
+        "test/storage/m175_live_finance_mutation_intent_test.dart",
+        "test/storage/m177_live_finance_authority_integration_test.dart",
+        "test/storage/m266_home_bound_source_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "No SQLCipher or SMS write behavior changed.",
+        "Every existing positive and negative test remains active.",
+        "No false Android physical performance or backup proof claimed."
+      ]
     }
   ]
 }

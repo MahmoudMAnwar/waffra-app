@@ -1864,3 +1864,7 @@ A further twelve original finance, budget, receipt, FX, SMS, security and UI tes
 
 ### M730 — Issue #633 / Draft #638: batch 3 real-source regression repair
 Preserve twelve additional existing budget, recurring, SMS, merchant and UI regression assertions; redirect only stale raw-main source reads to actual registered Home Dart part reconstruction and add its test import. No app financial writer, screenshot-approved UI or data changed. Exact-head CI and device proof stay mandatory.
+
+
+### M731 — #633 / Draft #638 original QA compatibility batch 4
+Twelve existing SMS, manual entry, account-security, restore, Android performance and reviewer tests will inspect actual same-library registered Home Dart parts through strict helper instead of obsolete raw main file lookup. Every original expectation and test gate is preserved. No production code touched; CI and owner-phone acceptance independent.
