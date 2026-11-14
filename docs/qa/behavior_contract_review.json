@@ -4584,6 +4584,32 @@
         "Any injected unapproved FX ledger persist or saveCaptured is detected without suppressing original hostile finance regressions.",
         "Original approved FX quote is non-posting in Saudi release, original currency consent and precision guards preserved."
       ]
+    },
+    {
+      "id": "M644-BIOMETRIC-ONLY-ATOMIC-RESET-NO-FAB-NOTICE",
+      "issue": "Issue #644 / Draft PR pending",
+      "previous_behavior": "Home uses saveCaptured(fullFinanceReset) even when encrypted SQLCipher refuses destructive snapshot edits; a generic reload error appears. No-FAB Tools notice inherits the narrower 87%-and-440dp footer card even though no + occupies its end.",
+      "approved_behavior": "Financial delete flows from one explicit action directly through device biometric to the dedicated active SQLCipher-only all-finance reset; no forced backup, no extra confirmation, and no legacy fallback. The writer checks fresh source generation, typed ledger/receipt ownership, SQL foreign keys, known finance tables and all-or-nothing native transaction. Preserve account login and nonfinance preferences. No-FAB pages show notice to normal page margins, while existing + FAB notice bottom/position stay unchanged with wrapping upwards.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_account_tools.part.dart",
+        "lib/storage/waffra_verified_finance_authority.dart",
+        "lib/storage/waffra_encrypted_finance_session.dart",
+        "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
+        "lib/storage/waffra_encrypted_full_finance_reset.dart"
+      ],
+      "test_paths": [
+        "test/m644_no_fab_snackbar_width_test.dart",
+        "test/storage/m644_biometric_finance_reset_test.dart",
+        "test/m110_live_finance_authority_writer_test.dart"
+      ],
+      "safety_invariants": [
+        "A failed device biometric always leaves funds, transfers, receipts, goals, budget and auth untouched.",
+        "Stale source or unknown schema aborts before any encrypted writes; failure inside the SQL transaction rolls back all rows.",
+        "Never erase OS encryption key, login identity, app preferences or external files automatically.",
+        "No FAB positional movement, no Snackbar X, no truncated long Arabic/English text; no-FAB notice expands to page margins.",
+        "Exact-HEAD CI, cold reopen and real physical Android checks are pending, do not claim Done until verified."
+      ]
     }
   ]
 }
