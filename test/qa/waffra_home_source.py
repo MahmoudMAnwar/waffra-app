@@ -81,4 +81,7 @@ def read_waffra_home_source(root=ROOT):
     restore(" // M782: verified pull-to-refresh and finance reload moved to registered Home part.\n",
             "lib/waffra_home_verified_refresh.part.dart",
             " Future<void> _refreshAndSettle(")
+    restore(" // M783: original SMS settings, exclusions and local notification actions moved to registered Home part.\n",
+            "lib/waffra_home_sms_management.part.dart",
+            " Future<void> _scanPreviousBankSmsFromSettings()async{")
     return source
