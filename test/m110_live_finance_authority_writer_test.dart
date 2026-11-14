@@ -55,12 +55,23 @@ void main() {
 
   test('M110 financial deletion carries baseline, not a fresh post-widget snapshot', () {
     final main = readWaffraMainSourceForContracts();
-    for (final route in ['deleteAllTransactions','fullFinanceReset']) {
-      final start = main.indexOf('route:WaffraFinanceRoute.$route');
-      expect(start, greaterThan(0), reason: route);
-      final before = main.substring(start > 440 ? start - 440 : 0, start);
-      expect(before, contains('final baseline=_lastFinanceAuthorityRead;'),
-          reason: route);
-    }
+    final legacyDelete = main.indexOf(
+      'route:WaffraFinanceRoute.deleteAllTransactions');
+    expect(legacyDelete, greaterThan(0));
+    expect(main.substring(legacyDelete-440, legacyDelete),
+      contains('final baseline=_lastFinanceAuthorityRead;'));
+    // M644 full reset is uniquely destructive: after biometric approval it
+    // drains queued writes, loads a fresh independent witness, and commits
+    // only through the dedicated verified SQLCipher reset route.
+    final biometric = main.indexOf('Future<void> eraseFinancialData()async');
+    expect(biometric, greaterThan(0));
+    final end = main.indexOf('Widget _accountTile(', biometric);
+    final reset = main.substring(biometric, end);
+    expect(reset, contains("await _authorizeSensitiveAction("));
+    expect(reset, contains('await _financialWriteQueue.drain();'));
+    expect(reset, contains('final baseline=await _financeAuthority.load('));
+    expect(reset, contains('_financeAuthority.resetAfterBiometric('));
+    expect(reset, isNot(contains('_financeAuthority.saveCaptured(')));
+    expect(reset, isNot(contains('confirmDeletion(')));
   });
 }
