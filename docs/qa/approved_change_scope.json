@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "change_id": "M690-M735-ISSUES632-637-20261114",
+  "change_id": "M690-M738-ISSUES632-637-20261114",
   "human_scope_review": "Issue #629 completes prior PR #628 only after user-visible acceptance; #631 explicitly authorizes three exact screenshots for Goals/Dues/SMS Review, permanently visible financial activity, non-moving FAB-aligned notice, and savings/goal-due cash safety. Existing tests replace outdated visual assumptions without deleting financial safety assertions. Device screenshots/old restore still require external device evidence.",
   "user_requested_changes": [
     "M690 #632 permanently disable third-party AI bank SMS uploads and opt-in on previously installed versions, remove Settings toggle and signed Android staging worker, retain local encrypted SMS Review and money writer.",
@@ -46,7 +46,8 @@
     "M733 #633 finish exact original Home source-inspection tests after registered Dart-part moves in five previously approved QA files without deleting or weakening assertions, and correct only Dart RegExp multiline syntax in M717 real import graph safety regression.",
     "M733 #633 extract actual Home verified source/destination transfer and goal savings history card UI into registered same-library Dart part byte-identically; retain existing ledger amounts, account identity, sheet behavior and source contracts. Same-head CI and physical Android acceptance separate.",
     "M734 #633 verify original M281 attachment marker in the real same-library Home account-tools Dart part; preserve all other M274–M281 and SQLCipher no-cutover source assertions.",
-    "M735 #633 extract unchanged verified category editor, parent/child category CRUD, module delete/restore/trash and category recycle-bin workflows from Home into registered same-library Dart part, retaining all original validations and SQLCipher money protection; update source QA and preserve M385 original comparison."
+    "M735 #633 extract unchanged verified category editor, parent/child category CRUD, module delete/restore/trash and category recycle-bin workflows from Home into registered same-library Dart part, retaining all original validations and SQLCipher money protection; update source QA and preserve M385 original comparison.",
+    "M738 #633 preserve all M672/M678 original verified transfer direction, SAR card and savings value source assertions after same-library M733 extraction by changing only its import and raw-main source reader to strict registered-part reconstruction."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -197,7 +198,8 @@
     "test/waffra_approved_ui_batch_test.dart",
     "test/waffra_m206_day_theme_tour_sms_regression_test.dart",
     "lib/waffra_home_category_workflows.part.dart",
-    "test/m735_home_category_workflows_extraction_test.dart"
+    "test/m735_home_category_workflows_extraction_test.dart",
+    "test/m672_m678_activity_account_regression_test.dart"
   ],
   "approved_deleted_files": [
     "lib/waffra_sms_cloud_review_analyzer.dart"
@@ -1604,6 +1606,16 @@
       {
         "start": "          sources = {",
         "end": "          for milestone,(path,marker) in sources.items():"
+      }
+    ],
+    "test/m672_m678_activity_account_regression_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "/// Source contracts supplement"
+      },
+      {
+        "start": "void main() {",
+        "end": "  final accountPage ="
       }
     ]
   }
