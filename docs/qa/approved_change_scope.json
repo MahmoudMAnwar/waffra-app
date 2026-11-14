@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "change_id": "M690-M782-ISSUES632-637-20261114",
+  "change_id": "M690-M783-ISSUES632-637-20261114",
   "human_scope_review": "Issue #629 completes prior PR #628 only after user-visible acceptance; #631 explicitly authorizes three exact screenshots for Goals/Dues/SMS Review, permanently visible financial activity, non-moving FAB-aligned notice, and savings/goal-due cash safety. Existing tests replace outdated visual assumptions without deleting financial safety assertions. Device screenshots/old restore still require external device evidence.",
   "user_requested_changes": [
     "M690 #632 permanently disable third-party AI bank SMS uploads and opt-in on previously installed versions, remove Settings toggle and signed Android staging worker, retain local encrypted SMS Review and money writer.",
@@ -65,7 +65,8 @@
     "M763 #633 fix M174 source-only M228 and M444 Python regressions from relocated verified Home load/recurring due methods: read strict registered source without weakening any refresh/budget/notification/SQLCipher assertions.",
     "M780 #633 extract Home original verified SQLCipher ledger published balance, transaction delete/undo, deleted transaction vault and fallback deletion routines to real same-library part, unchanged finance writer/confirmations, with exact source QA and no data migration.",
     "M781 #633 move original Home transaction card/details/actions/receipt viewer and greeting methods byte-identically to registered same-library Dart part, retaining secured original SMS, linked goal edit safety, all UI, user confirmation and financial authority.",
-    "M782 #633 extract original verified Home pull-to-refresh settle and finance reload methods, preserve State in-flight field/lifecycle, SQLCipher account/ledger, all source expectations, no fabricated balances and independent Android performance measurements."
+    "M782 #633 extract original verified Home pull-to-refresh settle and finance reload methods, preserve State in-flight field/lifecycle, SQLCipher account/ledger, all source expectations, no fabricated balances and independent Android performance measurements.",
+    "M783 #633 move byte-identical live SMS settings rescan/excluded sender and message recovery, grouped notification selection and entry to registered same-library Home part; preserve all original native consent, 30-day excluded retention, never-auto-post and SQLCipher owner invariants; scope M385 over the original contiguous implementation exactly."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -269,7 +270,9 @@
     "lib/waffra_home_transaction_cards.part.dart",
     "test/m781_home_transaction_cards_extraction_test.dart",
     "lib/waffra_home_verified_refresh.part.dart",
-    "test/m782_home_verified_refresh_extraction_test.dart"
+    "test/m782_home_verified_refresh_extraction_test.dart",
+    "lib/waffra_home_sms_management.part.dart",
+    "test/m783_home_sms_management_extraction_test.dart"
   ],
   "approved_deleted_files": [
     "lib/waffra_sms_cloud_review_analyzer.dart"
@@ -359,7 +362,7 @@
         "end": "import 'waffra_sms_local_rules.dart';"
       },
       {
-        "start": " Future<void> _m549OpenNotifications()async{",
+        "start": " Future<void> _rescanAutoSmsInbox(",
         "end": " Widget _autoSmsReviewCard(){"
       },
       {
@@ -393,10 +396,6 @@
       {
         "start": " String get _smsRuleOwnerKey=>WaffraSmsLocalRuleStore.ownerKey(",
         "end": " Timer? _m632SmsNoticeTimer;"
-      },
-      {
-        "start": " bool _autoSmsImportAgain=false;",
-        "end": " Future<void> _scanPreviousBankSmsFromSettings()async{"
       },
       {
         "start": " Future<void> _loadFinanceSafely()async{",
