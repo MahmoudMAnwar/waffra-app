@@ -2021,3 +2021,7 @@ The registered compact transaction card part (M790) includes original M733 dashb
 
 ### M835 — Issue #633 / Draft #638: real Home bank SMS review-indicator card extraction
 Owner continues code-only `_HomeScreenState` decomposition. Relocate the exact original 130 lines of `_autoSmsReviewCard` with its annotation into registered same-library `lib/waffra_home_sms_review_indicator.part.dart`. Preserve original Arabic/English status, pending/error counts, user manual rescan, open inbox callback, no automatic record, colors/icons/cards and untouched global FAB. Keep original sender inbox, refresh, native permissions, SMS SQLCipher writer, owner data and all source contracts unchanged. Register real Dart/Python source in strict M385/M550, write exact-source regression; real device screenshots, encrypted backup restore parity and latest CI remain separate.
+
+
+### M850 — Issue #633 / Draft #638: native SMS notification debounce and manual rescan source extraction
+Move original `_receiveAutoSmsNotice()` and `_rescanAutoSmsInbox()` unchanged into registered same-library Home Dart part while keeping timer State. Preserve native permission, owner/consent/session, offline review, explicit exclusion, no-auto-post, original bank message, progress/cancel and approved snackbar behavior. Strict Dart/Python source and M550 regression checks required. Source refactor cannot prove Android latency or original private backup parity.
