@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "change_id": "M690-M772-ISSUES632-637-20261114",
+  "change_id": "M690-M763-ISSUES632-637-20261114",
   "human_scope_review": "Issue #629 completes prior PR #628 only after user-visible acceptance; #631 explicitly authorizes three exact screenshots for Goals/Dues/SMS Review, permanently visible financial activity, non-moving FAB-aligned notice, and savings/goal-due cash safety. Existing tests replace outdated visual assumptions without deleting financial safety assertions. Device screenshots/old restore still require external device evidence.",
   "user_requested_changes": [
     "M690 #632 permanently disable third-party AI bank SMS uploads and opt-in on previously installed versions, remove Settings toggle and signed Android staging worker, retain local encrypted SMS Review and money writer.",
@@ -61,7 +61,8 @@
     "M761 #633 preserve every existing original M527 verified-account picker latency and M615/M618 approved bank SMS review/login regression assertion while redirecting only raw-main source readers to strict registered production Dart part reassembly, with exact M385 boundaries.",
     "M771 #633 preserve all original strict retired-cloud AI, confirmed bank-SMS SAR/date and large encrypted-ledger isolate/JSON decoder regression assertions after M770 code extraction by changing only old direct main.dart readers and helper imports; keep exact original source assertions intact.",
     "M762 #633 relocate original verified Home persistence, SMS hash source and recurring due/postponement methods into same-library Dart part with unchanged original SQLCipher writer, account/goal wallet, security, and anti-double-post safeguards, strict QA and no behavior change.",
-    "M772 #633 correct three historical Python SMS reviewed confirmation source readers to strict registered Dart-part reconstruction and retain existing M417 verified SMS transfer original-source assertion by reading registered unchanged confirmation part; no asserts removed, no native/finance changes."
+    "M772 #633 correct three historical Python SMS reviewed confirmation source readers to strict registered Dart-part reconstruction and retain existing M417 verified SMS transfer original-source assertion by reading registered unchanged confirmation part; no asserts removed, no native/finance changes.",
+    "M763 #633 fix M174 source-only M228 and M444 Python regressions from relocated verified Home load/recurring due methods: read strict registered source without weakening any refresh/budget/notification/SQLCipher assertions."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -258,7 +259,8 @@
     "test/m762_home_finance_persistence_due_extraction_test.dart",
     "test/qa/m565_sms_yes_no_test.py",
     "test/qa/m574_sms_confirmation_full_fields_test.py",
-    "test/qa/m452_sms_review_signup_regression_test.py"
+    "test/qa/m452_sms_review_signup_regression_test.py",
+    "test/qa/m228_pull_refresh_live_wiring_test.py"
   ],
   "approved_deleted_files": [
     "lib/waffra_sms_cloud_review_analyzer.dart"
@@ -466,7 +468,12 @@
     ],
     "test/qa/m444_notification_safety_test.py": [
       {
-        "start": "from pathlib import Path"
+        "start": "from pathlib import Path",
+        "end": "class M444NotificationSafety(unittest.TestCase):"
+      },
+      {
+        "start": " def test_finance_ui_respects_threshold_and_real_due(self):",
+        "end": "  main+=Path('lib/waffra_home_budget_cards.part.dart').read_text(encoding='utf8')"
       }
     ],
     "lib/waffra_cloudflare_sms_gateway.dart": [
@@ -2077,6 +2084,16 @@
       {
         "start": "    def test_registration_has_single_submit_and_avatar_choices(self):",
         "end": "        registration = home.split(\" Widget _phoneRegistrationForm(){\", 1)[1].split("
+      }
+    ],
+    "test/qa/m228_pull_refresh_live_wiring_test.py": [
+      {
+        "start": "from pathlib import Path",
+        "end": "class M228PullRefreshLiveWiring(unittest.TestCase):"
+      },
+      {
+        "start": "    def test_refresh_only_changes_source_selection_not_named_budget_projection(self):",
+        "end": "        left=src.index("
       }
     ]
   }
