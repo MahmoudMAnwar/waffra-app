@@ -1,10 +1,11 @@
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
+import 'support/waffra_main_source.dart';
 
 /// M636/#555: Owner-approved removal is permanent; finance and SMS safety
 /// checks are positive behavior requirements, not stale Qwen-era screenshots.
 void main(){
- final home=File('lib/main.dart').readAsStringSync();
+ final home=readWaffraMainSourceForContracts();
  final smart=File('lib/waffra_smart_features.dart').readAsStringSync();
  final widget=File('native/WaffraWidget.kt').readAsStringSync();
  test('M636 no local Qwen runtime/dependency, model installer, or old widget engine',(){
