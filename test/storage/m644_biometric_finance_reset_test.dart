@@ -1,11 +1,14 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:waffra/storage/waffra_accounts_schema.dart';
 import 'package:waffra/storage/waffra_atomic_finance_snapshot.dart';
 import 'package:waffra/storage/waffra_encrypted_full_finance_reset.dart';
+import 'package:waffra/storage/waffra_encrypted_receipt_vault.dart';
+import 'package:waffra/storage/waffra_portable_encrypted_vault_restorer.dart';
 import 'package:waffra/storage/waffra_encrypted_store.dart';
 import 'package:waffra/storage/waffra_fresh_encrypted_vault_bootstrap.dart';
 
@@ -144,6 +147,69 @@ void main() {
       store:db,experimentalEnabled:true).read()).values, {'entries':'[]', 'waffra_categories_v24':'[]'});
     expect(await count('fresh_finance_money_accounts'), 0);
     await WaffraAccountsSchema.requireReady(db);
+  });
+
+  test('M644 old SQL receipt index matching proven encrypted bytes is '
+      'removed in the same verified SQLCipher transaction', () async {
+    const id = 'test-entry';
+    final vault = WaffraEncryptedReceiptVault(
+      store: db, experimentalEnabled: true,
+    );
+    await vault.attachNewBatch(
+      entryId: id, images: <Uint8List>[Uint8List.fromList([12, 34, 56])],
+    );
+    final before = await snapshot.read();
+    final row = Map<String, Object?>.from(
+      (jsonDecode(before.values['entries'] as String) as List).single as Map,
+    );
+    row['receiptPath'] = WaffraEncryptedReceiptReference.of(id, 0);
+    await db.customStatement(
+      'UPDATE fresh_finance_entries SET source_json=? WHERE entry_id=?',
+      [jsonEncode(row), id],
+    );
+    await snapshot.commit(
+      expectedGeneration: before.generation,
+      fullFinanceSnapshot: <String, Object?>{
+        'entries': jsonEncode([row]),
+      },
+    );
+    final encrypted = (await vault.readAll(id)).single;
+    await db.customStatement(
+      'INSERT INTO fresh_finance_receipts'
+      '(entry_id,position,safe_filename,sha256_hex) VALUES(?,?,?,?)',
+      [id, 0, encrypted.safeName, encrypted.sha256Hex],
+    );
+    final witnessed = await snapshot.read();
+    final cleared = await resetter.resetAfterBiometric(
+      baseline: witnessed, userConfirmed: true, biometricVerified: true,
+    );
+    expect(cleared.receiptImagesRemoved, 1);
+    expect(await count('fresh_finance_receipts'), 0);
+    expect(await count('fresh_finance_receipt_blobs'), 0);
+    expect(await count('fresh_finance_entries'), 0);
+    expect((await db.customSelect('PRAGMA foreign_key_check').get()), isEmpty);
+  });
+
+  test('M644 file-only old receipt index fails without orphaning data '
+      'or deleting any external file', () async {
+    final external = File('${directory.path}/original-receipt.bin');
+    await external.writeAsBytes([9, 8, 7]);
+    await db.customStatement(
+      'INSERT INTO fresh_finance_receipts'
+      '(entry_id,position,safe_filename,sha256_hex) VALUES(?,?,?,?)',
+      ['test-entry', 0, 'original-receipt.bin', 'f' * 64],
+    );
+    final before = await snapshot.read();
+    await expectLater(
+      resetter.resetAfterBiometric(
+        baseline: before, userConfirmed: true, biometricVerified: true,
+      ),
+      throwsStateError,
+    );
+    expect((await snapshot.read()).digest, before.digest);
+    expect(await count('fresh_finance_receipts'), 1);
+    expect(await count('fresh_finance_entries'), 1);
+    expect(await external.readAsBytes(), [9, 8, 7]);
   });
 
   test('M644 biometric refusal never changes finance or account balances',
