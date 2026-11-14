@@ -88,5 +88,9 @@ String readWaffraMainSourceForContracts(){
  if(s.split(financeStartupMarker).length!=2)throw StateError('Missing or duplicated M750 startup load marker');
  s=s.replaceFirst(financeStartupMarker,_method('lib/waffra_home_finance_startup.part.dart',
   ' Future<void> load()async {'));
+ const accountFlowMarker=' // M760: unchanged verified-account refresh, selection, transfer and account filter methods moved to registered Home part.\n';
+ if(s.split(accountFlowMarker).length!=2)throw StateError('Missing or duplicated M760 account source');
+ s=s.replaceFirst(accountFlowMarker,_method('lib/waffra_home_verified_account_flows.part.dart',
+  ' Future<void> _m467RefreshHomeAccounts()async{'));
  return s;
 }
