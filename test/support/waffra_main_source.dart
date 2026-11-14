@@ -10,6 +10,11 @@ String _method(String path,String marker){
 }
 String readWaffraMainSourceForContracts(){
  var s=File('lib/main.dart').readAsStringSync();
+ const accountToolsMarker=' // M721: original Home calendar, backup and account tools moved to registered same-library part.\n';
+ if(s.split(accountToolsMarker).length!=2)throw StateError('Missing or duplicated account tools marker');
+ s=s.replaceFirst(accountToolsMarker,_method('lib/waffra_home_account_tools.part.dart',
+  ' Future<void> showWaffraFinancialCalendar('));
+
  const p=' // M687: PDF exporter moved to a same-library State extension.\n';
  const q=' // M687: Profile page moved to a same-library State extension.\n';
  if(s.split(p).length!=2||s.split(q).length!=2){
@@ -50,11 +55,6 @@ String readWaffraMainSourceForContracts(){
  }
  s=s.replaceFirst(originalGoalMarker,goalSource.substring(goalStart,goalActionStart));
  s=s.replaceFirst(originalActionMarker,goalSource.substring(goalActionStart,goalEnd));
-
- const accountToolsMarker=' // M721: original Home calendar, backup and account tools moved to registered same-library part.\n';
- if(s.split(accountToolsMarker).length!=2)throw StateError('Missing or duplicated account tools marker');
- s=s.replaceFirst(accountToolsMarker,_method('lib/waffra_home_account_tools.part.dart',
-  ' Future<void> showWaffraFinancialCalendar('));
 
  const smsMarker=' /// Explicit, idempotent account-to-account transfer from reviewed bank SMS.\n // M703: implementation moved byte-identically to registered Home part.\n';
  if(s.split(smsMarker).length!=2)throw StateError('Missing or duplicated M703 part marker');
