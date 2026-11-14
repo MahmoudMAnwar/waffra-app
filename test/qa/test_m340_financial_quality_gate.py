@@ -54,11 +54,19 @@ class FinancialQualityGateTest(unittest.TestCase):
             "foreign currency guard removal")
 
     def test_detects_fx_preview_ledger_write(self):
+        # M932: the production preview moved to a registered Dart part.
+        # Mutate that actual source so the hostile test cannot pass by
+        # checking obsolete raw main.dart or ignoring an untracked override.
         self.assert_detects_change(
-            "lib/main.dart",
+            "lib/waffra_home_fx_preview.part.dart",
             "WaffraForeignCurrencyPreview.show(context,",
             "persist(); WaffraForeignCurrencyPreview.show(context,",
             "FX preview unexpected finance write")
+        self.assert_detects_change(
+            "lib/waffra_home_fx_preview.part.dart",
+            "WaffraForeignCurrencyPreview.show(context,",
+            "saveCaptured(); WaffraForeignCurrencyPreview.show(context,",
+            "FX preview unauthorized captured-finance write")
 
     def test_detects_retired_qwen_tools_reintroduced(self):
         self.assertNotIn("WaffraOnDeviceQwen",
