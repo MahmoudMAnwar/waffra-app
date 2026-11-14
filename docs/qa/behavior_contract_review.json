@@ -3185,6 +3185,39 @@
         "Do not copy or fake source into test strings; read real registered Dart parts.",
         "M385 anchors apply only to import and original source-reader test bodies."
       ]
+    },
+    {
+      "id": "M729-PRESERVE-ORIGINAL-REGRESSIONS-BATCH2",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Exact 12 original tests inspected source strings in main.dart instead of registered same-library Home parts following approved extraction.",
+      "approved_behavior": "Repoint only original raw-main readers to readWaffraMainSourceForContracts; preserve all positive and negative assertions including SQLCipher, backup, SMS and data authorization. No production code changed.",
+      "source_paths": [
+        "lib/main.dart",
+        "test/support/waffra_main_source.dart"
+      ],
+      "test_paths": [
+        "test/m303_m306_hardening_regression_test.dart",
+        "test/m304_cross_source_duplicate_review_test.dart",
+        "test/m321_ai_model_download_delete_test.dart",
+        "test/m336_fx_consent_and_full_title_test.dart",
+        "test/m336_whole_app_finance_quality_matrix_test.dart",
+        "test/m339_failed_finance_save_receipt_cleanup_test.dart",
+        "test/m346_financial_health_budget_goal_test.dart",
+        "test/m352_existing_data_upgrade_contract_test.dart",
+        "test/m353_named_budget_pause_resume_test.dart",
+        "test/m354_android_transaction_sheet_nav_insets_test.dart",
+        "test/m355_global_scroll_cue_search_test.dart",
+        "test/m363_transaction_category_inline_creation_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "Source helper must read registered production parts and fail closed if missing.",
+        "No assertions deleted or test gates bypassed.",
+        "No user backup bytes or financial values changed."
+      ]
     }
   ]
 }

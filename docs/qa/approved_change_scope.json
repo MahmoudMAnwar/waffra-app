@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "change_id": "M690-M728-ISSUES632-637-20261114",
+  "change_id": "M690-M729-ISSUES632-637-20261114",
   "human_scope_review": "Issue #629 completes prior PR #628 only after user-visible acceptance; #631 explicitly authorizes three exact screenshots for Goals/Dues/SMS Review, permanently visible financial activity, non-moving FAB-aligned notice, and savings/goal-due cash safety. Existing tests replace outdated visual assumptions without deleting financial safety assertions. Device screenshots/old restore still require external device evidence.",
   "user_requested_changes": [
     "M690 #632 permanently disable third-party AI bank SMS uploads and opt-in on previously installed versions, remove Settings toggle and signed Android staging worker, retain local encrypted SMS Review and money writer.",
@@ -37,7 +37,8 @@
     "M725 #633 restore the trailing newline of every original Dart part when reconstructing source-level QA; exact M691 budget marker and nested M721/M687 profile must retain original token boundaries. Preserve all source assertions.",
     "M726 authorize the exact helper newline-bounds regression fix only; do not widen budget/goal or unrelated source edit permissions.",
     "M727 #633 restore exact-source M340 finance safety inspection of registered entrySheet Dart part (original SQLCipher account, SMS, FX and receipt guards) after safe Home extraction; preserve all positive and negative financial conditions, with no bypass or skipped tests.",
-    "M728 #633 repair only stale raw-main.dart source readers for 12 complete original Flutter finance, SMS, backup, budget and UI regression test files after byte-identical registered Home part extractions; preserve every original expectation and negative guard through readWaffraMainSourceForContracts(), with bounded test methods and unchanged runtime money code."
+    "M728 #633 repair only stale raw-main.dart source readers for 12 complete original Flutter finance, SMS, backup, budget and UI regression test files after byte-identical registered Home part extractions; preserve every original expectation and negative guard through readWaffraMainSourceForContracts(), with bounded test methods and unchanged runtime money code.",
+    "M729 #633 preserve 12 more original Flutter security, finance, currency, receipt, budget and mobile UI assertions while moving their stale raw main.dart source reads to the actual registered Home Dart part reconstruction. Only imports and exact original source-reading test bodies are authorized."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -81,11 +82,23 @@
     "test/m302_cross_feature_input_precision_test.dart",
     "test/m302_optimistic_module_write_safety_test.dart",
     "test/m302_recurring_first_due_regression_test.dart",
+    "test/m303_m306_hardening_regression_test.dart",
+    "test/m304_cross_source_duplicate_review_test.dart",
+    "test/m321_ai_model_download_delete_test.dart",
+    "test/m336_fx_consent_and_full_title_test.dart",
+    "test/m336_whole_app_finance_quality_matrix_test.dart",
+    "test/m339_failed_finance_save_receipt_cleanup_test.dart",
     "test/m343_goal_recurring_named_budgets_test.dart",
     "test/m345_goal_budget_forecast_test.dart",
+    "test/m346_financial_health_budget_goal_test.dart",
+    "test/m352_existing_data_upgrade_contract_test.dart",
+    "test/m353_named_budget_pause_resume_test.dart",
+    "test/m354_android_transaction_sheet_nav_insets_test.dart",
+    "test/m355_global_scroll_cue_search_test.dart",
     "test/m357_budget_hierarchy_and_filter_layout_test.dart",
     "test/m359_budget_directory_and_templates_test.dart",
     "test/m360_budget_category_quick_actions_test.dart",
+    "test/m363_transaction_category_inline_creation_test.dart",
     "test/m371_goal_wallet_and_budgets_regression_test.dart",
     "test/m388_m390_approved_goal_recurring_receipt_test.dart",
     "test/m392_m395_budget_quick_actions_goal_ui_test.dart",
@@ -882,6 +895,170 @@
       {
         "start": "test('M302 finance inputs retain unrepresentable cents for field validation',(){",
         "end": "test('M302 identical category names cannot bypass Arabic search normalization',(){"
+      }
+    ],
+    "test/m303_m306_hardening_regression_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "void main()"
+      },
+      {
+        "start": "void main()",
+        "end": "test('01 rapid manual confirmation is synchronously single-submit', () {"
+      }
+    ],
+    "test/m304_cross_source_duplicate_review_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "void main()"
+      },
+      {
+        "start": "test('live confirm shows advisory with explicit override, no auto discard', () {",
+        "end": null
+      }
+    ],
+    "test/m321_ai_model_download_delete_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "void main()"
+      },
+      {
+        "start": "test('M636 retire model source without deleting finance records',(){",
+        "end": "test('M636 old AI removal never clears user finance data or recovery',(){"
+      },
+      {
+        "start": "test('M636 old AI removal never clears user finance data or recovery',(){",
+        "end": "test('M636 remove Qwen dependency and native asset fetch',(){"
+      }
+    ],
+    "test/m336_fx_consent_and_full_title_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "void main()"
+      },
+      {
+        "start": "test('M640 foreign SMS source still blocks SAR posting without verification',(){",
+        "end": "test('M336 title is not forced into a single line',(){"
+      },
+      {
+        "start": "test('M336 title is not forced into a single line',(){",
+        "end": "test('M336 unsupported, mixed and stale FX cannot be silently saved',(){"
+      }
+    ],
+    "test/m336_whole_app_finance_quality_matrix_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "void main()"
+      },
+      {
+        "start": "test('M336 previously saved wrong-currency titles are flagged without edits',(){",
+        "end": "test('M337 newly created SMS category keeps selected parent after save',(){"
+      },
+      {
+        "start": "test('M337 newly created SMS category keeps selected parent after save',(){",
+        "end": "test('M338 repeated SMS totals use exact integer currency units',(){"
+      },
+      {
+        "start": "test('M636 SMS editor validates original currency BEFORE hash and commit',(){",
+        "end": "test('M336 exchange approval cannot be forged by zero, NaN or unsupported',(){"
+      }
+    ],
+    "test/m339_failed_finance_save_receipt_cleanup_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "void main()"
+      },
+      {
+        "start": "test('M339 manual receipt attachment stages roll back when ledger commit fails',(){",
+        "end": null
+      }
+    ],
+    "test/m346_financial_health_budget_goal_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "void main()"
+      },
+      {
+        "start": "test('M346 real Tools health UI consumes Home budget IDs and goal snapshots',(){",
+        "end": null
+      }
+    ],
+    "test/m352_existing_data_upgrade_contract_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "void main()"
+      },
+      {
+        "start": "test('budget review is visible, per record, cancellable, and never auto-posts',",
+        "end": null
+      }
+    ],
+    "test/m353_named_budget_pause_resume_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "void main()"
+      },
+      {
+        "start": "test('M353 all screens gate NEW standalone budget assignment and retain old links',(){",
+        "end": "test('M353 transaction details warn with optional link after resume',(){"
+      },
+      {
+        "start": "test('M353 transaction details warn with optional link after resume',(){",
+        "end": "test('M353 paused standalone budget toggles never touch original finance transaction',(){"
+      },
+      {
+        "start": "test('M353 paused standalone budget toggles never touch original finance transaction',(){",
+        "end": "testWidgets('M353 unlinked expense details show warning and link action',"
+      }
+    ],
+    "test/m354_android_transaction_sheet_nav_insets_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "void main()"
+      },
+      {
+        "start": "test('M354 actual manual/SMS/OCR route uses safe pinned footer',(){",
+        "end": null
+      }
+    ],
+    "test/m355_global_scroll_cue_search_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "void main()"
+      },
+      {
+        "start": "test('M355 app-wide scroll integration and search on historical link pickers', () {",
+        "end": null
+      }
+    ],
+    "test/m363_transaction_category_inline_creation_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "void main()"
+      },
+      {
+        "start": "test('M363 both category dropdowns create styled main/child categories',(){",
+        "end": "test('M363 original icon, color and duplicate protections are reused',(){"
+      },
+      {
+        "start": "test('M363 original icon, color and duplicate protections are reused',(){",
+        "end": "test('M363 transaction edit keeps same selectable active budget as create',(){"
+      },
+      {
+        "start": "test('M363 transaction edit keeps same selectable active budget as create',(){",
+        "end": "test('M363 bulk bank review also receives inline parent/child creation',(){"
+      },
+      {
+        "start": "test('M363 bulk bank review also receives inline parent/child creation',(){",
+        "end": "test('M362 verified encrypted goal spend uses one atomic wallet-and-ledger writer',(){"
+      },
+      {
+        "start": "test('M362 verified encrypted goal spend uses one atomic wallet-and-ledger writer',(){",
+        "end": "test('M689 short available balance rejects unaffordable funding',(){"
+      },
+      {
+        "start": "test('M689 short available balance rejects unaffordable funding',(){",
+        "end": null
       }
     ]
   }

@@ -1856,3 +1856,7 @@ The verified manual/SMS `entrySheet` resides in registered `lib/waffra_home_entr
 
 ### M728 — #633 / Draft PR #638: original 12-file Flutter regression compatibility
 Repoint obsolete `File('lib/main.dart').readAsStringSync()` inspections in twelve still-active original test files to the verified source reassembly from registered production Dart parts. Preserve every financial, local SMS, backup, category, budget, cash and mobile UI positive/negative test assertion. Limit each edit to an import and the pre-existing test method source reader; leave production finance, global FAB and backup data unchanged. Same-head CI is required before signoff.
+
+
+### M729 — #633 / Draft #638: hardening original regression source reader (batch 2)
+A further twelve original finance, budget, receipt, FX, SMS, security and UI tests are permitted to replace only raw `lib/main.dart` source reads with actual registered Home part reassembly; all current positive/negative expectations and runtime code remain unchanged. CI on exact head and physical device acceptance still required.
