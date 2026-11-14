@@ -116,5 +116,9 @@ String readWaffraMainSourceForContracts(){
  if(s.split(managementMarker).length!=2)throw StateError('Missing or duplicated M783 original SMS management marker');
  s=s.replaceFirst(managementMarker,_method('lib/waffra_home_sms_management.part.dart',
   ' Future<void> _scanPreviousBankSmsFromSettings()async{'));
+ const compactActivityMarker=' // M790: original compact financial activity cards live in registered Home part.\n';
+ if(s.split(compactActivityMarker).length!=2)throw StateError('Missing or duplicate M790 verified transaction card marker');
+ s=s.replaceFirst(compactActivityMarker,_method('lib/waffra_home_compact_activity_cards.part.dart',
+  ' Widget compactTransaction(MoneyEntry entry){'));
  return s;
 }
