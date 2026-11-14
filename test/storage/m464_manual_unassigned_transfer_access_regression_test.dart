@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import '../support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -98,7 +99,7 @@ void main(){
 
  test('Main plus opens one manual popup with three modes, verified transfer and direct writer',
   () {
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   final form=File('lib/waffra_account_transaction_form.dart').readAsStringSync();
   final menuStart=main.indexOf("if(tab==0&&!goalsOpened)...[");
   final menuEnd=main.indexOf("]else if(goalsOpened||tab==3)...[",menuStart);

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import '../support/waffra_main_source.dart';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -265,7 +266,7 @@ void main() {
   });
 
   test('M466 Home manual popup shares three choices and encrypted attachment view',(){
-    final app=File('lib/main.dart').readAsStringSync();
+    final app=readWaffraMainSourceForContracts();
     expect(app,contains("Key('waffra-manual-three-modes')"));
     expect(app,contains('WaffraAccountOperation.transfer'));
     expect(app,contains("Key('m466-confirm-transfer')"));
@@ -284,7 +285,7 @@ void main() {
 
   test('M457 manual UI posts a single frozen entry without optimistic ledger',
       () {
-    final app=File('lib/main.dart').readAsStringSync();
+    final app=readWaffraMainSourceForContracts();
     final start=app.indexOf('   final chosenManual=initial==null');
     final end=app.indexOf('  if(mounted)await budgetAlert(result,previousSpent);',start);
     expect(start,greaterThan(0));

@@ -1,9 +1,10 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main(){
  test('M302 refuse duplicate means no new finance write and staged receipt removed',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   final entry=main.indexOf('Future<void> entrySheet(');
   final duplicate=main.indexOf('if(initial==null&&entries.any((e)=>',entry);
   // M373 uses standalone named-budget IDs, never category IDs.
