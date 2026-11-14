@@ -4469,6 +4469,27 @@
         "Animation level writes use original owner preference key and whitelist, not finance.",
         "No finance ledger, SMS, original backup, due/goal calculation, database or source authority changed."
       ]
+    },
+    {
+      "id": "M927-RETIRED-AI-CLOUD-SMS-RUNTIME-REACHABILITY-GUARD",
+      "issue": "Issues #632, #634, #637 / Draft PR #638",
+      "previous_behavior": "Retired AI/Qwen/Cloudflare test-only validators remain in source tree for historical finance/currency negative tests after old cloud SMS runtime and release transport were removed; an accidental indirect Dart import could silently make them reachable in active Home/SMS paths.",
+      "approved_behavior": "Audit actual physical Dart import/export/part dependency graph from Home, official SMS consent and Android SMS runner at runtime; reject any edge reaching retired AI or external SMS analysis modules, ensure legacy installation cloud consent is erased, configured network gateway stays false, analyzeIfConsented and analyze methods fail closed, and local SMS parser still belongs to Home runtime.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_auto_sms_consent.dart",
+        "lib/waffra_sms_cloud_service.dart",
+        "lib/waffra_cloudflare_sms_gateway.dart"
+      ],
+      "test_paths": [
+        "test/qa/m927_retired_model_runtime_graph_guard_test.py"
+      ],
+      "safety_invariants": [
+        "No original bank SMS leaves the phone for legacy cloud analysis.",
+        "Local deterministic SMS parsing, user review and encrypted SQLCipher financial authority remain active.",
+        "Historical negative test-only currency/model validators cannot be called from production Home or notification onboarding.",
+        "No unrelated encrypted cloud backup synchronization or original owner restore components are deleted or disabled."
+      ]
     }
   ]
 }
