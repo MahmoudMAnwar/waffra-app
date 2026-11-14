@@ -477,7 +477,7 @@
         "end": " /// M593: even with JSON decoded on a worker isolate, creating thousands"
       },
       {
-        "start": " Future<void> _previewForeignBankCurrency(",
+        "start": " // M643: Saudi FX posting stays disabled;",
         "end": " Future<void> showInternalTransferTransactions()async{"
       },
       {
@@ -498,7 +498,7 @@
       },
       {
         "start": " @override void dispose(){if(!_m663FirstInteractiveFrame.isCompleted)",
-        "end": " Future<void> _previewForeignBankCurrency("
+        "end": " // M643: Saudi FX posting stays disabled;"
       },
       {
         "start": " Future<void> showInternalTransferTransactions()async{",
@@ -509,7 +509,7 @@
         "end": " String search='',typeFilter='الكل',categoryFilter='الكل',period='شهري';"
       },
       {
-        "start": " Future<void> _m627CloseForLogout()async{",
+        "start": " final Set<Future<void>> _m627OutstandingAccountReads=<Future<void>>{};",
         "end": " // Account filters are presentation-only;"
       }
     ],
