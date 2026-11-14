@@ -108,4 +108,7 @@ def read_waffra_home_source(root=ROOT):
     restore(" // M840: original verified Home/Widget synchronization now in registered Dart part.\n",
             "lib/waffra_home_widget_sync.part.dart",
             " Future<void> _syncWidgetTransactions()async{")
+    restore(" // M830: original Home navigation and summary helpers moved to registered same-library part.\n",
+            "lib/waffra_home_navigation_helpers.part.dart",
+            " Widget categoriesPage()=>categoriesPageV2();")
     return source
