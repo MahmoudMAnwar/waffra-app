@@ -69,4 +69,7 @@ def read_waffra_home_source(root=ROOT):
     restore(" // M770: original verified SMS review confirmation and entry batching moved to same-library part.\n",
             "lib/waffra_home_sms_confirmation.part.dart",
             " Future<List<MoneyEntry>> _m593BuildVerifiedEntries(")
+    restore(" // M762: verified finance persistence and recurring due/postponement methods moved unchanged to registered Home part.\n",
+            "lib/waffra_home_finance_persistence_due.part.dart",
+            " Future<void> persist(")
     return source
