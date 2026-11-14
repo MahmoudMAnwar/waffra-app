@@ -37,7 +37,7 @@ void main(){
     'lib/waffra_ai_recorded_answers.dart',
     'lib/waffra_ask_scope.dart',
   ]){
-   expect(visited,not(contains(obsolete)),reason:
+   expect(visited,isNot(contains(obsolete)),reason:
     'Retired cloud/AI path must not be compiled into the production app: $obsolete');
   }
  });
