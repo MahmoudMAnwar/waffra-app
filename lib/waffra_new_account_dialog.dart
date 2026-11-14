@@ -40,11 +40,15 @@ bool waffraNewAccountMatchesGroup(String? group,WaffraNewAccountDraft draft){
  return group=='cash'&&draft.kind=='cash';
 }
 
-/// Extract a selected custom institution root; the SQLCipher writer still
-/// validates its provider, account kind and active ownership.
+/// Extract only account-specific institution roots; the SQLCipher writer
+/// verifies the matching bank/wallet provider and actual active root.
 String? waffraCustomInstitutionRootForGroup(String? group){
  if(group==null)return null;
- final match=RegExp(r'^(bank|wallet):account:([^\\s]{1,128}) the same verified SQLCipher account API authorizes saving.
+ final match=RegExp(r'^(bank|wallet):account:([^\s]{1,128})$').firstMatch(group);
+ return match?.group(2);
+}
+
+/// A form only: the same verified SQLCipher account API authorizes saving.
 /// Bank names decorate labels, not trusted financial account provenance.
 class WaffraNewAccountDialog extends StatefulWidget {
  const WaffraNewAccountDialog({
