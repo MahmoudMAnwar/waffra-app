@@ -48,6 +48,7 @@ class M417AutoSmsContractTest(unittest.TestCase):
         self.assertIn("part 'waffra_home_sms_transfer_review.part.dart';",home)
         home=home.replace(marker,transfer_part,1)
         home+=self.read("lib/waffra_home_profile.part.dart")
+        home+=self.read("lib/waffra_home_sms_confirmation.part.dart")
         self.assertIn("await entrySheet(sms:true,initialSms:body,reviewedSender:sender);",home)
         self.assertIn("smsHashes.contains(bankSmsHash(body))",home)
         # Income/expense and two-sided transfers have independent durable
