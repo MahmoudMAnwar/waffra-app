@@ -136,5 +136,9 @@ String readWaffraMainSourceForContracts(){
  if(s.split(summaryMarker).length!=2)throw StateError('Missing/duplicate M810 genuine summary source');
  s=s.replaceFirst(summaryMarker,_method('lib/waffra_home_transaction_summary.part.dart',
   ' Future<void> showSummaryTransactions(bool income)async {'));
+ const verifiedPickersMarker=' // M812: verified SMS money-account and optional budget pickers moved to real registered Home part.\n';
+ if(s.split(verifiedPickersMarker).length!=2)throw StateError('Missing or duplicated M812 bank account/budget selection marker');
+ s=s.replaceFirst(verifiedPickersMarker,_method('lib/waffra_home_verified_finance_pickers.part.dart',
+  ' /// Read a single authoritative SQLCipher account witness immediately'));
  return s;
 }
