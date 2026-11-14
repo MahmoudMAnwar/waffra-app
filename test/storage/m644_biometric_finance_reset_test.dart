@@ -124,7 +124,7 @@ void main() {
     ]) {
       expect(await count(table), 0, reason: table);
     }
-    expect((await snapshot.read()).values, {'entries':'[]'});
+    expect((await snapshot.read()).values, {'entries':'[]', 'waffra_categories_v24':'[]'});
     expect((await db.customSelect('PRAGMA foreign_key_check').get()), isEmpty);
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getString('waffra_language'), 'ar');
@@ -133,7 +133,7 @@ void main() {
     db = WaffraEncryptedStore.openAt(
       File(directory.path+'/finance.sqlite'), key:key);
     expect((await WaffraAtomicFinanceSnapshot(
-      store:db,experimentalEnabled:true).read()).values, {'entries':'[]'});
+      store:db,experimentalEnabled:true).read()).values, {'entries':'[]', 'waffra_categories_v24':'[]'});
     expect(await count('fresh_finance_money_accounts'), 0);
     await WaffraAccountsSchema.requireReady(db);
   });
