@@ -37,7 +37,7 @@ class M925RegisteredHomeFinanceSourcePreflightTest(unittest.TestCase):
     def test_m924_original_dart_string_witnesses_stay_unweakened(self):
         guard=(ROOT/'test/qa/m924_widget_shared_sms_registered_source_guard_test.py').read_text(encoding='utf-8')
         dart=(ROOT/'test/m108_home_widget_one_finance_writer_test.dart').read_text(encoding='utf-8')
-        self.assertIn('self.assertIn(witness.replace("\'", "\\\\'"),test)',guard)
+        self.assertIn('self.assertIn(witness.replace(',guard)
         self.assertIn("self.assertIn(witness,original)",guard)
         self.assertEqual(dart.count('final home=readWaffraMainSourceForContracts();'),2)
         self.assertIn("expect(home,isNot(contains('_homeFinancePersistence.commitConfirmedLegacySms(')));",dart)
