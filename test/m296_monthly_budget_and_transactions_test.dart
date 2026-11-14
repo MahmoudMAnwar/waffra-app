@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -22,7 +23,7 @@ void main(){
   waffraLanguage.value='en';
   expect(waffraMonthlyBudgetSaveError(''), 'This field is required');
   expect(waffraMonthlyBudgetSaveError('0'), 'Enter an amount greater than zero');
-  final source=File('lib/main.dart').readAsStringSync();
+  final source=readWaffraMainSourceForContracts();
   expect(source,contains('final fieldError=waffraMonthlyBudgetSaveError(amount.text);'));
   expect(source,contains('if(fieldError!=null||v==null||!v.isFinite||v<=0)'));
   expect(source,contains('TextField(controller:amount,autofocus:false,'));
@@ -55,7 +56,7 @@ void main(){
    expect(waffraDashboardTransactionDisplayCount(count,expanded:false),10);
    expect(waffraDashboardTransactionDisplayCount(count,expanded:true),count);
   }
-  final source=File('lib/main.dart').readAsStringSync();
+  final source=readWaffraMainSourceForContracts();
   // M648: the entry preview remains capped at ten, while the same
   // activity list also exposes verified transfer/savings cards.
   expect(source,contains('if(waffraCanExpandDashboardTransactions(visible.length)&&'));

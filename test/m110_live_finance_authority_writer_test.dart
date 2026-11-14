@@ -1,9 +1,10 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('M110 Home finance persists through source authority, never direct legacy', () {
-    final main = File('lib/main.dart').readAsStringSync();
+    final main = readWaffraMainSourceForContracts();
     final authority = File('lib/storage/waffra_verified_finance_authority.dart')
       .readAsStringSync();
     expect(main, contains('_financeAuthority.saveCaptured('));
@@ -20,7 +21,7 @@ void main() {
   });
 
   test('M110 source witness captured before queued write; widget cannot be overwritten', () {
-    final main = File('lib/main.dart').readAsStringSync();
+    final main = readWaffraMainSourceForContracts();
     // M175 intentionally makes the route an argument: a stale widget must
     // still never overwrite the baseline, regardless of mutation intent.
     final start = main.indexOf(' Future<void> persist({');
@@ -53,7 +54,7 @@ void main() {
   });
 
   test('M110 financial deletion carries baseline, not a fresh post-widget snapshot', () {
-    final main = File('lib/main.dart').readAsStringSync();
+    final main = readWaffraMainSourceForContracts();
     for (final route in ['deleteAllTransactions','fullFinanceReset']) {
       final start = main.indexOf('route:WaffraFinanceRoute.$route');
       expect(start, greaterThan(0), reason: route);

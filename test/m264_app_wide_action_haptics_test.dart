@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -130,7 +131,7 @@ void main() {
     final widget=File('native/WaffraWidget.kt').readAsStringSync();
     expect(widget,contains('Intent(context, MainActivity::class.java)'));
     expect(widget,contains('PendingIntent.FLAG_IMMUTABLE'));
-    final main=File('lib/main.dart').readAsStringSync();
+    final main=readWaffraMainSourceForContracts();
     expect(main,contains('if(!_acceptFabTap())return;'));
     expect(main,contains('HapticFeedback.lightImpact();'));
     expect(main,contains('onChanged:(_)=>setState('),

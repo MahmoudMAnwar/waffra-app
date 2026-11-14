@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -85,7 +86,7 @@ void main() {
 
   test('bank SMS details always read from vault regardless of notes content',
       () {
-    final home = File('lib/main.dart').readAsStringSync();
+    final home = readWaffraMainSourceForContracts();
     final start = home.indexOf('Future<void> transactionDetails(MoneyEntry entry)');
     final end = home.indexOf('\n Widget tile(', start);
     expect(start, greaterThanOrEqualTo(0));

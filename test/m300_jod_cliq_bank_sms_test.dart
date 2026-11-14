@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/main.dart';
 import 'package:waffra/waffra_sms_fx_review.dart';
@@ -37,7 +38,7 @@ void main(){
   expect(WaffraCurrencyMinor.digits('SAR'),2);
  });
  test('M300 no accidental ledger conversion or false field-error notice',(){
-  final src=File('lib/main.dart').readAsStringSync();
+  final src=readWaffraMainSourceForContracts();
   expect(src,contains('WaffraSmsCurrencies.originalAmount('));
   expect(src,contains("WaffraSmsCurrencies.requiresReviewForSarLedger(message.text)"));
   expect(src,contains('bankSmsDate(body)==null||bankSmsHasUnverifiedTimestamp(body)'));

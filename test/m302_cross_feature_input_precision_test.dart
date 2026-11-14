@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -93,7 +94,7 @@ void main(){
   final entered=formatted(noTruncate,'1234.567');
   expect(entered.text,'1234.567');
   expect(WaffraValidators.positiveAmount(entered.text),'invalid_amount');
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   final all=RegExp(r'inputFormatters:\[const WaffraAmountFormatter\(truncateExcess:false\)\]')
       .allMatches(main).length;
   expect(all,greaterThanOrEqualTo(10),

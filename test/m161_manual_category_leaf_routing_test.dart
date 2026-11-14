@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/main.dart';
@@ -103,7 +104,7 @@ void main() {
   });
 
   test('M161 manual leaf routing retains source-gated SMS hash persistence', () {
-    final source = File('lib/main.dart').readAsStringSync();
+    final source = readWaffraMainSourceForContracts();
     // Both manual and bank-SMS entry paths now share the same leaf guard;
     // no financial write may bypass main/child category validation.
     expect(source, contains('if(!waffraCanAssignManualCategory(categories,'));
