@@ -48,4 +48,7 @@ def read_waffra_home_source(root=ROOT):
     restore(" // M733: verified transfer and savings card UI moved to registered same-library part.\n",
             "lib/waffra_home_verified_transfer_cards.part.dart",
             " String _m647VerifiedAccountLabel(")
+    restore(" // M735: Home category workflows extracted unchanged to registered same-library part.\n",
+            "lib/waffra_home_category_workflows.part.dart",
+            " Future<BudgetCategory?> categoryDialog(")
     return source
