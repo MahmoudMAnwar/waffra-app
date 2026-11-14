@@ -164,6 +164,9 @@ part 'waffra_home_budget_alert_charts.part.dart';
 part 'waffra_home_verified_finance_pickers.part.dart';
 part 'waffra_home_navigation_helpers.part.dart';
 part 'waffra_home_presentation_controls.part.dart';
+part 'waffra_home_logout_guard.part.dart';
+part 'waffra_home_finance_notification_route.part.dart';
+part 'waffra_home_fx_preview.part.dart';
 part 'waffra_home_sms_review_indicator.part.dart';
 part 'waffra_home_sms_transfer_review.part.dart';
 part 'waffra_home_goals_recurring_pages.part.dart';
@@ -4312,62 +4315,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  // Keep genuine DB reads visible to teardown even after Future.timeout
  // detached an old UI await. Each read must complete before SQLCipher closes.
  final Set<Future<void>> _m627OutstandingAccountReads=<Future<void>>{};
- Future<void> _m627CloseForLogout()async{
-  if(_m627ClosingSession)return;
-  _m627ClosingSession=true;
-  _m627AccountEpoch++;
-  _m630HomeStartupEpoch++;
-  // M636: retain the last verified Home frame behind the blocking logout
-  // overlay. An error/retry view belongs to real failure, never success.
-  // _m627ClosingSession still prevents finance work until safe teardown.
-  try{
-   // Never close an active database underneath a Home load or pending
-   // finance preparation/write. Timeout fails signout closed, not finance.
-   final pendingLoad=_m627HomeLoadCompletion;
-   if(pendingLoad!=null){
-    await pendingLoad.future.timeout(const Duration(seconds:20));
-   }
-   // Future.timeout does not cancel the SQL query: fail signout rather
-   // than close a vault whose old account read is still running.
-   await Future.wait<void>(_m627OutstandingAccountReads.toList())
-    .timeout(const Duration(seconds:20));
-   // M630: a widget reread or due-payment/reminder task may still own
-   // this source after the first Home frame. Finish it before vault close.
-   final postFrameFinance=_m630PostFrameFinanceWork;
-   if(postFrameFinance!=null){
-    await postFrameFinance.timeout(const Duration(seconds:20));
-   }
-   await _m468PersistSequence.timeout(const Duration(seconds:20));
-   await _financialWriteQueue.drain().timeout(const Duration(seconds:20));
-   final pending=_financeBindingFuture;
-   if(pending!=null)await pending;
-   final binding=_financeBinding;
-   if(binding!=null)await binding.close();
-   _financeBinding=null;
-   _financeBindingFuture=null;
-   // Preserve a non-null guarded authority until this Home unmounts.
-   _financeAuthority=WaffraVerifiedFinanceAuthority(legacy:_homeFinancePersistence);
-   _m468AccountReadInFlight=null;
-   _m468AccountReadAgain=false;
-   _m468VerifiedAccountsLoaded=false;
-  }catch(_){
-   _m627ClosingSession=false;
-   rethrow;
-  }
- }
- void _m627AbortFailedLogout(){
-  _m627ClosingSession=false;
-  // M636: if the genuine Home DB close fails, keep the owner signed in
-  // but offer verified finance Retry rather than a frozen
-  // `Signing out` state with a disposed authority or fake old balances.
-  if(mounted)setState((){
-   ready=false;
-   _financeLoadFailure=waffraIsEnglish?
-    'Sign-out was cancelled. Retry safely to verify your financial data.':
-    'توقف تسجيل الخروج. أعد المحاولة بأمان للتحقق من بياناتك المالية.';
-  });
- }
-
+ // M929: verified sign-out closing and cancelled-logout recovery live in registered Home part.
  // Account filters are presentation-only; never inherit them for new money.
  List<WaffraAccountBalance> _m467Accounts=const <WaffraAccountBalance>[];
  // M648: bounded verified transfer read is cached per displayed account.
@@ -4596,44 +4544,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  }
  // M791: original fail-closed Home finance startup and recovery UI in registered part.
  bool _m621NoticeOpening=false;
- void _m621OnFinanceNoticeTap(){
-  if(!mounted||!ready||!widget.postAuthVisible||_financeLoadFailure!=null||
-     _m621NoticeOpening||_autoSmsReviewOpen)return;
-  final target=waffraFinanceNoticeTap.value;
-  if(target==null)return;
-  final lifecycle=WidgetsBinding.instance.lifecycleState;
-  if(lifecycle!=null&&lifecycle!=AppLifecycleState.resumed)return;
-  _m621NoticeOpening=true;
-  waffraFinanceNoticeTap.value=null;
-  WidgetsBinding.instance.addPostFrameCallback((_)async{
-   try{
-    if(!mounted||!ready||_financeLoadFailure!=null)return;
-    if(target.destination=='review'){
-     // The existing targeted review performs an owner-verified pendingById.
-     // An excluded/stale/committed SMS cannot be posted twice from a tap.
-     await _reviewAutoSmsCandidates(targetId:target.id);
-    }else if(target.destination=='saved'){
-     // Only records from the CURRENT verified finance ledger can open.
-     final matching=entries.where((record)=>
-      record.id==target.entryId&&record.sourceType=='sms').toList();
-     if(matching.length==1){
-      await transactionDetails(matching.single);
-     }else if(mounted){
-      snack(context,waffraIsEnglish?
-       'This saved transaction is not available in the current account.':
-       'العملية المحفوظة غير موجودة في الحساب الحالي.');
-     }
-    }
-   }catch(error){
-    debugPrint('Finance notification route refused: ${error.runtimeType}');
-   }finally{
-    _m621NoticeOpening=false;
-    if(mounted&&waffraFinanceNoticeTap.value!=null){
-     _m621OnFinanceNoticeTap();
-    }
-   }
-  });
- }
+ // M929: verified notification-to-SMS/saved-ledger route lives in registered Home part.
  @override void dispose(){if(!_m663FirstInteractiveFrame.isCompleted)_m663FirstInteractiveFrame.complete();_m632SmsNoticeTimer?.cancel();if(identical(WaffraBackNavigation.onHomeBack,_registeredBackHandler))WaffraBackNavigation.onHomeBack=null;_dashboardScrollController.dispose();_categoryScrollController.dispose();_goalsScrollController.dispose();_recurringScrollController.dispose();waffraReturnHome.removeListener(_returnToHome);waffraIncomingSms.removeListener(_receiveSharedSms);waffraAutoSmsUpdates.removeListener(_receiveAutoSmsNotice);waffraFinanceNoticeTap.removeListener(_m621OnFinanceNoticeTap);waffraWidgetAction.removeListener(_receiveWidgetAction);_widgetReloadListener?.dispose();_saveProgress.dispose();final binding=_financeBinding;if(binding!=null)unawaited(_financialWriteQueue.drain().whenComplete(binding.close));super.dispose();}
  // M840: original verified Home/Widget synchronization now in registered Dart part.
  Future<void>? _m474PullRefreshInFlight;
@@ -4646,48 +4557,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  // M636: Manual paste/review sheet retired. Automatic encrypted SMS Review
  // and owner-verified account-bound finance editor are retained.
 
- // M643: Saudi FX posting stays disabled; retain non-posting preview for strict FX QA.
- // ignore: unused_element
- Future<void> _previewForeignBankCurrency(String raw)async {
-  if(!WaffraSaudiRelease.bankSmsForeignCurrencyPreview){
-   if(mounted)snack(context,waffraIsEnglish?
-    'Non-SAR transactions cannot be saved in this Saudi release.':
-    'العمليات بغير الريال غير مدعومة في النسخة السعودية الحالية.');
-   return;
-  }
-  // No bank message contents, personal identifiers, photos or notes are
-  // included in the FX network request: only original and target codes.
-  final source=WaffraSmsCurrencies.originalAmount(raw);
-  if(!mounted)return;
-  if(source==null){
-   snack(context,waffraIsEnglish?
-    'Original currency or amount is uncertain. Check the bank message first.':
-    'العملة أو المبلغ الأصلي غير مؤكد. راجع الرسالة البنكية أولًا.');
-   return;
-  }
-  final target=WaffraDisplayCurrency.country.code;
-  if(source.currency==target){
-   snack(context,waffraIsEnglish?
-    'Bank currency matches the app display currency. Encrypted foreign-currency saving is not enabled yet.':
-    'عملة الرسالة مطابقة لعملة العرض. حفظ العملات الأجنبية المشفر غير مفعل بعد.');
-   return;
-  }
-  snack(context,waffraIsEnglish?
-   'Retrieving the latest available exchange rate…':
-   'جاري جلب أحدث سعر صرف متاح…',isError:false);
-  final approved=await WaffraForeignCurrencyPreview.show(context,
-   originalAmount:source.amount,originalCurrency:source.currency,
-   targetCurrency:target,english:waffraIsEnglish);
-  if(approved!=null&&mounted){
-   // Do not write an FX amount to the guarded legacy ledger. We can only
-   // persist the conversion together with original currency + approved quote
-   // in the atomically encrypted FX finance source after cutover approval.
-   snack(context,waffraIsEnglish?
-    'Conversion preview approved. No amount was saved; encrypted FX posting is not active.':
-    'تمت الموافقة على معاينة التحويل فقط. لم يُحفظ أي مبلغ؛ تسجيل العملات المحوّلة ينتظر تفعيل التخزين المعتمد.');
-  }
- }
-
+ // M929: no-post foreign currency preview lives in registered Home part.
  // M719: original verified transaction entry form extracted to same-library Home part.
  // M795: Home category selector and protected receipt dialogs moved to registered Dart part.
  // M805: original Home budget alerts and chart SVG methods moved to registered part.
