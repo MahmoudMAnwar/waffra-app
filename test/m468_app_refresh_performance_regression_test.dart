@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_external_media_session.dart';
@@ -16,7 +17,7 @@ void main(){
  });
 
  test('M468 Home refresh reduces duplicate account and SMS scans',(){
-  final s=File('lib/main.dart').readAsStringSync();
+  final s=readWaffraMainSourceForContracts();
   expect(s,contains('final active=_m468AccountReadInFlight;'));
   expect(s,contains('_m468AccountReadAgain=true;'));
   expect(s,contains("final contextView=chosen=='all'?null:await api.readAccountContext("));
@@ -33,7 +34,7 @@ void main(){
  });
 
  test('M468 no financial authority or history is discarded for faster UI',(){
-  final s=File('lib/main.dart').readAsStringSync();
+  final s=readWaffraMainSourceForContracts();
   expect(s,contains('await _financialWriteQueue.drain();'));
   expect(s,contains('view.requireIntegrity();'));
   expect(s,contains('WaffraFreshHomeCatalogRecovery.load('));

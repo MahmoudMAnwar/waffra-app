@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/main.dart';
@@ -49,7 +50,7 @@ void main() {
   });
 
   test('M398: manual editor retains budget actions and adjacent date', () {
-    final app = File('lib/main.dart').readAsStringSync();
+    final app = readWaffraMainSourceForContracts();
     expect(app, contains("'__create_budget__'"));
     expect(app, contains("'__manage_budgets__'"));
     expect(app, contains('Expanded(child:dateAction())'));

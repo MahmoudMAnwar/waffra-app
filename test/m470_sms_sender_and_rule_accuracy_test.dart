@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_sms_local_rules.dart';
 
@@ -36,7 +37,7 @@ void main(){
  });
 
  test('M470 #12 sender summary is RTL-isolated and uses approved copy',(){
-  final home=File('lib/main.dart').readAsStringSync();
+  final home=readWaffraMainSourceForContracts();
   expect(home,contains('رسائل بانتظار المراجعة'));
   expect(home,isNot(contains(' رسائل تحتاج فرز')));
   expect(home,contains('textDirection:waffraIsEnglish?TextDirection.ltr:TextDirection.rtl'));
@@ -44,7 +45,7 @@ void main(){
  });
 
  test('M470 #5/#6 account action stays beside date with preserved entry state',(){
-  final home=File('lib/main.dart').readAsStringSync();
+  final home=readWaffraMainSourceForContracts();
   final anchor=home.indexOf('Future<void> entrySheet(');
   final editor=home.substring(anchor,home.indexOf('Future<void> showReceipt(',anchor));
   // #416/#418 supersede the old date-adjacent duplicate account button.

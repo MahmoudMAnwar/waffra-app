@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/main.dart';
@@ -78,7 +79,7 @@ void main() {
   });
 
   test('M373 all money flows use independent budget catalogue', () {
-    final app=File('lib/main.dart').readAsStringSync();
+    final app=readWaffraMainSourceForContracts();
     final directory=File('lib/waffra_budget_directory.part.dart').readAsStringSync();
     expect(app,contains("'waffra_named_budgets_v1':jsonEncode("));
     expect(app,contains("financeView.getString('waffra_named_budgets_v1')"));

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_new_account_dialog.dart';
@@ -53,7 +54,7 @@ void main(){
  });
 
  test('M470 #11 account suggestion only starts on confirmed bank SMS review',(){
-  final home=File('lib/main.dart').readAsStringSync();
+  final home=readWaffraMainSourceForContracts();
   final start=home.indexOf(' Future<({List<String?>? ids,int? generation})?> reviewSmsAccountLinks(');
   final end=home.indexOf('/// Budget assignment is OPTIONAL',start);
   expect(start,greaterThan(0));
@@ -93,7 +94,7 @@ void main(){
  });
 
  test('M636 SMS posting remains a separately confirmed atomic finance write',(){
-  final home=File('lib/main.dart').readAsStringSync();
+  final home=readWaffraMainSourceForContracts();
   final editor=home.substring(home.indexOf(' Future<void> entrySheet('),
    home.indexOf(' Future<void> showReceipt('));
   expect(editor,contains('reviewSmsAccountLinks([result]'));

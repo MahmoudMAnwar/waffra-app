@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_bank_sms_facts.dart';
@@ -76,7 +77,7 @@ void main(){
  });
 
  test('M473 #413: caller runs keyword learning only after verified writes',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   final learning=main.substring(
    main.indexOf(' Future<void> _learnManualCategoryPreference('),
    main.indexOf(' Map<String,Object?>? _localSmsClassification('));

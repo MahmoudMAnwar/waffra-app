@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/storage/waffra_accounts_repository.dart';
@@ -58,7 +59,7 @@ void main() {
   expect(source,isNot(contains("DropdownMenuItem(value:'none'")));
  });
  test('M470 Home manual and transfer both show sequential provider-account choices',(){
-  final source=File('lib/main.dart').readAsStringSync();
+  final source=readWaffraMainSourceForContracts();
   expect(source,contains("Key('m470-home-manual-provider-'"));
   expect(source,contains("Key('m470-home-manual-account-'"));
   expect(source,contains("'Bank or provider *':'الجهة أو البنك *'"));
@@ -68,7 +69,7 @@ void main() {
   expect(source,contains("initialSelectedIds:chosenManualAccount==null?null:[chosenManualAccount]"));
  });
  test('M470 SMS review has bank and account cascade with sender-match gate',(){
-  final source=File('lib/main.dart').readAsStringSync();
+  final source=readWaffraMainSourceForContracts();
   expect(source,contains("Key('m470-review-provider-'"));
   expect(source,contains("providerGroups.where((p)=>p.id==chosenProviders[n])"));
   expect(source,contains("chosenProviders[n]=value;"));
