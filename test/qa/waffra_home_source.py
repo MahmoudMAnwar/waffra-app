@@ -84,4 +84,7 @@ def read_waffra_home_source(root=ROOT):
     restore(" // M783: original SMS settings, exclusions and local notification actions moved to registered Home part.\n",
             "lib/waffra_home_sms_management.part.dart",
             " Future<void> _scanPreviousBankSmsFromSettings()async{")
+    restore(" // M790: original compact financial activity cards live in registered Home part.\n",
+            "lib/waffra_home_compact_activity_cards.part.dart",
+            " Widget compactTransaction(MoneyEntry entry){")
     return source
