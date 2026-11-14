@@ -480,7 +480,7 @@
       },
       {
         "start": " def test_finance_ui_respects_threshold_and_real_due(self):",
-        "end": "  main+=Path('lib/waffra_home_budget_cards.part.dart').read_text(encoding='utf8')"
+        "end": "  self.assertIn('WaffraFinancialInsights.reachedBudgetThreshold(',main)"
       }
     ],
     "lib/waffra_cloudflare_sms_gateway.dart": [
