@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "change_id": "M690-M835-ISSUES632-637-20261114",
+  "change_id": "M690-M850-ISSUES632-637-20261114",
   "human_scope_review": "Issue #629 completes prior PR #628 only after user-visible acceptance; #631 explicitly authorizes three exact screenshots for Goals/Dues/SMS Review, permanently visible financial activity, non-moving FAB-aligned notice, and savings/goal-due cash safety. Existing tests replace outdated visual assumptions without deleting financial safety assertions. Device screenshots/old restore still require external device evidence.",
   "user_requested_changes": [
     "M690 #632 permanently disable third-party AI bank SMS uploads and opt-in on previously installed versions, remove Settings toggle and signed Android staging worker, retain local encrypted SMS Review and money writer.",
@@ -77,7 +77,8 @@
     "M812 #633 relocate original verified bank SMS money-account witness and optional budget association methods unchanged into real same-library Home part; retain no guessed account, explicit user choice, generation safeguards and original money and SMS validations.",
     "M840 #633 move original SQLCipher verified Home/Widget transaction reconciliation method unchanged into registered same-library part, preserve source owner, ready guard, exact account balances and widget refresh; keep in-flight State field and independent complete CI/phone data parity.",
     "M830 #633 move original Home category/summary/filter + current-tab/footer/back navigation helper methods to registered same-library part, preserve original approved UI, global FAB and unchanged lifecycle/build.",
-    "M835 #633 preserve original no-auto-post Home bank SMS review indicator, message counts, pending/error, explicit rescan and user navigation and all approved UI by moving unchanged card to same-library part; no writer/permissions changes."
+    "M835 #633 preserve original no-auto-post Home bank SMS review indicator, message counts, pending/error, explicit rescan and user navigation and all approved UI by moving unchanged card to same-library part; no writer/permissions changes.",
+    "M850 #633 relocate exact existing Home SMS notice debouncer and explicit rescan methods into registered same-library part, preserving original timer, native owner permission, local-only/consent and no-auto financial post, source tests and private archive acceptance."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -303,7 +304,9 @@
     "lib/waffra_home_navigation_helpers.part.dart",
     "test/m830_home_navigation_helpers_extraction_test.dart",
     "lib/waffra_home_sms_review_indicator.part.dart",
-    "test/m835_home_sms_review_indicator_extraction_test.dart"
+    "test/m835_home_sms_review_indicator_extraction_test.dart",
+    "lib/waffra_home_sms_rescan.part.dart",
+    "test/m850_home_sms_rescan_extraction_test.dart"
   ],
   "approved_deleted_files": [
     "lib/waffra_sms_cloud_review_analyzer.dart"
@@ -393,7 +396,7 @@
         "end": "import 'waffra_sms_local_rules.dart';"
       },
       {
-        "start": " Future<void> _rescanAutoSmsInbox(",
+        "start": " Timer? _m632SmsNoticeTimer;",
         "end": " /// Explicit, idempotent account-to-account transfer from reviewed bank SMS."
       },
       {
