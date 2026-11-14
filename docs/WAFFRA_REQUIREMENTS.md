@@ -2029,3 +2029,7 @@ Move original `_receiveAutoSmsNotice()` and `_rescanAutoSmsInbox()` unchanged in
 
 ### M845 — Issue #633 / Draft #638: preserve original no-cloud SMS and account safety regression
 Original `test/m436_cloud_review_pipeline_test.dart` still reads raw `lib/main.dart` for a positive `reviewSmsBudgetLinks([record])` and verified manual SMS entry route after the owner's verified Home methods moved to registered same-library Dart parts. Redirect **only the two original main.dart source readers** to strict `readWaffraMainSourceForContracts()` with its import; keep all original cloud no-upload, OTP, account-bound finance, native 24-hour queue and redaction assertions unchanged. Do not skip or weaken tests, alter source code or re-enable external AI. M385 protected source ranges and CI remain mandatory.
+
+
+### M855 — Issue #633 / Draft #638: original M470 SMS excluded-sender and bulk selection regressions
+Six existing M470 SMS exclusion and history tests still use raw `lib/main.dart` readers after live sender/notification/indicator code was moved to registered same-library Dart parts. Change only the three original `File('lib/main.dart').readAsStringSync()` calls to strict `readWaffraMainSourceForContracts()` and add its import. Preserve every original sender/message restoration, native encrypted block, original bank SMS and 1000-row multi-select ID/commit assertion, no altered Flutter runtime, no weakened/removed assertion. Exact original-source M385 scope and head-CI required.
