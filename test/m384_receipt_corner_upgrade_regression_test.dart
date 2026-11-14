@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -37,7 +38,7 @@ void main() {
   });
 
   test('M384: both cards show folded count from the stored finance record', () {
-    final app=File('lib/main.dart').readAsStringSync();
+    final app=readWaffraMainSourceForContracts();
     final listCard=app.split('Widget tile(MoneyEntry e)').last
       .split('String get greeting').first;
     final compactCard=app.split('Widget compactTransaction(MoneyEntry entry)').last
