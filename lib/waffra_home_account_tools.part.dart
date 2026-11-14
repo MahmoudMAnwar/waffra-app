@@ -741,6 +741,16 @@ extension _WaffraHomeAccountTools on _HomeScreenState {
    if(mounted)snackSuccess(context,waffraIsEnglish?
     'Financial data permanently deleted':'تم حذف البيانات المالية بنجاح');
   }catch(e){
+   if(e is WaffraReceiptCleanupPending){
+    // Money was already committed as empty. Never falsely claim that the
+    // entire operation rolled back merely because an old app-owned image
+    // failed the post-commit purge; encrypted startup can resume the journal.
+    try{await _loadFinanceSafely();}catch(_){}
+    if(mounted)snack(context,waffraIsEnglish?
+     'Financial records were deleted, but receipt cleanup is pending. The app will retry securely.':
+     'تم حذف البيانات المالية، لكن تنظيف بعض المرفقات لم يكتمل وسيُستأنف بأمان.');
+    return;
+   }
    // A source or foreign-key mismatch must never trigger a legacy fallback.
    debugPrint('M644 verified biometric finance reset rejected: $e');
    if(mounted)snack(context,waffraIsEnglish?
