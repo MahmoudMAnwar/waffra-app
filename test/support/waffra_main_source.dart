@@ -175,5 +175,14 @@ String readWaffraMainSourceForContracts(){
  if(s.split(smsRescanMarker).length!=2)throw StateError('Missing or duplicate M850 live native SMS rescan source');
  s=s.replaceFirst(smsRescanMarker,_method('lib/waffra_home_sms_rescan.part.dart',
   ' void _receiveAutoSmsNotice(){'));
+ const m929_logout=' // M929: verified sign-out closing and cancelled-logout recovery live in registered Home part.\n';
+ if(s.split(m929_logout).length!=2)throw StateError('M929 logout Dart part marker missing or duplicate');
+ s=s.replaceFirst(m929_logout,_method('lib/waffra_home_logout_guard.part.dart',' Future<void> _m627CloseForLogout()async{'));
+ const m929_notice=' // M929: verified notification-to-SMS/saved-ledger route lives in registered Home part.\n';
+ if(s.split(m929_notice).length!=2)throw StateError('M929 notice Dart part marker missing or duplicate');
+ s=s.replaceFirst(m929_notice,_method('lib/waffra_home_finance_notification_route.part.dart',' void _m621OnFinanceNoticeTap(){'));
+ const m929_fx=' // M929: no-post foreign currency preview lives in registered Home part.\n';
+ if(s.split(m929_fx).length!=2)throw StateError('M929 fx Dart part marker missing or duplicate');
+ s=s.replaceFirst(m929_fx,_method('lib/waffra_home_fx_preview.part.dart',' Future<void> _previewForeignBankCurrency('));
  return s;
 }
