@@ -3461,6 +3461,35 @@
         "Part must be registered with main.dart, never replaced by stub or fake test source.",
         "Mobile screenshots and owner's historical encrypted backup parity remain separately unverified until physical device evidence."
       ]
+    },
+    {
+      "id": "M739-HOME-SMS-SENDER-INBOX-REAL-SOURCE",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "The original Home authenticated, sender-grouped SMS inbox review dialog lived inline inside _HomeScreenState, with direct owner approval, selection, sender filters and original message access.",
+      "approved_behavior": "Exact original inbox dialog is relocated to a registered same-library Dart extension; all original sender grouping/selection, original SMS, local review, explicit confirmation, security and no-automatic-write behavior remain identical and available to strict original source tests.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_sms_inbox.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/m739_home_sms_inbox_extraction_test.dart",
+        "test/m672_m678_activity_account_regression_test.dart",
+        "test/m669_sms_review_category_search_test.dart",
+        "test/m417_sms_first_run_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "SMS account confirmation and exact local source date/currency verification remain mandatory; never accept an automatic finance posting.",
+        "Sender-level selection, exclusion, exact original SMS body, local verified accounts and protected SQLCipher source are unchanged.",
+        "Strict registered source reconstruction is required and no pre-existing assertion is disabled.",
+        "Widget screenshots and encrypted V24 restore on owner physical Android remain separate acceptance proof."
+      ]
     }
   ]
 }
