@@ -4382,6 +4382,33 @@
         "Failed authority write keeps original financial values and displays a safe retry message.",
         "No change to owner Backup/Restore, original SMS review, or approved FAB layout."
       ]
+    },
+    {
+      "id": "M922-ORIGINAL-WIDGET-VERIFIED-BALANCE-SOURCE-CONTRACT",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Original M636 Widget balance test read raw main.dart to assert authoritative integer halalas and SAR display although the unchanged real Home Widget balance publisher moved to a registered same-library part, making source-only finance regression fail falsely.",
+      "approved_behavior": "Both original raw-main source readers in the same M636 Flutter Widget privacy/finance regression now use strict registered same-library production Home source reconstruction. Preserve all 19 original assertions and add no weaker fake balance or native capture route.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_widget_balance.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/waffra_widget_quick_capture_test.dart"
+      ],
+      "test_paths": [
+        "test/waffra_widget_quick_capture_test.dart",
+        "test/m904_home_widget_balance_extraction_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/legacy-writer-ordering.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "The original authenticated SQLCipher balance and integer halalas are verified; no guessing account balance or storing raw bank SMS.",
+        "Keep all native widget intent and owner-confirmed entry, retired quick capture, privacy and immutable intent checks unchanged.",
+        "Fail closed on missing/detached/duplicate Dart part; no mocked code for source tests.",
+        "Physical Android and password-authenticated owner V24 restore parity remain separately unverified."
+      ]
     }
   ]
 }
