@@ -4536,6 +4536,33 @@
         "Foreign-currency preview never posts converted amount or bypasses Saudi SAR release restriction.",
         "Existing app wide stationary FAB, UI design, 1:1 original source route, backup/restore and financial account balance remain unchanged."
       ]
+    },
+    {
+      "id": "M930-HOME-AUTH-SQLCIPHER-FAB-RESUME-WIDGET-ACTION-EXTRACTION",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Home verified first-frame visibility, finance authority bind, stationary FAB action lock, lifecycle onResume and root/Widget navigation callbacks remained inline in the large Home State after other same-library modules were extracted.",
+      "approved_behavior": "Move original exact methods without logic changes to five registered Dart parts; preserve source QA reconstruction, original owner session finance authority, first interactive frame, same verified UI action and explicit post-frame refresh.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_auth_visibility.part.dart",
+        "lib/waffra_home_finance_binding.part.dart",
+        "lib/waffra_home_fab_actions.part.dart",
+        "lib/waffra_home_resume_handler.part.dart",
+        "lib/waffra_home_widget_action_routes.part.dart"
+      ],
+      "test_paths": [
+        "test/m930_home_lifecycle_helpers_extraction_test.dart",
+        "test/m663_home_prewarm_auth_handoff_test.dart",
+        "test/m631_verified_finance_prewarm_test.dart",
+        "test/m627_home_handoff_timeout_and_session_reset_test.dart",
+        "test/m630_home_first_frame_contention_test.dart"
+      ],
+      "safety_invariants": [
+        "Never reopen closed SQLCipher owner authority or render pre-auth financial data.",
+        "Do not move the global FAB, alter its action timing or add financial writes.",
+        "Do not initiate expensive SMS/Widget reads on the unlock frame; preserve deferred guarded resume.",
+        "Original root navigation and Widget pending action never bypass authenticated Home-ready gates."
+      ]
     }
   ]
 }
