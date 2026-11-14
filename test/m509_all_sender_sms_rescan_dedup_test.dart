@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_sms_local_rules.dart';
@@ -65,7 +66,7 @@ void main() {
  });
 
  test('M509 finance-backed ACK is separate from exclude/reject ACK',(){
-  final home=File('lib/main.dart').readAsStringSync();
+  final home=readWaffraMainSourceForContracts();
   final worker=File('lib/waffra_auto_sms_autopost.part.dart').readAsStringSync();
   final nativeMain=File('native/WaffraMainActivity.kt').readAsStringSync();
   final nativeWorker=File('native/WaffraAutoSmsWorker.kt').readAsStringSync();

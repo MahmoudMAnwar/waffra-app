@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "change_id": "M690-M710-ISSUES632-637-20261113",
+  "change_id": "M690-M708-ISSUES632-637-20261114",
   "human_scope_review": "Issue #629 completes prior PR #628 only after user-visible acceptance; #631 explicitly authorizes three exact screenshots for Goals/Dues/SMS Review, permanently visible financial activity, non-moving FAB-aligned notice, and savings/goal-due cash safety. Existing tests replace outdated visual assumptions without deleting financial safety assertions. Device screenshots/old restore still require external device evidence.",
   "user_requested_changes": [
     "M690 #632 permanently disable third-party AI bank SMS uploads and opt-in on previously installed versions, remove Settings toggle and signed Android staging worker, retain local encrypted SMS Review and money writer.",
@@ -23,7 +23,8 @@
     "M707 #633/#635 byte-identical extraction of the real 770-line Goals+Recurring page methods from Home State into a same-library part; preserve linked goal-due wallet/cash UI, verified callbacks, approved visual layout and all original source assertions via true production-source reconstruction.",
     "M708 #633 preserve M298 required-category and M302 recurring due source contracts by using true M707 production part reconstruction; M283 workflow must inspect the registered budget-card part while keeping the no-redundant-edit negative guard.",
     "M709 #633 keep original mandatory M176 route tagging, M670 verified goals/recurring/card/Snackbar UI and M127 no-tour/backup/FAB tests observing real registered Home parts after extraction, without weakening finance or UX assertions.",
-    "M710 #635 retain existing M674/M675 real owner-approved goal, recurring-account selection, FAB 58px placement and no-duplicate-edit safety assertions while reconstructing the genuine registered Goals/Recurring part after M707."
+    "M710 #635 retain existing M674/M675 real owner-approved goal, recurring-account selection, FAB 58px placement and no-duplicate-edit safety assertions while reconstructing the genuine registered Goals/Recurring part after M707.",
+    "M708 #633/#635 repair 19 strict Flutter regression expectations by reading the exact registered Home transfer, Goals and Recurring Dart part implementations; do not weaken original assertions or alter finance writers."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -81,7 +82,18 @@
     "test/storage/m176_module_finance_route_intent_test.dart",
     "test/m670_feedback_transfer_dashboard_test.dart",
     "test/m127_ui_tour_backup_acceptance_test.dart",
-    "test/m674_approved_page_designs_test.dart"
+    "test/m674_approved_page_designs_test.dart",
+    "test/m644_goal_notice_funding_contract_test.dart",
+    "test/m509_all_sender_sms_rescan_dedup_test.dart",
+    "test/m148_english_categories_legacy_backup_uat_test.dart",
+    "test/m462_smart_sms_rule_review_test.dart",
+    "test/m669_sms_review_category_search_test.dart",
+    "test/m641_goal_recurring_account_binding_test.dart",
+    "test/m470_sms_transfer_fee_firsttap_category_test.dart",
+    "test/m149_backup_pin_localized_fab_trash_uat_test.dart",
+    "test/m495_pr402_ui_performance_regression_test.dart",
+    "test/m258_finance_refresh_wiring_test.dart",
+    "test/m470_postsave_lag_and_teach_return_test.dart"
   ],
   "approved_deleted_files": [
     "lib/waffra_sms_cloud_review_analyzer.dart"
@@ -367,6 +379,10 @@
       {
         "start": " test('M388: open-ended goal never divided by zero or marked achieved',(){",
         "end": " test('M390: restored receipt references open the same existing gallery',(){"
+      },
+      {
+        "start": " test('M389: recurring duplicate is new, editable, and cannot inherit linked goal ID',(){",
+        "end": " test('M389: Goals/Recurring + menus show approved choices instead of direct sheet',(){"
       }
     ],
     "test/m302_optimistic_module_write_safety_test.dart": [
@@ -476,6 +492,111 @@
       },
       {
         "start": " test('M675 immutable + source contract and existing finance write routing',(){"
+      }
+    ],
+    "test/m644_goal_notice_funding_contract_test.dart": [
+      {
+        "start": " test('M644 account pickers route failure through one footer-aware notice',(){",
+        "end": " test('M644 savings success only occurs after source-verified atomic posting',(){"
+      },
+      {
+        "start": "import 'dart:io';",
+        "end": "void main(){"
+      }
+    ],
+    "test/m509_all_sender_sms_rescan_dedup_test.dart": [
+      {
+        "start": " test('M509 finance-backed ACK is separate from exclude/reject ACK',(){",
+        "end": " test('M509 duplicate source alone never auto-creates a financial posting',(){"
+      },
+      {
+        "start": "import 'dart:io';",
+        "end": "void main() {"
+      }
+    ],
+    "test/m148_english_categories_legacy_backup_uat_test.dart": [
+      {
+        "start": " test('M148: transaction pickers and category search use translated display labels',(){",
+        "end": " test('M148: V2 uses 12+ and historical export remains decryptable',()async{"
+      },
+      {
+        "start": "import 'dart:io';",
+        "end": "void main() {"
+      }
+    ],
+    "test/m462_smart_sms_rule_review_test.dart": [
+      {
+        "start": " test('M462 SMS transfer uses verified account-to-account route',(){",
+        "end": " test('M462 background safely acknowledges verified exclusions',(){"
+      },
+      {
+        "start": "import 'dart:io';",
+        "end": "void main(){"
+      }
+    ],
+    "test/m669_sms_review_category_search_test.dart": [
+      {
+        "start": "  test('M669 all SMS review routes keep original source and explicit reasons',(){",
+        "end": "  test('M669 all non-command production dropdowns use centralized search', () {"
+      },
+      {
+        "start": "import 'dart:io';",
+        "end": "void main() {"
+      }
+    ],
+    "test/m641_goal_recurring_account_binding_test.dart": [
+      {
+        "start": " test('M641 zero-account recurring dialog opens; fund and due never double post',(){",
+        "end": " test('M641 local/digital banks and digital wallets remain distinct',(){"
+      },
+      {
+        "start": "import 'dart:io';",
+        "end": "void main(){"
+      }
+    ],
+    "test/m470_sms_transfer_fee_firsttap_category_test.dart": [
+      {
+        "start": "  test('M470 #13: transfer review never relies on fee-bearing BankParser amount', () {",
+        "end": " test('M470 currency guard preserves valid bank بSR and بـSAR amounts', () {"
+      },
+      {
+        "start": "import 'dart:io';",
+        "end": "void main() {"
+      }
+    ],
+    "test/m149_backup_pin_localized_fab_trash_uat_test.dart": [
+      {
+        "start": " test('M149: all recycle-bin CTAs are red and recurring calendar is alongside',(){",
+        "end": "  testWidgets('M149: red deleted button fits narrow half-width in $brightness',(tester)async{"
+      },
+      {
+        "start": "import 'dart:io';",
+        "end": "void main() {"
+      }
+    ],
+    "test/m495_pr402_ui_performance_regression_test.dart": [
+      {
+        "start": " test('M499 #416 all editor entry points expose dependent inline Add',(){",
+        "end": " test('M500 #420 Details Edit enables verified retroactive account link',(){"
+      },
+      {
+        "start": "import 'dart:io';",
+        "end": "void main(){"
+      }
+    ],
+    "test/m258_finance_refresh_wiring_test.dart": [
+      {
+        "start": " test('M258 safe-main finance refresh wiring all four pages',(){"
+      },
+      {
+        "start": "import 'dart:io';",
+        "end": "void main(){"
+      }
+    ],
+    "test/m470_postsave_lag_and_teach_return_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": " test('M636 manual and automatic SMS both parse ledger off the UI path',(){"
       }
     ]
   }

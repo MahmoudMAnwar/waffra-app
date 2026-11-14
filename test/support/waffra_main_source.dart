@@ -26,5 +26,9 @@ String readWaffraMainSourceForContracts(){
  if(s.split(t).length!=2)throw StateError('Missing or repeated M707 page marker');
  s=s.replaceFirst(t,_method('lib/waffra_home_goals_recurring_pages.part.dart',
   ' Widget goalsPage(){'));
+ const smsMarker=' /// Explicit, idempotent account-to-account transfer from reviewed bank SMS.\n // M703: implementation moved byte-identically to registered Home part.\n';
+ if(s.split(smsMarker).length!=2)throw StateError('Missing or duplicated M703 part marker');
+ s=s.replaceFirst(smsMarker,_method('lib/waffra_home_sms_transfer_review.part.dart',
+  ' /// Explicit, idempotent account-to-account transfer from reviewed bank SMS.'));
  return s;
 }

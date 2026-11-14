@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/main.dart';
@@ -48,7 +49,7 @@ void main() {
  });
 
  test('M149: all recycle-bin CTAs are red and recurring calendar is alongside',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   final cats=File('lib/waffra_categories_page.part.dart').readAsStringSync();
   expect(main,contains('class WaffraDeletedItemsButton extends StatelessWidget'));
   expect(main,contains('const Color(0xFFFF9090)'));

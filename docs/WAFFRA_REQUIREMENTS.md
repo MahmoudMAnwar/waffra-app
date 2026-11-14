@@ -1846,3 +1846,5 @@ Audit of remaining production direct Material `DropdownButtonFormField<String>` 
 - **M709 (same Draft #638):** Retained strict M176 module-intent finance writer counts, M670 Home/goal/recurring/Snackbar layout and M127 FAB/no-tour/backup assertions after extraction. Tests now reconstruct registered *actual* Dart parts in original source order. No assertions or security checks skipped. Exact-head Flutter CI still required.
 
 - **M710 / #635 (same Draft #638):** Preserve all M674/M675 real owner-approved page, linked recurring account and fixed global FAB source checks after the 770-line Goals/Recurring extraction; no assertions removed. Exact-head CI still required.
+
+- **M708 (2026-11-14, Draft #638):** Repaired 19 prior Flutter source-test failures after M703/M707 extraction by reconstructing exact executable Home SMS transfer, Goals and Recurring parts in their original declaration order. Only old source-reading sites and dedicated QA helper were adjusted; original financial assertions remain. Latest exact-head CI, independent physical Android UI proof, and actual backup/restore on disposable handset remain required.

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/main.dart';
 import 'package:waffra/waffra_category_catalog.dart';
@@ -71,7 +72,7 @@ void main() {
  });
 
  test('M148: transaction pickers and category search use translated display labels',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   final categories=File('lib/waffra_categories_page.part.dart').readAsStringSync();
   expect(main,contains('waffraSearchAny([label,waffraTr(label),waffraTr(item.name)],query)'));
   expect(main,contains('waffraSearchAny([c.name,waffraTr(c.name)],query)'));

@@ -52,7 +52,7 @@ void main() {
  });
 
  test('M389: recurring duplicate is new, editable, and cannot inherit linked goal ID',(){
-  final source=File('lib/main.dart').readAsStringSync();
+  final source=readWaffraMainSourceForContracts();
   final dialog=source.split('Future<void> recurringDialog(').last
     .split('DateTime nextRecurringDue(').first;
   expect(dialog,contains('RecurringBill? duplicate'));

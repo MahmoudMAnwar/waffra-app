@@ -1,8 +1,9 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main(){
- final source=File('lib/main.dart').readAsStringSync();
+ final source=readWaffraMainSourceForContracts();
 
  test('M636 manual and automatic SMS both parse ledger off the UI path',(){
   final editor=source.substring(

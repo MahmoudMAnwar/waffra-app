@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_sms_local_rules.dart';
@@ -277,7 +278,7 @@ void main(){
  });
 
  test('M462 SMS transfer uses verified account-to-account route',(){
-  final home=File('lib/main.dart').readAsStringSync();
+  final home=readWaffraMainSourceForContracts();
   final form=File('lib/waffra_account_transaction_form.dart')
    .readAsStringSync();
   final manager=File('lib/waffra_accounts_manager_page.dart')

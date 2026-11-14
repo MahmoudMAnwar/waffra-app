@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -169,7 +170,7 @@ void main() {
   });
 
   test('M669 all SMS review routes keep original source and explicit reasons',(){
-    final main=File('lib/main.dart').readAsStringSync();
+    final main=readWaffraMainSourceForContracts();
     final part=main.substring(
       main.indexOf(' Future<void> _reviewAutoSmsCandidates('),
       main.indexOf(' void _receiveSharedSms('));

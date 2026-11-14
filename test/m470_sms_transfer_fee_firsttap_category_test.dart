@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/main.dart';
@@ -78,7 +79,7 @@ void main() {
   });
 
   test('M470 #13: transfer review never relies on fee-bearing BankParser amount', () {
-    final app=File('lib/main.dart').readAsStringSync();
+    final app=readWaffraMainSourceForContracts();
     final transfer=app.substring(
       app.indexOf(' Future<void> _reviewSmsAccountTransfer('),
       app.indexOf(' Future<void> _reviewAutoSmsCandidates('));

@@ -1,8 +1,9 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 void main(){
  test('M258 safe-main finance refresh wiring all four pages',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   final categories=File('lib/waffra_categories_page.part.dart').readAsStringSync();
   expect(main,contains('onRefresh:()=>_refreshAndSettle(_dashboardScrollController,0)'));
   expect(main,contains('tab==1?_categoryScrollController:'));

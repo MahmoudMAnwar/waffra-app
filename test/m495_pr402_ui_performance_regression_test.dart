@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -77,7 +78,7 @@ void main(){
  });
 
  test('M499 #416 all editor entry points expose dependent inline Add',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   final form=File('lib/waffra_account_transaction_form.dart').readAsStringSync();
   final manager=File('lib/waffra_accounts_manager_page.dart').readAsStringSync();
   expect(main,contains('forTransfer:true,transferTarget:target'));

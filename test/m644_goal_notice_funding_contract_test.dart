@@ -1,11 +1,12 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// M644: regression for goal/recurring error UX and verified goal funding.
 void main(){
  test('M644 account pickers route failure through one footer-aware notice',(){
   final picker=File('lib/waffra_goal_recurring_account_picker.dart').readAsStringSync();
-  final app=File('lib/main.dart').readAsStringSync();
+  final app=readWaffraMainSourceForContracts();
   final actions=File('lib/waffra_goal_recurring_actions.part.dart').readAsStringSync();
   expect(picker,contains('required this.onCreateAccount,required this.onError'));
   expect(picker,contains('widget.onError(label('));
