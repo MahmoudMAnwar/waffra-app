@@ -1,12 +1,13 @@
 {
   "contract_version": 1,
   "change_id": "M940-M941-ISSUES646-647-PR648-HOME-INDEXED-READ-20261114",
-  "human_scope_review": "User approved named stage «تحسين الأداء واستكمال هيكلة وفرة» items 2 and 3: speed reading 2,000+ MoneyEntry and split Home State read responsibilities. PR #648 Draft, issues #646 #647. No change to SQLCipher finance writers, backup, saved account IDs, UI, + FAB or Snackbar. Source modifications are bounded to verified read index/state/filter, not entire files; existing M385/M550/M449 tests remain enabled. 2-phone Android benchmark remains pending.",
+  "human_scope_review": "User approved named stage «تحسين الأداء واستكمال هيكلة وفرة» items 2 and 3: speed reading 2,000+ MoneyEntry and split Home State read responsibilities. PR #648 Draft, issues #646 #647. No change to SQLCipher finance writers, backup, saved account IDs, UI, + FAB or Snackbar. Source modifications are bounded to verified read index/state/filter, not entire files; existing M385/M550/M449 tests remain enabled. 2-phone Android benchmark remains pending. M940 #646 owner approved 1000-2000+ bank SMS reading: sender-list retains all IDs/selection, only already-hydrated per-sender message cards show in progressive bounded pages. No native SMS scan, classification, decision, debit or excluded message changes.",
   "user_requested_changes": [
     "M940 #646 cache descending date order exactly once per immutable verified finance-ledger revision with stable source order on timestamp ties, read-only bounded pages and strict SQLCipher account row ID scoping.",
     "M940 #646 wire cached chronological read to Home dashboard and income-expense summary, preserving original search/date/amount/type/category and PDF semantics and all finance authority gates.",
     "M941 #647 separate read-cache ownership and transaction filter policy from giant _HomeScreenState, maintaining existing add/edit/delete/restore/reset invalidation methods without altering approved Home, Goals, Recurring, stationary FAB or Snackbar.",
-    "M940/M941 create synthetic 2,500+ page/ID/amount/filter/cache regression, align exact M810 source contract and M385 scope + behavior review + QA + requirements/release notes; real device acceptance remains pending."
+    "M940/M941 create synthetic 2,500+ page/ID/amount/filter/cache regression, align exact M810 source contract and M385 scope + behavior review + QA + requirements/release notes; real device acceptance remains pending.",
+    "M940 #646 show large bank SMS review sender queues using progressively revealed in-memory 100-row pages while preserving all-message sender bulk selection, identity and original review/approval flow; no financial writes or native scan changes."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -18,14 +19,21 @@
     "lib/waffra_finance_period_index.part.dart",
     "lib/waffra_home_dashboard_analytics.part.dart",
     "lib/waffra_home_ledger_query.part.dart",
+    "lib/waffra_home_sms_inbox.part.dart",
     "lib/waffra_home_transaction_summary.part.dart",
+    "lib/waffra_sms_review_page_window.dart",
     "test/m810_home_transaction_summary_extraction_test.dart",
-    "test/m940_m941_home_ledger_pagination_test.dart"
+    "test/m940_m941_home_ledger_pagination_test.dart",
+    "test/m940_sms_review_page_window_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
   "bounded_sections": {
     "lib/main.dart": [
+      {
+        "start": "import 'waffra_sms_review_groups.dart';",
+        "end": "import 'waffra_sms_account_learning.dart';"
+      },
       {
         "start": "part 'waffra_finance_period_index.part.dart';",
         "end": "part 'waffra_deleted_item_card.part.dart';"
@@ -57,6 +65,18 @@
       {
         "start": "  expect(part,contains('extension _WaffraHomeTransactionSummary on _HomeScreenState'));",
         "end": "  expect(part,contains('sum(items,income)'));"
+      }
+    ],
+    "lib/waffra_home_sms_inbox.part.dart": [
+      {
+        "start": " Future<void> _openAutoSmsInbox()async{",
+        "end": "       if(selectedIds.isNotEmpty)Padding("
+      }
+    ],
+    "lib/waffra_sms_review_page_window.dart": [
+      {
+        "start": "final class WaffraSmsReviewPageWindow {",
+        "end": null
       }
     ]
   }

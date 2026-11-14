@@ -16,7 +16,8 @@ final class WaffraSmsReviewPageWindow {
  bool revealNext(int total){
   if(total<0)throw RangeError.value(total,'total','Must be nonnegative');
   if(_exposed>=total)return false;
-  _exposed=(_exposed+pageSize).clamp(0,total);
+  final next=_exposed+pageSize;
+  _exposed=next<total?next:total;
   return true;
  }
 

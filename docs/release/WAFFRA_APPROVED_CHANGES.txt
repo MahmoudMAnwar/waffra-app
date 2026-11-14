@@ -765,3 +765,5 @@ M938 / #643 (2026-11-14, Draft #640 — CODE IN REVIEW, NOT RELEASED): Owner's a
 M940/M941 2026-11-14 DRAFT UNRELEASED: Owner-approved «تحسين الأداء واستكمال هيكلة وفرة». Planned read-only chronological indexed ledger view, bounded account-scoped page reads and extracted Home query/cache with synthetic regression tests. No changes to verified SQLCipher finance source, UI, + FAB, Snackbar, user backups or spouse handset. Real-phone performance acceptance remains pending. Issues #646 and #647.
 
 M940/M941 implementation source commit fe7da708452349d08f6361d698f556a4cf03420b, Draft PR #648, never released. Chronology order is cached per hydrated ledger snapshot with explicit invalidation. Android/legacy-backup certification pending.
+
+M940 #646 Draft PR #648 extension: bank SMS review displays verified sender messages in 100-row batches while scrolling and still preserves all sender selected IDs for bulk actions. Source SHA 93b5df78dcabd86175c8acee2a25008cd547b276. No new automatic financial writing, no change to approved cards, +, notices or encryption. Pending physical Android profiling.
