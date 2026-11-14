@@ -2129,3 +2129,7 @@ The original Home post-auth visibility/first-frame wait, SQLCipher finance binde
 
 ### M931 — Issue #633 / Draft #638: preserve original M636 source QA after registered Home extraction
 One original M636 positive safety test still read raw `lib/main.dart`, missing unchanged Home logout/Widget methods relocated into real registered same-library Dart parts. Replace only that test's reader with `readWaffraMainSourceForContracts`, retain all original assertions unchanged including abort signout, owner-verified Widget action, native pending intent, confirmed SMS source, blur FAB and retired Qwen prohibition. M385 scope and M550 test mapping retained; no runtime or financial code mutation. Exact-head CI required.
+
+
+### M932 — Issue #633 / Draft #638: M340 foreign-FX preview hostile test on actual registered Dart part
+The original M340 negative FX preview mutation falsely failed after M929 moved its exact original handler from raw `lib/main.dart` to `lib/waffra_home_fx_preview.part.dart`. Read this actual same-library part into M340 source overrides, and inject both unauthorized `persist()` and `saveCaptured()` via the original hostile QA test. Require the real source reconstructor to apply overrides and financial safety gate to reject both. No financial writer, exchange-rate behavior, user amounts, owner encrypted backup, SQLCipher, or approved UI is changed. Preserve all other M340 tests; new exact-head CI must pass. Physical Android UX and real backup/ledger parity remain distinct acceptance gates.
