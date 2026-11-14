@@ -4066,6 +4066,34 @@
         "No change to existing real-money writer, account transfer, backup restore, SMS posting, or archived data.",
         "Real signed Android performance/overflow and owner historical encrypted backup parity remain independent evidence."
       ]
+    },
+    {
+      "id": "M830-ORIGINAL-HOME-CATEGORY-FOOTER-NAVIGATION-HELPERS",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Home category page adapter, monthly summary/filter cards, category/goals/recurring tab rendering, swipe between tabs, bottom-footer stack navigation and Back remained inline in Home State.",
+      "approved_behavior": "Move the byte-identical presentation/navigation methods into a registered same-library Dart part, keeping the original lifecycle and build method in Home State. No navigation behavior, cards, FAB, finance source or user design is changed.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_navigation_helpers.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/m830_home_navigation_helpers_extraction_test.dart",
+        "test/m670_feedback_transfer_dashboard_test.dart",
+        "test/m127_fab_backup_no_tour_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Original `@override build`, FAB anchor, back stack and full user-approved screens stay semantically unchanged.",
+        "No receipt/data/account/SQLCipher source migration, silent new finance action or money modification.",
+        "Source QA reconstructs real registered part rather than suppressing previous tests.",
+        "Physical Android screenshots, footer overflow and old private backup parity remain separate."
+      ]
     }
   ]
 }
