@@ -3898,6 +3898,34 @@
         "No source-test bypass or relocated method stub permitted; tests inspect actual registered implementation.",
         "Real signed Android screenshots and source user's V24 encrypted Backup/Restore parity remain independent."
       ]
+    },
+    {
+      "id": "M791-VERIFIED-HOME-FINANCE-STARTUP-FAIL-CLOSED-RECOVERY",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "The single-flight encrypted Home startup load, account/ledger runtime source checks, background SMS handoff, verified retry and failure UI were implemented directly in `_HomeScreenState`.",
+      "approved_behavior": "Move the original verified `load` wrapper and fail-closed recovery UI byte-identically to a registered same-library Dart extension. Leave Home State completion fields, lifecycle, notice routing and actual SQLCipher authority intact.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_finance_recovery.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/m791_home_finance_recovery_extraction_test.dart",
+        "test/m630_home_first_frame_contention_test.dart",
+        "test/m623_verified_home_handoff_no_black_frame_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "No fabricated balances, expired session reuse or SMS-to-ledger automatic posting.",
+        "Failed encrypted source load retains account financial history and refuses to replace verified data silently.",
+        "Original progress/retry, biometric on-screen notice, owner/session generation, first frame source guards unchanged.",
+        "No performance improvement or signed Android V24 Backup/Restore equivalence claimed without independent physical proof."
+      ]
     }
   ]
 }
