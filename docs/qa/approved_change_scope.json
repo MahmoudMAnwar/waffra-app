@@ -44,7 +44,7 @@
     "lib/waffra_home_dashboard_analytics.part.dart": [
       {
         "start": " Widget dashboard(){",
-        "end": "   return RefreshIndicator("
+        "end": "  return RefreshIndicator("
       }
     ],
     "lib/waffra_home_transaction_summary.part.dart": [
