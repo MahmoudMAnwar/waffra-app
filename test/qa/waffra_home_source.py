@@ -75,4 +75,7 @@ def read_waffra_home_source(root=ROOT):
     restore(" // M780: original verified ledger deletion/undo and source publication moved to registered Home part.\n",
             "lib/waffra_home_transaction_ledger_actions.part.dart",
             " void _publishVerifiedTransactionLedger(")
+    restore(" // M781: original Home transaction cards/details/actions moved to registered same-library part.\n",
+            "lib/waffra_home_transaction_cards.part.dart",
+            " Widget stat(String label")
     return source
