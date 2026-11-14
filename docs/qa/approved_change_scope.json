@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "change_id": "M690-M741-ISSUES632-637-20261114",
+  "change_id": "M690-M742-ISSUES632-637-20261114",
   "human_scope_review": "Issue #629 completes prior PR #628 only after user-visible acceptance; #631 explicitly authorizes three exact screenshots for Goals/Dues/SMS Review, permanently visible financial activity, non-moving FAB-aligned notice, and savings/goal-due cash safety. Existing tests replace outdated visual assumptions without deleting financial safety assertions. Device screenshots/old restore still require external device evidence.",
   "user_requested_changes": [
     "M690 #632 permanently disable third-party AI bank SMS uploads and opt-in on previously installed versions, remove Settings toggle and signed Android staging worker, retain local encrypted SMS Review and money writer.",
@@ -50,7 +50,8 @@
     "M738 #633 preserve all M672/M678 original verified transfer direction, SAR card and savings value source assertions after same-library M733 extraction by changing only its import and raw-main source reader to strict registered-part reconstruction.",
     "M739 #633 extract the exact original authenticated sender-grouped bank-SMS review inbox UI to registered same-library Dart part with unchanged original body, cross-sender message selection, local OTP exclusion, no new finance writer or navigation/FAB changes; preserve M385 exact-source comparison, M550 complete registered-source contracts and same-SHA CI.",
     "M740 #633 keep all original native SMS owner/permission and nonzero truthful review tests by redirecting only three obsolete main.dart source readers to verified same-library source reconstruction after M739 extraction; retain every original assertion.",
-    "M741 #633 move original local bank SMS rule editing/association/manual learning/verified review candidate logic as byte-identical same-library Home part; retain profile-owner identity, offline only exclusions, money validation, original SMS visibility, immutable verified finance writer and strict source CI."
+    "M741 #633 move original local bank SMS rule editing/association/manual learning/verified review candidate logic as byte-identical same-library Home part; retain profile-owner identity, offline only exclusions, money validation, original SMS visibility, immutable verified finance writer and strict source CI.",
+    "M742 #633 extract original Home SMS scanner/isolated local classification, same-owner pending queue and sender exclusion/duplicate acknowledgement into registered same-library part byte-identically, retaining verified finance, native permissions, backpressure and existing strict source assertions."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -207,7 +208,9 @@
     "test/m739_home_sms_inbox_extraction_test.dart",
     "test/qa/m442_sms_consent_session_recovery_test.py",
     "lib/waffra_home_sms_rules.part.dart",
-    "test/m741_home_sms_rules_extraction_test.dart"
+    "test/m741_home_sms_rules_extraction_test.dart",
+    "lib/waffra_home_sms_refresh.part.dart",
+    "test/m742_home_sms_refresh_extraction_test.dart"
   ],
   "approved_deleted_files": [
     "lib/waffra_sms_cloud_review_analyzer.dart"
@@ -331,6 +334,10 @@
       {
         "start": " String get _smsRuleOwnerKey=>WaffraSmsLocalRuleStore.ownerKey(",
         "end": " Timer? _m632SmsNoticeTimer;"
+      },
+      {
+        "start": " bool _autoSmsImportAgain=false;",
+        "end": " Future<void> _scanPreviousBankSmsFromSettings()async{"
       }
     ],
     "test/support/waffra_main_source.dart": [
