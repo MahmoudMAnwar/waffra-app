@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "change_id": "M690-M853-ISSUES632-637-20261114",
+  "change_id": "M690-M900-ISSUES632-637-20261114",
   "human_scope_review": "Issue #629 completes prior PR #628 only after user-visible acceptance; #631 explicitly authorizes three exact screenshots for Goals/Dues/SMS Review, permanently visible financial activity, non-moving FAB-aligned notice, and savings/goal-due cash safety. Existing tests replace outdated visual assumptions without deleting financial safety assertions. Device screenshots/old restore still require external device evidence.",
   "user_requested_changes": [
     "M690 #632 permanently disable third-party AI bank SMS uploads and opt-in on previously installed versions, remove Settings toggle and signed Android staging worker, retain local encrypted SMS Review and money writer.",
@@ -83,7 +83,8 @@
     "M855 #633 retain all original M470 excluded sender/message restore, encrypted native queue and 1000-SMS selection tests unchanged; replace exactly three raw main source readers with genuine registered-part source helper.",
     "M851 #633 correct original real-source restoration dependency ordering, inserting registered M830 navigation helper before nested M721 backup/account tools marker in Dart and Python QA, preserving every assertion and finance source.",
     "M852 #633 fix Dart and Python exact registered-source regression helper ordering: restore M805 original budget/chart part before its nested M687 PDF, M780 ledger, M781 transaction card markers, retaining all original finance/backup/CI assertions.",
-    "M853 #633 keep all original no-guessed-bank-account/SMS sender-suffix verification regression assertions by redirecting only old M576 raw main.dart reader to strict registered real-source Python helper after verified-finance-picker extraction."
+    "M853 #633 keep all original no-guessed-bank-account/SMS sender-suffix verification regression assertions by redirecting only old M576 raw main.dart reader to strict registered real-source Python helper after verified-finance-picker extraction.",
+    "M900 #633 add new read-only Python QA regression of authentic registered Home source reconstruction and nested M830/M721, M805/M687/M780 ordering, enforce once-only verified startup/SMS/PDF/ledger witnesses without disabling existing tests or changing runtime finance/backup."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -313,7 +314,8 @@
     "lib/waffra_home_sms_rescan.part.dart",
     "test/m850_home_sms_rescan_extraction_test.dart",
     "test/m470_sms_excluded_senders_test.dart",
-    "test/qa/m576_first_distinct_bank_identity_test.py"
+    "test/qa/m576_first_distinct_bank_identity_test.py",
+    "test/qa/m900_home_source_reassembly_guard_test.py"
   ],
   "approved_deleted_files": [
     "lib/waffra_sms_cloud_review_analyzer.dart"
