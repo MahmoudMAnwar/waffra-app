@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/storage/waffra_authoritative_widget_balance.dart';
@@ -36,7 +37,7 @@ void main() {
   });
 
   test('M636 Home verified balance remains the only widget finance source',(){
-    final home=File('lib/main.dart').readAsStringSync();
+    final home=readWaffraMainSourceForContracts();
     final native=File('native/WaffraWidget.kt').readAsStringSync();
     final bridge=File('lib/waffra_home_widget.dart').readAsStringSync();
     final homeStart=home.indexOf('Future<void> _refreshWidget()async{');
