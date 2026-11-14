@@ -64,6 +64,19 @@ void main(){
   expect(WaffraRecurringAccountGroups.fromAccounts(await accounts().balances())
    .singleWhere((g)=>g.id=='bank:account:root-other').accounts.length,2);
  });
+ test('M943 custom institution root cannot archive while a child is live',()async{
+  await bank('root-other',0,'other');
+  await bank('child-other',250000,'other');
+  await WaffraCustomInstitutionLinks.assign(db,
+   accountId:'child-other',rootAccountId:'root-other',
+   confirmedIso:at,userConfirmed:true);
+  await expectLater(accounts().archiveEmptyAccount(
+   id:'root-other',userConfirmed:true),throwsStateError);
+  final current=await accounts().balances();
+  expect(current.singleWhere((a)=>a.id=='root-other').archived,isFalse);
+  expect(current.singleWhere((a)=>a.id=='child-other').balanceMinor,250000);
+ });
+
  test('M943 no guessed cross-provider linkage or unapproved child',()async{
   await bank('root-other',10000,'other');
   await bank('wrong-child',5000,'rajhi');
