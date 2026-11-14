@@ -4528,7 +4528,8 @@
         "test/m929_home_session_routes_extraction_test.dart",
         "test/m627_home_handoff_timeout_and_session_reset_test.dart",
         "test/m620_m621_finance_notification_routing_test.dart",
-        "test/m336_fx_consent_and_full_title_test.dart"
+        "test/m336_fx_consent_and_full_title_test.dart",
+        "test/m636_owner_approved_retirement_and_ui_test.dart"
       ],
       "safety_invariants": [
         "Wait for owner-verified Home reads, post-frame work and financial write queue before closing SQLCipher binding.",
