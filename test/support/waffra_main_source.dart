@@ -152,5 +152,9 @@ String readWaffraMainSourceForContracts(){
  if(s.split(smsIndicatorMarker).length!=2)throw StateError('Missing or duplicate M835 live SMS Review card marker');
  s=s.replaceFirst(smsIndicatorMarker,_method('lib/waffra_home_sms_review_indicator.part.dart',
   ' // ignore: unused_element\n Widget _autoSmsReviewCard(){'));
+ const smsRescanMarker=' // M850: original native SMS notice/rescan logic lives in registered Home Dart part.\n';
+ if(s.split(smsRescanMarker).length!=2)throw StateError('Missing or duplicate M850 live native SMS rescan source');
+ s=s.replaceFirst(smsRescanMarker,_method('lib/waffra_home_sms_rescan.part.dart',
+  ' void _receiveAutoSmsNotice(){'));
  return s;
 }
