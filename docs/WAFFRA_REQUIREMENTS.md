@@ -1974,5 +1974,5 @@ Continue the owner-approved Home refactor: relocate the original native-bank-SMS
 
 
 
-### M783 — Issue #633 / Draft PR #638: original Home compact transaction card extraction
+### M790 — Issue #633 / Draft PR #638: original Home compact transaction card extraction
 Continue owner-approved code-only Home decomposition: move the original compact financial activity card (`compactTransaction`) and original finance-action adapter `_m549HomeFinanceAction` unchanged to a registered same-library Dart part. Preserve every original income/expense amount sign, linked paid-recurring/goal-due visual distinction, SMS source labels, attachment-corner viewer, action callback, Saudi Riyal display and global FAB behavior. This is an exact source relocation, not a new money calculation, account mutation or performance claim. Retain strict M385 source checks and original UI assertions, and add an exact source-regression test. CI and physical Android/owner Backup Restore parity remain separate.
