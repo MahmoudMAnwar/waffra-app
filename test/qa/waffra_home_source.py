@@ -111,4 +111,7 @@ def read_waffra_home_source(root=ROOT):
     restore(" // M830: original Home navigation and summary helpers moved to registered same-library part.\n",
             "lib/waffra_home_navigation_helpers.part.dart",
             " Widget categoriesPage()=>categoriesPageV2();")
+    restore(" // M835: existing bank SMS review indicator card moved unchanged to registered Home part.\n",
+            "lib/waffra_home_sms_review_indicator.part.dart",
+            " // ignore: unused_element\n Widget _autoSmsReviewCard(){")
     return source
