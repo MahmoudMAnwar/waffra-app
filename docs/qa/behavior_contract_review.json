@@ -3757,6 +3757,34 @@
         "No automatically reclassified or fabricated transaction identity, account, amount or restoration is allowed.",
         "Actual physical Android old-backup restoration and visual acceptance still require owner/device evidence."
       ]
+    },
+    {
+      "id": "M781-REAL-HOME-TRANSACTION-CARDS-ACTIONS-ORIGINAL",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Home State included original transaction list cards, details, edit/delete action dialog, protected original SMS note retrieval, receipt viewer and greeting methods inline.",
+      "approved_behavior": "Relocate the original presentation/access methods byte-identically to a registered same-library Home Dart part. Keep every caller, bank SMS original-vault access, encrypted ledger deletion authority, linked-goal edit block, receipt chip and visual design unchanged.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_transaction_cards.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/m781_home_transaction_cards_extraction_test.dart",
+        "test/m687_home_state_extraction_test.dart",
+        "test/m672_m678_activity_account_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Never decrypt/record original bank SMS except through previously authenticated SQLCipher note vault.",
+        "No change to stored finance data, goals, transaction amounts, balance signs, undo, deletion or state lifecycle.",
+        "Existing widget and source checks are preserved and reconstruct the exact registered production methods.",
+        "Actual Android overflow screenshots, old encrypted backup parity and real financial effects require physical device proof."
+      ]
     }
   ]
 }
