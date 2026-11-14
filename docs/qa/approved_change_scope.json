@@ -109,7 +109,8 @@
     "M932 #633 fix recurring M266 encrypted-storage CI false failure after M930 Home Widget action extraction: inspect reconstructed registered production Dart parts, preserve all original native Widget, post-auth, SQLCipher fail-closed and legacy data assertions; add exact positive registered-part proof so source relocation cannot silently bypass QA.",
     "M933 #633 fail-closed source-contract repair: 19 Flutter failures across five jobs following registered Home part extraction. Update exact old raw-main readers and obsolete moved-method boundaries without removing money, SMS, auth or UI assertions.",
     "M934 #633 preventive M550 preflight: dynamically inventory all declared Flutter Home Dart parts, reject positive contains/split/indexOf assertions still reading raw lib/main.dart after method extraction, preserve source guard negative assertions and add adversarial Python unit tests before expensive full CI.",
-    "M934 exact M385 scope correction: include the new shared raw-main source-reader scanner inserted immediately before inventory(), leaving the old preflight implementation and all other protected sections byte-identical."
+    "M934 exact M385 scope correction: include the new shared raw-main source-reader scanner inserted immediately before inventory(), leaving the old preflight implementation and all other protected sections byte-identical.",
+    "M934 M385 consolidated all six previously approved M550 scanner scopes alongside three new narrowed preventive regions; no existing scope permission or prior code changes removed."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -577,6 +578,30 @@
       }
     ],
     "scripts/qa/m550_behavior_contract_preflight.py": [
+      {
+        "start": "def changed_paths(",
+        "end": "def _safe_literal("
+      },
+      {
+        "start": "def validate_review(",
+        "end": "def build_report("
+      },
+      {
+        "start": "    available = {x.relative_to(root).as_posix() for x in root.rglob(\"*\") if x.is_file()}",
+        "end": "    # Complete *repository* inventory, not a handpicked list of jobs."
+      },
+      {
+        "start": "    for p in sorted(sources):",
+        "end": "    # M687: same-library part moves are NOT code deletions."
+      },
+      {
+        "start": "    expected_parts = (",
+        "end": "    if home_path in new_sources:"
+      },
+      {
+        "start": "def _positive_python(",
+        "end": "def _positive_dart("
+      },
       {
         "start": "ANCHOR_DART = re.compile(",
         "end": "BINDING_DART = re.compile("
