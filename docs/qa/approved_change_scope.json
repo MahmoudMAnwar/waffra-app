@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
   "change_id": "M935-M938-ISSUES639-643-20261114-MAIN-RECONCILIATION",
-  "human_scope_review": "Issue #639: user expressly requests all code-side Phase Two completion, fresh Draft PR, exact residual physical Android tasks. Only synthetic non-production finance regression and QA/requirements/scope docs are in this PR. Original backup, phone databases, SQLCipher routing and UI source untouched. Issue #641 same-PR Phase Three user instruction adds only non-destructive signed-release readiness inventory under M550, no publish or finance changes. M937 #642 same-PR owner request adds exact-SHA CI test totals and heuristic repeated-failure reporting with no additional Flutter run or production code changes. Issue #643 user supplied four Android screenshots and requests exact FAB-edge snackbar, goal/dues filter counts and 3-dot menu, safe legacy deleted-goal repair and file-only one-biometric backup UX in same Draft PR; all relevant production edits limited to named methods. Release-note ancestry update is required by existing M449 to describe the exact owner-approved screenshot code changes, without treating them as production released. Same Draft #640 root-cause regression correction: current file-only backup, single opening OS biometric, goal trash in approved 3-dot menu, verified footer routing, and accepted SQLCipher snapshot-key generation test. Update existing assertions only, without disabling tests. Integrate merged main #645 finance reset and no-FAB notices verbatim; owner real backup and devices not claimed tested.",
+  "human_scope_review": "Issue #639: user expressly requests all code-side Phase Two completion, fresh Draft PR, exact residual physical Android tasks. Only synthetic non-production finance regression and QA/requirements/scope docs are in this PR. Original backup, phone databases, SQLCipher routing and UI source untouched. Issue #641 same-PR Phase Three user instruction adds only non-destructive signed-release readiness inventory under M550, no publish or finance changes. M937 #642 same-PR owner request adds exact-SHA CI test totals and heuristic repeated-failure reporting with no additional Flutter run or production code changes. Issue #643 user supplied four Android screenshots and requests exact FAB-edge snackbar, goal/dues filter counts and 3-dot menu, safe legacy deleted-goal repair and file-only one-biometric backup UX in same Draft PR; all relevant production edits limited to named methods. Release-note ancestry update is required by existing M449 to describe the exact owner-approved screenshot code changes, without treating them as production released. Same Draft #640 root-cause regression correction: current file-only backup, single opening OS biometric, goal trash in approved 3-dot menu, verified footer routing, and accepted SQLCipher snapshot-key generation test. Update existing assertions only, without disabling tests. Integrate merged main #645 finance reset and no-FAB notices verbatim; owner real backup and devices not claimed tested. M385 CI observed the new six existing test-file changes but needed exact original source anchors; add only bounded function scope for those six tests, keep every protected region outside byte-identical. No approved full-test replacements or gate bypass.",
   "user_requested_changes": [
     "M935 implement synthetic V24 to V3 conversion, two disposable cold SQLCipher restores, exact 19 identity and signed halala parity, goal/recurring/budget history, no invented bank balance, widget/PDF source checks and fail-closed duplicates in a NEW regression test only.",
     "M935 create a concrete private physical Android owner acceptance protocol for old encrypted backup parity, PDF totals, SMS performance, overflow, authentication and update safety; mark device evidence Pending.",
@@ -111,6 +111,42 @@
       {
         "start": " test('M150: export never writes encrypted archive to clipboard',(){",
         "end": " test('M150: Android uses picker and content provider"
+      }
+    ],
+    "test/m127_ui_tour_backup_acceptance_test.dart": [
+      {
+        "start": "  test('new backups use 12–256 character passwords and retain legacy import', () {",
+        "end": "  for (final direction in [TextDirection.rtl,TextDirection.ltr]) {"
+      }
+    ],
+    "test/m148_english_categories_legacy_backup_uat_test.dart": [
+      {
+        "start": " test('M148: no full encrypted JSON is rendered in editable TextField',(){",
+        "end": null
+      }
+    ],
+    "test/m149_backup_pin_localized_fab_trash_uat_test.dart": [
+      {
+        "start": " test('M149: all recycle-bin CTAs are red and recurring calendar is alongside',(){",
+        "end": " for(final brightness in [Brightness.light,Brightness.dark]){"
+      }
+    ],
+    "test/m153_secure_backup_sms_categories_uat_test.dart": [
+      {
+        "start": " test('M153: new backup screen is uncluttered and preserves legacy restore',(){",
+        "end": null
+      }
+    ],
+    "test/m502_logout_paths_test.dart": [
+      {
+        "start": "  test('M503: sign-out feedback reuses exactly one footer-aware presenter',(){",
+        "end": null
+      }
+    ],
+    "test/waffra_directional_fab_receipt_corner_test.dart": [
+      {
+        "start": "  test('goals keep outlined counter, recurring uses compact count badge', () {",
+        "end": "  test('all snackbar entry points share one footer-aware presenter', () {"
       }
     ]
   }
