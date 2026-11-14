@@ -16,6 +16,8 @@ def read_waffra_home_source(root=ROOT):
         if source.count(marker) != 1:
             raise AssertionError("Missing/duplicate Dart part marker: " + marker)
         source = source.replace(marker, _method(root, path, begin), 1)
+    restore(" // M721: original Home calendar, backup and account tools moved to registered same-library part.\n",
+            "lib/waffra_home_account_tools.part.dart"," Future<void> showWaffraFinancialCalendar(")
     restore(" // M687: PDF exporter moved to a same-library State extension.\n",
             "lib/waffra_home_pdf_reports.part.dart"," Future<void> exportEntriesPdf(")
     restore(" // M687: Profile page moved to a same-library State extension.\n",
@@ -40,8 +42,6 @@ def read_waffra_home_source(root=ROOT):
         if source.count(marker) != 1:
             raise AssertionError("Missing/duplicate goal marker")
         source = source.replace(marker, code, 1)
-    restore(" // M721: original Home calendar, backup and account tools moved to registered same-library part.\n",
-            "lib/waffra_home_account_tools.part.dart"," Future<void> showWaffraFinancialCalendar(")
     restore(" /// Explicit, idempotent account-to-account transfer from reviewed bank SMS.\n // M703: implementation moved byte-identically to registered Home part.\n",
             "lib/waffra_home_sms_transfer_review.part.dart",
             " /// Explicit, idempotent account-to-account transfer from reviewed bank SMS.")
