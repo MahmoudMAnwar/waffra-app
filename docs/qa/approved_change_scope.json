@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "change_id": "M690-M791-ISSUES632-637-20261114",
+  "change_id": "M690-M798-ISSUES632-637-20261114",
   "human_scope_review": "Issue #629 completes prior PR #628 only after user-visible acceptance; #631 explicitly authorizes three exact screenshots for Goals/Dues/SMS Review, permanently visible financial activity, non-moving FAB-aligned notice, and savings/goal-due cash safety. Existing tests replace outdated visual assumptions without deleting financial safety assertions. Device screenshots/old restore still require external device evidence.",
   "user_requested_changes": [
     "M690 #632 permanently disable third-party AI bank SMS uploads and opt-in on previously installed versions, remove Settings toggle and signed Android staging worker, retain local encrypted SMS Review and money writer.",
@@ -69,7 +69,8 @@
     "M783 #633 move byte-identical live SMS settings rescan/excluded sender and message recovery, grouped notification selection and entry to registered same-library Home part; preserve all original native consent, 30-day excluded retention, never-auto-post and SQLCipher owner invariants; scope M385 over the original contiguous implementation exactly.",
     "M790 #633 move original compact Home finance transaction activity card and shortcut method byte-identically into registered same-library Dart part, retain income/expense/due colors, SAR amounts, attachments, source type and FAB, strict M385 source verification and existing QA.",
     "M795 #633 move unchanged original Home parent/child category choice and encrypted receipt labeling/storage/view dialogs to registered same-library Dart part; retain all permissions, original attachments/SQLCipher, no silent category edits and every original test assertion.",
-    "M791 #633 move original secure Home finance startup single-flight and recovery screen to registered same-library part verbatim; preserve SQLCipher owner/session, retry, original error UX, protected finance authority, SMS handoff and source assertions; no finance writer or backup behavior changes."
+    "M791 #633 move original secure Home finance startup single-flight and recovery screen to registered same-library part verbatim; preserve SQLCipher owner/session, retry, original error UX, protected finance authority, SMS handoff and source assertions; no finance writer or backup behavior changes.",
+    "M798 #633 repair registered M790 compact card source reader ordering before nested M733 dashboard and M735 category methods; preserve exact real-part assertions in existing Dart/Python QA and add no-stub regression."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -281,7 +282,8 @@
     "lib/waffra_home_category_receipt_dialogs.part.dart",
     "test/m795_home_category_receipts_extraction_test.dart",
     "lib/waffra_home_finance_recovery.part.dart",
-    "test/m791_home_finance_recovery_extraction_test.dart"
+    "test/m791_home_finance_recovery_extraction_test.dart",
+    "test/m798_nested_home_part_source_order_test.dart"
   ],
   "approved_deleted_files": [
     "lib/waffra_sms_cloud_review_analyzer.dart"
