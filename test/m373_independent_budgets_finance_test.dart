@@ -87,7 +87,21 @@ void main() {
     expect(app,contains("namedBudgets.add(WaffraNamedBudget("));
     expect(app,contains("WaffraNamedBudget.fromLegacy(c)"));
     expect(app,contains("'namedBudgets':listValue('waffra_named_budgets_v1'"));
-    expect(app,contains("'waffra_named_budgets_v1':'[]'"));
+    // M644 resets the active SQLCipher snapshot, not stale Home defaults.
+    // The reset clears every financial table and does not keep budgets.
+    final reset=File('lib/storage/waffra_encrypted_full_finance_reset.dart')
+      .readAsStringSync();
+    final resetStart=reset.indexOf(
+      'Future<WaffraEncryptedFullResetResult> resetAfterBiometric(');
+    final resetEnd=reset.indexOf(
+      'Future<WaffraEncryptedFullResetResult> reset(',resetStart);
+    expect(resetStart,greaterThan(0));
+    expect(resetEnd,greaterThan(resetStart));
+    final durableReset=reset.substring(resetStart,resetEnd);
+    expect(app,contains('_financeAuthority.resetAfterBiometric('));
+    expect(durableReset,contains('final targets = tables.difference(_biometricPreservedTables);'));
+    expect(durableReset,contains('fullFinanceSnapshot: const <String, Object?>{'));
+    expect(durableReset,isNot(contains("'waffra_named_budgets_v1'")));
     expect(app,contains("operation:'standalone-budget-create'"));
     expect(app,contains("operation:'standalone-budget-soft-delete'"));
     expect(app,contains("operation:'standalone-budget-toggle'"));
