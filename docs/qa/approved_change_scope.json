@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "change_id": "M690-M903-ISSUES632-637-20261114",
+  "change_id": "M690-M920-ISSUES632-637-20261114",
   "human_scope_review": "Issue #629 completes prior PR #628 only after user-visible acceptance; #631 explicitly authorizes three exact screenshots for Goals/Dues/SMS Review, permanently visible financial activity, non-moving FAB-aligned notice, and savings/goal-due cash safety. Existing tests replace outdated visual assumptions without deleting financial safety assertions. Device screenshots/old restore still require external device evidence.",
   "user_requested_changes": [
     "M690 #632 permanently disable third-party AI bank SMS uploads and opt-in on previously installed versions, remove Settings toggle and signed Android staging worker, retain local encrypted SMS Review and money writer.",
@@ -88,7 +88,8 @@
     "M901 #633 preserve unchanged original M124 fail-closed SQLCipher finance writer and original receipt/Android widget/auto-cutover checks by replacing only raw main.dart reader with strict production Dart-part source reconstruction, and add a read-only regression that prevents returning to old main-only source.",
     "M902 #633 preserve original live Home/Widget SQLCipher and SMS writer checks in finance-full, M96 and M109 workflows by using fail-closed exact registered production Home Dart-part source, not stale raw main.dart; add regression asserting exactly two secure SMS writer sites with all original negatives.",
     "M903 #633 keep original M155 verified SQLCipher SMS, backup and native archive/privacy assertions and M158 Widget sender-confirmed SMS acknowledgment/no-raw-title regressions after actual production Home Dart-part extraction; change only registered-source readers, add full original-check regression; fail-closed M385/M550.",
-    "M904 #633 extract exact original verified Home Widget balance refresh/publish methods into registered same-library Dart part, preserving source auth, integer halalas, privacy masking and read-only behavior, with M385/M550 source QA and no original backup/UI modifications."
+    "M904 #633 extract exact original verified Home Widget balance refresh/publish methods into registered same-library Dart part, preserving source auth, integer halalas, privacy masking and read-only behavior, with M385/M550 source QA and no original backup/UI modifications.",
+    "M920 #633 retain all original full Flutter financial UI and SMS/bank/recurring/backup regression expectations from 10 named tests after real Home part extraction by adjusting only stale raw-main source imports/readers, no assertions removed, M385 unchanged-outside-scope and full CI."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -330,7 +331,17 @@
     ".github/workflows/m158-widget-sms-title-privacy.yml",
     "test/qa/m903_legacy_home_finance_workflow_guards_test.py",
     "lib/waffra_home_widget_balance.part.dart",
-    "test/m904_home_widget_balance_extraction_test.dart"
+    "test/m904_home_widget_balance_extraction_test.dart",
+    "test/m470_account_scope_and_transfer_date_test.dart",
+    "test/m268_approved_emerald_balance_card_test.dart",
+    "test/m384_receipt_corner_upgrade_regression_test.dart",
+    "test/m273_production_user_journey_regression_test.dart",
+    "test/m455_manual_sqlcipher_capture_scope_test.dart",
+    "test/m620_m621_finance_notification_routing_test.dart",
+    "test/m302_category_rename_integrity_test.dart",
+    "test/waffra_widget_balance_source_authority_test.dart",
+    "test/m324_required_ai_sms_receipts_test.dart",
+    "test/storage/m470_verified_recurring_payment_capture_test.dart"
   ],
   "approved_deleted_files": [
     "lib/waffra_sms_cloud_review_analyzer.dart"
@@ -2212,6 +2223,110 @@
       {
         "start": "      - name: Reject raw bank SMS in Widget ledger titles",
         "end": "          bridge=Path('lib/waffra_home_widget.dart').read_text()"
+      }
+    ],
+    "test/m470_account_scope_and_transfer_date_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "import 'package:flutter/material.dart';"
+      },
+      {
+        "start": "  test('M470 home account preferences never re-activate legacy unassigned filter', () {",
+        "end": "    expect(source, isNot(contains(\"chosen!='none'\")));"
+      }
+    ],
+    "test/m268_approved_emerald_balance_card_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "import 'package:flutter/material.dart';"
+      },
+      {
+        "start": " test('approved balance artwork stays embedded and never uses external images',(){",
+        "end": "  final artwork=File('lib/waffra_balance_art.dart').readAsStringSync();"
+      }
+    ],
+    "test/m384_receipt_corner_upgrade_regression_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "import 'package:flutter/material.dart';"
+      },
+      {
+        "start": "  test('M384: both cards show folded count from the stored finance record', () {",
+        "end": "    final listCard=app.split('Widget tile(MoneyEntry e)').last"
+      }
+    ],
+    "test/m273_production_user_journey_regression_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "import 'package:flutter/material.dart';"
+      },
+      {
+        "start": "    // not silently truncated to 100 during import.",
+        "end": "    expect(savePath, contains('await entrySheet(sms:true,initialSms:body,reviewedSender:sender);'));"
+      }
+    ],
+    "test/m455_manual_sqlcipher_capture_scope_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "import 'package:flutter_test/flutter_test.dart';"
+      },
+      {
+        "start": "  test('M455 Home applies narrowing before source-authorized queued write', () {",
+        "end": "    final begin = app.indexOf('Future<void> persist({');"
+      }
+    ],
+    "test/m620_m621_finance_notification_routing_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "import 'package:flutter_test/flutter_test.dart';"
+      },
+      {
+        "start": " test('M621 taps cannot bypass verified Home or book a second transaction',(){",
+        "end": "  final segment=home.split(' void _m621OnFinanceNoticeTap(){')[1]"
+      }
+    ],
+    "test/m302_category_rename_integrity_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "import 'package:flutter_test/flutter_test.dart';"
+      },
+      {
+        "start": "  test('M302 rejected category mutation reloads authority, never leaves phantom UI',(){",
+        "end": "    final start=main.indexOf('Future<void> addCategory(');"
+      },
+      {
+        "start": "  test('M302 live update path must use field-preserving clones',(){",
+        "end": "    final start=source.indexOf('Future<void> updateCategory(');"
+      }
+    ],
+    "test/waffra_widget_balance_source_authority_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "import 'package:flutter_test/flutter_test.dart';"
+      },
+      {
+        "start": "  test('M636 Home verified balance remains the only widget finance source',(){",
+        "end": "    final native=File('native/WaffraWidget.kt').readAsStringSync();"
+      }
+    ],
+    "test/m324_required_ai_sms_receipts_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "import 'package:flutter_test/flutter_test.dart';"
+      },
+      {
+        "start": "void main(){",
+        "end": " test('M636 plus offers manual entry, not bank-message paste',(){"
+      }
+    ],
+    "test/storage/m470_verified_recurring_payment_capture_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "import 'package:flutter_test/flutter_test.dart';"
+      },
+      {
+        "start": " test('M470 due posting retains recurring provenance, never manual',(){",
+        "end": "  final start=home.indexOf('if(!entries.any((e)=>e.id==id)){');"
       }
     ]
   }
