@@ -54,4 +54,7 @@ def read_waffra_home_source(root=ROOT):
     restore(" // M739: original sender-grouped bank SMS inbox dialog moved to same-library part.\n",
             "lib/waffra_home_sms_inbox.part.dart",
             " Future<void> _openAutoSmsInbox()async{")
+    restore(" // M741: original local SMS rule and learning methods moved to registered same-library part.\n",
+            "lib/waffra_home_sms_rules.part.dart",
+            " Future<void> _openSmsRules(")
     return source
