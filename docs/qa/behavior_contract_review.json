@@ -4150,6 +4150,34 @@
         "Original affirmative and negative financial, OTP, date, account and SQLCipher assertions remain enabled.",
         "Only signed Android device proof can validate no lag and actual historical user backup restore parity."
       ]
+    },
+    {
+      "id": "M901-M124-ORIGINAL-REGISTERED-SMS-FINANCE-WRITER-GATE",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "M124 Main Integration Pre-Merge Audit asserted the original secure SMS finance writer existed inside raw lib/main.dart even after exact byte-preserving extraction to registered Home part, causing a false failure while the original protected code remained live.",
+      "approved_behavior": "The M124 workflow reads the real fail-closed registered Home part reassembly before running every original positive and negative SQLCipher/receipt/native widget/Firebase source assertion. Missing or duplicate original method marker still fails closed; no test or runtime finance requirement is removed.",
+      "source_paths": [
+        ".github/workflows/m124-main-integration-audit.yml",
+        "lib/main.dart",
+        "lib/waffra_home_sms_confirmation.part.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/qa/m901_m124_finance_authority_workflow_guard_test.py",
+        "test/qa/m900_home_source_reassembly_guard_test.py",
+        "test/m770_home_sms_confirmation_extraction_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m124-main-integration-audit.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Never bypass verified SQLCipher financial authority or permit automatic bank-SMS posting from unverified plaintext.",
+        "Retain all original positive writer and negative unverified receipt/source cutover guards.",
+        "Source inspection must reconstruct only actual registered production same-library Dart parts; missing or repeated markers fail closed.",
+        "No claim of physical Android performance or private V24 backup parity from static source QA."
+      ]
     }
   ]
 }
