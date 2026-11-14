@@ -84,5 +84,9 @@ String readWaffraMainSourceForContracts(){
  if(s.split(smsRefreshMarker).length!=2)throw StateError('Missing or duplicate M742 guarded native SMS refresh marker');
  s=s.replaceFirst(smsRefreshMarker,_method('lib/waffra_home_sms_refresh.part.dart',
   ' Future<void> _refreshAutoSmsInbox('));
+ const financeStartupMarker=' // M750: verified Home financial startup load lives in registered same-library part.\n';
+ if(s.split(financeStartupMarker).length!=2)throw StateError('Missing or duplicated M750 startup load marker');
+ s=s.replaceFirst(financeStartupMarker,_method('lib/waffra_home_finance_startup.part.dart',
+  ' Future<void> load()async {'));
  return s;
 }
