@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_sms_review_groups.dart';
@@ -38,7 +39,7 @@ void main() {
  });
 
  test('Home verified review snapshot bypasses unnecessary 1000-SMS reread',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   final open=main.split(' Future<void> _openAutoSmsInbox()async{')[1]
    .split(' Widget _autoSmsReviewCard(){')[0];
   expect(open,contains('if(!_autoSmsStatusChecked||_autoSmsStatusProblem!=null||'));
@@ -52,7 +53,7 @@ void main() {
  });
 
  test('SMS classification runs outside UI isolate; native ACK stays checked',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   final refresh=main.split(' Future<void> _runAutoSmsRefresh(')[1]
    .split(' Future<void> _scanPreviousBankSmsFromSettings()async{')[0];
   final worker=main.split('Map<String,Object?> waffraM632ClassifySmsQueue(')[1]
@@ -86,7 +87,7 @@ void main() {
   expect(registration,contains('if(await canResumeRecord(saved,phone:phone,password:password))return;'));
   expect(registration,isNot(contains('!await canResumeRecord(persisted')));
   expect(registration,isNot(contains('_store.delete(')));
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   final submit=main.split(' Future<void> save()async {')[1]
    .split(' Widget _phoneRegistrationForm(){')[0];
   expect(submit,contains('if(busy)return;'));
