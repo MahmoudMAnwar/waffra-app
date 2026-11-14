@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "change_id": "M690-M851-ISSUES632-637-20261114",
+  "change_id": "M690-M852-ISSUES632-637-20261114",
   "human_scope_review": "Issue #629 completes prior PR #628 only after user-visible acceptance; #631 explicitly authorizes three exact screenshots for Goals/Dues/SMS Review, permanently visible financial activity, non-moving FAB-aligned notice, and savings/goal-due cash safety. Existing tests replace outdated visual assumptions without deleting financial safety assertions. Device screenshots/old restore still require external device evidence.",
   "user_requested_changes": [
     "M690 #632 permanently disable third-party AI bank SMS uploads and opt-in on previously installed versions, remove Settings toggle and signed Android staging worker, retain local encrypted SMS Review and money writer.",
@@ -81,7 +81,8 @@
     "M850 #633 relocate exact existing Home SMS notice debouncer and explicit rescan methods into registered same-library part, preserving original timer, native owner permission, local-only/consent and no-auto financial post, source tests and private archive acceptance.",
     "M845 #633 preserve every native bank SMS/cloud no-upload, account-bound manual, SAR/OTP and review assertion by changing only two obsolete M436 direct-main source readers to strict registered true-source helper; no original test assertion edited.",
     "M855 #633 retain all original M470 excluded sender/message restore, encrypted native queue and 1000-SMS selection tests unchanged; replace exactly three raw main source readers with genuine registered-part source helper.",
-    "M851 #633 correct original real-source restoration dependency ordering, inserting registered M830 navigation helper before nested M721 backup/account tools marker in Dart and Python QA, preserving every assertion and finance source."
+    "M851 #633 correct original real-source restoration dependency ordering, inserting registered M830 navigation helper before nested M721 backup/account tools marker in Dart and Python QA, preserving every assertion and finance source.",
+    "M852 #633 fix Dart and Python exact registered-source regression helper ordering: restore M805 original budget/chart part before its nested M687 PDF, M780 ledger, M781 transaction card markers, retaining all original finance/backup/CI assertions."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
