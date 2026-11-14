@@ -148,6 +148,10 @@ String readWaffraMainSourceForContracts(){
  if(s.split(widgetSyncMarker).length!=2)throw StateError('Missing or duplicate M840 actual Widget sync source');
  s=s.replaceFirst(widgetSyncMarker,_method('lib/waffra_home_widget_sync.part.dart',
   ' Future<void> _syncWidgetTransactions()async{'));
+ const widgetBalanceMarker=" // M904: original verified Widget balance refresh and fail-closed presentation moved unchanged to registered Home part.\n";
+ if(s.split(widgetBalanceMarker).length!=2)throw StateError('Missing or duplicate M904 original Widget balance marker');
+ s=s.replaceFirst(widgetBalanceMarker,_method('lib/waffra_home_widget_balance.part.dart',
+  ' Future<void> _refreshWidget()async{'));
  const smsIndicatorMarker=' // M835: existing bank SMS review indicator card moved unchanged to registered Home part.\n';
  if(s.split(smsIndicatorMarker).length!=2)throw StateError('Missing or duplicate M835 live SMS Review card marker');
  s=s.replaceFirst(smsIndicatorMarker,_method('lib/waffra_home_sms_review_indicator.part.dart',

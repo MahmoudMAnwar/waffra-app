@@ -111,6 +111,9 @@ def read_waffra_home_source(root=ROOT):
     restore(" // M840: original verified Home/Widget synchronization now in registered Dart part.\n",
             "lib/waffra_home_widget_sync.part.dart",
             " Future<void> _syncWidgetTransactions()async{")
+    restore(" // M904: original verified Widget balance refresh and fail-closed presentation moved unchanged to registered Home part.\n",
+            "lib/waffra_home_widget_balance.part.dart",
+            " Future<void> _refreshWidget()async{")
     restore(" // M835: existing bank SMS review indicator card moved unchanged to registered Home part.\n",
             "lib/waffra_home_sms_review_indicator.part.dart",
             " // ignore: unused_element\n Widget _autoSmsReviewCard(){")

@@ -87,7 +87,8 @@
     "M900 #633 add new read-only Python QA regression of authentic registered Home source reconstruction and nested M830/M721, M805/M687/M780 ordering, enforce once-only verified startup/SMS/PDF/ledger witnesses without disabling existing tests or changing runtime finance/backup.",
     "M901 #633 preserve unchanged original M124 fail-closed SQLCipher finance writer and original receipt/Android widget/auto-cutover checks by replacing only raw main.dart reader with strict production Dart-part source reconstruction, and add a read-only regression that prevents returning to old main-only source.",
     "M902 #633 preserve original live Home/Widget SQLCipher and SMS writer checks in finance-full, M96 and M109 workflows by using fail-closed exact registered production Home Dart-part source, not stale raw main.dart; add regression asserting exactly two secure SMS writer sites with all original negatives.",
-    "M903 #633 keep original M155 verified SQLCipher SMS, backup and native archive/privacy assertions and M158 Widget sender-confirmed SMS acknowledgment/no-raw-title regressions after actual production Home Dart-part extraction; change only registered-source readers, add full original-check regression; fail-closed M385/M550."
+    "M903 #633 keep original M155 verified SQLCipher SMS, backup and native archive/privacy assertions and M158 Widget sender-confirmed SMS acknowledgment/no-raw-title regressions after actual production Home Dart-part extraction; change only registered-source readers, add full original-check regression; fail-closed M385/M550.",
+    "M904 #633 extract exact original verified Home Widget balance refresh/publish methods into registered same-library Dart part, preserving source auth, integer halalas, privacy masking and read-only behavior, with M385/M550 source QA and no original backup/UI modifications."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -327,7 +328,9 @@
     "test/qa/m902_home_finance_workflow_source_guard_test.py",
     ".github/workflows/m155-approved-features-finance-reconcile.yml",
     ".github/workflows/m158-widget-sms-title-privacy.yml",
-    "test/qa/m903_legacy_home_finance_workflow_guards_test.py"
+    "test/qa/m903_legacy_home_finance_workflow_guards_test.py",
+    "lib/waffra_home_widget_balance.part.dart",
+    "test/m904_home_widget_balance_extraction_test.dart"
   ],
   "approved_deleted_files": [
     "lib/waffra_sms_cloud_review_analyzer.dart"
@@ -438,7 +441,7 @@
       },
       {
         "start": " void _receiveSharedSms(){",
-        "end": " Future<void> _refreshWidget()async{"
+        "end": " @override void dispose(){if(!_m663FirstInteractiveFrame.isCompleted)"
       },
       {
         "start": " bool _m468AccountReadAgain=false;",
@@ -449,7 +452,7 @@
         "end": " void _receiveSharedSms()"
       },
       {
-        "start": " Future<void> _publishVerifiedWidgetBalance(",
+        "start": " @override void dispose(){if(!_m663FirstInteractiveFrame.isCompleted)",
         "end": " double sum(Iterable<MoneyEntry>"
       },
       {

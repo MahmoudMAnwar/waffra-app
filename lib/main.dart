@@ -152,6 +152,7 @@ part 'waffra_home_compact_activity_cards.part.dart';
 part 'waffra_home_finance_recovery.part.dart';
 part 'waffra_home_transaction_summary.part.dart';
 part 'waffra_home_widget_sync.part.dart';
+part 'waffra_home_widget_balance.part.dart';
 part 'waffra_home_sms_rescan.part.dart';
 part 'waffra_home_sms_management.part.dart';
 part 'waffra_home_category_receipt_dialogs.part.dart';
@@ -4715,43 +4716,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  Future<void>? _m474PullRefreshInFlight;
  // M782: verified pull-to-refresh and finance reload moved to registered Home part.
  // M750: verified Home financial startup load lives in registered same-library part.
- Future<void> _refreshWidget()async{
-  if(!Platform.isAndroid)return;
-  try{
-   await _ensureFinanceBound();
-   final verified=await _financeAuthority.load(
-    route:WaffraFinanceRoute.widgetBalanceRefresh);
-   await _publishVerifiedWidgetBalance(verified);
-  }catch(e){
-   debugPrint('Widget source unavailable: ${e.runtimeType}');
-   await refreshWaffraHomeWidget(
-    balance:'***',negative:false,hidden:true,
-    currency:WaffraDisplayCurrency.label(waffraIsEnglish));
-  }
- }
- Future<void> _publishVerifiedWidgetBalance(
-  WaffraFinanceAuthorityRead verified)async{
-  if(!Platform.isAndroid)return;
-  try{
-   verified.finance.requireIntegrity();
-   final raw=verified.ledgerRaw;
-   if(raw==null)throw StateError('Verified widget ledger is missing.');
-   // After authority validation, sum large ledgers on a worker isolate.
-   final net=raw.length>=WaffraLargeJsonDecode.isolateThreshold
-    ?await compute(WaffraAuthoritativeWidgetBalance.netHalalas,raw)
-    :WaffraAuthoritativeWidgetBalance.netHalalas(raw);
-   await refreshWaffraHomeWidget(
-    balance:hideWaffraAmounts.value?'***':WaffraDisplayCurrency.amount(net/100),
-    negative:net<0,
-    hidden:hideWaffraAmounts.value,
-    currency:WaffraDisplayCurrency.label(waffraIsEnglish));
-  }catch(e){
-   debugPrint('Verified widget balance refresh unavailable: ${e.runtimeType}');
-   await refreshWaffraHomeWidget(
-    balance:'***',negative:false,hidden:true,
-    currency:WaffraDisplayCurrency.label(waffraIsEnglish));
-  }
- }
+ // M904: original verified Widget balance refresh and fail-closed presentation moved unchanged to registered Home part.
  // M762: verified finance persistence and recurring due/postponement methods moved unchanged to registered Home part.
  double sum(Iterable<MoneyEntry> list,bool income)=>
   list.where((e)=>e.income==income).fold<int>(0,(v,e)=>v+WaffraRecurringPolicy.toHalalas(e.amount))/100;

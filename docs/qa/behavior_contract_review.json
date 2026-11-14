@@ -4239,6 +4239,26 @@
         "Missing, duplicated, or detached Dart-part source is rejected by the source reassembler.",
         "Source checks are not physical Android restore/account balance or real-device performance evidence."
       ]
+    },
+    {
+      "id": "M904-HOME-WIDGET-BALANCE",
+      "issue": "Issue #633 / Draft PR #638 approved Home State extraction",
+      "previous_behavior": "Original verified Android Home Widget balance refresh and net-halalas publishing methods are inline in the Home State.",
+      "approved_behavior": "Move both methods byte-identically into registered same-library Dart part; preserve verified SQLCipher authority, net-halalas, isolate, Android checks, privacy eye and fail-closed masked display. Real-source QA returns methods to original location; no money writer or archive change.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_widget_balance.part.dart"
+      ],
+      "test_paths": [
+        "test/m904_home_widget_balance_extraction_test.dart",
+        "test/qa/m900_home_source_reassembly_guard_test.py"
+      ],
+      "safety_invariants": [
+        "Unavailable or unauthenticated ledger cannot become visible zero instead of masked balance.",
+        "Integer-halalas verified net calculation and off-isolate large dataset handling remain unchanged.",
+        "No finance save or SMS posting added by read-only Widget refresh.",
+        "The owner's source archive, ledger balances and approved global FAB are unmodified."
+      ]
     }
   ]
 }
