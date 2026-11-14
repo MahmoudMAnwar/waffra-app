@@ -2,8 +2,9 @@
 from pathlib import Path
 import re
 import unittest
+from waffra_home_source import read_waffra_home_source
 
-SRC=(Path(__file__).resolve().parents[2]/'lib/main.dart').read_text(encoding='utf-8')
+SRC=read_waffra_home_source()
 
 class FullSmsPreviewTest(unittest.TestCase):
  def test_review_preview_displays_all_495_fields(self):
