@@ -1,9 +1,10 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main(){
  test('M470 #7: owner chooses between excluding messages and senders',(){
-  final home=File('lib/main.dart').readAsStringSync();
+  final home=readWaffraMainSourceForContracts();
   final start=home.indexOf("key:const Key('waffra-sms-bulk-exclude-selected')");
   final end=home.indexOf(' Widget _autoSmsReviewCard(){',start);
   expect(start,greaterThan(0));
@@ -30,7 +31,7 @@ void main(){
  });
 
  test('M470 #8: excluded senders have a dedicated restore control',(){
-  final home=File('lib/main.dart').readAsStringSync();
+  final home=readWaffraMainSourceForContracts();
   final bridge=File('lib/waffra_auto_sms.dart').readAsStringSync();
   expect(home,contains('المستبعدون'));
   expect(home,contains("Key('waffra-excluded-sms-list')"));
@@ -75,7 +76,7 @@ void main(){
  });
 
  test('M470 #10: 1000 SMS selection uses ID sets and bounded exclusion commits',(){
-  final home=File('lib/main.dart').readAsStringSync();
+  final home=readWaffraMainSourceForContracts();
   expect(home,contains('final idSet=ids.toSet();'));
   expect(home,contains('final selectedIds=<String>{};'));
   expect(home,contains('ListView.builder('));
