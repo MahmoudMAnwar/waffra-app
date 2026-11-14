@@ -4654,7 +4654,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    WaffraApprovedFixedFabNoticePosition(
     key:const Key('m675-snackbar-beside-unchanged-fab'),
     link:_fabOverlayAnchor,english:waffraIsEnglish,
-    child:WaffraFooterNoticeHost(onNoticePresented:(){
+    // Fill the horizontal run to the stationary FAB, including empty space.
+    child:WaffraFooterNoticeHost(expandToAvailableWidth:true,onNoticePresented:(){
      if(mounted&&addFabExpanded)setState(()=>addFabExpanded=false);
     }),
    ),

@@ -20,3 +20,7 @@ Issue [#643](https://github.com/MahmoudMAnwar/waffra-app/issues/643) · Same [Dr
 - **No-go** if duplicated entries, missing goals, wrong totals, stale typed SQL witness, an unexpected second OS fingerprint, fullscreen notice covering FAB or any data loss. Do not update spouse phone before independent finance acceptance.
 
 No actual personal backup, password, SMS body or private screenshot was uploaded by this implementation.
+
+## M939 — owner exact-edge clarification for Snackbar (same Draft #640)
+
+On all plus-button routes, the Snackbar's entire visible card including unused blank space ends **exactly** at the near physical edge of the unchanged 58dp + circle. It does not overlap or leave the old 8dp gap. Two-/multi-line messages expand upward with stationary bottom and fixed horizontal bounds. Arabic plus is physical left, English physical right. In Settings, Tools, and account detail routes without a plus, the card extends horizontally from 12dp left margin to 12dp right margin, even for short labels, with original bottom/footer clearance. The shared notice presenter and tap-to-dismiss are unchanged. Geometry widget regressions verify edge equality and wrapping; Android screenshot acceptance remains outstanding. M163 old source expectation now uses the mandatory once-on-dialog-entry fingerprint and verifies reminders after the correct durable restore write.

@@ -752,3 +752,7 @@ M938 / #643 (2026-11-14, Draft #640 — CODE IN REVIEW, NOT RELEASED): Owner's a
 
 [PR #640 / M938 — existing Draft CI regression repair, 2026-11-14]
 - Applied merged main #645, retaining biometric-only SQLCipher financial reset and no-FAB Snackbar. Restored original regression assertions to current approved file-only one-biometric backup, 3-dot goals menu, footer routing and permitted finance fixture; no tests disabled, no UI changes, real owner archive/device acceptance pending.
+
+[M939 / #643 / Draft PR #640 — owner exact FAB-edge Snackbar and M163 source regression, 2026-11-14, NOT RELEASED]
+- The same notice card now reaches the physical 58dp + circle boundary even for short messages containing unused space; the previous 8dp gap and centered/capped width are removed. Long text expands upward, never shifts or covers the +. With no +, Settings/Tools/account details use full page width with existing 12dp margins; original footer clearance remains.
+- Corrected M163's obsolete second backup biometric search and reminder index: keep the original once-on-opening OS fingerprint, verified restore authority, atomic ledger commit, post-commit UI, SMS hashes and Widget sync. All assertions remain active. Exact latest SHA CI and physical-device proof remain pending.
