@@ -475,7 +475,9 @@ class WaffraEncryptedFullFinanceReset {
       experimentalEnabled: true,
     ).withExclusiveAccess(() async {
       await verifySourceUnderLock();
-      return snapshot.store.transaction(() async {
+      // A previous committed reset may have unfinished external receipt cleanup.
+      await _deletePendingExternalReceipts();
+      final committed = await snapshot.store.transaction(() async {
         final current = await snapshot.read();
         WaffraFinanceReadView.fromEncrypted(current).requireIntegrity();
         if (current.generation != baseline.generation ||
@@ -527,41 +529,72 @@ class WaffraEncryptedFullFinanceReset {
           };
         }
         var receiptCount = 0;
+        var encryptedReceiptCount = 0;
+        final externalReceipts = <String, String>{};
         final vault = WaffraEncryptedReceiptVault(
           store: snapshot.store, experimentalEnabled: true,
         );
+        String? receiptRoot;
         for (final entry in entries) {
-          final slots = _receiptSlots(entry['receiptPath']);
-          if (slots == 0) continue;
-          final images = await vault.readAll(entry['id'] as String);
-          if (images.length != slots) {
-            throw StateError('Encrypted receipt count does not match ledger.');
+          final owner = entry['id'] as String;
+          final refs = _receiptReferences(entry['receiptPath']);
+          if (refs.length != _receiptSlots(entry['receiptPath'])) {
+            throw StateError('Malformed original receipt list.');
           }
-          for (var i = 0; i < slots; i++) {
-            if (images[i].position != i) {
-              throw StateError('Encrypted receipt order differs.');
+          if (refs.isEmpty) continue;
+          final encrypted = refs.every(
+            (value) => value.startsWith('waffra-receipt://'),
+          );
+          if (!encrypted && refs.any(
+            (value) => value.startsWith('waffra-receipt://'),
+          )) {
+            throw StateError('Mixed external and encrypted receipt references.');
+          }
+          if (encrypted) {
+            final images = await vault.readAll(owner);
+            if (images.length != refs.length) {
+              throw StateError('Encrypted receipt count differs from ledger.');
             }
-            final old = legacyByPosition.remove(
-              jsonEncode([entry['id'] as String, i]),
-            );
-            if (old != null &&
-                (old['name'] != images[i].safeName ||
-                 old['sha'] != images[i].sha256Hex)) {
-              throw StateError(
-                'Old receipt metadata differs from encrypted attachment.',
+            for (var i = 0; i < refs.length; i++) {
+              if (images[i].position != i ||
+                  !WaffraEncryptedReceiptReference.matches(refs[i],owner,i)) {
+                throw StateError('Encrypted receipt ownership differs.');
+              }
+              final old = legacyByPosition.remove(jsonEncode([owner, i]));
+              if (old != null &&
+                  (old['name'] != images[i].safeName ||
+                   old['sha'] != images[i].sha256Hex)) {
+                throw StateError('Old SQL receipt SHA differs from BLOB.');
+              }
+            }
+            encryptedReceiptCount += refs.length;
+          } else {
+            receiptRoot ??= await _trustedReceiptRoot();
+            for (var i = 0; i < refs.length; i++) {
+              final actual = await _verifiedOwnedFilePath(
+                refs[i], receiptRoot,
               );
+              if (externalReceipts.containsKey(actual)) {
+                throw StateError('Receipt file shared by multiple entries.');
+              }
+              final digest = await _verifiedReceiptDigest(actual);
+              final old = legacyByPosition.remove(jsonEncode([owner, i]));
+              final name = actual.split(Platform.pathSeparator).last;
+              if (old != null &&
+                  (old['name'] != name || old['sha'] != digest)) {
+                throw StateError('Old external receipt metadata changed.');
+              }
+              externalReceipts[actual] = digest;
             }
           }
-          receiptCount += slots;
+          receiptCount += refs.length;
         }
         if (legacyByPosition.isNotEmpty) {
-          // No source path or external-file deletion is attempted here.
-          // A dangling/file-backed index requires a separate verified
-          // filesystem migration and must never be silently orphaned.
-          throw StateError('Unverified file-backed receipt prevents reset.');
+          throw StateError('Orphan or unverified old receipt metadata.');
         }
         if (tables.contains('fresh_finance_receipt_blobs') &&
-            await _count('fresh_finance_receipt_blobs') != receiptCount) {
+            await _count('fresh_finance_receipt_blobs') !=
+                encryptedReceiptCount) {
           throw StateError('Unlinked encrypted receipt prevents reset.');
         }
         final hashes = current.values['waffra_sms_hashes_v1'] as List<String>? ??
@@ -575,6 +608,20 @@ class WaffraEncryptedFullFinanceReset {
           throw StateError('Financial SMS deduplication integrity mismatch.');
         }
 
+        // The pending purge is journaled inside the SAME encrypted SQLite
+        // commit; no app-owned file is deleted until the commit is final.
+        await snapshot.store.customStatement(
+          'CREATE TABLE IF NOT EXISTS ' + _receiptCleanupTable +
+          '(path TEXT PRIMARY KEY NOT NULL, '
+          'sha256_hex TEXT NOT NULL CHECK(length(sha256_hex)=64))',
+        );
+        for (final planned in externalReceipts.entries) {
+          await snapshot.store.customStatement(
+            'INSERT INTO ' + _receiptCleanupTable +
+            '(path,sha256_hex) VALUES(?,?)',
+            [planned.key, planned.value],
+          );
+        }
         final targets = tables.difference(_biometricPreservedTables);
         final parents = <String, Set<String>>{};
         for (final table in targets) {
@@ -638,6 +685,10 @@ class WaffraEncryptedFullFinanceReset {
           receiptImagesRemoved: receiptCount,
         );
       });
+      // This runs only after the encrypted commit. If interrupted, the
+      // journal is still present and recovery resumes on the next bind.
+      await _deletePendingExternalReceipts();
+      return committed;
     });
   }
 
