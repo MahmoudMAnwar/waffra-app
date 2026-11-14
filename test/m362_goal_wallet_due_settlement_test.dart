@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/main.dart';
 import 'package:waffra/waffra_goal_due_policy.dart';
@@ -67,7 +68,9 @@ void main(){
  });
 
  test('M362 due-date handler confirms before coupling goal, ledger, recurrence',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
+  final dueSource=File('lib/waffra_home_finance_persistence_due.part.dart').readAsStringSync();
+  expect(dueSource,contains('WaffraGoalDueAllocation.allocate('));
   expect(main,contains('WaffraGoalDueAllocation.allocate('));
   expect(main,contains('sourceType:\'goal_due\''));
   expect(main,contains('recurring[scheduleIndex]=currentSchedule.single.copy(active:false)'));

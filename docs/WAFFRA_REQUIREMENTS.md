@@ -2093,3 +2093,7 @@ The exact-head live financial write-ordering CI fails the original M636 Widget b
 
 ### M908 — Issue #633 / Draft PR #638: verified due-source account provenance
 Move the original `_m650DueVerifiedAccount` read-only cached verified due-account provenance method unchanged into registered `lib/waffra_home_due_account_provenance.part.dart`. Keep original wallet amount threshold, owner-bound `readExistingEntryAccount`, rejection of missing/closed-account mapping, and no unverified account guessing. Real Dart/Python source reconstruction and M385/M550 tests; original Backup/Restore and signed Android proof remain independent.
+
+
+### M923 — Issue #633 / Draft #638: restore original M362 verified due-goal regression on registered production part
+M371 workflow failed because its M362 original source-level due-settlement test inspected only raw `lib/main.dart` after the unchanged production due handler moved to declared `lib/waffra_home_finance_persistence_due.part.dart`. Preserve all the existing goal-wallet/integer-halalas/recurring/no-double-debit tests, redirect that single source reader to fail-closed `readWaffraMainSourceForContracts()`, and additionally assert the actual registered due handler contains original `WaffraGoalDueAllocation.allocate(`. No app/finance/backup code changes; add Python regression and M385 exact bounded scope. Require rerun on the new exact HEAD; no physical-device or owner archive proof is inferred.
