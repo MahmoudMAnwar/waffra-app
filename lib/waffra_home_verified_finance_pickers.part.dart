@@ -146,17 +146,7 @@ extension _WaffraHomeVerifiedFinancePickers on _HomeScreenState {
      }
     }
    }
-   if(active.isEmpty){
-    if(mustSelectAccount){
-     snack(context,waffraIsEnglish?
-      'Add at least one bank, cash, or wallet account in My Accounts first.':
-      'لازم تضيف حسابًا ماليًا واحدًا على الأقل من حساباتي أولًا.',isError:true);
-     return null;
-    }
-    return (
-     ids:List<String?>.filled(candidates.length,null),
-     generation:verified.witness.generation);
-   }
+   // Empty first-install account list still permits inline verified creation.
    final assigned=List<String?>.filled(candidates.length,null);
    if(createdFromSmsAccountId!=null){
     assigned[0]=createdFromSmsAccountId;
@@ -259,13 +249,75 @@ extension _WaffraHomeVerifiedFinancePickers on _HomeScreenState {
     return (ids:List<String?>.unmodifiable(assigned),
      generation:latest.witness.generation);
    }
-   final providerGroups=WaffraRecurringAccountGroups.fromAccounts(active);
+   var providerGroups=WaffraRecurringAccountGroups.withBankProviderChoices(active);
    final chosenProviders=List<String?>.generate(assigned.length,(index){
     for(final group in providerGroups){
      if(group.accounts.any((a)=>a.id==assigned[index]))return group.id;
     }
     return null;
    });
+   final parentRevisions=List<int>.filled(candidates.length,0);
+   final childRevisions=List<int>.filled(candidates.length,0);
+   Future<void> createInlineReviewAccount(
+    BuildContext pickerContext,StateSetter update,int index,
+    {required bool createProvider})async{
+    final selectedGroup=createProvider?null:chosenProviders[index];
+    if(!createProvider&&selectedGroup==null)return;
+    var accountWasWritten=false;
+    try{
+     final selectedProvider=waffraProviderForAccountGroup(selectedGroup);
+     final types=<String,List<String>>{
+      for(final kind in const ['bank','wallet'])
+       kind:active.where((a)=>!a.archived&&a.kind==kind&&
+        a.customSubtypeLabel!=null).map((a)=>a.customSubtypeLabel!)
+        .toSet().toList()..sort(),
+     };
+     final draft=await showWaffraDialog<WaffraNewAccountDraft>(
+      context:pickerContext,builder:(dialog)=>WaffraNewAccountDialog(
+       english:waffraIsEnglish,suggestedProviderId:selectedProvider?.id,
+       customSubtypeOptions:types));
+     if(draft==null||!mounted||!pickerContext.mounted)return;
+     if(!waffraNewAccountMatchesGroup(selectedGroup,draft)){
+      snack(pickerContext,waffraIsEnglish?
+       'Linked account must match its selected bank or wallet.':
+       'الحساب التابع لازم يكون لنفس البنك أو المحفظة المختارة.',isError:true);
+      return;
+     }
+     final api=WaffraVerifiedAccountsApi(bridge:bridge);
+     await api.balances();
+     final id='m942-sms-review-'+newId();
+     await api.createTypedAccountWithIdentity(
+      id:id,name:draft.name,kind:draft.kind,
+      providerId:draft.providerId??'none',
+      subtype:draft.subtype??'other',openingMinor:draft.openingMinor,
+      createdIso:DateTime.now().toUtc().toIso8601String(),
+      lastFour:draft.lastFour,
+      customSubtypeLabel:draft.customSubtypeLabel,userConfirmed:true);
+     accountWasWritten=true;
+     final current=await bridge.readVerifiedAccounts();
+     final list=current.balances.where((a)=>!a.archived).toList();
+     if(list.where((a)=>a.id==id).length!=1)throw StateError('Account not verified');
+     final related=WaffraRecurringAccountGroups.fromAccounts(list)
+      .where((p)=>p.accounts.any((a)=>a.id==id)).toList();
+     if(related.length!=1)throw StateError('Bank group not verified');
+     if(!mounted||!pickerContext.mounted)return;
+     update((){
+      verified=current;
+      active=list;
+      providerGroups=WaffraRecurringAccountGroups.withBankProviderChoices(list);
+      chosenProviders[index]=related.single.id;
+      assigned[index]=id;
+     });
+     unawaited(_m467RefreshHomeAccounts());
+    }catch(_){
+     if(pickerContext.mounted)snack(pickerContext,
+      accountWasWritten?
+       (waffraIsEnglish?'Account saved, but refresh is needed.':
+        'تم حفظ الحساب لكن تعذر تحديث القائمة؛ حدّث الحسابات.'):
+       (waffraIsEnglish?'Account not saved. Check bank and retry.':
+        'لم يتم حفظ الحساب؛ راجع البنك وحاول مرة أخرى.'),isError:true);
+    }
+   }
    final approved=await showWaffraDialog<bool>(context:context,
     builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
      title:WaffraText(mustSelectAccount?
