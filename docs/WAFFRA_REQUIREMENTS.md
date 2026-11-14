@@ -1,3 +1,10 @@
+## M935 — Phase Two code-side financial acceptance & physical Android handoff (2026-11-14)
+
+- **Issue:** [#639](https://github.com/MahmoudMAnwar/waffra-app/issues/639). **PR:** new Phase Two Draft PR. **Status:** Partial — synthetic finance regression and physical-device matrix implemented; exact-HEAD CI and owner Android acceptance pending.
+- **Owner scope:** finish repository-side Phase Two checks for legacy Backup/Restore, 19 distinct IDs vs doubled rows, signed halala totals, bank-account separation, verified widget/PDF routes, typed goals/recurring/budgets/categories, and cold encrypted reopen. Keep original V24 file unchanged and use synthetic fixtures only.
+- **QA:** `test/storage/m935_phase_two_restore_finance_acceptance_test.dart` cold-reopens two independent disposable SQLCipher vaults from one authenticated V24→V3 archive, reconciles original 19 IDs, 17 expenses/2 incomes, DB/Widget/snapshot money totals, typed history, and zero invented bank accounts. Negative duplicate/missing/altered row tests stay strict. Existing full Flutter CI picks up this test automatically. The 100% acceptance of PDF rendering, zero overflow, real Android freezes and the owner's original backup **cannot** be certified by host CI.
+- **Owner-only UAT:** [M935 Android checklist](qa/M935_PHASE_TWO_ANDROID_ACCEPTANCE.md) first on expendable test handset; no spouse-handset update or real archive upload until owner's financial parity and no-duplicate evidence passes. No app runtime, finance writer, permissions, UI or production settings were changed.
+
 ## M623 — No automatic rescue export during restore (2026-11-13)
 
 - **Issue:** [#623](https://github.com/MahmoudMAnwar/waffra-app/issues/623). **Same PR:** [#621](https://github.com/MahmoudMAnwar/waffra-app/pull/621) (Draft). **Status:** Partial — removed mandatory encrypted rescue generation, external-save requirement, success/confirmation wording and rescue API from verified restore; source and targeted tests updated; exact-HEAD CI/device acceptance pending.
