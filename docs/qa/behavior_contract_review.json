@@ -3642,6 +3642,35 @@
         "Use only actual registered Dart parts, not mock source or special-case stubs.",
         "Physical Android and user's old backup/ledger parity are still not certified by source tests."
       ]
+    },
+    {
+      "id": "M760-VERIFIED-ACCOUNT-SELECTORS-ORIGINAL-SOURCE",
+      "issue": "Issue #633 / Draft #638",
+      "previous_behavior": "Home still contained large verified account single-flight refresh, selected-account filtering, account manager and two-sided transfer editor methods inline in _HomeScreenState.",
+      "approved_behavior": "Extract byte-identical original methods into registered same-library Home Dart part without altering owner/account identity, verified selected account balances, transaction history, account creation, or explicit source-and-destination transfer confirmation.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_verified_account_flows.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/m760_home_verified_account_flows_extraction_test.dart",
+        "test/m467_account_header_test.dart",
+        "test/m527_home_account_picker_latency_test.dart",
+        "test/m667_accounts_use_home_composer_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Never invent verified account balance, account ID or provider; account lookup must fail closed.",
+        "Transfer remains owner-confirmed, two-sided, excluded from income/expense budgets and does not create money.",
+        "Single-flight finance source and logout/session fencing remain unchanged.",
+        "Preserve all current original positive/negative tests; no actual phone and owner historical encrypted-backup parity claimed."
+      ]
     }
   ]
 }
