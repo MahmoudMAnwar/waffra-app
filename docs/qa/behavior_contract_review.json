@@ -4039,6 +4039,33 @@
         "Budget association remains optional and cannot silently change ledger or cash totals.",
         "No old encrypted records touched; physical Android and owner backup parity remain independent."
       ]
+    },
+    {
+      "id": "M840-ORIGINAL-HOME-WIDGET-VERIFIED-FINANCE-SYNC",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Home State directly performed an authenticated verified SQLCipher widget finance refresh and transferred the checked source to the home-widget store.",
+      "approved_behavior": "Relocate the unchanged `_syncWidgetTransactions` method to an actual same-library Dart part and keep every verified finance source, session/ready check, no-zero-on-integrity-failure fallback and pull-refresh State field unchanged.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_widget_sync.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/m840_home_widget_sync_extraction_test.dart",
+        "test/m625_single_verified_home_read_login_handoff_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "No widget balance is shown from an unverified SQLCipher account or stale session.",
+        "A failed original finance source integrity check must not synthesize zero ledger data.",
+        "No change to existing real-money writer, account transfer, backup restore, SMS posting, or archived data.",
+        "Real signed Android performance/overflow and owner historical encrypted backup parity remain independent evidence."
+      ]
     }
   ]
 }
