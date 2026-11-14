@@ -45,4 +45,7 @@ def read_waffra_home_source(root=ROOT):
     restore(" /// Explicit, idempotent account-to-account transfer from reviewed bank SMS.\n // M703: implementation moved byte-identically to registered Home part.\n",
             "lib/waffra_home_sms_transfer_review.part.dart",
             " /// Explicit, idempotent account-to-account transfer from reviewed bank SMS.")
+    restore(" // M733: verified transfer and savings card UI moved to registered same-library part.\n",
+            "lib/waffra_home_verified_transfer_cards.part.dart",
+            " String _m647VerifiedAccountLabel(")
     return source
