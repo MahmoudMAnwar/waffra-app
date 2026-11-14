@@ -102,7 +102,7 @@
         "end": " Future<void> renameAccount({required String id,required String name,\n  required bool userConfirmed})async{"
       },
       {
-        "start": " Future<void> archiveEmptyAccount({required String id,",
+        "start": " Future<void> archiveEmptyAccount({required String id,\n  required bool userConfirmed})async{",
         "end": null
       }
     ],
