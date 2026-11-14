@@ -4512,6 +4512,30 @@
         "Foreign-currency consent, receipt staging, full finance authority, retired AI prohibitions and SQLCipher production cutover checks remain unchanged.",
         "No changes to Flutter finance writers, original bank SMS, budgets, Backup/Restore, native Widget or stationary FAB."
       ]
+    },
+    {
+      "id": "M929-HOME-LOGOUT-NOTICE-FX-SAME-LIBRARY-EXTRACTION",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Original owner-session logout close, finance notification routing and no-post foreign FX preview methods lived directly inside _HomeScreenState and were referenced by exact source QA.",
+      "approved_behavior": "Preserve those original methods exactly, relocate to three registered same-library Dart extension parts; source-based Dart and Python QA reconstruct the real registered parts, and an explicit regression confirms close ordering, verified finance destination, and no unapproved currency ledger posting.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_logout_guard.part.dart",
+        "lib/waffra_home_finance_notification_route.part.dart",
+        "lib/waffra_home_fx_preview.part.dart"
+      ],
+      "test_paths": [
+        "test/m929_home_session_routes_extraction_test.dart",
+        "test/m627_home_handoff_timeout_and_session_reset_test.dart",
+        "test/m620_m621_finance_notification_routing_test.dart",
+        "test/m336_fx_consent_and_full_title_test.dart"
+      ],
+      "safety_invariants": [
+        "Wait for owner-verified Home reads, post-frame work and financial write queue before closing SQLCipher binding.",
+        "Only authenticated pending review or verified saved ledger identity is used for finance notification taps, without direct SMS commit.",
+        "Foreign-currency preview never posts converted amount or bypasses Saudi SAR release restriction.",
+        "Existing app wide stationary FAB, UI design, 1:1 original source route, backup/restore and financial account balance remain unchanged."
+      ]
     }
   ]
 }
