@@ -91,7 +91,9 @@
     "M904 #633 extract exact original verified Home Widget balance refresh/publish methods into registered same-library Dart part, preserving source auth, integer halalas, privacy masking and read-only behavior, with M385/M550 source QA and no original backup/UI modifications.",
     "M920 #633 retain all original full Flutter financial UI and SMS/bank/recurring/backup regression expectations from 10 named tests after real Home part extraction by adjusting only stale raw-main source imports/readers, no assertions removed, M385 unchanged-outside-scope and full CI.",
     "M905 #633 continue full Home state modularization by moving original four verified display-only transfer and savings history cache methods into registered Dart part byte-identically, retain account filters and secure source with strict M385/M550 and original Dart/Python QA.",
-    "M921 #633 preserve all original verified recurring provenance and budget-isolation assertions while eliminating Dart's unused original IO import warning by adding a positive real production part witness inside the already bounded M470 test; never suppress storage analysis or alter runtime finance."
+    "M921 #633 preserve all original verified recurring provenance and budget-isolation assertions while eliminating Dart's unused original IO import warning by adding a positive real production part witness inside the already bounded M470 test; never suppress storage analysis or alter runtime finance.",
+    "M906 #633 relocate original Home sum/category leaf-only selectors and localized consent dialogs unchanged into registered Dart part with exact-source QA; retain approved UI and finance arithmetic.",
+    "M907 #633 relocate original Home delete-all transaction path unchanged into registered part with explicit confirmation, SQLCipher captured ledger and SMS hashes durable atomic journal, no early state clear and exact-source QA."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -345,7 +347,11 @@
     "test/m324_required_ai_sms_receipts_test.dart",
     "test/storage/m470_verified_recurring_payment_capture_test.dart",
     "lib/waffra_home_unified_activity_reads.part.dart",
-    "test/m905_verified_activity_reads_extraction_test.dart"
+    "test/m905_verified_activity_reads_extraction_test.dart",
+    "lib/waffra_home_category_confirmations.part.dart",
+    "lib/waffra_home_delete_all_transactions.part.dart",
+    "test/m906_home_category_confirmations_extraction_test.dart",
+    "test/m907_home_delete_all_extraction_test.dart"
   ],
   "approved_deleted_files": [
     "lib/waffra_sms_cloud_review_analyzer.dart"
@@ -427,10 +433,6 @@
         "end": "unawaited(_syncWidgetTransactions());"
       },
       {
-        "start": " Future<void> confirmDeleteAllEntries() async {",
-        "end": " Future<void> showInternalTransferTransactions()async{"
-      },
-      {
         "start": "key:const Key('waffra-header-account-entry'),",
         "end": "child:AnimatedContainer(duration:waffraMotion(260),"
       },
@@ -448,7 +450,7 @@
       },
       {
         "start": " Future<void> _previewForeignBankCurrency(",
-        "end": " Future<void> confirmDeleteAllEntries() async {"
+        "end": " Future<void> showInternalTransferTransactions()async{"
       },
       {
         "start": " String get _smsRuleOwnerKey=>WaffraSmsLocalRuleStore.ownerKey(",
@@ -468,10 +470,6 @@
       },
       {
         "start": " @override void dispose(){if(!_m663FirstInteractiveFrame.isCompleted)",
-        "end": " double sum(Iterable<MoneyEntry>"
-      },
-      {
-        "start": " Future<bool?> confirmDeletion(",
         "end": " Future<void> _previewForeignBankCurrency("
       },
       {

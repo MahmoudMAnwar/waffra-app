@@ -76,6 +76,9 @@ String readWaffraMainSourceForContracts(){
  if(s.split(categoryReceiptMarker).length!=2)throw StateError('Missing or duplicate M795 real category and receipts marker');
  s=s.replaceFirst(categoryReceiptMarker,_method('lib/waffra_home_category_receipt_dialogs.part.dart',
   ' Future<String?> chooseTransactionCategory('));
+ const m906=' // M906: original Home category and confirmation helpers extracted unchanged to registered part.\n';
+ if(s.split(m906).length!=2)throw StateError('Missing or duplicate M906 real category/confirmation source');
+ s=s.replaceFirst(m906,_method('lib/waffra_home_category_confirmations.part.dart',' double sum(Iterable<MoneyEntry> list,bool income)=>'));
  const financeRecoveryMarker=' // M791: original fail-closed Home finance startup and recovery UI in registered part.\n';
  if(s.split(financeRecoveryMarker).length!=2)throw StateError('Missing or duplicated M791 recovery source marker');
  s=s.replaceFirst(financeRecoveryMarker,_method('lib/waffra_home_finance_recovery.part.dart',
@@ -127,6 +130,9 @@ String readWaffraMainSourceForContracts(){
  if(s.split(ledgerActionsMarker).length!=2)throw StateError('Missing or duplicated M780 verified ledger actions marker');
  s=s.replaceFirst(ledgerActionsMarker,_method('lib/waffra_home_transaction_ledger_actions.part.dart',
   ' void _publishVerifiedTransactionLedger('));
+ const m907=' // M907: original authenticated Home delete-all path extracted unchanged to registered part.\n';
+ if(s.split(m907).length!=2)throw StateError('Missing or duplicate M907 real confirmed-delete source');
+ s=s.replaceFirst(m907,_method('lib/waffra_home_delete_all_transactions.part.dart',' Future<void> confirmDeleteAllEntries() async {'));
  const transactionCardsMarker=' // M781: original Home transaction cards/details/actions moved to registered same-library part.\n';
  if(s.split(transactionCardsMarker).length!=2)throw StateError('Missing or duplicated M781 real transaction card source marker');
  s=s.replaceFirst(transactionCardsMarker,_method('lib/waffra_home_transaction_cards.part.dart',

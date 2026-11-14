@@ -4342,6 +4342,46 @@
         "No money writer, encrypted archive, account balance or UI behavior is modified.",
         "Actual Android and owner backup parity are independent tests."
       ]
+    },
+    {
+      "id": "M906-HOME-ORIGINAL-CATEGORY-CONFIRMATION-EXTRACTION",
+      "issue": "Issue #633 Draft #638 Home state modularization",
+      "previous_behavior": "Verified Home sum, category leaf selectors and original localized deletion/confirmation dialogs were inline within the large State source.",
+      "approved_behavior": "Move same original methods byte-for-byte to registered same-library category confirmation part, preserving exact halalas, category hierarchy, consent buttons and dialogs.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_category_confirmations.part.dart"
+      ],
+      "test_paths": [
+        "test/m906_home_category_confirmations_extraction_test.dart",
+        "test/qa/m900_home_source_reassembly_guard_test.py"
+      ],
+      "safety_invariants": [
+        "Integer halalas category totals must remain unchanged.",
+        "Manual new categories remain selectable only at valid leaves.",
+        "User confirmation remains explicit with original cancel semantics.",
+        "No account, original SMS, original backup or global FAB changes."
+      ]
+    },
+    {
+      "id": "M907-HOME-ORIGINAL-ATOMIC-DELETE-ALL-EXTRACTION",
+      "issue": "Issue #633 Draft #638 Home state modularization",
+      "previous_behavior": "Confirmed bulk deletion used one trusted owner-bound SQLCipher finance authority captured write of ledger and SMS duplicate hashes followed by in-memory clear only on success.",
+      "approved_behavior": "Move same method byte-for-byte into registered same-library Home part without altering explicit owner confirmation, write queue, finance source baseline, route, paired entries/hash journal, widget refresh or fail-closed error recovery.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_delete_all_transactions.part.dart"
+      ],
+      "test_paths": [
+        "test/m907_home_delete_all_extraction_test.dart",
+        "test/qa/m900_home_source_reassembly_guard_test.py"
+      ],
+      "safety_invariants": [
+        "Never clear owner data without explicit confirmation and verified durable finance write.",
+        "Original SMS duplicate hashes and transaction ledger are committed atomically together.",
+        "Failed authority write keeps original financial values and displays a safe retry message.",
+        "No change to owner Backup/Restore, original SMS review, or approved FAB layout."
+      ]
     }
   ]
 }

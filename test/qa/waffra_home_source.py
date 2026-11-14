@@ -88,6 +88,7 @@ def read_waffra_home_source(root=ROOT):
     restore(" // M780: original verified ledger deletion/undo and source publication moved to registered Home part.\n",
             "lib/waffra_home_transaction_ledger_actions.part.dart",
             " void _publishVerifiedTransactionLedger(")
+    restore(" // M907: original authenticated Home delete-all path extracted unchanged to registered part.\n", "lib/waffra_home_delete_all_transactions.part.dart", " Future<void> confirmDeleteAllEntries() async {")
     restore(" // M781: original Home transaction cards/details/actions moved to registered same-library part.\n",
             "lib/waffra_home_transaction_cards.part.dart",
             " Widget stat(String label")
@@ -100,6 +101,7 @@ def read_waffra_home_source(root=ROOT):
     restore(" // M795: Home category selector and protected receipt dialogs moved to registered Dart part.\n",
             "lib/waffra_home_category_receipt_dialogs.part.dart",
             " Future<String?> chooseTransactionCategory(")
+    restore(" // M906: original Home category and confirmation helpers extracted unchanged to registered part.\n", "lib/waffra_home_category_confirmations.part.dart", " double sum(Iterable<MoneyEntry> list,bool income)=>")
     restore(" // M791: original fail-closed Home finance startup and recovery UI in registered part.\n",
             "lib/waffra_home_finance_recovery.part.dart",
             " Future<void> _loadFinanceSafely()async{")

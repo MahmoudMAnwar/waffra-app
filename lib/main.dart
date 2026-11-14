@@ -147,6 +147,7 @@ part 'waffra_home_verified_account_flows.part.dart';
 part 'waffra_home_unified_activity_reads.part.dart';
 part 'waffra_home_finance_persistence_due.part.dart';
 part 'waffra_home_transaction_ledger_actions.part.dart';
+part 'waffra_home_delete_all_transactions.part.dart';
 part 'waffra_home_transaction_cards.part.dart';
 part 'waffra_home_verified_refresh.part.dart';
 part 'waffra_home_compact_activity_cards.part.dart';
@@ -157,6 +158,7 @@ part 'waffra_home_widget_balance.part.dart';
 part 'waffra_home_sms_rescan.part.dart';
 part 'waffra_home_sms_management.part.dart';
 part 'waffra_home_category_receipt_dialogs.part.dart';
+part 'waffra_home_category_confirmations.part.dart';
 part 'waffra_home_budget_alert_charts.part.dart';
 part 'waffra_home_verified_finance_pickers.part.dart';
 part 'waffra_home_navigation_helpers.part.dart';
@@ -4668,41 +4670,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  // M750: verified Home financial startup load lives in registered same-library part.
  // M904: original verified Widget balance refresh and fail-closed presentation moved unchanged to registered Home part.
  // M762: verified finance persistence and recurring due/postponement methods moved unchanged to registered Home part.
- double sum(Iterable<MoneyEntry> list,bool income)=>
-  list.where((e)=>e.income==income).fold<int>(0,(v,e)=>v+WaffraRecurringPolicy.toHalalas(e.amount))/100;
- BudgetCategory categoryFor(String name,bool income) {
-  for(final c in categories){if(c.name==name&&c.income==income)return c;}
-  return BudgetCategory(id:'fallback',name:name,icon:'category',color:colors[7],income:income);
- }
- List<BudgetCategory> forType(bool income)=>categories.where((c)=>c.income==income).toList();
- // Manual entries may only select leaf categories; stored parent references
- // in older transactions remain unchanged until a user deliberately edits.
- List<BudgetCategory> forManualTransactionType(bool income)=>
-  categories.where((c)=>c.income==income&&c.isSubcategory&&
-   waffraCategoryAvailableForNewEntry(categories,c)).toList();
- // Used in NEW recurring selections. forType stays historical/complete.
- List<BudgetCategory> forSelectableType(bool income)=>
-  forManualTransactionType(income);
- Future<bool?> confirm(String title,String body)=>showWaffraDialog<bool>(
-  context:context,builder:(ctx)=>AlertDialog(title:WaffraText(title),content:WaffraText(body),
-  actions:[TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,false)),child:const WaffraText('إلغاء')),
-   FilledButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,true)),child:const WaffraText('تأكيد'))]));
- Future<bool?> confirmDeletion(String title,String body)=>showWaffraDialog<bool>(
-  context:context,builder:(ctx)=>AlertDialog(
-   title:WaffraText(title),content:WaffraText(body),
-   actionsPadding:const EdgeInsets.fromLTRB(14,6,14,14),
-   actions:[SizedBox(width:double.maxFinite,child:Row(children:[
-    Expanded(child:OutlinedButton(
-     onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,false)),
-     child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء',maxLines:2,
-      textAlign:TextAlign.center))),
-    const SizedBox(width:10),
-    Expanded(child:FilledButton(
-     style:FilledButton.styleFrom(backgroundColor:Colors.red),
-     onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,true)),
-     child:WaffraText(waffraIsEnglish?'Confirm delete':'تأكيد الحذف',
-      maxLines:2,textAlign:TextAlign.center))),
-   ]))]));
+ // M906: original Home category and confirmation helpers extracted unchanged to registered part.
  // M812: verified SMS money-account and optional budget pickers moved to real registered Home part.
  // M636: Manual paste/review sheet retired. Automatic encrypted SMS Review
  // and owner-verified account-bound finance editor are retained.
@@ -4752,41 +4720,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  // M719: original verified transaction entry form extracted to same-library Home part.
  // M795: Home category selector and protected receipt dialogs moved to registered Dart part.
  // M805: original Home budget alerts and chart SVG methods moved to registered part.
- Future<void> confirmDeleteAllEntries() async {
-  if(entries.isEmpty){snack(context,waffraIsEnglish?'No transactions to delete':'لا توجد معاملات لحذفها');return;}
-  final confirmed=await confirmDeletion(
-   waffraIsEnglish?'Delete all transactions?':'حذف كل المعاملات؟',
-   waffraIsEnglish?'Delete all ${entries.length} recorded transactions permanently? This cannot be undone.':'سيُحذف ${entries.length} معاملة نهائيًا. لا يمكن التراجع.');
-  if(confirmed!=true||!mounted)return;
-  // Crash journal BOTH the ledger and duplicate hashes as one recoverable
-  // intent. Do not clear in-memory finance until durable storage confirms it.
-  final clear=<String,Object>{
-   'entries':'[]',
-   'waffra_sms_hashes_v1':<String>[],
-  };
-  try{
-   final baseline=_lastFinanceAuthorityRead;
-   await _financialWriteQueue.submit(clear,(captured)async{
-    if(baseline==null)throw StateError('Finance source baseline unavailable.');
-    final committed=await _financeAuthority.saveCaptured(
-     route:WaffraFinanceRoute.deleteAllTransactions,
-     baseline:baseline,captured:captured,userConfirmed:true,
-    );
-    _lastFinanceAuthorityRead=committed;
-    _lastLedgerSavedRaw=committed.ledgerRaw;
-    _lastWidgetRevision=committed.widgetRevision;
-   });
-   if(!mounted)return;
-   setState((){_m684InvalidatePeriodRead();entries.clear();smsHashes.clear();});
-   unawaited(_refreshWidget());
-   snackSuccess(context,waffraIsEnglish?'All transactions deleted':'تم حذف جميع المعاملات');
-  }catch(e){
-   debugPrint('Confirmed transaction deletion could not be verified: $e');
-   if(mounted)snack(context,waffraIsEnglish?
-    'Deletion could not be confirmed. Reload before retrying.':
-    'تعذر تأكيد الحذف. أعد تحميل المعاملات قبل المحاولة مجددًا.');
-  }
- }
+ // M907: original authenticated Home delete-all path extracted unchanged to registered part.
  // M715: budget editor, historical linking and category administration moved to registered Home part.
  // M810: original Home income/expense transaction summary now in registered part.
  Future<void> showInternalTransferTransactions()async{
