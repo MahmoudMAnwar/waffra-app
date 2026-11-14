@@ -21,6 +21,9 @@ def read_waffra_home_source(root=ROOT):
             " Widget categoriesPage()=>categoriesPageV2();")
     restore(" // M721: original Home calendar, backup and account tools moved to registered same-library part.\n",
             "lib/waffra_home_account_tools.part.dart"," Future<void> showWaffraFinancialCalendar(")
+    restore(" // M805: original Home budget alerts and chart SVG methods moved to registered part.\n",
+            "lib/waffra_home_budget_alert_charts.part.dart",
+            " Future<void> _requestPercentageAlertPermission()async{")
     restore(" // M687: PDF exporter moved to a same-library State extension.\n",
             "lib/waffra_home_pdf_reports.part.dart"," Future<void> exportEntriesPdf(")
     restore(" // M687: Profile page moved to a same-library State extension.\n",
@@ -81,9 +84,6 @@ def read_waffra_home_source(root=ROOT):
     restore(" // M762: verified finance persistence and recurring due/postponement methods moved unchanged to registered Home part.\n",
             "lib/waffra_home_finance_persistence_due.part.dart",
             " Future<void> persist(")
-    restore(" // M805: original Home budget alerts and chart SVG methods moved to registered part.\n",
-            "lib/waffra_home_budget_alert_charts.part.dart",
-            " Future<void> _requestPercentageAlertPermission()async{")
     restore(" // M780: original verified ledger deletion/undo and source publication moved to registered Home part.\n",
             "lib/waffra_home_transaction_ledger_actions.part.dart",
             " void _publishVerifiedTransactionLedger(")
