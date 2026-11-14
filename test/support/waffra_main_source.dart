@@ -76,5 +76,9 @@ String readWaffraMainSourceForContracts(){
  if(s.split(inboxMarker).length!=2)throw StateError('Missing or duplicate M739 original inbox marker');
  s=s.replaceFirst(inboxMarker,_method('lib/waffra_home_sms_inbox.part.dart',
   ' Future<void> _openAutoSmsInbox()async{'));
+ const localRulesMarker=' // M741: original local SMS rule and learning methods moved to registered same-library part.\n';
+ if(s.split(localRulesMarker).length!=2)throw StateError('Missing or duplicate M741 local-rule marker');
+ s=s.replaceFirst(localRulesMarker,_method('lib/waffra_home_sms_rules.part.dart',
+  ' Future<void> _openSmsRules('));
  return s;
 }
