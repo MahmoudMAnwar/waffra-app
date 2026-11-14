@@ -2025,3 +2025,7 @@ Owner continues code-only `_HomeScreenState` decomposition. Relocate the exact o
 
 ### M850 — Issue #633 / Draft #638: native SMS notification debounce and manual rescan source extraction
 Move original `_receiveAutoSmsNotice()` and `_rescanAutoSmsInbox()` unchanged into registered same-library Home Dart part while keeping timer State. Preserve native permission, owner/consent/session, offline review, explicit exclusion, no-auto-post, original bank message, progress/cancel and approved snackbar behavior. Strict Dart/Python source and M550 regression checks required. Source refactor cannot prove Android latency or original private backup parity.
+
+
+### M845 — Issue #633 / Draft #638: preserve original no-cloud SMS and account safety regression
+Original `test/m436_cloud_review_pipeline_test.dart` still reads raw `lib/main.dart` for a positive `reviewSmsBudgetLinks([record])` and verified manual SMS entry route after the owner's verified Home methods moved to registered same-library Dart parts. Redirect **only the two original main.dart source readers** to strict `readWaffraMainSourceForContracts()` with its import; keep all original cloud no-upload, OTP, account-bound finance, native 24-hour queue and redaction assertions unchanged. Do not skip or weaken tests, alter source code or re-enable external AI. M385 protected source ranges and CI remain mandatory.
