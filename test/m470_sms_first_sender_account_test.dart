@@ -77,7 +77,8 @@ void main(){
   expect(flow,contains('WaffraSmsAccountLearning.suggest(learned,sender:smsSender,'));
   expect(flow,contains('suggestedLastFour:proposedSuffix'));
   expect(flow,contains('برصيد افتتاحي صفر ريال قابل للتعديل.'));
-  expect(flow,contains("draft.kind!='bank'||draft.providerId!=knownBank"));
+  expect(flow,contains('draft.kind!=suggestedKind||draft.providerId!=knownBank'));
+  expect(flow,contains("customSubtypeOptions:{suggestedKind:savedCustomTypes}"));
   expect(flow,contains('api.createTypedAccountWithIdentity('));
   // Verified suffix and user confirmation are both passed to the writer,
   // with the optional custom subtype label preserved in between.
