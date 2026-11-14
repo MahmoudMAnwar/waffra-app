@@ -4317,6 +4317,31 @@
         "Unavailable verified authority produces an error, not silently invented balances.",
         "Original owner encrypted backup and static floating add button are untouched."
       ]
+    },
+    {
+      "id": "M921-STRICT-STORAGE-ANALYZER-REAL-RECURRING-WITNESS",
+      "issue": "Issue #633 / Draft #638",
+      "previous_behavior": "After M920 original Home source test reconstruction, test/storage/m470_verified_recurring_payment_capture_test.dart retained its original dart:io import but no longer referenced File, producing a strict Dart storage analyzer unused_import warning and failing the Full Offline Finance and UI Regression workflow.",
+      "approved_behavior": "Retain the original test import and every original 12 assertions, and strengthen the scoped recurring-provenance test with a read-only File source witness verifying the actual registered Home recurring due part still implements applyRecurring(). No CI analysis flag is relaxed.",
+      "source_paths": [
+        "test/storage/m470_verified_recurring_payment_capture_test.dart",
+        "lib/waffra_home_finance_persistence_due.part.dart",
+        "test/support/waffra_main_source.dart"
+      ],
+      "test_paths": [
+        "test/storage/m470_verified_recurring_payment_capture_test.dart",
+        "test/m762_home_finance_persistence_due_extraction_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "All original recurring ledger provenance, budget isolation and SQLCipher checks remain enabled.",
+        "The strict analyzer is not skipped or weakened; the import is meaningfully used against registered production source.",
+        "No money writer, encrypted archive, account balance or UI behavior is modified.",
+        "Actual Android and owner backup parity are independent tests."
+      ]
     }
   ]
 }
