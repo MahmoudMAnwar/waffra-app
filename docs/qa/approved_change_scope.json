@@ -53,7 +53,7 @@
     "lib/main.dart": [
       {
         "start": "class _WaffraFooterNoticeHostState extends State<WaffraFooterNoticeHost> {",
-        "end": " /// The only public way to display transient system feedback."
+        "end": "/// The only public way to display transient system feedback."
       },
       {
         "start": "void snack(BuildContext context,String text,{",
