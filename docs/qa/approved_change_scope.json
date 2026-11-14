@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "change_id": "M690-M790-ISSUES632-637-20261114",
+  "change_id": "M690-M795-ISSUES632-637-20261114",
   "human_scope_review": "Issue #629 completes prior PR #628 only after user-visible acceptance; #631 explicitly authorizes three exact screenshots for Goals/Dues/SMS Review, permanently visible financial activity, non-moving FAB-aligned notice, and savings/goal-due cash safety. Existing tests replace outdated visual assumptions without deleting financial safety assertions. Device screenshots/old restore still require external device evidence.",
   "user_requested_changes": [
     "M690 #632 permanently disable third-party AI bank SMS uploads and opt-in on previously installed versions, remove Settings toggle and signed Android staging worker, retain local encrypted SMS Review and money writer.",
@@ -67,7 +67,8 @@
     "M781 #633 move original Home transaction card/details/actions/receipt viewer and greeting methods byte-identically to registered same-library Dart part, retaining secured original SMS, linked goal edit safety, all UI, user confirmation and financial authority.",
     "M782 #633 extract original verified Home pull-to-refresh settle and finance reload methods, preserve State in-flight field/lifecycle, SQLCipher account/ledger, all source expectations, no fabricated balances and independent Android performance measurements.",
     "M783 #633 move byte-identical live SMS settings rescan/excluded sender and message recovery, grouped notification selection and entry to registered same-library Home part; preserve all original native consent, 30-day excluded retention, never-auto-post and SQLCipher owner invariants; scope M385 over the original contiguous implementation exactly.",
-    "M790 #633 move original compact Home finance transaction activity card and shortcut method byte-identically into registered same-library Dart part, retain income/expense/due colors, SAR amounts, attachments, source type and FAB, strict M385 source verification and existing QA."
+    "M790 #633 move original compact Home finance transaction activity card and shortcut method byte-identically into registered same-library Dart part, retain income/expense/due colors, SAR amounts, attachments, source type and FAB, strict M385 source verification and existing QA.",
+    "M795 #633 move unchanged original Home parent/child category choice and encrypted receipt labeling/storage/view dialogs to registered same-library Dart part; retain all permissions, original attachments/SQLCipher, no silent category edits and every original test assertion."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -275,7 +276,9 @@
     "lib/waffra_home_sms_management.part.dart",
     "test/m783_home_sms_management_extraction_test.dart",
     "lib/waffra_home_compact_activity_cards.part.dart",
-    "test/m790_home_compact_activity_cards_extraction_test.dart"
+    "test/m790_home_compact_activity_cards_extraction_test.dart",
+    "lib/waffra_home_category_receipt_dialogs.part.dart",
+    "test/m795_home_category_receipts_extraction_test.dart"
   ],
   "approved_deleted_files": [
     "lib/waffra_sms_cloud_review_analyzer.dart"
@@ -386,7 +389,7 @@
       },
       {
         "start": " Future<void> _previewForeignBankCurrency(",
-        "end": " Future<String?> chooseTransactionCategory("
+        "end": " Future<void> _requestPercentageAlertPermission()async{"
       },
       {
         "start": " Future<void> showInternalTransferTransactions()async{",
