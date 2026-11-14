@@ -19,6 +19,10 @@ String readWaffraMainSourceForContracts(){
  s=s.replaceFirst(accountToolsMarker,_method('lib/waffra_home_account_tools.part.dart',
   ' Future<void> showWaffraFinancialCalendar('));
 
+ const budgetChartMarker=' // M805: original Home budget alerts and chart SVG methods moved to registered part.\n';
+ if(s.split(budgetChartMarker).length!=2)throw StateError('Missing or duplicated M805 original chart/alert marker');
+ s=s.replaceFirst(budgetChartMarker,_method('lib/waffra_home_budget_alert_charts.part.dart',
+  ' Future<void> _requestPercentageAlertPermission()async{'));
  const p=' // M687: PDF exporter moved to a same-library State extension.\n';
  const q=' // M687: Profile page moved to a same-library State extension.\n';
  if(s.split(p).length!=2||s.split(q).length!=2){
@@ -116,10 +120,6 @@ String readWaffraMainSourceForContracts(){
  if(s.split(financePersistenceMarker).length!=2)throw StateError('Missing or duplicated M762 verified persistence source');
  s=s.replaceFirst(financePersistenceMarker,_method('lib/waffra_home_finance_persistence_due.part.dart',
   ' Future<void> persist('));
- const budgetChartMarker=' // M805: original Home budget alerts and chart SVG methods moved to registered part.\n';
- if(s.split(budgetChartMarker).length!=2)throw StateError('Missing or duplicated M805 original chart/alert marker');
- s=s.replaceFirst(budgetChartMarker,_method('lib/waffra_home_budget_alert_charts.part.dart',
-  ' Future<void> _requestPercentageAlertPermission()async{'));
  const ledgerActionsMarker=' // M780: original verified ledger deletion/undo and source publication moved to registered Home part.\n';
  if(s.split(ledgerActionsMarker).length!=2)throw StateError('Missing or duplicated M780 verified ledger actions marker');
  s=s.replaceFirst(ledgerActionsMarker,_method('lib/waffra_home_transaction_ledger_actions.part.dart',
