@@ -410,6 +410,94 @@ CREATE TABLE IF NOT EXISTS $_table(
     });
   }
 
+  /// M938: user-confirmed ONE-TIME rebuilding of missing typed tombstones
+  /// after an authenticated older archive was imported into SQLCipher.
+  ///
+  /// This never edits a cash entry, balance, the active goal list, or the
+  /// immutable finance snapshot. It refuses any partial/existing SQL witness,
+  /// malformed archive, duplicate identity or active-ID collision.
+  Future<void> repairImportedLegacyTrash({
+    required WaffraFinanceModule module,
+    required WaffraFinanceSnapshotState baseline,
+    required bool userConfirmed,
+  }) async {
+    _requireCandidate();
+    if(!userConfirmed){
+      throw StateError('Explicit owner approval required to repair legacy trash.');
+    }
+    return WaffraExperimentalWriterGate(
+      disposableDirectory:writerDirectory,experimentalEnabled:true,
+    ).withExclusiveAccess(()async{
+      await verifySourceUnderLock();
+      await snapshot.store.transaction(()async{
+        final current=await _currentWithWitness(baseline);
+        await _verifyActive(module:module,values:current.values);
+        final active=_decodeList(current.values[_activeKey(module)]);
+        _requireUniqueEntities(active);
+        final archived=_decodeList(current.values[_trashKey(module)]);
+        if(archived.isEmpty||archived.length>10000){
+          throw StateError('No bounded legacy recycle archive to repair.');
+        }
+        await _ensureTable();
+        final existing=await snapshot.store.customSelect(
+          'SELECT entity_id FROM $_table WHERE module_name=?',
+          variables:[Variable.withString(module.name)],
+        ).get();
+        // A partial SQL witness may signal tampering or a stale process.
+        // Never repair (and mask) a partial or conflicting typed source.
+        if(existing.isNotEmpty){
+          throw StateError('Existing encrypted recycle witness requires audit.');
+        }
+        final payload=_payloadKey(module);
+        final known=active.map((e)=>e['id']).toSet();
+        final seen=<String>{};
+        final now=DateTime.now().toUtc().millisecondsSinceEpoch;
+        for(var i=0;i<archived.length;i++){
+          final item=archived[i][payload];
+          final stamp=archived[i]['deletedAt'];
+          if(item is! Map<String,dynamic>||stamp is! String){
+            throw StateError('Invalid legacy recycle source record.');
+          }
+          final id=item['id'];
+          final date=DateTime.tryParse(stamp);
+          if(id is! String||id.trim().isEmpty||id.length>256||
+             !seen.add(id)||known.contains(id)||date==null){
+            throw StateError('Duplicate or invalid legacy recycle identity.');
+          }
+          final deletedAt=date.toUtc().millisecondsSinceEpoch;
+          final expiry=deletedAt+retention.inMilliseconds;
+          if(deletedAt<0||deletedAt>now||expiry<=deletedAt){
+            throw StateError('Invalid legacy recycle date.');
+          }
+          final typed=await snapshot.store.customSelect(
+            'SELECT 1 FROM ${_tableName(module)} '
+            'WHERE ${_idColumn(module)}=? LIMIT 1',
+            variables:[Variable.withString(id)],
+          ).get();
+          if(typed.isNotEmpty){
+            throw StateError('Legacy recycle identity still active in SQL.');
+          }
+          final encoded=jsonEncode(item);
+          await snapshot.store.customStatement(
+            'INSERT INTO $_table(module_name,entity_id,source_json,'
+            'source_sha256,original_index,deleted_at_ms,expires_at_ms) '
+            'VALUES(?,?,?,?,?,?,?)',
+            [module.name,id,encoded,_hash(encoded),active.length+i,
+             deletedAt,expiry],
+          );
+        }
+        // Independently hash/check EVERY row against the authenticated
+        // snapshot before the single SQL transaction can commit.
+        await _requireAlignedTrash(module:module,values:current.values);
+        final after=await snapshot.read();
+        if(after.generation!=baseline.generation||
+           after.digest!=baseline.digest){
+          throw StateError('Legacy trash repair changed the finance ledger.');
+        }
+      });
+    });
+  }
+
   /// No automatic expiry purge: a trusted retention clock and device restore
   /// attestor have not yet been approved for a live encrypted finance source.
   Future<Map<String, int>> pending(WaffraFinanceModule module) async {
