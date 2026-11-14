@@ -1,10 +1,11 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main(){
  test('M636 Home alone owns verified bank SMS finance writers; widget never debits',(){
   final native=File('native/WaffraWidget.kt').readAsStringSync();
-  final home=File('lib/main.dart').readAsStringSync();
+  final home=readWaffraMainSourceForContracts();
   final journal=File('lib/storage/waffra_home_finance_persistence.dart').readAsStringSync();
   final router=File('lib/storage/waffra_verified_finance_authority.dart').readAsStringSync();
   expect(File('lib/waffra_widget_capture.part.dart').existsSync(),isFalse);
@@ -25,7 +26,7 @@ void main(){
  });
  test('M636 native widget cannot switch finance source or start a second writer',(){
   final native=File('native/WaffraWidget.kt').readAsStringSync();
-  final home=File('lib/main.dart').readAsStringSync();
+  final home=readWaffraMainSourceForContracts();
   final binding=File('lib/storage/waffra_production_finance_authority_binding.dart').readAsStringSync();
   expect(native,isNot(contains('FirebaseFirestore.instance')));
   expect(native,isNot(contains('WaffraProductionFinanceAuthorityBinding.bind(')));

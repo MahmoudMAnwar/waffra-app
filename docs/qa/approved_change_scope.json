@@ -96,7 +96,8 @@
     "M907 #633 relocate original Home delete-all transaction path unchanged into registered part with explicit confirmation, SQLCipher captured ledger and SMS hashes durable atomic journal, no early state clear and exact-source QA.",
     "M922 #633 repair original M636 verified Widget balance and anti-raw-SMS Flutter source tests after unchanged M904 Widget balance module extraction by changing only stale raw main readers to true registered Home part helper; preserve all 19 assertions, original SQLCipher/owner/privacy safety and M385 exact source.",
     "M908 #633 extract original Home due account provenance helper byte-for-byte into registered Dart part without inventing account identities; preserve account-wallet provenance, trusted SQLCipher history, no writer, M385 and M550 and strict Dart/Python original-source tests.",
-    "M923 #633 fix confirmed M371 CI failure in original M362 due settlement test: preserve all 7 original no-double-charge, goal wallet, strict halalas and recurrence assertions while reading actual registered same-library Home source, verify the original due-persistence implementation, and prevent stale raw-main-only source inspection."
+    "M923 #633 fix confirmed M371 CI failure in original M362 due settlement test: preserve all 7 original no-double-charge, goal wallet, strict halalas and recurrence assertions while reading actual registered same-library Home source, verify the original due-persistence implementation, and prevent stale raw-main-only source inspection.",
+    "M924 #633 preserve unchanged M108/M110 original two live Home/Widget SQLCipher and SMS writer tests after real registered Dart part extraction, by replacing exactly two raw lib/main.dart test readers with fail-closed registered-part source reassembler; preserve all original security, native pending intent, CAS journal and no second writer assertions."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -359,7 +360,9 @@
     "lib/waffra_home_due_account_provenance.part.dart",
     "test/m908_home_due_provenance_extraction_test.dart",
     "test/m362_goal_wallet_due_settlement_test.dart",
-    "test/qa/m923_goal_due_registered_source_guard_test.py"
+    "test/qa/m923_goal_due_registered_source_guard_test.py",
+    "test/m108_home_widget_one_finance_writer_test.dart",
+    "test/qa/m924_widget_shared_sms_registered_source_guard_test.py"
   ],
   "approved_deleted_files": [
     "lib/waffra_sms_cloud_review_analyzer.dart"
@@ -2361,6 +2364,20 @@
       {
         "start": " test('M362 due-date handler confirms before coupling goal, ledger, recurrence',(){",
         "end": "  expect(main,contains('WaffraGoalDueAllocation.allocate('));"
+      }
+    ],
+    "test/m108_home_widget_one_finance_writer_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "import 'package:flutter_test/flutter_test.dart';"
+      },
+      {
+        "start": " test('M636 Home alone owns verified bank SMS finance writers; widget never debits',(){",
+        "end": "  final journal=File('lib/storage/waffra_home_finance_persistence.dart').readAsStringSync();"
+      },
+      {
+        "start": " test('M636 native widget cannot switch finance source or start a second writer',(){",
+        "end": "  final binding=File('lib/storage/waffra_production_finance_authority_binding.dart').readAsStringSync();"
       }
     ]
   }
