@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "change_id": "M690-M723-ISSUES632-637-20261114",
+  "change_id": "M690-M724-ISSUES632-637-20261114",
   "human_scope_review": "Issue #629 completes prior PR #628 only after user-visible acceptance; #631 explicitly authorizes three exact screenshots for Goals/Dues/SMS Review, permanently visible financial activity, non-moving FAB-aligned notice, and savings/goal-due cash safety. Existing tests replace outdated visual assumptions without deleting financial safety assertions. Device screenshots/old restore still require external device evidence.",
   "user_requested_changes": [
     "M690 #632 permanently disable third-party AI bank SMS uploads and opt-in on previously installed versions, remove Settings toggle and signed Android staging worker, retain local encrypted SMS Review and money writer.",
@@ -32,7 +32,8 @@
     "M717 #634 delete the retired cloud transport's HTTP client compile dependency, preserve the test-only fail-closed analyze signature and currency safety validator, and add a transitive application import graph test proving legacy AI and Cloudflare modules are unreachable from the runtime entrypoint.",
     "M719 #633 transfer the full original manual/SMS transaction editor and its account/category/save validation flow into a same-library Home part byte-for-byte, preserve all original finance and local SMS safety assertions through real source reassembly; do not change finance or FAB UI behavior.",
     "M721 #633 move unchanged 980-line calendar, verified encrypted backup/restore dialogs and PIN/account tools from Home State to registered same-library part; keep all account/security archive bytes and source expectations intact.",
-    "M723 #633 original five Python bank-SMS/date/account verification suites now reconstruct exactly the registered real Dart parts after M719/M721, without removal of any financial assertions; M550 recognizes real Python source helper for static checks."
+    "M723 #633 original five Python bank-SMS/date/account verification suites now reconstruct exactly the registered real Dart parts after M719/M721, without removal of any financial assertions; M550 recognizes real Python source helper for static checks.",
+    "M724 #633 restore the secure account-tools Dart part BEFORE checking the M687 profile marker, because the preserved profile extraction placeholder was inside the relocated 980-line account methods. Correct both Dart and Python true-source readers without removing any assertions."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
