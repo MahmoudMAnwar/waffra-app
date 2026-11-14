@@ -4429,6 +4429,27 @@
         "Closed session or unavailable finance binding yields null instead of an invented account.",
         "No transaction save, original backup data mutation or global add-button changes."
       ]
+    },
+    {
+      "id": "M925-M174-M110-EXACT-REGISTERED-PRODUCTION-HOME-READS",
+      "issue": "Issue #633 / Draft PR #638 / user requested finish remaining code",
+      "previous_behavior": "Original M108-M110 Home and Widget finance-source protections passed on real registered Dart parts, but M924 Python witness mismatched Dart escaped 'add', and the M110 workflow inline code checked finance routes only in raw main.dart, causing unrelated false CI failures.",
+      "approved_behavior": "Keep original positive and negative finance-source protections and their witnesses; handle Dart escaped quotes without weakening original strings, and require M110 workflow to load the exact registered main-plus-Dart-part source using fail-closed reconstruction, verifying original SQLCipher routes and no unverified direct finance writes.",
+      "source_paths": [
+        ".github/workflows/m110-home-writer-source-authority.yml",
+        "test/qa/m924_widget_shared_sms_registered_source_guard_test.py"
+      ],
+      "test_paths": [
+        "test/qa/m925_exact_home_source_ci_guard_test.py",
+        "test/m108_home_widget_one_finance_writer_test.dart",
+        "test/m110_live_finance_authority_writer_test.dart"
+      ],
+      "safety_invariants": [
+        "No direct legacy finance mutation in registered Home source.",
+        "Original verified SQLCipher full reset, transaction delete-all and bulk SMS writes all remain visible to source checks.",
+        "Dart's literal source quoting must not remove or weaken original M108 native/widget/account safeguards.",
+        "Original finance, native widget, plus floating action button and encrypted Backup/Restore production code are untouched."
+      ]
     }
   ]
 }

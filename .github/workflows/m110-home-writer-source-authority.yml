@@ -77,7 +77,16 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          home=Path('lib/main.dart').read_text()
+          import sys
+          # The Home finance writers now reside in registered same-library Dart
+          # parts. Reassemble actual production source fail-closed (no mocks).
+          sys.path.insert(0,str(Path('test/qa').resolve()))
+          from waffra_home_source import read_waffra_home_source
+          main=Path('lib/main.dart').read_text(encoding='utf-8')
+          assert "part 'waffra_home_finance_persistence_due.part.dart';" in main
+          assert "part 'waffra_home_delete_all_transactions.part.dart';" in main
+          assert "part 'waffra_home_sms_confirmation.part.dart';" in main
+          home=read_waffra_home_source(Path.cwd())
           assert '_homeFinancePersistence.saveLegacy(' not in home
           assert '_homeFinancePersistence.commitConfirmedLegacySms(' not in home
           assert 'WaffraFinanceRoute.deleteAllTransactions' in home

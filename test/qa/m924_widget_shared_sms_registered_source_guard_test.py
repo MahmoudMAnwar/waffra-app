@@ -19,7 +19,9 @@ class M924WidgetWriterRealSourceGuard(unittest.TestCase):
             "unawaited(entrySheet())",
             "if(!startup.encrypted)await const WaffraLiveLegacyFinanceGuard().requireLegacySource(p)",
         ):
-            self.assertIn(witness,test)
+            # Dart escapes nested single quotes in source-level assertions.
+            # Check the same original witness without changing finance assertions.
+            self.assertIn(witness.replace("'", "\\'"),test)
             self.assertIn(witness,original)
         self.assertIn("part 'waffra_home_sms_confirmation.part.dart';",lib)
         self.assertIn("part 'waffra_home_entry_sheet.part.dart';",lib)
