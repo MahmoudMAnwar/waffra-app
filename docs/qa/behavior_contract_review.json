@@ -3078,6 +3078,31 @@
         "Local bank SMS parsing and manual review stay available, and encrypted original SMS text stays unchanged.",
         "Old test-only amount and currency anti-hallucination evidence remains checked."
       ]
+    },
+    {
+      "id": "M719-TRANSACTION-ENTRY-VERIFIED-WRITER-RELOCATION",
+      "issue": "Issue #633 / Draft #638, modularize transaction editor without changing account write/save semantics",
+      "previous_behavior": "The 1,737-line manual and reviewed-SMS transaction entry editor lived in the monolithic Home State with account selection, categorization, date, notes and confirmed money write callbacks.",
+      "approved_behavior": "Keep the original production entrySheet method text byte-for-byte in a registered main.dart part extension. The editor still validates the account, category, original bank SMS, duplicate prevention, verified writes and secure attachment references exactly as before; all source QA reuses the registered part.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_entry_sheet.part.dart",
+        "test/support/waffra_main_source.dart"
+      ],
+      "test_paths": [
+        "test/m719_home_entry_sheet_extraction_test.dart",
+        "test/m470_sms_transfer_fee_firsttap_category_test.dart",
+        "test/m611_manual_home_finance_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "No new or changed SQLCipher write logic or account associations.",
+        "Reviewed bank SMS remains manual-confirmation only and retains original body/date evidence.",
+        "Approved transaction UI and global fixed + button remain unchanged."
+      ]
     }
   ]
 }

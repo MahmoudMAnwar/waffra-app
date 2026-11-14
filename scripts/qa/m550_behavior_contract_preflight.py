@@ -339,6 +339,7 @@ def build_report(base: str, head: str, root: Path = ROOT) -> dict:
         "lib/waffra_home_profile.part.dart",
         "lib/waffra_home_budget_cards.part.dart",
         "lib/waffra_home_budget_workflows.part.dart",
+        "lib/waffra_home_entry_sheet.part.dart",
         "lib/waffra_home_sms_transfer_review.part.dart",
         "lib/waffra_home_goals_recurring_pages.part.dart",
         "lib/waffra_home_goal_actions.part.dart",
