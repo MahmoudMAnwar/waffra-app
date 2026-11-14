@@ -1,11 +1,12 @@
 {
   "contract_version": 1,
   "change_id": "M644-ISSUE644-20261114-EXACT-HEAD-FAILURE-REGRESSION",
-  "human_scope_review": "Issue #644 and Draft PR #645: owner approves no-FAB page-margin Snackbar and immediate after-biometric, no-mandatory-backup full SQLCipher finance reset. Real-device destructive acceptance and latest CI are pending. Protect all unrelated code and existing finance/security regressions. M644 follow-up corrects one legitimate optional SQL receipt test fixture, two relocated source assertions without dropping financial invariants, two workflow source guards to use registered Home parts, and a single unused import; all original production guards remain unchanged. M644 completion adds a visible no-FAB account-detail notice and checks old relational receipt metadata against verified encrypted BLOB bytes before atomic SQL reset. External file-backed legacy receipts still stop the destructive reset with unchanged files/data. Test fixtures contain only disposable synthetic transactions.",
+  "human_scope_review": "Issue #644 and Draft PR #645: owner approves no-FAB page-margin Snackbar and immediate after-biometric, no-mandatory-backup full SQLCipher finance reset. Real-device destructive acceptance and latest CI are pending. Protect all unrelated code and existing finance/security regressions. M644 follow-up corrects one legitimate optional SQL receipt test fixture, two relocated source assertions without dropping financial invariants, two workflow source guards to use registered Home parts, and a single unused import; all original production guards remain unchanged. M644 completion adds a visible no-FAB account-detail notice and checks old relational receipt metadata against verified encrypted BLOB bytes before atomic SQL reset. External file-backed legacy receipts still stop the destructive reset with unchanged files/data. Test fixtures contain only disposable synthetic transactions. M644 final receipt-file implementation adds a durable SQLCipher-only pending-cleanup journal, app-owned receipt path/byte attestation, post-commit purge and next authenticated-launch replay; cleanup failure is reported as a committed reset with pending attachment cleanup. The binder retains exact independent source guard and avoids the cleanup lock on normal startup.",
   "user_requested_changes": [
     "M644 #644 No-FAB snackbar reaches page's horizontal margins; + FAB position remains stationary and its adjacent Snackbar grows upwards for multiline messages; financial deletion runs after device biometric without required backup, while original login/app settings stay intact; reset must be atomic, source/FK/typed-integrity verified.",
     "M644 #644 owner requested fixing all CI failures rather than rerunning failing checks. Correct synthetic optional receipt table assumption, source guards after original Home split, release scope/behavior witnesses, and unused test import without deleting functionality.",
-    "M644 #644 owner requested completion of remaining code: account detail no-FAB Snackbar anchored to bottom with full width; safe handling of historical receipt SQL metadata matching encrypted BLOB records, and fail-closed rejection of unverifiable external-file-only receipts with no partial deletion."
+    "M644 #644 owner requested completion of remaining code: account detail no-FAB Snackbar anchored to bottom with full width; safe handling of historical receipt SQL metadata matching encrypted BLOB records, and fail-closed rejection of unverifiable external-file-only receipts with no partial deletion.",
+    "M644 #644 completion: delete verified legacy physical receipt files from the app's private Documents/receipts directory using a SQLCipher journal created atomically with reset; resume interrupted cleanup at next authenticated startup; refuse symlinks, escaped paths, altered SHA or non-owned files; distinguish cleanup pending after committed reset. Preserve existing '+' and show full-width snackbar on account detail route."
   ],
   "allowed_changed_files": [
     ".github/workflows/m283-compact-layout-tools-back-greetings.yml",
@@ -17,6 +18,7 @@
     "lib/main.dart",
     "lib/storage/waffra_encrypted_finance_session.dart",
     "lib/storage/waffra_encrypted_full_finance_reset.dart",
+    "lib/storage/waffra_production_finance_authority_binding.dart",
     "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
     "lib/storage/waffra_verified_finance_authority.dart",
     "lib/waffra_home_account_tools.part.dart",
@@ -35,6 +37,10 @@
   "bounded_sections": {
     "lib/main.dart": [
       {
+        "start": "import 'storage/waffra_home_finance_persistence.dart';",
+        "end": "import 'storage/waffra_verified_finance_authority.dart';"
+      },
+      {
         "start": "class WaffraFooterNoticeHost extends StatefulWidget {",
         "end": "/// The only public way to display transient system feedback."
       },
@@ -51,6 +57,14 @@
     ],
     "lib/storage/waffra_encrypted_full_finance_reset.dart": [
       {
+        "start": "/// Standalone synthetic SQLCipher full-finance reset candidate.",
+        "end": "  static const _knownTables = <String>{"
+      },
+      {
+        "start": "  static const _knownTables = <String>{",
+        "end": "  static const _recoveryTables = <String>["
+      },
+      {
         "start": "  Future<void> _requireNoRecoveryHistory(",
         "end": "  Future<WaffraEncryptedFullResetResult> reset({"
       }
@@ -62,6 +76,10 @@
       }
     ],
     "lib/storage/waffra_verified_encrypted_finance_bridge.dart": [
+      {
+        "start": "  const WaffraVerifiedEncryptedFinanceBridge({",
+        "end": "  Future<void> _requireActivatedUnderLock() async {"
+      },
       {
         "start": "  Future<WaffraGoalDueSqlReceipt> settleLinkedGoalDue({",
         "end": "  Future<WaffraEncryptedFullResetResult> resetVerifiedFinance({"
@@ -107,6 +125,12 @@
       {
         "start": "          from pathlib import Path",
         "end": "          print(\"Opt-in setup and fail-closed multi-currency import source guards passed.\")"
+      }
+    ],
+    "lib/storage/waffra_production_finance_authority_binding.dart": [
+      {
+        "start": "      if (evidence != null) {",
+        "end": "      // Home immediately calls WaffraFreshHomeCatalogRecovery.load(), which"
       }
     ]
   }
