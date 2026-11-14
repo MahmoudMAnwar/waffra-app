@@ -1868,3 +1868,7 @@ Preserve twelve additional existing budget, recurring, SMS, merchant and UI regr
 
 ### M731 — #633 / Draft #638 original QA compatibility batch 4
 Twelve existing SMS, manual entry, account-security, restore, Android performance and reviewer tests will inspect actual same-library registered Home Dart parts through strict helper instead of obsolete raw main file lookup. Every original expectation and test gate is preserved. No production code touched; CI and owner-phone acceptance independent.
+
+
+### M732 — Issue #633 / Draft #638: original restore and financial security regression source compatibility
+Repair only old `lib/main.dart` reader in eight active V24 restore, finance persistence, SMS, receipt and permissions test files to use existing registered Dart-part reconstruction. Maintain every positive and negative assertion without changing production restore or financial code; acceptance requires latest-head CI and actual Android parity independently.

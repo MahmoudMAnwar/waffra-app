@@ -3307,6 +3307,35 @@
         "Helper must reconstruct actual registered Dart part source, not stub/fake methods.",
         "No physical Android or real private backup parity claim."
       ]
+    },
+    {
+      "id": "M732-RESTORE-FINANCE-SOURCE-REGRESSION",
+      "issue": "Issue #633, Draft #638",
+      "previous_behavior": "Eight original legacy-backup/finance/UI tests scanned only lib/main.dart and missed relocated unchanged production Home methods.",
+      "approved_behavior": "Use registered Home source reconstruction for only those old readers and imports, preserving exact assertions including old-archive restoration, anti-duplicate ledger and sensitive finance guard.",
+      "source_paths": [
+        "lib/main.dart",
+        "test/support/waffra_main_source.dart"
+      ],
+      "test_paths": [
+        "test/m224_verified_pull_refresh_dialog_test.dart",
+        "test/storage/m457_direct_manual_finance_commit_test.dart",
+        "test/storage/m620_restored_home_ledger_parity_test.dart",
+        "test/storage/m616_android_v24_restore_test.dart",
+        "test/storage/m464_manual_unassigned_transfer_access_regression_test.dart",
+        "test/storage/m614_legacy_v24_restore_test.dart",
+        "test/m302_duplicate_receipt_cleanup_test.dart",
+        "test/m290_google_country_reminders_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "No original encrypted archive or money writer changed.",
+        "All original security and backup assertions remain active.",
+        "Physical device restore remains separate from host CI."
+      ]
     }
   ]
 }
