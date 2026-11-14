@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
@@ -8,7 +9,7 @@ import 'package:waffra/main.dart';
 /// M632: actual pure-worker outputs plus UI/security source regression.
 void main(){
  TestWidgetsFlutterBinding.ensureInitialized();
- final source=File('lib/main.dart').readAsStringSync();
+ final source=readWaffraMainSourceForContracts();
  final review=source.split(
   ' Future<void> _reviewAutoSmsCandidates({String? targetId})async {')[1]
   .split(' void _receiveSharedSms(){')[0];
