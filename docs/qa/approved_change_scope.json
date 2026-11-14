@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "change_id": "M690-M760-ISSUES632-637-20261114",
+  "change_id": "M690-M770-ISSUES632-637-20261114",
   "human_scope_review": "Issue #629 completes prior PR #628 only after user-visible acceptance; #631 explicitly authorizes three exact screenshots for Goals/Dues/SMS Review, permanently visible financial activity, non-moving FAB-aligned notice, and savings/goal-due cash safety. Existing tests replace outdated visual assumptions without deleting financial safety assertions. Device screenshots/old restore still require external device evidence.",
   "user_requested_changes": [
     "M690 #632 permanently disable third-party AI bank SMS uploads and opt-in on previously installed versions, remove Settings toggle and signed Android staging worker, retain local encrypted SMS Review and money writer.",
@@ -56,7 +56,8 @@
     "M750 #633 move original verified Home financial startup load() byte-for-byte to registered same-library Dart part, preserve original SQLCipher ledger/category/goal/recurring/account authority and background handoff, retain all strict original regression assertions and separate handset V24 parity.",
     "M744 #633 update only the obsolete raw-main source reader and necessary helper import in twelve original strict bank SMS/Home/login/verified finance regression test files after registered same-library M739/M741/M742 moves; retain every original assertion and security/financial check.",
     "M751 #633 retain all six original strict Home startup/login, native refresh, SQLCipher catalog, biometric and timing assertions after exact M750 same-library finance load extraction: alter only stale raw-main source-reader imports/expressions under narrow approved M385 bounds; no test skipped or production money code changed.",
-    "M760 #633 extract real Home verified single-flight bank account reads/filter/picker and two-sided confirmed transfers into same-library Dart part, preserving all existing SQLCipher owner checks, transfer identity, balances and historical data and source regressions."
+    "M760 #633 extract real Home verified single-flight bank account reads/filter/picker and two-sided confirmed transfers into same-library Dart part, preserving all existing SQLCipher owner checks, transfer identity, balances and historical data and source regressions.",
+    "M770 #633 extract original 805-line registered same-library verified bank SMS confirmation/review and bounded ledger entry decoding from Home, preserving unchanged verified writer/owner/session/SAR/date/OTP/ACK/account/duplicate safeguards, original message and UI, with exact M385 source and M550 positive assertions."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -241,7 +242,9 @@
     "test/m613_foreground_lock_and_m614_finance_timing_contract_test.dart",
     "test/storage/m451_fresh_home_catalog_recovery_test.dart",
     "lib/waffra_home_verified_account_flows.part.dart",
-    "test/m760_home_verified_account_flows_extraction_test.dart"
+    "test/m760_home_verified_account_flows_extraction_test.dart",
+    "lib/waffra_home_sms_confirmation.part.dart",
+    "test/m770_home_sms_confirmation_extraction_test.dart"
   ],
   "approved_deleted_files": [
     "lib/waffra_sms_cloud_review_analyzer.dart"
@@ -377,6 +380,10 @@
       {
         "start": " bool _m468AccountReadAgain=false;",
         "end": " WaffraFinanceAuthorityRead? _lastFinanceAuthorityRead;"
+      },
+      {
+        "start": " /// M593: even with JSON decoded on a worker isolate, creating thousands",
+        "end": " void _receiveSharedSms()"
       }
     ],
     "test/support/waffra_main_source.dart": [
