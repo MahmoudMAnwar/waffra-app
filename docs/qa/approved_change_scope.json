@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "change_id": "M690-M901-ISSUES632-637-20261114",
+  "change_id": "M690-M902-ISSUES632-637-20261114",
   "human_scope_review": "Issue #629 completes prior PR #628 only after user-visible acceptance; #631 explicitly authorizes three exact screenshots for Goals/Dues/SMS Review, permanently visible financial activity, non-moving FAB-aligned notice, and savings/goal-due cash safety. Existing tests replace outdated visual assumptions without deleting financial safety assertions. Device screenshots/old restore still require external device evidence.",
   "user_requested_changes": [
     "M690 #632 permanently disable third-party AI bank SMS uploads and opt-in on previously installed versions, remove Settings toggle and signed Android staging worker, retain local encrypted SMS Review and money writer.",
@@ -85,7 +85,8 @@
     "M852 #633 fix Dart and Python exact registered-source regression helper ordering: restore M805 original budget/chart part before its nested M687 PDF, M780 ledger, M781 transaction card markers, retaining all original finance/backup/CI assertions.",
     "M853 #633 keep all original no-guessed-bank-account/SMS sender-suffix verification regression assertions by redirecting only old M576 raw main.dart reader to strict registered real-source Python helper after verified-finance-picker extraction.",
     "M900 #633 add new read-only Python QA regression of authentic registered Home source reconstruction and nested M830/M721, M805/M687/M780 ordering, enforce once-only verified startup/SMS/PDF/ledger witnesses without disabling existing tests or changing runtime finance/backup.",
-    "M901 #633 preserve unchanged original M124 fail-closed SQLCipher finance writer and original receipt/Android widget/auto-cutover checks by replacing only raw main.dart reader with strict production Dart-part source reconstruction, and add a read-only regression that prevents returning to old main-only source."
+    "M901 #633 preserve unchanged original M124 fail-closed SQLCipher finance writer and original receipt/Android widget/auto-cutover checks by replacing only raw main.dart reader with strict production Dart-part source reconstruction, and add a read-only regression that prevents returning to old main-only source.",
+    "M902 #633 preserve original live Home/Widget SQLCipher and SMS writer checks in finance-full, M96 and M109 workflows by using fail-closed exact registered production Home Dart-part source, not stale raw main.dart; add regression asserting exactly two secure SMS writer sites with all original negatives."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -318,7 +319,11 @@
     "test/qa/m576_first_distinct_bank_identity_test.py",
     "test/qa/m900_home_source_reassembly_guard_test.py",
     ".github/workflows/m124-main-integration-audit.yml",
-    "test/qa/m901_m124_finance_authority_workflow_guard_test.py"
+    "test/qa/m901_m124_finance_authority_workflow_guard_test.py",
+    ".github/workflows/finance-full-regression.yml",
+    ".github/workflows/m96-runtime-finance-cloud-integration.yml",
+    ".github/workflows/m109-verified-finance-authority.yml",
+    "test/qa/m902_home_finance_workflow_source_guard_test.py"
   ],
   "approved_deleted_files": [
     "lib/waffra_sms_cloud_review_analyzer.dart"
@@ -2170,6 +2175,24 @@
       {
         "start": "      - name: Ensure no implicit SQLCipher switch or unverified receipt UI mount",
         "end": "          widget=Path('native/WaffraWidget.kt').read_text()"
+      }
+    ],
+    ".github/workflows/finance-full-regression.yml": [
+      {
+        "start": "          from pathlib import Path",
+        "end": "          widget=Path('native/WaffraWidget.kt').read_text()"
+      }
+    ],
+    ".github/workflows/m96-runtime-finance-cloud-integration.yml": [
+      {
+        "start": "      - name: Confirm production source remains protected",
+        "end": "          widget = Path('native/WaffraWidget.kt').read_text()"
+      }
+    ],
+    ".github/workflows/m109-verified-finance-authority.yml": [
+      {
+        "start": "          from pathlib import Path",
+        "end": "          router=Path('lib/storage/waffra_verified_finance_authority.dart').read_text()"
       }
     ]
   }
