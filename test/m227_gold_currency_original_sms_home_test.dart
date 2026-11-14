@@ -31,7 +31,7 @@ void main() {
   });
 
   test('M227 full SMS is read from protected vault for details', () {
-    final home = File('lib/main.dart').readAsStringSync();
+    final home = readWaffraMainSourceForContracts();
     final bind = File('lib/storage/waffra_production_finance_authority_binding.dart')
         .readAsStringSync();
     final authority = File('lib/storage/waffra_verified_finance_authority.dart')
@@ -51,7 +51,7 @@ void main() {
   });
 
   test('M227 preserves merged M226 FAB timings', () {
-    final home = File('lib/main.dart').readAsStringSync();
+    final home = readWaffraMainSourceForContracts();
     // The FAB responsiveness work removed arbitrary transition sleeps;
     // retain double-tap and menu-close safety instead of old delay values.
     expect(home, contains('if(_addActionOpening)return;'));
