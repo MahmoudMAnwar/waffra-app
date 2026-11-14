@@ -4653,8 +4653,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      if(mounted&&addFabExpanded)setState(()=>addFabExpanded=false);
     }),
    ),
-  if(!accountOpened&&(tab==2||!ready))
-   PositionedDirectional(start:12,end:12,bottom:90,
+  // No '+' is mounted on the account detail route either. Keep the notice
+  // at the page bottom there; the other no-FAB tabs retain footer clearance.
+  if(accountOpened||tab==2||!ready)
+   PositionedDirectional(start:12,end:12,bottom:accountOpened?12:90,
     child:WaffraFooterNoticeHost(expandToAvailableWidth:true)),
   if(addFabExpanded&&!accountOpened)...[
    Positioned.fill(
