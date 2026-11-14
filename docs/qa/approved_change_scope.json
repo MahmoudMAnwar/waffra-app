@@ -100,6 +100,10 @@
       {
         "start": " Future<List<WaffraAccountBalance>> balances()async{",
         "end": " Future<void> renameAccount({required String id,required String name,\n  required bool userConfirmed})async{"
+      },
+      {
+        "start": " Future<void> archiveEmptyAccount({required String id,",
+        "end": null
       }
     ],
     "lib/storage/waffra_verified_accounts_api.dart": [
