@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "change_id": "M690-M713-ISSUES632-637-20261114",
+  "change_id": "M690-M715-ISSUES632-637-20261114",
   "human_scope_review": "Issue #629 completes prior PR #628 only after user-visible acceptance; #631 explicitly authorizes three exact screenshots for Goals/Dues/SMS Review, permanently visible financial activity, non-moving FAB-aligned notice, and savings/goal-due cash safety. Existing tests replace outdated visual assumptions without deleting financial safety assertions. Device screenshots/old restore still require external device evidence.",
   "user_requested_changes": [
     "M690 #632 permanently disable third-party AI bank SMS uploads and opt-in on previously installed versions, remove Settings toggle and signed Android staging worker, retain local encrypted SMS Review and money writer.",
@@ -27,7 +27,8 @@
     "M708 #633/#635 repair 19 strict Flutter regression expectations by reading the exact registered Home transfer, Goals and Recurring Dart part implementations; do not weaken original assertions or alter finance writers.",
     "M711 #633 extract the original Home goal funding, withdrawal, goal creation, challenges and action callbacks to a same-library Dart part; restore source-based QA from the real part and preserve financial checks without modifying the ledger.",
     "M712 #633 register exact extracted goal workflow finance behavior in M550 contract registry and refresh M449 release notes after audited M711 production code, without altering application implementation.",
-    "M713 #633 fix 30 production-source CI false regressions after M711 by explicitly registering the real Dart goal actions part in M550, and redirect only outdated goal-source tests to the real same-library source helper; retain all positive and negative Assertions."
+    "M713 #633 fix 30 production-source CI false regressions after M711 by explicitly registering the real Dart goal actions part in M550, and redirect only outdated goal-source tests to the real same-library source helper; retain all positive and negative Assertions.",
+    "M715 #633 byte-identical extraction of the original monthly budget editor, historical review/linking and budget administration methods to registered same-library Home Dart part, with original source reconstruction for finance contracts and no ledger change."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -101,7 +102,9 @@
     "test/m711_goal_workflows_extraction_test.dart",
     "test/m371_goal_wallet_and_budgets_regression_test.dart",
     "test/waffra_approved_ui_batch_test.dart",
-    "test/waffra_m206_day_theme_tour_sms_regression_test.dart"
+    "test/waffra_m206_day_theme_tour_sms_regression_test.dart",
+    "lib/waffra_home_budget_workflows.part.dart",
+    "test/m715_budget_workflows_extraction_test.dart"
   ],
   "approved_deleted_files": [
     "lib/waffra_sms_cloud_review_analyzer.dart"
@@ -179,7 +182,7 @@
         "end": "unawaited(_syncWidgetTransactions());"
       },
       {
-        "start": "void refreshFromBudgetDirectory()",
+        "start": " Future<void> confirmDeleteAllEntries() async {",
         "end": " Future<void> showSummaryTransactions("
       },
       {

@@ -18,6 +18,11 @@ String readWaffraMainSourceForContracts(){
  s=s.replaceFirst(p,_method('lib/waffra_home_pdf_reports.part.dart',
   ' Future<void> exportEntriesPdf('));
  s=s.replaceFirst(q,_method('lib/waffra_home_profile.part.dart',' Widget profilePage(){'));
+ const budgetMarker=' // M715: budget editor, historical linking and category administration moved to registered Home part.\n';
+ if(s.split(budgetMarker).length!=2)throw StateError('Missing or duplicate budget workflows marker');
+ s=s.replaceFirst(budgetMarker,_method('lib/waffra_home_budget_workflows.part.dart',
+  ' Future<void> editMonthlyBudget('));
+
  const r=' // M691: Budget, monthly summary and insight cards moved to same-library State extension.\n';
  if(s.split(r).length!=2)throw StateError('Missing M691 budget-card part marker');
  s=s.replaceFirst(r,_method('lib/waffra_home_budget_cards.part.dart',

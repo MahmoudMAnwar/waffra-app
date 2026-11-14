@@ -3028,6 +3028,31 @@
         "The cash/goal balance checks and historical backup writer remain unchanged.",
         "No physical Android proof is inferred from a source-only extraction."
       ]
+    },
+    {
+      "id": "M715-BUDGET-EDITOR-AND-HISTORIC-LINK-EXTRACTION",
+      "issue": "Issue #633 / Draft PR #638: extract budget editing, historical expense linking and budget management without changing financial writes",
+      "previous_behavior": "Home Screen State directly held monthly budget editing and historic expense-to-budget choices next to finance account and transaction actions in lib/main.dart.",
+      "approved_behavior": "Keep all original budget edit/reconciliation and historical-link code in one registered main.dart part extension without changing SQLCipher verified account association, classification, budget activation, saved money or approved widget behavior. Source tests reassemble the exact registered production Dart part.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_budget_workflows.part.dart",
+        "test/support/waffra_main_source.dart"
+      ],
+      "test_paths": [
+        "test/m715_budget_workflows_extraction_test.dart",
+        "test/m343_goal_recurring_named_budgets_test.dart",
+        "test/m414_percentage_alert_controls_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "Historical expenses never acquire a silently invented account or duplicate ledger debit.",
+        "Budget-only edits and monthly projections cannot mutate an unrelated bank account balance.",
+        "Old finance and UI tests observe real production Dart text rather than removed or weakened assertions."
+      ]
     }
   ]
 }
