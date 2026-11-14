@@ -17,6 +17,7 @@ SOURCE_PATHS = (
     "lib/main.dart",
     "lib/waffra_home_entry_sheet.part.dart",
     "lib/waffra_home_sms_confirmation.part.dart",
+    "lib/waffra_home_fx_preview.part.dart",
     "lib/waffra_sms_multicurrency_review.dart",
     "lib/waffra_ai_recorded_answers.dart",
     "lib/waffra_smart_features.dart",
