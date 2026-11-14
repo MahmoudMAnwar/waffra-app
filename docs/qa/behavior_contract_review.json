@@ -3926,6 +3926,34 @@
         "Original progress/retry, biometric on-screen notice, owner/session generation, first frame source guards unchanged.",
         "No performance improvement or signed Android V24 Backup/Restore equivalence claimed without independent physical proof."
       ]
+    },
+    {
+      "id": "M805-HOME-BUDGET-NOTIFICATION-AND-CHART-SOURCE",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Budget percentage alert permission, verified budget threshold notifications and pure expense/weekly/paired SVG chart presentation were implemented inline in Home State.",
+      "approved_behavior": "Exact original method bodies are registered as a same-library Home Dart part; unchanged threshold checks, date/finance totals, colors and local permission request. Old source regressions reconstruct the true implementation.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_budget_alert_charts.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/m805_home_budget_alert_charts_extraction_test.dart",
+        "test/m346_financial_health_budget_goal_test.dart",
+        "test/m352_existing_data_upgrade_contract_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "No unverified account cash, ledger entry or budget commitment changes.",
+        "No chart colors/values/layout altered or notification permission bypassed.",
+        "Original tests continue inspecting actual registered code, without skip or stubs.",
+        "Real device overflow, PDF colors and historical encrypted backup balance parity remain independent acceptance."
+      ]
     }
   ]
 }
