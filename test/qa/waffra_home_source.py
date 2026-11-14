@@ -51,4 +51,7 @@ def read_waffra_home_source(root=ROOT):
     restore(" // M735: Home category workflows extracted unchanged to registered same-library part.\n",
             "lib/waffra_home_category_workflows.part.dart",
             " Future<BudgetCategory?> categoryDialog(")
+    restore(" // M739: original sender-grouped bank SMS inbox dialog moved to same-library part.\n",
+            "lib/waffra_home_sms_inbox.part.dart",
+            " Future<void> _openAutoSmsInbox()async{")
     return source
