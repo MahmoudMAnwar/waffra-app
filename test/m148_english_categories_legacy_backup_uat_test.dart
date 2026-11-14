@@ -41,7 +41,7 @@ void main() {
  test('M148: guarded catalog installer explicitly supports v4 upgrade',(){
   final legacy=File('lib/storage/waffra_home_finance_persistence.dart').readAsStringSync();
   expect(legacy,contains('version != 2 && version != 3 && version != 4 && version != 5'));
-  final ui=File('lib/main.dart').readAsStringSync();
+  final ui=readWaffraMainSourceForContracts();
   expect(ui,contains('waffra_category_catalog_v4_installed'));
   expect(ui,contains('waffra_category_catalog_v5_installed'));
   expect(ui,contains('version:4'));
@@ -110,7 +110,7 @@ void main() {
  });
 
  test('M148: no full encrypted JSON is rendered in editable TextField',(){
-  final source=File('lib/main.dart').readAsStringSync();
+  final source=readWaffraMainSourceForContracts();
   expect(source,contains("Key('waffra-new-backup-password')"));
   expect(source,contains("Key('waffra-existing-backup-password')"));
   expect(source,contains("Key('waffra-open-backup-file')"));

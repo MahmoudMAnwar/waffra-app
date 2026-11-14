@@ -3284,6 +3284,29 @@
         "Every existing positive and negative test remains active.",
         "No false Android physical performance or backup proof claimed."
       ]
+    },
+    {
+      "id": "M731-REAL-DART-PART-SOURCE-CONTRACTS-BATCH4",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Legacy source assertions read only lib/main.dart and falsely missed original verified Home methods extracted unchanged into registered same-library Dart parts.",
+      "approved_behavior": "Read the existing real-source reconstruction helper, retaining every original positive/negative assertion. No production writer, SMS account acknowledgment, financial backup or UI behavior changes.",
+      "source_paths": [
+        "test/support/waffra_main_source.dart",
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m644_goal_notice_funding_contract_test.dart",
+        "test/m148_english_categories_legacy_backup_uat_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "Only replace the original raw-main source reader, preserving all source assertions.",
+        "Helper must reconstruct actual registered Dart part source, not stub/fake methods.",
+        "No physical Android or real private backup parity claim."
+      ]
     }
   ]
 }

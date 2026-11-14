@@ -20,7 +20,7 @@ void main(){
  });
 
  test('M644 savings success only occurs after source-verified atomic posting',(){
-  final code=File('lib/main.dart').readAsStringSync();
+  final code=readWaffraMainSourceForContracts();
   final a=code.indexOf('Future<void> fundGoal(SavingGoal g)async {');
   final b=code.indexOf('IconData goalIcon(',a);
   expect(a,greaterThan(0));

@@ -609,6 +609,10 @@
       {
         "start": "import 'dart:io';",
         "end": "void main(){"
+      },
+      {
+        "start": "test('M644 savings success only occurs after source-verified atomic posting',(){",
+        "end": null
       }
     ],
     "test/m509_all_sender_sms_rescan_dedup_test.dart": [
@@ -629,6 +633,14 @@
       {
         "start": "import 'dart:io';",
         "end": "void main() {"
+      },
+      {
+        "start": "test('M148: guarded catalog installer explicitly supports v4 upgrade',(){",
+        "end": "test('M148: English roots outrank same-spelled children; compounds use context',(){"
+      },
+      {
+        "start": "test('M148: no full encrypted JSON is rendered in editable TextField',(){",
+        "end": null
       }
     ],
     "test/m462_smart_sms_rule_review_test.dart": [

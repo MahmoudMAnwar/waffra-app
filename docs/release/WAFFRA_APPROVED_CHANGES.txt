@@ -632,3 +632,5 @@ M729 #633 (2026-11-14): Another twelve original complete finance/SMS/FX/backup/r
 M730 #633 (2026-11-14): Twelve additional original category/budget/recurring/SMS/merchant/UI finance regressions now inspect the real registered Dart-part Home methods via the existing strict source helper. No original assertion removed, no fake source, no skipped test, no production finance change. Same-SHA CI plus physical Android/backup testing remain separate.
 
 M731 #633 (2026-11-14): Twelve additional original reviewed-SMS, verified finance, account, Android performance and backup regression tests now inspect the actual same-library registered Dart part source through the strict existing helper. Assertions identical, no tests disabled, no production code modified. Exact-head CI and physical device/old encrypted restore acceptance remain distinct.
+
+M731 (#633, Draft #638): additional unchanged live Home-method source contracts now read registered Dart-part reconstruction rather than raw main.dart; all existing assertions preserved. Exact-head Flutter and financial CI plus real-device acceptance remain separate gates.
