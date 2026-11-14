@@ -144,5 +144,9 @@ String readWaffraMainSourceForContracts(){
  if(s.split(widgetSyncMarker).length!=2)throw StateError('Missing or duplicate M840 actual Widget sync source');
  s=s.replaceFirst(widgetSyncMarker,_method('lib/waffra_home_widget_sync.part.dart',
   ' Future<void> _syncWidgetTransactions()async{'));
+ const navMarker=' // M830: original Home navigation and summary helpers moved to registered same-library part.\n';
+ if(s.split(navMarker).length!=2)throw StateError('Missing or duplicated M830 navigation helpers marker');
+ s=s.replaceFirst(navMarker,_method('lib/waffra_home_navigation_helpers.part.dart',
+  ' Widget categoriesPage()=>categoriesPageV2();'));
  return s;
 }
