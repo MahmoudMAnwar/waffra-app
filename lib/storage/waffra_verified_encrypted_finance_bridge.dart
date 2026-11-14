@@ -66,6 +66,7 @@ class WaffraVerifiedEncryptedFinanceBridge {
     required this.snapshot,
     required this.cutoverJournal,
     required this.writerDirectory,
+    this.legacyReceiptsDirectory,
     this.allWritersRoutedVerified = false,
     this.secureKeyVerified = false,
     this.experimentalEnabled = false,
@@ -74,6 +75,7 @@ class WaffraVerifiedEncryptedFinanceBridge {
   final WaffraAtomicFinanceSnapshot snapshot;
   final WaffraEncryptedCutoverJournal cutoverJournal;
   final Directory writerDirectory;
+  final Directory? legacyReceiptsDirectory;
   final bool allWritersRoutedVerified;
   final bool secureKeyVerified;
   final bool experimentalEnabled;
@@ -233,6 +235,7 @@ class WaffraVerifiedEncryptedFinanceBridge {
     return WaffraEncryptedFullFinanceReset(
       snapshot: snapshot,
       writerDirectory: writerDirectory,
+      legacyReceiptsDirectory: legacyReceiptsDirectory,
       verifySourceUnderLock: _requireActivatedUnderLock,
       experimentalEnabled: true,
     ).resetAfterBiometric(
@@ -240,6 +243,22 @@ class WaffraVerifiedEncryptedFinanceBridge {
       userConfirmed: userConfirmed,
       biometricVerified: biometricVerified,
     );
+  }
+
+  /// M644: repeat the authenticated cleanup of app-owned receipt files from
+  /// a previous committed reset. No legacy writer or source activation here.
+  Future<void> resumePendingResetReceiptCleanup() async {
+    if (!experimentalEnabled || !allWritersRoutedVerified ||
+        !secureKeyVerified) {
+      throw StateError('Encrypted receipt cleanup needs active source.');
+    }
+    await WaffraEncryptedFullFinanceReset(
+      snapshot: snapshot,
+      writerDirectory: writerDirectory,
+      legacyReceiptsDirectory: legacyReceiptsDirectory,
+      verifySourceUnderLock: _requireActivatedUnderLock,
+      experimentalEnabled: true,
+    ).resumePendingExternalReceiptCleanup();
   }
 
   Future<WaffraEncryptedFullResetResult> resetVerifiedFinance({
