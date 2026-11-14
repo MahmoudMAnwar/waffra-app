@@ -256,6 +256,37 @@ void main() {
     expect((await db.customSelect('PRAGMA foreign_key_check').get()),isEmpty);
   });
 
+  test('M644 a financially linked file outside the app receipts folder '
+      'blocks reset and never deletes that file', () async {
+    final outside = await Directory.systemTemp.createTemp('m644-outsider-');
+    addTearDown(() async {
+      if (await outside.exists()) await outside.delete(recursive:true);
+    });
+    final file = File('${outside.path}/out-of-scope.png');
+    final bytes = <int>[8,9,10];
+    await file.writeAsBytes(bytes);
+    final before = await snapshot.read();
+    final entry = Map<String, Object?>.from(
+      (jsonDecode(before.values['entries'] as String) as List).single as Map,
+    )..['receiptPath'] = file.path;
+    await db.customStatement(
+      'UPDATE fresh_finance_entries SET receipt_count=?,source_json=? '
+      'WHERE entry_id=?', [1,jsonEncode(entry),'test-entry'],
+    );
+    await snapshot.commit(
+      expectedGeneration:before.generation,
+      fullFinanceSnapshot:<String,Object?>{'entries':jsonEncode([entry])},
+    );
+    final stable = await snapshot.read();
+    await expectLater(resetter.resetAfterBiometric(
+      baseline:stable,userConfirmed:true,biometricVerified:true,
+    ),throwsStateError);
+    expect(await file.readAsBytes(), bytes);
+    expect((await snapshot.read()).digest, stable.digest);
+    expect(await count('fresh_finance_entries'),1);
+    expect(await count('fresh_finance_money_accounts'),2);
+  });
+
   test('M644 interrupted external cleanup resumes using only encrypted '
       'journal without altering live financial records', () async {
     final image=File('${directory.path}/pending-receipt.bin');
