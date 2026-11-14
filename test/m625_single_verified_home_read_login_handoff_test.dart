@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/storage/waffra_home_finance_persistence.dart';
 import 'package:waffra/storage/waffra_production_finance_authority_binding.dart';
@@ -32,7 +33,7 @@ void main() {
   test('only installed Home skips duplicated full read, never source checks', () {
     final binder=File('lib/storage/waffra_production_finance_authority_binding.dart')
         .readAsStringSync();
-    final app=File('lib/main.dart').readAsStringSync();
+    final app=readWaffraMainSourceForContracts();
     final binding=app.split(' Future<void> _bindFinanceSource()async{')[1]
         .split(' // Account filters are presentation-only;')[0];
     expect(binding,contains('installedApp:true,'));
@@ -54,7 +55,7 @@ void main() {
   });
 
   test('verified biometric and relogin meet identical complete-Home contract', () {
-    final app=File('lib/main.dart').readAsStringSync();
+    final app=readWaffraMainSourceForContracts();
     final root=app.split(' Widget _m623RootContent(BuildContext rootContext){')[1]
         .split(' @override Widget build(BuildContext context)=>MaterialApp(')[0];
     final homeLoader=app.split(' Future<void> _loadFinanceSafely()async{')[1]
