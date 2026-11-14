@@ -80,5 +80,9 @@ String readWaffraMainSourceForContracts(){
  if(s.split(localRulesMarker).length!=2)throw StateError('Missing or duplicate M741 local-rule marker');
  s=s.replaceFirst(localRulesMarker,_method('lib/waffra_home_sms_rules.part.dart',
   ' Future<void> _openSmsRules('));
+ const smsRefreshMarker=' // M742: original native SMS inbox refresh and offline classification moved to registered part.\n';
+ if(s.split(smsRefreshMarker).length!=2)throw StateError('Missing or duplicate M742 guarded native SMS refresh marker');
+ s=s.replaceFirst(smsRefreshMarker,_method('lib/waffra_home_sms_refresh.part.dart',
+  ' Future<void> _refreshAutoSmsInbox('));
  return s;
 }
