@@ -38,20 +38,36 @@
         "end": "/// A form only:"
       }
     ],
+    "lib/waffra_home_dashboard_analytics.part.dart": [
+      {
+        "start": " Widget dashboard(){",
+        "end": " List<MoneyEntry> get analysisEntries=>"
+      },
+      {
+        "start": " Widget nextMonthForecast(){",
+        "end": " Widget _analysisStat("
+      }
+    ],
+    "lib/waffra_home_budget_cards.part.dart": [
+      {
+        "start": " Widget smartMoneyInsightsCard(){",
+        "end": null
+      }
+    ],
     "lib/waffra_home_verified_account_flows.part.dart": [
       {
-        "start": " double _m467ShownBalance(){",
+        "start": " List<MoneyEntry> _m684ScopedMonthEntries(int year,int month){",
         "end": " Future<void> _m467PickHomeAccount()async{"
       },
       {
-        "start": "  Future<void> openVerifiedTransfer()async{",
+        "start": " Future<void> openVerifiedTransfer()async{",
         "end": null
       }
     ],
     "lib/waffra_home_goal_actions.part.dart": [
       {
-        "start": "  Future<WaffraAccountBalance?> _m641CreateGoalRecurringAccount(",
-        "end": "  /// Release an earmark back to spendable cash."
+        "start": " Future<WaffraAccountBalance?> _m641CreateGoalRecurringAccount(",
+        "end": " /// Release an earmark back to spendable cash."
       }
     ],
     "lib/waffra_home_entry_sheet.part.dart": [
@@ -66,22 +82,26 @@
         "end": " Future<void> compose("
       }
     ],
-    "lib/waffra_home_verified_finance_pickers.part.dart": [
-      {
-        "start": "  Future<({List<String?>? ids,int? generation})?> reviewSmsAccountLinks(",
-        "end": " /// Budget assignment is OPTIONAL"
-      }
-    ],
     "lib/waffra_home_sms_transfer_review.part.dart": [
       {
         "start": "       onCreateSmsAccount:(group,createProvider,isDestination)async{",
-        "end": "        onConfirmTransfer:(draft)async{"
+        "end": "       onConfirmTransfer:(draft)async{"
+      }
+    ],
+    "lib/waffra_home_verified_finance_pickers.part.dart": [
+      {
+        "start": " Future<({List<String?>? ids,int? generation})?> reviewSmsAccountLinks(",
+        "end": "/// Budget assignment is OPTIONAL"
       }
     ],
     "lib/storage/waffra_account_details_schema.dart": [
       {
         "start": "abstract final class WaffraAccountDetailsSchema {",
         "end": " static Future<void> assign("
+      },
+      {
+        "start": " static Future<void> assign(",
+        "end": null
       }
     ]
   }

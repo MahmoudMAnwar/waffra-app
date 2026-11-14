@@ -9,7 +9,7 @@
   "contracts": [
     {
       "id": "M942-OPENING-BALANCE-ACCOUNT-GROUP-SOURCE",
-      "issue": "#649",
+      "issue": "Issue #649 (M942 account opening, typed-provider migration and dropdown verification)",
       "previous_behavior": "Forecast uses transaction net without authenticated account opening; SMS transfer child bank regex covers only selected banks; review-account selection cannot create an account inline.",
       "approved_behavior": "Use verified account-summed opening-aware balance in forecasts, enforce exact catalog bank/wallet group BEFORE SQLCipher account creation, and allow verified account creation from income/expense/transfer/goal/recurring/SMS account dropdowns. No new finance writer or inferred bank balance.",
       "source_paths": ["lib/waffra_home_dashboard_analytics.part.dart", "lib/waffra_home_budget_cards.part.dart", "lib/waffra_home_verified_account_flows.part.dart", "lib/waffra_home_sms_transfer_review.part.dart", "lib/waffra_home_verified_finance_pickers.part.dart", "lib/waffra_home_goal_actions.part.dart", "lib/waffra_home_entry_sheet.part.dart", "lib/waffra_accounts_manager_page.dart", "lib/waffra_new_account_dialog.dart", "lib/storage/waffra_account_details_schema.dart"],
