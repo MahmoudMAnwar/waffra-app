@@ -1848,3 +1848,7 @@ Audit of remaining production direct Material `DropdownButtonFormField<String>` 
 - **M710 / #635 (same Draft #638):** Preserve all M674/M675 real owner-approved page, linked recurring account and fixed global FAB source checks after the 770-line Goals/Recurring extraction; no assertions removed. Exact-head CI still required.
 
 - **M708 (2026-11-14, Draft #638):** Repaired 19 prior Flutter source-test failures after M703/M707 extraction by reconstructing exact executable Home SMS transfer, Goals and Recurring parts in their original declaration order. Only old source-reading sites and dedicated QA helper were adjusted; original financial assertions remain. Latest exact-head CI, independent physical Android UI proof, and actual backup/restore on disposable handset remain required.
+
+
+### M727 — Issue #633 / Draft PR #638: restore exact-home finance-source preflight
+The verified manual/SMS `entrySheet` resides in registered `lib/waffra_home_entry_sheet.part.dart`, not directly in `main.dart`. M340 must inspect the actual declared part within the original Home method boundary and retain every original SQLCipher/SMS/FX/date/receipt evidence assertion; missing parts and duplicate markers must fail closed. No production finance or restore code changes are authorized. Same-head full CI and actual Android old-backup parity remain separately required.

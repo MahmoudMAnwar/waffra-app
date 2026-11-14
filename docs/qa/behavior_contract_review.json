@@ -3128,6 +3128,30 @@
         "No account or money writer logic changed.",
         "Phone restore and actual backup acceptance require separate device evidence."
       ]
+    },
+    {
+      "id": "M727-REGISTERED-SMS-ENTRY-SOURCE-M340",
+      "issue": "Issue #633 / Draft PR #638 exact-head 7-workflow regression failure",
+      "previous_behavior": "M340 scanned only lib/main.dart after M719 moved the unchanged verified entrySheet into a registered same-library Dart part; five mandatory editor/account/receipt/FX witnesses falsely reported missing.",
+      "approved_behavior": "Read registered existing lib/waffra_home_entry_sheet.part.dart with unique anchors, refuse missing/duplicate part declarations, reconstruct the actual Home editor at its original marker and enforce unchanged original M340 financial, currency, anti-replay and receipt guards on that real source.",
+      "source_paths": [
+        "scripts/qa/m340_financial_quality_gate.py",
+        "lib/main.dart",
+        "lib/waffra_home_entry_sheet.part.dart"
+      ],
+      "test_paths": [
+        "test/m719_home_entry_sheet_extraction_test.dart",
+        "test/m300_all_supported_currency_sms_matrix_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m340-continuous-financial-quality.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "Never remove or downgrade any M340 positive/negative finance assertion.",
+        "Unregistered or missing Home entry parts must fail closed.",
+        "No changes to money/backup writers, accounts or SMS data. Physical Android and original private archive parity remain separate acceptance gates."
+      ]
     }
   ]
 }
