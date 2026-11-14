@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -85,7 +86,7 @@ void main() {
   }
 
   test('M667 production Accounts screen delegates to exact Home entrySheet', () {
-    final home = File('lib/main.dart').readAsStringSync();
+    final home = readWaffraMainSourceForContracts();
     final accounts =
         File('lib/waffra_accounts_manager_page.dart').readAsStringSync();
     final start = home.indexOf('Future<void> openVerifiedAccounts()async{');

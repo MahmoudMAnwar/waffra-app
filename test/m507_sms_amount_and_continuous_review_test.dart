@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/main.dart';
@@ -67,7 +68,7 @@ void main() {
   });
 
   test('M636 automatic SMS review and editor still use latest learned rules',(){
-    final src=File('lib/main.dart').readAsStringSync();
+    final src=readWaffraMainSourceForContracts();
     final review=src.substring(src.indexOf(' Future<void> _reviewAutoSmsCandidates('),
      src.indexOf(' void _receiveSharedSms('));
     final editor=src.substring(src.indexOf(' Future<void> entrySheet('),

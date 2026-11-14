@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -163,7 +164,7 @@ void main() {
 
  group('M665 visual and event lifecycle source guards', () {
   test('compact review retains main and child correction on current sheet', () {
-   final main=File('lib/main.dart').readAsStringSync();
+   final main=readWaffraMainSourceForContracts();
    final start=main.indexOf(' Future<void> _reviewAutoSmsCandidates(');
    final end=main.indexOf(' void _receiveSharedSms(',start);
    final review=main.substring(start,end);
@@ -207,7 +208,7 @@ void main() {
   });
 
   test('after secure rule write, classify queue without rescanning phone history', () {
-   final main=File('lib/main.dart').readAsStringSync();
+   final main=readWaffraMainSourceForContracts();
    final start=main.indexOf(' Future<bool> _learnSafeSmsRule({');
    final end=main.indexOf(' Future<void> _learnManualTransferPreference()',start);
    final fragment=main.substring(start,end);
@@ -241,7 +242,7 @@ void main() {
     .where((rule)=>rule.resolvedKind==kind),isNotEmpty,
     reason:'Ready-made \$kind bucket is active on first install');
   }
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   final begin=main.indexOf('Map<String,Object?> waffraM632ClassifySmsQueue(');
   final end=main.indexOf('List<String> splitBankMessages(',begin);
   expect(begin,greaterThanOrEqualTo(0));
