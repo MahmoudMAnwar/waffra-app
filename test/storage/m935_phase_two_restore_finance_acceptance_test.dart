@@ -84,7 +84,7 @@ void main() {
     expect(source.where((e)=>e['income']==true),hasLength(2));
 
     // Integer halalas avoid rounding and prohibit a fake zero bank balance.
-    const incomeMinor=130100,expenseMinor=32725,netMinor=98275;
+    const incomeMinor=130100,expenseMinor=32725,netMinor=97375;
     expect(signedHalalas(source),netMinor);
     final candidate=await WaffraLegacyV24SqlCipherConverter.prepare(
       payload:legacyFixture(),password:password,
