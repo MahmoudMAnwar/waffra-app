@@ -1,3 +1,12 @@
+## M942 — إصلاح تباين أرصدة الحسابات البنكية التابعة وإنشائها من القوائم (2026-11-14)
+
+- **Issue:** [#649](https://github.com/MahmoudMAnwar/waffra-app/issues/649). Independent Draft PR from main; no changes to #648.
+- **Problem 1:** Main's verified all-account balance includes every SQLCipher `opening_minor` but projected balance/forecast and budget forecast still use transaction-only legacy net; replace those cash bases with the owner-verified, account-summed SAR balance. Do not classify opening funds as income or invent bank balances while verified accounts are unavailable.
+- **Problem 2:** SMS transfer inline child-account creation recognizes only a partial bank-name regex. Resolve all supported local/digital banks and wallets using exact provider category/group IDs; validate selected parent *before* the verified SQLCipher write. Prevent committing a wrong-provider child and returning an error only after the money account exists.
+- **Problem 3:** All inline add-account paths (manual income/expense, transfer, recurring, goals, SMS review, My Accounts) must use WaffraNewAccountDialog with the verified writer, accept and persist integer-halala opening balances, and refresh the bank/account choices. Preserve independent cancellation, account owner checks, original SMS, and separate transaction approval.
+- **Acceptance:** two accounts at the same bank with distinct openings appear individually and in total after cold SQLCipher reopen; transfer still net-zero, opening is not income; bank/wallet mismatch is refused prior to writing; verified generation refreshed before SMS confirmation; original +/Snackbar and approved UI unchanged. CI and real signed Android parity are separate gates.
+- **QA:** [M942 account opening and dropdown review](qa/M942_ACCOUNT_OPENING_DROPDOWN_REVIEW.md); status is implementation/CI **Pending** until exact SHA checks complete. Never claim wife backup/real phone verification without evidence.
+
 ## PR #640 — CI root-cause and latest-main reconciliation (2026-11-14)
 
 - Same Draft PR #640 updated from merged main (#645), without altering the biometric-only financial reset, PDF values or no-FAB wide Snackbar. Correct outdated backup/goal/footer source contracts and a synthetic invalid finance key; retain every test. Verify restore exact IDs, integer-halala totals, accountless history, encryption and cold-open integrity. Owner's actual backup and physical Android tests remain pending.
