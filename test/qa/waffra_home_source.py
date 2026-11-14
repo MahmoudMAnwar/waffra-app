@@ -7,7 +7,7 @@ def _method(root, path, begin):
     a, b = source.find(begin), source.rfind("\n}")
     if a < 0 or b <= a:
         raise AssertionError("Missing Dart production method: " + path)
-    return source[a:b]
+    return source[a:b+1]
 
 def read_waffra_home_source(root=ROOT):
     source = (root / "lib/main.dart").read_text(encoding="utf-8")
@@ -36,7 +36,7 @@ def read_waffra_home_source(root=ROOT):
         raise AssertionError("Original goal code part is malformed")
     markers = (
        (" // M711: original Home goal workflows live in the registered goal-actions part.\n",goal[a:b]),
-       (" // M711: goal action sheet implementation lives in the goal-actions part.\n",goal[b:c]),
+       (" // M711: goal action sheet implementation lives in the goal-actions part.\n",goal[b:c+1]),
     )
     for marker,code in markers:
         if source.count(marker) != 1:
