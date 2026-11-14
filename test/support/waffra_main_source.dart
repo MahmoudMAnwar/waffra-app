@@ -68,5 +68,9 @@ String readWaffraMainSourceForContracts(){
  if(s.split(verifiedCardsMarker).length!=2)throw StateError('Missing or duplicated M733 transfer cards marker');
  s=s.replaceFirst(verifiedCardsMarker,_method('lib/waffra_home_verified_transfer_cards.part.dart',
   ' String _m647VerifiedAccountLabel('));
+ const categoryWorkflowsMarker=' // M735: Home category workflows extracted unchanged to registered same-library part.\n';
+ if(s.split(categoryWorkflowsMarker).length!=2)throw StateError('Missing or duplicate M735 category workflows marker');
+ s=s.replaceFirst(categoryWorkflowsMarker,_method('lib/waffra_home_category_workflows.part.dart',
+  ' Future<BudgetCategory?> categoryDialog('));
  return s;
 }
