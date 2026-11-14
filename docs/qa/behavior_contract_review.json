@@ -3542,6 +3542,34 @@
         "The original app production source must be fully reconstructed from the registered part in QA, not faked.",
         "No physical handset performance/backup-restore acceptance claimed by source-only refactoring."
       ]
+    },
+    {
+      "id": "M742-HOME-NATIVE-SMS-REFRESH-REGISTERED-PART",
+      "issue": "Issue #633 / Draft #638",
+      "previous_behavior": "Home kept the original native Android bank-SMS queue refresh, incremental local 1000–2000-row scan, offline isolate classification, owner-session epochs and deduplication inline in State.",
+      "approved_behavior": "Move the original methods unchanged to a registered same-library Home Dart part. Preserve state-lifetime in-flight/backpressure fields in Home and all owner native permission, queue parsing, local acknowledgment, user approval and error behavior.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_sms_refresh.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/m742_home_sms_refresh_extraction_test.dart",
+        "test/qa/m442_sms_consent_session_recovery_test.py",
+        "test/m417_sms_first_run_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "No cloud or third-party SMS transmission; local-only native queue and isolate classification remain unchanged.",
+        "Owner/epoch, permissions, OTP exclusion and no-automatic finance posting remain strict.",
+        "Original source assertions inspect real registered production Dart part and no QA check is skipped.",
+        "No full Android latency or private historical Backup/Restore parity claimed until device evidence."
+      ]
     }
   ]
 }
