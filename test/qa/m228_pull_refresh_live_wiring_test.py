@@ -1,9 +1,10 @@
 from pathlib import Path
 import unittest
+from waffra_home_source import read_waffra_home_source
 
 class M228PullRefreshLiveWiring(unittest.TestCase):
     def test_refresh_only_changes_source_selection_not_named_budget_projection(self):
-        src=Path("lib/main.dart").read_text(encoding="utf-8")
+        src=read_waffra_home_source()
         left=src.index(" Future<void> _refreshFromVerifiedFinance()async {")
         right=src.index(" Future<void> load()async {",left)
         refresh=src[left:right]
