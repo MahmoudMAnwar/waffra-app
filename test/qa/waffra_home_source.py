@@ -63,4 +63,7 @@ def read_waffra_home_source(root=ROOT):
     restore(" // M750: verified Home financial startup load lives in registered same-library part.\n",
             "lib/waffra_home_finance_startup.part.dart",
             " Future<void> load()async {")
+    restore(" // M760: unchanged verified-account refresh, selection, transfer and account filter methods moved to registered Home part.\n",
+            "lib/waffra_home_verified_account_flows.part.dart",
+            " Future<void> _m467RefreshHomeAccounts()async{")
     return source
