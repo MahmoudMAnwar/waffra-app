@@ -3785,6 +3785,35 @@
         "Existing widget and source checks are preserved and reconstruct the exact registered production methods.",
         "Actual Android overflow screenshots, old encrypted backup parity and real financial effects require physical device proof."
       ]
+    },
+    {
+      "id": "M782-VERIFIED-HOME-PULL-REFRESH-SOURCE-PARITY",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Original Home State kept guarded pull-to-refresh scroll settle and finance authority reload methods inline, immediately before original extracted M750 load marker.",
+      "approved_behavior": "Relocate both exact original methods to registered same-library Home refresh part, retaining State-owned in-flight guard and keeping existing M750 load marker in main.dart immediately after the M782 extraction marker so original source order and all tests remain intact.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_verified_refresh.part.dart",
+        "lib/waffra_home_finance_startup.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/m782_home_verified_refresh_extraction_test.dart",
+        "test/m468_app_refresh_performance_regression_test.dart",
+        "test/m629_pull_refresh_parity_auth_home_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Every refreshed balance and ledger record must come from verified SQLCipher authority with expected generation and digest.",
+        "A failed or unchanged refresh must not fabricate, clear or duplicate money; keep original fail-closed UI and scroll restoration.",
+        "Original Home State owns in-flight coalescing field and owner session lifecycle; the real M750 startup marker must remain in main.dart.",
+        "No claims of actual physical Android latency, financial parity or encrypted backup/restore without device evidence."
+      ]
     }
   ]
 }
