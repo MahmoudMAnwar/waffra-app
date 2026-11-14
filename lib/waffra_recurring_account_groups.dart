@@ -68,7 +68,7 @@ abstract final class WaffraRecurringAccountGroups {
      (account.providerId=='other'?null:account.providerId):
      WaffraSmsAccountLearning.bankGroup(account.name);
     id=institution==null
-      ?'${account.kind}:account:${account.id}'
+      ?'${account.kind}:account:${account.customInstitutionRootId??account.id}'
       :'${account.kind}:institution:$institution';
     name=institution==null
       ?(ar:account.name,en:account.name)
@@ -81,7 +81,7 @@ abstract final class WaffraRecurringAccountGroups {
     name=(ar:account.name,en:account.name);
    }
    buckets.putIfAbsent(id,()=>[]).add(account);
-   names[id]=name;
+   names.putIfAbsent(id,()=>name);
   }
   return List<WaffraRecurringAccountGroup>.unmodifiable(
    buckets.entries.map((entry)=>WaffraRecurringAccountGroup(
