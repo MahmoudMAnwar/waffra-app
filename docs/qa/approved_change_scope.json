@@ -65,10 +65,6 @@
     ],
     "test/m110_live_finance_authority_writer_test.dart": [
       {
-        "start": "test('M110 financial deletion carries baseline, not a fresh post-widget snapshot', () {",
-        "end": null
-      },
-      {
         "start": "  test('M110 financial deletion carries baseline",
         "end": "\n}"
       }
