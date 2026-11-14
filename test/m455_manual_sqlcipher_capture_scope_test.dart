@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/storage/waffra_home_transaction_capture.dart';
@@ -73,7 +74,7 @@ void main() {
   });
 
   test('M455 Home applies narrowing before source-authorized queued write', () {
-    final app = File('lib/main.dart').readAsStringSync();
+    final app = readWaffraMainSourceForContracts();
     final begin = app.indexOf('Future<void> persist({');
     final end = app.indexOf('Future<bool> _persistModuleOrReload(', begin);
     expect(begin, greaterThanOrEqualTo(0));
