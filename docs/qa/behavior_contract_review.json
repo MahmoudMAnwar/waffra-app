@@ -3103,6 +3103,31 @@
         "Reviewed bank SMS remains manual-confirmation only and retains original body/date evidence.",
         "Approved transaction UI and global fixed + button remain unchanged."
       ]
+    },
+    {
+      "id": "M721-SECURE-BACKUP-ACCOUNT-TOOLS-RELOCATION",
+      "issue": "Issue #633, Draft PR #638, exact security and account tools extraction",
+      "previous_behavior": "Home State contained 980 lines of calendar, secure backup export, restore dialogs, PIN and account management actions directly in main.dart.",
+      "approved_behavior": "Registered same-library Dart extension contains byte-identical user-calendar, account tools and encrypted Backup/Restore logic with no changes to authentication, archive format, verified balances or financial data writes.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_account_tools.part.dart",
+        "test/support/waffra_main_source.dart"
+      ],
+      "test_paths": [
+        "test/m721_home_account_tools_extraction_test.dart",
+        "test/m127_ui_tour_backup_acceptance_test.dart",
+        "test/m149_backup_pin_localized_fab_trash_uat_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "All encrypted backup payload, integrity, version migration and biometric checks remain source-identical.",
+        "No account or money writer logic changed.",
+        "Phone restore and actual backup acceptance require separate device evidence."
+      ]
     }
   ]
 }

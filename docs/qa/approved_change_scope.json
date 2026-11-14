@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "change_id": "M690-M719-ISSUES632-637-20261114",
+  "change_id": "M690-M721-ISSUES632-637-20261114",
   "human_scope_review": "Issue #629 completes prior PR #628 only after user-visible acceptance; #631 explicitly authorizes three exact screenshots for Goals/Dues/SMS Review, permanently visible financial activity, non-moving FAB-aligned notice, and savings/goal-due cash safety. Existing tests replace outdated visual assumptions without deleting financial safety assertions. Device screenshots/old restore still require external device evidence.",
   "user_requested_changes": [
     "M690 #632 permanently disable third-party AI bank SMS uploads and opt-in on previously installed versions, remove Settings toggle and signed Android staging worker, retain local encrypted SMS Review and money writer.",
@@ -30,7 +30,8 @@
     "M713 #633 fix 30 production-source CI false regressions after M711 by explicitly registering the real Dart goal actions part in M550, and redirect only outdated goal-source tests to the real same-library source helper; retain all positive and negative Assertions.",
     "M715 #633 byte-identical extraction of the original monthly budget editor, historical review/linking and budget administration methods to registered same-library Home Dart part, with original source reconstruction for finance contracts and no ledger change.",
     "M717 #634 delete the retired cloud transport's HTTP client compile dependency, preserve the test-only fail-closed analyze signature and currency safety validator, and add a transitive application import graph test proving legacy AI and Cloudflare modules are unreachable from the runtime entrypoint.",
-    "M719 #633 transfer the full original manual/SMS transaction editor and its account/category/save validation flow into a same-library Home part byte-for-byte, preserve all original finance and local SMS safety assertions through real source reassembly; do not change finance or FAB UI behavior."
+    "M719 #633 transfer the full original manual/SMS transaction editor and its account/category/save validation flow into a same-library Home part byte-for-byte, preserve all original finance and local SMS safety assertions through real source reassembly; do not change finance or FAB UI behavior.",
+    "M721 #633 move unchanged 980-line calendar, verified encrypted backup/restore dialogs and PIN/account tools from Home State to registered same-library part; keep all account/security archive bytes and source expectations intact."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -109,7 +110,9 @@
     "test/m715_budget_workflows_extraction_test.dart",
     "test/m717_no_cloud_runtime_dependency_test.dart",
     "lib/waffra_home_entry_sheet.part.dart",
-    "test/m719_home_entry_sheet_extraction_test.dart"
+    "test/m719_home_entry_sheet_extraction_test.dart",
+    "lib/waffra_home_account_tools.part.dart",
+    "test/m721_home_account_tools_extraction_test.dart"
   ],
   "approved_deleted_files": [
     "lib/waffra_sms_cloud_review_analyzer.dart"
@@ -212,7 +215,7 @@
       },
       {
         "start": " // M689: all goal actions stay available by tapping the compact card.",
-        "end": " Future<void> showWaffraFinancialCalendar()async{"
+        "end": " Widget currentTab(){"
       },
       {
         "start": " Widget _filterChip(String label,bool selected,VoidCallback onTap)=>",
