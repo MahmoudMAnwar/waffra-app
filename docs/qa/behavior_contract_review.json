@@ -1,21 +1,80 @@
 {
   "schema_version": 1,
-  "pr": "new Draft PR for #649",
-  "issue": "Issue #649 — M942 opening bank balances and inline dropdown fixes",
+  "pr": "M943 — independent stacked Draft PR for #651 (base #650)",
+  "issue": "Issue #651 — M943 eight financial followups",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at new branch start",
   "reviewed_at": "2026-11-14",
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
     {
+      "id": "M943-VERIFIED-BALANCE-ACCOUNT-SENDER-SUFFIX-QA",
+      "issue": "Issue #651 — 8-point post-M942 code review",
+      "previous_behavior": "Unverified Home fallback may display historical net as bank balance; month percent derives from unverified net; Home materializes all filtered transactions; only six SMS sender aliases; unrelated Other bank identities are not linkable, saved masked suffix cannot be explicitly cleared; old archive and retired model code require audit.",
+      "approved_behavior": "Verified bank balance or explicit unknown state, no unsupported growth %, bounded indexed Home page, conservative catalog sender hints, no unverified institution links, explicit confirmed last-four clearing through SQLCipher. Synthetic restore audit and retired-helper dependency scan are distinct from device acceptance.",
+      "source_paths": [
+        "lib/waffra_home_balance_header.part.dart",
+        "lib/waffra_home_verified_account_flows.part.dart",
+        "lib/waffra_home_dashboard_analytics.part.dart",
+        "lib/waffra_finance_period_index.part.dart",
+        "lib/waffra_sms_account_learning.dart",
+        "lib/waffra_recurring_account_groups.dart",
+        "lib/waffra_accounts_manager_page.dart",
+        "lib/storage/waffra_account_context_repository.dart",
+        "lib/storage/waffra_verified_accounts_api.dart"
+      ],
+      "test_paths": [
+        "test/m943_home_balance_and_paging_test.dart",
+        "test/m943_sms_bank_catalog_test.dart",
+        "test/storage/m943_verified_bank_suffix_clear_test.dart",
+        "test/m943_backup_retired_graph_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m449-release-notes-freshness.yml"
+      ],
+      "safety_invariants": [
+        "No fabricated SAR account balance or growth percent; no ledger mutation in Home reads.",
+        "No guessed institution ownership or SMS auto-post; every writer requires verified owner and user confirmation.",
+        "Never change approved FAB/Snackbar position or original encrypted device backup.",
+        "Do not remove old model currency safety negative tests without replacement; all CI exact SHA."
+      ]
+    },
+    {
       "id": "M942-OPENING-BALANCE-ACCOUNT-GROUP-SOURCE",
       "issue": "Issue #649 (M942 account opening, typed-provider migration and dropdown verification)",
       "previous_behavior": "Forecast uses transaction net without authenticated account opening; SMS transfer child bank regex covers only selected banks; review-account selection cannot create an account inline.",
       "approved_behavior": "Use verified account-summed opening-aware balance in forecasts, enforce exact catalog bank/wallet group BEFORE SQLCipher account creation, and allow verified account creation from income/expense/transfer/goal/recurring/SMS account dropdowns. No new finance writer or inferred bank balance.",
-      "source_paths": ["lib/waffra_home_dashboard_analytics.part.dart", "lib/waffra_home_budget_cards.part.dart", "lib/waffra_home_verified_account_flows.part.dart", "lib/waffra_home_sms_transfer_review.part.dart", "lib/waffra_home_verified_finance_pickers.part.dart", "lib/waffra_home_goal_actions.part.dart", "lib/waffra_home_entry_sheet.part.dart", "lib/waffra_accounts_manager_page.dart", "lib/waffra_new_account_dialog.dart", "lib/storage/waffra_account_details_schema.dart"],
-      "test_paths": ["test/m942_opening_account_dropdown_regression_test.dart", "test/storage/m942_two_child_openings_sqlcipher_test.dart", "test/storage/m942_account_details_v1_upgrade_test.dart", "test/qa/m447_verified_sms_account_linking_test.py"],
-      "ci_workflows_to_watch": [".github/workflows/finance-full-regression.yml", ".github/workflows/m550-behavior-contract-preflight.yml", ".github/workflows/m449-release-notes-freshness.yml"],
-      "safety_invariants": ["No guessed account, negative opening, created-income transaction or different-bank linked child.", "No duplicate confirmed SMS or transfer charge and no stale account selection witness.", "Approved + and Snackbar and financial reset/restore remain unchanged.", "Device/backup parity requires separately recorded real Android results."]
+      "source_paths": [
+        "lib/waffra_home_dashboard_analytics.part.dart",
+        "lib/waffra_home_budget_cards.part.dart",
+        "lib/waffra_home_verified_account_flows.part.dart",
+        "lib/waffra_home_sms_transfer_review.part.dart",
+        "lib/waffra_home_verified_finance_pickers.part.dart",
+        "lib/waffra_home_goal_actions.part.dart",
+        "lib/waffra_home_entry_sheet.part.dart",
+        "lib/waffra_accounts_manager_page.dart",
+        "lib/waffra_new_account_dialog.dart",
+        "lib/storage/waffra_account_details_schema.dart"
+      ],
+      "test_paths": [
+        "test/m942_opening_account_dropdown_regression_test.dart",
+        "test/storage/m942_two_child_openings_sqlcipher_test.dart",
+        "test/storage/m942_account_details_v1_upgrade_test.dart",
+        "test/qa/m447_verified_sms_account_linking_test.py"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m449-release-notes-freshness.yml"
+      ],
+      "safety_invariants": [
+        "No guessed account, negative opening, created-income transaction or different-bank linked child.",
+        "No duplicate confirmed SMS or transfer charge and no stale account selection witness.",
+        "Approved + and Snackbar and financial reset/restore remain unchanged.",
+        "Device/backup parity requires separately recorded real Android results."
+      ]
     },
     {
       "id": "M623-VERIFIED-RESTORE-NO-SECOND-BACKUP",
