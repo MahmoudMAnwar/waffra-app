@@ -4178,6 +4178,38 @@
         "Source inspection must reconstruct only actual registered production same-library Dart parts; missing or repeated markers fail closed.",
         "No claim of physical Android performance or private V24 backup parity from static source QA."
       ]
+    },
+    {
+      "id": "M902-REAL-HOME-FINANCE-CI-WRITER-SOURCE",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Three still-registered full or specialized finance workflows inspected raw lib/main.dart source for secure bank-SMS and SQLCipher authority guards, missing the actual original methods relocated into registered same-library Dart parts.",
+      "approved_behavior": "Run every original positive and negative finance/widget/cutover assertion on the strict, original-order, real registered Dart-part reconstruction shared with existing Python QA; missing, foreign or duplicate part registration must fail closed. Retain the original two verified bank SMS writer routes and enforce their exact source count in a new read-only regression.",
+      "source_paths": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m96-runtime-finance-cloud-integration.yml",
+        ".github/workflows/m109-verified-finance-authority.yml",
+        "lib/main.dart",
+        "lib/waffra_home_entry_sheet.part.dart",
+        "lib/waffra_home_sms_confirmation.part.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/qa/m902_home_finance_workflow_source_guard_test.py",
+        "test/qa/m900_home_source_reassembly_guard_test.py",
+        "test/qa/test_m340_financial_quality_gate.py"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m96-runtime-finance-cloud-integration.yml",
+        ".github/workflows/m109-verified-finance-authority.yml",
+        ".github/workflows/m174-main-sha-regression.yml"
+      ],
+      "safety_invariants": [
+        "Never weaken or remove original positive confirmed-SMS writer, money-source authority, no implicit SQLCipher activation, negative Widget writer, receipt or Firebase assertions.",
+        "Exactly two original verified SMS commit sites in the actual declared production Dart parts; test helpers may not fabricate finance code.",
+        "No app finance, archived data, OS biometrics, original SMS encryption or visual design changes.",
+        "Physical Android and owner old encrypted archive parity are separate from source-level CI."
+      ]
     }
   ]
 }
