@@ -1,8 +1,9 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main(){
- final home=File('lib/main.dart').readAsStringSync();
+ final home=readWaffraMainSourceForContracts();
  final tools=File('lib/waffra_smart_features.dart').readAsStringSync();
  test('M636 retired model has no executable entry point or installer',(){
   expect(File('lib/waffra_ondevice_qwen.dart').existsSync(),isFalse);
