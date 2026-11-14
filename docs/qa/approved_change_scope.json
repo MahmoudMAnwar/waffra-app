@@ -34,7 +34,7 @@
     ],
     ".github/workflows/finance-full-regression.yml": [
       {
-        "start": "      - name: Run every existing app and storage unit/widget regression",
+        "start": "      - name: Analyze full Flutter application",
         "end": "      - name: Verify new offline finance paths remain opt-in"
       }
     ]
