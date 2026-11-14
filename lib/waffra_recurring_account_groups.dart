@@ -81,7 +81,11 @@ abstract final class WaffraRecurringAccountGroups {
     name=(ar:account.name,en:account.name);
    }
    buckets.putIfAbsent(id,()=>[]).add(account);
-   names.putIfAbsent(id,()=>name);
+   if(account.customInstitutionRootId==null){
+    names[id]=name; // Existing concrete institution root wins over child label.
+   }else{
+    names.putIfAbsent(id,()=>name);
+   }
   }
   return List<WaffraRecurringAccountGroup>.unmodifiable(
    buckets.entries.map((entry)=>WaffraRecurringAccountGroup(
