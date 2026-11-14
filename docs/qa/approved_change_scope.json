@@ -108,7 +108,8 @@
     "M932 #633/#634 repair genuine M340 hostile FX preview mutation test after unchanged registered Home Dart extraction: include real lib/waffra_home_fx_preview.part.dart as an overridable source in M340 financial safety audit, mutate that actual file (not raw main.dart), prove both persist() and saveCaptured() illegal financial writes are rejected, and keep every original audit, baseline and fail-closed assertion. Existing scope boundaries and all 43 exact SHA CI checks remain enforced; real device acceptance separate.",
     "M932 #633 fix recurring M266 encrypted-storage CI false failure after M930 Home Widget action extraction: inspect reconstructed registered production Dart parts, preserve all original native Widget, post-auth, SQLCipher fail-closed and legacy data assertions; add exact positive registered-part proof so source relocation cannot silently bypass QA.",
     "M933 #633 fail-closed source-contract repair: 19 Flutter failures across five jobs following registered Home part extraction. Update exact old raw-main readers and obsolete moved-method boundaries without removing money, SMS, auth or UI assertions.",
-    "M934 #633 preventive M550 preflight: dynamically inventory all declared Flutter Home Dart parts, reject positive contains/split/indexOf assertions still reading raw lib/main.dart after method extraction, preserve source guard negative assertions and add adversarial Python unit tests before expensive full CI."
+    "M934 #633 preventive M550 preflight: dynamically inventory all declared Flutter Home Dart parts, reject positive contains/split/indexOf assertions still reading raw lib/main.dart after method extraction, preserve source guard negative assertions and add adversarial Python unit tests before expensive full CI.",
+    "M934 exact M385 scope correction: include the new shared raw-main source-reader scanner inserted immediately before inventory(), leaving the old preflight implementation and all other protected sections byte-identical."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -581,7 +582,7 @@
         "end": "BINDING_DART = re.compile("
       },
       {
-        "start": "def inventory(root: Path = ROOT) -> dict:",
+        "start": "    return stale, examined",
         "end": "def validate_review("
       },
       {
