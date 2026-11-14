@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_sms_cloud_redactor.dart';
 
@@ -27,7 +28,7 @@ void main() {
 
  test('M452 background posts only with account-bound owner rule',(){
   final auto=File('lib/waffra_auto_sms_autopost.part.dart').readAsStringSync();
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   expect(auto,contains('!matched.autoPost'));
   expect(auto,contains('matched.accountSuffix'));
   expect(auto,contains('matched.accountId'));
@@ -52,7 +53,7 @@ void main() {
 
  test('M452 no unsolicited cloud choice on signup or SMS review',(){
   final ui=File('lib/waffra_auto_sms_consent.dart').readAsStringSync();
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   final cloud=File('lib/waffra_sms_cloud_service.dart').readAsStringSync();
   expect(ui,contains("await prefs.remove('waffra_cloud_sms_installation_consent_v2');"));
   expect(ui,isNot(contains('WaffraSmsCloudService')));
