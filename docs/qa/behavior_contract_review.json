@@ -4450,6 +4450,25 @@
         "Dart's literal source quoting must not remove or weaken original M108 native/widget/account safeguards.",
         "Original finance, native widget, plus floating action button and encrypted Backup/Restore production code are untouched."
       ]
+    },
+    {
+      "id": "M926-HOME-PRESENTATION-SCROLL-ANIMATION-CONTROLS",
+      "issue": "Issue #633 / Draft #638",
+      "previous_behavior": "Dashboard scroll compact header and persisted animation-level selector were inline in _HomeScreenState.",
+      "approved_behavior": "Move unchanged exact method implementations to registered same-library Home Dart part, retain scroll listener, post-frame Flutter mounted checks, 96px compact threshold, animation-level whitelist, SharedPreferences key and fixed FAB geometry.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_presentation_controls.part.dart"
+      ],
+      "test_paths": [
+        "test/m926_home_presentation_controls_extraction_test.dart",
+        "test/qa/m900_home_source_reassembly_guard_test.py"
+      ],
+      "safety_invariants": [
+        "No change to same-frame Flutter header layout or existing FAB anchor.",
+        "Animation level writes use original owner preference key and whitelist, not finance.",
+        "No finance ledger, SMS, original backup, due/goal calculation, database or source authority changed."
+      ]
     }
   ]
 }

@@ -22,6 +22,7 @@ class M900RegisteredHomeReassemblyGuard(unittest.TestCase):
         charts = source("lib/waffra_home_budget_alert_charts.part.dart")
         for part in (
             "waffra_home_navigation_helpers.part.dart",
+            "waffra_home_presentation_controls.part.dart",
             "waffra_home_account_tools.part.dart",
             "waffra_home_budget_alert_charts.part.dart",
             "waffra_home_pdf_reports.part.dart",
@@ -84,6 +85,8 @@ class M900RegisteredHomeReassemblyGuard(unittest.TestCase):
             " Future<List<WaffraInternalTransferHistory>> _m648HomeTransfers(",
             " Future<List<WaffraVerifiedGoalMovement>> _m649HomeSavings(",
             " Future<String?> _m650DueVerifiedAccount(MoneyEntry entry){",
+            " void _handleDashboardScroll(){",
+            " Future<void> setAnimationLevel(String next)async {",
             " void _publishVerifiedTransactionLedger(",
         ):
             self.assertEqual(original.count(method), 1, method)

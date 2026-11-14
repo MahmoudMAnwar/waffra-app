@@ -19,6 +19,8 @@ def read_waffra_home_source(root=ROOT):
     restore(" // M830: original Home navigation and summary helpers moved to registered same-library part.\n",
             "lib/waffra_home_navigation_helpers.part.dart",
             " Widget categoriesPage()=>categoriesPageV2();")
+    restore(" // M926: original dashboard scroll compactness and motion preference methods moved unchanged to Home part.\n",
+            "lib/waffra_home_presentation_controls.part.dart", " void _handleDashboardScroll(){")
     restore(" // M721: original Home calendar, backup and account tools moved to registered same-library part.\n",
             "lib/waffra_home_account_tools.part.dart"," Future<void> showWaffraFinancialCalendar(")
     restore(" // M805: original Home budget alerts and chart SVG methods moved to registered part.\n",

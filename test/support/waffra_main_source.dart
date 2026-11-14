@@ -14,6 +14,9 @@ String readWaffraMainSourceForContracts(){
  if(s.split(navMarker).length!=2)throw StateError('Missing or duplicated M830 navigation helpers marker');
  s=s.replaceFirst(navMarker,_method('lib/waffra_home_navigation_helpers.part.dart',
   ' Widget categoriesPage()=>categoriesPageV2();'));
+ const m926=' // M926: original dashboard scroll compactness and motion preference methods moved unchanged to Home part.\n';
+ if(s.split(m926).length!=2)throw StateError('M926 registered presentation methods missing or duplicate');
+ s=s.replaceFirst(m926,_method('lib/waffra_home_presentation_controls.part.dart',' void _handleDashboardScroll(){'));
  const accountToolsMarker=' // M721: original Home calendar, backup and account tools moved to registered same-library part.\n';
  if(s.split(accountToolsMarker).length!=2)throw StateError('Missing or duplicated account tools marker');
  s=s.replaceFirst(accountToolsMarker,_method('lib/waffra_home_account_tools.part.dart',

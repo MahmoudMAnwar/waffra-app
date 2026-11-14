@@ -163,6 +163,7 @@ part 'waffra_home_category_confirmations.part.dart';
 part 'waffra_home_budget_alert_charts.part.dart';
 part 'waffra_home_verified_finance_pickers.part.dart';
 part 'waffra_home_navigation_helpers.part.dart';
+part 'waffra_home_presentation_controls.part.dart';
 part 'waffra_home_sms_review_indicator.part.dart';
 part 'waffra_home_sms_transfer_review.part.dart';
 part 'waffra_home_goals_recurring_pages.part.dart';
@@ -4449,21 +4450,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  final ScrollController _categoryScrollController=ScrollController();
  final ScrollController _goalsScrollController=ScrollController();
  final ScrollController _recurringScrollController=ScrollController();
- void _handleDashboardScroll(){
-  if(!mounted||tab!=0||goalsOpened||!_dashboardScrollController.hasClients)return;
-  final compact=_dashboardScrollController.offset>96;
-  if(compact==_headerCompact)return;
-  WidgetsBinding.instance.addPostFrameCallback((_){
-   if(mounted&&tab==0&&compact!=_headerCompact)setState(()=>_headerCompact=compact);
-  });
- }
- Future<void> setAnimationLevel(String next)async {
-  if(!{'full','balanced','reduced','off'}.contains(next))return;
-  waffraAnimationLevel.value=next;
-  if(mounted)setState((){});
-  final p=await SharedPreferences.getInstance();
-  await p.setString('waffra_animation_level',next);
- }
+ // M926: original dashboard scroll compactness and motion preference methods moved unchanged to Home part.
  String search='',typeFilter='الكل',categoryFilter='الكل',period='شهري';
  String categorySearch='',categoryDisplay='all',categoryTypeFilter='all',goalDisplay='all',recurringDisplay='all';
  String categorySort='default'; // Presentation-only; never rewrites finance categories.
