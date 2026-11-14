@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "change_id": "M690-M742-ISSUES632-637-20261114",
+  "change_id": "M690-M743-ISSUES632-637-20261114",
   "human_scope_review": "Issue #629 completes prior PR #628 only after user-visible acceptance; #631 explicitly authorizes three exact screenshots for Goals/Dues/SMS Review, permanently visible financial activity, non-moving FAB-aligned notice, and savings/goal-due cash safety. Existing tests replace outdated visual assumptions without deleting financial safety assertions. Device screenshots/old restore still require external device evidence.",
   "user_requested_changes": [
     "M690 #632 permanently disable third-party AI bank SMS uploads and opt-in on previously installed versions, remove Settings toggle and signed Android staging worker, retain local encrypted SMS Review and money writer.",
@@ -51,7 +51,8 @@
     "M739 #633 extract the exact original authenticated sender-grouped bank-SMS review inbox UI to registered same-library Dart part with unchanged original body, cross-sender message selection, local OTP exclusion, no new finance writer or navigation/FAB changes; preserve M385 exact-source comparison, M550 complete registered-source contracts and same-SHA CI.",
     "M740 #633 keep all original native SMS owner/permission and nonzero truthful review tests by redirecting only three obsolete main.dart source readers to verified same-library source reconstruction after M739 extraction; retain every original assertion.",
     "M741 #633 move original local bank SMS rule editing/association/manual learning/verified review candidate logic as byte-identical same-library Home part; retain profile-owner identity, offline only exclusions, money validation, original SMS visibility, immutable verified finance writer and strict source CI.",
-    "M742 #633 extract original Home SMS scanner/isolated local classification, same-owner pending queue and sender exclusion/duplicate acknowledgement into registered same-library part byte-identically, retaining verified finance, native permissions, backpressure and existing strict source assertions."
+    "M742 #633 extract original Home SMS scanner/isolated local classification, same-owner pending queue and sender exclusion/duplicate acknowledgement into registered same-library part byte-identically, retaining verified finance, native permissions, backpressure and existing strict source assertions.",
+    "M743 #633 retain every existing SMS review, native rescan, grouping, excluded sender and perf assertion in five original Flutter regression test suites by updating only stale raw-main source readers to verified production Dart-part reassembly after M739/M742; no test skipped or weakened."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -210,7 +211,12 @@
     "lib/waffra_home_sms_rules.part.dart",
     "test/m741_home_sms_rules_extraction_test.dart",
     "lib/waffra_home_sms_refresh.part.dart",
-    "test/m742_home_sms_refresh_extraction_test.dart"
+    "test/m742_home_sms_refresh_extraction_test.dart",
+    "test/m549_sms_review_owner_scoped_test.dart",
+    "test/m548_review_grouping_and_signup_perf_test.dart",
+    "test/m661_exclusion_rule_apply_regression_test.dart",
+    "test/m464_sms_bulk_rescan_regression_test.dart",
+    "test/m638_sms_inbox_delete_sync_test.dart"
   ],
   "approved_deleted_files": [
     "lib/waffra_sms_cloud_review_analyzer.dart"
@@ -1653,6 +1659,92 @@
       {
         "start": "    def test_existing_android_permission_not_misreported_as_missing(self):",
         "end": "        settings = home[home.index('Future<void> _scanPreviousBankSmsFromSettings()'):"
+      }
+    ],
+    "test/m549_sms_review_owner_scoped_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "void main() {"
+      },
+      {
+        "start": " test('M549 select 1000, no sender confirmation storm, no per-message sender receipts',(){",
+        "end": "  final review=main.substring(main.indexOf(' Future<void> _openAutoSmsInbox()async{'),"
+      },
+      {
+        "start": " test('M549 1000-message bulk confirm never parses SMS bodies on the UI isolate',(){",
+        "end": "  final begin=main.indexOf('waffra-sms-bulk-exclude-selected');"
+      },
+      {
+        "start": "  expect(native,contains('isExcludedMessageLocked(context, fingerprint)'));",
+        "end": "  expect(main,contains(\"_autoSmsProgress['rescanNeeded']==true\"));"
+      },
+      {
+        "start": " test('M549 all sender lists still hide actual Android messages from deletion',(){",
+        "end": "  expect(review,contains('Your phone SMS and saved financial transactions are untouched.'));"
+      }
+    ],
+    "test/m548_review_grouping_and_signup_perf_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "void main() {"
+      },
+      {
+        "start": " test('Home verified review snapshot bypasses unnecessary 1000-SMS reread',(){",
+        "end": "  final open=main.split(' Future<void> _openAutoSmsInbox()async{')[1]"
+      },
+      {
+        "start": " test('SMS classification runs outside UI isolate; native ACK stays checked',(){",
+        "end": "  final refresh=main.split(' Future<void> _runAutoSmsRefresh(')[1]"
+      },
+      {
+        "start": "  expect(registration,isNot(contains('_store.delete(')));",
+        "end": "  final submit=main.split(' Future<void> save()async {')[1]"
+      }
+    ],
+    "test/m661_exclusion_rule_apply_regression_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "void main() {"
+      },
+      {
+        "start": "  test('every successful manual create/edit/delete signals rule refresh', () {",
+        "end": "   expect(source, contains('final VoidCallback? onRulesChanged;'));"
+      },
+      {
+        "start": "  test('manual sender preview uses paired live sender IDs', () {",
+        "end": "   expect(source, contains('final List<String> scannedSenders;'));"
+      },
+      {
+        "start": "  test('unreadable encrypted rules do not silently look like saved matching rules', () {",
+        "end": "   final begin = home.indexOf('  var customRules=<WaffraSmsLocalRule>[];');"
+      },
+      {
+        "start": "  test('queued custom exclusions use durable native IDs, never finance writes', () {",
+        "end": "   final start = home.indexOf("
+      }
+    ],
+    "test/m464_sms_bulk_rescan_regression_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "void main() {"
+      },
+      {
+        "start": " test('M464 rescan signals active state and returns cumulative counts',(){",
+        "end": "  expect(app,contains('bool _autoSmsRescanRunning=false;'));"
+      },
+      {
+        "start": " test('M464 review supports both sender and individual multi-selection',(){",
+        "end": "  final begin=app.indexOf(' Future<void> _openAutoSmsInbox()async{');"
+      }
+    ],
+    "test/m638_sms_inbox_delete_sync_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "void main(){"
+      },
+      {
+        "start": " test('M638 explicit Rescan alone calls background native inbox sync',(){",
+        "end": "  final bridge=File('lib/waffra_auto_sms.dart').readAsStringSync();"
       }
     ]
   }
