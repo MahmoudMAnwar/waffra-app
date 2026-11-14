@@ -402,6 +402,10 @@
       {
         "start": " test('M389: duplicate goal uses independent identity and starts with zero savings',(){",
         "end": " test('M389: recurring duplicate is new, editable, and cannot inherit linked goal ID',(){"
+      },
+      {
+        "start": " test('M389: Goals/Recurring + menus show approved choices instead of direct sheet',(){",
+        "end": " test('M388: open-ended goal never divided by zero or marked achieved',(){"
       }
     ],
     "test/m302_optimistic_module_write_safety_test.dart": [
