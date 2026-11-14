@@ -102,4 +102,7 @@ def read_waffra_home_source(root=ROOT):
     restore(" // M810: original Home income/expense transaction summary now in registered part.\n",
             "lib/waffra_home_transaction_summary.part.dart",
             " Future<void> showSummaryTransactions(bool income)async {")
+    restore(" // M812: verified SMS money-account and optional budget pickers moved to real registered Home part.\n",
+            "lib/waffra_home_verified_finance_pickers.part.dart",
+            " /// Read a single authoritative SQLCipher account witness immediately")
     return source
