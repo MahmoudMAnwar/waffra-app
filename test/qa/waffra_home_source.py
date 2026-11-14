@@ -66,4 +66,7 @@ def read_waffra_home_source(root=ROOT):
     restore(" // M760: unchanged verified-account refresh, selection, transfer and account filter methods moved to registered Home part.\n",
             "lib/waffra_home_verified_account_flows.part.dart",
             " Future<void> _m467RefreshHomeAccounts()async{")
+    restore(" // M770: original verified SMS review confirmation and entry batching moved to same-library part.\n",
+            "lib/waffra_home_sms_confirmation.part.dart",
+            " Future<List<MoneyEntry>> _m593BuildVerifiedEntries(")
     return source
