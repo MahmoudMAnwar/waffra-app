@@ -18,7 +18,8 @@
     "lib/waffra_home_account_tools.part.dart",
     "test/m110_live_finance_authority_writer_test.dart",
     "test/m644_no_fab_snackbar_width_test.dart",
-    "test/storage/m644_biometric_finance_reset_test.dart"
+    "test/storage/m644_biometric_finance_reset_test.dart",
+    "test/waffra_directional_fab_receipt_corner_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
@@ -67,6 +68,12 @@
       {
         "start": "  test('M110 financial deletion carries baseline",
         "end": "\n}"
+      }
+    ],
+    "test/waffra_directional_fab_receipt_corner_test.dart": [
+      {
+        "start": "  test('all snackbar entry points share one footer-aware presenter', () {",
+        "end": "\n\n  testWidgets('footer notice pushes financial content up"
       }
     ]
   }
