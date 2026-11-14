@@ -524,12 +524,11 @@ extension _WaffraHomeGoalsRecurringPagesModule on _HomeScreenState {
  }
  Widget recurringPage(){
   final today=DateUtils.dateOnly(DateTime.now());
-  final shown=recurring.where((r){
-   final goalDue=r.linkedGoalId!=null;
-   final due=goalDue?r.startAt:nextRecurringDue(r);
-   final date=DateUtils.dateOnly(due);
+  bool duePass(RecurringBill r,String filter){
+   final date=DateUtils.dateOnly(
+    r.linkedGoalId==null?nextRecurringDue(r):r.startAt);
    final days=date.difference(today).inDays;
-   final inView=switch(recurringDisplay){
+   return switch(filter){
     'today'=>r.active&&days==0,
     'week'=>r.active&&days>=0&&days<=7,
     'month'=>date.year==today.year&&date.month==today.month,
@@ -538,9 +537,25 @@ extension _WaffraHomeGoalsRecurringPagesModule on _HomeScreenState {
     'paused'=>!r.active,
     _=>true,
    };
-   return inView&&waffraSearchAny(
-    [r.title,r.category,waffraTr(r.category)],recurringSearch);
-  }).toList()..sort((a,b){
+  }
+  const dueFilters=<String>['all','today','week','month','overdue','active','paused'];
+  final dueCounts=<String,int>{
+   for(final filter in dueFilters)
+    filter:recurring.where((r)=>duePass(r,filter)).length,
+  };
+  String dueLabel(String filter)=>switch(filter){
+   'today'=>waffraIsEnglish?'Today':'اليوم',
+   'week'=>waffraIsEnglish?'This week':'هذا الأسبوع',
+   'month'=>waffraIsEnglish?'This month':'هذا الشهر',
+   'overdue'=>waffraIsEnglish?'Overdue':'متأخرة',
+   'active'=>waffraIsEnglish?'Active':'نشطة',
+   'paused'=>waffraIsEnglish?'Inactive':'غير نشطة',
+   _=>waffraIsEnglish?'All':'الكل',
+  };
+  final shown=recurring.where((r)=>
+   duePass(r,recurringDisplay)&&
+   waffraSearchAny([r.title,r.category,waffraTr(r.category)],recurringSearch)
+  ).toList()..sort((a,b){
    final aa=a.linkedGoalId==null?nextRecurringDue(a):a.startAt;
    final bb=b.linkedGoalId==null?nextRecurringDue(b):b.startAt;
    return aa.compareTo(bb);
@@ -568,17 +583,30 @@ extension _WaffraHomeGoalsRecurringPagesModule on _HomeScreenState {
      const SizedBox(height:16),
      SingleChildScrollView(scrollDirection:Axis.horizontal,
       child:Row(children:[
-       _filterChip(waffraIsEnglish?'All':'الكل',recurringDisplay=='all',
-        ()=>setState(()=>recurringDisplay='all')),
-       const SizedBox(width:8),
-       _filterChip(waffraIsEnglish?'This week':'هذا الأسبوع',
-        recurringDisplay=='week',()=>setState(()=>recurringDisplay='week')),
-       const SizedBox(width:8),
-       _filterChip(waffraIsEnglish?'This month':'هذا الشهر',
-        recurringDisplay=='month',()=>setState(()=>recurringDisplay='month')),
-       const SizedBox(width:8),
-       _filterChip(waffraIsEnglish?'Overdue':'متأخرة',
-        recurringDisplay=='overdue',()=>setState(()=>recurringDisplay='overdue')),
+       SizedBox(width:118,child:WaffraOutlinedItemsCount(
+        label:waffraIsEnglish?'Due items':'الاستحقاقات',
+        count:recurring.length)),
+       const SizedBox(width:6),
+       _filterChip('${dueLabel(recurringDisplay)} (${dueCounts[recurringDisplay]??0})',
+        true,()=>setState(()=>recurringDisplay='all')),
+       PopupMenuButton<String>(
+        key:const Key('m938-dues-filter-menu'),
+        tooltip:waffraIsEnglish?'Filter due dates':'فلترة الاستحقاقات',
+        icon:const Icon(Icons.filter_alt_outlined,color:emerald),
+        onSelected:(v)=>setState(()=>recurringDisplay=v),
+        itemBuilder:(ctx)=>[
+         for(final filter in dueFilters)
+          PopupMenuItem<String>(key:Key('m938-due-filter-'+filter),
+           value:filter,child:Row(children:[
+            Expanded(child:WaffraText(dueLabel(filter))),
+            Text('${dueCounts[filter]??0}',style:const TextStyle(
+             color:emerald,fontWeight:FontWeight.bold)),
+            if(recurringDisplay==filter)...[
+             const SizedBox(width:6),
+             const Icon(Icons.check_rounded,color:emerald,size:17),
+            ],
+           ])),
+        ]),
        IconButton(
         key:const Key('m689-recurring-search-toggle'),
         tooltip:waffraIsEnglish?'Search due dates':'بحث في الاستحقاقات',
