@@ -1883,3 +1883,7 @@ Preserve five original test files' unchanged assertions by redirecting only thei
 
 ### M733 — Issue #633 / Draft PR #638: real verified transfer and savings cards extraction
 Owner directs completing the remaining code-only part of the Home refactor on the same Draft PR. Extract the original source/destination verified transfer labels/cards, savings contribution/withdrawal cards, and compact transfer-history sheet from `_HomeScreenState` into a same-library registered Dart part. Preserve every account identity, amount, direction, balance, goal amount, layout/FAB and no-write display rule byte-for-byte. Keep secure transfer posting and SQLCipher ledger writers untouched; add a regression asserting source registration, original finance display behavior and part-source reconstruction. Original full-screen physical Android overflow and actual old-archive restore remain separate device acceptance requirements; do not claim 100% until verified.
+
+
+### M734 — Issue #633 / Draft #638, exact M282 moved-source marker
+After M721 extraction the original M281 attachment witness exists in the registered Home account-tools Dart part. M282 must check that same literal marker in the real part while preserving the other M274–M281 and SQLCipher cutover gates; device and backup evidence remain independent.

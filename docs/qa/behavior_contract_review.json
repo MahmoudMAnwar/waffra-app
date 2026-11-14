@@ -3386,6 +3386,29 @@
         "Full transitive original AI/cloud dependency graph remains forbidden from production.",
         "No production money, backup or SMS code touched."
       ]
+    },
+    {
+      "id": "M734-M281-REGISTERED-HOME-TOOLS-SOURCE-WITNESS",
+      "issue": "Issue #633 / Draft #638",
+      "previous_behavior": "M282 M281 marker located in Home part after M721 but workflow still required raw main.dart.",
+      "approved_behavior": "Require exact original attachment marker in registered lib/waffra_home_account_tools.part.dart, unchanged other milestones.",
+      "source_paths": [
+        ".github/workflows/m282-combined-candidate.yml",
+        "lib/main.dart",
+        "lib/waffra_home_account_tools.part.dart"
+      ],
+      "test_paths": [
+        "test/m721_home_account_tools_extraction_test.dart",
+        "test/m640_receipt_reader_retirement_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m282-combined-candidate.yml"
+      ],
+      "safety_invariants": [
+        "No acceptance check skipped.",
+        "Original positive attachment marker mandatory.",
+        "No production financial code changed."
+      ]
     }
   ]
 }
