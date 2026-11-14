@@ -107,7 +107,8 @@
     "M931 #633 repair the original unweakened M636 logout/Widget safety source test after the byte-identical M929/M930 Dart-part extraction: use fail-closed actual registered Home source rather than only raw main.dart, keeping every original anti-Qwen, stationary FAB, logout fail-closed, SMS source and Widget owner assertion.",
     "M932 #633/#634 repair genuine M340 hostile FX preview mutation test after unchanged registered Home Dart extraction: include real lib/waffra_home_fx_preview.part.dart as an overridable source in M340 financial safety audit, mutate that actual file (not raw main.dart), prove both persist() and saveCaptured() illegal financial writes are rejected, and keep every original audit, baseline and fail-closed assertion. Existing scope boundaries and all 43 exact SHA CI checks remain enforced; real device acceptance separate.",
     "M932 #633 fix recurring M266 encrypted-storage CI false failure after M930 Home Widget action extraction: inspect reconstructed registered production Dart parts, preserve all original native Widget, post-auth, SQLCipher fail-closed and legacy data assertions; add exact positive registered-part proof so source relocation cannot silently bypass QA.",
-    "M933 #633 fail-closed source-contract repair: 19 Flutter failures across five jobs following registered Home part extraction. Update exact old raw-main readers and obsolete moved-method boundaries without removing money, SMS, auth or UI assertions."
+    "M933 #633 fail-closed source-contract repair: 19 Flutter failures across five jobs following registered Home part extraction. Update exact old raw-main readers and obsolete moved-method boundaries without removing money, SMS, auth or UI assertions.",
+    "M934 #633 preventive M550 preflight: dynamically inventory all declared Flutter Home Dart parts, reject positive contains/split/indexOf assertions still reading raw lib/main.dart after method extraction, preserve source guard negative assertions and add adversarial Python unit tests before expensive full CI."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -394,7 +395,8 @@
     "test/m636_owner_approved_retirement_and_ui_test.dart",
     "test/storage/m266_widget_source_fail_closed_ui_test.dart",
     "test/m227_gold_currency_original_sms_home_test.dart",
-    "test/m526_instant_insights_route_test.dart"
+    "test/m526_instant_insights_route_test.dart",
+    "test/qa/m550_behavior_contract_preflight_test.py"
   ],
   "approved_deleted_files": [
     "lib/waffra_sms_cloud_review_analyzer.dart"
@@ -575,28 +577,16 @@
     ],
     "scripts/qa/m550_behavior_contract_preflight.py": [
       {
-        "start": "def changed_paths(",
-        "end": "def _safe_literal("
+        "start": "ANCHOR_DART = re.compile(",
+        "end": "BINDING_DART = re.compile("
       },
       {
-        "start": "def validate_review(",
-        "end": "def build_report("
+        "start": "def inventory(root: Path = ROOT) -> dict:",
+        "end": "def validate_review("
       },
       {
-        "start": "    available = {x.relative_to(root).as_posix() for x in root.rglob(\"*\") if x.is_file()}",
-        "end": "    # Complete *repository* inventory, not a handpicked list of jobs."
-      },
-      {
-        "start": "    for p in sorted(sources):",
-        "end": "    # M687: same-library part moves are NOT code deletions."
-      },
-      {
-        "start": "    expected_parts = (",
-        "end": "    if home_path in new_sources:"
-      },
-      {
-        "start": "def _positive_python(",
-        "end": "def _positive_dart("
+        "start": "    stale, count = detect_stale(target_tests, old_sources, new_sources, sources)",
+        "end": "    impacted = [j for j in inv[\"jobs\"] if"
       }
     ],
     "test/m687_home_state_extraction_test.dart": [
@@ -2500,6 +2490,12 @@
       {
         "start": "void main() {",
         "end": null
+      }
+    ],
+    "test/qa/m550_behavior_contract_preflight_test.py": [
+      {
+        "start": "    def test_catches_old_dart_expectation_and_source_split_boundary(self):",
+        "end": "    def test_catches_obsolete_inline_workflow_source_assertions(self):"
       }
     ]
   }

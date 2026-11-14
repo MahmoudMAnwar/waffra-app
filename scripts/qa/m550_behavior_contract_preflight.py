@@ -29,6 +29,14 @@ ANCHOR_DART = re.compile(
     r"(?P<q>['\"])(?P<literal>(?:\\.|(?!\2).)*)\2",
     re.DOTALL,
 )
+# M934: indexOf anchors are executable source assertions too. In particular,
+# testing a moved method against raw main.dart is NOT made valid by
+# concatenating part content solely for the stale-change inventory.
+INDEXOF_DART = re.compile(
+    r"\b(?P<var>[A-Za-z_]\w*)\.indexOf\(\s*"
+    r"(?P<q>['\"])(?P<literal>(?:\\.|(?!\2).)*)\2",
+    re.DOTALL,
+)
 BINDING_DART = re.compile(
     r"\b(?:final|var)\s+(?P<var>[A-Za-z_]\w*)\s*=\s*File\(\s*"
     r"(?P<q>['\"])(?P<path>(?:lib|native|android|ios|firebase|assets)/[^'\"]+)\2\s*\)"
@@ -208,6 +216,50 @@ def detect_stale(
                               "source": source, "old_expectation": literal[:150],
                               "kind": kind})
     return stale, examined
+
+
+
+def detect_unmigrated_home_readers(
+    tests: dict[str, str], main_source: str, registered_parts: dict[str, str],
+) -> list[dict]:
+    """Reject positive test expectations against raw main that now live only in Dart parts.
+
+    The original M550 scanner appends registered parts for legitimate *reconstructed*
+    source contracts, but this is not what File('lib/main.dart') reads. Check the
+    actual file at the assertion site, not that synthetic union.
+    """
+    part_contents = "\n".join(registered_parts.values())
+    stale: list[dict] = []
+    for path, data in sorted(tests.items()):
+        if not path.endswith(".dart") or "lib/main.dart" not in data:
+            continue
+        bindings: list[tuple[int, str, bool]] = [
+            (m.start(), m["var"], m["path"] == "lib/main.dart")
+            for m in BINDING_DART.finditer(data)
+        ]
+        bindings.extend((m.start(), m["var"], False)
+                        for m in BINDING_MAIN_RECON.finditer(data))
+        for kind, pattern in (
+            ("expect contains", POSITIVE_DART),
+            ("source split anchor", ANCHOR_DART),
+            ("source indexOf anchor", INDEXOF_DART),
+        ):
+            for assertion in pattern.finditer(data):
+                literal = _safe_literal(assertion["q"], assertion["literal"])
+                if not literal or literal in main_source or literal not in part_contents:
+                    continue
+                prior = [(offset, raw) for offset, name, raw in bindings
+                         if name == assertion["var"] and offset < assertion.start()]
+                if not prior or not max(prior)[1]:
+                    continue
+                stale.append({
+                    "test": path,
+                    "line": data.count("\n", 0, assertion.start()) + 1,
+                    "source": "lib/main.dart",
+                    "old_expectation": literal[:150],
+                    "kind": kind + " (unmigrated registered Dart part)",
+                })
+    return stale
 
 
 def inventory(root: Path = ROOT) -> dict:
@@ -396,6 +448,18 @@ def build_report(base: str, head: str, root: Path = ROOT) -> dict:
                 raise ContractError(f"Unregistered or foreign Dart part: {part_path}")
             new_sources[home_path] += "\\n" + part_source
     stale, count = detect_stale(target_tests, old_sources, new_sources, sources)
+    # M934: scan ALL Dart tests against the literal raw main.dart they read.
+    # Static warnings are reported BEFORE 10-minute Flutter test suites run.
+    raw_main = (root / home_path).read_text(encoding="utf-8")
+    registered_parts: dict[str, str] = {}
+    for name in re.findall(r"(?m)^part '([^']+\.part\.dart)';", raw_main):
+        part_path = root / "lib" / name
+        if part_path.is_file():
+            content = part_path.read_text(encoding="utf-8")
+            if content.startswith("part of 'main.dart';"):
+                registered_parts[name] = content
+    stale.extend(detect_unmigrated_home_readers(
+        target_tests, raw_main, registered_parts))
     impacted = [j for j in inv["jobs"] if
                 any("flutter test test/" in cmd or
                     "unittest discover" in cmd or
