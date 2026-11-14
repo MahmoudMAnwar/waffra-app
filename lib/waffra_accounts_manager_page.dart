@@ -303,6 +303,7 @@ class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {
    subtype:choice.subtype??'other',openingMinor:choice.openingMinor,
    createdIso:DateTime.now().toIso8601String(),
    lastFour:choice.lastFour,customSubtypeLabel:choice.customSubtypeLabel,
+   customInstitutionRootId:waffraCustomInstitutionRootForGroup(providerGroup),
    userConfirmed:true);
   final refreshed=await verified.balances();
   final found=refreshed.where((a)=>a.id==newId&&!a.archived).toList();
