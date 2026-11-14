@@ -3599,6 +3599,49 @@
         "Only real registered Home source is reconstructed; missing/duplicated part fails source checks.",
         "Physical owner handset and V24 backup/restore balance parity require separate acceptance evidence."
       ]
+    },
+    {
+      "id": "M743-M744-ORIGINAL-SMS-HOME-SOURCE-REGRESSION-COMPATIBILITY",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Seventeen existing Flutter SMS, sender grouping, offline rescan, onboarding performance, biometric Home and verified account safety regression suites read inline method text directly from raw main.dart.",
+      "approved_behavior": "After registered original Home Dart-part refactors, only original static source readers are redirected to strict real registered original-code reconstruction. All existing positive, negative, performance, OTP, owner, ledger, multi-account SMS and lifecycle assertions remain unchanged.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_sms_inbox.part.dart",
+        "lib/waffra_home_sms_rules.part.dart",
+        "lib/waffra_home_sms_refresh.part.dart",
+        "test/support/waffra_main_source.dart"
+      ],
+      "test_paths": [
+        "test/m549_sms_review_owner_scoped_test.dart",
+        "test/m548_review_grouping_and_signup_perf_test.dart",
+        "test/m661_exclusion_rule_apply_regression_test.dart",
+        "test/m464_sms_bulk_rescan_regression_test.dart",
+        "test/m638_sms_inbox_delete_sync_test.dart",
+        "test/m548_source_method_boundary_guard_test.dart",
+        "test/m624_deferred_sms_after_verified_home_test.dart",
+        "test/m622_immediate_home_without_loader_test.dart",
+        "test/m630_home_first_frame_contention_test.dart",
+        "test/m632_sms_account_splash_isolate_contract_test.dart",
+        "test/m461_sms_exclusion_and_history_scan_test.dart",
+        "test/m604_fast_login_first_frame_test.dart",
+        "test/m623_verified_home_handoff_no_black_frame_test.dart",
+        "test/m629_pull_refresh_parity_auth_home_test.dart",
+        "test/m625_single_verified_home_read_login_handoff_test.dart",
+        "test/m627_home_handoff_timeout_and_session_reset_test.dart",
+        "test/m462_smart_sms_rule_review_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Every original assertion remains; no skipped or weakened financial/SMS checks.",
+        "No code outside M385 individually scoped old source reader/import ranges altered.",
+        "Use only actual registered Dart parts, not mock source or special-case stubs.",
+        "Physical Android and user's old backup/ledger parity are still not certified by source tests."
+      ]
     }
   ]
 }
