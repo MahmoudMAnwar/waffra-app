@@ -96,5 +96,9 @@ String readWaffraMainSourceForContracts(){
  if(s.split(smsConfirmationMarker).length!=2)throw StateError('Missing or duplicate original M770 SMS confirmation marker');
  s=s.replaceFirst(smsConfirmationMarker,_method('lib/waffra_home_sms_confirmation.part.dart',
   ' Future<List<MoneyEntry>> _m593BuildVerifiedEntries('));
+ const financePersistenceMarker=' // M762: verified finance persistence and recurring due/postponement methods moved unchanged to registered Home part.\n';
+ if(s.split(financePersistenceMarker).length!=2)throw StateError('Missing or duplicated M762 verified persistence source');
+ s=s.replaceFirst(financePersistenceMarker,_method('lib/waffra_home_finance_persistence_due.part.dart',
+  ' Future<void> persist('));
  return s;
 }
