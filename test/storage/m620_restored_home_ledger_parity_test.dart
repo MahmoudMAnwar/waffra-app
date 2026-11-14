@@ -72,6 +72,8 @@ void main() {
 
   test('M620 restored V24 checks canonical SQLCipher before repainting '
       'Home; SQL rollback and source-witness guards are still active', () {
+    expect(File('lib/waffra_home_account_tools.part.dart').existsSync(), isTrue,
+      reason: 'Original verified Home backup/account-tools part must exist');
     final code=readWaffraMainSourceForContracts();
     expect(code,contains("restoreStage='CANONICAL_PARITY'"));
     expect(code,contains("restoreStage='HOME_PARITY'"));
