@@ -1,13 +1,14 @@
 """M447: guard actual bank-SMS account selection through verified source."""
 import unittest
 from pathlib import Path
+from waffra_home_source import read_waffra_home_source
 
 ROOT = Path(__file__).resolve().parents[2]
 
 
 class VerifiedSmsAccountLinkingTest(unittest.TestCase):
     def test_every_home_sms_commit_reviews_accounts(self):
-        home = (ROOT / "lib/main.dart").read_text(encoding="utf-8")
+        home = read_waffra_home_source(ROOT)
         self.assertEqual(home.count("commitConfirmedSms("), 2)
         self.assertNotIn("Future<void> bulkSmsSheet(", home)
         self.assertIn("await entrySheet(sms:true,initialSms:body,reviewedSender:sender);", home)
@@ -26,13 +27,13 @@ class VerifiedSmsAccountLinkingTest(unittest.TestCase):
         self.assertEqual(home.count("expectedAccountGeneration:reviewedAccount.generation"), 1)
 
     def test_manual_and_recurring_finance_account_selection(self):
-        home = (ROOT / "lib/main.dart").read_text(encoding="utf-8")
+        home = read_waffra_home_source(ROOT)
         self.assertIn("selectedAccountId:chosen.ids?.single", home)
         self.assertIn("selectedAccountId:initial==null?chosenManual?.ids?.single:null", home)
         self.assertIn("route:WaffraFinanceRoute.recurringPostingAndPostponement", home)
 
     def test_verified_source_only_with_no_shadow_db(self):
-        home = (ROOT / "lib/main.dart").read_text(encoding="utf-8")
+        home = read_waffra_home_source(ROOT)
         reader = home.split("Future<({List<String?>? ids,int? generation})?> reviewSmsAccountLinks(", 1)[1]
         reader = reader.split("/// Budget assignment is OPTIONAL", 1)[0]
         self.assertIn("final bridge=_financeBinding?.accountsBridge;", reader)

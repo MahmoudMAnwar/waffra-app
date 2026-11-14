@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 
@@ -44,7 +45,7 @@ void main() {
  });
 
  test('M549 select 1000, no sender confirmation storm, no per-message sender receipts',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   final review=main.substring(main.indexOf(' Future<void> _openAutoSmsInbox()async{'),
    main.indexOf(' Widget _autoSmsReviewCard(){'));
   expect(review,contains('waffra-sms-select-all-visible'));
@@ -59,7 +60,7 @@ void main() {
  });
 
  test('M549 1000-message bulk confirm never parses SMS bodies on the UI isolate',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   final begin=main.indexOf('waffra-sms-bulk-exclude-selected');
   final end=main.indexOf('final confirmed=await showWaffraDialog<bool>',begin);
   expect(begin,greaterThan(0));
@@ -80,14 +81,14 @@ void main() {
   expect(native,contains('historyCursorAt'));
   expect(native,contains('historyCursorId'));
   expect(native,contains('isExcludedMessageLocked(context, fingerprint)'));
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   expect(main,contains("_autoSmsProgress['rescanNeeded']==true"));
   expect(main,contains('onPressed:canRescan?'));
   expect(main,contains('await _refreshAutoSmsInbox(importMonth:true);'));
  });
 
  test('M549 all sender lists still hide actual Android messages from deletion',(){
-  final review=File('lib/main.dart').readAsStringSync();
+  final review=readWaffraMainSourceForContracts();
   expect(review,contains('Your phone SMS and saved financial transactions are untouched.'));
   expect(review,isNot(contains('deleteAndroidSms')));
   final native=File('native/WaffraAutoSmsStore.kt').readAsStringSync();

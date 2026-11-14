@@ -1,9 +1,7 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 
 import 'waffra_ai_finance_brain.dart';
 import 'waffra_bank_sms_facts.dart';
-import 'waffra_sms_cloud_redactor.dart';
 
 /// M423: Cloudflare Worker transport for consented, redacted bank-SMS review.
 ///
@@ -13,10 +11,10 @@ import 'waffra_sms_cloud_redactor.dart';
 ///
 /// Nothing here can persist a transaction. Every result requires user review.
 abstract final class WaffraCloudflareSmsGateway {
-  static const configuredUrl = String.fromEnvironment(
-    'WAFFRA_SMS_WORKER_URL', defaultValue: '',
-  );
-  static bool get configured => configuredUrl.isNotEmpty;
+  // M698 / #634: a retired transport is NEVER configured, including when a
+  // stale release or local build still passes WAFFRA_SMS_WORKER_URL.
+  static const String configuredUrl = '';
+  static bool get configured => false;
 
   static Uri? validEndpoint(String value) {
     final uri = Uri.tryParse(value);
@@ -57,6 +55,11 @@ abstract final class WaffraCloudflareSmsGateway {
     if (response is! Map || response['ok'] != true ||
         response['unverified'] != true ||
         response['review_required'] != true) return null;
+    // Retired test-only validator: malformed/oversized provider objects
+    // are never considered financial evidence; no network request occurs.
+    try{
+      if(jsonEncode(response).length>16000)return null;
+    }catch(_){return null;}
     final rows = response['transactions'];
     // A single SMS must resolve to exactly one action or fall back locally.
     if (rows is! List || rows.length != 1 || rows.single is! Map) {
@@ -114,37 +117,13 @@ abstract final class WaffraCloudflareSmsGateway {
     };
   }
 
+  /// M695 / #634: external worker transport has been retired permanently.
+  /// Keep exact review-only validation helpers for historical safety tests,
+  /// but no client, token or SMS is ever sent off the device.
   static Future<Map<String, Object?>?> analyze({
     required String source,
     required String appCheckToken,
     required Uri endpoint,
-    http.Client? client,
-  }) async {
-    if (validEndpoint(endpoint.toString()) == null ||
-        appCheckToken.isEmpty) return null;
-    final redacted = WaffraSmsCloudRedactor.redact(source);
-    if (redacted == null) return null;
-    final owned = client == null;
-    final transport = client ?? http.Client();
-    try {
-      final result = await transport.post(
-        endpoint,
-        headers: <String, String>{
-          'content-type': 'application/json',
-          'X-Firebase-AppCheck': appCheckToken,
-        },
-        body: jsonEncode(<String, Object>{
-          'cloudConsent': true,
-          'text': redacted,
-        }),
-      ).timeout(const Duration(seconds: 18));
-      if (result.statusCode != 200 || result.body.length > 16000) return null;
-      return validateSuggestion(redacted, jsonDecode(result.body));
-    } catch (_) {
-      // Never log bank SMS, tokens, model output or provider errors.
-      return null;
-    } finally {
-      if (owned) transport.close();
-    }
-  }
+    Object? client,
+  }) async => null;
 }

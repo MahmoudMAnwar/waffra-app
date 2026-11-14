@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_backup_files.dart';
@@ -15,7 +16,7 @@ void main(){
  });
 
  test('M150: manual income/expense picker receives only leaf categories',(){
-  final source=File('lib/main.dart').readAsStringSync();
+  final source=readWaffraMainSourceForContracts();
   expect(source,contains('List<BudgetCategory> forManualTransactionType(bool income)=>'));
   expect(source,contains('c.income==income&&c.isSubcategory'));
   expect(source,contains('final mainCategories=waffraManualCategoryParents(available,income);'));
@@ -45,7 +46,7 @@ void main(){
  });
 
  test('M150: export never writes encrypted archive to clipboard',(){
-  final source=File('lib/main.dart').readAsStringSync();
+  final source=readWaffraMainSourceForContracts();
   final start=source.indexOf('Future<void> backupDialog()');
   final end=source.indexOf('// System credentials are never saved',start);
   expect(start,greaterThan(-1));

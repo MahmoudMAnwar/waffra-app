@@ -1,8 +1,9 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  final app=File('lib/main.dart').readAsStringSync();
+  final app=readWaffraMainSourceForContracts();
   final root=app.split('class _WaffraAppState extends State<WaffraApp>')[1]
     .split('class PinLockScreen extends StatefulWidget')[0];
   final home=app.split('class _HomeScreenState extends State<HomeScreen>')[1];

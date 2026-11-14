@@ -30,7 +30,8 @@ void main() {
 
  test('M639 updates visible strings only, preserving Android opt-in and retry', () {
   final source=File('lib/waffra_auto_sms_consent.dart').readAsStringSync();
-  expect(source,contains('await WaffraSmsCloudService.setConsent(false);'));
+  expect(source,contains("await prefs.remove('waffra_cloud_sms_installation_consent_v2');"));
+  expect(source,isNot(contains('waffra_sms_cloud_service.dart')));
   expect(source,contains('final smsAllowed=await WaffraAutoSms.optIn();'));
   expect(source,contains('if(!smsAllowed){'));
   expect(source,contains('await WaffraAutoSms.requestNotificationPermission();'));
@@ -38,7 +39,7 @@ void main() {
   expect(source,contains("'تعذر استكمال إعداد الأذونات. أعد المحاولة للمتابعة بأمان.'"));
   expect(source,contains("widget.english?'Retry':'إعادة المحاولة'"));
   expect(
-   source.indexOf('await WaffraSmsCloudService.setConsent(false);'),
+   source.indexOf("await prefs.remove('waffra_cloud_sms_installation_consent_v2');"),
    lessThan(source.indexOf('await WaffraAutoSms.optIn();')),
   );
  });

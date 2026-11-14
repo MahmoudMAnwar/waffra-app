@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'waffra_auto_sms.dart';
-import 'waffra_sms_cloud_service.dart';
+import 'dart:io';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Follow-up to account creation: only Android's SMS and notification
 /// permission dialogs, in that order. No cloud or classification choice.
@@ -28,8 +29,12 @@ class _WaffraAutoSmsConsentPageState extends State<WaffraAutoSmsConsentPage> {
   if(busy)return;
   setState((){busy=true;error=null;});
   try{
-   // Never opt in to the external AI on behalf of the user.
-   await WaffraSmsCloudService.setConsent(false);
+   // M705: retire the exact old cloud consent locally without importing
+   // any dormant network/AI module into the live permission route.
+   if(Platform.isAndroid){
+    final prefs=await SharedPreferences.getInstance();
+    await prefs.remove('waffra_cloud_sms_installation_consent_v2');
+   }
    // WaffraAutoSms.optIn first requests READ_SMS and RECEIVE_SMS; when
    // granted, it then requests Android notification permission.
    final smsAllowed=await WaffraAutoSms.optIn();

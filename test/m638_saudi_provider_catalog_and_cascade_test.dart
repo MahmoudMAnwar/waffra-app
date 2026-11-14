@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/storage/waffra_accounts_repository.dart';
@@ -45,7 +46,7 @@ void main(){
  });
 
  test('M638 income/expense/transfer gate parent type and dependent account',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   expect(main,contains('m638-home-manual-institution-type-'));
   expect(main,contains('m638-transfer-type-'));
   expect(main,contains('chosenManualProviderCategory=type;'));

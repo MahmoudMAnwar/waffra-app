@@ -133,6 +133,9 @@ def audit_scope(manifest: dict, changed: set[str],
         # M671 #605: owner explicitly retired the seven-step onboarding tour.
         # Exact file only; the general M385 fail-closed policy is unchanged.
         "lib/waffra_tour_plan.dart",
+        # M700 #634: owner-retired unreachable cloud SMS staging module;
+        # allow this exact deletion only; all other files remain fail-closed.
+        "lib/waffra_sms_cloud_review_analyzer.dart",
     }
     for p in deletions:
         if p not in explicitly_retired:

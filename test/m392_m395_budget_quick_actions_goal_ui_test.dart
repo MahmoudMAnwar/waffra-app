@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/main.dart';
@@ -28,7 +29,7 @@ void main() {
  });
 
  test('M393 goal pause is explicit in Quick Actions, with guarded finance writes',(){
-  final source=File('lib/main.dart').readAsStringSync();
+  final source=readWaffraMainSourceForContracts();
   final linked=File('lib/waffra_goal_recurring_actions.part.dart').readAsStringSync();
   expect(source,contains("'waffra-goal-quick-actions-'"));
   expect(source,contains("'waffra-goal-active-switch-'"));
@@ -44,7 +45,7 @@ void main() {
  });
 
  test('M393 recurring Quick Actions preserve original edit/delete/toggle',(){
-  final source=File('lib/main.dart').readAsStringSync();
+  final source=readWaffraMainSourceForContracts();
   // M689: compact due card shows actions directly, no oversized expander.
   expect(source,contains("'m689-due-card-'"));
   expect(source,isNot(contains("PageStorageKey<String>('waffra-recurring-quick-actions-'")));
@@ -75,7 +76,7 @@ void main() {
  });
 
  test('M395 search and visible scrollbars do not mutate finance models',(){
-  final source=File('lib/main.dart').readAsStringSync();
+  final source=readWaffraMainSourceForContracts();
   expect(source,contains("'waffra-goals-search'"));
   expect(source,contains("'waffra-recurring-search'"));
   expect(source,contains("controller:_goalsScrollController,thumbVisibility:true"));
@@ -86,7 +87,7 @@ void main() {
  });
 
  test('M396 new due entries require explicit consent, never silently debit',(){
-  final home=File('lib/main.dart').readAsStringSync();
+  final home=readWaffraMainSourceForContracts();
   final linked=File('lib/waffra_goal_recurring_actions.part.dart').readAsStringSync();
   expect(home,contains('final linkNew=g.dueDate!=null&&g.target>0&&g.active&&'));
   expect(home,contains('await _confirmGoalDueRecurringLink(g)'));

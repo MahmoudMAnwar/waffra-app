@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -41,7 +42,7 @@ void main(){
  });
 
  test('M495 #418 date fills row and budget is equally expanded when present',(){
-  final src=File('lib/main.dart').readAsStringSync();
+  final src=readWaffraMainSourceForContracts();
   final from=src.indexOf('Future<void> entrySheet({MoneyEntry? initial');
   final to=src.indexOf('Future<void> showReceipt(',from);
   expect(from,greaterThanOrEqualTo(0));
@@ -54,7 +55,7 @@ void main(){
  });
 
  test('M495 #412 user-confirmed financial account bypasses repeat popup',(){
-  final src=File('lib/main.dart').readAsStringSync();
+  final src=readWaffraMainSourceForContracts();
   final from=src.indexOf('reviewSmsAccountLinks(');
   final to=src.indexOf('/// Budget assignment is OPTIONAL',from);
   expect(from,greaterThanOrEqualTo(0));
@@ -67,7 +68,7 @@ void main(){
  });
 
  test('M495 #419 avoid synchronous UI blocking during navigation and refresh',(){
-  final src=File('lib/main.dart').readAsStringSync();
+  final src=readWaffraMainSourceForContracts();
   expect(src,contains('if(_m486ResumeQueued)return;'));
   expect(src,contains('WidgetsBinding.instance.addPostFrameCallback'));
   expect(src,contains('if(target<0||target>=WaffraFooterNavigation.itemCount'));
@@ -77,7 +78,7 @@ void main(){
  });
 
  test('M499 #416 all editor entry points expose dependent inline Add',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   final form=File('lib/waffra_account_transaction_form.dart').readAsStringSync();
   final manager=File('lib/waffra_accounts_manager_page.dart').readAsStringSync();
   expect(main,contains('forTransfer:true,transferTarget:target'));
@@ -99,7 +100,7 @@ void main(){
  });
 
  test('M500 #420 Details Edit enables verified retroactive account link',(){
-  final src=File('lib/main.dart').readAsStringSync();
+  final src=readWaffraMainSourceForContracts();
   final from=src.indexOf('Future<void> entrySheet({MoneyEntry? initial');
   final to=src.indexOf('Future<void> showReceipt(',from);
   expect(from,greaterThanOrEqualTo(0));

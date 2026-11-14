@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/main.dart' show WaffraNamedBudget;
 import 'package:waffra/waffra_account_monthly_budget_policy.dart';
@@ -62,7 +63,7 @@ void main(){
   }),throwsFormatException);
  });
  test('M470 budget creation/edit and monthly Home card read explicit money account',(){
-  final source=File('lib/main.dart').readAsStringSync();
+  final source=readWaffraMainSourceForContracts();
   expect(source,contains("Key('m470-budget-create-account')"));
   expect(source,contains("Key('m470-budget-edit-account')"));
   expect(source,contains("assignedAccountId:selected.accountId"));

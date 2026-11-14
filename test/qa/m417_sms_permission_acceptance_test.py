@@ -38,7 +38,14 @@ class M417AutoSmsContractTest(unittest.TestCase):
         self.assertNotIn("commitConfirmedSms",receiver+queue)
 
     def test_writes_only_from_existing_verified_sms_review(self):
-        home=self.read("lib/main.dart")+self.read("lib/waffra_home_profile.part.dart")
+        from waffra_home_source import read_waffra_home_source
+        main=self.read("lib/main.dart")
+        # Retain the original registered-transfer marker and the real finance
+        # assertions, but reconstruct every registered Home part in source order.
+        marker=" // M703: implementation moved byte-identically to registered Home part."
+        self.assertIn(marker,main)
+        self.assertIn("part 'waffra_home_sms_transfer_review.part.dart';",main)
+        home=read_waffra_home_source()
         self.assertIn("await entrySheet(sms:true,initialSms:body,reviewedSender:sender);",home)
         self.assertIn("smsHashes.contains(bankSmsHash(body))",home)
         # Income/expense and two-sided transfers have independent durable
@@ -84,7 +91,8 @@ class M417AutoSmsContractTest(unittest.TestCase):
         ui=self.read("lib/waffra_auto_sms_consent.dart")
         # Account creation is followed by Android SMS then notifications.
         # Cloud disclosure must be separate and tied to a specific message.
-        self.assertIn("await WaffraSmsCloudService.setConsent(false)",ui)
+        self.assertIn("await prefs.remove('waffra_cloud_sms_installation_consent_v2');",ui)
+        self.assertNotIn("waffra_sms_cloud_service.dart",ui)
         self.assertIn("await WaffraAutoSms.optIn()",ui)
         self.assertIn("await WaffraAutoSms.requestNotificationPermission()",ui)
         self.assertNotIn("allow(cloud:true)",ui)

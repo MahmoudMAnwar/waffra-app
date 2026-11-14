@@ -1,5 +1,6 @@
 
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -54,7 +55,7 @@ void main(){
  });
 
  test('M641 zero-account recurring dialog opens; fund and due never double post',(){
-  final app=File('lib/main.dart').readAsStringSync();
+  final app=readWaffraMainSourceForContracts();
   final start=app.indexOf(' Future<void> recurringDialog(');
   final end=app.indexOf(' DateTime nextRecurringDue(',start);
   expect(start,greaterThan(0));expect(end,greaterThan(start));

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/main.dart';
@@ -51,7 +52,7 @@ void main() {
   });
 
   test('M470 #18: first SMS tap opens selected review without PopScope veto', () {
-    final app=File('lib/main.dart').readAsStringSync();
+    final app=readWaffraMainSourceForContracts();
     final inbox=app.substring(app.indexOf(' Future<void> _openAutoSmsInbox()'),
         app.indexOf(' Widget _autoSmsReviewCard()'));
     expect(inbox,contains('openingReviewId'));
@@ -66,7 +67,7 @@ void main() {
   });
 
   test('M470 #19: post-back subcategory must be current parent-scoped', () {
-    final app=File('lib/main.dart').readAsStringSync();
+    final app=readWaffraMainSourceForContracts();
     final editor=app.substring(app.indexOf(' Future<void> entrySheet('),
       app.indexOf(' Future<void> showReceipt('));
     expect(editor,contains("Key('m470-entry-subcategory-picker')"));
@@ -78,7 +79,7 @@ void main() {
   });
 
   test('M470 #13: transfer review never relies on fee-bearing BankParser amount', () {
-    final app=File('lib/main.dart').readAsStringSync();
+    final app=readWaffraMainSourceForContracts();
     final transfer=app.substring(
       app.indexOf(' Future<void> _reviewSmsAccountTransfer('),
       app.indexOf(' Future<void> _reviewAutoSmsCandidates('));

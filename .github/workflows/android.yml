@@ -7,12 +7,6 @@ on:
     branches:
       - main
   workflow_dispatch:
-    inputs:
-      sms_staging_worker:
-        description: 'Owner QA APK on main only: enable Firebase App Check Cloudflare SMS staging'
-        required: false
-        type: boolean
-        default: false
 
 # Fast-build concurrency: only the latest pushed revision needs an APK.
 # Separate full-smoke workflow runs independently without skipped steps.
@@ -972,21 +966,10 @@ jobs:
           else
             echo "::warning::WAFFRA_PUBLIC_EIA_KEY is not configured; oil quotes will depend on unkeyed FRED CSV availability"
           fi
-          # M436: Owner-approved exact-main QA APKs can analyze opted-in,
-          # redacted bank SMS into encrypted review suggestions. NO auto-post.
-          # All Play AAB builds and non-main branches stay cloud-disabled.
-          sms_define=()
-          if [[ "${{ inputs.sms_staging_worker }}" == "true" && "${{ github.ref }}" != "refs/heads/main" ]]; then
-            echo "::error::Cloud SMS staging APK is allowed only from main"
-            exit 1
-          fi
-          if [[ "${{ github.ref }}" == "refs/heads/main" && ( "${{ github.event_name }}" == "push" || "${{ github.event_name }}" == "workflow_dispatch" ) ]]; then
-            sms_define+=(--dart-define="WAFFRA_SMS_WORKER_URL=https://waffra-sms-appcheck-staging.mahmoudmanwar159.workers.dev/analyze")
-            echo "Signed main QA APK: opt-in App Check cloud SMS suggestions to staging (NO auto-post)"
-          fi
+          # M436: External bank-SMS AI staging retired by M690 / #632.
           for attempt in 1 2 3 4; do
             echo "Android ARM64 build attempt ${attempt}/4"
-            if flutter build apk --no-pub --release --target-platform android-arm64 --tree-shake-icons "${eia_define[@]}" "${sms_define[@]}"; then
+            if flutter build apk --no-pub --release --target-platform android-arm64 --tree-shake-icons "${eia_define[@]}"; then
               elapsed=$(( $(date +%s) - started ))
               printf 'ARM64 build command: **%s seconds** (including retries, if any).\n' "$elapsed" >> "$GITHUB_STEP_SUMMARY"
               echo "WAFFRA_ARM64_BUILD_SECONDS=$elapsed"

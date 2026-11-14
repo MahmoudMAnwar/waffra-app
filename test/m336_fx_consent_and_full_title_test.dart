@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_foreign_currency_preview.dart';
@@ -65,7 +66,7 @@ void main() {
  });
 
  test('M640 foreign SMS source still blocks SAR posting without verification',(){
-  final app=File('lib/main.dart').readAsStringSync();
+  final app=readWaffraMainSourceForContracts();
   expect(app,contains('WaffraSmsCurrencies.requiresReviewForSarLedger(message.text)'));
   expect(app,contains('WaffraSmsCurrencies.originalAmount(initialSms)'));
   expect(app,isNot(contains('WaffraBankScreenshotParser.requiresForeignCurrencyReview(')));
@@ -73,7 +74,7 @@ void main() {
  });
 
  test('M336 title is not forced into a single line',(){
-  final app=File('lib/main.dart').readAsStringSync();
+  final app=readWaffraMainSourceForContracts();
   final start=app.indexOf('Widget compactTransaction(MoneyEntry entry)');
   final end=app.indexOf('Widget dashboard()',start);
   expect(app.substring(start,end),contains('WaffraText(entry.title,maxLines:3'));

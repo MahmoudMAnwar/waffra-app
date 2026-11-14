@@ -1,8 +1,9 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main(){
- final source=File('lib/main.dart').readAsStringSync();
+ final source=readWaffraMainSourceForContracts();
  final root=source.split(' Widget _m623RootContent(BuildContext rootContext){')[1]
   .split(' @override Widget build(BuildContext context)=>MaterialApp(')[0];
  final homeLoader=source.split(' Future<void> _loadFinanceSafely()async{')[1]

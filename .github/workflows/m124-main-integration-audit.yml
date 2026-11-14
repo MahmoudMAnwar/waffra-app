@@ -52,7 +52,12 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          main=Path('lib/main.dart').read_text()
+          import sys
+          # M901: inspect only real, registered production Home Dart parts.
+          # Missing or duplicate extraction markers fail closed in this helper.
+          sys.path.insert(0, str(Path('test/qa').resolve()))
+          from waffra_home_source import read_waffra_home_source
+          main=read_waffra_home_source()
           widget=Path('native/WaffraWidget.kt').read_text()
           bridge=Path(
               'lib/storage/waffra_verified_encrypted_finance_bridge.dart'

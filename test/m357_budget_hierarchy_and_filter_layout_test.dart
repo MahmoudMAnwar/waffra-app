@@ -1,10 +1,11 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('M373 named-budget selection is independent of category hierarchy', () {
-    final app=File('lib/main.dart').readAsStringSync();
+    final app=readWaffraMainSourceForContracts();
     final create=app.split('Future<String?> chooseBudgetCategory(').last
      .split('void refreshFromBudgetDirectory()').first;
     expect(create,contains("'waffra-independent-budget-create'"));
@@ -15,7 +16,7 @@ void main() {
   });
 
   test('M357 budget card is collapsible and edit/delete are explicit', () {
-    final app = File('lib/main.dart').readAsStringSync();
+    final app = readWaffraMainSourceForContracts();
     expect(app, contains('bool monthlyBudgetDetailsOpen=false;'));
     expect(app, contains("'waffra-month-budget-expand-toggle'"));
     expect(app, contains('if(monthlyBudgetDetailsOpen)...['));

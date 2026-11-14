@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -102,7 +103,7 @@ void main() {
   }
 
   test('M354 actual manual/SMS/OCR route uses safe pinned footer',(){
-    final home=File('lib/main.dart').readAsStringSync();
+    final home=readWaffraMainSourceForContracts();
     final start=home.indexOf('final result=await showModalBottomSheet<MoneyEntry>(');
     final end=home.indexOf(
       'debounce?.cancel();disposeLater([title,value,notes,message,transferAmount,transferNote]);',start);

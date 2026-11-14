@@ -8,25 +8,23 @@ void main(){
   expect(src,contains('child:WaffraMandatoryBiometricGate'));
   expect(src,contains('WaffraLocalPhoneCredentials.verify('));
   expect(src,contains('WaffraLocalAccountMigration('));
-  expect(src,contains('WaffraSmsCloudService.setConsent(enabled)'));
+  expect(src,isNot(contains('WaffraSmsCloudService.setConsent(enabled)')));
   expect(src,contains('await WaffraAutoSms.disable();'));
   expect(src,isNot(contains("_accountTile(waffraIsEnglish?'PIN app lock'")));
  });
- test('M429 Cloudflare is app-attested, free-only and never embeds staging key',(){
+ test('M690 retired cloud SMS service cannot enable or upload',(){
   final cloud=File('lib/waffra_sms_cloud_service.dart').readAsStringSync();
-  final worker=File('cloudflare/waffra_sms_worker.mjs').readAsStringSync();
-  expect(cloud,contains('waffra_cloud_sms_installation_consent_v2'));
-  expect(cloud,contains('FirebaseAppCheck'));
-  expect(worker,contains('SMS_RATE_LIMITER'));
-  expect(worker,contains('SMS_IP_LIMITER'));
-  expect(worker,contains("'openrouter/free'"));
-  expect(worker,isNot(contains('WAFFRA_STAGING_TOKEN')));
+  expect(cloud,contains('hasConsent()async=>false'));
+  expect(cloud,contains('await prefs.remove(_key)'));
+  expect(cloud,contains('analyzeIfConsented(String source)async=>null'));
+  expect(cloud,isNot(contains('FirebaseAppCheck')));
  });
  test('M430: first-run consent does not reimport historical bank inbox',(){
   final bridge=File('lib/waffra_auto_sms.dart').readAsStringSync();
   final consent=File('lib/waffra_auto_sms_consent.dart').readAsStringSync();
   expect(bridge,isNot(contains("channel.invokeMethod<int>('importRecentBankSms')")));
-  expect(consent,contains('await WaffraSmsCloudService.setConsent(false)'));
+  expect(consent,contains("await prefs.remove('waffra_cloud_sms_installation_consent_v2');"));
+  expect(consent,isNot(contains('waffra_sms_cloud_service.dart')));
   expect(consent,contains('await WaffraAutoSms.optIn()'));
  });
 
@@ -60,20 +58,13 @@ void main(){
   expect(main,contains('reviewSmsBudgetLinks([record])'));
   expect(main,contains('if(targetId!=null&&id!=targetId)continue;'));
  });
-  test('M436 signed QA APK Cloudflare staging is main only, cloud opt-in',(){
-  final workflow=File('.github/workflows/android.yml').readAsStringSync();
-  expect(workflow,contains('sms_staging_worker:'));
-  expect(workflow,contains('default: false'));
-  expect(workflow,contains('github.event_name'));
-  expect(workflow,contains('"push"'));
-  expect(workflow,contains('refs/heads/main'));
-  expect(workflow,contains('Cloud SMS staging APK is allowed only from main'));
-  expect(workflow,contains('WAFFRA_SMS_WORKER_URL=https://waffra-sms-appcheck-staging.mahmoudmanwar159.workers.dev/analyze'));
-  expect(workflow,contains('"\${sms_define[@]}"'));
-  expect(workflow,contains('flutter build appbundle --no-pub --release --target-platform android-arm64 --tree-shake-icons "\${eia_define[@]}"'));
-  expect(workflow,isNot(contains('OPENROUTER_API_KEY')));
+ test('M690 no signed APK or AAB contains cloud SMS staging',(){
+  final build=File('.github/workflows/android.yml').readAsStringSync();
+  expect(build,isNot(contains('WAFFRA_SMS_WORKER_URL=')));
+  expect(build,isNot(contains('sms_staging_worker:')));
+  expect(build,isNot(contains('sms_define')));
+  expect(build,contains('flutter build appbundle --no-pub --release'));
  });
-
 
  test('M434 encrypted SMS inbox groups real sender and displays count',(){
   final main=readWaffraMainSourceForContracts();

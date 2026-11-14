@@ -41,7 +41,10 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           widget=Path('native/WaffraWidget.kt').read_text()
-          home=Path('lib/main.dart').read_text()
+          import sys
+          sys.path.insert(0, str(Path('test/qa').resolve()))
+          from waffra_home_source import read_waffra_home_source
+          home=read_waffra_home_source()
           bridge=Path('lib/waffra_home_widget.dart').read_text()
           rules=Path('lib/waffra_merchant_rules.dart').read_text()
           assert not Path('lib/waffra_widget_capture.part.dart').exists()

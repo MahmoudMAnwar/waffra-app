@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:waffra/main.dart';
@@ -152,7 +153,7 @@ void main() {
   });
 
   test('P0: all app finance entry points use the safe feedback boundary',(){
-    final code=File('lib/main.dart').readAsStringSync();
+    final code=readWaffraMainSourceForContracts();
     // M468 preserves the same progress controller but sequences preparation and
     // commits to prevent out-of-order financial writes.
     expect(code,contains('final saving=_saveProgress.track<void>('));

@@ -1,4 +1,5 @@
 import 'dart:io';
+import '../support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/storage/waffra_production_finance_routing_gate.dart';
@@ -16,7 +17,9 @@ void main() {
   ];
 
   test('M175 exact Home live writes carry their distinct finance intent', () {
-    final home = File('lib/main.dart').readAsStringSync();
+    expect(File('lib/waffra_home_entry_sheet.part.dart').existsSync(), isTrue,
+      reason: 'Original verified Home transaction editor part must exist');
+    final home = readWaffraMainSourceForContracts();
     expect(home, contains(
       'WaffraFinanceRoute route = WaffraFinanceRoute.transactionEdit,'));
     expect(home, contains('route:route,\n    baseline:baseline,'));

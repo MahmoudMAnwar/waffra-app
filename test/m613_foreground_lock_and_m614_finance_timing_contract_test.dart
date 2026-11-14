@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 
@@ -20,7 +21,7 @@ void main() {
  });
 
  test('M614 profile-mode spans distinguish secure login from verified financial first frame', () {
-  final app=File('lib/main.dart').readAsStringSync();
+  final app=readWaffraMainSourceForContracts();
   final signIn=app.substring(
    app.indexOf(' Future<void> _signIn()async{'),
    app.indexOf(' String get maskedLastPhone{'));

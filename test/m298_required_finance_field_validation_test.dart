@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'support/waffra_main_source.dart';
 import 'package:waffra/waffra_validators.dart';
 
 void main() {
@@ -51,7 +52,7 @@ void main() {
  });
 
  test('M298 all three finance entry points display category error and reject invalid selection',(){
-  final source=File('lib/main.dart').readAsStringSync();
+  final source=readWaffraMainSourceForContracts();
   // M335 replaces the old flat category menu with required main/subcategory
   // pickers. Both the bulk SMS review and the shared manual/scan/SMS entry
   // sheet must reject an invalid (or stale) leaf before persisting money.

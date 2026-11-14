@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import '../support/waffra_main_source.dart';
 import 'package:waffra/storage/waffra_production_finance_routing_gate.dart';
 import 'package:waffra/storage/waffra_production_finance_source_guard.dart';
 import 'package:waffra/storage/waffra_runtime_finance_route_contract.dart';
@@ -16,7 +17,7 @@ void main() {
   ];
 
   test('M176 every existing category, goal, recurring and budget save is tagged', () {
-    final home = File('lib/main.dart').readAsStringSync();
+    final home = readWaffraMainSourceForContracts();
     final trash = File('lib/waffra_recurring_trash.part.dart').readAsStringSync();
     // The newer fail-closed _persistModuleOrReload path replaces some
     // legacy direct persist calls. M373 also split named budget creation/toggle
@@ -106,7 +107,7 @@ void main() {
     for (final intent in intents) {
       expect(audit.blockers, contains('unverified_route_${intent.name}'));
     }
-    final home = File('lib/main.dart').readAsStringSync();
+    final home = readWaffraMainSourceForContracts();
     expect(home, contains('Future<void> persist({'));
     expect(home, contains('final baseline=_lastFinanceAuthorityRead;'));
     expect(home, contains('_financialWriteQueue.submit(snapshot,'));

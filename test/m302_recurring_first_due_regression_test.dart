@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'support/waffra_main_source.dart';
 import 'package:waffra/waffra_recurring_policy.dart';
 
 void main(){
@@ -69,7 +70,7 @@ void main(){
  });
 
  test('M302 real app overview reads the same verified recurring due policy',(){
-  final code=File('lib/main.dart').readAsStringSync();
+  final code=readWaffraMainSourceForContracts();
   expect(code,contains('WaffraRecurringPolicy.nextActionableDue('));
   expect(code,contains('currentMonthPaid:entries.any((entry)=>entry.id==monthId)'));
   expect(code,contains("postponedUntil:DateTime.tryParse(recurringPostponed[monthId]??'')"));

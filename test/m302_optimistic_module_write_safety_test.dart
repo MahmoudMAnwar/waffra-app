@@ -1,10 +1,11 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'support/waffra_main_source.dart';
 
 void main() {
  test('M302 all optimistic module writes must recover authoritative finance state',(){
-  final s=File('lib/main.dart').readAsStringSync();
+  final s=readWaffraMainSourceForContracts();
   final guardStart=s.indexOf('Future<bool> _persistModuleOrReload(');
   final guardEnd=s.indexOf('Future<void> _persistSmsHashes(',guardStart);
   expect(guardStart,greaterThan(0));
@@ -27,7 +28,7 @@ void main() {
  });
 
  test('M302 goal funding does not celebrate uncommitted savings',(){
-  final code=File('lib/main.dart').readAsStringSync();
+  final code=readWaffraMainSourceForContracts();
   final start=code.indexOf('Future<void> fundGoal(');
   final end=code.indexOf('IconData goalIcon(',start);
   expect(start,greaterThan(0));
@@ -57,7 +58,7 @@ void main() {
  });
 
  test('M302 inline category picker returns a new name only after durable save',(){
-  final code=File('lib/main.dart').readAsStringSync();
+  final code=readWaffraMainSourceForContracts();
   final start=code.indexOf('Future<String?> chooseTransactionCategory(');
   final end=code.indexOf('Future<String?> _promptReceiptLabel(',start);
   expect(start,greaterThan(0));
@@ -82,7 +83,7 @@ void main() {
  });
 
  test('M302 recurring reminders are not scheduled for rejected mutations',(){
-  final code=File('lib/main.dart').readAsStringSync();
+  final code=readWaffraMainSourceForContracts();
   final actionStart=code.indexOf('Future<void> _setRecurringActiveFromCard(');
   final actionEnd=code.indexOf('Widget recurringPage(){',actionStart);
   expect(actionStart,greaterThan(0));

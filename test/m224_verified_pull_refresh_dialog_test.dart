@@ -1,9 +1,10 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('M224 pulls verified finance data instead of repainting stale UI', () {
-    final code=File('lib/main.dart').readAsStringSync();
+    final code=readWaffraMainSourceForContracts();
     expect(code,contains('Future<void> _refreshFromVerifiedFinance()async'));
     expect(code,contains('await _financialWriteQueue.drain()'));
     expect(code,contains('view.requireIntegrity()'));
@@ -20,7 +21,7 @@ void main() {
   });
 
   test('M224 recurring due reminder shows RTL-safe independent fields and equal-width actions', () {
-    final code=File('lib/main.dart').readAsStringSync();
+    final code=readWaffraMainSourceForContracts();
     expect(code,contains("'هل تم الدفع، أم ترغب في تأجيل الاستحقاق؟'"));
     expect(code,contains("Directionality(textDirection:TextDirection.ltr,"));
     expect(code,contains("actions:[SizedBox(width:min(330.0"));
@@ -37,7 +38,7 @@ void main() {
   });
 
   test('M224 original SMS legacy storage ban remains unchanged', () {
-    final code=File('lib/main.dart').readAsStringSync();
+    final code=readWaffraMainSourceForContracts();
     expect(code,contains('if(WaffraSmsCurrencies.requiresReviewForSarLedger(message.text))'));
     expect(code,contains('Foreign or unknown currency: no transaction was saved as SAR'));
     expect(code,contains("notes:body,sourceType:'sms'"));

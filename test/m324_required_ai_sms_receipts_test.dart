@@ -1,8 +1,9 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main(){
- final home=File('lib/main.dart').readAsStringSync();
+ final home=readWaffraMainSourceForContracts();
  test('M636 plus offers manual entry, not bank-message paste',(){
   expect(home,contains("label:waffraIsEnglish?'Add manual transaction':'إضافة عملية يدوية'"));
   expect(home,contains('unawaited(_launchAddAction(()=>entrySheet(),fromMenu:true))'));

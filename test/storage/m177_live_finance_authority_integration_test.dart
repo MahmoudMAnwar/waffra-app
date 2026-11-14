@@ -1,4 +1,5 @@
 import 'dart:io';
+import '../support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -178,7 +179,7 @@ void main() {
   });
 
   test('M177 no screen still directly uses a legacy finance write', () {
-    final home = File('lib/main.dart').readAsStringSync();
+    final home = readWaffraMainSourceForContracts();
     expect(home, isNot(contains('_homeFinancePersistence.withLegacyWriter(')));
     expect(home, isNot(contains('_homeFinancePersistence.loadCustomGoalSuggestions(')));
     expect(home, isNot(contains('_homeFinancePersistence.addCustomGoalSuggestion(')));

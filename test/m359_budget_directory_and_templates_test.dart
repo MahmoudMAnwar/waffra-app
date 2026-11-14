@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_budget_template_catalog.dart';
@@ -49,7 +50,7 @@ void main() {
   });
 
   test('M359: overall budget is computed, transaction review can create budget', () {
-    final app = File('lib/main.dart').readAsStringSync();
+    final app = readWaffraMainSourceForContracts();
     expect(app, contains('final overallLimit=allBudgets.fold<double>'));
     expect(app, contains('final overallSpent=monthEntries.where('));
     expect(app, contains("'الميزانية الشهرية العامة'"));

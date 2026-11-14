@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_large_json_decode.dart';
 
@@ -26,7 +27,7 @@ void main(){
   expect(jsonDecode(await WaffraLargeJsonDecode.encodeRecords(records)),records);
  });
  test('M468 save freezes the ledger before deferring encoding and guarding',(){
-  final src=File('lib/main.dart').readAsStringSync();
+  final src=readWaffraMainSourceForContracts();
   final start=src.indexOf(' Future<void> persist({');
   final end=src.indexOf(' Future<bool> _persistModuleOrReload(',start);
   expect(start,greaterThan(0));
@@ -46,7 +47,7 @@ void main(){
   expect(route,contains('await _financeAuthority.saveCaptured('));
  });
  test('M468 first install and pull use the same verified parsing contract',(){
-  final src=File('lib/main.dart').readAsStringSync();
+  final src=readWaffraMainSourceForContracts();
   expect(src,contains('await WaffraLargeJsonDecode.parse(raw)'));
   // M603: verified ledger projection yields after bounded mapping,
   // retaining all rows, their order and source integrity checks.

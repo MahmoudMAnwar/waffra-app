@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter/material.dart';
 import 'package:waffra/waffra_i18n.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -89,7 +90,7 @@ void main(){
  });
 
  test('M353 all screens gate NEW standalone budget assignment and retain old links',(){
-  final home=File('lib/main.dart').readAsStringSync();
+  final home=readWaffraMainSourceForContracts();
   final directory=File('lib/waffra_budget_directory.part.dart').readAsStringSync();
   // Old category-backed budgets still deserialize for non-destructive upgrades,
   // but new budgets and assignments must use independent names and IDs.
@@ -115,7 +116,7 @@ void main(){
  });
 
  test('M353 transaction details warn with optional link after resume',(){
-  final home=File('lib/main.dart').readAsStringSync();
+  final home=readWaffraMainSourceForContracts();
   expect(home,contains("Key('waffra-transaction-budget-unlinked-warning')"));
   expect(home,contains('if(entry.budgetId==null)'));
   expect(home,contains("Key('waffra-transaction-link-budget-action')"));
@@ -130,7 +131,7 @@ void main(){
  });
 
  test('M353 paused standalone budget toggles never touch original finance transaction',(){
-  final home=File('lib/main.dart').readAsStringSync();
+  final home=readWaffraMainSourceForContracts();
   final scope=home.split('Future<void> setNamedBudgetActive(').last
     .split('Future<void> editBudgetForCategory(').first;
   // Changing only one budget record is safe; no transaction rewrites,

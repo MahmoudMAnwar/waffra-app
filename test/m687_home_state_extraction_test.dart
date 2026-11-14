@@ -18,7 +18,7 @@ void main(){
   expect(pdf,contains('pdfSavings=await _m649HomeSavings(account)'));
   expect(pdf,contains('waffraGoalDueCashMinor(e)/100'));
   expect(profile,contains('future:_m528SmsEnabled()'));
-  expect(profile,contains('future:_m528CloudConsent()'));
+  expect(profile,isNot(contains('future:_m528CloudConsent()')));
   expect(profile,contains('WaffraLocalAccountMigration('));
  });
  test('M687 real code can be source-audited in original method order',(){

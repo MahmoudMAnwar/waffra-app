@@ -1,9 +1,10 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main(){
  test('M615 approved review is structured and scroll thumb stays off RTL SMS',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   final section=main.substring(
    main.indexOf(' Future<void> _reviewAutoSmsCandidates('),
    main.indexOf(' void _receiveSharedSms(){'));
@@ -24,7 +25,7 @@ void main(){
  });
 
  test('M618 No/Edit alternatives are source-correct and must not auto-post',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   final s=main.substring(main.indexOf(' Future<void> _reviewAutoSmsCandidates('),
    main.indexOf(' void _receiveSharedSms(){'));
   expect(s,contains("if(decision=='no'&&understood&&!sensitive&&"));
@@ -81,7 +82,7 @@ void main(){
  });
 
  test('M617 verified login removes only the second OS probe and never skips secure KDF',(){
-  final app=File('lib/main.dart').readAsStringSync();
+  final app=readWaffraMainSourceForContracts();
   final signIn=app.substring(app.indexOf(' Future<void> _signIn()async{'),
    app.indexOf(' String get maskedLastPhone{'));
   expect(signIn,contains('await WaffraLocalPhoneCredentials.verify('));

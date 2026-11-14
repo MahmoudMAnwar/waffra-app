@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/storage/legacy_snapshot_preflight.dart';
@@ -13,7 +14,7 @@ import 'package:waffra/waffra_sms_multicurrency_review.dart';
 /// fixtures. Source checks alone are NOT a physical-phone or runtime cutover
 /// certification; the existing M280 SQLCipher and M277 UI suites run in CI.
 void main() {
-  final mainSource = File('lib/main.dart').readAsStringSync();
+  final mainSource = readWaffraMainSourceForContracts();
 
   String method(String opening, String endMarker) {
     final start = mainSource.indexOf(opening);

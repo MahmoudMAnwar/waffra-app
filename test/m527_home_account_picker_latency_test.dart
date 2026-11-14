@@ -1,9 +1,10 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  final source = File('lib/main.dart').readAsStringSync();
+  final source = readWaffraMainSourceForContracts();
   final start = source.indexOf('Future<void> _m467PickHomeAccount()async{');
   final end = source.indexOf('Future<void> openVerifiedAccounts()async{', start);
   final method = start < 0 || end < start ? '' : source.substring(start, end);

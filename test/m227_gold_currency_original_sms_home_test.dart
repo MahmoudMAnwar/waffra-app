@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_display_currency.dart';
 
@@ -12,7 +13,7 @@ void main() {
   });
 
   test('M227 gold stays accessible through the new inline Tools markets accordion', () {
-    final source = File('lib/main.dart').readAsStringSync();
+    final source = readWaffraMainSourceForContracts();
     expect(source, isNot(contains("Key('waffra-home-gold-currency-entry')")));
     expect(source, contains('case 2:return _smartToolsTab();'));
     final tools=File('lib/waffra_smart_features.dart').readAsStringSync();
@@ -30,7 +31,7 @@ void main() {
   });
 
   test('M227 full SMS is read from protected vault for details', () {
-    final home = File('lib/main.dart').readAsStringSync();
+    final home = readWaffraMainSourceForContracts();
     final bind = File('lib/storage/waffra_production_finance_authority_binding.dart')
         .readAsStringSync();
     final authority = File('lib/storage/waffra_verified_finance_authority.dart')
@@ -50,7 +51,7 @@ void main() {
   });
 
   test('M227 preserves merged M226 FAB timings', () {
-    final home = File('lib/main.dart').readAsStringSync();
+    final home = readWaffraMainSourceForContracts();
     // The FAB responsiveness work removed arbitrary transition sleeps;
     // retain double-tap and menu-close safety instead of old delay values.
     expect(home, contains('if(_addActionOpening)return;'));

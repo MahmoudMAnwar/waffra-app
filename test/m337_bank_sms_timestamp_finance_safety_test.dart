@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/main.dart';
 
@@ -27,7 +28,7 @@ void main() {
     referenceDate:reference),isFalse);
  });
  test('M636 auto-SMS confirms original source date BEFORE hash/commit',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   final from=main.indexOf(' Future<void> _m565ConfirmSms({');
   final to=main.indexOf(' Future<void> _reviewAutoSmsCandidates(',from);
   expect(from,greaterThan(0));

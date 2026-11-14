@@ -1,10 +1,11 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('M163 backup restore commits all finance before publishing UI state', () {
-    final source = File('lib/main.dart').readAsStringSync();
+    final source = readWaffraMainSourceForContracts();
     final dialogStart = source.indexOf('Future<void> backupDialog()');
     final dialogEnd = source.indexOf(
       '// System credentials are never saved', dialogStart);

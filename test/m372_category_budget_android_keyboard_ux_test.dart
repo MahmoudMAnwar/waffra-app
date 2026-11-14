@@ -1,8 +1,9 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  final source = File('lib/main.dart').readAsStringSync();
+  final source = readWaffraMainSourceForContracts();
   final directory = File('lib/waffra_budget_directory.part.dart').readAsStringSync();
 
   test('M372: main picker creates only main; leaf picker only child', () {

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_practical_ledger_engine.dart';
 
@@ -29,7 +30,7 @@ void main(){
    expect(issues,isEmpty);
  });
  test('M346 real Tools health UI consumes Home budget IDs and goal snapshots',(){
-   final app=File('lib/main.dart').readAsStringSync();
+   final app=readWaffraMainSourceForContracts();
    final smart=File('lib/waffra_smart_features.dart').readAsStringSync();
    final tools=File('lib/waffra_practical_tools_page.dart').readAsStringSync();
    expect(app,contains('unassignedNamedBudget:!e.income&&e.budgetId==null'));

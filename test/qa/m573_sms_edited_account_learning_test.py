@@ -1,8 +1,9 @@
 """M573: No/edit reviewed bank SMS learns account only after verified commit."""
 from pathlib import Path
+from waffra_home_source import read_waffra_home_source
 import unittest
 
-SRC=(Path(__file__).resolve().parents[2]/'lib/main.dart').read_text(encoding='utf-8')
+SRC=read_waffra_home_source()
 
 class EditedSmsAccountLearning(unittest.TestCase):
  def test_editor_uses_sender_and_avoids_precommit_learning(self):

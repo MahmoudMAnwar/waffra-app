@@ -15,6 +15,9 @@ from typing import Mapping
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE_PATHS = (
     "lib/main.dart",
+    "lib/waffra_home_entry_sheet.part.dart",
+    "lib/waffra_home_sms_confirmation.part.dart",
+    "lib/waffra_home_fx_preview.part.dart",
     "lib/waffra_sms_multicurrency_review.dart",
     "lib/waffra_ai_recorded_answers.dart",
     "lib/waffra_smart_features.dart",
@@ -29,11 +32,33 @@ def load_sources(root: Path = ROOT) -> dict[str, str]:
     return {name: (root / name).read_text(encoding="utf-8") for name in SOURCE_PATHS}
 
 
+def _registered_home_entry_source(sources: Mapping[str, str], problems: list[str]) -> str:
+    """Inspect all actual registered original Home methods without bypassing any
+    of M340's SMS owner, account-generation, duplicate-hash or money guards.
+
+    The real filesystem reader accepts injected real-source text for hostile
+    regression tests, so a mutation of the SMS review or editor part is audited
+    in place rather than silently ignored.
+    """
+    import sys
+    qa_path = str(ROOT / "test/qa")
+    if qa_path not in sys.path:
+        sys.path.insert(0, qa_path)
+    from waffra_home_source import read_waffra_home_source
+    try:
+        return read_waffra_home_source(ROOT, overrides=sources)
+    except (OSError, UnicodeError, AssertionError, ValueError) as exc:
+        problems.append("lib/main.dart: registered Home financial source unavailable: "
+                        + str(exc)[:260])
+        return sources.get("lib/main.dart", "")
+
+
 def audit_sources(sources: Mapping[str, str]) -> list[str]:
     problems: list[str] = []
 
     def require(path: str, evidence: str, reason: str) -> None:
-        if evidence not in sources.get(path, ""):
+        checked = home if path == "lib/main.dart" else sources.get(path, "")
+        if evidence not in checked:
             problems.append(f"{path}: {reason}")
 
     main = "lib/main.dart"
@@ -49,7 +74,7 @@ def audit_sources(sources: Mapping[str, str]) -> list[str]:
     # authority. M565 adds the owner's first-pass Yes path: checking only the
     # former three would incorrectly reject a *more* protected finance route.
     # Independently demand its user-confirmed, account-witness and hash guards.
-    home = sources.get(main, "")
+    home = _registered_home_entry_source(sources, problems)
     # M636: two remaining secure SMS routes (confirmed Review and editor).
     # The two old widget/paste paths are deleted, NOT downgraded to plain
     # SharedPreferences. A new writer or missing route must fail this gate.
@@ -131,7 +156,6 @@ def audit_sources(sources: Mapping[str, str]) -> list[str]:
     require(curr, "originalAmount(", "conservative bank amount evidence missing")
 
     # Check only the actual foreign-FX preview handler, not unrelated app writes.
-    home = sources.get(main, "")
     start = home.find("Future<void> _previewForeignBankCurrency(")
     # M640: OCR handler was deleted. The verified manual/SMS editor now
     # immediately follows the still-required foreign-FX preview. Preserve

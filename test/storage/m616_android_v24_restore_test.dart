@@ -1,4 +1,5 @@
 import 'dart:io';
+import '../support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/storage/waffra_accounts_finance_history.dart';
@@ -107,7 +108,7 @@ void main() {
       expect(code,contains('WaffraRestoreStagingDirectory.create('));
       expect(code,isNot(contains('Directory.systemTemp.createTemp(')));
     }
-    final ui=File('lib/main.dart').readAsStringSync();
+    final ui=readWaffraMainSourceForContracts();
     expect(ui,contains("restoreStage='V24_STAGING'"));
     expect(ui,contains("restoreStage='SQL_PREFLIGHT'"));
     expect(ui,contains("restoreStage='SQL_APPLY'"));
@@ -162,7 +163,7 @@ void main() {
 
   test('M622 V24 to V3 reuses same selected finance source but fresh '
       'preflight still detects source drift without a rescue file', () {
-    final ui=File('lib/main.dart').readAsStringSync();
+    final ui=readWaffraMainSourceForContracts();
     expect(ui,contains('inspectedRestoreSource=source;'));
     expect(ui,contains('final source=inspectedRestoreSource??'));
     final preflight=File(

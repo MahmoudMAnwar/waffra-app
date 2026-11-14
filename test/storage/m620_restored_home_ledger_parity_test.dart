@@ -1,4 +1,5 @@
 import 'dart:io';
+import '../support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/storage/waffra_restored_ledger_identity_guard.dart';
@@ -71,7 +72,9 @@ void main() {
 
   test('M620 restored V24 checks canonical SQLCipher before repainting '
       'Home; SQL rollback and source-witness guards are still active', () {
-    final code=File('lib/main.dart').readAsStringSync();
+    expect(File('lib/waffra_home_account_tools.part.dart').existsSync(), isTrue,
+      reason: 'Original verified Home backup/account-tools part must exist');
+    final code=readWaffraMainSourceForContracts();
     expect(code,contains("restoreStage='CANONICAL_PARITY'"));
     expect(code,contains("restoreStage='HOME_PARITY'"));
     expect(code,contains('WaffraRestoredLedgerIdentityGuard.verify('));

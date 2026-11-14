@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_mandatory_biometric_gate.dart';
@@ -24,7 +25,7 @@ void main() {
   });
 
   test('M443 Home retains biometric lock on actual background only', () {
-    final home = File('lib/main.dart').readAsStringSync();
+    final home = readWaffraMainSourceForContracts();
     final lifecycle = home.substring(
         home.indexOf(' @override void didChangeAppLifecycleState('),
         home.indexOf(' @override void dispose(){WaffraRegionalCopy.'));
@@ -52,7 +53,7 @@ void main() {
   });
 
   test('M443 no merchant selection, brand logos or remote logo assets in active UI', () {
-    final home = File('lib/main.dart').readAsStringSync();
+    final home = readWaffraMainSourceForContracts();
     for (final disabled in [
       "import 'waffra_merchant_brands.dart';",
       "Key('waffra-transaction-select-merchant')",
@@ -69,7 +70,7 @@ void main() {
   });
 
   test('M443 legacy transaction amounts and merchant keys are not wiped', () {
-    final home = File('lib/main.dart').readAsStringSync();
+    final home = readWaffraMainSourceForContracts();
     expect(home, contains("'merchantKey':merchantKey"));
     expect(home, contains('merchantKey:initial?.merchantKey??'));
     expect(home, contains('existingMerchantKey:e.merchantKey'));

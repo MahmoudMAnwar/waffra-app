@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'support/waffra_main_source.dart';
 import 'package:waffra/main.dart';
 
 /// M670 regressions: owner-requested changes are presentation/navigation
@@ -53,7 +54,7 @@ void main() {
  }
 
  test('M670 SMS rescan feedback belongs to the requesting route',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   final notifications=File('lib/waffra_approved_notifications.dart')
    .readAsStringSync();
   final rescan=main.split(
@@ -72,7 +73,7 @@ void main() {
  });
 
  test('M670 transfer always opens verified editor; second account is required',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   final form=File('lib/waffra_account_transaction_form.dart')
    .readAsStringSync();
   final manual=main.split(' Future<void> openVerifiedTransfer()async{')[1]
@@ -91,7 +92,7 @@ void main() {
  });
 
  test('M670 separate SMS alternative opens only selected income/expense editor',(){
-  final source=File('lib/main.dart').readAsStringSync();
+  final source=readWaffraMainSourceForContracts();
   final review=source.split(
    "   }else if(decision=='transfer-manual'&&mounted){")[1]
    .split("   }else if(decision=='yes'&&mounted")[0];
@@ -108,7 +109,7 @@ void main() {
  });
 
  test('M670 all Home filters have a real limit and reversible expansion',(){
-  final source=File('lib/main.dart').readAsStringSync();
+  final source=readWaffraMainSourceForContracts();
   final dashboard=source.split(' Widget dashboard(){')[1]
    .split(' List<MoneyEntry> get analysisEntries')[0];
   for(final label in ['الكل','الدخل','المصروفات','التحويلات',
@@ -125,7 +126,7 @@ void main() {
  });
 
  test('M670 goals, recurring and category stats share layout geometry',(){
-  final source=File('lib/main.dart').readAsStringSync();
+  final source=readWaffraMainSourceForContracts();
   final cats=File('lib/waffra_categories_page.part.dart').readAsStringSync();
   expect(cats,contains('Widget _compactCategoryStat('));
   expect(source,contains("Key('m689-goal-card-'"));
@@ -138,7 +139,7 @@ void main() {
  });
 
  test('M670 Snackbar central presenter has no visible X nor 2-line clipping',(){
-  final source=File('lib/main.dart').readAsStringSync();
+  final source=readWaffraMainSourceForContracts();
   final body=source.split('class WaffraNoticeContent extends StatelessWidget')[1]
    .split('final ValueNotifier<WaffraNoticeData?> _waffraFooterNotice=')[0];
   expect(body,isNot(contains('waffra-snackbar-close')));

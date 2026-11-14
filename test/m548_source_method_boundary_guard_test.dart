@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'support/waffra_source_method_section.dart';
@@ -39,7 +40,7 @@ void main(){
  });
 
  test('M548 explicit history paging belongs to Rescan, not review or rules',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   final review=waffraSourceMethodSection(main,
    start:' Future<void> _openAutoSmsInbox()async{',
    end:' Widget _autoSmsReviewCard(){');

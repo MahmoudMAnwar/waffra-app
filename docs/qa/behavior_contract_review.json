@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "pr": "Draft #630",
-  "issue": "#629, #631",
+  "pr": 638,
+  "issue": "Issues #632–#637",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at new branch start",
-  "reviewed_at": "2026-11-13",
+  "reviewed_at": "2026-11-14",
   "review_policy": "M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending.",
   "contracts": [
     {
@@ -2723,6 +2723,1866 @@
       "safety_invariants": [
         "No production UI geometry or finance code changed in this test-only commit.",
         "Never mark physical-device UI or old-owner-backup parity as complete from simulator/widget data."
+      ]
+    },
+    {
+      "id": "M690-RETIRE-EXTERNAL-SMS-CLOUD-ISSUE632",
+      "issue": "Issue #632 / Draft PR #638",
+      "previous_behavior": "Bank SMS Settings offered a third-party OpenRouter consent switch, Android main APK embedded a staging Cloudflare worker URL and old installations could retain opt-in.",
+      "approved_behavior": "Permanently deny cloud consent and external analysis, clear historical consent when permissions run, remove Settings cloud switch and Android worker build define; retain deterministic on-device SMS Review, OTP protection and encrypted transaction writes.",
+      "source_paths": [
+        "lib/waffra_sms_cloud_service.dart",
+        "lib/waffra_home_profile.part.dart",
+        ".github/workflows/android.yml"
+      ],
+      "test_paths": [
+        "test/m429_sms_phone_integration_test.dart",
+        "test/m436_cloud_review_pipeline_test.dart",
+        "test/m528_settings_async_cache_regression_test.dart",
+        "test/m690_retired_cloud_sms_contract_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "Old consent never permits off-device SMS even on upgraded installations.",
+        "Local SMS review remains accessible and cannot auto-post remote suggestions.",
+        "Never store or log bank SMS in external provider or GitHub.",
+        "Keep physical APK review independent of CI."
+      ]
+    },
+    {
+      "id": "M691-HOME-BUDGET-CARD-MODULARIZATION-ISSUE633",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "HomeScreenState still embedded >400 lines of budget card, monthly summary and financial insight UI, tightly coupling a large main.dart to presentation widgets.",
+      "approved_behavior": "Move existing 416-line presentation block verbatim into a same-library _HomeScreenState extension; test all source constraints against reconstructed original code, including the real budget-alert threshold and recurring due checks. Preserve finance and SQLCipher writers untouched.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_budget_cards.part.dart"
+      ],
+      "test_paths": [
+        "test/m691_home_budget_cards_extraction_test.dart",
+        "test/support/waffra_main_source.dart",
+        "test/m401_m402_budget_month_centered_dropdown_test.dart",
+        "test/m549_approved_home_notifications_test.dart",
+        "test/m611_manual_home_finance_regression_test.dart",
+        "test/m580_sms_security_navigation_performance_test.dart",
+        "test/qa/m444_notification_safety_test.py",
+        "test/m343_goal_recurring_named_budgets_test.dart",
+        "test/m345_goal_budget_forecast_test.dart",
+        "test/m357_budget_hierarchy_and_filter_layout_test.dart",
+        "test/m359_budget_directory_and_templates_test.dart",
+        "test/m360_budget_category_quick_actions_test.dart",
+        "test/m392_m395_budget_quick_actions_goal_ui_test.dart",
+        "test/m414_percentage_alert_controls_test.dart",
+        "test/m467_account_header_test.dart",
+        "test/m470_account_monthly_budget_policy_test.dart",
+        "test/m684_finance_period_index_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "Do not delete or weaken original financial source assertions.",
+        "No new user-visible layout, ledger side effects or FAB relocation.",
+        "Actual Android overflow cannot be inferred from text/source preflight."
+      ]
+    },
+    {
+      "id": "M692-2K4-LEDGER-MONTH-PAGING-ISSUE636",
+      "issue": "Issue #636 / Draft PR #638",
+      "previous_behavior": "Monthly date-indexed SQLCipher reads existed but a large 2400-row disposable test, cold reopened paging and unchanged account balance scenario had no dedicated executable coverage.",
+      "approved_behavior": "Seed disposable encrypted finance schema with 2400 distinct synthetic IDs spanning two months; enforce single-month reads and disjoint ordered paging, whole-history parity and unchanged unassigned bank balance, repeat 80-item read after cold reopen and emit elapsed CI runner measurement.",
+      "source_paths": [
+        "lib/storage/waffra_account_context_read.dart",
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/storage/m692_large_ledger_month_read_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m147-merge-readiness.yml"
+      ],
+      "safety_invariants": [
+        "No real owner data or secrets in test fixtures.",
+        "Elapsed host-runner time is not a physical Android latency proof.",
+        "Never drop out-of-month historical rows from full-history access."
+      ]
+    },
+    {
+      "id": "M693-APPROVED-PAGES-LAYOUT-MATRIX-ISSUE635",
+      "issue": "Issue #635 / Draft PR #638",
+      "previous_behavior": "Single approved composite scene and narrow synthetic one-page notice check did not cover separate Goals, Due dates and SMS Review component layouts across all theme/direction/width combinations.",
+      "approved_behavior": "Add 3 by 12 Flutter widget-composition combinations with 1.3 text scale, verified amount/progress, original SMS example, multi-line notice, and never-moving 58dp FAB. Keep physical Android and full live Home acceptance distinct.",
+      "source_paths": [
+        "lib/waffra_approved_page_designs.dart",
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m693_three_approved_pages_layout_matrix_test.dart",
+        "test/m688_approved_android_screens_matrix_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "No change to screenshot-approved production widget styling.",
+        "No fake physical-device pass from Flutter test composition."
+      ]
+    },
+    {
+      "id": "M694-CLOUD-CONSENT-CACHE-RETIREMENT-ISSUE634",
+      "issue": "Issue #634 / Draft PR #638",
+      "previous_behavior": "HomeState retained a cloud-consent cached Future, getter and two reset paths after owner removed third-party SMS model settings.",
+      "approved_behavior": "Remove only now-unused cloud-consent cache/getter/reset; preserve SMS permission Future and refresh on account settings/resume, and all finance/biometric state untouched.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_profile.part.dart"
+      ],
+      "test_paths": [
+        "test/m528_settings_async_cache_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Do not reintroduce third-party model consent on Settings.",
+        "Do not alter bank SMS review or encrypted account state."
+      ]
+    },
+    {
+      "id": "M695-CLOUDFLARE-DIRECT-TRANSPORT-RETIREMENT-ISSUE634",
+      "issue": "Issue #634 / Draft PR #638",
+      "previous_behavior": "Even after settings retirement, an unreferenced old Cloudflare helper retained a callable outbound HTTP POST method; main.dart still imported the disabled service, triggering unused import analyzer warning.",
+      "approved_behavior": "Remove unused main.dart service import and make orphan gateway analyze() always return null without opening a client or contacting a provider. Retain pure strict historical currency/review and OTP validation helper functions as positive security regression test fixtures. Also reject any oversized/malformed old JSON-like response in pure validation without permitting HTTP. Remove now-unused SMS redactor import after disabling network transport; code analyzer must be warning-free.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_cloudflare_sms_gateway.dart",
+        "lib/waffra_sms_cloud_service.dart"
+      ],
+      "test_paths": [
+        "test/m423_cloudflare_sms_gateway_test.dart",
+        "test/m690_retired_cloud_sms_contract_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m429-integration-smoke.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "No POST regardless of passed URL, source, fake App Check token or HTTP client.",
+        "Existing helper currency/OTP validation assertions remain enforced.",
+        "No Settings or app startup cloud opt-in."
+      ]
+    },
+    {
+      "id": "M698-UNCONFIGURABLE-CLOUD-REVIEW-ISSUE634",
+      "issue": "Issue #634 / Draft PR #638",
+      "previous_behavior": "The obsolete Cloudflare helper still exposed an environment configured URL, and the unused message-stage module remained in lib.",
+      "approved_behavior": "Return configured=false and empty configuredUrl regardless of stale builds, remove only the unreachable old cloud message staging module, preserve review-only currency/OTP and native protected SMS parsing. The removed staging module is declared in the exact approved-deletion manifest; M550 references only surviving production sources and the no-network test. M701 M550 now verifies deleted paths are explicitly M385-declared, covered by this review contract, with retained no-network tests; an unapproved deletion is rejected.",
+      "source_paths": [
+        "lib/waffra_cloudflare_sms_gateway.dart",
+        "lib/waffra_sms_cloud_service.dart",
+        "lib/waffra_sms_cloud_review_analyzer.dart"
+      ],
+      "test_paths": [
+        "test/m690_retired_cloud_sms_contract_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/android.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "No external SMS submission can be enabled by build-time define.",
+        "Manual review, original SMS and authenticated SQLCipher writer are unchanged.",
+        "Historical pure validation tests retain their original financial rejection assertions."
+      ]
+    },
+    {
+      "id": "M699-LEGACY-CLOUD-UI-RETIREMENT-ISSUES634-637",
+      "issue": "Issues #634 and #637 / Draft PR #638",
+      "previous_behavior": "Old inbox items carrying a cloud proposal rendered 'AI suggestion' with unverified amount and a separate external suggestion counter.",
+      "approved_behavior": "Treat historical proposals as needing manual review. Hide obsolete external model labels and untrusted suggestion amounts while retaining the original full SMS and local bank rules.",
+      "source_paths": [
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m690_retired_cloud_sms_contract_test.dart",
+        "test/m436_cloud_review_pipeline_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/android.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Original SMS history remains visible to the user.",
+        "No unchecked external recommendation becomes posted money.",
+        "The no-network policy does not alter stored SQLCipher balances, receipts or account selection."
+      ]
+    },
+    {
+      "id": "M703-HOME-SMS-TRANSFER-REVIEW-EXTRACTION-ISSUE633",
+      "issue": "Issue #633",
+      "previous_behavior": "The live bank-SMS transfer review and its verified SQLCipher transfer/fee acknowledgment code were embedded inside monolithic Home State in lib/main.dart.",
+      "approved_behavior": "The same code is moved without behavior changes to a registered same-library Dart part, with manual SAR amount/date/account confirmation, atomic fee transaction, durable SMS ACK and verified Home/Widget refresh unchanged.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_sms_transfer_review.part.dart"
+      ],
+      "test_paths": [
+        "test/m703_home_sms_transfer_extraction_test.dart",
+        "test/m690_retired_cloud_sms_contract_test.dart",
+        "test/qa/m417_sms_permission_acceptance_test.py"
+      ],
+      "safety_invariants": [
+        "Never infer a bank account or transfer principal from untrusted SMS.",
+        "Never acknowledge a transfer before verified SQLCipher commit.",
+        "Preserve the original SMS text and explicit user confirmation.",
+        "Never double debit on historical SMS replay or bank fee ambiguity."
+      ]
+    },
+    {
+      "id": "M705-NO-RETIRED-CLOUD-RUNTIME-PERMISSIONS-ISSUE634",
+      "issue": "Issue #634 / Draft PR #638",
+      "previous_behavior": "Live SMS onboarding imported the retired cloud bank-SMS service solely to clear an obsolete consent preference; that transitive dependency retained cloud transport/AI code in the installed runtime path.",
+      "approved_behavior": "Live Android SMS onboarding erases the exact obsolete consent preference using local SharedPreferences and never imports or calls the retired cloud service. User SMS and notification permission order, decline behavior and encrypted manual review stay intact.",
+      "source_paths": [
+        "lib/waffra_auto_sms_consent.dart"
+      ],
+      "test_paths": [
+        "test/m417_sms_first_run_test.dart",
+        "test/m429_sms_phone_integration_test.dart",
+        "test/m436_cloud_review_pipeline_test.dart",
+        "test/qa/m417_sms_permission_acceptance_test.py",
+        "test/m463_auth_first_one_page_test.dart",
+        "test/m639_permissions_onboarding_plain_copy_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m417-auto-bank-sms.yml",
+        ".github/workflows/android.yml"
+      ],
+      "safety_invariants": [
+        "Previously stored cloud consent is removed locally and cannot enable a transport.",
+        "No cloud service or third-party model import is reachable from onboarding.",
+        "SMS/notification permissions remain an explicit OS user action.",
+        "No bank message or verified amount is transmitted to a third party."
+      ]
+    },
+    {
+      "id": "M707-APPROVED-GOALS-RECURRING-REAL-PAGES-ISSUES633-635",
+      "issue": "Issues #633 and #635 / Draft PR #638",
+      "previous_behavior": "Real compact Goals and Recurring pages were embedded together in the monolithic Home State, increasing coupling while old raw-main tests assumed their source location.",
+      "approved_behavior": "The 770-line original production Goals and Recurring methods move unchanged to a registered same-library Dart part, preserving approved UI, account/goal linked due wallet and bank cash breakdown, all controls and writer callbacks. Existing source QA reconstructs the true part in original order, never duplicating or mocking finance behavior.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_goals_recurring_pages.part.dart"
+      ],
+      "test_paths": [
+        "test/m707_home_goals_recurring_extraction_test.dart",
+        "test/m388_m390_approved_goal_recurring_receipt_test.dart",
+        "test/m302_optimistic_module_write_safety_test.dart",
+        "test/m665_goal_due_display_and_linked_edit_test.dart",
+        "test/m693_three_approved_pages_layout_matrix_test.dart",
+        "test/m298_required_finance_field_validation_test.dart",
+        "test/m302_recurring_first_due_regression_test.dart",
+        "test/storage/m176_module_finance_route_intent_test.dart",
+        "test/m670_feedback_transfer_dashboard_test.dart",
+        "test/m127_ui_tour_backup_acceptance_test.dart",
+        "test/m674_approved_page_designs_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/android.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m283-compact-layout-tools-back-greetings.yml"
+      ],
+      "safety_invariants": [
+        "No financial data or SQLCipher writers are changed in the extraction.",
+        "Linked goal due expense must show original total, verified wallet contribution and bank cash remainder.",
+        "Goal funding does not celebrate rejected writes and open-ended goals cannot divide by zero.",
+        "Do not move or resize the global FAB or change approved page designs."
+      ]
+    },
+    {
+      "id": "M711-GOAL-WORKFLOW-TRUE-DART-PART",
+      "issue": "Issue #633 in PR #638; owner-approved extraction of full Home goal workflows",
+      "previous_behavior": "Home State contained approximately 963 lines of verified savings goal creation, funding, releases, challenge and goal action implementations, coupled to a single main.dart source file.",
+      "approved_behavior": "All original goal workflows are located byte-identically in the registered same-library waﬀra Home Dart part; no finance writer, account source, savings wallet transaction, due payment, data format, or visual widget behavior changes. Historical source assertions inspect the genuine Dart part in original order, not a mock.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_goal_actions.part.dart",
+        "test/support/waffra_main_source.dart"
+      ],
+      "test_paths": [
+        "test/m711_goal_workflows_extraction_test.dart",
+        "test/m707_home_goals_recurring_extraction_test.dart",
+        "test/m644_goal_notice_funding_contract_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "Goal funding and releasing continue using verified account and goal wallet writes; no additional or missing debit.",
+        "The cash/goal balance checks and historical backup writer remain unchanged.",
+        "No physical Android proof is inferred from a source-only extraction."
+      ]
+    },
+    {
+      "id": "M715-BUDGET-EDITOR-AND-HISTORIC-LINK-EXTRACTION",
+      "issue": "Issue #633 / Draft PR #638: extract budget editing, historical expense linking and budget management without changing financial writes",
+      "previous_behavior": "Home Screen State directly held monthly budget editing and historic expense-to-budget choices next to finance account and transaction actions in lib/main.dart.",
+      "approved_behavior": "Keep all original budget edit/reconciliation and historical-link code in one registered main.dart part extension without changing SQLCipher verified account association, classification, budget activation, saved money or approved widget behavior. Source tests reassemble the exact registered production Dart part.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_budget_workflows.part.dart",
+        "test/support/waffra_main_source.dart"
+      ],
+      "test_paths": [
+        "test/m715_budget_workflows_extraction_test.dart",
+        "test/m343_goal_recurring_named_budgets_test.dart",
+        "test/m414_percentage_alert_controls_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "Historical expenses never acquire a silently invented account or duplicate ledger debit.",
+        "Budget-only edits and monthly projections cannot mutate an unrelated bank account balance.",
+        "Old finance and UI tests observe real production Dart text rather than removed or weakened assertions."
+      ]
+    },
+    {
+      "id": "M717-RETIRED-CLOUD-RUNTIME-REACHABILITY",
+      "issue": "Issue #634 and #637 / Draft PR #638; remove unused external AI/Cloud runtime dependency without affecting local SMS financial review",
+      "previous_behavior": "A retired Cloudflare SMS gateway remained in lib with an unused HTTP client type despite its analyze entrypoint always returning null. Test-only model currency validators remain available to old finance safety assertions.",
+      "approved_behavior": "Remove the unused http client compile-time import from this retired transport, retain the named analyze argument and fail-closed null behavior for historical tests, and independently verify that no AI/Cloudflare module is transitively imported by the app's main entrypoint or registered library parts.",
+      "source_paths": [
+        "lib/waffra_cloudflare_sms_gateway.dart",
+        "lib/main.dart",
+        "lib/waffra_sms_cloud_service.dart"
+      ],
+      "test_paths": [
+        "test/m717_no_cloud_runtime_dependency_test.dart",
+        "test/m690_retired_cloud_sms_contract_test.dart",
+        "test/m423_cloudflare_sms_gateway_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "No sensitive SMS or bank data can reach a retired external HTTP transport.",
+        "Local bank SMS parsing and manual review stay available, and encrypted original SMS text stays unchanged.",
+        "Old test-only amount and currency anti-hallucination evidence remains checked."
+      ]
+    },
+    {
+      "id": "M719-TRANSACTION-ENTRY-VERIFIED-WRITER-RELOCATION",
+      "issue": "Issue #633 / Draft #638, modularize transaction editor without changing account write/save semantics",
+      "previous_behavior": "The 1,737-line manual and reviewed-SMS transaction entry editor lived in the monolithic Home State with account selection, categorization, date, notes and confirmed money write callbacks.",
+      "approved_behavior": "Keep the original production entrySheet method text byte-for-byte in a registered main.dart part extension. The editor still validates the account, category, original bank SMS, duplicate prevention, verified writes and secure attachment references exactly as before; all source QA reuses the registered part.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_entry_sheet.part.dart",
+        "test/support/waffra_main_source.dart"
+      ],
+      "test_paths": [
+        "test/m719_home_entry_sheet_extraction_test.dart",
+        "test/m470_sms_transfer_fee_firsttap_category_test.dart",
+        "test/m611_manual_home_finance_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "No new or changed SQLCipher write logic or account associations.",
+        "Reviewed bank SMS remains manual-confirmation only and retains original body/date evidence.",
+        "Approved transaction UI and global fixed + button remain unchanged."
+      ]
+    },
+    {
+      "id": "M721-SECURE-BACKUP-ACCOUNT-TOOLS-RELOCATION",
+      "issue": "Issue #633, Draft PR #638, exact security and account tools extraction",
+      "previous_behavior": "Home State contained 980 lines of calendar, secure backup export, restore dialogs, PIN and account management actions directly in main.dart.",
+      "approved_behavior": "Registered same-library Dart extension contains byte-identical user-calendar, account tools and encrypted Backup/Restore logic with no changes to authentication, archive format, verified balances or financial data writes.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_account_tools.part.dart",
+        "test/support/waffra_main_source.dart"
+      ],
+      "test_paths": [
+        "test/m721_home_account_tools_extraction_test.dart",
+        "test/m127_ui_tour_backup_acceptance_test.dart",
+        "test/m149_backup_pin_localized_fab_trash_uat_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "All encrypted backup payload, integrity, version migration and biometric checks remain source-identical.",
+        "No account or money writer logic changed.",
+        "Phone restore and actual backup acceptance require separate device evidence."
+      ]
+    },
+    {
+      "id": "M727-REGISTERED-SMS-ENTRY-SOURCE-M340",
+      "issue": "Issue #633 / Draft PR #638 exact-head 7-workflow regression failure",
+      "previous_behavior": "M340 scanned only lib/main.dart after M719 moved the unchanged verified entrySheet into a registered same-library Dart part; five mandatory editor/account/receipt/FX witnesses falsely reported missing.",
+      "approved_behavior": "Read registered existing lib/waffra_home_entry_sheet.part.dart with unique anchors, refuse missing/duplicate part declarations, reconstruct the actual Home editor at its original marker and enforce unchanged original M340 financial, currency, anti-replay and receipt guards on that real source.",
+      "source_paths": [
+        "scripts/qa/m340_financial_quality_gate.py",
+        "lib/main.dart",
+        "lib/waffra_home_entry_sheet.part.dart"
+      ],
+      "test_paths": [
+        "test/m719_home_entry_sheet_extraction_test.dart",
+        "test/m300_all_supported_currency_sms_matrix_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m340-continuous-financial-quality.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "Never remove or downgrade any M340 positive/negative finance assertion.",
+        "Unregistered or missing Home entry parts must fail closed.",
+        "No changes to money/backup writers, accounts or SMS data. Physical Android and original private archive parity remain separate acceptance gates."
+      ]
+    },
+    {
+      "id": "M728-ORIGINAL-SOURCE-TEST-COMPATIBILITY-BATCH1",
+      "issue": "Issue #633 / Draft PR #638, exact-head source relocation regressions",
+      "previous_behavior": "Following the already-authorized Home Dart part extraction, 12 original QA files continued to read only raw lib/main.dart and falsely missed production functionality still present in registered parts.",
+      "approved_behavior": "Use existing test/support/waffra_main_source.dart to restore original Home method order from real registered part text. Original test expectation bodies and negative assertions remain unchanged; no CI skips, no production code or financial persistence edits.",
+      "source_paths": [
+        "test/support/waffra_main_source.dart",
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m110_live_finance_authority_writer_test.dart",
+        "test/m150_file_backup_leaf_categories_uat_test.dart",
+        "test/m153_secure_backup_sms_categories_uat_test.dart",
+        "test/m161_manual_category_leaf_routing_test.dart",
+        "test/m163_atomic_backup_restore_durability_test.dart",
+        "test/m262_bank_sms_notes_separation_test.dart",
+        "test/m264_app_wide_action_haptics_test.dart",
+        "test/m275_smooth_confirmation_performance_test.dart",
+        "test/m296_monthly_budget_and_transactions_test.dart",
+        "test/m300_all_supported_currency_sms_matrix_test.dart",
+        "test/m300_jod_cliq_bank_sms_test.dart",
+        "test/m302_cross_feature_input_precision_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "All existing finance SMS backup budget and UI assertions stay identical.",
+        "Do not copy or fake source into test strings; read real registered Dart parts.",
+        "M385 anchors apply only to import and original source-reader test bodies."
+      ]
+    },
+    {
+      "id": "M729-PRESERVE-ORIGINAL-REGRESSIONS-BATCH2",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Exact 12 original tests inspected source strings in main.dart instead of registered same-library Home parts following approved extraction.",
+      "approved_behavior": "Repoint only original raw-main readers to readWaffraMainSourceForContracts; preserve all positive and negative assertions including SQLCipher, backup, SMS and data authorization. No production code changed.",
+      "source_paths": [
+        "lib/main.dart",
+        "test/support/waffra_main_source.dart"
+      ],
+      "test_paths": [
+        "test/m303_m306_hardening_regression_test.dart",
+        "test/m304_cross_source_duplicate_review_test.dart",
+        "test/m321_ai_model_download_delete_test.dart",
+        "test/m336_fx_consent_and_full_title_test.dart",
+        "test/m336_whole_app_finance_quality_matrix_test.dart",
+        "test/m339_failed_finance_save_receipt_cleanup_test.dart",
+        "test/m346_financial_health_budget_goal_test.dart",
+        "test/m352_existing_data_upgrade_contract_test.dart",
+        "test/m353_named_budget_pause_resume_test.dart",
+        "test/m354_android_transaction_sheet_nav_insets_test.dart",
+        "test/m355_global_scroll_cue_search_test.dart",
+        "test/m363_transaction_category_inline_creation_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "Source helper must read registered production parts and fail closed if missing.",
+        "No assertions deleted or test gates bypassed.",
+        "No user backup bytes or financial values changed."
+      ]
+    },
+    {
+      "id": "M730-ORIGINAL-REGRESSIONS-BATCH3",
+      "issue": "Issue #633, Draft PR #638",
+      "previous_behavior": "12 original active Flutter regressions still scanned only lib/main.dart following extracted Home method moves.",
+      "approved_behavior": "Change only the source reader to registered-part test helper, without deleting any original assertion, runtime code, or widening source contracts.",
+      "source_paths": [
+        "test/support/waffra_main_source.dart",
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m372_category_budget_android_keyboard_ux_test.dart",
+        "test/m373_independent_budgets_finance_test.dart",
+        "test/m375_budget_visibility_balance_regression_test.dart",
+        "test/m380_unlinked_budget_step_back_ux_test.dart",
+        "test/m398_budget_directory_reopen_scope_test.dart",
+        "test/m400_compact_visible_copy_test.dart",
+        "test/m443_merchant_screenshot_regression_test.dart",
+        "test/m468_app_refresh_performance_regression_test.dart",
+        "test/m470_recurring_provider_accounts_test.dart",
+        "test/m470_sms_first_sender_account_test.dart",
+        "test/m470_sms_sender_and_rule_accuracy_test.dart",
+        "test/m473_manual_sms_keyword_learning_parity_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "All finance, SMS, UI, budget and migration assertions unchanged.",
+        "No hidden/skipped regression.",
+        "Real Android and real encrypted backup parity not claimed by tests."
+      ]
+    },
+    {
+      "id": "M731-HOME-SOURCE-REGRESSION-BATCH4",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Twelve active source tests were bound to old lib/main.dart text after actual Home functions moved intact to registered Dart parts.",
+      "approved_behavior": "Retain original security, UI, SMS, source-authority and performance assertions, reading strict real code reassembly without copying or weakening any test or changing production behavior.",
+      "source_paths": [
+        "lib/main.dart",
+        "test/support/waffra_main_source.dart"
+      ],
+      "test_paths": [
+        "test/m486_sms_back_navigation_source_test.dart",
+        "test/m506_android_nine_regressions_test.dart",
+        "test/m507_sms_amount_and_continuous_review_test.dart",
+        "test/m547_sms_incremental_jank_regression_test.dart",
+        "test/m603_app_wide_lag_source_regression_test.dart",
+        "test/m638_saudi_provider_catalog_and_cascade_test.dart",
+        "test/m640_receipt_reader_retirement_test.dart",
+        "test/m665_sms_review_structural_learning_test.dart",
+        "test/m667_accounts_use_home_composer_test.dart",
+        "test/storage/m175_live_finance_mutation_intent_test.dart",
+        "test/storage/m177_live_finance_authority_integration_test.dart",
+        "test/storage/m266_home_bound_source_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "No SQLCipher or SMS write behavior changed.",
+        "Every existing positive and negative test remains active.",
+        "No false Android physical performance or backup proof claimed."
+      ]
+    },
+    {
+      "id": "M731-REAL-DART-PART-SOURCE-CONTRACTS-BATCH4",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Legacy source assertions read only lib/main.dart and falsely missed original verified Home methods extracted unchanged into registered same-library Dart parts.",
+      "approved_behavior": "Read the existing real-source reconstruction helper, retaining every original positive/negative assertion. No production writer, SMS account acknowledgment, financial backup or UI behavior changes.",
+      "source_paths": [
+        "test/support/waffra_main_source.dart",
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m644_goal_notice_funding_contract_test.dart",
+        "test/m148_english_categories_legacy_backup_uat_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "Only replace the original raw-main source reader, preserving all source assertions.",
+        "Helper must reconstruct actual registered Dart part source, not stub/fake methods.",
+        "No physical Android or real private backup parity claim."
+      ]
+    },
+    {
+      "id": "M732-RESTORE-FINANCE-SOURCE-REGRESSION",
+      "issue": "Issue #633, Draft #638",
+      "previous_behavior": "Eight original legacy-backup/finance/UI tests scanned only lib/main.dart and missed relocated unchanged production Home methods.",
+      "approved_behavior": "Use registered Home source reconstruction for only those old readers and imports, preserving exact assertions including old-archive restoration, anti-duplicate ledger and sensitive finance guard.",
+      "source_paths": [
+        "lib/main.dart",
+        "test/support/waffra_main_source.dart"
+      ],
+      "test_paths": [
+        "test/m224_verified_pull_refresh_dialog_test.dart",
+        "test/storage/m457_direct_manual_finance_commit_test.dart",
+        "test/storage/m620_restored_home_ledger_parity_test.dart",
+        "test/storage/m616_android_v24_restore_test.dart",
+        "test/storage/m464_manual_unassigned_transfer_access_regression_test.dart",
+        "test/storage/m614_legacy_v24_restore_test.dart",
+        "test/m302_duplicate_receipt_cleanup_test.dart",
+        "test/m290_google_country_reminders_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "No original encrypted archive or money writer changed.",
+        "All original security and backup assertions remain active.",
+        "Physical device restore remains separate from host CI."
+      ]
+    },
+    {
+      "id": "M733-EXTRACT-LIVE-HOME-DASHBOARD-ANALYTICS",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Home dashboard, forecasts and analytics were still embedded in the remaining very large _HomeScreenState.",
+      "approved_behavior": "Move identical production method bodies, including actual month/forecast and visual calculation logic, into a registered same-library Dart part and reconstruct them for original source assertions without changing SQLCipher balances or dashboard data.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_dashboard_analytics.part.dart",
+        "test/support/waffra_main_source.dart"
+      ],
+      "test_paths": [
+        "test/m733_home_dashboard_analytics_extraction_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "No finance/backup/account/ledger writer modification.",
+        "All original widget and source finance contracts stay enabled.",
+        "Physical Android review and owner encrypted backup parity remain acceptance gates."
+      ]
+    },
+    {
+      "id": "M733-EXACT-SOURCE-REGRESSIONS-AND-STRICT-GRAPH-REGEX",
+      "issue": "Issue #633/#634, Draft #638",
+      "previous_behavior": "Five older UI/finance tests still inspected obsolete main.dart methods directly; new M717 strict dependency graph test used invalid Dart inline (?m) flag.",
+      "approved_behavior": "Read the original registered Home part code for all existing test expectations; use Dart's multiLine:true RegExp option without changing graph coverage.",
+      "source_paths": [
+        "test/support/waffra_main_source.dart",
+        "test/m717_no_cloud_runtime_dependency_test.dart"
+      ],
+      "test_paths": [
+        "test/m302_optimistic_module_write_safety_test.dart",
+        "test/m470_sms_transfer_fee_firsttap_category_test.dart",
+        "test/m149_backup_pin_localized_fab_trash_uat_test.dart",
+        "test/waffra_m206_day_theme_tour_sms_regression_test.dart",
+        "test/m495_pr402_ui_performance_regression_test.dart",
+        "test/m717_no_cloud_runtime_dependency_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "All original finance, SMS, wallet, backup, and UI assertions remain unchanged.",
+        "Full transitive original AI/cloud dependency graph remains forbidden from production.",
+        "No production money, backup or SMS code touched."
+      ]
+    },
+    {
+      "id": "M734-M281-REGISTERED-HOME-TOOLS-SOURCE-WITNESS",
+      "issue": "Issue #633 / Draft #638",
+      "previous_behavior": "M282 M281 marker located in Home part after M721 but workflow still required raw main.dart.",
+      "approved_behavior": "Require exact original attachment marker in registered lib/waffra_home_account_tools.part.dart, unchanged other milestones.",
+      "source_paths": [
+        ".github/workflows/m282-combined-candidate.yml",
+        "lib/main.dart",
+        "lib/waffra_home_account_tools.part.dart"
+      ],
+      "test_paths": [
+        "test/m721_home_account_tools_extraction_test.dart",
+        "test/m640_receipt_reader_retirement_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m282-combined-candidate.yml"
+      ],
+      "safety_invariants": [
+        "No acceptance check skipped.",
+        "Original positive attachment marker mandatory.",
+        "No production financial code changed."
+      ]
+    },
+    {
+      "id": "M736-VERIFIED-TRANSFER-CARDS-REGISTERED-HOME-SOURCE",
+      "issue": "Issue #633 / Draft PR #638 M733",
+      "previous_behavior": "Original verified Home transfer and savings cards were moved from inline Home State to a registered same-library Dart part.",
+      "approved_behavior": "Preserve source-verified bank/wallet labels, internal two-sided amount direction and non-posting savings cards from unchanged production part; test exact registered code and original finance source contracts.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_verified_transfer_cards.part.dart",
+        "test/support/waffra_main_source.dart"
+      ],
+      "test_paths": [
+        "test/m733_home_verified_transfer_cards_extraction_test.dart",
+        "test/m647_m652_financial_activity_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Never change money writers, transfer principal or savings source identity.",
+        "Never weaken original regressions or trust missing Dart part source.",
+        "Android physical and private backup acceptance remain independent."
+      ]
+    },
+    {
+      "id": "M737-VERIFIED-CATEGORY-WORKFLOWS-REGISTERED-HOME-SOURCE",
+      "issue": "Issue #633 / Draft PR #638 M735",
+      "previous_behavior": "The original Home category CRUD, parent/child category editor, source-verified finance module trash and category recycle-bin flows remained embedded in the large Home State source.",
+      "approved_behavior": "Move exact original production category and trash method bodies to the declared same-library Dart part; retain validation, money write security, account/goal/budget association, user confirmation and historical deleted data behavior. Strict Dart/Python real-source reconstruction and dedicated unchanged-code regression apply.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_category_workflows.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/m735_home_category_workflows_extraction_test.dart",
+        "test/m363_transaction_category_inline_creation_test.dart",
+        "test/m352_existing_data_upgrade_contract_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Keep verified SQLCipher finance authority and categorization IDs unchanged.",
+        "Retain original positive/negative category parent-child, restore, deletion and recurrence safety expectations.",
+        "Part must be registered with main.dart, never replaced by stub or fake test source.",
+        "Mobile screenshots and owner's historical encrypted backup parity remain separately unverified until physical device evidence."
+      ]
+    },
+    {
+      "id": "M739-HOME-SMS-SENDER-INBOX-REAL-SOURCE",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "The original Home authenticated, sender-grouped SMS inbox review dialog lived inline inside _HomeScreenState, with direct owner approval, selection, sender filters and original message access.",
+      "approved_behavior": "Exact original inbox dialog is relocated to a registered same-library Dart extension; all original sender grouping/selection, original SMS, local review, explicit confirmation, security and no-automatic-write behavior remain identical and available to strict original source tests.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_sms_inbox.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/m739_home_sms_inbox_extraction_test.dart",
+        "test/m672_m678_activity_account_regression_test.dart",
+        "test/m669_sms_review_category_search_test.dart",
+        "test/m417_sms_first_run_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "SMS account confirmation and exact local source date/currency verification remain mandatory; never accept an automatic finance posting.",
+        "Sender-level selection, exclusion, exact original SMS body, local verified accounts and protected SQLCipher source are unchanged.",
+        "Strict registered source reconstruction is required and no pre-existing assertion is disabled.",
+        "Widget screenshots and encrypted V24 restore on owner physical Android remain separate acceptance proof."
+      ]
+    },
+    {
+      "id": "M739-REGISTERED-HOME-SOURCE-STORAGE-ANALYZE",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Three original storage tests migrated to strict actual Home part source read retained unused dart:io import, causing exact-head Dart analyzer warnings.",
+      "approved_behavior": "Explicit fail-closed File existence checks for the actual registered Home editor/account-tools Dart parts while preserving all previous positive and negative finance, SMS and restore assertions; strict analyzer severity unchanged.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_entry_sheet.part.dart",
+        "lib/waffra_home_account_tools.part.dart"
+      ],
+      "test_paths": [
+        "test/storage/m175_live_finance_mutation_intent_test.dart",
+        "test/storage/m266_home_bound_source_regression_test.dart",
+        "test/storage/m620_restored_home_ledger_parity_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m174-main-sqlcipher-regression.yml"
+      ],
+      "safety_invariants": [
+        "No source of funds or encrypted user archive modified.",
+        "No QA assertion skipped or weakened.",
+        "Fail closed when required registered Home part is absent."
+      ]
+    },
+    {
+      "id": "M741-HOME-OFFLINE-SMS-RULES-REAL-IMPLEMENTATION",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Home State retained original on-device SMS rule editor, selected verified account association, learned manual keywords and safe bank-operation categories inline.",
+      "approved_behavior": "Byte-identical methods now reside inside a registered same-library Dart part while owner key and timer fields remain on original Home State. Actual offline SMS source, local sender-rule selection and currency-safe preview persist without a new finance/cloud writer.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_sms_rules.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/m741_home_sms_rules_extraction_test.dart",
+        "test/m462_smart_sms_rule_review_test.dart",
+        "test/m470_sms_sender_and_rule_accuracy_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Never upload SMS to cloud or infer a bank account or SAR amount from ambiguous source text.",
+        "Original explicit customer confirmation, verified SQLCipher ledger and OTP exclusions are unchanged.",
+        "The original app production source must be fully reconstructed from the registered part in QA, not faked.",
+        "No physical handset performance/backup-restore acceptance claimed by source-only refactoring."
+      ]
+    },
+    {
+      "id": "M742-HOME-NATIVE-SMS-REFRESH-REGISTERED-PART",
+      "issue": "Issue #633 / Draft #638",
+      "previous_behavior": "Home kept the original native Android bank-SMS queue refresh, incremental local 1000–2000-row scan, offline isolate classification, owner-session epochs and deduplication inline in State.",
+      "approved_behavior": "Move the original methods unchanged to a registered same-library Home Dart part. Preserve state-lifetime in-flight/backpressure fields in Home and all owner native permission, queue parsing, local acknowledgment, user approval and error behavior.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_sms_refresh.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/m742_home_sms_refresh_extraction_test.dart",
+        "test/qa/m442_sms_consent_session_recovery_test.py",
+        "test/m417_sms_first_run_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "No cloud or third-party SMS transmission; local-only native queue and isolate classification remain unchanged.",
+        "Owner/epoch, permissions, OTP exclusion and no-automatic finance posting remain strict.",
+        "Original source assertions inspect real registered production Dart part and no QA check is skipped.",
+        "No full Android latency or private historical Backup/Restore parity claimed until device evidence."
+      ]
+    },
+    {
+      "id": "M750-VERIFIED-FINANCE-HOME-STARTUP-REAL-SOURCE",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "The source-verified Home startup load() method, including SQLCipher binding, cold catalog restoration, verified accounts and historical goals/recurring handling, lived inline inside _HomeScreenState.",
+      "approved_behavior": "Move exactly the original load() method body to a registered same-library Dart part and reconstruct it in legacy Dart/Python source tests. Keep the encrypted source checks, same-origin owner, source-to-ready trace, persisted categories/goals/recurring and widget/notification startup interactions identical; no new data or money write.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_finance_startup.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/m750_home_finance_startup_extraction_test.dart",
+        "test/m630_home_first_frame_contention_test.dart",
+        "test/m627_home_handoff_timeout_and_session_reset_test.dart",
+        "test/m623_verified_home_handoff_no_black_frame_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Verified SQLCipher owner/source baseline, account-linked money, category, goal and recurring historical data remain unchanged.",
+        "No removal/weakening of old finance writer, backup/restore and startup regression assertions.",
+        "Only real registered Home source is reconstructed; missing/duplicated part fails source checks.",
+        "Physical owner handset and V24 backup/restore balance parity require separate acceptance evidence."
+      ]
+    },
+    {
+      "id": "M743-M744-ORIGINAL-SMS-HOME-SOURCE-REGRESSION-COMPATIBILITY",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Seventeen existing Flutter SMS, sender grouping, offline rescan, onboarding performance, biometric Home and verified account safety regression suites read inline method text directly from raw main.dart.",
+      "approved_behavior": "After registered original Home Dart-part refactors, only original static source readers are redirected to strict real registered original-code reconstruction. All existing positive, negative, performance, OTP, owner, ledger, multi-account SMS and lifecycle assertions remain unchanged.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_sms_inbox.part.dart",
+        "lib/waffra_home_sms_rules.part.dart",
+        "lib/waffra_home_sms_refresh.part.dart",
+        "test/support/waffra_main_source.dart"
+      ],
+      "test_paths": [
+        "test/m549_sms_review_owner_scoped_test.dart",
+        "test/m548_review_grouping_and_signup_perf_test.dart",
+        "test/m661_exclusion_rule_apply_regression_test.dart",
+        "test/m464_sms_bulk_rescan_regression_test.dart",
+        "test/m638_sms_inbox_delete_sync_test.dart",
+        "test/m548_source_method_boundary_guard_test.dart",
+        "test/m624_deferred_sms_after_verified_home_test.dart",
+        "test/m622_immediate_home_without_loader_test.dart",
+        "test/m630_home_first_frame_contention_test.dart",
+        "test/m632_sms_account_splash_isolate_contract_test.dart",
+        "test/m461_sms_exclusion_and_history_scan_test.dart",
+        "test/m604_fast_login_first_frame_test.dart",
+        "test/m623_verified_home_handoff_no_black_frame_test.dart",
+        "test/m629_pull_refresh_parity_auth_home_test.dart",
+        "test/m625_single_verified_home_read_login_handoff_test.dart",
+        "test/m627_home_handoff_timeout_and_session_reset_test.dart",
+        "test/m462_smart_sms_rule_review_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Every original assertion remains; no skipped or weakened financial/SMS checks.",
+        "No code outside M385 individually scoped old source reader/import ranges altered.",
+        "Use only actual registered Dart parts, not mock source or special-case stubs.",
+        "Physical Android and user's old backup/ledger parity are still not certified by source tests."
+      ]
+    },
+    {
+      "id": "M760-VERIFIED-ACCOUNT-SELECTORS-ORIGINAL-SOURCE",
+      "issue": "Issue #633 / Draft #638",
+      "previous_behavior": "Home still contained large verified account single-flight refresh, selected-account filtering, account manager and two-sided transfer editor methods inline in _HomeScreenState.",
+      "approved_behavior": "Extract byte-identical original methods into registered same-library Home Dart part without altering owner/account identity, verified selected account balances, transaction history, account creation, or explicit source-and-destination transfer confirmation.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_verified_account_flows.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/m760_home_verified_account_flows_extraction_test.dart",
+        "test/m467_account_header_test.dart",
+        "test/m527_home_account_picker_latency_test.dart",
+        "test/m667_accounts_use_home_composer_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Never invent verified account balance, account ID or provider; account lookup must fail closed.",
+        "Transfer remains owner-confirmed, two-sided, excluded from income/expense budgets and does not create money.",
+        "Single-flight finance source and logout/session fencing remain unchanged.",
+        "Preserve all current original positive/negative tests; no actual phone and owner historical encrypted-backup parity claimed."
+      ]
+    },
+    {
+      "id": "M770-VERIFIED-SMS-REVIEW-ACCOUNT-SAR-ACK-REGISTERED-PART",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Home State retained original bounded verified SQLCipher row decoding, explicit bank SMS confirmation, exact protected original-message review and full sender-level pending review UI inline.",
+      "approved_behavior": "Byte-identically relocate the original _m593BuildVerifiedEntries, _m565ConfirmSms, _m615ReviewDetail and _reviewAutoSmsCandidates methods into a registered same-library Dart part; old original-source contracts inspect the true parts. No new posting route or behavior change.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_sms_confirmation.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/m770_home_sms_confirmation_extraction_test.dart",
+        "test/m417_sms_first_run_test.dart",
+        "test/m669_sms_review_category_search_test.dart",
+        "test/m632_sms_account_splash_isolate_contract_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "No confirmed bank SMS writes without source SAR and date confirmation, one verified selected account, and explicit userConfirmed:true.",
+        "Duplicate hash and original message ACK and encryption privacy remain enforced and no old finance assertion may be weakened.",
+        "Missing/duplicated registered production Dart part fails source QA, never reconstructed with a stub.",
+        "Exact current-head CI and owner physical Android restored-archive parity required before full acceptance."
+      ]
+    },
+    {
+      "id": "M762-VERIFIED-HOME-FINANCE-PERSISTENCE-DUE-ORIGINAL",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Authenticated Home verified finance persistence and recurring due/postpone user flows remained inline in the large Home State class.",
+      "approved_behavior": "Relocate original unchanged persistence, SMS duplicate hashes, reminder toggles and verified recurring due posting into registered same-library Dart part. Preserve original finance amount, account, goal-wallet, migration and encrypted SQLCipher write checks, original alerts and recoverability.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_finance_persistence_due.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/m762_home_finance_persistence_due_extraction_test.dart",
+        "test/m302_optimistic_module_write_safety_test.dart",
+        "test/m373_independent_budgets_finance_test.dart",
+        "test/m468_app_refresh_performance_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Never post unconfirmed or duplicate recurring due, skip account verification or overwrite the verified SQLCipher ledger.",
+        "Preserve exact original encrypted backup source, goals wallet, recurring default account and transaction budget behavior.",
+        "All positive and negative money-writing and recurring source assertions remain enabled and inspect real registered source.",
+        "Device performance, screenshots and old V24 backup restore on owner phone remain unverified outside CI."
+      ]
+    },
+    {
+      "id": "M780-ORIGINAL-VERIFIED-LEDGER-DELETE-UNDO-HOME",
+      "issue": "Issue #633, Draft PR #638",
+      "previous_behavior": "Original Home ledger transaction save-result publication, verified user-confirmed deletion, fail-closed undo, deleted-list viewer and legacy fallback lived as methods inline in _HomeScreenState.",
+      "approved_behavior": "Relocate exact production method bodies byte-for-byte to registered same-library `waffra_home_transaction_ledger_actions.part.dart` without changing any SQLCipher source, transaction ID, data, dialog, undo, permission or verified writer; reconstruct their original real production source for every old test.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_transaction_ledger_actions.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/m780_home_verified_ledger_actions_extraction_test.dart",
+        "test/storage/m620_restored_home_ledger_parity_test.dart",
+        "test/m647_m652_financial_activity_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Never change or bypass SQLCipher authority, verified finance source or user approval for a destructive action.",
+        "A failed financial delete/restore must leave the verified ledger unchanged; preserve all original source-level assertions.",
+        "No automatically reclassified or fabricated transaction identity, account, amount or restoration is allowed.",
+        "Actual physical Android old-backup restoration and visual acceptance still require owner/device evidence."
+      ]
+    },
+    {
+      "id": "M781-REAL-HOME-TRANSACTION-CARDS-ACTIONS-ORIGINAL",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Home State included original transaction list cards, details, edit/delete action dialog, protected original SMS note retrieval, receipt viewer and greeting methods inline.",
+      "approved_behavior": "Relocate the original presentation/access methods byte-identically to a registered same-library Home Dart part. Keep every caller, bank SMS original-vault access, encrypted ledger deletion authority, linked-goal edit block, receipt chip and visual design unchanged.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_transaction_cards.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/m781_home_transaction_cards_extraction_test.dart",
+        "test/m687_home_state_extraction_test.dart",
+        "test/m672_m678_activity_account_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Never decrypt/record original bank SMS except through previously authenticated SQLCipher note vault.",
+        "No change to stored finance data, goals, transaction amounts, balance signs, undo, deletion or state lifecycle.",
+        "Existing widget and source checks are preserved and reconstruct the exact registered production methods.",
+        "Actual Android overflow screenshots, old encrypted backup parity and real financial effects require physical device proof."
+      ]
+    },
+    {
+      "id": "M782-VERIFIED-HOME-PULL-REFRESH-SOURCE-PARITY",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Original Home State kept guarded pull-to-refresh scroll settle and finance authority reload methods inline, immediately before original extracted M750 load marker.",
+      "approved_behavior": "Relocate both exact original methods to registered same-library Home refresh part, retaining State-owned in-flight guard and keeping existing M750 load marker in main.dart immediately after the M782 extraction marker so original source order and all tests remain intact.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_verified_refresh.part.dart",
+        "lib/waffra_home_finance_startup.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/m782_home_verified_refresh_extraction_test.dart",
+        "test/m468_app_refresh_performance_regression_test.dart",
+        "test/m629_pull_refresh_parity_auth_home_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Every refreshed balance and ledger record must come from verified SQLCipher authority with expected generation and digest.",
+        "A failed or unchanged refresh must not fabricate, clear or duplicate money; keep original fail-closed UI and scroll restoration.",
+        "Original Home State owns in-flight coalescing field and owner session lifecycle; the real M750 startup marker must remain in main.dart.",
+        "No claims of actual physical Android latency, financial parity or encrypted backup/restore without device evidence."
+      ]
+    },
+    {
+      "id": "M783-HOME-ORIGINAL-SMS-EXCLUSIONS-AND-NOTIFICATION-ACTIONS",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Home State directly implemented protected native SMS history rescan from Settings, excluded sender/message review and restore, locally grouped review notices and explicit multi-select exclusion actions.",
+      "approved_behavior": "Relocate original method bodies unchanged into registered same-library Dart part preserving user-owned local SMS queue, verified sender and notification permission, 30-day excluded retention, user approval, no automatic posting, original message and fixed FAB navigation.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_sms_management.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/m783_home_sms_management_extraction_test.dart",
+        "test/m461_sms_exclusion_and_history_scan_test.dart",
+        "test/m638_sms_inbox_delete_sync_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "No native SMS permission, OTP exclusion or original encrypted message exposure behavior may be weakened.",
+        "No new financial write, guessed account or automatic receipt of a bank message as money.",
+        "Must restore exact registered Dart-part implementation into original source assertions, not invent substitutes.",
+        "Physical Android, backed-up user history and offline encrypted archive/ledger parity remain separate requirements."
+      ]
+    },
+    {
+      "id": "M790-ORIGINAL-COMPACT-TRANSACTION-CARDS-REAL-SOURCE",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "The compact Home income, expense, paid recurring and goal-due activity tiles and Home finance shortcut adapter remained embedded in `_HomeScreenState`.",
+      "approved_behavior": "Relocate the original method bodies unchanged into a registered same-library Home Dart part, retaining original SAR amount direction, income/expense/paid due distinctions, attachment corner viewer, encrypted original SMS source label, clickable finance action and global FAB.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_compact_activity_cards.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/m790_home_compact_activity_cards_extraction_test.dart",
+        "test/m647_m652_financial_activity_regression_test.dart",
+        "test/m670_feedback_transfer_dashboard_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "No transaction insert, verified ledger write, unapproved account debit or source identity change is introduced by presentation extraction.",
+        "Original paid due is one persisted transaction, never a second ledger debit.",
+        "Original attachment and SAR typography/actions remain active and all previous positive and negative regression assertions remain enabled.",
+        "No Android visual overflow, actual slowdown reduction or original user V24 Backup/Restore parity is claimed without device evidence."
+      ]
+    },
+    {
+      "id": "M795-ORIGINAL-HOME-CATEGORY-AND-ENCRYPTED-RECEIPTS",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Original Home transaction category picker, contextual parent/child category creation, local receipt name/file and encrypted attachment display methods remained embedded in Home State.",
+      "approved_behavior": "Move unchanged production method bodies to a declared same-library Dart part and restore exact original code into Dart/Python source contracts. Keep financial confirmation, receipt encryption, original saved file identity and category hierarchy unchanged.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_category_receipt_dialogs.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/m795_home_category_receipts_extraction_test.dart",
+        "test/m363_transaction_category_inline_creation_test.dart",
+        "test/m302_duplicate_receipt_cleanup_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "No category/account guessed or finance transaction silently altered; category validation unchanged.",
+        "Receipt file viewer, encryption, storage and prior saved user file references preserved.",
+        "No source-test bypass or relocated method stub permitted; tests inspect actual registered implementation.",
+        "Real signed Android screenshots and source user's V24 encrypted Backup/Restore parity remain independent."
+      ]
+    },
+    {
+      "id": "M791-VERIFIED-HOME-FINANCE-STARTUP-FAIL-CLOSED-RECOVERY",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "The single-flight encrypted Home startup load, account/ledger runtime source checks, background SMS handoff, verified retry and failure UI were implemented directly in `_HomeScreenState`.",
+      "approved_behavior": "Move the original verified `load` wrapper and fail-closed recovery UI byte-identically to a registered same-library Dart extension. Leave Home State completion fields, lifecycle, notice routing and actual SQLCipher authority intact.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_finance_recovery.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/m791_home_finance_recovery_extraction_test.dart",
+        "test/m630_home_first_frame_contention_test.dart",
+        "test/m623_verified_home_handoff_no_black_frame_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "No fabricated balances, expired session reuse or SMS-to-ledger automatic posting.",
+        "Failed encrypted source load retains account financial history and refuses to replace verified data silently.",
+        "Original progress/retry, biometric on-screen notice, owner/session generation, first frame source guards unchanged.",
+        "No performance improvement or signed Android V24 Backup/Restore equivalence claimed without independent physical proof."
+      ]
+    },
+    {
+      "id": "M805-HOME-BUDGET-NOTIFICATION-AND-CHART-SOURCE",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Budget percentage alert permission, verified budget threshold notifications and pure expense/weekly/paired SVG chart presentation were implemented inline in Home State.",
+      "approved_behavior": "Exact original method bodies are registered as a same-library Home Dart part; unchanged threshold checks, date/finance totals, colors and local permission request. Old source regressions reconstruct the true implementation.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_budget_alert_charts.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/m805_home_budget_alert_charts_extraction_test.dart",
+        "test/m346_financial_health_budget_goal_test.dart",
+        "test/m352_existing_data_upgrade_contract_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "No unverified account cash, ledger entry or budget commitment changes.",
+        "No chart colors/values/layout altered or notification permission bypassed.",
+        "Original tests continue inspecting actual registered code, without skip or stubs.",
+        "Real device overflow, PDF colors and historical encrypted backup balance parity remain independent acceptance."
+      ]
+    },
+    {
+      "id": "M810-VERIFIED-HOME-INCOME-EXPENSE-SUMMARY-SOURCE",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Original Home income and expense summary sheet and cash totals were in the large Home State, reflecting verified scoped transactions.",
+      "approved_behavior": "Relocate the same exact summary dialog and transaction list to registered same-library Dart part, retaining verified account filtering, income/expense totals, original absence copy, Riyal alignment and no financial writer.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_transaction_summary.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/m810_home_transaction_summary_extraction_test.dart",
+        "test/m647_m652_financial_activity_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Summary is display-only; it cannot post an unapproved transaction or duplicate paid due.",
+        "Total income and expenses derive from the same verified account-scoped entries and unchanged amount functions.",
+        "Existing positive, negative, UI and encrypted finance checks must remain active and inspect real registered methods.",
+        "Physical Android overflow and original owner V24 encrypted backup parity require independent evidence."
+      ]
+    },
+    {
+      "id": "M820-STRICT-NESTED-BUDGET-LEDGER-HOME-REGISTERED-SOURCE",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "M805 original chart/alert Dart part contained nested markers for M780 verified ledger delete/undo and M781 transaction action card methods; preexisting source-reader order tried nested markers before loading their containing part.",
+      "approved_behavior": "Use the unchanged real registered M805 part first in both Dart/Python Home source readers, then reconstruct nested M780/M781 once each in original method order without stubs, behavior edits or weakened assertions.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_budget_alert_charts.part.dart",
+        "lib/waffra_home_transaction_ledger_actions.part.dart",
+        "lib/waffra_home_transaction_cards.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/m820_nested_home_ledger_part_order_test.dart",
+        "test/m780_home_verified_ledger_actions_extraction_test.dart",
+        "test/m781_home_transaction_cards_extraction_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "All original SQLCipher money source, authorization, transaction IDs and account balances unchanged.",
+        "All previous finance/visual source assertions retained; no QA job bypassed.",
+        "Missing or duplicated real registered source markers fail closed.",
+        "Physical Android financial/backup parity remains a separate acceptance gate."
+      ]
+    },
+    {
+      "id": "M812-ORIGINAL-VERIFIED-SMS-ACCOUNT-AND-OPTIONAL-BUDGET-CHOICE",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "The Home State inline SMS money-account and independent budget picker handled bank sender/last-four evidence, exact encrypted account generation, and optional per-expense budget association.",
+      "approved_behavior": "Relocate byte-identical actual methods into registered same-library Dart part, preserving new-account and existing-account explicit consent, source evidence and no automatic selection, optional budget and original review UI.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_verified_finance_pickers.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/m812_home_verified_finance_pickers_extraction_test.dart",
+        "test/m470_sms_sender_and_rule_accuracy_test.dart",
+        "test/m363_transaction_category_inline_creation_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Never infer a verified money account from the SMS sender, last-four digits or stale account generation.",
+        "Account creation and any SMS finance posting require actual owner confirmation and authority validation.",
+        "Budget association remains optional and cannot silently change ledger or cash totals.",
+        "No old encrypted records touched; physical Android and owner backup parity remain independent."
+      ]
+    },
+    {
+      "id": "M840-ORIGINAL-HOME-WIDGET-VERIFIED-FINANCE-SYNC",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Home State directly performed an authenticated verified SQLCipher widget finance refresh and transferred the checked source to the home-widget store.",
+      "approved_behavior": "Relocate the unchanged `_syncWidgetTransactions` method to an actual same-library Dart part and keep every verified finance source, session/ready check, no-zero-on-integrity-failure fallback and pull-refresh State field unchanged.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_widget_sync.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/m840_home_widget_sync_extraction_test.dart",
+        "test/m625_single_verified_home_read_login_handoff_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "No widget balance is shown from an unverified SQLCipher account or stale session.",
+        "A failed original finance source integrity check must not synthesize zero ledger data.",
+        "No change to existing real-money writer, account transfer, backup restore, SMS posting, or archived data.",
+        "Real signed Android performance/overflow and owner historical encrypted backup parity remain independent evidence."
+      ]
+    },
+    {
+      "id": "M830-ORIGINAL-HOME-CATEGORY-FOOTER-NAVIGATION-HELPERS",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Home category page adapter, monthly summary/filter cards, category/goals/recurring tab rendering, swipe between tabs, bottom-footer stack navigation and Back remained inline in Home State.",
+      "approved_behavior": "Move the byte-identical presentation/navigation methods into a registered same-library Dart part, keeping the original lifecycle and build method in Home State. No navigation behavior, cards, FAB, finance source or user design is changed.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_navigation_helpers.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/m830_home_navigation_helpers_extraction_test.dart",
+        "test/m670_feedback_transfer_dashboard_test.dart",
+        "test/m127_ui_tour_backup_acceptance_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Original `@override build`, FAB anchor, back stack and full user-approved screens stay semantically unchanged.",
+        "No receipt/data/account/SQLCipher source migration, silent new finance action or money modification.",
+        "Source QA reconstructs real registered part rather than suppressing previous tests.",
+        "Physical Android screenshots, footer overflow and old private backup parity remain separate."
+      ]
+    },
+    {
+      "id": "M835-HOME-LOCAL-SMS-MANUAL-REVIEW-INDICATOR",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Home renders the local bank SMS review summary/count/error/rescan card directly in Home State; it opens review only on explicit user tap and cannot automatically post financial entries.",
+      "approved_behavior": "Move the unchanged original card implementation, including the unused-element annotation, to a registered same-library Dart part with no UI/FAB, SMS account, native queue or security behavior change.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_sms_review_indicator.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/m835_home_sms_review_indicator_extraction_test.dart",
+        "test/m547_sms_incremental_jank_regression_test.dart",
+        "test/m549_sms_review_owner_scoped_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "No automatic money posting, guessed account or original SMS privacy downgrade.",
+        "Original review count/errors, opt-in explicit native rescans and sender grouping unchanged.",
+        "The Home FAB and approved designs remain byte-for-byte equivalent.",
+        "Original source and Android/device/Backup Restore checks remain mandatory."
+      ]
+    },
+    {
+      "id": "M850-ORIGINAL-NATIVE-SMS-NOTICE-RESCAN-REAL-SOURCE",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "The original native bank SMS arrival-debounce and manually triggered historical rescan callbacks ran inline in the large Home State.",
+      "approved_behavior": "Move those same original callbacks unchanged to registered same-library Dart part, retaining the State timer/in-flight refresh fields, owner/permission/session checking, user-controlled rescan and no automatic finance posting.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_sms_rescan.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/m850_home_sms_rescan_extraction_test.dart",
+        "test/qa/m442_sms_consent_session_recovery_test.py",
+        "test/m547_sms_incremental_jank_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Incoming Android SMS events are debounced once and user-rescan is explicit; no automatic financial posting.",
+        "Owner-bound local bank review remains consented; dropped/failed SMS scan cannot silently erase queued messages.",
+        "Original affirmative and negative financial, OTP, date, account and SQLCipher assertions remain enabled.",
+        "Only signed Android device proof can validate no lag and actual historical user backup restore parity."
+      ]
+    },
+    {
+      "id": "M901-M124-ORIGINAL-REGISTERED-SMS-FINANCE-WRITER-GATE",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "M124 Main Integration Pre-Merge Audit asserted the original secure SMS finance writer existed inside raw lib/main.dart even after exact byte-preserving extraction to registered Home part, causing a false failure while the original protected code remained live.",
+      "approved_behavior": "The M124 workflow reads the real fail-closed registered Home part reassembly before running every original positive and negative SQLCipher/receipt/native widget/Firebase source assertion. Missing or duplicate original method marker still fails closed; no test or runtime finance requirement is removed.",
+      "source_paths": [
+        ".github/workflows/m124-main-integration-audit.yml",
+        "lib/main.dart",
+        "lib/waffra_home_sms_confirmation.part.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/qa/m901_m124_finance_authority_workflow_guard_test.py",
+        "test/qa/m900_home_source_reassembly_guard_test.py",
+        "test/m770_home_sms_confirmation_extraction_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m124-main-integration-audit.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Never bypass verified SQLCipher financial authority or permit automatic bank-SMS posting from unverified plaintext.",
+        "Retain all original positive writer and negative unverified receipt/source cutover guards.",
+        "Source inspection must reconstruct only actual registered production same-library Dart parts; missing or repeated markers fail closed.",
+        "No claim of physical Android performance or private V24 backup parity from static source QA."
+      ]
+    },
+    {
+      "id": "M902-REAL-HOME-FINANCE-CI-WRITER-SOURCE",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Three still-registered full or specialized finance workflows inspected raw lib/main.dart source for secure bank-SMS and SQLCipher authority guards, missing the actual original methods relocated into registered same-library Dart parts.",
+      "approved_behavior": "Run every original positive and negative finance/widget/cutover assertion on the strict, original-order, real registered Dart-part reconstruction shared with existing Python QA; missing, foreign or duplicate part registration must fail closed. Retain the original two verified bank SMS writer routes and enforce their exact source count in a new read-only regression.",
+      "source_paths": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m96-runtime-finance-cloud-integration.yml",
+        ".github/workflows/m109-verified-finance-authority.yml",
+        "lib/main.dart",
+        "lib/waffra_home_entry_sheet.part.dart",
+        "lib/waffra_home_sms_confirmation.part.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/qa/m902_home_finance_workflow_source_guard_test.py",
+        "test/qa/m900_home_source_reassembly_guard_test.py",
+        "test/qa/test_m340_financial_quality_gate.py"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m96-runtime-finance-cloud-integration.yml",
+        ".github/workflows/m109-verified-finance-authority.yml",
+        ".github/workflows/m174-main-sha-regression.yml"
+      ],
+      "safety_invariants": [
+        "Never weaken or remove original positive confirmed-SMS writer, money-source authority, no implicit SQLCipher activation, negative Widget writer, receipt or Firebase assertions.",
+        "Exactly two original verified SMS commit sites in the actual declared production Dart parts; test helpers may not fabricate finance code.",
+        "No app finance, archived data, OS biometrics, original SMS encryption or visual design changes.",
+        "Physical Android and owner old encrypted archive parity are separate from source-level CI."
+      ]
+    },
+    {
+      "id": "M903-LEGACY-M155-M158-ORIGINAL-SMS-FINANCE-WIDGET-SOURCE",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Original M155/M158 finance and bank SMS/Widget privacy CI checks searched raw main.dart for live authenticated writer, encrypted backup UI and SMS acknowledgment, even after those exact implementations were extracted into real registered same-library Dart parts.",
+      "approved_behavior": "Both workflows use strict production Home source reconstruction from registered part files, preserving all original eight M155 and nine M158 positive/negative finance, private SMS title, widget sender, backup, native import/export and encrypted archive assertions.",
+      "source_paths": [
+        ".github/workflows/m155-approved-features-finance-reconcile.yml",
+        ".github/workflows/m158-widget-sms-title-privacy.yml",
+        "lib/main.dart",
+        "lib/waffra_home_sms_confirmation.part.dart",
+        "lib/waffra_home_account_tools.part.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/qa/m903_legacy_home_finance_workflow_guards_test.py",
+        "test/qa/m900_home_source_reassembly_guard_test.py"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m155-approved-features-finance-reconcile.yml",
+        ".github/workflows/m158-widget-sms-title-privacy.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "Original actual verified financial SMS and backup methods, account identities and encrypted SQLCipher authority remain untouched.",
+        "No original Widget/SMS/merchant/privacy/duplicate/old-backup positive or negative check may be dropped.",
+        "Missing, duplicated, or detached Dart-part source is rejected by the source reassembler.",
+        "Source checks are not physical Android restore/account balance or real-device performance evidence."
+      ]
+    },
+    {
+      "id": "M904-HOME-WIDGET-BALANCE",
+      "issue": "Issue #633 / Draft PR #638 approved Home State extraction",
+      "previous_behavior": "Original verified Android Home Widget balance refresh and net-halalas publishing methods are inline in the Home State.",
+      "approved_behavior": "Move both methods byte-identically into registered same-library Dart part; preserve verified SQLCipher authority, net-halalas, isolate, Android checks, privacy eye and fail-closed masked display. Real-source QA returns methods to original location; no money writer or archive change.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_widget_balance.part.dart"
+      ],
+      "test_paths": [
+        "test/m904_home_widget_balance_extraction_test.dart",
+        "test/qa/m900_home_source_reassembly_guard_test.py"
+      ],
+      "safety_invariants": [
+        "Unavailable or unauthenticated ledger cannot become visible zero instead of masked balance.",
+        "Integer-halalas verified net calculation and off-isolate large dataset handling remain unchanged.",
+        "No finance save or SMS posting added by read-only Widget refresh.",
+        "The owner's source archive, ledger balances and approved global FAB are unmodified."
+      ]
+    },
+    {
+      "id": "M920-ORIGINAL-FLUTTER-HOME-REGRESSION-SOURCE",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Eleven original Flutter source-level tests read a reduced main.dart file or counted only its haptic tap wrappers, after the genuine original Home implementation moved into 43 registered Dart parts.",
+      "approved_behavior": "Read only original complete registered production Home Dart parts through the strict fail-closed source helper; preserve original account identity, receipt counts, SQLCipher finance controls, bank SMS confirmation, due and widget balances, category rollback, app-wide haptic threshold and all negative tests.",
+      "source_paths": [
+        "lib/main.dart",
+        "test/support/waffra_main_source.dart",
+        "lib/waffra_home_verified_account_flows.part.dart",
+        "lib/waffra_home_transaction_cards.part.dart",
+        "lib/waffra_home_sms_confirmation.part.dart",
+        "lib/waffra_home_finance_persistence_due.part.dart"
+      ],
+      "test_paths": [
+        "test/m470_account_scope_and_transfer_date_test.dart",
+        "test/m268_approved_emerald_balance_card_test.dart",
+        "test/m384_receipt_corner_upgrade_regression_test.dart",
+        "test/m273_production_user_journey_regression_test.dart",
+        "test/m455_manual_sqlcipher_capture_scope_test.dart",
+        "test/m620_m621_finance_notification_routing_test.dart",
+        "test/m302_category_rename_integrity_test.dart",
+        "test/waffra_widget_balance_source_authority_test.dart",
+        "test/m324_required_ai_sms_receipts_test.dart",
+        "test/storage/m470_verified_recurring_payment_capture_test.dart",
+        "test/m264_app_wide_action_haptics_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m174-main-sha-regression.yml"
+      ],
+      "safety_invariants": [
+        "Do not change any runtime money writer, stored owner information, original SMS, encrypted archive, or approved visible design.",
+        "Every original positive and negative assertion retained verbatim; app-wide haptic action threshold remains greater than 245.",
+        "Missing registered Dart part or duplicated extraction marker must cause source tests to fail closed.",
+        "Full exact SHA Flutter/Android CI plus physical owner device old backup/restore parity remain independent."
+      ]
+    },
+    {
+      "id": "M905-VERIFIED-HOME-ACTIVITY-CACHE",
+      "issue": "Issue #633 / Draft PR #638 source modularization",
+      "previous_behavior": "Transfer and savings goal verified read-only account history and merged activity cache functions are inline within _HomeScreenState.",
+      "approved_behavior": "Move exactly the same four existing verified account-scoped read-only history cache and invalidation methods to a declared same-library Home part without changing finance, widget, backup, account, SQLCipher or UI behavior.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_unified_activity_reads.part.dart"
+      ],
+      "test_paths": [
+        "test/m905_verified_activity_reads_extraction_test.dart",
+        "test/qa/m900_home_source_reassembly_guard_test.py"
+      ],
+      "safety_invariants": [
+        "Use only verified accountsBridge history reads rather than additional money ledger writers.",
+        "Preserve selected account and goal movement identity and invalidate stale per-account futures.",
+        "Unavailable verified authority produces an error, not silently invented balances.",
+        "Original owner encrypted backup and static floating add button are untouched."
+      ]
+    },
+    {
+      "id": "M921-STRICT-STORAGE-ANALYZER-REAL-RECURRING-WITNESS",
+      "issue": "Issue #633 / Draft #638",
+      "previous_behavior": "After M920 original Home source test reconstruction, test/storage/m470_verified_recurring_payment_capture_test.dart retained its original dart:io import but no longer referenced File, producing a strict Dart storage analyzer unused_import warning and failing the Full Offline Finance and UI Regression workflow.",
+      "approved_behavior": "Retain the original test import and every original 12 assertions, and strengthen the scoped recurring-provenance test with a read-only File source witness verifying the actual registered Home recurring due part still implements applyRecurring(). No CI analysis flag is relaxed.",
+      "source_paths": [
+        "test/storage/m470_verified_recurring_payment_capture_test.dart",
+        "lib/waffra_home_finance_persistence_due.part.dart",
+        "test/support/waffra_main_source.dart"
+      ],
+      "test_paths": [
+        "test/storage/m470_verified_recurring_payment_capture_test.dart",
+        "test/m762_home_finance_persistence_due_extraction_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "All original recurring ledger provenance, budget isolation and SQLCipher checks remain enabled.",
+        "The strict analyzer is not skipped or weakened; the import is meaningfully used against registered production source.",
+        "No money writer, encrypted archive, account balance or UI behavior is modified.",
+        "Actual Android and owner backup parity are independent tests."
+      ]
+    },
+    {
+      "id": "M906-HOME-ORIGINAL-CATEGORY-CONFIRMATION-EXTRACTION",
+      "issue": "Issue #633 Draft #638 Home state modularization",
+      "previous_behavior": "Verified Home sum, category leaf selectors and original localized deletion/confirmation dialogs were inline within the large State source.",
+      "approved_behavior": "Move same original methods byte-for-byte to registered same-library category confirmation part, preserving exact halalas, category hierarchy, consent buttons and dialogs.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_category_confirmations.part.dart"
+      ],
+      "test_paths": [
+        "test/m906_home_category_confirmations_extraction_test.dart",
+        "test/qa/m900_home_source_reassembly_guard_test.py"
+      ],
+      "safety_invariants": [
+        "Integer halalas category totals must remain unchanged.",
+        "Manual new categories remain selectable only at valid leaves.",
+        "User confirmation remains explicit with original cancel semantics.",
+        "No account, original SMS, original backup or global FAB changes."
+      ]
+    },
+    {
+      "id": "M907-HOME-ORIGINAL-ATOMIC-DELETE-ALL-EXTRACTION",
+      "issue": "Issue #633 Draft #638 Home state modularization",
+      "previous_behavior": "Confirmed bulk deletion used one trusted owner-bound SQLCipher finance authority captured write of ledger and SMS duplicate hashes followed by in-memory clear only on success.",
+      "approved_behavior": "Move same method byte-for-byte into registered same-library Home part without altering explicit owner confirmation, write queue, finance source baseline, route, paired entries/hash journal, widget refresh or fail-closed error recovery.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_delete_all_transactions.part.dart"
+      ],
+      "test_paths": [
+        "test/m907_home_delete_all_extraction_test.dart",
+        "test/qa/m900_home_source_reassembly_guard_test.py"
+      ],
+      "safety_invariants": [
+        "Never clear owner data without explicit confirmation and verified durable finance write.",
+        "Original SMS duplicate hashes and transaction ledger are committed atomically together.",
+        "Failed authority write keeps original financial values and displays a safe retry message.",
+        "No change to owner Backup/Restore, original SMS review, or approved FAB layout."
+      ]
+    },
+    {
+      "id": "M922-ORIGINAL-WIDGET-VERIFIED-BALANCE-SOURCE-CONTRACT",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Original M636 Widget balance test read raw main.dart to assert authoritative integer halalas and SAR display although the unchanged real Home Widget balance publisher moved to a registered same-library part, making source-only finance regression fail falsely.",
+      "approved_behavior": "Both original raw-main source readers in the same M636 Flutter Widget privacy/finance regression now use strict registered same-library production Home source reconstruction. Preserve all 19 original assertions and add no weaker fake balance or native capture route.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_widget_balance.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/waffra_widget_quick_capture_test.dart"
+      ],
+      "test_paths": [
+        "test/waffra_widget_quick_capture_test.dart",
+        "test/m904_home_widget_balance_extraction_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m110-home-writer-source-authority.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "The original authenticated SQLCipher balance and integer halalas are verified; no guessing account balance or storing raw bank SMS.",
+        "Keep all native widget intent and owner-confirmed entry, retired quick capture, privacy and immutable intent checks unchanged.",
+        "Fail closed on missing/detached/duplicate Dart part; no mocked code for source tests.",
+        "Physical Android and password-authenticated owner V24 restore parity remain separately unverified."
+      ]
+    },
+    {
+      "id": "M908-DUE-ACCOUNT-PROVENANCE-ORIGINAL-EXTRACTION",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Original Home read-only due payment account provenance helper was inline in Home State and memoized source account identity for paid goals and due transactions.",
+      "approved_behavior": "Move unchanged original helper into same-library registered Dart part, retain goal-wallet versus verified child account provenance, owner-bound read, missing-link null result and account cache; no write or changed finance behavior.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_due_account_provenance.part.dart"
+      ],
+      "test_paths": [
+        "test/m908_home_due_provenance_extraction_test.dart",
+        "test/qa/m900_home_source_reassembly_guard_test.py"
+      ],
+      "safety_invariants": [
+        "Never infer an account identity from an unverified/missing child link.",
+        "Goal wallet payment proof must use the exact original integer-halalas threshold.",
+        "Closed session or unavailable finance binding yields null instead of an invented account.",
+        "No transaction save, original backup data mutation or global add-button changes."
+      ]
+    },
+    {
+      "id": "M925-M174-M110-EXACT-REGISTERED-PRODUCTION-HOME-READS",
+      "issue": "Issue #633 / Draft PR #638 / user requested finish remaining code",
+      "previous_behavior": "Original M108-M110 Home and Widget finance-source protections passed on real registered Dart parts, but M924 Python witness mismatched Dart escaped 'add', and the M110 workflow inline code checked finance routes only in raw main.dart, causing unrelated false CI failures.",
+      "approved_behavior": "Keep original positive and negative finance-source protections and their witnesses; handle Dart escaped quotes without weakening original strings, and require M110 workflow to load the exact registered main-plus-Dart-part source using fail-closed reconstruction, verifying original SQLCipher routes and no unverified direct finance writes.",
+      "source_paths": [
+        ".github/workflows/m110-home-writer-source-authority.yml",
+        "test/qa/m924_widget_shared_sms_registered_source_guard_test.py"
+      ],
+      "test_paths": [
+        "test/qa/m925_exact_home_source_ci_guard_test.py",
+        "test/m108_home_widget_one_finance_writer_test.dart",
+        "test/m110_live_finance_authority_writer_test.dart"
+      ],
+      "safety_invariants": [
+        "No direct legacy finance mutation in registered Home source.",
+        "Original verified SQLCipher full reset, transaction delete-all and bulk SMS writes all remain visible to source checks.",
+        "Dart's literal source quoting must not remove or weaken original M108 native/widget/account safeguards.",
+        "Original finance, native widget, plus floating action button and encrypted Backup/Restore production code are untouched."
+      ]
+    },
+    {
+      "id": "M926-HOME-PRESENTATION-SCROLL-ANIMATION-CONTROLS",
+      "issue": "Issue #633 / Draft #638",
+      "previous_behavior": "Dashboard scroll compact header and persisted animation-level selector were inline in _HomeScreenState.",
+      "approved_behavior": "Move unchanged exact method implementations to registered same-library Home Dart part, retain scroll listener, post-frame Flutter mounted checks, 96px compact threshold, animation-level whitelist, SharedPreferences key and fixed FAB geometry.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_presentation_controls.part.dart"
+      ],
+      "test_paths": [
+        "test/m926_home_presentation_controls_extraction_test.dart",
+        "test/qa/m900_home_source_reassembly_guard_test.py"
+      ],
+      "safety_invariants": [
+        "No change to same-frame Flutter header layout or existing FAB anchor.",
+        "Animation level writes use original owner preference key and whitelist, not finance.",
+        "No finance ledger, SMS, original backup, due/goal calculation, database or source authority changed."
+      ]
+    },
+    {
+      "id": "M927-RETIRED-AI-CLOUD-SMS-RUNTIME-REACHABILITY-GUARD",
+      "issue": "Issues #632, #634, #637 / Draft PR #638",
+      "previous_behavior": "Retired AI/Qwen/Cloudflare test-only validators remain in source tree for historical finance/currency negative tests after old cloud SMS runtime and release transport were removed; an accidental indirect Dart import could silently make them reachable in active Home/SMS paths.",
+      "approved_behavior": "Audit actual physical Dart import/export/part dependency graph from Home, official SMS consent and Android SMS runner at runtime; reject any edge reaching retired AI or external SMS analysis modules, ensure legacy installation cloud consent is erased, configured network gateway stays false, analyzeIfConsented and analyze methods fail closed, and local SMS parser still belongs to Home runtime.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_auto_sms_consent.dart",
+        "lib/waffra_sms_cloud_service.dart",
+        "lib/waffra_cloudflare_sms_gateway.dart"
+      ],
+      "test_paths": [
+        "test/qa/m927_retired_model_runtime_graph_guard_test.py"
+      ],
+      "safety_invariants": [
+        "No original bank SMS leaves the phone for legacy cloud analysis.",
+        "Local deterministic SMS parsing, user review and encrypted SQLCipher financial authority remain active.",
+        "Historical negative test-only currency/model validators cannot be called from production Home or notification onboarding.",
+        "No unrelated encrypted cloud backup synchronization or original owner restore components are deleted or disabled."
+      ]
+    },
+    {
+      "id": "M928-M340-PRESERVE-ORIGINAL-ACTUAL-HOME-SMS-AUTHORITY",
+      "issue": "Issue #633 / Draft #638 safe Home same-library source extraction",
+      "previous_behavior": "M340 offline financial source gate and its hostile-mutation tests read the initial Home main source plus only one extracted entry-sheet part, missing original protected SMS review confirmation, verified bank account pre-Yes selection, authenticated editor safeguards and duplicate prevention once those methods became registered Dart parts.",
+      "approved_behavior": "Reconstruct complete real registered Home source including selected actual imported-part override text, keep strict failure for missing/duplicate markers; repair original M340 negative mutator tests to edit the actual registered SMS confirmation and editor source, not obsolete raw main.dart. Do not drop, alter, or bypass original safety conditions.",
+      "source_paths": [
+        "scripts/qa/m340_financial_quality_gate.py",
+        "test/qa/waffra_home_source.py",
+        "test/qa/test_m340_financial_quality_gate.py"
+      ],
+      "test_paths": [
+        "test/qa/test_m340_financial_quality_gate.py",
+        "test/qa/m928_registered_home_finance_guard_injection_test.py",
+        "test/qa/m900_home_source_reassembly_guard_test.py"
+      ],
+      "safety_invariants": [
+        "M340 still demands exactly two verified SMS authority commits and original owner, account-generation, amount/date, hash and review guards.",
+        "Hostile mutations of the actual SMS confirmation/editor part must cause M340 audit failure; no fixture or mocked production source.",
+        "Foreign-currency consent, receipt staging, full finance authority, retired AI prohibitions and SQLCipher production cutover checks remain unchanged.",
+        "No changes to Flutter finance writers, original bank SMS, budgets, Backup/Restore, native Widget or stationary FAB."
+      ]
+    },
+    {
+      "id": "M929-HOME-LOGOUT-NOTICE-FX-SAME-LIBRARY-EXTRACTION",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Original owner-session logout close, finance notification routing and no-post foreign FX preview methods lived directly inside _HomeScreenState and were referenced by exact source QA.",
+      "approved_behavior": "Preserve those original methods exactly, relocate to three registered same-library Dart extension parts; source-based Dart and Python QA reconstruct the real registered parts, and an explicit regression confirms close ordering, verified finance destination, and no unapproved currency ledger posting.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_logout_guard.part.dart",
+        "lib/waffra_home_finance_notification_route.part.dart",
+        "lib/waffra_home_fx_preview.part.dart"
+      ],
+      "test_paths": [
+        "test/m929_home_session_routes_extraction_test.dart",
+        "test/m627_home_handoff_timeout_and_session_reset_test.dart",
+        "test/m620_m621_finance_notification_routing_test.dart",
+        "test/m336_fx_consent_and_full_title_test.dart",
+        "test/m636_owner_approved_retirement_and_ui_test.dart"
+      ],
+      "safety_invariants": [
+        "Wait for owner-verified Home reads, post-frame work and financial write queue before closing SQLCipher binding.",
+        "Only authenticated pending review or verified saved ledger identity is used for finance notification taps, without direct SMS commit.",
+        "Foreign-currency preview never posts converted amount or bypasses Saudi SAR release restriction.",
+        "Existing app wide stationary FAB, UI design, 1:1 original source route, backup/restore and financial account balance remain unchanged."
+      ]
+    },
+    {
+      "id": "M930-HOME-AUTH-SQLCIPHER-FAB-RESUME-WIDGET-ACTION-EXTRACTION",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Home verified first-frame visibility, finance authority bind, stationary FAB action lock, lifecycle onResume and root/Widget navigation callbacks remained inline in the large Home State after other same-library modules were extracted.",
+      "approved_behavior": "Move original exact methods without logic changes to five registered Dart parts; preserve source QA reconstruction, original owner session finance authority, first interactive frame, same verified UI action and explicit post-frame refresh.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_auth_visibility.part.dart",
+        "lib/waffra_home_finance_binding.part.dart",
+        "lib/waffra_home_fab_actions.part.dart",
+        "lib/waffra_home_resume_handler.part.dart",
+        "lib/waffra_home_widget_action_routes.part.dart"
+      ],
+      "test_paths": [
+        "test/m930_home_lifecycle_helpers_extraction_test.dart",
+        "test/m663_home_prewarm_auth_handoff_test.dart",
+        "test/m631_verified_finance_prewarm_test.dart",
+        "test/m627_home_handoff_timeout_and_session_reset_test.dart",
+        "test/m630_home_first_frame_contention_test.dart"
+      ],
+      "safety_invariants": [
+        "Never reopen closed SQLCipher owner authority or render pre-auth financial data.",
+        "Do not move the global FAB, alter its action timing or add financial writes.",
+        "Do not initiate expensive SMS/Widget reads on the unlock frame; preserve deferred guarded resume.",
+        "Original root navigation and Widget pending action never bypass authenticated Home-ready gates."
+      ]
+    },
+    {
+      "id": "M932-M340-REAL-FX-DART-PART-NEGATIVE-FINANCE-WRITER",
+      "issue": "Issue #633 / PR #638",
+      "previous_behavior": "M340 negative FX-preview financial-writer mutation test injected a forbidden persist() call into raw lib/main.dart, even though the original preview was moved byte-preserved into lib/waffra_home_fx_preview.part.dart; the guard's source overrides also omitted that new part.",
+      "approved_behavior": "Load actual registered FX preview part into M340 overridable source map and mutate it directly, verifying both persist() and saveCaptured() writes fail finance safety review while all original verified SMS, amount/date/account, FX approval, SQLCipher, Qwen and no-write checks stay intact.",
+      "source_paths": [
+        "scripts/qa/m340_financial_quality_gate.py",
+        "test/qa/test_m340_financial_quality_gate.py",
+        "lib/waffra_home_fx_preview.part.dart"
+      ],
+      "test_paths": [
+        "test/qa/test_m340_financial_quality_gate.py",
+        "test/qa/m928_registered_home_finance_guard_injection_test.py"
+      ],
+      "safety_invariants": [
+        "The actual registered FX preview is included in finance source overrides, never substituted with a mock or stale raw main.dart.",
+        "Any injected unapproved FX ledger persist or saveCaptured is detected without suppressing original hostile finance regressions.",
+        "Original approved FX quote is non-posting in Saudi release, original currency consent and precision guards preserved."
       ]
     }
   ]

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 
@@ -9,7 +10,7 @@ void main() {
   late String nativeActivity;
 
   setUpAll(() {
-    mainSource = File('lib/main.dart').readAsStringSync();
+    mainSource = readWaffraMainSourceForContracts();
     nativeActivity = File('native/WaffraMainActivity.kt').readAsStringSync();
   });
 

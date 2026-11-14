@@ -1,9 +1,10 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main(){
  test('M339 manual receipt attachment stages roll back when ledger commit fails',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   final start=main.indexOf('Future<void> entrySheet(');
   final end=main.indexOf('Future<String?> chooseTransactionCategory(',start);
   expect(start,greaterThan(0));

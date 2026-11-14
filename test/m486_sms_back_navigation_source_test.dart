@@ -1,10 +1,11 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 
 void main(){
  test('M486 #410 sender picker stays below SMS review/editor',(){
-  final source=File('lib/main.dart').readAsStringSync();
+  final source=readWaffraMainSourceForContracts();
   final inboxStart=source.indexOf('Future<void> _openAutoSmsInbox()async{');
   final cardStart=source.indexOf('Widget _autoSmsReviewCard(){',inboxStart);
   expect(inboxStart,greaterThanOrEqualTo(0));
@@ -28,7 +29,7 @@ void main(){
  });
 
  test('M486 #410 canceling nested editor cannot acknowledge bank SMS',(){
-  final source=File('lib/main.dart').readAsStringSync();
+  final source=readWaffraMainSourceForContracts();
   final detailStart=source.indexOf('Future<void> _reviewAutoSmsCandidates(');
   final end=source.indexOf('void _receiveSharedSms()',detailStart);
   expect(detailStart,greaterThanOrEqualTo(0));
@@ -43,7 +44,7 @@ void main(){
   expect(detail,contains('_autoSmsReviewOpen=false;'));
  });
  test('M488 #416 cancelled inline Add retains prior financial selector',(){
-  final source=File('lib/main.dart').readAsStringSync();
+  final source=readWaffraMainSourceForContracts();
   final start=source.indexOf('Future<void> entrySheet({MoneyEntry? initial');
   final end=source.indexOf('if(selectedMain.isNotEmpty&&subcategories.isEmpty)',start);
   expect(start,greaterThanOrEqualTo(0));
@@ -57,7 +58,7 @@ void main(){
  });
 
  test('M492 #410 Back stores only an ephemeral matching SMS editor draft',(){
-  final src=File('lib/main.dart').readAsStringSync();
+  final src=readWaffraMainSourceForContracts();
   final start=src.indexOf('Future<void> entrySheet({MoneyEntry? initial');
   final end=src.indexOf('if(selectedMain.isNotEmpty&&subcategories.isEmpty)',start);
   expect(start,greaterThanOrEqualTo(0));
@@ -76,7 +77,7 @@ void main(){
  });
 
  test('M494 #405 #416 inline creation is verified and preserves editor',(){
-  final src=File('lib/main.dart').readAsStringSync();
+  final src=readWaffraMainSourceForContracts();
   final start=src.indexOf('Future<void> createAccountInsideEntryDropdown(');
   final end=src.indexOf('Widget operationPicker(){',start);
   expect(start,greaterThanOrEqualTo(0));
@@ -104,7 +105,7 @@ void main(){
  });
 
  test('M494 #409 original SMS visible in editor but OTP guarded',(){
-  final src=File('lib/main.dart').readAsStringSync();
+  final src=readWaffraMainSourceForContracts();
   expect(src,contains("Key('waffra-entry-original-sms-expand')"));
   expect(src,contains("Key('waffra-entry-original-sms-text')"));
   expect(src,contains('WaffraBankSmsFactsParser.parse(initialSms??message.text).pending?'));
@@ -113,7 +114,7 @@ void main(){
  });
 
  test('M494 #417 failed bulk exclusion retains the selected sender sheet',(){
-  final src=File('lib/main.dart').readAsStringSync();
+  final src=readWaffraMainSourceForContracts();
   final from=src.indexOf('// Explicit queue removal first, followed by a SEPARATE sender opt-in.');
   final to=src.indexOf('Widget _autoSmsReviewCard(){',from);
   expect(from,greaterThanOrEqualTo(0));

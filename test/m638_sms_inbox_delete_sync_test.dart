@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main(){
@@ -26,7 +27,7 @@ void main(){
  });
 
  test('M638 explicit Rescan alone calls background native inbox sync',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   final bridge=File('lib/waffra_auto_sms.dart').readAsStringSync();
   final activity=File('native/WaffraMainActivity.kt').readAsStringSync();
   final begin=main.indexOf(' Future<void> _rescanAutoSmsInbox({BuildContext? feedbackContext})async{');

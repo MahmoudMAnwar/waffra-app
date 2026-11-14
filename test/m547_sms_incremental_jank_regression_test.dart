@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'support/waffra_source_method_section.dart';
@@ -30,7 +31,7 @@ void main() {
 
  test('M547 new-only rescans never clear a previously completed cursor', () {
   final native=File('native/WaffraAutoSmsStore.kt').readAsStringSync();
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   final restart=native.split(
    'fun restartCompletedHistory(context: Context): Boolean')[1]
    .split('private data class HistoricalSmsRow')[0];
@@ -48,7 +49,7 @@ void main() {
  });
 
  test('M547 only an explicit rescan fetches historical pages during UI interactions', () {
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   final resume=main.split('void _m468OnResume(){')[1]
    .split('@override void initState()')[0];
   final open=waffraSourceMethodSection(main,

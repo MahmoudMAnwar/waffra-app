@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -143,7 +144,7 @@ void main() {
   });
 
   test('M290 permissions are triggered only by the relevant user action', () {
-    final main = File('lib/main.dart').readAsStringSync();
+    final main = readWaffraMainSourceForContracts();
     final onboarding = File('lib/waffra_country_first_run_page.dart')
       .readAsStringSync();
     final country = File('lib/waffra_country_suggestion.dart')

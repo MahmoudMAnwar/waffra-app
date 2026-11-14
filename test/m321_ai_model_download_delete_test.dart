@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main(){
@@ -6,13 +7,13 @@ void main(){
   expect(File('lib/waffra_ondevice_qwen.dart').existsSync(),false);
   expect(File('lib/waffra_ai_model_gate.dart').existsSync(),false);
   expect(File('scripts/qa/prefetch_verified_llamadart.sh').existsSync(),false);
-  final home=File('lib/main.dart').readAsStringSync();
+  final home=readWaffraMainSourceForContracts();
   expect(home,contains('Future<void> eraseFinancialData()async'));
   expect(home,isNot(contains('Future<void> deleteAiModel()async')));
   expect(home,contains('await _accountWriteAuthority.signOut();'));
  });
  test('M636 old AI removal never clears user finance data or recovery',(){
-  final home=File('lib/main.dart').readAsStringSync();
+  final home=readWaffraMainSourceForContracts();
   expect(home,contains('Future<void> _loadFinanceSafely()async'));
   expect(home,contains('financeView.requireIntegrity();'));
   expect(home,contains('Future<void> entrySheet('));

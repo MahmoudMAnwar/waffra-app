@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/main.dart';
 import 'package:waffra/waffra_display_currency.dart';
@@ -222,7 +223,7 @@ void main() {
   });
 
   test('M300 manual bank SMS editor blocks foreign currency before hashing',(){
-    final app=File('lib/main.dart').readAsStringSync();
+    final app=readWaffraMainSourceForContracts();
     final editor=app.indexOf('Future<void> entrySheet(');
     final save=app.indexOf('if(message.text.trim().isEmpty)return;',editor);
     final hash=app.indexOf('final h=sha256.convert',save);

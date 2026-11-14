@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/main.dart';
@@ -46,7 +47,7 @@ void main() {
   });
 
   test('M375 budget picker is conditional, assignment is always optional', () {
-    final app=File('lib/main.dart').readAsStringSync();
+    final app=readWaffraMainSourceForContracts();
     final categories=File('lib/waffra_categories_page.part.dart')
       .readAsStringSync();
     expect(app,contains('if(!income&&waffraHasSelectableBudget(namedBudgets))...['),

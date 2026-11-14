@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -9,7 +10,7 @@ void main(){
  TestWidgetsFlutterBinding.ensureInitialized();
 
  test('approved balance artwork stays embedded and never uses external images',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   final artwork=File('lib/waffra_balance_art.dart').readAsStringSync();
   final header=File('lib/waffra_home_balance_header.part.dart').readAsStringSync();
   expect(header,contains('waffra-approved-emerald-balance-card'));

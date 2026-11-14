@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -41,7 +42,7 @@ void main() {
   });
 
   test('login preserves source guards and removes only redundant IO/delay',(){
-    final source=File('lib/main.dart').readAsStringSync();
+    final source=readWaffraMainSourceForContracts();
     final login=source.split(' Future<void> _signIn()async{')[1]
       .split(' String get maskedLastPhone{')[0];
     final intro=source.split(' Future<void> launchIntro()async{')[1]

@@ -1,10 +1,11 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// M624: post-login native SMS work may not steal the FIRST real Home frame.
 /// A signed Android cold/warm profile trace is still required for speed claims.
 void main() {
- final source=File('lib/main.dart').readAsStringSync();
+ final source=readWaffraMainSourceForContracts();
  final app=source.split('class _WaffraAppState extends State<WaffraApp>')[1]
   .split('class PinLockScreen extends StatefulWidget')[0];
  final userSave=app.split(' Future<void> saveUser(Person u)async {')[1]

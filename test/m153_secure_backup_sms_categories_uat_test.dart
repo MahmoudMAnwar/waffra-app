@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/main.dart';
 import 'package:waffra/waffra_merchant_rules.dart';
@@ -63,7 +64,7 @@ void main(){
  });
 
  test('M153: new backup screen is uncluttered and preserves legacy restore',(){
-  final source=File('lib/main.dart').readAsStringSync();
+  final source=readWaffraMainSourceForContracts();
   final start=source.indexOf('Future<void> backupDialog()');
   final end=source.indexOf('// System credentials are never saved',start);
   final dialog=source.substring(start,end);

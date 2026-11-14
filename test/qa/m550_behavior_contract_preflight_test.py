@@ -69,6 +69,48 @@ native.split('old sender grouping');
         self.assertEqual(checked, 2)
         self.assertEqual(len(stale), 2)
 
+
+    def test_m934_rejects_raw_main_reader_for_relocated_widget_guard(self):
+        sample = """
+void main(){
+ test('widget',(){
+  final main=File('lib/main.dart').readAsStringSync();
+  expect(main,contains(' Future<void> _refreshWidget()async{'));
+  final start=main.indexOf(' void _receiveWidgetAction(){');
+ });
+}
+"""
+        stale = guard.detect_unmigrated_home_readers(
+            {"test/widget.dart": sample},
+            "part 'waffra_home_widget_balance.part.dart';",
+            {"waffra_home_widget_balance.part.dart":
+             " Future<void> _refreshWidget()async{\n void _receiveWidgetAction(){"},
+        )
+        self.assertEqual(len(stale), 2)
+        self.assertEqual({x["kind"].split(" (")[0] for x in stale},
+                         {"expect contains", "source indexOf anchor"})
+
+    def test_m934_reconstructed_home_and_negative_security_assertions_remain_valid(self):
+        sample = """
+void main(){
+ test('safe',(){
+  final main=readWaffraMainSourceForContracts();
+  expect(main,contains(' Future<void> _refreshWidget()async{'));
+ });
+ test('raw is deliberately missing moved implementation',(){
+  final main=File('lib/main.dart').readAsStringSync();
+  expect(main,isNot(contains(' Future<void> _refreshWidget()async{')));
+  expect(main,contains("part 'waffra_home_widget_balance.part.dart';"));
+ });
+}
+"""
+        self.assertEqual(guard.detect_unmigrated_home_readers(
+            {"test/safe.dart": sample},
+            "part 'waffra_home_widget_balance.part.dart';",
+            {"waffra_home_widget_balance.part.dart":
+             " Future<void> _refreshWidget()async{",
+            }), [])
+
     def test_catches_obsolete_inline_workflow_source_assertions(self):
         sample = """
 run: |

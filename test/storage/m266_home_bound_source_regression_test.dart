@@ -1,4 +1,5 @@
 import 'dart:io';
+import '../support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 
@@ -6,7 +7,10 @@ import 'package:flutter_test/flutter_test.dart';
 /// source-dependent operations. This is source-level regression evidence,
 /// not a physical-device or production SQLCipher activation certificate.
 void main() {
-  final app = File('lib/main.dart').readAsStringSync();
+  if (!File('lib/waffra_home_entry_sheet.part.dart').existsSync()) {
+    throw StateError('Original verified Home editor part missing');
+  }
+  final app = readWaffraMainSourceForContracts();
 
   String between(String start, String end) {
     final from = app.indexOf(start);

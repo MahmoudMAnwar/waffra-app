@@ -29,6 +29,14 @@ ANCHOR_DART = re.compile(
     r"(?P<q>['\"])(?P<literal>(?:\\.|(?!\2).)*)\2",
     re.DOTALL,
 )
+# M934: indexOf anchors are executable source assertions too. In particular,
+# testing a moved method against raw main.dart is NOT made valid by
+# concatenating part content solely for the stale-change inventory.
+INDEXOF_DART = re.compile(
+    r"\b(?P<var>[A-Za-z_]\w*)\.indexOf\(\s*"
+    r"(?P<q>['\"])(?P<literal>(?:\\.|(?!\2).)*)\2",
+    re.DOTALL,
+)
 BINDING_DART = re.compile(
     r"\b(?:final|var)\s+(?P<var>[A-Za-z_]\w*)\s*=\s*File\(\s*"
     r"(?P<q>['\"])(?P<path>(?:lib|native|android|ios|firebase|assets)/[^'\"]+)\2\s*\)"
@@ -70,7 +78,7 @@ def git(*args: str) -> str:
 
 
 def changed_paths(base: str, head: str) -> set[str]:
-    return {p for p in git("diff", "--name-only", "--diff-filter=ACMR",
+    return {p for p in git("diff", "--name-only", "--diff-filter=ACMRD",
                             "-z", base, head).split("\x00") if p}
 
 
@@ -123,6 +131,8 @@ def _positive_python(text: str, path: str) -> list[tuple[str, str, int, str]]:
             if isinstance(node, (ast.Assign, ast.AnnAssign)):
                 value = node.value
                 src = _read_path(value) if value is not None else None
+                if src is None and isinstance(value, ast.Call) and isinstance(value.func, ast.Name) and value.func.id == 'read_waffra_home_source':
+                    src = 'lib/main.dart'
                 if src:
                     targets = node.targets if isinstance(node, ast.Assign) else [node.target]
                     for target in targets:
@@ -208,6 +218,50 @@ def detect_stale(
     return stale, examined
 
 
+
+def detect_unmigrated_home_readers(
+    tests: dict[str, str], main_source: str, registered_parts: dict[str, str],
+) -> list[dict]:
+    """Reject positive test expectations against raw main that now live only in Dart parts.
+
+    The original M550 scanner appends registered parts for legitimate *reconstructed*
+    source contracts, but this is not what File('lib/main.dart') reads. Check the
+    actual file at the assertion site, not that synthetic union.
+    """
+    part_contents = "\n".join(registered_parts.values())
+    stale: list[dict] = []
+    for path, data in sorted(tests.items()):
+        if not path.endswith(".dart") or "lib/main.dart" not in data:
+            continue
+        bindings: list[tuple[int, str, bool]] = [
+            (m.start(), m["var"], m["path"] == "lib/main.dart")
+            for m in BINDING_DART.finditer(data)
+        ]
+        bindings.extend((m.start(), m["var"], False)
+                        for m in BINDING_MAIN_RECON.finditer(data))
+        for kind, pattern in (
+            ("expect contains", POSITIVE_DART),
+            ("source split anchor", ANCHOR_DART),
+            ("source indexOf anchor", INDEXOF_DART),
+        ):
+            for assertion in pattern.finditer(data):
+                literal = _safe_literal(assertion["q"], assertion["literal"])
+                if not literal or literal in main_source or literal not in part_contents:
+                    continue
+                prior = [(offset, raw) for offset, name, raw in bindings
+                         if name == assertion["var"] and offset < assertion.start()]
+                if not prior or not max(prior)[1]:
+                    continue
+                stale.append({
+                    "test": path,
+                    "line": data.count("\n", 0, assertion.start()) + 1,
+                    "source": "lib/main.dart",
+                    "old_expectation": literal[:150],
+                    "kind": kind + " (unmigrated registered Dart part)",
+                })
+    return stale
+
+
 def inventory(root: Path = ROOT) -> dict:
     workflows = sorted([*root.glob(".github/workflows/*.yml"),
                         *root.glob(".github/workflows/*.yaml")])
@@ -234,6 +288,7 @@ def validate_review(
     review: dict, changed: set[str], available: set[str],
     *,
     must_be_changed: bool = True,
+    approved_deleted: set[str] | None = None,
 ) -> list[str]:
     if review.get("schema_version") != 1:
         raise ContractError("M550 behavior review missing/invalid schema_version=1")
@@ -245,6 +300,9 @@ def validate_review(
     contracts = review.get("contracts")
     if not isinstance(contracts, list) or not contracts:
         raise ContractError("M550 requires substantive behavior-to-test contracts")
+    # Exact-path deletions must be declared by the M385 scope gate.
+    # M550 still requires a reviewed behavior contract and live QA tests.
+    deleted = approved_deleted or set()
     covered = set()
     summaries = []
     for c in contracts:
@@ -256,8 +314,12 @@ def validate_review(
         paths, tests = c.get("source_paths"), c.get("test_paths")
         if not isinstance(paths, list) or not paths or not isinstance(tests, list) or not tests:
             raise ContractError(f"M550 {c['id']}: provide source_paths and test_paths")
-        if any(not isinstance(p, str) or p not in available for p in paths + tests):
+        if any(not isinstance(p, str) or
+                   (p not in available and p not in deleted)
+                   for p in paths + tests):
             raise ContractError(f"M550 {c['id']}: source/test reference missing from checkout")
+        if any(p in deleted for p in tests):
+            raise ContractError(f"M550 {c['id']}: removed test cannot attest deleted source")
         if any(not p.startswith(("test/", "scripts/qa/test_")) for p in tests):
             raise ContractError(f"M550 {c['id']}: test_paths must be real QA tests")
         safety = c.get("safety_invariants")
@@ -283,12 +345,24 @@ def build_report(base: str, head: str, root: Path = ROOT) -> dict:
     if inv["workflows"] < 1 or not inv["jobs"]:
         raise ContractError("M550 workflow inventory empty; refusing false green")
     available = {x.relative_to(root).as_posix() for x in root.rglob("*") if x.is_file()}
+    # M701: Validate removed production paths against the exact approved
+    # deletion declaration. Never treat a random missing file as approved.
+    deleted_sources = sources - available
+    try:
+        scope = json.loads((root / "docs/qa/approved_change_scope.json").read_text(encoding="utf-8"))
+        approved_deleted = set(scope.get("approved_deleted_files", []))
+    except (OSError, ValueError, TypeError) as e:
+        raise ContractError(f"M550 approved deletion scope unreadable: {e}") from e
+    if deleted_sources - approved_deleted:
+        raise ContractError("M550 undeclared deleted source: " +
+                            ", ".join(sorted(deleted_sources - approved_deleted)))
     if sources:
         try:
             contract = json.loads((root / CONTRACT).read_text(encoding="utf-8"))
         except (OSError, ValueError) as e:
             raise ContractError(f"M550 behavior review unreadable: {e}") from e
-        contracts = validate_review(contract, changed, available)
+        contracts = validate_review(contract, changed, available,
+                                    approved_deleted=deleted_sources)
     else:
         contracts = []
     # Complete *repository* inventory, not a handpicked list of jobs.
@@ -303,7 +377,11 @@ def build_report(base: str, head: str, root: Path = ROOT) -> dict:
             old_sources[p] = git("show", f"{base}:{p}")
         except ContractError:
             continue  # New source path: no deleted baseline assertion.
-        new_sources[p] = (root / p).read_text(encoding="utf-8")
+        # Deleted sources are protected by the M385 exact-path gate.
+        # They cannot be opened at HEAD, and are deliberately not
+        # reconstituted from the baseline as though still executable.
+        if p in available:
+            new_sources[p] = (root / p).read_text(encoding="utf-8")
     # M687: same-library part moves are NOT code deletions. Check that every
     # extracted part is declared by main.dart, says 'part of main.dart', and
     # exists in the head tree before allowing any old source assertion to
@@ -313,6 +391,51 @@ def build_report(base: str, head: str, root: Path = ROOT) -> dict:
     expected_parts = (
         "lib/waffra_home_pdf_reports.part.dart",
         "lib/waffra_home_profile.part.dart",
+        "lib/waffra_home_budget_cards.part.dart",
+        "lib/waffra_home_budget_workflows.part.dart",
+        "lib/waffra_home_entry_sheet.part.dart",
+        "lib/waffra_home_account_tools.part.dart",
+        "lib/waffra_home_sms_transfer_review.part.dart",
+        "lib/waffra_home_verified_transfer_cards.part.dart",
+        "lib/waffra_home_category_workflows.part.dart",
+        "lib/waffra_home_sms_inbox.part.dart",
+        "lib/waffra_home_sms_rules.part.dart",
+        "lib/waffra_home_sms_refresh.part.dart",
+        "lib/waffra_home_finance_startup.part.dart",
+        "lib/waffra_home_sms_confirmation.part.dart",
+        "lib/waffra_home_verified_account_flows.part.dart",
+        "lib/waffra_home_unified_activity_reads.part.dart",
+        "lib/waffra_home_due_account_provenance.part.dart",
+        "lib/waffra_home_finance_persistence_due.part.dart",
+        "lib/waffra_home_transaction_ledger_actions.part.dart",
+        "lib/waffra_home_transaction_cards.part.dart",
+        "lib/waffra_home_verified_refresh.part.dart",
+        "lib/waffra_home_compact_activity_cards.part.dart",
+        "lib/waffra_home_finance_recovery.part.dart",
+        "lib/waffra_home_transaction_summary.part.dart",
+        "lib/waffra_home_widget_sync.part.dart",
+        "lib/waffra_home_category_confirmations.part.dart",
+        "lib/waffra_home_delete_all_transactions.part.dart",
+        "lib/waffra_home_widget_balance.part.dart",
+        "lib/waffra_home_sms_rescan.part.dart",
+        "lib/waffra_home_sms_management.part.dart",
+        "lib/waffra_home_category_receipt_dialogs.part.dart",
+        "lib/waffra_home_budget_alert_charts.part.dart",
+        "lib/waffra_home_verified_finance_pickers.part.dart",
+        "lib/waffra_home_navigation_helpers.part.dart",
+        "lib/waffra_home_presentation_controls.part.dart",
+        "lib/waffra_home_logout_guard.part.dart",
+        "lib/waffra_home_finance_notification_route.part.dart",
+        "lib/waffra_home_fx_preview.part.dart",
+        "lib/waffra_home_auth_visibility.part.dart",
+        "lib/waffra_home_finance_binding.part.dart",
+        "lib/waffra_home_fab_actions.part.dart",
+        "lib/waffra_home_resume_handler.part.dart",
+        "lib/waffra_home_widget_action_routes.part.dart",
+        "lib/waffra_home_sms_review_indicator.part.dart",
+        "lib/waffra_home_goals_recurring_pages.part.dart",
+        "lib/waffra_home_goal_actions.part.dart",
+        "lib/waffra_home_dashboard_analytics.part.dart",
     )
     if home_path in new_sources:
         main_source = new_sources[home_path]
@@ -325,6 +448,18 @@ def build_report(base: str, head: str, root: Path = ROOT) -> dict:
                 raise ContractError(f"Unregistered or foreign Dart part: {part_path}")
             new_sources[home_path] += "\\n" + part_source
     stale, count = detect_stale(target_tests, old_sources, new_sources, sources)
+    # M934: scan ALL Dart tests against the literal raw main.dart they read.
+    # Static warnings are reported BEFORE 10-minute Flutter test suites run.
+    raw_main = (root / home_path).read_text(encoding="utf-8")
+    registered_parts: dict[str, str] = {}
+    for name in re.findall(r"(?m)^part '([^']+\.part\.dart)';", raw_main):
+        part_path = root / "lib" / name
+        if part_path.is_file():
+            content = part_path.read_text(encoding="utf-8")
+            if content.startswith("part of 'main.dart';"):
+                registered_parts[name] = content
+    stale.extend(detect_unmigrated_home_readers(
+        target_tests, raw_main, registered_parts))
     impacted = [j for j in inv["jobs"] if
                 any("flutter test test/" in cmd or
                     "unittest discover" in cmd or

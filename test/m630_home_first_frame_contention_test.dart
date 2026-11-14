@@ -1,11 +1,12 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 
 /// M630 / #542: cross-session regression for latest merged M632/M633 Home.
 /// These source ordering tests are not a substitute for real-device profiling.
 void main() {
-  final source = File('lib/main.dart').readAsStringSync();
+  final source = readWaffraMainSourceForContracts();
   final home = source.split(
     'class _HomeScreenState extends State<HomeScreen>')[1];
   final close = home.split(' Future<void> _m627CloseForLogout()async{')[1]

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -29,7 +30,7 @@ void main(){
  });
 
  test('M640 all former scan-and-create paths, flags and model fetches are gone',(){
-  final app=File('lib/main.dart').readAsStringSync();
+  final app=readWaffraMainSourceForContracts();
   final tools=File('lib/waffra_practical_tools_page.dart').readAsStringSync();
   final brain=File('lib/waffra_ai_finance_brain.dart').readAsStringSync();
   final release=File('lib/waffra_saudi_release.dart').readAsStringSync();

@@ -5,6 +5,7 @@ analyze, widget tests or signed-device permission coverage.
 """
 from pathlib import Path
 import unittest
+from waffra_home_source import read_waffra_home_source
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -15,7 +16,7 @@ def source(path: str) -> str:
 
 class M452ReviewAndRegistration(unittest.TestCase):
     def test_sms_review_is_collapsible_and_count_remains_visible(self):
-        home = source("lib/main.dart")
+        home = read_waffra_home_source()
         card = home.split(" Widget _autoSmsReviewCard(){", 1)[1].split(
             " Future<void> _reviewAutoSmsCandidates(", 1)[0]
         self.assertIn("bool _autoSmsReviewExpanded=false;", home)
@@ -47,7 +48,7 @@ class M452ReviewAndRegistration(unittest.TestCase):
         self.assertIn("_autoSmsReviewExpanded=!_autoSmsReviewExpanded", card)
 
     def test_registration_has_single_submit_and_avatar_choices(self):
-        home = source("lib/main.dart")
+        home = read_waffra_home_source()
         registration = home.split(" Widget _phoneRegistrationForm(){", 1)[1].split(
             " @override Widget build(BuildContext context){", 1)[0]
         for key in ("waffra-register-single-page", "waffra-register-name",

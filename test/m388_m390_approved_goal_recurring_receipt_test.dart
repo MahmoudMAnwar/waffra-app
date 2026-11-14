@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -34,7 +35,7 @@ void main() {
  });
 
  test('M389: duplicate goal uses independent identity and starts with zero savings',(){
-  final source=File('lib/main.dart').readAsStringSync();
+  final source=readWaffraMainSourceForContracts();
   final dialog=source.split('Future<void> goalDialog(').last
     .split('/// Release an earmark').first;
   expect(dialog,contains('{SavingGoal? duplicate,bool openEnded=false})'));
@@ -51,7 +52,7 @@ void main() {
  });
 
  test('M389: recurring duplicate is new, editable, and cannot inherit linked goal ID',(){
-  final source=File('lib/main.dart').readAsStringSync();
+  final source=readWaffraMainSourceForContracts();
   final dialog=source.split('Future<void> recurringDialog(').last
     .split('DateTime nextRecurringDue(').first;
   expect(dialog,contains('RecurringBill? duplicate'));
@@ -63,7 +64,7 @@ void main() {
  });
 
  test('M389: Goals/Recurring + menus show approved choices instead of direct sheet',(){
-  final source=File('lib/main.dart').readAsStringSync();
+  final source=readWaffraMainSourceForContracts();
   final menu=source.split('if(addFabExpanded&&!accountOpened&&(tab==0||tab==1||tab==3||tab==4||goalsOpened))').last
     .split('if(tourActive&&tourTargetReady)').first;
   for(final label in <String>[
@@ -81,7 +82,7 @@ void main() {
  });
 
  test('M388: open-ended goal never divided by zero or marked achieved',(){
-  final source=File('lib/main.dart').readAsStringSync();
+  final source=readWaffraMainSourceForContracts();
   final actions=source.split('Future<void> _m689GoalActions(').last
    .split('Widget goalsPage(){').first;
   final card=source.split('Widget goalsPage(){').last
@@ -98,7 +99,7 @@ void main() {
  });
 
  test('M390: restored receipt references open the same existing gallery',(){
-  final source=File('lib/main.dart').readAsStringSync();
+  final source=readWaffraMainSourceForContracts();
   final list=source.split('Widget tile(MoneyEntry e){').last
     .split('String get greeting').first;
   final home=source.split('Widget compactTransaction(MoneyEntry entry){').last

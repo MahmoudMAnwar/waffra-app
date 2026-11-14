@@ -1,4 +1,5 @@
 import 'dart:io';
+import '../support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/storage/waffra_home_transaction_capture.dart';
 import 'package:waffra/storage/waffra_production_finance_routing_gate.dart';
@@ -63,7 +64,11 @@ void main() {
  });
 
  test('M470 due posting retains recurring provenance, never manual',(){
-  final home=File('lib/main.dart').readAsStringSync();
+  final home=readWaffraMainSourceForContracts();
+  // M921: prove the current recurring writer still lives in a real Home part.
+  final duePart=File('lib/waffra_home_finance_persistence_due.part.dart')
+   .readAsStringSync();
+  expect(duePart,contains(' Future<void> applyRecurring()async {'));
   final start=home.indexOf('if(!entries.any((e)=>e.id==id)){');
   final end=home.indexOf('recurringPostponed.remove(id);',start);
   expect(start,greaterThan(0));

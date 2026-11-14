@@ -1,10 +1,11 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// M629 / #540: fast pull mechanics must speed up independent preparation
 /// while preserving password, SQLCipher, account witness and owner checks.
 void main(){
- final app=File('lib/main.dart').readAsStringSync();
+ final app=readWaffraMainSourceForContracts();
  final login=app.split(' Future<void> _signIn()async{')[1]
    .split(' String get maskedLastPhone{')[0];
  final root=app.split('class _WaffraAppState extends State<WaffraApp>')[1]

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/main.dart';
@@ -51,7 +52,7 @@ void main(){
  });
 
  test('M380 manual, receipt/OCR and SMS save gates are opt-in but confirmed',(){
-  final app=File('lib/main.dart').readAsStringSync();
+  final app=readWaffraMainSourceForContracts();
   final confirm=app.indexOf('final confirmed=await waffraConfirmUnlinkedBudgetSave(\n         context:sheetContext)');
   final post=app.indexOf('Navigator.pop(sheetContext,MoneyEntry(',confirm);
   expect(confirm,greaterThan(0));
@@ -67,7 +68,7 @@ void main(){
  });
 
  test('M380 budget choice and back remain concise, data-only and stepwise',(){
-  final app=File('lib/main.dart').readAsStringSync();
+  final app=readWaffraMainSourceForContracts();
   expect(app,isNot(contains('اختياري، من غير تغيير القسم')));
   expect(app,isNot(contains('ميزانية العملية (اختياري)')));
   expect(app,contains('حد الميزانية: '));

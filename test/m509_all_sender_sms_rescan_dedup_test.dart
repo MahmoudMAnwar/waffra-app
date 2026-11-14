@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_sms_local_rules.dart';
@@ -53,7 +54,7 @@ void main() {
 
  test('M547 new-only Rescan preserves completed and unfinished native cursors',(){
   final store=File('native/WaffraAutoSmsStore.kt').readAsStringSync();
-  final home=File('lib/main.dart').readAsStringSync();
+  final home=readWaffraMainSourceForContracts();
   final legacy=store.split(
    'fun restartCompletedHistory(context: Context): Boolean')[1]
    .split('private data class HistoricalSmsRow')[0];
@@ -65,7 +66,7 @@ void main() {
  });
 
  test('M509 finance-backed ACK is separate from exclude/reject ACK',(){
-  final home=File('lib/main.dart').readAsStringSync();
+  final home=readWaffraMainSourceForContracts();
   final worker=File('lib/waffra_auto_sms_autopost.part.dart').readAsStringSync();
   final nativeMain=File('native/WaffraMainActivity.kt').readAsStringSync();
   final nativeWorker=File('native/WaffraAutoSmsWorker.kt').readAsStringSync();

@@ -1,11 +1,12 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_display_currency.dart';
 
 void main(){
  test('M636 circular widget keeps verified balance without SMS entry',(){
   final workflow=File('.github/workflows/android.yml').readAsStringSync();
-  final home=File('lib/main.dart').readAsStringSync();
+  final home=readWaffraMainSourceForContracts();
   final widget=File('native/WaffraWidget.kt').readAsStringSync();
   expect(workflow,contains('android:targetCellWidth="1"'));
   expect(workflow,contains('android:targetCellHeight="1"'));
@@ -27,7 +28,7 @@ void main(){
   expect(market.fromSar(100),1250);
  });
  test('M636 no standalone widget SMS review can bypass authentication',(){
-  final home=File('lib/main.dart').readAsStringSync();
+  final home=readWaffraMainSourceForContracts();
   final native=File('native/WaffraMainActivity.kt').readAsStringSync();
   final workflow=File('.github/workflows/android.yml').readAsStringSync();
   expect(File('lib/waffra_widget_capture.part.dart').existsSync(),isFalse);

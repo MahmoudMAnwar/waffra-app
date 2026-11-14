@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/main.dart';
 import 'package:waffra/waffra_category_catalog.dart';
@@ -99,7 +100,7 @@ void main() {
  });
 
  test('M343 goal/recurring UI uses one saved total and budget remains independent',(){
-  final app=File('lib/main.dart').readAsStringSync();
+  final app=readWaffraMainSourceForContracts();
   final link=File('lib/waffra_goal_recurring_actions.part.dart').readAsStringSync();
   expect(app,contains('waffra_goal_recurring_actions.part.dart'));
   expect(app,contains('await this._saveGoalAndLinkedDueAtomically(g,'));

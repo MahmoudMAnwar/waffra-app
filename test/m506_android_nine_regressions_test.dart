@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -22,7 +23,7 @@ void main() {
   });
 
   test('M506 widget-resume large finance decode uses the isolate threshold', () {
-    final src=File('lib/main.dart').readAsStringSync();
+    final src=readWaffraMainSourceForContracts();
     final sync=src.substring(src.indexOf(' Future<void> _syncWidgetTransactions()async{'),
       src.indexOf(' Future<void> _refreshAndSettle('));
     expect(sync,contains('WaffraLargeJsonDecode.parse(raw)'));
@@ -93,7 +94,7 @@ void main() {
   });
 
   test('M506 SMS receipt, rule learning and transfer require confirmed verified source', () {
-    final src=File('lib/main.dart').readAsStringSync();
+    final src=readWaffraMainSourceForContracts();
     final authority=File('lib/storage/waffra_verified_finance_authority.dart')
       .readAsStringSync();
     final writer=File('lib/storage/waffra_unified_finance_writer.dart')
@@ -115,7 +116,7 @@ void main() {
   });
 
   test('M506 local sign-out recovery requires fingerprint and never overwrites a verifier', () {
-    final src=File('lib/main.dart').readAsStringSync();
+    final src=readWaffraMainSourceForContracts();
     final logout=src.substring(src.indexOf(' Future<void> logout()async {'),
       src.indexOf(' Future<void> setPin('));
     final registration=src.substring(src.indexOf(' Future<void> saveUser(Person u)async {'),

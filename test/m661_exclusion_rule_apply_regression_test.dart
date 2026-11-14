@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_bank_sms_facts.dart';
@@ -87,7 +88,7 @@ void main() {
   test('every successful manual create/edit/delete signals rule refresh', () {
    final source = File('lib/waffra_sms_rule_settings_page.dart')
     .readAsStringSync();
-   final home = File('lib/main.dart').readAsStringSync();
+   final home = readWaffraMainSourceForContracts();
    expect(source, contains('final VoidCallback? onRulesChanged;'));
    final persist = source.substring(
     source.indexOf(' Future<bool> _persist('),
@@ -105,7 +106,7 @@ void main() {
   test('manual sender preview uses paired live sender IDs', () {
    final source = File('lib/waffra_sms_rule_settings_page.dart')
     .readAsStringSync();
-   final home = File('lib/main.dart').readAsStringSync();
+   final home = readWaffraMainSourceForContracts();
    expect(source, contains('final List<String> scannedSenders;'));
    expect(source, contains('widget.scannedMessages.asMap().entries.where'));
    expect(source, contains('widget.scannedSenders[row.key]'));
@@ -113,7 +114,7 @@ void main() {
   });
 
   test('unreadable encrypted rules do not silently look like saved matching rules', () {
-   final home = File('lib/main.dart').readAsStringSync();
+   final home = readWaffraMainSourceForContracts();
    final begin = home.indexOf('  var customRules=<WaffraSmsLocalRule>[];');
    final end = home.indexOf('  final classified=await compute(', begin);
    expect(begin, greaterThanOrEqualTo(0));
@@ -126,7 +127,7 @@ void main() {
   });
 
   test('queued custom exclusions use durable native IDs, never finance writes', () {
-   final home = File('lib/main.dart').readAsStringSync();
+   final home = readWaffraMainSourceForContracts();
    final start = home.indexOf(
     'Map<String,Object?> waffraM632ClassifySmsQueue(');
    final end = home.indexOf('List<String> splitBankMessages(', start);

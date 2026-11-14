@@ -213,45 +213,6 @@ extension _WaffraHomeProfileModule on _HomeScreenState {
        });
       }),
      )),
-    if(Platform.isAndroid)FutureBuilder<bool>(
-     future:_m528CloudConsent(),
-     builder:(context,snapshot)=>SwitchListTile(
-      secondary:const Icon(Icons.cloud_outlined,color:emerald),
-      title:WaffraText(waffraIsEnglish?
-       'AI analysis of bank SMS (cloud)':'تحليل الرسائل البنكية بالذكاء الاصطناعي السحابي'),
-      subtitle:WaffraText(waffraIsEnglish?
-       'Optional. Sends redacted financial SMS to a third-party AI provider.':
-       'اختياري. يرسل النص المالي بعد حجب المعرفات لخدمة ذكاء اصطناعي خارجية.'),
-      value:snapshot.data==true,
-      onChanged:WaffraHaptics.selection((enabled)async{
-       if(enabled){
-        final accepted=await showWaffraDialog<bool>(context:context,
-         builder:(dialog)=>AlertDialog(
-          title:WaffraText(waffraIsEnglish?
-           'Enable cloud bank SMS analysis?':'تفعيل تحليل الرسائل البنكية السحابي؟'),
-          content:WaffraText(waffraIsEnglish?
-           'Bank SMS that match financial activity will be redacted locally, then processed by a third-party model through OpenRouter. Some processing may take place outside Saudi Arabia. This is separate from permission to read SMS. You can decline and keep local analysis.':
-           'سيتم حجب المعرفات الشخصية من الرسائل البنكية المطابقة محليًا، ثم إرسال البيانات المالية لخدمة ذكاء اصطناعي خارجية عبر OpenRouter. قد تتم المعالجة خارج السعودية. هذه موافقة منفصلة عن صلاحية قراءة الرسائل، ويمكنك رفضها والاستمرار بالتحليل المحلي.'),
-          actions:[
-           TextButton(onPressed:()=>Navigator.pop(dialog,false),
-            child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
-           FilledButton(onPressed:()=>Navigator.pop(dialog,true),
-            child:WaffraText(waffraIsEnglish?'I agree':'أوافق')),
-          ]));
-        if(accepted!=true)return;
-       }
-       final completed=await WaffraSmsCloudService.setConsent(enabled);
-       if(!completed&&mounted){
-        snack(context,waffraIsEnglish?
-         'Cloud analysis or App Check is unavailable. No SMS was uploaded.':
-         'التحليل السحابي أو حماية التطبيق غير متاحة. لم يتم رفع أي رسالة.',
-         isError:true);
-       }
-       if(mounted)setState((){
-        _m528CloudConsentFuture=WaffraSmsCloudService.hasConsent();
-       });
-      }),
-     )),
     // Mandatory biometrics: optional PIN settings removed.
     SwitchListTile(secondary:const Icon(Icons.preview_outlined,color:emerald),
      title:WaffraText(waffraIsEnglish?'Protect Recent Apps preview':'حماية معاينة التطبيقات الأخيرة'),

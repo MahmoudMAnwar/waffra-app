@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_bank_sms_facts.dart';
@@ -57,7 +58,7 @@ void main() {
   });
 
   test('review refresh serializes work and batches durable exclusions',(){
-    final app=File('lib/main.dart').readAsStringSync();
+    final app=readWaffraMainSourceForContracts();
     expect(app,contains('Future<void>? _autoSmsRefreshInFlight;'));
     // The batch worker produces exclusion IDs; main retains only owner-
     // checked native ACK/rollback, rather than re-parsing 2k SMS on UI.

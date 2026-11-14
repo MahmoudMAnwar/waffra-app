@@ -26,7 +26,10 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          app=Path('lib/main.dart').read_text()
+          import sys
+          sys.path.insert(0, str(Path('test/qa').resolve()))
+          from waffra_home_source import read_waffra_home_source
+          app=read_waffra_home_source()
           native=Path('native/WaffraMainActivity.kt').read_text()
           backup=Path('lib/waffra_secure_backup.dart').read_text()
           assert '_financeAuthority.commitConfirmedSms' in app

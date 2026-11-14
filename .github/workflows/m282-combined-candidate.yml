@@ -45,7 +45,7 @@ jobs:
               'M278': ('test/m278_system_bars_responsive_matrix_test.dart',''),
               'M279': ('scripts/qa/m279_app_security_gate.py',''),
               'M280': ('lib/main.dart',r'Online\s+Pre[-\s]?Auth(?:ori[sz]ation)?'),
-              'M281': ('lib/main.dart','hasAttachment:e.receiptPath?.isNotEmpty??false'),
+              'M281': ('lib/waffra_home_account_tools.part.dart','hasAttachment:e.receiptPath?.isNotEmpty??false'),
           }
           for milestone,(path,marker) in sources.items():
               f=Path(path)

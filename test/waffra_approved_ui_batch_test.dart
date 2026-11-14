@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/main.dart';
@@ -9,7 +10,7 @@ void main() {
  tearDown(()=>waffraLanguage.value='ar');
 
  test('Three recycle bins share the same card and do not erase the financial ledger',(){
-  final main=File('lib/main.dart').readAsStringSync();
+  final main=readWaffraMainSourceForContracts();
   final recurring=File('lib/waffra_recurring_trash.part.dart').readAsStringSync();
   final common=File('lib/waffra_deleted_item_card.part.dart').readAsStringSync();
   expect(main,contains("part 'waffra_deleted_item_card.part.dart';"));
@@ -31,7 +32,7 @@ void main() {
  });
 
  test('Savings dialog is simple, localized and contains one primary goal-create action',(){
-  final source=File('lib/main.dart').readAsStringSync();
+  final source=readWaffraMainSourceForContracts();
   expect(source,contains('floatingActionButtonLocation:WaffraDirectionalFabLocation(english:waffraIsEnglish)'));
   expect(source.contains('FilledButton.icon(onPressed:goalDialog'),isFalse);
   expect(source.contains('إضافة أول هدف ادخاري'),isFalse);

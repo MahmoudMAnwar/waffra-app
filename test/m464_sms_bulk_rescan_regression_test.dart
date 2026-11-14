@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/storage/waffra_account_context_policy.dart';
@@ -21,7 +22,7 @@ void main() {
  });
 
  test('M464 rescan signals active state and returns cumulative counts',(){
-  final app=File('lib/main.dart').readAsStringSync();
+  final app=readWaffraMainSourceForContracts();
   expect(app,contains('bool _autoSmsRescanRunning=false;'));
   expect(app,contains('Future<void> _rescanAutoSmsInbox({BuildContext? feedbackContext})async{'));
   expect(app,contains('await _refreshAutoSmsInbox(importMonth:true);'));
@@ -32,7 +33,7 @@ void main() {
  });
 
  test('M464 review supports both sender and individual multi-selection',(){
-  final app=File('lib/main.dart').readAsStringSync();
+  final app=readWaffraMainSourceForContracts();
   final begin=app.indexOf(' Future<void> _openAutoSmsInbox()async{');
   final end=app.indexOf(' Widget _autoSmsReviewCard(){',begin);
   expect(begin,greaterThan(0));

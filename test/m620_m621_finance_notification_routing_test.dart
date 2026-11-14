@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_messages.dart';
@@ -85,7 +86,7 @@ void main(){
  });
 
  test('M621 taps cannot bypass verified Home or book a second transaction',(){
-  final home=File('lib/main.dart').readAsStringSync();
+  final home=readWaffraMainSourceForContracts();
   final segment=home.split(' void _m621OnFinanceNoticeTap(){')[1]
    .split(' @override void dispose(){')[0];
   expect(segment,contains('!ready||_financeLoadFailure!=null'));

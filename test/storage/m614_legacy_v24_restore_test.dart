@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import '../support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_secure_backup.dart';
@@ -152,7 +153,7 @@ void main() {
 
   test('UI routes legacy authenticated backups through separate V3 restore '
       'rather than claiming bad password', () {
-    final code=File('lib/main.dart').readAsStringSync();
+    final code=readWaffraMainSourceForContracts();
     expect(code,contains('WaffraLegacyV24SqlCipherConverter.prepare('));
     expect(code,contains('encryptedArchive:restoreArchive'));
     expect(code,contains('backupDecrypted=true;'));

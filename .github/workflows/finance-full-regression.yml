@@ -59,7 +59,10 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          main=Path('lib/main.dart').read_text()
+          import sys
+          sys.path.insert(0, str(Path('test/qa').resolve()))
+          from waffra_home_source import read_waffra_home_source
+          main=read_waffra_home_source()
           widget=Path('native/WaffraWidget.kt').read_text()
           assert not Path('lib/waffra_widget_capture.part.dart').exists()
           widget_journal=Path('lib/storage/waffra_legacy_widget_commit_journal.dart').read_text()

@@ -1,10 +1,11 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Source contracts supplement, not replace, real widget/device acceptance.
 /// No test in this file writes to the user financial SQLCipher ledger.
 void main() {
-  final main = File('lib/main.dart').readAsStringSync();
+  final main = readWaffraMainSourceForContracts();
   final accountPage =
       File('lib/waffra_accounts_manager_page.dart').readAsStringSync();
   final mark = File('lib/waffra_riyal_symbol.dart').readAsStringSync();
