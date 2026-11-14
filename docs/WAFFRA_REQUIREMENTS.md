@@ -1891,3 +1891,7 @@ After M721 extraction the original M281 attachment witness exists in the registe
 
 ### M735 — Issue #633 / Draft PR #638: category administration and secure recycle-bin workflow extraction
 With the owner's explicit instruction to complete code-only Home refactoring, move the original 500-line category editor, parent/child category choice and source-verified trash/restore module workflows into a registered same-library Home Dart part byte-for-byte. No category IDs, financial writer, historical transaction, account linking, deleted data retention, dropdown UI design or security gate changes authorized. Add original-source reconstruction and an exact production regression test. Existing PR M385 fail-closed scope remains required, and current-head CI plus Android/legacy encrypted backup parity are separate acceptance gates.
+
+
+### M738 — Issue #633 / Draft PR #638: preserve original M672/M678 transfer and savings card assertions
+The existing M672/M678 source regression inspected only `lib/main.dart`. M733 moved exact real verified transfer and goal savings card methods into registered same-library Dart part. Update only the legacy test's import and source reader to strict `readWaffraMainSourceForContracts()`; preserve all original balance sign, transfer direction, goal savings, and original visual assertions unchanged. Do not modify ledger writers, weaken checks or skip tests. Exact-HEAD CI remains the evidence gate.
