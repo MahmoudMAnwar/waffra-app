@@ -148,5 +148,9 @@ String readWaffraMainSourceForContracts(){
  if(s.split(navMarker).length!=2)throw StateError('Missing or duplicated M830 navigation helpers marker');
  s=s.replaceFirst(navMarker,_method('lib/waffra_home_navigation_helpers.part.dart',
   ' Widget categoriesPage()=>categoriesPageV2();'));
+ const smsIndicatorMarker=' // M835: existing bank SMS review indicator card moved unchanged to registered Home part.\n';
+ if(s.split(smsIndicatorMarker).length!=2)throw StateError('Missing or duplicate M835 live SMS Review card marker');
+ s=s.replaceFirst(smsIndicatorMarker,_method('lib/waffra_home_sms_review_indicator.part.dart',
+  ' // ignore: unused_element\n Widget _autoSmsReviewCard(){'));
  return s;
 }
