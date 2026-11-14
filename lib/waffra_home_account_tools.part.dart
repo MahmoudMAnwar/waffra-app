@@ -90,7 +90,6 @@ extension _WaffraHomeAccountTools on _HomeScreenState {
   String? stagedBackup,backupError,restoreError,restorePasswordError;
   var attempted=false,restoring=false,exporting=false;
   int? mode;
-  bool advanced=false;
   await showWaffraDialog<void>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
    title:WaffraText(waffraIsEnglish?'Secure backup':'نسختك الاحتياطية الآمنة',
     style:const TextStyle(fontWeight:FontWeight.bold)),
@@ -211,30 +210,6 @@ extension _WaffraHomeAccountTools on _HomeScreenState {
       }
      }),icon:const Icon(Icons.file_open_outlined),
      label:WaffraText(waffraIsEnglish?'Choose .waffra file':'اختيار ملف .waffra من الجهاز')),
-    // Backward compatibility ONLY: opt-in reading of previously exported
-    // clipboard-only text. New exports never put archive data on clipboard.
-    TextButton.icon(onPressed:WaffraHaptics.tap(()=>update(()=>advanced=!advanced)),
-     icon:Icon(advanced?Icons.expand_less:Icons.expand_more),
-     label:WaffraText(waffraIsEnglish?'Advanced options':'خيارات متقدمة')),
-    if(advanced)TextButton.icon(key:const Key('waffra-import-legacy-text'),
-     onPressed:WaffraHaptics.tap(restoring?null:()async{
-      final old=await Clipboard.getData(Clipboard.kTextPlain);
-      if(!ctx.mounted)return;
-      final text=old?.text?.trim()??'';
-      if(text.isEmpty||text.length>WaffraBackupFiles.maxArchiveBytes){
-       update(()=>restoreError=waffraIsEnglish?
-        'No valid older backup text in clipboard.':
-        'لا يوجد نص نسخة احتياطية قديمة صالح في الحافظة.');
-       return;
-      }
-      update((){
-       stagedBackup=text;
-       restoreError=null;
-       attempted=false;
-      });
-     }),icon:const Icon(Icons.history_outlined,size:18),
-     label:WaffraText(waffraIsEnglish?
-      'Import older copied backup (legacy)':'استيراد نسخة نصية قديمة (للتوافق فقط)')),
     if(stagedBackup!=null)...[
      const SizedBox(height:8),
      ListTile(dense:true,leading:const Icon(Icons.check_circle_outline,color:Colors.green),
@@ -333,10 +308,11 @@ extension _WaffraHomeAccountTools on _HomeScreenState {
          ?'Restore ${result.transactionCount} transactions and ${result.receiptCount} receipts?'
          :'هل تريد استعادة ${result.transactionCount} معاملة و${result.receiptCount} مرفق؟');
        if(approved!=true||!mounted||!ctx.mounted)return;
-       if(!await _authorizeSensitiveAction('replacing encrypted finance')||
-          !mounted||!ctx.mounted)return;
-       // Neither the file chooser nor the biometric prompt holds the native
-       // writer lock; the final commit compares the preflight source witness.
+       // M938: the user already passed mandatory biometric on opening
+       // backupDialog(); this SAME modal keeps archive-password AEAD,
+       // SQLCipher preflight, fresh source witness and explicit confirmation.
+       // Do not trigger a redundant second OS fingerprint challenge.
+       if(!mounted||!ctx.mounted)return;
        await _financialWriteQueue.drain();
        final bridge=_financeBinding?.accountsBridge;
        if(bridge==null)throw StateError('Active finance source is unavailable.');
