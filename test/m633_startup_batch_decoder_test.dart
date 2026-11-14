@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_large_json_decode.dart';
 
@@ -42,7 +43,7 @@ void main(){
   expect((decoded.read('categories') as List).single['id'],'other');
  });
  test('M633 Home waits for verified balances and keeps owner/session fencing',(){
-  final src=File('lib/main.dart').readAsStringSync();
+  final src=readWaffraMainSourceForContracts();
   final load=src.split(' Future<void> load()async {\n  final financeClock=')[1]
     .split(' Future<void> _refreshWidget()async{')[0];
   final app=src.split('class _WaffraAppState extends State<WaffraApp>')[1];
