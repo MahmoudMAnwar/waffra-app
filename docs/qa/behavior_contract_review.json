@@ -3570,6 +3570,35 @@
         "Original source assertions inspect real registered production Dart part and no QA check is skipped.",
         "No full Android latency or private historical Backup/Restore parity claimed until device evidence."
       ]
+    },
+    {
+      "id": "M750-VERIFIED-FINANCE-HOME-STARTUP-REAL-SOURCE",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "The source-verified Home startup load() method, including SQLCipher binding, cold catalog restoration, verified accounts and historical goals/recurring handling, lived inline inside _HomeScreenState.",
+      "approved_behavior": "Move exactly the original load() method body to a registered same-library Dart part and reconstruct it in legacy Dart/Python source tests. Keep the encrypted source checks, same-origin owner, source-to-ready trace, persisted categories/goals/recurring and widget/notification startup interactions identical; no new data or money write.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_finance_startup.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/m750_home_finance_startup_extraction_test.dart",
+        "test/m630_home_first_frame_contention_test.dart",
+        "test/m627_home_handoff_timeout_and_session_reset_test.dart",
+        "test/m623_verified_home_handoff_no_black_frame_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Verified SQLCipher owner/source baseline, account-linked money, category, goal and recurring historical data remain unchanged.",
+        "No removal/weakening of old finance writer, backup/restore and startup regression assertions.",
+        "Only real registered Home source is reconstructed; missing/duplicated part fails source checks.",
+        "Physical owner handset and V24 backup/restore balance parity require separate acceptance evidence."
+      ]
     }
   ]
 }
