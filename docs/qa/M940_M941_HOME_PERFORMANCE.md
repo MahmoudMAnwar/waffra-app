@@ -15,3 +15,7 @@ The approved code change reuses ONE date-descending immutable ledger index per h
 
 ## M940 SMS review paging
 The native owner-verified candidate queue is still scanned/grouped completely, without deleting any rows. When browsing a sender, the Flutter list initially exposes 100 message cards and reveals more in bounded 100-row windows on near-bottom vertical scrolling; the original `visibleIds()` remains the complete sender group for select-all and batch exclusion, including messages past the rendered window. No UI card styling, sender group order, original SMS text, native scan or finance confirmation changes. Host regression uses 2,400 message IDs. This is **presentation pagination only**; true native database cursor paging and measured Android frame stability remain pending real device work.
+
+## M486 regression protection during incremental scroll
+
+Exact full-suite CI at SHA 987e677 exposed one failure in `test/m486_sms_back_navigation_source_test.dart`: the original sender sheet explicitly forbids `WidgetsBinding.instance.addPostFrameCallback` anywhere in the picker, since that API previously broke nested editor navigation. M940 now coalesces near-bottom notifications into a zero-delay **event-loop turn**, guards the original selected sender ID and mounted picker context, and leaves nested review/editor routing untouched. The original M486 negative regression stays enabled and unchanged. Full CI must be repeated on this commit.

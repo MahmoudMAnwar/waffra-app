@@ -45,6 +45,10 @@ void main(){
   expect(source,contains('selectedIds.addAll(visibleIds());'));
   expect(source,contains('selectedIds.removeAll(visibleIds());'));
   expect(source,contains('messageWindow.revealNext(latest)'));
+  expect(source,contains('if(pageRevealScheduled)return false;'));
+  expect(source,contains('if(!ctx.mounted||selectedSender!=requestedSender)return;'));
+  // M486 sender/editor navigation must never be deferred by post-frame callbacks.
+  expect(source,isNot(contains('WidgetsBinding.instance.addPostFrameCallback((_){')));
   expect(source,contains('await _reviewAutoSmsCandidates(targetId:id);'));
  });
 }

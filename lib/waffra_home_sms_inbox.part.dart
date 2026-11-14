@@ -21,6 +21,8 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
   String? selectedSender,openingReviewId;
   // M940: a bounded display window only; bulk selection always sees full IDs.
   final messageWindow=WaffraSmsReviewPageWindow();
+  // Coalesce repeated near-bottom scroll notifications into one queue turn.
+  var pageRevealScheduled=false;
   final selectedIds=<String>{};
   var bulkBusy=false;
   List<String> idsOf(Iterable<Map<String,Object?>> rows)=>
@@ -100,13 +102,21 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
             notification.metrics.extentAfter>360)return false;
          final count=bySender[selectedSender]?.length??0;
          if(messageWindow.visibleCount(count)>=count)return false;
-         WidgetsBinding.instance.addPostFrameCallback((_){
-          if(!ctx.mounted||selectedSender==null)return;
-          final latest=bySender[selectedSender]?.length??0;
+         // M486: do not post a frame callback inside the sender picker:
+         // this route must stay mounted throughout nested SMS editing.
+         // A coalesced event-loop turn occurs after current layout/scroll,
+         // and cannot reveal rows for a sender already switched or closed.
+         if(pageRevealScheduled)return false;
+         pageRevealScheduled=true;
+         final requestedSender=selectedSender;
+         unawaited(Future<void>.delayed(Duration.zero,(){
+          pageRevealScheduled=false;
+          if(!ctx.mounted||selectedSender!=requestedSender)return;
+          final latest=bySender[requestedSender]?.length??0;
           if(messageWindow.visibleCount(latest)<latest){
            refresh(()=>messageWindow.revealNext(latest));
           }
-         });
+         }));
          return false;
         },
         child:ListView.builder(
