@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import '../support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -183,7 +184,7 @@ void main() {
   });
 
   test('M451 actual Home uses the same verified startup repair', () async {
-    final app = File('lib/main.dart').readAsStringSync();
+    final app = readWaffraMainSourceForContracts();
     final pos = app.indexOf(' Future<void> load()async {',
       app.indexOf('class _HomeScreenState'));
     final slice = app.substring(pos, app.indexOf('  _lastWidgetRevision=',pos));
