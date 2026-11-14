@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
-  "pr": 640,
-  "issue": "Issues #639, #641, #642, #643; combined with merged main #644",
+  "pr": 648,
+  "issue": "Issues #639, #641, #642, #643; combined with merged main #644; #646, #647",
   "workflow_review_policy": "scan-all-registered-workflows",
-  "baseline": "main at new branch start",
+  "baseline": "main 8c3c3b72943e485b0bb5004d36362abdbd377347",
   "reviewed_at": "2026-11-14",
-  "review_policy": "M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
+  "review_policy": "M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants. M940/M941: verified ledger-only read cache, account ID scoped pages and display query extraction; no UI/writer/auth/backup changes.",
   "contracts": [
     {
       "id": "M623-VERIFIED-RESTORE-NO-SECOND-BACKUP",
@@ -4656,6 +4656,38 @@
         "No external receipt file is deleted before the SQLCipher finance transaction succeeds; pending external cleanup is recorded in the SQLCipher vault before the commit and resumed only under verified source ownership and native writer lock.",
         "After a committed reset, failed physical-file cleanup must be reported as partial cleanup and must never be represented as a successful SQL rollback; persisted cleanup journal replays without removing unrelated financial data.",
         "Normal app startup without pending receipt cleanup must skip the writer gate; source cutover and identity credentials remain unchanged."
+      ]
+    },
+    {
+      "id": "M940-M941-HOME-INDEXED-READ-PAGING",
+      "issue": "Issues #646, #647",
+      "previous_behavior": "Home dashboard and income/expense sheet each sort entire MoneyEntry projections on rebuild; Home State owns index lifetime and dashboard predicate.",
+      "approved_behavior": "One cached descending timeline per immutable verified ledger revision; source-verified account IDs, bounded pages, read-only filter and cache separated from Home State; all previous ledger mutation/restore/reset invalidation retained; UI unchanged. Bank SMS sender review progressively shows bounded hydrated items with a listener, while bulk selection continues to act on ALL actual sender IDs.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_finance_period_index.part.dart",
+        "lib/waffra_home_ledger_query.part.dart",
+        "lib/waffra_home_dashboard_analytics.part.dart",
+        "lib/waffra_home_transaction_summary.part.dart",
+        "lib/waffra_home_sms_inbox.part.dart",
+        "lib/waffra_sms_review_page_window.dart"
+      ],
+      "test_paths": [
+        "test/m940_m941_home_ledger_pagination_test.dart",
+        "test/m810_home_transaction_summary_extraction_test.dart",
+        "test/m684_finance_period_index_test.dart",
+        "test/m940_sms_review_page_window_test.dart"
+      ],
+      "safety_invariants": [
+        "Only account IDs witnessed by SQLCipher may filter transactions; no new assignment or finance writers.",
+        "MoneyEntry amounts, posting identities, backups, UI and FAB/notice anchors are unchanged.",
+        "On every ledger revision and restore/reset the read-only index is invalidated.",
+        "Signed Android profiling and original backup acceptance remain pending.",
+        "SMS message IDs and sender bulk selections remain complete beyond the current visible page; no native exclusion, auto-post, OTP or receipt policy change."
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/finance-full-regression.yml"
       ]
     }
   ]

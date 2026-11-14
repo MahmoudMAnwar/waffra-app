@@ -1,187 +1,83 @@
 {
   "contract_version": 1,
-  "change_id": "M935-M939-ISSUES639-643-20261114-MAIN-RECONCILIATION",
-  "human_scope_review": "Issue #639: user expressly requests all code-side Phase Two completion, fresh Draft PR, exact residual physical Android tasks. Only synthetic non-production finance regression and QA/requirements/scope docs are in this PR. Original backup, phone databases, SQLCipher routing and UI source untouched. Issue #641 same-PR Phase Three user instruction adds only non-destructive signed-release readiness inventory under M550, no publish or finance changes. M937 #642 same-PR owner request adds exact-SHA CI test totals and heuristic repeated-failure reporting with no additional Flutter run or production code changes. Issue #643 user supplied four Android screenshots and requests exact FAB-edge snackbar, goal/dues filter counts and 3-dot menu, safe legacy deleted-goal repair and file-only one-biometric backup UX in same Draft PR; all relevant production edits limited to named methods. Release-note ancestry update is required by existing M449 to describe the exact owner-approved screenshot code changes, without treating them as production released. Same Draft #640 root-cause regression correction: current file-only backup, single opening OS biometric, goal trash in approved 3-dot menu, verified footer routing, and accepted SQLCipher snapshot-key generation test. Update existing assertions only, without disabling tests. Integrate merged main #645 finance reset and no-FAB notices verbatim; owner real backup and devices not claimed tested. M385 CI observed the new six existing test-file changes but needed exact original source anchors; add only bounded function scope for those six tests, keep every protected region outside byte-identical. No approved full-test replacements or gate bypass. Original Oct21 source contract was failing solely because it demanded a second restore biometric that the owner explicitly retired. Change only that assertion, preserve the initial biometric, financial deletion biometric, physical-device gate and all other existing tests. M939 owner #643 clarification: entire Snackbar card edge meets fixed 58dp FAB circle with zero gap regardless of short or wrapped message; on no-FAB routes it fills 12dp page margins. Source-level M163 durable restore regression is aligned with once-on-opening biometric and post-commit reminders. No production financial writer or actual source security checks are removed. M939 follow-up after exact-HEAD Flutter detected four source-layout regressions: one real fixed-FAB notice height bug (Center was filling available follower height and vertically re-centering long lines), plus two M675 tests still requiring the retired 7dp gap and two M938 bottom-edge tests that catch the real defect. Fix host to shrink-wrap with heightFactor 1.0, preserve original FAB and rerun unchanged M938 bottom-edge tests; update M675 tests to assert zero-gap non-overlap instead of removed 7dp clearance. No test disabled.",
+  "change_id": "M940-M941-ISSUES646-647-PR648-HOME-INDEXED-READ-20261114",
+  "human_scope_review": "User approved named stage «تحسين الأداء واستكمال هيكلة وفرة» items 2 and 3: speed reading 2,000+ MoneyEntry and split Home State read responsibilities. PR #648 Draft, issues #646 #647. No change to SQLCipher finance writers, backup, saved account IDs, UI, + FAB or Snackbar. Source modifications are bounded to verified read index/state/filter, not entire files; existing M385/M550/M449 tests remain enabled. 2-phone Android benchmark remains pending. M940 #646 owner approved 1000-2000+ bank SMS reading: sender-list retains all IDs/selection, only already-hydrated per-sender message cards show in progressive bounded pages. No native SMS scan, classification, decision, debit or excluded message changes. M940 M486 root fix: sender-sheet scroll pagination uses coalesced zero-delay event loop turn instead of prohibited post-frame callback; preserves original M486 negative nested-navigation contract, no test weakening. Retain current exact bounded SMS source section.",
   "user_requested_changes": [
-    "M935 implement synthetic V24 to V3 conversion, two disposable cold SQLCipher restores, exact 19 identity and signed halala parity, goal/recurring/budget history, no invented bank balance, widget/PDF source checks and fail-closed duplicates in a NEW regression test only.",
-    "M935 create a concrete private physical Android owner acceptance protocol for old encrypted backup parity, PDF totals, SMS performance, overflow, authentication and update safety; mark device evidence Pending.",
-    "M935 maintain numbered Issue #639 and project requirement history; do not alter financial production code or start any real backup restoration, and keep PR Draft until source tests and owner acceptance.",
-    "M936 Issue #641 Phase Three: static signed-release source evidence inventory with exact SHA, reject dropped M190/M267/M171/M279/M449/Phase Two gates via focused negative regression tests and existing M550 preflight; remain NO_GO pending owner Android and signed APK acceptance, no production deployment.",
-    "M937 Issue #642 Phase Four: existing full offline Flutter suite emits actual passed/failed/skipped/total and heuristic repeated-failure groups with sanitized exact-SHA artifacts; hostile tests fail closed; no skipped suppressions or new full suite.",
-    "M938 #643 Android screenshot scope: snackbar success from backup-dialog Settings must remain beside original stationary global 58dp + even when multiline; goal and due count-aware filter funnels and 3-dot Deleted Goals menu; keep finance lists untouched.",
-    "M938 #643 old authenticated V24 deleted-goal archive needs explicitly user-confirmed SQL-only recovery-index repair under native lock, strict source generation/digest and unique tombstones; no money records or ledger changes.",
-    "M938 #643 restore dialog must use only .waffra SAF file choice and password, removing advanced clipboard import and no redundant second biometric after the initial mandatory one, while retaining encryption/authentication, preflight, explicit replacement and CAS/atomic restore.",
-    "M938 #643 maintain fresh owner-approved app release notes ancestry after modified Flutter UI/verified encrypted trash code; explicitly mark as unreleased Draft pending UAT.",
-    "M938 #643 update M550 source/test behavior contract review to cover all owner-approved UI and verified encrypted recycle changes, preserving exact original acceptance and negative tests.",
-    "M938 #643 update the exact obsolete M150 clipboard import assertion to verify that Advanced/legacy clipboard UI is absent without weakening the encrypted .waffra export and restore safeguards.",
-    "Fix eight full-suite failures with approved source-backed assertions, preserve every regression and align existing Draft #640 to main. No new pull request.",
-    "Replace the obsolete second backup-dialog fingerprint assertion with a negative regression guaranteeing only the original OS biometric remains; retain deletion biometric and all other original controls.",
-    "M939 #643: card surface (including blank space) must finish exactly at the actual 58dp + circle; long notice only grows upward, no plus full-width with existing page margins. Fix original M163 false failure without weakening verified restore security.",
-    "M939 Flutter failure root fix: prevent vertically expanding host Center from shifting multi-line Snackbar bottom. Retain M938 strict bottom-edge assertions; update obsolete M675 7dp-gap assertions to exact edge equality."
+    "M940 #646 cache descending date order exactly once per immutable verified finance-ledger revision with stable source order on timestamp ties, read-only bounded pages and strict SQLCipher account row ID scoping.",
+    "M940 #646 wire cached chronological read to Home dashboard and income-expense summary, preserving original search/date/amount/type/category and PDF semantics and all finance authority gates.",
+    "M941 #647 separate read-cache ownership and transaction filter policy from giant _HomeScreenState, maintaining existing add/edit/delete/restore/reset invalidation methods without altering approved Home, Goals, Recurring, stationary FAB or Snackbar.",
+    "M940/M941 create synthetic 2,500+ page/ID/amount/filter/cache regression, align exact M810 source contract and M385 scope + behavior review + QA + requirements/release notes; real device acceptance remains pending.",
+    "M940 #646 show large bank SMS review sender queues using progressively revealed in-memory 100-row pages while preserving all-message sender bulk selection, identity and original review/approval flow; no financial writes or native scan changes.",
+    "Resolve original M486 sender-sheet nested editor navigation regression caused by pagination post-frame scheduling using coalesced guarded event-loop pagination; test remains untouched and must pass on exact SHA."
   ],
   "allowed_changed_files": [
-    ".github/workflows/finance-full-regression.yml",
-    ".github/workflows/m550-behavior-contract-preflight.yml",
     "docs/WAFFRA_REQUIREMENTS.md",
-    "docs/qa/M935_PHASE_TWO_ANDROID_ACCEPTANCE.md",
-    "docs/qa/M936_PHASE_THREE_RELEASE_READINESS.md",
-    "docs/qa/M937_PHASE_FOUR_TEST_REPORTING.md",
-    "docs/qa/M938_ANDROID_SCREENSHOT_ACCEPTANCE.md",
+    "docs/qa/M940_M941_HOME_PERFORMANCE.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
-    "lib/storage/waffra_encrypted_module_recycle.dart",
-    "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
-    "lib/waffra_approved_page_designs.dart",
-    "lib/waffra_home_account_tools.part.dart",
-    "lib/waffra_home_category_workflows.part.dart",
-    "lib/waffra_home_goals_recurring_pages.part.dart",
-    "scripts/qa/m936_release_evidence_gate.py",
-    "scripts/qa/m937_flutter_test_report.py",
-    "test/m127_ui_tour_backup_acceptance_test.dart",
-    "test/m148_english_categories_legacy_backup_uat_test.dart",
-    "test/m149_backup_pin_localized_fab_trash_uat_test.dart",
-    "test/m150_file_backup_leaf_categories_uat_test.dart",
-    "test/m153_secure_backup_sms_categories_uat_test.dart",
-    "test/m163_atomic_backup_restore_durability_test.dart",
-    "test/m502_logout_paths_test.dart",
-    "test/m674_approved_page_designs_test.dart",
-    "test/m938_goals_restore_fab_contract_test.dart",
-    "test/qa/m936_release_evidence_gate_test.py",
-    "test/qa/m937_flutter_test_report_test.py",
-    "test/storage/m935_phase_two_restore_finance_acceptance_test.dart",
-    "test/storage/m938_legacy_goal_recycle_repair_test.dart",
-    "test/waffra_directional_fab_receipt_corner_test.dart",
-    "test/waffra_oct21_regression_test.dart"
+    "lib/waffra_finance_period_index.part.dart",
+    "lib/waffra_home_dashboard_analytics.part.dart",
+    "lib/waffra_home_ledger_query.part.dart",
+    "lib/waffra_home_sms_inbox.part.dart",
+    "lib/waffra_home_transaction_summary.part.dart",
+    "lib/waffra_sms_review_page_window.dart",
+    "test/m810_home_transaction_summary_extraction_test.dart",
+    "test/m940_m941_home_ledger_pagination_test.dart",
+    "test/m940_sms_review_page_window_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
   "bounded_sections": {
-    ".github/workflows/m550-behavior-contract-preflight.yml": [
-      {
-        "start": "      - name: Test the M550 fail-closed stale-assertion scanner itself",
-        "end": "      - name: Verify all registered workflows and impacted test contracts BEFORE expensive CI"
-      }
-    ],
-    ".github/workflows/finance-full-regression.yml": [
-      {
-        "start": "      - name: Analyze full Flutter application",
-        "end": "      - name: Verify new offline finance paths remain opt-in"
-      }
-    ],
     "lib/main.dart": [
       {
-        "start": "class _WaffraFooterNoticeHostState extends State<WaffraFooterNoticeHost> {",
-        "end": "/// The only public way to display transient system feedback."
+        "start": "import 'waffra_sms_review_groups.dart';",
+        "end": "import 'waffra_sms_account_learning.dart';"
       },
       {
-        "start": "void snack(BuildContext context,String text,{",
-        "end": "void snackSuccess(BuildContext context,String text)=>snack"
+        "start": "part 'waffra_finance_period_index.part.dart';",
+        "end": "part 'waffra_deleted_item_card.part.dart';"
       },
       {
-        "start": "  if(!accountOpened&&ready&&tab!=2)\n   WaffraApprovedFixedFabNoticePosition(",
-        "end": "  // No '+' is mounted on the account detail route either."
+        "start": " final entries=<MoneyEntry>[],categories=<BudgetCategory>[],goals=<SavingGoal>[],recurring=<RecurringBill>[];",
+        "end": " final namedBudgets=<WaffraNamedBudget>[];"
       }
     ],
-    "lib/waffra_home_goals_recurring_pages.part.dart": [
+    "lib/waffra_finance_period_index.part.dart": [
       {
-        "start": " Widget goalsPage(){",
-        "end": " Future<void> recurringDialog("
-      },
-      {
-        "start": " Widget recurringPage(){",
+        "start": "class WaffraFinancePeriodIndex {",
         "end": null
       }
     ],
-    "lib/waffra_home_account_tools.part.dart": [
+    "lib/waffra_home_dashboard_analytics.part.dart": [
       {
-        "start": " Future<void> backupDialog()async {",
-        "end": " // System credentials are never saved in plain text."
+        "start": " Widget dashboard(){",
+        "end": "  return RefreshIndicator("
       }
     ],
-    "lib/waffra_home_category_workflows.part.dart": [
+    "lib/waffra_home_transaction_summary.part.dart": [
       {
-        "start": " Future<void> _showVerifiedModuleTrash(WaffraFinanceModule module)async{",
-        "end": " Future<void> deleteCategory("
+        "start": " Future<void> showSummaryTransactions(bool income)async {",
+        "end": "  if(items.isEmpty){"
       }
     ],
-    "lib/storage/waffra_encrypted_module_recycle.dart": [
+    "test/m810_home_transaction_summary_extraction_test.dart": [
       {
-        "start": "  Future<WaffraEncryptedModuleRecycleResult> restore({",
-        "end": "  Future<Map<String, int>> pending("
+        "start": "  expect(part,contains('extension _WaffraHomeTransactionSummary on _HomeScreenState'));",
+        "end": "  expect(part,contains('sum(items,income)'));"
       }
     ],
-    "lib/storage/waffra_verified_encrypted_finance_bridge.dart": [
+    "lib/waffra_home_sms_inbox.part.dart": [
       {
-        "start": "  Future<WaffraEncryptedModuleRecycleResult> restoreVerifiedModule({",
-        "end": "  /// Applies only user-edited finance keys."
+        "start": " Future<void> _openAutoSmsInbox()async{",
+        "end": "       if(selectedIds.isNotEmpty)Padding("
       }
     ],
-    "test/m150_file_backup_leaf_categories_uat_test.dart": [
+    "lib/waffra_sms_review_page_window.dart": [
       {
-        "start": " test('M150: export never writes encrypted archive to clipboard',(){",
-        "end": " test('M150: Android uses picker and content provider"
-      }
-    ],
-    "test/m127_ui_tour_backup_acceptance_test.dart": [
-      {
-        "start": "  test('new backups use 12–256 character passwords and retain legacy import', () {",
-        "end": "  for (final direction in [TextDirection.rtl,TextDirection.ltr]) {"
-      }
-    ],
-    "test/m148_english_categories_legacy_backup_uat_test.dart": [
-      {
-        "start": " test('M148: no full encrypted JSON is rendered in editable TextField',(){",
+        "start": "final class WaffraSmsReviewPageWindow {",
         "end": null
-      }
-    ],
-    "test/m149_backup_pin_localized_fab_trash_uat_test.dart": [
-      {
-        "start": " test('M149: all recycle-bin CTAs are red and recurring calendar is alongside',(){",
-        "end": " for(final brightness in [Brightness.light,Brightness.dark]){"
-      }
-    ],
-    "test/m153_secure_backup_sms_categories_uat_test.dart": [
-      {
-        "start": " test('M153: new backup screen is uncluttered and preserves legacy restore',(){",
-        "end": null
-      }
-    ],
-    "test/m502_logout_paths_test.dart": [
-      {
-        "start": "  test('M503: sign-out feedback reuses exactly one footer-aware presenter',(){",
-        "end": null
-      }
-    ],
-    "test/waffra_directional_fab_receipt_corner_test.dart": [
-      {
-        "start": "  test('goals keep outlined counter, recurring uses compact count badge', () {",
-        "end": "  test('all snackbar entry points share one footer-aware presenter', () {"
-      }
-    ],
-    "test/waffra_oct21_regression_test.dart": [
-      {
-        "start": " test('Sensitive financial actions always require OS biometric authentication', () {",
-        "end": " test('Android recent-app protection is independently adjustable', () {"
-      }
-    ],
-    "lib/waffra_approved_page_designs.dart": [
-      {
-        "start": "class WaffraApprovedFixedFabNoticePosition extends StatelessWidget {",
-        "end": null
-      }
-    ],
-    "test/m163_atomic_backup_restore_durability_test.dart": [
-      {
-        "start": "  test('M163 backup restore commits all finance before publishing UI state', () {",
-        "end": "  test('M163 encrypted restore cannot bypass verified source authority', () {"
-      }
-    ],
-    "test/m674_approved_page_designs_test.dart": [
-      {
-        "start": " testWidgets('M675 Arabic snackbar wraps upward beside stationary left +',",
-        "end": " testWidgets('M683 narrow Arabic/English money and 100% goal remain legible',"
       }
     ]
   }

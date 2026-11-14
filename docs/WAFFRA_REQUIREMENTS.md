@@ -1,3 +1,9 @@
+## M940–M941 — تحسين الأداء واستكمال هيكلة وفرة (2026-11-14)
+
+- **Approved name:** «تحسين الأداء واستكمال هيكلة وفرة». **Issues:** [#646](https://github.com/MahmoudMAnwar/waffra-app/issues/646) (index and page reads over thousands of transactions); [#647](https://github.com/MahmoudMAnwar/waffra-app/issues/647) (extract Home State read/filter responsibility). **Status:** Partial — implementation and regression pushed to Draft PR #648; exact-SHA CI + real Android UAT pending.
+- Implement immutable newest-first indexed history and bounded pages for verified MoneyEntry; retain exact SQLCipher source-backed account entry IDs and no invented balances. Split display read-cache and filter policy from `_HomeScreenState`; retain each existing mutation/restore/reset invalidation.
+- Preserve user-approved Home, Goals and Recurring designs, static + FAB, Snackbar, financial source and backup invariants. Add test coverage for 2,500+ rows, pages, account scopes, ties and filters; bank SMS review reveals up to 100 message cards per sender at a time with automatic next-page scrolling while select-all continues to include every full sender message ID; document that phone benchmark/owner archive remain pending. [QA protocol](qa/M940_M941_HOME_PERFORMANCE.md).
+
 ## PR #640 — CI root-cause and latest-main reconciliation (2026-11-14)
 
 - Same Draft PR #640 updated from merged main (#645), without altering the biometric-only financial reset, PDF values or no-FAB wide Snackbar. Correct outdated backup/goal/footer source contracts and a synthetic invalid finance key; retain every test. Verify restore exact IDs, integer-halala totals, accountless history, encryption and cold-open integrity. Owner's actual backup and physical Android tests remain pending.

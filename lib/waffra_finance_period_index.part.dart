@@ -22,6 +22,55 @@ class WaffraFinancePeriodIndex {
  final Map<int,List<int>> _byMonth=<int,List<int>>{};
  final Map<int,List<int>> _byYear=<int,List<int>>{};
  final Map<String,List<int>> _byId=<String,List<int>>{};
+ List<int>? _newestPositions;
+
+ /// Stable newest-first read order, computed once per immutable ledger
+ /// revision instead of sorting the entire history on every Home rebuild.
+ /// Equal timestamps retain original source order. No writer/account guess.
+ List<int> get _newestFirstPositions{
+  final cached=_newestPositions;
+  if(cached!=null)return cached;
+  final positions=List<int>.generate(_source.length,(i)=>i);
+  positions.sort((a,b){
+   final byDate=_source[b].date.compareTo(_source[a].date);
+   return byDate!=0?byDate:a.compareTo(b);
+  });
+  return _newestPositions=List<int>.unmodifiable(positions);
+ }
+
+ /// Exact verified-ID read projection. Null means all accounts;
+ /// EMPTY verified ID scope means no assigned transactions.
+ List<MoneyEntry> newestFirst({
+  Set<String>? verifiedEntryIds,
+  bool Function(MoneyEntry)? where,
+ })=>_select(_newestFirstPositions.where((index){
+  final row=_source[index];
+  return (verifiedEntryIds==null||verifiedEntryIds.contains(row.id))&&
+   (where==null||where(row));
+ }));
+
+ /// In-memory bounded page through the already sorted immutable index.
+ /// This API does not claim SQLCipher database-level pagination.
+ List<MoneyEntry> pageNewestFirst({
+  Set<String>? verifiedEntryIds,
+  bool Function(MoneyEntry)? where,
+  required int offset,
+  required int limit,
+ }){
+  if(offset<0||limit<0)throw RangeError('offset and limit must be nonnegative');
+  if(limit==0)return const <MoneyEntry>[];
+  var matched=0;
+  final positions=<int>[];
+  for(final index in _newestFirstPositions){
+   final row=_source[index];
+   if(verifiedEntryIds!=null&&!verifiedEntryIds.contains(row.id))continue;
+   if(where!=null&&!where(row))continue;
+   if(matched++<offset)continue;
+   positions.add(index);
+   if(positions.length==limit)break;
+  }
+  return _select(positions);
+ }
 
  static int _monthKey(int year,int month)=>year*12+month-1;
  List<int> get years=>List<int>.unmodifiable(_byYear.keys);
