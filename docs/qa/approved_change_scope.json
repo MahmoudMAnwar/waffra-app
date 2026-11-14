@@ -99,7 +99,7 @@
       },
       {
         "start": " Future<List<WaffraAccountBalance>> balances()async{",
-        "end": " Future<void> renameAccount("
+        "end": " Future<void> renameAccount({required String id,required String name,\n  required bool userConfirmed})async{"
       }
     ],
     "lib/storage/waffra_verified_accounts_api.dart": [
@@ -187,7 +187,7 @@
     "lib/waffra_new_account_dialog.dart": [
       {
         "start": "class WaffraNewAccountDraft {",
-        "end": "/// A form only:"
+        "end": "class WaffraNewAccountDialog extends StatefulWidget {"
       }
     ],
     "lib/waffra_recurring_account_groups.dart": [
