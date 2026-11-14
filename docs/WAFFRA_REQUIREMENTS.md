@@ -1887,3 +1887,7 @@ Owner directs completing the remaining code-only part of the Home refactor on th
 
 ### M734 — Issue #633 / Draft #638, exact M282 moved-source marker
 After M721 extraction the original M281 attachment witness exists in the registered Home account-tools Dart part. M282 must check that same literal marker in the real part while preserving the other M274–M281 and SQLCipher cutover gates; device and backup evidence remain independent.
+
+
+### M735 — Issue #633 / Draft PR #638: category administration and secure recycle-bin workflow extraction
+With the owner's explicit instruction to complete code-only Home refactoring, move the original 500-line category editor, parent/child category choice and source-verified trash/restore module workflows into a registered same-library Home Dart part byte-for-byte. No category IDs, financial writer, historical transaction, account linking, deleted data retention, dropdown UI design or security gate changes authorized. Add original-source reconstruction and an exact production regression test. Existing PR M385 fail-closed scope remains required, and current-head CI plus Android/legacy encrypted backup parity are separate acceptance gates.
