@@ -17,22 +17,19 @@ extension _WaffraHomeDashboardAnalyticsModule on _HomeScreenState {
    _m684Periods.before(monthStart),goals);
   final monthChange=hasPreviousMonthEntries&&previousClosingBalance>0
    ?((waffraAvailableCash(entries,goals)-previousClosingBalance)/previousClosingBalance)*100:null;
-  final visible=scopedEntries.where((e){
-   final q=search.trim();
-   return(waffraSearchAny([e.title,e.category,waffraTr(e.category)],q))&&
-    (transactionsDateRange==null||(e.date.isAfter(transactionsDateRange!.start.subtract(const Duration(days:1)))&&e.date.isBefore(transactionsDateRange!.end.add(const Duration(days:1)))))&&
-    (minTransactionAmount==null||e.amount>=minTransactionAmount!)&&
-    (maxTransactionAmount==null||e.amount<=maxTransactionAmount!)&&
-    (typeFilter=='الكل'||(typeFilter=='الدخل'&&e.income)||
-     (typeFilter=='المصروفات'&&!e.income)||
-     (typeFilter=='الاستحقاقات'&&
-      (e.sourceType=='recurring'||e.sourceType=='goal_due')))&&
-    (categoryFilter=='الكل'||categoryFilter==e.category);
-  }).toList()..sort((a,b)=>b.date.compareTo(a.date));
-  final filterCats=<String>{'الكل',...scopedEntries.where((e)=>typeFilter=='الكل'||
-   (typeFilter=='الدخل'&&e.income)||(typeFilter=='المصروفات'&&!e.income)||
-   (typeFilter=='الاستحقاقات'&&
-    (e.sourceType=='recurring'||e.sourceType=='goal_due'))).map((e)=>e.category)}.toList();
+  // M940: time order is cached once for the authenticated ledger revision.
+  // On search/filter/UI repaint, scan the sorted read-only positions without
+  // re-sorting every account-scoped financial record.
+  final transactionFilter=WaffraHomeTransactionFilter(
+   search:search,typeFilter:typeFilter,categoryFilter:categoryFilter,
+   dateRange:transactionsDateRange,minAmount:minTransactionAmount,
+   maxAmount:maxTransactionAmount);
+  final visible=_m684Periods.newestFirst(
+   verifiedEntryIds:_m467SelectedAccount=='all'?null:
+    (_m684ScopedEntryIds??const <String>{}),
+   where:transactionFilter.accepts);
+  final filterCats=<String>{'الكل',...scopedEntries
+   .where(transactionFilter.acceptsType).map((e)=>e.category)}.toList();
   final selected=filterCats.contains(categoryFilter)?categoryFilter:'الكل';
   final shown=visible.take(waffraDashboardTransactionDisplayCount(
    visible.length,expanded:showAllTransactions)).toList();
