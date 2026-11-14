@@ -58,7 +58,7 @@ def runtime_graph():
 class M927RetiredCloudAiRuntimeGraph(unittest.TestCase):
     def test_active_home_and_native_sms_import_graph_never_reaches_retired_model(self):
         nodes,edges=runtime_graph()
-        self.assertGreater(len(nodes),35,reason='Must traverse real product dependency graph, not mock')
+        self.assertGreater(len(nodes),35,msg='Must traverse real product dependency graph, not mock')
         self.assertIn((LIB/'waffra_bank_sms_facts.dart').resolve(),nodes)
         self.assertIn((LIB/'waffra_sms_intelligence.dart').resolve(),nodes)
         self.assertIn((LIB/'waffra_auto_sms_consent.dart').resolve(),nodes)
