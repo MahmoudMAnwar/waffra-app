@@ -1,20 +1,63 @@
 {
   "contract_version": 1,
-  "change_id": "M940-M941-ISSUES646-647-HOME-INDEXED-READ-20261114",
-  "human_scope_review": "User approved named stage and points 2,3: verified chronological read performance and Home State decomposition, without changed UI, money, encryption or backups. Code changes restricted to read index and display query; physical Android UAT not claimed.",
+  "change_id": "M940-M941-ISSUES646-647-PR648-HOME-INDEXED-READ-20261114",
+  "human_scope_review": "User approved named stage «تحسين الأداء واستكمال هيكلة وفرة» items 2 and 3: speed reading 2,000+ MoneyEntry and split Home State read responsibilities. PR #648 Draft, issues #646 #647. No change to SQLCipher finance writers, backup, saved account IDs, UI, + FAB or Snackbar. Source modifications are bounded to verified read index/state/filter, not entire files; existing M385/M550/M449 tests remain enabled. 2-phone Android benchmark remains pending.",
   "user_requested_changes": [
-    "M940 #646 cache chronological read order once per authenticated immutable ledger revision and add bounded display pages with exact SQLCipher ID scoping.",
-    "M941 #647 extract read cache/filter policy from large Home State; wire dashboard and income-expense summary without changing UI or finance writes.",
-    "Add extensive synthetic regression, update historical M810 source contract, requirements and signed release text. Preserve all M385/M550/M449 gates."
+    "M940 #646 cache descending date order exactly once per immutable verified finance-ledger revision with stable source order on timestamp ties, read-only bounded pages and strict SQLCipher account row ID scoping.",
+    "M940 #646 wire cached chronological read to Home dashboard and income-expense summary, preserving original search/date/amount/type/category and PDF semantics and all finance authority gates.",
+    "M941 #647 separate read-cache ownership and transaction filter policy from giant _HomeScreenState, maintaining existing add/edit/delete/restore/reset invalidation methods without altering approved Home, Goals, Recurring, stationary FAB or Snackbar.",
+    "M940/M941 create synthetic 2,500+ page/ID/amount/filter/cache regression, align exact M810 source contract and M385 scope + behavior review + QA + requirements/release notes; real device acceptance remains pending."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/M940_M941_HOME_PERFORMANCE.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
-    "docs/release/WAFFRA_APPROVED_CHANGES.txt"
+    "docs/release/WAFFRA_APPROVED_CHANGES.txt",
+    "lib/main.dart",
+    "lib/waffra_finance_period_index.part.dart",
+    "lib/waffra_home_dashboard_analytics.part.dart",
+    "lib/waffra_home_ledger_query.part.dart",
+    "lib/waffra_home_transaction_summary.part.dart",
+    "test/m810_home_transaction_summary_extraction_test.dart",
+    "test/m940_m941_home_ledger_pagination_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
-  "bounded_sections": {}
+  "bounded_sections": {
+    "lib/main.dart": [
+      {
+        "start": "part 'waffra_finance_period_index.part.dart';",
+        "end": "part 'waffra_deleted_item_card.part.dart';"
+      },
+      {
+        "start": " final entries=<MoneyEntry>[],categories=<BudgetCategory>[],goals=<SavingGoal>[],recurring=<RecurringBill>[];",
+        "end": " final namedBudgets=<WaffraNamedBudget>[];"
+      }
+    ],
+    "lib/waffra_finance_period_index.part.dart": [
+      {
+        "start": "class WaffraFinancePeriodIndex {",
+        "end": null
+      }
+    ],
+    "lib/waffra_home_dashboard_analytics.part.dart": [
+      {
+        "start": " Widget dashboard(){",
+        "end": "   return RefreshIndicator("
+      }
+    ],
+    "lib/waffra_home_transaction_summary.part.dart": [
+      {
+        "start": " Future<void> showSummaryTransactions(bool income)async {",
+        "end": "  if(items.isEmpty){"
+      }
+    ],
+    "test/m810_home_transaction_summary_extraction_test.dart": [
+      {
+        "start": "  expect(part,contains('extension _WaffraHomeTransactionSummary on _HomeScreenState'));",
+        "end": "  expect(part,contains('sum(items,income)'));"
+      }
+    ]
+  }
 }

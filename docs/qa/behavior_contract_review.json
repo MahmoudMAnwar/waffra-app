@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "pr": "M940/M941 Draft PR (to be assigned)",
+  "pr": 648,
   "issue": "Issues #639, #641, #642, #643; combined with merged main #644; #646, #647",
   "workflow_review_policy": "scan-all-registered-workflows",
-  "baseline": "main at new branch start",
+  "baseline": "main 8c3c3b72943e485b0bb5004d36362abdbd377347",
   "reviewed_at": "2026-11-14",
   "review_policy": "M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants. M940/M941: verified ledger-only read cache, account ID scoped pages and display query extraction; no UI/writer/auth/backup changes.",
   "contracts": [
