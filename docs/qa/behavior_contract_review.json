@@ -3700,6 +3700,35 @@
         "Missing/duplicated registered production Dart part fails source QA, never reconstructed with a stub.",
         "Exact current-head CI and owner physical Android restored-archive parity required before full acceptance."
       ]
+    },
+    {
+      "id": "M762-VERIFIED-HOME-FINANCE-PERSISTENCE-DUE-ORIGINAL",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Authenticated Home verified finance persistence and recurring due/postpone user flows remained inline in the large Home State class.",
+      "approved_behavior": "Relocate original unchanged persistence, SMS duplicate hashes, reminder toggles and verified recurring due posting into registered same-library Dart part. Preserve original finance amount, account, goal-wallet, migration and encrypted SQLCipher write checks, original alerts and recoverability.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_finance_persistence_due.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/m762_home_finance_persistence_due_extraction_test.dart",
+        "test/m302_optimistic_module_write_safety_test.dart",
+        "test/m373_independent_budgets_finance_test.dart",
+        "test/m468_app_refresh_performance_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Never post unconfirmed or duplicate recurring due, skip account verification or overwrite the verified SQLCipher ledger.",
+        "Preserve exact original encrypted backup source, goals wallet, recurring default account and transaction budget behavior.",
+        "All positive and negative money-writing and recurring source assertions remain enabled and inspect real registered source.",
+        "Device performance, screenshots and old V24 backup restore on owner phone remain unverified outside CI."
+      ]
     }
   ]
 }
