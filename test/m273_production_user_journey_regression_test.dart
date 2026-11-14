@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -72,7 +73,7 @@ void main() {
     expect(summary.duplicates, 0);
     // The 101st message must be refused at the confirmation boundary,
     // not silently truncated to 100 during import.
-    final savePath = File('lib/main.dart').readAsStringSync();
+    final savePath = readWaffraMainSourceForContracts();
     expect(savePath, contains('await entrySheet(sms:true,initialSms:body,reviewedSender:sender);'));
   });
 
