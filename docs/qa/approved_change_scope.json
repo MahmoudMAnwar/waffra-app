@@ -103,7 +103,8 @@
     "M927 #634/#632/#637 audit exact real Flutter/Dart import and part traversal from Home, SMS consent and offline SMS runtime entrypoints; fail CI if retired Qwen, AI or Cloudflare SMS model sources become reachable again, assert legacy consent disabled and outbound analyze fail closed while preserving active local SMS normalization and encrypted backups. Test-only compatibility validators are not deleted without completing old test migration.",
     "M928 #633 fix M340 financial source authority gate after Home Dart extraction with exact real registered source reconstruction, including hostile QA mutations against real source of SMS confirmation and manual finance editor; preserve every positive and negative M340 authority/amount/date/consent/FX/duplicate/account-generation assertion. Keep M385 bounded source and existing M340 full Flutter/SQLCipher matrix.",
     "M929 #633 finish factoring verified Home logout/session cleanup, finance notification-to-SMS/saved-ledger route and no-post foreign-FX preview into three same-library Dart parts, preserving exact original method bodies, no direct ledger writes, no UI/FAB changes, original encrypted finance close ordering and same-source QA reconstruction. Continue remaining release gates without false completion claim.",
-    "M930 #633 move original remaining Home startup-visibility, verified owner session binding, stationary FAB tap guards, lifecycle resume, and root/Widget action routes into five registered same-library Dart extension parts, exactly preserving code; original Dart/Python source QA and money safety remain authoritative, with full device acceptance still external."
+    "M930 #633 move original remaining Home startup-visibility, verified owner session binding, stationary FAB tap guards, lifecycle resume, and root/Widget action routes into five registered same-library Dart extension parts, exactly preserving code; original Dart/Python source QA and money safety remain authoritative, with full device acceptance still external.",
+    "M931 #633 repair the original unweakened M636 logout/Widget safety source test after the byte-identical M929/M930 Dart-part extraction: use fail-closed actual registered Home source rather than only raw main.dart, keeping every original anti-Qwen, stationary FAB, logout fail-closed, SMS source and Widget owner assertion."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -386,7 +387,8 @@
     "lib/waffra_home_fab_actions.part.dart",
     "lib/waffra_home_resume_handler.part.dart",
     "lib/waffra_home_widget_action_routes.part.dart",
-    "test/m930_home_lifecycle_helpers_extraction_test.dart"
+    "test/m930_home_lifecycle_helpers_extraction_test.dart",
+    "test/m636_owner_approved_retirement_and_ui_test.dart"
   ],
   "approved_deleted_files": [
     "lib/waffra_sms_cloud_review_analyzer.dart"
