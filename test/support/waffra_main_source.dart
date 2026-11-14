@@ -10,6 +10,10 @@ String _method(String path,String marker){
 }
 String readWaffraMainSourceForContracts(){
  var s=File('lib/main.dart').readAsStringSync();
+ const navMarker=' // M830: original Home navigation and summary helpers moved to registered same-library part.\n';
+ if(s.split(navMarker).length!=2)throw StateError('Missing or duplicated M830 navigation helpers marker');
+ s=s.replaceFirst(navMarker,_method('lib/waffra_home_navigation_helpers.part.dart',
+  ' Widget categoriesPage()=>categoriesPageV2();'));
  const accountToolsMarker=' // M721: original Home calendar, backup and account tools moved to registered same-library part.\n';
  if(s.split(accountToolsMarker).length!=2)throw StateError('Missing or duplicated account tools marker');
  s=s.replaceFirst(accountToolsMarker,_method('lib/waffra_home_account_tools.part.dart',
@@ -144,10 +148,6 @@ String readWaffraMainSourceForContracts(){
  if(s.split(widgetSyncMarker).length!=2)throw StateError('Missing or duplicate M840 actual Widget sync source');
  s=s.replaceFirst(widgetSyncMarker,_method('lib/waffra_home_widget_sync.part.dart',
   ' Future<void> _syncWidgetTransactions()async{'));
- const navMarker=' // M830: original Home navigation and summary helpers moved to registered same-library part.\n';
- if(s.split(navMarker).length!=2)throw StateError('Missing or duplicated M830 navigation helpers marker');
- s=s.replaceFirst(navMarker,_method('lib/waffra_home_navigation_helpers.part.dart',
-  ' Widget categoriesPage()=>categoriesPageV2();'));
  const smsIndicatorMarker=' // M835: existing bank SMS review indicator card moved unchanged to registered Home part.\n';
  if(s.split(smsIndicatorMarker).length!=2)throw StateError('Missing or duplicate M835 live SMS Review card marker');
  s=s.replaceFirst(smsIndicatorMarker,_method('lib/waffra_home_sms_review_indicator.part.dart',
