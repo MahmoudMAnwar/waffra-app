@@ -295,7 +295,9 @@ extension _WaffraHomeVerifiedFinancePickers on _HomeScreenState {
       subtype:draft.subtype??'other',openingMinor:draft.openingMinor,
       createdIso:DateTime.now().toUtc().toIso8601String(),
       lastFour:draft.lastFour,
-      customSubtypeLabel:draft.customSubtypeLabel,userConfirmed:true);
+      customSubtypeLabel:draft.customSubtypeLabel,
+      customInstitutionRootId:waffraCustomInstitutionRootForGroup(selectedGroup),
+      userConfirmed:true);
      accountWasWritten=true;
      final current=await bridge.readVerifiedAccounts();
      final list=current.balances.where((a)=>!a.archived).toList();
