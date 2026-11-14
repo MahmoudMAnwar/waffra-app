@@ -63,10 +63,12 @@ void main() {
     });
   }
 
-  test('M644 main routes no-FAB Tools and not-ready Home to wide footer', () {
+  test('M644 all no-FAB routes including opened account show wide notice', () {
     final source = File('lib/main.dart').readAsStringSync();
     expect(source, contains('if(!accountOpened&&ready&&tab!=2)'));
-    expect(source, contains('if(!accountOpened&&(tab==2||!ready))'));
+    expect(source, contains('floatingActionButton:!ready||accountOpened||tab==2?null:'));
+    expect(source, contains('if(accountOpened||tab==2||!ready)'));
+    expect(source, contains('bottom:accountOpened?12:90,'));
     expect(source, contains(
       'WaffraFooterNoticeHost(expandToAvailableWidth:true)'));
     expect(source, contains(
