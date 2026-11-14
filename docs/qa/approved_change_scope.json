@@ -12,7 +12,8 @@
     "M938 #643 old authenticated V24 deleted-goal archive needs explicitly user-confirmed SQL-only recovery-index repair under native lock, strict source generation/digest and unique tombstones; no money records or ledger changes.",
     "M938 #643 restore dialog must use only .waffra SAF file choice and password, removing advanced clipboard import and no redundant second biometric after the initial mandatory one, while retaining encryption/authentication, preflight, explicit replacement and CAS/atomic restore.",
     "M938 #643 maintain fresh owner-approved app release notes ancestry after modified Flutter UI/verified encrypted trash code; explicitly mark as unreleased Draft pending UAT.",
-    "M938 #643 update M550 source/test behavior contract review to cover all owner-approved UI and verified encrypted recycle changes, preserving exact original acceptance and negative tests."
+    "M938 #643 update M550 source/test behavior contract review to cover all owner-approved UI and verified encrypted recycle changes, preserving exact original acceptance and negative tests.",
+    "M938 #643 update the exact obsolete M150 clipboard import assertion to verify that Advanced/legacy clipboard UI is absent without weakening the encrypted .waffra export and restore safeguards."
   ],
   "allowed_changed_files": [
     ".github/workflows/finance-full-regression.yml",
@@ -33,6 +34,7 @@
     "lib/waffra_home_goals_recurring_pages.part.dart",
     "scripts/qa/m936_release_evidence_gate.py",
     "scripts/qa/m937_flutter_test_report.py",
+    "test/m150_file_backup_leaf_categories_uat_test.dart",
     "test/m938_goals_restore_fab_contract_test.dart",
     "test/qa/m936_release_evidence_gate_test.py",
     "test/qa/m937_flutter_test_report_test.py",
@@ -96,6 +98,12 @@
       {
         "start": "  Future<WaffraEncryptedModuleRecycleResult> restoreVerifiedModule({",
         "end": "  /// Applies only user-edited finance keys."
+      }
+    ],
+    "test/m150_file_backup_leaf_categories_uat_test.dart": [
+      {
+        "start": " test('M150: export never writes encrypted archive to clipboard',(){",
+        "end": " test('M150: Android uses picker and content provider"
       }
     ]
   }
