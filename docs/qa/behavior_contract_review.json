@@ -21,13 +21,26 @@
         "lib/waffra_recurring_account_groups.dart",
         "lib/waffra_accounts_manager_page.dart",
         "lib/storage/waffra_account_context_repository.dart",
-        "lib/storage/waffra_verified_accounts_api.dart"
+        "lib/storage/waffra_verified_accounts_api.dart",
+        "lib/storage/waffra_custom_institution_links.dart",
+        "lib/storage/waffra_accounts_portable_backup_v3.dart",
+        "lib/storage/waffra_accounts_repository.dart",
+        "lib/waffra_home_verified_finance_pickers.part.dart",
+        "lib/waffra_home_entry_sheet.part.dart",
+        "lib/waffra_new_account_dialog.dart",
+        "lib/waffra_home_sms_transfer_review.part.dart",
+        "lib/waffra_home_goal_actions.part.dart",
+        "lib/waffra_home_sms_confirmation.part.dart"
       ],
       "test_paths": [
         "test/m943_home_balance_and_paging_test.dart",
         "test/m943_sms_bank_catalog_test.dart",
         "test/storage/m943_verified_bank_suffix_clear_test.dart",
-        "test/m943_backup_retired_graph_test.dart"
+        "test/m943_backup_retired_graph_test.dart",
+        "test/storage/m943_custom_institution_and_backup_test.dart",
+        "test/m268_approved_emerald_balance_card_test.dart",
+        "test/m470_sms_first_sender_account_test.dart",
+        "test/m684_finance_period_index_test.dart"
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/finance-full-regression.yml",
@@ -38,7 +51,8 @@
         "No fabricated SAR account balance or growth percent; no ledger mutation in Home reads.",
         "No guessed institution ownership or SMS auto-post; every writer requires verified owner and user confirmation.",
         "Never change approved FAB/Snackbar position or original encrypted device backup.",
-        "Do not remove old model currency safety negative tests without replacement; all CI exact SHA."
+        "Do not remove old model currency safety negative tests without replacement; all CI exact SHA.",
+        "Only user-confirmed Other institutions may join by root account FK, never by shared label or SMS guessing; link/backup restore fail closed."
       ]
     },
     {
