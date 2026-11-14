@@ -137,4 +137,14 @@ def read_waffra_home_source(root=ROOT, overrides=None):
             "lib/waffra_home_finance_notification_route.part.dart", " void _m621OnFinanceNoticeTap(){")
     restore(" // M929: no-post foreign currency preview lives in registered Home part.\n",
             "lib/waffra_home_fx_preview.part.dart", " Future<void> _previewForeignBankCurrency(")
+    restore(" // M930: original visible Home session helper moved without behavioral change.\n",
+            "lib/waffra_home_auth_visibility.part.dart", " Future<bool> _m663AwaitVisible(int epoch)async{")
+    restore(" // M930: original binding Home session helper moved without behavioral change.\n",
+            "lib/waffra_home_finance_binding.part.dart", " Future<void> _ensureFinanceBound()async{")
+    restore(" // M930: original fab Home session helper moved without behavioral change.\n",
+            "lib/waffra_home_fab_actions.part.dart", " Future<void> _launchAddAction(Future<void> Function() action,{bool fromMenu=false})async{")
+    restore(" // M930: original resume Home session helper moved without behavioral change.\n",
+            "lib/waffra_home_resume_handler.part.dart", " void _m468OnResume(){")
+    restore(" // M930: original widgets Home session helper moved without behavioral change.\n",
+            "lib/waffra_home_widget_action_routes.part.dart", " void _returnToHome(){")
     return source
