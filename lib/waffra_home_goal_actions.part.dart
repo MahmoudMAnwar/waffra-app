@@ -279,7 +279,9 @@ extension _WaffraHomeGoalActions on _HomeScreenState {
    openingMinor:draft.openingMinor,
    createdIso:DateTime.now().toUtc().toIso8601String(),
    lastFour:draft.lastFour,
-   customSubtypeLabel:draft.customSubtypeLabel,userConfirmed:true);
+   customSubtypeLabel:draft.customSubtypeLabel,
+   customInstitutionRootId:waffraCustomInstitutionRootForGroup(requestedGroupId),
+   userConfirmed:true);
   final refreshed=await api.balances();
   final created=refreshed.where((a)=>a.id==id&&!a.archived).toList();
   if(created.length!=1)throw StateError('New account lacked verified ledger');
