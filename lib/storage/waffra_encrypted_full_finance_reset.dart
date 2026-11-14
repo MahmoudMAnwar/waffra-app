@@ -367,10 +367,28 @@ class WaffraEncryptedFullFinanceReset {
         }
         final entries = _ledger(current.values['entries'] as String?);
         await _verifyCurrentTypedLedger(entries);
-        // Never discard external legacy receipt file references silently.
-        // The blob-backed vault is verified against canonical entry slots.
-        if ((await _count('fresh_finance_receipts')) != 0) {
-          throw StateError('Legacy receipt references need verified cleanup.');
+        // Older SQL catalog versions can carry a second receipt index.
+        // It contains hashes/names but NO file bytes. Only clear a legacy
+        // index entry when its owner, position, name and content SHA match
+        // an independently checked SQLCipher BLOB. Path-only external files
+        // can never be called deleted by a SQL-only transaction.
+        final legacyRows = await snapshot.store.customSelect(
+          'SELECT entry_id,position,safe_filename,sha256_hex '
+          'FROM fresh_finance_receipts',
+        ).get();
+        final legacyByPosition = <String, Map<String, String>>{};
+        for (final row in legacyRows) {
+          final owner = row.read<String>('entry_id');
+          final position = row.read<int>('position');
+          final key = jsonEncode([owner, position]);
+          if (owner.isEmpty || position < 0 ||
+              legacyByPosition.containsKey(key)) {
+            throw StateError('Duplicate or invalid old receipt association.');
+          }
+          legacyByPosition[key] = <String, String>{
+            'name': row.read<String>('safe_filename'),
+            'sha': row.read<String>('sha256_hex'),
+          };
         }
         var receiptCount = 0;
         final vault = WaffraEncryptedReceiptVault(
@@ -387,8 +405,24 @@ class WaffraEncryptedFullFinanceReset {
             if (images[i].position != i) {
               throw StateError('Encrypted receipt order differs.');
             }
+            final old = legacyByPosition.remove(
+              jsonEncode([entry['id'] as String, i]),
+            );
+            if (old != null &&
+                (old['name'] != images[i].safeName ||
+                 old['sha'] != images[i].sha256Hex)) {
+              throw StateError(
+                'Old receipt metadata differs from encrypted attachment.',
+              );
+            }
           }
           receiptCount += slots;
+        }
+        if (legacyByPosition.isNotEmpty) {
+          // No source path or external-file deletion is attempted here.
+          // A dangling/file-backed index requires a separate verified
+          // filesystem migration and must never be silently orphaned.
+          throw StateError('Unverified file-backed receipt prevents reset.');
         }
         if (tables.contains('fresh_finance_receipt_blobs') &&
             await _count('fresh_finance_receipt_blobs') != receiptCount) {
