@@ -105,4 +105,7 @@ def read_waffra_home_source(root=ROOT):
     restore(" // M812: verified SMS money-account and optional budget pickers moved to real registered Home part.\n",
             "lib/waffra_home_verified_finance_pickers.part.dart",
             " /// Read a single authoritative SQLCipher account witness immediately")
+    restore(" // M840: original verified Home/Widget synchronization now in registered Dart part.\n",
+            "lib/waffra_home_widget_sync.part.dart",
+            " Future<void> _syncWidgetTransactions()async{")
     return source
