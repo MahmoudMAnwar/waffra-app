@@ -295,6 +295,178 @@ class WaffraEncryptedFullFinanceReset {
     }
   }
 
+  // M644: owner-authorized immediate biometric reset. No external backup is
+  // mandatory; unlike the historical backup-matched variant, this path must
+  // also erase account and domain projections in the SAME SQLCipher commit.
+  // A missing/unrecognized SQL table refuses the operation before any write.
+  static const _biometricKnownTables = <String>{
+    ..._knownTables,
+    'fresh_finance_money_accounts',
+    'fresh_finance_account_entry_links',
+    'fresh_finance_internal_transfers',
+    'fresh_finance_account_revision',
+    'fresh_finance_goal_account_sources',
+    'fresh_finance_recurring_account_defaults',
+    'fresh_finance_account_sms_suffixes',
+    'fresh_finance_account_context_revision',
+    'fresh_finance_account_details',
+    'fresh_finance_account_details_revision',
+    'fresh_finance_custom_account_subtypes',
+    'fresh_finance_custom_account_subtypes_revision',
+  };
+  static const _biometricPreservedTables = <String>{
+    'fresh_finance_meta',
+    'fresh_finance_cutover_checkpoint',
+    'fresh_finance_snapshot_state',
+    'fresh_finance_domain_revision',
+    'fresh_finance_account_revision',
+    'fresh_finance_account_context_revision',
+    'fresh_finance_account_details_revision',
+    'fresh_finance_custom_account_subtypes_revision',
+  };
+
+  Future<WaffraEncryptedFullResetResult> resetAfterBiometric({
+    required WaffraFinanceSnapshotState baseline,
+    required bool userConfirmed,
+    required bool biometricVerified,
+  }) async {
+    if (!experimentalEnabled || !snapshot.experimentalEnabled ||
+        !userConfirmed || !biometricVerified) {
+      throw StateError('An explicitly approved biometric reset is required.');
+    }
+    return WaffraExperimentalWriterGate(
+      disposableDirectory: writerDirectory,
+      experimentalEnabled: true,
+    ).withExclusiveAccess(() async {
+      await verifySourceUnderLock();
+      return snapshot.store.transaction(() async {
+        final current = await snapshot.read();
+        WaffraFinanceReadView.fromEncrypted(current).requireIntegrity();
+        if (current.generation != baseline.generation ||
+            current.digest != baseline.digest) {
+          throw StateError('Source changed after biometric reset approval.');
+        }
+        final discoveredRows = await snapshot.store.customSelect(
+          "SELECT name FROM sqlite_master WHERE type='table' "
+          "AND name LIKE 'fresh_finance_%'",
+        ).get();
+        final tables = discoveredRows
+            .map((row) => row.read<String>('name')).toSet();
+        if (tables.difference(_biometricKnownTables).isNotEmpty ||
+            !tables.contains('fresh_finance_entries') ||
+            !tables.contains('fresh_finance_categories') ||
+            !tables.contains('fresh_finance_snapshot_state') ||
+            !tables.contains('fresh_finance_receipts') ||
+            !tables.contains('fresh_finance_sms_hashes')) {
+          throw StateError('Unknown or incomplete encrypted finance schema.');
+        }
+        if ((await snapshot.store.customSelect(
+          'PRAGMA foreign_key_check',
+        ).get()).isNotEmpty) {
+          throw StateError('Financial references are inconsistent.');
+        }
+        final entries = _ledger(current.values['entries'] as String?);
+        await _verifyCurrentTypedLedger(entries);
+        // Never discard external legacy receipt file references silently.
+        // The blob-backed vault is verified against canonical entry slots.
+        if ((await _count('fresh_finance_receipts')) != 0) {
+          throw StateError('Legacy receipt references need verified cleanup.');
+        }
+        var receiptCount = 0;
+        final vault = WaffraEncryptedReceiptVault(
+          store: snapshot.store, experimentalEnabled: true,
+        );
+        for (final entry in entries) {
+          final slots = _receiptSlots(entry['receiptPath']);
+          if (slots == 0) continue;
+          final images = await vault.readAll(entry['id'] as String);
+          if (images.length != slots) {
+            throw StateError('Encrypted receipt count does not match ledger.');
+          }
+          for (var i = 0; i < slots; i++) {
+            if (images[i].position != i) {
+              throw StateError('Encrypted receipt order differs.');
+            }
+          }
+          receiptCount += slots;
+        }
+        if (tables.contains('fresh_finance_receipt_blobs') &&
+            await _count('fresh_finance_receipt_blobs') != receiptCount) {
+          throw StateError('Unlinked encrypted receipt prevents reset.');
+        }
+        final hashes = current.values['waffra_sms_hashes_v1'] as List<String>? ??
+            const <String>[];
+        final sqlHashes = await snapshot.store.customSelect(
+          'SELECT message_hash FROM fresh_finance_sms_hashes',
+        ).get();
+        if (sqlHashes.length != hashes.length ||
+            sqlHashes.map((e) => e.read<String>('message_hash')).toSet()
+                .difference(hashes.toSet()).isNotEmpty) {
+          throw StateError('Financial SMS deduplication integrity mismatch.');
+        }
+
+        final targets = tables.difference(_biometricPreservedTables);
+        final parents = <String, Set<String>>{};
+        for (final table in targets) {
+          // Table names come exclusively from the fixed known-table allowlist.
+          final refs = await snapshot.store.customSelect(
+            'PRAGMA foreign_key_list(' + table + ')',
+          ).get();
+          parents[table] = refs
+              .map((row) => row.read<String>('table'))
+              .where(targets.contains).toSet()..remove(table);
+        }
+        final remaining = <String>{...targets};
+        while (remaining.isNotEmpty) {
+          final children = remaining.where((candidate) =>
+              !remaining.any((other) => other != candidate &&
+                  (parents[other]?.contains(candidate) ?? false)))
+              .toList()..sort();
+          if (children.isEmpty) {
+            throw StateError('Unresolvable financial foreign-key dependency.');
+          }
+          for (final table in children) {
+            if (table == 'fresh_finance_categories') {
+              // M452 refuses deletion of a parent while a subcategory exists.
+              await snapshot.store.customStatement(
+                "DELETE FROM fresh_finance_categories "
+                "WHERE COALESCE(parent_id,'')<>''",
+              );
+            }
+            await snapshot.store.customStatement('DELETE FROM ' + table);
+            remaining.remove(table);
+          }
+        }
+        final cleared = await snapshot.commit(
+          expectedGeneration: current.generation,
+          fullFinanceSnapshot: const <String, Object?>{'entries': '[]'},
+        );
+        for (final table in targets) {
+          if (await _count(table) != 0) {
+            throw StateError('Encrypted finance reset left records: ' + table);
+          }
+        }
+        if ((await snapshot.store.customSelect(
+          'PRAGMA foreign_key_check',
+        ).get()).isNotEmpty ||
+            _ledger(cleared.values['entries'] as String?).isNotEmpty ||
+            cleared.values.length != 1 ||
+            cleared.generation != current.generation + 1) {
+          throw StateError('Biometric reset commit integrity mismatch.');
+        }
+        WaffraFinanceReadView.fromEncrypted(cleared).requireIntegrity();
+        return WaffraEncryptedFullResetResult(
+          previousGeneration: current.generation,
+          newGeneration: cleared.generation,
+          previousDigest: current.digest,
+          resetDigest: cleared.digest,
+          transactionsRemoved: entries.length,
+          receiptImagesRemoved: receiptCount,
+        );
+      });
+    });
+  }
+
   Future<WaffraEncryptedFullResetResult> reset({
     required WaffraFinanceSnapshotState baseline,
     required String encryptedBackup,
