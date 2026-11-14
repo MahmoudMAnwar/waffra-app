@@ -2447,6 +2447,16 @@
         "start": "    def test_detects_finance_authority_bypass(self):",
         "end": "    def test_detects_fx_consent_bypass(self):"
       }
+    ],
+    "test/m636_owner_approved_retirement_and_ui_test.dart": [
+      {
+        "start": "import 'package:flutter_test/flutter_test.dart';",
+        "end": "/// M636/#555:"
+      },
+      {
+        "start": "void main(){",
+        "end": " final smart=File('lib/waffra_smart_features.dart').readAsStringSync();"
+      }
     ]
   }
 }
