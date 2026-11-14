@@ -4094,6 +4094,34 @@
         "Source QA reconstructs real registered part rather than suppressing previous tests.",
         "Physical Android screenshots, footer overflow and old private backup parity remain separate."
       ]
+    },
+    {
+      "id": "M835-HOME-LOCAL-SMS-MANUAL-REVIEW-INDICATOR",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Home renders the local bank SMS review summary/count/error/rescan card directly in Home State; it opens review only on explicit user tap and cannot automatically post financial entries.",
+      "approved_behavior": "Move the unchanged original card implementation, including the unused-element annotation, to a registered same-library Dart part with no UI/FAB, SMS account, native queue or security behavior change.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_sms_review_indicator.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/m835_home_sms_review_indicator_extraction_test.dart",
+        "test/m547_sms_incremental_jank_regression_test.dart",
+        "test/m549_sms_review_owner_scoped_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "No automatic money posting, guessed account or original SMS privacy downgrade.",
+        "Original review count/errors, opt-in explicit native rescans and sender grouping unchanged.",
+        "The Home FAB and approved designs remain byte-for-byte equivalent.",
+        "Original source and Android/device/Backup Restore checks remain mandatory."
+      ]
     }
   ]
 }
