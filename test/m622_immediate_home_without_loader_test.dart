@@ -1,8 +1,9 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main(){
- final source=File('lib/main.dart').readAsStringSync();
+ final source=readWaffraMainSourceForContracts();
 
  test('M622 never renders fake balance or loading screen while verifying vault',(){
   final scaffold=source.split(' @override Widget build(BuildContext context)=>PopScope(')[1]
