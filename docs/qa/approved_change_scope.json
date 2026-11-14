@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "change_id": "M690-M729-ISSUES632-637-20261114",
+  "change_id": "M690-M730-ISSUES632-637-20261114",
   "human_scope_review": "Issue #629 completes prior PR #628 only after user-visible acceptance; #631 explicitly authorizes three exact screenshots for Goals/Dues/SMS Review, permanently visible financial activity, non-moving FAB-aligned notice, and savings/goal-due cash safety. Existing tests replace outdated visual assumptions without deleting financial safety assertions. Device screenshots/old restore still require external device evidence.",
   "user_requested_changes": [
     "M690 #632 permanently disable third-party AI bank SMS uploads and opt-in on previously installed versions, remove Settings toggle and signed Android staging worker, retain local encrypted SMS Review and money writer.",
@@ -38,7 +38,8 @@
     "M726 authorize the exact helper newline-bounds regression fix only; do not widen budget/goal or unrelated source edit permissions.",
     "M727 #633 restore exact-source M340 finance safety inspection of registered entrySheet Dart part (original SQLCipher account, SMS, FX and receipt guards) after safe Home extraction; preserve all positive and negative financial conditions, with no bypass or skipped tests.",
     "M728 #633 repair only stale raw-main.dart source readers for 12 complete original Flutter finance, SMS, backup, budget and UI regression test files after byte-identical registered Home part extractions; preserve every original expectation and negative guard through readWaffraMainSourceForContracts(), with bounded test methods and unchanged runtime money code.",
-    "M729 #633 preserve 12 more original Flutter security, finance, currency, receipt, budget and mobile UI assertions while moving their stale raw main.dart source reads to the actual registered Home Dart part reconstruction. Only imports and exact original source-reading test bodies are authorized."
+    "M729 #633 preserve 12 more original Flutter security, finance, currency, receipt, budget and mobile UI assertions while moving their stale raw main.dart source reads to the actual registered Home Dart part reconstruction. Only imports and exact original source-reading test bodies are authorized.",
+    "M730 #633 preapprove 12 further original budget, income, bank SMS, merchant, recurring and UI regression tests to inspect the actual declared same-library Home parts, retaining every positive and negative assertion and preserving money code."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -100,20 +101,32 @@
     "test/m360_budget_category_quick_actions_test.dart",
     "test/m363_transaction_category_inline_creation_test.dart",
     "test/m371_goal_wallet_and_budgets_regression_test.dart",
+    "test/m372_category_budget_android_keyboard_ux_test.dart",
+    "test/m373_independent_budgets_finance_test.dart",
+    "test/m375_budget_visibility_balance_regression_test.dart",
+    "test/m380_unlinked_budget_step_back_ux_test.dart",
     "test/m388_m390_approved_goal_recurring_receipt_test.dart",
     "test/m392_m395_budget_quick_actions_goal_ui_test.dart",
+    "test/m398_budget_directory_reopen_scope_test.dart",
+    "test/m400_compact_visible_copy_test.dart",
     "test/m401_m402_budget_month_centered_dropdown_test.dart",
     "test/m414_percentage_alert_controls_test.dart",
     "test/m417_sms_first_run_test.dart",
     "test/m423_cloudflare_sms_gateway_test.dart",
     "test/m429_sms_phone_integration_test.dart",
     "test/m436_cloud_review_pipeline_test.dart",
+    "test/m443_merchant_screenshot_regression_test.dart",
     "test/m462_smart_sms_rule_review_test.dart",
     "test/m463_auth_first_one_page_test.dart",
     "test/m467_account_header_test.dart",
+    "test/m468_app_refresh_performance_regression_test.dart",
     "test/m470_account_monthly_budget_policy_test.dart",
     "test/m470_postsave_lag_and_teach_return_test.dart",
+    "test/m470_recurring_provider_accounts_test.dart",
+    "test/m470_sms_first_sender_account_test.dart",
+    "test/m470_sms_sender_and_rule_accuracy_test.dart",
     "test/m470_sms_transfer_fee_firsttap_category_test.dart",
+    "test/m473_manual_sms_keyword_learning_parity_test.dart",
     "test/m495_pr402_ui_performance_regression_test.dart",
     "test/m509_all_sender_sms_rescan_dedup_test.dart",
     "test/m528_settings_async_cache_regression_test.dart",
@@ -1058,6 +1071,158 @@
       },
       {
         "start": "test('M689 short available balance rejects unaffordable funding',(){",
+        "end": null
+      }
+    ],
+    "test/m372_category_budget_android_keyboard_ux_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "void main()"
+      },
+      {
+        "start": "void main()",
+        "end": "test('M372: main picker creates only main; leaf picker only child', () {"
+      }
+    ],
+    "test/m373_independent_budgets_finance_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "void main()"
+      },
+      {
+        "start": "test('M373 all money flows use independent budget catalogue', () {",
+        "end": null
+      }
+    ],
+    "test/m375_budget_visibility_balance_regression_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "void main()"
+      },
+      {
+        "start": "test('M375 budget picker is conditional, assignment is always optional', () {",
+        "end": "test('M376 budget association never changes a historical ledger value', () {"
+      }
+    ],
+    "test/m380_unlinked_budget_step_back_ux_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "void main()"
+      },
+      {
+        "start": "test('M380 manual, receipt/OCR and SMS save gates are opt-in but confirmed',(){",
+        "end": "test('M380 budget choice and back remain concise, data-only and stepwise',(){"
+      },
+      {
+        "start": "test('M380 budget choice and back remain concise, data-only and stepwise',(){",
+        "end": null
+      }
+    ],
+    "test/m398_budget_directory_reopen_scope_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "void main()"
+      },
+      {
+        "start": "test('M398: manual editor retains budget actions and adjacent date', () {",
+        "end": null
+      }
+    ],
+    "test/m400_compact_visible_copy_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "void main()"
+      },
+      {
+        "start": "test('M400 new standalone budget form does not repeat visible help text', () {",
+        "end": "test('M400 deletion copy is readable; deletion still requires confirmation', () {"
+      },
+      {
+        "start": "test('M400 deletion copy is readable; deletion still requires confirmation', () {",
+        "end": null
+      }
+    ],
+    "test/m443_merchant_screenshot_regression_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "void main()"
+      },
+      {
+        "start": "test('M443 Home retains biometric lock on actual background only', () {",
+        "end": "test('M443 no merchant selection, brand logos or remote logo assets in active UI', () {"
+      },
+      {
+        "start": "test('M443 no merchant selection, brand logos or remote logo assets in active UI', () {",
+        "end": "test('M443 legacy transaction amounts and merchant keys are not wiped', () {"
+      },
+      {
+        "start": "test('M443 legacy transaction amounts and merchant keys are not wiped', () {",
+        "end": null
+      }
+    ],
+    "test/m468_app_refresh_performance_regression_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "void main()"
+      },
+      {
+        "start": "test('M468 Home refresh reduces duplicate account and SMS scans',(){",
+        "end": "test('M468 no financial authority or history is discarded for faster UI',(){"
+      },
+      {
+        "start": "test('M468 no financial authority or history is discarded for faster UI',(){",
+        "end": null
+      }
+    ],
+    "test/m470_recurring_provider_accounts_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "void main()"
+      },
+      {
+        "start": "test('M470 Home manual and transfer both show sequential provider-account choices',(){",
+        "end": "test('M470 SMS review has bank and account cascade with sender-match gate',(){"
+      },
+      {
+        "start": "test('M470 SMS review has bank and account cascade with sender-match gate',(){",
+        "end": "test('M470 money form requires an explicit provider before a linked source or destination',(){"
+      }
+    ],
+    "test/m470_sms_first_sender_account_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "void main()"
+      },
+      {
+        "start": "test('M470 #11 account suggestion only starts on confirmed bank SMS review',(){",
+        "end": "test('M636 SMS posting remains a separately confirmed atomic finance write',(){"
+      },
+      {
+        "start": "test('M636 SMS posting remains a separately confirmed atomic finance write',(){",
+        "end": null
+      }
+    ],
+    "test/m470_sms_sender_and_rule_accuracy_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "void main()"
+      },
+      {
+        "start": "test('M470 #12 sender summary is RTL-isolated and uses approved copy',(){",
+        "end": "test('M470 #5/#6 account action stays beside date with preserved entry state',(){"
+      },
+      {
+        "start": "test('M470 #5/#6 account action stays beside date with preserved entry state',(){",
+        "end": null
+      }
+    ],
+    "test/m473_manual_sms_keyword_learning_parity_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "void main()"
+      },
+      {
+        "start": "test('M473 #413: caller runs keyword learning only after verified writes',(){",
         "end": null
       }
     ]

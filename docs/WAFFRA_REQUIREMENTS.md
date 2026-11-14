@@ -1860,3 +1860,7 @@ Repoint obsolete `File('lib/main.dart').readAsStringSync()` inspections in twelv
 
 ### M729 — #633 / Draft #638: hardening original regression source reader (batch 2)
 A further twelve original finance, budget, receipt, FX, SMS, security and UI tests are permitted to replace only raw `lib/main.dart` source reads with actual registered Home part reassembly; all current positive/negative expectations and runtime code remain unchanged. CI on exact head and physical device acceptance still required.
+
+
+### M730 — Issue #633 / Draft #638: batch 3 real-source regression repair
+Preserve twelve additional existing budget, recurring, SMS, merchant and UI regression assertions; redirect only stale raw-main source reads to actual registered Home Dart part reconstruction and add its test import. No app financial writer, screenshot-approved UI or data changed. Exact-head CI and device proof stay mandatory.

@@ -3218,6 +3218,39 @@
         "No assertions deleted or test gates bypassed.",
         "No user backup bytes or financial values changed."
       ]
+    },
+    {
+      "id": "M730-ORIGINAL-REGRESSIONS-BATCH3",
+      "issue": "Issue #633, Draft PR #638",
+      "previous_behavior": "12 original active Flutter regressions still scanned only lib/main.dart following extracted Home method moves.",
+      "approved_behavior": "Change only the source reader to registered-part test helper, without deleting any original assertion, runtime code, or widening source contracts.",
+      "source_paths": [
+        "test/support/waffra_main_source.dart",
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m372_category_budget_android_keyboard_ux_test.dart",
+        "test/m373_independent_budgets_finance_test.dart",
+        "test/m375_budget_visibility_balance_regression_test.dart",
+        "test/m380_unlinked_budget_step_back_ux_test.dart",
+        "test/m398_budget_directory_reopen_scope_test.dart",
+        "test/m400_compact_visible_copy_test.dart",
+        "test/m443_merchant_screenshot_regression_test.dart",
+        "test/m468_app_refresh_performance_regression_test.dart",
+        "test/m470_recurring_provider_accounts_test.dart",
+        "test/m470_sms_first_sender_account_test.dart",
+        "test/m470_sms_sender_and_rule_accuracy_test.dart",
+        "test/m473_manual_sms_keyword_learning_parity_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "All finance, SMS, UI, budget and migration assertions unchanged.",
+        "No hidden/skipped regression.",
+        "Real Android and real encrypted backup parity not claimed by tests."
+      ]
     }
   ]
 }
