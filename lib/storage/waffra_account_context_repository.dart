@@ -228,6 +228,29 @@ last_four=excluded.last_four,confirmed_iso=excluded.confirmed_iso
   });
  }
 
+ /// Explicit user-confirmed removal of a previously verified bank suffix.
+ /// No account row, opening balance, bank identity or ledger is modified.
+ Future<void> clearVerifiedBankSuffix({
+  required String accountId,
+  required String confirmedIso,
+  required bool userConfirmed,
+ })async{
+  await _ready();
+  if(!userConfirmed)throw StateError('Bank identifier removal needs approval.');
+  _id(accountId);_when(confirmedIso);
+  await store.transaction(()async{
+   await _active(accountId);
+   final account=await store.customSelect(
+    'SELECT kind FROM fresh_finance_money_accounts WHERE account_id=?',
+    variables:[Variable.withString(accountId)]).getSingle();
+   if(account.read<String>('kind')!='bank')throw StateError(
+    'Only a bank account may clear its verified bank suffix.');
+   await store.customStatement(
+    'DELETE FROM fresh_finance_account_sms_suffixes WHERE account_id=?',
+    [accountId]);
+  });
+ }
+
  /// Read only the user-confirmed four-digit suffix from SQLCipher.
  /// Never infer digits from account labels, SMS sender or the Home filter.
  Future<String?> verifiedBankSuffix(String accountId)async{
