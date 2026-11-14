@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_account_transaction_form.dart';
 import 'package:waffra/waffra_new_account_dialog.dart';
 import 'package:waffra/waffra_saudi_financial_providers.dart';
+import 'package:waffra/storage/waffra_account_details_schema.dart';
 
 WaffraNewAccountDraft draft(String kind,String provider,int minor)=>
  WaffraNewAccountDraft(name:'حساب تابع',kind:kind,
@@ -18,6 +19,9 @@ void main(){
    final candidate=draft(kind,provider.id,502525);
    expect(waffraProviderForAccountGroup(provider.groupId)?.id,provider.id);
    expect(waffraNewAccountMatchesGroup(provider.groupId,candidate),isTrue);
+   expect(WaffraAccountDetailsSchema.valid(kind:kind,providerId:provider.id,
+    subtype:kind=='bank'?'current':'digital'),isTrue,
+    reason:'SQLCipher provider CHECK must accept every offered catalog institution');
    final wrong=kind=='wallet'?'bank':'wallet';
    expect(waffraNewAccountMatchesGroup(provider.groupId,
     draft(wrong,provider.id,502525)),isFalse);
@@ -27,6 +31,10 @@ void main(){
      draft(kind,other.id,502525)),isFalse);
    }
   }
+  expect(waffraNewAccountMatchesGroup('bank:institution:other',
+   draft('bank','other',500000)),isTrue);
+  expect(waffraNewAccountMatchesGroup('wallet:institution:other',
+   draft('wallet','other',500000)),isTrue);
   expect(waffraNewAccountMatchesGroup('bank:institution:other',
    draft('bank','rajhi',500000)),isFalse);
   expect(waffraNewAccountMatchesGroup('bank:account:legacy',

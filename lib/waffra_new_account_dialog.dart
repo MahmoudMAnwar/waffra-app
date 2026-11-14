@@ -29,6 +29,10 @@ bool waffraNewAccountMatchesGroup(String? group,WaffraNewAccountDraft draft){
  if(institution!=null)return draft.providerId==institution.id&&
   draft.kind==(institution.category==WaffraSaudiFinancialProviders.wallet?
    'wallet':'bank');
+ if(group=='bank:institution:other')return
+  draft.kind=='bank'&&draft.providerId=='other';
+ if(group=='wallet:institution:other')return
+  draft.kind=='wallet'&&draft.providerId=='other';
  return group=='cash'&&draft.kind=='cash';
 }
 
