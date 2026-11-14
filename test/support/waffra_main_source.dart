@@ -120,5 +120,9 @@ String readWaffraMainSourceForContracts(){
  if(s.split(compactActivityMarker).length!=2)throw StateError('Missing or duplicate M790 verified transaction card marker');
  s=s.replaceFirst(compactActivityMarker,_method('lib/waffra_home_compact_activity_cards.part.dart',
   ' Widget compactTransaction(MoneyEntry entry){'));
+ const categoryReceiptMarker=' // M795: Home category selector and protected receipt dialogs moved to registered Dart part.\n';
+ if(s.split(categoryReceiptMarker).length!=2)throw StateError('Missing or duplicate M795 real category and receipts marker');
+ s=s.replaceFirst(categoryReceiptMarker,_method('lib/waffra_home_category_receipt_dialogs.part.dart',
+  ' Future<String?> chooseTransactionCategory('));
  return s;
 }
