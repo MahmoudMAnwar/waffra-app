@@ -119,10 +119,18 @@ void main() {
       'fresh_finance_internal_transfers',
       'fresh_finance_goals',
       'fresh_finance_recurring',
-      'fresh_finance_receipt_blobs',
       'fresh_finance_sms_hashes',
     ]) {
       expect(await count(table), 0, reason: table);
+    }
+    // The receipt-BLOB table is optional until the first attachment. An
+    // absent table means there are no encrypted invoice bytes to retain.
+    final receiptTable = await db.customSelect(
+      "SELECT name FROM sqlite_master WHERE type='table' "
+      "AND name='fresh_finance_receipt_blobs'",
+    ).get();
+    if (receiptTable.isNotEmpty) {
+      expect(await count('fresh_finance_receipt_blobs'), 0);
     }
     expect((await snapshot.read()).values, {'entries':'[]', 'waffra_categories_v24':'[]'});
     expect((await db.customSelect('PRAGMA foreign_key_check').get()), isEmpty);
