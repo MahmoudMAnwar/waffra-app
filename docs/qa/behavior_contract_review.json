@@ -3842,6 +3842,34 @@
         "Must restore exact registered Dart-part implementation into original source assertions, not invent substitutes.",
         "Physical Android, backed-up user history and offline encrypted archive/ledger parity remain separate requirements."
       ]
+    },
+    {
+      "id": "M790-ORIGINAL-COMPACT-TRANSACTION-CARDS-REAL-SOURCE",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "The compact Home income, expense, paid recurring and goal-due activity tiles and Home finance shortcut adapter remained embedded in `_HomeScreenState`.",
+      "approved_behavior": "Relocate the original method bodies unchanged into a registered same-library Home Dart part, retaining original SAR amount direction, income/expense/paid due distinctions, attachment corner viewer, encrypted original SMS source label, clickable finance action and global FAB.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_compact_activity_cards.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/m790_home_compact_activity_cards_extraction_test.dart",
+        "test/m647_m652_financial_activity_regression_test.dart",
+        "test/m670_feedback_transfer_dashboard_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "No transaction insert, verified ledger write, unapproved account debit or source identity change is introduced by presentation extraction.",
+        "Original paid due is one persisted transaction, never a second ledger debit.",
+        "Original attachment and SAR typography/actions remain active and all previous positive and negative regression assertions remain enabled.",
+        "No Android visual overflow, actual slowdown reduction or original user V24 Backup/Restore parity is claimed without device evidence."
+      ]
     }
   ]
 }
