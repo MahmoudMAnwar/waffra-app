@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "change_id": "M690-M820-ISSUES632-637-20261114",
+  "change_id": "M690-M812-ISSUES632-637-20261114",
   "human_scope_review": "Issue #629 completes prior PR #628 only after user-visible acceptance; #631 explicitly authorizes three exact screenshots for Goals/Dues/SMS Review, permanently visible financial activity, non-moving FAB-aligned notice, and savings/goal-due cash safety. Existing tests replace outdated visual assumptions without deleting financial safety assertions. Device screenshots/old restore still require external device evidence.",
   "user_requested_changes": [
     "M690 #632 permanently disable third-party AI bank SMS uploads and opt-in on previously installed versions, remove Settings toggle and signed Android staging worker, retain local encrypted SMS Review and money writer.",
@@ -73,7 +73,8 @@
     "M798 #633 repair registered M790 compact card source reader ordering before nested M733 dashboard and M735 category methods; preserve exact real-part assertions in existing Dart/Python QA and add no-stub regression.",
     "M805 #633 move original Home budget percentage permission, threshold alerts and pure chart SVGs byte-identically into real same-library part; preserve original finance numbers, notifications and charts without source test changes, actual Android/PDF/restore parity separately.",
     "M810 #633 relocate original verified Home income and expense summary transaction dialog byte-identically, preserving source account filtering, original totals and Riyal alignment, zero state, list/tile/UI and no-ledger-writer promise; retain strict M385/M550 tests.",
-    "M820 #633 reorder real M805 chart/alert Dart part reconstruction before its nested M780 verified delete/undo and M781 transaction UI parts in strict Dart/Python QA; never weaken original money assertions."
+    "M820 #633 reorder real M805 chart/alert Dart part reconstruction before its nested M780 verified delete/undo and M781 transaction UI parts in strict Dart/Python QA; never weaken original money assertions.",
+    "M812 #633 relocate original verified bank SMS money-account witness and optional budget association methods unchanged into real same-library Home part; retain no guessed account, explicit user choice, generation safeguards and original money and SMS validations."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -291,7 +292,9 @@
     "test/m805_home_budget_alert_charts_extraction_test.dart",
     "lib/waffra_home_transaction_summary.part.dart",
     "test/m810_home_transaction_summary_extraction_test.dart",
-    "test/m820_nested_home_ledger_part_order_test.dart"
+    "test/m820_nested_home_ledger_part_order_test.dart",
+    "lib/waffra_home_verified_finance_pickers.part.dart",
+    "test/m812_home_verified_finance_pickers_extraction_test.dart"
   ],
   "approved_deleted_files": [
     "lib/waffra_sms_cloud_review_analyzer.dart"
@@ -427,6 +430,10 @@
       {
         "start": " Future<void> _publishVerifiedWidgetBalance(",
         "end": " double sum(Iterable<MoneyEntry>"
+      },
+      {
+        "start": " Future<bool?> confirmDeletion(",
+        "end": " Future<void> _previewForeignBankCurrency("
       }
     ],
     "test/support/waffra_main_source.dart": [
