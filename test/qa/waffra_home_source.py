@@ -57,4 +57,7 @@ def read_waffra_home_source(root=ROOT):
     restore(" // M741: original local SMS rule and learning methods moved to registered same-library part.\n",
             "lib/waffra_home_sms_rules.part.dart",
             " Future<void> _openSmsRules(")
+    restore(" // M742: original native SMS inbox refresh and offline classification moved to registered part.\n",
+            "lib/waffra_home_sms_refresh.part.dart",
+            " Future<void> _refreshAutoSmsInbox(")
     return source
