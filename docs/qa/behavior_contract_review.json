@@ -4,7 +4,7 @@
   "issue": "Issues #632–#637",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at new branch start",
-  "reviewed_at": "2026-11-13",
+  "reviewed_at": "2026-11-14",
   "review_policy": "M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending.",
   "contracts": [
     {
@@ -3002,6 +3002,31 @@
         "Linked goal due expense must show original total, verified wallet contribution and bank cash remainder.",
         "Goal funding does not celebrate rejected writes and open-ended goals cannot divide by zero.",
         "Do not move or resize the global FAB or change approved page designs."
+      ]
+    },
+    {
+      "id": "M711-GOAL-WORKFLOW-TRUE-DART-PART",
+      "issue": "Issue #633 in PR #638; owner-approved extraction of full Home goal workflows",
+      "previous_behavior": "Home State contained approximately 963 lines of verified savings goal creation, funding, releases, challenge and goal action implementations, coupled to a single main.dart source file.",
+      "approved_behavior": "All original goal workflows are located byte-identically in the registered same-library waﬀra Home Dart part; no finance writer, account source, savings wallet transaction, due payment, data format, or visual widget behavior changes. Historical source assertions inspect the genuine Dart part in original order, not a mock.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_goal_actions.part.dart",
+        "test/support/waffra_main_source.dart"
+      ],
+      "test_paths": [
+        "test/m711_goal_workflows_extraction_test.dart",
+        "test/m707_home_goals_recurring_extraction_test.dart",
+        "test/m644_goal_notice_funding_contract_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "Goal funding and releasing continue using verified account and goal wallet writes; no additional or missing debit.",
+        "The cash/goal balance checks and historical backup writer remain unchanged.",
+        "No physical Android proof is inferred from a source-only extraction."
       ]
     }
   ]

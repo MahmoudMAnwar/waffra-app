@@ -25,7 +25,8 @@
     "M709 #633 keep original mandatory M176 route tagging, M670 verified goals/recurring/card/Snackbar UI and M127 no-tour/backup/FAB tests observing real registered Home parts after extraction, without weakening finance or UX assertions.",
     "M710 #635 retain existing M674/M675 real owner-approved goal, recurring-account selection, FAB 58px placement and no-duplicate-edit safety assertions while reconstructing the genuine registered Goals/Recurring part after M707.",
     "M708 #633/#635 repair 19 strict Flutter regression expectations by reading the exact registered Home transfer, Goals and Recurring Dart part implementations; do not weaken original assertions or alter finance writers.",
-    "M711 #633 extract the original Home goal funding, withdrawal, goal creation, challenges and action callbacks to a same-library Dart part; restore source-based QA from the real part and preserve financial checks without modifying the ledger."
+    "M711 #633 extract the original Home goal funding, withdrawal, goal creation, challenges and action callbacks to a same-library Dart part; restore source-based QA from the real part and preserve financial checks without modifying the ledger.",
+    "M712 #633 register exact extracted goal workflow finance behavior in M550 contract registry and refresh M449 release notes after audited M711 production code, without altering application implementation."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
