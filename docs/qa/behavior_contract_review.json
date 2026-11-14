@@ -3409,6 +3409,30 @@
         "Original positive attachment marker mandatory.",
         "No production financial code changed."
       ]
+    },
+    {
+      "id": "M736-VERIFIED-TRANSFER-CARDS-REGISTERED-HOME-SOURCE",
+      "issue": "Issue #633 / Draft PR #638 M733",
+      "previous_behavior": "Original verified Home transfer and savings cards were moved from inline Home State to a registered same-library Dart part.",
+      "approved_behavior": "Preserve source-verified bank/wallet labels, internal two-sided amount direction and non-posting savings cards from unchanged production part; test exact registered code and original finance source contracts.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_verified_transfer_cards.part.dart",
+        "test/support/waffra_main_source.dart"
+      ],
+      "test_paths": [
+        "test/m733_home_verified_transfer_cards_extraction_test.dart",
+        "test/m647_m652_financial_activity_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Never change money writers, transfer principal or savings source identity.",
+        "Never weaken original regressions or trust missing Dart part source.",
+        "Android physical and private backup acceptance remain independent."
+      ]
     }
   ]
 }
