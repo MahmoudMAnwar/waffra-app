@@ -97,6 +97,7 @@ import 'storage/waffra_fresh_install_source.dart';
 import 'storage/waffra_fresh_home_catalog_recovery.dart';
 import 'storage/waffra_live_account_write_authority.dart';
 import 'storage/waffra_home_finance_persistence.dart';
+import 'storage/waffra_encrypted_full_finance_reset.dart' show WaffraReceiptCleanupPending;
 import 'storage/waffra_verified_finance_authority.dart';
 import 'storage/waffra_accounts_portable_backup_v3.dart';
 import 'storage/waffra_legacy_v24_sqlcipher_converter.dart';
