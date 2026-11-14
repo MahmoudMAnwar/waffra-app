@@ -358,12 +358,16 @@
         "end": "void main() {"
       },
       {
+        "start": "void main() {",
+        "end": " test('M436 native queue claim is atomic and withholds future retries',(){"
+      },
+      {
         "start": " test('M452 background posts only with account-bound owner rule',(){",
-        "end": "  expect(auto,contains('!matched.autoPost'));"
+        "end": " test('M452 no unsolicited cloud choice on signup or SMS review',(){"
       },
       {
         "start": " test('M452 no unsolicited cloud choice on signup or SMS review',(){",
-        "end": "  expect(ui,contains(\"await prefs.remove('waffra_cloud_sms_installation_consent_v2');\"));"
+        "end": " test('M436 redactor accepts compact English multi-currency SMS',(){"
       }
     ],
     "test/m528_settings_async_cache_regression_test.dart": [
