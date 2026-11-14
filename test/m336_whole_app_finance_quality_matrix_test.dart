@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/main.dart';
 import 'package:waffra/waffra_sms_multicurrency_review.dart';
@@ -79,13 +80,13 @@ void main(){
    final manual=MoneyEntry(id:'manual',title:suspicious.title,
     amount:136,income:false,category:'أخرى',date:DateTime(2026,10,31));
    expect(waffraNeedsLegacyFxReview(manual),isFalse);
-   final app=File('lib/main.dart').readAsStringSync();
+   final app=readWaffraMainSourceForContracts();
    expect(app,contains("Key('waffra-legacy-foreign-currency-review-warning')"));
    expect(app,contains('may include unverified amounts'));
  });
 
   test('M337 newly created SMS category keeps selected parent after save',(){
-  final app=File('lib/main.dart').readAsStringSync();
+  final app=readWaffraMainSourceForContracts();
   final from=app.indexOf('Future<void> entrySheet(');
   final to=app.indexOf('Future<String?> chooseTransactionCategory(',from);
   expect(from,greaterThan(0));
@@ -143,7 +144,7 @@ void main(){
  });
 
  test('M636 SMS editor validates original currency BEFORE hash and commit',(){
-  final app=File('lib/main.dart').readAsStringSync();
+  final app=readWaffraMainSourceForContracts();
   final start=app.indexOf(' Future<void> entrySheet(');
   final end=app.indexOf(' Future<void> showReceipt(',start);
   final editor=app.substring(start,end);

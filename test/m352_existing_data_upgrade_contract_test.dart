@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -126,7 +127,7 @@ void main() {
 
   test('budget review is visible, per record, cancellable, and never auto-posts',
       () {
-   final home=File('lib/main.dart').readAsStringSync();
+   final home=readWaffraMainSourceForContracts();
    final screen=File('lib/waffra_categories_page.part.dart').readAsStringSync();
    expect(home,contains('Future<void> reviewUnlinkedHistoricalExpenses()'));
    expect(home,contains('Future<void> assignExistingExpenseToBudget(MoneyEntry old)'));

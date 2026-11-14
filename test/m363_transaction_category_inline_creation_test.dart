@@ -1,9 +1,10 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main(){
  test('M363 both category dropdowns create styled main/child categories',(){
-  final source=File('lib/main.dart').readAsStringSync();
+  final source=readWaffraMainSourceForContracts();
   expect(source,contains("'waffra-inline-create-main-category'"));
   expect(source,contains('if(allowCreate&&!leafLabels)'));
   expect(source,contains("'waffra-inline-create-subcategory'"));
@@ -18,7 +19,7 @@ void main(){
  });
 
  test('M363 original icon, color and duplicate protections are reused',(){
-  final source=File('lib/main.dart').readAsStringSync();
+  final source=readWaffraMainSourceForContracts();
   expect(source,contains('categoryDialog({BudgetCategory? initial'));
   expect(source,contains('WaffraValidators.uniqueCategory(created.name,'));
   expect(source,contains('icon:Icon(categoryIcon(x),color:icon==x?emerald:null)'));
@@ -26,7 +27,7 @@ void main(){
  });
 
  test('M363 transaction edit keeps same selectable active budget as create',(){
-  final source=File('lib/main.dart').readAsStringSync();
+  final source=readWaffraMainSourceForContracts();
   // Back restores any unsaved SMS editor choice, otherwise an existing
   // finance record preserves its prior budget association on edit.
   expect(source,contains("String? selectedBudgetId=(smsEditorDraft?['budget'] as String?)??initial?.budgetId;"));
@@ -43,14 +44,14 @@ void main(){
  });
 
  test('M363 bulk bank review also receives inline parent/child creation',(){
-  final source=File('lib/main.dart').readAsStringSync();
+  final source=readWaffraMainSourceForContracts();
   expect(source,contains('allowCreate:true,typeIncome:income,parentId:selectedParentId'));
   expect(source,contains('leafLabels:true,allowCreate:true,'));
   expect(source,contains('selectedParentId=leaves.single.parentId'));
  });
 
  test('M362 verified encrypted goal spend uses one atomic wallet-and-ledger writer',(){
-  final source=File('lib/main.dart').readAsStringSync();
+  final source=readWaffraMainSourceForContracts();
   // The atomic goal due writer has now been implemented. Keep a positive
   // source-level witness instead of requiring its obsolete fail-closed stub.
   expect(source,contains('_financeAuthority.settleLinkedGoalDue('));
@@ -62,7 +63,7 @@ void main(){
  });
 
  test('M689 short available balance rejects unaffordable funding',(){
-  final source=File('lib/main.dart').readAsStringSync();
+  final source=readWaffraMainSourceForContracts();
   final start=source.indexOf('Future<void> fundGoal(SavingGoal g)async');
   final end=source.indexOf('IconData goalIcon(',start);
   final fund=source.substring(start,end);

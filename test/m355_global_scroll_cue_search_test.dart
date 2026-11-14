@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -95,7 +96,7 @@ void main() {
   });
 
   test('M355 app-wide scroll integration and search on historical link pickers', () {
-    final home = File('lib/main.dart').readAsStringSync();
+    final home = readWaffraMainSourceForContracts();
     final cueSource =
         File('lib/waffra_visible_scroll_behavior.dart').readAsStringSync();
     expect(home,contains('scrollBehavior:const WaffraVisibleScrollBehavior()'));

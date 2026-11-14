@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_cross_source_duplicate_review.dart';
@@ -174,7 +175,7 @@ void main() {
   });
 
   test('live confirm shows advisory with explicit override, no auto discard', () {
-    final source = File('lib/main.dart').readAsStringSync();
+    final source = readWaffraMainSourceForContracts();
     final anchor = source.indexOf('if(initial==null&&entries.any((e)=>');
     expect(anchor, greaterThanOrEqualTo(0));
     final snippet = source.substring(anchor, anchor + 1800);
