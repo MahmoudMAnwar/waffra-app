@@ -3,15 +3,17 @@ import 'package:drift/drift.dart';
 import 'waffra_accounts_schema.dart';
 import 'waffra_account_details_schema.dart';
 import 'waffra_custom_account_subtype_schema.dart';
+import 'waffra_custom_institution_links.dart';
 import 'waffra_account_context_schema.dart';
 import 'waffra_encrypted_store.dart';
 
 class WaffraAccountBalance {
  const WaffraAccountBalance(
   this.id,this.name,this.kind,this.balanceMinor,this.archived,
-  {this.providerId,this.subtype,this.customSubtypeLabel});
+  {this.providerId,this.subtype,this.customSubtypeLabel,
+   this.customInstitutionRootId});
  final String id,name,kind;
- final String? providerId,subtype,customSubtypeLabel;
+ final String? providerId,subtype,customSubtypeLabel,customInstitutionRootId;
  final int balanceMinor;
  final bool archived;
 }
@@ -181,6 +183,12 @@ class WaffraAccountsRepository implements WaffraAccountOperations {
   await _ready();
   final hasDetails=await WaffraAccountDetailsSchema.exists(db);
   if(hasDetails)await WaffraAccountDetailsSchema.requireReady(db);
+  final hasInstitutionLinks=await WaffraCustomInstitutionLinks.exists(db);
+  if(hasInstitutionLinks)await WaffraCustomInstitutionLinks.requireReady(db);
+  final institutionColumn=hasInstitutionLinks?
+   'g.root_account_id AS custom_root_id':'NULL AS custom_root_id';
+  final institutionJoin=hasInstitutionLinks?
+   'LEFT JOIN ${WaffraCustomInstitutionLinks.table} g ON g.account_id=a.account_id':'';
   final hasCustom=await WaffraCustomAccountSubtypeSchema.exists(db);
   if(hasCustom)await WaffraCustomAccountSubtypeSchema.requireReady(db);
   final detailColumns=hasDetails?
@@ -194,7 +202,7 @@ class WaffraAccountsRepository implements WaffraAccountOperations {
    'LEFT JOIN fresh_finance_custom_account_subtypes c ON c.account_id=a.account_id':'';
   final rows=await db.customSelect('''
 SELECT a.account_id,a.label,a.kind,a.archived,
- $detailColumns,$customColumn,
+ $detailColumns,$customColumn,$institutionColumn,
  a.opening_minor +
  COALESCE((SELECT SUM(CASE WHEN e.is_income=1 THEN e.amount_minor
    WHEN due.entry_id IS NOT NULL THEN -due.current_cash_minor
@@ -215,6 +223,7 @@ SELECT a.account_id,a.label,a.kind,a.archived,
 FROM fresh_finance_money_accounts a
 $detailJoin
 $customJoin
+$institutionJoin
 ORDER BY a.created_iso,a.account_id
 ''').get();
   return List<WaffraAccountBalance>.unmodifiable(rows.map((r)=>
