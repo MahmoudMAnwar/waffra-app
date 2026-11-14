@@ -57,7 +57,8 @@ void main(){
    final notice=ValueNotifier<WaffraNoticeData?>(WaffraNoticeData(
     text:'Message confirming restored 19 transactions after verification '
       'with encrypted archive and all saved goal balances',
-    kind:WaffraSnackKind.success));
+    kind:WaffraSnackKind.success,
+    duration:const Duration(seconds:8),requireDismissal:false));
    addTearDown(notice.dispose);
    await tester.pumpWidget(MaterialApp(home:Scaffold(body:Stack(children:[
     Positioned(left:english?300:18,bottom:80,
