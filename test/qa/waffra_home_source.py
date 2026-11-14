@@ -99,4 +99,7 @@ def read_waffra_home_source(root=ROOT):
     restore(" // M791: original fail-closed Home finance startup and recovery UI in registered part.\n",
             "lib/waffra_home_finance_recovery.part.dart",
             " Future<void> _loadFinanceSafely()async{")
+    restore(" // M810: original Home income/expense transaction summary now in registered part.\n",
+            "lib/waffra_home_transaction_summary.part.dart",
+            " Future<void> showSummaryTransactions(bool income)async {")
     return source
