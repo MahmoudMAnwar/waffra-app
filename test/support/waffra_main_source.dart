@@ -104,5 +104,9 @@ String readWaffraMainSourceForContracts(){
  if(s.split(ledgerActionsMarker).length!=2)throw StateError('Missing or duplicated M780 verified ledger actions marker');
  s=s.replaceFirst(ledgerActionsMarker,_method('lib/waffra_home_transaction_ledger_actions.part.dart',
   ' void _publishVerifiedTransactionLedger('));
+ const transactionCardsMarker=' // M781: original Home transaction cards/details/actions moved to registered same-library part.\n';
+ if(s.split(transactionCardsMarker).length!=2)throw StateError('Missing or duplicated M781 real transaction card source marker');
+ s=s.replaceFirst(transactionCardsMarker,_method('lib/waffra_home_transaction_cards.part.dart',
+  ' Widget stat(String label'));
  return s;
 }
