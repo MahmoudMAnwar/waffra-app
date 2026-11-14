@@ -1903,3 +1903,7 @@ Owner requests continuing the outstanding code-only Home refactor. Extract origi
 
 ### M740 — Issue #633 / Draft #638: preserve M442 historical native SMS permission/source tests
 After M739 exact source extraction, two historical Python tests indexed `_openAutoSmsInbox()` in raw main.dart; the live method now resides in the registered part. Redirect only the original three raw-main readers in `test/qa/m442_sms_consent_session_recovery_test.py` to the strict real registered-Dart-part source reassembly. Retain **all** original native permission, owner session, no misleading zero count, and no automatic SMS finance-writer assertions. Do not skip or alter underlying checks. Keep the complete fail-closed M385 comparison outside four narrow reader/import sections.
+
+
+### M741 — Issue #633 / Draft PR #638: extract original local SMS rules/learning without behavior changes
+The owner asked to continue completing the remaining Home code. Move 176 original lines of `_openSmsRules`, verified sender-account association, local SMS rule learning, safe manual keyword preferences and local OTP/currency-category candidate resolution into `lib/waffra_home_sms_rules.part.dart` as registered same-library extension. Keep the owner-key getter and Home timer state in State, preserve all original Dart method bodies and current offline-only/confirmed-money behavior, and update strict real source and contract scans. No network/AI restoration, no original SMS storage outside verified account, no ledger or permissions changes; CI and Android/Backup parity remain distinct.
