@@ -1899,3 +1899,7 @@ The existing M672/M678 source regression inspected only `lib/main.dart`. M733 mo
 
 ### M739 — Issue #633 / Draft PR #638: real sender-grouped SMS inbox extraction
 Owner requests continuing the outstanding code-only Home refactor. Extract original ~374-line authenticated SMS sender-grouped inbox dialog into a registered same-library Dart part **byte-for-byte**. Keep message selection across senders, original SMS body, review/confirmation, local account/OTP exclusions, fixed FAB/navigation, SQLCipher ledger and encryption safety unchanged; do not extract the adjacent unused-element annotation for the next Home card. Update strict Dart/Python registered-source reconstruction and M550 required part list. Add source integrity tests and retain independent Android overflow/owner-backup acceptance. This code move is not performance proof.
+
+
+### M740 — Issue #633 / Draft #638: preserve M442 historical native SMS permission/source tests
+After M739 exact source extraction, two historical Python tests indexed `_openAutoSmsInbox()` in raw main.dart; the live method now resides in the registered part. Redirect only the original three raw-main readers in `test/qa/m442_sms_consent_session_recovery_test.py` to the strict real registered-Dart-part source reassembly. Retain **all** original native permission, owner session, no misleading zero count, and no automatic SMS finance-writer assertions. Do not skip or alter underlying checks. Keep the complete fail-closed M385 comparison outside four narrow reader/import sections.
