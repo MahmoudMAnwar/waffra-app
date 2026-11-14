@@ -4122,6 +4122,34 @@
         "The Home FAB and approved designs remain byte-for-byte equivalent.",
         "Original source and Android/device/Backup Restore checks remain mandatory."
       ]
+    },
+    {
+      "id": "M850-ORIGINAL-NATIVE-SMS-NOTICE-RESCAN-REAL-SOURCE",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "The original native bank SMS arrival-debounce and manually triggered historical rescan callbacks ran inline in the large Home State.",
+      "approved_behavior": "Move those same original callbacks unchanged to registered same-library Dart part, retaining the State timer/in-flight refresh fields, owner/permission/session checking, user-controlled rescan and no automatic finance posting.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_sms_rescan.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/m850_home_sms_rescan_extraction_test.dart",
+        "test/qa/m442_sms_consent_session_recovery_test.py",
+        "test/m547_sms_incremental_jank_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Incoming Android SMS events are debounced once and user-rescan is explicit; no automatic financial posting.",
+        "Owner-bound local bank review remains consented; dropped/failed SMS scan cannot silently erase queued messages.",
+        "Original affirmative and negative financial, OTP, date, account and SQLCipher assertions remain enabled.",
+        "Only signed Android device proof can validate no lag and actual historical user backup restore parity."
+      ]
     }
   ]
 }
