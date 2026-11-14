@@ -3870,6 +3870,34 @@
         "Original attachment and SAR typography/actions remain active and all previous positive and negative regression assertions remain enabled.",
         "No Android visual overflow, actual slowdown reduction or original user V24 Backup/Restore parity is claimed without device evidence."
       ]
+    },
+    {
+      "id": "M795-ORIGINAL-HOME-CATEGORY-AND-ENCRYPTED-RECEIPTS",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Original Home transaction category picker, contextual parent/child category creation, local receipt name/file and encrypted attachment display methods remained embedded in Home State.",
+      "approved_behavior": "Move unchanged production method bodies to a declared same-library Dart part and restore exact original code into Dart/Python source contracts. Keep financial confirmation, receipt encryption, original saved file identity and category hierarchy unchanged.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_category_receipt_dialogs.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/m795_home_category_receipts_extraction_test.dart",
+        "test/m363_transaction_category_inline_creation_test.dart",
+        "test/m302_duplicate_receipt_cleanup_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "No category/account guessed or finance transaction silently altered; category validation unchanged.",
+        "Receipt file viewer, encryption, storage and prior saved user file references preserved.",
+        "No source-test bypass or relocated method stub permitted; tests inspect actual registered implementation.",
+        "Real signed Android screenshots and source user's V24 encrypted Backup/Restore parity remain independent."
+      ]
     }
   ]
 }
