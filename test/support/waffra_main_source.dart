@@ -112,5 +112,9 @@ String readWaffraMainSourceForContracts(){
  if(s.split(verifiedRefreshMarker).length!=2)throw StateError('Missing/duplicate M782 real verified refresh source');
  s=s.replaceFirst(verifiedRefreshMarker,_method('lib/waffra_home_verified_refresh.part.dart',
   ' Future<void> _refreshAndSettle('));
+ const managementMarker=' // M783: original SMS settings, exclusions and local notification actions moved to registered Home part.\n';
+ if(s.split(managementMarker).length!=2)throw StateError('Missing or duplicated M783 original SMS management marker');
+ s=s.replaceFirst(managementMarker,_method('lib/waffra_home_sms_management.part.dart',
+  ' Future<void> _scanPreviousBankSmsFromSettings()async{'));
  return s;
 }
