@@ -167,6 +167,11 @@ part 'waffra_home_presentation_controls.part.dart';
 part 'waffra_home_logout_guard.part.dart';
 part 'waffra_home_finance_notification_route.part.dart';
 part 'waffra_home_fx_preview.part.dart';
+part 'waffra_home_auth_visibility.part.dart';
+part 'waffra_home_finance_binding.part.dart';
+part 'waffra_home_fab_actions.part.dart';
+part 'waffra_home_resume_handler.part.dart';
+part 'waffra_home_widget_action_routes.part.dart';
 part 'waffra_home_sms_review_indicator.part.dart';
 part 'waffra_home_sms_transfer_review.part.dart';
 part 'waffra_home_goals_recurring_pages.part.dart';
@@ -4250,16 +4255,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    });
   }
  }
- Future<bool> _m663AwaitVisible(int epoch)async{
-  if(widget.postAuthVisible){
-   // Actual layout is allowed to finish before optional I/O.
-   await WidgetsBinding.instance.endOfFrame;
-  }else{
-   await _m663FirstInteractiveFrame.future;
-  }
-  return mounted&&widget.postAuthVisible&&
-   epoch==_m630HomeStartupEpoch&&!_m627ClosingSession;
- }
+ // M930: original visible Home session helper moved without behavioral change.
  // Stable callback identity ensures an old locale-specific Home disposal
  // cannot clear the replacement Home's back handler.
  late final bool Function() _registeredBackHandler=_consumeHomeBack;
@@ -4270,31 +4266,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  late WaffraVerifiedFinanceAuthority _financeAuthority=WaffraVerifiedFinanceAuthority(legacy:_homeFinancePersistence);
  WaffraProductionFinanceAuthorityBinding? _financeBinding;
  Future<void>? _financeBindingFuture;
- Future<void> _ensureFinanceBound()async{
-  if(_financeBinding!=null)return;
-  final pending=_financeBindingFuture??=_bindFinanceSource();
-  try{await pending;}
-  catch(_){if(identical(_financeBindingFuture,pending))_financeBindingFuture=null;rethrow;}
- }
- Future<void> _bindFinanceSource()async{
-  // Reuse the exact verified owner/session connection; if speculative open
-  // failed, use the existing fail-closed original binder instead.
-  final pendingWarm=_m631PrewarmConsumed?null:widget.prewarmedFinanceBinding;
-  _m631PrewarmConsumed=true;
-  final warmed=await pendingWarm;
-  if(kProfileMode)debugPrint('WAFFRA_AUTH_PERF home_binding_reused=${warmed!=null}');
-  final binding=warmed??await WaffraProductionFinanceAuthorityBinding.bind(
-    installedApp:true,
-   // The first mandatory Home dashboard read validates this source;
-   // skip the duplicate encrypted snapshot read during binder setup.
-   deferInitialDashboardRead:true,
-   legacy:_homeFinancePersistence,
-   startupRoute:WaffraFinanceRoute.appStartup,
-  );
-  if(!mounted){await binding.close();throw StateError('Home startup was disposed.');}
-  _financeBinding=binding;
-  _financeAuthority=binding.authority;
- }
+ // M930: original binding Home session helper moved without behavioral change.
  // Never reopen a previously adopted (possibly now CLOSED) binding on Retry,
  // particularly after an aborted signout or an interrupted Home load.
  bool _m631PrewarmConsumed=false;
@@ -4429,23 +4401,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  bool _addActionOpening=false;
  bool _fabPressed=false;
  DateTime? _lastFabTapAt;
- Future<void> _launchAddAction(Future<void> Function() action,{bool fromMenu=false})async{
-  if(_addActionOpening)return;
-  _addActionOpening=true;
-  if(mounted&&addFabExpanded)setState(()=>addFabExpanded=false);
-  try{
-   // Allow the menu to finish collapsing before presenting a sheet.
-   // M474: open sheet promptly after closing the menu.
-   if(mounted)await action();
-  }finally{_addActionOpening=false;}
- }
- bool _acceptFabTap(){
-  final now=DateTime.now();
-  if(_addActionOpening||(_lastFabTapAt!=null&&
-   now.difference(_lastFabTapAt!)<const Duration(milliseconds:380)))return false;
-  _lastFabTapAt=now;
-  return true;
- }
+ // M930: original fab Home session helper moved without behavioral change.
  // Account settings open from the app bar instead of a footer destination.
  bool accountOpened=false;
  bool showAllTransactions=false,showTransactionFilters=false,showTransactionSearch=false;
@@ -4455,46 +4411,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  // never persist a duplicate raw SMS outside the verified encrypted source.
  final Map<String,Map<String,Object?>> _m492SmsEditorDrafts={};
  bool _m486ResumeQueued=false;
- void _m468OnResume(){
-  if(!mounted||!ready||!widget.postAuthVisible||
-     WaffraExternalMediaSession.shouldSkipResumeBackgroundWork)return;
-  _m621OnFinanceNoticeTap();
-  // M486 #419: biometrics/OS resume must render a frame before expensive
-  // SQLCipher/widget and SMS I/O start. Collapse repeated lifecycle events.
-  if(_m486ResumeQueued)return;
-  _m486ResumeQueued=true;
-  WidgetsBinding.instance.addPostFrameCallback((_){
-   _m486ResumeQueued=false;
-   if(!mounted||!ready||!widget.postAuthVisible||
-      WaffraExternalMediaSession.shouldSkipResumeBackgroundWork)return;
-   // Verified finance/widget read is still required, merely deferred one
-   // frame. Never infer cash from an unverified snapshot.
-   if(accountOpened&&mounted)setState((){
-    _m528SmsEnabledFuture=null;
-   });
-   unawaited(_syncWidgetTransactions());
-   final now=DateTime.now();
-   final last=_m468LastResumeSmsScan;
-   if(_autoSmsRefreshInFlight!=null||
-      (last!=null&&now.difference(last)<const Duration(seconds:20)))return;
-   _m468LastResumeSmsScan=now;
-   // Real-time receiver already stages new SMS. A lifecycle resume must not
-   // launch a four-page historical scan while the UI unlock animation runs.
-   // The owner's explicit Rescan action continues any incomplete history.
-   unawaited(_refreshAutoSmsInbox());
-  });
- }
+ // M930: original resume Home session helper moved without behavioral change.
  @override void initState(){super.initState();WaffraBackNavigation.onHomeBack=_registeredBackHandler;_dashboardScrollController.addListener(_handleDashboardScroll);waffraReturnHome.addListener(_returnToHome);waffraIncomingSms.addListener(_receiveSharedSms);waffraAutoSmsUpdates.addListener(_receiveAutoSmsNotice);waffraFinanceNoticeTap.addListener(_m621OnFinanceNoticeTap);waffraWidgetAction.addListener(_receiveWidgetAction);_widgetReloadListener=AppLifecycleListener(onResume:_m468OnResume);unawaited(_loadFinanceSafely());}
- void _returnToHome(){if(mounted)setState((){_tabBackStack.clear();tab=0;accountOpened=false;goalsOpened=false;addFabExpanded=false;});}
- void _receiveWidgetAction(){
-  // New pre-auth barrier. Preserve the original owner/action guard below
-  // because existing Widgets/source regressions depend on its semantics.
-  if(!mounted||!ready||!widget.postAuthVisible)return;
-  if(!mounted||!ready||waffraWidgetAction.value!='add')return;
-  waffraWidgetAction.value=null;
-  setState((){tab=0;goalsOpened=false;addFabExpanded=false;});
-  WidgetsBinding.instance.addPostFrameCallback((_){if(mounted)unawaited(entrySheet());});
- }
+ // M930: original widgets Home session helper moved without behavioral change.
  bool _autoSmsReviewOpen=false;
  bool _autoSmsReviewExpanded=false; // Presentation-only: collapsed by default.
  bool _autoSmsStatusChecked=false;
