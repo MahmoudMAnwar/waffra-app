@@ -3729,6 +3729,34 @@
         "All positive and negative money-writing and recurring source assertions remain enabled and inspect real registered source.",
         "Device performance, screenshots and old V24 backup restore on owner phone remain unverified outside CI."
       ]
+    },
+    {
+      "id": "M780-ORIGINAL-VERIFIED-LEDGER-DELETE-UNDO-HOME",
+      "issue": "Issue #633, Draft PR #638",
+      "previous_behavior": "Original Home ledger transaction save-result publication, verified user-confirmed deletion, fail-closed undo, deleted-list viewer and legacy fallback lived as methods inline in _HomeScreenState.",
+      "approved_behavior": "Relocate exact production method bodies byte-for-byte to registered same-library `waffra_home_transaction_ledger_actions.part.dart` without changing any SQLCipher source, transaction ID, data, dialog, undo, permission or verified writer; reconstruct their original real production source for every old test.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_transaction_ledger_actions.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/m780_home_verified_ledger_actions_extraction_test.dart",
+        "test/storage/m620_restored_home_ledger_parity_test.dart",
+        "test/m647_m652_financial_activity_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Never change or bypass SQLCipher authority, verified finance source or user approval for a destructive action.",
+        "A failed financial delete/restore must leave the verified ledger unchanged; preserve all original source-level assertions.",
+        "No automatically reclassified or fabricated transaction identity, account, amount or restoration is allowed.",
+        "Actual physical Android old-backup restoration and visual acceptance still require owner/device evidence."
+      ]
     }
   ]
 }
