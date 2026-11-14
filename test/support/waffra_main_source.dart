@@ -124,5 +124,9 @@ String readWaffraMainSourceForContracts(){
  if(s.split(categoryReceiptMarker).length!=2)throw StateError('Missing or duplicate M795 real category and receipts marker');
  s=s.replaceFirst(categoryReceiptMarker,_method('lib/waffra_home_category_receipt_dialogs.part.dart',
   ' Future<String?> chooseTransactionCategory('));
+ const financeRecoveryMarker=' // M791: original fail-closed Home finance startup and recovery UI in registered part.\n';
+ if(s.split(financeRecoveryMarker).length!=2)throw StateError('Missing or duplicated M791 recovery source marker');
+ s=s.replaceFirst(financeRecoveryMarker,_method('lib/waffra_home_finance_recovery.part.dart',
+  ' Future<void> _loadFinanceSafely()async{'));
  return s;
 }
