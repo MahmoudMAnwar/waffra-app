@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
   "change_id": "M935-M938-ISSUES639-643-20261114-MAIN-RECONCILIATION",
-  "human_scope_review": "Issue #639: user expressly requests all code-side Phase Two completion, fresh Draft PR, exact residual physical Android tasks. Only synthetic non-production finance regression and QA/requirements/scope docs are in this PR. Original backup, phone databases, SQLCipher routing and UI source untouched. Issue #641 same-PR Phase Three user instruction adds only non-destructive signed-release readiness inventory under M550, no publish or finance changes. M937 #642 same-PR owner request adds exact-SHA CI test totals and heuristic repeated-failure reporting with no additional Flutter run or production code changes. Issue #643 user supplied four Android screenshots and requests exact FAB-edge snackbar, goal/dues filter counts and 3-dot menu, safe legacy deleted-goal repair and file-only one-biometric backup UX in same Draft PR; all relevant production edits limited to named methods. Release-note ancestry update is required by existing M449 to describe the exact owner-approved screenshot code changes, without treating them as production released. Same Draft #640 root-cause regression correction: current file-only backup, single opening OS biometric, goal trash in approved 3-dot menu, verified footer routing, and accepted SQLCipher snapshot-key generation test. Update existing assertions only, without disabling tests. Integrate merged main #645 finance reset and no-FAB notices verbatim; owner real backup and devices not claimed tested. M385 CI observed the new six existing test-file changes but needed exact original source anchors; add only bounded function scope for those six tests, keep every protected region outside byte-identical. No approved full-test replacements or gate bypass.",
+  "human_scope_review": "Issue #639: user expressly requests all code-side Phase Two completion, fresh Draft PR, exact residual physical Android tasks. Only synthetic non-production finance regression and QA/requirements/scope docs are in this PR. Original backup, phone databases, SQLCipher routing and UI source untouched. Issue #641 same-PR Phase Three user instruction adds only non-destructive signed-release readiness inventory under M550, no publish or finance changes. M937 #642 same-PR owner request adds exact-SHA CI test totals and heuristic repeated-failure reporting with no additional Flutter run or production code changes. Issue #643 user supplied four Android screenshots and requests exact FAB-edge snackbar, goal/dues filter counts and 3-dot menu, safe legacy deleted-goal repair and file-only one-biometric backup UX in same Draft PR; all relevant production edits limited to named methods. Release-note ancestry update is required by existing M449 to describe the exact owner-approved screenshot code changes, without treating them as production released. Same Draft #640 root-cause regression correction: current file-only backup, single opening OS biometric, goal trash in approved 3-dot menu, verified footer routing, and accepted SQLCipher snapshot-key generation test. Update existing assertions only, without disabling tests. Integrate merged main #645 finance reset and no-FAB notices verbatim; owner real backup and devices not claimed tested. M385 CI observed the new six existing test-file changes but needed exact original source anchors; add only bounded function scope for those six tests, keep every protected region outside byte-identical. No approved full-test replacements or gate bypass. Original Oct21 source contract was failing solely because it demanded a second restore biometric that the owner explicitly retired. Change only that assertion, preserve the initial biometric, financial deletion biometric, physical-device gate and all other existing tests.",
   "user_requested_changes": [
     "M935 implement synthetic V24 to V3 conversion, two disposable cold SQLCipher restores, exact 19 identity and signed halala parity, goal/recurring/budget history, no invented bank balance, widget/PDF source checks and fail-closed duplicates in a NEW regression test only.",
     "M935 create a concrete private physical Android owner acceptance protocol for old encrypted backup parity, PDF totals, SMS performance, overflow, authentication and update safety; mark device evidence Pending.",
@@ -14,7 +14,8 @@
     "M938 #643 maintain fresh owner-approved app release notes ancestry after modified Flutter UI/verified encrypted trash code; explicitly mark as unreleased Draft pending UAT.",
     "M938 #643 update M550 source/test behavior contract review to cover all owner-approved UI and verified encrypted recycle changes, preserving exact original acceptance and negative tests.",
     "M938 #643 update the exact obsolete M150 clipboard import assertion to verify that Advanced/legacy clipboard UI is absent without weakening the encrypted .waffra export and restore safeguards.",
-    "Fix eight full-suite failures with approved source-backed assertions, preserve every regression and align existing Draft #640 to main. No new pull request."
+    "Fix eight full-suite failures with approved source-backed assertions, preserve every regression and align existing Draft #640 to main. No new pull request.",
+    "Replace the obsolete second backup-dialog fingerprint assertion with a negative regression guaranteeing only the original OS biometric remains; retain deletion biometric and all other original controls."
   ],
   "allowed_changed_files": [
     ".github/workflows/finance-full-regression.yml",
@@ -46,7 +47,8 @@
     "test/qa/m937_flutter_test_report_test.py",
     "test/storage/m935_phase_two_restore_finance_acceptance_test.dart",
     "test/storage/m938_legacy_goal_recycle_repair_test.dart",
-    "test/waffra_directional_fab_receipt_corner_test.dart"
+    "test/waffra_directional_fab_receipt_corner_test.dart",
+    "test/waffra_oct21_regression_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
@@ -147,6 +149,12 @@
       {
         "start": "  test('goals keep outlined counter, recurring uses compact count badge', () {",
         "end": "  test('all snackbar entry points share one footer-aware presenter', () {"
+      }
+    ],
+    "test/waffra_oct21_regression_test.dart": [
+      {
+        "start": " test('Sensitive financial actions always require OS biometric authentication', () {",
+        "end": " test('Android recent-app protection is independently adjustable', () {"
       }
     ]
   }
