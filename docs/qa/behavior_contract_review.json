@@ -4588,27 +4588,35 @@
       "id": "M644-BIOMETRIC-ONLY-ATOMIC-RESET-NO-FAB-NOTICE",
       "issue": "Issue #644 / Draft PR #645",
       "previous_behavior": "Home uses saveCaptured(fullFinanceReset) even when encrypted SQLCipher refuses destructive snapshot edits; a generic reload error appears. No-FAB Tools notice inherits the narrower 87%-and-440dp footer card even though no + occupies its end.",
-      "approved_behavior": "Financial delete flows from one explicit action directly through device biometric to the dedicated active SQLCipher-only all-finance reset; no forced backup, no extra confirmation, and no legacy fallback. The writer checks fresh source generation, typed ledger/receipt ownership, SQL foreign keys, known finance tables and all-or-nothing native transaction. Preserve account login and nonfinance preferences. No-FAB pages show notice to normal page margins, while existing + FAB notice bottom/position stay unchanged with wrapping upwards.",
+      "approved_behavior": "Financial delete flows from one explicit action directly through device biometric to the dedicated active SQLCipher-only all-finance reset; no forced backup, no extra confirmation, and no legacy fallback. The writer checks fresh source generation, typed ledger/receipt ownership, SQL foreign keys, known finance tables and all-or-nothing native transaction. Preserve account login and nonfinance preferences. No-FAB pages show notice to normal page margins, while existing + FAB notice bottom/position stay unchanged with wrapping upwards. Follow-up CI repair reads exact compiled Home part source instead of obsolete raw main.dart-only checks for Saudi greetings and recurring reminders; uses the installed receipt table when present; preserves complete monetary reset assertions and all original budget/index tests.",
       "source_paths": [
         "lib/main.dart",
         "lib/waffra_home_account_tools.part.dart",
         "lib/storage/waffra_verified_finance_authority.dart",
         "lib/storage/waffra_encrypted_finance_session.dart",
         "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
-        "lib/storage/waffra_encrypted_full_finance_reset.dart"
+        "lib/storage/waffra_encrypted_full_finance_reset.dart",
+        ".github/workflows/m283-compact-layout-tools-back-greetings.yml",
+        ".github/workflows/m290-country-reminders-multicurrency.yml"
       ],
       "test_paths": [
         "test/m644_no_fab_snackbar_width_test.dart",
         "test/storage/m644_biometric_finance_reset_test.dart",
         "test/m110_live_finance_authority_writer_test.dart",
-        "test/waffra_directional_fab_receipt_corner_test.dart"
+        "test/waffra_directional_fab_receipt_corner_test.dart",
+        "test/m304_cross_source_duplicate_review_test.dart",
+        "test/m373_independent_budgets_finance_test.dart",
+        "test/m684_finance_period_index_test.dart"
       ],
       "safety_invariants": [
         "A failed device biometric always leaves funds, transfers, receipts, goals, budget and auth untouched.",
         "Stale source or unknown schema aborts before any encrypted writes; failure inside the SQL transaction rolls back all rows.",
         "Never erase OS encryption key, login identity, app preferences or external files automatically.",
         "No FAB positional movement, no Snackbar X, no truncated long Arabic/English text; no-FAB notice expands to page margins.",
-        "Exact-HEAD CI, cold reopen and real physical Android checks are pending, do not claim Done until verified."
+        "Exact-HEAD CI, cold reopen and real physical Android checks are pending, do not claim Done until verified.",
+        "Preflight resolves registered part declarations with an origin check; a missing or malformed part still fails the guarded workflow.",
+        "Optional receipt-BLOB SQL table may be physically absent only when no encrypted invoice was ever stored; a present table must have no rows after reset.",
+        "Independent budgets, deleted entries and finance-period indexes remain covered by positive assertions rather than simply deleting tests."
       ]
     }
   ]
