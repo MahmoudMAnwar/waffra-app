@@ -5,6 +5,7 @@ They do not certify real device permission behavior or SQLCipher cutover.
 """
 from pathlib import Path
 import unittest
+from waffra_home_source import read_waffra_home_source
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -91,7 +92,7 @@ class M442SmsConsentSessionRecovery(unittest.TestCase):
     def test_bridge_is_wired_to_native_with_no_os_reprompt_on_relogin(self):
         bridge = read("lib/waffra_auto_sms.dart")
         activity = read("native/WaffraMainActivity.kt")
-        home = read("lib/main.dart")
+        home = read_waffra_home_source()
         for name in ('autoSmsTrackingStatus', 'pauseAutoSmsForSignOut',
                      'resumeAutoSmsAfterSignIn'):
             self.assertIn(name, bridge)
@@ -157,7 +158,7 @@ class M442SmsConsentSessionRecovery(unittest.TestCase):
     def test_dashboard_does_not_hide_disabled_or_corrupt_queue_as_zero(self):
         store = read("native/WaffraAutoSmsStore.kt")
         bridge = read("lib/waffra_auto_sms.dart")
-        home = read("lib/main.dart")
+        home = read_waffra_home_source()
         self.assertIn('fun trackingStatus(context: Context): Map<String, Boolean>', store)
         for key in ('"permissionGranted"', '"trackingRequested"', '"profileReady"',
                     '"suspendedAfterLogout"', '"historyComplete"', '"enabled"'):
@@ -189,7 +190,7 @@ class M442SmsConsentSessionRecovery(unittest.TestCase):
             home.index('Future<void> _openAutoSmsInbox()')])
 
     def test_existing_android_permission_not_misreported_as_missing(self):
-        home = read("lib/main.dart")
+        home = read_waffra_home_source()
         settings = home[home.index('Future<void> _scanPreviousBankSmsFromSettings()'):
                         home.index('Future<void> _openAutoSmsInbox()')]
         self.assertIn('if(!await WaffraAutoSms.enabled())', settings)
