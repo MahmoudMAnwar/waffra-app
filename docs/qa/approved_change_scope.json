@@ -102,7 +102,8 @@
     "M926 #633 safely move exact original UI-only dashboard scroll header compactness and persistent animation preference methods out of _HomeScreenState into registered Dart Home part; keep 96px threshold, post-frame mounted guard and SharedPreferences animation settings unchanged; M385/M550 and original Dart/Python source regression.",
     "M927 #634/#632/#637 audit exact real Flutter/Dart import and part traversal from Home, SMS consent and offline SMS runtime entrypoints; fail CI if retired Qwen, AI or Cloudflare SMS model sources become reachable again, assert legacy consent disabled and outbound analyze fail closed while preserving active local SMS normalization and encrypted backups. Test-only compatibility validators are not deleted without completing old test migration.",
     "M928 #633 fix M340 financial source authority gate after Home Dart extraction with exact real registered source reconstruction, including hostile QA mutations against real source of SMS confirmation and manual finance editor; preserve every positive and negative M340 authority/amount/date/consent/FX/duplicate/account-generation assertion. Keep M385 bounded source and existing M340 full Flutter/SQLCipher matrix.",
-    "M929 #633 finish factoring verified Home logout/session cleanup, finance notification-to-SMS/saved-ledger route and no-post foreign-FX preview into three same-library Dart parts, preserving exact original method bodies, no direct ledger writes, no UI/FAB changes, original encrypted finance close ordering and same-source QA reconstruction. Continue remaining release gates without false completion claim."
+    "M929 #633 finish factoring verified Home logout/session cleanup, finance notification-to-SMS/saved-ledger route and no-post foreign-FX preview into three same-library Dart parts, preserving exact original method bodies, no direct ledger writes, no UI/FAB changes, original encrypted finance close ordering and same-source QA reconstruction. Continue remaining release gates without false completion claim.",
+    "M930 #633 move original remaining Home startup-visibility, verified owner session binding, stationary FAB tap guards, lifecycle resume, and root/Widget action routes into five registered same-library Dart extension parts, exactly preserving code; original Dart/Python source QA and money safety remain authoritative, with full device acceptance still external."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -379,7 +380,13 @@
     "lib/waffra_home_logout_guard.part.dart",
     "lib/waffra_home_finance_notification_route.part.dart",
     "lib/waffra_home_fx_preview.part.dart",
-    "test/m929_home_session_routes_extraction_test.dart"
+    "test/m929_home_session_routes_extraction_test.dart",
+    "lib/waffra_home_auth_visibility.part.dart",
+    "lib/waffra_home_finance_binding.part.dart",
+    "lib/waffra_home_fab_actions.part.dart",
+    "lib/waffra_home_resume_handler.part.dart",
+    "lib/waffra_home_widget_action_routes.part.dart",
+    "test/m930_home_lifecycle_helpers_extraction_test.dart"
   ],
   "approved_deleted_files": [
     "lib/waffra_sms_cloud_review_analyzer.dart"
@@ -457,8 +464,8 @@
         "end": "String? _accountOpenSection;"
       },
       {
-        "start": "void _m468OnResume(){",
-        "end": "unawaited(_syncWidgetTransactions());"
+        "start": " bool _m486ResumeQueued=false;",
+        "end": " @override void initState(){super.initState();WaffraBackNavigation.onHomeBack=_registeredBackHandler;"
       },
       {
         "start": "key:const Key('waffra-header-account-entry'),",
@@ -511,6 +518,22 @@
       {
         "start": " final Set<Future<void>> _m627OutstandingAccountReads=<Future<void>>{};",
         "end": " // Account filters are presentation-only;"
+      },
+      {
+        "start": " @override void didUpdateWidget(covariant HomeScreen oldWidget){",
+        "end": " // Stable callback identity ensures"
+      },
+      {
+        "start": " WaffraProductionFinanceAuthorityBinding? _financeBinding;",
+        "end": " // Never reopen a previously adopted"
+      },
+      {
+        "start": " DateTime? _lastFabTapAt;",
+        "end": " // Account settings open from"
+      },
+      {
+        "start": " @override void initState(){super.initState();WaffraBackNavigation.onHomeBack=_registeredBackHandler;",
+        "end": " bool _autoSmsReviewOpen=false;"
       }
     ],
     "test/support/waffra_main_source.dart": [
