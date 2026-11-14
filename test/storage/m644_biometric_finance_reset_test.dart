@@ -197,7 +197,7 @@ void main() {
     await db.customStatement(
       'INSERT INTO fresh_finance_receipts'
       '(entry_id,position,safe_filename,sha256_hex) VALUES(?,?,?,?)',
-      ['test-entry', 0, 'original-receipt.bin', 'f' * 64],
+      ['test-entry', 0, 'original-receipt.bin', List<String>.filled(64, 'f').join()],
     );
     final before = await snapshot.read();
     await expectLater(
