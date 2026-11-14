@@ -112,6 +112,10 @@ String readWaffraMainSourceForContracts(){
  if(s.split(financePersistenceMarker).length!=2)throw StateError('Missing or duplicated M762 verified persistence source');
  s=s.replaceFirst(financePersistenceMarker,_method('lib/waffra_home_finance_persistence_due.part.dart',
   ' Future<void> persist('));
+ const budgetChartMarker=' // M805: original Home budget alerts and chart SVG methods moved to registered part.\n';
+ if(s.split(budgetChartMarker).length!=2)throw StateError('Missing or duplicated M805 original chart/alert marker');
+ s=s.replaceFirst(budgetChartMarker,_method('lib/waffra_home_budget_alert_charts.part.dart',
+  ' Future<void> _requestPercentageAlertPermission()async{'));
  const ledgerActionsMarker=' // M780: original verified ledger deletion/undo and source publication moved to registered Home part.\n';
  if(s.split(ledgerActionsMarker).length!=2)throw StateError('Missing or duplicated M780 verified ledger actions marker');
  s=s.replaceFirst(ledgerActionsMarker,_method('lib/waffra_home_transaction_ledger_actions.part.dart',
@@ -128,9 +132,5 @@ String readWaffraMainSourceForContracts(){
  if(s.split(managementMarker).length!=2)throw StateError('Missing or duplicated M783 original SMS management marker');
  s=s.replaceFirst(managementMarker,_method('lib/waffra_home_sms_management.part.dart',
   ' Future<void> _scanPreviousBankSmsFromSettings()async{'));
- const budgetChartMarker=' // M805: original Home budget alerts and chart SVG methods moved to registered part.\n';
- if(s.split(budgetChartMarker).length!=2)throw StateError('Missing or duplicated M805 original chart/alert marker');
- s=s.replaceFirst(budgetChartMarker,_method('lib/waffra_home_budget_alert_charts.part.dart',
-  ' Future<void> _requestPercentageAlertPermission()async{'));
  return s;
 }
