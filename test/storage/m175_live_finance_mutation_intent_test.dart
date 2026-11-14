@@ -17,6 +17,8 @@ void main() {
   ];
 
   test('M175 exact Home live writes carry their distinct finance intent', () {
+    expect(File('lib/waffra_home_entry_sheet.part.dart').existsSync(), isTrue,
+      reason: 'Original verified Home transaction editor part must exist');
     final home = readWaffraMainSourceForContracts();
     expect(home, contains(
       'WaffraFinanceRoute route = WaffraFinanceRoute.transactionEdit,'));
