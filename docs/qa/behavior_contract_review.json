@@ -3814,6 +3814,34 @@
         "Original Home State owns in-flight coalescing field and owner session lifecycle; the real M750 startup marker must remain in main.dart.",
         "No claims of actual physical Android latency, financial parity or encrypted backup/restore without device evidence."
       ]
+    },
+    {
+      "id": "M783-HOME-ORIGINAL-SMS-EXCLUSIONS-AND-NOTIFICATION-ACTIONS",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Home State directly implemented protected native SMS history rescan from Settings, excluded sender/message review and restore, locally grouped review notices and explicit multi-select exclusion actions.",
+      "approved_behavior": "Relocate original method bodies unchanged into registered same-library Dart part preserving user-owned local SMS queue, verified sender and notification permission, 30-day excluded retention, user approval, no automatic posting, original message and fixed FAB navigation.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_sms_management.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/m783_home_sms_management_extraction_test.dart",
+        "test/m461_sms_exclusion_and_history_scan_test.dart",
+        "test/m638_sms_inbox_delete_sync_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "No native SMS permission, OTP exclusion or original encrypted message exposure behavior may be weakened.",
+        "No new financial write, guessed account or automatic receipt of a bank message as money.",
+        "Must restore exact registered Dart-part implementation into original source assertions, not invent substitutes.",
+        "Physical Android, backed-up user history and offline encrypted archive/ledger parity remain separate requirements."
+      ]
     }
   ]
 }
