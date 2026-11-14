@@ -4399,7 +4399,7 @@
         "test/m904_home_widget_balance_extraction_test.dart"
       ],
       "ci_workflows_to_watch": [
-        ".github/workflows/legacy-writer-ordering.yml",
+        ".github/workflows/m110-home-writer-source-authority.yml",
         ".github/workflows/finance-full-regression.yml",
         ".github/workflows/m550-behavior-contract-preflight.yml"
       ],
