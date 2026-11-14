@@ -368,6 +368,18 @@ class WaffraVerifiedAccountsApi implements WaffraAccountOperations {
     confirmedIso:DateTime.now().toIso8601String(),userConfirmed:true);
  },userConfirmed:userConfirmed);
 
+ /// Rename and explicitly clear a verified bank suffix in the same
+ /// authenticated SQLCipher writer transaction. No account balance changes.
+ Future<void> renameAccountAndClearSuffix({
+  required String id,required String name,required bool userConfirmed,
+ })=>_commit<void>((repository)async{
+  await repository.renameAccount(id:id,name:name,userConfirmed:true);
+  await WaffraAccountContextRepository(
+   store:repository.db,experimentalEnabled:true).clearVerifiedBankSuffix(
+    accountId:id,confirmedIso:DateTime.now().toIso8601String(),
+    userConfirmed:true);
+ },userConfirmed:userConfirmed);
+
  @override
  Future<void> archiveEmptyAccount({required String id,
   required bool userConfirmed})=>_commit<void>((repository)=>
