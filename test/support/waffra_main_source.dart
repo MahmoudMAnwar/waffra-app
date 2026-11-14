@@ -128,5 +128,9 @@ String readWaffraMainSourceForContracts(){
  if(s.split(managementMarker).length!=2)throw StateError('Missing or duplicated M783 original SMS management marker');
  s=s.replaceFirst(managementMarker,_method('lib/waffra_home_sms_management.part.dart',
   ' Future<void> _scanPreviousBankSmsFromSettings()async{'));
+ const budgetChartMarker=' // M805: original Home budget alerts and chart SVG methods moved to registered part.\n';
+ if(s.split(budgetChartMarker).length!=2)throw StateError('Missing or duplicated M805 original chart/alert marker');
+ s=s.replaceFirst(budgetChartMarker,_method('lib/waffra_home_budget_alert_charts.part.dart',
+  ' Future<void> _requestPercentageAlertPermission()async{'));
  return s;
 }
