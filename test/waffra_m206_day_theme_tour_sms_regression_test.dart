@@ -8,7 +8,7 @@ import 'package:waffra/waffra_merchant_rules.dart';
 
 void main() {
   test('new installs start in light mode while an explicit choice persists', () {
-    final source = File('lib/main.dart').readAsStringSync();
+    final source = readWaffraMainSourceForContracts();
     expect(source, contains("String appearance='light';"));
     expect(source, contains(
       "appearance=p.getString('waffra_appearance_mode_v1')??"));
@@ -17,7 +17,7 @@ void main() {
   });
 
   test('AR/EN changes direction instantly without whole-page slide or Navigator replacement', () {
-    final source=File('lib/main.dart').readAsStringSync();
+    final source=readWaffraMainSourceForContracts();
     final root=source.substring(source.indexOf('builder:(context,child)=>WaffraNoticeTapDismissArea('),
       source.indexOf('theme:ThemeData(',source.indexOf('builder:(context,child)=>WaffraNoticeTapDismissArea(')));
     expect(root,contains('child:WaffraIdleBiometricOverlay('));
@@ -33,7 +33,7 @@ void main() {
   });
 
   test('M671 tour removed, but tool accordion and appearance remain',(){
-    final source=File('lib/main.dart').readAsStringSync();
+    final source=readWaffraMainSourceForContracts();
     expect(source,isNot(contains('WaffraTourPlan')));
     expect(source,isNot(contains('Widget tourOverlay()=>')));
     expect(source,isNot(contains('beginTour()')));
@@ -42,7 +42,7 @@ void main() {
   });
 
   test('M636 verified SMS keeps source text encrypted and date/fingerprint exact',(){
-    final home=File('lib/main.dart').readAsStringSync();
+    final home=readWaffraMainSourceForContracts();
     final editor=home.substring(home.indexOf(' Future<void> entrySheet('),
       home.indexOf(' Future<void> showReceipt('));
     final confirm=home.substring(home.indexOf(' Future<void> _m565ConfirmSms({'),

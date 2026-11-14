@@ -12,7 +12,7 @@ void main() {
  tearDown(()=>waffraLanguage.value='ar');
 
  test('M149: V2 uses strong passphrase; legacy restore accepts old password',(){
-  final source=File('lib/main.dart').readAsStringSync();
+  final source=readWaffraMainSourceForContracts();
   final start=source.indexOf('Future<void> backupDialog()');
   final end=source.indexOf('// System credentials are never saved',start);
   final dialog=source.substring(start,end);
@@ -27,7 +27,7 @@ void main() {
  });
 
  test('M149: initial PIN advances on four digits and three dialogs use same shell',(){
-  final source=File('lib/main.dart').readAsStringSync();
+  final source=readWaffraMainSourceForContracts();
   final start=source.indexOf('Future<String?> _askForPin(');
   final end=source.indexOf('Future<void> configurePin()',start);
   expect(start,greaterThan(-1));

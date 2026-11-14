@@ -7,7 +7,7 @@ void main(){
  test('M717 retired cloud and AI code cannot be reached from app entrypoint',(){
   final visited=<String>{};
   final queue=<String>['lib/main.dart'];
-  final refs=RegExp(r'''(?m)^\s*(?:import|part)\s+['"]([^'"]+)['"]\s*;''');
+  final refs=RegExp(r'''^\s*(?:import|part)\s+['"]([^'"]+)['"]\s*;''',multiLine:true);
   while(queue.isNotEmpty){
    final path=queue.removeLast();
    if(!visited.add(path))continue;
