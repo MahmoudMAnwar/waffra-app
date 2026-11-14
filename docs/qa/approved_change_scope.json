@@ -1,14 +1,22 @@
 {
   "contract_version": 1,
-  "change_id": "M942-ISSUE649-BANK-OPENING-FORECAST-DROPDOWNS-20261114",
-  "human_scope_review": "Owner explicitly requests a new separate PR to fix all three identified account dropdown and opening forecast problems. Every finance account opening goes through existing verified SQLCipher writer. Catalog parent identity checked before saving. No core ledger, backup, biometric, approved +, Snackbar or UI redesign. Phone proof pending.",
+  "change_id": "M943-ISSUE651-EIGHT-FINANCE-FOLLOWUPS-20261114",
+  "human_scope_review": "Eight explicit owner-approved followups; independent stacked PR base #650 to avoid stale SQLCipher provider schema changes. All financial SQLCipher writer and authenticated source invariants; no unreviewed money writes and no changed approved UI geometry. Phone backup proof separate.",
   "user_requested_changes": [
     "Align projected balance and budget projection with verified total of all active SQLCipher bank accounts including opening balance, no forged balance when not verified.",
     "Reject bank/wallet child under mismatched or unknown selected provider before writer call in every inline account creation path including SMS transfers.",
     "Make creation of a bank/child with opening balance available through review SMS dropdown and separate transfer; refresh exact verified account witness after creation.",
     "Add two distinct opening balances persisted across SQLCipher reopen with no income posting, unit/UI source acceptance and release/QA documentation.",
     "M942 extend SQLCipher typed provider constraints and valid provider IDs to all approved Saudi local/digital banks and wallets. Upgrade legacy account-details v1 to v2 transactionally without altering opening_minor, account IDs, archived status or ledger.",
-    "M942 align M447 SMS regression with new approved verified in-context first account creation while retaining mandatory account and no-shadow-DB writer checks."
+    "M942 align M447 SMS regression with new approved verified in-context first account creation while retaining mandatory account and no-shadow-DB writer checks.",
+    "NO fabricated Home bank balance on verified SQLCipher failure; show readable placeholder instead.",
+    "Bound Home transaction result list and count with stable index, keeping verified account scope and filters.",
+    "Remove unsupported monthly growth % until authenticated historical balances exist.",
+    "Expand bank/wallet SMS sender identification to approved catalog only; keep no unconfirmed account selection or posting.",
+    "Support Other institution child accounts without conflating different banks; preserve encrypted identity or fail closed.",
+    "Allow user to clear verified bank last four atomically with rename and authenticated SQLCipher writer.",
+    "Add historical V24/V3 restore/reconciliation regression matrix; owner original handset verification separate.",
+    "Audit retired AI helper graph and remove truly unreachable code only with preserved security regression coverage."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -29,7 +37,19 @@
     "test/storage/m942_two_child_openings_sqlcipher_test.dart",
     "lib/storage/waffra_account_details_schema.dart",
     "test/storage/m942_account_details_v1_upgrade_test.dart",
-    "test/qa/m447_verified_sms_account_linking_test.py"
+    "test/qa/m447_verified_sms_account_linking_test.py",
+    "docs/qa/M943_FINANCE_FOLLOWUP_SCOPE.md",
+    "lib/waffra_home_balance_header.part.dart",
+    "lib/waffra_finance_period_index.part.dart",
+    "lib/waffra_sms_account_learning.dart",
+    "lib/waffra_recurring_account_groups.dart",
+    "lib/waffra_home_sms_confirmation.part.dart",
+    "lib/storage/waffra_account_context_repository.dart",
+    "lib/storage/waffra_verified_accounts_api.dart",
+    "test/m943_home_balance_and_paging_test.dart",
+    "test/m943_sms_bank_catalog_test.dart",
+    "test/storage/m943_verified_bank_suffix_clear_test.dart",
+    "test/m943_backup_retired_graph_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
@@ -80,8 +100,8 @@
     ],
     "lib/waffra_accounts_manager_page.dart": [
       {
-        "start": " Future<WaffraAccountBalance?> createAccountInsideComposer(",
-        "end": " Future<void> compose("
+        "start": " Future<void> rename(WaffraAccountBalance item)async{",
+        "end": " Future<void> archive(WaffraAccountBalance item)async{"
       }
     ],
     "lib/waffra_home_sms_transfer_review.part.dart": [
@@ -110,6 +130,52 @@
       {
         "start": "    def test_verified_source_only_with_no_shadow_db(self):",
         "end": "    def test_no_guarded_legacy_sms_account_override(self):"
+      }
+    ],
+    "lib/waffra_home_balance_header.part.dart": [
+      {
+        "start": "class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {",
+        "end": "/// A cancelled budget warning"
+      }
+    ],
+    "lib/waffra_finance_period_index.part.dart": [
+      {
+        "start": "class WaffraFinancePeriodIndex {",
+        "end": null
+      }
+    ],
+    "lib/waffra_sms_account_learning.dart": [
+      {
+        "start": " static String? bankGroup(String text){",
+        "end": " /// One actual source-verified user confirmation"
+      }
+    ],
+    "lib/waffra_recurring_account_groups.dart": [
+      {
+        "start": " static List<WaffraRecurringAccountGroup> fromAccounts(",
+        "end": null
+      }
+    ],
+    "lib/waffra_home_sms_confirmation.part.dart": [
+      {
+        "start": "   Future<void> selectAccountBeforeYes(",
+        "end": "   Future<void> confirm"
+      }
+    ],
+    "lib/storage/waffra_account_context_repository.dart": [
+      {
+        "start": " Future<void> setVerifiedBankSuffix({",
+        "end": " /// Read only the user-confirmed four-digit suffix"
+      }
+    ],
+    "lib/storage/waffra_verified_accounts_api.dart": [
+      {
+        "start": " Future<String?> verifiedBankSuffix(String accountId)",
+        "end": " /// Null account means unassigned"
+      },
+      {
+        "start": " Future<void> renameAccountWithSuffix({",
+        "end": " @override\n Future<void> archiveEmptyAccount"
       }
     ]
   }
