@@ -27,6 +27,7 @@ class M900RegisteredHomeReassemblyGuard(unittest.TestCase):
             "waffra_home_pdf_reports.part.dart",
             "waffra_home_transaction_ledger_actions.part.dart",
             "waffra_home_widget_balance.part.dart",
+            "waffra_home_unified_activity_reads.part.dart",
         ):
             self.assertEqual(main.count("part '" + part + "';"), 1, part)
             self.assertTrue(source("lib/" + part).startswith("part of 'main.dart';"), part)
@@ -73,6 +74,9 @@ class M900RegisteredHomeReassemblyGuard(unittest.TestCase):
             " Future<void> _syncWidgetTransactions()async{",
             " Future<void> _refreshWidget()async{",
             " Future<void> _publishVerifiedWidgetBalance(",
+            " void _m648InvalidateTransfers(){",
+            " Future<List<WaffraInternalTransferHistory>> _m648HomeTransfers(",
+            " Future<List<WaffraVerifiedGoalMovement>> _m649HomeSavings(",
             " void _publishVerifiedTransactionLedger(",
         ):
             self.assertEqual(original.count(method), 1, method)

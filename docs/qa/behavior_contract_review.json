@@ -4297,6 +4297,26 @@
         "Missing registered Dart part or duplicated extraction marker must cause source tests to fail closed.",
         "Full exact SHA Flutter/Android CI plus physical owner device old backup/restore parity remain independent."
       ]
+    },
+    {
+      "id": "M905-VERIFIED-HOME-ACTIVITY-CACHE",
+      "issue": "Issue #633 / Draft PR #638 source modularization",
+      "previous_behavior": "Transfer and savings goal verified read-only account history and merged activity cache functions are inline within _HomeScreenState.",
+      "approved_behavior": "Move exactly the same four existing verified account-scoped read-only history cache and invalidation methods to a declared same-library Home part without changing finance, widget, backup, account, SQLCipher or UI behavior.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_unified_activity_reads.part.dart"
+      ],
+      "test_paths": [
+        "test/m905_verified_activity_reads_extraction_test.dart",
+        "test/qa/m900_home_source_reassembly_guard_test.py"
+      ],
+      "safety_invariants": [
+        "Use only verified accountsBridge history reads rather than additional money ledger writers.",
+        "Preserve selected account and goal movement identity and invalidate stale per-account futures.",
+        "Unavailable verified authority produces an error, not silently invented balances.",
+        "Original owner encrypted backup and static floating add button are untouched."
+      ]
     }
   ]
 }

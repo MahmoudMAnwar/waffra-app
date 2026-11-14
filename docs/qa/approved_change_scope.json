@@ -89,7 +89,8 @@
     "M902 #633 preserve original live Home/Widget SQLCipher and SMS writer checks in finance-full, M96 and M109 workflows by using fail-closed exact registered production Home Dart-part source, not stale raw main.dart; add regression asserting exactly two secure SMS writer sites with all original negatives.",
     "M903 #633 keep original M155 verified SQLCipher SMS, backup and native archive/privacy assertions and M158 Widget sender-confirmed SMS acknowledgment/no-raw-title regressions after actual production Home Dart-part extraction; change only registered-source readers, add full original-check regression; fail-closed M385/M550.",
     "M904 #633 extract exact original verified Home Widget balance refresh/publish methods into registered same-library Dart part, preserving source auth, integer halalas, privacy masking and read-only behavior, with M385/M550 source QA and no original backup/UI modifications.",
-    "M920 #633 retain all original full Flutter financial UI and SMS/bank/recurring/backup regression expectations from 10 named tests after real Home part extraction by adjusting only stale raw-main source imports/readers, no assertions removed, M385 unchanged-outside-scope and full CI."
+    "M920 #633 retain all original full Flutter financial UI and SMS/bank/recurring/backup regression expectations from 10 named tests after real Home part extraction by adjusting only stale raw-main source imports/readers, no assertions removed, M385 unchanged-outside-scope and full CI.",
+    "M905 #633 continue full Home state modularization by moving original four verified display-only transfer and savings history cache methods into registered Dart part byte-identically, retain account filters and secure source with strict M385/M550 and original Dart/Python QA."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -341,7 +342,9 @@
     "test/m302_category_rename_integrity_test.dart",
     "test/waffra_widget_balance_source_authority_test.dart",
     "test/m324_required_ai_sms_receipts_test.dart",
-    "test/storage/m470_verified_recurring_payment_capture_test.dart"
+    "test/storage/m470_verified_recurring_payment_capture_test.dart",
+    "lib/waffra_home_unified_activity_reads.part.dart",
+    "test/m905_verified_activity_reads_extraction_test.dart"
   ],
   "approved_deleted_files": [
     "lib/waffra_sms_cloud_review_analyzer.dart"
@@ -455,7 +458,7 @@
         "end": " @override void dispose(){if(!_m663FirstInteractiveFrame.isCompleted)"
       },
       {
-        "start": " bool _m468AccountReadAgain=false;",
+        "start": " String? _m652ActivityAccountKey;",
         "end": " WaffraFinanceAuthorityRead? _lastFinanceAuthorityRead;"
       },
       {

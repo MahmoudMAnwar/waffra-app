@@ -112,6 +112,9 @@ String readWaffraMainSourceForContracts(){
  if(s.split(accountFlowMarker).length!=2)throw StateError('Missing or duplicated M760 account source');
  s=s.replaceFirst(accountFlowMarker,_method('lib/waffra_home_verified_account_flows.part.dart',
   ' Future<void> _m467RefreshHomeAccounts()async{'));
+ const m905Marker=' // M905: original verified transfer and savings activity cache readers moved unchanged to registered Home part.\n';
+ if(s.split(m905Marker).length!=2)throw StateError('Missing or repeated M905 activity marker');
+ s=s.replaceFirst(m905Marker,_method('lib/waffra_home_unified_activity_reads.part.dart',' void _m648InvalidateTransfers(){'));
  const smsConfirmationMarker=' // M770: original verified SMS review confirmation and entry batching moved to same-library part.\n';
  if(s.split(smsConfirmationMarker).length!=2)throw StateError('Missing or duplicate original M770 SMS confirmation marker');
  s=s.replaceFirst(smsConfirmationMarker,_method('lib/waffra_home_sms_confirmation.part.dart',
