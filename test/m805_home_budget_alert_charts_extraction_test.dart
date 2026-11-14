@@ -28,8 +28,23 @@ void main() {
   final start=whole.indexOf(' Future<void> _requestPercentageAlertPermission()async{');
   final end=whole.indexOf(' Future<void> confirmDeleteAllEntries() async {',start);
   final part=File('lib/waffra_home_budget_alert_charts.part.dart').readAsStringSync();
-  final source=part.substring(part.indexOf(' Future<void> _requestPercentageAlertPermission()async{'),
+  var source=part.substring(part.indexOf(' Future<void> _requestPercentageAlertPermission()async{'),
    part.lastIndexOf('\n}')+1);
+  String registeredMethod(String path,String signature){
+   final code=File(path).readAsStringSync();
+   final at=code.indexOf(signature),endOfPart=code.lastIndexOf('\n}');
+   expect(at,greaterThanOrEqualTo(0),reason:path);
+   expect(endOfPart,greaterThan(at),reason:path);
+   return code.substring(at,endOfPart+1);
+  }
+  const ledgerMarker=' // M780: original verified ledger deletion/undo and source publication moved to registered Home part.\n';
+  const cardsMarker=' // M781: original Home transaction cards/details/actions moved to registered same-library part.\n';
+  expect(source.split(ledgerMarker).length,2);
+  expect(source.split(cardsMarker).length,2);
+  source=source.replaceFirst(ledgerMarker,
+   registeredMethod('lib/waffra_home_transaction_ledger_actions.part.dart',' void _publishVerifiedTransactionLedger('));
+  source=source.replaceFirst(cardsMarker,
+   registeredMethod('lib/waffra_home_transaction_cards.part.dart',' Widget stat(String label'));
   expect(start,greaterThan(0));
   expect(end,greaterThan(start));
   expect(whole.substring(start,end),source);
