@@ -110,7 +110,17 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          app=Path('lib/main.dart').read_text()
+          import re
+          main=Path('lib/main.dart').read_text()
+          parts=re.findall(r"(?m)^part '([^']+\\.part\\.dart)';", main)
+          assert parts and len(parts)==len(set(parts)), "Registered Home parts must be unique"
+          home_parts=[]
+          for name in parts:
+            part=Path('lib')/name
+            body=part.read_text()
+            assert "part of 'main.dart';" in body, "Unregistered/invalid Home part "+name
+            home_parts.append(body)
+          app=main+'\\n'+'\\n'.join(home_parts)
           budget=Path('lib/waffra_home_budget_cards.part.dart').read_text()
           tools=Path('lib/waffra_smart_features.dart').read_text()
           buttons=Path('lib/waffra_action_layout.dart').read_text()
