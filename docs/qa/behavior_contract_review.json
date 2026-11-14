@@ -4564,6 +4564,26 @@
         "Do not initiate expensive SMS/Widget reads on the unlock frame; preserve deferred guarded resume.",
         "Original root navigation and Widget pending action never bypass authenticated Home-ready gates."
       ]
+    },
+    {
+      "id": "M932-M340-REAL-FX-DART-PART-NEGATIVE-FINANCE-WRITER",
+      "issue": "Issue #633 / PR #638",
+      "previous_behavior": "M340 negative FX-preview financial-writer mutation test injected a forbidden persist() call into raw lib/main.dart, even though the original preview was moved byte-preserved into lib/waffra_home_fx_preview.part.dart; the guard's source overrides also omitted that new part.",
+      "approved_behavior": "Load actual registered FX preview part into M340 overridable source map and mutate it directly, verifying both persist() and saveCaptured() writes fail finance safety review while all original verified SMS, amount/date/account, FX approval, SQLCipher, Qwen and no-write checks stay intact.",
+      "source_paths": [
+        "scripts/qa/m340_financial_quality_gate.py",
+        "test/qa/test_m340_financial_quality_gate.py",
+        "lib/waffra_home_fx_preview.part.dart"
+      ],
+      "test_paths": [
+        "test/qa/test_m340_financial_quality_gate.py",
+        "test/qa/m928_registered_home_finance_guard_injection_test.py"
+      ],
+      "safety_invariants": [
+        "The actual registered FX preview is included in finance source overrides, never substituted with a mock or stale raw main.dart.",
+        "Any injected unapproved FX ledger persist or saveCaptured is detected without suppressing original hostile finance regressions.",
+        "Original approved FX quote is non-posting in Saudi release, original currency consent and precision guards preserved."
+      ]
     }
   ]
 }
