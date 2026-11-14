@@ -1895,3 +1895,7 @@ With the owner's explicit instruction to complete code-only Home refactoring, mo
 
 ### M738 — Issue #633 / Draft PR #638: preserve original M672/M678 transfer and savings card assertions
 The existing M672/M678 source regression inspected only `lib/main.dart`. M733 moved exact real verified transfer and goal savings card methods into registered same-library Dart part. Update only the legacy test's import and source reader to strict `readWaffraMainSourceForContracts()`; preserve all original balance sign, transfer direction, goal savings, and original visual assertions unchanged. Do not modify ledger writers, weaken checks or skip tests. Exact-HEAD CI remains the evidence gate.
+
+
+### M739 — Issue #633 / Draft PR #638: real sender-grouped SMS inbox extraction
+Owner requests continuing the outstanding code-only Home refactor. Extract original ~374-line authenticated SMS sender-grouped inbox dialog into a registered same-library Dart part **byte-for-byte**. Keep message selection across senders, original SMS body, review/confirmation, local account/OTP exclusions, fixed FAB/navigation, SQLCipher ledger and encryption safety unchanged; do not extract the adjacent unused-element annotation for the next Home card. Update strict Dart/Python registered-source reconstruction and M550 required part list. Add source integrity tests and retain independent Android overflow/owner-backup acceptance. This code move is not performance proof.
