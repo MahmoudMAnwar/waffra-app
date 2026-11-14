@@ -3433,6 +3433,34 @@
         "Never weaken original regressions or trust missing Dart part source.",
         "Android physical and private backup acceptance remain independent."
       ]
+    },
+    {
+      "id": "M737-VERIFIED-CATEGORY-WORKFLOWS-REGISTERED-HOME-SOURCE",
+      "issue": "Issue #633 / Draft PR #638 M735",
+      "previous_behavior": "The original Home category CRUD, parent/child category editor, source-verified finance module trash and category recycle-bin flows remained embedded in the large Home State source.",
+      "approved_behavior": "Move exact original production category and trash method bodies to the declared same-library Dart part; retain validation, money write security, account/goal/budget association, user confirmation and historical deleted data behavior. Strict Dart/Python real-source reconstruction and dedicated unchanged-code regression apply.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_category_workflows.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/m735_home_category_workflows_extraction_test.dart",
+        "test/m363_transaction_category_inline_creation_test.dart",
+        "test/m352_existing_data_upgrade_contract_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Keep verified SQLCipher finance authority and categorization IDs unchanged.",
+        "Retain original positive/negative category parent-child, restore, deletion and recurrence safety expectations.",
+        "Part must be registered with main.dart, never replaced by stub or fake test source.",
+        "Mobile screenshots and owner's historical encrypted backup parity remain separately unverified until physical device evidence."
+      ]
     }
   ]
 }
