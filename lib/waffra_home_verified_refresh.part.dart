@@ -140,5 +140,4 @@ extension _WaffraHomeVerifiedRefresh on _HomeScreenState {
    });
   }
  }
- // M750: verified Home financial startup load lives in registered same-library part.
 }
