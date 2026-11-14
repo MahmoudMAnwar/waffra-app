@@ -216,7 +216,7 @@ void main(){
 
  test('M462 beginner review is prefilled and keeps finance approval separate',(){
   final ui=File('lib/waffra_sms_rule_settings_page.dart').readAsStringSync();
-  final home=File('lib/main.dart').readAsStringSync();
+  final home=readWaffraMainSourceForContracts();
   expect(ui,contains('seedCategory'));
   expect(ui,contains('proposed?.name'));
   expect(ui,contains("Key('waffra-sms-any-keyword')"));
@@ -312,7 +312,7 @@ void main(){
  });
 
  test('M636 transfers cannot silently post through SMS expense editor',(){
-  final source=File('lib/main.dart').readAsStringSync();
+  final source=readWaffraMainSourceForContracts();
   final confirmed=source.substring(
    source.indexOf(' Future<void> _m565ConfirmSms({'),
    source.indexOf(' Future<void> _reviewAutoSmsCandidates('));
