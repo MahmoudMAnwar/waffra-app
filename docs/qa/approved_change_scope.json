@@ -29,7 +29,7 @@
         "end": "/// The only public way to display transient system feedback."
       },
       {
-        "start": "  if(!accountOpened&&ready&&tab!=2)",
+        "start": "  // M675: footer height stays invariant. The global + is unchanged.",
         "end": "  if(addFabExpanded&&!accountOpened)...["
       }
     ],
@@ -41,25 +41,25 @@
     ],
     "lib/storage/waffra_encrypted_full_finance_reset.dart": [
       {
-        "start": "  // M644: owner-authorized immediate biometric reset.",
+        "start": "  Future<void> _requireNoRecoveryHistory(",
         "end": "  Future<WaffraEncryptedFullResetResult> reset({"
       }
     ],
     "lib/storage/waffra_verified_finance_authority.dart": [
       {
-        "start": "  /// M644: approved by the owner",
+        "start": "  /// The final destructive finance route deliberately has NO legacy",
         "end": "  Future<WaffraFinanceAuthorityRead> resetVerifiedFinance({"
       }
     ],
     "lib/storage/waffra_verified_encrypted_finance_bridge.dart": [
       {
-        "start": "  /// M644: one biometric-only owner approval",
+        "start": "  Future<WaffraGoalDueSqlReceipt> settleLinkedGoalDue({",
         "end": "  Future<WaffraEncryptedFullResetResult> resetVerifiedFinance({"
       }
     ],
     "lib/storage/waffra_encrypted_finance_session.dart": [
       {
-        "start": "  /// M644: send the explicitly biometrically approved reset",
+        "start": "  /// Converts the HomeScreen's full captured batch into a delta",
         "end": "  Future<WaffraEncryptedFullResetResult> resetVerifiedFinance({"
       }
     ],
