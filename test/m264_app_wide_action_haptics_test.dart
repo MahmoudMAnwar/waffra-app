@@ -117,7 +117,7 @@ void main() {
     ];
     var taps=0;
     for(final path in paths){
-      final s=File(path).readAsStringSync();
+      final s=path=='lib/main.dart'?readWaffraMainSourceForContracts():File(path).readAsStringSync();
       expect(s.contains('WaffraHaptics.tap(')
           || s.contains('WaffraHaptics.selection('),isTrue,
           reason:'$path has not been connected to the haptic action');
