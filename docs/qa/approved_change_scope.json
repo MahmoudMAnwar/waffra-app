@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "change_id": "M690-M845-ISSUES632-637-20261114",
+  "change_id": "M690-M855-ISSUES632-637-20261114",
   "human_scope_review": "Issue #629 completes prior PR #628 only after user-visible acceptance; #631 explicitly authorizes three exact screenshots for Goals/Dues/SMS Review, permanently visible financial activity, non-moving FAB-aligned notice, and savings/goal-due cash safety. Existing tests replace outdated visual assumptions without deleting financial safety assertions. Device screenshots/old restore still require external device evidence.",
   "user_requested_changes": [
     "M690 #632 permanently disable third-party AI bank SMS uploads and opt-in on previously installed versions, remove Settings toggle and signed Android staging worker, retain local encrypted SMS Review and money writer.",
@@ -79,7 +79,8 @@
     "M830 #633 move original Home category/summary/filter + current-tab/footer/back navigation helper methods to registered same-library part, preserve original approved UI, global FAB and unchanged lifecycle/build.",
     "M835 #633 preserve original no-auto-post Home bank SMS review indicator, message counts, pending/error, explicit rescan and user navigation and all approved UI by moving unchanged card to same-library part; no writer/permissions changes.",
     "M850 #633 relocate exact existing Home SMS notice debouncer and explicit rescan methods into registered same-library part, preserving original timer, native owner permission, local-only/consent and no-auto financial post, source tests and private archive acceptance.",
-    "M845 #633 preserve every native bank SMS/cloud no-upload, account-bound manual, SAR/OTP and review assertion by changing only two obsolete M436 direct-main source readers to strict registered true-source helper; no original test assertion edited."
+    "M845 #633 preserve every native bank SMS/cloud no-upload, account-bound manual, SAR/OTP and review assertion by changing only two obsolete M436 direct-main source readers to strict registered true-source helper; no original test assertion edited.",
+    "M855 #633 retain all original M470 excluded sender/message restore, encrypted native queue and 1000-SMS selection tests unchanged; replace exactly three raw main source readers with genuine registered-part source helper."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -307,7 +308,8 @@
     "lib/waffra_home_sms_review_indicator.part.dart",
     "test/m835_home_sms_review_indicator_extraction_test.dart",
     "lib/waffra_home_sms_rescan.part.dart",
-    "test/m850_home_sms_rescan_extraction_test.dart"
+    "test/m850_home_sms_rescan_extraction_test.dart",
+    "test/m470_sms_excluded_senders_test.dart"
   ],
   "approved_deleted_files": [
     "lib/waffra_sms_cloud_review_analyzer.dart"
@@ -2129,6 +2131,24 @@
       {
         "start": "    def test_refresh_only_changes_source_selection_not_named_budget_projection(self):",
         "end": "        left=src.index("
+      }
+    ],
+    "test/m470_sms_excluded_senders_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "void main(){"
+      },
+      {
+        "start": " test('M470 #7: owner chooses between excluding messages and senders',(){",
+        "end": "  final start=home.indexOf("
+      },
+      {
+        "start": " test('M470 #8: excluded senders have a dedicated restore control',(){",
+        "end": "  expect(home,contains('المستبعدون'));"
+      },
+      {
+        "start": " test('M470 #10: 1000 SMS selection uses ID sets and bounded exclusion commits',(){",
+        "end": "  expect(home,contains('final idSet=ids.toSet();'));"
       }
     ]
   }
