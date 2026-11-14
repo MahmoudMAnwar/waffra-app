@@ -35,7 +35,7 @@ void main() {
  });
 
  test('M389: duplicate goal uses independent identity and starts with zero savings',(){
-  final source=File('lib/main.dart').readAsStringSync();
+  final source=readWaffraMainSourceForContracts();
   final dialog=source.split('Future<void> goalDialog(').last
     .split('/// Release an earmark').first;
   expect(dialog,contains('{SavingGoal? duplicate,bool openEnded=false})'));
@@ -64,7 +64,7 @@ void main() {
  });
 
  test('M389: Goals/Recurring + menus show approved choices instead of direct sheet',(){
-  final source=File('lib/main.dart').readAsStringSync();
+  final source=readWaffraMainSourceForContracts();
   final menu=source.split('if(addFabExpanded&&!accountOpened&&(tab==0||tab==1||tab==3||tab==4||goalsOpened))').last
     .split('if(tourActive&&tourTargetReady)').first;
   for(final label in <String>[

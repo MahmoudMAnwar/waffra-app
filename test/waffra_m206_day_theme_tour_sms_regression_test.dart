@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -63,7 +64,7 @@ void main() {
 
 
   test('FAB launch waits for the menu collapse and suppresses double taps', () {
-    final source = File('lib/main.dart').readAsStringSync();
+    final source = readWaffraMainSourceForContracts();
     expect(source, contains('if(_addActionOpening)return;'));
     // PR #402 removes the fixed 260ms UI-blocking sleep. The async
     // gate must still close the menu and suppress double-submission.

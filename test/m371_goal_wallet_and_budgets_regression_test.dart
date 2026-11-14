@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/main.dart';
@@ -108,7 +109,7 @@ void main() {
 
   test('M371 goal creation cannot post an expense or negative cash debit',
       () {
-    final source=File('lib/main.dart').readAsStringSync();
+    final source=readWaffraMainSourceForContracts();
     expect(source,contains('target:noTarget?0.0:n!,saved:0,dueDate:selectedDeadline'));
     final creation=source.split('Future<void> goalDialog(').last
         .split('/// Release an earmark').first;
