@@ -19,6 +19,8 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
   final bySender=grouped.bySender;
   final senders=grouped.senders;
   String? selectedSender,openingReviewId;
+  // M940: a bounded display window only; bulk selection always sees full IDs.
+  final messageWindow=WaffraSmsReviewPageWindow();
   final selectedIds=<String>{};
   var bulkBusy=false;
   List<String> idsOf(Iterable<Map<String,Object?>> rows)=>
@@ -91,11 +93,27 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
           const SizedBox(width:12),
          ]),
         )),
-       Expanded(child:ListView.builder(
+       Expanded(child:NotificationListener<ScrollNotification>(
+        onNotification:(notification){
+         if(selectedSender==null||
+            notification.metrics.axis!=Axis.vertical||
+            notification.metrics.extentAfter>360)return false;
+         final count=bySender[selectedSender]?.length??0;
+         if(messageWindow.visibleCount(count)>=count)return false;
+         WidgetsBinding.instance.addPostFrameCallback((_){
+          if(!ctx.mounted||selectedSender==null)return;
+          final latest=bySender[selectedSender]?.length??0;
+          if(messageWindow.visibleCount(latest)<latest){
+           refresh(()=>messageWindow.revealNext(latest));
+          }
+         });
+         return false;
+        },
+        child:ListView.builder(
         key:Key(selectedSender==null?'waffra-sms-sender-list':
          'waffra-sms-sender-transactions'),
         itemCount:selectedSender==null?senders.length:
-         (bySender[selectedSender]?.length??0),
+         messageWindow.visibleCount(bySender[selectedSender]?.length??0),
         itemBuilder:(rowContext,index){
          if(selectedSender==null){
           final sender=senders[index],count=bySender[sender]!.length;
@@ -128,7 +146,10 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
               })),
              const Icon(Icons.chevron_left_rounded,color:forest),
             ]),
-            onTap:()=>refresh(()=>selectedSender=sender),
+            onTap:()=>refresh((){
+             selectedSender=sender;
+             messageWindow.reset();
+            }),
            ));
          }
          final item=bySender[selectedSender]![index];
@@ -191,7 +212,7 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
            }
           }:null,
          );
-        })),
+        }))),
        if(selectedIds.isNotEmpty)Padding(
         padding:const EdgeInsets.fromLTRB(12,8,12,4),
         child:SizedBox(width:double.infinity,child:FilledButton.icon(

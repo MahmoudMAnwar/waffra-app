@@ -82,6 +82,7 @@ import 'waffra_auto_sms_policy.dart';
 import 'waffra_bank_sms_facts.dart';
 import 'waffra_sms_local_rules.dart';
 import 'waffra_sms_review_groups.dart';
+import 'waffra_sms_review_page_window.dart';
 import 'waffra_sms_account_learning.dart';
 import 'waffra_sms_rule_settings_page.dart';
 import 'waffra_unknown_financial_sms_page.dart';
