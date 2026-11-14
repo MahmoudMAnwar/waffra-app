@@ -40,11 +40,20 @@ class WaffraEncryptedFullResetResult {
 ///
 /// This only resets finance inside its original SQLCipher vault. It does NOT
 /// delete identity credentials, cloud records, external backups or OS keys.
+/// The SQLCipher commit succeeded, but an authenticated external receipt file
+/// still requires safe deletion. Never describe this state as a rolled-back reset.
+class WaffraReceiptCleanupPending implements Exception {
+  const WaffraReceiptCleanupPending();
+  @override
+  String toString() => 'Encrypted reset committed; receipt cleanup pending.';
+}
+
 class WaffraEncryptedFullFinanceReset {
   const WaffraEncryptedFullFinanceReset({
     required this.snapshot,
     required this.writerDirectory,
     required this.verifySourceUnderLock,
+    this.legacyReceiptsDirectory,
     this.experimentalEnabled = false,
   });
 
@@ -53,6 +62,8 @@ class WaffraEncryptedFullFinanceReset {
   final WaffraAtomicFinanceSnapshot snapshot;
   final Directory writerDirectory;
   final Future<void> Function() verifySourceUnderLock;
+  /// Only app-owned Documents/receipts, never an arbitrary device directory.
+  final Directory? legacyReceiptsDirectory;
   final bool experimentalEnabled;
 
   static const _knownTables = <String>{
@@ -65,6 +76,7 @@ class WaffraEncryptedFullFinanceReset {
     'fresh_finance_goals',
     'fresh_finance_recurring',
     'fresh_finance_receipts',
+    'fresh_finance_reset_receipt_cleanup',
     'fresh_finance_receipt_blobs',
     'fresh_finance_receipt_recycle',
     'fresh_finance_receipt_recycle_blobs',
@@ -318,12 +330,136 @@ class WaffraEncryptedFullFinanceReset {
     'fresh_finance_meta',
     'fresh_finance_cutover_checkpoint',
     'fresh_finance_snapshot_state',
+    'fresh_finance_reset_receipt_cleanup',
     'fresh_finance_domain_revision',
     'fresh_finance_account_revision',
     'fresh_finance_account_context_revision',
     'fresh_finance_account_details_revision',
     'fresh_finance_custom_account_subtypes_revision',
   };
+
+  static const String _receiptCleanupTable =
+      'fresh_finance_reset_receipt_cleanup';
+
+  static List<String> _receiptReferences(Object? raw) {
+    if (raw == null || raw == '') return const <String>[];
+    if (raw is! String) throw StateError('Invalid receipt reference type.');
+    final parsed = raw.startsWith('[') ? jsonDecode(raw) : <dynamic>[raw];
+    if (parsed is! List || parsed.isEmpty ||
+        parsed.any((part) => part is! String || part.isEmpty)) {
+      throw StateError('Malformed receipt references.');
+    }
+    return List<String>.unmodifiable(parsed.cast<String>());
+  }
+
+  Future<String> _trustedReceiptRoot() async {
+    final root = legacyReceiptsDirectory;
+    if (root == null || !await root.exists()) {
+      throw StateError('No verified local receipt directory.');
+    }
+    final canonical = await root.resolveSymbolicLinks();
+    if (canonical == Platform.pathSeparator) {
+      throw StateError('Device root cannot be a receipt directory.');
+    }
+    return canonical;
+  }
+
+  Future<String> _verifiedOwnedFilePath(String path, String root) async {
+    final file = File(path);
+    if (!file.isAbsolute ||
+        await FileSystemEntity.type(path, followLinks: false) !=
+            FileSystemEntityType.file ||
+        await file.parent.resolveSymbolicLinks() != root) {
+      throw StateError('Receipt is not an app-owned regular file.');
+    }
+    return file.resolveSymbolicLinks();
+  }
+
+  Future<String> _verifiedReceiptDigest(String path) async {
+    final file = File(path);
+    final before = await file.stat();
+    if (before.size < 1 ||
+        before.size > WaffraEncryptedReceiptVault.maxReceiptBytes) {
+      throw StateError('External receipt is outside safe image limits.');
+    }
+    final bytes = await file.readAsBytes();
+    final after = await file.stat();
+    if (bytes.length != before.size || after.size != before.size ||
+        after.modified != before.modified) {
+      throw StateError('External receipt changed during verification.');
+    }
+    return sha256.convert(bytes).toString();
+  }
+
+  /// Retry an interrupted post-commit filesystem purge using the durable
+  /// encrypted journal. This may be called during source-attested startup.
+  /// The journal is written in the SAME SQL transaction as the ledger reset;
+  /// no file is touched until that transaction has committed successfully.
+  Future<void> resumePendingExternalReceiptCleanup() =>
+      WaffraExperimentalWriterGate(
+        disposableDirectory: writerDirectory, experimentalEnabled: true,
+      ).withExclusiveAccess(() async {
+        await verifySourceUnderLock();
+        await _deletePendingExternalReceipts();
+      });
+
+  Future<void> _deletePendingExternalReceipts() async {
+    final exists = await snapshot.store.customSelect(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+      variables: [Variable.withString(_receiptCleanupTable)],
+    ).get();
+    if (exists.isEmpty) return;
+    final rows = await snapshot.store.customSelect(
+      'SELECT path,sha256_hex FROM ' + _receiptCleanupTable + ' ORDER BY path',
+    ).get();
+    if (rows.isEmpty) return;
+    try {
+      final root = await _trustedReceiptRoot();
+      final pending = <String, bool>{};
+      // Prove ALL files before removing the first; a tampered file causes
+      // no new deletion and the encrypted journal remains available.
+      for (final row in rows) {
+        final path = row.read<String>('path');
+        final digest = row.read<String>('sha256_hex');
+        final file = File(path);
+        final type = await FileSystemEntity.type(path, followLinks: false);
+        if (type == FileSystemEntityType.notFound) {
+          if (!file.isAbsolute ||
+              await file.parent.resolveSymbolicLinks() != root) {
+            throw StateError('Missing receipt path escaped app-owned folder.');
+          }
+          pending[path] = false; // Deleted before interruption.
+          continue;
+        }
+        final actual = await _verifiedOwnedFilePath(path, root);
+        if (actual != path ||
+            await _verifiedReceiptDigest(path) != digest) {
+          throw StateError('Pending receipt hash or path has changed.');
+        }
+        pending[path] = true;
+      }
+      for (final row in rows) {
+        final path = row.read<String>('path');
+        if (pending[path] == true) {
+          final actual = await _verifiedOwnedFilePath(path, root);
+          if (actual != path ||
+              await _verifiedReceiptDigest(path) !=
+                  row.read<String>('sha256_hex')) {
+            throw StateError('Receipt changed immediately before removal.');
+          }
+          await File(path).delete();
+        }
+        // On a crash between File.delete and this SQL update, retry sees
+        // the missing expected file and removes only the matching journal row.
+        await snapshot.store.customStatement(
+          'DELETE FROM ' + _receiptCleanupTable + ' WHERE path=?',
+          [path],
+        );
+      }
+    } catch (_) {
+      throw const WaffraReceiptCleanupPending();
+    }
+  }
 
   Future<WaffraEncryptedFullResetResult> resetAfterBiometric({
     required WaffraFinanceSnapshotState baseline,
