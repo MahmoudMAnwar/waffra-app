@@ -11,7 +11,8 @@
     "M938 #643 Android screenshot scope: snackbar success from backup-dialog Settings must remain beside original stationary global 58dp + even when multiline; goal and due count-aware filter funnels and 3-dot Deleted Goals menu; keep finance lists untouched.",
     "M938 #643 old authenticated V24 deleted-goal archive needs explicitly user-confirmed SQL-only recovery-index repair under native lock, strict source generation/digest and unique tombstones; no money records or ledger changes.",
     "M938 #643 restore dialog must use only .waffra SAF file choice and password, removing advanced clipboard import and no redundant second biometric after the initial mandatory one, while retaining encryption/authentication, preflight, explicit replacement and CAS/atomic restore.",
-    "M938 #643 maintain fresh owner-approved app release notes ancestry after modified Flutter UI/verified encrypted trash code; explicitly mark as unreleased Draft pending UAT."
+    "M938 #643 maintain fresh owner-approved app release notes ancestry after modified Flutter UI/verified encrypted trash code; explicitly mark as unreleased Draft pending UAT.",
+    "M938 #643 update M550 source/test behavior contract review to cover all owner-approved UI and verified encrypted recycle changes, preserving exact original acceptance and negative tests."
   ],
   "allowed_changed_files": [
     ".github/workflows/finance-full-regression.yml",
@@ -22,6 +23,7 @@
     "docs/qa/M937_PHASE_FOUR_TEST_REPORTING.md",
     "docs/qa/M938_ANDROID_SCREENSHOT_ACCEPTANCE.md",
     "docs/qa/approved_change_scope.json",
+    "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
     "lib/storage/waffra_encrypted_module_recycle.dart",

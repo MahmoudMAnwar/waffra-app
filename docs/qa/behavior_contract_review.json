@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
-  "pr": 638,
-  "issue": "Issues #632–#637",
+  "pr": 640,
+  "issue": "Issues #639, #641, #642 and #643",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at new branch start",
   "reviewed_at": "2026-11-14",
-  "review_policy": "M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending.",
+  "review_policy": "M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
     {
       "id": "M623-VERIFIED-RESTORE-NO-SECOND-BACKUP",
@@ -4583,6 +4583,38 @@
         "The actual registered FX preview is included in finance source overrides, never substituted with a mock or stale raw main.dart.",
         "Any injected unapproved FX ledger persist or saveCaptured is detected without suppressing original hostile finance regressions.",
         "Original approved FX quote is non-posting in Saudi release, original currency consent and precision guards preserved."
+      ]
+    },
+    {
+      "id": "M938-ANDROID-SCREENSHOT-FAB-GOAL-FILTERS-DELETED-RESTORE-ONE-BIOMETRIC",
+      "issue": "Issue #643 / same Draft PR #640; authenticated older V24 restore Android screenshots and approved UI corrections",
+      "previous_behavior": "Backup success from Settings could choose a full-width fallback Snackbar even when Home's global FAB returned. Goal archive used a filter icon and opened an opaque encrypted trash mismatch error for missing historical SQL metadata; goal/due status/date filters lacked counts. Backup dialog displayed Advanced/clipboard-only options and challenged biometrics again after one successful opening challenge.",
+      "approved_behavior": "Route Home-owned restore notices to the existing stationary FAB anchor across Settings handoff, with no footer geometry change. Put goal/due status and week/month windows in counted funnel menus; goal Deleted/Inactive shortcuts use a separate 3-dot More menu. Reconstitute only missing historical encrypted trash SQL metadata after a second explicit owner consent and exact baseline source witness under native lock, reject duplicate/partial/future/stale entries, and preserve zero-mutation financial ledger. Backup dialog remains file-only with one opening mandatory OS biometric, original archive password, explicit destructive restore confirmation, crypto preflight and atomic CAS.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_goals_recurring_pages.part.dart",
+        "lib/waffra_home_account_tools.part.dart",
+        "lib/waffra_home_category_workflows.part.dart",
+        "lib/storage/waffra_encrypted_module_recycle.dart",
+        "lib/storage/waffra_verified_encrypted_finance_bridge.dart"
+      ],
+      "test_paths": [
+        "test/m938_goals_restore_fab_contract_test.dart",
+        "test/storage/m938_legacy_goal_recycle_repair_test.dart",
+        "test/m668_footer_edge_snackbar_test.dart",
+        "test/storage/m186_module_authority_ui_gate_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m174-main-sha-postmerge.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "The fixed global 58dp FAB is never moved, resized or reimplemented by the notice, and Arabic/English multi-line text grows upward beside it.",
+        "A typed SQLCipher tombstone mismatch is never silently accepted: a fully verified encrypted source and explicit repair approval are mandatory; any partial existing witness, malformed archive, duplicate ID, stale source or divergent finance digest fails closed.",
+        "No legacy repair may rewrite a financial transaction, cash account, savings funding movement, archived goal's amount or immutable encrypted snapshot.",
+        "A backup password and source CAS/SQLCipher restore preflight remain mandatory; remove only the redundant second fingerprint inside an already biometrically authorized still-open dialog.",
+        "Full code-side CI cannot substitute for Android screenshots, physical biometric count or owner's historical archive and balance parity."
       ]
     }
   ]
