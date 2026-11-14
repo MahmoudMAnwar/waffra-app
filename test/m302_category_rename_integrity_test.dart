@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/main.dart';
@@ -52,7 +53,7 @@ void main() {
   });
 
   test('M302 rejected category mutation reloads authority, never leaves phantom UI',(){
-    final main=File('lib/main.dart').readAsStringSync();
+    final main=readWaffraMainSourceForContracts();
     final start=main.indexOf('Future<void> addCategory(');
     final finish=main.indexOf('WaffraFinanceRoute _moduleMutationRoute',start);
     expect(start,greaterThan(0));
@@ -68,7 +69,7 @@ void main() {
   });
 
   test('M302 live update path must use field-preserving clones',(){
-    final source=File('lib/main.dart').readAsStringSync();
+    final source=readWaffraMainSourceForContracts();
     final start=source.indexOf('Future<void> updateCategory(');
     final end=source.indexOf('WaffraFinanceRoute _moduleMutationRoute',start);
     expect(start,greaterThan(0));
