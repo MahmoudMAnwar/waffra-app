@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "change_id": "M690-M921-ISSUES632-637-20261114",
+  "change_id": "M690-M922-ISSUES632-637-20261114",
   "human_scope_review": "Issue #629 completes prior PR #628 only after user-visible acceptance; #631 explicitly authorizes three exact screenshots for Goals/Dues/SMS Review, permanently visible financial activity, non-moving FAB-aligned notice, and savings/goal-due cash safety. Existing tests replace outdated visual assumptions without deleting financial safety assertions. Device screenshots/old restore still require external device evidence.",
   "user_requested_changes": [
     "M690 #632 permanently disable third-party AI bank SMS uploads and opt-in on previously installed versions, remove Settings toggle and signed Android staging worker, retain local encrypted SMS Review and money writer.",
@@ -93,7 +93,8 @@
     "M905 #633 continue full Home state modularization by moving original four verified display-only transfer and savings history cache methods into registered Dart part byte-identically, retain account filters and secure source with strict M385/M550 and original Dart/Python QA.",
     "M921 #633 preserve all original verified recurring provenance and budget-isolation assertions while eliminating Dart's unused original IO import warning by adding a positive real production part witness inside the already bounded M470 test; never suppress storage analysis or alter runtime finance.",
     "M906 #633 relocate original Home sum/category leaf-only selectors and localized consent dialogs unchanged into registered Dart part with exact-source QA; retain approved UI and finance arithmetic.",
-    "M907 #633 relocate original Home delete-all transaction path unchanged into registered part with explicit confirmation, SQLCipher captured ledger and SMS hashes durable atomic journal, no early state clear and exact-source QA."
+    "M907 #633 relocate original Home delete-all transaction path unchanged into registered part with explicit confirmation, SQLCipher captured ledger and SMS hashes durable atomic journal, no early state clear and exact-source QA.",
+    "M922 #633 repair original M636 verified Widget balance and anti-raw-SMS Flutter source tests after unchanged M904 Widget balance module extraction by changing only stale raw main readers to true registered Home part helper; preserve all 19 assertions, original SQLCipher/owner/privacy safety and M385 exact source."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -351,7 +352,8 @@
     "lib/waffra_home_category_confirmations.part.dart",
     "lib/waffra_home_delete_all_transactions.part.dart",
     "test/m906_home_category_confirmations_extraction_test.dart",
-    "test/m907_home_delete_all_extraction_test.dart"
+    "test/m907_home_delete_all_extraction_test.dart",
+    "test/waffra_widget_quick_capture_test.dart"
   ],
   "approved_deleted_files": [
     "lib/waffra_sms_cloud_review_analyzer.dart"
@@ -2329,6 +2331,20 @@
       {
         "start": " test('M470 due posting retains recurring provenance, never manual',(){",
         "end": "  final start=home.indexOf('if(!entries.any((e)=>e.id==id)){');"
+      }
+    ],
+    "test/waffra_widget_quick_capture_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "void main(){"
+      },
+      {
+        "start": " test('M636 circular widget keeps verified balance without SMS entry',(){",
+        "end": "  final widget=File('native/WaffraWidget.kt').readAsStringSync();"
+      },
+      {
+        "start": " test('M636 no standalone widget SMS review can bypass authentication',(){",
+        "end": "  final native=File('native/WaffraMainActivity.kt').readAsStringSync();"
       }
     ]
   }
