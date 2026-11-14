@@ -3490,6 +3490,30 @@
         "Strict registered source reconstruction is required and no pre-existing assertion is disabled.",
         "Widget screenshots and encrypted V24 restore on owner physical Android remain separate acceptance proof."
       ]
+    },
+    {
+      "id": "M739-REGISTERED-HOME-SOURCE-STORAGE-ANALYZE",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Three original storage tests migrated to strict actual Home part source read retained unused dart:io import, causing exact-head Dart analyzer warnings.",
+      "approved_behavior": "Explicit fail-closed File existence checks for the actual registered Home editor/account-tools Dart parts while preserving all previous positive and negative finance, SMS and restore assertions; strict analyzer severity unchanged.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_entry_sheet.part.dart",
+        "lib/waffra_home_account_tools.part.dart"
+      ],
+      "test_paths": [
+        "test/storage/m175_live_finance_mutation_intent_test.dart",
+        "test/storage/m266_home_bound_source_regression_test.dart",
+        "test/storage/m620_restored_home_ledger_parity_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m174-main-sqlcipher-regression.yml"
+      ],
+      "safety_invariants": [
+        "No source of funds or encrypted user archive modified.",
+        "No QA assertion skipped or weakened.",
+        "Fail closed when required registered Home part is absent."
+      ]
     }
   ]
 }
