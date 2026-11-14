@@ -1,3 +1,23 @@
+## M937 — Phase Four exact-SHA regression reporting (2026-11-14)
+
+- Issue [#642](https://github.com/MahmoudMAnwar/waffra-app/issues/642); same [Draft PR #640](https://github.com/MahmoudMAnwar/waffra-app/pull/640). Status: Partial, exact-HEAD CI pending.
+- Owner-approved Phase Four: existing full Flutter suite reports real passed, failed, skipped, total and approximate repeated failure symptom groups, not confirmed unique defects. JSON file reporter preserves original expanded output; original test step and source security gates still fail on any error, skipped cases not converted to passed.
+- Safeguards: raw events and error/stack content never uploaded, only sanitized report and Job Summary. Missing runner data fails closed. No financial application code, source authority, Android permissions, keys, release or extra suite changes.
+- QA: [M937 report acceptance](qa/M937_PHASE_FOUR_TEST_REPORTING.md) and test/qa/m937_flutter_test_report_test.py.
+
+## M936 — Phase Three signed-release source readiness, owner acceptance NO-GO (2026-11-14)
+
+- **Issue:** [#641](https://github.com/MahmoudMAnwar/waffra-app/issues/641). **Same Draft PR:** [#640](https://github.com/MahmoudMAnwar/waffra-app/pull/640). **Status:** Partial — read-only release source inventory and hostile scanner tests added; owner signed-APK/physical Android acceptance and explicit launch approval pending.
+- **Scope:** run a cheap, exact-SHA read-only preflight in existing M550 for signed APK hash/certificate gate (M190), two-phone installed APK identity (M267), signed bundle source audit (M171), permission/security (M279), release notes ancestry (M449), and M935 hardware/financial acceptance checklist. Negative mutation tests must reject missing, replaced or symlinked guard sources. A passing source inventory is explicitly never a Play deployment or production SQLCipher cutover permission.
+- **QA:** [M936 Third Phase readiness](qa/M936_PHASE_THREE_RELEASE_READINESS.md). This is a safety/release-readiness tranche only; no evidence of prior wording of Stage Three was available, no live sign or deployment action, no changes to `lib/`, `android/`, Firebase, finance writer or user archive. Keep Draft and track owner acceptance independently.
+
+## M935 — Phase Two code-side financial acceptance & physical Android handoff (2026-11-14)
+
+- **Issue:** [#639](https://github.com/MahmoudMAnwar/waffra-app/issues/639). **PR:** [PR #640](https://github.com/MahmoudMAnwar/waffra-app/pull/640) (Draft). **Status:** Partial — synthetic finance regression and physical-device matrix implemented; exact-HEAD CI and owner Android acceptance pending.
+- **Owner scope:** finish repository-side Phase Two checks for legacy Backup/Restore, 19 distinct IDs vs doubled rows, signed halala totals, bank-account separation, verified widget/PDF routes, typed goals/recurring/budgets/categories, and cold encrypted reopen. Keep original V24 file unchanged and use synthetic fixtures only.
+- **QA:** `test/storage/m935_phase_two_restore_finance_acceptance_test.dart` cold-reopens two independent disposable SQLCipher vaults from one authenticated V24→V3 archive, reconciles original 19 IDs, 17 expenses/2 incomes, DB/Widget/snapshot money totals, typed history, and zero invented bank accounts. Negative duplicate/missing/altered row tests stay strict. Existing full Flutter CI picks up this test automatically. The 100% acceptance of PDF rendering, zero overflow, real Android freezes and the owner's original backup **cannot** be certified by host CI.
+- **Owner-only UAT:** [M935 Android checklist](qa/M935_PHASE_TWO_ANDROID_ACCEPTANCE.md) first on expendable test handset; no spouse-handset update or real archive upload until owner's financial parity and no-duplicate evidence passes. No app runtime, finance writer, permissions, UI or production settings were changed.
+
 ## M623 — No automatic rescue export during restore (2026-11-13)
 
 - **Issue:** [#623](https://github.com/MahmoudMAnwar/waffra-app/issues/623). **Same PR:** [#621](https://github.com/MahmoudMAnwar/waffra-app/pull/621) (Draft). **Status:** Partial — removed mandatory encrypted rescue generation, external-save requirement, success/confirmation wording and rescue API from verified restore; source and targeted tests updated; exact-HEAD CI/device acceptance pending.

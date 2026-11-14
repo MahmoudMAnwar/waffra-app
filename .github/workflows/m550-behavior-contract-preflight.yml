@@ -59,6 +59,10 @@ jobs:
           done
       - name: Test the M550 fail-closed stale-assertion scanner itself
         run: python3 -m unittest discover -s test/qa -p 'm550_behavior_contract_preflight_test.py' -v
+      - name: M936 Phase Three signed-release source evidence (read-only NO-GO)
+        run: |
+          python3 -m unittest discover -s test/qa -p 'm936_release_evidence_gate_test.py' -v
+          python3 scripts/qa/m936_release_evidence_gate.py --source-sha "$(git rev-parse HEAD)"
       - name: Verify all registered workflows and impacted test contracts BEFORE expensive CI
         if: github.event_name == 'pull_request'
         env:
