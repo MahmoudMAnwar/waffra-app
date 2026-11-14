@@ -5372,6 +5372,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  // finance reads/writes still run independently after each committed change.
  Future<void>? _m474PullRefreshInFlight;
  // M782: verified pull-to-refresh and finance reload moved to registered Home part.
+ // M750: verified Home financial startup load lives in registered same-library part.
  Future<void> _refreshWidget()async{
   if(!Platform.isAndroid)return;
   try{
