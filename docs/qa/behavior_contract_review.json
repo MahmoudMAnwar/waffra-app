@@ -4011,6 +4011,34 @@
         "Missing or duplicated real registered source markers fail closed.",
         "Physical Android financial/backup parity remains a separate acceptance gate."
       ]
+    },
+    {
+      "id": "M812-ORIGINAL-VERIFIED-SMS-ACCOUNT-AND-OPTIONAL-BUDGET-CHOICE",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "The Home State inline SMS money-account and independent budget picker handled bank sender/last-four evidence, exact encrypted account generation, and optional per-expense budget association.",
+      "approved_behavior": "Relocate byte-identical actual methods into registered same-library Dart part, preserving new-account and existing-account explicit consent, source evidence and no automatic selection, optional budget and original review UI.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_verified_finance_pickers.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/m812_home_verified_finance_pickers_extraction_test.dart",
+        "test/m470_sms_sender_and_rule_accuracy_test.dart",
+        "test/m363_transaction_category_inline_creation_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Never infer a verified money account from the SMS sender, last-four digits or stale account generation.",
+        "Account creation and any SMS finance posting require actual owner confirmation and authority validation.",
+        "Budget association remains optional and cannot silently change ledger or cash totals.",
+        "No old encrypted records touched; physical Android and owner backup parity remain independent."
+      ]
     }
   ]
 }
