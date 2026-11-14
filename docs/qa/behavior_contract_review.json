@@ -3514,6 +3514,34 @@
         "No QA assertion skipped or weakened.",
         "Fail closed when required registered Home part is absent."
       ]
+    },
+    {
+      "id": "M741-HOME-OFFLINE-SMS-RULES-REAL-IMPLEMENTATION",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Home State retained original on-device SMS rule editor, selected verified account association, learned manual keywords and safe bank-operation categories inline.",
+      "approved_behavior": "Byte-identical methods now reside inside a registered same-library Dart part while owner key and timer fields remain on original Home State. Actual offline SMS source, local sender-rule selection and currency-safe preview persist without a new finance/cloud writer.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_sms_rules.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/m741_home_sms_rules_extraction_test.dart",
+        "test/m462_smart_sms_rule_review_test.dart",
+        "test/m470_sms_sender_and_rule_accuracy_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Never upload SMS to cloud or infer a bank account or SAR amount from ambiguous source text.",
+        "Original explicit customer confirmation, verified SQLCipher ledger and OTP exclusions are unchanged.",
+        "The original app production source must be fully reconstructed from the registered part in QA, not faked.",
+        "No physical handset performance/backup-restore acceptance claimed by source-only refactoring."
+      ]
     }
   ]
 }
