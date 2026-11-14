@@ -8,6 +8,8 @@ import 'package:waffra/storage/waffra_accounts_repository.dart';
 import 'package:waffra/storage/waffra_account_details_schema.dart';
 import 'package:waffra/storage/waffra_custom_institution_links.dart';
 import 'package:waffra/storage/waffra_accounts_portable_backup_v3.dart';
+import 'package:waffra/storage/waffra_encrypted_receipt_vault.dart';
+import 'package:waffra/storage/waffra_portable_encrypted_backup_exporter.dart';
 import 'package:waffra/waffra_recurring_account_groups.dart';
 
 void main(){
@@ -75,6 +77,45 @@ void main(){
   final current=await accounts().balances();
   expect(current.singleWhere((a)=>a.id=='root-other').archived,isFalse);
   expect(current.singleWhere((a)=>a.id=='child-other').balanceMinor,250000);
+ });
+
+ test('M943 original encrypted V3 envelope restores custom Other group atomically',()async{
+  await bank('owner-root',500000,'other');
+  await bank('child-savings',200000,'other');
+  await WaffraCustomInstitutionLinks.assign(db,
+   accountId:'child-savings',rootAccountId:'owner-root',
+   confirmedIso:at,userConfirmed:true);
+  const password='m943-disposable-backup-archive-password';
+  final archive=await WaffraPortableEncryptedBackupExporter(
+   snapshot:WaffraAtomicFinanceSnapshot(
+    store:db,experimentalEnabled:true),
+   receiptVault:WaffraEncryptedReceiptVault(
+    store:db,experimentalEnabled:true),
+   writerDirectory:dir,verifySourceUnderLock:()async{},
+   experimentalEnabled:true).exportV3(password:password);
+  final preview=await WaffraAccountsPortableBackupV3.verifyAndPreview(
+   encryptedArchive:archive,password:password);
+  expect(preview.customInstitutionLinks?.single['root_account_id'],'owner-root');
+  final target=WaffraEncryptedStore.openAt(
+   File('${dir.path}/restored-v3.sqlite'),
+   key:'m943-custom-institution-restored-test-only');
+  try{
+   await WaffraAccountsPortableBackupV3.restoreToEmptyEncryptedVault(
+    encryptedArchive:archive,password:password,disposableStore:target,
+    userConfirmed:true,experimentalEnabled:true);
+   final restored=await WaffraAccountsRepository(
+    db:target,experimentalEnabled:true).balances();
+   expect(restored.fold<int>(0,(v,a)=>v+a.balanceMinor),700000);
+   expect(restored.singleWhere((a)=>a.id=='child-savings')
+    .customInstitutionRootId,'owner-root');
+   expect(WaffraRecurringAccountGroups.fromAccounts(restored)
+    .singleWhere((g)=>g.id=='bank:account:owner-root')
+    .accounts.length,2);
+   final n=(await target.customSelect(
+    'SELECT COUNT(*) AS n FROM fresh_finance_entries').getSingle())
+    .read<int>('n');
+   expect(n,0);
+  }finally{await target.close();}
  });
 
  test('M943 no guessed cross-provider linkage or unapproved child',()async{
