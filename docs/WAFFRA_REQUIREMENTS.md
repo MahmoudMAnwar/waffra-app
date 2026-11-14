@@ -1,3 +1,9 @@
+## M936 — Phase Three signed-release source readiness, owner acceptance NO-GO (2026-11-14)
+
+- **Issue:** [#641](https://github.com/MahmoudMAnwar/waffra-app/issues/641). **Same Draft PR:** [#640](https://github.com/MahmoudMAnwar/waffra-app/pull/640). **Status:** Partial — read-only release source inventory and hostile scanner tests added; owner signed-APK/physical Android acceptance and explicit launch approval pending.
+- **Scope:** run a cheap, exact-SHA read-only preflight in existing M550 for signed APK hash/certificate gate (M190), two-phone installed APK identity (M267), signed bundle source audit (M171), permission/security (M279), release notes ancestry (M449), and M935 hardware/financial acceptance checklist. Negative mutation tests must reject missing, replaced or symlinked guard sources. A passing source inventory is explicitly never a Play deployment or production SQLCipher cutover permission.
+- **QA:** [M936 Third Phase readiness](qa/M936_PHASE_THREE_RELEASE_READINESS.md). This is a safety/release-readiness tranche only; no evidence of prior wording of Stage Three was available, no live sign or deployment action, no changes to `lib/`, `android/`, Firebase, finance writer or user archive. Keep Draft and track owner acceptance independently.
+
 ## M935 — Phase Two code-side financial acceptance & physical Android handoff (2026-11-14)
 
 - **Issue:** [#639](https://github.com/MahmoudMAnwar/waffra-app/issues/639). **PR:** [PR #640](https://github.com/MahmoudMAnwar/waffra-app/pull/640) (Draft). **Status:** Partial — synthetic finance regression and physical-device matrix implemented; exact-HEAD CI and owner Android acceptance pending.

@@ -1,19 +1,31 @@
 {
   "contract_version": 1,
-  "change_id": "M935-ISSUE639-PHASE-TWO-ACCEPTANCE-20261114",
-  "human_scope_review": "Issue #639: user expressly requests all code-side Phase Two completion, fresh Draft PR, exact residual physical Android tasks. Only synthetic non-production finance regression and QA/requirements/scope docs are in this PR. Original backup, phone databases, SQLCipher routing and UI source untouched.",
+  "change_id": "M935-M936-ISSUES639-641-PHASE-TWO-THREE-20261114",
+  "human_scope_review": "Issue #639: user expressly requests all code-side Phase Two completion, fresh Draft PR, exact residual physical Android tasks. Only synthetic non-production finance regression and QA/requirements/scope docs are in this PR. Original backup, phone databases, SQLCipher routing and UI source untouched. Issue #641 same-PR Phase Three user instruction adds only non-destructive signed-release readiness inventory under M550, no publish or finance changes.",
   "user_requested_changes": [
     "M935 implement synthetic V24 to V3 conversion, two disposable cold SQLCipher restores, exact 19 identity and signed halala parity, goal/recurring/budget history, no invented bank balance, widget/PDF source checks and fail-closed duplicates in a NEW regression test only.",
     "M935 create a concrete private physical Android owner acceptance protocol for old encrypted backup parity, PDF totals, SMS performance, overflow, authentication and update safety; mark device evidence Pending.",
-    "M935 maintain numbered Issue #639 and project requirement history; do not alter financial production code or start any real backup restoration, and keep PR Draft until source tests and owner acceptance."
+    "M935 maintain numbered Issue #639 and project requirement history; do not alter financial production code or start any real backup restoration, and keep PR Draft until source tests and owner acceptance.",
+    "M936 Issue #641 Phase Three: static signed-release source evidence inventory with exact SHA, reject dropped M190/M267/M171/M279/M449/Phase Two gates via focused negative regression tests and existing M550 preflight; remain NO_GO pending owner Android and signed APK acceptance, no production deployment."
   ],
   "allowed_changed_files": [
+    ".github/workflows/m550-behavior-contract-preflight.yml",
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/M935_PHASE_TWO_ANDROID_ACCEPTANCE.md",
+    "docs/qa/M936_PHASE_THREE_RELEASE_READINESS.md",
     "docs/qa/approved_change_scope.json",
+    "scripts/qa/m936_release_evidence_gate.py",
+    "test/qa/m936_release_evidence_gate_test.py",
     "test/storage/m935_phase_two_restore_finance_acceptance_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
-  "bounded_sections": {}
+  "bounded_sections": {
+    ".github/workflows/m550-behavior-contract-preflight.yml": [
+      {
+        "start": "      - name: Test the M550 fail-closed stale-assertion scanner itself",
+        "end": "      - name: Verify all registered workflows and impacted test contracts BEFORE expensive CI"
+      }
+    ]
+  }
 }
