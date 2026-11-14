@@ -2,7 +2,7 @@
 
 **Owner request:** complete all code-side Phase Two checks and hand over only genuine physical-device tasks.
 **Issue:** [#639](https://github.com/MahmoudMAnwar/waffra-app/issues/639).
-**PR:** record the new Draft PR link after creation. **Status: Partial / Hardware UAT pending.**
+**PR:** [PR #640](https://github.com/MahmoudMAnwar/waffra-app/pull/640) (Draft). **Status: Partial / Hardware UAT pending.**
 
 ## CI-side acceptance (synthetic only)
 
