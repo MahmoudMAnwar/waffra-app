@@ -4587,7 +4587,7 @@
     },
     {
       "id": "M644-BIOMETRIC-ONLY-ATOMIC-RESET-NO-FAB-NOTICE",
-      "issue": "Issue #644 / Draft PR pending",
+      "issue": "Issue #644 / Draft PR #645",
       "previous_behavior": "Home uses saveCaptured(fullFinanceReset) even when encrypted SQLCipher refuses destructive snapshot edits; a generic reload error appears. No-FAB Tools notice inherits the narrower 87%-and-440dp footer card even though no + occupies its end.",
       "approved_behavior": "Financial delete flows from one explicit action directly through device biometric to the dedicated active SQLCipher-only all-finance reset; no forced backup, no extra confirmation, and no legacy fallback. The writer checks fresh source generation, typed ledger/receipt ownership, SQL foreign keys, known finance tables and all-or-nothing native transaction. Preserve account login and nonfinance preferences. No-FAB pages show notice to normal page margins, while existing + FAB notice bottom/position stay unchanged with wrapping upwards.",
       "source_paths": [
