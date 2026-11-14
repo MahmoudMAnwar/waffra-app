@@ -3152,6 +3152,39 @@
         "Unregistered or missing Home entry parts must fail closed.",
         "No changes to money/backup writers, accounts or SMS data. Physical Android and original private archive parity remain separate acceptance gates."
       ]
+    },
+    {
+      "id": "M728-ORIGINAL-SOURCE-TEST-COMPATIBILITY-BATCH1",
+      "issue": "Issue #633 / Draft PR #638, exact-head source relocation regressions",
+      "previous_behavior": "Following the already-authorized Home Dart part extraction, 12 original QA files continued to read only raw lib/main.dart and falsely missed production functionality still present in registered parts.",
+      "approved_behavior": "Use existing test/support/waffra_main_source.dart to restore original Home method order from real registered part text. Original test expectation bodies and negative assertions remain unchanged; no CI skips, no production code or financial persistence edits.",
+      "source_paths": [
+        "test/support/waffra_main_source.dart",
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m110_live_finance_authority_writer_test.dart",
+        "test/m150_file_backup_leaf_categories_uat_test.dart",
+        "test/m153_secure_backup_sms_categories_uat_test.dart",
+        "test/m161_manual_category_leaf_routing_test.dart",
+        "test/m163_atomic_backup_restore_durability_test.dart",
+        "test/m262_bank_sms_notes_separation_test.dart",
+        "test/m264_app_wide_action_haptics_test.dart",
+        "test/m275_smooth_confirmation_performance_test.dart",
+        "test/m296_monthly_budget_and_transactions_test.dart",
+        "test/m300_all_supported_currency_sms_matrix_test.dart",
+        "test/m300_jod_cliq_bank_sms_test.dart",
+        "test/m302_cross_feature_input_precision_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "All existing finance SMS backup budget and UI assertions stay identical.",
+        "Do not copy or fake source into test strings; read real registered Dart parts.",
+        "M385 anchors apply only to import and original source-reader test bodies."
+      ]
     }
   ]
 }

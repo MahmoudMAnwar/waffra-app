@@ -1852,3 +1852,7 @@ Audit of remaining production direct Material `DropdownButtonFormField<String>` 
 
 ### M727 — Issue #633 / Draft PR #638: restore exact-home finance-source preflight
 The verified manual/SMS `entrySheet` resides in registered `lib/waffra_home_entry_sheet.part.dart`, not directly in `main.dart`. M340 must inspect the actual declared part within the original Home method boundary and retain every original SQLCipher/SMS/FX/date/receipt evidence assertion; missing parts and duplicate markers must fail closed. No production finance or restore code changes are authorized. Same-head full CI and actual Android old-backup parity remain separately required.
+
+
+### M728 — #633 / Draft PR #638: original 12-file Flutter regression compatibility
+Repoint obsolete `File('lib/main.dart').readAsStringSync()` inspections in twelve still-active original test files to the verified source reassembly from registered production Dart parts. Preserve every financial, local SMS, backup, category, budget, cash and mobile UI positive/negative test assertion. Limit each edit to an import and the pre-existing test method source reader; leave production finance, global FAB and backup data unchanged. Same-head CI is required before signoff.
