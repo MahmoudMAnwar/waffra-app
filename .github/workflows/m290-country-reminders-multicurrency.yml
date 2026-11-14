@@ -105,7 +105,17 @@ jobs:
           python3 -m unittest discover -s test/qa -p 'm290_country_permissions_test.py' -v
           python3 - <<'PY'
           from pathlib import Path
-          app=Path('lib/main.dart').read_text()
+          import re
+          main=Path('lib/main.dart').read_text()
+          parts=re.findall(r"(?m)^part '([^']+\\.part\\.dart)';", main)
+          assert parts and len(parts)==len(set(parts)), "Registered Home parts must be unique"
+          home_parts=[]
+          for name in parts:
+            part=Path('lib')/name
+            body=part.read_text()
+            assert "part of 'main.dart';" in body, "Invalid declared part "+name
+            home_parts.append(body)
+          app=main+'\\n'+'\\n'.join(home_parts)
           setup=Path('lib/waffra_country_first_run_page.dart').read_text()
           verify=Path('lib/waffra_sms_multicurrency_review.dart').read_text()
           assert "googleFirstRunSetup&&WaffraSaudiRelease.locationCountryOnboarding;" in app
