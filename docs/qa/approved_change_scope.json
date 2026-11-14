@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "change_id": "M690-M850-ISSUES632-637-20261114",
+  "change_id": "M690-M845-ISSUES632-637-20261114",
   "human_scope_review": "Issue #629 completes prior PR #628 only after user-visible acceptance; #631 explicitly authorizes three exact screenshots for Goals/Dues/SMS Review, permanently visible financial activity, non-moving FAB-aligned notice, and savings/goal-due cash safety. Existing tests replace outdated visual assumptions without deleting financial safety assertions. Device screenshots/old restore still require external device evidence.",
   "user_requested_changes": [
     "M690 #632 permanently disable third-party AI bank SMS uploads and opt-in on previously installed versions, remove Settings toggle and signed Android staging worker, retain local encrypted SMS Review and money writer.",
@@ -78,7 +78,8 @@
     "M840 #633 move original SQLCipher verified Home/Widget transaction reconciliation method unchanged into registered same-library part, preserve source owner, ready guard, exact account balances and widget refresh; keep in-flight State field and independent complete CI/phone data parity.",
     "M830 #633 move original Home category/summary/filter + current-tab/footer/back navigation helper methods to registered same-library part, preserve original approved UI, global FAB and unchanged lifecycle/build.",
     "M835 #633 preserve original no-auto-post Home bank SMS review indicator, message counts, pending/error, explicit rescan and user navigation and all approved UI by moving unchanged card to same-library part; no writer/permissions changes.",
-    "M850 #633 relocate exact existing Home SMS notice debouncer and explicit rescan methods into registered same-library part, preserving original timer, native owner permission, local-only/consent and no-auto financial post, source tests and private archive acceptance."
+    "M850 #633 relocate exact existing Home SMS notice debouncer and explicit rescan methods into registered same-library part, preserving original timer, native owner permission, local-only/consent and no-auto financial post, source tests and private archive acceptance.",
+    "M845 #633 preserve every native bank SMS/cloud no-upload, account-bound manual, SAR/OTP and review assertion by changing only two obsolete M436 direct-main source readers to strict registered true-source helper; no original test assertion edited."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -353,16 +354,16 @@
     ],
     "test/m436_cloud_review_pipeline_test.dart": [
       {
-        "start": "void main() {",
-        "end": " test('M436 native queue claim is atomic and withholds future retries',(){"
+        "start": "import 'dart:io';",
+        "end": "void main() {"
       },
       {
         "start": " test('M452 background posts only with account-bound owner rule',(){",
-        "end": " test('M452 no unsolicited cloud choice on signup or SMS review',(){"
+        "end": "   expect(auto,contains('!matched.autoPost'));"
       },
       {
         "start": " test('M452 no unsolicited cloud choice on signup or SMS review',(){",
-        "end": " test('M436 redactor accepts compact English multi-currency SMS',(){"
+        "end": "   final cloud=File('lib/waffra_sms_cloud_service.dart').readAsStringSync();"
       }
     ],
     "test/m528_settings_async_cache_regression_test.dart": [
