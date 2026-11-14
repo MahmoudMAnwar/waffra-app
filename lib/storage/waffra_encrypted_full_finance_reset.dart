@@ -439,7 +439,11 @@ class WaffraEncryptedFullFinanceReset {
         }
         final cleared = await snapshot.commit(
           expectedGeneration: current.generation,
-          fullFinanceSnapshot: const <String, Object?>{'entries': '[]'},
+          fullFinanceSnapshot: const <String, Object?>{
+            'entries': '[]',
+            // Even restored/migrated vaults must reopen with a known catalog.
+            'waffra_categories_v24': '[]',
+          },
         );
         for (final table in targets) {
           if (await _count(table) != 0) {
@@ -450,7 +454,7 @@ class WaffraEncryptedFullFinanceReset {
           'PRAGMA foreign_key_check',
         ).get()).isNotEmpty ||
             _ledger(cleared.values['entries'] as String?).isNotEmpty ||
-            cleared.values.length != 1 ||
+            cleared.values.length != 2 ||
             cleared.generation != current.generation + 1) {
           throw StateError('Biometric reset commit integrity mismatch.');
         }
