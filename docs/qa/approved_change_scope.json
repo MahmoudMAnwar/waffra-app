@@ -1993,15 +1993,15 @@
       },
       {
         "start": " test('M615 approved review is structured and scroll thumb stays off RTL SMS',(){",
-        "end": "   final section=main.substring("
+        "end": "  final section=main.substring("
       },
       {
         "start": " test('M618 No/Edit alternatives are source-correct and must not auto-post',(){",
-        "end": "   final s=main.substring("
+        "end": "  final s=main.substring("
       },
       {
         "start": " test('M617 verified login removes only the second OS probe and never skips secure KDF',(){",
-        "end": "   final signIn=app.substring("
+        "end": "  final signIn=app.substring("
       }
     ]
   }
