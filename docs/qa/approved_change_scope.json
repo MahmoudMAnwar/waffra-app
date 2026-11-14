@@ -94,7 +94,8 @@
     "M921 #633 preserve all original verified recurring provenance and budget-isolation assertions while eliminating Dart's unused original IO import warning by adding a positive real production part witness inside the already bounded M470 test; never suppress storage analysis or alter runtime finance.",
     "M906 #633 relocate original Home sum/category leaf-only selectors and localized consent dialogs unchanged into registered Dart part with exact-source QA; retain approved UI and finance arithmetic.",
     "M907 #633 relocate original Home delete-all transaction path unchanged into registered part with explicit confirmation, SQLCipher captured ledger and SMS hashes durable atomic journal, no early state clear and exact-source QA.",
-    "M922 #633 repair original M636 verified Widget balance and anti-raw-SMS Flutter source tests after unchanged M904 Widget balance module extraction by changing only stale raw main readers to true registered Home part helper; preserve all 19 assertions, original SQLCipher/owner/privacy safety and M385 exact source."
+    "M922 #633 repair original M636 verified Widget balance and anti-raw-SMS Flutter source tests after unchanged M904 Widget balance module extraction by changing only stale raw main readers to true registered Home part helper; preserve all 19 assertions, original SQLCipher/owner/privacy safety and M385 exact source.",
+    "M908 #633 extract original Home due account provenance helper byte-for-byte into registered Dart part without inventing account identities; preserve account-wallet provenance, trusted SQLCipher history, no writer, M385 and M550 and strict Dart/Python original-source tests."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -353,7 +354,9 @@
     "lib/waffra_home_delete_all_transactions.part.dart",
     "test/m906_home_category_confirmations_extraction_test.dart",
     "test/m907_home_delete_all_extraction_test.dart",
-    "test/waffra_widget_quick_capture_test.dart"
+    "test/waffra_widget_quick_capture_test.dart",
+    "lib/waffra_home_due_account_provenance.part.dart",
+    "test/m908_home_due_provenance_extraction_test.dart"
   ],
   "approved_deleted_files": [
     "lib/waffra_sms_cloud_review_analyzer.dart"
@@ -463,7 +466,7 @@
         "end": " @override void dispose(){if(!_m663FirstInteractiveFrame.isCompleted)"
       },
       {
-        "start": " String? _m652ActivityAccountKey;",
+        "start": " final Map<String,Future<String?>> _m650DueSourceCache={};",
         "end": " WaffraFinanceAuthorityRead? _lastFinanceAuthorityRead;"
       },
       {

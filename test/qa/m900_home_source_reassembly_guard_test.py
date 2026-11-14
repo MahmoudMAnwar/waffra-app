@@ -30,6 +30,7 @@ class M900RegisteredHomeReassemblyGuard(unittest.TestCase):
             "waffra_home_category_confirmations.part.dart",
             "waffra_home_delete_all_transactions.part.dart",
             "waffra_home_unified_activity_reads.part.dart",
+            "waffra_home_due_account_provenance.part.dart",
         ):
             self.assertEqual(main.count("part '" + part + "';"), 1, part)
             self.assertTrue(source("lib/" + part).startswith("part of 'main.dart';"), part)
@@ -82,6 +83,7 @@ class M900RegisteredHomeReassemblyGuard(unittest.TestCase):
             " void _m648InvalidateTransfers(){",
             " Future<List<WaffraInternalTransferHistory>> _m648HomeTransfers(",
             " Future<List<WaffraVerifiedGoalMovement>> _m649HomeSavings(",
+            " Future<String?> _m650DueVerifiedAccount(MoneyEntry entry){",
             " void _publishVerifiedTransactionLedger(",
         ):
             self.assertEqual(original.count(method), 1, method)

@@ -4409,6 +4409,26 @@
         "Fail closed on missing/detached/duplicate Dart part; no mocked code for source tests.",
         "Physical Android and password-authenticated owner V24 restore parity remain separately unverified."
       ]
+    },
+    {
+      "id": "M908-DUE-ACCOUNT-PROVENANCE-ORIGINAL-EXTRACTION",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Original Home read-only due payment account provenance helper was inline in Home State and memoized source account identity for paid goals and due transactions.",
+      "approved_behavior": "Move unchanged original helper into same-library registered Dart part, retain goal-wallet versus verified child account provenance, owner-bound read, missing-link null result and account cache; no write or changed finance behavior.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_due_account_provenance.part.dart"
+      ],
+      "test_paths": [
+        "test/m908_home_due_provenance_extraction_test.dart",
+        "test/qa/m900_home_source_reassembly_guard_test.py"
+      ],
+      "safety_invariants": [
+        "Never infer an account identity from an unverified/missing child link.",
+        "Goal wallet payment proof must use the exact original integer-halalas threshold.",
+        "Closed session or unavailable finance binding yields null instead of an invented account.",
+        "No transaction save, original backup data mutation or global add-button changes."
+      ]
     }
   ]
 }

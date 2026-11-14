@@ -145,6 +145,7 @@ part 'waffra_home_finance_startup.part.dart';
 part 'waffra_home_sms_confirmation.part.dart';
 part 'waffra_home_verified_account_flows.part.dart';
 part 'waffra_home_unified_activity_reads.part.dart';
+part 'waffra_home_due_account_provenance.part.dart';
 part 'waffra_home_finance_persistence_due.part.dart';
 part 'waffra_home_transaction_ledger_actions.part.dart';
 part 'waffra_home_delete_all_transactions.part.dart';
@@ -4377,24 +4378,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  // M650: memoize receipt/linked-money account provenance for paid dues.
  // Display-only metadata, never an extra payment or a source-account guess.
  final Map<String,Future<String?>> _m650DueSourceCache={};
- Future<String?> _m650DueVerifiedAccount(MoneyEntry entry){
-  return _m650DueSourceCache.putIfAbsent(entry.id,()async{
-   if(entry.sourceType=='goal_due'&&
-      entry.goalWalletPaidMinor>=
-       WaffraRecurringPolicy.toHalalas(entry.amount)){
-    return waffraIsEnglish?'Savings goal wallet':'محفظة الهدف الادخاري';
-   }
-   final bridge=_financeBinding?.accountsBridge;
-   if(bridge==null)return null;
-   final link=await WaffraVerifiedAccountsApi(bridge:bridge)
-    .readExistingEntryAccount(entryId:entry.id);
-   if(!link.exists||link.accountId==null||_m627ClosingSession)return null;
-   for(final account in _m467Accounts){
-    if(account.id==link.accountId)return _m647VerifiedAccountLabel(account);
-   }
-   return null; // Archived/missing account identity must not be invented.
-  });
- }
+ // M908: original guarded due-account provenance method lives in registered Home part.
  String? _m652ActivityAccountKey;
  Future<({
   List<WaffraInternalTransferHistory> transfers,

@@ -79,6 +79,7 @@ def read_waffra_home_source(root=ROOT):
             "lib/waffra_home_verified_account_flows.part.dart",
             " Future<void> _m467RefreshHomeAccounts()async{")
     restore(" // M905: original verified transfer and savings activity cache readers moved unchanged to registered Home part.\n", "lib/waffra_home_unified_activity_reads.part.dart", " void _m648InvalidateTransfers(){")
+    restore(" // M908: original guarded due-account provenance method lives in registered Home part.\n", "lib/waffra_home_due_account_provenance.part.dart", " Future<String?> _m650DueVerifiedAccount(MoneyEntry entry){")
     restore(" // M770: original verified SMS review confirmation and entry batching moved to same-library part.\n",
             "lib/waffra_home_sms_confirmation.part.dart",
             " Future<List<MoneyEntry>> _m593BuildVerifiedEntries(")
