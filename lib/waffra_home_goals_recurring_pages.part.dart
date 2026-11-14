@@ -6,10 +6,37 @@ extension _WaffraHomeGoalsRecurringPagesModule on _HomeScreenState {
  Widget goalsPage(){
   final target=goals.fold<double>(0,(v,g)=>v+g.target);
   final saved=goals.fold<double>(0,(v,g)=>v+g.saved);
+  final today=DateUtils.dateOnly(DateTime.now());
+  bool goalPass(SavingGoal g,String filter){
+   final complete=g.target>0&&g.saved>=g.target;
+   final due=g.dueDate==null?null:DateUtils.dateOnly(g.dueDate!);
+   final delta=due?.difference(today).inDays;
+   return switch(filter){
+    'active'=>g.active,
+    'inactive'=>!g.active,
+    'done'=>complete,
+    'incomplete'=>!complete,
+    'week'=>delta!=null&&delta>=0&&delta<=7,
+    'month'=>due!=null&&due.year==today.year&&due.month==today.month,
+    _=>true,
+   };
+  }
+  const filterValues=<String>['all','active','inactive','done','incomplete','week','month'];
+  final goalCounts=<String,int>{
+   for(final filter in filterValues)
+    filter:goals.where((g)=>goalPass(g,filter)).length,
+  };
+  String filterLabel(String filter)=>switch(filter){
+   'active'=>waffraIsEnglish?'Active':'نشطة',
+   'inactive'=>waffraIsEnglish?'Inactive':'غير نشطة',
+   'done'=>waffraIsEnglish?'Completed':'مكتملة',
+   'incomplete'=>waffraIsEnglish?'Incomplete':'غير مكتملة',
+   'week'=>waffraIsEnglish?'This week':'هذا الأسبوع',
+   'month'=>waffraIsEnglish?'This month':'هذا الشهر',
+   _=>waffraIsEnglish?'All':'الكل',
+  };
   final filtered=goals.where((g)=>
-   (goalDisplay=='all'||
-    (goalDisplay=='done'?(g.target>0&&g.saved>=g.target):
-     (g.active&&(g.target<=0||g.saved<g.target))))&&
+   goalPass(g,goalDisplay)&&
    waffraSearchAny([g.name,waffraTr(g.name)],goalSearch)).toList();
   final ordered=filtered.toList()..sort((a,b){
    if(a.active!=b.active)return a.active?-1:1;
@@ -41,29 +68,53 @@ extension _WaffraHomeGoalsRecurringPagesModule on _HomeScreenState {
        goals.where((g)=>g.active).length.toString(),Icons.track_changes),
      ]),
      const SizedBox(height:12),
-     // Keep filter controls a single scrollable row at 320dp. The global
-     // floating + stays on the unchanged scaffold, not inside this list.
+     // M938: accurate status/due counts, grouped in one filter funnel.
+     // The independent 3-dot menu contains Deleted/Inactive goal actions.
      SingleChildScrollView(scrollDirection:Axis.horizontal,
       child:Row(children:[
-       _filterChip(waffraIsEnglish?'All':'الكل',goalDisplay=='all',
-        ()=>setState(()=>goalDisplay='all')),
-       const SizedBox(width:7),
-       _filterChip(waffraIsEnglish?'Active':'نشطة',goalDisplay=='active',
-        ()=>setState(()=>goalDisplay='active')),
-       const SizedBox(width:7),
-       _filterChip(waffraIsEnglish?'Completed':'مكتملة',goalDisplay=='done',
-        ()=>setState(()=>goalDisplay='done')),
-       const SizedBox(width:9),
-       IconButton(
-        key:const Key('m689-goals-search-toggle'),
+       SizedBox(width:118,child:WaffraOutlinedItemsCount(
+        label:waffraIsEnglish?'Goals':'الأهداف',count:goals.length)),
+       const SizedBox(width:6),
+       _filterChip('${filterLabel(goalDisplay)} (${goalCounts[goalDisplay]??0})',
+        true,()=>setState(()=>goalDisplay='all')),
+       PopupMenuButton<String>(
+        key:const Key('m938-goals-filter-menu'),
+        tooltip:waffraIsEnglish?'Filter goals':'فلترة الأهداف',
+        icon:const Icon(Icons.filter_alt_outlined,color:emerald),
+        onSelected:(v)=>setState(()=>goalDisplay=v),
+        itemBuilder:(ctx)=>[
+         for(final filter in filterValues)
+          PopupMenuItem<String>(key:Key('m938-goal-filter-'+filter),
+           value:filter,child:Row(children:[
+            Expanded(child:WaffraText(filterLabel(filter))),
+            Text('${goalCounts[filter]??0}',style:const TextStyle(
+             color:emerald,fontWeight:FontWeight.bold)),
+            if(goalDisplay==filter)...[
+             const SizedBox(width:6),
+             const Icon(Icons.check_rounded,color:emerald,size:17),
+            ],
+           ])),
+        ]),
+       IconButton(key:const Key('m689-goals-search-toggle'),
         tooltip:waffraIsEnglish?'Search goals':'بحث عن هدف',
         onPressed:()=>setState(()=>_m689GoalSearchOpen=!_m689GoalSearchOpen),
         icon:const Icon(Icons.search_rounded,color:emerald)),
-       IconButton(
-        key:const Key('m689-goals-archive'),
-        tooltip:waffraIsEnglish?'Deleted goals':'الأهداف المحذوفة',
-        onPressed:WaffraHaptics.tapRequired(deletedGoalsDialog),
-        icon:const Icon(Icons.filter_alt_outlined,color:emerald)),
+       PopupMenuButton<String>(
+        key:const Key('m938-goals-more'),
+        tooltip:waffraIsEnglish?'More goal actions':'المزيد من إجراءات الأهداف',
+        icon:const Icon(Icons.more_vert_rounded,color:emerald),
+        onSelected:(v){
+         if(v=='trash')unawaited(deletedGoalsDialog());
+         if(v=='inactive'||v=='incomplete')setState(()=>goalDisplay=v);
+        },
+        itemBuilder:(ctx)=>[
+         PopupMenuItem<String>(value:'trash',child:WaffraText(
+          waffraIsEnglish?'Deleted goals':'الأهداف المحذوفة')),
+         PopupMenuItem<String>(value:'inactive',child:WaffraText(
+          '${waffraIsEnglish?'Inactive goals':'الأهداف غير النشطة'} (${goalCounts['inactive']??0})')),
+         PopupMenuItem<String>(value:'incomplete',child:WaffraText(
+          '${waffraIsEnglish?'Incomplete goals':'الأهداف غير المكتملة'} (${goalCounts['incomplete']??0})')),
+        ]),
       ])),
      if(_m689GoalSearchOpen)...[
       const SizedBox(height:9),
