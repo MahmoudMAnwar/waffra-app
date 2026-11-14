@@ -192,7 +192,7 @@ void main() {
       throwsStateError);
     expect(()=>WaffraRestoredLedgerIdentityGuard.verify(
       authenticatedSource:source,
-      verifiedSnapshot:[{...source.first,'amount':source.first['amount'] as double+1},
+      verifiedSnapshot:[{...source.first,'amount':(source.first['amount'] as num)+1.0},
         ...source.skip(1)]),throwsStateError);
     final sameLooking=[source.first,
       {...source.first,'id':'m935-different-id'}];
