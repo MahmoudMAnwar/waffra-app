@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -54,7 +55,7 @@ void main() {
   });
 
   test('M470 home account preferences never re-activate legacy unassigned filter', () {
-    final source = File('lib/main.dart').readAsStringSync();
+    final source = readWaffraMainSourceForContracts();
     expect(source, isNot(contains("chosen!='none'")));
     expect(source, isNot(contains("next!='none'")));
     expect(source, isNot(contains("selected=='none'")));
