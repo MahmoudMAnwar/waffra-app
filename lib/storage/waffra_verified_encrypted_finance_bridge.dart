@@ -220,6 +220,28 @@ class WaffraVerifiedEncryptedFinanceBridge {
     });
   }
 
+  /// M644: one biometric-only owner approval, exact source witness and SQLCipher lock.
+  Future<WaffraEncryptedFullResetResult> resetAfterBiometric({
+    required WaffraEncryptedHomeWitness baseline,
+    required bool userConfirmed,
+    required bool biometricVerified,
+  }) async {
+    if (!experimentalEnabled || !allWritersRoutedVerified ||
+        !secureKeyVerified) {
+      throw StateError('Verified encrypted source is not available for reset.');
+    }
+    return WaffraEncryptedFullFinanceReset(
+      snapshot: snapshot,
+      writerDirectory: writerDirectory,
+      verifySourceUnderLock: _requireActivatedUnderLock,
+      experimentalEnabled: true,
+    ).resetAfterBiometric(
+      baseline: baseline.snapshot,
+      userConfirmed: userConfirmed,
+      biometricVerified: biometricVerified,
+    );
+  }
+
   Future<WaffraEncryptedFullResetResult> resetVerifiedFinance({
     required WaffraEncryptedHomeWitness baseline,
     required String encryptedBackup,
