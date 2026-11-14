@@ -184,5 +184,20 @@ String readWaffraMainSourceForContracts(){
  const m929_fx=' // M929: no-post foreign currency preview lives in registered Home part.\n';
  if(s.split(m929_fx).length!=2)throw StateError('M929 fx Dart part marker missing or duplicate');
  s=s.replaceFirst(m929_fx,_method('lib/waffra_home_fx_preview.part.dart',' Future<void> _previewForeignBankCurrency('));
+ const m930_visible=' // M930: original visible Home session helper moved without behavioral change.\n';
+ if(s.split(m930_visible).length!=2)throw StateError('M930 visible original production Dart part missing/duplicate');
+ s=s.replaceFirst(m930_visible,_method('lib/waffra_home_auth_visibility.part.dart',' Future<bool> _m663AwaitVisible(int epoch)async{'));
+ const m930_binding=' // M930: original binding Home session helper moved without behavioral change.\n';
+ if(s.split(m930_binding).length!=2)throw StateError('M930 binding original production Dart part missing/duplicate');
+ s=s.replaceFirst(m930_binding,_method('lib/waffra_home_finance_binding.part.dart',' Future<void> _ensureFinanceBound()async{'));
+ const m930_fab=' // M930: original fab Home session helper moved without behavioral change.\n';
+ if(s.split(m930_fab).length!=2)throw StateError('M930 fab original production Dart part missing/duplicate');
+ s=s.replaceFirst(m930_fab,_method('lib/waffra_home_fab_actions.part.dart',' Future<void> _launchAddAction(Future<void> Function() action,{bool fromMenu=false})async{'));
+ const m930_resume=' // M930: original resume Home session helper moved without behavioral change.\n';
+ if(s.split(m930_resume).length!=2)throw StateError('M930 resume original production Dart part missing/duplicate');
+ s=s.replaceFirst(m930_resume,_method('lib/waffra_home_resume_handler.part.dart',' void _m468OnResume(){'));
+ const m930_widgets=' // M930: original widgets Home session helper moved without behavioral change.\n';
+ if(s.split(m930_widgets).length!=2)throw StateError('M930 widgets original production Dart part missing/duplicate');
+ s=s.replaceFirst(m930_widgets,_method('lib/waffra_home_widget_action_routes.part.dart',' void _returnToHome(){'));
  return s;
 }
