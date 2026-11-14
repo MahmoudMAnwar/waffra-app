@@ -114,4 +114,7 @@ def read_waffra_home_source(root=ROOT):
     restore(" // M835: existing bank SMS review indicator card moved unchanged to registered Home part.\n",
             "lib/waffra_home_sms_review_indicator.part.dart",
             " // ignore: unused_element\n Widget _autoSmsReviewCard(){")
+    restore(" // M850: original native SMS notice/rescan logic lives in registered Home Dart part.\n",
+            "lib/waffra_home_sms_rescan.part.dart",
+            " void _receiveAutoSmsNotice(){")
     return source
