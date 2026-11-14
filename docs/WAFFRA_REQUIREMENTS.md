@@ -2125,3 +2125,7 @@ Original `_m627CloseForLogout` and `_m627AbortFailedLogout`, `_m621OnFinanceNoti
 
 ### M930 — Issue #633 / Draft #638: finish remaining session and navigation helper extraction
 The original Home post-auth visibility/first-frame wait, SQLCipher finance binder and warm-binding adoption, fixed global `+` dedupe/action dispatcher, app resume queue, and in-app/Widget navigation routes are moved without behavioral edits into five same-library Dart parts. Preserve every owner-authenticated SQLCipher authority, no stale close, original SMS refresh throttling, on-resume deferred work, immutable FAB geometry and single active session. Existing source QA must reconstruct the genuine parts; no weakened assertions. CI on the final exact SHA and physical Android owner backup parity remain distinct release gates.
+
+
+### M931 — Issue #633 / Draft #638: preserve original M636 source QA after registered Home extraction
+One original M636 positive safety test still read raw `lib/main.dart`, missing unchanged Home logout/Widget methods relocated into real registered same-library Dart parts. Replace only that test's reader with `readWaffraMainSourceForContracts`, retain all original assertions unchanged including abort signout, owner-verified Widget action, native pending intent, confirmed SMS source, blur FAB and retired Qwen prohibition. M385 scope and M550 test mapping retained; no runtime or financial code mutation. Exact-head CI required.
