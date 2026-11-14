@@ -1,13 +1,16 @@
 {
   "contract_version": 1,
-  "change_id": "M935-M937-ISSUES639-642-20261114",
-  "human_scope_review": "Issue #639: user expressly requests all code-side Phase Two completion, fresh Draft PR, exact residual physical Android tasks. Only synthetic non-production finance regression and QA/requirements/scope docs are in this PR. Original backup, phone databases, SQLCipher routing and UI source untouched. Issue #641 same-PR Phase Three user instruction adds only non-destructive signed-release readiness inventory under M550, no publish or finance changes. M937 #642 same-PR owner request adds exact-SHA CI test totals and heuristic repeated-failure reporting with no additional Flutter run or production code changes.",
+  "change_id": "M935-M938-ISSUES639-643-20261114",
+  "human_scope_review": "Issue #639: user expressly requests all code-side Phase Two completion, fresh Draft PR, exact residual physical Android tasks. Only synthetic non-production finance regression and QA/requirements/scope docs are in this PR. Original backup, phone databases, SQLCipher routing and UI source untouched. Issue #641 same-PR Phase Three user instruction adds only non-destructive signed-release readiness inventory under M550, no publish or finance changes. M937 #642 same-PR owner request adds exact-SHA CI test totals and heuristic repeated-failure reporting with no additional Flutter run or production code changes. Issue #643 user supplied four Android screenshots and requests exact FAB-edge snackbar, goal/dues filter counts and 3-dot menu, safe legacy deleted-goal repair and file-only one-biometric backup UX in same Draft PR; all relevant production edits limited to named methods.",
   "user_requested_changes": [
     "M935 implement synthetic V24 to V3 conversion, two disposable cold SQLCipher restores, exact 19 identity and signed halala parity, goal/recurring/budget history, no invented bank balance, widget/PDF source checks and fail-closed duplicates in a NEW regression test only.",
     "M935 create a concrete private physical Android owner acceptance protocol for old encrypted backup parity, PDF totals, SMS performance, overflow, authentication and update safety; mark device evidence Pending.",
     "M935 maintain numbered Issue #639 and project requirement history; do not alter financial production code or start any real backup restoration, and keep PR Draft until source tests and owner acceptance.",
     "M936 Issue #641 Phase Three: static signed-release source evidence inventory with exact SHA, reject dropped M190/M267/M171/M279/M449/Phase Two gates via focused negative regression tests and existing M550 preflight; remain NO_GO pending owner Android and signed APK acceptance, no production deployment.",
-    "M937 Issue #642 Phase Four: existing full offline Flutter suite emits actual passed/failed/skipped/total and heuristic repeated-failure groups with sanitized exact-SHA artifacts; hostile tests fail closed; no skipped suppressions or new full suite."
+    "M937 Issue #642 Phase Four: existing full offline Flutter suite emits actual passed/failed/skipped/total and heuristic repeated-failure groups with sanitized exact-SHA artifacts; hostile tests fail closed; no skipped suppressions or new full suite.",
+    "M938 #643 Android screenshot scope: snackbar success from backup-dialog Settings must remain beside original stationary global 58dp + even when multiline; goal and due count-aware filter funnels and 3-dot Deleted Goals menu; keep finance lists untouched.",
+    "M938 #643 old authenticated V24 deleted-goal archive needs explicitly user-confirmed SQL-only recovery-index repair under native lock, strict source generation/digest and unique tombstones; no money records or ledger changes.",
+    "M938 #643 restore dialog must use only .waffra SAF file choice and password, removing advanced clipboard import and no redundant second biometric after the initial mandatory one, while retaining encryption/authentication, preflight, explicit replacement and CAS/atomic restore."
   ],
   "allowed_changed_files": [
     ".github/workflows/finance-full-regression.yml",
@@ -16,12 +19,21 @@
     "docs/qa/M935_PHASE_TWO_ANDROID_ACCEPTANCE.md",
     "docs/qa/M936_PHASE_THREE_RELEASE_READINESS.md",
     "docs/qa/M937_PHASE_FOUR_TEST_REPORTING.md",
+    "docs/qa/M938_ANDROID_SCREENSHOT_ACCEPTANCE.md",
     "docs/qa/approved_change_scope.json",
+    "lib/main.dart",
+    "lib/storage/waffra_encrypted_module_recycle.dart",
+    "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
+    "lib/waffra_home_account_tools.part.dart",
+    "lib/waffra_home_category_workflows.part.dart",
+    "lib/waffra_home_goals_recurring_pages.part.dart",
     "scripts/qa/m936_release_evidence_gate.py",
     "scripts/qa/m937_flutter_test_report.py",
+    "test/m938_goals_restore_fab_contract_test.dart",
     "test/qa/m936_release_evidence_gate_test.py",
     "test/qa/m937_flutter_test_report_test.py",
-    "test/storage/m935_phase_two_restore_finance_acceptance_test.dart"
+    "test/storage/m935_phase_two_restore_finance_acceptance_test.dart",
+    "test/storage/m938_legacy_goal_recycle_repair_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
@@ -36,6 +48,50 @@
       {
         "start": "      - name: Analyze full Flutter application",
         "end": "      - name: Verify new offline finance paths remain opt-in"
+      }
+    ],
+    "lib/main.dart": [
+      {
+        "start": "class _WaffraFooterNoticeHostState extends State<WaffraFooterNoticeHost> {",
+        "end": " /// The only public way to display transient system feedback."
+      },
+      {
+        "start": "void snack(BuildContext context,String text,{",
+        "end": "void snackSuccess(BuildContext context,String text)=>snack"
+      }
+    ],
+    "lib/waffra_home_goals_recurring_pages.part.dart": [
+      {
+        "start": " Widget goalsPage(){",
+        "end": " Future<void> recurringDialog("
+      },
+      {
+        "start": " Widget recurringPage(){",
+        "end": null
+      }
+    ],
+    "lib/waffra_home_account_tools.part.dart": [
+      {
+        "start": " Future<void> backupDialog()async {",
+        "end": " // System credentials are never saved in plain text."
+      }
+    ],
+    "lib/waffra_home_category_workflows.part.dart": [
+      {
+        "start": " Future<void> _showVerifiedModuleTrash(WaffraFinanceModule module)async{",
+        "end": " Future<void> deleteCategory("
+      }
+    ],
+    "lib/storage/waffra_encrypted_module_recycle.dart": [
+      {
+        "start": "  Future<WaffraEncryptedModuleRecycleResult> restore({",
+        "end": "  Future<Map<String, int>> pending("
+      }
+    ],
+    "lib/storage/waffra_verified_encrypted_finance_bridge.dart": [
+      {
+        "start": "  Future<WaffraEncryptedModuleRecycleResult> restoreVerifiedModule({",
+        "end": "  /// Applies only user-edited finance keys."
       }
     ]
   }
