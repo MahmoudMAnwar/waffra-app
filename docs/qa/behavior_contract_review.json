@@ -4600,7 +4600,8 @@
       "test_paths": [
         "test/m644_no_fab_snackbar_width_test.dart",
         "test/storage/m644_biometric_finance_reset_test.dart",
-        "test/m110_live_finance_authority_writer_test.dart"
+        "test/m110_live_finance_authority_writer_test.dart",
+        "test/waffra_directional_fab_receipt_corner_test.dart"
       ],
       "safety_invariants": [
         "A failed device biometric always leaves funds, transfers, receipts, goals, budget and auth untouched.",
