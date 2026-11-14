@@ -1,8 +1,9 @@
 """M576: distinct sender+four digit bank identity needs owner account choice."""
 from pathlib import Path
 import unittest
+from waffra_home_source import read_waffra_home_source
 
-SRC=(Path(__file__).resolve().parents[2]/'lib/main.dart').read_text(encoding='utf-8')
+SRC=read_waffra_home_source()
 
 class BankIdentityChoice(unittest.TestCase):
  def test_second_account_same_bank_never_silently_inherits_old_identity(self):
