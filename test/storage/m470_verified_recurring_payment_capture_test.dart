@@ -65,6 +65,10 @@ void main() {
 
  test('M470 due posting retains recurring provenance, never manual',(){
   final home=readWaffraMainSourceForContracts();
+  // M921: prove the current recurring writer still lives in a real Home part.
+  final duePart=File('lib/waffra_home_finance_persistence_due.part.dart')
+   .readAsStringSync();
+  expect(duePart,contains(' Future<void> applyRecurring()async {'));
   final start=home.indexOf('if(!entries.any((e)=>e.id==id)){');
   final end=home.indexOf('recurringPostponed.remove(id);',start);
   expect(start,greaterThan(0));
