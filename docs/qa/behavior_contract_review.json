@@ -3981,6 +3981,36 @@
         "Existing positive, negative, UI and encrypted finance checks must remain active and inspect real registered methods.",
         "Physical Android overflow and original owner V24 encrypted backup parity require independent evidence."
       ]
+    },
+    {
+      "id": "M820-STRICT-NESTED-BUDGET-LEDGER-HOME-REGISTERED-SOURCE",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "M805 original chart/alert Dart part contained nested markers for M780 verified ledger delete/undo and M781 transaction action card methods; preexisting source-reader order tried nested markers before loading their containing part.",
+      "approved_behavior": "Use the unchanged real registered M805 part first in both Dart/Python Home source readers, then reconstruct nested M780/M781 once each in original method order without stubs, behavior edits or weakened assertions.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_budget_alert_charts.part.dart",
+        "lib/waffra_home_transaction_ledger_actions.part.dart",
+        "lib/waffra_home_transaction_cards.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/m820_nested_home_ledger_part_order_test.dart",
+        "test/m780_home_verified_ledger_actions_extraction_test.dart",
+        "test/m781_home_transaction_cards_extraction_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "All original SQLCipher money source, authorization, transaction IDs and account balances unchanged.",
+        "All previous finance/visual source assertions retained; no QA job bypassed.",
+        "Missing or duplicated real registered source markers fail closed.",
+        "Physical Android financial/backup parity remains a separate acceptance gate."
+      ]
     }
   ]
 }
