@@ -15,6 +15,7 @@ from typing import Mapping
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE_PATHS = (
     "lib/main.dart",
+    "lib/waffra_home_entry_sheet.part.dart",
     "lib/waffra_sms_multicurrency_review.dart",
     "lib/waffra_ai_recorded_answers.dart",
     "lib/waffra_smart_features.dart",
@@ -29,11 +30,44 @@ def load_sources(root: Path = ROOT) -> dict[str, str]:
     return {name: (root / name).read_text(encoding="utf-8") for name in SOURCE_PATHS}
 
 
+def _registered_home_entry_source(sources: Mapping[str, str], problems: list[str]) -> str:
+    """Inspect the real, registered same-library Home editor, never a stub.
+
+    M719 moved the verified finance editor byte-for-byte into a Dart part.
+    Reinsert its *existing* method at the original marker so the previous
+    SMS, date, foreign-currency, receipt and writer checks remain unchanged.
+    Missing, detached or duplicate code fails closed.
+    """
+    main = sources.get("lib/main.dart", "")
+    path = "lib/waffra_home_entry_sheet.part.dart"
+    declaration = "part 'waffra_home_entry_sheet.part.dart';"
+    marker = (
+        " // M719: original verified transaction entry form extracted "
+        "to same-library Home part.\\n"
+    )
+    # This is a source assertion, not a substitute for Dart analyzer checks.
+    if main.count(declaration) != 1 or main.count(marker) != 1:
+        problems.append("lib/main.dart: registered M719 finance editor missing/duplicated")
+        return main
+    part = sources.get(path, "")
+    start_marker = " Future<void> entrySheet("
+    start = part.find(start_marker)
+    end = part.rfind("\\n}")
+    if (not part.startswith("part of 'main.dart';")
+            or "on _HomeScreenState" not in part
+            or part.count(start_marker) != 1
+            or start < 0 or end <= start):
+        problems.append(f"{path}: original verified finance editor missing/duplicated")
+        return main
+    return main.replace(marker, part[start:end + 1])
+
+
 def audit_sources(sources: Mapping[str, str]) -> list[str]:
     problems: list[str] = []
 
     def require(path: str, evidence: str, reason: str) -> None:
-        if evidence not in sources.get(path, ""):
+        checked = home if path == "lib/main.dart" else sources.get(path, "")
+        if evidence not in checked:
             problems.append(f"{path}: {reason}")
 
     main = "lib/main.dart"
@@ -49,7 +83,7 @@ def audit_sources(sources: Mapping[str, str]) -> list[str]:
     # authority. M565 adds the owner's first-pass Yes path: checking only the
     # former three would incorrectly reject a *more* protected finance route.
     # Independently demand its user-confirmed, account-witness and hash guards.
-    home = sources.get(main, "")
+    home = _registered_home_entry_source(sources, problems)
     # M636: two remaining secure SMS routes (confirmed Review and editor).
     # The two old widget/paste paths are deleted, NOT downgraded to plain
     # SharedPreferences. A new writer or missing route must fail this gate.
@@ -131,7 +165,6 @@ def audit_sources(sources: Mapping[str, str]) -> list[str]:
     require(curr, "originalAmount(", "conservative bank amount evidence missing")
 
     # Check only the actual foreign-FX preview handler, not unrelated app writes.
-    home = sources.get(main, "")
     start = home.find("Future<void> _previewForeignBankCurrency(")
     # M640: OCR handler was deleted. The verified manual/SMS editor now
     # immediately follows the still-required foreign-FX preview. Preserve
