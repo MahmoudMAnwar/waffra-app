@@ -261,6 +261,17 @@ ORDER BY a.created_iso,a.account_id
    if(matched.length!=1||matched.single.balanceMinor!=0){
     throw StateError('Non-empty account cannot be archived.');
    }
+   // An Other-institution root with live children remains selectable as
+   // a group; archiving it would orphan linked-child creation workflows.
+   if(await WaffraCustomInstitutionLinks.exists(db)){
+    final liveChildren=await db.customSelect('''
+SELECT g.account_id FROM ${WaffraCustomInstitutionLinks.table} g
+JOIN fresh_finance_money_accounts child ON child.account_id=g.account_id
+WHERE g.root_account_id=? AND child.archived=0 LIMIT 1
+''',variables:[Variable.withString(id)]).get();
+    if(liveChildren.isNotEmpty)throw StateError(
+     'Cannot archive a custom institution with active child accounts.');
+   }
    await db.customStatement(
     'UPDATE fresh_finance_money_accounts SET archived=1 WHERE account_id=?',[id]);
   });
