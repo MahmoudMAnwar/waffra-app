@@ -16,11 +16,10 @@ void main(){
   expect(header,contains('waffra-approved-emerald-balance-card'));
   expect(header,contains('WaffraBalanceIllustration()'));
   expect(header,contains('WaffraBalanceWavePainter('));
-  // The M467 verified account header only compares months on the
-  // all-account legacy fallback; account-scoped balances cannot invent it.
-  expect(main,contains("monthlyChangePercent:_m467SelectedAccount=='all'&&"));
-  expect(main,contains('_m467AccountContext==null?monthChange:null'));
-  expect(main,contains('hasPreviousMonthEntries&&previousClosingBalance>0'));
+  // Unverified historical income/expense net is never a bank comparison.
+  expect(main,contains('balanceVerified:_m468VerifiedAccountsLoaded'));
+  expect(main,contains('monthlyChangePercent:null'));
+  expect(main,isNot(contains('hasPreviousMonthEntries&&previousClosingBalance>0')));
   expect(artwork,contains('class WaffraBalanceIllustration'));
   expect(artwork,contains('linearGradient id="gold"'));
   expect(artwork,contains('linearGradient id="leaf"'));
