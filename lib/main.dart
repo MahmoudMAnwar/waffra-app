@@ -4557,6 +4557,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  // M636: Manual paste/review sheet retired. Automatic encrypted SMS Review
  // and owner-verified account-bound finance editor are retained.
 
+ // M643: Saudi FX posting stays disabled; retain non-posting preview for strict FX QA.
  // M929: no-post foreign currency preview lives in registered Home part.
  // M719: original verified transaction entry form extracted to same-library Home part.
  // M795: Home category selector and protected receipt dialogs moved to registered Dart part.
