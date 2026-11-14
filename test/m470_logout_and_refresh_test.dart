@@ -1,9 +1,10 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main(){
  test('M470 #1 all signout entry points route to single safe logout',(){
-  final home=File('lib/main.dart').readAsStringSync();
+  final home=readWaffraMainSourceForContracts();
   final start=home.indexOf(' Future<void> logout()async {');
   final end=home.indexOf(' Future<void> setPin(',start);
   expect(start,greaterThan(0));
@@ -24,7 +25,7 @@ void main(){
  });
 
  test('M470 #2 unchanged verified refresh avoids reconstructing whole ledger',(){
-  final home=File('lib/main.dart').readAsStringSync();
+  final home=readWaffraMainSourceForContracts();
   final start=home.indexOf(' Future<void> _refreshFromVerifiedFinance()async {');
   final end=home.indexOf(' Future<void> load()async {',start);
   expect(start,greaterThan(0));
