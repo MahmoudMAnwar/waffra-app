@@ -3336,6 +3336,29 @@
         "All original security and backup assertions remain active.",
         "Physical device restore remains separate from host CI."
       ]
+    },
+    {
+      "id": "M733-EXTRACT-LIVE-HOME-DASHBOARD-ANALYTICS",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Home dashboard, forecasts and analytics were still embedded in the remaining very large _HomeScreenState.",
+      "approved_behavior": "Move identical production method bodies, including actual month/forecast and visual calculation logic, into a registered same-library Dart part and reconstruct them for original source assertions without changing SQLCipher balances or dashboard data.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_dashboard_analytics.part.dart",
+        "test/support/waffra_main_source.dart"
+      ],
+      "test_paths": [
+        "test/m733_home_dashboard_analytics_extraction_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "No finance/backup/account/ledger writer modification.",
+        "All original widget and source finance contracts stay enabled.",
+        "Physical Android review and owner encrypted backup parity remain acceptance gates."
+      ]
     }
   ]
 }

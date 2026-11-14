@@ -1872,3 +1872,6 @@ Twelve existing SMS, manual entry, account-security, restore, Android performanc
 
 ### M732 — Issue #633 / Draft #638: original restore and financial security regression source compatibility
 Repair only old `lib/main.dart` reader in eight active V24 restore, finance persistence, SMS, receipt and permissions test files to use existing registered Dart-part reconstruction. Maintain every positive and negative assertion without changing production restore or financial code; acceptance requires latest-head CI and actual Android parity independently.
+
+### M733 / #633 — same-library Home dashboard and analytics modularization (2026-11-14)
+Code scope: extract the existing Home dashboard, month/forecast widgets and read-only financial analysis into a registered Dart part without changing any UI arrangement, SQLCipher writes, calculations, account selection, global FAB or original Arabic/English text. The real-source QA reconstruction and unchanged finance assertions must continue to pass; device screenshot and original owner backup acceptance remain separate pending gates. Status: implementation proposed in Draft #638, exact-head CI pending.

@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "change_id": "M690-M732-ISSUES632-637-20261114",
+  "change_id": "M690-M733-ISSUES632-637-20261114",
   "human_scope_review": "Issue #629 completes prior PR #628 only after user-visible acceptance; #631 explicitly authorizes three exact screenshots for Goals/Dues/SMS Review, permanently visible financial activity, non-moving FAB-aligned notice, and savings/goal-due cash safety. Existing tests replace outdated visual assumptions without deleting financial safety assertions. Device screenshots/old restore still require external device evidence.",
   "user_requested_changes": [
     "M690 #632 permanently disable third-party AI bank SMS uploads and opt-in on previously installed versions, remove Settings toggle and signed Android staging worker, retain local encrypted SMS Review and money writer.",
@@ -186,7 +186,9 @@
     "test/storage/m692_large_ledger_month_read_test.dart",
     "test/support/waffra_main_source.dart",
     "test/waffra_approved_ui_batch_test.dart",
-    "test/waffra_m206_day_theme_tour_sms_regression_test.dart"
+    "test/waffra_m206_day_theme_tour_sms_regression_test.dart",
+    "lib/waffra_home_dashboard_analytics.part.dart",
+    "test/m733_home_dashboard_analytics_extraction_test.dart"
   ],
   "approved_deleted_files": [
     "lib/waffra_sms_cloud_review_analyzer.dart"
@@ -298,6 +300,10 @@
       {
         "start": " Future<void> _previewForeignBankCurrency(",
         "end": " Future<String?> chooseTransactionCategory("
+      },
+      {
+        "start": " Widget _m549HomeFinanceAction({",
+        "end": " Future<BudgetCategory?> categoryDialog("
       }
     ],
     "test/support/waffra_main_source.dart": [

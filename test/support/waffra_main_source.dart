@@ -60,5 +60,9 @@ String readWaffraMainSourceForContracts(){
  if(s.split(smsMarker).length!=2)throw StateError('Missing or duplicated M703 part marker');
  s=s.replaceFirst(smsMarker,_method('lib/waffra_home_sms_transfer_review.part.dart',
   ' /// Explicit, idempotent account-to-account transfer from reviewed bank SMS.'));
+ const dashboardMarker=' // M733: unchanged dashboard, forecast and financial analytics views moved to registered Home part.\n';
+ if(s.split(dashboardMarker).length!=2)throw StateError('Missing M733 registered dashboard section');
+ s=s.replaceFirst(dashboardMarker,_method('lib/waffra_home_dashboard_analytics.part.dart',
+  ' Widget dashboard(){'));
  return s;
 }
