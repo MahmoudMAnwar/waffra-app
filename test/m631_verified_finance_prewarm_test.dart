@@ -1,10 +1,11 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// M631: source-level safety contract. CI cannot certify physical Android
 /// first-frame timing; profile APK traces and two-device data QA are required.
 void main() {
- final src=File('lib/main.dart').readAsStringSync();
+ final src=readWaffraMainSourceForContracts();
  final app=src.split('class _WaffraAppState extends State<WaffraApp>')[1]
    .split('class PinLockScreen extends StatefulWidget')[0];
  final home=src.split('class _HomeScreenState extends State<HomeScreen>')[1];
