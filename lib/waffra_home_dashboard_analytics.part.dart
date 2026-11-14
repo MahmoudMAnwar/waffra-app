@@ -29,6 +29,11 @@ extension _WaffraHomeDashboardAnalyticsModule on _HomeScreenState {
    (typeFilter=='الاستحقاقات'&&
     (e.sourceType=='recurring'||e.sourceType=='goal_due'))).map((e)=>e.category)}.toList();
   final selected=filterCats.contains(categoryFilter)?categoryFilter:'الكل';
+  // Full verified transaction history is materialized only for an explicit
+  // export or an expanded combined activity view, never for the collapsed
+  // Home first page. PDF exports must include all matching transactions.
+  List<MoneyEntry> fullFilteredTransactions()=>
+   _m684Periods.newestFirst(verifiedEntryIds:verifiedIds,where:matches);
   final shown=_m684Periods.pageNewestFirst(
    verifiedEntryIds:verifiedIds,where:matches,offset:0,
    limit:waffraDashboardTransactionDisplayCount(
@@ -250,7 +255,7 @@ extension _WaffraHomeDashboardAnalyticsModule on _HomeScreenState {
              onSelected:WaffraHaptics.selection((action){
               if(action=='delete-all')confirmDeleteAllEntries();
               if(action=='restore-transactions')_showVerifiedDeletedTransactions();
-              if(action=='pdf')exportEntriesPdf(visible,'تقرير عمليات وفرة',activityFilter:typeFilter);
+              if(action=='pdf')exportEntriesPdf(fullFilteredTransactions(),'تقرير عمليات وفرة',activityFilter:typeFilter);
              }),
              itemBuilder:(ctx)=>[
               if(_lastFinanceAuthorityRead?.source==
@@ -358,7 +363,7 @@ extension _WaffraHomeDashboardAnalyticsModule on _HomeScreenState {
                 ])).toList(growable:false):
                <WaffraVerifiedGoalMovement>[];
               final history=<({DateTime when,Object activity})>[
-               if(typeFilter=='الكل')for(final e in visible)
+               if(typeFilter=='الكل')for(final e in fullFilteredTransactions())
                 (when:e.date,activity:e),
                for(final t in transfers)
                 (when:DateTime.tryParse(t.occurredIso)??DateTime(1970),
@@ -409,7 +414,7 @@ extension _WaffraHomeDashboardAnalyticsModule on _HomeScreenState {
                   style:const TextStyle(color:Colors.grey,fontSize:12)),
                  const Spacer(),
                  TextButton.icon(onPressed:WaffraHaptics.tap(()=>
-                  exportEntriesPdf(visible,'تقرير عمليات وفرة',
+                  exportEntriesPdf(fullFilteredTransactions(),'تقرير عمليات وفرة',
                    activityFilter:typeFilter)),
                   icon:const Icon(Icons.picture_as_pdf_outlined,size:18),
                   label:WaffraText(waffraIsEnglish?'Export PDF':'تصدير PDF')),
@@ -433,7 +438,7 @@ extension _WaffraHomeDashboardAnalyticsModule on _HomeScreenState {
                style:const TextStyle(color:Colors.grey,fontSize:12)),
               const Spacer(),
               TextButton.icon(onPressed:WaffraHaptics.tap(()=>
-               exportEntriesPdf(visible,'تقرير عمليات وفرة',
+               exportEntriesPdf(fullFilteredTransactions(),'تقرير عمليات وفرة',
                 activityFilter:typeFilter)),
                icon:const Icon(Icons.picture_as_pdf_outlined,size:18),
                label:WaffraText(waffraIsEnglish?'Export PDF':'تصدير PDF')),
