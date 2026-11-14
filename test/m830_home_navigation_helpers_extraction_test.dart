@@ -29,10 +29,19 @@ void main() {
   final start=full.indexOf(' Widget categoriesPage()=>categoriesPageV2();');
   final end=full.indexOf(' @override Widget build(BuildContext context)=>PopScope(',start);
   final part=File('lib/waffra_home_navigation_helpers.part.dart').readAsStringSync();
-  final original=part.substring(part.indexOf(' Widget categoriesPage()=>categoriesPageV2();'),
-    part.lastIndexOf('\n}')+1);
   expect(start,greaterThan(0));
   expect(end,greaterThan(start));
-  expect(full.substring(start,end),original);
+  // Reassembled goal/recurring parts may lie between these original methods.
+  final firstBoundary=part.indexOf(' // M711: original Home goal workflows');
+  final first=part.substring(part.indexOf(' Widget categoriesPage()=>categoriesPageV2();'),firstBoundary);
+  final currentTab=part.indexOf(' Widget currentTab(){');
+  final tail=part.substring(currentTab,part.lastIndexOf('\n}')+1);
+  expect(firstBoundary,greaterThan(0));
+  expect(currentTab,greaterThan(firstBoundary));
+  expect(full.substring(start,start+first.length),first);
+  final tabStart=full.indexOf(' Widget currentTab(){');
+  expect(tabStart,greaterThan(start));
+  expect(full.substring(tabStart,tabStart+tail.length),tail);
+  expect(full.split(' Widget categoriesPage()=>categoriesPageV2();').length,2);
  });
 }

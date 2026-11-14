@@ -11,8 +11,10 @@ void main(){
  });
  test('Original registered source reassembles byte-identically for old QA',(){
   final full=readWaffraMainSourceForContracts(),part=File('lib/waffra_home_category_confirmations.part.dart').readAsStringSync();
-  final a=full.indexOf(' double sum(Iterable<MoneyEntry> list,bool income)=>'),b=full.indexOf(' // M812: verified SMS money-account and optional budget pickers moved to real registered Home part.',a);
-  expect(a,greaterThan(0));expect(b,greaterThan(a));
-  expect(full.substring(a,b),part.substring(part.indexOf(' double sum(Iterable<MoneyEntry> list,bool income)=>'),part.lastIndexOf('\n}')+1));
+  final a=full.indexOf(' double sum(Iterable<MoneyEntry> list,bool income)=>');
+  final exact=part.substring(part.indexOf(' double sum(Iterable<MoneyEntry> list,bool income)=>'),part.lastIndexOf('\n}')+1);
+  expect(a,greaterThan(0));
+  expect(full.substring(a,a+exact.length),exact);
+  expect(full.split(' double sum(Iterable<MoneyEntry> list,bool income)=>').length,2);
  });
 }

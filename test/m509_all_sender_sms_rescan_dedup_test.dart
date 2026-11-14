@@ -54,7 +54,7 @@ void main() {
 
  test('M547 new-only Rescan preserves completed and unfinished native cursors',(){
   final store=File('native/WaffraAutoSmsStore.kt').readAsStringSync();
-  final home=File('lib/main.dart').readAsStringSync();
+  final home=readWaffraMainSourceForContracts();
   final legacy=store.split(
    'fun restartCompletedHistory(context: Context): Boolean')[1]
    .split('private data class HistoricalSmsRow')[0];

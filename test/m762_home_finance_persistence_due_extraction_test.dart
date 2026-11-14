@@ -23,7 +23,7 @@ void main(){
   ]) {
    expect(part,contains(marker),reason:marker);
   }
-  expect(main,contains(' Future<void> _refreshWidget()async{'));
+  expect(readWaffraMainSourceForContracts(),contains(' Future<void> _refreshWidget()async{'));
  });
  test('M762 original verified finance code and due source reconstruct exactly',(){
   final all=readWaffraMainSourceForContracts();

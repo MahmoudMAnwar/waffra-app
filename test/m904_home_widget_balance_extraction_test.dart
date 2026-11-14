@@ -23,10 +23,9 @@ void main(){
   final source=readWaffraMainSourceForContracts();
   final part=File('lib/waffra_home_widget_balance.part.dart').readAsStringSync();
   final a=source.indexOf(' Future<void> _refreshWidget()async{');
-  final b=source.indexOf(' // M762: verified finance persistence',a);
   final expected=part.substring(part.indexOf(' Future<void> _refreshWidget()async{'),part.lastIndexOf('\n}')+1);
-  expect(a,greaterThan(0));expect(b,greaterThan(a));
-  expect(source.substring(a,b),expected);
+  expect(a,greaterThan(0));
+  expect(source.substring(a,a+expected.length),expected);
   expect(source.split(' Future<void> _refreshWidget()async{').length,2);
   expect(source.split(' Future<void> _publishVerifiedWidgetBalance(').length,2);
  });

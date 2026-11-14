@@ -19,7 +19,7 @@ void main() {
   expect(part,contains('لن تُسجَّل أي عملية مالية إلا بعد مراجعتك وتأكيدك.'));
   expect(part,isNot(contains('_financeAuthority.saveCaptured(')));
   expect(part,isNot(contains('_financeAuthority.commitConfirmedSms(')));
-  expect(main,contains(' Widget _autoSmsReviewCard(){'));
+  expect(readWaffraMainSourceForContracts(),contains(' Widget _autoSmsReviewCard(){'));
  });
  test('M739 previous Home source contracts read the exact authenticated inbox part', () {
   final whole=readWaffraMainSourceForContracts();

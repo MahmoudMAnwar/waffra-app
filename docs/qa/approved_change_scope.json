@@ -106,7 +106,8 @@
     "M930 #633 move original remaining Home startup-visibility, verified owner session binding, stationary FAB tap guards, lifecycle resume, and root/Widget action routes into five registered same-library Dart extension parts, exactly preserving code; original Dart/Python source QA and money safety remain authoritative, with full device acceptance still external.",
     "M931 #633 repair the original unweakened M636 logout/Widget safety source test after the byte-identical M929/M930 Dart-part extraction: use fail-closed actual registered Home source rather than only raw main.dart, keeping every original anti-Qwen, stationary FAB, logout fail-closed, SMS source and Widget owner assertion.",
     "M932 #633/#634 repair genuine M340 hostile FX preview mutation test after unchanged registered Home Dart extraction: include real lib/waffra_home_fx_preview.part.dart as an overridable source in M340 financial safety audit, mutate that actual file (not raw main.dart), prove both persist() and saveCaptured() illegal financial writes are rejected, and keep every original audit, baseline and fail-closed assertion. Existing scope boundaries and all 43 exact SHA CI checks remain enforced; real device acceptance separate.",
-    "M932 #633 fix recurring M266 encrypted-storage CI false failure after M930 Home Widget action extraction: inspect reconstructed registered production Dart parts, preserve all original native Widget, post-auth, SQLCipher fail-closed and legacy data assertions; add exact positive registered-part proof so source relocation cannot silently bypass QA."
+    "M932 #633 fix recurring M266 encrypted-storage CI false failure after M930 Home Widget action extraction: inspect reconstructed registered production Dart parts, preserve all original native Widget, post-auth, SQLCipher fail-closed and legacy data assertions; add exact positive registered-part proof so source relocation cannot silently bypass QA.",
+    "M933 #633 fail-closed source-contract repair: 19 Flutter failures across five jobs following registered Home part extraction. Update exact old raw-main readers and obsolete moved-method boundaries without removing money, SMS, auth or UI assertions."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -391,7 +392,9 @@
     "lib/waffra_home_widget_action_routes.part.dart",
     "test/m930_home_lifecycle_helpers_extraction_test.dart",
     "test/m636_owner_approved_retirement_and_ui_test.dart",
-    "test/storage/m266_widget_source_fail_closed_ui_test.dart"
+    "test/storage/m266_widget_source_fail_closed_ui_test.dart",
+    "test/m227_gold_currency_original_sms_home_test.dart",
+    "test/m526_instant_insights_route_test.dart"
   ],
   "approved_deleted_files": [
     "lib/waffra_sms_cloud_review_analyzer.dart"
@@ -746,6 +749,10 @@
       {
         "start": " test('M389: Goals/Recurring + menus show approved choices instead of direct sheet',(){",
         "end": " test('M388: open-ended goal never divided by zero or marked achieved',(){"
+      },
+      {
+        "start": " test('M390: restored receipt references open the same existing gallery',(){",
+        "end": null
       }
     ],
     "test/m302_optimistic_module_write_safety_test.dart": [
@@ -891,6 +898,10 @@
       {
         "start": "import 'dart:io';",
         "end": "void main() {"
+      },
+      {
+        "start": " test('M547 new-only Rescan preserves completed and unfinished native cursors',(){",
+        "end": " test('M509 finance-backed ACK is separate from exclude/reject ACK',(){"
       }
     ],
     "test/m148_english_categories_legacy_backup_uat_test.dart": [
@@ -2469,6 +2480,26 @@
       {
         "start": " test('M636 external widget has no separate writable SMS/UI source',(){",
         "end": " test('M266 pending finance cutover still fails closed without data loss',()async{"
+      }
+    ],
+    "test/m227_gold_currency_original_sms_home_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "void main() {"
+      },
+      {
+        "start": "void main() {",
+        "end": null
+      }
+    ],
+    "test/m526_instant_insights_route_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "void main() {"
+      },
+      {
+        "start": "void main() {",
+        "end": null
       }
     ]
   }

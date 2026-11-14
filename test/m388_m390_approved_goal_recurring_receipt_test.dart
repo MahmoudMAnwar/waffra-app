@@ -99,7 +99,7 @@ void main() {
  });
 
  test('M390: restored receipt references open the same existing gallery',(){
-  final source=File('lib/main.dart').readAsStringSync();
+  final source=readWaffraMainSourceForContracts();
   final list=source.split('Widget tile(MoneyEntry e){').last
     .split('String get greeting').first;
   final home=source.split('Widget compactTransaction(MoneyEntry entry){').last

@@ -25,17 +25,16 @@ void main() {
   }
   expect(part,isNot(contains('_financeAuthority.saveCaptured(')));
   expect(part,isNot(contains('_financeAuthority.commitConfirmedSms(')));
-  expect(home,contains(' Widget _autoSmsReviewCard(){'));
+  expect(readWaffraMainSourceForContracts(),contains(' Widget _autoSmsReviewCard(){'));
  });
  test('M783 old finance and SMS regression source reads the actual registered methods',() {
   final source=readWaffraMainSourceForContracts();
   final begin=source.indexOf(' Future<void> _scanPreviousBankSmsFromSettings()async{');
-  final end=source.indexOf(' // M739: original sender-grouped bank SMS inbox dialog',begin);
   final part=File('lib/waffra_home_sms_management.part.dart').readAsStringSync();
   final original=part.substring(part.indexOf(' Future<void> _scanPreviousBankSmsFromSettings()async{'),
     part.lastIndexOf('\n}')+1);
   expect(begin,greaterThan(0));
-  expect(end,greaterThan(begin));
-  expect(source.substring(begin,end),original);
+  expect(source.substring(begin,begin+original.length),original);
+  expect(source.split(' Future<void> _scanPreviousBankSmsFromSettings()async{').length,2);
  });
 }

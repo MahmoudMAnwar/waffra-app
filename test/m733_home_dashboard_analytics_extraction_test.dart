@@ -9,7 +9,7 @@ void main(){
   final part=File('lib/waffra_home_dashboard_analytics.part.dart').readAsStringSync();
   final actual=readWaffraMainSourceForContracts();
   expect(main,contains("part 'waffra_home_dashboard_analytics.part.dart';"));
-  expect(main,contains(' // M733: unchanged dashboard, forecast and financial analytics views moved to registered Home part.'));
+  expect(part,startsWith("part of 'main.dart';"));
   expect(main,isNot(contains(' Widget dashboard(){')));
   expect(part,contains('extension _WaffraHomeDashboardAnalyticsModule on _HomeScreenState {'));
   for(final method in <String>[

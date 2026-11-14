@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_bank_sms_facts.dart';
 import 'package:waffra/waffra_cloudflare_sms_gateway.dart';
@@ -25,7 +26,7 @@ void main(){
   expect(File('lib/waffra_sms_cloud_review_analyzer.dart').existsSync(),isFalse);
  });
  test('M699 legacy cloud suggestions do not return in the SMS inbox',(){
-  final inbox=File('lib/main.dart').readAsStringSync();
+  final inbox=readWaffraMainSourceForContracts();
   expect(inbox,isNot(contains('AI suggestion •')));
   expect(inbox,isNot(contains('اقتراح AI •')));
   expect(inbox,isNot(contains('cloud AI suggestions ready')));

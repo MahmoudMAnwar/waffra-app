@@ -11,8 +11,10 @@ void main(){
  });
  test('Original registered source reassembles byte-identically for old QA',(){
   final full=readWaffraMainSourceForContracts(),part=File('lib/waffra_home_delete_all_transactions.part.dart').readAsStringSync();
-  final a=full.indexOf(' Future<void> confirmDeleteAllEntries() async {'),b=full.indexOf(' // M715: budget editor, historical linking and category administration moved to registered Home part.',a);
-  expect(a,greaterThan(0));expect(b,greaterThan(a));
-  expect(full.substring(a,b),part.substring(part.indexOf(' Future<void> confirmDeleteAllEntries() async {'),part.lastIndexOf('\n}')+1));
+  final a=full.indexOf(' Future<void> confirmDeleteAllEntries() async {');
+  final exact=part.substring(part.indexOf(' Future<void> confirmDeleteAllEntries() async {'),part.lastIndexOf('\n}')+1);
+  expect(a,greaterThan(0));
+  expect(full.substring(a,a+exact.length),exact);
+  expect(full.split(' Future<void> confirmDeleteAllEntries() async {').length,2);
  });
 }

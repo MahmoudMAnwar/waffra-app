@@ -21,7 +21,7 @@ void main() {
    expect(part,contains(anchor),reason:anchor);
   }
   expect(part,contains('encrypted'));
-  expect(home,contains(' Future<void> _requestPercentageAlertPermission()async{'));
+  expect(readWaffraMainSourceForContracts(),contains(' Future<void> _requestPercentageAlertPermission()async{'));
  });
  test('M795 existing receipt/category assertions inspect genuine registered Dart source',(){
   final whole=readWaffraMainSourceForContracts();

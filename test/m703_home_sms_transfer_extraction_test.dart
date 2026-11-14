@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// M703 / #633: verify the real transfer review was extracted to a
@@ -10,7 +11,7 @@ void main() {
    .readAsStringSync();
   expect(home,contains("part 'waffra_home_sms_transfer_review.part.dart';"));
   expect(part,startsWith("part of 'main.dart';"));
-  expect(home,contains('_reviewSmsAccountTransfer('));
+  expect(readWaffraMainSourceForContracts(),contains('_reviewSmsAccountTransfer('));
   expect(part,contains('Future<void> _reviewSmsAccountTransfer('));
   expect(part,contains('await _ensureFinanceBound();'));
   expect(part,contains('WaffraVerifiedAccountsApi(bridge:bridge)'));

@@ -47,6 +47,16 @@ void main() {
    registeredMethod('lib/waffra_home_transaction_cards.part.dart',' Widget stat(String label'));
   expect(start,greaterThan(0));
   expect(end,greaterThan(start));
-  expect(whole.substring(start,end),source);
+  // Further same-library extractions replace nested markers in the real
+  // source; compare original chart logic byte-for-byte and require both real
+  // registered downstream finance/UI fragments without dropping assertions.
+  final firstNested=source.indexOf(' // M687: PDF exporter moved');
+  expect(firstNested,greaterThan(0));
+  expect(whole.substring(start,start+firstNested),source.substring(0,firstNested));
+  for(final descendant in [
+   registeredMethod('lib/waffra_home_transaction_ledger_actions.part.dart',' void _publishVerifiedTransactionLedger('),
+   registeredMethod('lib/waffra_home_transaction_cards.part.dart',' Widget stat(String label'),
+  ]){expect(whole,contains(descendant));}
+  expect(end,greaterThan(start));
  });
 }

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_display_currency.dart';
 
@@ -12,7 +13,7 @@ void main() {
   });
 
   test('M227 gold stays accessible through the new inline Tools markets accordion', () {
-    final source = File('lib/main.dart').readAsStringSync();
+    final source = readWaffraMainSourceForContracts();
     expect(source, isNot(contains("Key('waffra-home-gold-currency-entry')")));
     expect(source, contains('case 2:return _smartToolsTab();'));
     final tools=File('lib/waffra_smart_features.dart').readAsStringSync();
