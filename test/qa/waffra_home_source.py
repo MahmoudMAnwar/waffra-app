@@ -60,4 +60,7 @@ def read_waffra_home_source(root=ROOT):
     restore(" // M742: original native SMS inbox refresh and offline classification moved to registered part.\n",
             "lib/waffra_home_sms_refresh.part.dart",
             " Future<void> _refreshAutoSmsInbox(")
+    restore(" // M750: verified Home financial startup load lives in registered same-library part.\n",
+            "lib/waffra_home_finance_startup.part.dart",
+            " Future<void> load()async {")
     return source
