@@ -78,4 +78,7 @@ def read_waffra_home_source(root=ROOT):
     restore(" // M781: original Home transaction cards/details/actions moved to registered same-library part.\n",
             "lib/waffra_home_transaction_cards.part.dart",
             " Widget stat(String label")
+    restore(" // M782: verified pull-to-refresh and finance reload moved to registered Home part.\n",
+            "lib/waffra_home_verified_refresh.part.dart",
+            " Future<void> _refreshAndSettle(")
     return source
