@@ -3954,6 +3954,33 @@
         "Original tests continue inspecting actual registered code, without skip or stubs.",
         "Real device overflow, PDF colors and historical encrypted backup balance parity remain independent acceptance."
       ]
+    },
+    {
+      "id": "M810-VERIFIED-HOME-INCOME-EXPENSE-SUMMARY-SOURCE",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Original Home income and expense summary sheet and cash totals were in the large Home State, reflecting verified scoped transactions.",
+      "approved_behavior": "Relocate the same exact summary dialog and transaction list to registered same-library Dart part, retaining verified account filtering, income/expense totals, original absence copy, Riyal alignment and no financial writer.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_transaction_summary.part.dart",
+        "test/support/waffra_main_source.dart",
+        "test/qa/waffra_home_source.py"
+      ],
+      "test_paths": [
+        "test/m810_home_transaction_summary_extraction_test.dart",
+        "test/m647_m652_financial_activity_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Summary is display-only; it cannot post an unapproved transaction or duplicate paid due.",
+        "Total income and expenses derive from the same verified account-scoped entries and unchanged amount functions.",
+        "Existing positive, negative, UI and encrypted finance checks must remain active and inspect real registered methods.",
+        "Physical Android overflow and original owner V24 encrypted backup parity require independent evidence."
+      ]
     }
   ]
 }
