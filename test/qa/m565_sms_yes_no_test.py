@@ -1,8 +1,9 @@
 """M565: reviewed SMS yes/no verified finance behavior and source-date contract."""
 from pathlib import Path
 import unittest
+from waffra_home_source import read_waffra_home_source
 
-SOURCE=(Path(__file__).resolve().parents[2]/'lib/main.dart').read_text(encoding='utf-8')
+SOURCE=read_waffra_home_source()
 
 class SmsYesNoTest(unittest.TestCase):
  def test_yes_no_with_preview_and_no_guessing(self):
