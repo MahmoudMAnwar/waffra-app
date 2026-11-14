@@ -64,5 +64,9 @@ String readWaffraMainSourceForContracts(){
  if(s.split(dashboardMarker).length!=2)throw StateError('Missing M733 registered dashboard section');
  s=s.replaceFirst(dashboardMarker,_method('lib/waffra_home_dashboard_analytics.part.dart',
   ' Widget dashboard(){'));
+ const verifiedCardsMarker=' // M733: verified transfer and savings card UI moved to registered same-library part.\n';
+ if(s.split(verifiedCardsMarker).length!=2)throw StateError('Missing or duplicated M733 transfer cards marker');
+ s=s.replaceFirst(verifiedCardsMarker,_method('lib/waffra_home_verified_transfer_cards.part.dart',
+  ' String _m647VerifiedAccountLabel('));
  return s;
 }
