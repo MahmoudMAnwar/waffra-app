@@ -453,7 +453,7 @@ class WaffraVerifiedFinanceAuthority {
       throw StateError('Biometric reset was not committed durably.');
     }
     final refreshed = await load(route: route);
-    if (refreshed.encryptedWitness?.generation != result.newGeneration ||
+    if (refreshed.encryptedWitness?.snapshot.generation != result.newGeneration ||
         refreshed.finance.getString('entries') != '[]') {
       throw StateError('Biometric reset post-commit finance read differs.');
     }
