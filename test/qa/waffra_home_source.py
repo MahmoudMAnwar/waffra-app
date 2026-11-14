@@ -72,4 +72,7 @@ def read_waffra_home_source(root=ROOT):
     restore(" // M762: verified finance persistence and recurring due/postponement methods moved unchanged to registered Home part.\n",
             "lib/waffra_home_finance_persistence_due.part.dart",
             " Future<void> persist(")
+    restore(" // M780: original verified ledger deletion/undo and source publication moved to registered Home part.\n",
+            "lib/waffra_home_transaction_ledger_actions.part.dart",
+            " void _publishVerifiedTransactionLedger(")
     return source
