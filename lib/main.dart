@@ -3776,7 +3776,8 @@ class _WaffraFooterNoticeHostState extends State<WaffraFooterNoticeHost> {
  @override void dispose(){
   _source.removeListener(_onChanged);
   _waffraFooterHostCount--;
-  if(_waffraFooterHostCount==0)waffraDismissFooterNotice();
+  // The notice may outlive Settings while the FAB anchor remounts;
+  // logout and timeout still dismiss it. Do not drop it on host teardown.
   super.dispose();
  }
  @override Widget build(BuildContext context)=>
@@ -3831,7 +3832,10 @@ void snack(BuildContext context,String text,{
  final inHome=context.widget is HomeScreen||
   context.findAncestorWidgetOfExactType<HomeScreen>()!=null;
  final inHomeDialog=ModalRoute.of(context) is PopupRoute;
- if(_waffraFooterHostCount>0&&(preferFooter||inHome||inHomeDialog)){
+ // An authenticated restore finishes in a Home-owned Settings modal.
+ // Even if its footer is temporarily absent, queue the notice for the
+ // stationary global FAB instead of displaying a full-width fallback.
+ if(inHome||(_waffraFooterHostCount>0&&(preferFooter||inHomeDialog))){
   // Switching from a non-footer route must never leave two notices stacked.
   ScaffoldMessenger.maybeOf(context)?.hideCurrentSnackBar();
   _waffraFallbackNoticeMessenger=null;
