@@ -2041,3 +2041,7 @@ Correct both original-source regression helpers (`test/support/waffra_main_sourc
 
 ### M852 — Issue #633 / Draft PR #638: restore nested M805 PDF exporter before original-source assertions
 The real registered M805 `waffra_home_budget_alert_charts.part.dart` includes the original M687 PDF exporter marker as well as M780/M781 nested transaction safety markers. Both actual-production Dart/Python source reconstruction helpers must restore M805 before M687 PDF, retaining M805-before-M780/M781 and M830-before-M721 dependencies. This is only an ordering correction of existing strict registered-part reassembly; no production Dart code, finance writer, report, backup or source assertion changes. Preserve all original positive and negative tests and run exact-HEAD CI; real Android/backup parity remain separate.
+
+
+### M853 — Issue #633 / Draft #638: preserve M576 verified bank-account identity QA after M812 extraction
+The original M576 bank-SMS test directly reads `lib/main.dart`, but its unchanged `reviewSmsAccountLinks` implementation is now in registered `lib/waffra_home_verified_finance_pickers.part.dart`. Update only the M576 import/source reader to `read_waffra_home_source()` so all original sender/four-digit account identity, consent, verified generation and no-inferred-account assertions still execute on the real registered production Dart part. Do not change any original assertion, finance writer or bank identity behavior. Full CI and physical-device owner archive remain separately required.
