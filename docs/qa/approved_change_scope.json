@@ -2168,7 +2168,7 @@
     ],
     ".github/workflows/m124-main-integration-audit.yml": [
       {
-        "start": "          from pathlib import Path",
+        "start": "      - name: Ensure no implicit SQLCipher switch or unverified receipt UI mount",
         "end": "          widget=Path('native/WaffraWidget.kt').read_text()"
       }
     ]
