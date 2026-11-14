@@ -4259,6 +4259,44 @@
         "No finance save or SMS posting added by read-only Widget refresh.",
         "The owner's source archive, ledger balances and approved global FAB are unmodified."
       ]
+    },
+    {
+      "id": "M920-ORIGINAL-FLUTTER-HOME-REGRESSION-SOURCE",
+      "issue": "Issue #633 / Draft PR #638",
+      "previous_behavior": "Eleven original Flutter source-level tests read a reduced main.dart file or counted only its haptic tap wrappers, after the genuine original Home implementation moved into 43 registered Dart parts.",
+      "approved_behavior": "Read only original complete registered production Home Dart parts through the strict fail-closed source helper; preserve original account identity, receipt counts, SQLCipher finance controls, bank SMS confirmation, due and widget balances, category rollback, app-wide haptic threshold and all negative tests.",
+      "source_paths": [
+        "lib/main.dart",
+        "test/support/waffra_main_source.dart",
+        "lib/waffra_home_verified_account_flows.part.dart",
+        "lib/waffra_home_transaction_cards.part.dart",
+        "lib/waffra_home_sms_confirmation.part.dart",
+        "lib/waffra_home_finance_persistence_due.part.dart"
+      ],
+      "test_paths": [
+        "test/m470_account_scope_and_transfer_date_test.dart",
+        "test/m268_approved_emerald_balance_card_test.dart",
+        "test/m384_receipt_corner_upgrade_regression_test.dart",
+        "test/m273_production_user_journey_regression_test.dart",
+        "test/m455_manual_sqlcipher_capture_scope_test.dart",
+        "test/m620_m621_finance_notification_routing_test.dart",
+        "test/m302_category_rename_integrity_test.dart",
+        "test/waffra_widget_balance_source_authority_test.dart",
+        "test/m324_required_ai_sms_receipts_test.dart",
+        "test/storage/m470_verified_recurring_payment_capture_test.dart",
+        "test/m264_app_wide_action_haptics_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m174-main-sha-regression.yml"
+      ],
+      "safety_invariants": [
+        "Do not change any runtime money writer, stored owner information, original SMS, encrypted archive, or approved visible design.",
+        "Every original positive and negative assertion retained verbatim; app-wide haptic action threshold remains greater than 245.",
+        "Missing registered Dart part or duplicated extraction marker must cause source tests to fail closed.",
+        "Full exact SHA Flutter/Android CI plus physical owner device old backup/restore parity remain independent."
+      ]
     }
   ]
 }
