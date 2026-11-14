@@ -1,5 +1,6 @@
 from pathlib import Path
 import unittest
+from waffra_home_source import read_waffra_home_source
 
 class M444NotificationSafety(unittest.TestCase):
  def test_recurring_notices_never_cancel_every_channel(self):
@@ -9,7 +10,7 @@ class M444NotificationSafety(unittest.TestCase):
   self.assertIn('_plugin.cancel(request.id)',reminders)
   self.assertIn('oneTimeDueAt',reminders)
  def test_finance_ui_respects_threshold_and_real_due(self):
-  main=Path('lib/main.dart').read_text(encoding='utf8')
+  main=read_waffra_home_source()
   main+=Path('lib/waffra_home_budget_cards.part.dart').read_text(encoding='utf8')
   self.assertIn('WaffraFinancialInsights.reachedBudgetThreshold(',main)
   self.assertIn('budget:b.budget,alertPercent:b.alertPercent',main)
