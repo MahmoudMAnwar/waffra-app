@@ -97,6 +97,7 @@ import 'storage/waffra_fresh_install_source.dart';
 import 'storage/waffra_fresh_home_catalog_recovery.dart';
 import 'storage/waffra_live_account_write_authority.dart';
 import 'storage/waffra_home_finance_persistence.dart';
+import 'storage/waffra_encrypted_full_finance_reset.dart' show WaffraReceiptCleanupPending;
 import 'storage/waffra_verified_finance_authority.dart';
 import 'storage/waffra_accounts_portable_backup_v3.dart';
 import 'storage/waffra_legacy_v24_sqlcipher_converter.dart';
@@ -3744,10 +3745,12 @@ void _waffraShowFooterNotice(WaffraNoticeData notice){
 /// The financial list is laid out above it instead of being obscured.
 class WaffraFooterNoticeHost extends StatefulWidget {
  const WaffraFooterNoticeHost({super.key,this.onNoticePresented,
-  this.listenable,this.onDismiss});
+  this.listenable,this.onDismiss,this.expandToAvailableWidth=false});
  final VoidCallback? onNoticePresented;
  final ValueListenable<WaffraNoticeData?>? listenable;
  final VoidCallback? onDismiss;
+ /// Extend the snackbar to the page's normal margins when no + is shown.
+ final bool expandToAvailableWidth;
  @override State<WaffraFooterNoticeHost> createState()=>
   _WaffraFooterNoticeHostState();
 }
@@ -3790,7 +3793,8 @@ class _WaffraFooterNoticeHostState extends State<WaffraFooterNoticeHost> {
      Padding(
       padding:const EdgeInsets.only(top:4,bottom:8),
       child:Center(child:SizedBox(
-       width:min(MediaQuery.sizeOf(ctx).width*0.87,440.0),
+       width:widget.expandToAvailableWidth?double.infinity:
+        min(MediaQuery.sizeOf(ctx).width*0.87,440.0),
        child:Builder(builder:(panelContext){
         return Material(
          color:waffraNoticeSurfaceColor(panelContext),elevation:2,
@@ -4642,7 +4646,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    }),
   ),
   ),
-  if(!accountOpened&&tab!=2)
+  if(!accountOpened&&ready&&tab!=2)
    WaffraApprovedFixedFabNoticePosition(
     key:const Key('m675-snackbar-beside-unchanged-fab'),
     link:_fabOverlayAnchor,english:waffraIsEnglish,
@@ -4650,9 +4654,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
      if(mounted&&addFabExpanded)setState(()=>addFabExpanded=false);
     }),
    ),
-  if(!accountOpened&&tab==2)
-   PositionedDirectional(start:12,end:12,bottom:90,
-    child:WaffraFooterNoticeHost()),
+  // No '+' is mounted on the account detail route either. Keep the notice
+  // at the page bottom there; the other no-FAB tabs retain footer clearance.
+  if(accountOpened||tab==2||!ready)
+   PositionedDirectional(start:12,end:12,bottom:accountOpened?12:90,
+    child:WaffraFooterNoticeHost(expandToAvailableWidth:true)),
   if(addFabExpanded&&!accountOpened)...[
    Positioned.fill(
     key:const Key('waffra-fullscreen-fab-blur'),

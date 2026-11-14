@@ -425,6 +425,41 @@ class WaffraVerifiedFinanceAuthority {
   /// present the same fresh, independently attested SQLCipher read that is
   /// currently displayed and an externally saved authenticated backup.
   /// No UI shortcut is allowed to set the encrypted activation marker.
+  /// M644: approved by the owner as a biometric-only irreversible reset.
+  /// Never falls back to legacy or retains a stale Home/Widget witness.
+  Future<WaffraFinanceAuthorityRead> resetAfterBiometric({
+    required WaffraFinanceRoute route,
+    required WaffraFinanceAuthorityRead baseline,
+    required bool userConfirmed,
+    required bool biometricVerified,
+  }) async {
+    if (route != WaffraFinanceRoute.fullFinanceReset ||
+        !userConfirmed || !biometricVerified) {
+      throw StateError('Verified full reset requires biometric consent.');
+    }
+    final source = await _requireRoute(route);
+    if (source != WaffraRuntimeFinanceBackend.verifiedEncrypted ||
+        baseline.source != WaffraRuntimeFinanceBackend.verifiedEncrypted ||
+        baseline.encryptedWitness == null ||
+        encryptedSession == null) {
+      throw StateError('Full finance reset requires an active SQLCipher source.');
+    }
+    final result = await encryptedSession!.resetAfterBiometric(
+      baseline: baseline.encryptedWitness!,
+      userConfirmed: true,
+      biometricVerified: true,
+    );
+    if (result.newGeneration <= result.previousGeneration) {
+      throw StateError('Biometric reset was not committed durably.');
+    }
+    final refreshed = await load(route: route);
+    if (refreshed.encryptedWitness?.snapshot.generation != result.newGeneration ||
+        refreshed.finance.getString('entries') != '[]') {
+      throw StateError('Biometric reset post-commit finance read differs.');
+    }
+    return refreshed;
+  }
+
   Future<WaffraFinanceAuthorityRead> resetVerifiedFinance({
     required WaffraFinanceRoute route,
     required WaffraFinanceAuthorityRead baseline,

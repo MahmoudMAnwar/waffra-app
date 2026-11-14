@@ -89,7 +89,8 @@ void main() {
     expect(source,isNot(contains('bottomNavigationBar:accountOpened?null:Column(mainAxisSize:MainAxisSize.min')));
     expect(source,contains('if(mounted&&addFabExpanded)setState(()=>addFabExpanded=false)'));
     expect(source,contains('maxLines:2,'));
-    expect(source,contains('width:min(MediaQuery.sizeOf(ctx).width*0.87,440.0)'));
+    expect(source,contains('width:widget.expandToAvailableWidth?double.infinity:'));
+    expect(source,contains('min(MediaQuery.sizeOf(ctx).width*0.87,440.0)'));
     expect(RegExp(r'\.showSnackBar\s*\(').allMatches(source).length,1);
   });
 

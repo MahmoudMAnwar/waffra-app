@@ -153,10 +153,17 @@ class WaffraProductionFinanceAuthorityBinding {
           );
         }
       }
+      // Only the app-created private Documents/receipts directory is eligible
+      // for cleanup; test/non-installed bindings never guess a filesystem root.
+      final receiptsDirectory = installedApp && Platform.isAndroid
+          ? Directory((await getApplicationDocumentsDirectory()).path +
+              Platform.pathSeparator + 'receipts')
+          : null;
       final bridge = WaffraVerifiedEncryptedFinanceBridge(
         snapshot: snapshot,
         cutoverJournal: journal,
         writerDirectory: directory,
+        legacyReceiptsDirectory: receiptsDirectory,
         allWritersRoutedVerified: true,
         secureKeyVerified: true,
         experimentalEnabled: true,
@@ -173,6 +180,22 @@ class WaffraProductionFinanceAuthorityBinding {
         externalSourceWitnessActive: true,
         verifiedKeyRecoveryInDevice: true,
       );
+      // A confirmed reset can commit before Android finishes deleting its
+      // own legacy receipt files. Resume the encrypted purge journal under
+      // the attested Home/Widget writer lock before exposing a new session.
+      // Skip the writer gate entirely on normal app startup (no pending row).
+      final cleanupTable = await store.customSelect(
+        "SELECT name FROM sqlite_master WHERE type='table' "
+        "AND name='fresh_finance_reset_receipt_cleanup'",
+      ).get();
+      if (cleanupTable.isNotEmpty) {
+        final pending = await store.customSelect(
+          'SELECT count(*) AS n FROM fresh_finance_reset_receipt_cleanup',
+        ).getSingle();
+        if (pending.read<int>('n') > 0) {
+          await bridge.resumePendingResetReceiptCleanup();
+        }
+      }
       // Home immediately calls WaffraFreshHomeCatalogRecovery.load(), which
       // reads dashboardRead with the same active native source witnesses and
       // verifies integrity BEFORE it can expose ledger or balances. Avoid a
