@@ -132,5 +132,9 @@ String readWaffraMainSourceForContracts(){
  if(s.split(managementMarker).length!=2)throw StateError('Missing or duplicated M783 original SMS management marker');
  s=s.replaceFirst(managementMarker,_method('lib/waffra_home_sms_management.part.dart',
   ' Future<void> _scanPreviousBankSmsFromSettings()async{'));
+ const summaryMarker=' // M810: original Home income/expense transaction summary now in registered part.\n';
+ if(s.split(summaryMarker).length!=2)throw StateError('Missing/duplicate M810 genuine summary source');
+ s=s.replaceFirst(summaryMarker,_method('lib/waffra_home_transaction_summary.part.dart',
+  ' Future<void> showSummaryTransactions(bool income)async {'));
  return s;
 }
