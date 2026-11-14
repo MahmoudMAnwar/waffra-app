@@ -32,23 +32,23 @@ class FinancialQualityGateTest(unittest.TestCase):
 
     def test_detects_finance_authority_bypass(self):
         self.assert_detects_change(
-            "lib/main.dart", "_financeAuthority.commitConfirmedSms(",
+            "lib/waffra_home_sms_confirmation.part.dart", "_financeAuthority.commitConfirmedSms(",
             "_homeFinancePersistence.commitConfirmedLegacySms(",
             "SMS verified authority bypass")
 
     def test_new_sms_confirmation_cannot_drop_account_witness_or_hash(self):
         self.assert_detects_change(
-            "lib/main.dart",
+            "lib/waffra_home_sms_confirmation.part.dart",
             "expectedAccountGeneration:chosen.generation",
             "expectedAccountGeneration:null",
             "quick SMS account-generation bypass")
         self.assert_detects_change(
-            "lib/main.dart", "allowDuplicateHashes:false",
+            "lib/waffra_home_sms_confirmation.part.dart", "allowDuplicateHashes:false",
             "allowDuplicateHashes:true", "duplicate bank debit bypass")
 
     def test_detects_foreign_currency_bypass(self):
         self.assert_detects_change(
-            "lib/main.dart",
+            "lib/waffra_home_entry_sheet.part.dart",
             "WaffraSmsCurrencies.requiresReviewForSarLedger(message.text)",
             "false",
             "foreign currency guard removal")
@@ -74,7 +74,7 @@ class FinancialQualityGateTest(unittest.TestCase):
 
     def test_detects_sms_editor_account_generation_bypass(self):
         self.assert_detects_change(
-            "lib/main.dart",
+            "lib/waffra_home_entry_sheet.part.dart",
             "expectedAccountGeneration:reviewedAccount.generation",
             "expectedAccountGeneration:null",
             "surviving SMS editor account witness bypass")

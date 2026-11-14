@@ -100,7 +100,8 @@
     "M924 #633 preserve unchanged M108/M110 original two live Home/Widget SQLCipher and SMS writer tests after real registered Dart part extraction, by replacing exactly two raw lib/main.dart test readers with fail-closed registered-part source reassembler; preserve all original security, native pending intent, CAS journal and no second writer assertions.",
     "M925 #633 repair exact-head M174 all-Python QA false failure by comparing Dart-escaped source quote safely while preserving all original M108/M110 negative/positive finance assertions; repair M110 inline direct-write preflight to read fail-closed registered same-library real Dart Home source and check original negative direct legacy writes and positive SQLCipher finance routes; no real wallet/widget/backup changes.",
     "M926 #633 safely move exact original UI-only dashboard scroll header compactness and persistent animation preference methods out of _HomeScreenState into registered Dart Home part; keep 96px threshold, post-frame mounted guard and SharedPreferences animation settings unchanged; M385/M550 and original Dart/Python source regression.",
-    "M927 #634/#632/#637 audit exact real Flutter/Dart import and part traversal from Home, SMS consent and offline SMS runtime entrypoints; fail CI if retired Qwen, AI or Cloudflare SMS model sources become reachable again, assert legacy consent disabled and outbound analyze fail closed while preserving active local SMS normalization and encrypted backups. Test-only compatibility validators are not deleted without completing old test migration."
+    "M927 #634/#632/#637 audit exact real Flutter/Dart import and part traversal from Home, SMS consent and offline SMS runtime entrypoints; fail CI if retired Qwen, AI or Cloudflare SMS model sources become reachable again, assert legacy consent disabled and outbound analyze fail closed while preserving active local SMS normalization and encrypted backups. Test-only compatibility validators are not deleted without completing old test migration.",
+    "M928 #633 fix M340 financial source authority gate after Home Dart extraction with exact real registered source reconstruction, including hostile QA mutations against real source of SMS confirmation and manual finance editor; preserve every positive and negative M340 authority/amount/date/consent/FX/duplicate/account-generation assertion. Keep M385 bounded source and existing M340 full Flutter/SQLCipher matrix."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -371,7 +372,9 @@
     "lib/waffra_home_presentation_controls.part.dart",
     "test/m926_home_presentation_controls_extraction_test.dart",
     "test/qa/m927_retired_model_runtime_graph_guard_test.py",
-    "docs/qa/m927_retired_model_runtime_audit.md"
+    "docs/qa/m927_retired_model_runtime_audit.md",
+    "test/qa/test_m340_financial_quality_gate.py",
+    "test/qa/m928_registered_home_finance_guard_injection_test.py"
   ],
   "approved_deleted_files": [
     "lib/waffra_sms_cloud_review_analyzer.dart"
@@ -2403,6 +2406,12 @@
       {
         "start": "          from pathlib import Path",
         "end": "          assert '_homeFinancePersistence.saveLegacy(' not in home"
+      }
+    ],
+    "test/qa/test_m340_financial_quality_gate.py": [
+      {
+        "start": "    def test_detects_finance_authority_bypass(self):",
+        "end": "    def test_detects_fx_consent_bypass(self):"
       }
     ]
   }

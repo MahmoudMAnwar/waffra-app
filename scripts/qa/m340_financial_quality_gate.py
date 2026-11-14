@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[2]
 SOURCE_PATHS = (
     "lib/main.dart",
     "lib/waffra_home_entry_sheet.part.dart",
+    "lib/waffra_home_sms_confirmation.part.dart",
     "lib/waffra_sms_multicurrency_review.dart",
     "lib/waffra_ai_recorded_answers.dart",
     "lib/waffra_smart_features.dart",
@@ -31,35 +32,24 @@ def load_sources(root: Path = ROOT) -> dict[str, str]:
 
 
 def _registered_home_entry_source(sources: Mapping[str, str], problems: list[str]) -> str:
-    """Inspect the real, registered same-library Home editor, never a stub.
+    """Inspect all actual registered original Home methods without bypassing any
+    of M340's SMS owner, account-generation, duplicate-hash or money guards.
 
-    M719 moved the verified finance editor byte-for-byte into a Dart part.
-    Reinsert its *existing* method at the original marker so the previous
-    SMS, date, foreign-currency, receipt and writer checks remain unchanged.
-    Missing, detached or duplicate code fails closed.
+    The real filesystem reader accepts injected real-source text for hostile
+    regression tests, so a mutation of the SMS review or editor part is audited
+    in place rather than silently ignored.
     """
-    main = sources.get("lib/main.dart", "")
-    path = "lib/waffra_home_entry_sheet.part.dart"
-    declaration = "part 'waffra_home_entry_sheet.part.dart';"
-    marker = (
-        " // M719: original verified transaction entry form extracted "
-        "to same-library Home part.\n"
-    )
-    # This is a source assertion, not a substitute for Dart analyzer checks.
-    if main.count(declaration) != 1 or main.count(marker) != 1:
-        problems.append("lib/main.dart: registered M719 finance editor missing/duplicated")
-        return main
-    part = sources.get(path, "")
-    start_marker = " Future<void> entrySheet("
-    start = part.find(start_marker)
-    end = part.rfind("\n}")
-    if (not part.startswith("part of 'main.dart';")
-            or "on _HomeScreenState" not in part
-            or part.count(start_marker) != 1
-            or start < 0 or end <= start):
-        problems.append(f"{path}: original verified finance editor missing/duplicated")
-        return main
-    return main.replace(marker, part[start:end + 1])
+    import sys
+    qa_path = str(ROOT / "test/qa")
+    if qa_path not in sys.path:
+        sys.path.insert(0, qa_path)
+    from waffra_home_source import read_waffra_home_source
+    try:
+        return read_waffra_home_source(ROOT, overrides=sources)
+    except (OSError, UnicodeError, AssertionError, ValueError) as exc:
+        problems.append("lib/main.dart: registered Home financial source unavailable: "
+                        + str(exc)[:260])
+        return sources.get("lib/main.dart", "")
 
 
 def audit_sources(sources: Mapping[str, str]) -> list[str]:

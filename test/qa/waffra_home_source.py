@@ -2,20 +2,25 @@
 from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 
-def _method(root, path, begin):
-    source = (root / path).read_text(encoding="utf-8")
+def _read(root, path, overrides=None):
+    if overrides is not None and path in overrides:
+        return overrides[path]
+    return (root / path).read_text(encoding="utf-8")
+
+def _method(root, path, begin, overrides=None):
+    source = _read(root, path, overrides)
     a, b = source.find(begin), source.rfind("\n}")
     if a < 0 or b <= a:
         raise AssertionError("Missing Dart production method: " + path)
     return source[a:b+1]
 
-def read_waffra_home_source(root=ROOT):
-    source = (root / "lib/main.dart").read_text(encoding="utf-8")
+def read_waffra_home_source(root=ROOT, overrides=None):
+    source = _read(root, "lib/main.dart", overrides)
     def restore(marker, path, begin):
         nonlocal source
         if source.count(marker) != 1:
             raise AssertionError("Missing/duplicate Dart part marker: " + marker)
-        source = source.replace(marker, _method(root, path, begin), 1)
+        source = source.replace(marker, _method(root, path, begin, overrides), 1)
     restore(" // M830: original Home navigation and summary helpers moved to registered same-library part.\n",
             "lib/waffra_home_navigation_helpers.part.dart",
             " Widget categoriesPage()=>categoriesPageV2();")
@@ -38,7 +43,7 @@ def read_waffra_home_source(root=ROOT):
             "lib/waffra_home_entry_sheet.part.dart"," Future<void> entrySheet(")
     restore(" // M707: approved Goals and Recurring pages moved to registered Home part.\n",
             "lib/waffra_home_goals_recurring_pages.part.dart"," Widget goalsPage(){")
-    goal = (root / "lib/waffra_home_goal_actions.part.dart").read_text(encoding="utf-8")
+    goal = _read(root, "lib/waffra_home_goal_actions.part.dart", overrides)
     a,b,c = goal.find(" Future<void> goalDialog("),goal.find(" Future<void> _m689GoalActions("),goal.rfind("\n}")
     if a < 0 or b <= a or c <= b:
         raise AssertionError("Original goal code part is malformed")

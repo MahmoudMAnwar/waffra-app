@@ -4490,6 +4490,28 @@
         "Historical negative test-only currency/model validators cannot be called from production Home or notification onboarding.",
         "No unrelated encrypted cloud backup synchronization or original owner restore components are deleted or disabled."
       ]
+    },
+    {
+      "id": "M928-M340-PRESERVE-ORIGINAL-ACTUAL-HOME-SMS-AUTHORITY",
+      "issue": "Issue #633 / Draft #638 safe Home same-library source extraction",
+      "previous_behavior": "M340 offline financial source gate and its hostile-mutation tests read the initial Home main source plus only one extracted entry-sheet part, missing original protected SMS review confirmation, verified bank account pre-Yes selection, authenticated editor safeguards and duplicate prevention once those methods became registered Dart parts.",
+      "approved_behavior": "Reconstruct complete real registered Home source including selected actual imported-part override text, keep strict failure for missing/duplicate markers; repair original M340 negative mutator tests to edit the actual registered SMS confirmation and editor source, not obsolete raw main.dart. Do not drop, alter, or bypass original safety conditions.",
+      "source_paths": [
+        "scripts/qa/m340_financial_quality_gate.py",
+        "test/qa/waffra_home_source.py",
+        "test/qa/test_m340_financial_quality_gate.py"
+      ],
+      "test_paths": [
+        "test/qa/test_m340_financial_quality_gate.py",
+        "test/qa/m928_registered_home_finance_guard_injection_test.py",
+        "test/qa/m900_home_source_reassembly_guard_test.py"
+      ],
+      "safety_invariants": [
+        "M340 still demands exactly two verified SMS authority commits and original owner, account-generation, amount/date, hash and review guards.",
+        "Hostile mutations of the actual SMS confirmation/editor part must cause M340 audit failure; no fixture or mocked production source.",
+        "Foreign-currency consent, receipt staging, full finance authority, retired AI prohibitions and SQLCipher production cutover checks remain unchanged.",
+        "No changes to Flutter finance writers, original bank SMS, budgets, Backup/Restore, native Widget or stationary FAB."
+      ]
     }
   ]
 }
