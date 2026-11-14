@@ -232,7 +232,8 @@ ORDER BY a.created_iso,a.account_id
     r.read<int>('archived')!=0,
     providerId:r.readNullable<String>('provider_id'),
     subtype:r.readNullable<String>('subtype'),
-    customSubtypeLabel:r.readNullable<String>('custom_subtype_label'))));
+    customSubtypeLabel:r.readNullable<String>('custom_subtype_label'),
+    customInstitutionRootId:r.readNullable<String>('custom_root_id'))));
  }
 
  Future<void> renameAccount({required String id,required String name,
