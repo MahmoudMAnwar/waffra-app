@@ -131,4 +131,10 @@ def read_waffra_home_source(root=ROOT, overrides=None):
     restore(" // M850: original native SMS notice/rescan logic lives in registered Home Dart part.\n",
             "lib/waffra_home_sms_rescan.part.dart",
             " void _receiveAutoSmsNotice(){")
+    restore(" // M929: verified sign-out closing and cancelled-logout recovery live in registered Home part.\n",
+            "lib/waffra_home_logout_guard.part.dart", " Future<void> _m627CloseForLogout()async{")
+    restore(" // M929: verified notification-to-SMS/saved-ledger route lives in registered Home part.\n",
+            "lib/waffra_home_finance_notification_route.part.dart", " void _m621OnFinanceNoticeTap(){")
+    restore(" // M929: no-post foreign currency preview lives in registered Home part.\n",
+            "lib/waffra_home_fx_preview.part.dart", " Future<void> _previewForeignBankCurrency(")
     return source
