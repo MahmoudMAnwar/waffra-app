@@ -16,6 +16,9 @@ def read_waffra_home_source(root=ROOT):
         if source.count(marker) != 1:
             raise AssertionError("Missing/duplicate Dart part marker: " + marker)
         source = source.replace(marker, _method(root, path, begin), 1)
+    restore(" // M830: original Home navigation and summary helpers moved to registered same-library part.\n",
+            "lib/waffra_home_navigation_helpers.part.dart",
+            " Widget categoriesPage()=>categoriesPageV2();")
     restore(" // M721: original Home calendar, backup and account tools moved to registered same-library part.\n",
             "lib/waffra_home_account_tools.part.dart"," Future<void> showWaffraFinancialCalendar(")
     restore(" // M687: PDF exporter moved to a same-library State extension.\n",
@@ -108,9 +111,6 @@ def read_waffra_home_source(root=ROOT):
     restore(" // M840: original verified Home/Widget synchronization now in registered Dart part.\n",
             "lib/waffra_home_widget_sync.part.dart",
             " Future<void> _syncWidgetTransactions()async{")
-    restore(" // M830: original Home navigation and summary helpers moved to registered same-library part.\n",
-            "lib/waffra_home_navigation_helpers.part.dart",
-            " Widget categoriesPage()=>categoriesPageV2();")
     restore(" // M835: existing bank SMS review indicator card moved unchanged to registered Home part.\n",
             "lib/waffra_home_sms_review_indicator.part.dart",
             " // ignore: unused_element\n Widget _autoSmsReviewCard(){")
