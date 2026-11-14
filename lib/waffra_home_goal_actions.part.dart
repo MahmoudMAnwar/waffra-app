@@ -252,11 +252,7 @@ extension _WaffraHomeGoalActions on _HomeScreenState {
   final api=WaffraVerifiedAccountsApi(bridge:bridge);
   final before=await api.balances();
   if(!mounted)return null;
-  WaffraSaudiProvider? selectedProvider;
-  if(requestedGroupId!=null&&requestedGroupId.contains(':institution:')){
-   final identifier=requestedGroupId.split(':').last;
-   selectedProvider=WaffraSaudiFinancialProviders.byId(identifier);
-  }
+  final selectedProvider=waffraProviderForAccountGroup(requestedGroupId);
   final kinds=<String,List<String>>{
    for(final kind in const ['bank','wallet'])
     kind:before.where((a)=>!a.archived&&a.kind==kind&&
@@ -269,11 +265,8 @@ extension _WaffraHomeGoalActions on _HomeScreenState {
     suggestedProviderId:selectedProvider?.id,
     customSubtypeOptions:kinds));
   if(draft==null||!mounted)return null;
-  if(selectedProvider!=null&&
-     (draft.providerId!=selectedProvider.id||
-      draft.kind!=(selectedProvider.category==WaffraSaudiFinancialProviders.wallet?
-       'wallet':'bank'))){
-   throw StateError('New financial account provider changed');
+  if(!waffraNewAccountMatchesGroup(requestedGroupId,draft)){
+   throw StateError('Child account provider changed');
   }
   // The account form may stay open while SMS/widget writes change finance.
   // Take a fresh verified witness after the user confirms this draft.

@@ -332,9 +332,8 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
       if(draft==null||!sheetContext.mounted)return;
       // Bank child creation must stay under the selected real institution;
       // never silently convert a specific bank group into another provider.
-      if(expectedBank!=null&&
-         (draft.kind!=(selectedCatalog!.category==WaffraSaudiFinancialProviders.wallet?
-          'wallet':'bank')||draft.providerId!=expectedBank)){
+      if(!mainProvider&&
+         !waffraNewAccountMatchesGroup(selectedParent,draft)){
        snack(sheetContext,waffraIsEnglish?
         'The linked account must belong to the selected bank.':
         'الحساب التابع لازم يكون لنفس البنك المختار.',isError:true);
