@@ -6,7 +6,7 @@ String _method(String path,String marker){
  final c=File(path).readAsStringSync();
  final a=c.indexOf(marker),b=c.lastIndexOf('\n}');
  if(a<0||b<=a)throw StateError('Missing extracted method in $path');
- return c.substring(a,b);
+ return c.substring(a,b+1);
 }
 String readWaffraMainSourceForContracts(){
  var s=File('lib/main.dart').readAsStringSync();
@@ -54,7 +54,7 @@ String readWaffraMainSourceForContracts(){
   throw StateError('Missing or duplicate relocated goal section');
  }
  s=s.replaceFirst(originalGoalMarker,goalSource.substring(goalStart,goalActionStart));
- s=s.replaceFirst(originalActionMarker,goalSource.substring(goalActionStart,goalEnd));
+ s=s.replaceFirst(originalActionMarker,goalSource.substring(goalActionStart,goalEnd+1));
 
  const smsMarker=' /// Explicit, idempotent account-to-account transfer from reviewed bank SMS.\n // M703: implementation moved byte-identically to registered Home part.\n';
  if(s.split(smsMarker).length!=2)throw StateError('Missing or duplicated M703 part marker');
