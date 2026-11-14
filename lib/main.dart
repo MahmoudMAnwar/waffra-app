@@ -3793,7 +3793,10 @@ class _WaffraFooterNoticeHostState extends State<WaffraFooterNoticeHost> {
     const SizedBox(width:double.infinity,height:0):
      Padding(
       padding:const EdgeInsets.only(top:4,bottom:8),
-      child:Center(child:SizedBox(
+      // Shrink-wrap to the notice itself. An unconstrained Center fills
+      // the FAB follower's height and recenters a long message downward.
+      // HeightFactor pins the physical BOTTOM edge while rows wrap upward.
+      child:Center(heightFactor:1.0,child:SizedBox(
        width:widget.expandToAvailableWidth?double.infinity:
         min(MediaQuery.sizeOf(ctx).width*0.87,440.0),
        child:Builder(builder:(panelContext){
