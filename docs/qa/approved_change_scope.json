@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "change_id": "M690-M744-ISSUES632-637-20261114",
+  "change_id": "M690-M751-ISSUES632-637-20261114",
   "human_scope_review": "Issue #629 completes prior PR #628 only after user-visible acceptance; #631 explicitly authorizes three exact screenshots for Goals/Dues/SMS Review, permanently visible financial activity, non-moving FAB-aligned notice, and savings/goal-due cash safety. Existing tests replace outdated visual assumptions without deleting financial safety assertions. Device screenshots/old restore still require external device evidence.",
   "user_requested_changes": [
     "M690 #632 permanently disable third-party AI bank SMS uploads and opt-in on previously installed versions, remove Settings toggle and signed Android staging worker, retain local encrypted SMS Review and money writer.",
@@ -54,7 +54,8 @@
     "M742 #633 extract original Home SMS scanner/isolated local classification, same-owner pending queue and sender exclusion/duplicate acknowledgement into registered same-library part byte-identically, retaining verified finance, native permissions, backpressure and existing strict source assertions.",
     "M743 #633 retain every existing SMS review, native rescan, grouping, excluded sender and perf assertion in five original Flutter regression test suites by updating only stale raw-main source readers to verified production Dart-part reassembly after M739/M742; no test skipped or weakened.",
     "M750 #633 move original verified Home financial startup load() byte-for-byte to registered same-library Dart part, preserve original SQLCipher ledger/category/goal/recurring/account authority and background handoff, retain all strict original regression assertions and separate handset V24 parity.",
-    "M744 #633 update only the obsolete raw-main source reader and necessary helper import in twelve original strict bank SMS/Home/login/verified finance regression test files after registered same-library M739/M741/M742 moves; retain every original assertion and security/financial check."
+    "M744 #633 update only the obsolete raw-main source reader and necessary helper import in twelve original strict bank SMS/Home/login/verified finance regression test files after registered same-library M739/M741/M742 moves; retain every original assertion and security/financial check.",
+    "M751 #633 retain all six original strict Home startup/login, native refresh, SQLCipher catalog, biometric and timing assertions after exact M750 same-library finance load extraction: alter only stale raw-main source-reader imports/expressions under narrow approved M385 bounds; no test skipped or production money code changed."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -231,7 +232,13 @@
     "test/m623_verified_home_handoff_no_black_frame_test.dart",
     "test/m629_pull_refresh_parity_auth_home_test.dart",
     "test/m625_single_verified_home_read_login_handoff_test.dart",
-    "test/m627_home_handoff_timeout_and_session_reset_test.dart"
+    "test/m627_home_handoff_timeout_and_session_reset_test.dart",
+    "test/m470_logout_and_refresh_test.dart",
+    "test/m633_startup_batch_decoder_test.dart",
+    "test/m631_verified_finance_prewarm_test.dart",
+    "test/m663_home_prewarm_auth_handoff_test.dart",
+    "test/m613_foreground_lock_and_m614_finance_timing_contract_test.dart",
+    "test/storage/m451_fresh_home_catalog_recovery_test.dart"
   ],
   "approved_deleted_files": [
     "lib/waffra_sms_cloud_review_analyzer.dart"
@@ -1886,6 +1893,70 @@
       {
         "start": "void main() {",
         "end": "  final root=app.split('class _WaffraAppState extends State<WaffraApp>')[1]"
+      }
+    ],
+    "test/m470_logout_and_refresh_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "import 'package:flutter_test/flutter_test.dart';"
+      },
+      {
+        "start": " test('M470 #1 all signout entry points route to single safe logout',(){",
+        "end": "  final start=home.indexOf(' Future<void> logout()async {');"
+      },
+      {
+        "start": " test('M470 #2 unchanged verified refresh avoids reconstructing whole ledger',(){",
+        "end": "  final start=home.indexOf(' Future<void> _refreshFromVerifiedFinance()async {');"
+      }
+    ],
+    "test/m633_startup_batch_decoder_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "import 'package:flutter_test/flutter_test.dart';"
+      },
+      {
+        "start": " test('M633 Home waits for verified balances and keeps owner/session fencing',(){",
+        "end": "  final load=src.split(' Future<void> load()async {\\n  final financeClock=')[1]"
+      }
+    ],
+    "test/m631_verified_finance_prewarm_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "import 'package:flutter_test/flutter_test.dart';"
+      },
+      {
+        "start": "void main() {",
+        "end": " final app=src.split('class _WaffraAppState extends State<WaffraApp>')[1]"
+      }
+    ],
+    "test/m663_home_prewarm_auth_handoff_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "import 'package:flutter_test/flutter_test.dart';"
+      },
+      {
+        "start": "void main() {",
+        "end": " final root=app.substring("
+      }
+    ],
+    "test/m613_foreground_lock_and_m614_finance_timing_contract_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "import 'package:flutter_test/flutter_test.dart';"
+      },
+      {
+        "start": " test('M614 profile-mode spans distinguish secure login from verified financial first frame', () {",
+        "end": "  final signIn=app.substring("
+      }
+    ],
+    "test/storage/m451_fresh_home_catalog_recovery_test.dart": [
+      {
+        "start": "import 'dart:io';",
+        "end": "import 'package:flutter_test/flutter_test.dart';"
+      },
+      {
+        "start": "  test('M451 actual Home uses the same verified startup repair', () async {",
+        "end": "    final pos = app.indexOf(' Future<void> load()async {',"
       }
     ]
   }
