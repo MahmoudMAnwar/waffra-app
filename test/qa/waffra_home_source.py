@@ -90,4 +90,7 @@ def read_waffra_home_source(root=ROOT):
     restore(" // M795: Home category selector and protected receipt dialogs moved to registered Dart part.\n",
             "lib/waffra_home_category_receipt_dialogs.part.dart",
             " Future<String?> chooseTransactionCategory(")
+    restore(" // M791: original fail-closed Home finance startup and recovery UI in registered part.\n",
+            "lib/waffra_home_finance_recovery.part.dart",
+            " Future<void> _loadFinanceSafely()async{")
     return source
