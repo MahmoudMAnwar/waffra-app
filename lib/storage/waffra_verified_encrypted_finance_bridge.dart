@@ -827,6 +827,21 @@ class WaffraVerifiedEncryptedFinanceBridge {
     );
   }
 
+  /// M938: only a verified, owner-confirmed historical trash import may
+  /// reconstitute absent SQL metadata; real active finance stays immutable.
+  Future<void> repairImportedLegacyTrash({
+    required WaffraEncryptedHomeWitness baseline,
+    required WaffraFinanceModule module,
+    required bool userConfirmed,
+  }) {
+    if(!experimentalEnabled||!userConfirmed){
+      throw StateError('Verified and authorized legacy trash repair required.');
+    }
+    return _verifiedModuleRecycle.repairImportedLegacyTrash(
+      module:module,baseline:baseline.snapshot,userConfirmed:true,
+    );
+  }
+
   Future<Map<String, int>> listVerifiedDeletedModules(
     WaffraFinanceModule module,
   ) {

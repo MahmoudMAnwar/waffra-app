@@ -184,7 +184,8 @@ void main(){
   await tester.pumpAndSettle();
   final plus=tester.getRect(find.byKey(const Key('m675-fixed-plus')));
   final short=tester.getRect(find.byKey(const Key('m675-snackbar')));
-  expect(short.left,greaterThanOrEqualTo(plus.right+7));
+  expect((short.left-plus.right).abs(),lessThanOrEqualTo(0.5),
+    reason:'The notice ends at the physical + edge without a gap');
   expect((short.bottom-plus.bottom).abs(),lessThan(1.0));
   await tester.pumpWidget(scene(
    'رسالة تأكيد طويلة من سطرين أو أكثر ولا تغير موقع زر الإضافة على الإطلاق'));
@@ -192,7 +193,8 @@ void main(){
   final fixed=tester.getRect(find.byKey(const Key('m675-fixed-plus')));
   final long=tester.getRect(find.byKey(const Key('m675-snackbar')));
   expect(fixed,plus);
-  expect(long.left,greaterThanOrEqualTo(fixed.right+7));
+  expect((long.left-fixed.right).abs(),lessThanOrEqualTo(0.5),
+    reason:'Wrap changes height, never the physical + edge');
   expect((long.bottom-fixed.bottom).abs(),lessThan(1.0));
   expect(long.height,greaterThan(short.height));
   expect(tester.takeException(),isNull);
@@ -211,7 +213,8 @@ void main(){
   await tester.pumpAndSettle();
   final plus=tester.getRect(find.byKey(const Key('m675-fixed-plus')));
   final snackbar=tester.getRect(find.byKey(const Key('m675-snackbar')));
-  expect(snackbar.right,lessThanOrEqualTo(plus.left-7));
+  expect((snackbar.right-plus.left).abs(),lessThanOrEqualTo(0.5),
+    reason:'English notice meets its right-hand + without overlap');
   expect((snackbar.bottom-plus.bottom).abs(),lessThan(1.0));
   expect(tester.takeException(),isNull);
  });

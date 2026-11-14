@@ -116,12 +116,12 @@ void main() {
   expect(source,contains("Key('waffra-open-backup-file')"));
   expect(source,contains("Key('waffra-confirm-backup-restore')"));
   expect(source,contains('LengthLimitingTextInputFormatter(256)'));
-  expect(source,contains('stagedBackup=text;'));
+  expect(source,contains('stagedBackup=selected;'));
   expect(source,contains('compute(waffraDecodeBackupInIsolate'));
   expect(source,contains('WaffraBackupFiles.saveEncryptedArchive(encrypted)'));
   expect(source.contains('await Clipboard.setData(ClipboardData(text:encrypted))'),isFalse);
   expect(source.contains('TextField(controller:input,minLines:4,maxLines:7'),isFalse);
   expect(source.contains('legacyRestorePassword?'),isFalse);
-  expect(source,contains("_authorizeSensitiveAction('restoring data')"));
+  expect(source,contains("_authorizeSensitiveAction('backing up or restoring data')"));
  });
 }

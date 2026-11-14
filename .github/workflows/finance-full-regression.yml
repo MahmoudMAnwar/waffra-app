@@ -52,8 +52,32 @@ jobs:
         run: dart analyze lib/storage test/storage
       - name: Analyze full Flutter application
         run: flutter analyze --no-pub --no-fatal-infos --no-fatal-warnings
+      - name: M937 regression report parser hostile tests
+        run: python3 -m unittest discover -s test/qa -p 'm937_flutter_test_report_test.py' -v
       - name: Run every existing app and storage unit/widget regression
-        run: flutter test test/ --reporter expanded
+        run: |
+          mkdir -p build/qa
+          flutter test test/ --reporter expanded --file-reporter json:build/qa/m937-flutter-events.jsonl
+      - name: M937 exact SHA summary from real test events
+        if: always()
+        shell: bash
+        env:
+          TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set +e
+          python3 scripts/qa/m937_flutter_test_report.py --source-sha "$TESTED_SHA" --input build/qa/m937-flutter-events.jsonl --output build/qa/m937-test-summary.json --markdown build/qa/m937-test-summary.md
+          status=$?
+          if [ -f build/qa/m937-test-summary.md ]; then cat build/qa/m937-test-summary.md >> "$GITHUB_STEP_SUMMARY"; fi
+          exit "$status"
+      - name: Upload sanitized M937 test report on every outcome
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m937-full-flutter-quality-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            build/qa/m937-test-summary.json
+            build/qa/m937-test-summary.md
+          if-no-files-found: error
       - name: Verify new offline finance paths remain opt-in
         shell: bash
         run: |

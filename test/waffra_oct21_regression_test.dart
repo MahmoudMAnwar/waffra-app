@@ -55,7 +55,9 @@ void main() {
   final auth = File('lib/waffra_biometrics.dart').readAsStringSync();
   expect(auth, contains('biometricOnly: true'));
   expect(app, contains("_authorizeSensitiveAction('backing up or restoring data')"));
-  expect(app, contains("_authorizeSensitiveAction('restoring data')"));
+  // The same open backup dialog is already OS-biometric gated once at entry.
+  // Never bring back an extra fingerprint after the replacement consent.
+  expect(app, isNot(contains("_authorizeSensitiveAction('restoring data')")));
   expect(app, contains("_authorizeSensitiveAction('deleting financial data')"));
   expect(app, contains('WaffraBiometrics.isAvailable()'));
  });

@@ -54,7 +54,9 @@ void main() {
   expect(main,contains('class WaffraDeletedItemsButton extends StatelessWidget'));
   expect(main,contains('const Color(0xFFFF9090)'));
   expect(main,contains('const Color(0xFFB42332)'));
-  expect(main,contains('onPressed:WaffraHaptics.tapRequired(deletedGoalsDialog)'));
+  expect(main,contains("Key('m938-goals-more')"));
+  expect(main,contains("if(v=='trash')unawaited(deletedGoalsDialog());"));
+  expect(main,isNot(contains('onPressed:WaffraHaptics.tapRequired(deletedGoalsDialog)')));
   expect(main,contains("if(v=='trash')unawaited(deletedRecurringDialog());"));
   // The new compact recurring cards remain adjacent; legacy recycle-bin
   // buttons in other sections stay red and independently accessible.

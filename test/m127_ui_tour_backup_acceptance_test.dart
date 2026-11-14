@@ -45,8 +45,8 @@ void main() {
     expect(source,contains('if(!WaffraSecureBackup.isValidNewPassword(secret.text))'));
     expect(source,contains('WaffraBackupFiles.saveEncryptedArchive(encrypted)'));
     expect(source,contains('WaffraBackupFiles.openArchive()'));
-    expect(source,contains("'Import older copied backup (legacy)'"));
-    expect(source,contains('Clipboard.getData(Clipboard.kTextPlain)'));
+    expect(source,contains('WaffraLegacyV24SqlCipherConverter.prepare('));
+    expect(source,isNot(contains('Clipboard.getData(Clipboard.kTextPlain)')));
     expect(source,contains('Never copy it to the system clipboard on export.'));
   });
 

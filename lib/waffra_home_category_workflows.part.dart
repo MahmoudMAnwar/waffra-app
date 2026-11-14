@@ -284,10 +284,44 @@ extension _WaffraHomeCategoryWorkflows on _HomeScreenState {
    if(baseline.source!=WaffraRuntimeFinanceBackend.verifiedEncrypted){
     throw StateError('Encrypted module trash source was not selected.');
    }
-   final expiries=await _financeAuthority.listVerifiedDeletedModules(module);
+   // M938: a genuinely authenticated older V24 archive may contain
+   // deleted-goal wrappers but no typed SQL recycle witnesses. This is
+   // never silently trusted; only an explicit owner-confirmed, atomic
+   // metadata reconciliation may make those records recoverable.
+   var latest=baseline;
+   Map<String,int> expiries;
+   try{
+    expiries=await _financeAuthority.listVerifiedDeletedModules(module);
+   }on StateError catch(error){
+    if(module!=WaffraFinanceModule.goals||
+       !error.toString().contains('Encrypted module trash and SQL witness differ.')||
+       baseline.encryptedWitness==null)rethrow;
+    final archived=WaffraVerifiedModuleUiGuard.decodeTrash(
+     baseline.finance.getString(WaffraVerifiedModuleUiGuard.trashKey(module)),
+     WaffraVerifiedModuleUiGuard.trashPayloadKey(module));
+    if(archived.isEmpty)rethrow;
+    if(!mounted)return;
+    final approved=await confirm(
+     waffraIsEnglish?'Rebuild old Deleted Goals index?':
+      'إصلاح فهرس الأهداف المحذوفة القديمة؟',
+     waffraIsEnglish
+      ?'The authenticated older backup contains deleted goals without the new encrypted index. Rebuild only the missing recovery index? No transactions, savings or account balances will change.'
+      :'النسخة القديمة الموثّقة فيها أهداف محذوفة بدون فهرس SQLCipher الجديد. هل توافق على إنشاء فهرس الاسترجاع المفقود فقط؟ لن تتغير أي عمليات أو مدخرات أو أرصدة.');
+    if(approved!=true||!mounted)return;
+    final bridge=_financeBinding?.accountsBridge;
+    if(bridge==null)throw StateError('Verified encrypted bridge unavailable.');
+    await bridge.repairImportedLegacyTrash(
+     baseline:baseline.encryptedWitness!,
+     module:module,userConfirmed:true);
+    latest=await _financeAuthority.load(route:route);
+    if(latest.source!=WaffraRuntimeFinanceBackend.verifiedEncrypted){
+     throw StateError('Encrypted source changed after recycle repair.');
+    }
+    expiries=await _financeAuthority.listVerifiedDeletedModules(module);
+   }
    final items=WaffraVerifiedModuleUiGuard.verifiedTrash(
     module:module,
-    trashRaw:baseline.finance.getString(
+    trashRaw:latest.finance.getString(
      WaffraVerifiedModuleUiGuard.trashKey(module)),
     encryptedExpiries:expiries,
    );

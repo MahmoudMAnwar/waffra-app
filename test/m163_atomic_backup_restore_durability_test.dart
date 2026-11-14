@@ -12,9 +12,13 @@ void main() {
     expect(dialogStart, greaterThanOrEqualTo(0));
     expect(dialogEnd, greaterThan(dialogStart));
     final dialog = source.substring(dialogStart, dialogEnd);
+    // The mandatory biometric now happens once, at secure dialog opening.
+    // Keep the original gate instead of expecting a retired second prompt.
     final authorized = dialog.indexOf(
-      "_authorizeSensitiveAction('restoring data')");
+      "_authorizeSensitiveAction('backing up or restoring data')");
     expect(authorized, greaterThanOrEqualTo(0));
+    expect(RegExp(r'_authorizeSensitiveAction\(').allMatches(dialog).length, 1);
+    expect(authorized, lessThan(dialog.indexOf('await showWaffraDialog<void>(')));
     final restore = dialog.substring(authorized);
 
     final confirmed = restore.indexOf('final restoreSnapshot=<String,Object>{');
@@ -25,7 +29,10 @@ void main() {
     final durableWrite = restore.indexOf(
       'await _financeAuthority.saveCaptured(', sourceRead);
     final firstPublishedUi = restore.indexOf('setState((){', durableWrite);
-    final reminder = restore.indexOf('await syncRecurringReminders();');
+    // Earlier restore branches also synchronize reminders. Verify the
+    // reminder that follows THIS durable legacy commit and UI publication.
+    final reminder = restore.indexOf(
+      'await syncRecurringReminders();', firstPublishedUi);
     expect(confirmed, greaterThanOrEqualTo(0));
     expect(queued, greaterThan(confirmed));
     expect(sourceRead, greaterThan(queued));

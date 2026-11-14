@@ -55,7 +55,11 @@ void main(){
   expect(dialog,contains('WaffraBackupFiles.saveEncryptedArchive(encrypted)'));
   expect(dialog,contains("Key('waffra-open-backup-file')"));
   expect(dialog,contains('WaffraBackupFiles.openArchive()'));
-  expect(dialog,contains("Key('waffra-import-legacy-text')"));
+  // M938: old clipboard-only import is deliberately no longer exposed.
+  // Keep encrypted .waffra file decoding and all existing security checks.
+  expect(dialog,isNot(contains("Key('waffra-import-legacy-text')")));
+  expect(dialog,isNot(contains('Advanced options')));
+  expect(dialog,isNot(contains('Clipboard.getData(')));
   expect(dialog,contains('compute(waffraDecodeBackupInIsolate'));
   expect(dialog.contains('Clipboard.setData'),isFalse);
   expect(dialog.contains('ClipboardData(text:encrypted)'),isFalse);

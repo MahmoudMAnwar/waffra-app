@@ -74,7 +74,10 @@ void main() {
     expect(source,contains('class WaffraOutlinedItemsCount'));
     expect(source,contains("Key('m689-goal-card-'"));
     expect(source,contains("Key('m689-due-card-'"));
-    expect(source,contains("_filterChip(waffraIsEnglish?'This week':'هذا الأسبوع'"));
+    expect(source,contains("Key('m938-goals-filter-menu')"));
+    expect(source,contains("Key('m938-dues-filter-menu')"));
+    expect(source,contains('goalCounts[goalDisplay]'));
+    expect(source,contains('dueCounts[recurringDisplay]'));
     expect(source,isNot(contains("WaffraOutlinedItemsCount(label:waffraIsEnglish?'Recurring transactions'")));
     expect(source,contains('width:36,height:30,color:forest'));
   });

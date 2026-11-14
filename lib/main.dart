@@ -3779,7 +3779,8 @@ class _WaffraFooterNoticeHostState extends State<WaffraFooterNoticeHost> {
  @override void dispose(){
   _source.removeListener(_onChanged);
   _waffraFooterHostCount--;
-  if(_waffraFooterHostCount==0)waffraDismissFooterNotice();
+  // The notice may outlive Settings while the FAB anchor remounts;
+  // logout and timeout still dismiss it. Do not drop it on host teardown.
   super.dispose();
  }
  @override Widget build(BuildContext context)=>
@@ -3792,7 +3793,10 @@ class _WaffraFooterNoticeHostState extends State<WaffraFooterNoticeHost> {
     const SizedBox(width:double.infinity,height:0):
      Padding(
       padding:const EdgeInsets.only(top:4,bottom:8),
-      child:Center(child:SizedBox(
+      // Shrink-wrap to the notice itself. An unconstrained Center fills
+      // the FAB follower's height and recenters a long message downward.
+      // HeightFactor pins the physical BOTTOM edge while rows wrap upward.
+      child:Center(heightFactor:1.0,child:SizedBox(
        width:widget.expandToAvailableWidth?double.infinity:
         min(MediaQuery.sizeOf(ctx).width*0.87,440.0),
        child:Builder(builder:(panelContext){
@@ -3835,7 +3839,10 @@ void snack(BuildContext context,String text,{
  final inHome=context.widget is HomeScreen||
   context.findAncestorWidgetOfExactType<HomeScreen>()!=null;
  final inHomeDialog=ModalRoute.of(context) is PopupRoute;
- if(_waffraFooterHostCount>0&&(preferFooter||inHome||inHomeDialog)){
+ // An authenticated restore finishes in a Home-owned Settings modal.
+ // Even if its footer is temporarily absent, queue the notice for the
+ // stationary global FAB instead of displaying a full-width fallback.
+ if(inHome||(_waffraFooterHostCount>0&&(preferFooter||inHomeDialog))){
   // Switching from a non-footer route must never leave two notices stacked.
   ScaffoldMessenger.maybeOf(context)?.hideCurrentSnackBar();
   _waffraFallbackNoticeMessenger=null;
@@ -4650,7 +4657,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
    WaffraApprovedFixedFabNoticePosition(
     key:const Key('m675-snackbar-beside-unchanged-fab'),
     link:_fabOverlayAnchor,english:waffraIsEnglish,
-    child:WaffraFooterNoticeHost(onNoticePresented:(){
+    // Fill the horizontal run to the stationary FAB, including empty space.
+    child:WaffraFooterNoticeHost(expandToAvailableWidth:true,onNoticePresented:(){
      if(mounted&&addFabExpanded)setState(()=>addFabExpanded=false);
     }),
    ),

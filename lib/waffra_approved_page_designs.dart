@@ -241,9 +241,15 @@ class WaffraApprovedFixedFabNoticePosition extends StatelessWidget {
     link:link,showWhenUnlinked:false,
     targetAnchor:english?Alignment.bottomLeft:Alignment.bottomRight,
     followerAnchor:english?Alignment.bottomRight:Alignment.bottomLeft,
-    offset:Offset(english?-8:8,0),
+    // Meet the actual 58dp circle's near edge, without an arbitrary gap.
+    // Use the full horizontal space to the opposite page margin, including
+    // any blank part of a short card. Multiline notices still grow upward.
+    offset:Offset.zero,
     child:SizedBox(
-     width:(MediaQuery.sizeOf(context).width-104).clamp(168.0,440.0).toDouble(),
+     width:(MediaQuery.sizeOf(context).width-90-
+       MediaQuery.viewPaddingOf(context).left-
+       MediaQuery.viewPaddingOf(context).right)
+       .clamp(1.0,double.infinity).toDouble(),
      child:child),
    )),
  );
