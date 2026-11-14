@@ -96,4 +96,7 @@ def read_waffra_home_source(root=ROOT):
     restore(" // M791: original fail-closed Home finance startup and recovery UI in registered part.\n",
             "lib/waffra_home_finance_recovery.part.dart",
             " Future<void> _loadFinanceSafely()async{")
+    restore(" // M805: original Home budget alerts and chart SVG methods moved to registered part.\n",
+            "lib/waffra_home_budget_alert_charts.part.dart",
+            " Future<void> _requestPercentageAlertPermission()async{")
     return source
