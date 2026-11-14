@@ -3359,6 +3359,33 @@
         "All original widget and source finance contracts stay enabled.",
         "Physical Android review and owner encrypted backup parity remain acceptance gates."
       ]
+    },
+    {
+      "id": "M733-EXACT-SOURCE-REGRESSIONS-AND-STRICT-GRAPH-REGEX",
+      "issue": "Issue #633/#634, Draft #638",
+      "previous_behavior": "Five older UI/finance tests still inspected obsolete main.dart methods directly; new M717 strict dependency graph test used invalid Dart inline (?m) flag.",
+      "approved_behavior": "Read the original registered Home part code for all existing test expectations; use Dart's multiLine:true RegExp option without changing graph coverage.",
+      "source_paths": [
+        "test/support/waffra_main_source.dart",
+        "test/m717_no_cloud_runtime_dependency_test.dart"
+      ],
+      "test_paths": [
+        "test/m302_optimistic_module_write_safety_test.dart",
+        "test/m470_sms_transfer_fee_firsttap_category_test.dart",
+        "test/m149_backup_pin_localized_fab_trash_uat_test.dart",
+        "test/waffra_m206_day_theme_tour_sms_regression_test.dart",
+        "test/m495_pr402_ui_performance_regression_test.dart",
+        "test/m717_no_cloud_runtime_dependency_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "All original finance, SMS, wallet, backup, and UI assertions remain unchanged.",
+        "Full transitive original AI/cloud dependency graph remains forbidden from production.",
+        "No production money, backup or SMS code touched."
+      ]
     }
   ]
 }

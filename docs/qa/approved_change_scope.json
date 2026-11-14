@@ -42,7 +42,8 @@
     "M730 #633 preapprove 12 further original budget, income, bank SMS, merchant, recurring and UI regression tests to inspect the actual declared same-library Home parts, retaining every positive and negative assertion and preserving money code.",
     "M731 #633 preapprove 12 more existing bank SMS editor, category/account chooser, Android jank and Home transaction security regression reader corrections, preserving assertions and ignoring no negative conditions; only exact import and source reader statements permitted.",
     "M732 #633 preapprove 8 exact original encrypted backup, Android V24 migration, verified finance, user permissions and SMS review test files to inspect real extracted Home Dart parts; no assertion or production finance behavior may change.",
-    "M732 #633: repair M385 finance-quality script protected-boundary anchor to a unique unchanged header present at both original main and current registered editor source; preserve exact outside-scope comparison and fail-closed SHA/finance behavior."
+    "M732 #633: repair M385 finance-quality script protected-boundary anchor to a unique unchanged header present at both original main and current registered editor source; preserve exact outside-scope comparison and fail-closed SHA/finance behavior.",
+    "M733 #633 finish exact original Home source-inspection tests after registered Dart-part moves in five previously approved QA files without deleting or weakening assertions, and correct only Dart RegExp multiline syntax in M717 real import graph safety regression."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -515,6 +516,18 @@
       },
       {
         "start": " test('M302 recurring reminders are not scheduled for rejected mutations',(){"
+      },
+      {
+        "start": " test('M302 all optimistic module writes must recover authoritative finance state',(){",
+        "end": " test('M302 goal funding does not celebrate uncommitted savings',(){"
+      },
+      {
+        "start": " test('M302 goal funding does not celebrate uncommitted savings',(){",
+        "end": " test('M302 inline category picker returns a new name only after durable save',(){"
+      },
+      {
+        "start": " test('M302 inline category picker returns a new name only after durable save',(){",
+        "end": " test('M302 recurring reminders are not scheduled for rejected mutations',(){"
       }
     ],
     "test/m298_required_finance_field_validation_test.dart": [
@@ -697,6 +710,14 @@
       {
         "start": "import 'dart:io';",
         "end": "void main() {"
+      },
+      {
+        "start": "  test('M470 #18: first SMS tap opens selected review without PopScope veto', () {",
+        "end": "  test('M470 #19: post-back subcategory must be current parent-scoped', () {"
+      },
+      {
+        "start": "  test('M470 #19: post-back subcategory must be current parent-scoped', () {",
+        "end": "  test('M470 #13: transfer review never relies on fee-bearing BankParser amount', () {"
       }
     ],
     "test/m149_backup_pin_localized_fab_trash_uat_test.dart": [
@@ -707,6 +728,14 @@
       {
         "start": "import 'dart:io';",
         "end": "void main() {"
+      },
+      {
+        "start": " test('M149: V2 uses strong passphrase; legacy restore accepts old password',(){",
+        "end": " test('M149: initial PIN advances on four digits and three dialogs use same shell',(){"
+      },
+      {
+        "start": " test('M149: initial PIN advances on four digits and three dialogs use same shell',(){",
+        "end": " test('M149: all recycle-bin CTAs are red and recurring calendar is alongside',(){"
       }
     ],
     "test/m495_pr402_ui_performance_regression_test.dart": [
@@ -717,6 +746,22 @@
       {
         "start": "import 'dart:io';",
         "end": "void main(){"
+      },
+      {
+        "start": " test('M495 #418 date fills row and budget is equally expanded when present',(){",
+        "end": " test('M495 #412 user-confirmed financial account bypasses repeat popup',(){"
+      },
+      {
+        "start": " test('M495 #412 user-confirmed financial account bypasses repeat popup',(){",
+        "end": " test('M495 #419 avoid synchronous UI blocking during navigation and refresh',(){"
+      },
+      {
+        "start": " test('M495 #419 avoid synchronous UI blocking during navigation and refresh',(){",
+        "end": " test('M499 #416 all editor entry points expose dependent inline Add',(){"
+      },
+      {
+        "start": " test('M500 #420 Details Edit enables verified retroactive account link',(){",
+        "end": " testWidgets('M499 #416 child picker is disabled without provider, cancel preserves amount',"
       }
     ],
     "test/m258_finance_refresh_wiring_test.dart": [
@@ -761,6 +806,22 @@
       {
         "start": "  test('FAB launch waits for the menu collapse and suppresses double taps', () {",
         "end": "  testWidgets('details show verified original SMS once and concise name', (tester) async {"
+      },
+      {
+        "start": "  test('new installs start in light mode while an explicit choice persists', () {",
+        "end": "  test('AR/EN changes direction instantly without whole-page slide or Navigator replacement', () {"
+      },
+      {
+        "start": "  test('AR/EN changes direction instantly without whole-page slide or Navigator replacement', () {",
+        "end": "  test('M671 tour removed, but tool accordion and appearance remain',(){"
+      },
+      {
+        "start": "  test('M671 tour removed, but tool accordion and appearance remain',(){",
+        "end": "  test('M636 verified SMS keeps source text encrypted and date/fingerprint exact',(){"
+      },
+      {
+        "start": "  test('M636 verified SMS keeps source text encrypted and date/fingerprint exact',(){",
+        "end": "  test('FAB launch waits for the menu collapse and suppresses double taps', () {"
       }
     ],
     "test/qa/m447_verified_sms_account_linking_test.py": [

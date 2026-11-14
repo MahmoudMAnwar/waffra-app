@@ -1875,3 +1875,7 @@ Repair only old `lib/main.dart` reader in eight active V24 restore, finance pers
 
 ### M733 / #633 — same-library Home dashboard and analytics modularization (2026-11-14)
 Code scope: extract the existing Home dashboard, month/forecast widgets and read-only financial analysis into a registered Dart part without changing any UI arrangement, SQLCipher writes, calculations, account selection, global FAB or original Arabic/English text. The real-source QA reconstruction and unchanged finance assertions must continue to pass; device screenshot and original owner backup acceptance remain separate pending gates. Status: implementation proposed in Draft #638, exact-head CI pending.
+
+
+### M733 — #633/#634 / Draft #638: remaining source QA and valid Dart dependency regex
+Preserve five original test files' unchanged assertions by redirecting only their stale Home source readers to actual registered Dart-part reconstruction, with exact M385 method boundaries. Use Dart RegExp's native `multiLine:true` instead of unsupported inline `(?m)` in M717; the dependency graph's matches and prohibited modules remain unchanged. Same-head CI and original Android encrypted backup parity remain acceptance gates.
