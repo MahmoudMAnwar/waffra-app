@@ -65,7 +65,10 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          app = Path('lib/main.dart').read_text()
+          import sys
+          sys.path.insert(0, str(Path('test/qa').resolve()))
+          from waffra_home_source import read_waffra_home_source
+          app = read_waffra_home_source()
           widget = Path('native/WaffraWidget.kt').read_text()
           persistence = Path('lib/storage/waffra_home_finance_persistence.dart').read_text()
           # M110 Home and Widget dispatch confirmed SMS via one verified
