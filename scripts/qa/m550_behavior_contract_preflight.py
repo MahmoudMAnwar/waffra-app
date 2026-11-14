@@ -123,6 +123,8 @@ def _positive_python(text: str, path: str) -> list[tuple[str, str, int, str]]:
             if isinstance(node, (ast.Assign, ast.AnnAssign)):
                 value = node.value
                 src = _read_path(value) if value is not None else None
+                if src is None and isinstance(value, ast.Call) and isinstance(value.func, ast.Name) and value.func.id == 'read_waffra_home_source':
+                    src = 'lib/main.dart'
                 if src:
                     targets = node.targets if isinstance(node, ast.Assign) else [node.target]
                     for target in targets:

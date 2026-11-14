@@ -1,7 +1,8 @@
 """M566: editable SMS must confirm unknown original bank date before finance write."""
 from pathlib import Path
+from waffra_home_source import read_waffra_home_source
 import unittest
-SOURCE=(Path(__file__).resolve().parents[2]/'lib/main.dart').read_text(encoding='utf-8')
+SOURCE=read_waffra_home_source()
 class SmsDateReviewTest(unittest.TestCase):
  def test_date_consent_inside_editor(self):
   region=SOURCE.split('Future<void> entrySheet(',1)[1].split('Future<void> showReceipt(',1)[0]

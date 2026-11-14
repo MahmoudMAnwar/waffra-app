@@ -1,6 +1,6 @@
 {
   "contract_version": 1,
-  "change_id": "M690-M721-ISSUES632-637-20261114",
+  "change_id": "M690-M723-ISSUES632-637-20261114",
   "human_scope_review": "Issue #629 completes prior PR #628 only after user-visible acceptance; #631 explicitly authorizes three exact screenshots for Goals/Dues/SMS Review, permanently visible financial activity, non-moving FAB-aligned notice, and savings/goal-due cash safety. Existing tests replace outdated visual assumptions without deleting financial safety assertions. Device screenshots/old restore still require external device evidence.",
   "user_requested_changes": [
     "M690 #632 permanently disable third-party AI bank SMS uploads and opt-in on previously installed versions, remove Settings toggle and signed Android staging worker, retain local encrypted SMS Review and money writer.",
@@ -31,7 +31,8 @@
     "M715 #633 byte-identical extraction of the original monthly budget editor, historical review/linking and budget administration methods to registered same-library Home Dart part, with original source reconstruction for finance contracts and no ledger change.",
     "M717 #634 delete the retired cloud transport's HTTP client compile dependency, preserve the test-only fail-closed analyze signature and currency safety validator, and add a transitive application import graph test proving legacy AI and Cloudflare modules are unreachable from the runtime entrypoint.",
     "M719 #633 transfer the full original manual/SMS transaction editor and its account/category/save validation flow into a same-library Home part byte-for-byte, preserve all original finance and local SMS safety assertions through real source reassembly; do not change finance or FAB UI behavior.",
-    "M721 #633 move unchanged 980-line calendar, verified encrypted backup/restore dialogs and PIN/account tools from Home State to registered same-library part; keep all account/security archive bytes and source expectations intact."
+    "M721 #633 move unchanged 980-line calendar, verified encrypted backup/restore dialogs and PIN/account tools from Home State to registered same-library part; keep all account/security archive bytes and source expectations intact.",
+    "M723 #633 original five Python bank-SMS/date/account verification suites now reconstruct exactly the registered real Dart parts after M719/M721, without removal of any financial assertions; M550 recognizes real Python source helper for static checks."
   ],
   "allowed_changed_files": [
     ".github/workflows/android.yml",
@@ -112,7 +113,13 @@
     "lib/waffra_home_entry_sheet.part.dart",
     "test/m719_home_entry_sheet_extraction_test.dart",
     "lib/waffra_home_account_tools.part.dart",
-    "test/m721_home_account_tools_extraction_test.dart"
+    "test/m721_home_account_tools_extraction_test.dart",
+    "test/qa/m447_verified_sms_account_linking_test.py",
+    "test/qa/m564_sms_exact_date_guard_test.py",
+    "test/qa/m566_sms_manual_date_confirmation_test.py",
+    "test/qa/m573_sms_edited_account_learning_test.py",
+    "test/qa/m578_sms_time_confirmation_test.py",
+    "test/qa/waffra_home_source.py"
   ],
   "approved_deleted_files": [
     "lib/waffra_sms_cloud_review_analyzer.dart"
@@ -271,6 +278,10 @@
       {
         "start": "    expected_parts = (",
         "end": "    if home_path in new_sources:"
+      },
+      {
+        "start": "def _positive_python(",
+        "end": "def _positive_dart("
       }
     ],
     "test/m687_home_state_extraction_test.dart": [
@@ -661,6 +672,40 @@
       {
         "start": "  test('FAB launch waits for the menu collapse and suppresses double taps', () {",
         "end": "  testWidgets('details show verified original SMS once and concise name', (tester) async {"
+      }
+    ],
+    "test/qa/m447_verified_sms_account_linking_test.py": [
+      {
+        "start": "import unittest",
+        "end": "class VerifiedSmsAccountLinkingTest"
+      },
+      {
+        "start": "    def test_every_home_sms_commit_reviews_accounts(self):",
+        "end": "    def test_no_guarded_legacy_sms_account_override(self):"
+      }
+    ],
+    "test/qa/m564_sms_exact_date_guard_test.py": [
+      {
+        "start": "from pathlib import Path",
+        "end": "class ExactBankSmsDateTest"
+      }
+    ],
+    "test/qa/m566_sms_manual_date_confirmation_test.py": [
+      {
+        "start": "from pathlib import Path",
+        "end": "class SmsDateReviewTest"
+      }
+    ],
+    "test/qa/m573_sms_edited_account_learning_test.py": [
+      {
+        "start": "from pathlib import Path",
+        "end": "class EditedSmsAccountLearning"
+      }
+    ],
+    "test/qa/m578_sms_time_confirmation_test.py": [
+      {
+        "start": "from pathlib import Path",
+        "end": "class BankSmsTimeConfirmation"
       }
     ]
   }

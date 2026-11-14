@@ -4,10 +4,11 @@ The owner retired the independent bulk paste sheet, not the strict original-
 timestamp guard or the account-bound, human-confirmed automatic SMS review.
 """
 from pathlib import Path
+from waffra_home_source import read_waffra_home_source
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
-SOURCE = (ROOT / 'lib/main.dart').read_text(encoding='utf-8')
+SOURCE = read_waffra_home_source(ROOT)
 
 
 class ExactBankSmsDateTest(unittest.TestCase):

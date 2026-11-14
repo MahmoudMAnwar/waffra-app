@@ -1,7 +1,8 @@
 """M578: edited bank SMS requires exact date AND hour/minute confirmation."""
 from pathlib import Path
+from waffra_home_source import read_waffra_home_source
 import unittest
-SRC=(Path(__file__).resolve().parents[2]/'lib/main.dart').read_text(encoding='utf-8')
+SRC=read_waffra_home_source()
 
 class BankSmsTimeConfirmation(unittest.TestCase):
  def test_calendar_then_clock_are_mandatory(self):
