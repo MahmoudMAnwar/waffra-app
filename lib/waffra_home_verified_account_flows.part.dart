@@ -115,8 +115,11 @@ extension _WaffraHomeVerifiedAccountFlows on _HomeScreenState {
  }
 
  double _m467ShownBalance(){
+  // A missing verified SQLCipher projection must never become ledger net.
+  // Home renders a nonnumeric placeholder when balanceVerified is false.
+  if(!_m468VerifiedAccountsLoaded)return 0;
   if(_m467SelectedAccount=='all'){
-   return _m942VerifiedAllAccountsBalance()??waffraAvailableCash(entries,goals);
+   return _m942VerifiedAllAccountsBalance()??0;
   }
   for(final a in _m467Accounts){
    if(a.id==_m467SelectedAccount)return a.balanceMinor/100;
