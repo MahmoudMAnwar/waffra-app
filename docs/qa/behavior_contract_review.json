@@ -1,12 +1,37 @@
 {
   "schema_version": 1,
-  "pr": "M979 + M980 Draft — Android pure OTP and all four SMS rule kinds (#683/#657)",
-  "issue": "Issue #683, five axes #657, owner clarified four rule types on 2026-11-15",
+  "pr": "M982 Draft — background WaffraAutoSmsStore.excludeMessages bridge parity (#687, stacked on #684)",
+  "issue": "Issue #687 / owner SMS axis #657, after Issue #683",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at f0def360ea75b9c865548b6f1b4fc07e9640f2c2 after #656",
   "reviewed_at": "2026-11-15",
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
+    {
+      "id": "M982-NATIVE-WORKER-FOREGROUND-EXCLUDE-METHOD-CHANNEL-PARITY",
+      "issue": "Issues #687 / #683 / #657",
+      "previous_behavior": "Foreground MainActivity implements Flutter MethodChannel `excludeAutoBankSms` but WaffraAutoSmsWorker's parallel `waffra/messages` channel does not, returning notImplemented to WaffraAutoSms.excludeMessages during background M980 saved/default exclusion. Flutter fail-closed retains row for review and can notify owner despite a matching exclusion rule.",
+      "approved_behavior": "Android background worker receives the exact `excludeAutoBankSms` call from Flutter, converts a List<String> to Set<String> and delegates synchronously to original `WaffraAutoSmsStore.excludeMessages(context,ids)`; returns storage success. That existing owner-encrypted store enforces signed-in owner, batch max 100 valid SHA256 fingerprints, queue membership, durable exclusion and 30-day reversible labels; no financial ACK, posting, network, raw message, sender blacklist or UI changes. Existing fallback review remains if store cannot commit.",
+      "source_paths": [
+        "native/WaffraAutoSmsWorker.kt"
+      ],
+      "test_paths": [
+        "test/m982_background_sms_exclusion_bridge_test.dart",
+        "test/m980_four_sms_rule_kinds_every_route_test.dart",
+        "test/m954_all_sms_rule_routes_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m946-whole-app-feature-smoke.yml",
+        ".github/workflows/m417-automatic-bank-sms-opt-in.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "Native worker and foreground share one owner-encrypted per-message exclusion policy; worker may not impersonate finance source or call acknowledgeCommitted from this new handler.",
+        "Incorrect/nonexistent fingerprint or lost owner session returns false and does not suppress user review; no false persistence success.",
+        "No raw OTP or bank SMS body is logged/transmitted; 30-day UI label and durable exact-SMS anti-replay remain in original store.",
+        "Compile native Kotlin with M417 and exercise real incoming/background Android SMS on device before UAT claim."
+      ]
+    },
     {
       "id": "M980-ONE-FOUR-WAY-RULE-PASS-FOREGROUND-HISTORY-BACKGROUND",
       "issue": "Issues #683 and #657",
