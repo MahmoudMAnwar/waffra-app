@@ -81,10 +81,6 @@ abstract final class WaffraSmsLocalRules {
   return true;
  }
 
- // A narrowly scoped owner exclusion for app activation contains
- // "حساب", otherwise blocked as account metadata. This fixed *event phrase*
- // is not an account number, balance, card identifier or a posting rule.
- // Completed financial evidence still vetoes every exclusion downstream.
  static bool safeRuleKeyword(String text,String kind)=>safeKeyword(text)||
   (kind=='excluded'&&const <String>{
    'otp','pin','تفعيل الحساب'
