@@ -890,3 +890,10 @@ M940/M941 Draft PR #648 M486 regression correction (unreleased): coalesced futur
 - Further correction after full rule-path review: explicit sender-scoped exclusions may apply to any weak preliminary bank classification when there is no independent completed-money cue, while posted payments/transfers and OTP mixed with completed debits are never silently excluded. Curated default payment reminders and promotional exclusions still apply, including cases with generic "payment"/"خصم" text but no posted debit.
 - Extended the synthetic M954 regression to 17 focused tests: user-defined rule despite a weak expense heuristic; payment reminder exclusion versus completed payment+OTP retention. See test/m954_all_sms_rule_routes_regression_test.dart and docs/qa/M954_SMS_RULE_PIPELINE_ACCEPTANCE.md.
 - This entry follows latest source/test edits. M385 scope and M550 code-review contracts still apply. Signed Android OTP intake and physical UAT remain pending; no source-only claim of full real-device success.
+
+[M449 REVIEWED UPDATE — ISSUES #659/#661 — PR #660 — EXACT-HEAD CI CORRECTIONS]
+- Reviewed source SHA: 71a43f78ad787aa710e179813124f960cba9b7a5
+- Approved change: permit only the nonfinancial event phrase "تفعيل الحساب" for an explicitly owner-defined exclusion; all completed account debit/credit/transfer evidence continues to veto automatic exclusion. Refresh original M652 chrono-five-kind test to assert current numbered history iterator, and M221 empty-state test to assert owner-approved "الاستحقاقات" terminology. Three custom-exclusion cases and two stale UI expectations caused seven CI workflows to fail; root causes fixed in source/assertions, no green status claimed until new head executes.
+- Changed production paths: lib/waffra_sms_local_rules.dart
+- Changed tests: test/m647_m652_financial_activity_regression_test.dart, test/m221_approved_financial_ui_test.dart; existing M954 owner-rule tests unchanged.
+- Verification: exact-head CI plus physical SMS/Android evidence are separate. This entry is NOT approval of all 5 axes or legacy restore.
