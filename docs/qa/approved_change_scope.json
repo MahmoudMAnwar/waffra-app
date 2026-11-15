@@ -139,7 +139,7 @@
     "test/m938_goals_restore_fab_contract_test.dart": [
       {
         "start": " test('M938 home restore notice retains FAB anchor during Settings handoff',(){",
-        "end": " for(final english in [false,true]){"
+        "end": " for(final english in [false,true]){\n  testWidgets('M938 "
       }
     ],
     "test/m707_home_goals_recurring_extraction_test.dart": [
