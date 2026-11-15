@@ -838,3 +838,8 @@ M940/M941 Draft PR #648 M486 regression correction (unreleased): coalesced futur
 - Adds a real synthetic encrypted SQLCipher end-to-end journey across account opening balances, manual account-linked income/expense, cold reopen, legacy unassigned transaction read, duplicate manual reject and reviewed SMS anti-replay.
 - Updates obsolete M296 Home Show more/less assertions to test one inline operations toolbar and verified mixed-activity counts. Does NOT remove previous finance, security or native Android CI gates.
 - The owner-private V24 archive, device biometric/SMS/background and signed APK installation require separate, authorized physical acceptance; none are claimed as tested by a synthetic archive.
+
+[M947 #653 / Draft PR #654 — deletion smoke extension, NOT RELEASED, 2026-11-15]
+- Existing automated suite previously omitted all real SQLCipher transaction deletion from the all-feature smoke. M946 now runs encrypted transaction/receipt Delete, Cancel, Undo, 30-day Goals/Recurring/Category recycle, SMS inbox delete, Delete All and account deletion release-gate validations on every PR.
+- New M183 regression runs 19 historical SQLCipher rows including two incomes, declines deletion, deletes one expense, closes and reopens encrypted vault, verifies all other historic records and bank SMS hashes survive and restores the deleted item to exact original snapshot order.
+- UI source tests require verified before-publish and stable Home navigation; physical Android black-frame and OS biometrics remain separate acceptance gates. No user backup ever uploaded to CI.
