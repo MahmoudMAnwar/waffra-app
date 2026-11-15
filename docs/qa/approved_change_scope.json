@@ -23,7 +23,12 @@
     "lib/waffra_home_ledger_query.part.dart",
     "lib/waffra_home_dashboard_analytics.part.dart",
     "test/m944_home_progressive_window_test.dart",
-    "test/storage/m944_transfer_replay_and_opening_parity_test.dart"
+    "test/storage/m944_transfer_replay_and_opening_parity_test.dart",
+    "lib/main.dart",
+    "lib/waffra_home_root_shell.part.dart",
+    "test/support/waffra_main_source.dart",
+    "test/m830_home_navigation_helpers_extraction_test.dart",
+    "test/m644_no_fab_snackbar_width_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
@@ -72,6 +77,34 @@
       {
         "start": " Widget dashboard(){",
         "end": " List<MoneyEntry> get analysisEntries=>period=='سنوي'?"
+      }
+    ],
+    "lib/main.dart": [
+      {
+        "start": "part 'waffra_home_navigation_helpers.part.dart';",
+        "end": "part 'waffra_home_presentation_controls.part.dart';"
+      },
+      {
+        "start": " Future<void> showInternalTransferTransactions()async{",
+        "end": "class WaffraDeletedItemsButton extends StatelessWidget {"
+      }
+    ],
+    "test/support/waffra_main_source.dart": [
+      {
+        "start": " const m930_widgets=' // M930: original widgets Home session helper moved without behavioral change.",
+        "end": " return s;\n}"
+      }
+    ],
+    "test/m830_home_navigation_helpers_extraction_test.dart": [
+      {
+        "start": " test('M830 Home navigation and user-approved FAB/back behavior retain registered code',(){",
+        "end": " test('M830 original Home navigation source is reconstructed identically',(){"
+      }
+    ],
+    "test/m644_no_fab_snackbar_width_test.dart": [
+      {
+        "start": "  test('M644 all no-FAB routes including opened account show wide notice', () {",
+        "end": null
       }
     ]
   }
