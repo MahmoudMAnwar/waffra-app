@@ -103,5 +103,34 @@ class SummaryTest(unittest.TestCase):
             self.assertFalse(json.loads(out.read_text())["passed_gate"])
 
 
+    def test_duplicate_runner_start_blocks_false_green(self):
+        r = mod.summary(feed({"type": "start"},
+                             start(1), done(1)), SHA)
+        self.assertIn("duplicate_runner_start", r["issues"])
+        self.assertFalse(r["complete"])
+        self.assertFalse(r["passed_gate"])
+        self.assertEqual(r["passed"], 1)
+
+    def test_duplicate_suite_id_cannot_reassign_failure_to_another_file(self):
+        r = mod.summary(feed(
+            {"type": "suite", "suite": {
+                "id": 1, "path": "test/other.dart"}},
+            start(1), done(1)), SHA)
+        self.assertIn("duplicate_suite_id", r["issues"])
+        self.assertFalse(r["passed_gate"])
+        self.assertEqual(r["passed"], 1)
+
+    def test_missing_suite_provenance_blocks_successful_runner(self):
+        unknown = {"type": "testStart", "test": {
+            "id": 12, "suiteID": 987, "name": "missing-file"}}
+        r = mod.summary(feed(unknown, done(12)), SHA)
+        self.assertIn("missing_suite_provenance", r["issues"])
+        self.assertFalse(r["complete"])
+        self.assertFalse(r["passed_gate"])
+        self.assertEqual(r["passed"], 1)
+        self.assertEqual(r["failed"], 0)
+        self.assertEqual(r["skipped"], 0)
+
+
 if __name__ == "__main__":
     unittest.main()
