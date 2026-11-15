@@ -1,12 +1,37 @@
 {
   "schema_version": 1,
-  "pr": "M955/M956 Draft PR #665 — ledger-free Home and single-witness verified account view",
-  "issue": "Issue #664 (follow-up #657) — five-axis Home performance and exact-money parity",
+  "pr": "M964 Draft stacked on #665 — remaining pure Home State helper extraction",
+  "issue": "Issue #666, follow-up to five axes #657 and code-only M955-M963",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at f0def360ea75b9c865548b6f1b4fc07e9640f2c2 after #656",
   "reviewed_at": "2026-11-15",
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
+    {
+      "id": "M964-REMAINING-HOME-STATE-PURE-HELPER-EXTRACTION",
+      "issue": "Issue #666 / Draft stacked PR",
+      "previous_behavior": "A handful of pure presentation/session helper methods remained in _HomeScreenState although most finance and UI behaviors are split into same-library Dart parts.",
+      "approved_behavior": "Move only four pure methods with exact original bodies and names into a registered same-library extension; preserve State lifecycle, callback identity, owner SMS rule scope and old-period source witness invalidation.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_state_core_helpers.part.dart"
+      ],
+      "test_paths": [
+        "test/m964_home_state_pure_helpers_extraction_test.dart",
+        "test/m630_home_first_frame_contention_test.dart",
+        "test/m528_settings_async_cache_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m946-whole-app-feature-smoke.yml",
+        ".github/workflows/m147-final-main-safe-merge-review.yml"
+      ],
+      "safety_invariants": [
+        "Original money/SMS/backup code untouched, no real-data changes.",
+        "Registered Dart extension accesses the same private State fields and original session epoch, owner hash and rule key.",
+        "All lifecycle listener callback identities, persistent writers, original UI, 50-card window, verified index invalidation remain in State.",
+        "Strict exact-SHA M385/M550 and all mandatory tests retained."
+      ]
+    },
     {
       "id": "M963-VERIFIED-EDIT-UNDO-ACCOUNT-REFRESH",
       "issue": "Issue #657 / Draft PR #665 after merged #660",

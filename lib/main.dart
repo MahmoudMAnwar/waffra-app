@@ -183,6 +183,7 @@ part 'waffra_home_goal_actions.part.dart';
 part 'waffra_home_dashboard_analytics.part.dart';
 part 'waffra_finance_period_index.part.dart';
 part 'waffra_home_ledger_query.part.dart';
+part 'waffra_home_state_core_helpers.part.dart';
 part 'waffra_deleted_item_card.part.dart';
 part 'waffra_auto_sms_autopost.part.dart';
 
@@ -4294,10 +4295,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  // before explicit logout closes the owner-bound SQLCipher connection.
  int _m630HomeStartupEpoch=0;
  Future<void>? _m630PostFrameFinanceWork;
- bool _m630SmsSessionCurrent(int epoch)=>
-  mounted&&ready&&widget.postAuthVisible&&
-  !_m627ClosingSession&&_financeLoadFailure==null&&
-  epoch==_m630HomeStartupEpoch;
+ // M964: pure Home helper now lives in registered same-library part.
  // A signout must not close SQLCipher while a Home load still owns a read.
  Completer<void>? _m627HomeLoadCompletion;
  // Keep genuine DB reads visible to teardown even after Future.timeout
@@ -4330,13 +4328,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  Future<void>? _m468AccountReadInFlight;
  bool _m468AccountReadAgain=false;
 
- String get _m467ChoiceKey{
-  final owner=widget.profile.provider+'|'+widget.profile.phone.trim()+
-   '|'+widget.profile.email.trim().toLowerCase();
-  final hash=sha256.convert(utf8.encode(owner)).toString();
-  return 'waffra_home_account_display_'+hash.substring(0,20);
- }
-
+ // M964: pure Home helper now lives in registered same-library part.
  // Concurrent save, transfer, resume and refresh events share one account read.
  // A later request gets ONE trailing replay so a new commit is not missed.
  // M760: unchanged verified-account refresh, selection, transfer and account filter methods moved to registered Home part.
@@ -4351,7 +4343,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  int _m945DashboardRenderVersion=0;
  String? _m945UnifiedHistoryScope;
  int? _m945UnifiedHistoryCount;
- WaffraFinancePeriodIndex get _m684Periods=>_m940LedgerReads.index(entries);
+ // M964: pure Home helper now lives in registered same-library part.
  void _m684InvalidatePeriodRead(){
   _m940LedgerReads.invalidate();
   _m945UnifiedHistoryScope=null;
@@ -4450,10 +4442,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  bool _m661RuleLoadErrorNotified=false;
  final List<Map<String,Object?>> _autoSmsPending=<Map<String,Object?>>[];
 
- String get _smsRuleOwnerKey=>WaffraSmsLocalRuleStore.ownerKey(
-  provider:widget.profile.provider,phone:widget.profile.phone,
-  email:widget.profile.email);
-
+ // M964: pure Home helper now lives in registered same-library part.
  // M741: original local SMS rule and learning methods moved to registered same-library part.
  Timer? _m632SmsNoticeTimer;
  // M850: original native SMS notice/rescan logic lives in registered Home Dart part.

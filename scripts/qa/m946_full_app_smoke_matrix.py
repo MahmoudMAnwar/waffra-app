@@ -21,6 +21,10 @@ GROUPS = ("money", "experience", "safety")
 # Each user-facing capability has a real runnable suite. Tests can be reused
 # across capabilities; the runner de-duplicates within each CI shard.
 FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {
+    "m964_home_state_pure_helper_architecture": ("experience", (
+        "test/m964_home_state_pure_helpers_extraction_test.dart",
+        "test/m630_home_first_frame_contention_test.dart",
+        "test/m528_settings_async_cache_regression_test.dart")),
     "m963_verified_edit_undo_updates_home_account_view": ("experience", (
         "test/m963_verified_edit_undo_account_refresh_test.dart",
         "test/storage/m953_verified_historical_edit_regression_test.dart")),
