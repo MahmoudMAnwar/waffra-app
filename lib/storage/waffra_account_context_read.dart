@@ -63,6 +63,8 @@ abstract final class WaffraAccountContextRead {
     required String monthIso,
     String? selectedAccountId,
     bool summaryOnly=false,
+    // Home only: preserve verified budget and goal projection, omit ledger cards.
+    bool includeEntries=true,
   }) async {
     await WaffraAccountsSchema.requireReady(store);
     if (!RegExp(r'^[0-9]{4}-[0-9]{2}$').hasMatch(monthIso) ||
@@ -77,6 +79,7 @@ LEFT JOIN fresh_finance_account_entry_links l ON l.entry_id=e.entry_id
 LEFT JOIN fresh_finance_standalone_allocations a ON a.entry_id=e.entry_id
 ${summaryOnly ? 'WHERE e.occurred_iso>=? AND e.occurred_iso<?' : ''}
 ORDER BY e.occurred_iso DESC, e.entry_id DESC
+${includeEntries ? '' : 'LIMIT 0'}
 ''',variables:[
  // Explicit SQL predicate: the existing occurred_iso index stays usable.
  // All-time reads remain opt-in for historical reconciliation/export.
