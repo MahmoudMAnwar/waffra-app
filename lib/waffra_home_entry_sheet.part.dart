@@ -82,11 +82,28 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
    sourceAmount!=null&&sourceAmount.currency=='SAR'&&
    (sourceAmount.amount-parsedSms.amount!).abs()<0.00001&&
    parsedSms.income==(factsSms.kind==WaffraBankOperationKind.income);
+  // M983: the SMS editor can display independently safe hints without
+  // granting permission to commit money. Unverified fields stay editable.
+  final directionKnown=factsSms!=null&&!factsSms.pending&&
+   (factsSms.kind==WaffraBankOperationKind.income||
+    factsSms.kind==WaffraBankOperationKind.expense)&&
+   (reviewedIncomeOverride==null||
+    reviewedIncomeOverride==(factsSms.kind==WaffraBankOperationKind.income));
+  final safeSmsTitle=directionKnown&&parsedSms!=null&&
+   waffraTransactionTitleAllowed(parsedSms.title)?parsedSms.title:'';
   final suggestedSmsTitle=trustedSms?
    (RegExp(r'شحن\s*(?:جوال|هاتف|رصيد)|top[ -]?up',
     caseSensitive:false).hasMatch(initialSms!)?
      (waffraIsEnglish?'Mobile top-up':'شحن الجوال'):
-     parsedSms.title):'';
+     parsedSms.title):safeSmsTitle;
+  // A verified SAR principal is a display suggestion ONLY: the existing
+  // account, date, original facts and user confirmation guard still apply.
+  final safeSmsAmount=trustedSms?parsedSms!.amount:
+   directionKnown&&sourceAmount?.currency=='SAR'&&
+   factsSms!.canAutoPostAsIncomeExpense&&
+   !WaffraSmsCurrencies.requiresReviewForSarLedger(initialSms!)&&
+   (parsedSms?.amount==null||parsedSms!.amount==sourceAmount!.amount)?
+    sourceAmount?.amount:null;
   final title=TextEditingController(text:
    (smsEditorDraft?['title'] as String?)??initial?.title??
    suggestedSmsTitle);
@@ -96,7 +113,7 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
   final value=TextEditingController(text:
    (smsEditorDraft?['amount'] as String?)??(initial!=null?
    formatWaffraEditAmount(initial.amount):
-   trustedSms?formatWaffraMoney(parsedSms.amount??0):''));
+   safeSmsAmount!=null&&safeSmsAmount>0?formatWaffraMoney(safeSmsAmount):''));
   final message=TextEditingController(text:initialSms??'');
   // Explicit compact correction outranks an OLD uncommitted SMS draft.
   // Ordinary manual/receipt editing still preserves previous precedence.
@@ -111,7 +128,7 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
   // Keep existing edit categories and previously-approved SMS suggestions.
   String category=(smsEditorDraft?['category'] as String?)??
    initial?.category??(sms?
-    (trustedSms?(editorLearnedCategory??parsedSms.category):'أخرى'):'');
+    (directionKnown?(editorLearnedCategory??(trustedSms?parsedSms!.category:'')):''):'');
   String? selectedParentId;
   String? selectedBudgetId=(smsEditorDraft?['budget'] as String?)??initial?.budgetId;
   var entryAccounts=_m467Accounts.where((a)=>!a.archived).toList();
@@ -407,6 +424,20 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
      }
     }
     Widget operationPicker(){
+     // M983: opening a known type from the SMS row never shows a redundant
+     // income/expense/transfer selector. User can edit every actual field.
+     if(sms&&initial==null&&reviewedIncomeOverride!=null){
+      return Padding(padding:const EdgeInsets.only(bottom:8),
+       child:Align(alignment:AlignmentDirectional.centerStart,
+        child:Chip(
+         avatar:Icon(income?Icons.south_west_rounded:
+          Icons.north_east_rounded,size:18,
+          color:income?emerald:Colors.red),
+         label:WaffraText(income?
+          (waffraIsEnglish?'Income transaction':'عملية دخل'):
+          (waffraIsEnglish?'Expense transaction':'عملية مصروف')))));
+     }
+
      // Manual income/expense selected from SMS: one template, no three-mode switch.
      if(manualIncomeOverride!=null&&initial==null&&!sms){
       return const SizedBox.shrink();
