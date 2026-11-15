@@ -30,12 +30,12 @@
         "end": "  await showModalBottomSheet<void>("
       },
       {
-        "start": "               for(final group in bySender.values){",
-        "end": "               if(selectedSender!=null&&!senders.contains(selectedSender)){"
+        "start": "for(final group in bySender.values){",
+        "end": "if(selectedSender!=null&&!senders.contains(selectedSender)){"
       },
       {
-        "start": "             for(final rows in bySender.values){",
-        "end": "             selectedIds.removeAll(done);"
+        "start": "for(final rows in bySender.values){",
+        "end": "selectedIds.removeAll(done);"
       }
     ],
     "scripts/qa/m937_flutter_test_report.py": [
