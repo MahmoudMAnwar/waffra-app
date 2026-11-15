@@ -1156,11 +1156,16 @@ Map<String,Object?> waffraM632ClassifySmsQueue(Map<String,Object?> input){
   final sender=candidate['sender'] is String?candidate['sender'] as String:'';
   final facts=WaffraBankSmsFactsParser.parse(body);
   final parsed=BankParser.parse(body);
+  // M980: ALL FOUR owner/default kinds match before a safety branch can
+  // select a review suggestion or request a durable native exclusion.
+  final fourWay=WaffraSmsLocalRules.matchAllFourKinds(
+   body:body,sender:sender,custom:rules);
   final special=WaffraSmsLocalRules.resolveSpecial(
    body:body,sender:sender,
    bankKind:annotated['sensitiveOtp']==true?
     WaffraBankOperationKind.uncertain:facts.kind,custom:rules,
-   nativeSensitiveOtp:annotated['sensitiveOtp']==true);
+   nativeSensitiveOtp:annotated['sensitiveOtp']==true,
+   matchedRules:fourWay);
   Map<String,Object?>? local;
   if(special!=null){
    local=<String,Object?>{
@@ -1175,7 +1180,8 @@ Map<String,Object?> waffraM632ClassifySmsQueue(Map<String,Object?> input){
      (facts.kind!=WaffraBankOperationKind.income&&
       facts.kind!=WaffraBankOperationKind.expense))){
    final rule=WaffraSmsLocalRules.resolve(
-    body:body,sender:sender,bankKind:facts.kind,custom:rules);
+    body:body,sender:sender,bankKind:facts.kind,custom:rules,
+    matchedRules:fourWay);
    if(rule!=null&&validCategories.contains(
       '${rule.income?'1':'0'}:${rule.category}')){
     local=<String,Object?>{
