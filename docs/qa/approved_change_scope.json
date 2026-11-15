@@ -174,8 +174,8 @@
     ],
     ".github/scripts/run-m120-android-receipt-reopen.sh": [
       {
-        "start": "device=\"emulator-5554\"\n",
-        "end": "test_file=\"integration_test/m120_verified_receipt_reopen_android_test.dart\"\n"
+        "start": "device=\"emulator-5554\"",
+        "end": "test_file=\"integration_test/m120_verified_receipt_reopen_android_test.dart\""
       }
     ]
   }
