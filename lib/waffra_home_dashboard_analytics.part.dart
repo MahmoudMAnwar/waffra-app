@@ -4,6 +4,19 @@ part of 'main.dart';
 /// analytics methods moved together without changing calculations or UI.
 extension _WaffraHomeDashboardAnalyticsModule on _HomeScreenState {
  Widget dashboard(){
+  // M944: incremental presentation windows avoid thousands of built Cards
+  // in the same frame. PDF/export continues to use complete verified data.
+  void advanceHistoryWindow(int total){
+   setState((){
+    if(!showAllTransactions){
+     showAllTransactions=true;
+     _m940LedgerReads.resetExpanded();
+    }else if(!_m940LedgerReads.revealNext(total)){
+     showAllTransactions=false;
+     _m940LedgerReads.resetExpanded();
+    }
+   });
+  }
   final scopedEntries=_m467ScopedEntries().toList();
   final unverifiedFxEntries=entries.where(waffraNeedsLegacyFxReview).toList();
   // M943: authenticated historical bank closing/opening not available here.
@@ -25,10 +38,11 @@ extension _WaffraHomeDashboardAnalyticsModule on _HomeScreenState {
   // Home first page. PDF exports must include all matching transactions.
   List<MoneyEntry> fullFilteredTransactions()=>
    _m684Periods.newestFirst(verifiedEntryIds:verifiedIds,where:transactionFilter.accepts);
+  final requestedWindow=waffraDashboardTransactionDisplayCount(
+   visibleCount,expanded:showAllTransactions);
   final shown=_m684Periods.pageNewestFirst(
    verifiedEntryIds:verifiedIds,where:transactionFilter.accepts,offset:0,
-   limit:waffraDashboardTransactionDisplayCount(
-    visibleCount,expanded:showAllTransactions));
+   limit:min(requestedWindow,_m940LedgerReads.expandedLimit));
   return RefreshIndicator(
    onRefresh:()=>_refreshAndSettle(_dashboardScrollController,0),
    child:NotificationListener<ScrollStartNotification>(
@@ -216,8 +230,9 @@ extension _WaffraHomeDashboardAnalyticsModule on _HomeScreenState {
               child:TextButton(
                key:const Key('waffra-dashboard-transactions-expand'),
                onPressed:WaffraHaptics.tap(
-                ()=>setState(()=>showAllTransactions=!showAllTransactions)),
-               child:WaffraText(showAllTransactions?
+                ()=>advanceHistoryWindow(visibleCount)),
+               child:WaffraText(showAllTransactions&&
+                _m940LedgerReads.expandedLimit>=visibleCount?
                 (waffraIsEnglish?'Show less':'عرض أقل'):
                 (waffraIsEnglish?'Show more':'عرض أكثر')))),
            const SizedBox(height:10),
@@ -363,8 +378,9 @@ extension _WaffraHomeDashboardAnalyticsModule on _HomeScreenState {
                 (when:DateTime.tryParse(m.occurredIso)??DateTime(1970),
                  activity:m),
               ]..sort((a,b)=>b.when.compareTo(a.when));
-              final maxShown=waffraDashboardTransactionDisplayCount(
+              final requestedUnified=waffraDashboardTransactionDisplayCount(
                history.length,expanded:showAllTransactions);
+              final maxShown=min(requestedUnified,_m940LedgerReads.expandedLimit);
               return Column(children:[
                // Count the verified unified timeline (not just money entries).
                // Applies to All, Transfers and Savings alike.
@@ -373,8 +389,9 @@ extension _WaffraHomeDashboardAnalyticsModule on _HomeScreenState {
                  child:TextButton(
                   key:const Key('waffra-dashboard-unified-activity-expand'),
                   onPressed:WaffraHaptics.tap(
-                   ()=>setState(()=>showAllTransactions=!showAllTransactions)),
-                  child:WaffraText(showAllTransactions?
+                   ()=>advanceHistoryWindow(history.length)),
+                  child:WaffraText(showAllTransactions&&
+                   _m940LedgerReads.expandedLimit>=history.length?
                    (waffraIsEnglish?'Show less':'عرض أقل'):
                    (waffraIsEnglish?'Show more':'عرض أكثر')))),
                if(history.isEmpty)Padding(
