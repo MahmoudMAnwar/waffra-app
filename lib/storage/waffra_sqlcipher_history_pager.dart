@@ -129,14 +129,7 @@ SELECT e.entry_id,e.title,e.amount_minor,e.is_income,e.occurred_iso,
  l.account_id,a.budget_id,a.amount_minor AS budget_allocated_minor
 FROM fresh_finance_entries e
 LEFT JOIN fresh_finance_account_entry_links l ON l.entry_id=e.entry_id
--- Multibudget allocations must never create duplicate transaction cards
--- or break (occurred_iso,entry_id) keyset ordering across page boundaries.
-LEFT JOIN (
- SELECT entry_id,
-  CASE WHEN COUNT(*)=1 THEN MAX(budget_id) END AS budget_id,
-  CASE WHEN COUNT(*)=1 THEN MAX(amount_minor) END AS amount_minor
- FROM fresh_finance_standalone_allocations GROUP BY entry_id
-) a ON a.entry_id=e.entry_id
+LEFT JOIN fresh_finance_standalone_allocations a ON a.entry_id=e.entry_id
 ''' + (clauses.isEmpty ? '' : 'WHERE ' + clauses.join(' AND ') + '\n') + '''
 ORDER BY e.occurred_iso DESC,e.entry_id DESC
 LIMIT ?
