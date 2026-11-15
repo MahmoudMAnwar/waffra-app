@@ -726,7 +726,7 @@ extension _WaffraHomeDashboardAnalyticsModule on _HomeScreenState {
         (waffraIsEnglish?'Approximately ${cash(forecast)} at the current pace.':
          'حوالي ${cash(forecast)} إذا استمر معدل الإنفاق الحالي.')),
        WaffraText(waffraIsEnglish?'Estimate from recorded transactions and upcoming recurring expenses, not a guarantee.':
-        'تقدير مبني على معاملاتك والعمليات المتكررة القادمة، وليس مبلغًا مؤكدًا.',
+        'تقدير مبني على معاملاتك والاستحقاقات القادمة، وليس مبلغًا مؤكدًا.',
         style:const TextStyle(fontSize:11)),
       ]))),
      const SizedBox(height:24),
