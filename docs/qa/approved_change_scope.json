@@ -41,6 +41,12 @@
         "start": "FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {",
         "end": "    \"m983_sms_direct_kind_editor_prefill_live_review_refresh\""
       }
+    ],
+    "test/m940_sms_review_page_window_test.dart": [
+      {
+        "start": " test('M940 production review wires page window and original full-ID selection',(){",
+        "end": null
+      }
     ]
   }
 }
