@@ -8,7 +8,8 @@
     "Make creation of a bank/child with opening balance available through review SMS dropdown and separate transfer; refresh exact verified account witness after creation.",
     "Add two distinct opening balances persisted across SQLCipher reopen with no income posting, unit/UI source acceptance and release/QA documentation.",
     "M942 extend SQLCipher typed provider constraints and valid provider IDs to all approved Saudi local/digital banks and wallets. Upgrade legacy account-details v1 to v2 transactionally without altering opening_minor, account IDs, archived status or ledger.",
-    "M942 align M447 SMS regression with new approved verified in-context first account creation while retaining mandatory account and no-shadow-DB writer checks."
+    "M942 align M447 SMS regression with new approved verified in-context first account creation while retaining mandatory account and no-shadow-DB writer checks.",
+    "Repair four existing M470/M371/M268 positive QA assertions after M942 source relocation/verification: preserve provider-changed account reset, latest verified generation, exact SQLCipher opening and dashboard comparison; no tests skipped, removed or weakened."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -29,7 +30,11 @@
     "test/storage/m942_two_child_openings_sqlcipher_test.dart",
     "lib/storage/waffra_account_details_schema.dart",
     "test/storage/m942_account_details_v1_upgrade_test.dart",
-    "test/qa/m447_verified_sms_account_linking_test.py"
+    "test/qa/m447_verified_sms_account_linking_test.py",
+    "test/m470_recurring_provider_accounts_test.dart",
+    "test/m371_goal_wallet_and_budgets_regression_test.dart",
+    "test/m470_sms_first_sender_account_test.dart",
+    "test/m268_approved_emerald_balance_card_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
@@ -110,6 +115,30 @@
       {
         "start": "    def test_verified_source_only_with_no_shadow_db(self):",
         "end": "    def test_no_guarded_legacy_sms_account_override(self):"
+      }
+    ],
+    "test/m470_recurring_provider_accounts_test.dart": [
+      {
+        "start": "  test('M470 SMS review has bank and account cascade with sender-match gate',(){",
+        "end": "  test('M470 money form requires an explicit provider before a linked source or destination',(){"
+      }
+    ],
+    "test/m371_goal_wallet_and_budgets_regression_test.dart": [
+      {
+        "start": "   test('M371 goal creation cannot post an expense or negative cash debit',",
+        "end": null
+      }
+    ],
+    "test/m470_sms_first_sender_account_test.dart": [
+      {
+        "start": " test('M470 #11 account suggestion only starts on confirmed bank SMS review',(){",
+        "end": " test('M636 SMS posting remains a separately confirmed atomic finance write',(){"
+      }
+    ],
+    "test/m268_approved_emerald_balance_card_test.dart": [
+      {
+        "start": " test('approved balance artwork stays embedded and never uses external images',(){",
+        "end": " for(final brightness in [Brightness.light,Brightness.dark]){"
       }
     ]
   }
