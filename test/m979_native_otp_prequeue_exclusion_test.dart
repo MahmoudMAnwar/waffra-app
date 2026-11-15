@@ -46,6 +46,18 @@ void main() {
     }
   });
 
+  test('M979 password-change security alert without code remains reviewable',
+      () {
+    const advisory = 'Your account password was changed successfully';
+    expect(WaffraBankSmsFactsParser.isVerificationChallenge(advisory), isFalse);
+    final decision = WaffraSmsLocalRules.resolveSpecial(
+      body: advisory, sender: 'NewApp',
+      bankKind: WaffraBankSmsFactsParser.parse(advisory).kind);
+    expect(decision?.resolvedKind, isNot('excluded'));
+    final native = File('native/WaffraAutoSmsStore.kt').readAsStringSync();
+    expect(native, contains('explicitOtpToken.containsMatchIn(body)'));
+  });
+
   test('M979 native intake blocks pure OTP before queue capacity or notify',
       () {
     final native = File('native/WaffraAutoSmsStore.kt').readAsStringSync();
