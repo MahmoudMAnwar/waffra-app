@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
   "change_id": "M944-ISSUE653-FIVE-AXIS-RELIABILITY-20261115",
-  "human_scope_review": "2026-11-15 owner approved modifications in SAME Draft PR #654: preserve original 19 backup identities and two income entries after new manual append, update period index and account balance projection, Goals/Dues count filters and official Riyal, Dues empty-state and gold metrics, Home inline Show more/less. Original encrypted archive requires owner-device proof.",
+  "human_scope_review": "2026-11-15 owner approved modifications in SAME Draft PR #654: preserve original 19 backup identities and two income entries after new manual append, update period index and account balance projection, Goals/Dues count filters and official Riyal, Dues empty-state and gold metrics, Home inline Show more/less. Original encrypted archive requires owner-device proof. On 2026-11-15 the user additionally instructed autonomous smoke testing of EVERY feature (small and large) and every cross-feature account/database linkage, all within existing draft PR #654. Added mandatory all-PR M946 matrix and synthetic encrypted SQLCipher end-to-end test, no real-owner backup bytes.",
   "user_requested_changes": [
     "Implement authenticated SQLCipher paging for thousands of finance entries with stable order and verified account scope, no financial write changes.",
     "Improve large-list pagination for transactions, native SMS sender review, goals and recurring without changing approved layouts or selection semantics.",
@@ -14,7 +14,10 @@
     "Move Home Show more/less to the search/filter/More row for verified combined financial history.",
     "Update one obsolete positive M940/M941 assumption on exact Home finance-index method form; add explicit checks that the new unified-history cache is invalidated, retaining all old read-only finance guard assertions.",
     "Require the verified active SQLCipher account context, not only a cached selected-account ID, before rendering scoped ledger/month entries; resolves unused-field analyzer warning and prevents stale account transitions.",
-    "Ensure restored 19-entry source parity repair invalidates the stale Home monthly read cache after authenticated SQLCipher ledger correction, without changing archive or old stored records."
+    "Ensure restored 19-entry source parity repair invalidates the stale Home monthly read cache after authenticated SQLCipher ledger correction, without changing archive or old stored records.",
+    "Proactively test the entire Waffra application on every PR: all feature-level smoke and linked-feature scenarios, including auth, biometric, Home, manual/SMS, accounts, transfers, recurring/Goals, budgets, categories, notifications, deleted/restore, PDFs, Riyal, settings and tools. Report real pass/fail/skip and device-only gaps.",
+    "Add synthetic SQLCipher integration smoke: account creation/opening balances, linked manual income/expense, selected account scoping, unassigned legacy income, duplicate manual ID, SMS anti-replay, cold reopen and invariant balances. All on disposable database, not owner device.",
+    "Correct old Home pagination smoke expectations following inline Show more/less approved UI; preserve required assertions for one toolbar and combined activity counts."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -52,7 +55,12 @@
     "test/m945_restored_history_filters_ui_test.dart",
     "test/m940_m941_home_ledger_pagination_test.dart",
     "lib/waffra_home_verified_account_flows.part.dart",
-    "lib/waffra_home_account_tools.part.dart"
+    "lib/waffra_home_account_tools.part.dart",
+    "test/m296_monthly_budget_and_transactions_test.dart",
+    "test/storage/m946_whole_app_money_journey_smoke_test.dart",
+    "scripts/qa/m946_full_app_smoke_matrix.py",
+    "test/qa/m946_full_app_smoke_matrix_test.py",
+    ".github/workflows/m946-whole-app-feature-smoke.yml"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
@@ -227,6 +235,12 @@
       {
         "start": " Future<void> backupDialog()async {",
         "end": " // System credentials are never saved"
+      }
+    ],
+    "test/m296_monthly_budget_and_transactions_test.dart": [
+      {
+        "start": " test('Eleven or more matching transactions start at ten and can expand',(){",
+        "end": null
       }
     ]
   }
