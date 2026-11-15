@@ -1,12 +1,39 @@
 {
   "schema_version": 1,
-  "pr": "M979 Draft — native owner-encrypted pure-OTP prequeue exclusion (#683/#657)",
-  "issue": "Issue #683 / five-axis #657 (SMS intake, privacy, UI, quality)",
+  "pr": "M979 + M980 Draft — Android pure OTP and all four SMS rule kinds (#683/#657)",
+  "issue": "Issue #683, five axes #657, owner clarified four rule types on 2026-11-15",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at f0def360ea75b9c865548b6f1b4fc07e9640f2c2 after #656",
   "reviewed_at": "2026-11-15",
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
+    {
+      "id": "M980-ONE-FOUR-WAY-RULE-PASS-FOREGROUND-HISTORY-BACKGROUND",
+      "issue": "Issues #683 and #657",
+      "previous_behavior": "Foreground/history M632 first calls transfer/exclusion special resolver, then calls financial custom/default resolver only after parser proves an amount/SAR direction; background independently rescans rules in two phases. Thus new/unclassified messages may never evaluate income and expense rules, and custom rule conflicts are not cross-checked with excluded/transfer.",
+      "approved_behavior": "For every non-committed pending SMS, both native-queue foreground/history isolate M632 and background worker M452 build the SAME reusable matchAllFourKinds list from all owner-saved encrypted rules plus all built-in Saudi income, expense, transfer and excluded seeds. They match all four kinds before special and financial route decisions; background reuses same matches for any account-authorized posting. Preclassification never prevents rule *matching*; current independent posted money, direction/amount/SAR, verified source, explicit owner autoPost/account suffix and generation guards still prevent unsafe exclusion or posting. Conflicting custom kinds stay review-only. Native pure-OTP receipt is a narrow security fast path, not a finance classifier. No SMS writer, UI, custom rule storage, verified finance path or bank SMS records are changed.",
+      "source_paths": [
+        "lib/waffra_sms_local_rules.dart",
+        "lib/main.dart",
+        "lib/waffra_auto_sms_autopost.part.dart"
+      ],
+      "test_paths": [
+        "test/m980_four_sms_rule_kinds_every_route_test.dart",
+        "test/m954_all_sms_rule_routes_regression_test.dart",
+        "test/m979_native_otp_prequeue_exclusion_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m946-whole-app-feature-smoke.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m417-automatic-bank-sms-opt-in.yml"
+      ],
+      "safety_invariants": [
+        "Every SMS matched against all four kinds before decision, even when guessed bank direction is uncertain; do not label matched suggestion as a completed ledger transaction.",
+        "Completed debit/transfer and mixed OTP-money cannot be silently excluded by a weak rule; same verified account, exact suffix, owner confirmation/standing autoPost, one-shot SMS digest and SQLCipher writer remain unmodified.",
+        "One-pass four-kind matching runs off Flutter UI isolate for 1000-row history, source precheck avoids needless regex operations; background may not reparse unverified custom rules.",
+        "Untrusted or missing encrypted owner rules are never treated as present; built-ins are only safe hints, not auto money posting."
+      ]
+    },
     {
       "id": "M979-NATIVE-OTP-EXCLUDE-BEFORE-QUEUE-AND-RETAIN-MIXED-MONEY",
       "issue": "Issues #683 and #657",
