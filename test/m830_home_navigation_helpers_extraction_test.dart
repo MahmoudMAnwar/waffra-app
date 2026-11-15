@@ -21,7 +21,8 @@ void main() {
   ]) {
    expect(part,contains(item),reason:item);
   }
-  expect(main,contains(' @override Widget build(BuildContext context)=>PopScope('));
+  expect(main,contains(' @override Widget build(BuildContext context)=>_m944BuildHome();'));
+  expect(main,contains("part 'waffra_home_root_shell.part.dart';"));
   expect(part,isNot(contains('_financeAuthority.saveCaptured(')));
  });
  test('M830 original Home navigation source is reconstructed identically',(){
