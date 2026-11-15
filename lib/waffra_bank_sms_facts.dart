@@ -53,8 +53,9 @@ abstract final class WaffraBankSmsFactsParser {
   r'verification\s+code)\b|معلق[ةه]?|غير\s+مكتمل|مرفوض|'
   r'رمز\s+(?:التحقق|التفعيل)',
   caseSensitive:false);
- /// Security/OTP evidence is never a completed debit. Built-in rules may
- /// suggest exclusion, but destructive queue removal still needs consent.
+ /// Security/OTP evidence never authorizes a debit. Verified nonfinancial
+ /// challenges are excluded by the same safe foreground/background rules;
+ /// any mixed completed-money evidence stays in review.
  static final _securityChallenge=RegExp(
   r'\b(?:otp|one[ -]?time[ -]?(?:password|code|passcode)|'
   r'verification[ -]?code|security[ -]?code|authorization[ -]?code|'
