@@ -43,7 +43,8 @@ void main(){
  });
 
  test('M938 home restore notice retains FAB anchor during Settings handoff',(){
-  final home=File('lib/main.dart').readAsStringSync();
+  final home=File('lib/main.dart').readAsStringSync()+'\n'+
+    File('lib/waffra_home_root_shell.part.dart').readAsStringSync();
   expect(home,contains('if(inHome||(_waffraFooterHostCount>0&&'));
   expect(home,isNot(contains('if(_waffraFooterHostCount==0)waffraDismissFooterNotice();')));
   expect(home,contains('WaffraApprovedFixedFabNoticePosition('));
