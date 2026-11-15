@@ -1,12 +1,34 @@
 {
   "schema_version": 1,
-  "pr": "M964 Draft stacked on #665 — remaining pure Home State helper extraction",
-  "issue": "Issue #666, follow-up to five axes #657 and code-only M955-M963",
+  "pr": "M973 Draft — owner-indexed single SMS review cleanup (#671, #657)",
+  "issue": "Issue #671, five-axis Issue #657 (performance + QA)",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at f0def360ea75b9c865548b6f1b4fc07e9640f2c2 after #656",
   "reviewed_at": "2026-11-15",
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
+    {
+      "id": "M973-INDEXED-SINGLE-SMS-REVIEW-SENDER-CLEANUP",
+      "issue": "Issues #671 and #657",
+      "previous_behavior": "After one reviewed SMS leaves the native pending queue, UI scanned every sender group with removeWhere, including unrelated sender lists; repeated actions scale with the full review size.",
+      "approved_behavior": "Build a per-dialog ID-to-owning-groups index once during normal sender grouping. After the original authoritative pending queue absence check, remove the ID only from owner groups, retaining support for one duplicated ID in multiple legacy sender groups; drop empty sender without losing unrelated selections and preserve cache invalidation. Bulk encrypted sender and message exclusions and original SMS behavior remain identical.",
+      "source_paths": [
+        "lib/waffra_sms_review_groups.dart",
+        "lib/waffra_home_sms_inbox.part.dart"
+      ],
+      "test_paths": [
+        "test/m973_sms_review_group_owner_index_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m946-whole-app-feature-smoke.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "Source grouping is review-only; never modify the input/native SMS queue, account source, financial transactions, or local exclusion rules.",
+        "No bulk exclusion, original SMS display, fixed FAB, Snackbar or screen geometry changes.",
+        "Never claim private legacy backup, phone UI, live OTP or signed APK tested by host synthetic cases."
+      ]
+    },
     {
       "id": "M968-STACKED-PR-M550-SOURCE-SCOPE-PREFLIGHT",
       "issue": "Issue #668 / Issue #657",
