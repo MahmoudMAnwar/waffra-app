@@ -267,7 +267,7 @@
     ],
     "test/storage/m183_encrypted_transaction_recycle_test.dart": [
       {
-        "start": "  test('M947 nineteen restored rows: deleting one expense preserves both '",
+        "start": "  tearDown(() async {",
         "end": "  test('M183 deletes transaction and encrypted invoice as one reversible SQL commit',"
       }
     ]
