@@ -287,7 +287,9 @@ extension _WaffraHomeVerifiedAccountFlows on _HomeScreenState {
        final bank=selectedBank??(createProvider?senderBank:null);
        // A confirmed outgoing purchase proves at most SOURCE suffix.
        // Never put source digits in the destination account's field.
-       final suffix=!isDestination&&bank!=null&&bank==senderBank?
+       final suffix=!isDestination&&bank!=null&&bank==senderBank&&
+        WaffraSaudiFinancialProviders.byId(bank)?.category!=
+         WaffraSaudiFinancialProviders.wallet?
         WaffraBankSmsFactsParser.suggestedAccountLastFour(
          body,income:false):null;
        final custom=<String,List<String>>{

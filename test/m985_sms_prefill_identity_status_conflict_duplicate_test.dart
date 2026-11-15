@@ -21,7 +21,7 @@ void main(){
    'شراء بمبلغ 125 ريال رقم العملية 9876',income:false),isNull);
   expect(WaffraBankSmsFactsParser.suggestedAccountLastFour(
    'شراء بمبلغ 125 ريال من حساب ****1234 إلى حساب ****5678',
-   income:false),isNull,reason:'Two masked account identities are ambiguous');
+   income:false),'1234',reason:'Source is the only candidate for a verified debit');
   expect(WaffraBankSmsFactsParser.suggestedAccountLastFour(
    'حوالة صادرة بمبلغ 100 ريال من حساب ****1234',income:false),isNull);
   expect(WaffraBankSmsFactsParser.suggestedAccountLastFour(
@@ -63,6 +63,7 @@ void main(){
   expect(editor,contains('final fallback=reviewedIncomeOverride?'));
   expect(editor,contains('chosenManualProvider=existing.single.id'));
   expect(editor,contains('suggestedAccountLastFour('));
+  expect(editor,contains('WaffraSaudiFinancialProviders.wallet'));
   expect(editor,contains('bankReferenceReplay||entries.any('));
   expect(actions,contains('await entrySheet(manualIncomeOverride:kind=='));
   expect(actions,contains('reviewedOriginalSms:body,reviewedSender:sender'));

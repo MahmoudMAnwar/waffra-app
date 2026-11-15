@@ -8,7 +8,8 @@
     " #4 preview saved-rule conflicts and sensitive/pending impact",
     " #5 warn duplicate only with matching reference and exact bank/account suffix+same day+amount",
     " #6 suggest masked/ending last four in account add and prefill manual reclassified income/expense/transfer SAR amount, bank provider, leaf/parent where valid, exact SMS date if known; owner chooses account",
-    " #7 run distinct unit and source tests, retain prior cases; #1 not requested"
+    " #7 run distinct unit and source tests, retain prior cases; #1 not requested",
+    "M985 full regression suite: preserve previous duplicate advisory source test while testing added reference+account+SAR+date proof; account suffix only on true bank, not wallet."
   ],
   "allowed_changed_files": [
     "lib/waffra_bank_sms_facts.dart",
@@ -26,7 +27,8 @@
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
-    "docs/release/WAFFRA_APPROVED_CHANGES.txt"
+    "docs/release/WAFFRA_APPROVED_CHANGES.txt",
+    "test/m304_cross_source_duplicate_review_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],

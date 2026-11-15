@@ -391,6 +391,8 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
       final trustedProvider=bankFromSender!=null&&
        expectedBank==bankFromSender;
       final proposedSuffix=accountSourceSms!=null&&expectedBank!=null&&
+       WaffraSaudiFinancialProviders.byId(expectedBank)?.category!=
+        WaffraSaudiFinancialProviders.wallet&&
        trustedProvider&&bankFacts!=null?
        (forTransfer&&bankFacts.kind==WaffraBankOperationKind.transfer?
         WaffraSmsAccountLearning.suffix4(transferTarget?
@@ -1459,7 +1461,7 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
   // suffix, status, date and SAR amount. It is an advisory, never a hidden
   // exclusion or an override of the verified SQLCipher idempotency writer.
   final bankReferenceReplay=initial==null&&manualReviewBody!=null&&
-   entries.any((e)=>e.sourceType=='sms'&&
+   entries.any((e)=>e.sourceType=='sms'&&e.income==result.income&&
     WaffraBankSmsFactsParser.sameReferenceAccountHint(
      manualReviewBody,e.notes)&&
     e.amount==result.amount&&
