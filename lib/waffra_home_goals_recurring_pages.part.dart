@@ -386,8 +386,8 @@ extension _WaffraHomeGoalsRecurringPagesModule on _HomeScreenState {
       final status=paidGoalDue!=null?
        (waffraIsEnglish?'Paid goal due':'استحقاق هدف مدفوع'):
        goal!=null?(waffraIsEnglish?'Goal due':'استحقاق هدف'):
-       r.income?(waffraIsEnglish?'Recurring income':'دخل متكرر'):
-       (waffraIsEnglish?'Recurring expense':'مصروف متكرر');
+       r.income?(waffraIsEnglish?'Income due':'استحقاق دخل'):
+       (waffraIsEnglish?'Expense due':'استحقاق مصروف');
       Widget amountLabel(String label,double amount){
        return Expanded(child:Column(children:[
         SizedBox(width:double.infinity,child:FittedBox(
