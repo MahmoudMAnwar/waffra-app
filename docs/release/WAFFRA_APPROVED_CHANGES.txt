@@ -822,3 +822,9 @@ M940/M941 Draft PR #648 M486 regression correction (unreleased): coalesced futur
 - Goals/Dues unified count dropdowns and official SAR mark; Goals overflow retains deleted items without redundant status filters. Gold Dues metrics and actionable empty state retain linked-goal/recurring features.
 - Place the single Home activity expand/collapse action on the same toolbar as filter, search and More for ledger and combined transfer/savings history. Existing windowing/full PDF remain.
 - Original user encrypted archive and physical Android behavior are NOT verified by these source changes; no release/merge claimed.
+
+[M945 #653 / Draft PR #654 — EXACT-HEAD FINANCE SAFETY ADDENDUM — 2026-11-15, NOT RELEASED]
+- After the previously noted user-approved UI changes, financial account selection now requires both an authenticated account context and exact verified account-entry IDs before presenting selected-account rows. The All accounts view still includes old unassigned transactions; no old ledger row or personal balance is rewritten.
+- Repaired the original read-only M940/M941 source contract to require invalidation of both the month index and combined-activity count when the financial snapshot changes; no regression gate removed.
+- The selected-account context analyzer warning was a source-level blocker in M429; this change consumes the existing SQLCipher-backed read rather than disabling analyzer warnings. M385 scope retains tight file and function boundaries.
+- Original user's password-encrypted 19-record archive is NOT part of CI. Real goals/dues and two historic income rows remain subject to owner-device restore verification after exact-head CI passes.
