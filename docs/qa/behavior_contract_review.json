@@ -1,12 +1,45 @@
 {
   "schema_version": 1,
-  "pr": "M953 — Android screenshot financial editor/notifications/dues corrections, Draft PR (Issue #659)",
-  "issue": "Issue #659 — latest owner 8 Android screenshots 2026-11-15",
+  "pr": "Draft PR #660 — M953 screenshots + M954 default/owner SMS rule parity and durable OTP exclusions",
+  "issue": "Issues #659 and #661: Android screenshots plus all-SMS rule matching before review",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main after #656 f0def360ea75b9c865548b6f1b4fc07e9640f2c2",
   "reviewed_at": "2026-11-15",
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
+    {
+      "id": "M954-ALL-ARRIVALS-DEFAULT-AND-OWNER-RULE-PIPELINE",
+      "issue": "Issue #661 / user report: new-installed-app verification SMS appears even with exclusion and all other message rules activated",
+      "previous_behavior": "Native OTP parser omitted common new-app registration/login phrases. Home isolate and background WorkManager differed: Home used seeded plus owner rules, but background excluded only explicitly owner-created matches, required uncertain bank facts, and used transient acknowledge([id]) instead of a durable 30-day native exclusion. Sensitive OTP digits masked natively could not match legacy exact text fragments later in Dart.",
+      "approved_behavior": "Every newly received, foreground/rescanned and background SMS is evaluated using the common source-independent normalized rule resolver. Preserve native sensitiveOtp after masked digits and recognize additional Arabic/English sign-in codes. Custom owner + curated default exclusion matches use native excludeMessages (durable 30-day marker), before notifying for review; income, expense and transfer rules remain review-only unless separately source-confirmed and account-authorized. Unknown/ambiguous and completed-money+OTP items remain pending and never disappear. User rules load failures never enable account auto-posting.",
+      "source_paths": [
+        "lib/waffra_bank_sms_facts.dart",
+        "native/WaffraAutoSmsStore.kt",
+        "lib/waffra_sms_local_rules.dart",
+        "lib/waffra_sms_saudi_seed_rules.part.dart",
+        "lib/main.dart",
+        "lib/waffra_home_sms_rules.part.dart",
+        "lib/waffra_auto_sms_autopost.part.dart"
+      ],
+      "test_paths": [
+        "test/m954_all_sms_rule_routes_regression_test.dart",
+        "test/m509_all_sender_sms_rescan_dedup_test.dart",
+        "test/m661_exclusion_rule_apply_regression_test.dart",
+        "test/m580_sms_security_navigation_performance_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m946-whole-app-feature-smoke.yml"
+      ],
+      "safety_invariants": [
+        "Never persist raw OTP digits after native SMS ingestion or expose them as ordinary notification text; do not upload messages to cloud.",
+        "Never exclude a completed bank debit/credit, actual outgoing/incoming transfer, card settlement or mixed financial transaction solely for matching OTP/marketing keywords.",
+        "Only the existing native 30-day excluded ledger records excluded message fingerprints; no credit/debit entry or bank account is posted or inferred by this change.",
+        "Default categories, owner-encrypted manual rules, sender scoping, rule keyword boundaries, account consent and duplicate finance protection remain independent safeguards.",
+        "Source-level and synthetic tests do not prove live Android SMS on a phone; no signed release or private backup was tested."
+      ]
+    },
     {
       "id": "M953-VERIFIED-ONE-ROW-HISTORICAL-EDIT",
       "issue": "Issue #659 / Android user screenshot: older date update fails while other transactions must not change",
