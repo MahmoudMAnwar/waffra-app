@@ -19,6 +19,20 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
   final bySender=grouped.bySender;
   final senders=grouped.senders;
   String? selectedSender,openingReviewId;
+  DateTime? selectedDay;
+  var calendarIndex=WaffraSmsReviewCalendarIndex.from(_autoSmsPending,
+   paidDueDates:entries.where((e)=>
+    e.sourceType=='recurring'||e.sourceType=='goal_due')
+    .map((e)=>e.date));
+  final visibleSenderNames=<String>[];
+  var visibleSenderRows=<Map<String,Object?>>[];
+  var visibleReviewIds=<String>[];
+  void rebuildCalendarIndex(){
+   calendarIndex=WaffraSmsReviewCalendarIndex.from(_autoSmsPending,
+    paidDueDates:entries.where((e)=>
+     e.sourceType=='recurring'||e.sourceType=='goal_due')
+     .map((e)=>e.date));
+  }
   // M940: a bounded display window only; bulk selection always sees full IDs.
   final messageWindow=WaffraSmsReviewPageWindow();
   // Coalesce repeated near-bottom scroll notifications into one queue turn.
@@ -51,10 +65,157 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
     combined.addAll(ids);
    }
    allReviewIds=List<String>.unmodifiable(combined);
+   visibleSenderNames
+    ..clear()
+    ..addAll(selectedDay==null?senders:senders.where((sender)=>
+     (bySender[sender]??const <Map<String,Object?>>[]).any((row){
+      final id=row['id'];
+      return id is String&&calendarIndex.matchesId(id,selectedDay!);
+     })));
+   final source=selectedSender==null?allReviewIds:
+    senderIds[selectedSender]??const <String>[];
+   visibleReviewIds=selectedDay==null?source:source.where(
+    (id)=>calendarIndex.matchesId(id,selectedDay!)).toList(growable:false);
+   final rows=bySender[selectedSender]??const <Map<String,Object?>>[];
+   visibleSenderRows=selectedDay==null?rows:rows.where((row){
+    final id=row['id'];
+    return id is String&&calendarIndex.matchesId(id,selectedDay!);
+   }).toList(growable:false);
   }
   refreshReviewIds();
-  List<String> visibleIds()=>selectedSender==null?allReviewIds:
-   senderIds[selectedSender]??const <String>[];
+  List<String> visibleIds()=>visibleReviewIds;
+  void moveSender(int offset){
+   if(selectedSender==null||visibleSenderNames.length<2)return;
+   final current=visibleSenderNames.indexOf(selectedSender!);
+   final next=current+offset;
+   if(current<0||next<0||next>=visibleSenderNames.length)return;
+   selectedSender=visibleSenderNames[next];
+   messageWindow.reset();
+   refreshReviewIds();
+  }
+  Color calendarDotColor(String kind,BuildContext ctx)=>switch(kind){
+   'income'=>emerald,
+   'expense'=>Colors.deepOrange,
+   'transfer'=>const Color(0xFFD8A400),
+   'due'=>Theme.of(ctx).brightness==Brightness.dark?
+    const Color(0xFFD6BBFF):const Color(0xFF7653AA),
+   _=>Theme.of(ctx).colorScheme.outline,
+  };
+  Future<void> openReviewCalendar(BuildContext ctx,StateSetter refresh)async{
+   var month=DateTime(
+    (selectedDay??DateTime.now()).year,(selectedDay??DateTime.now()).month);
+   final selected=await showWaffraDialog<String>(
+    context:ctx,builder:(dialog)=>StatefulBuilder(
+     builder:(dialog,updateMonth){
+      final start=DateTime(month.year,month.month);
+      final offset=start.weekday%7; // Sunday first, RTL mirrors layout.
+      final days=DateTime(month.year,month.month+1,0).day;
+      final isDark=Theme.of(dialog).brightness==Brightness.dark;
+      final labels=waffraIsEnglish?
+       const <String>['Su','Mo','Tu','We','Th','Fr','Sa']:
+       const <String>['أح','إث','ثل','أر','خم','جم','سب'];
+      return AlertDialog(
+       title:WaffraText(waffraIsEnglish?'SMS review calendar':
+        'تقويم رسائل المراجعة'),
+       content:SizedBox(width:360,child:Column(
+        mainAxisSize:MainAxisSize.min,children:[
+         Row(children:[
+          IconButton(key:const Key('m984-calendar-prev-month'),
+           icon:const Icon(Icons.chevron_right_rounded),
+           onPressed:()=>updateMonth(()=>
+            month=DateTime(month.year,month.month-1))),
+          Expanded(child:WaffraText(
+           MaterialLocalizations.of(dialog).formatMonthYear(month),
+           textAlign:TextAlign.center,
+           style:const TextStyle(fontWeight:FontWeight.w700))),
+          IconButton(key:const Key('m984-calendar-next-month'),
+           icon:const Icon(Icons.chevron_left_rounded),
+           onPressed:()=>updateMonth(()=>
+            month=DateTime(month.year,month.month+1))),
+         ]),
+         Row(children:[
+          for(final label in labels)Expanded(child:Center(
+           child:WaffraText(label,style:const TextStyle(fontSize:11)))),
+         ]),
+         const SizedBox(height:4),
+         GridView.builder(shrinkWrap:true,
+          physics:const NeverScrollableScrollPhysics(),
+          itemCount:offset+days,
+          gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(
+           crossAxisCount:7,mainAxisSpacing:3,crossAxisSpacing:2,
+           childAspectRatio:.88),
+          itemBuilder:(cellContext,i){
+           if(i<offset)return const SizedBox.shrink();
+           final d=i-offset+1;
+           final date=DateTime(month.year,month.month,d);
+           final dots=calendarIndex.dots(date);
+           final chosen=selectedDay==date;
+           return InkWell(
+            key:Key('m984-calendar-day-${date.year}-${date.month}-$d'),
+            borderRadius:BorderRadius.circular(8),
+            onTap:()=>Navigator.pop(dialog,date.toIso8601String()),
+            child:Container(
+             decoration:BoxDecoration(
+              color:chosen?emerald.withValues(alpha:isDark?.25:.12):null,
+              borderRadius:BorderRadius.circular(8)),
+             child:Column(mainAxisAlignment:MainAxisAlignment.center,
+              children:[
+               WaffraText('$d',style:TextStyle(fontSize:13,
+                color:chosen?emerald:null,
+                fontWeight:dots.isNotEmpty?
+                 FontWeight.bold:FontWeight.normal)),
+               const SizedBox(height:3),
+               Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+                for(final kind in dots)Padding(
+                 padding:const EdgeInsets.symmetric(horizontal:1.5),
+                 child:Container(width:5,height:5,
+                  decoration:BoxDecoration(shape:BoxShape.circle,
+                   color:calendarDotColor(kind,dialog)))),
+               ]),
+              ])),
+           );
+          }),
+         const SizedBox(height:12),
+         Wrap(spacing:12,runSpacing:7,children:[
+          for(final item in const <(String,String,String)>[
+           ('income','Income','دخل'),('expense','Expense','مصروف'),
+           ('transfer','Transfer','تحويل'),('due','Paid due','استحقاق مدفوع')])
+           Row(mainAxisSize:MainAxisSize.min,children:[
+            Container(width:7,height:7,decoration:BoxDecoration(
+             shape:BoxShape.circle,
+             color:calendarDotColor(item.$1,dialog))),
+            const SizedBox(width:4),
+            WaffraText(waffraIsEnglish?item.$2:item.$3,
+             style:const TextStyle(fontSize:11)),
+           ]),
+         ]),
+         const SizedBox(height:8),
+         WaffraText(waffraIsEnglish?
+          'Dots mark SMS received on each day (max 3); confirmed paid dues are counted separately.':
+          'النقاط حسب تاريخ وصول الرسالة (بحد أقصى ٣)؛ الاستحقاقات المدفوعة منفصلة عن عدد الرسائل.',
+          style:const TextStyle(fontSize:11)),
+        ])),
+       actions:[
+        TextButton(key:const Key('m984-calendar-clear-day'),
+         onPressed:()=>Navigator.pop(dialog,'clear'),
+         child:WaffraText(waffraIsEnglish?'All dates':'كل الأيام')),
+        TextButton(onPressed:()=>Navigator.pop(dialog),
+         child:WaffraText(waffraIsEnglish?'Close':'إغلاق')),
+       ],
+      );
+     }));
+   if(!ctx.mounted||selected==null)return;
+   refresh((){
+    selectedDay=selected=='clear'?null:DateTime.tryParse(selected);
+    selectedSender=null;
+    messageWindow.reset();
+    refreshReviewIds();
+    if(selectedDay!=null){
+     selectedIds.removeWhere((id)=>
+      !calendarIndex.matchesId(id,selectedDay!));
+    }
+   });
+  }
   await showModalBottomSheet<void>(
    context:context,isScrollControlled:true,showDragHandle:true,
    builder:(sheet)=>StatefulBuilder(
