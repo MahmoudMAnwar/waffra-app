@@ -1,95 +1,62 @@
 {
   "contract_version": 1,
-  "change_id": "M969-ISSUE670-M120-EMULATOR-SHUTDOWN-FAIL-CLOSED-20261115",
-  "human_scope_review": "Owner's latest prior-chat five axes are financial integrity, account & Backup/Restore integration, performance/responsiveness, UI stability, and architecture/proactive tests (20 proposed improvements). Issue #657/PR #658 implement first bounded tranche: fail-close missing linked SQLCipher finance-domain schema, memoize large SMS-review selections, and harden exact-SHA CI evidence; preserve approved UI and all financial writers. No claim of all 20 done or real backup/Android UAT. Owner authorized continuing unfinished five axes after first 24/24 CI green. Second safe tranche: use verified SQLCipher keyset for historical UNASSIGNED account reconciliation (not just monthly), remove per-budget repeated full-month scan using pure O(entries + budgets) parity-checked halala aggregates, extend absent due/budget-table fail-closed tests, and preserve existing UI/finance writers. One independent 2700-row SQLCipher parity expansion and 10000-entry/120-budget synthetic test protect correctness. This does NOT complete all five axes or prove physical phone/old private backup. Third bounded tranche of same five axes: use one grouped SQLCipher per-account goal-source aggregation instead of per-goal correlated scans, preserving original fund/release signs, independent saved wallet and no bank mutation; add real 80-goal/720-movement disposable encrypted parity regression, register this and existing M952 tests in exact-head M946 smoke. No owner backup, hardware acceptance or new ledger writes. Fourth tranche corrected from actual encrypted CI: SQLite UNIQUE(entry_id) prevents a second standalone budget allocation for one entry; remove redundant grouped ledger joins and retain direct unique joins. The source-backed monthly allocation read and grouped goal projection remain. A disposable encrypted regression now tests that a duplicate allocation is rejected, distinct budgets retain independent correct totals and full/month/keyset pages and account balances are stable. Do not change database uniqueness, finance writers, owner backup or UI. M955 stacked draft PR #665 onto #658 (Issue #664) safely optimizes selected-account Home finance summary: opt-in includeEntries:false under SAME verified SQLCipher snapshot lock skips all current-month transaction cards while still computing exact-halala independent monthly budgets, grouped goal sources and complete historical account IDs. Existing context exports/pages keep includeEntries:true. Encrypted 900-row cross-account parity and CI matrix are mandatory. No bank money, restore payload, original SMS or FAB changes; hardware/legacy backup and further Home architecture remain open. M956 follows on the same draft: Home account refresh now uses one source-locked SQLCipher read for verified account balances, monthly ledger-free context and complete historical account IDs, all at a single pre/post finance generation/digest. The original three-read gap is closed, no new writer, unlinked-entry reparenting or UI redesign. Same test suite checks source gate and account/legacy encrypted parity; real Android remains external. After merged #658 and exact tree-equivalent reconciliation to main, the current PR changes exactly 12 files. Previous M952 source files are now baseline on main, not re-declared in M385. Sections for unchanged files are removed (not security gates); M385 still compares original main and full exact HEAD source changes. M385 Home anchor now wraps only the specific M468 verified-account read function, with unique pre-existing start/end anchors on both main and PR HEAD. M957 updates the precise M468/M470 regression witnesses after single-witness Home implementation: old three-lock strings were asserted and failed on actual exact-HEAD CI; new contracts assert one authenticated Home API, source-backed entry IDs, session epoch, requested-ID fallback and non-resurrection of 'none'. All other tests and source guards remain mandatory. M958 removes the redundant LIMIT-0 transaction-card query entirely for verified Home compact summary; full account-context views still execute the original read, and encrypted parity/single-witness gates remain. Same PR #665, no writer, UI or archive changes. M959 keeps the user-selected account when an obsolete async Home read fails after a newer selection, fails closed on displayed balance/context and queues a witnessed retry without changing any money. Existing M467 source test asserts this race protection. M960 optimizes verified account-balance read to independent grouped SQLCipher source CTEs instead of four correlated SUMs per account, preserving original integer-halala opening, entry/due cash, transfer and goal source signs. New executable source-vs-original encrypted 360-entry/12-transfer/3-goal-movement/cold-reopen regression is M946 mandatory. No account writer, migration, original archive or approved UI changes. M960 CI correction: M385 end anchor must uniquely name the implementation's async renameAccount method, rather than the also-present interface signature; no protected source scope widened. M961 adds per-immutable-ledger monthly list caching and last verified account-ID month view caching, reusing explicit previous ledger invalidation; source/witness ID change never reuses prior filter. New runnable 12000-entry host parity/invalidation test added to M946 experience, with no finance writer or UI layout changes. M962 reconciles M944's stale one-line invalidate() test assertion with the M961 cache state: check all four source/account/month cached fields and original 50-card window reset. The prior test remains enabled and source production remains unchanged. M963 fixes owner-visible Undo of a previously approved verified transaction edit: the original ordinary Save handler already refreshes finance accounts; the Snackbar Undo directly invokes the encrypted writer but did not refresh the verified Home bank/account summary. Add a source-level contract to assert refresh only on confirmed Undo without re-enabling Undo for linked account moves. M969 #670: exact-head #665 M120 Android passed real SQLCipher receipt cold-reopen assertions, then QEMU host action stalled during emulator termination and 45-min CI timed out. Add bounded host emulator cleanup on ALL M120 script exits, preserving exact original Flutter test exit code and without converting failures into successes. Add ANDROID_EMULATOR_WAIT_TIME_BEFORE_KILL=5 and pre-emulator executable source regression; no production app, finance writer, APK, private backup or physical handset changed.",
+  "change_id": "M967-ISSUE666-OLD-SMS-PREWARM-SOURCE-CONTRACTS-20261115",
+  "human_scope_review": "Owner explicitly requires finishing code-side architecture for the five axes #657. After #658 merged and Draft #665 M955-M963 source-based integration, this stacked Issue #666 tranche moves only four pure Home helper methods to one registered same-library part: SMS session epoch guard, owner-scoped display key, immutable period-index accessor, SMS rule owner key. Preserve exact method contents, lifecycle callbacks, finance writer, SQLCipher source, SMS rules, original UI/FAB/Snackbar, original backup and physical device. Update exact tested extraction scope without weakening M385/M550. No claim whole five axes 100%. M965 finishes the two remaining nonlistener Home helpers requested in Issue #666: finance-period invalidation and memoized native SMS permission future. Extract unchanged method bodies to existing same-library part, leave field storage, owner session and callbacks in State. Update old M528/M940/M964 source contracts and a new M965 registration without disabling tests; guard bounded main.dart and test edits. M966: real in-progress exact-head full Flutter logs discovered M624/M548/M622 stale source assertions checking the SMS session-epoch helper body only in reconstructed main.dart. M964 moved its exact original body into the registered same-library part. Correct old tests to attest the actual helper file while still proving owner guard and post-frame scheduling; add only missing M624/M548 tests to M946 because M622 already registered. No runtime change or disabled test. M967 proactive search after real M966 failures found three more obsolete source-extraction assertions in M623/M631/M632 expecting the session epoch predicate in inlined main.dart. Preserve all tests, assert real registered Dart-part predicate source without changing any production behavior. M623 already exists in M946 so add only M631 and M632 as separate experience feature.",
   "user_requested_changes": [
-    "Axis 1: reject account-backed financial source when expected versioned domain linked tables or revision are missing even if account marker and foreign keys appear healthy.",
-    "Axis 2: protect bank-account links, account opening and V3/V24 restore parity with source readiness checks before reads, no speculative migration or real archive modification.",
-    "Axis 3: cache full sender-group and whole review ID lists at UI scope across repeated rebuilds, invalidating only on confirmed review or native exclusion while retaining 100-card rendering, full selection and original SMS.",
-    "Axis 4: preserve approved Home, Goals, Recurring visual composition, FAB, Snackbar, RTL and notification review transitions; do not change appearance without regression acceptance.",
-    "Axis 5: reject duplicated runner start, duplicate suite IDs or missing suite references in M937 exact-SHA fail-closed CI summary; add three hostile Python regressions and source/SQLCipher tests.",
-    "Track twenty-proposed-improvement work without claiming completed axes; no disabled tests, no fake Android or private backup proof.",
-    "Second tranche Axis 3: replace historical unassigned account-context OFFSET UI with source-witnessed SQLCipher keyset and cursor invalidation on filter/month/link, preserving old offset read API for old consumers.",
-    "Second tranche Axes 1/3: compute account-context budget usage with a single O(entries+budgets) pass instead of B times scanning E entries, comparing every budget exact halalas to existing policy in 10000-entry synthetic tests.",
-    "Second tranche Axes 1/2: reject finance account context when due-settlement or standalone allocation tables disappeared even if account revision survives.",
-    "Second tranche Axes 4/5: preserve account-page navigation/RTL/FAB/card layouts and update only source-contract assertions for verified historical pagination, maintain failing CI detection and no skipped tests.",
-    "Axes 1/2/3: replace correlated per-goal account-contribution SQL with one grouped encrypted read, preserve all saved balances, funding/release polarity, unsourced due debits and record identities, with independent old-SQL parity over 80 synthetic goals and 720 source movements.",
-    "Axes 4/5: enforce execution of newly added goal/budget/schema/keyset suites in M946 exact-HEAD money and safety shards, not merely register source contracts; do not turn off existing tests.",
-    "Axes 1/2/3/5: verify actual UNIQUE(entry_id) prevents two standalone budget allocations for the same entry, preserves one ledger row and account debit per source entry, and allows separate budget-linked entries with correct monthly totals.",
-    "Run source-backed same-expense-two-budget regression on every PR SHA through M946; preserve the original M385 fail-closed bounded scope and all other suite registrations.",
-    "M955: Home verified selected-account card must not deserialize transaction rows it does not display; preserve monthly budget/goal exact parity, all-time historical linked IDs, owner source witness and RTL static FAB.",
-    "M956: make Home account header balances, month budget/goal summary and all-time entry membership one generation-consistent verified read rather than three separate finance locks; preserve exact old account views and cache/race invalidation.",
-    "M956: correct stale account response guard to compare the original requested account rather than verified 'all' fallback, so archived/deleted selected banks do not cause infinite Home refresh/retry loops.",
-    "M957: fix two exact-HEAD Flutter source-contract tests M468/M470 that assert the superseded three-lock Home account reads; keep the same account and owner-witness safety and reject stale/unassigned fallback; no test disabled.",
-    "M958 Axis 3/5: avoid even executing the zero-row ledger SQL query during verified Home header summary; preserve full ledger reads for all regular account-context callers and run existing encrypted parity plus a targeted source regression.",
-    "M959 Axis 1/4/5: reject stale async Home account read failure without resetting the owner's newer selection to all; hide unverifiable money/context until the existing source-verified retry succeeds.",
-    "M960 Axis 1/2/3/5: optimize all verified bank/wallet/archived account balance SQL to grouped source aggregation with exact halala parity against the existing reference query, owner lock unchanged, never double count transfers, goal funding or goal-paid due.",
-    "M961 Axis 3/4/5: reuse already verified immutable month results across Home/Budget rebuilds, avoid re-filtering one account ID set repeatedly, invalidate on ledger mutation and do not reuse a filter across new owner SQLCipher ID witnesses.",
-    "M962 update the obsolete M944 Home progressive window source-only expectation to explicitly assert the full M961 ledger and verified month/account witness invalidation, without weakening 50-card or PDF behavior.",
-    "M963 Axes 1/2/4/5: after successful one-ID SQLCipher transaction edit Undo, refresh verified Home account balances and monthly budgets; do not offer metadata Undo after confirmed bank reassignment or link; preserve all original writers and tests.",
-    "M969: ensure the M120 Android emulator action can release its disposable qemu child after a successfully completed real encrypted receipt cold-reopen test, without hanging until CI timeout or disabling its original assertions.",
-    "M969: run a CI test for bounded emulator teardown and preservation of the original Flutter assertion exit status; keep real Android, SQLCipher, M385 and M550 verification active."
+    "Extract the four non-mutating Home State helper methods into one registered Dart part with identical source and owner/session semantics, no financial writes or UI changes.",
+    "Retain listener-bound SMS callback, State init/dispose, verified money and entry-history cache invalidation in their original lifecycle owner.",
+    "Add a mandatory exact-HEAD source-contract regression through existing M946 experience shard and preserve old first-frame, owner rule and 50-card tests.",
+    "M965: finish Issue #666 extraction of finance-ledger display-index invalidation and the session-scoped native SMS permission future into the Home same-library helpers, with original method signatures and source operations unchanged.",
+    "M965: preserve old M940/M528/M964 assertions by asserting moved method definitions inside the registered library part, retaining source index invalidation, SMS permissions, callback lifecycle and prior test coverage.",
+    "M966 fix three exact-head full-Flutter regression failures caused by stale source checks after moving the original SMS session epoch guard to a registered Dart part, checking the real implementation rather than reintroducing duplicate methods.",
+    "M967: verify relocated exact Home/SMS post-frame session epoch guard through three additional original prewarm/Android review source tests, preserving the guard and real full Flutter behavior."
   ],
   "allowed_changed_files": [
-    "docs/WAFFRA_REQUIREMENTS.md",
-    "docs/qa/M955_HOME_VERIFIED_SUMMARY_OPTIMIZATION.md",
+    "lib/main.dart",
+    "lib/waffra_home_state_core_helpers.part.dart",
+    "test/m964_home_state_pure_helpers_extraction_test.dart",
+    "scripts/qa/m946_full_app_smoke_matrix.py",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
+    "docs/WAFFRA_REQUIREMENTS.md",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "lib/storage/waffra_account_context_read.dart",
-    "lib/storage/waffra_verified_accounts_api.dart",
-    "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
-    "lib/waffra_home_verified_account_flows.part.dart",
-    "scripts/qa/m946_full_app_smoke_matrix.py",
-    "test/m467_account_header_test.dart",
-    "test/m468_app_refresh_performance_regression_test.dart",
-    "test/m470_account_scope_and_transfer_date_test.dart",
-    "test/storage/m955_home_verified_summary_parity_test.dart",
-    "lib/storage/waffra_accounts_repository.dart",
-    "test/storage/m960_grouped_account_balance_parity_test.dart",
-    "lib/waffra_finance_period_index.part.dart",
-    "lib/waffra_home_ledger_query.part.dart",
-    "test/m961_verified_month_scope_cache_test.dart",
-    "test/m944_home_progressive_window_test.dart",
-    "lib/waffra_home_entry_sheet.part.dart",
-    "test/m963_verified_edit_undo_account_refresh_test.dart",
-    ".github/workflows/m120-android-receipt-cold-reopen.yml",
-    ".github/scripts/run-m120-android-receipt-reopen.sh",
-    "test/qa/m969_m120_emulator_shutdown_test.py"
+    "test/m940_m941_home_ledger_pagination_test.dart",
+    "test/m528_settings_async_cache_regression_test.dart",
+    "test/m965_home_state_cache_lifecycle_extraction_test.dart",
+    "test/m624_deferred_sms_after_verified_home_test.dart",
+    "test/m548_review_grouping_and_signup_perf_test.dart",
+    "test/m622_immediate_home_without_loader_test.dart",
+    "test/m623_verified_home_handoff_no_black_frame_test.dart",
+    "test/m631_verified_finance_prewarm_test.dart",
+    "test/m632_sms_account_splash_isolate_contract_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
   "bounded_sections": {
-    "lib/storage/waffra_verified_accounts_api.dart": [
+    "lib/main.dart": [
       {
-        "start": "  String? monthIso,String? selectedAccountId,bool? income,",
-        "end": " /// Attach a past unassigned entry only AFTER the account screen has a"
+        "start": "part 'waffra_home_ledger_query.part.dart';",
+        "end": "part 'waffra_deleted_item_card.part.dart';"
       },
       {
-        "start": " Future<WaffraAccountContextReadResult> readAccountContext({",
-        "end": " /// M684: all-time account entry IDs without full historical SQL detail."
-      }
-    ],
-    "lib/storage/waffra_account_context_read.dart": [
-      {
-        "start": "    final rows = await store.customSelect('''",
-        "end": "    final budgets = await store.customSelect('''"
+        "start": " Future<void>? _m630PostFrameFinanceWork;",
+        "end": " // A signout must not close SQLCipher while a Home load still owns a read."
       },
       {
-        "start": "ORDER BY name, budget_id",
-        "end": "    // A goal is its own savings wallet. Display the overall saved total"
+        "start": " bool _m468AccountReadAgain=false;",
+        "end": " // Concurrent save, transfer, resume and refresh events share one account read."
       },
       {
-        "start": "    // A goal is its own savings wallet. Display the overall saved total",
-        "end": "    final goals=List<WaffraAccountGoalSummary>.unmodifiable("
+        "start": " int? _m945UnifiedHistoryCount;",
+        "end": " final namedBudgets=<WaffraNamedBudget>[];"
       },
       {
-        "start": "  static Future<List<WaffraAccountLedgerRow>> loadMonthEntries({",
-        "end": "  /// M681: original accountless history, not only current month."
+        "start": " final List<Map<String,Object?>> _autoSmsPending=<Map<String,Object?>>[];",
+        "end": " // M741: original local SMS rule and learning methods moved to registered same-library part."
       },
       {
-        "start": "  static Future<WaffraAccountContextReadResult> load({",
-        "end": "    final rows = await store.customSelect('''"
+        "start": " // M528: stable permission/consent futures across unrelated profile repaints.",
+        "end": " String? _accountOpenSection;"
       }
     ],
     "scripts/qa/m946_full_app_smoke_matrix.py": [
@@ -98,84 +65,52 @@
         "end": "# Must remain listed; CI cannot pretend that unit/widget tests prove these."
       }
     ],
-    "lib/storage/waffra_verified_encrypted_finance_bridge.dart": [
+    "test/m940_m941_home_ledger_pagination_test.dart": [
       {
-        "start": "  Future<WaffraAccountContextReadResult> readVerifiedAccountContext({",
-        "end": "  /// Read account balances with a source witness"
+        "start": "  final main=File('lib/main.dart').readAsStringSync();",
+        "end": "  expect(dash,contains('where:transactionFilter.accepts'));"
       }
     ],
-    "lib/waffra_home_verified_account_flows.part.dart": [
+    "test/m528_settings_async_cache_regression_test.dart": [
       {
-        "start": " Future<void> _m468ReadVerifiedAccountsOnce()async{",
-        "end": " String get _m467AccountLabel{"
-      },
-      {
-        "start": " List<MoneyEntry> _m684ScopedMonthEntries(int year,int month){",
-        "end": " double? _m942VerifiedAllAccountsBalance(){"
+        "start": "  final state=between('bool protectRecentApps=true;','String? _accountOpenSection;');",
+        "end": "  expect(state,isNot(contains('_m528CloudConsentFuture')));"
       }
     ],
-    "test/m467_account_header_test.dart": [
+    "test/m624_deferred_sms_after_verified_home_test.dart": [
       {
-        "start": "  expect(src,contains('_m467ScopedEntries().toList()'));",
-        "end": "  expect(src,contains('_m467Accounts.fold<int>(0,(total,a)=>total+a.balanceMinor)/100'));"
+        "start": "  expect(startup,contains('if(!activeOwner||!_m630SmsSessionCurrent(startupEpoch))return;'));",
+        "end": "  expect(startup.indexOf('final activeOwner=(await widget.onVerifiedHomeSmsResume?.call())??true;'),"
       }
     ],
-    "test/m468_app_refresh_performance_regression_test.dart": [
+    "test/m548_review_grouping_and_signup_perf_test.dart": [
       {
-        "start": "  expect(s,contains('final active=_m468AccountReadInFlight;'));",
-        "end": "  expect(s,contains('AppLifecycleListener(onResume:_m468OnResume)'));"
+        "start": "  expect(refresh,contains('if(!_m630SmsSessionCurrent(smsEpoch))return;'));",
+        "end": "  expect(refresh,contains('WaffraAutoSms.pendingChecked()'));"
       }
     ],
-    "test/m470_account_scope_and_transfer_date_test.dart": [
+    "test/m622_immediate_home_without_loader_test.dart": [
       {
-        "start": "    expect(source, isNot(contains(\"chosen!='none'\")));",
-        "end": "  });\n}"
+        "start": "  expect(startup,contains('if(!_m630SmsSessionCurrent(startupEpoch))return;'));",
+        "end": "\n });\n}"
       }
     ],
-    "lib/storage/waffra_accounts_repository.dart": [
+    "test/m623_verified_home_handoff_no_black_frame_test.dart": [
       {
-        "start": " Future<List<WaffraAccountBalance>> balances()async{",
-        "end": " Future<void> renameAccount({required String id,required String name,\n  required bool userConfirmed})async{"
+        "start": "  expect(homeLoader,contains('if(!_m630SmsSessionCurrent(startupEpoch))return;'));",
+        "end": "  expect(homeLoader,contains('await _refreshAutoSmsInbox(importMonth:!_autoSmsHistoryComplete)'));"
       }
     ],
-    "lib/waffra_finance_period_index.part.dart": [
+    "test/m631_verified_finance_prewarm_test.dart": [
       {
-        "start": "class WaffraFinancePeriodIndex {",
-        "end": " /// Analytics annual view retains precisely the same historical entries."
+        "start": "  expect(load,contains('if(!_m630SmsSessionCurrent(startupEpoch))return;'));",
+        "end": "  expect(load,contains('_m630PostFrameFinanceWork=postFrameFinance;'));"
       }
     ],
-    "lib/waffra_home_ledger_query.part.dart": [
+    "test/m632_sms_account_splash_isolate_contract_test.dart": [
       {
-        "start": "final class WaffraHomeLedgerReadCache {",
-        "end": "/// M941: the original dashboard search/date/amount/type/category predicate"
-      }
-    ],
-    "test/m944_home_progressive_window_test.dart": [
-      {
-        "start": "  expect(q,contains('static const int expandedPageSize=50;'));",
-        "end": "  expect(dashboard,contains(\n   'limit:min(requestedWindow,_m940LedgerReads.expandedLimit)'));"
-      }
-    ],
-    "lib/waffra_home_entry_sheet.part.dart": [
-      {
-        "start": "    onAction:linkedHistoricalAccountInThisEdit||movedLinkedAccountInThisEdit?null:()async{",
-        "end": "     if(mounted)snackSuccess(context,waffraIsEnglish?"
-      }
-    ],
-    ".github/workflows/m120-android-receipt-cold-reopen.yml": [
-      {
-        "start": "      - name: Analyze Android SQLCipher receipt reopen test\n",
-        "end": "      - name: Enable KVM for Android emulator\n"
-      },
-      {
-        "start": "      - name: Run disposable Android receipt restart and recovery proof\n",
-        "end": null
-      }
-    ],
-    ".github/scripts/run-m120-android-receipt-reopen.sh": [
-      {
-        "start": "device=\"emulator-5554\"",
-        "end": "test_file=\"integration_test/m120_verified_receipt_reopen_android_test.dart\""
+        "start": "  expect(refresher,contains('if(!_m630SmsSessionCurrent(smsEpoch))return;'));",
+        "end": "  expect(refresher,contains('WaffraAutoSms.pendingChecked()'));"
       }
     ]
   }

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "pr": "M955/M956 Draft PR #665 — ledger-free Home and single-witness verified account view",
-  "issue": "Issue #664 (follow-up #657) — five-axis Home performance and exact-money parity",
+  "pr": "M964 Draft stacked on #665 — remaining pure Home State helper extraction",
+  "issue": "Issue #666, follow-up to five axes #657 and code-only M955-M963",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at f0def360ea75b9c865548b6f1b4fc07e9640f2c2 after #656",
   "reviewed_at": "2026-11-15",
@@ -71,6 +71,105 @@
         "Only the GitHub-hosted disposable QEMU emulator is stopped; do not kill unrelated machines or suppress connected-driver assertions.",
         "No production financial writer, SQLCipher authority, UI, signed APK or private owner backup modified.",
         "Host test is not evidence of physical Android acceptance; the existing real emulator test must independently succeed at the exact new HEAD."
+      ]
+    },
+    {
+      "id": "M967-RELOCATED-POST-AUTH-SMS-SOURCE-GATE-COVERAGE",
+      "issue": "Issue #666 / Draft PR #667",
+      "previous_behavior": "M623, M631 and M632 positive assertions still seek the SMS post-auth ready/owner epoch predicate in reconstructed main.dart after M964 moved the exact implementation into the registered helper part.",
+      "approved_behavior": "Each existing test must inspect the verified same-library helper's actual session/body guard and keep its unchanged post-frame SMS, owner and isolate checks. M946 adds only missing M631/M632, M623 already registered.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_state_core_helpers.part.dart"
+      ],
+      "test_paths": [
+        "test/m623_verified_home_handoff_no_black_frame_test.dart",
+        "test/m631_verified_finance_prewarm_test.dart",
+        "test/m632_sms_account_splash_isolate_contract_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m946-whole-app-feature-smoke.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Same mounted/ready/postAuthVisible+epoch check with no code change.",
+        "No test skipped or removed, no duplicate M946 file.",
+        "No change to finance writer, native SMS callbacks, archive or approved UI."
+      ]
+    },
+    {
+      "id": "M966-EXTRACTED-SMS-SESSION-EPOCH-SOURCE-REGRESSION",
+      "issue": "Issue #666 / stacked PR #667",
+      "previous_behavior": "M624/M548/M622 source tests assumed the native SMS session predicate was defined inside reconstructed main.dart even after M964 extracted it to a same-library Dart part.",
+      "approved_behavior": "Keep original verified Home frame/owner/logout/SMS-ACK safety assertions and prove the exact epoch predicate body in its actual registered Dart file. Register only M624/M548 as newly required M946 tests since M622 is already registered.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_state_core_helpers.part.dart"
+      ],
+      "test_paths": [
+        "test/m624_deferred_sms_after_verified_home_test.dart",
+        "test/m548_review_grouping_and_signup_perf_test.dart",
+        "test/m622_immediate_home_without_loader_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m946-whole-app-feature-smoke.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Original mounted, ready, postAuthVisible, closingSession, finance failure and exact startup epoch clauses all remain verified.",
+        "No duplicate session gate or altered SMS/finance writer, no disabled tests.",
+        "New M946 smoke registration does not duplicate existing M622 suite and M385 source boundaries are preserved."
+      ]
+    },
+    {
+      "id": "M965-HOME-LEDGER-INVALIDATION-AND-SMS-PERMISSION-EXTRACTION",
+      "issue": "Issue #666 / stacked Draft PR #667",
+      "previous_behavior": "Home core State carried ledger period-cache invalidation and memoized SMS permission future implementations, while other pure helpers were moved in M964.",
+      "approved_behavior": "Move both exact original bodies to registered same-library Home helpers. Keep State-owned fields, original authenticated source invalidation, permission refresh lifecycle and SMS app code unchanged; update existing M528/M940/M964 source tests rather than weaken them.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_state_core_helpers.part.dart"
+      ],
+      "test_paths": [
+        "test/m965_home_state_cache_lifecycle_extraction_test.dart",
+        "test/m940_m941_home_ledger_pagination_test.dart",
+        "test/m528_settings_async_cache_regression_test.dart",
+        "test/m964_home_state_pure_helpers_extraction_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m946-whole-app-feature-smoke.yml",
+        ".github/workflows/m147-final-main-safe-merge-review.yml"
+      ],
+      "safety_invariants": [
+        "Home ledger invalidation clears the period-cache index, unified history count and scope exactly as before.",
+        "SMS native permission is only fetched and cached once per Home owner session, with existing callers able to reset it.",
+        "No mutation to finance writers, accounts, SMS rules, real backup or UI geometry.",
+        "Old tests remain enabled; new M965 source and full Flutter verification required."
+      ]
+    },
+    {
+      "id": "M964-REMAINING-HOME-STATE-PURE-HELPER-EXTRACTION",
+      "issue": "Issue #666 / Draft stacked PR",
+      "previous_behavior": "A handful of pure presentation/session helper methods remained in _HomeScreenState although most finance and UI behaviors are split into same-library Dart parts.",
+      "approved_behavior": "Move only four pure methods with exact original bodies and names into a registered same-library extension; preserve State lifecycle, callback identity, owner SMS rule scope and old-period source witness invalidation.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_state_core_helpers.part.dart"
+      ],
+      "test_paths": [
+        "test/m964_home_state_pure_helpers_extraction_test.dart",
+        "test/m630_home_first_frame_contention_test.dart",
+        "test/m528_settings_async_cache_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m946-whole-app-feature-smoke.yml",
+        ".github/workflows/m147-final-main-safe-merge-review.yml"
+      ],
+      "safety_invariants": [
+        "Original money/SMS/backup code untouched, no real-data changes.",
+        "Registered Dart extension accesses the same private State fields and original session epoch, owner hash and rule key.",
+        "All lifecycle listener callback identities, persistent writers, original UI, 50-card window, verified index invalidation remain in State.",
+        "Strict exact-SHA M385/M550 and all mandatory tests retained."
       ]
     },
     {
