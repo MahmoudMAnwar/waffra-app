@@ -153,7 +153,7 @@ void main() {
   expect(home,contains('if(!snapshot.hasData)return Column('));
   // M953 numbered unified timeline renders by visible history index,
   // not the old income/expense-only compact map.
-  expect(home,contains('for(final event in history.take(maxShown))'));
+  expect(home,contains('for(final (index,event) in history.take(maxShown).indexed)'));
   expect(home,contains('compactTransaction(event.activity as MoneyEntry)'));
   expect(home,isNot(contains('entries.add(')));
   expect(home,isNot(contains('api.transfer(')));
