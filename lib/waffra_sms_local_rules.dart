@@ -152,7 +152,9 @@ abstract final class WaffraSmsLocalRules {
   return rule;
  }
 
- static bool matches(WaffraSmsLocalRule rule,String body,{String sender=''}) {
+ static bool matches(WaffraSmsLocalRule rule,String body,{
+  String sender='',String? preNormalizedBody,
+ }) {
   final trustedSeed=rule.builtIn&&rule.id.startsWith('sa_');
   if(rule.keywords.isEmpty||rule.keywords.any((word)=>
     trustedSeed?!_safeSaudiSeedKeyword(word,rule.resolvedKind):
@@ -165,10 +167,12 @@ abstract final class WaffraSmsLocalRules {
   if(rule.templateFamily=='beneficiary_management'){
    return _beneficiaryManagement(body)&&!_hasCompletedFinanceCue(body);
   }
-  final source=' ${normalized(body)} ';
+  // M980: same normalization reused by all four rule groups per SMS.
+  final source=' ${preNormalizedBody??normalized(body)} ';
   bool has(String keyword){
    final safe=normalized(keyword);
-   if(safe.isEmpty)return false;
+   // M980: avoid full regex work for unmentioned keywords across 4 groups.
+   if(safe.isEmpty||!source.contains(safe))return false;
    // Boundaries prevent short English keywords matching arbitrary longer words.
    return source.contains(' $safe ')||
     source.contains(' $safe\n')||
@@ -239,11 +243,29 @@ abstract final class WaffraSmsLocalRules {
 
  /// Transfers cannot create ledger income/expense entries; exclude rules
  /// only operate on unconfirmed, non-financial messages.
+ /// M980: match every SMS against all four owner/default rule groups before
+ /// making safety decisions. Matching is only a suggestion, never posting.
+ static List<WaffraSmsLocalRule> matchAllFourKinds({
+  required String body,required String sender,
+  Iterable<WaffraSmsLocalRule> custom=const <WaffraSmsLocalRule>[],
+ }){
+  final found=<WaffraSmsLocalRule>[];
+  final normalizedBody=normalized(body);
+  for(final rule in <WaffraSmsLocalRule>[...custom,...allDefaultRules]){
+   if(!const <String>{'income','expense','transfer','excluded'}
+     .contains(rule.resolvedKind))continue;
+   if(matches(rule,body,sender:sender,
+     preNormalizedBody:normalizedBody))found.add(rule);
+  }
+  return List<WaffraSmsLocalRule>.unmodifiable(found);
+ }
+
  static WaffraSmsLocalRule? resolveSpecial({
   required String body,required String sender,
   required WaffraBankOperationKind bankKind,
   Iterable<WaffraSmsLocalRule> custom=const <WaffraSmsLocalRule>[],
   bool nativeSensitiveOtp=false,
+  Iterable<WaffraSmsLocalRule>? matchedRules,
  }) {
   final posted=_hasPostedMoneyEvidence(body);
   // Android masks OTP digits before encrypted storage. Preserve the native
@@ -256,15 +278,23 @@ abstract final class WaffraSmsLocalRules {
   // regardless of a weak preclassification. Inferred bankKind is not proof
   // of a posted debit; completed-money cues are independently checked first.
   // Genuine finance, transfers, and mixed OTP + money always stay in review.
-  final eligible=<WaffraSmsLocalRule>[
-   ...custom.where((rule)=>rule.resolvedKind!='excluded'||
-    !_hasCompletedFinanceCue(body)),
-   ...waffraSaudiSpecialSeedRules,
-  ].where((rule)=>
+  // The same precomputed candidates cover ALL four types. Only apply safe
+  // transfer/exclusion priorities after evaluating every saved/default rule.
+  final checked=matchedRules??<WaffraSmsLocalRule>[
+   ...custom,...waffraSaudiSpecialSeedRules,
+  ];
+  final eligible=checked.where((rule)=>
    ((rule.resolvedKind=='transfer'&&bankKind==WaffraBankOperationKind.transfer)||
     (rule.resolvedKind=='excluded'&&!posted&&
+     // Preserve the original custom-exclusion guard: generic financial
+     // action language requires human review, unlike vetted default seeds.
+     (rule.builtIn||!_hasCompletedFinanceCue(body))&&
      !(verification&&_hasCompletedFinanceCue(body))))&&
-   matches(rule,body,sender:sender)).toList(growable:false);
+   (matchedRules!=null||matches(rule,body,sender:sender)))
+    .toList(growable:false);
+  // Conflicting user rules never silently hide or misclassify an SMS.
+  if(matchedRules!=null&&matchedRules.where((r)=>!r.builtIn)
+    .map((r)=>r.resolvedKind).toSet().length>1)return null;
   // Unknown new-app verification language is still a known security
   // EVENT, even if none of the older literal seed fragments matched.
   // Reuse the existing seed identity; do not learn/store sensitive OTPs.
@@ -309,14 +339,21 @@ abstract final class WaffraSmsLocalRules {
   required String body,required String sender,
   required WaffraBankOperationKind bankKind,
   Iterable<WaffraSmsLocalRule> custom=const <WaffraSmsLocalRule>[],
+  Iterable<WaffraSmsLocalRule>? matchedRules,
  }) {
   // Financial direction is independent bank evidence, never an editable rule.
   // All transfers, card settlements, unconfirmed and uncertain SMS need review.
   if(bankKind!=WaffraBankOperationKind.income&&
      bankKind!=WaffraBankOperationKind.expense)return null;
+  // M980: even a fully verified direction never grants autoPost when two
+  // saved owner rules disagree about this SAME message's classification.
+  if(matchedRules!=null&&matchedRules.where((r)=>!r.builtIn)
+    .map((r)=>r.resolvedKind).toSet().length>1)return null;
   final income=bankKind==WaffraBankOperationKind.income;
-  final personal=custom.where((rule)=>!rule.builtIn&&rule.financial&&
-    matches(rule,body,sender:sender)).toList(growable:false);
+  final personal=(matchedRules??custom).where((rule)=>
+   !rule.builtIn&&rule.financial&&
+   (matchedRules!=null||matches(rule,body,sender:sender)))
+    .toList(growable:false);
   if(personal.isNotEmpty){
    if(personal.any((rule)=>rule.income!=income))return null;
    final resolved=personal.map((rule)=>
@@ -328,8 +365,10 @@ abstract final class WaffraSmsLocalRules {
   // "Declined purchase", pending authorizations and OTP challenges
   // are NOT settled transactions, even if they mention a familiar merchant.
   if(WaffraBankSmsFactsParser.parse(body).pending)return null;
-  final eligible=builtIn.where((rule)=>rule.income==income&&
-    matches(rule,body,sender:sender)).toList(growable:false);
+  final eligible=(matchedRules??builtIn).where((rule)=>
+   rule.builtIn&&rule.financial&&rule.income==income&&
+   (matchedRules!=null||matches(rule,body,sender:sender)))
+    .toList(growable:false);
   if(eligible.isEmpty)return null;
   // High-specificity merchant/service hints beat fallback banking verbs;
   // conflicting specific categories require explicit user review.

@@ -1,35 +1,78 @@
 {
   "contract_version": 1,
-  "change_id": "M978-ISSUE681-RECURRING-REMINDER-DATED-GOAL-INDEX-20261115",
-  "human_scope_review": "Five-axis Issue #657 follow-up #681 in reminder-only read logic, stacked above #680 and #678. In syncRecurringReminders, replace N recurring × N goals any() scans with one dated-goal ID Set from same loaded Home goals. Preserve active category, linked/unlinked reminders, duplicate-or-missing any() semantics, schedule ordering and times, no finance writer or notification content modifications. Exact 10000-goal/1000-recurring executable regression and existing boundary test in M946 experience. Bounded M385/M550, no physical Android or private archive claim.",
+  "change_id": "M979-M980-ISSUE683-ALL-FOUR-SMS-RULES-NATIVE-OTP-20261115",
+  "human_scope_review": "Owner correction: every encrypted SMS candidate must run ALL FOUR independent owner-saved and built-in/default rule kinds (income, expense, transfer, excluded), on foreground review, history import and background worker, not OTP/exclusion alone. One matchAllFourKinds pass enumerates the four groups, then resolveSpecial and resolve reuse matches with original completed-finance, direction, amount, SAR, owner/account generation and explicit autoPost guards intact; conflicting custom kinds do not silently exclude. Native M979 high-confidence PURE-OTP prequeue security path and durable fingerprint remain. M385 path+function bounds and M550 behavior are reviewed; new executable M980 five-case suite and original M954/M979 suites required in M946 safety, not a device/UAT or 95% certificate.",
   "user_requested_changes": [
-    "Continue owner five axes toward audited 95% with actual source performance improvement.",
-    "Index eligible dated goal IDs once per reminder sync while preserving original any() filtering and duplicate/undated semantics.",
-    "Keep original scheduling order, active/category guards, reminder permission and exact oneTimeDueAt; no financial writes.",
-    "Run new 10k-goal/1k-linked-bill executable test with existing M86 in M946 and exact-head CI."
+    "Apply ALL FOUR categories on EVERY SMS: دخل، مصروف، تحويل، مستبعدة, including user's encrypted custom rules and ready-made defaults on foreground, history and background.",
+    "Do not prefilter away the other rule kinds based on a weak initial bank classification: first match all four, then use bank/account evidence to determine safe suggestion and posting authorization.",
+    "Keep pure high-confidence verification exclusion BEFORE queue on Android; protect combined OTP+financial movements and password advisories; no sender blacklist or raw code stored.",
+    "Do not auto-post a transfer as income/expense or allow conflicting personal rules to silently exclude/commit money; preserve old financial writer/locked autoPost consent and verified account source.",
+    "Run original M954 plus nonduplicate M979/M980 executable suites with M946 safety, all M385/M550 and native M417 compile/real handset gates."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "lib/waffra_home_finance_persistence_due.part.dart",
+    "native/WaffraAutoSmsStore.kt",
     "scripts/qa/m946_full_app_smoke_matrix.py",
-    "test/m978_recurring_reminder_goal_index_test.dart"
+    "test/m979_native_otp_prequeue_exclusion_test.dart",
+    "lib/main.dart",
+    "lib/waffra_auto_sms_autopost.part.dart",
+    "lib/waffra_sms_local_rules.dart",
+    "test/m980_four_sms_rule_kinds_every_route_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
   "bounded_sections": {
-    "lib/waffra_home_finance_persistence_due.part.dart": [
+    "native/WaffraAutoSmsStore.kt": [
       {
-        "start": " Future<void> syncRecurringReminders()async {",
-        "end": " Future<void> toggleRecurringReminders("
+        "start": "    private val otp = Regex(",
+        "end": "    private val action = Regex("
+      },
+      {
+        "start": "    fun qualifies(sender: String, body: String)",
+        "end": "    // M437: Unknown-finance lookup"
+      },
+      {
+        "start": "    fun offer(context: Context, sender: String, body: String, at: Long,",
+        "end": "    fun pending(context: Context)"
       }
     ],
     "scripts/qa/m946_full_app_smoke_matrix.py": [
       {
         "start": "FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {",
-        "end": "    \"m977_large_argon2id_backup_envelope_integrity\""
+        "end": "    \"m978_reminder_linked_goal_index_parity\""
+      }
+    ],
+    "lib/main.dart": [
+      {
+        "start": "Map<String,Object?> waffraM632ClassifySmsQueue(",
+        "end": "List<String> splitBankMessages("
+      }
+    ],
+    "lib/waffra_auto_sms_autopost.part.dart": [
+      {
+        "start": "  final actionable=<Map<String,Object?>>[];",
+        "end": "  if(actionable.isEmpty)return summary;"
+      },
+      {
+        "start": "   for(final candidate in actionable.take(25)){",
+        "end": "     // The rule is bound to the exact account suffix"
+      }
+    ],
+    "lib/waffra_sms_local_rules.dart": [
+      {
+        "start": " static bool matches(WaffraSmsLocalRule rule,String body,",
+        "end": " /// OTP plus a completed purchase/debit"
+      },
+      {
+        "start": " /// Transfers cannot create ledger income/expense entries;",
+        "end": " /// Keep a single safe auto-learned bucket"
+      },
+      {
+        "start": " static WaffraSmsLocalRule? resolve({",
+        "end": " static const builtIn=<WaffraSmsLocalRule>["
       }
     ]
   }

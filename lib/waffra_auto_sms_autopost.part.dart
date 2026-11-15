@@ -67,6 +67,9 @@ abstract final class WaffraAutoSmsAutoPoster {
    }
   }
   final actionable=<Map<String,Object?>>[];
+  // M980: classify each original, owner-scoped SMS against four rule kinds
+  // exactly once, then reuse the same matches for safe posting eligibility.
+  final matchedById=<String,List<WaffraSmsLocalRule>>{};
   summary['excluded']=0;
   for(final row in pending){
    final id=row['id'],body=row['body'],sender=row['sender'];
@@ -74,9 +77,13 @@ abstract final class WaffraAutoSmsAutoPoster {
     final facts=WaffraBankSmsFactsParser.parse(body);
     final kind=row['sensitiveOtp']==true?
      WaffraBankOperationKind.uncertain:facts.kind;
+    final fourWay=WaffraSmsLocalRules.matchAllFourKinds(
+     body:body,sender:sender,custom:rules);
+    matchedById[id]=fourWay;
     final rule=WaffraSmsLocalRules.resolveSpecial(
      body:body,sender:sender,bankKind:kind,custom:rules,
-     nativeSensitiveOtp:row['sensitiveOtp']==true);
+     nativeSensitiveOtp:row['sensitiveOtp']==true,
+     matchedRules:fourWay);
     if(rule?.resolvedKind=='excluded'){
      // The exact native fingerprint goes into the durable 30-day excluded
      // ledger, not just a transient acknowledge(). No repeat after rescan.
@@ -128,7 +135,8 @@ abstract final class WaffraAutoSmsAutoPoster {
       await keepForReview(candidate);continue;
      }
      final matched=WaffraSmsLocalRules.resolve(
-      body:body,sender:sender,bankKind:facts.kind,custom:rules);
+      body:body,sender:sender,bankKind:facts.kind,custom:rules,
+      matchedRules:matchedById[id]);
      if(matched==null||matched.builtIn||!matched.autoPost||
         matched.sender.isEmpty||matched.accountId.isEmpty||
         matched.accountSuffix.isEmpty||matched.income!=parsed.income){
