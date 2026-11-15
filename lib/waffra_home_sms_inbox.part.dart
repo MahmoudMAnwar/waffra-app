@@ -247,7 +247,9 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
              (suggestedKind=='income'?(waffraIsEnglish?'Income':'دخل'):
               suggestedKind=='expense'?(waffraIsEnglish?'Expense':'مصروف'):
               (waffraIsEnglish?'Transfer':'تحويل'))):
-           (waffraIsEnglish?'Local rule • ':'قاعدة محلية • ')+
+           (local['suggestedOnly']==true?
+            (waffraIsEnglish?'Suggested • ':'مقترح • '):
+            (waffraIsEnglish?'Local rule • ':'قاعدة محلية • '))+
             (local['kind']=='transfer'?
              (waffraIsEnglish?'Transfer':'تحويل'):
              local['kind']=='excluded'?
