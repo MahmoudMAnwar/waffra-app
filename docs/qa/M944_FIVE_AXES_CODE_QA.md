@@ -22,3 +22,9 @@ Issue: #653. Branch: `feat/m944-five-axis-code-reliability-20261115`. Draft PR, 
 - Compared original Goals/Recurring block to extracted workflows method text: **15,906 of 15,906 characters match**; replacing the one marker reconstructs the original page-part bytes exactly.
 - New Home state still intentionally owns State lifecycle, owners/authorization/source leases, writable presentation fields and tiny event routing. Splitting these into wrappers without a verified benefit would add stale state and complicate dispose; do not count line reductions alone as safety proof.
 - Full source-contract/Flutter/Android CI on the exact PR head remains required before marking this axis Done; physical device screenshots and owner-backup parity are not implied.
+
+## M945 — owner-reported restoration/UI follow-up (Nov 15 2026; same #654)
+- Added read-only finance cache invalidation after all three verified ledger-replace branches in manual/SMS sheet and after failed-save optimistic rollback; confirmed manual append requests authenticated account refresh. No storage writer rewrite.
+- Goals/Dues count-bearing dropdowns replace redundant filter icon and default chip. Goals overflow keeps Deleted only; SAR money uses native currency widget. Dues adds gold aggregate strip and empty-state Add button while retaining reminders/linked goal and due cards.
+- The Home activities Show more/less is now a single in-toolbar control, with the verified combined transfer/savings total rather than two separated buttons; read windows remain capped at 50 per action.
+- Added synthetic 19-to-20 ledger index test with two old incomes, widget/DOM source QA and updated M944 assertions. These are not evidence that the actual encrypted owner archive (password unavailable) contains or restored five goals and both income rows. Same-head CI and physical Android UAT pending.
