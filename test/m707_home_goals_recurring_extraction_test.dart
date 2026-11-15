@@ -8,6 +8,13 @@ void main(){
   final main=File('lib/main.dart').readAsStringSync();
   final part=File('lib/waffra_home_goals_recurring_pages.part.dart').readAsStringSync();
   expect(main,contains("part 'waffra_home_goals_recurring_pages.part.dart';"));
+  expect(main,contains("part 'waffra_home_recurring_workflows.part.dart';"));
+  final workflows=File('lib/waffra_home_recurring_workflows.part.dart').readAsStringSync();
+  expect(workflows,startsWith("part of 'main.dart';"));
+  expect(workflows,contains('extension _WaffraHomeRecurringWorkflows on _HomeScreenState'));
+  expect(workflows,contains(' Future<void> recurringDialog('));
+  expect(workflows,contains(' Future<void> _m665ExplainLinkedGoalEdit('));
+  expect(part,isNot(contains(' Future<void> recurringDialog(')));
   expect(part,startsWith("part of 'main.dart';"));
   expect(main,isNot(contains(' Widget goalsPage(){')));
   expect(main,isNot(contains(' Widget recurringPage(){')));
