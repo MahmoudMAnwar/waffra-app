@@ -1,4 +1,8 @@
-M988 merchant category hint precision: a bounded exact list of known Saudi store/pharmacy/restaurant names resolves common Arabic/English spelling variants, without migrating historical learned merchant keys; income/payment rails stay unclassified. Regression fixtures added.
+M988 inherited merchant alias suggestions for Saudi shopping/health/food categories, history safe and no changes to stored keys.
+
+M989 safety follow-up: reviewed-message typed editor and Yes confirmation now both block multi-event, refunded or reversed bank SMS from ordinary single income/expense posts and show explicit manual-review warning, independent of cached background annotations; source QA added.
+
+M989 (#703): offline in-memory SMS lifecycle labels for pending/posted/reversed/refunded/failed; strict same-bank reference+account suffix+SAR amount related-event evidence and O(N) indexed duplicate advisories, no auto ledger changes. Refund/reversal retained for explicit human review. Regression + 2k event-index stress. Native phone/device finance reconciliation pending.
 
 M988 (#702) user-undoable local rules: secure owner-keyed five-version history, UI Undo of last modification, read-only before/after impact estimate with sender and conflict semantics; removed leftover AI text. Preserves previous SMS reviewer classification, SQLCipher finance and OTP safety. More merchant alias work remains.
 
@@ -1000,4 +1004,4 @@ M969 / Issue #670 / Draft #665: real M120 Android SQLCipher receipt restart asse
 [M968 / #668] Prevent silent omission of mandatory M946 whole-app exact-head Flutter tests for stacked PRs based on feature branches: remove main-only pull_request filter while keeping push-main, 3 shards, reports and all safety gates; regression test added. Source/app money and UI unchanged; handset and owner historic backup NOT certified.
 [M968 / #668] Also trigger unchanged M550/M385 behavior and source-boundary gate for stacked PRs with non-main base; QA source test covers both M946/M550, no check disabled.
 
-[M987–M988 / issues #701–#702 / 2026-11-16 stacked integration] Preserve original M987 structured bank SMS facts and mixed-event fail-closed behavior plus M988 encrypted owner-only rule history, explicit undo and sampled classification-impact simulation. Source files were reparented onto the verified M987 head without altering production code content. No ledger auto-post/ACK changes. Full exact-HEAD CI and real-device UAT remain mandatory before main merge.
+[M987–M989 / #701–#703 / 2026-11-16 stacked-main integration] Original M987 structured bank facts and fail-closed composite handling, M988 owner-encrypted rule undo/simulation and M989 exact-evidence lifecycle/duplicate advisory tests reapplied onto verified M988 head without editing their application sources. No financial posting or native SMS ACK changes; original SMS retained. Exact-head CI and real Android UAT still required before each sequential merge.

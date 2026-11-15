@@ -1,58 +1,50 @@
 {
   "contract_version": 1,
-  "change_id": "M988-ISSUE702-LOCAL-RULE-UNDO-SIM-20261115",
-  "human_scope_review": "Owner requested local rule intelligence, preview and rollback. Adds encrypted owner-scoped revision history (max five), explicit UI Undo, bounded read-only preview of changed/conflicting messages and removal of outdated AI language. Does not authorize automatic ledger changes.",
+  "change_id": "M989-ISSUE703-SMS-LIFECYCLE-DEDUP-20261115",
+  "human_scope_review": "Owner approved lifecycle/duplicate safeguards across incoming bank messages. This draft implements in-isolate read-only lifecycle evidence links when bank sender/reference/account/amount all match, with multi-event/refund/reversal fail-close. Never auto deletes or commits ledger entries. CI fix: preserve reference-labelled bank metadata when detecting SAR without weakening unsupported currency review.",
   "user_requested_changes": [
-    "M988 store five prior validated rule versions in encrypted user-scoped storage, undo with owner validation and no finance write.",
-    "M988 simulate impact on at most first 100 queued SMS sender/body pairs before changing rule; count changed classifications and conflicts only.",
-    "M988 remove deprecated AI marketing text from rule settings, retain all original review and OTP protections.",
-    "Add runnable history and simulation tests.",
-    "M988 normalize a limited exact list of Saudi retailer and pharmacy brand aliases for category suggestion only, preserving previously stored merchant learning keys and rejecting payment rails."
+    "M989 detect pending/posted/failed/reversed/refunded lifecycle stage conservatively and retain reversal/refund for human financial review.",
+    "M989 use sender+reference+masked account suffix+exact SAR amount in in-memory indexed candidate linkage, no same-amount-only dedup.",
+    "M989 annotate possible repeated/reconciled SMS for display-only future review without deleting or ACKing messages.",
+    "M989 add runnable 2000-item indexed stress and lifecycle regression tests.",
+    "M989 block ordinary Yes and typed SMS editor for composite/refund/reversal messages even when native pending lookup bypasses cached classified queue; show dedicated review warning and preserve original.",
+    "M989 regression: an explicitly labelled bank reference (Ref: ABC12345) is NOT an unsupported ISO currency; posted SAR plus reference stays parseable, while unlabelled unsupported currency continues to fail closed."
   ],
   "allowed_changed_files": [
     "docs/qa/approved_change_scope.json",
-    "lib/waffra_sms_rule_settings_page.dart",
-    "lib/waffra_sms_local_rules.dart",
-    "docs/release/WAFFRA_APPROVED_CHANGES.txt",
+    "lib/main.dart",
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/behavior_contract_review.json",
-    "lib/waffra_sms_rule_simulator.dart",
-    "test/m988_sms_rule_simulation_history_test.dart",
-    "lib/waffra_merchant_rules.dart",
-    "test/m988_sms_merchant_alias_test.dart"
+    "docs/release/WAFFRA_APPROVED_CHANGES.txt",
+    "lib/waffra_sms_lifecycle_evidence.dart",
+    "test/m989_sms_lifecycle_related_events_test.dart",
+    "lib/waffra_home_sms_confirmation.part.dart",
+    "test/m989_sms_review_lifecycle_guard_test.dart",
+    "lib/waffra_sms_multicurrency_review.dart",
+    "test/m989_sms_reference_currency_regression_test.dart"
   ],
   "bounded_sections": {
-    "lib/waffra_sms_local_rules.dart": [
+    "lib/main.dart": [
       {
-        "start": "class WaffraSmsLocalRuleStore {",
-        "end": null
+        "start": "import 'waffra_sms_structured_bank_context.dart';",
+        "end": "import 'waffra_sms_rule_settings_page.dart';"
+      },
+      {
+        "start": "Map<String,Object?> waffraM632ClassifySmsQueue(",
+        "end": "List<String> splitBankMessages("
       }
     ],
-    "lib/waffra_sms_rule_settings_page.dart": [
+    "lib/waffra_home_sms_confirmation.part.dart": [
       {
-        "start": "import 'waffra_sms_local_rules.dart';",
-        "end": "import 'waffra_bank_sms_facts.dart';"
+        "start": "  Future<void> _m983OpenSmsTypedTemplate({",
+        "end": " Future<void> _reviewAutoSmsCandidates({String? targetId})async {"
       },
       {
-        "start": "class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{",
-        "end": " Future<void> _remove(WaffraSmsLocalRule rule)async{"
-      },
-      {
-        "start": "     final previewRule=WaffraSmsLocalRule(",
-        "end": "     return SafeArea(top:false,child:Padding("
-      },
-      {
-        "start": " @override Widget build(BuildContext context)=>Scaffold(",
+        "start": " Future<void> _reviewAutoSmsCandidates({String? targetId})async {",
         "end": null
-      }
-    ],
-    "lib/waffra_merchant_rules.dart": [
-      {
-        "start": "String? waffraRecognizedMerchantLeaf(String merchant,{required bool income}){",
-        "end": "/// Optional high-confidence hint from the operation itself (not app locale)."
       }
     ]
   },
-  "approved_deleted_files": [],
-  "allowed_workflow_changes": []
+  "allowed_workflow_changes": [],
+  "approved_deleted_files": []
 }
