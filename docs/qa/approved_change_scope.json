@@ -125,7 +125,7 @@
     ],
     "test/m371_goal_wallet_and_budgets_regression_test.dart": [
       {
-        "start": "   test('M371 goal creation cannot post an expense or negative cash debit',",
+        "start": "  test('M371 goal creation cannot post an expense or negative cash debit',",
         "end": null
       }
     ],
