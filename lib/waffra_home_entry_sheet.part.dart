@@ -767,8 +767,8 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
         padding:const EdgeInsets.only(bottom:9),
         child:WaffraText(originalLinkedAccountId!=null?
          (waffraIsEnglish?
-          'Already linked; editing details cannot move it to another account.':
-          'العملية مربوطة بحساب بالفعل، وتعديل التفاصيل مش هينقلها لحساب آخر.'):
+          'Changing the linked account moves the existing transaction, without another posting.':
+          'تقدر تنقل العملية للحساب الصحيح دون تسجيل دخل أو مصروف مرة ثانية.'):
          (waffraIsEnglish?
           'Link this older transaction without posting a second income or expense.':
           'اربط العملية القديمة بحساب دون إضافة دخل أو مصروف مرة ثانية.'),
