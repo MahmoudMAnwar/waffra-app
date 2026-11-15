@@ -52,7 +52,7 @@
     "scripts/qa/m946_full_app_smoke_matrix.py": [
       {
         "start": "FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {",
-        "end": "    \"m982_background_auto_sms_exclusion_channel_parity\""
+        "end": "    \"m981_history_live_otp_atomic_parity\""
       }
     ]
   }
