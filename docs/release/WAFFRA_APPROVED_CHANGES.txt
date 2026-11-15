@@ -843,3 +843,9 @@ M940/M941 Draft PR #648 M486 regression correction (unreleased): coalesced futur
 - Existing automated suite previously omitted all real SQLCipher transaction deletion from the all-feature smoke. M946 now runs encrypted transaction/receipt Delete, Cancel, Undo, 30-day Goals/Recurring/Category recycle, SMS inbox delete, Delete All and account deletion release-gate validations on every PR.
 - New M183 regression runs 19 historical SQLCipher rows including two incomes, declines deletion, deletes one expense, closes and reopens encrypted vault, verifies all other historic records and bank SMS hashes survive and restores the deleted item to exact original snapshot order.
 - UI source tests require verified before-publish and stable Home navigation; physical Android black-frame and OS biometrics remain separate acceptance gates. No user backup ever uploaded to CI.
+
+[M948 risk-driven regression & QA integrity — #654 Draft, not released — 2026-11-15]
+- Functional: correct Home start-day date filter; 10,000-record property fuzz matches independent ledger source/order/filter and account ID selection; 10,000 cent math and 16-year leap-month due schedule; simultaneous manual/bank SMS writer uses one authoritative generation and cannot double-credit; unconfirmed, malformed, stale and non-owned input cannot mutate the encrypted ledger.
+- Non-functional: 10,000-record indexed-reading/pagination host benchmark capped at 15 sec and approved Goals/Dues RTL 320px screen at 200% font-size host widget check. These DO NOT prove Android scroll FPS, OS notifications or physical biometric screens.
+- CI quality: M946 shards fail on any Skipped, Failed, invalid report, wrong SHA or fake physical-approval assertion, with mutation self-tests; no silent 0-test green. Keep full core finance CI and QA scope gates intact.
+- Gate remains Draft; actual encrypted spouse archive and Android black-screen/delete remain user-device acceptance items; no claim of zero bugs.

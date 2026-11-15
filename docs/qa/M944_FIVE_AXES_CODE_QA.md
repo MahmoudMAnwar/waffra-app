@@ -41,3 +41,10 @@ Issue: #653. Branch: `feat/m944-five-axis-code-reliability-20261115`. Draft PR, 
 - Added UI source contract for confirmed-only commit, source-witness and receipt verification, no navigation replacement/reset, index invalidation, Delete All and biometric full-vault reset distinct flows.
 - Added mandatory M946 smoke paths for SQL transaction and receipt recycle, 30-day Goals/Recurring/category restoration, SMS inbox delete, Delete All, and cloud account release guard. These source contracts do not replace on-device OS permissions, visual black-screen, or biometric testing.
 - Actual head CI outcome, including Passed/Failed/Skipped, remains separate; tests are not claimed passing merely because code was pushed.
+
+## M948 — New property/load/host-UX and evidence gates (2026-11-15, #654)
+- Found real bug: Home calendar range started at selected start-minus-one-day. Fixed in the shared read-only filter with exact inclusive day-only comparison; tests include yesterday-at-23:59, next-day-at-00:00, end of year and leap February.
+- New runnable `test/m948_financial_properties_and_performance_test.dart`: 10,000 seeded ledger records vs independent brute-force reference, account-filter and page exactness, 50-card cache invalidation, 10,000 integer-halalas, 16-year due calendars, and 320px RTL/200% text fixture. The 15-second limit measures *host index* only.
+- Expanded real encrypted SQLCipher M946 test with parallel manual/SMS writers at one witnessed generation (only one may commit) and invalid/cancelled account/user/receipt input rollback; encrypted cold reopen verifies the winner ID and balance.
+- Added fail-closed `scripts/qa/m948_smoke_quality_gate.py` and mutation test: rejects skipped/failing/incomplete test evidence, missing events, wrong commit, invalid totals and false Android verification. M946 CI now invokes this gate after producing M937 report and statically analyzes new Dart suites.
+- All fixture data is synthetic. Real owner archive, Android biometric/notification delivery and black-screen/lag remain NOT physically tested by host suite.

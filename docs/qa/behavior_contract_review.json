@@ -4937,6 +4937,40 @@
         ".github/workflows/m946-whole-app-feature-smoke.yml",
         ".github/workflows/finance-full-regression.yml"
       ]
+    },
+    {
+      "id": "M948-RISK-PROPERTY-LOAD-QUALITY",
+      "issue": "#653 / Draft PR #654 owner requested broader functional and non-functional testing, Nov 15 2026",
+      "previous_behavior": "DateRange filter could include previous calendar day; whole-app smoke passed with skipped tests and did not stress 10k ledger queries, randomized halalas, 16-year recurring dates, 320px RTL, or overlapping manual/SMS writers.",
+      "approved_behavior": "Prove the date picker includes only exact selected calendar days, all 10k authenticated synthetic ledger identities/period summaries, immutable source and 50-card windows; negative/invalid/cancelled finance input and parallel authenticated SQLCipher writer cannot damage/double-post. Host 320px RTL 200% font widget must lay out without overflow; CI must report actual zero skipped and exact HEAD.",
+      "source_paths": [
+        "lib/waffra_home_ledger_query.part.dart",
+        "lib/waffra_finance_period_index.part.dart",
+        "lib/waffra_home_dashboard_analytics.part.dart",
+        "lib/storage/waffra_unified_finance_writer.dart",
+        "scripts/qa/m946_full_app_smoke_matrix.py",
+        "scripts/qa/m948_smoke_quality_gate.py",
+        ".github/workflows/m946-whole-app-feature-smoke.yml"
+      ],
+      "test_paths": [
+        "test/m948_financial_properties_and_performance_test.dart",
+        "test/storage/m946_whole_app_money_journey_smoke_test.dart",
+        "test/m940_m941_home_ledger_pagination_test.dart",
+        "test/m86_recurring_schedule_boundary_test.dart",
+        "test/qa/m948_smoke_quality_gate_test.py"
+      ],
+      "safety_invariants": [
+        "Do not fabricate bank account history or mutate the owner's records for tests.",
+        "Every invalid/unconfirmed/stale write leaves both financial digest and source balances unchanged.",
+        "Two parallel writers with one witnessed source generation must not both post.",
+        "Date filter never contains a transaction prior to first selected date or after last date.",
+        "Nonfunctional host tests do not substitute for device FPS, physical biometric, backup UAT or screen-reader checks.",
+        "No skipped test, missing event, stale SHA or unverified physical claim can pass M946 quality gate."
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m946-whole-app-feature-smoke.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ]
     }
   ]
 }
