@@ -261,7 +261,7 @@ abstract final class WaffraSmsLocalRules {
   ].where((rule)=>
    ((rule.resolvedKind=='transfer'&&bankKind==WaffraBankOperationKind.transfer)||
     (rule.resolvedKind=='excluded'&&!posted&&
-     !_hasCompletedFinanceCue(body)))&&
+     !(verification&&_hasCompletedFinanceCue(body))))&&
    matches(rule,body,sender:sender)).toList(growable:false);
   // Unknown new-app verification language is still a known security
   // EVENT, even if none of the older literal seed fragments matched.
