@@ -41,7 +41,8 @@
         "Stored owner/ledger/SQLCipher writer, existing identity and accounts stay unchanged",
         "Original SMS remains available for read-only inspection; no logging or new network channel",
         "Physical RTL Android, bank SMS intake and old backup UAT not asserted by synthetic CI",
-        "Bank last-four prefill is disabled for wallet subtype; existing cross-source duplicate advisory still runs with user override."
+        "Bank last-four prefill is disabled for wallet subtype; existing cross-source duplicate advisory still runs with user override.",
+        "Unknown original bank date on manually corrected income/expense requires explicit day and time selection; never silently accept device date."
       ]
     },
     {

@@ -330,7 +330,7 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
         context:sheetContext,initialDate:date,
         firstDate:DateTime(2000),lastDate:DateTime.now());
        if(d==null||!sheetContext.mounted)return;
-       if(sms){
+       if(sms||manualReviewBody!=null){
         // Bank SMS corrections need deliberate date AND hour/minute;
         // accepting only a calendar date would silently set midnight.
         final time=await showTimePicker(
@@ -352,9 +352,9 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
        }
       }),
       icon:const Icon(Icons.calendar_month,size:19),
-      label:WaffraText(sms&&!smsDateConfirmed?
+      label:WaffraText((sms||manualReviewBody!=null)&&!smsDateConfirmed?
        (waffraIsEnglish?'Select date and time':'اختر التاريخ والوقت'):
-       sms?
+       (sms||manualReviewBody!=null)?
         dayText(date)+' '+date.hour.toString().padLeft(2,'0')+':'+
          date.minute.toString().padLeft(2,'0'):
         dayText(date),maxLines:1));
@@ -1288,7 +1288,7 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
          ((initial==null||(canLinkExistingAccount&&originalLinkedAccountId==null)||
             canMoveLinkedAccount)&&
           chosenManualAccount==null)||
-         (sms&&!smsDateConfirmed))?null:()async {
+         ((sms||manualReviewBody!=null)&&!smsDateConfirmed))?null:()async {
        if(submitTapped)return;
        update(()=>attempted=true);
        final n=sms?amountOf(value.text):amountOfDisplay(value.text);
@@ -1380,6 +1380,12 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
         final confirmed=await waffraConfirmUnlinkedBudgetSave(
          context:sheetContext);
         if(!confirmed||!sheetContext.mounted)return;
+       }
+       if(manualReviewBody!=null&&!smsDateConfirmed){
+        if(sheetContext.mounted)snack(sheetContext,waffraIsEnglish?
+         'Choose the original bank date and time before saving the correction.':
+         'اختار التاريخ والوقت الحقيقي للعملية البنكية قبل حفظ التصحيح.',isError:true);
+        return;
        }
        if(sms){
         if(message.text.trim().isEmpty)return;

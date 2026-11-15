@@ -59,6 +59,8 @@ void main(){
   expect(editor,contains('final manualReviewBody=!sms&&initial==null?reviewedOriginalSms:null'));
   expect(editor,contains('final manualReviewSafeMoney='));
   expect(editor,contains('final manualReviewDate='));
+  expect(editor,contains('((sms||manualReviewBody!=null)&&!smsDateConfirmed))?null:()async {'));
+  expect(editor,contains('if(manualReviewBody!=null&&!smsDateConfirmed){'));
   expect(editor,contains('final manualReviewTitle='));
   expect(editor,contains('final fallback=reviewedIncomeOverride?'));
   expect(editor,contains('chosenManualProvider=existing.single.id'));
