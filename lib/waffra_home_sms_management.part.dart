@@ -248,6 +248,8 @@ extension _WaffraHomeSmsManagement on _HomeScreenState {
   final individual=ids.where((id)=>!bySender.contains(id)).toList();
   final done=<String>{};
   var failed=false;
+  var learnedPatterns=0;
+  String? ruleWarning;
   try{
    if(senderNames.isNotEmpty){
     if(await WaffraAutoSms.excludeSenders(senderNames)){
@@ -270,8 +272,6 @@ extension _WaffraHomeSmsManagement on _HomeScreenState {
    // These are two different owner-encrypted policies: native message
    // exclusions and reusable safe local rules. Never interpret an absent
    // reusable pattern as an absent/native-failed message exclusion.
-   var learnedPatterns=0;
-   String? ruleWarning;
    if(done.isNotEmpty&&_smsRuleOwnerKey.isNotEmpty){
     try{
      final candidates=<WaffraSmsLocalRule>[];
