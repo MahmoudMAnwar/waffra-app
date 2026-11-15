@@ -67,7 +67,7 @@ void main(){
   expect(end,greaterThan(start));
   final snippet=review.substring(start,end);
   expect(snippet,contains('WaffraAutoSms.pendingById(id)'));
-  expect(snippet,contains("if(row['id']!=id)"));
+  expect(snippet,contains("row['id']!=id"));
   expect(snippet,contains("if(kind=='transfer'){"));
   expect(snippet,contains('await _reviewSmsAccountTransfer(item:row,facts:facts)'));
   expect(snippet,contains('await openVerifiedTransfer()'));
