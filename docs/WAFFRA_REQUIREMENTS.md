@@ -1,3 +1,7 @@
+## M957 — تحديث اختبارات مصدر الحسابات بعد الإصلاح M956
+
+- إبقاء اختبارات M468 وM470 شغالة كما هي، مع تحديث التوقعات القديمة التي كانت تشترط قراءة الحساب ثلاث مرات بدل المسار المشفر الواحد الصحيح. يشمل التحقق منع اختيار «بدون حساب»، وعدم رجوع الحساب المؤرشف تلقائيًا، وسلامة معرفات جميع العمليات التاريخية. فشل آخر CI تم تحديده من سجل التشغيل ولا يجوز إيقاف الاختبارات لتجاوزه.
+
 - M956 follow-up: a stale or archived chosen account must resolve to «كل الحسابات» in one read, not endlessly re-enter the refresh; concurrency guard must compare with the requested account before SQLCipher validation. No money writer or UI geometry changes.
 
 ## M956 — تحميل حسابات الرئيسية من مصدر مالي واحد (Issue #664 / Draft PR #665)

@@ -59,11 +59,17 @@ void main() {
     expect(source, isNot(contains("chosen!='none'")));
     expect(source, isNot(contains("next!='none'")));
     expect(source, isNot(contains("selected=='none'")));
-    expect(source, contains("if(chosen!='all'&&"));
+    // M956 resolves stale/archived account preference inside the one
+    // authenticated source lock; Home must not resurrect a 'none' bucket.
+    expect(source, contains('final requested=chosen;'));
+    expect(source, contains('chosen=verified.selectedAccountId;'));
+    expect(source, contains('_m467SelectedAccount!=requested'));
     expect(source, contains("chosen=p.getString(_m467ChoiceKey)??'all'"));
     // Historic account membership comes from SQL IDs, with O(k) indexed reads.
     expect(source, contains('final ids=_m684ScopedEntryIds;'));
     expect(source, contains('return _m684Periods.byIds(ids);'));
-    expect(source, contains('api.readAccountEntryIds(accountId:chosen)'));
+    expect(source, contains('await api.readHomeAccountView('));
+    expect(source, contains('final scopedIds=verified.entryIds;'));
+    expect(source, isNot(contains('api.readAccountEntryIds(accountId:chosen)')));
   });
 }

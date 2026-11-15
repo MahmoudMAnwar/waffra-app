@@ -912,3 +912,6 @@ M955 #665 accountless older-history QA (2026-11-15; Draft, not shipped): a disti
 - Read-only source gate compares finance generation and digest before and after and reverts stale/archived account preferences to all accounts; real device and private Backup/Restore acceptance are explicitly not claimed. Exact-HEAD CI remains required.
 
 - M956 source guard correction: compare the asynchronous Home selection response with the originally requested account rather than the safe 'all' fallback; archived or deleted accounts no longer initiate an infinite refresh loop. Physical Android confirmation remains separate.
+
+[CI TEST CONTRACT ALIGNMENT: M957 / #664 / DRAFT #665]
+- CI-discovered outdated M468/M470 Flutter source assertions now check the one owner-witnessed SQLCipher Home account view, complete account membership IDs, selected-account race guard and original no-unassigned-account UX. Tests remain enabled; underlying financial writer and Android layouts unchanged. This does not certify actual device/owner backup.

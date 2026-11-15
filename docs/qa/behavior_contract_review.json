@@ -8,6 +8,30 @@
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
     {
+      "id": "M957-M468-M470-HOME-SINGLE-WITNESS-REGRESSION",
+      "issue": "Issue #664, PR #665",
+      "previous_behavior": "M468 and M470 tests expected obsolete three-lock Home source snippets and fail after verified M956 refactor despite unchanged safety.",
+      "approved_behavior": "Do not remove/skip these tests. Assert Home calls exactly one verified readHomeAccountView, source passes selected account and monthly scope, the original session/race guards remain, account historical IDs remain source-backed, and no legacy 'none' bucket reappears.",
+      "source_paths": [
+        "lib/waffra_home_verified_account_flows.part.dart",
+        "lib/storage/waffra_verified_encrypted_finance_bridge.dart"
+      ],
+      "test_paths": [
+        "test/m468_app_refresh_performance_regression_test.dart",
+        "test/m470_account_scope_and_transfer_date_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m946-whole-app-feature-smoke.yml",
+        ".github/workflows/m147-final-main-safe-merge-review.yml"
+      ],
+      "safety_invariants": [
+        "M468 app lifecycle and SMS refresh assertions stay enabled.",
+        "M470 selection, SMS transfer date and no-unassigned-choice widget tests stay enabled.",
+        "No money writer, account link, new invalid fallback or legacy archive alteration.",
+        "No assertion removed without an equivalent strengthened single-witness check."
+      ]
+    },
+    {
       "id": "M956-HOME-ACCOUNT-VIEW-ONE-ATOMIC-WITNESS",
       "issue": "Issue #664 / PR #665 continuation, 5-axis performance/finance integrity",
       "previous_behavior": "Home obtains balances, month context and all-time linked IDs via three independently locked, generation-divergent finance reads.",

@@ -39,3 +39,8 @@ Stacked work on #658 / Issue #657. PR base is `feat/m952-five-axes-followup-2026
 - M956 adds an independently activated/encrypted bridge integration case using an ephemeral first-run owner source: compare atomic vs legacy separately witnessed reads for a user-approved 2,350.50 SAR account, validate unknown account falls back to all, and assert exact digest/generation and balance before/after. This is a test vault, never the owner's real backup.
 
 - Additional M956 race/fallback guard: record the pre-query requested account ID. If a selected bank was archived/deleted, the verified result must resolve to all and apply once; comparing the currently selected ID against the **resolved** fallback previously caused repeated re-reads. Only a real concurrent user selection change should enqueue a retry. M467 and M955 source contracts assert this condition; actual Android click-through is still unverified.
+
+## M957 — correction of two outdated but mandatory regression witnesses
+
+- The M946 safety shard and money shard and M147 full Flutter suite exposed two outdated **source-only** checks (M468/M470) that still expected the previous three independent SQLCipher Home reads. Their original behavioral aims (no duplicate background scans, no `none` account choice, no stale account membership) remain.
+- Update their assertions to check the authenticated one-lock M956 API call, preserved exact account membership, separate epoch and requested-account stale response guard. The remaining tests within both files stay unchanged and enabled. This is a test-contract migration driven by actual exact-SHA failures, not relaxing the gate or fabricating device results.
