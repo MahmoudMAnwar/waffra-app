@@ -28,6 +28,7 @@ extension _WaffraHomeVerifiedAccountFlows on _HomeScreenState {
 
  Future<void> _m468ReadVerifiedAccountsOnce()async{
   final readEpoch=_m627AccountEpoch;
+  String? failedReadRequested;
   if(_m627ClosingSession)return;
   try{
    await _ensureFinanceBound();
@@ -44,6 +45,7 @@ extension _WaffraHomeVerifiedAccountFlows on _HomeScreenState {
    // Otherwise every refresh sees old selected != fallback and retries
    // forever without applying the safe account correction.
    final requested=chosen;
+   failedReadRequested=requested;
    final now=DateTime.now();
    final month=now.year.toString().padLeft(4,'0')+'-'+
     now.month.toString().padLeft(2,'0');
@@ -76,6 +78,19 @@ extension _WaffraHomeVerifiedAccountFlows on _HomeScreenState {
   }catch(error){
    debugPrint('Home accounts view unavailable: '+error.runtimeType.toString());
    if(!mounted||_m627ClosingSession||readEpoch!=_m627AccountEpoch)return;
+   // The older read failed after the owner selected another account.
+   // Do not overwrite the new selection with 'all'; fail closed on money
+   // and let the already queued refresh verify the newer requested view.
+   if(failedReadRequested!=null&&_m467AccountChoiceRestored&&
+      _m467SelectedAccount!=failedReadRequested){
+    _m468AccountReadAgain=true;
+    setState((){
+     _m467AccountContext=null;
+     _m684ScopedEntryIds=null;
+     _m468VerifiedAccountsLoaded=false;
+    });
+    return;
+   }
    // Never show a stale bank balance when verified SQL projection is absent.
    setState((){
     _m467Accounts=const <WaffraAccountBalance>[];

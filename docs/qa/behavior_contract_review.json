@@ -8,6 +8,21 @@
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
     {
+      "id": "M959-STALE-HOME-ACCOUNT-READ-FAILURE-RETRY",
+      "issue": "Issue #664 / Draft PR #665, continuing #657",
+      "previous_behavior": "A failed older Home SQLCipher account read could catch after a later owner account selection and blindly reset selected account to all, losing the intended filter.",
+      "approved_behavior": "Retain the original requested account witness, detect when a newer verified picker selection differs, enqueue the existing source-verified read retry and invalidate prior money/context instead of overwriting the new account selection.",
+      "source_paths": ["lib/waffra_home_verified_account_flows.part.dart"],
+      "test_paths": ["test/m467_account_header_test.dart"],
+      "ci_workflows_to_watch": [".github/workflows/m946-whole-app-feature-smoke.yml", ".github/workflows/m147-final-main-safe-merge-review.yml"],
+      "safety_invariants": [
+        "Existing session closing and read epoch checks run before stale selection handling.",
+        "Never display stale bank balance or account scoped IDs while waiting for witnessed retry.",
+        "Never change selected account to all because an earlier failed read completed late.",
+        "No ledger writes, biometric changes, original SMS or UI geometry updates."
+      ]
+    },
+    {
       "id": "M958-HOME-COMPACT-SKIPS-LEDGER-SELECT",
       "issue": "Issue #664 / Draft PR #665, continuing #657",
       "previous_behavior": "Home's compact source read executed a JOIN/ORDER BY ledger-card query with LIMIT 0 even though it requested zero cards.",

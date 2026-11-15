@@ -35,6 +35,12 @@ void main(){
   expect(src,isNot(contains('api.readAccountEntryIds(accountId:chosen)')));
   expect(src,contains('final ids=_m684ScopedEntryIds;'));
   expect(src,contains('final requested=chosen;'));
+  // M959: a failed old read must not erase the user's newer account pick.
+  expect(src,contains('String? failedReadRequested;'));
+  expect(src,contains('failedReadRequested=requested;'));
+  expect(src,contains('_m467SelectedAccount!=failedReadRequested'));
+  expect(src,contains('_m468AccountReadAgain=true;'));
+  expect(src,contains('_m468VerifiedAccountsLoaded=false;'));
   expect(src,contains('if(_m467AccountChoiceRestored&&_m467SelectedAccount!=requested)'));
   expect(src,isNot(contains('_m467SelectedAccount!=chosen')));
   expect(src,contains('_m467Accounts.fold<int>(0,(total,a)=>total+a.balanceMinor)/100'));

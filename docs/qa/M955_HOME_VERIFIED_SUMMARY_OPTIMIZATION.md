@@ -49,3 +49,8 @@ Stacked work on #658 / Issue #657. PR base is `feat/m952-five-axes-followup-2026
 
 - The compact verified Home summary no longer submits a transaction-card SELECT/JOIN/ORDER BY with `LIMIT 0`; it skips that SQL read entirely. Default full-context reads still run their original ledger query and return immutable source-backed rows in their original order.
 - The SQLCipher account/goal/budget read and source generation/digest witness are unchanged. A new source contract runs alongside existing 900-entry and accountless cold-reopen encrypted tests. No money writer, private restore, FAB/Snackbar or Android UI layout changed. This is a bounded performance improvement, not five-axis completion.
+
+## M959 — Stale asynchronous account-read error does not erase later choice
+
+- When a previous verified SQLCipher account view fails after the owner has chosen a different account, the catch path now detects the superseded request and schedules the existing witnessed rerun. It preserves the new selection, invalidates the old budget/ledger-ID context and prevents numeric balances from being displayed as authenticated until the current read passes. Session epoch and shutdown protections remain the first guard.
+- An extra M467 source contract asserts this failure path; the same encrypted integration remains required. No financial mutation or visual redesign.
