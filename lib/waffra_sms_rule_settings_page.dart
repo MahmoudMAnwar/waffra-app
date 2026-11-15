@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'waffra_sms_local_rules.dart';
+import 'waffra_sms_rule_simulator.dart';
 import 'waffra_bank_sms_facts.dart';
 import 'waffra_centered_dropdown.dart';
 
@@ -30,7 +31,7 @@ class WaffraSmsRuleSettingsPage extends StatefulWidget {
 class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
  final store=const WaffraSmsLocalRuleStore();
  List<WaffraSmsLocalRule> saved=const [];
- bool loading=true,busy=false;
+ bool loading=true,busy=false,canUndo=false;
  String? error;
  @override void initState(){
   super.initState();
@@ -39,8 +40,9 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
  Future<void> _load()async{
   try{
    final rules=await store.read(widget.ownerKey);
+   final undoAvailable=await store.hasUndo(widget.ownerKey);
    if(!mounted)return;
-   setState((){saved=rules;loading=false;error=null;});
+   setState((){saved=rules;canUndo=undoAvailable;loading=false;error=null;});
    if(widget.seedMessage!=null){
     WidgetsBinding.instance.addPostFrameCallback((_){
      if(mounted)_edit(seed:widget.seedMessage,kindHint:widget.seedKind);
@@ -60,7 +62,7 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
   try{
    await store.write(widget.ownerKey,next);
    if(mounted){
-    setState(()=>saved=next);
+    setState((){saved=next;canUndo=true;});
     // M661: a seedless user-created rule has no route result to signal Home.
     // Persist first, then notify the existing debounced pending-SMS refresh.
     widget.onRulesChanged?.call();
@@ -71,6 +73,25 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
     'Could not save rules securely. Nothing changed.':
     'تعذر حفظ القواعد بأمان. لم يتغير شيء.');
    return false;
+  }finally{if(mounted)setState(()=>busy=false);}
+ }
+ Future<void> _undoLastRuleChange()async{
+  if(!mounted||busy||error!=null||!canUndo)return;
+  setState(()=>busy=true);
+  try{
+   final previous=await store.undoLast(widget.ownerKey);
+   if(previous==null||!mounted)return;
+   final stillUndo=await store.hasUndo(widget.ownerKey);
+   if(!mounted)return;
+   setState((){saved=previous;canUndo=stillUndo;});
+   widget.onRulesChanged?.call();
+   widget.onNotice(widget.english?
+    'Restored the previous encrypted rule version.':
+    'تم استرجاع الإصدار السابق من القواعد المشفرة.');
+  }catch(_){
+   if(mounted)widget.onNotice(widget.english?
+    'Could not restore the previous encrypted rules. Nothing was removed.':
+    'تعذر استعادة الإصدار السابق بأمان. لم تُحذف قواعدك.');
   }finally{if(mounted)setState(()=>busy=false);}
  }
  Future<void> _remove(WaffraSmsLocalRule rule)async{
@@ -173,6 +194,10 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
       kind!='excluded').length;
      final otpSensitive=previewMatches.where((row)=>
       WaffraBankSmsFactsParser.isVerificationChallenge(row.value)).length;
+     // M988 sample-only before/after impact, never a write or approval.
+     final impact=WaffraSmsRuleSimulator.compare(
+      samples:inspected,existing:saved,preview:previewRule,
+      replacingId:existing?.id);
      return SafeArea(top:false,child:Padding(
       padding:EdgeInsets.fromLTRB(18,8,18,MediaQuery.viewInsetsOf(ctx).bottom+12),
       child:ConstrainedBox(constraints:BoxConstraints(
@@ -293,6 +318,11 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
         Text(widget.english?
          'Matches $matches checked messages (preview, not deletion).':
          'تنطبق على $matches رسالة تم فحصها (معاينة فقط).',
+         style:Theme.of(ctx).textTheme.bodySmall),
+        const SizedBox(height:5),
+        Text(widget.english?
+         'Estimated change: ${impact.changed} of ${impact.examined} sampled messages (no changes saved).':
+         'التغيير المتوقع: ${impact.changed} من ${impact.examined} رسالة ضمن العينة (دون حفظ).',
          style:Theme.of(ctx).textTheme.bodySmall),
         const SizedBox(height:8),
         if(conflicts>0)Padding(
@@ -521,10 +551,16 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
     child:Text(error!,textAlign:TextAlign.center))):
    ListView(padding:const EdgeInsets.fromLTRB(16,12,16,90),children:[
     Text(widget.english?
-     'Rules run offline before AI. A rule only suggests the type and category; transactions need your approval.':
-     'القواعد بتحلل محليًا قبل الذكاء الاصطناعي، وبتقترح نوع العملية والقسم فقط. الحفظ بعد موافقتك.',
+     'Rules run locally on your device and suggest categories; financial changes require your verified approval.':
+     'القواعد تحلل الرسائل محليًا على جهازك وتقترح النوع والقسم، والعملية المالية تتطلب تأكيدك الموثق.',
      style:Theme.of(context).textTheme.bodyMedium),
     const SizedBox(height:16),
+    if(canUndo)Align(alignment:AlignmentDirectional.centerStart,
+     child:OutlinedButton.icon(
+      key:const Key('m988-sms-undo-last-rule-revision'),
+      onPressed:busy?null:_undoLastRuleChange,
+      icon:const Icon(Icons.undo_rounded),
+      label:Text(widget.english?'Undo last rule change':'التراجع عن آخر تعديل للقواعد'))),
     Text(widget.english?'Learned classifications':'التصنيفات التي تعلّمها وفرة',
      style:Theme.of(context).textTheme.titleMedium),
     const SizedBox(height:8),

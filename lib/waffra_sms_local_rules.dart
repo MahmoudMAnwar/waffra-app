@@ -809,12 +809,65 @@ class WaffraSmsLocalRuleStore {
   }
   return rules;
  }
+ String _historyKey(String owner){
+  _key(owner); // Same exact verified-owner validation as live rules.
+  return 'waffra_sms_local_rules_history_v1_$owner';
+ }
+ static List<String> boundedHistory(Iterable<String> snapshots,String previous){
+  final next=[...snapshots,previous];
+  return List<String>.unmodifiable(
+   next.length<=5?next:next.sublist(next.length-5));
+ }
+ Future<List<String>> _readHistory(String owner)async{
+  final raw=await _storage.read(key:_historyKey(owner));
+  if(raw==null||raw.isEmpty)return const [];
+  final decoded=jsonDecode(raw);
+  if(decoded is! List||decoded.length>5||
+     decoded.any((e)=>e is! String||e.length>128000)){
+   throw const FormatException('Corrupt encrypted SMS rule revision history');
+  }
+  return decoded.cast<String>();
+ }
+ Future<bool> hasUndo(String owner)async=>
+  (await _readHistory(owner)).isNotEmpty;
+ Future<List<WaffraSmsLocalRule>?> undoLast(String owner)async{
+  final history=await _readHistory(owner);
+  if(history.isEmpty)return null;
+  final previous=history.last;
+  final parsed=jsonDecode(previous);
+  if(parsed is! List||parsed.length>100){
+   throw const FormatException('Invalid prior SMS rules');
+  }
+  final restored=<WaffraSmsLocalRule>[];
+  for(final row in parsed){
+   if(row is! Map)throw const FormatException('Invalid rule revision row');
+   final rule=WaffraSmsLocalRule.fromJson(Map<String,dynamic>.from(row));
+   WaffraSmsLocalRules.validate(rule);
+   restored.add(rule);
+  }
+  if(restored.map((r)=>r.id).toSet().length!=restored.length){
+   throw const FormatException('Duplicate ID in rule revision');
+  }
+  // The same encrypted owner-scoped key remains the sole active rule set.
+  // This never modifies bank entries or auto-confirms pending SMS.
+  await _storage.write(key:_key(owner),value:previous);
+  await _storage.write(key:_historyKey(owner),
+   value:jsonEncode(history.sublist(0,history.length-1)));
+  return List<WaffraSmsLocalRule>.unmodifiable(restored);
+ }
  Future<void> write(String owner,List<WaffraSmsLocalRule> rules)async{
   if(rules.length>100||rules.map((e)=>e.id).toSet().length!=rules.length){
    throw const FormatException('Too many or duplicate rules');
   }
   for(final rule in rules)WaffraSmsLocalRules.validate(rule);
-  await _storage.write(key:_key(owner),
-   value:jsonEncode(rules.map((rule)=>rule.toJson()).toList(growable:false)));
+  final key=_key(owner);
+  final next=jsonEncode(rules.map((rule)=>rule.toJson()).toList(growable:false));
+  final previous=(await _storage.read(key:key))??'[]';
+  if(previous==next)return;
+  final history=await _readHistory(owner);
+  final updated=boundedHistory(history,previous);
+  // Store at most five encrypted prior user-rule snapshots, never raw SMS.
+  await _storage.write(key:_historyKey(owner),value:jsonEncode(updated));
+  await _storage.write(key:key,value:next);
  }
 }

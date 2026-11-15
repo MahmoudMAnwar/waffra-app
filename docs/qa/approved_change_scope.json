@@ -1,39 +1,55 @@
 {
   "contract_version": 1,
-  "change_id": "M987-ISSUE701-STRUCTURED-SMS-AND-COMPOSITE-20261115",
-  "human_scope_review": "Owner requested all SMS improvements; this PR adds read-only structured bank context with Saudi bank sender identity, currency-safe amount and masked suffix proposals, composite financial SMS fail-close in the existing review isolate. No ledger finance changes.",
+  "change_id": "M988-ISSUE702-LOCAL-RULE-UNDO-SIM-20261115",
+  "human_scope_review": "Owner requested local rule intelligence, preview and rollback. Adds encrypted owner-scoped revision history (max five), explicit UI Undo, bounded read-only preview of changed/conflicting messages and removal of outdated AI language. Does not authorize automatic ledger changes.",
   "user_requested_changes": [
-    "M987 identify transaction principal distinctly from balance and fees, preserve original SAR currency; unknown or foreign => review.",
-    "M987 identify likely Saudi bank by allowlisted sender, suggest only unambiguous last four; provider never proves account.",
-    "M987 if SMS contains multiple separate financial events, keep complete original pending for manual review without auto-excluding or selecting first amount.",
-    "Add executable four-case regression tests and preserve owner isolation.",
-    "Refresh retained source-based isolation test to verify read-only structured bank context extracts facts and composites in worker, without native ACK or finance writes."
+    "M988 store five prior validated rule versions in encrypted user-scoped storage, undo with owner validation and no finance write.",
+    "M988 simulate impact on at most first 100 queued SMS sender/body pairs before changing rule; count changed classifications and conflicts only.",
+    "M988 remove deprecated AI marketing text from rule settings, retain all original review and OTP protections.",
+    "Add runnable history and simulation tests.",
+    "M988 normalize a limited exact list of Saudi retailer and pharmacy brand aliases for category suggestion only, preserving previously stored merchant learning keys and rejecting payment rails."
   ],
   "allowed_changed_files": [
-    "lib/main.dart",
     "docs/qa/approved_change_scope.json",
+    "lib/waffra_sms_rule_settings_page.dart",
+    "lib/waffra_sms_local_rules.dart",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/behavior_contract_review.json",
-    "lib/waffra_sms_structured_bank_context.dart",
-    "test/m987_sms_structured_bank_context_test.dart",
-    "test/m548_review_grouping_and_signup_perf_test.dart"
+    "lib/waffra_sms_rule_simulator.dart",
+    "test/m988_sms_rule_simulation_history_test.dart",
+    "lib/waffra_merchant_rules.dart",
+    "test/m988_sms_merchant_alias_test.dart"
   ],
   "bounded_sections": {
-    "lib/main.dart": [
+    "lib/waffra_sms_local_rules.dart": [
       {
-        "start": "import 'waffra_sms_account_learning.dart';",
-        "end": "import 'waffra_sms_rule_settings_page.dart';"
-      },
-      {
-        "start": "Map<String,Object?> waffraM632ClassifySmsQueue(",
-        "end": "List<String> splitBankMessages("
+        "start": "class WaffraSmsLocalRuleStore {",
+        "end": null
       }
     ],
-    "test/m548_review_grouping_and_signup_perf_test.dart": [
+    "lib/waffra_sms_rule_settings_page.dart": [
       {
-        "start": " test('SMS classification runs outside UI isolate; native ACK stays checked',(){",
-        "end": " test('fresh registration proves exact read-back without duplicate KDF',(){"
+        "start": "import 'waffra_sms_local_rules.dart';",
+        "end": "import 'waffra_bank_sms_facts.dart';"
+      },
+      {
+        "start": "class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{",
+        "end": " Future<void> _remove(WaffraSmsLocalRule rule)async{"
+      },
+      {
+        "start": "     final previewRule=WaffraSmsLocalRule(",
+        "end": "     return SafeArea(top:false,child:Padding("
+      },
+      {
+        "start": " @override Widget build(BuildContext context)=>Scaffold(",
+        "end": null
+      }
+    ],
+    "lib/waffra_merchant_rules.dart": [
+      {
+        "start": "String? waffraRecognizedMerchantLeaf(String merchant,{required bool income}){",
+        "end": "/// Optional high-confidence hint from the operation itself (not app locale)."
       }
     ]
   },

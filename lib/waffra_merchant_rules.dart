@@ -110,7 +110,31 @@ String? waffraMerchantKey(String raw,{bool income=false}){
 /// A doctor token must stand alone ("DR ALI"), never "DRIVE" or "ADDRESS".
 String? waffraRecognizedMerchantLeaf(String merchant,{required bool income}){
  if(income)return null;
- final key=waffraNormalizeMerchantName(merchant);
+ // M988: normalize explicitly known institution/shop aliases only for
+ // display-category suggestions. Historical learned merchant keys and
+ // encrypted category preferences remain byte-identical after upgrades.
+ var key=waffraNormalizeMerchantName(merchant);
+ const aliases=<String,String>{
+  'al othaim':'alothaim',
+  'al othaim markets':'alothaim',
+  'alothaim markets':'alothaim',
+  'اسواق العثيم':'العثيم',
+  'اسواق ال عثيم':'العثيم',
+  'al nahdi':'alnahdi pharmacy',
+  'alnahdi':'alnahdi pharmacy',
+  'nahdi':'nahdi pharmacy',
+  'nahdi pharmacies':'nahdi pharmacy',
+  'ال نهدي':'النهدي',
+  'صيدليات النهدي':'النهدي',
+  'بن داوود':'بن داود',
+  'hunger station':'hungerstation',
+  'hungr station':'hungerstation',
+  'star bucks':'starbucks',
+  'star bucks coffee':'starbucks',
+  'mcdonald s':'mcdonalds',
+  'mcdonalds ksa':'mcdonalds',
+ };
+ key=aliases[key]??key;
  if(key.isEmpty)return null;
  bool any(List<String> terms)=>terms.any((term)=>
   key==term||key.startsWith('$term ')||key.contains(' $term ')||
