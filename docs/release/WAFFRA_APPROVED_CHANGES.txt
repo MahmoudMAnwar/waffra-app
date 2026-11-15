@@ -832,3 +832,9 @@ M940/M941 Draft PR #648 M486 regression correction (unreleased): coalesced futur
 [M945 backup parity cache follow-up — #654 DRAFT, not released, 2026-11-15]
 - Corrected a second read-only display-index invalidation gap specifically in the authenticated V24-to-SQLCipher post-restore canonical ledger UI repair. When trusted SQLCipher records are used to correct a stale Home list, the month cache is now invalidated in the same setState. No owner archive content, opening account amount, goal savings or transaction row is modified by this UI correction.
 - A source contract asserts the parity repair and all previous manual/SMS guards. Device validation with the encrypted owner archive still requires authorization; there is no claim of recovered invisible goals without it.
+
+[M946 #653 / PR #654 — autonomous whole-app smoke, DRAFT / NOT RELEASED — 2026-11-15]
+- Adds fail-closed whole-app smoke inventory for 33 active features with 60 actual Dart test files across finance, experience and safety; triggers with every PR/main commit regardless of touched file paths. Exact-head results are reported by the existing M937 event parser, not inferred from a green workflow label.
+- Adds a real synthetic encrypted SQLCipher end-to-end journey across account opening balances, manual account-linked income/expense, cold reopen, legacy unassigned transaction read, duplicate manual reject and reviewed SMS anti-replay.
+- Updates obsolete M296 Home Show more/less assertions to test one inline operations toolbar and verified mixed-activity counts. Does NOT remove previous finance, security or native Android CI gates.
+- The owner-private V24 archive, device biometric/SMS/background and signed APK installation require separate, authorized physical acceptance; none are claimed as tested by a synthetic archive.
