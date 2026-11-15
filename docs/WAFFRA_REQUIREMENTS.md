@@ -1,3 +1,13 @@
+## M954 — تطبيق جميع قواعد الرسائل على كل SMS قبل المراجعة (2026-11-15)
+
+- **Issue [#661](https://github.com/MahmoudMAnwar/waffra-app/issues/661)**; implemented in existing **Draft PR #660** alongside M953, independent of #658.
+- Every real Android SMS notice must pass the same offline local rule engine for default rules and every verified owner's user-added rules: exclusion, income, expense, transfer, and ambiguous review. The rule checks sender and normalized keywords/template fragments before notifying or presenting a candidate, in normal foreground, historical month rescan and background WorkManager.
+- Recognize new-app Arabic/English registration, sign-in, login, authentication and verification codes. Native masks OTP digits BEFORE queuing or persisting ciphertext and retains only safe `sensitiveOtp` metadata. Never learn, log or send OTP contents.
+- Automatically move a safely matched nonfinancial excluded SMS (including curated default exclusions) to native encrypted 30-day excluded list using `excludeMessages`, never transient `acknowledge`; scans and app relaunch must not repeatedly reveal it. The stored exclusion marker expires per existing policy, while matching default/custom rule persists separately.
+- **Safety priority**: Any independent posted bank money, income, expense, transfer, fee or card settlement evidence, including mixed OTP text, must remain financial/manual review and cannot be deleted by default or user keyword matching. A bank category rule is never an auto-post license; financial direction, account verification and confirmed save stay independently enforced.
+- If owner rules cannot be loaded, built-in vetted exclusions may still apply, but custom rules must not be treated as active and no account auto-post is authorized. Do not hide errors or delete unknown/ambiguous financial messages.
+- Regression and real-device checklist: [M954 SMS rule pipeline acceptance](qa/M954_SMS_RULE_PIPELINE_ACCEPTANCE.md), `test/m954_all_sms_rule_routes_regression_test.dart`, existing M508/M509/M580/M661/M665 tests. Exact-HEAD CI and owner Android test are separate release gates.
+
 ## M953 — إصلاح مشاكل تعديل العمليات وإشعارات Android (2026-11-15)
 
 - **Issue [#659](https://github.com/MahmoudMAnwar/waffra-app/issues/659)**; independent Draft PR from main, separate from #658.
