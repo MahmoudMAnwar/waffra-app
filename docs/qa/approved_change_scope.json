@@ -17,7 +17,8 @@
     "test/storage/m944_sqlcipher_keyset_paging_test.dart",
     "lib/storage/waffra_verified_accounts_api.dart",
     "lib/waffra_account_context_page.dart",
-    "test/m611_manual_home_finance_regression_test.dart"
+    "test/m611_manual_home_finance_regression_test.dart",
+    "docs/qa/behavior_contract_review.json"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
