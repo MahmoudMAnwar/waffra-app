@@ -8,6 +8,30 @@
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
     {
+      "id": "M969-M120-ANDROID-EMULATOR-POST-PASS-HANG-FAIL-CLOSED",
+      "issue": "Issue #670 / #657 / PR #665",
+      "previous_behavior": "At PR #665 SHA acbed078 M120 Android test on emulator 5554 printed All tests passed and M120_RECEIPT_ANDROID_PASS; reactivecircus android-emulator-runner@v2 then hung after Terminate Emulator until the 45-minute job was cancelled.",
+      "approved_behavior": "Register an EXIT trap in the existing M120 real Flutter-drive runner. Bound adb emulator kill, then stop only the disposable qemu host if still alive, preserve original driver status exactly across cleanup; configure native wait 5s, execute a shell syntax and source regression before emulator boot, retain exact PR SHA, Android test and all original error classifiers.",
+      "source_paths": [
+        ".github/workflows/m120-android-receipt-cold-reopen.yml",
+        ".github/scripts/run-m120-android-receipt-reopen.sh",
+        "integration_test/m120_verified_receipt_reopen_android_test.dart"
+      ],
+      "test_paths": [
+        "test/qa/m969_m120_emulator_shutdown_test.py"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m120-android-receipt-cold-reopen.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "On any nonzero Flutter drive result, exit with that nonzero status, even if emulator cleanup succeeds.",
+        "Only the GitHub-hosted disposable QEMU emulator is stopped; do not kill unrelated machines or suppress connected-driver assertions.",
+        "No production financial writer, SQLCipher authority, UI, signed APK or private owner backup modified.",
+        "Host test is not evidence of physical Android acceptance; the existing real emulator test must independently succeed at the exact new HEAD."
+      ]
+    },
+    {
       "id": "M967-RELOCATED-POST-AUTH-SMS-SOURCE-GATE-COVERAGE",
       "issue": "Issue #666 / Draft PR #667",
       "previous_behavior": "M623, M631 and M632 positive assertions still seek the SMS post-auth ready/owner epoch predicate in reconstructed main.dart after M964 moved the exact implementation into the registered helper part.",
