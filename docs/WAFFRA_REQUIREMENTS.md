@@ -13,7 +13,7 @@
 
 - **Third tranche (same PR #658, 2026-11-15):** replace Account Context's per-goal correlated SQL query with one grouped SQLCipher source-verified sum; preserve fund/release sign, unsourced due-debits and independent wallet total. Add real disposable 80-goal/720-movement parity test and register all new M952 SQLCipher/pager/10k budget suites in mandatory M946 exact-HEAD money/safety groups. No user archives or device evidence claimed.
 
-- **Fourth tranche (same PR #658, 2026-11-15):** correct multi-budget historical expense read-side fan-out: one SQLCipher ledger entry and one bank debit even when several independently named budget allocations exist, while each budget receives its own saved allocation and exact-halala totals. Protect full/month/keyset projections with a real encrypted test registered in M946 exact-HEAD smoke. No database writer/schema, saved backup, approved UI or physical Android changed.
+- **Fourth tranche correction (same PR #658, 2026-11-15):** actual encrypted CI confirmed `UNIQUE(entry_id)` in standalone budget allocations; one entry cannot belong to two standalone budgets. Remove redundant aggregation joins, retain direct unique source joins, preserve independent monthly budget projection and source-account goal aggregation. Encrypted regression must assert rejection of a second allocation for the same entry, distinct linked budgets, correct bank balance and unique full/month/keyset pages; M946 exact-HEAD smoke remains mandatory. Do not modify schema, writer, backup, UI or user data.
 
 ## M944 — تحسين الأداء العميق واستقرار البيانات: المحاور الخمسة (2026-11-15)
 
