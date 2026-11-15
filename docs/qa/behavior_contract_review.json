@@ -1,12 +1,38 @@
 {
   "schema_version": 1,
-  "pr": "M979 + M980 Draft — Android pure OTP and all four SMS rule kinds (#683/#657)",
-  "issue": "Issue #683, five axes #657, owner clarified four rule types on 2026-11-15",
+  "pr": "M981 Draft — historical SMS OTP atomic security parity with live (#685, stacked #684)",
+  "issue": "Issue #685 / five-axis #657 and owner priority SMS improvement; parent #683 and PR #684",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at f0def360ea75b9c865548b6f1b4fc07e9640f2c2 after #656",
   "reviewed_at": "2026-11-15",
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
+    {
+      "id": "M981-HISTORICAL-SMS-OTP-SAME-NATIVE-GATE-ATOMIC-CURSOR-DENIAL",
+      "issue": "Issues #685, #683 and #657",
+      "previous_behavior": "M979's native live offer() detects pure OTP before writing to encrypted review, but importConsentMonth() imported the same type into encrypted review after masking digits; a later Flutter review sweep was needed to exclude it, and subsequent rescan could briefly reintroduce it.",
+      "approved_behavior": "Historical import reuses EXACT same pureVerificationOnly predicate as live offer on original body after owner session, excluded sender, committed/excluded/transfer fingerprint dedup. For each new OTP-only message, enqueue only an owner-encrypted SHA-256 ID and reversible safe sender/receivedAt/excludedAt label into per-shard batch maps; do not add to review queue or increment accepted, but advance examined/cursor. All modified denied-ID shards, 30d labels, review queue and scan progress are persisted in ONE SharedPreferences editor.commit; zero persistence on failed commit, excluded cache cleared only after success. Mixed financial alerts plus OTP still go through existing masked review then four-way Flutter classification; no change in owner custom rule engine, finance writer, phone SMS or notification routing.",
+      "source_paths": [
+        "native/WaffraAutoSmsStore.kt"
+      ],
+      "test_paths": [
+        "test/m981_historical_otp_atomic_intake_test.dart",
+        "test/m979_native_otp_prequeue_exclusion_test.dart",
+        "test/m980_four_sms_rule_kinds_every_route_test.dart",
+        "test/m954_all_sms_rule_routes_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m946-whole-app-feature-smoke.yml",
+        ".github/workflows/m417-automatic-bank-sms-opt-in.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "No raw OTP/received SMS body saved in historical excluded fingerprint/label bucket; safe sender/time only; no app SMS deletion and no finance writer.",
+        "Owner/session and atomically persisted scanned/accepted counters and historical date+row-ID cursor do not advance when encrypted editor commit fails.",
+        "Completed debit/transfer, even if with OTP, remains reviewable and never auto-excluded by pureVerificationOnly; the four user/default kinds still apply in Flutter.",
+        "Exact owner-bound anti-replay hashes persist beyond 30-day UI labels, avoid whole-sender exclusions; test on physical Android needed to confirm live behavior."
+      ]
+    },
     {
       "id": "M980-ONE-FOUR-WAY-RULE-PASS-FOREGROUND-HISTORY-BACKGROUND",
       "issue": "Issues #683 and #657",

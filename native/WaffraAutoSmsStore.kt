@@ -1432,6 +1432,12 @@ object WaffraAutoSmsStore {
                 for (i in 0 until queue.length()) {
                     existingIds.add(queue.getJSONObject(i).getString("id"))
                 }
+                // M981: collect OTP-only hashes/labels for ONE atomic commit
+                // with the history cursor. Decrypt each shard only once per
+                // bounded page, never persist the original OTP body/code.
+                val deniedOtpByShard = mutableMapOf<String, MutableSet<String>>()
+                val otpLabelsByShard =
+                    mutableMapOf<String, MutableMap<String, JSONObject>>()
                 var examined = 0
                 var accepted = 0
                 var stoppedForCapacity = false
@@ -1449,17 +1455,41 @@ object WaffraAutoSmsStore {
                             !isCommittedLocked(context, fingerprint) &&
                             !isExcludedMessageLocked(context, fingerprint) &&
                             !isCompletedTransferLocked(context, fingerprint)) {
-                            val sensitive = otp.containsMatchIn(row.body)
-                            val masked = if (sensitive)
-                                row.body.trim().replace(Regex("[0-9٠-٩۰-۹]+"), "••••")
-                                else row.body.trim()
-                            queue.put(JSONObject().put("id", fingerprint)
-                                .put("sender", row.sender.trim()).put("body", masked)
-                                .put("sensitiveOtp", sensitive)
-                                .put("receivedAt", row.receivedAt)
-                                .put("reviewNotified", true))
-                            existingIds.add(fingerprint)
-                            accepted++
+                            if (pureVerificationOnly(row.body)) {
+                                // Same native predicate as live offer(), but
+                                // zero per-message commits in historical scan.
+                                val shard = fingerprint.take(2)
+                                val ids = deniedOtpByShard.getOrPut(shard) {
+                                    excludedMessageBucket(context, fingerprint)
+                                        .toMutableSet()
+                                }
+                                val labels = otpLabelsByShard.getOrPut(shard) {
+                                    excludedMessageInfo(context, fingerprint)
+                                        .toMutableMap()
+                                }
+                                if (labels.containsKey(fingerprint) ||
+                                    !ids.add(fingerprint))
+                                    throw IllegalStateException(
+                                        "Conflicting historical OTP fingerprint")
+                                labels[fingerprint] = JSONObject()
+                                    .put("id", fingerprint)
+                                    .put("sender", row.sender.trim().take(100))
+                                    .put("receivedAt", row.receivedAt)
+                                    .put("excludedAt", System.currentTimeMillis())
+                                existingIds.add(fingerprint)
+                            } else {
+                                val sensitive = otp.containsMatchIn(row.body)
+                                val masked = if (sensitive)
+                                    row.body.trim().replace(Regex("[0-9٠-٩۰-۹]+"), "••••")
+                                    else row.body.trim()
+                                queue.put(JSONObject().put("id", fingerprint)
+                                    .put("sender", row.sender.trim()).put("body", masked)
+                                    .put("sensitiveOtp", sensitive)
+                                    .put("receivedAt", row.receivedAt)
+                                    .put("reviewNotified", true))
+                                existingIds.add(fingerprint)
+                                accepted++
+                            }
                         }
                     }
                     examined++
@@ -1482,7 +1512,19 @@ object WaffraAutoSmsStore {
                 if (complete) editor.putBoolean(historyInitialCompleted, true)
                 if (accepted > 0)
                     editor.putString(queueName, seal(queue.toString()))
+                // OTP exclusion IDs, recoverable 30d labels, cursor and queue
+                // MUST commit together. On failure none can be advanced.
+                for ((shard, ids) in deniedOtpByShard) {
+                    val labels = otpLabelsByShard[shard]
+                        ?: throw IllegalStateException("Missing OTP exclusion labels")
+                    editor.putString(excludedMessageBucketPrefix + shard,
+                        seal(JSONArray(ids.toList()).toString()))
+                    editor.putString(excludedMessageInfoBucketPrefix + shard,
+                        seal(JSONArray(labels.values.toList()).toString()))
+                }
                 if (!editor.commit()) return@synchronized 0
+                if (deniedOtpByShard.isNotEmpty())
+                    excludedMessageCipherCache.clear()
                 accepted
             } catch (_: Exception) {
                 // Never overwrite earlier ciphertext or advance a failed scan.
