@@ -1,51 +1,35 @@
 {
   "contract_version": 1,
-  "change_id": "M984-ISSUE695-SMS-CALENDAR-THREE-DOTS-RTL-SENDER-PAGING-20261115",
-  "human_scope_review": "Owner explicitly requires beside Select All an interactive SMS calendar with days marked by 1, 2 or max 3 colored dots: income emerald, expense deep orange/red like existing compact activity card, transfer gold, paid due violet matching existing due card. Calendar counts owner-bound pending SMS by RECEIVED date and displays verified paid recurring/goal-dues as separate events/counter, never equating these to incoming SMS. Tap day filters sender list and review IDs including Select All; clear resets. Horizontal RTL/LTR sender swipes and visible prev/next arrows preserve valid multi-selected ID state, lazy visible window and nested scroll. Pure O(N) day index no SMS body/OTP persistence/finance authority. Seven synthetic+source tests include 2k cases, timezone/leap day, hidden day, status colors and existing M983/M980/M549 in M946. Strict M385 exact 7 files and two bounded Dart changes, M550 behavior, Android RTL screenshots needed. M550 on first M984 head identified obsolete `test/m940_sms_review_page_window_test.dart` positive assertion on old unfiltered `messageWindow.visibleCount(bySender[..].length)` and exactly 3 refresh calls; updated that EXISTING real test to assert exactly 9 refresh trigger sites and visibleSenderRows paging after day filters while retaining full sender ID selection. No production behavior changed to appease test.",
+  "change_id": "M982-REBASED-ISSUE687-SMS-BACKGROUND-EXCLUSION-BRIDGE-20261115",
+  "human_scope_review": "Port of previously tested five-green Draft #688, now stacked on latest M984 branch because old #688 conflicts with merged #684/#686/#690 docs and QA. Owner confirmed all four rule groups (income, expense, transfer, excluded) must execute foreground/history/background. Android Worker has no `excludeAutoBankSms` handler even though Flutter calls it and MainActivity supports it. Add exact owner-encrypted native store delegate for exclusion SHA256 IDs and 30-day label, not finance commit. Retain original M982 three executable synthetic source/route tests without dilution, register safety M946 with M980 and M954; exact seven-file M385 and M550 guards, Android Kotlin required. UI calendar remains parent untouched; once parent #696 merges, retarget Draft child to main, require exact-head CI and close old #688 only after replacement.",
   "user_requested_changes": [
-    "Add calendar icon directly beside the Select All SMS checkbox. Day marked by exactly 1 dot for 1 event, 2 dots for 2, capped at 3 for 3 or more, with entry colors aligned to income/expense/transfer/paid due activity cards.",
-    "Calendar is month navigable and selecting a date filters reviewed sender groups and pending SMS; expose exact SMS received count separately from existing confirmed paid due count and clear date filter.",
-    "Support moving freely among bank SMS senders by horizontal right/left swipes respecting RTL/LTR plus accessible previous/next buttons; reset sender pagination without dropping selected IDs or touching ledger.",
-    "Select All and bulk exclusion target ONLY currently visible day/sender rows, and other dates remain unmodified; maintain selection correctly on saved SMS/ACK refreshing pending state.",
-    "Keep all four saved/default rules, original SMS/OTP protection, no financial auto posting or new permissions; test synthetic high-volume dates, colors, swipes and counts in M946 and device screenshot QA.",
-    "Reconcile preexisting M940 pagination source tests with the owner-approved date-filtered sender rows, preserving original full-ID bulk selection and pagination invariants."
+    "Finish previously approved Issue #687: ensure every background `excluded` rule (user+default) persists through the same Android store method as foreground and never produces a false review notification.",
+    "Restore exact `excludeAutoBankSms` MethodChannel branch on the latest SMS UI base branch after stale old PR source/QA conflicts.",
+    "Keep owner session, SHA-256 IDs, encryption, 30-day safe sender/time labels, zero financial ACK or autoPost authority, zero original SMS body logging.",
+    "Keep 3 original nonduplicate executable M982 tests plus M980/M954 and M385/M550/Kotlin CI on new head, no actual Android hardware assertion."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "lib/waffra_home_sms_inbox.part.dart",
-    "lib/waffra_sms_review_groups.dart",
+    "native/WaffraAutoSmsWorker.kt",
     "scripts/qa/m946_full_app_smoke_matrix.py",
-    "test/m984_sms_calendar_dots_sender_swipe_test.dart",
-    "test/m940_sms_review_page_window_test.dart"
+    "test/m982_background_sms_exclusion_bridge_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
   "bounded_sections": {
-    "lib/waffra_home_sms_inbox.part.dart": [
+    "native/WaffraAutoSmsWorker.kt": [
       {
-        "start": " Future<void> _openAutoSmsInbox()async{",
-        "end": null
-      }
-    ],
-    "lib/waffra_sms_review_groups.dart": [
-      {
-        "start": "class WaffraSmsReviewGroups {",
-        "end": null
+        "start": "                        \"ackAutoBankSms\" -> {",
+        "end": "                        \"notifyAutoSmsSaved\" -> {"
       }
     ],
     "scripts/qa/m946_full_app_smoke_matrix.py": [
       {
         "start": "FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {",
-        "end": "    \"m983_sms_direct_kind_editor_prefill_live_review_refresh\""
-      }
-    ],
-    "test/m940_sms_review_page_window_test.dart": [
-      {
-        "start": " test('M940 production review wires page window and original full-ID selection',(){",
-        "end": null
+        "end": "    \"m984_sms_received_calendar_dots_and_rtl_sender_swipe\""
       }
     ]
   }
