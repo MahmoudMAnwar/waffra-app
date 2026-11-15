@@ -108,7 +108,7 @@ extension _WaffraHomeDashboardAnalyticsModule on _HomeScreenState {
          // M674 Home concept #1: data-backed navigation tiles, not new ledger writes.
          Row(key:const Key('m674-home-approved-shortcuts'),children:[
           WaffraApprovedDashboardLink(
-           title:waffraIsEnglish?'Recurring':'المتكررة',
+           title:waffraIsEnglish?'Due dates':'الاستحقاقات',
            count:recurring.where((r)=>r.active).length.toString(),
            icon:Icons.event_repeat_rounded,
            onTap:()=>unawaited(selectFooter(4))),
