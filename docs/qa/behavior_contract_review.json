@@ -1,12 +1,38 @@
 {
   "schema_version": 1,
-  "pr": "M943 — independent stacked Draft PR for #651 (base #650)",
-  "issue": "Issue #651 — M943 eight financial followups",
+  "pr": "M944 — five-axis code reliability Draft PR #654",
+  "issue": "Issue #653 — M944 five-axis code improvements",
   "workflow_review_policy": "scan-all-registered-workflows",
-  "baseline": "main at new branch start",
-  "reviewed_at": "2026-11-14",
+  "baseline": "main merge #652 at efba4d1f0b20b4111b60a1720de682059aac63fe",
+  "reviewed_at": "2026-11-15",
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
+    {
+      "id": "M944-VERIFIED-LEDGER-KEYSET-READS",
+      "issue": "Issue #653 / PR #654 axis 1: encrypted database level paging and account screen",
+      "previous_behavior": "Account history used OFFSET on each 50-entry SQL query and in-memory Home display pagination, so high offsets rescan past rows. No source-locked keyset API was exposed; a cursor was not retained by account/month filter across Previous/Next navigation.",
+      "approved_behavior": "Only the verified account source-lock adapter exposes deterministic SQLCipher keyset pages by occurred_iso DESC and entry_id DESC, with explicit account and month filters; no full-table row materialization for the account-history widget, no new financial writers, and no unrelated historical account linking. Previous/Next preserve back cursors and reset on account/month switch and confirmed accountless link. Unassigned historical reconciliation remains an independent source-verified queue and Home screen still uses existing display index until separately changed.",
+      "source_paths": [
+        "lib/storage/waffra_sqlcipher_history_pager.dart",
+        "lib/storage/waffra_verified_accounts_api.dart",
+        "lib/waffra_account_context_page.dart"
+      ],
+      "test_paths": [
+        "test/storage/m944_sqlcipher_keyset_paging_test.dart",
+        "test/m611_manual_home_finance_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "No unverified legacy finance fallback, inferred account ownership, posting, migration or bank balance modification from read pagination.",
+        "Retain 50-row account history UI styling, sender original message, owner-approved + FAB and Snackbar position, and accountless user-confirmed linking.",
+        "Use only already activated, owner-verified SQLCipher account source read via readVerifiedAccountMetadata; reject unsupported schemas and altered generation under lock.",
+        "2,700-row synthetic SQLCipher parity and cold reopen are not proof of physical Android FPS or private V24 archive compatibility."
+      ]
+    },
     {
       "id": "M943-VERIFIED-BALANCE-ACCOUNT-SENDER-SUFFIX-QA",
       "issue": "Issue #651 — 8-point post-M942 code review",
