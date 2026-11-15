@@ -21,6 +21,9 @@ GROUPS = ("money", "experience", "safety")
 # Each user-facing capability has a real runnable suite. Tests can be reused
 # across capabilities; the runner de-duplicates within each CI shard.
 FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {
+    "m960_grouped_sqlcipher_account_balances_source_parity": ("money", (
+        "test/storage/m960_grouped_account_balance_parity_test.dart",
+        "test/storage/m440_accounts_repository_test.dart")),
     # M952: all new finance/goal/readiness regressions execute on exact PR SHA
     # rather than existing only as locally runnable, unregistered test files.
     "m955_home_verified_month_summary_without_ledger_hydration": ("money", (

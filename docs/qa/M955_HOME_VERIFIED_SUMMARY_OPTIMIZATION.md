@@ -54,3 +54,8 @@ Stacked work on #658 / Issue #657. PR base is `feat/m952-five-axes-followup-2026
 
 - When a previous verified SQLCipher account view fails after the owner has chosen a different account, the catch path now detects the superseded request and schedules the existing witnessed rerun. It preserves the new selection, invalidates the old budget/ledger-ID context and prevents numeric balances from being displayed as authenticated until the current read passes. Session epoch and shutdown protections remain the first guard.
 - An extra M467 source contract asserts this failure path; the same encrypted integration remains required. No financial mutation or visual redesign.
+
+## M960 — Grouped owner-verified account balance arithmetic
+
+- The previously per-account correlated income/expense, current-cash goal due, inbound/outbound transfer, and goal wallet-source sum is now four independently grouped SQLCipher source CTE projections joined once to each account; each bank/wallet/archived account keeps exactly the same integer halala outcome, schema witness and account display order. No joins multiply unrelated money streams.
+- Mandatory disposable SQLCipher regression with 360 source transactions, 12 two-sided transfers, a partial due split, 3 attributed goal movements and a bankless/archived account verifies new vs original SQL byte-for-byte IDs and amounts and repeats after encrypted cold reopen. No finance write, private backup or Android acceptance implied.

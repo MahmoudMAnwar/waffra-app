@@ -8,6 +8,21 @@
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
     {
+      "id": "M960-GROUPED-SQLCIPHER-ACCOUNT-BALANCE-PARITY",
+      "issue": "Issue #657 / Draft PR #665",
+      "previous_behavior": "Every verified account balance performed separately correlated SQL SUMs over entries, due, incoming and outgoing transfers and savings sources, repeating finance scans per bank.",
+      "approved_behavior": "Aggregate each independent source once across all accounts with SQLCipher GROUP BY, LEFT JOIN only the preaggregated one-row-per-account sources, retain exact old opening+income-expense(actual due cash)+transfers+goal fund/release integer arithmetic and archive order.",
+      "source_paths": ["lib/storage/waffra_accounts_repository.dart"],
+      "test_paths": ["test/storage/m960_grouped_account_balance_parity_test.dart", "test/storage/m440_accounts_repository_test.dart"],
+      "ci_workflows_to_watch": [".github/workflows/m946-whole-app-feature-smoke.yml", ".github/workflows/finance-full-regression.yml"],
+      "safety_invariants": [
+        "All account money comes exclusively from active SQLCipher finance domain under original verified caller and schema readiness.",
+        "Original correlated-reference encrypted SQL parity across 360 mixed transactions, 12 internal transfers, 3 goal movements, partial goal-due and archived account.",
+        "No double posting: transfers net to zero, funded goals do not enter income or expense, due draws actual current cash only.",
+        "Existing account writer, source migration and private archives remain untouched; full device/backup acceptance still pending."
+      ]
+    },
+    {
       "id": "M959-STALE-HOME-ACCOUNT-READ-FAILURE-RETRY",
       "issue": "Issue #664 / Draft PR #665, continuing #657",
       "previous_behavior": "A failed older Home SQLCipher account read could catch after a later owner account selection and blindly reset selected account to all, losing the intended filter.",
