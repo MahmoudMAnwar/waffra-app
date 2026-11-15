@@ -6,6 +6,28 @@ set -euo pipefail
 # Retry ONLY pre-test transport errors; never mask finance assertions,
 # SQLCipher key failures, native-asset corruption or broken receipt flows.
 device="emulator-5554"
+
+# M969 / #670: the native receipt test can PASS while the Android QEMU
+# host hangs indefinitely at the runner action's "Terminate Emulator".
+# Stop ONLY the disposable emulator after test/retry evidence is collected.
+# Preserve the exact flutter-drive exit status across all cleanup outcomes.
+_m969ShutdownDisposableEmulator(){
+  local test_status=$?
+  trap - EXIT
+  echo "M969_ANDROID_TEST_EXIT_STATUS:${test_status}"
+  timeout --signal=TERM --kill-after=2s 8s \
+    adb -s "$device" emu kill >/dev/null 2>&1 || true
+  if pgrep -f '[q]emu-system-x86_64' >/dev/null 2>&1; then
+    sleep 3
+    pkill -TERM -f '[q]emu-system-x86_64' >/dev/null 2>&1 || true
+    sleep 2
+    if pgrep -f '[q]emu-system-x86_64' >/dev/null 2>&1; then
+      pkill -KILL -f '[q]emu-system-x86_64' >/dev/null 2>&1 || true
+    fi
+  fi
+  exit "$test_status"
+}
+trap _m969ShutdownDisposableEmulator EXIT
 test_file="integration_test/m120_verified_receipt_reopen_android_test.dart"
 max_attempts=3
 mkdir -p build/m120 test_driver
