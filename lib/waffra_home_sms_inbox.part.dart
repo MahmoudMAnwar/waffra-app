@@ -19,6 +19,72 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
   final bySender=grouped.bySender;
   final senders=grouped.senders;
   String? selectedSender,openingReviewId;
+  DateTime? selectedDay;
+  var calendarIndex=WaffraSmsReviewCalendarIndex.from(_autoSmsPending,
+   paidDueDates:entries.where((e)=>
+    e.sourceType=='recurring'||e.sourceType=='goal_due')
+    .map((e)=>e.date),
+   bookedBankEntries:entries.where((e)=>e.sourceType=='sms').map((e)=>
+    WaffraSmsCalendarBookedEvent(id:e.id,date:e.date,income:e.income)));
+  final visibleSenderNames=<String>[];
+  var visibleSenderRows=<Map<String,Object?>>[];
+  var visibleReviewIds=<String>[];
+  void rebuildCalendarIndex(){
+   calendarIndex=WaffraSmsReviewCalendarIndex.from(_autoSmsPending,
+    paidDueDates:entries.where((e)=>
+     e.sourceType=='recurring'||e.sourceType=='goal_due')
+     .map((e)=>e.date),
+    bookedBankEntries:entries.where((e)=>e.sourceType=='sms').map((e)=>
+     WaffraSmsCalendarBookedEvent(id:e.id,date:e.date,income:e.income)));
+  }
+  // Read-only saved bank entries for a selected calendar day, deduped by
+  // owner-verified ledger ID. No native SMS ACK or finance mutation.
+  List<MoneyEntry> bookedBankOnDay(DateTime date){
+   final target=WaffraSmsReviewCalendarIndex.day(date);
+   final seen=<String>{};
+   return entries.where((e)=>e.sourceType=='sms'&&e.id.isNotEmpty&&
+    WaffraSmsReviewCalendarIndex.day(e.date)==target&&seen.add(e.id))
+    .toList(growable:false);
+  }
+  Future<void> openBookedBankDay(BuildContext ctx)async{
+   final date=selectedDay;
+   if(date==null)return;
+   final booked=bookedBankOnDay(date);
+   if(booked.isEmpty)return;
+   await showModalBottomSheet<void>(
+    context:ctx,isScrollControlled:true,showDragHandle:true,
+    builder:(history)=>SafeArea(child:SizedBox(
+     height:min(MediaQuery.sizeOf(history).height*.70,560.0),
+     child:Column(children:[
+      Padding(padding:const EdgeInsets.symmetric(horizontal:18,vertical:12),
+       child:WaffraText(waffraIsEnglish?
+        'Saved bank transactions':'العمليات البنكية المحفوظة',
+        style:const TextStyle(fontSize:17,fontWeight:FontWeight.bold))),
+      Expanded(child:ListView.builder(
+       itemCount:booked.length,itemBuilder:(itemCtx,index){
+        final entry=booked[index];
+        return ListTile(
+         key:Key('m984-booked-sms-entry-${entry.id}'),
+         leading:Icon(entry.income?Icons.south_west_rounded:
+          Icons.north_east_rounded,
+          color:entry.income?emerald:Colors.deepOrange),
+         title:WaffraText(entry.title,maxLines:1),
+         subtitle:WaffraText(dayText(entry.date)),
+         trailing:ConstrainedBox(
+          constraints:const BoxConstraints(maxWidth:110),
+          child:FittedBox(fit:BoxFit.scaleDown,
+           child:RiyalAmount(entry.amount))),
+         onTap:()async{
+          Navigator.pop(history);
+          if(!mounted)return;
+          final verified=entries.where((e)=>
+           e.id==entry.id&&e.sourceType=='sms').toList();
+          if(verified.length==1)await transactionDetails(verified.single);
+         },
+        );
+       })),
+     ]))));
+  }
   // M940: a bounded display window only; bulk selection always sees full IDs.
   final messageWindow=WaffraSmsReviewPageWindow();
   // Coalesce repeated near-bottom scroll notifications into one queue turn.
@@ -51,10 +117,157 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
     combined.addAll(ids);
    }
    allReviewIds=List<String>.unmodifiable(combined);
+   visibleSenderNames
+    ..clear()
+    ..addAll(selectedDay==null?senders:senders.where((sender)=>
+     (bySender[sender]??const <Map<String,Object?>>[]).any((row){
+      final id=row['id'];
+      return id is String&&calendarIndex.matchesId(id,selectedDay!);
+     })));
+   final source=selectedSender==null?allReviewIds:
+    senderIds[selectedSender]??const <String>[];
+   visibleReviewIds=selectedDay==null?source:source.where(
+    (id)=>calendarIndex.matchesId(id,selectedDay!)).toList(growable:false);
+   final rows=bySender[selectedSender]??const <Map<String,Object?>>[];
+   visibleSenderRows=selectedDay==null?rows:rows.where((row){
+    final id=row['id'];
+    return id is String&&calendarIndex.matchesId(id,selectedDay!);
+   }).toList(growable:false);
   }
   refreshReviewIds();
-  List<String> visibleIds()=>selectedSender==null?allReviewIds:
-   senderIds[selectedSender]??const <String>[];
+  List<String> visibleIds()=>visibleReviewIds;
+  void moveSender(int offset){
+   if(selectedSender==null||visibleSenderNames.length<2)return;
+   final current=visibleSenderNames.indexOf(selectedSender!);
+   final next=current+offset;
+   if(current<0||next<0||next>=visibleSenderNames.length)return;
+   selectedSender=visibleSenderNames[next];
+   messageWindow.reset();
+   refreshReviewIds();
+  }
+  Color calendarDotColor(String kind,BuildContext ctx)=>switch(kind){
+   'income'=>emerald,
+   'expense'=>Colors.deepOrange,
+   'transfer'=>const Color(0xFFD8A400),
+   'due'=>Theme.of(ctx).brightness==Brightness.dark?
+    const Color(0xFFD6BBFF):const Color(0xFF7653AA),
+   _=>Theme.of(ctx).colorScheme.outline,
+  };
+  Future<void> openReviewCalendar(BuildContext ctx,StateSetter refresh)async{
+   var month=DateTime(
+    (selectedDay??DateTime.now()).year,(selectedDay??DateTime.now()).month);
+   final selected=await showWaffraDialog<String>(
+    context:ctx,builder:(dialog)=>StatefulBuilder(
+     builder:(dialog,updateMonth){
+      final start=DateTime(month.year,month.month);
+      final offset=start.weekday%7; // Sunday first, RTL mirrors layout.
+      final days=DateTime(month.year,month.month+1,0).day;
+      final isDark=Theme.of(dialog).brightness==Brightness.dark;
+      final labels=waffraIsEnglish?
+       const <String>['Su','Mo','Tu','We','Th','Fr','Sa']:
+       const <String>['أح','إث','ثل','أر','خم','جم','سب'];
+      return AlertDialog(scrollable:true,
+       title:WaffraText(waffraIsEnglish?'SMS review calendar':
+        'تقويم رسائل المراجعة'),
+       content:SizedBox(width:360,child:Column(
+        mainAxisSize:MainAxisSize.min,children:[
+         Row(children:[
+          IconButton(key:const Key('m984-calendar-prev-month'),
+           icon:const Icon(Icons.chevron_right_rounded),
+           onPressed:()=>updateMonth(()=>
+            month=DateTime(month.year,month.month-1))),
+          Expanded(child:WaffraText(
+           MaterialLocalizations.of(dialog).formatMonthYear(month),
+           textAlign:TextAlign.center,
+           style:const TextStyle(fontWeight:FontWeight.w700))),
+          IconButton(key:const Key('m984-calendar-next-month'),
+           icon:const Icon(Icons.chevron_left_rounded),
+           onPressed:()=>updateMonth(()=>
+            month=DateTime(month.year,month.month+1))),
+         ]),
+         Row(children:[
+          for(final label in labels)Expanded(child:Center(
+           child:WaffraText(label,style:const TextStyle(fontSize:11)))),
+         ]),
+         const SizedBox(height:4),
+         GridView.builder(shrinkWrap:true,
+          physics:const NeverScrollableScrollPhysics(),
+          itemCount:offset+days,
+          gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(
+           crossAxisCount:7,mainAxisSpacing:3,crossAxisSpacing:2,
+           childAspectRatio:.88),
+          itemBuilder:(cellContext,i){
+           if(i<offset)return const SizedBox.shrink();
+           final d=i-offset+1;
+           final date=DateTime(month.year,month.month,d);
+           final dots=calendarIndex.dots(date);
+           final chosen=selectedDay==date;
+           return InkWell(
+            key:Key('m984-calendar-day-${date.year}-${date.month}-$d'),
+            borderRadius:BorderRadius.circular(8),
+            onTap:()=>Navigator.pop(dialog,date.toIso8601String()),
+            child:Container(
+             decoration:BoxDecoration(
+              color:chosen?emerald.withValues(alpha:isDark ? .25 : .12):null,
+              borderRadius:BorderRadius.circular(8)),
+             child:Column(mainAxisAlignment:MainAxisAlignment.center,
+              children:[
+               WaffraText('$d',style:TextStyle(fontSize:13,
+                color:chosen?emerald:null,
+                fontWeight:dots.isNotEmpty?
+                 FontWeight.bold:FontWeight.normal)),
+               const SizedBox(height:3),
+               Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+                for(final kind in dots)Padding(
+                 padding:const EdgeInsets.symmetric(horizontal:1.5),
+                 child:Container(width:5,height:5,
+                  decoration:BoxDecoration(shape:BoxShape.circle,
+                   color:calendarDotColor(kind,dialog)))),
+               ]),
+              ])),
+           );
+          }),
+         const SizedBox(height:12),
+         Wrap(spacing:12,runSpacing:7,children:[
+          for(final item in const <(String,String,String)>[
+           ('income','Income','دخل'),('expense','Expense','مصروف'),
+           ('transfer','Transfer','تحويل'),('due','Paid due','استحقاق مدفوع')])
+           Row(mainAxisSize:MainAxisSize.min,children:[
+            Container(width:7,height:7,decoration:BoxDecoration(
+             shape:BoxShape.circle,
+             color:calendarDotColor(item.$1,dialog))),
+            const SizedBox(width:4),
+            WaffraText(waffraIsEnglish?item.$2:item.$3,
+             style:const TextStyle(fontSize:11)),
+           ]),
+         ]),
+         const SizedBox(height:8),
+         WaffraText(waffraIsEnglish?
+          'Max 3 dots: SMS by received day, saved bank entries by booked date and confirmed paid dues; counts are separate.':
+          'حتى ٣ نقاط للرسائل حسب وصولها، والعمليات البنكية المحفوظة حسب تاريخها، والاستحقاقات المدفوعة؛ الأعداد مستقلة.',
+          style:const TextStyle(fontSize:11)),
+        ])),
+       actions:[
+        TextButton(key:const Key('m984-calendar-clear-day'),
+         onPressed:()=>Navigator.pop(dialog,'clear'),
+         child:WaffraText(waffraIsEnglish?'All dates':'كل الأيام')),
+        TextButton(onPressed:()=>Navigator.pop(dialog),
+         child:WaffraText(waffraIsEnglish?'Close':'إغلاق')),
+       ],
+      );
+     }));
+   if(!ctx.mounted||selected==null)return;
+   refresh((){
+    selectedDay=selected=='clear'?null:DateTime.tryParse(selected);
+    selectedSender=null;
+    messageWindow.reset();
+    refreshReviewIds();
+    if(selectedDay!=null){
+     selectedIds.removeWhere((id)=>
+      !calendarIndex.matchesId(id,selectedDay!));
+    }
+   });
+  }
   await showModalBottomSheet<void>(
    context:context,isScrollControlled:true,showDragHandle:true,
    builder:(sheet)=>StatefulBuilder(
@@ -63,7 +276,10 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
      canPop:selectedSender==null||openingReviewId!=null,
      onPopInvokedWithResult:(didPop,result){
       if(!didPop&&selectedSender!=null&&openingReviewId==null){
-       refresh(()=>selectedSender=null);
+       refresh((){
+        selectedSender=null;
+        refreshReviewIds();
+       });
       }
      },
      child:SafeArea(
@@ -77,7 +293,10 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
           icon:const Icon(Icons.arrow_back_rounded,color:forest),
           onPressed:(){
            if(selectedSender==null){Navigator.pop(ctx);}
-           else{refresh(()=>selectedSender=null);}
+           else{refresh((){
+            selectedSender=null;
+            refreshReviewIds();
+           });}
           }),
          Expanded(child:Column(mainAxisSize:MainAxisSize.min,
           crossAxisAlignment:CrossAxisAlignment.start,children:[
@@ -86,7 +305,7 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
            style:const TextStyle(fontSize:22,fontWeight:FontWeight.bold)),
           WaffraText(visibleIds().length.toString()+
            (waffraIsEnglish?' messages from ':' رسالة من ')+
-           senders.length.toString()+
+           visibleSenderNames.length.toString()+
            (waffraIsEnglish?' senders':' مرسلين'),
            style:TextStyle(fontSize:12,
             color:Theme.of(ctx).colorScheme.onSurfaceVariant)),
@@ -117,15 +336,84 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
           WaffraText(selectedIds.length.toString()+
            (waffraIsEnglish?' selected':' محددة'),
            style:const TextStyle(fontSize:12,color:emerald)),
-          const SizedBox(width:12),
+          IconButton(
+           key:const Key('m984-sms-calendar-button'),
+           tooltip:waffraIsEnglish?'View SMS calendar':'عرض تقويم الرسائل',
+           onPressed:bulkBusy?null:()=>openReviewCalendar(ctx,refresh),
+           icon:const Icon(Icons.calendar_month_outlined,color:emerald)),
+          if(selectedDay!=null)IconButton(
+           key:const Key('m984-calendar-reset-filter'),
+           tooltip:waffraIsEnglish?'Clear date filter':'إلغاء فلتر اليوم',
+           icon:const Icon(Icons.filter_alt_off_outlined),
+           onPressed:()=>refresh((){
+            selectedDay=null;
+            selectedSender=null;
+            messageWindow.reset();
+            refreshReviewIds();
+           })),
          ]),
         )),
-       Expanded(child:NotificationListener<ScrollNotification>(
+       if(selectedDay!=null)Padding(
+        padding:const EdgeInsets.symmetric(horizontal:14,vertical:4),
+        child:Row(children:[
+         const Icon(Icons.event_note_outlined,size:17,color:emerald),
+         const SizedBox(width:6),
+         Expanded(child:WaffraText(waffraIsEnglish?
+          'Received ${calendarIndex.smsCount(selectedDay!)} SMS on ${dayText(selectedDay!)} • ${calendarIndex.bookedCount(selectedDay!)} saved bank transactions • ${calendarIndex.dueCount(selectedDay!)} paid dues':
+          'وصل ${calendarIndex.smsCount(selectedDay!)} رسالة يوم ${dayText(selectedDay!)} • ${calendarIndex.bookedCount(selectedDay!)} عملية بنكية محفوظة • ${calendarIndex.dueCount(selectedDay!)} استحقاق مدفوع',
+          style:const TextStyle(fontSize:12))),
+        ])),
+       if(selectedDay!=null&&calendarIndex.bookedCount(selectedDay!)>0)
+         Padding(padding:const EdgeInsets.symmetric(horizontal:14),
+          child:Align(alignment:AlignmentDirectional.centerStart,
+           child:TextButton.icon(
+            key:const Key('m984-open-booked-bank-day'),
+            onPressed:bulkBusy?null:()=>openBookedBankDay(ctx),
+            icon:const Icon(Icons.receipt_long_outlined,size:17),
+            label:WaffraText(waffraIsEnglish?
+             'View saved bank transactions':'عرض العمليات البنكية المحفوظة')))),
+        if(selectedSender!=null&&visibleSenderNames.length>1)Padding(
+        padding:const EdgeInsets.symmetric(horizontal:12),
+        child:Row(children:[
+         IconButton(key:const Key('m984-sender-previous'),
+          tooltip:waffraIsEnglish?'Previous sender':'المرسل السابق',
+          onPressed:bulkBusy||openingReviewId!=null||
+           visibleSenderNames.indexOf(selectedSender!)<=0?null:
+           ()=>refresh(()=>moveSender(-1)),
+          icon:const Icon(Icons.chevron_right_rounded)),
+         Expanded(child:WaffraText(
+          '${visibleSenderNames.indexOf(selectedSender!)+1} / ${visibleSenderNames.length}',
+          textAlign:TextAlign.center,
+          style:const TextStyle(fontSize:12,fontWeight:FontWeight.bold))),
+         IconButton(key:const Key('m984-sender-next'),
+          tooltip:waffraIsEnglish?'Next sender':'المرسل التالي',
+          onPressed:bulkBusy||openingReviewId!=null||
+           visibleSenderNames.indexOf(selectedSender!)>=visibleSenderNames.length-1?
+           null:()=>refresh(()=>moveSender(1)),
+          icon:const Icon(Icons.chevron_left_rounded)),
+        ])),
+       if(selectedDay!=null&&visibleSenderNames.isEmpty)Padding(
+        padding:const EdgeInsets.all(12),
+        child:WaffraText(waffraIsEnglish?
+         'No SMS currently awaiting review on this day.':
+         'لا توجد رسائل بانتظار المراجعة في اليوم المختار.',
+         textAlign:TextAlign.center)),
+       Expanded(child:GestureDetector(
+        behavior:HitTestBehavior.translucent,
+        onHorizontalDragEnd:selectedSender==null||bulkBusy||
+         openingReviewId!=null?null:(details){
+         final velocity=details.primaryVelocity??0;
+         if(velocity.abs()<160)return;
+         final rtl=Directionality.of(ctx)==TextDirection.rtl;
+         final offset=velocity<0?(rtl?-1:1):(rtl?1:-1);
+         refresh(()=>moveSender(offset));
+        },
+        child:NotificationListener<ScrollNotification>(
         onNotification:(notification){
          if(selectedSender==null||
             notification.metrics.axis!=Axis.vertical||
             notification.metrics.extentAfter>360)return false;
-         final count=bySender[selectedSender]?.length??0;
+         final count=visibleSenderRows.length;
          if(messageWindow.visibleCount(count)>=count)return false;
          // M486: do not post a frame callback inside the sender picker:
          // this route must stay mounted throughout nested SMS editing.
@@ -137,7 +425,7 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
          unawaited(Future<void>.delayed(Duration.zero,(){
           pageRevealScheduled=false;
           if(!ctx.mounted||selectedSender!=requestedSender)return;
-          final latest=bySender[requestedSender]?.length??0;
+          final latest=visibleSenderRows.length;
           if(messageWindow.visibleCount(latest)<latest){
            refresh(()=>messageWindow.revealNext(latest));
           }
@@ -147,11 +435,16 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
         child:ListView.builder(
         key:Key(selectedSender==null?'waffra-sms-sender-list':
          'waffra-sms-sender-transactions'),
-        itemCount:selectedSender==null?senders.length:
-         messageWindow.visibleCount(bySender[selectedSender]?.length??0),
+        itemCount:selectedSender==null?visibleSenderNames.length:
+         messageWindow.visibleCount(visibleSenderRows.length),
         itemBuilder:(rowContext,index){
          if(selectedSender==null){
-          final sender=senders[index],count=bySender[sender]!.length;
+          final sender=visibleSenderNames[index];
+          final count=selectedDay==null?bySender[sender]!.length:
+           bySender[sender]!.where((row){
+            final id=row['id'];
+            return id is String&&calendarIndex.matchesId(id,selectedDay!);
+           }).length;
           return Card(
            margin:const EdgeInsets.symmetric(horizontal:13,vertical:5),
            elevation:0,
@@ -184,10 +477,11 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
             onTap:()=>refresh((){
              selectedSender=sender;
              messageWindow.reset();
+             refreshReviewIds();
             }),
            ));
          }
-         final item=bySender[selectedSender]![index];
+         final item=visibleSenderRows[index];
          final id=item['id'],at=item['receivedAt'];
          final date=at is int?DateTime.fromMillisecondsSinceEpoch(at)
           .toLocal().toString().substring(0,16):'';
@@ -212,10 +506,11 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
               'Unknown sender':'مرسل غير محدد');
             bySender..clear()..addAll(fresh.bySender);
             senders..clear()..addAll(fresh.senders);
+            rebuildCalendarIndex();
             refreshReviewIds();
             final active=allReviewIds.toSet();
             selectedIds.removeWhere((selected)=>!active.contains(selected));
-            if(selectedSender!=null&&!senders.contains(selectedSender)){
+            if(selectedSender!=null&&!visibleSenderNames.contains(selectedSender)){
              selectedSender=null;
              messageWindow.reset();
             }
@@ -304,7 +599,7 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
             const <String>{'income','expense','transfer'}.contains(suggestedKind)?
              suggestedKind:null),
          );
-        }))),
+        })))),
        if(selectedIds.isNotEmpty)Padding(
         padding:const EdgeInsets.fromLTRB(12,8,12,4),
         child:SizedBox(width:double.infinity,child:FilledButton.icon(
@@ -443,6 +738,7 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
              rows.removeWhere((row)=>done.contains(row['id']));
             }
             senders.removeWhere((sender)=>bySender[sender]!.isEmpty);
+            rebuildCalendarIndex();
             refreshReviewIds();
             selectedIds.removeAll(done);
            }

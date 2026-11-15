@@ -1,66 +1,60 @@
 {
   "contract_version": 1,
-  "change_id": "M983-ISSUE689-DIRECT-SMS-TYPED-EDITOR-PREFILL-REFRESH-20261115",
-  "human_scope_review": "Owner 2026-11-15 requests direct income/expense/transfer SMS templates, safe auto-filled title, amount, date, category and bank provider suggestions, no second three-way type choice on edit, and immediate sender review list update and rule status after saving. Existing native secured ID and account-SQLCipher writer remain; direct transfer SMS uses two-owner-account verified form, and manual transfer for uncertain evidence remains unacknowledged. One source-bounded native review and editor view plus sender Inbox, executable new tests, existing M580/M669/M980 in mandatory M946; no hardware UAT or calendar/swipe conflated (separate issue). New pure M632 M983 display-only fallback reads shared M980 four-kind matches and sets suggestedOnly kind even without authoritative amount/category, only when owner rules are conflict-free and no OTP/pending/contradictory bank evidence. Never extends money or exclusion commit. One executable test covers three unmatched-amount kinds plus conflict.",
+  "change_id": "M984-ISSUE695-SMS-CALENDAR-THREE-DOTS-RTL-SENDER-PAGING-20261115",
+  "human_scope_review": "Owner explicitly requires beside Select All an interactive SMS calendar with days marked by 1, 2 or max 3 colored dots: income emerald, expense deep orange/red like existing compact activity card, transfer gold, paid due violet matching existing due card. Calendar counts owner-bound pending SMS by RECEIVED date and displays verified paid recurring/goal-dues as separate events/counter, never equating these to incoming SMS. Tap day filters sender list and review IDs including Select All; clear resets. Horizontal RTL/LTR sender swipes and visible prev/next arrows preserve valid multi-selected ID state, lazy visible window and nested scroll. Pure O(N) day index no SMS body/OTP persistence/finance authority. Seven synthetic+source tests include 2k cases, timezone/leap day, hidden day, status colors and existing M983/M980/M549 in M946. Strict M385 exact 7 files and two bounded Dart changes, M550 behavior, Android RTL screenshots needed. M550 on first M984 head identified obsolete `test/m940_sms_review_page_window_test.dart` positive assertion on old unfiltered `messageWindow.visibleCount(bySender[..].length)` and exactly 3 refresh calls; updated that EXISTING real test to assert exactly 9 refresh trigger sites and visibleSenderRows paging after day filters while retaining full sender ID selection. No production behavior changed to appease test. M486 exact-head full Flutter failure: pre-calendar legacy source test expected one-statement sender clear, but new guarded Back and arrow handlers reset sender and refresh the day-aware ID list. Preserve route, anti-ACK and nested review invariants with a real regex source contract (two controlled Back paths), never remove or skip original test. M984 saved-bank historical calendar: existing owner-verified MoneyEntry sourceType=sms contributes a DISTINCT booked count by entry.date, metadata-only ID/date/direction with unique ID dedupe; never categorized as a pending native SMS. The day filter provides a read-only lazy list and previously protected transactionDetails to view verified saved bank operations. Two runnable synthetic tests exercise pending+booked+due counts, dedupe, cap and no native ACK. Original 9-file M984 production and test scope unchanged.",
   "user_requested_changes": [
-    "Tap an SMS income, expense or transfer type to OPEN THAT EXACT existing editor directly without another three-way selector.",
-    "Prefill independently trusted SAR principal, title, current saved/default four-way category hints, bank provider and verified SMS date; never guess account identity or make an unconfirmed amount authoritative.",
-    "Editing a correctly classified SMS opens the same type rather than asking to select income/expense/transfer again; a transfer never saves as income/expense.",
-    "After editor saves and native ACK succeeds, immediately refresh current sender list and reclassify waiting rows using all four owner/default SMS rule kinds; preserve selected sender/multi-selection, status updates and safe failure retention.",
-    "Keep original SMS text visible where permitted, OTP hidden, no finance write until owner and account/date/category verified; test no duplicate and regression.",
-    "A recognized saved/default Income, Expense or Transfer rule must immediately update the displayed Needs Review status even when no verified SAR amount is available; display suggestedOnly rather than posting or ACKing money. Conflicts keep Needs Review."
+    "Add calendar icon directly beside the Select All SMS checkbox. Day marked by exactly 1 dot for 1 event, 2 dots for 2, capped at 3 for 3 or more, with entry colors aligned to income/expense/transfer/paid due activity cards.",
+    "Calendar is month navigable and selecting a date filters reviewed sender groups and pending SMS; expose exact SMS received count separately from existing confirmed paid due count and clear date filter.",
+    "Support moving freely among bank SMS senders by horizontal right/left swipes respecting RTL/LTR plus accessible previous/next buttons; reset sender pagination without dropping selected IDs or touching ledger.",
+    "Select All and bulk exclusion target ONLY currently visible day/sender rows, and other dates remain unmodified; maintain selection correctly on saved SMS/ACK refreshing pending state.",
+    "Keep all four saved/default rules, original SMS/OTP protection, no financial auto posting or new permissions; test synthetic high-volume dates, colors, swipes and counts in M946 and device screenshot QA.",
+    "Reconcile preexisting M940 pagination source tests with the owner-approved date-filtered sender rows, preserving original full-ID bulk selection and pagination invariants.",
+    "Keep existing M486 nested SMS Back/navigation test active; reconcile its source assertion with RTL calendar sender state reset, protecting BOTH guarded Back and visible-arrow callbacks.",
+    "Calendar must also include existing saved bank SMS transactions on their financial entry date, with independently counted/deduped booked items and guarded read-only daily drilldown; do not create another money entry or store message body."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "lib/waffra_home_entry_sheet.part.dart",
-    "lib/waffra_home_sms_confirmation.part.dart",
     "lib/waffra_home_sms_inbox.part.dart",
+    "lib/waffra_sms_review_groups.dart",
     "scripts/qa/m946_full_app_smoke_matrix.py",
-    "test/m983_sms_direct_kind_prefill_refresh_test.dart",
-    "lib/main.dart"
+    "test/m984_sms_calendar_dots_sender_swipe_test.dart",
+    "test/m940_sms_review_page_window_test.dart",
+    "test/m486_sms_back_navigation_source_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
   "bounded_sections": {
-    "lib/waffra_home_entry_sheet.part.dart": [
-      {
-        "start": "  // Direct SMS corrections and native review use the same latest offline",
-        "end": "  String? selectedParentId;"
-      },
-      {
-        "start": "    Widget operationPicker(){",
-        "end": "     if(manualIncomeOverride!=null&&initial==null&&!sms){"
-      }
-    ],
-    "lib/waffra_home_sms_confirmation.part.dart": [
-      {
-        "start": " Widget _m615ReviewDetail(",
-        "end": " Future<void> _reviewAutoSmsCandidates({String? targetId})async {"
-      },
-      {
-        "start": " Future<void> _reviewAutoSmsCandidates({String? targetId})async {",
-        "end": null
-      }
-    ],
     "lib/waffra_home_sms_inbox.part.dart": [
       {
         "start": " Future<void> _openAutoSmsInbox()async{",
         "end": null
       }
     ],
+    "lib/waffra_sms_review_groups.dart": [
+      {
+        "start": "class WaffraSmsReviewGroups {",
+        "end": null
+      }
+    ],
     "scripts/qa/m946_full_app_smoke_matrix.py": [
       {
         "start": "FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {",
-        "end": "    \"m981_history_live_otp_atomic_parity\""
+        "end": "    \"m983_sms_direct_kind_editor_prefill_live_review_refresh\""
       }
     ],
-    "lib/main.dart": [
+    "test/m940_sms_review_page_window_test.dart": [
       {
-        "start": "Map<String,Object?> waffraM632ClassifySmsQueue(",
-        "end": "List<String> splitBankMessages("
+        "start": " test('M940 production review wires page window and original full-ID selection',(){",
+        "end": null
+      }
+    ],
+    "test/m486_sms_back_navigation_source_test.dart": [
+      {
+        "start": " test('M486 #410 sender picker stays below SMS review/editor',(){",
+        "end": " test('M486 #410 canceling nested editor cannot acknowledge bank SMS',(){"
       }
     ]
   }

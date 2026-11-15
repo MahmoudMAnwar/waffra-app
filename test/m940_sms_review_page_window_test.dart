@@ -46,9 +46,15 @@ void main(){
   expect(source,contains('allReviewIds=List<String>.unmodifiable(combined);'));
   expect(source,contains('senderIds[selectedSender]??const <String>[]'));
   expect(source,contains('idsCache.clear();'));
-  expect(RegExp(r'refreshReviewIds\(\);').allMatches(source).length,3);
+  expect(RegExp(r'refreshReviewIds\(\);').allMatches(source).length,9);
   expect(source,contains('NotificationListener<ScrollNotification>('));
-  expect(source,contains('messageWindow.visibleCount(bySender[selectedSender]?.length??0)'));
+  // M984 date-filtered list pages only the currently visible sender rows;
+  // full native ID index remains available for appropriate bulk selection.
+  expect(source,contains('messageWindow.visibleCount(visibleSenderRows.length)'));
+  expect(source,contains('final count=visibleSenderRows.length;'));
+  expect(source,contains('final latest=visibleSenderRows.length;'));
+  expect(source,contains('allReviewIds=List<String>.unmodifiable(combined);'));
+  expect(source,contains('selectedDay==null?source:source.where('));
   expect(source,contains('selectedIds.addAll(visibleIds());'));
   expect(source,contains('selectedIds.removeAll(visibleIds());'));
   expect(source,contains('messageWindow.revealNext(latest)'));
