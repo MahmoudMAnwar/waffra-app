@@ -88,7 +88,10 @@ void main(){
   expect(flow,contains('verified=await bridge.readVerifiedAccounts();'));
   expect(flow,contains('assigned[0]=createdFromSmsAccountId'));
   expect(flow,contains('if(approved!=true)return null;'));
-  expect(flow,contains('generation:verified.witness.generation'));
+  expect(flow,contains('generation:latest.witness.generation'));
+  expect(flow,contains('generation:fresh.witness.generation'));
+  expect(flow,contains('final latest=await bridge.readVerifiedAccounts();'));
+  expect(flow,contains('final fresh=await bridge.readVerifiedAccounts();'));
   expect(flow.indexOf('if(approved!=true)return null;'),
    greaterThan(flow.indexOf('assigned[0]=createdFromSmsAccountId')));
   expect(flow,isNot(contains('commitConfirmedSms(')));
