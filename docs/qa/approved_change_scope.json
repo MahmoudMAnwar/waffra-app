@@ -1,48 +1,34 @@
 {
   "contract_version": 1,
-  "change_id": "M983-ISSUE689-DIRECT-SMS-TYPED-EDITOR-PREFILL-REFRESH-20261115",
-  "human_scope_review": "Owner 2026-11-15 requests direct income/expense/transfer SMS templates, safe auto-filled title, amount, date, category and bank provider suggestions, no second three-way type choice on edit, and immediate sender review list update and rule status after saving. Existing native secured ID and account-SQLCipher writer remain; direct transfer SMS uses two-owner-account verified form, and manual transfer for uncertain evidence remains unacknowledged. One source-bounded native review and editor view plus sender Inbox, executable new tests, existing M580/M669/M980 in mandatory M946; no hardware UAT or calendar/swipe conflated (separate issue). New pure M632 M983 display-only fallback reads shared M980 four-kind matches and sets suggestedOnly kind even without authoritative amount/category, only when owner rules are conflict-free and no OTP/pending/contradictory bank evidence. Never extends money or exclusion commit. One executable test covers three unmatched-amount kinds plus conflict.",
+  "change_id": "M984-ISSUE691-SMS-SENDER-SWIPE-THREE-DOT-CALENDAR-20261115",
+  "human_scope_review": "Owner requested horizontal swipe between bank SMS senders and calendar beside Select All showing one per-message dot, max 3, from the currently pending encrypted SMS list only. Colors mirror Financial Activity income emerald, expense deep orange, transfer gold and due purple; uncertain neutral. Selecting a date filters displayed senders and rows while preserving selected IDs across date changes; clear restores all. The new day aggregation and widget are presentation-only, with no SMS/finance writes and no speculation about already ACKed/archived arrival dates. Adds real widget RTL and 0/1/2/3+ dot tests, source sender selection/paging checks, M946 with old M973/M548; bounded branch stacked on #690 M983. Real Android UAT remains. One old M940 source contract asserted unfiltered group length before the owner asked for day-filtered visual rows; change ONLY that assertion to page from displayBySender filtered snapshot. This preserves paging behavior and reconciles M550 checked positive assumption.",
   "user_requested_changes": [
-    "Tap an SMS income, expense or transfer type to OPEN THAT EXACT existing editor directly without another three-way selector.",
-    "Prefill independently trusted SAR principal, title, current saved/default four-way category hints, bank provider and verified SMS date; never guess account identity or make an unconfirmed amount authoritative.",
-    "Editing a correctly classified SMS opens the same type rather than asking to select income/expense/transfer again; a transfer never saves as income/expense.",
-    "After editor saves and native ACK succeeds, immediately refresh current sender list and reclassify waiting rows using all four owner/default SMS rule kinds; preserve selected sender/multi-selection, status updates and safe failure retention.",
-    "Keep original SMS text visible where permitted, OTP hidden, no finance write until owner and account/date/category verified; test no duplicate and regression.",
-    "A recognized saved/default Income, Expense or Transfer rule must immediately update the displayed Needs Review status even when no verified SAR amount is available; display suggestedOnly rather than posting or ACKing money. Conflicts keep Needs Review."
+    "Navigate between SMS sender groups using horizontal right/left swipes while retaining vertical message paging and multi-selection.",
+    "Add calendar icon immediately next to Select All; show accurate number of review SMS per day as 1,2,or at most 3 colored dots regardless of larger actual count.",
+    "Match income, expense, transfer, due colors to existing financial activity cards; unknown/pending security messages neutral.",
+    "Filter inbox senders and SMS rows to picked day, with actual visible counts and a Show All reset; preserve owner selection across date/sender changes and clear only ACKed IDs.",
+    "Keep original confirmation, SQLCipher, native SMS, footer + control and review security unchanged; test widget/month/RTL and sender filter in M946 experience.",
+    "Update the obsolete M940 source test that expected unfiltered bySender paging, to assert actual day-filtered displayBySender while retaining identical pagination bounds."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "lib/waffra_home_entry_sheet.part.dart",
-    "lib/waffra_home_sms_confirmation.part.dart",
+    "lib/main.dart",
     "lib/waffra_home_sms_inbox.part.dart",
+    "lib/waffra_sms_review_calendar.dart",
     "scripts/qa/m946_full_app_smoke_matrix.py",
-    "test/m983_sms_direct_kind_prefill_refresh_test.dart",
-    "lib/main.dart"
+    "test/m984_sms_calendar_sender_swipe_test.dart",
+    "test/m940_sms_review_page_window_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
   "bounded_sections": {
-    "lib/waffra_home_entry_sheet.part.dart": [
+    "lib/main.dart": [
       {
-        "start": "  // Direct SMS corrections and native review use the same latest offline",
-        "end": "  String? selectedParentId;"
-      },
-      {
-        "start": "    Widget operationPicker(){",
-        "end": "     if(manualIncomeOverride!=null&&initial==null&&!sms){"
-      }
-    ],
-    "lib/waffra_home_sms_confirmation.part.dart": [
-      {
-        "start": " Widget _m615ReviewDetail(",
-        "end": " Future<void> _reviewAutoSmsCandidates({String? targetId})async {"
-      },
-      {
-        "start": " Future<void> _reviewAutoSmsCandidates({String? targetId})async {",
-        "end": null
+        "start": "import 'waffra_sms_review_groups.dart';",
+        "end": "import 'waffra_sms_review_page_window.dart';"
       }
     ],
     "lib/waffra_home_sms_inbox.part.dart": [
@@ -54,13 +40,7 @@
     "scripts/qa/m946_full_app_smoke_matrix.py": [
       {
         "start": "FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {",
-        "end": "    \"m981_history_live_otp_atomic_parity\""
-      }
-    ],
-    "lib/main.dart": [
-      {
-        "start": "Map<String,Object?> waffraM632ClassifySmsQueue(",
-        "end": "List<String> splitBankMessages("
+        "end": "    \"m983_sms_direct_kind_editor_prefill_live_review_refresh\""
       }
     ]
   }
