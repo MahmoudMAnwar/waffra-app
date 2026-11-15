@@ -104,8 +104,12 @@ void main() {
   expect(page,contains('linkUnassignedEntry('));
   expect(page,contains('m681-opening-balance-attestation'));
   expect(page,contains('openingExcludesHistory:openingVerified'));
-  expect(page,contains('readUnassignedPage('));
+  // M952: historical accountless pages use verified SQLCipher keysets,
+  // not an OFFSET walk through every imported older record.
+  expect(page,isNot(contains('readUnassignedPage(')));
+  expect(page,contains("unassignedOnly:filter=='none'"));
   expect(page,contains('readKeysetHistoryPage('));
+  expect(api,contains('unassignedOnly:unassignedOnly'));
   expect(page,contains('_m944MonthCursors[pageOffset]'));
   expect(page,contains('if(page?.hasMore==true)TextButton('));
   expect(page,isNot(contains('data.entries.where(')));
