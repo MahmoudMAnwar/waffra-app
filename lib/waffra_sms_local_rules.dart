@@ -256,7 +256,20 @@ abstract final class WaffraSmsLocalRules {
      (bankKind==WaffraBankOperationKind.uncertain||
       (rule.builtIn&&rule.id.startsWith('sa_excluded_')))))&&
    matches(rule,body,sender:sender)).toList(growable:false);
-  if(eligible.isEmpty)return null;
+  if(eligible.isEmpty){
+   // New app senders may deliver a genuine authentication challenge using
+   // a phrase outside the curated Saudi seeds. This is NOT an amount rule:
+   // only the independently recognized security challenge, with no posted
+   // financial evidence, qualifies for automatic pending-queue exclusion.
+   // Never suppress a completed bank debit/transfer mixed with an OTP.
+   if(!posted&&WaffraBankSmsFactsParser.isVerificationChallenge(body)){
+    return const WaffraSmsLocalRule(
+     id:'builtin_verified_challenge',name:'رسالة تحقق',
+     keywords:['otp'],kind:'excluded',income:false,category:'',
+     builtIn:true,autoPost:false);
+   }
+   return null;
+  }
   if(eligible.map((r)=>r.resolvedKind).toSet().length>1)return null;
   return eligible.first;
  }
