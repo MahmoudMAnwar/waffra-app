@@ -87,7 +87,7 @@ Four separate Python audit mutation tests are **not** counted among these 43. Ne
 
 ## M950 extended audit: 46 more distinct functional cases (15 Nov 2026)
 
-**Total on PR #656 is now 89 distinct new functional test() cases**: 43 M949 + 46 M950. The additional 46 consist of 28 pure verified source decision cases and 18 disposable encrypted SQLCipher cross-month projection cases; they are not fixture loop input counts.
+**At the M950 milestone, the PR had 89 distinct new functional test() cases**: 43 M949 + 46 M950. The additional 46 consist of 28 pure verified source decision cases and 18 disposable encrypted SQLCipher cross-month projection cases; they are not fixture loop input counts.
 
 ### M950-P — SMS, recurring due, budget and goal-source decisions (28 new functional cases)
 
@@ -153,3 +153,41 @@ Compared with: Baseline M448 encrypted context single-month, M684 month reader, 
 `scripts/qa/m950_extended_functional_audit.py` must verify exactly P01–P28 and S01–S18, with meaningful unique titles, zero skipped tests, zero duplicate names from existing cases, and no source-text-only checks. It joins M949 audit in the mandatory M946 feature matrix. Four separate Python audit self-tests are not counted in the 89 Flutter functional cases.
 
 **Explicit limits:** A finite suite cannot prove all bugs eliminated. Actual mobile biometrics, old private backup restore and OS SMS/notification runtime still require physical-device evidence.
+
+
+## M951: 26 new SMS eligibility and owner-isolated budget alert cases
+
+**Final new functional test count on PR #656: 115** = 43 M949 + 46 M950 + 26 M951. This is the number of executable Dart `test()` cases, not the number of files or the variable data rows inside test loops. There are six NEW Dart test files; separate Python audit unit tests are not counted.
+
+Compared with existing `test/waffra_auto_sms_policy_test.dart` and `test/m444_budget_alert_once_test.dart`: M951 checks independent boundary and combined eligibility conditions and owner/budget/year/time isolation beyond basic allowance, blanket invalid amount, same-owner threshold and same-key concurrency already present.
+
+| New ID | Distinct direct user behavior |
+|---|---|
+| M951-A01 | untrusted alphabetic sender cannot post valid completed bank purchase |
+| M951-A02 | fake BANK label with long phone digits is untrusted despite bank substring |
+| M951-A03 | foreign currency flag blocks otherwise valid Saudi purchase |
+| M951-A04 | missing verified account link blocks posting even with bank sender |
+| M951-A05 | inactive user category rejects valid-looking card expense |
+| M951-A06 | source date exactly two days ahead stays within supported window |
+| M951-A07 | source date two days plus one second ahead requires manual review |
+| M951-A08 | source date exactly 365 days before arrival is still eligible |
+| M951-A09 | source date older than 365 days by one second needs review |
+| M951-A10 | missing extracted money amount is not a zero-valued posting |
+| M951-A11 | parsed fractional halala is rejected without automatic rounding |
+| M951-A12 | parsed amount beyond one-million SAR threshold must be reviewed |
+| M951-A13 | verified expense cannot silently become income when parser direction conflicts |
+| M951-A14 | missing verified bank and paused category are not bypassed together |
+| M951-A15 | blank SMS is ignored before sender or money validation |
+| M951-A16 | oversized SMS above review allowance is ignored before financial posting |
+| M951-B01 | two budgets under same owner do not share a threshold token |
+| M951-B02 | two owners of the same budget have independent alert history |
+| M951-B03 | changing calendar day inside same month does not repeat warning |
+| M951-B04 | same month next year receives a new independent alert threshold |
+| M951-B05 | blank owner never persists invalid notification history |
+| M951-B06 | blank budget identifier never claims another budget warning |
+| M951-B07 | invalid progress stages cannot create owner notification |
+| M951-B08 | repeated percentage values in one batch count as a single stage |
+| M951-B09 | out-of-order threshold jump marks earlier crossed levels as already used |
+| M951-B10 | simultaneous alerts for different budget owners each survive isolation |
+
+The mandatory M946 manifest enforces a separate `scripts/qa/m951_last_functional_gap_audit.py` to reject any missing/duplicate/skipped source-linked case. Host CI cannot certify real Android SMS receipt/notification/biometrics or an owner's private restored backup.

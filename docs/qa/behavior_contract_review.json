@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "pr": "M949/M950 — 89 NEW nonduplicate functional tests on same Draft PR #656",
+  "pr": "M949–M951 — 115 NEW nonduplicate executable functional tests on Draft PR #656",
   "issue": "Issue #655 — nonduplicated functional test journeys",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main after merged PR #654 at b624100a040d2a05c02d9ea9827dd36494c39538",
@@ -5030,6 +5030,33 @@
         "Selected bank month queries never reveal an accountless or different bank entry and cannot double-post internal transfers as income/expense.",
         "Historical association requires consent and preserves signed integer halalas, old IDs, source and other bank links.",
         "Disposable encrypted fixtures only; Android SMS interception, biometric, real device backup and external notifications remain device-only."
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m946-whole-app-feature-smoke.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ]
+    },
+    {
+      "id": "M951-26-SMS-ELIGIBILITY-AND-ALERT-ISOLATION",
+      "issue": "#655 / Draft PR #656; user's final gap sweep on 2026-11-15",
+      "previous_behavior": "SMS allow/review decisions at exact verified source-date edges, missing account/category intersection, spoofed bank sender with long numeric digits, one-halala precision and budget alert dedup across owners, budgets and calendar months lacked dedicated multi-condition M951 regression cases.",
+      "approved_behavior": "Test actual WaffraAutoSmsPolicy.decide with 16 independently named synthetic bank purchase scenarios and actual WaffraBudgetAlertOnce.claim with 10 independently named SharedPreferences isolated user/budget/month/replay cases, plus exact IDs and uniqueness anti-skipped gate. Add all 26 to M946 every-head smoke; total 115 new functional tests in M949, M950, M951.",
+      "source_paths": [
+        "lib/waffra_auto_sms_policy.dart",
+        "lib/waffra_budget_alert_once.dart",
+        "scripts/qa/m946_full_app_smoke_matrix.py",
+        "scripts/qa/m951_last_functional_gap_audit.py"
+      ],
+      "test_paths": [
+        "test/m951_sms_eligibility_and_budget_alert_isolation_test.dart",
+        "test/qa/m951_last_functional_gap_audit_test.py"
+      ],
+      "safety_invariants": [
+        "Untrusted, invalid, incomplete or not account-linked bank SMS must never become a posted income/expense automatically.",
+        "Only confirmed financial source-date windows and halala accuracy can be accepted; mismatched income/expense direction is rejected.",
+        "Budget notices are independent per owner, budget ID, calendar month, never replay a crossed stage and do not mutate ledger state.",
+        "All 115 new test() cases appear in mandatory M946 with zero skipped; physical Android SMS and notification actual delivery unproven.",
+        "Existing original tests, production code and real private backup unchanged."
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/m946-whole-app-feature-smoke.yml",

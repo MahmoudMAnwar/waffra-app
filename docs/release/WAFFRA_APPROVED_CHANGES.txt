@@ -863,3 +863,8 @@ M940/M941 Draft PR #648 M486 regression correction (unreleased): coalesced futur
 - 46 additional nonduplicate executable Dart test cases: 28 SMS verified source/destination, recurring payment override, budget and goal movement policy; 18 SQLCipher month-account history, scoped paging, account budget and consent association scenarios.
 - New total = 89 executable functional tests across five new Dart files. Existing test suites/production app unchanged. M946 mandatory CI shards and M950 strict identity audit validate exact-head evidence; Python mutation audit tests separately excluded from functional count.
 - These host tests do NOT prove physical Android biometric, SMS permissions or owner's password-authenticated legacy backup.
+
+[M951 final risk-based gap sweep in Draft #656 — 2026-11-15, NOT RELEASED]
+- 26 additional executable functional tests for bank SMS pre-posting eligibility and budget alert unique owner/month scope, plus fail-closed M951 case audit.
+- Final newly added test() total: 115 across six NEW Dart files (M949 43 + M950 46 + M951 26), all in mandatory M946 smoke. Existing tests and all production code remain unchanged. Four+four+two Python audit tests are separate and do not inflate functional count.
+- Still require exact-head CI pass/failed/skipped and real Android UAT for biometric, actual SMS delivery and encrypted backup compatibility.
