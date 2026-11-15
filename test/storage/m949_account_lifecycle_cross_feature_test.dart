@@ -12,17 +12,17 @@ void main(){
  late Directory dir;
  late WaffraEncryptedStore db;
  const secret='m949-disposable-private-test-finance-key';
- WaffraAccountsRepository get accounts=>WaffraAccountsRepository(
+ WaffraAccountsRepository accounts()=>WaffraAccountsRepository(
    db:db,experimentalEnabled:true);
  Future<void> make(String id,int amount,{String kind='bank',String? name})=>
-  accounts.createAccount(id:id,name:name??id,kind:kind,openingMinor:amount,
+  accounts().createAccount(id:id,name:name??id,kind:kind,openingMinor:amount,
    createdIso:'2026-11-15T09:00:00',userConfirmed:true);
- Future<Map<String,int>> balances()async=>{for(final a in await accounts.balances())
+ Future<Map<String,int>> balances()async=>{for(final a in await accounts().balances())
   a.id:a.balanceMinor};
  Future<int> count(String table)async=>(await db.customSelect(
   'SELECT count(*) AS n FROM '+table).getSingle()).read<int>('n');
  Future<bool> move(String id,String from,String to,int minor,{String note=''})=>
-  accounts.transfer(id:id,fromAccountId:from,toAccountId:to,
+  accounts().transfer(id:id,fromAccountId:from,toAccountId:to,
    amountMinor:minor,occurredIso:'2026-11-15T10:00:00',
    note:note,userConfirmed:true);
  Future<void> insertOld(String id,int minor,{bool income=true})async{
@@ -52,8 +52,8 @@ void main(){
   await move('m1','bank','wallet',15000);
   await move('m2','wallet','bank',2500);
   final old=await balances();
-  await accounts.renameAccount(id:'bank',name:'   مصرف مرتب   ',userConfirmed:true);
-  final rows=await accounts.balances();
+  await accounts().renameAccount(id:'bank',name:'   مصرف مرتب   ',userConfirmed:true);
+  final rows=await accounts().balances();
   expect(rows.singleWhere((r)=>r.id=='bank').name,'مصرف مرتب');
   expect({for(final a in rows)a.id:a.balanceMinor},old);
   expect(await count('fresh_finance_internal_transfers'),2);
@@ -74,8 +74,8 @@ void main(){
  test('M949-A03 drain account to exact zero then archive, future source rejected',()async{
   await make('old',3300);await make('next',0);
   await move('empty-out','old','next',3300);
-  await accounts.archiveEmptyAccount(id:'old',userConfirmed:true);
-  expect((await accounts.balances()).singleWhere((a)=>a.id=='old').archived,true);
+  await accounts().archiveEmptyAccount(id:'old',userConfirmed:true);
+  expect((await accounts().balances()).singleWhere((a)=>a.id=='old').archived,true);
   await expectLater(move('after-archive','old','next',1),throwsStateError);
   expect(await balances(),{'old':0,'next':3300});
   expect(await count('fresh_finance_internal_transfers'),1);
@@ -83,7 +83,7 @@ void main(){
 
  test('M949-A04 zero-balance archived destination cannot receive new transfer',()async{
   await make('live',250);await make('retired',0);
-  await accounts.archiveEmptyAccount(id:'retired',userConfirmed:true);
+  await accounts().archiveEmptyAccount(id:'retired',userConfirmed:true);
   await expectLater(move('to-closed','live','retired',10),throwsStateError);
   expect(await balances(),{'live':250,'retired':0});
   expect(await count('fresh_finance_internal_transfers'),0);
@@ -93,17 +93,17 @@ void main(){
   await make('original',13579,kind:'bank',name:'Original');
   await expectLater(make('original',99999,kind:'wallet',name:'Replacement'),
    throwsA(anything));
-  expect((await accounts.balances()).single.kind,'bank');
-  expect((await accounts.balances()).single.name,'Original');
+  expect((await accounts().balances()).single.kind,'bank');
+  expect((await accounts().balances()).single.name,'Original');
   expect(await balances(),{'original':13579});
  });
 
  test('M949-A06 failed whitespace rename does not modify transfer ledger',()async{
   await make('account',500);await make('other',0);
   await move('prior','account','other',1);
-  await expectLater(accounts.renameAccount(
+  await expectLater(accounts().renameAccount(
    id:'account',name:' \t ',userConfirmed:true),throwsArgumentError);
-  expect((await accounts.balances()).first.name,'account');
+  expect((await accounts().balances()).first.name,'account');
   expect(await balances(),{'account':499,'other':1});
   expect(await count('fresh_finance_internal_transfers'),1);
  });
@@ -111,9 +111,9 @@ void main(){
  test('M949-A07 81 Unicode runes rejected on rename while saved money survives',()async{
   await make('account',9100);
   final invalid=List<String>.filled(81,'هـ').join();
-  await expectLater(accounts.renameAccount(id:'account',name:invalid,
+  await expectLater(accounts().renameAccount(id:'account',name:invalid,
    userConfirmed:true),throwsArgumentError);
-  expect((await accounts.balances()).single.name,'account');
+  expect((await accounts().balances()).single.name,'account');
   expect(await balances(),{'account':9100});
  });
 
@@ -127,7 +127,7 @@ void main(){
 
  test('M949-A09 corrupt account timestamp never creates historical owner',()async{
   await make('valid',250);
-  await expectLater(accounts.createAccount(id:'broken',name:'Broken',
+  await expectLater(accounts().createAccount(id:'broken',name:'Broken',
    kind:'bank',openingMinor:99,createdIso:'not-an-ISO-time',
    userConfirmed:true),throwsArgumentError);
   expect(await balances(),{'valid':250});
@@ -164,13 +164,13 @@ void main(){
   await make('first',0);await make('second',0);
   await insertOld('old-linked',525);
   await insertOld('old-orphan',750);
-  await accounts.linkEntry(entryId:'old-linked',accountId:'first',
+  await accounts().linkEntry(entryId:'old-linked',accountId:'first',
    linkedIso:'2026-11-15T10:01:00',userConfirmed:true);
-  final assigned=await accounts.linkHistoricalEntries(
+  final assigned=await accounts().linkHistoricalEntries(
    accountId:'second',linkedIso:'2026-11-15T10:02:00',
    userConfirmed:true,verifiedMigration:true);
   expect(assigned,1);
-  expect(await accounts.linkHistoricalEntries(accountId:'second',
+  expect(await accounts().linkHistoricalEntries(accountId:'second',
    linkedIso:'2026-11-15T10:03:00',userConfirmed:true,
    verifiedMigration:true),0);
   expect(await balances(),{'first':525,'second':750});
@@ -184,7 +184,7 @@ void main(){
 
  test('M949-A14 linking missing transaction fails foreign key, never creates phantom link',()async{
   await make('bank',3333);
-  await expectLater(accounts.linkEntry(entryId:'never-posted',
+  await expectLater(accounts().linkEntry(entryId:'never-posted',
    accountId:'bank',linkedIso:'2026-11-15T10:00:00',userConfirmed:true),
    throwsA(anything));
   expect(await count('fresh_finance_account_entry_links'),0);
