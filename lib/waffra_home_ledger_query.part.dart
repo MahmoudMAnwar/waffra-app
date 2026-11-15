@@ -4,6 +4,23 @@ part of 'main.dart';
 /// The verified ledger remains owned by SQLCipher; no write is performed.
 final class WaffraHomeLedgerReadCache {
  WaffraFinancePeriodIndex? _snapshot;
+ List<MoneyEntry>? _scopedMonthSource;
+ Set<String>? _scopedMonthIds;
+ List<MoneyEntry>? _scopedMonthResult;
+
+ /// A verified finance ID-set is immutable for one source witness.
+ /// A different ID-set object or month never shares an account filter.
+ List<MoneyEntry> scopedMonth(
+   List<MoneyEntry> monthRows,Set<String> verifiedEntryIds){
+  final cached=_scopedMonthResult;
+  if(cached!=null&&identical(_scopedMonthSource,monthRows)&&
+      identical(_scopedMonthIds,verifiedEntryIds))return cached;
+  final filtered=List<MoneyEntry>.unmodifiable(
+    monthRows.where((e)=>verifiedEntryIds.contains(e.id)));
+  _scopedMonthSource=monthRows;
+  _scopedMonthIds=verifiedEntryIds;
+  return _scopedMonthResult=filtered;
+ }
  WaffraFinancePeriodIndex index(List<MoneyEntry> source)=>
   _snapshot??=WaffraFinancePeriodIndex(source);
  // M944: only a bounded number of cards may be built during a single Home
@@ -19,7 +36,13 @@ final class WaffraHomeLedgerReadCache {
   return true;
  }
  void resetExpanded(){_expandedLimit=expandedPageSize;}
- void invalidate(){_snapshot=null;resetExpanded();}
+ void invalidate(){
+  _snapshot=null;
+  _scopedMonthSource=null;
+  _scopedMonthIds=null;
+  _scopedMonthResult=null;
+  resetExpanded();
+ }
 }
 
 /// M941: the original dashboard search/date/amount/type/category predicate

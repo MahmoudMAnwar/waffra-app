@@ -8,6 +8,21 @@
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
     {
+      "id": "M961-VERIFIED-MONTH-CACHE-IDENTITY-AND-INVALIDATION",
+      "issue": "Issue #657 / Draft PR #665",
+      "previous_behavior": "Every Home and Budget frame can rematerialize the same month list and repeat the same account-ID filter over an unchanged verified ledger.",
+      "approved_behavior": "One immutable monthly list per indexed source revision, plus a single last-account filtered result cached by month list and exact authenticated SQLCipher ID-set object reference; previous explicit ledger mutation/restore invalidation drops all cached output.",
+      "source_paths": ["lib/waffra_finance_period_index.part.dart", "lib/waffra_home_ledger_query.part.dart", "lib/waffra_home_verified_account_flows.part.dart"],
+      "test_paths": ["test/m961_verified_month_scope_cache_test.dart", "test/m684_finance_period_index_test.dart"],
+      "ci_workflows_to_watch": [".github/workflows/m946-whole-app-feature-smoke.yml"],
+      "safety_invariants": [
+        "Fail closed on missing bank source context and on null authenticated membership set before this display-only cache is invoked.",
+        "Never reuse account A filtered rows for account B, a changed source ID set, a different month or after ledger invalidation.",
+        "Preserve original month order, duplicate source IDs semantics and immutable read-only lists.",
+        "No new finance writer or migration, unassigned account ownership, FAB/Snackbar, RTL or approved card redesign."
+      ]
+    },
+    {
       "id": "M960-GROUPED-SQLCIPHER-ACCOUNT-BALANCE-PARITY",
       "issue": "Issue #657 / Draft PR #665",
       "previous_behavior": "Every verified account balance performed separately correlated SQL SUMs over entries, due, incoming and outgoing transfers and savings sources, repeating finance scans per bank.",

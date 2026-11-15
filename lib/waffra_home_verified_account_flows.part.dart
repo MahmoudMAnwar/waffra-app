@@ -128,7 +128,7 @@ extension _WaffraHomeVerifiedAccountFlows on _HomeScreenState {
   if(_m467AccountContext==null)return const <MoneyEntry>[];
   final ids=_m684ScopedEntryIds;
   if(ids==null)return const <MoneyEntry>[];
-  return monthRows.where((e)=>ids.contains(e.id)).toList(growable:false);
+  return _m940LedgerReads.scopedMonth(monthRows,ids);
  }
 
  double? _m942VerifiedAllAccountsBalance(){

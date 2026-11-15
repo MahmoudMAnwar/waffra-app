@@ -59,3 +59,8 @@ Stacked work on #658 / Issue #657. PR base is `feat/m952-five-axes-followup-2026
 
 - The previously per-account correlated income/expense, current-cash goal due, inbound/outbound transfer, and goal wallet-source sum is now four independently grouped SQLCipher source CTE projections joined once to each account; each bank/wallet/archived account keeps exactly the same integer halala outcome, schema witness and account display order. No joins multiply unrelated money streams.
 - Mandatory disposable SQLCipher regression with 360 source transactions, 12 two-sided transfers, a partial due split, 3 attributed goal movements and a bankless/archived account verifies new vs original SQL byte-for-byte IDs and amounts and repeats after encrypted cold reopen. No finance write, private backup or Android acceptance implied.
+
+## M961 — immutable month and last-account display view cache
+
+- The current read-session `WaffraFinancePeriodIndex` reuses a single unmodifiable list per month. `WaffraHomeLedgerReadCache.scopedMonth` keeps only the latest result for one exact immutable month list and the owner-verified account-ID set by identity. The existing ledger `invalidate()` drops all caches; even an equal-value but newly witnessed ID set is re-filtered. No account cash is calculated or reassigned.
+- The mandatory M946 experience test seeds 12,000 synthetic ledger entries and asserts source order, stable repeated identity, bank A→B isolation, fresh account witness, other months, and invalidation after insertion. Original Home/Goals/Dues/Snackbar/FAB unchanged. This tests host logic, not handset FPS.
