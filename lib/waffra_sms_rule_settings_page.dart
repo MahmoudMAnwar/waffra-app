@@ -620,9 +620,14 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
        'transfer'=>widget.english?'Transfers':'تحويل',
        _=>widget.english?'Excluded messages':'الرسائل المستبعدة',
       }),
-      subtitle:Text(widget.english?
-       '${saved.where((r)=>r.resolvedKind==kind).length} saved patterns':
-       '${saved.where((r)=>r.resolvedKind==kind).length} أنماط محفوظة'),
+      subtitle:Text(kind=='excluded'&&
+        excludedSmsCount!=null&&blockedSenderCount!=null?
+       (widget.english?
+        '${saved.where((r)=>r.resolvedKind==kind).length} reusable patterns • ${excludedSmsCount!} excluded SMS • ${blockedSenderCount!} blocked senders':
+        '${saved.where((r)=>r.resolvedKind==kind).length} قواعد متعلّمة • ${excludedSmsCount!} رسالة مستبعدة • ${blockedSenderCount!} مرسل مستبعد'):
+       (widget.english?
+        '${saved.where((r)=>r.resolvedKind==kind).length} saved patterns':
+        '${saved.where((r)=>r.resolvedKind==kind).length} أنماط محفوظة')),
       children:[
        if(!saved.any((r)=>r.resolvedKind==kind))
         Padding(padding:const EdgeInsets.all(14),
