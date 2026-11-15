@@ -178,6 +178,7 @@ part 'waffra_home_widget_action_routes.part.dart';
 part 'waffra_home_sms_review_indicator.part.dart';
 part 'waffra_home_sms_transfer_review.part.dart';
 part 'waffra_home_goals_recurring_pages.part.dart';
+part 'waffra_home_recurring_workflows.part.dart';
 part 'waffra_home_goal_actions.part.dart';
 part 'waffra_home_dashboard_analytics.part.dart';
 part 'waffra_finance_period_index.part.dart';
