@@ -281,6 +281,9 @@ abstract final class WaffraSmsLocalRules {
   final eligible=checked.where((rule)=>
    ((rule.resolvedKind=='transfer'&&bankKind==WaffraBankOperationKind.transfer)||
     (rule.resolvedKind=='excluded'&&!posted&&
+     // Preserve the original custom-exclusion guard: generic financial
+     // action language requires human review, unlike vetted default seeds.
+     (rule.builtIn||!_hasCompletedFinanceCue(body))&&
      !(verification&&_hasCompletedFinanceCue(body))))&&
    (matchedRules!=null||matches(rule,body,sender:sender)))
     .toList(growable:false);
