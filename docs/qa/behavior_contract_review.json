@@ -8,6 +8,33 @@
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
     {
+      "id": "M944-BOUNDED-HOME-AND-UNIFIED-ACTIVITY",
+      "issue": "Issue #653 / PR #654 axis 2: large financial activity lists",
+      "previous_behavior": "When Home financial activity was expanded, wa ffraDashboardTransactionDisplayCount returned every match, eagerly building thousands of transaction, transfer and savings activity cards in one widget tree. Read-cache invalidation only cleared its date index.",
+      "approved_behavior": "Keep the approved Home cards and Show more/Show less controls, but cap the expanded rendered window to 50 transactions per intentional step, including unified transfers and savings. Reset window on finance reload, preserve all matching verified records for actual PDF export and account source verification, and retain original SMS/group selection independently.",
+      "source_paths": [
+        "lib/waffra_home_ledger_query.part.dart",
+        "lib/waffra_home_dashboard_analytics.part.dart"
+      ],
+      "test_paths": [
+        "test/m944_home_progressive_window_test.dart",
+        "test/m940_m941_home_ledger_pagination_test.dart",
+        "test/m296_monthly_budget_and_transactions_test.dart",
+        "test/m670_feedback_transfer_dashboard_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "Do not alter global + FAB/Snackbar geometry or Home/Goals/Recurring card styling and RTL layout.",
+        "Do not change finance writer, account linkage, verified currency source, monthly sums or duplicate-suppression policies.",
+        "Export still uses all filtered verified ledger entries; no financial history is deleted or permanently hidden by a display-window boundary.",
+        "Per-action progressive rendering is a UI optimization; no claim that all hydrated finance database reads are on-demand or the owner's Android frame rate has been measured."
+      ]
+    },
+    {
       "id": "M944-VERIFIED-LEDGER-KEYSET-READS",
       "issue": "Issue #653 / PR #654 axis 1: encrypted database level paging and account screen",
       "previous_behavior": "Account history used OFFSET on each 50-entry SQL query and in-memory Home display pagination, so high offsets rescan past rows. No source-locked keyset API was exposed; a cursor was not retained by account/month filter across Previous/Next navigation.",
