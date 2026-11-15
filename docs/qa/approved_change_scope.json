@@ -261,6 +261,16 @@
         "start": " test('M462 background safely acknowledges verified exclusions',(){",
         "end": " test('M636 transfers cannot silently post through SMS expense editor',(){"
       }
+    ],
+    "lib/storage/waffra_verified_encrypted_finance_bridge.dart": [
+      {
+        "start": "import 'waffra_encrypted_finance_ui_patch.dart';",
+        "end": "import 'waffra_encrypted_module_projection_guard.dart';"
+      },
+      {
+        "start": "    ).saveScreenChanges(",
+        "end": "  /// M514 #451: add the FIRST batch"
+      }
     ]
   }
 }
