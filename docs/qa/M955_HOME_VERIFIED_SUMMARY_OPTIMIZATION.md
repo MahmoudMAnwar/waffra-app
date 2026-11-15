@@ -18,3 +18,9 @@ Stacked work on #658 / Issue #657. PR base is `feat/m952-five-axes-followup-2026
 - Existing account context page and export use unchanged entry lists.
 - No claim that five axes are 100% or that owner private old V3 Backup/Restore / Android handset FPS and geometry have been tested. Follow-up structural Home extraction and account membership scaling remain separate.
 - Review and tests must pass on the exact PR SHA; avoid skipped test counts.
+
+## Second code tranche: source-level SQLCipher budget aggregation
+
+- When `includeEntries:false` only, `WaffraAccountContextRead.load` now groups that month's actual encrypted `fresh_finance_standalone_allocations` by budget ID inside SQLite (`SUM(INTEGER)`), instead of fetching every month allocation into a Dart list on each Home account refresh. Active source budgets and their positive limits remain authoritative; unassigned expenses contribute globally but not to a selected bank. Null/all-account context cannot silently match an account, and invalid expense allocation amounts fail closed.
+- Normal Account Context screen `includeEntries:true` deliberately preserves the earlier pure one-pass Dart aggregation and full ledger read, ensuring the legacy accounting/export semantics cannot drift.
+- The 900-row real encrypted regression compares BOTH paths over bank, wallet and all accounts, two active budgets, receipts with unassigned/older-month entries, exact goal funding and cold SQLCipher reopen, and ensures no mutation of bank balances or entry count. Existing M952 10,000-row/120-budget policy parity remains required. Performance claim is reduced Dart row materialization for Home only; no Android FPS or private archive numbers invented.
