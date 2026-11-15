@@ -19,7 +19,7 @@ void main() {
     WaffraEncryptedStore? db;
     try {
       db=WaffraEncryptedStore.openAt(file,key:key);
-      final seeded=db!;
+      final seeded=db;
       await WaffraFreshEncryptedVaultBootstrap(
         store:seeded,experimentalEnabled:true,
       ).initialize(decision:WaffraFirstRunDecision.freshCandidate);
@@ -149,7 +149,7 @@ ORDER BY a.created_iso,a.account_id
       await seeded.close();
       db=WaffraEncryptedStore.openAt(file,key:key);
       final reopened=WaffraAccountsRepository(
-        db:db!,experimentalEnabled:true);
+        db:db,experimentalEnabled:true);
       expect({for(final a in await reopened.balances())
         a.id:a.balanceMinor},oldBalances);
     } finally {
