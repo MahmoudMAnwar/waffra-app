@@ -1,12 +1,42 @@
 {
   "schema_version": 1,
-  "pr": "M952 / Draft PR #658 — five-axis 20-improvement continuation with verified unassigned SQLCipher keyset and single-pass budget parity",
-  "issue": "Issue #657 — financial integrity, accounts/restore, responsiveness, UI stability, architecture and proactive QA",
+  "pr": "M955 / Draft PR #665 stacked on #658 — verified ledger-free Home summary, original M952 contracts retained",
+  "issue": "Issue #664 (follow-up #657) — five-axis Home performance and exact-money parity",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at f0def360ea75b9c865548b6f1b4fc07e9640f2c2 after #656",
   "reviewed_at": "2026-11-15",
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
+    {
+      "id": "M955-VERIFIED-HOME-BUDGET-GOAL-SUMMARY-NO-LEDGER-ROWS",
+      "issue": "Issue #664 / Draft PR #665 stacked on #658",
+      "previous_behavior": "The Home selected-account header requests summaryOnly=true but the encrypted AccountContext read still hydrates every current-month entry to return a list Home never displays. Account context/reconciliation pages use the full entry list and MUST retain it.",
+      "approved_behavior": "A new default-true includeEntries option is passed through existing witnessed SQLCipher snapshot and account API. Only Home sets includeEntries=false with summaryOnly=true, causing SQL LIMIT 0 for the card query while leaving independent monthly confirmed budget aggregates and grouped goal-source totals unchanged. Other callers default true; all-time ledger-free misuse is rejected. Source witness checks before/after remain identical, all-time verified account-linked ID filtering remains untouched; neither writes money nor invents empty bank data.",
+      "source_paths": [
+        "lib/storage/waffra_account_context_read.dart",
+        "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
+        "lib/storage/waffra_verified_accounts_api.dart",
+        "lib/waffra_home_verified_account_flows.part.dart",
+        "scripts/qa/m946_full_app_smoke_matrix.py"
+      ],
+      "test_paths": [
+        "test/storage/m955_home_verified_summary_parity_test.dart",
+        "test/storage/m448_account_context_read_test.dart",
+        "test/m467_account_header_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m946-whole-app-feature-smoke.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "No bank posting or account association is changed by an account-summary read; halala balances and source counts remain unchanged.",
+        "For both selected bank/wallet and all accounts, exact monthly budget global/selected amounts and goal saved/source amounts match the pre-optimization projection.",
+        "Historical/reconciliation/export call sites still default includeEntries=true; unscoped ledger-free read fails closed.",
+        "Only existing verified SQLCipher snapshot lock and generation/digest are used; missing linked financial domain fails closed.",
+        "No fixed plus, RTL, notification, approved Home/Goals/Dues design or owner private archived data changes; owner handset and old backup remain unverified."
+      ]
+    },
     {
       "id": "M952-UNIQUE-ENTRY-BUDGET-ASSOCIATION-SQLCIPHER",
       "issue": "Issue #657 / PR #658: enforce actual UNIQUE(entry_id) and distinct standalone budget attribution without duplicating bank money",
