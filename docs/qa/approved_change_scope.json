@@ -43,7 +43,119 @@
     "lib/main.dart": [
       {
         "start": "import 'waffra_recurring_policy.dart';",
-        "end": "import 'waffra_cross_source_duplicate_review.dart';"
+        "end": "import 'storage/waffra_legacy_write_queue.dart';"
+      }
+    ],
+    "lib/storage/waffra_sqlcipher_history_pager.dart": [
+      {
+        "start": "  static Future<WaffraSqlcipherHistoryPage> load({",
+        "end": "    // Fetch one extra row to prove whether another page exists"
+      }
+    ],
+    "lib/storage/waffra_verified_accounts_api.dart": [
+      {
+        "start": "import 'waffra_accounts_repository.dart';",
+        "end": "/// Production-facing M440 account adapter."
+      },
+      {
+        "start": " @override\n Future<List<WaffraAccountBalance>> balances()async{",
+        "end": " /// M611: owner-scoped verified read;"
+      },
+      {
+        "start": " Future<WaffraSqlcipherHistoryPage> readKeysetHistoryPage({",
+        "end": " /// Attach a past unassigned entry only AFTER"
+      }
+    ],
+    "lib/storage/waffra_verified_active_restore_preflight.dart": [
+      {
+        "start": "import 'dart:math';",
+        "end": "/// This stage code never contains"
+      },
+      {
+        "start": "class WaffraVerifiedRestorePreflightResult {",
+        "end": "/// Read-only, password-authenticated preflight BEFORE"
+      },
+      {
+        "start": "  Future<WaffraVerifiedRestorePreflightResult> inspect({",
+        "end": null
+      }
+    ],
+    "lib/waffra_account_context_page.dart": [
+      {
+        "start": "import 'waffra_account_context_settings.dart';",
+        "end": "import 'waffra_i18n.dart';"
+      },
+      {
+        "start": "class WaffraAccountContextPage extends StatefulWidget {",
+        "end": "class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {"
+      },
+      {
+        "start": "class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {",
+        "end": null
+      }
+    ],
+    "lib/waffra_accounts_manager_page.dart": [
+      {
+        "start": "import 'waffra_account_context_page.dart';",
+        "end": "import 'waffra_new_account_dialog.dart';"
+      },
+      {
+        "start": "class WaffraAccountsManagerPage extends StatefulWidget {",
+        "end": "class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {"
+      },
+      {
+        "start": " Future<void> openAccountReview()async{",
+        "end": " Future<void> addAccount()async{"
+      }
+    ],
+    "lib/waffra_home_account_tools.part.dart": [
+      {
+        "start": " Future<void> backupDialog()async {",
+        "end": " Future<String?> _askForPin({"
+      }
+    ],
+    "lib/waffra_home_sms_inbox.part.dart": [
+      {
+        "start": "          final done=<String>{};",
+        "end": "          }finally{\n           if(ctx.mounted)refresh(()=>bulkBusy=false);"
+      }
+    ],
+    "lib/waffra_home_sms_management.part.dart": [
+      {
+        "start": " Future<bool> _m592ExcludeNotificationSelection(",
+        "end": " Future<void> _m549OpenNotifications()async{"
+      }
+    ],
+    "lib/waffra_home_sms_rules.part.dart": [
+      {
+        "start": " Future<bool> _learnSafeSmsRule({",
+        "end": " // Retained single-message reference for on-demand review"
+      }
+    ],
+    "lib/waffra_home_verified_account_flows.part.dart": [
+      {
+        "start": " Future<void> openVerifiedAccounts()async{",
+        "end": " Future<void> openReviewedSmsManualTransfer({"
+      }
+    ],
+    "lib/waffra_sms_local_rules.dart": [
+      {
+        "start": "import 'dart:convert';",
+        "end": "import 'package:crypto/crypto.dart';"
+      },
+      {
+        "start": " static void validate(WaffraSmsLocalRule rule){",
+        "end": null
+      }
+    ],
+    "lib/waffra_sms_rule_settings_page.dart": [
+      {
+        "start": "import 'waffra_sms_local_rules.dart';",
+        "end": "import 'waffra_sms_rule_simulator.dart';"
+      },
+      {
+        "start": "class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{",
+        "end": null
       }
     ]
   },
