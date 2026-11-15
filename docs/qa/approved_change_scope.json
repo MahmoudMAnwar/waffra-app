@@ -12,7 +12,9 @@
     "Rename every visible recurring page/footer/Tools/Trash label to الاستحقاقات or الاستحقاق, without renaming saved keys, enums, finance types, or old archives.",
     "New executable encrypted historical edit, notification/sender widget, source contracts; update only obsolete visual baseline tests, never skip or weaken money/security/regression gates.",
     "Existing receipt-rollback source contract now verifies source-reloaded error copy and still requires physical cleanup after a failed save, never disables stage cleanup or swallows failures.",
-    "M954 (#661): unify new-app OTP/verification and owner rule matching across native masking, all-queue foreground isolate, on-demand local inspection, and WorkManager before notifications. Safe built-in/user exclusion is durable native 30-day anti-replay, never mere queue acknowledge; completed financial event/transfer and owner-rule-load failures remain fail-closed. Add 15 targeted regression cases and device acceptance."
+    "M954 (#661): unify new-app OTP/verification and owner rule matching across native masking, all-queue foreground isolate, on-demand local inspection, and WorkManager before notifications. Safe built-in/user exclusion is durable native 30-day anti-replay, never mere queue acknowledge; completed financial event/transfer and owner-rule-load failures remain fail-closed. Add 15 targeted regression cases and device acceptance.",
+    "Fix exact-HEAD M954 owner exclusion failure by allowing only vetted event phrase 'تفعيل الحساب' in excluded custom rules while retaining a completed-money veto; keep legacy financial-keyword privacy rules unchanged.",
+    "Fix stale M652 numbered-activity source expectation and M221 renamed dues empty-state assertion; new tests must check current approved behaviors rather than legacy map or label."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -51,7 +53,9 @@
     "test/m953_notifications_actions_and_edit_contract_test.dart",
     "test/m954_all_sms_rule_routes_regression_test.dart",
     "test/storage/m953_verified_historical_edit_regression_test.dart",
-    "test/waffra_concept2_final_visual_test.dart"
+    "test/waffra_concept2_final_visual_test.dart",
+    "test/m647_m652_financial_activity_regression_test.dart",
+    "test/m221_approved_financial_ui_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
@@ -186,6 +190,10 @@
       {
         "start": " static WaffraSmsLocalRule? resolveSpecial({",
         "end": " /// Keep a single safe auto-learned bucket"
+      },
+      {
+        "start": " static bool safeRuleKeyword(String text,String kind)=>",
+        "end": " // Built-in phrases are manually curated"
       }
     ],
     "lib/waffra_bank_sms_facts.dart": [
