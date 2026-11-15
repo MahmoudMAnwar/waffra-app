@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "pr": "M949 — new Draft PR, Issue #655, 43 genuinely new functional cases",
+  "pr": "M949/M950 — 89 NEW nonduplicate functional tests on same Draft PR #656",
   "issue": "Issue #655 — nonduplicated functional test journeys",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main after merged PR #654 at b624100a040d2a05c02d9ea9827dd36494c39538",
@@ -4998,6 +4998,38 @@
         "Compound Home filters cannot leak old accountless entries into selected verified account.",
         "Exactly 43 distinct test() cases and 0 skipped on exact PR SHA; separate 4 Python audit mutation tests not counted as functional.",
         "No physical Android device, real user encrypted backup or SMS originals sent to CI."
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m946-whole-app-feature-smoke.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ]
+    },
+    {
+      "id": "M950-46-EXTENDED-FUNCTIONAL-JOURNEYS",
+      "issue": "#655 / PR #656; user explicitly requested further unique test expansion",
+      "previous_behavior": "M949 covered 43 new compound cases, but unique SMS source/destination unicode numeral collisions, recurring one-time vs future account identity, account-linked budgets across months, verified original legacy review queue page boundaries and exact selected account reconciliation were not directly combined in these tests.",
+      "approved_behavior": "Add 28 M950-P pure business policy test() calls for verified multi-script bank SMS source/destination and ambiguity, recurring action/override identity, goal fund/release cross-account projection, global budget threshold vs selected header; plus 18 M950-S actual disposable SQLCipher tests for December/January and leap-February month boundaries, tied dated paging, partial unassigned association, budget across months, source-account ID filter, archive and immutable read results. All independently runnable, no source text asserts. M946 mandatory every-head smoke rejects removed, duplicated, skipped or already named test cases; report 89 new distinct functional cases across M949/M950.",
+      "source_paths": [
+        "lib/storage/waffra_account_context_policy.dart",
+        "lib/storage/waffra_account_context_read.dart",
+        "lib/storage/waffra_accounts_repository.dart",
+        "lib/waffra_recurring_policy.dart",
+        "scripts/qa/m946_full_app_smoke_matrix.py",
+        "scripts/qa/m950_extended_functional_audit.py"
+      ],
+      "test_paths": [
+        "test/m950_account_sms_due_budget_decision_matrix_test.dart",
+        "test/storage/m950_verified_monthly_scopes_and_history_test.dart",
+        "test/qa/m950_extended_functional_audit_test.py"
+      ],
+      "safety_invariants": [
+        "Only selected unique case IDs P01–P28 and S01–S18 contribute to 46 new M950 cases. No existing tests replaced and M949's 43 unaffected.",
+        "Bank SMS not uniquely verified by exact last-four digits stays unassigned; no inferred bank/sender selection.",
+        "One-time recurring payment bank override cannot silently change the recurring future default.",
+        "Global category budget expense spending includes independently authenticated unassigned and other account rows but never income; account header only changes scoped numerator.",
+        "Selected bank month queries never reveal an accountless or different bank entry and cannot double-post internal transfers as income/expense.",
+        "Historical association requires consent and preserves signed integer halalas, old IDs, source and other bank links.",
+        "Disposable encrypted fixtures only; Android SMS interception, biometric, real device backup and external notifications remain device-only."
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/m946-whole-app-feature-smoke.yml",

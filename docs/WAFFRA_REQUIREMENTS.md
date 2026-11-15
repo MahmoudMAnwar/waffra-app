@@ -2251,3 +2251,8 @@ Separate Draft PR stacked on #650. Fix unverified Home balance display; remove u
 - Mandatory every-PR M946 coverage must run these against the exact SHA. An executable uniqueness guard ensures exactly ordered IDs, no title duplicates against other suite titles, no skip and no source-text-only substitutes.
 - Maintain the individual case inventory and old-test differentiation in docs/qa/M949_UNIQUE_FUNCTIONAL_CASES.md. Four QA Python self-tests are separate from the 43 functional tests.
 - No production app source, old automated tests, user backup or device data changes. Real Android, biometrics and owner-data restore require independent verification.
+
+### M950 — Further nonduplicate functional coverage on same PR #656
+- Add **46 more new executable Flutter functional tests** beyond M949: 28 verified bank SMS suffix (Arabic/Persian numeral and source/destination), recurring payment default vs one-off, global budget and goal sources; 18 SQLCipher month-scoped financial context, historical account assignment, pagination, budget accounting and archive. **Total newly created on this PR = 89 functional cases, five new Dart test files.**
+- Require separate M950 46-case distinct-ID and existing-title audit plus mandatory M946 exact-head money/experience smoke on every commit. Zero failures and zero skipped; do not count QA mutation tests as functional.
+- No source changes in `lib/`, Android or other production files; no original user backups in CI. See `docs/qa/M949_UNIQUE_FUNCTIONAL_CASES.md` for the complete breakdown.
