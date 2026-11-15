@@ -271,6 +271,12 @@
         "start": "    ).saveScreenChanges(",
         "end": "  /// M514 #451: add the FIRST batch"
       }
+    ],
+    "test/m495_pr402_ui_performance_regression_test.dart": [
+      {
+        "start": " test('M500 #420 Details Edit enables verified retroactive account link',(){",
+        "end": " testWidgets('M499 #416 child picker is disabled without provider, cancel preserves amount'"
+      }
     ]
   }
 }
