@@ -1756,6 +1756,7 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
       'Transaction change reverted':'تم التراجع عن تعديل المعاملة');
     });
   }
+ }
  /// M953: edit exactly one historical row against its CURRENT encrypted
  /// witness. Legacy SMS/V24 rows may have extra fields or old date encoding:
  /// do not regenerate the full ledger via MoneyEntry.toJson().
@@ -1839,7 +1840,5 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
    }
    return false;
   }
- }
-
  }
 }
