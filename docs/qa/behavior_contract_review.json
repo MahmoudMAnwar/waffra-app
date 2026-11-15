@@ -8,10 +8,10 @@
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
     {
-      "id": "M952-LEGACY-MULTIBUDGET-LEDGER-SOURCE-DEDUPE",
-      "issue": "Issue #657 axes 1/2/3/5: prevent multiple standalone budgets from duplicating one SQLCipher ledger expense",
-      "previous_behavior": "The encrypted account context and history keyset joined standalone allocations one-to-many, causing the same posted expense to appear more than once when one entry was allocated to two independent budgets. This also risks repeating visual transactions in pagination and inflating per-entry financial count; budget summaries depended on the exploded rows.",
-      "approved_behavior": "Group per-entry allocation metadata in full/month/keyset ledger projections. Multiple budget links must not fabricate a singular budget identity, while each persisted budget allocation is independently included in source-backed monthly budget summaries with exact integer-halalas. No posted money or account balance is created; original SQLCipher writers, account assignment, source authority and user backups remain unchanged.",
+      "id": "M952-UNIQUE-ENTRY-BUDGET-ASSOCIATION-SQLCIPHER",
+      "issue": "Issue #657 / PR #658: enforce actual UNIQUE(entry_id) and distinct standalone budget attribution without duplicating bank money",
+      "previous_behavior": "The initial M952 synthetic test incorrectly assumed two budget allocations could refer to one expense. Actual SQLCipher source rejects that case with UNIQUE(entry_id), as the exact-head M946 and encrypted-storage failures demonstrated.",
+      "approved_behavior": "Keep the direct unique budget association LEFT JOIN in full/month/keyset SQLCipher reads. Use one source-backed month allocation query for budget summaries, preserve independent amounts for distinct budget-linked entries, and fail closed when a second budget association for the same entry is attempted. No schema or finance writer changes.",
       "source_paths": [
         "lib/storage/waffra_account_context_read.dart",
         "lib/storage/waffra_sqlcipher_history_pager.dart",
@@ -28,10 +28,10 @@
         ".github/workflows/m550-behavior-contract-preflight.yml"
       ],
       "safety_invariants": [
-        "One verified finance entry remains exactly one ledger row across full, monthly, and keyset pages and exactly one bank cash debit, even with two standalone budget allocations.",
-        "Both separately saved budget limits and allocations remain visible and correct, including unassigned global spending and selected-account totals; no hidden heuristic chooses an arbitrary one of multiple budgets.",
-        "Physical user archive, signed Android screen and device handling remain an explicit separate acceptance gate; no unobserved test marked passed.",
-        "Existing M385 protected-scope and M449 release-note gates remain active and mandatory; all M946 tests execute against exact head SHA."
+        "A second standalone budget allocation with the same entry_id must be rejected by actual encrypted SQLCipher UNIQUE(entry_id), not inserted or silently double-counted.",
+        "Two different expense entries may belong to two separate budgets and must yield correct global and selected-account exact-halala budget totals.",
+        "One linked bank expense debits once; full/month/keyset projections preserve unique IDs, date order and account balances.",
+        "M946/M385/M449/M550 exact-head tests and device/backup owner acceptance remain mandatory; no unsupported claims."
       ]
     },
     {
