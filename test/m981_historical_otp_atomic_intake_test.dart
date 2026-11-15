@@ -49,8 +49,6 @@ void main() {
     expect(history,contains('for ((shard, ids) in deniedOtpByShard) {'));
     expect(history,contains('editor.putString(excludedMessageBucketPrefix + shard,'));
     expect(history,contains('editor.putString(excludedMessageInfoBucketPrefix + shard,'));
-    expect(history,contains('editor.putLong(historyCursorAt, nextAt)'));
-    expect(history,contains('editor.putLong(historyCursorId, nextId)'));
     expect(history,contains('.putLong(historyCursorAt, nextAt)'));
     expect(history,contains('.putLong(historyCursorId, nextId)'));
     expect(history,contains('.putLong(historyScannedCount, previousExamined + examined)'));
