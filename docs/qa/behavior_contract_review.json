@@ -1,12 +1,136 @@
 {
   "schema_version": 1,
-  "pr": "M949–M951 — 115 NEW nonduplicate executable functional tests on Draft PR #656",
-  "issue": "Issue #655 — nonduplicated functional test journeys",
+  "pr": "M953 — Android screenshot financial editor/notifications/dues corrections, Draft PR (Issue #659)",
+  "issue": "Issue #659 — latest owner 8 Android screenshots 2026-11-15",
   "workflow_review_policy": "scan-all-registered-workflows",
-  "baseline": "main after merged PR #654 at b624100a040d2a05c02d9ea9827dd36494c39538",
+  "baseline": "main after #656 f0def360ea75b9c865548b6f1b4fc07e9640f2c2",
   "reviewed_at": "2026-11-15",
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
+    {
+      "id": "M953-VERIFIED-ONE-ROW-HISTORICAL-EDIT",
+      "issue": "Issue #659 / Android user screenshot: older date update fails while other transactions must not change",
+      "previous_behavior": "Home transaction editor reserializes all loaded MoneyEntry objects for an existing edit, changing the raw shape of untouched imported SMS/V24 rows and triggering authoritative SQL source projection mismatch. Save failure did not re-read the source before stating old data unchanged.",
+      "approved_behavior": "For a verified encrypted source, fetch current authenticated ledger under save queue, compare exactly the chosen displayed entry ID and immutable provenance, patch ONLY one raw row while preserving all other raw original maps and all receipt paths, commit the original transactionEdit route under source lock, read back exact ID and fields, and refresh on any uncertainty. Keep separate atomic rules for account move, transfer and paid goal due.",
+      "source_paths": [
+        "lib/waffra_home_entry_sheet.part.dart"
+      ],
+      "test_paths": [
+        "test/storage/m953_verified_historical_edit_regression_test.dart",
+        "test/m953_notifications_actions_and_edit_contract_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m946-whole-app-feature-smoke.yml"
+      ],
+      "safety_invariants": [
+        "Never duplicate an existing signed debit, overwrite another account/source, mutate unrelated old SMS fields or reassign a linked account without a separate atomic writer.",
+        "No UI success is claimed before certified SQLCipher source write plus readback; failed/unknown writes re-read the source, not falsely assert money unchanged.",
+        "Restore, transaction ID, authenticated bank SMS hash, receipts, goal wallet and original prior old-date entries retain identity.",
+        "Only disposable synthetic encrypted fixtures are tested; actual phone and private backup are not asserted verified."
+      ]
+    },
+    {
+      "id": "M953-NATIVE-SMS-ARRIVAL-ORDER",
+      "issue": "Issue #659 notifications screen shows oldest messages first; latest must be above",
+      "previous_behavior": "Notifications screen displayed pending native SMS queue in provider returned order, including oldest messages at top and most recent lower, and preserved that order in sender filter.",
+      "approved_behavior": "Carry native receivedAt epoch milliseconds into a notification immutable view, sort a new presentation list descending with deterministic original order for equal/missing timestamps, apply same order in All and each sender filter, preserving selected IDs and original text.",
+      "source_paths": [
+        "lib/waffra_approved_notifications.dart",
+        "lib/waffra_home_sms_management.part.dart"
+      ],
+      "test_paths": [
+        "test/m953_notifications_actions_and_edit_contract_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "Never rewrite, acknowledge, classify, persist or parse a raw native bank SMS merely to sort its review card.",
+        "Select-all and sender filtering remain independently owner-controlled and use all queued IDs.",
+        "Sensitive OTP data is never decrypted or exposed by notification ordering."
+      ]
+    },
+    {
+      "id": "M953-SMS-REVIEW-ACTIONS",
+      "issue": "Issue #659 screenshots: Arabic SMS approval button titles truncated and unknown messages lack exclusion",
+      "previous_behavior": "Three equally constrained action buttons truncate Arabic labels while some unknown nonsensitive sender review paths have no visible exclude button, pushing users toward incorrect finance categorization.",
+      "approved_behavior": "Put Done and Edit on readable primary row and nonsensitive Exclude on its own full-width row; present separate Exclude for unrecognized nonsensitive sender review; retain transfer-specific confirmation and sensitive OTP exclusion route.",
+      "source_paths": [
+        "lib/waffra_home_sms_confirmation.part.dart"
+      ],
+      "test_paths": [
+        "test/m953_notifications_actions_and_edit_contract_test.dart",
+        "test/m669_sms_review_category_search_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "Unrecognized or informational bank SMS is never converted to income/expense merely to dismiss review.",
+        "Transfer still requires separate verified account source and destination approval.",
+        "Sensitive security/OTP message bodies remain protected; Exclude does not post money."
+      ]
+    },
+    {
+      "id": "M953-CHRONOLOGICAL-HOME-NUMBERED-ACTIVITY",
+      "issue": "Issue #659 screenshots: number all Home financial cards 1,2,...",
+      "previous_behavior": "Home financial activity cards were chronological but lacked a visible row index; transfers and savings share the one unified timeline with ordinary income and expense.",
+      "approved_behavior": "Render a small display-only ordinal for each currently shown activity, computed from its 1-based position in the filtered newest-first unified Home timeline (and fallback MoneyEntry-only view); include income, expense, transfer, savings and paid due without modifying IDs.",
+      "source_paths": [
+        "lib/waffra_home_dashboard_analytics.part.dart",
+        "lib/waffra_home_compact_activity_cards.part.dart"
+      ],
+      "test_paths": [
+        "test/m953_notifications_actions_and_edit_contract_test.dart",
+        "test/m672_m678_activity_account_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "Never change database order, amount, transaction IDs, SMS hashes or account links to produce display numbers.",
+        "Keep original user-approved activity cards, colors, FAB and Snackbar geometry unchanged except small ordinal rail.",
+        "Number every visible activity type from the same filtered timeline, without re-posting transfers or goal savings."
+      ]
+    },
+    {
+      "id": "M953-DUES-NAME-AND-RTL-SCROLL-FILTERS",
+      "issue": "Issue #659 screenshot: duplicate Goals/Due count and scrollbar covers content, recurring tab is renamed dues",
+      "previous_behavior": "A separate outlined Goal/Due count tile repeated the All filter count; Due and backup dialog scrollbar painted over Arabic text; footer and related user-facing labels still said recurring.",
+      "approved_behavior": "Remove only redundant adjacent count widgets and retain correct counts per filter and header; add RTL directional dialog scroll content inset; use الاستحقاقات/استحقاق and Dues in user-visible tab/buttons/descriptions/trash while preserving persistent 'recurring' identifiers and data format.",
+      "source_paths": [
+        "lib/waffra_home_goals_recurring_pages.part.dart",
+        "lib/waffra_home_recurring_workflows.part.dart",
+        "lib/waffra_home_account_tools.part.dart",
+        "lib/waffra_footer.dart",
+        "lib/waffra_i18n.dart",
+        "lib/waffra_recurring_trash.part.dart",
+        "lib/waffra_financial_tools.dart",
+        "lib/waffra_home_profile.part.dart",
+        "lib/waffra_home_category_workflows.part.dart"
+      ],
+      "test_paths": [
+        "test/m953_notifications_actions_and_edit_contract_test.dart",
+        "test/m938_goals_restore_fab_contract_test.dart",
+        "test/m277_ux_accessibility_quality_test.dart",
+        "test/waffra_concept2_final_visual_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m274-production-ui-journeys.yml"
+      ],
+      "safety_invariants": [
+        "All stored recurring IDs, account schedules, goal links, due charges and backup schema keys remain byte-for-byte unchanged.",
+        "Approved Home/Goals/Dues card layout and system RTL/LTR direction, fixed add button and anchored Snackbar remain in place.",
+        "Scrollbar inset must not hide text, keyboard actions or confirmation button at narrow Android widths."
+      ]
+    },
     {
       "id": "M944-ROOT-SHELL-AND-RECURRING-WORKFLOW-EXTRACTION",
       "issue": "Issue #653 / PR #654 axis 4: finish Home State extraction without UI changes",
