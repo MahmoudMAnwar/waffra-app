@@ -356,7 +356,7 @@ extension _WaffraHomeAccountTools on _HomeScreenState {
          // Never delete same-looking entries from a financial database.
          final exact=await _m593BuildVerifiedEntries(canonicalRows);
          if(!mounted)return;
-         setState((){entries..clear()..addAll(exact);});
+         setState((){_m684InvalidatePeriodRead();entries..clear()..addAll(exact);});
          WaffraRestoredLedgerIdentityGuard.verify(
           authenticatedSource:authenticatedLegacyRows,
           verifiedSnapshot:entries.map((e)=>e.toJson()).toList());
