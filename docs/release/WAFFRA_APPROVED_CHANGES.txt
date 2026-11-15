@@ -801,3 +801,9 @@ M940/M941 Draft PR #648 M486 regression correction (unreleased): coalesced futur
 
 [M943 #651 / stacked Draft #652 — 2026-11-15 CI correction, NOT RELEASED]
 - Restored safe grouping of existing untyped bank account labels by anchored institution prefix without weakening verified sender matching; added exact alrajhibank sender alias. Kept M940/M941 read-only search/filter semantics with M943 bounded display + complete PDF export. Corrected original M343/M296/M470 Flutter source assertions to validate these real contracts; no disabled tests. Reconciled latest M942 branch/main and staged 8-point source regression; physical owner archive and latest CI still pending.
+
+
+[M944 #653 / Draft #654 — 2026-11-15, CODE-ONLY / NOT RELEASED]
+- SQLCipher account history read now supports a source-locked keyset cursor, ordered by occurred_iso DESC and entry_id DESC, with explicit month/account/income filters and bounded page size. The account history screen keeps Previous/Next and resets cursor on month, account, and confirmed-link changes. Historical accountless rows remain separate and require user confirmation to link.
+- Added a disposable encrypted 2,700-row regression for page ordering, duplicate avoidance, account/period filtering, money-read-only parity, and cold reopen; strengthened original M611 positive contract. App + FAB, Snackbar, original SMS review, finance writers, account openings, transfer balance, backup and stored money are untouched.
+- This is a staging record, not a customer release: Flutter exact-head CI, expanded Home list pagination, native SMS source paging, parity and cleanup/QA axes remain pending; no physical Android or owner's private V24 backup has been validated.
