@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
-  "change_id": "M952-ISSUE657-FIVE-AXIS-CONTINUATION-KEYSET-BUDGET-PARITY-20261115",
-  "human_scope_review": "Owner's latest prior-chat five axes are financial integrity, account & Backup/Restore integration, performance/responsiveness, UI stability, and architecture/proactive tests (20 proposed improvements). Issue #657/PR #658 implement first bounded tranche: fail-close missing linked SQLCipher finance-domain schema, memoize large SMS-review selections, and harden exact-SHA CI evidence; preserve approved UI and all financial writers. No claim of all 20 done or real backup/Android UAT. Owner authorized continuing unfinished five axes after first 24/24 CI green. Second safe tranche: use verified SQLCipher keyset for historical UNASSIGNED account reconciliation (not just monthly), remove per-budget repeated full-month scan using pure O(entries + budgets) parity-checked halala aggregates, extend absent due/budget-table fail-closed tests, and preserve existing UI/finance writers. One independent 2700-row SQLCipher parity expansion and 10000-entry/120-budget synthetic test protect correctness. This does NOT complete all five axes or prove physical phone/old private backup.",
+  "change_id": "M953-ISSUE662-OTP-SAFETY-STACKED-ON-M952-20261115",
+  "human_scope_review": "Owner's latest prior-chat five axes are financial integrity, account & Backup/Restore integration, performance/responsiveness, UI stability, and architecture/proactive tests (20 proposed improvements). Issue #657/PR #658 implement first bounded tranche: fail-close missing linked SQLCipher finance-domain schema, memoize large SMS-review selections, and harden exact-SHA CI evidence; preserve approved UI and all financial writers. No claim of all 20 done or real backup/Android UAT. Owner authorized continuing unfinished five axes after first 24/24 CI green. Second safe tranche: use verified SQLCipher keyset for historical UNASSIGNED account reconciliation (not just monthly), remove per-budget repeated full-month scan using pure O(entries + budgets) parity-checked halala aggregates, extend absent due/budget-table fail-closed tests, and preserve existing UI/finance writers. One independent 2700-row SQLCipher parity expansion and 10000-entry/120-budget synthetic test protect correctness. This does NOT complete all five axes or prove physical phone/old private backup. Follow-up Issue #662/#663 adds new-app verification exclusions only under posted-finance veto, aligns foreground/background ACK, and adds 6 new mandatory regressions; no user ledger or approved UI changes.",
   "user_requested_changes": [
     "Axis 1: reject account-backed financial source when expected versioned domain linked tables or revision are missing even if account marker and foreign keys appear healthy.",
     "Axis 2: protect bank-account links, account opening and V3/V24 restore parity with source readiness checks before reads, no speculative migration or real archive modification.",
@@ -12,7 +12,10 @@
     "Second tranche Axis 3: replace historical unassigned account-context OFFSET UI with source-witnessed SQLCipher keyset and cursor invalidation on filter/month/link, preserving old offset read API for old consumers.",
     "Second tranche Axes 1/3: compute account-context budget usage with a single O(entries+budgets) pass instead of B times scanning E entries, comparing every budget exact halalas to existing policy in 10000-entry synthetic tests.",
     "Second tranche Axes 1/2: reject finance account context when due-settlement or standalone allocation tables disappeared even if account revision survives.",
-    "Second tranche Axes 4/5: preserve account-page navigation/RTL/FAB/card layouts and update only source-contract assertions for verified historical pagination, maintain failing CI detection and no skipped tests."
+    "Second tranche Axes 4/5: preserve account-page navigation/RTL/FAB/card layouts and update only source-contract assertions for verified historical pagination, maintain failing CI detection and no skipped tests.",
+    "M953 follow-up: recognize unfamiliar Arabic and English app authentication challenges without admitting arbitrary text/amount-only messages; never remove posted bank debit or transfer even when OTP wording co-occurs.",
+    "M953 follow-up: apply the same resolver in foreground and background WorkManager, ACK only proven nonfinancial challenge or existing owner-confirmed custom exclusion; all other bank messages remain reviewable.",
+    "M953 follow-up: six distinct runnable OTP and mixed-finance regression cases in mandatory M946 without deleting old test inventory; keep original cards, fixed FAB/Snackbar and private backup untouched."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -33,7 +36,13 @@
     "test/qa/m937_flutter_test_report_test.py",
     "test/storage/m944_sqlcipher_keyset_paging_test.dart",
     "test/storage/m952_account_linked_schema_readiness_test.dart",
-    "test/storage/m952_budget_single_pass_parity_test.dart"
+    "test/storage/m952_budget_single_pass_parity_test.dart",
+    "docs/qa/M953_OTP_VERIFICATION_SAFETY.md",
+    "lib/waffra_bank_sms_facts.dart",
+    "lib/waffra_sms_local_rules.dart",
+    "lib/waffra_auto_sms_autopost.part.dart",
+    "scripts/qa/m946_full_app_smoke_matrix.py",
+    "test/m953_new_app_otp_exclusion_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
