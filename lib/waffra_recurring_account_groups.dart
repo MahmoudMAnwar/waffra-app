@@ -49,6 +49,35 @@ abstract final class WaffraRecurringAccountGroups {
   return List<WaffraRecurringAccountGroup>.unmodifiable(byId.values);
  }
 
+ /// Legacy display grouping only. Names need an anchored full institution
+ /// name plus a word separator; never financial posting or SMS authority.
+ static String? _legacyBankLabelId(String label,String kind){
+  if(kind!='bank')return null;
+  String normalize(String text)=>text.trim().toLowerCase()
+   .replaceAll('أ','ا').replaceAll('إ','ا').replaceAll('آ','ا')
+   .replaceAll(RegExp(r'\s+'),' ');
+  final value=normalize(label);
+  final aliases=<String,String>{
+   for(final provider in [
+    ...WaffraSaudiFinancialProviders.localBanks,
+    ...WaffraSaudiFinancialProviders.digitalBanks,
+   ]) normalize(provider.labelAr):provider.id,
+   for(final provider in [
+    ...WaffraSaudiFinancialProviders.localBanks,
+    ...WaffraSaudiFinancialProviders.digitalBanks,
+   ]) normalize(provider.labelEn):provider.id,
+   'الراجحي':'rajhi','al rajhi':'rajhi','alrajhi':'rajhi',
+   'الاهلي':'snb','الانماء':'inma','البلاد':'bilad',
+  };
+  final identities=<String>{
+   for(final alias in aliases.entries)
+    if(value==alias.key||value.startsWith('${alias.key} ')||
+       value.startsWith('${alias.key}-')||
+       value.startsWith('${alias.key}–')) alias.value,
+  };
+  return identities.length==1?identities.single:null;
+ }
+
  /// Accounts without a recognized institution are deliberately kept in
  /// individual groups, rather than guessed into a potentially wrong bank.
  /// Selecting a group does not select an account or authorize a payment.
@@ -66,7 +95,7 @@ abstract final class WaffraRecurringAccountGroups {
     // Only OLD accounts without structured metadata may use name hints.
     final institution=account.providerId!=null?
      (account.providerId=='other'?null:account.providerId):
-     WaffraSmsAccountLearning.bankGroup(account.name);
+     _legacyBankLabelId(account.name,account.kind);
     id=institution==null
       ?'${account.kind}:account:${account.customInstitutionRootId??account.id}'
       :'${account.kind}:institution:$institution';
