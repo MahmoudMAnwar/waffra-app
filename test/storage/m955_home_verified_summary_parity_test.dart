@@ -25,7 +25,7 @@ void main() {
     expect(start,greaterThan(0));
     expect(end,greaterThan(start));
     final guarded=bridge.substring(start,end);
-    expect(RegExp(r'withExclusiveAccess\\(\\(\\) async').allMatches(
+    expect('withExclusiveAccess(() async {'.allMatches(
       guarded).length,1);
     expect(guarded,contains('await _requireActivatedUnderLock();'));
     expect(guarded,contains('final before = await snapshot.read();'));
