@@ -59,7 +59,11 @@ abstract final class WaffraBankSmsFactsParser {
   r'\b(?:otp|one[ -]?time[ -]?(?:password|code|passcode)|'
   r'verification[ -]?code|security[ -]?code|authorization[ -]?code|'
   r'confirm(?:ation)?[ -]?code|temporary[ -]?(?:password|code))\b|'
-  r'رمز\s*(?:مؤقت|التحقق|تفعيل|التفعيل|الدخول|تأكيد|التأكيد|الامان|الأمان)|'
+  r'رمز\s*(?:مؤقت|التحقق|تفعيل|التفعيل|الدخول|تأكيد|التأكيد|الامان|الأمان|التوثيق|المصادقة|تسجيل\s+الدخول)|'
+  r'(?:كود|رمز)\s*(?:تسجيل\s+الدخول|الدخول|التأكيد|التحقق|التوثيق|المصادقة)|'
+  r'(?:رمزك|كودك|الكود\s+الخاص\s+بك)\s*(?:(?:هو|هي)\s*|[:：]\s*)[0-9٠-٩۰-۹]{4,8}|'
+  r'\b(?:login|sign[ -]?in|authentication|auth|activation|access|2fa)\s+(?:pass)?code\b|'
+  r'\byour\s+(?:(?:login|sign[ -]?in|security|verification|app)\s+)?code\s*(?:is|[:：])\s*[0-9]{4,8}\b|'
   r'كلم[ةه]\s*مرور\s*مؤقت[ةه]?|'
   r'رمز\s*(?:إضافة|اضافة|تأكيد)\s*المستفيد',
   caseSensitive:false);
