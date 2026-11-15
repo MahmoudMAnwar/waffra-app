@@ -1,3 +1,10 @@
+## M955 — مواصلة المحاور الخمسة: ملخص الحساب في الرئيسية دون تحميل كل المعاملات (2026-11-15)
+
+- **Issue:** [#664](https://github.com/MahmoudMAnwar/waffra-app/issues/664), follow-up [#657](https://github.com/MahmoudMAnwar/waffra-app/issues/657). **Stacked Draft:** [PR #665](https://github.com/MahmoudMAnwar/waffra-app/pull/665) targeting PR #658 branch, not main. PR #660 remains independent.
+- **Financial integrity / accounts:** the verified SQLCipher account/budget/goal projection runs behind the original native source gate and pre/post digest checks. The new `includeEntries` switch defaults to true; never change amounts, account links, balances or source ownership. `false` is only valid with `summaryOnly:true`.
+- **Performance:** the Home account chip can now request month-scoped budget/goal totals without decoding a full month's transaction cards it never renders from `context.entries`. Use SQLite `LIMIT 0` for that optional row projection, keep independently source-backed monthly allocations and one grouped goal contribution query. All-time historical account ID filtering and normal Account Context/reports keep their old semantics.
+- **QA:** `test/storage/m955_home_verified_summary_parity_test.dart` seeds 900 encrypted entries, two independent budgets, a bank/wallet/unassigned mix and account-sourced goal, checks exact selected/global/goal halala parity against original reads, one-to-one history, no bank/source changes, no ledger card hydration, and rejects misuse for unbounded history. Register in M946 exact-head money test; M385/M550/M449 required. Physical Android, old private archive, further Home architecture remain unverified. All 5 axes remain Partial, not 100%.
+
 ## M952 — Proactive Financial Reliability & Code Hardening: المحاور الخمسة (2026-11-15)
 
 - **Issue:** [#657](https://github.com/MahmoudMAnwar/waffra-app/issues/657). **Draft:** [PR #658](https://github.com/MahmoudMAnwar/waffra-app/pull/658). The latest user-requested plan has **five axes and 20 proposed improvements**; these are NOT the older M944 five axes. Do not mark the entire plan done from the first tranche.
