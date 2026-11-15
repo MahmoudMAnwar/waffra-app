@@ -1,106 +1,24 @@
 {
   "contract_version": 1,
-  "change_id": "M990-ISSUE708-SMS-SINGLE-PASS-AND-PERF-20261115",
-  "human_scope_review": "Owner requested all 14 SMS improvements. M990 is the next stacked Draft increment after M989 (#707): reuse structured facts and amount for lifecycle safely; tests and more performance and rule-preview work, without changing money authority or the native SMS ACK pipeline. Remaining items must stay clearly tracked; no automatic 100% assertion. M1000 M103 root causes: 2 obsolete source literal assertions in M338 and M940. These tests are retained and updated only within anchored approved sections after checking exact source, no behavioral policy changes; M946 true 1069 test executions all passed on previous head.",
+  "change_id": "M1001-ISSUE712-MAIN-SAR-REGRESSION-20261116",
+  "human_scope_review": "Owner explicitly ordered fixing the failed main APK build, then continuing SMS exclusion rule work in Draft #711. The post-#709 main M340 guard and M928 tests failed because the parser no longer required a direct source-action SAR amount witness. The intended fix reinstates independent originalAmount(s), with cached sourceAmount only able to veto a mismatch. No test or safety gate is removed.",
   "user_requested_changes": [
-    "M990 reuse a single parsed SMS original SAR amount for lifecycle matching, even pending, without allowing pending financial posting.",
-    "M990 preserve strict exact bank+reference+account+amount relations, native ACK and four-kind rule safety.",
-    "M990 run targeted test on source/posted, pending/posted, foreign currency/uncertain SMS and large queues.",
-    "Retain every original regression test, exact-SHA CI, no bypass, full device verification pending.",
-    "M990 read-only separate labelled VAT and verified fee from principal; Arabic/Persian digits, SAR-only, never modify posted amount or assume VAT adds to principal. Cover unknown currency and ambiguous numeric fields.",
-    "M990 rule preview must distinguish any excluded-rule sample that the actual four-kind posted-money/OTP safety resolver would reject. Show blocked exclusion count; never save sample SMS or grant exclusion/finance rights.",
-    "M990 prevent fee foreign-currency scanning from crossing into the next VAT or other SMS field; foreign currency in the same fee clause remains blocked. Keep explicit fee separately from VAT and principal.",
-    "M991 selective reclassification of only affected native pending SMS after sender/keyword rule revisions. Cache previous classifications in verified owner's Home session only, verify exact native ID+sender+SHA256(body), invalidate by category, owner, session, and changed matching rules. Never cache exclusion native ACK or financial commitment decisions; always reparse money/OTP, lifecycle and verified hashes.",
-    "M991 live sender inbox counts and calendar refresh when native pending set changes while sheet is already open, using a notifier and preserving selected sender/day/selection. No hidden Android history scan, no prior SMS resurrection.",
-    "M992 offline versioned v1 Saudi banking template families across allowlisted local/digital banks and wallets; ambiguous multi-event messages have no template auto-clearance; template metadata is suggestion only and cannot authorize money, account ownership, ACK or user-rule learning.",
-    "M993 read-only cross-session exact-relation history keyed to verified owner via existing encrypted Flutter secure storage. Persist ONLY SHA256 of exact bank sender+reference+masked suffix+SAR-minor and native SMS ID, lifecycle stage and timestamp; cap 256 records/30 days, no raw SMS/account digits and no finance/native ACK. Re-verify current native pending IDs before reading/writing suggestions.",
-    "M994 full pending SMS rule-impact preview up to 2000 messages without old 100-message truncation; build rule candidate indexes once, preserve custom-only suggestion semantics and conflict counts; never auto-save or auto-exclude. Exercise 2000-message before/after preview and sender scoping regressions.",
-    "M995 pass one currency discovery/amount record between structured bank context and legacy BankParser in the same SMS worker; retain public BankParser.parse default fallback for all old callers and all old tests. Do not alter currency ledger authorization or SQLCipher writes.",
-    "M996 render existing possibleDuplicate/possibleSettlement/possibleReversal read-only relation flags in sender review row as localized non-definitive labels, without changing actions, counts, sender navigation, native ACK or financial writer.",
-    "M997 register every new executable 14-roadmap regression M986–M996 into existing M946 3-shard same-SHA full-app smoke inventory; preserve all prior features and tests, no CI skips, and keep physical Android acceptance separate.",
-    "M992 safety: versioned bank template recognition must not imply masked BANK account suffix for digital-wallet providers (e.g. Barq); wallet account association remains explicit user confirmation.",
-    "M998 (#708) close roadmap gaps #2/4/7/14: re-use already parsed bank SMS facts and verified OTP state in structured bank context, suffix suggestion and versioned template registry (no duplicate fact parses), preserve standalone APIs. Extend read-only Saudi provider SMS families and fixture coverage of all 17 curated banks/digital banks/wallets with safety around ambiguous/OTP/status notices. Expand deterministic merchant extraction and aliases on explicitly labelled safe names and user-confirmed category learning, never learn raw OTP/account IDs. Register new 100/1000/2000 stress tests in existing M946 and separate Android device UAT matrix. No ledger/ACK/saved user consent changes.",
-    "M999 (#708) repair three detected M946 regressions: read-only wallet metadata must not prefill bank suffix (update previous M990 fixture), `Purchase Card reversed` is a reversal template (fix production regex), and M632 classification must retain its four authoritative queue keys while allowing extra read-only cacheHits/encrypted-digest history metadata required by M991/M993. Extend existing legacy tests (do not delete or disable) to verify old required keys and forbid any new write/ACK action.",
-    "M1000 repair exact same-SHA M103 full Flutter failures without changing production: M338 old source contract expected standalone originalAmount(s) but M995 now safely passes an optional cached sourceAmount and detectedCurrencies through identical SAR validation. Update only the bounded M338 source assertions; retain all runtime money tests. M940 old 9 refresh call count changed to 11 in new SMS reclassification UI; assert exactly 11 while preserving paging/source selection and existing separate coverage. Approve two protected test files with narrow M385 sections, no production/UI security policy change."
+    "Fix #709 post-merge main signed APK blockage by preserving independent source-action SAR amount validation in BankParser.parse.",
+    "Keep M340/M928 source authority, original currency and timestamp safety checks enabled. Never allow precomputed sourceAmount to replace original bank text proof.",
+    "Document exact root cause and changed scope; rerun full existing CI before merge."
   ],
   "allowed_changed_files": [
+    "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
-    "docs/WAFFRA_REQUIREMENTS.md",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "lib/waffra_sms_structured_bank_context.dart",
-    "lib/waffra_sms_lifecycle_evidence.dart",
-    "test/m990_sms_single_pass_structured_facts_test.dart",
-    "lib/waffra_sms_rule_simulator.dart",
-    "lib/waffra_sms_rule_settings_page.dart",
-    "test/m990_sms_rule_impact_safe_exclusion_test.dart",
-    "lib/waffra_bank_sms_facts.dart",
-    "lib/main.dart",
-    "lib/waffra_home_sms_refresh.part.dart",
-    "lib/waffra_home_sms_inbox.part.dart",
-    "lib/waffra_sms_incremental_rule_review.dart",
-    "test/m991_sms_incremental_rule_review_test.dart",
-    "test/m991_sms_live_counts_source_test.dart",
-    "lib/waffra_sms_saudi_template_registry.dart",
-    "test/m992_saudi_sms_template_registry_test.dart",
-    "lib/waffra_sms_lifecycle_history_store.dart",
-    "test/m993_sms_lifecycle_history_test.dart",
-    "test/m994_full_sms_rule_impact_test.dart",
-    "test/m995_sms_single_currency_scan_test.dart",
-    "test/m996_sms_related_advisory_ui_test.dart",
-    "scripts/qa/m946_full_app_smoke_matrix.py",
-    "lib/waffra_sms_multicurrency_review.dart",
-    "lib/waffra_merchant_rules.dart",
-    "test/m998_sms_shared_facts_parity_test.dart",
-    "test/m998_saudi_sms_all_provider_templates_test.dart",
-    "test/m998_merchant_corrections_and_alias_safety_test.dart",
-    "test/m998_sms_2000_corpus_benchmark_test.dart",
-    "docs/qa/M998_ANDROID_SMS_UAT_MATRIX.md",
-    "test/m632_sms_account_splash_isolate_contract_test.dart",
-    "test/m338_currency_less_sms_finance_guard_test.dart",
-    "test/m940_sms_review_page_window_test.dart"
+    "lib/main.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
       {
-        "start": "Map<String,Object?> waffraM632ClassifySmsQueue(",
-        "end": "List<String> splitBankMessages("
-      },
-      {
-        "start": "bool _m661RuleLoadErrorNotified=false;",
-        "end": "// M964: pure Home helper now lives in registered same-library part."
-      },
-      {
-        "start": "@override void dispose(){if(!_m663FirstInteractiveFrame.isCompleted)",
-        "end": "// M840: original verified Home/Widget synchronization now in registered Dart part."
-      },
-      {
-        "start": "class BankParser {",
-        "end": "String bankSmsHash("
-      }
-    ],
-    "lib/waffra_home_sms_refresh.part.dart": [
-      {
-        "start": " Future<void> _runAutoSmsRefresh({bool importMonth=false})async{",
-        "end": "// Passive SMS review is local-only;"
-      }
-    ],
-    "lib/waffra_home_sms_inbox.part.dart": [
-      {
-        "start": "  await showModalBottomSheet<void>(",
-        "end": "  // The sender inbox route remains beneath the message review."
-      }
-    ],
-    "test/m338_currency_less_sms_finance_guard_test.dart": [
-      {
-        "start": " test('M338 bank parser checks actual currency evidence after amount candidate',(){",
-        "end": null
-      }
-    ],
-    "test/m940_sms_review_page_window_test.dart": [
-      {
-        "start": "  expect(source,contains('idsCache.clear();'));",
-        "end": "  expect(source,contains('NotificationListener<ScrollNotification>('));"
+        "start": "  // SAR appearing only in a balance or a separate fee is not proof",
+        "end": "  var title=income?'مبلغ وارد'"
       }
     ]
   },
