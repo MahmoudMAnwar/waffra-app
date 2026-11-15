@@ -94,7 +94,8 @@ void main() {
         {'shared','rent-entry','unassigned','october'});
       final bounded=await WaffraAccountContextRead.loadMonthEntries(
         store:db,monthIso:'2026-11',limit:20);
-      expect(bounded.map((e)=>e.id).toSet(),{'shared','unassigned'});
+      expect(bounded.map((e)=>e.id).toSet(),
+        {'shared','rent-entry','unassigned'});
       expect(bounded.length,3);
 
       final page1=await WaffraSqlcipherHistoryPager.load(
