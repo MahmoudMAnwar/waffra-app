@@ -1,3 +1,13 @@
+## M952 — متابعة المحاور الخمسة بعد دمج #654 و#656 (2026-11-15)
+
+- **Issue:** [#657](https://github.com/MahmoudMAnwar/waffra-app/issues/657). **Draft PR:** يتحدد بعد رفع التغييرات.
+- **Axis 1:** Audit the merged verified SQLCipher keyset source read; no reimplementation or unverified fallback. Status: **Audit in progress**.
+- **Axis 2:** Cache complete sender-group SMS review IDs once per queue revision; refresh only on review completion or confirmed bulk exclusion. Preserve 100-card window, full select-all/exclude, original SMS and sender-navigation UI. Status: **Implementation in progress**.
+- **Axis 3:** No change to financial writer/ledger; retain account opening, transfer net-zero, goal/recurring/due and Restore anti-replay invariants while inspecting gaps. Status: **Audit in progress**.
+- **Axis 4:** Preserve registered Home parts, session source leases and approved + / Snackbar geometry; only proven dead code may be removed. Status: **Audit in progress**.
+- **Axis 5:** Fail-closed Dart JSON reporter on duplicate runner-start, duplicate suite identity and test referring to an unreported suite, without changing zero-fail/skipped counts or output privacy. New hostile-event unit tests. Status: **Implementation in progress**.
+- **Safety:** no genuine Android/biometric/UAT or original encrypted archive claims, no CI weakening, no new financial write, no change to approved layouts. Only mark an axis **Done** after exact HEAD validation passes. [Verification tracker](qa/M952_FIVE_AXES_FOLLOWUP.md).
+
 ## M944 — تحسين الأداء العميق واستقرار البيانات: المحاور الخمسة (2026-11-15)
 
 - **Issue:** [#653](https://github.com/MahmoudMAnwar/waffra-app/issues/653). **Owner instruction:** implement and report only independently verified milestones as «تم انتهاء محور 1 من 5» ... «تم انتهاء محور 5 من 5».
