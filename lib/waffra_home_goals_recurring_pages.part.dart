@@ -1,5 +1,25 @@
 part of 'main.dart';
 
+/// M974 / #673: immutable ID lookups for read-only card presentation.
+/// Preserve original matched row order and duplicates; never guess an owner.
+final class WaffraHomeCardIdIndex<T> {
+ WaffraHomeCardIdIndex(Iterable<T> source,String? Function(T) id){
+  final groups=<String,List<T>>{};
+  for(final item in source){
+   final key=id(item);
+   if(key==null)continue;
+   (groups[key]??=<T>[]).add(item);
+  }
+  _byId=Map<String,List<T>>.unmodifiable({
+   for(final group in groups.entries)
+    group.key:List<T>.unmodifiable(group.value),
+  });
+ }
+ late final Map<String,List<T>> _byId;
+ List<T> matches(String? id)=>id==null?List<T>.empty(growable:false):
+  _byId[id]??List<T>.empty(growable:false);
+}
+
 /// M707 / #633/#635: byte-identical owner-approved Goals/Recurring real pages.
 /// Verified SQLCipher source and every user action stay in the parent Home State.
 extension _WaffraHomeGoalsRecurringPagesModule on _HomeScreenState {
@@ -47,6 +67,8 @@ extension _WaffraHomeGoalsRecurringPagesModule on _HomeScreenState {
    return (a.dueDate??DateTime(9999))
     .compareTo(b.dueDate??DateTime(9999));
   });
+  final activeAccountById=WaffraHomeCardIdIndex<WaffraAccountBalance>(
+   _m467Accounts.where((a)=>!a.archived),(a)=>a.id);
   return Scrollbar(
    controller:_goalsScrollController,thumbVisibility:true,
    thickness:3,radius:const Radius.circular(8),
@@ -136,8 +158,7 @@ extension _WaffraHomeGoalsRecurringPagesModule on _HomeScreenState {
      const SizedBox(height:12),
      ...ordered.map((g){
       final percent=g.target<=0?0.0:(g.saved/g.target).clamp(0.0,1.0);
-      final storedAccount=g.accountId==null?const <WaffraAccountBalance>[]:
-       _m467Accounts.where((a)=>a.id==g.accountId&&!a.archived).toList();
+      final storedAccount=activeAccountById.matches(g.accountId);
       final accountName=storedAccount.length==1?storedAccount.single.name:
        (g.accountId==null?null:
         (waffraIsEnglish?'Account needs verification':'الحساب يحتاج مراجعة'));
@@ -267,6 +288,12 @@ extension _WaffraHomeGoalsRecurringPagesModule on _HomeScreenState {
    final bb=b.linkedGoalId==null?nextRecurringDue(b):b.startAt;
    return aa.compareTo(bb);
   });
+  // Reuse already verified snapshot membership without per-card full scans.
+  final linkedGoalById=WaffraHomeCardIdIndex<SavingGoal>(goals,(g)=>g.id);
+  final paidGoalDueById=WaffraHomeCardIdIndex<MoneyEntry>(
+   entries.where((e)=>e.sourceType=='goal_due'),(e)=>e.id);
+  final activeAccountById=WaffraHomeCardIdIndex<WaffraAccountBalance>(
+   _m467Accounts.where((a)=>!a.archived),(a)=>a.id);
   return Scrollbar(
    controller:_recurringScrollController,thumbVisibility:true,
    thickness:3,radius:const Radius.circular(8),
@@ -366,16 +393,14 @@ extension _WaffraHomeGoalsRecurringPagesModule on _HomeScreenState {
      ],
      const SizedBox(height:14),
      ...shown.map((r){
-      final linked=goals.where((g)=>g.id==r.linkedGoalId).toList();
+      final linked=linkedGoalById.matches(r.linkedGoalId);
       final goal=linked.isEmpty?null:linked.single;
       final due=goal==null?nextRecurringDue(r):r.startAt;
       final settledId=WaffraRecurringPolicy.entryId(r.id,
        DateTime(r.startAt.year,r.startAt.month,r.startAt.day));
-      final paid=entries.where((e)=>e.id==settledId&&
-       e.sourceType=='goal_due').toList(growable:false);
+      final paid=paidGoalDueById.matches(settledId);
       final paidGoalDue=goal!=null&&paid.length==1?paid.single:null;
-      final activeAccounts=r.accountId==null?const <WaffraAccountBalance>[]:
-       _m467Accounts.where((a)=>a.id==r.accountId&&!a.archived).toList();
+      final activeAccounts=activeAccountById.matches(r.accountId);
       final accountLabel=activeAccounts.length==1?activeAccounts.single.name:
        (r.accountId==null?null:
         (waffraIsEnglish?'Account needs verification':'الحساب يحتاج مراجعة'));
