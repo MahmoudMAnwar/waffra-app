@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 class WaffraReviewNotice {
  const WaffraReviewNotice({
   required this.id,required this.sender,required this.preview,
-  this.kind,this.amount,
+  this.kind,this.amount,this.receivedAtMs=0,
  });
  final String id,sender,preview;
  final String? kind;
  final double? amount;
+ /// Native SMS arrival timestamp (epoch ms); never inferred from message text.
+ final int receivedAtMs;
 }
 
 /// Notifications list is the review entry point, not a second overview sheet.
@@ -126,7 +128,15 @@ class _WaffraApprovedNotificationsPageState
   );
  }
  @override Widget build(BuildContext context){
-  final items=widget.readPending();
+  // Native receivedAt is the arrival order, independent of message date or
+  // sender. Sort ALL and sender-filter views newest first, with original
+  // input order as the deterministic tie-breaker for missing timestamps.
+  final indexed=widget.readPending().asMap().entries.toList()
+   ..sort((a,b){
+    final cmp=b.value.receivedAtMs.compareTo(a.value.receivedAtMs);
+    return cmp!=0?cmp:a.key.compareTo(b.key);
+   });
+  final items=indexed.map((entry)=>entry.value).toList(growable:false);
   // One linear pass and sender-key reuse; no message body parsing in build.
   final senderLabels=<String,String>{};
   final senderGroups=<String,List<WaffraReviewNotice>>{};
