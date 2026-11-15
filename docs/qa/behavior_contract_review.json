@@ -4862,6 +4862,37 @@
         ".github/workflows/m550-behavior-contract-preflight.yml",
         ".github/workflows/finance-full-regression.yml"
       ]
+    },
+    {
+      "id": "M945-OWNER-RESTORE-VIEW-CONSISTENCY",
+      "issue": "Issue #653, user-approved M945 follow-up in Draft PR #654",
+      "previous_behavior": "After restoring 19 historical entries then saving a manual expense, a cached Home month view could remain stale and show neither the new expense nor two older income entries. The user also reported duplicate Goals and Dues filter controls, incomplete Dues empty state and incorrect textual Riyal presentation. Home Show more or less appeared on a separate row and sometimes twice.",
+      "approved_behavior": "Every authoritative manual or bank SMS ledger replacement invalidates the read-only Home finance index, manual confirmed posts refresh verified accounts, and rejected writes invalidate their optimistic view. A 19-plus-1 synthetic record test retains every original ID including two income entries. Goals and Dues have single count dropdowns and official SAR monetary widgets; Goals More retains Deleted goals only, Dues shows approved metrics and a useful add-state, and Home has one inline Show more or less driven by verified mixed activities.",
+      "source_paths": [
+        "lib/waffra_home_entry_sheet.part.dart",
+        "lib/waffra_home_goals_recurring_pages.part.dart",
+        "lib/waffra_approved_page_designs.dart",
+        "lib/waffra_home_dashboard_analytics.part.dart",
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m945_restored_history_filters_ui_test.dart",
+        "test/m944_home_progressive_window_test.dart",
+        "test/m684_finance_period_index_test.dart",
+        "test/m938_goals_restore_fab_contract_test.dart"
+      ],
+      "safety_invariants": [
+        "Do not rewrite historical money, erase old income or silently link unassigned old transactions when a manual expense is committed.",
+        "Only verified SQLCipher snapshots and account source may be used for balances and account scopes.",
+        "The owner's password-encrypted archive is not decrypted by synthetic tests, and five missing goals remain an open acceptance issue until the archive is verified on a disposable device.",
+        "No duplicate posting or transfer booked as income; the existing 58px plus icon, bottom footer and stationary Snackbar are unchanged.",
+        "The linked-goal due, savings balance, deleted goals and recurring reminders remain accessible.",
+        "Source-based tests and full exact-head CI are separate from signed Android owner acceptance."
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ]
     }
   ]
 }
