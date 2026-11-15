@@ -193,6 +193,82 @@ void main(){
   expect((await db.customSelect('PRAGMA foreign_key_check').get()),isEmpty);
  });
 
+
+ test('M948 competing manual and SMS writes with SAME witnessed generation '
+  'never both debit or credit the bank; cold reopen retains one',()async{
+  final generation=(await snapshot().read()).generation;
+  Future<bool> attempt(String id,bool income)async{
+   try{
+    final saved=await writer().appendTransactions(
+     records:[entry(id,income:income,amount:37.25,
+      source:income?'bank_sms':'manual')],
+     messageHashes:[income?
+      'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb':null],
+     selectedAccountIds:['bank'],userConfirmed:true,
+     expectedAccountGeneration:generation);
+    return saved.saved==1;
+   }on StateError{
+    return false;
+   }
+  }
+  final verdict=await Future.wait([
+   attempt('m948-concurrent-manual',false),
+   attempt('m948-concurrent-sms',true),
+  ]);
+  expect(verdict.where((ok)=>ok).length,1,
+   reason:'Two stale source writers must never both charge an account');
+  expect(await count('fresh_finance_entries'),1);
+  expect(await count('fresh_finance_account_entry_links'),1);
+  final ledger=(jsonDecode((await snapshot().read()).values['entries']
+   as String) as List).cast<Map>();
+  expect(ledger.length,1);
+  final income=ledger.single['income']==true;
+  expect(ledger.single['id'],
+   income?'m948-concurrent-sms':'m948-concurrent-manual');
+  final expectedMinor=income?103725:96275;
+  expect((await accounts().balances()).singleWhere(
+   (a)=>a.id=='bank').balanceMinor,expectedMinor);
+  await db.close();
+  db=WaffraEncryptedStore.openAt(vault,key:key);
+  expect(await count('fresh_finance_entries'),1);
+  expect((await accounts().balances()).singleWhere(
+   (a)=>a.id=='bank').balanceMinor,expectedMinor);
+  expect(jsonDecode((await snapshot().read()).values['entries'] as String),
+   ledger);
+ });
+
+ test('M948 invalid inputs, stale account choice and cancelled confirmation '
+  'must never write to encrypted finance or accounts',()async{
+  final original=(await snapshot().read()).digest;
+  final generation=(await snapshot().read()).generation;
+  Future<void> reject({
+   required Map<String,Object?> record,
+   List<String?> hashes=const [null],
+   List<String?> ids=const ['bank'],
+   bool confirmed=true,
+  })async{
+   await expectLater(writer().appendTransactions(
+    records:[record],messageHashes:hashes,
+    selectedAccountIds:ids,userConfirmed:confirmed,
+    expectedAccountGeneration:generation),
+    throwsA(anyOf(isA<ArgumentError>(),isA<StateError>())));
+   expect((await snapshot().read()).digest,original);
+   expect(await count('fresh_finance_entries'),0);
+   expect((await accounts().balances()).singleWhere(
+    (a)=>a.id=='bank').balanceMinor,100000);
+  }
+  await reject(record:entry('m948-no-consent',income:false,amount:13),
+   confirmed:false);
+  await reject(record:{...entry('m948-empty',income:false,amount:13),
+   'id':''});
+  await reject(record:entry('m948-wrong-bank',income:false,amount:13),
+   ids:const ['unknown-account']);
+  await reject(record:entry('m948-bad-hash',income:false,amount:13),
+   hashes:const ['not-a-64-character-sha']);
+  await reject(record:{...entry('m948-file',income:false,amount:13),
+   'receiptPath':'/storage/emulated/0/secret.jpg'});
+ });
+
  test('M946 reviewed SMS hash is idempotent and never double-posts '
   'into linked bank or wallet',()async{
   const hash='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
