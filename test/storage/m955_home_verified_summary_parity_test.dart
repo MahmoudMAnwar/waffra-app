@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/storage/waffra_account_context_read.dart';
 import 'package:waffra/storage/waffra_account_context_repository.dart';
+import 'package:waffra/storage/waffra_account_context_schema.dart';
 import 'package:waffra/storage/waffra_accounts_repository.dart';
 import 'package:waffra/storage/waffra_accounts_schema.dart';
 import 'package:waffra/storage/waffra_encrypted_store.dart';
@@ -207,6 +208,9 @@ void main() {
         experimentalEnabled:true).initialize(
           decision:WaffraFirstRunDecision.freshCandidate);
       await WaffraAccountsSchema.install(db);
+      // Old V3 accountless restores still install the empty versioned account
+      // attribution schema. Its absence is corrupted data, never a zero bank.
+      await WaffraAccountContextSchema.install(db);
       const stamp='2026-11-04T10:00:00';
       for(final (id,amount,income) in <(String,int,bool)>[
         ('legacy-expense',7000,false),
