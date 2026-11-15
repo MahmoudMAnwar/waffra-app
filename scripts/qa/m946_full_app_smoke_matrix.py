@@ -23,6 +23,9 @@ GROUPS = ("money", "experience", "safety")
 FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {
     # M952: all new finance/goal/readiness regressions execute on exact PR SHA
     # rather than existing only as locally runnable, unregistered test files.
+    "m955_home_verified_month_summary_without_ledger_hydration": ("money", (
+        "test/storage/m955_home_verified_summary_parity_test.dart",
+        "test/storage/m448_account_context_read_test.dart")),
     "m952_encrypted_account_domain_fail_closed": ("safety", (
         "test/storage/m952_account_linked_schema_readiness_test.dart",
         "test/storage/m440_accounts_portable_v3_test.dart")),
