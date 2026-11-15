@@ -4867,14 +4867,15 @@
       "id": "M945-OWNER-RESTORE-VIEW-CONSISTENCY",
       "issue": "Issue #653, user-approved M945 follow-up in Draft PR #654",
       "previous_behavior": "After restoring 19 historical entries then saving a manual expense, a cached Home month view could remain stale and show neither the new expense nor two older income entries. The user also reported duplicate Goals and Dues filter controls, incomplete Dues empty state and incorrect textual Riyal presentation. Home Show more or less appeared on a separate row and sometimes twice.",
-      "approved_behavior": "Every authoritative manual or bank SMS ledger replacement invalidates the read-only Home finance index, manual confirmed posts refresh verified accounts, and rejected writes invalidate their optimistic view. A 19-plus-1 synthetic record test retains every original ID including two income entries. Goals and Dues have single count dropdowns and official SAR monetary widgets; Goals More retains Deleted goals only, Dues shows approved metrics and a useful add-state, and Home has one inline Show more or less driven by verified mixed activities. The selected-account read view now consumes verified context and refuses a stale selection without it, preserving All accounts history.",
+      "approved_behavior": "Every authoritative manual or bank SMS ledger replacement invalidates the read-only Home finance index, manual confirmed posts refresh verified accounts, and rejected writes invalidate their optimistic view. A 19-plus-1 synthetic record test retains every original ID including two income entries. Goals and Dues have single count dropdowns and official SAR monetary widgets; Goals More retains Deleted goals only, Dues shows approved metrics and a useful add-state, and Home has one inline Show more or less driven by verified mixed activities. The selected-account read view now consumes verified context and refuses a stale selection without it, preserving All accounts history. A post-restore canonical identity parity correction also invalidates the Home period index before rebinding the verified ledger rows.",
       "source_paths": [
         "lib/waffra_home_entry_sheet.part.dart",
         "lib/waffra_home_goals_recurring_pages.part.dart",
         "lib/waffra_approved_page_designs.dart",
         "lib/waffra_home_dashboard_analytics.part.dart",
         "lib/main.dart",
-        "lib/waffra_home_verified_account_flows.part.dart"
+        "lib/waffra_home_verified_account_flows.part.dart",
+        "lib/waffra_home_account_tools.part.dart"
       ],
       "test_paths": [
         "test/m945_restored_history_filters_ui_test.dart",
