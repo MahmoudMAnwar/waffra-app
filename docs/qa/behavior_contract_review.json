@@ -35,7 +35,8 @@
         "Historical/reconciliation/export call sites still default includeEntries=true; unscoped ledger-free read fails closed.",
         "Only existing verified SQLCipher snapshot lock and generation/digest are used; missing linked financial domain fails closed.",
         "No fixed plus, RTL, notification, approved Home/Goals/Dues design or owner private archived data changes; owner handset and old backup remain unverified.",
-        "The new direct SQLCipher integer budget aggregation and the old Dart one-pass policy must produce identical global and selected-account results for 900 encrypted entries over bank, wallet and all-account contexts; no legacy full-entry path change."
+        "The new direct SQLCipher integer budget aggregation and the old Dart one-pass policy must produce identical global and selected-account results for 900 encrypted entries over bank, wallet and all-account contexts; no legacy full-entry path change.",
+        "A second disposable encrypted accountless old-history fixture has real unassigned income/expense, an independently funded goal wallet, a confirmed standalone budget and zero bank accounts; compact vs legacy projections preserve 7,000 global halalas, zero bank attribution, 15,000 saved wallet and exactly two entries after cold reopen, never invent a bank opening balance."
       ]
     },
     {
