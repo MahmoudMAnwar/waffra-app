@@ -2209,3 +2209,9 @@ M939 verification correction: Flutter's fixed FAB follower host must shrink-wrap
 
 ### M943 — Issue #651: owner follow-up after M942, 8 workstreams
 Separate Draft PR stacked on #650. Fix unverified Home balance display; remove unfounded monthly comparison; bound Home displayed transactions without changing financial ordering; expand Saudi SMS bank/wallet recognition without auto-post; preserve explicit independent identities for custom Other institutions; support authenticated clearance of bank last four; add V24/V3 backup reconciliation QA; audit retired AI source compatibility without breaking currency security or changing active app routes. Keep all approved Home/Goals/Recurring cards, FAB and Snackbar unchanged. Full exact-SHA CI, original owner encrypted backup and actual signed Android UAT are independent gates.
+
+### M944 محور 4 — تجزئة Home والعمليات المتكررة (تنفيذ ضمن PR #654)
+- فصل `HomeScreenState.build` (246 سطرًا، نسخة مطابقة للمصدر الأصلي) إلى `waffra_home_root_shell.part.dart` مع إبقاء State ومرجع الـFAB/الفوتر/Snackbar كما هما.
+- فصل محرر المتكررة وحساب موعدها وإجراءات الهدف المرتبط (304 أسطر مطابقة) إلى `waffra_home_recurring_workflows.part.dart`، وإبقاء Goals/Recurring UI الأصلي في ملف الصفحات.
+- تحديث اختبار Dart/Python لإعادة تركيب المصدر الأصلي ومراجعة الاختبارات القديمة؛ بدون إزالة أو تعطيل أي حارس أموال أو بيانات، وبدون تعديل شكل القوالب المعتمدة.
+- الحالة: **Partial** لحين اجتياز CI على أحدث SHA؛ فصل الحقول المشتركة العشوائي أو نسخ الحالة في Controllers ثانية ليس هدفًا بحد ذاته وقد يسبب أخطاء رصيد/Logout.
