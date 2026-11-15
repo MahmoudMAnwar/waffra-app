@@ -85,6 +85,7 @@ import 'waffra_sms_review_groups.dart';
 import 'waffra_sms_review_page_window.dart';
 import 'waffra_sms_account_learning.dart';
 import 'waffra_sms_structured_bank_context.dart';
+import 'waffra_sms_lifecycle_evidence.dart';
 import 'waffra_sms_rule_settings_page.dart';
 import 'waffra_unknown_financial_sms_page.dart';
 import 'waffra_auto_sms_consent.dart';
@@ -1140,6 +1141,8 @@ Map<String,Object?> waffraM632ClassifySmsQueue(Map<String,Object?> input){
  final ruleIndex=WaffraSmsRuleCandidateIndex(rules);
  final validCategories=(input['categories'] as List).whereType<String>().toSet();
  final hashes=(input['hashes'] as List).whereType<String>().toSet();
+ // M989: exact-reference lifecycle links remain in isolate memory only.
+ final relatedEventIndex=WaffraSmsRelatedEventIndex();
  final waiting=<Map<String,Object?>>[];
  final excluded=<String>[];
  final committed=<String>[];
@@ -1159,6 +1162,21 @@ Map<String,Object?> waffraM632ClassifySmsQueue(Map<String,Object?> input){
   final sender=candidate['sender'] is String?candidate['sender'] as String:'';
   final contextFacts=WaffraSmsStructuredBankContext.parse(body,sender:sender);
   final facts=contextFacts.facts;
+  final lifecycle=WaffraSmsLifecycleEvidence.inspect(body,
+   sender:sender,context:contextFacts);
+  final relation=relatedEventIndex.inspectAndRemember(lifecycle);
+  if(relation!=WaffraSmsRelatedEvent.none){
+   annotated['relatedSmsEvent']=relation.name;
+  }
+  if(lifecycle.stage==WaffraSmsLifecycleStage.reversed||
+     lifecycle.stage==WaffraSmsLifecycleStage.refunded){
+   // Refunds/reversals require their OWN verified financial treatment.
+   // Never reinterpret them as a fresh ordinary income or expenditure.
+   annotated['lifecycleStage']=lifecycle.stage.name;
+   waiting.add(annotated);
+   continue;
+  }
+
   // A combined SMS can contain two independent financial events. Neither
   // an exclusion nor the first amount may classify the complete message.
   if(contextFacts.composite){
