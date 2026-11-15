@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
   "change_id": "M952-ISSUE657-FIVE-AXIS-CONTINUATION-KEYSET-BUDGET-PARITY-20261115",
-  "human_scope_review": "Owner's latest prior-chat five axes are financial integrity, account & Backup/Restore integration, performance/responsiveness, UI stability, and architecture/proactive tests (20 proposed improvements). Issue #657/PR #658 implement first bounded tranche: fail-close missing linked SQLCipher finance-domain schema, memoize large SMS-review selections, and harden exact-SHA CI evidence; preserve approved UI and all financial writers. No claim of all 20 done or real backup/Android UAT. Owner authorized continuing unfinished five axes after first 24/24 CI green. Second safe tranche: use verified SQLCipher keyset for historical UNASSIGNED account reconciliation (not just monthly), remove per-budget repeated full-month scan using pure O(entries + budgets) parity-checked halala aggregates, extend absent due/budget-table fail-closed tests, and preserve existing UI/finance writers. One independent 2700-row SQLCipher parity expansion and 10000-entry/120-budget synthetic test protect correctness. This does NOT complete all five axes or prove physical phone/old private backup. Third bounded tranche of same five axes: use one grouped SQLCipher per-account goal-source aggregation instead of per-goal correlated scans, preserving original fund/release signs, independent saved wallet and no bank mutation; add real 80-goal/720-movement disposable encrypted parity regression, register this and existing M952 tests in exact-head M946 smoke. No owner backup, hardware acceptance or new ledger writes.",
+  "human_scope_review": "Owner's latest prior-chat five axes are financial integrity, account & Backup/Restore integration, performance/responsiveness, UI stability, and architecture/proactive tests (20 proposed improvements). Issue #657/PR #658 implement first bounded tranche: fail-close missing linked SQLCipher finance-domain schema, memoize large SMS-review selections, and harden exact-SHA CI evidence; preserve approved UI and all financial writers. No claim of all 20 done or real backup/Android UAT. Owner authorized continuing unfinished five axes after first 24/24 CI green. Second safe tranche: use verified SQLCipher keyset for historical UNASSIGNED account reconciliation (not just monthly), remove per-budget repeated full-month scan using pure O(entries + budgets) parity-checked halala aggregates, extend absent due/budget-table fail-closed tests, and preserve existing UI/finance writers. One independent 2700-row SQLCipher parity expansion and 10000-entry/120-budget synthetic test protect correctness. This does NOT complete all five axes or prove physical phone/old private backup. Third bounded tranche of same five axes: use one grouped SQLCipher per-account goal-source aggregation instead of per-goal correlated scans, preserving original fund/release signs, independent saved wallet and no bank mutation; add real 80-goal/720-movement disposable encrypted parity regression, register this and existing M952 tests in exact-head M946 smoke. No owner backup, hardware acceptance or new ledger writes. Fourth bounded tranche: fix verified historical multi-budget association fan-out in read-only SQLCipher account ledger, bounded month and keyset pages. Existing domain schema uniquely identifies (budget_id,entry_id) rather than entry_id and the production writer can attach multiple standalone budgets to one historic expense. Preserve one actual ledger transaction and bank debit; compute each budget's independent confirmed amount from allocation source rows, rather than duplicating the ledger. Add real encrypted regression and run in M946. No finance writer, archive migration, user's data, UI or FAB altered.",
   "user_requested_changes": [
     "Axis 1: reject account-backed financial source when expected versioned domain linked tables or revision are missing even if account marker and foreign keys appear healthy.",
     "Axis 2: protect bank-account links, account opening and V3/V24 restore parity with source readiness checks before reads, no speculative migration or real archive modification.",
@@ -14,7 +14,9 @@
     "Second tranche Axes 1/2: reject finance account context when due-settlement or standalone allocation tables disappeared even if account revision survives.",
     "Second tranche Axes 4/5: preserve account-page navigation/RTL/FAB/card layouts and update only source-contract assertions for verified historical pagination, maintain failing CI detection and no skipped tests.",
     "Axes 1/2/3: replace correlated per-goal account-contribution SQL with one grouped encrypted read, preserve all saved balances, funding/release polarity, unsourced due debits and record identities, with independent old-SQL parity over 80 synthetic goals and 720 source movements.",
-    "Axes 4/5: enforce execution of newly added goal/budget/schema/keyset suites in M946 exact-HEAD money and safety shards, not merely register source contracts; do not turn off existing tests."
+    "Axes 4/5: enforce execution of newly added goal/budget/schema/keyset suites in M946 exact-HEAD money and safety shards, not merely register source contracts; do not turn off existing tests.",
+    "Axes 1/2/3/5: ensure each SQLCipher entry appears exactly once in full, month and keyset histories even when multiple separately named standalone budgets reference it. Keep every budget's exact source allocation and single bank debit, without inventing one budget when several are verified.",
+    "Run source-backed same-expense-two-budget regression on every PR SHA through M946; preserve the original M385 fail-closed bounded scope and all other suite registrations."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -37,7 +39,8 @@
     "test/storage/m952_account_linked_schema_readiness_test.dart",
     "test/storage/m952_budget_single_pass_parity_test.dart",
     "test/storage/m952_goal_projection_scale_parity_test.dart",
-    "scripts/qa/m946_full_app_smoke_matrix.py"
+    "scripts/qa/m946_full_app_smoke_matrix.py",
+    "test/storage/m952_multibudget_ledger_dedup_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
@@ -84,6 +87,10 @@
       {
         "start": "    bool? income,",
         "end": "      clauses.add('l.account_id=?');"
+      },
+      {
+        "start": "    final query = '''",
+        "end": "    final rows = await store.customSelect(query, variables: variables).get();"
       }
     ],
     "lib/storage/waffra_verified_accounts_api.dart": [
@@ -106,12 +113,20 @@
     ],
     "lib/storage/waffra_account_context_read.dart": [
       {
+        "start": "    final rows = await store.customSelect('''",
+        "end": "    final budgets = await store.customSelect('''"
+      },
+      {
         "start": "ORDER BY name, budget_id",
         "end": "    // A goal is its own savings wallet. Display the overall saved total"
       },
       {
         "start": "    // A goal is its own savings wallet. Display the overall saved total",
         "end": "    final goals=List<WaffraAccountGoalSummary>.unmodifiable("
+      },
+      {
+        "start": "  static Future<List<WaffraAccountLedgerRow>> loadMonthEntries({",
+        "end": "  /// M681: original accountless history, not only current month."
       }
     ],
     "test/storage/m944_sqlcipher_keyset_paging_test.dart": [
