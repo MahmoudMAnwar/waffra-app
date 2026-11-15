@@ -8,6 +8,32 @@
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
     {
+      "id": "M954-M160-VERIFIED-UNDO-30DAY-EXCLUSION-FULL-SUITE-PARITY",
+      "issue": "Issues #659/#661 / Draft #660: two full-suite stale assertions after approved edit and durable SMS exclusion changes",
+      "previous_behavior": "M684 expected the old legacy in-memory index rollback string even in a verified SQLCipher row-edit path; M462 expected excluded SMS to be acknowledged transiently, permitting the same excluded message to reappear during rescan.",
+      "approved_behavior": "Verified historical edit Undo uses `_m953SaveExistingVerifiedEntry` under an authenticated source witness and reread, while legacy Undo still invalidates period index prior to in-memory rollback. Exclusions use `WaffraAutoSms.excludeMessages([id])` to preserve native 30-day exclusion identity; duplicate/confirmed finance rows retain `acknowledgeCommitted` separately. No financial source writer or native exclusion retention is modified by the test-only correction.",
+      "source_paths": [
+        "lib/waffra_home_entry_sheet.part.dart",
+        "lib/waffra_auto_sms_autopost.part.dart",
+        "native/WaffraAutoSmsStore.kt"
+      ],
+      "test_paths": [
+        "test/m684_finance_period_index_test.dart",
+        "test/m462_smart_sms_rule_review_test.dart",
+        "test/m954_all_sms_rule_routes_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m160-main-reconcile-backup-regression.yml",
+        ".github/workflows/m946-whole-app-feature-smoke.yml"
+      ],
+      "safety_invariants": [
+        "Secure SQLCipher row edit and Undo may not fall back to changing guessed legacy finance balances.",
+        "A 30-day exclusion is persisted, never just acknowledged with no durable record; a later scan must not re-add the same OTP.",
+        "M385 tests are changed inside explicit exact sections, not by loosening guard; M449 approved release notes remain current.",
+        "3105-case full-suite success required before PR readiness, no skip or masking."
+      ]
+    },
+    {
       "id": "M954-FAILED-CI-OWNER-EXCLUSION-AND-APPROVED-LABELS",
       "issue": "Issues #659 and #661 / Draft #660 exact-HEAD failed CI follow-up",
       "previous_behavior": "Owner custom exclude keyword 'تفعيل الحساب' was blocked as any word containing 'حساب' is considered account-sensitive; three M954 tests failed. Older M652 source and M221 widget tests asserted removed legacy map/recurring labels despite user-approved numbered timeline and 'استحقاقات'.",
