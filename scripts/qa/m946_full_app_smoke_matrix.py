@@ -103,6 +103,26 @@ FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {
     "receipts_and_encrypted_finance": ("safety", (
         "test/m262_bank_sms_notes_separation_test.dart",
         "test/storage/m457_direct_manual_finance_commit_test.dart")),
+    "transaction_delete_cancel_undo_and_receipt_parity": ("safety", (
+        "test/storage/m183_encrypted_transaction_recycle_test.dart",
+        "test/storage/m183_transaction_home_ui_guard_test.dart",
+        "test/m947_deletion_flow_contract_test.dart")),
+    "deleted_goals_restore_and_30_day_retention": ("safety", (
+        "test/storage/encrypted_goal_recycle_test.dart",
+        "test/storage/m938_legacy_goal_recycle_repair_test.dart",
+        "test/m938_goals_restore_fab_contract_test.dart")),
+    "recurring_and_category_recycle_without_history_loss": ("safety", (
+        "test/storage/m185_encrypted_module_recycle_test.dart",
+        "test/m907_home_delete_all_extraction_test.dart")),
+    "delete_all_and_biometric_full_reset_protection": ("safety", (
+        "test/m907_home_delete_all_extraction_test.dart",
+        "test/m947_deletion_flow_contract_test.dart")),
+    "sms_delete_exclude_synchronization": ("experience", (
+        "test/m638_sms_inbox_delete_sync_test.dart",
+        "test/m470_sms_excluded_senders_test.dart")),
+    "cloud_account_delete_release_guard": ("safety", (
+        "test/m107_release_backend_gating_test.dart",
+        "test/m279_app_wide_security_regression_test.dart")),
     "deleted_data_and_retired_features": ("safety", (
         "test/m671_tour_retirement_snackbar_tap_test.dart",
         "test/m470_sms_excluded_senders_test.dart")),
@@ -129,6 +149,7 @@ DEVICE_ONLY = (
     "signed APK installation/updating the older spouse handset without data loss",
     "password-authorized exact owner backup restore and historical goal parity",
     "external exchange-rate, gold and oil upstream freshness in live conditions",
+    "real Android delete-sheet navigation, biometric dialog and post-delete black-frame check",
 )
 
 PRODUCTION_GUARDS = (
@@ -139,6 +160,12 @@ PRODUCTION_GUARDS = (
     "lib/storage/waffra_unified_finance_writer.dart",
     "lib/storage/waffra_accounts_repository.dart",
     "lib/storage/waffra_legacy_v24_sqlcipher_converter.dart",
+    "lib/waffra_home_transaction_ledger_actions.part.dart",
+    "lib/waffra_home_delete_all_transactions.part.dart",
+    "lib/waffra_home_category_confirmations.part.dart",
+    "lib/storage/waffra_encrypted_transaction_recycle.dart",
+    "lib/storage/waffra_encrypted_goal_recycle.dart",
+    "lib/storage/waffra_encrypted_module_recycle.dart",
 )
 
 def group_tests(group: str) -> tuple[str, ...]:
