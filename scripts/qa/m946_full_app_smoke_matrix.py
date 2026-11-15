@@ -11,6 +11,7 @@ import argparse
 import json
 from pathlib import Path
 import subprocess
+from m949_unique_functional_case_audit import audit as audit_m949
 
 ROOT = Path(__file__).resolve().parents[2]
 GROUPS = ("money", "experience", "safety")
@@ -18,6 +19,15 @@ GROUPS = ("money", "experience", "safety")
 # Each user-facing capability has a real runnable suite. Tests can be reused
 # across capabilities; the runner de-duplicates within each CI shard.
 FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {
+    "m949_account_rename_transfer_archive_and_partial_legacy_link": ("money", (
+        "test/storage/m949_account_lifecycle_cross_feature_test.dart",
+        "test/storage/m440_accounts_repository_test.dart")),
+    "m949_goal_recurring_category_multi_step_atomicity": ("money", (
+        "test/storage/m949_goal_recurring_category_sequences_test.dart",
+        "test/storage/m641_goal_account_integrity_test.dart")),
+    "m949_combined_date_amount_search_category_account_filters": ("experience", (
+        "test/m949_home_filter_combined_user_journeys_test.dart",
+        "test/m940_m941_home_ledger_pagination_test.dart")),
     "exact_month_end_date_range_filters": ("money", (
         "test/m948_financial_properties_and_performance_test.dart",
         "test/m940_m941_home_ledger_pagination_test.dart")),
@@ -215,12 +225,14 @@ def validate(root: Path = ROOT) -> dict[str, object]:
     if missing or weak:
         raise ValueError(f"M946 uncovered feature/source: missing={sorted(set(missing))} "
                          f"weak={sorted(set(weak))}")
+    new_functional = audit_m949(root)
     buckets = {g: group_tests(g) for g in GROUPS}
     if any(len(v) < 10 for v in buckets.values()):
         raise ValueError("A critical smoke shard was silently reduced")
     return {
         "gate": "M946 full app actionable smoke; physical device acceptance separate",
         "features_count": len(FEATURES),
+        "new_nonduplicate_functional_cases": new_functional["unique_case_count"],
         "test_files_count": len({p for _, t in FEATURES.values() for p in t}),
         "groups": {g: {"files": list(files), "count": len(files)}
                    for g, files in buckets.items()},
