@@ -43,6 +43,9 @@ def read_waffra_home_source(root=ROOT, overrides=None):
             "lib/waffra_home_entry_sheet.part.dart"," Future<void> entrySheet(")
     restore(" // M707: approved Goals and Recurring pages moved to registered Home part.\n",
             "lib/waffra_home_goals_recurring_pages.part.dart"," Widget goalsPage(){")
+    recurring_marker = ' // M944: original recurring editor and linked-goal actions live in the recurring-workflows part.\\n'
+    restore(recurring_marker, 'lib/waffra_home_recurring_workflows.part.dart',
+            ' Future<void> recurringDialog(')
     goal = _read(root, "lib/waffra_home_goal_actions.part.dart", overrides)
     a,b,c = goal.find(" Future<void> goalDialog("),goal.find(" Future<void> _m689GoalActions("),goal.rfind("\n}")
     if a < 0 or b <= a or c <= b:
