@@ -828,3 +828,7 @@ M940/M941 Draft PR #648 M486 regression correction (unreleased): coalesced futur
 - Repaired the original read-only M940/M941 source contract to require invalidation of both the month index and combined-activity count when the financial snapshot changes; no regression gate removed.
 - The selected-account context analyzer warning was a source-level blocker in M429; this change consumes the existing SQLCipher-backed read rather than disabling analyzer warnings. M385 scope retains tight file and function boundaries.
 - Original user's password-encrypted 19-record archive is NOT part of CI. Real goals/dues and two historic income rows remain subject to owner-device restore verification after exact-head CI passes.
+
+[M945 backup parity cache follow-up — #654 DRAFT, not released, 2026-11-15]
+- Corrected a second read-only display-index invalidation gap specifically in the authenticated V24-to-SQLCipher post-restore canonical ledger UI repair. When trusted SQLCipher records are used to correct a stale Home list, the month cache is now invalidated in the same setState. No owner archive content, opening account amount, goal savings or transaction row is modified by this UI correction.
+- A source contract asserts the parity repair and all previous manual/SMS guards. Device validation with the encrypted owner archive still requires authorization; there is no claim of recovered invisible goals without it.
