@@ -21,7 +21,8 @@
         "test/m983_sms_direct_kind_prefill_refresh_test.dart",
         "test/m980_four_sms_rule_kinds_every_route_test.dart",
         "test/m549_approved_home_notifications_test.dart",
-        "test/m940_sms_review_page_window_test.dart"
+        "test/m940_sms_review_page_window_test.dart",
+        "test/m486_sms_back_navigation_source_test.dart"
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/m946-whole-app-feature-smoke.yml",
@@ -33,7 +34,8 @@
         "SMS count is keyed exclusively by receivedAt and native exact ID. Paid due MoneyEntry items from verified SQLCipher ledger are separate from SMS and cannot inflate the message count.",
         "Dots max three but count may be arbitrarily high; matching date and sender filters restrict only UI rows and Select All, never hide/dequeue messages from other dates.",
         "RTL horizontal pager cannot fire when no sender, bulk processing or nested review active and never breaks vertical list scrolling, valid selected IDs or the FAB.",
-        "Physical Android visual/RTL and TalkBack gesture acceptance remains pending despite source and Dart tests."
+        "Physical Android visual/RTL and TalkBack gesture acceptance remains pending despite source and Dart tests.",
+        "M486 original full Flutter nested sender navigation test stays runnable: guarded Android Back and sender-back arrow each return to the sender picker with calendar-filtered IDs refreshed; no navigator pop before review or native ACK when cancelled."
       ]
     },
     {
