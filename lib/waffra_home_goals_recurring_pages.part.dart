@@ -74,9 +74,7 @@ extension _WaffraHomeGoalsRecurringPagesModule on _HomeScreenState {
      // The independent 3-dot menu contains Deleted/Inactive goal actions.
      SingleChildScrollView(scrollDirection:Axis.horizontal,
       child:Row(children:[
-       SizedBox(width:118,child:WaffraOutlinedItemsCount(
-        label:waffraIsEnglish?'Goals':'الأهداف',count:goals.length)),
-       const SizedBox(width:6),
+       // The All filter already exposes the complete goal count.
        PopupMenuButton<String>(
         key:const Key('m938-goals-filter-menu'),
         tooltip:waffraIsEnglish?'Filter goals':'فلترة الأهداف',
@@ -303,10 +301,7 @@ extension _WaffraHomeGoalsRecurringPagesModule on _HomeScreenState {
      const SizedBox(height:16),
      SingleChildScrollView(scrollDirection:Axis.horizontal,
       child:Row(children:[
-       SizedBox(width:118,child:WaffraOutlinedItemsCount(
-        label:waffraIsEnglish?'Due items':'الاستحقاقات',
-        count:recurring.length)),
-       const SizedBox(width:6),
+       // The All filter already exposes the complete due count.
        PopupMenuButton<String>(
         key:const Key('m938-dues-filter-menu'),
         tooltip:waffraIsEnglish?'Filter due dates':'فلترة الاستحقاقات',
@@ -353,7 +348,7 @@ extension _WaffraHomeGoalsRecurringPagesModule on _HomeScreenState {
         },
         itemBuilder:(ctx)=>[
          PopupMenuItem(value:'trash',
-          child:WaffraText(waffraIsEnglish?'Deleted recurring':'المتكررة المحذوفة')),
+          child:WaffraText(waffraIsEnglish?'Deleted dues':'الاستحقاقات المحذوفة')),
          PopupMenuItem(value:'reminders',
           child:WaffraText(recurringRemindersEnabled?
            (waffraIsEnglish?'Turn reminders off':'إيقاف التذكيرات'):
@@ -391,8 +386,8 @@ extension _WaffraHomeGoalsRecurringPagesModule on _HomeScreenState {
       final status=paidGoalDue!=null?
        (waffraIsEnglish?'Paid goal due':'استحقاق هدف مدفوع'):
        goal!=null?(waffraIsEnglish?'Goal due':'استحقاق هدف'):
-       r.income?(waffraIsEnglish?'Recurring income':'دخل متكرر'):
-       (waffraIsEnglish?'Recurring expense':'مصروف متكرر');
+       r.income?(waffraIsEnglish?'Income due':'استحقاق دخل'):
+       (waffraIsEnglish?'Expense due':'استحقاق مصروف');
       Widget amountLabel(String label,double amount){
        return Expanded(child:Column(children:[
         SizedBox(width:double.infinity,child:FittedBox(

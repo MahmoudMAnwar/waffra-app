@@ -1158,7 +1158,8 @@ Map<String,Object?> waffraM632ClassifySmsQueue(Map<String,Object?> input){
   final special=WaffraSmsLocalRules.resolveSpecial(
    body:body,sender:sender,
    bankKind:annotated['sensitiveOtp']==true?
-    WaffraBankOperationKind.uncertain:facts.kind,custom:rules);
+    WaffraBankOperationKind.uncertain:facts.kind,custom:rules,
+   nativeSensitiveOtp:annotated['sensitiveOtp']==true);
   Map<String,Object?>? local;
   if(special!=null){
    local=<String,Object?>{

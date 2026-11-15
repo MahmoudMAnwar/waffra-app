@@ -82,7 +82,9 @@ abstract final class WaffraSmsLocalRules {
  }
 
  static bool safeRuleKeyword(String text,String kind)=>safeKeyword(text)||
-  (kind=='excluded'&&const <String>{'otp','pin'}.contains(normalized(text)));
+  (kind=='excluded'&&const <String>{
+   'otp','pin','تفعيل الحساب'
+  }.contains(normalized(text)));
 
  // Built-in phrases are manually curated and cannot contain amounts,
  // card suffixes or secrets. Keep user-learned keywords on the stricter
@@ -241,11 +243,19 @@ abstract final class WaffraSmsLocalRules {
   required String body,required String sender,
   required WaffraBankOperationKind bankKind,
   Iterable<WaffraSmsLocalRule> custom=const <WaffraSmsLocalRule>[],
+  bool nativeSensitiveOtp=false,
  }) {
   final posted=_hasPostedMoneyEvidence(body);
-  // Custom exclusions remain conservative and owner-confirmed; curated ready
-  // exclusions may safely override a naive "expense" direction based ONLY
-  // on words like "خصم حصري" / "payment reminder", not a posted debit.
+  // Android masks OTP digits before encrypted storage. Preserve the native
+  // sensitive classification, but never auto-exclude a mixed/posted movement.
+  final verification=nativeSensitiveOtp||
+   WaffraBankSmsFactsParser.isVerificationChallenge(body);
+  final safeVerification=verification&&!posted&&
+   !_hasCompletedFinanceCue(body);
+  // Evaluate every owner rule and vetted default against every SMS,
+  // regardless of a weak preclassification. Inferred bankKind is not proof
+  // of a posted debit; completed-money cues are independently checked first.
+  // Genuine finance, transfers, and mixed OTP + money always stay in review.
   final eligible=<WaffraSmsLocalRule>[
    ...custom.where((rule)=>rule.resolvedKind!='excluded'||
     !_hasCompletedFinanceCue(body)),
@@ -253,9 +263,15 @@ abstract final class WaffraSmsLocalRules {
   ].where((rule)=>
    ((rule.resolvedKind=='transfer'&&bankKind==WaffraBankOperationKind.transfer)||
     (rule.resolvedKind=='excluded'&&!posted&&
-     (bankKind==WaffraBankOperationKind.uncertain||
-      (rule.builtIn&&rule.id.startsWith('sa_excluded_')))))&&
+     !(verification&&_hasCompletedFinanceCue(body))))&&
    matches(rule,body,sender:sender)).toList(growable:false);
+  // Unknown new-app verification language is still a known security
+  // EVENT, even if none of the older literal seed fragments matched.
+  // Reuse the existing seed identity; do not learn/store sensitive OTPs.
+  if(eligible.isEmpty&&safeVerification){
+   return waffraSaudiSpecialSeedRules.firstWhere(
+    (rule)=>rule.id=='sa_excluded_009');
+  }
   if(eligible.isEmpty)return null;
   if(eligible.map((r)=>r.resolvedKind).toSet().length>1)return null;
   return eligible.first;

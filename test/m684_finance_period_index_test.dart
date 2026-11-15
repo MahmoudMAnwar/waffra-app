@@ -124,7 +124,7 @@ void main(){
   expect(s,contains("traceHomeStep('after_batch_json_decode');\n  _m684InvalidatePeriodRead();"));
   expect(s,contains('_m684InvalidatePeriodRead();\n       entries.insert(0,MoneyEntry('));
   expect(s,contains('_m684InvalidatePeriodRead();\n       setState(()=>entries.insert(0,MoneyEntry('));
-  expect(s,contains('_m684InvalidatePeriodRead();\n     setState(()=>entries[index]=initial)'));
+  // Verified edit undo uses a witnessed SQLCipher single-row save; legacy\n  // undo still invalidates the Home index before its in-memory rollback.\n  expect(s,contains('if(!await _m953SaveExistingVerifiedEntry(result,initial))return;'));\n  expect(s,contains('_m684InvalidatePeriodRead();\n      setState(()=>entries[index]=initial)'));
   expect(s,contains('_m684InvalidatePeriodRead();\n  setState(()=>entries.removeWhere('));
   expect(s,contains('_m684InvalidatePeriodRead();\n    setState(()=>entries.insert(0,e)'));
   expect(s,contains('_m684InvalidatePeriodRead();entries.clear();smsHashes.clear()'));

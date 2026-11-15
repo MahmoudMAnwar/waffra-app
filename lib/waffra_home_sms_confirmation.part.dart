@@ -512,33 +512,47 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
           (waffraIsEnglish?'Choose money account':'اختيار الحساب المالي'))),
         ),
         const SizedBox(height:6),
-        Row(children:[
-         Expanded(child:FilledButton.icon(
-          key:const Key('m565-sms-yes-confirm'),
-          onPressed:canConfirm&&reviewedAccount?.ids?.single!=null&&
-           reviewedAccount?.generation!=null&&
-           !choosingAccount?()=>Navigator.pop(dialog,'yes'):null,
-          icon:const Icon(Icons.check_rounded,size:18),
-          label:WaffraText(waffraIsEnglish?'Done':'تم',maxLines:1))),
-         const SizedBox(width:6),
-         Expanded(child:OutlinedButton.icon(
-          key:const Key('m565-sms-no-edit'),
-          onPressed:()=>Navigator.pop(dialog,'no'),
-          icon:const Icon(Icons.edit_outlined,size:18),
-          label:WaffraText(waffraIsEnglish?'Edit':'تعديل',maxLines:1))),
+        // Two readable actions on the first row, with Exclude at full
+        // width below. Three narrow Expanded buttons truncated Arabic text.
+        Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+         Row(children:[
+          Expanded(child:FilledButton.icon(
+           key:const Key('m565-sms-yes-confirm'),
+           onPressed:canConfirm&&reviewedAccount?.ids?.single!=null&&
+            reviewedAccount?.generation!=null&&
+            !choosingAccount?()=>Navigator.pop(dialog,'yes'):null,
+           icon:const Icon(Icons.check_rounded,size:18),
+           label:WaffraText(waffraIsEnglish?'Done':'تم',maxLines:1))),
+          const SizedBox(width:8),
+          Expanded(child:OutlinedButton.icon(
+           key:const Key('m565-sms-no-edit'),
+           onPressed:()=>Navigator.pop(dialog,'no'),
+           icon:const Icon(Icons.edit_outlined,size:18),
+           label:WaffraText(waffraIsEnglish?'Edit':'تعديل',maxLines:1))),
+         ]),
          if(!sensitive&&facts.kind!=WaffraBankOperationKind.transfer)...[
-          const SizedBox(width:6),
-          Expanded(flex:2,child:OutlinedButton.icon(
+          const SizedBox(height:8),
+          OutlinedButton.icon(
            key:const Key('m595-review-single-exclude'),
            onPressed:()=>Navigator.pop(dialog,'exclude'),
-           icon:const Icon(Icons.block_outlined,size:17),
-           label:WaffraText(waffraIsEnglish?'Exclude':'استبعاد الرسالة',
-            maxLines:2,textAlign:TextAlign.center))),
+           icon:const Icon(Icons.block_outlined,size:18),
+           label:WaffraText(waffraIsEnglish?'Exclude message':
+            'استبعاد الرسالة',textAlign:TextAlign.center)),
          ],
         ]),
        ],
-       // A separate Exclude remains for unknown/transfer review only;
-       // verified income/expense uses the same approved three-button row.
+       // Unknown non-sensitive senders also need a direct exclusion
+       // action. Selection must never force a misleading Income/Expense
+       // choice just to remove a beneficiary activation or bulletin.
+       if(!sensitive&&facts.kind!=WaffraBankOperationKind.transfer&&
+          !(understood&&reviewType==(expectedIncome?'income':'expense')))
+        Padding(padding:const EdgeInsets.only(top:10),
+         child:OutlinedButton.icon(
+          key:const Key('m953-unknown-sms-exclude'),
+          onPressed:()=>Navigator.pop(dialog,'exclude'),
+          icon:const Icon(Icons.block_outlined),
+          label:WaffraText(waffraIsEnglish?'Exclude message':
+           'استبعاد الرسالة'))),
        const SizedBox(height:12),
        const SizedBox(height:8),
        if(facts.kind==WaffraBankOperationKind.transfer&&!sensitive&&

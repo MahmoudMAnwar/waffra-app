@@ -13,7 +13,12 @@ void main(){
   expect(editor,contains('stagedReceiptCopies.add(renamed)'));
   expect(editor,contains('stagedReceiptCopies.add(path)'));
   expect(editor,contains('stagedReceiptCopies.add(copied)'));
-  final catchPoint=editor.indexOf('Could not save the transaction.');
+  // M953: after uncertain encrypted commits, source is reloaded before
+  // the user is told to retry. The old "data unchanged" text was unsafe.
+  final catchPoint=editor.indexOf(
+   'Save was not confirmed; verified finance was reloaded before retry.');
+  expect(editor.substring(catchPoint),contains(
+   'await _refreshFromVerifiedFinance();'));
   final cleanup=editor.indexOf('for(final copy in stagedReceiptCopies)',catchPoint);
   expect(catchPoint,greaterThan(0));
   expect(cleanup,greaterThan(catchPoint));

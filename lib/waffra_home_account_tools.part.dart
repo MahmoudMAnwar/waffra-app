@@ -93,7 +93,9 @@ extension _WaffraHomeAccountTools on _HomeScreenState {
   await showWaffraDialog<void>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
    title:WaffraText(waffraIsEnglish?'Secure backup':'نسختك الاحتياطية الآمنة',
     style:const TextStyle(fontWeight:FontWeight.bold)),
-   content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,
+   content:SingleChildScrollView(
+    padding:const EdgeInsetsDirectional.only(end:18),
+    child:Column(mainAxisSize:MainAxisSize.min,
     crossAxisAlignment:CrossAxisAlignment.stretch,children:[
     WaffraText(waffraIsEnglish?'Your data. Your password.':
      'بياناتك محفوظة بتشفير قوي. أنت وحدك تملك كلمة المرور.',

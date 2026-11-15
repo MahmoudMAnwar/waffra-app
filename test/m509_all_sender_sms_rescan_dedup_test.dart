@@ -80,7 +80,11 @@ void main() {
   expect(home,contains('WaffraAutoSms.acknowledgeCompletedTransfer([id])'));
   expect(home,isNot(contains('WaffraAutoSms.acknowledge([id])')));
   expect(worker,contains('WaffraAutoSms.acknowledgeCommitted([id])'));
-  expect(worker,contains("rule?.builtIn==false"));
+  // M954: background also honors vetted built-in exclusion rules; both
+  // built-in and user matches must persist native 30-day exclusion markers.
+  expect(worker,contains("rule?.resolvedKind=='excluded'"));
+  expect(worker,contains('WaffraAutoSms.excludeMessages([id])'));
+  expect(worker,isNot(contains('WaffraAutoSms.acknowledge([id])')));
   expect(nativeMain,contains('"ackCommittedAutoBankSms" -> {'));
   expect(nativeWorker,contains('"ackCommittedAutoBankSms" -> {'));
   // Native intake can only seal fingerprints after Flutter has confirmed

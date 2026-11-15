@@ -22,6 +22,7 @@ import 'waffra_atomic_finance_snapshot.dart';
 import 'waffra_atomic_encrypted_receipt_transaction_writer.dart';
 import 'waffra_encrypted_cutover_journal.dart';
 import 'waffra_encrypted_finance_ui_patch.dart';
+import 'waffra_encrypted_entry_projection_guard.dart';
 import 'waffra_encrypted_module_projection_guard.dart';
 import 'waffra_encrypted_module_recycle.dart';
 import 'waffra_fresh_finance_modules_repository.dart';
@@ -873,6 +874,103 @@ class WaffraVerifiedEncryptedFinanceBridge {
     );
   }
 
+
+
+  /// M956: source-witnessed metadata edit plus account reassignment, atomic.
+  Future<WaffraFinanceSnapshotState> editExistingAndMoveAccount({
+    required WaffraEncryptedHomeWitness baseline,
+    required Map<String,Object?> expectedOriginal,
+    required Map<String,Object?> replacement,
+    required String fromAccountId,required String toAccountId,
+    required bool userConfirmed,
+  })async{
+    final old=Map<String,Object?>.from(jsonDecode(jsonEncode(expectedOriginal)) as Map);
+    final revised=Map<String,Object?>.from(jsonDecode(jsonEncode(replacement)) as Map);
+    final id=old['id'];
+    if(!experimentalEnabled||!userConfirmed||id is! String||
+       id.isEmpty||id.length>128||revised['id']!=id||
+       fromAccountId.isEmpty||toAccountId.isEmpty||
+       fromAccountId==toAccountId||fromAccountId.length>128||
+       toAccountId.length>128||
+       !const {'manual','sms'}.contains(old['sourceType'])||
+       revised['sourceType']!=old['sourceType']||
+       revised['receiptPath']!=old['receiptPath']||
+       revised['goalWalletPaidMinor']!=old['goalWalletPaidMinor']){
+      throw StateError('Unsafe transaction account reassignment.');
+    }
+    const editable={'title','category','income','amount','date','notes',
+      'personalNotes','budgetId','merchantKey'};
+    for(final key in <String>{...old.keys,...revised.keys}){
+      if(!editable.contains(key)&&
+         jsonEncode(old[key])!=jsonEncode(revised[key])){
+        throw StateError('Immutable transaction field changed.');
+      }
+    }
+    return WaffraExperimentalWriterGate(
+      disposableDirectory:writerDirectory,experimentalEnabled:true,
+    ).withExclusiveAccess(()async{
+      await _requireActivatedUnderLock();
+      return snapshot.store.transaction(()async{
+        await WaffraAccountsSchema.requireReady(snapshot.store);
+        final before=await snapshot.read();
+        if(before.generation!=baseline.generation||
+           before.digest!=baseline.digest){
+          throw StateError('Finance changed since account review.');
+        }
+        final decoded=jsonDecode(before.values['entries'] as String? ?? '[]');
+        if(decoded is! List||decoded.any((e)=>e is! Map)){
+          throw StateError('Malformed encrypted ledger.');
+        }
+        final matches=decoded.where((e)=>(e as Map)['id']==id).toList();
+        if(matches.length!=1||jsonEncode(matches.single)!=jsonEncode(old)){
+          throw StateError('Existing transaction changed or missing.');
+        }
+        final sql=await snapshot.store.customSelect(
+          'SELECT source_json FROM fresh_finance_entries WHERE entry_id=?',
+          variables:[Variable.withString(id)]).get();
+        if(sql.length!=1||
+           jsonEncode(jsonDecode(sql.single.read<String>('source_json')))!=
+            jsonEncode(old)){
+          throw StateError('SQL projection changed before reassignment.');
+        }
+        final linked=await snapshot.store.customSelect(
+          'SELECT account_id FROM fresh_finance_account_entry_links WHERE entry_id=?',
+          variables:[Variable.withString(id)]).get();
+        if(linked.length!=1||
+           linked.single.read<String>('account_id')!=fromAccountId){
+          throw StateError('Original account link changed.');
+        }
+        final account=await snapshot.store.customSelect(
+          'SELECT archived,currency FROM fresh_finance_money_accounts WHERE account_id=?',
+          variables:[Variable.withString(toAccountId)]).get();
+        if(account.length!=1||account.single.read<int>('archived')!=0||
+           account.single.read<String>('currency')!='SAR'){
+          throw StateError('Destination account is unavailable.');
+        }
+        final nextJson=jsonEncode(decoded.map((row)=>
+          (row as Map)['id']==id?revised:row).toList());
+        await WaffraEncryptedEntryProjectionGuard.reconcile(
+          store:snapshot.store,
+          previousJson:before.values['entries'] as String?,
+          updatedJson:nextJson);
+        await snapshot.store.customStatement(
+          'UPDATE fresh_finance_account_entry_links '
+          'SET account_id=?,confirmed_iso=? WHERE entry_id=? AND account_id=?',
+          [toAccountId,DateTime.now().toIso8601String(),id,fromAccountId]);
+        final next=Map<String,Object?>.from(before.values)
+         ..['entries']=nextJson;
+        final committed=await snapshot.commit(
+          expectedGeneration:before.generation,fullFinanceSnapshot:next);
+        final confirmed=await snapshot.store.customSelect(
+          'SELECT account_id FROM fresh_finance_account_entry_links WHERE entry_id=?',
+          variables:[Variable.withString(id)]).getSingle();
+        if(confirmed.read<String>('account_id')!=toAccountId){
+          throw StateError('Account reassignment was not persisted.');
+        }
+        return committed;
+      });
+    });
+  }
 
   /// M514 #451: add the FIRST batch of encrypted receipts to an EXISTING
   /// verified finance record. No new money, account association, or SMS hash

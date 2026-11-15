@@ -34,7 +34,8 @@ void main(){
   expect(page,contains("key:const Key('m938-goals-filter-menu')"));
   expect(page,contains("key:const Key('m938-goals-more')"));
   expect(page,contains('Icons.more_vert_rounded'));
-  expect(page,contains('WaffraOutlinedItemsCount('));
+  // M953: All dropdown already contains each count; extra chip removed.
+  expect(page,isNot(contains('WaffraOutlinedItemsCount(')));
   expect(page,contains("key:const Key('m938-dues-filter-menu')"));
   expect(page,contains("'all','today','week','month','overdue','active','paused'"));
   expect(page,contains('goalCounts[filter]'));

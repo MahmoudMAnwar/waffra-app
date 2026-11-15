@@ -39,6 +39,32 @@
 - **Accountless old-history acceptance:** a second disposable SQLCipher test models legacy archive money records that have not been explicitly assigned a bank account. Preserve the exact two historical entries, 7,000 halalas of globally allocated spending and 15,000 saved-goal wallet after cold reopen; do not silently create a bank or claim a verified balance of 2,500 halalas just because historical income minus expense is positive. No real private user archive is inspected.
 - **QA:** `test/storage/m955_home_verified_summary_parity_test.dart` seeds 900 encrypted entries, two independent budgets, a bank/wallet/unassigned mix and account-sourced goal, checks exact selected/global/goal halala parity against original reads, one-to-one history, no bank/source changes, no ledger card hydration, and rejects misuse for unbounded history. Register in M946 exact-head money test; M385/M550/M449 required. Physical Android, old private archive, further Home architecture remain unverified. All 5 axes remain Partial, not 100%.
 
+## M958 — منع تراجع غير صحيح بعد نقل معاملة بين الحسابات
+
+- تصحيح اختبار M495 القديم الذي فشل في CI بعد توسيع حظر زر «تراجع» ليشمل نقل معاملة مرتبطة بالفعل إلى حساب آخر؛ لا يجوز التراجع عن بيانات العملية دون الرجوع الذري عن تأثير الحساب. التأكد من تعطيل الزر ووظيفته مع الاحتفاظ بإمكانية التراجع عن تعديل البيانات الوصفية العادي. لا حذف لاختبارات ولا تعديل مباشر لمعاملات مالية.
+
+## M954 — تطبيق جميع قواعد الرسائل على كل SMS قبل المراجعة (2026-11-15)
+
+- **Issue [#661](https://github.com/MahmoudMAnwar/waffra-app/issues/661)**; implemented in existing **Draft PR #660** alongside M953, independent of #658.
+- Every real Android SMS notice must pass the same offline local rule engine for default rules and every verified owner's user-added rules: exclusion, income, expense, transfer, and ambiguous review. The rule checks sender and normalized keywords/template fragments before notifying or presenting a candidate, in normal foreground, historical month rescan and background WorkManager.
+- Recognize new-app Arabic/English registration, sign-in, login, authentication and verification codes. Native masks OTP digits BEFORE queuing or persisting ciphertext and retains only safe `sensitiveOtp` metadata. Never learn, log or send OTP contents.
+- Automatically move a safely matched nonfinancial excluded SMS (including curated default exclusions) to native encrypted 30-day excluded list using `excludeMessages`, never transient `acknowledge`; scans and app relaunch must not repeatedly reveal it. The stored exclusion marker expires per existing policy, while matching default/custom rule persists separately.
+- **Safety priority**: Any independent posted bank money, income, expense, transfer, fee or card settlement evidence, including mixed OTP text, must remain financial/manual review and cannot be deleted by default or user keyword matching. A bank category rule is never an auto-post license; financial direction, account verification and confirmed save stay independently enforced.
+- If owner rules cannot be loaded, built-in vetted exclusions may still apply, but custom rules must not be treated as active and no account auto-post is authorized. Do not hide errors or delete unknown/ambiguous financial messages.
+- Regression and real-device checklist: [M954 SMS rule pipeline acceptance](qa/M954_SMS_RULE_PIPELINE_ACCEPTANCE.md), `test/m954_all_sms_rule_routes_regression_test.dart`, existing M508/M509/M580/M661/M665 tests. Exact-HEAD CI and owner Android test are separate release gates.
+
+## M953 — إصلاح مشاكل تعديل العمليات وإشعارات Android (2026-11-15)
+
+- **Issue [#659](https://github.com/MahmoudMAnwar/waffra-app/issues/659)**; independent Draft PR from main, separate from #658.
+- Financial edits must preserve existing IDs, SMS hash/original notes, attachments, verified account source/links and all other rows. A change to a past date must save correctly against verified one-row projection without whole-ledger normalization of old imported records. Every rejected/uncertain write reloads the verified source; never assert unchanged money without verifying.
+- Number all dashboard activity cards by newest-first visible display order (1,2,...), including income/expense/transfer/savings; never mutate financial IDs.
+- Sort notifications newest-first using native `receivedAt`, consistently for All and sender filters, preserving selection and original SMS.
+- Bank SMS review buttons: readable full labels, Exclude for unknown nonsensitive messages, unchanged sensitive OTP confidentiality and transfer confirmation.
+- Separate RTL dialog scrollbar from text in Backup/Restore and Due editor. Remove redundant Goals/Due count chip beside All, while retaining each filter's count and all saved records.
+- Rename **only user-facing** recurring terminology to «الاستحقاقات» / «الاستحقاق» across app; retain database keys, Dart types, account and backup formats.
+- Cover income, expense, old-date, amount, notes, category, budget, account provenance, mixed SMS, unconfirmed transfer/goal/due, timestamp ties and source conflicts. Linked-account reassignment, changing existing settled transfer and paid Goal/Due **remain pending separate atomic writers** and must never be implied safe/complete by a UI-only change.
+- [M953 screenshot acceptance and exact test matrix](qa/M953_ANDROID_SCREENSHOT_REPAIR.md). Host smoke is not physical Android/old private archive UAT. Do not mark Done or merge unless source-specific tests and exact-head CI succeed.
+
 ## M952 — Proactive Financial Reliability & Code Hardening: المحاور الخمسة (2026-11-15)
 
 - **Issue:** [#657](https://github.com/MahmoudMAnwar/waffra-app/issues/657). **Draft:** [PR #658](https://github.com/MahmoudMAnwar/waffra-app/pull/658). The latest user-requested plan has **five axes and 20 proposed improvements**; these are NOT the older M944 five axes. Do not mark the entire plan done from the first tranche.
@@ -2319,3 +2345,6 @@ Separate Draft PR stacked on #650. Fix unverified Home balance display; remove u
 - Add 26 distinct direct functional `test()` cases: 16 bank SMS posting/review/ignore eligibility boundary combinations, and 10 one-time budget warning owner/budget/month isolation and replay cases. Together with the 43 M949 and 46 M950 additions, **115 new executable functional test cases across six new Dart files** are registered into mandatory M946 every-PR smoke.
 - Keep 618 pre-existing tests and 18 Android integrations untouched. Three uniqueness/scope audits for M949, M950 and M951 reject old exact-title duplication, skipped or removed tests. Do not count audit mutation tests in 115.
 - A finite host suite is not proof that no other test can ever be added. Outstanding device-only checks remain actual Android permissions, OS notification delivery, biometrics, physical delete sheet and old backup restore on an authorized phone.
+
+## M956 — تعديل الحساب المرتبط بعملية مالية سابقة (15 نوفمبر 2026)
+- **Issue #659 / Draft PR #660:** بعد موافقة المستخدم، تعديل عملية دخل/مصروف يدوية أو SMS مربوطة سابقًا ونقل ارتباطها لحساب سعودي موثق في معاملة SQLCipher واحدة، مع إعادة حساب رصيد الحسابين ومنع التكرار، وعدم تغيير هوية العملية أو مرفقاتها. استحقاق الهدف المدفوع لا يستخدم هذا المسار. الاختبارات والجهاز الفعلي ما زالا بحاجة لاعتماد النتائج.

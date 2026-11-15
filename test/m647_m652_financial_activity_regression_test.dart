@@ -151,7 +151,10 @@ void main() {
   expect(home,contains('event.activity is WaffraInternalTransferHistory'));
   expect(home,contains('event.activity is WaffraVerifiedGoalMovement'));
   expect(home,contains('if(!snapshot.hasData)return Column('));
-  expect(home,contains('...shown.map(compactTransaction)'));
+  // M953 numbered unified timeline renders by visible history index,
+  // not the old income/expense-only compact map.
+  expect(home,contains('for(final (index,event) in history.take(maxShown).indexed)'));
+  expect(home,contains('compactTransaction(event.activity as MoneyEntry)'));
   expect(home,isNot(contains('entries.add(')));
   expect(home,isNot(contains('api.transfer(')));
  });
