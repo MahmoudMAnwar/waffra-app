@@ -104,7 +104,10 @@ void main(){
   final summary=File('lib/waffra_home_transaction_summary.part.dart').readAsStringSync();
   final query=File('lib/waffra_home_ledger_query.part.dart').readAsStringSync();
   expect(main,contains("part 'waffra_home_ledger_query.part.dart';"));
-  expect(main,contains('void _m684InvalidatePeriodRead()=>_m940LedgerReads.invalidate();'));
+  expect(main,contains('void _m684InvalidatePeriodRead(){'));
+   expect(main,contains('_m940LedgerReads.invalidate();'));
+   expect(main,contains('_m945UnifiedHistoryScope=null;'));
+   expect(main,contains('_m945UnifiedHistoryCount=null;'));
   expect(dash,contains('where:transactionFilter.accepts'));
   expect(dash,contains('_m684ScopedEntryIds??const <String>{}'));
   expect(summary,contains('where:(e)=>e.income==income'));
