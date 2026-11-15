@@ -1491,6 +1491,7 @@ class WaffraVerifiedEncryptedFinanceBridge {
     required String monthIso,
     String? selectedAccountId,
     bool summaryOnly=false,
+    bool includeEntries=true,
   }) async {
     if (!experimentalEnabled) {
       throw StateError('Encrypted account context is not active.');
@@ -1504,6 +1505,7 @@ class WaffraVerifiedEncryptedFinanceBridge {
         store: snapshot.store, monthIso: monthIso,
         selectedAccountId: selectedAccountId,
         summaryOnly: summaryOnly,
+        includeEntries: includeEntries,
       );
       final after = await snapshot.read();
       if (before.generation != after.generation ||
