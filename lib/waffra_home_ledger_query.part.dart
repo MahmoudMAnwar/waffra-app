@@ -6,7 +6,20 @@ final class WaffraHomeLedgerReadCache {
  WaffraFinancePeriodIndex? _snapshot;
  WaffraFinancePeriodIndex index(List<MoneyEntry> source)=>
   _snapshot??=WaffraFinancePeriodIndex(source);
- void invalidate(){_snapshot=null;}
+ // M944: only a bounded number of cards may be built during a single Home
+ // frame, even when the user has expanded a 10,000-row timeline.
+ static const int expandedPageSize=50;
+ int _expandedLimit=expandedPageSize;
+ int get expandedLimit=>_expandedLimit;
+ bool revealNext(int total){
+  if(total<0)throw RangeError.value(total,'total');
+  if(_expandedLimit>=total)return false;
+  _expandedLimit=(_expandedLimit+expandedPageSize)<total
+   ?_expandedLimit+expandedPageSize:total;
+  return true;
+ }
+ void resetExpanded(){_expandedLimit=expandedPageSize;}
+ void invalidate(){_snapshot=null;resetExpanded();}
 }
 
 /// M941: the original dashboard search/date/amount/type/category predicate
