@@ -119,8 +119,8 @@
     ],
     "test/m470_recurring_provider_accounts_test.dart": [
       {
-        "start": "  test('M470 SMS review has bank and account cascade with sender-match gate',(){",
-        "end": "  test('M470 money form requires an explicit provider before a linked source or destination',(){"
+        "start": " test('M470 SMS review has bank and account cascade with sender-match gate',(){",
+        "end": " test('M470 money form requires an explicit provider before a linked source or destination',(){"
       }
     ],
     "test/m371_goal_wallet_and_budgets_regression_test.dart": [
