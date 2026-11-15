@@ -1,12 +1,35 @@
 {
   "schema_version": 1,
-  "pr": "M974 Draft — immutable Goal/Due per-page card join read index (#673, #657)",
-  "issue": "Issue #673, five-axis Issue #657, stacked above Issue #671 / #672",
+  "pr": "M975 Draft — verified recurring due paid-ID source cache (#675, #657)",
+  "issue": "Issue #675, five-axis Issue #657, stacked on #674/#672",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at f0def360ea75b9c865548b6f1b4fc07e9640f2c2 after #656",
   "reviewed_at": "2026-11-15",
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
+    {
+      "id": "M975-RECURRING-DUE-SNAPSHOT-ID-SET-PARITY",
+      "issue": "Issues #675 and #657",
+      "previous_behavior": "Recurring due card page recalculates nextRecurringDue repeatedly for seven filter groups, sorting and cards. Each ordinary nextRecurringDue uses `entries.any` across the full historical ledger to detect an already-paid month, adding repeated O(number_of_bills × ledger_rows) work.",
+      "approved_behavior": "The recurring page creates one immutable ID set from the same verified Home entries and one map with object-identity bill memoization during its synchronous build. An optional `paidEntryIds` argument accelerates only these reads; every other nextRecurringDue caller retains original `entries.any` fallback and identical WaffraRecurringPolicy schedule/postponement semantics.",
+      "source_paths": [
+        "lib/waffra_home_recurring_workflows.part.dart",
+        "lib/waffra_home_goals_recurring_pages.part.dart"
+      ],
+      "test_paths": [
+        "test/m975_recurring_paid_id_read_cache_test.dart",
+        "test/m302_recurring_first_due_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m946-whole-app-feature-smoke.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "No change to SQLCipher finance/posting/recurring settlement writer, backup, banking or SMS routing.",
+        "Original paid receipt membership, calendar day, overdue/postponed and linked-goal date conditions remain unchanged.",
+        "Owner handset FPS, RTL/UAT and private old V3 backup remain external; synthetic CI is not hardware evidence."
+      ]
+    },
     {
       "id": "M974-HIGH-VOLUME-GOAL-DUE-CARD-ID-PARITY",
       "issue": "Issues #673 and #657",

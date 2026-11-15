@@ -221,7 +221,7 @@ extension _WaffraHomeRecurringWorkflows on _HomeScreenState {
    await syncRecurringReminders();
   }
  }
- DateTime nextRecurringDue(RecurringBill r) {
+ DateTime nextRecurringDue(RecurringBill r,{Set<String>? paidEntryIds}) {
   if(r.linkedGoalId!=null){
    final once=DateTime(r.startAt.year,r.startAt.month,r.startAt.day);
    final stableId=WaffraRecurringPolicy.entryId(r.id,once);
@@ -233,7 +233,8 @@ extension _WaffraHomeRecurringWorkflows on _HomeScreenState {
   final monthId=WaffraRecurringPolicy.entryId(r.id,monthlyDue);
   return WaffraRecurringPolicy.nextActionableDue(
    today:today,startAt:r.startAt,day:r.day,
-   currentMonthPaid:entries.any((entry)=>entry.id==monthId),
+   currentMonthPaid:paidEntryIds?.contains(monthId)??
+    entries.any((entry)=>entry.id==monthId),
    postponedUntil:DateTime.tryParse(recurringPostponed[monthId]??''));
  }
  Future<void> _setRecurringActiveFromCard(RecurringBill r,bool enabled)async{

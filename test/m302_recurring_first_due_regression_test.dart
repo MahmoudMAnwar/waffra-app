@@ -72,7 +72,10 @@ void main(){
  test('M302 real app overview reads the same verified recurring due policy',(){
   final code=readWaffraMainSourceForContracts();
   expect(code,contains('WaffraRecurringPolicy.nextActionableDue('));
-  expect(code,contains('currentMonthPaid:entries.any((entry)=>entry.id==monthId)'));
+  // M975 keeps both the cached verified preview and exact old fallback.
+  expect(code,contains('currentMonthPaid:paidEntryIds?.contains(monthId)??'));
+  expect(code,contains('entries.any((entry)=>entry.id==monthId),'));
+  expect(code,contains('DateTime nextRecurringDue(RecurringBill r,{Set<String>? paidEntryIds})'));
   expect(code,contains("postponedUntil:DateTime.tryParse(recurringPostponed[monthId]??'')"));
  });
 }
