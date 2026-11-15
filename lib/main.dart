@@ -4347,8 +4347,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  // M940/M941: the verified display index lives in one Home read session,
  // separate from widget State. Existing mutation/restore/reset invalidates it.
  final WaffraHomeLedgerReadCache _m940LedgerReads=WaffraHomeLedgerReadCache();
+ int _m945DashboardRenderVersion=0;
+ String? _m945UnifiedHistoryScope;
+ int? _m945UnifiedHistoryCount;
  WaffraFinancePeriodIndex get _m684Periods=>_m940LedgerReads.index(entries);
- void _m684InvalidatePeriodRead()=>_m940LedgerReads.invalidate();
+ void _m684InvalidatePeriodRead(){
+  _m940LedgerReads.invalidate();
+  _m945UnifiedHistoryScope=null;
+  _m945UnifiedHistoryCount=null;
+ }
  final namedBudgets=<WaffraNamedBudget>[];
  // One repaint-isolated saving indicator for every confirmed Home finance edit.
  final WaffraSmoothOperationController _saveProgress=WaffraSmoothOperationController();
