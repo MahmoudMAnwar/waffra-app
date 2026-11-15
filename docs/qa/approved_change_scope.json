@@ -37,7 +37,9 @@
     "lib/waffra_home_goals_recurring_pages.part.dart",
     "lib/waffra_home_recurring_workflows.part.dart",
     "test/m930_home_lifecycle_helpers_extraction_test.dart",
-    "test/m944_home_residual_state_audit_test.dart"
+    "test/m944_home_residual_state_audit_test.dart",
+    "test/m622_immediate_home_without_loader_test.dart",
+    "test/m623_verified_home_handoff_no_black_frame_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
@@ -166,6 +168,18 @@
       {
         "start": " test('M930 verified Home session/nav methods are real same-library parts, unchanged',(){",
         "end": null
+      }
+    ],
+    "test/m622_immediate_home_without_loader_test.dart": [
+      {
+        "start": " test('M622 never renders fake balance or loading screen while verifying vault',(){",
+        "end": " test('M622 entire real Home values come from one completed verified load',(){"
+      }
+    ],
+    "test/m623_verified_home_handoff_no_black_frame_test.dart": [
+      {
+        "start": " final homeLoader=source.split(' Future<void> _loadFinanceSafely()async{')[1]",
+        "end": " test('M623 keeps prior authenticated UI until one complete verified Home',(){"
       }
     ]
   }
