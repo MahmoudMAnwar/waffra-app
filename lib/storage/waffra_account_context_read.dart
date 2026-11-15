@@ -74,14 +74,7 @@ SELECT e.entry_id, e.title, e.amount_minor, e.is_income, e.occurred_iso,
        l.account_id, a.budget_id, a.amount_minor AS budget_allocated_minor
 FROM fresh_finance_entries e
 LEFT JOIN fresh_finance_account_entry_links l ON l.entry_id=e.entry_id
--- One entry stays one ledger row even with several named budgets.
-LEFT JOIN (
- SELECT entry_id,
-  CASE WHEN COUNT(*)=1 THEN MAX(budget_id) END AS budget_id,
-  CASE WHEN COUNT(*)=1 THEN MAX(amount_minor) END AS amount_minor
- FROM fresh_finance_standalone_allocations
- GROUP BY entry_id
-) a ON a.entry_id=e.entry_id
+LEFT JOIN fresh_finance_standalone_allocations a ON a.entry_id=e.entry_id
 ${summaryOnly ? 'WHERE e.occurred_iso>=? AND e.occurred_iso<?' : ''}
 ORDER BY e.occurred_iso DESC, e.entry_id DESC
 ''',variables:[
@@ -235,14 +228,7 @@ SELECT e.entry_id,e.title,e.amount_minor,e.is_income,e.occurred_iso,
  l.account_id,a.budget_id,a.amount_minor AS budget_allocated_minor
 FROM fresh_finance_entries e
 LEFT JOIN fresh_finance_account_entry_links l ON l.entry_id=e.entry_id
--- One entry stays one ledger row even with several named budgets.
-LEFT JOIN (
- SELECT entry_id,
-  CASE WHEN COUNT(*)=1 THEN MAX(budget_id) END AS budget_id,
-  CASE WHEN COUNT(*)=1 THEN MAX(amount_minor) END AS amount_minor
- FROM fresh_finance_standalone_allocations
- GROUP BY entry_id
-) a ON a.entry_id=e.entry_id
+LEFT JOIN fresh_finance_standalone_allocations a ON a.entry_id=e.entry_id
 WHERE e.occurred_iso>=? AND e.occurred_iso<?
  '''+(selectedAccountId==null?'':'AND l.account_id=?')+'''
 ORDER BY e.occurred_iso DESC,e.entry_id DESC
