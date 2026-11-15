@@ -1,12 +1,38 @@
 {
   "schema_version": 1,
-  "pr": "M988 Draft — encrypted local-rule history, undo and read-only simulation (#702)",
-  "issue": "Issue #702, stacked on #705",
+  "pr": "M989 Draft — bank SMS lifecycle and exact-evidence duplicate index (#703)",
+  "issue": "Issue #703, stacked on #706",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at f0def360ea75b9c865548b6f1b4fc07e9640f2c2 after #656",
   "reviewed_at": "2026-11-15",
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
+    {
+      "id": "M989-LIFECYCLE-STRICT-LINK-DUPLICATE-REVIEW",
+      "issue": "Issue #703",
+      "previous_behavior": "The queue review classified each SMS as an isolated event; a posted transaction following a pending authorization, or a later refund/reversal, was not linked by strict read-only evidence.",
+      "approved_behavior": "Propose read-only related-event flags only on an identical known Saudi bank sender, bank reference, unique account suffix and exact SAR amount; refund and reversal remain in user review without new automatic ledger writes. Use an O(N) per-batch map and stress 2000 rows.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_sms_lifecycle_evidence.dart",
+        "lib/waffra_home_sms_confirmation.part.dart",
+        "lib/waffra_sms_multicurrency_review.dart"
+      ],
+      "test_paths": [
+        "test/m989_sms_lifecycle_related_events_test.dart",
+        "test/m980_four_sms_rule_kinds_every_route_test.dart",
+        "test/m985_sms_prefill_identity_status_conflict_duplicate_test.dart",
+        "test/m989_sms_review_lifecycle_guard_test.dart",
+        "test/m989_sms_reference_currency_regression_test.dart"
+      ],
+      "safety_invariants": [
+        "No finance writer, native ACK, excluded IDs or hard deduplication are executed by the lifecycle index.",
+        "Amount alone is never enough to link transactions, and an unknown bank sender creates no relation key.",
+        "Refunds and reversals remain human-reviewed and never silently invert previously booked amounts.",
+        "Direct typed editor and reviewer Yes button independently disallow treating composite/refund/reversal SMS as a settled ordinary single finance transaction.",
+        "A standalone labelled bank reference must never be mistaken for a currency; unknown currency in a monetary clause continues to block SAR proposals."
+      ]
+    },
     {
       "id": "M988-OWNER-ENCRYPTED-RULE-REVISION-UNDO",
       "issue": "Issue #702",
@@ -27,8 +53,7 @@
       "safety_invariants": [
         "Rule history remains owner-keyed and encrypted, with no original SMS bodies or OTP numbers copied into snapshots.",
         "Undo never writes finance or ACKs SMS; it restores only validated rule configuration.",
-        "Simulation is sample-only and cannot authorize exclusion of a posted transaction or automatic finance writes.",
-        "Merchant aliases change only suggestions, never persistent user-learned merchant keys, incoming direction, bank account assignment or finance writer."
+        "Simulation is sample-only and cannot authorize exclusion of a posted transaction or automatic finance writes."
       ]
     },
     {
