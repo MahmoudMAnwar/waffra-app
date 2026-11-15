@@ -75,6 +75,8 @@ abstract final class WaffraAccountContextRead {
         DateTime.tryParse(monthIso + '-01') == null) {
       throw ArgumentError('Invalid accounting month.');
     }
+    late final List<WaffraAccountLedgerRow> entries;
+    if(includeEntries){
     final rows = await store.customSelect('''
 SELECT e.entry_id, e.title, e.amount_minor, e.is_income, e.occurred_iso,
        l.account_id, a.budget_id, a.amount_minor AS budget_allocated_minor
@@ -83,7 +85,6 @@ LEFT JOIN fresh_finance_account_entry_links l ON l.entry_id=e.entry_id
 LEFT JOIN fresh_finance_standalone_allocations a ON a.entry_id=e.entry_id
 ${summaryOnly ? 'WHERE e.occurred_iso>=? AND e.occurred_iso<?' : ''}
 ORDER BY e.occurred_iso DESC, e.entry_id DESC
-${includeEntries ? '' : 'LIMIT 0'}
 ''',variables:[
  // Explicit SQL predicate: the existing occurred_iso index stays usable.
  // All-time reads remain opt-in for historical reconciliation/export.
@@ -92,7 +93,7 @@ ${includeEntries ? '' : 'LIMIT 0'}
   Variable.withString(_nextMonthIso(monthIso)),
  ],
 ]).get();
-    final entries = List<WaffraAccountLedgerRow>.unmodifiable(rows.map((r) =>
+    entries = List<WaffraAccountLedgerRow>.unmodifiable(rows.map((r) =>
       WaffraAccountLedgerRow(
         id: r.read<String>('entry_id'),
         title: r.read<String>('title'),
@@ -104,6 +105,10 @@ ${includeEntries ? '' : 'LIMIT 0'}
         budgetAllocatedMinor: r.readNullable<int>('budget_allocated_minor'),
       ),
     ));
+    } else {
+      // Home's compact header never issues a transaction-card SQL query.
+      entries = const <WaffraAccountLedgerRow>[];
+    }
     final budgets = await store.customSelect('''
 SELECT budget_id, name, monthly_limit_minor
 FROM fresh_finance_standalone_budgets

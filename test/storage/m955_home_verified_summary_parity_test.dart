@@ -415,4 +415,23 @@ void main() {
     }
   });
 
+
+  test('M958 compact SQLCipher Home summary does not issue a zero-row '
+      'transaction-card SELECT', () {
+    final source=File('lib/storage/waffra_account_context_read.dart')
+      .readAsStringSync();
+    final start=source.indexOf(
+      'static Future<WaffraAccountContextReadResult> load({');
+    final end=source.indexOf(
+      "final budgets = await store.customSelect('''",start);
+    expect(start,greaterThan(0));
+    expect(end,greaterThan(start));
+    final projection=source.substring(start,end);
+    expect(projection,contains('if(includeEntries){'));
+    expect(projection,contains(
+      'entries = const <WaffraAccountLedgerRow>[];'));
+    expect(projection,isNot(contains('LIMIT 0')));
+    // The 900-row and accountless SQLCipher cases above still compare
+    // unchanged exact-halalas, goals and account association after reopen.
+  });
 }

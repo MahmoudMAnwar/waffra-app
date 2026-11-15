@@ -44,3 +44,8 @@ Stacked work on #658 / Issue #657. PR base is `feat/m952-five-axes-followup-2026
 
 - The M946 safety shard and money shard and M147 full Flutter suite exposed two outdated **source-only** checks (M468/M470) that still expected the previous three independent SQLCipher Home reads. Their original behavioral aims (no duplicate background scans, no `none` account choice, no stale account membership) remain.
 - Update their assertions to check the authenticated one-lock M956 API call, preserved exact account membership, separate epoch and requested-account stale response guard. The remaining tests within both files stay unchanged and enabled. This is a test-contract migration driven by actual exact-SHA failures, not relaxing the gate or fabricating device results.
+
+## M958 — Eliminate redundant zero-row ledger query
+
+- The compact verified Home summary no longer submits a transaction-card SELECT/JOIN/ORDER BY with `LIMIT 0`; it skips that SQL read entirely. Default full-context reads still run their original ledger query and return immutable source-backed rows in their original order.
+- The SQLCipher account/goal/budget read and source generation/digest witness are unchanged. A new source contract runs alongside existing 900-entry and accountless cold-reopen encrypted tests. No money writer, private restore, FAB/Snackbar or Android UI layout changed. This is a bounded performance improvement, not five-axis completion.

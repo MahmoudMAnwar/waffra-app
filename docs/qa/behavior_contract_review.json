@@ -8,6 +8,21 @@
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
     {
+      "id": "M958-HOME-COMPACT-SKIPS-LEDGER-SELECT",
+      "issue": "Issue #664 / Draft PR #665, continuing #657",
+      "previous_behavior": "Home's compact source read executed a JOIN/ORDER BY ledger-card query with LIMIT 0 even though it requested zero cards.",
+      "approved_behavior": "When includeEntries=false and summaryOnly=true, do not issue a ledger-card SELECT at all; return an immutable empty list. Keep the unchanged full SQL query when includeEntries=true and preserve grouped budget and goal amounts.",
+      "source_paths": ["lib/storage/waffra_account_context_read.dart"],
+      "test_paths": ["test/storage/m955_home_verified_summary_parity_test.dart"],
+      "ci_workflows_to_watch": [".github/workflows/m946-whole-app-feature-smoke.yml", ".github/workflows/finance-full-regression.yml"],
+      "safety_invariants": [
+        "Account Context history still returns original source-backed rows in original order.",
+        "Read-only SQLCipher compact summary cannot change verified balances, budget halalas, goals or historical membership.",
+        "Never bypass owner-source activation, generation/digest witness or missing-schema checks.",
+        "Owner real old archive and Android device acceptance remain pending."
+      ]
+    },
+    {
       "id": "M957-M468-M470-HOME-SINGLE-WITNESS-REGRESSION",
       "issue": "Issue #664, PR #665",
       "previous_behavior": "M468 and M470 tests expected obsolete three-lock Home source snippets and fail after verified M956 refactor despite unchanged safety.",
