@@ -80,7 +80,7 @@ void main(){
     expect(await count('fresh_finance_internal_transfers'),81);
     expect(await count('fresh_finance_entries'),0);
 
-    await store.close();
+    await store!.close();
     store=null;
     store=WaffraEncryptedStore.openAt(path,key:key);
     await WaffraAccountsSchema.requireReady(store!);
