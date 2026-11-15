@@ -1,78 +1,35 @@
 {
   "contract_version": 1,
-  "change_id": "M979-M980-ISSUE683-ALL-FOUR-SMS-RULES-NATIVE-OTP-20261115",
-  "human_scope_review": "Owner correction: every encrypted SMS candidate must run ALL FOUR independent owner-saved and built-in/default rule kinds (income, expense, transfer, excluded), on foreground review, history import and background worker, not OTP/exclusion alone. One matchAllFourKinds pass enumerates the four groups, then resolveSpecial and resolve reuse matches with original completed-finance, direction, amount, SAR, owner/account generation and explicit autoPost guards intact; conflicting custom kinds do not silently exclude. Native M979 high-confidence PURE-OTP prequeue security path and durable fingerprint remain. M385 path+function bounds and M550 behavior are reviewed; new executable M980 five-case suite and original M954/M979 suites required in M946 safety, not a device/UAT or 95% certificate.",
+  "change_id": "M982-ISSUE687-BACKGROUND-AUTO-SMS-EXCLUSION-BRIDGE-20261115",
+  "human_scope_review": "Real owner-requested all-four-rule SMS improvement: WaffraAutoSmsAutoPoster.run correctly asks native excludeAutoBankSms, MainActivity supports it, but background worker MethodChannel misses it, so a saved/user-seed exclusion cannot be applied in worker and may create a false review alert. Fix missing case ONLY in native/WaffraAutoSmsWorker.kt using identical owner-encrypted WaffraAutoSmsStore.excludeMessages(context,ids), no finance posting or ACK. Add three synthetic Flutter+source tests to protect Flutter/live/worker method parity and 30d labels, register in M946 safety with existing M980/M954; M385 exact seven-file scope and M550, Android M417 compile required. Stacked PR above #684, real handset UAT still separate.",
   "user_requested_changes": [
-    "Apply ALL FOUR categories on EVERY SMS: دخل، مصروف، تحويل، مستبعدة, including user's encrypted custom rules and ready-made defaults on foreground, history and background.",
-    "Do not prefilter away the other rule kinds based on a weak initial bank classification: first match all four, then use bank/account evidence to determine safe suggestion and posting authorization.",
-    "Keep pure high-confidence verification exclusion BEFORE queue on Android; protect combined OTP+financial movements and password advisories; no sender blacklist or raw code stored.",
-    "Do not auto-post a transfer as income/expense or allow conflicting personal rules to silently exclude/commit money; preserve old financial writer/locked autoPost consent and verified account source.",
-    "Run original M954 plus nonduplicate M979/M980 executable suites with M946 safety, all M385/M550 and native M417 compile/real handset gates."
+    "Make owner saved and built-in excluded rules actually work in the background worker for all four-category SMS routing, not just the foreground app.",
+    "Add the missing `excludeAutoBankSms` MethodChannel branch in worker forwarding List<String> ids to original WaffraAutoSmsStore.excludeMessages(context, ids).",
+    "Keep finance commit/ACK separate, owner and SHA256 verification, encrypted 30-day exclusion labels, no plaintext SMS logs or sender blacklist.",
+    "Add tests that verify Flutter bridge, native foreground handler and background handler use exactly the same safe owner-encrypted storage function; M946/M385/M550/M417 required."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "native/WaffraAutoSmsStore.kt",
+    "native/WaffraAutoSmsWorker.kt",
     "scripts/qa/m946_full_app_smoke_matrix.py",
-    "test/m979_native_otp_prequeue_exclusion_test.dart",
-    "lib/main.dart",
-    "lib/waffra_auto_sms_autopost.part.dart",
-    "lib/waffra_sms_local_rules.dart",
-    "test/m980_four_sms_rule_kinds_every_route_test.dart"
+    "test/m982_background_sms_exclusion_bridge_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
   "bounded_sections": {
-    "native/WaffraAutoSmsStore.kt": [
+    "native/WaffraAutoSmsWorker.kt": [
       {
-        "start": "    private val otp = Regex(",
-        "end": "    private val action = Regex("
-      },
-      {
-        "start": "    fun qualifies(sender: String, body: String)",
-        "end": "    // M437: Unknown-finance lookup"
-      },
-      {
-        "start": "    fun offer(context: Context, sender: String, body: String, at: Long,",
-        "end": "    fun pending(context: Context)"
+        "start": "                        \"ackAutoBankSms\" -> {",
+        "end": "                        \"notifyAutoSmsSaved\" -> {"
       }
     ],
     "scripts/qa/m946_full_app_smoke_matrix.py": [
       {
         "start": "FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {",
-        "end": "    \"m978_reminder_linked_goal_index_parity\""
-      }
-    ],
-    "lib/main.dart": [
-      {
-        "start": "Map<String,Object?> waffraM632ClassifySmsQueue(",
-        "end": "List<String> splitBankMessages("
-      }
-    ],
-    "lib/waffra_auto_sms_autopost.part.dart": [
-      {
-        "start": "  final actionable=<Map<String,Object?>>[];",
-        "end": "  if(actionable.isEmpty)return summary;"
-      },
-      {
-        "start": "   for(final candidate in actionable.take(25)){",
-        "end": "     // The rule is bound to the exact account suffix"
-      }
-    ],
-    "lib/waffra_sms_local_rules.dart": [
-      {
-        "start": " static bool matches(WaffraSmsLocalRule rule,String body,",
-        "end": " /// OTP plus a completed purchase/debit"
-      },
-      {
-        "start": " /// Transfers cannot create ledger income/expense entries;",
-        "end": " /// Keep a single safe auto-learned bucket"
-      },
-      {
-        "start": " static WaffraSmsLocalRule? resolve({",
-        "end": " static const builtIn=<WaffraSmsLocalRule>["
+        "end": "    \"m980_four_sms_rule_kinds_every_route\""
       }
     ]
   }
