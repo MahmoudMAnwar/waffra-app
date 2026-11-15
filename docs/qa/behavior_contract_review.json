@@ -1,12 +1,36 @@
 {
   "schema_version": 1,
-  "pr": "M987 Draft — structured Saudi SMS facts and composite safety (#701)",
-  "issue": "Issue #701, stacked on #704",
+  "pr": "M988 Draft — encrypted local-rule history, undo and read-only simulation (#702)",
+  "issue": "Issue #702, stacked on #705",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at f0def360ea75b9c865548b6f1b4fc07e9640f2c2 after #656",
   "reviewed_at": "2026-11-15",
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
+    {
+      "id": "M988-OWNER-ENCRYPTED-RULE-REVISION-UNDO",
+      "issue": "Issue #702",
+      "previous_behavior": "Local rule updates replaced their prior encrypted version without a user-visible rollback; preview counted matching messages but not before/after type changes.",
+      "approved_behavior": "Retain up to five prior validated encrypted owner-scoped snapshots; an explicit Undo restores previous saved rules and refreshes message suggestions. Read-only sampled before/after classification impact and conflicts never modify the SMS queue or money ledger.",
+      "source_paths": [
+        "lib/waffra_sms_local_rules.dart",
+        "lib/waffra_sms_rule_settings_page.dart",
+        "lib/waffra_sms_rule_simulator.dart",
+        "lib/waffra_merchant_rules.dart"
+      ],
+      "test_paths": [
+        "test/m988_sms_rule_simulation_history_test.dart",
+        "test/m985_sms_prefill_identity_status_conflict_duplicate_test.dart",
+        "test/m470_sms_sender_and_rule_accuracy_test.dart",
+        "test/m988_sms_merchant_alias_test.dart"
+      ],
+      "safety_invariants": [
+        "Rule history remains owner-keyed and encrypted, with no original SMS bodies or OTP numbers copied into snapshots.",
+        "Undo never writes finance or ACKs SMS; it restores only validated rule configuration.",
+        "Simulation is sample-only and cannot authorize exclusion of a posted transaction or automatic finance writes.",
+        "Merchant aliases change only suggestions, never persistent user-learned merchant keys, incoming direction, bank account assignment or finance writer."
+      ]
+    },
     {
       "id": "M987-STRUCTURED-BANK-FACTS-COMPOSITE-REVIEW",
       "issue": "Issue #701",
@@ -19,8 +43,7 @@
       "test_paths": [
         "test/m987_sms_structured_bank_context_test.dart",
         "test/m980_four_sms_rule_kinds_every_route_test.dart",
-        "test/m985_sms_prefill_identity_status_conflict_duplicate_test.dart",
-        "test/m548_review_grouping_and_signup_perf_test.dart"
+        "test/m985_sms_prefill_identity_status_conflict_duplicate_test.dart"
       ],
       "safety_invariants": [
         "Unambiguous bank sender and suffix are suggestions, not proof of bank-account ownership.",
