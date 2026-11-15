@@ -234,9 +234,9 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
             if(ctx.mounted)refresh((){
              openingReviewId=null;
              if(!_autoSmsPending.any((row)=>row['id']==id)){
-              for(final group in bySender.values){
-               group.removeWhere((row)=>row['id']==id);
-              }
+
+              // M973: native pending queue has already confirmed removal.
+              grouped.removeReviewedId(id);
               selectedIds.remove(id);
               senders.removeWhere((name)=>bySender[name]?.isEmpty??true);
               refreshReviewIds();
