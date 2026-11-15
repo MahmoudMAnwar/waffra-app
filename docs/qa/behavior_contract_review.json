@@ -8,6 +8,48 @@
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
     {
+      "id": "M968-STACKED-PR-M550-SOURCE-SCOPE-PREFLIGHT",
+      "issue": "Issue #668 / Issue #657",
+      "previous_behavior": "Every-PR M550/M385 approved scope/behavior gate had pull_request branches: [main], leaving feature-base nested PR #667 without this mandatory preflight.",
+      "approved_behavior": "Trigger the existing M550 source-contract job on any PR base branch; still checkout and compare the actual PR head/base, enforce M385 bounded source and behavior requirements and preserve audit behavior. QA self-test prevents re-adding base restrictions.",
+      "source_paths": [
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "test_paths": [
+        "test/qa/m946_full_app_smoke_matrix_test.py"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m946-whole-app-feature-smoke.yml"
+      ],
+      "safety_invariants": [
+        "No M385 or M550 scope bypass, full replacement or security test removal.",
+        "Keep protected source/review gates on exact PR SHA and base; no false signed APK/private backup certification.",
+        "No app code or real finance data modified."
+      ]
+    },
+    {
+      "id": "M968-STACKED-PR-M946-WHOLE-APP-SMOKE",
+      "issue": "Issue #668 / five-axis Issue #657",
+      "previous_behavior": "M946 pull_request had branches: [main], so stacked PR #667 targeted at PR #665's feature branch got no whole-app exact-HEAD money/experience/safety smoke evidence.",
+      "approved_behavior": "Run M946 for every pull_request base branch while keeping push main, exact PR head checkout, 3 required Flutter shards, source inventory, M937 reports, M948 zero-skip gates and artifacts; self-test rejects new branch filters.",
+      "source_paths": [
+        ".github/workflows/m946-whole-app-feature-smoke.yml"
+      ],
+      "test_paths": [
+        "test/qa/m946_full_app_smoke_matrix_test.py"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m946-whole-app-feature-smoke.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "No tests removed, skipped or relaxed; each three-shard M946 attempt still enforces real positive results and exact SHA.",
+        "No change to finance/UI writers, owner data, SQLCipher authority, original SMS or backup.",
+        "All owner physical Android, signed APK, live SMS, biometric and historic private restore acceptance remain pending."
+      ]
+    },
+    {
       "id": "M969-M120-ANDROID-EMULATOR-POST-PASS-HANG-FAIL-CLOSED",
       "issue": "Issue #670 / #657 / PR #665",
       "previous_behavior": "At PR #665 SHA acbed078 M120 Android test on emulator 5554 printed All tests passed and M120_RECEIPT_ANDROID_PASS; reactivecircus android-emulator-runner@v2 then hung after Terminate Emulator until the 45-minute job was cancelled.",
