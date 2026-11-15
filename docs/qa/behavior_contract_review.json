@@ -11,15 +11,20 @@
       "id": "M986-INDEX-OWNER-SENDER-SAFETY",
       "issue": "Issue #700",
       "previous_behavior": "Every queued SMS checked all custom owner rules, including rules for unrelated senders.",
-      "approved_behavior": "Construct one immutable-in-use sender candidate index per background isolate batch; preserve global rules, four-way financial/excluded matching, conflict detection, rule priority, no auto-post, native ACK and verified SQLCipher finance authority.",
+      "approved_behavior": "Construct a sender- and keyword-prefix candidate index once per background isolate batch; preserve matching rule order, all four categories and templates including beneficiary/OTP, default rules, verified financial authority, native ACK behavior; never turn suggestions into posting permission.",
       "test_paths": [
         "test/m986_sms_rule_sender_index_test.dart",
-        "test/m980_four_sms_rule_kinds_every_route_test.dart"
+        "test/m980_four_sms_rule_kinds_every_route_test.dart",
+        "test/m548_review_grouping_and_signup_perf_test.dart"
       ],
       "safety_invariants": [
         "A rule scoped to one sender cannot be considered for a different sender; normalized sender identity is used for both index and match.",
         "Every rule candidate is still evaluated with existing keyword and safety guards; all default rules remain active.",
         "No finance write, no SMS auto ACK from indexing; other roadmap phases remain incomplete."
+      ],
+      "source_paths": [
+        "lib/waffra_sms_local_rules.dart",
+        "lib/main.dart"
       ]
     },
     {
