@@ -48,7 +48,7 @@ extension _WaffraHomeVerifiedAccountFlows on _HomeScreenState {
    // Month-only context plus lightweight all-time account membership.
    final contextView=chosen=='all'?null:await api.readAccountContext(
     monthIso:month,
-    selectedAccountId:chosen,summaryOnly:true);
+    selectedAccountId:chosen,summaryOnly:true,includeEntries:false);
    final scopedIds=chosen=='all'?null:
     await api.readAccountEntryIds(accountId:chosen);
    if(!mounted||_m627ClosingSession||readEpoch!=_m627AccountEpoch)return;
