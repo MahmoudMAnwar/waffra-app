@@ -3,6 +3,17 @@ part of 'main.dart';
 /// M790 / Issue #633: exact original compact activity cards and finance shortcut.
 /// Same Dart library; source amounts, colors, receipts and routes unchanged.
 extension _WaffraHomeCompactActivityCards on _HomeScreenState {
+ /// M953: display-only ordinal in the filtered newest-first timeline;
+ /// not a persisted entry ID, receipt, balance or account reference.
+ Widget _m953NumberedActivity(int ordinal,Widget card)=>Row(
+  crossAxisAlignment:CrossAxisAlignment.center,children:[
+   SizedBox(width:29,child:Center(child:Text('$ordinal',
+    key:Key('m953-activity-position-$ordinal'),
+    style:const TextStyle(fontSize:13,color:emerald,
+     fontWeight:FontWeight.w800)))),
+   const SizedBox(width:5),
+   Expanded(child:card),
+  ]);
  Widget compactTransaction(MoneyEntry entry){
   final cat=categoryFor(entry.category,entry.income);
   final attachmentCount=waffraReceiptPaths(entry.receiptPath).length;
