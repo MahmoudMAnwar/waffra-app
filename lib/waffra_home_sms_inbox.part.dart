@@ -25,11 +25,36 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
   var pageRevealScheduled=false;
   final selectedIds=<String>{};
   var bulkBusy=false;
-  List<String> idsOf(Iterable<Map<String,Object?>> rows)=>
-   rows.map((row)=>row['id']).whereType<String>().toList(growable:false);
-  List<String> visibleIds()=>selectedSender==null?
-   idsOf(bySender.values.expand((rows)=>rows)):
-   idsOf(bySender[selectedSender]??const <Map<String,Object?>>[]);
+  // M952: memoize *complete* sender IDs. Rebuilding 10k IDs for each
+  // header, metric, checkbox or scroll repaint is unnecessary work.
+  // The cache belongs to this dialog; confirmed mutations invalidate it.
+  final idsCache=<List<Map<String,Object?>>,List<String>>{};
+  List<String> idsOf(Iterable<Map<String,Object?>> rows){
+   if(rows is List<Map<String,Object?>>){
+    return idsCache.putIfAbsent(rows,()=>List<String>.unmodifiable(
+     rows.map((row)=>row['id']).whereType<String>()));
+   }
+   return rows.map((row)=>row['id']).whereType<String>()
+    .toList(growable:false);
+  }
+  final senderIds=<String,List<String>>{};
+  var allReviewIds=<String>[];
+  void refreshReviewIds(){
+   idsCache.clear();
+   senderIds.clear();
+   final combined=<String>[];
+   for(final sender in senders){
+    final group=bySender[sender];
+    if(group==null)continue;
+    final ids=idsOf(group);
+    senderIds[sender]=ids;
+    combined.addAll(ids);
+   }
+   allReviewIds=List<String>.unmodifiable(combined);
+  }
+  refreshReviewIds();
+  List<String> visibleIds()=>selectedSender==null?allReviewIds:
+   senderIds[selectedSender]??const <String>[];
   await showModalBottomSheet<void>(
    context:context,isScrollControlled:true,showDragHandle:true,
    builder:(sheet)=>StatefulBuilder(
@@ -214,6 +239,7 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
               }
               selectedIds.remove(id);
               senders.removeWhere((name)=>bySender[name]?.isEmpty??true);
+              refreshReviewIds();
               if(selectedSender!=null&&!senders.contains(selectedSender)){
                selectedSender=null;
               }
@@ -361,6 +387,7 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
              rows.removeWhere((row)=>done.contains(row['id']));
             }
             senders.removeWhere((sender)=>bySender[sender]!.isEmpty);
+            refreshReviewIds();
             selectedIds.removeAll(done);
            }
            // On a partial native failure, keep the list mounted so the
