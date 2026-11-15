@@ -105,7 +105,9 @@ void main() {
   expect(page,contains('m681-opening-balance-attestation'));
   expect(page,contains('openingExcludesHistory:openingVerified'));
   expect(page,contains('readUnassignedPage('));
-  expect(page,contains('readMonthlyPage('));
+  expect(page,contains('readKeysetHistoryPage('));
+  expect(page,contains('_m944MonthCursors[pageOffset]'));
+  expect(page,contains('if(page?.hasMore==true)TextButton('));
   expect(page,isNot(contains('data.entries.where(')));
   expect(read,contains('loadUnassignedEntries('));
   expect(read,contains('SELECT COUNT(*) AS entry_count'));
