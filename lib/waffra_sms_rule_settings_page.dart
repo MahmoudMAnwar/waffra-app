@@ -37,6 +37,8 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
  // Native exclusions are a DIFFERENT owner-encrypted policy from keyword rules.
  // A missing Android/consent read is unknown, never reported as zero.
  int? excludedSmsCount,blockedSenderCount;
+ List<Map<String,Object?>>? nativeExcluded;
+ List<String>? nativeBlockedSenders;
  @override void initState(){
   super.initState();
   _load();
@@ -56,6 +58,8 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
     saved=rules;canUndo=undoAvailable;loading=false;error=null;
     excludedSmsCount=excluded?.length;
     blockedSenderCount=blocked?.length;
+    nativeExcluded=excluded;
+    nativeBlockedSenders=blocked;
    });
    if(widget.seedMessage!=null){
     WidgetsBinding.instance.addPostFrameCallback((_){
@@ -629,6 +633,35 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
         '${saved.where((r)=>r.resolvedKind==kind).length} saved patterns':
         '${saved.where((r)=>r.resolvedKind==kind).length} أنماط محفوظة')),
       children:[
+       if(kind=='excluded'&&nativeExcluded!=null&&
+          nativeBlockedSenders!=null)...[
+        ListTile(
+         leading:const Icon(Icons.lock_outline),
+         title:Text(widget.english?'Stored Android exclusions':
+          'الاستبعادات المحفوظة فعليًا في أندرويد'),
+         subtitle:Text(widget.english?
+          'These are saved message IDs or whole blocked senders, not reusable keyword rules. You can restore them from Settings > Excluded.':
+          'دي رسائل مستبعدة أو مرسلون محجوبون فعليًا، مش قواعد كلمات. تقدر ترجعهم من إعدادات المستبعدين.'),
+        ),
+        for(final blocked in nativeBlockedSenders!.take(30))
+         ListTile(dense:true,leading:const Icon(Icons.block_outlined),
+          title:Text(blocked,maxLines:1,overflow:TextOverflow.ellipsis),
+          subtitle:Text(widget.english?'Blocked sender':'مرسل مستبعد')),
+        for(final message in nativeExcluded!.take(40))
+         ListTile(dense:true,leading:const Icon(Icons.mark_email_read_outlined),
+          title:Text((message['sender'] as String?)?.trim().isNotEmpty==true?
+           message['sender'] as String:
+           (widget.english?'Unknown sender':'مرسل غير معروف'),
+           maxLines:1,overflow:TextOverflow.ellipsis),
+          subtitle:Text(widget.english?
+           'Excluded individual message (encrypted on device)':
+           'رسالة مستبعدة منفردة (محفوظة مشفرة على الجهاز)')),
+        if(nativeExcluded!.length>40||nativeBlockedSenders!.length>30)
+         Padding(padding:const EdgeInsets.all(12),
+          child:Text(widget.english?
+           'Only the first 40 messages and 30 senders are shown here. Open Settings > Excluded for full management.':
+           'يظهر أول 40 رسالة و30 مرسل هنا. افتح الإعدادات > المستبعدون للإدارة الكاملة.')),
+       ],
        if(!saved.any((r)=>r.resolvedKind==kind))
         Padding(padding:const EdgeInsets.all(14),
          child:Text(widget.english?
