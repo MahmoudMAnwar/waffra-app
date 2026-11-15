@@ -1,12 +1,40 @@
 {
   "schema_version": 1,
-  "pr": "M981 Draft — historical SMS OTP atomic security parity with live (#685, stacked #684)",
-  "issue": "Issue #685 / five-axis #657 and owner priority SMS improvement; parent #683 and PR #684",
+  "pr": "M983 Draft — one-click SMS typed templates, safe field prefill and immediate sender review refresh (#689)",
+  "issue": "Issue #689 / five-axis #657, after merged M979–M981",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at f0def360ea75b9c865548b6f1b4fc07e9640f2c2 after #656",
   "reviewed_at": "2026-11-15",
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
+    {
+      "id": "M983-EXACT-SMS-TEMPLATE-PREFILL-REFRESH-NO-SHADOW-MONEY",
+      "issue": "Issues #689 and #657",
+      "previous_behavior": "Sender SMS inbox tap opens a generic review dialog. Edit may open a second type selector; the income/expense editor starts with blank fields unless every parser independently verified the whole amount, and transfer can route through an unrelated three-way manual operation picker. After returning from the nested editor the open sender dialog does not rebuild grouped local-rule suggestion/rows, so statuses and selection can remain stale.",
+      "approved_behavior": "Sender SMS row exposes explicit income, expense and transfer actions; selecting one loads exact native owner-scoped SMS ID and opens only the corresponding existing validated editor. Confident income/expense SMS displays safe parsed title, SAR principal, date and four-way owner/default local category hints without overriding user editing or inventing bank account; transfer facts route to original verified two-account SMS transfer editor, uncertain transfer invokes separate manual two-account editor while leaving original SMS pending. The edit action on known SMS goes directly into the same type, not a second type-picker. After saving/returning, the current sender modal re-reads encrypted pending state and reclassifies all 4 rule types, preserves valid multi-select and selected sender, and reflects exact ACK/posting; unconfirmed or failed ACK stays reviewable.",
+      "source_paths": [
+        "lib/waffra_home_entry_sheet.part.dart",
+        "lib/waffra_home_sms_confirmation.part.dart",
+        "lib/waffra_home_sms_inbox.part.dart"
+      ],
+      "test_paths": [
+        "test/m983_sms_direct_kind_prefill_refresh_test.dart",
+        "test/m580_sms_security_navigation_performance_test.dart",
+        "test/m669_sms_review_category_search_test.dart",
+        "test/m980_four_sms_rule_kinds_every_route_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m946-whole-app-feature-smoke.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "No direct row action can infer sender-owned source/destination account, create money, or remove SMS from native encrypted queue before an exact SQLCipher verified writer+native ACK.",
+        "When the user manually selects a type conflicting with independent bank facts, keep a separate manual transaction with original SMS as reference and leave the source SMS pending.",
+        "Sole type-specific editor never shows original OTP contents and cannot bypass SAR/direction/pending/date/category/account/generation confirmation.",
+        "Sender review groups are refreshed after a completed edit and four-way rules re-run, with all selection IDs intersected against current verified encrypted queue.",
+        "Real Android device and RTL visual verification remain required; source/unit CI alone does not certify UI screenshots."
+      ]
+    },
     {
       "id": "M981-HISTORICAL-SMS-OTP-SAME-NATIVE-GATE-ATOMIC-CURSOR-DENIAL",
       "issue": "Issues #685, #683 and #657",
