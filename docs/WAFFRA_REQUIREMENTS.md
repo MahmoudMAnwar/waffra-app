@@ -2232,3 +2232,8 @@ Separate Draft PR stacked on #650. Fix unverified Home balance display; remove u
 - Summarize actual passed/failed/skipped test cases by exact commit SHA. Reject missing reports, missing source/tests, test failures, and unverified app-source checkouts; do not silence test or static-analyzer failures.
 - Hardware-only risks remain OPEN and must not be reported as green: Android SMS/background, biometric/OS behavior, signed APK installation, RTL/font scaling, notifications, owner-private V24 restore and real third-party quote freshness.
 - The test device and its disposable data must never be confused with the spouse device containing irreplaceable historical records.
+
+### M947 — Deletion/restore must be proactively smoke tested (same #654)
+- Mandatory regression for transaction Delete / Cancel / Undo, including 19-item restored ledger with two historic income entries, SQLCipher cold reopen, unchanged eighteen sibling rows and SMS dedup hashes; no owner data touched.
+- Mandatory regression for 30-day deleted Goals, Recurring, Categories, receipts, SMS inbox, and the distinct Delete All and Cloud Account Delete controls. Preserve settled Goal due, bank wallet balances and receipt hashes; confirm stale snapshots are rejected.
+- UI transitions must not replace the Home screen, set loading to black frame or present success before durable SQLCipher commit; the full-financial-data erase remains behind biometric confirmation. Real Android OS biometric/black-frame proof is an independent UAT requirement, never a host-test PASS.
