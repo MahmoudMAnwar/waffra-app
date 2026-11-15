@@ -1,6 +1,19 @@
 import 'dart:io';
+import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:waffra/main.dart' show defaultCategories;
+import 'package:waffra/storage/waffra_atomic_finance_snapshot.dart';
+import 'package:waffra/storage/waffra_encrypted_cutover_journal.dart';
+import 'package:waffra/storage/waffra_encrypted_finance_session.dart';
+import 'package:waffra/storage/waffra_fresh_home_catalog_recovery.dart';
+import 'package:waffra/storage/waffra_fresh_install_source.dart';
+import 'package:waffra/storage/waffra_production_finance_source_guard.dart';
+import 'package:waffra/storage/waffra_verified_accounts_api.dart';
+import 'package:waffra/storage/waffra_verified_encrypted_finance_bridge.dart';
+import 'package:waffra/storage/waffra_verified_finance_authority.dart';
+
 import 'package:waffra/storage/waffra_account_context_read.dart';
 import 'package:waffra/storage/waffra_account_context_repository.dart';
 import 'package:waffra/storage/waffra_account_context_schema.dart';
@@ -12,8 +25,96 @@ import 'package:waffra/storage/waffra_fresh_encrypted_vault_bootstrap.dart';
 /// Actual disposable SQLCipher source, never a mocked Home summary.
 /// The new selected-account header must not deserialize the same transaction
 /// cards Home already owns, but cannot alter a single halala or goal source.
+class _M956ActiveEncryptedSource extends WaffraProductionFinanceSourceGuard {
+ @override
+ Future<WaffraProductionFinanceSourceReport> inspect({
+  SharedPreferences? preferences,
+ }) async => const WaffraProductionFinanceSourceReport(
+  source:WaffraProductionFinanceSource.encryptedRoutingRequired,
+  reasonCode:'m956-single-witness-encrypted-account-fixture',
+ );
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  test('M956 real activated SQLCipher Home view agrees with verified '
+       'separate account reads and never rewrites finance', () async {
+    SharedPreferences.setMockInitialValues({});
+    final directory=await Directory.systemTemp.createTemp('m956-home-owner-');
+    WaffraEncryptedStore? db;
+    try {
+      String? key;
+      final fresh=await WaffraFreshInstallSource.prepareIn(
+        directory,readKey:()async=>key,writeKey:(value)async{key=value;});
+      expect(fresh,isNotNull);
+      db=WaffraEncryptedStore.openAt(
+        File('${directory.path}/${WaffraEncryptedStore.encryptedDatabaseFilename}'),
+        key:key!);
+      final snapshot=WaffraAtomicFinanceSnapshot(
+        store:db,experimentalEnabled:true);
+      final bridge=WaffraVerifiedEncryptedFinanceBridge(
+        snapshot:snapshot,
+        cutoverJournal:WaffraEncryptedCutoverJournal(
+          store:db,snapshot:snapshot,experimentalEnabled:true),
+        writerDirectory:directory,allWritersRoutedVerified:true,
+        secureKeyVerified:true,experimentalEnabled:true);
+      final authority=WaffraVerifiedFinanceAuthority(
+        sourceGuard:_M956ActiveEncryptedSource(),freshInstall:fresh,
+        encryptedSession:WaffraEncryptedFinanceSession(
+          bridge:bridge,experimentalEnabled:true),
+        encryptedSqlWitnessActive:true,externalSourceWitnessActive:true,
+        verifiedKeyRecoveryInDevice:true);
+      await WaffraFreshHomeCatalogRecovery.load(
+        authority:authority,defaultCategoriesJson:jsonEncode(
+          defaultCategories().map((c)=>c.toJson()).toList()));
+      final api=WaffraVerifiedAccountsApi(bridge:bridge);
+      await api.balances();
+      await api.createAccount(
+        id:'bank',name:'Verified Riyadh Bank',kind:'bank',
+        openingMinor:235050,createdIso:'2026-11-15T11:00:00Z',
+        userConfirmed:true);
+      final before=await snapshot.read();
+      final selected=await api.readHomeAccountView(
+        monthIso:'2026-11',selectedAccountId:'bank');
+      expect(selected.selectedAccountId,'bank');
+      expect(selected.balances.singleWhere((a)=>a.id=='bank').balanceMinor,
+        235050);
+      expect(selected.context,isNotNull);
+      expect(selected.context!.entries,isEmpty);
+      expect(selected.entryIds,isEmpty);
+      final ordinaryBalances=await api.balances();
+      final ordinaryContext=await api.readAccountContext(
+        monthIso:'2026-11',selectedAccountId:'bank',
+        summaryOnly:true,includeEntries:false);
+      final ordinaryIds=await api.readAccountEntryIds(accountId:'bank');
+      expect(ordinaryBalances.single.balanceMinor,
+        selected.balances.single.balanceMinor);
+      expect(ordinaryContext.budgets.length,selected.context!.budgets.length);
+      expect(ordinaryContext.goals.length,selected.context!.goals.length);
+      expect(ordinaryIds,selected.entryIds);
+      final stale=await api.readHomeAccountView(
+        monthIso:'2026-11',selectedAccountId:'missing-or-archived');
+      expect(stale.selectedAccountId,'all');
+      expect(stale.context,isNull);
+      expect(stale.entryIds,isNull);
+      expect(stale.balances.single.balanceMinor,235050);
+      final all=await api.readHomeAccountView(
+        monthIso:'2026-11',selectedAccountId:'all');
+      expect(all.selectedAccountId,'all');
+      expect(all.context,isNull);
+      expect(all.entryIds,isNull);
+      final after=await snapshot.read();
+      expect(after.generation,before.generation);
+      expect(after.digest,before.digest);
+      expect((await WaffraAccountsRepository(
+        db:db,experimentalEnabled:true).balances()).single.balanceMinor,
+        235050,reason:'Home financial reads must never post money.');
+    } finally {
+      await db?.close();
+      if(await directory.exists())await directory.delete(recursive:true);
+    }
+  });
 
   test('M956 Home bank selection is a single authenticated source read', () {
     final bridge=File(
