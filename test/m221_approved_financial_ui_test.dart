@@ -48,7 +48,7 @@ void main() {
   )));
   expect(find.text('كشف الاشتراكات'),findsOneWidget);
   expect(find.text('لا توجد اشتراكات محتملة حاليًا'),findsOneWidget);
-  expect(find.text('لا توجد مصروفات متكررة مسجلة'),findsOneWidget);
+  expect(find.text('لا توجد استحقاقات مسجلة'),findsOneWidget);
   expect(find.textContaining('0.00'),findsWidgets);
   expect(find.byType(WaffraCurrencyMark),findsWidgets);
  });
