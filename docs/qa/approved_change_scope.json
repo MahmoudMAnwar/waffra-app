@@ -30,7 +30,7 @@
         "end": "  return Scrollbar(\n   controller:_goalsScrollController"
       },
       {
-        "start": "      ...ordered.map((g){",
+        "start": "     ...ordered.map((g){",
         "end": "      final completed=g.target>0&&g.saved>=g.target;"
       },
       {
@@ -38,7 +38,7 @@
         "end": "  return Scrollbar(\n   controller:_recurringScrollController"
       },
       {
-        "start": "      ...shown.map((r){",
+        "start": "     ...shown.map((r){",
         "end": "      final savedDue=goal==null?0.0:min(r.amount,max(0,goal.saved));"
       }
     ],
