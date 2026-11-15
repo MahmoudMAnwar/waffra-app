@@ -139,6 +139,14 @@ void main() {
       await expectLater(WaffraAccountContextRead.load(
         store:db,monthIso:'2026-11',includeEntries:false),
         throwsA(isA<ArgumentError>()));
+      for(final invalid in const ['2026-00','2026-13','2026-1','2026-99']){
+        await expectLater(WaffraAccountContextRead.load(
+          store:db,monthIso:invalid,summaryOnly:true,
+          includeEntries:false),throwsA(isA<ArgumentError>()));
+        await expectLater(WaffraAccountContextRead.load(
+          store:db,monthIso:invalid,summaryOnly:true),
+          throwsA(isA<ArgumentError>()));
+      }
       expect({
         for(final row in await accounts.balances())row.id:row.balanceMinor
       },before,reason:'Both encrypted projections must be read-only.');
