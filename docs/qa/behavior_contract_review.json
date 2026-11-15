@@ -4896,6 +4896,47 @@
         ".github/workflows/m550-behavior-contract-preflight.yml",
         ".github/workflows/finance-full-regression.yml"
       ]
+    },
+    {
+      "id": "M947-DESTRUCTIVE-ACTIONS-SMOKE-AND-REVERSE",
+      "issue": "#653 / Draft PR #654, 2026-11-15 user asked proactive delete testing",
+      "previous_behavior": "M946 whole-app smoke inventory mentioned deleted features but did not execute encrypted transaction recycle, cancellation, 30-day Goal and category/recurring trash, Delete All nor uncommitted session navigation checks.",
+      "approved_behavior": "Run runnable deletion/restore regression on every PR and main: 19 source-matched SQLCipher rows with two incomes, decline and accept one expense deletion, verify other eighteen exact rows remain after cold reopen, preserve anti-replay SMS hashes, then undo to the original 19. Independently run preexisting receipt and 30-day expiry, Goal/Recurring/category, UI and Delete All tests; source contract guards cancellation, verified-before-setState, no page replacement and full-finance reset biometric requirement. Treat cloud account deletion as a separately disabled release gate.",
+      "source_paths": [
+        "lib/waffra_home_transaction_ledger_actions.part.dart",
+        "lib/waffra_home_delete_all_transactions.part.dart",
+        "lib/waffra_home_category_confirmations.part.dart",
+        "lib/waffra_recurring_trash.part.dart",
+        "lib/storage/waffra_encrypted_transaction_recycle.dart",
+        "lib/storage/waffra_encrypted_goal_recycle.dart",
+        "lib/storage/waffra_encrypted_module_recycle.dart",
+        "lib/waffra_home_account_tools.part.dart",
+        "scripts/qa/m946_full_app_smoke_matrix.py"
+      ],
+      "test_paths": [
+        "test/storage/m183_encrypted_transaction_recycle_test.dart",
+        "test/storage/m183_transaction_home_ui_guard_test.dart",
+        "test/storage/m185_encrypted_module_recycle_test.dart",
+        "test/storage/encrypted_goal_recycle_test.dart",
+        "test/storage/m938_legacy_goal_recycle_repair_test.dart",
+        "test/m947_deletion_flow_contract_test.dart",
+        "test/m907_home_delete_all_extraction_test.dart",
+        "test/m638_sms_inbox_delete_sync_test.dart",
+        "test/m107_release_backend_gating_test.dart"
+      ],
+      "safety_invariants": [
+        "Cancellation and stale or changed receipt IDs must never persist deletion or change money.",
+        "A single deleted expense cannot rewrite other eighteen historical rows or remove two original income entries; undo restores all 19 exactly.",
+        "Bank SMS anti-replay hashes survive selected deletion, no duplicate charges after recovery.",
+        "Deleted goal/recurring/category documents are reversible with authenticated 30-day clock, and settled history is unchanged.",
+        "Published Home ledger and read index update only after source-authorized success, no navigation replacement causing black screen.",
+        "Full-vault deletion requires device biometrics and separate explicit confirmation route; unavailable OS biometrics cannot be marked tested by source guards.",
+        "Private owner backup and Android delete navigation/biometrics require separately observed device UAT."
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m946-whole-app-feature-smoke.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ]
     }
   ]
 }
