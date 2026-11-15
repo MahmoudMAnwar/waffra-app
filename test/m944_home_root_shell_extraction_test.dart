@@ -35,8 +35,7 @@ void main() {
  test('M944 relocated root still has verified startup gate and full back route', () {
   final shell = File('lib/waffra_home_root_shell.part.dart').readAsStringSync();
   final reconstructed = readWaffraMainSourceForContracts();
-  expect(reconstructed, contains(
-    ' @override Widget build(BuildContext context)=>PopScope('));
+  expect(shell, contains(' Widget _m944BuildHome()=>PopScope('));
   expect(reconstructed, isNot(contains(
     ' @override Widget build(BuildContext context)=>_m944BuildHome();')));
   expect(shell, contains('child:!ready&&_financeLoadFailure==null?'));
