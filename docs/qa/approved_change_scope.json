@@ -13,7 +13,8 @@
     "Use original Saudi Riyal artwork for Goals/Dues money, add due gold metrics and useful add-due empty state while preserving functions.",
     "Move Home Show more/less to the search/filter/More row for verified combined financial history.",
     "Update one obsolete positive M940/M941 assumption on exact Home finance-index method form; add explicit checks that the new unified-history cache is invalidated, retaining all old read-only finance guard assertions.",
-    "Require the verified active SQLCipher account context, not only a cached selected-account ID, before rendering scoped ledger/month entries; resolves unused-field analyzer warning and prevents stale account transitions."
+    "Require the verified active SQLCipher account context, not only a cached selected-account ID, before rendering scoped ledger/month entries; resolves unused-field analyzer warning and prevents stale account transitions.",
+    "Ensure restored 19-entry source parity repair invalidates the stale Home monthly read cache after authenticated SQLCipher ledger correction, without changing archive or old stored records."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -50,7 +51,8 @@
     "lib/waffra_approved_page_designs.dart",
     "test/m945_restored_history_filters_ui_test.dart",
     "test/m940_m941_home_ledger_pagination_test.dart",
-    "lib/waffra_home_verified_account_flows.part.dart"
+    "lib/waffra_home_verified_account_flows.part.dart",
+    "lib/waffra_home_account_tools.part.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
@@ -219,6 +221,12 @@
       {
         "start": " Iterable<MoneyEntry> _m467ScopedEntries(){",
         "end": " double? _m942VerifiedAllAccountsBalance(){"
+      }
+    ],
+    "lib/waffra_home_account_tools.part.dart": [
+      {
+        "start": " Future<void> backupDialog()async {",
+        "end": " // System credentials are never saved"
       }
     ]
   }
