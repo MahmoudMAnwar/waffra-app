@@ -38,6 +38,8 @@ void main(){
   expect(source,contains('Confirmed manual entry absent from verified ledger.'));
   expect(source,contains('unawaited(_m467RefreshHomeAccounts());'));
   expect(source,contains('_m684InvalidatePeriodRead();entries..clear()..addAll(previousEntries);'));
+  final restore=File('lib/waffra_home_account_tools.part.dart').readAsStringSync();
+  expect(restore,contains('_m684InvalidatePeriodRead();entries..clear()..addAll(exact);'));
  });
 
  test('M945 one Goals/Dues counted dropdown and preserved original actions',(){
