@@ -66,6 +66,10 @@ jobs:
         if: matrix.group == 'money'
         run: dart analyze test/storage/m946_whole_app_money_journey_smoke_test.dart
 
+      - name: Independently prove all five new SQLCipher cross-feature journeys
+        if: matrix.group == 'money'
+        run: flutter test --no-pub --reporter expanded test/storage/m946_whole_app_money_journey_smoke_test.dart
+
       - name: Execute every registered test for this feature shard
         shell: bash
         env:
