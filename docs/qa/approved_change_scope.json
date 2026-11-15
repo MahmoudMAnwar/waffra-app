@@ -22,7 +22,8 @@
     "Add all destructive financial and nonfinancial deletion paths to mandatory every-PR smoke, with reversible delete and rollback: original 19 archived rows, 2 incomes, independent SMS hashes, encrypted receipts, 30-day goal and recurring bins, Delete All, SMS inbox, and account closure gating; avoid a black-screen navigation reset after delete.",
     "Add deterministic property and 10,000-row indexed query/pagination performance tests, randomized integer-halalas, 16-year leap-date and due schedule boundary, RTL 200% text on 320px viewports, and simultaneous user/manual and bank SMS SQLCipher writes preserving exactly-once balances.",
     "Close discovered functional defect: dashboard selected date range erroneously included the entire calendar day before requested start. Compare exact inclusive date-only selected boundaries; add month/year/leap date regression.",
-    "Make M946 always fail if any skipped/incomplete test, stale checked SHA, no test evidence, or host report falsely claims physical Android/UAT proof. Test the gate itself by mutations, enforce in each mandatory money/experience/safety CI shard."
+    "Make M946 always fail if any skipped/incomplete test, stale checked SHA, no test evidence, or host report falsely claims physical Android/UAT proof. Test the gate itself by mutations, enforce in each mandatory money/experience/safety CI shard.",
+    "Scope anchor encompasses the existing M944 Home ledger cache AND the M948 exact-day filter in the same registered Home read-only query source; no finance writer is modified."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -113,7 +114,7 @@
     ],
     "lib/waffra_home_ledger_query.part.dart": [
       {
-        "start": "final class WaffraHomeTransactionFilter {",
+        "start": "final class WaffraHomeLedgerReadCache {",
         "end": null
       }
     ],
