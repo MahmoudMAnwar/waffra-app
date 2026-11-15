@@ -15,12 +15,14 @@
       "test_paths": [
         "test/m986_sms_rule_sender_index_test.dart",
         "test/m980_four_sms_rule_kinds_every_route_test.dart",
-        "test/m548_review_grouping_and_signup_perf_test.dart"
+        "test/m548_review_grouping_and_signup_perf_test.dart",
+        "test/qa/m578_sms_time_confirmation_test.py"
       ],
       "safety_invariants": [
         "A rule scoped to one sender cannot be considered for a different sender; normalized sender identity is used for both index and match.",
         "Every rule candidate is still evaluated with existing keyword and safety guards; all default rules remain active.",
-        "No finance write, no SMS auto ACK from indexing; other roadmap phases remain incomplete."
+        "No finance write, no SMS auto ACK from indexing; other roadmap phases remain incomplete.",
+        "Existing date/time source QA asserts both bank SMS and manually corrected SMS use explicit calendar and clock before finance save."
       ],
       "source_paths": [
         "lib/waffra_sms_local_rules.dart",

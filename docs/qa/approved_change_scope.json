@@ -6,7 +6,8 @@
     "M986 A initial: index custom rules by normalized sender once per background batch; all matching kinds and global rules remain evaluated.",
     "Add executable regression against legacy matching with multiple senders and no cross-owner leaks.",
     "Plan M987 B, M988 C, M989 D in their own issues; no claim of completion.",
-    "Maintain original saved/default rule order with two-character conservative prefix candidate lookup; validated against full matcher."
+    "Maintain original saved/default rule order with two-character conservative prefix candidate lookup; validated against full matcher.",
+    "M174 stale M578 source assertion now verifies both SMS and corrected manual-review date guards, retaining mandatory date and clock checks."
   ],
   "allowed_changed_files": [
     "lib/waffra_sms_local_rules.dart",
@@ -15,7 +16,8 @@
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "docs/WAFFRA_REQUIREMENTS.md",
-    "test/m986_sms_rule_sender_index_test.dart"
+    "test/m986_sms_rule_sender_index_test.dart",
+    "test/qa/m578_sms_time_confirmation_test.py"
   ],
   "allowed_workflow_changes": [],
   "human_review_required": false,
@@ -34,6 +36,12 @@
       {
         "start": "/// Transfers cannot create ledger income/expense entries;",
         "end": " static WaffraSmsLocalRule? resolveSpecial("
+      }
+    ],
+    "test/qa/m578_sms_time_confirmation_test.py": [
+      {
+        "start": "  for marker in (",
+        "end": "   self.assertIn('var smsDateConfirmed=initial!=null||',editor)"
       }
     ]
   }

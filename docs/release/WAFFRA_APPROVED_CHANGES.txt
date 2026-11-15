@@ -1,3 +1,5 @@
+M986 M174 regression: keep calendar AND clock verification for bank SMS and corrected manual SMS; update stale source-test conditional to assert the broader new guard without removing any required date assertions. Sender index now honors sender scoping even for template-family entries.
+
 M986 CI correction: removed duplicate M385 allowed test path, added bounded source ranges and required M550 source_paths. Upgraded initial sender index to preserve exact original rule precedence and safely skip irrelevant 2-character keyword prefixes; new four-kind parity cases. No financial write change.
 
 M986 (Issue #700): initial performance improvement indexes saved SMS rules by normalized sender once per background classification batch, preserving all four rule kinds, default rules, OTP and finance safety. New behavioral regression tests; phases #701-#703 remain planned, not implemented. No auto-post or UI design changes.

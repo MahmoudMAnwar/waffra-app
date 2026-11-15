@@ -76,6 +76,7 @@ class WaffraSmsRuleCandidateIndex {
    final rule=all[i];
    final key=WaffraSmsLocalRules.normalized(rule.sender);
    final entry=MapEntry<int,WaffraSmsLocalRule>(i,rule);
+   _senderByIndex[i]=key;
    final tokens=<String>{};
    if(rule.templateFamily.isNotEmpty||rule.keywords.isEmpty){
     _always.add(entry);
@@ -92,7 +93,6 @@ class WaffraSmsRuleCandidateIndex {
    for(final token in tokens){
     _prefix.putIfAbsent(token,()=>[]).add(entry);
    }
-   _senderByIndex[i]=key;
   }
  }
  final Map<String,List<MapEntry<int,WaffraSmsLocalRule>>> _prefix={};
