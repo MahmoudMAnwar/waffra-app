@@ -1,25 +1,27 @@
 {
   "contract_version": 1,
   "change_id": "M952-ISSUE657-FIVE-AXIS-CODE-RELIABILITY-CONTINUATION-20261115",
-  "human_scope_review": "Owner explicitly asked to begin the same five code-hardening axes from the previous conversation. Work continues after merged #654/#656, without duplicate functional test cases or non-requested changes. First bounded tranche: make sender grouped SMS queue ID reads cached rather than rebuilding thousands of IDs on repeated Flutter widget builds while preserving full select-all, then harden the Dart JSON result reporter against duplicate / unattested runner records. Five axes remain tracked; only independently passing completed parts may be reported Done. Existing CI safety gates and production finance writing are untouched.",
+  "human_scope_review": "Owner's latest prior-chat five axes are financial integrity, account & Backup/Restore integration, performance/responsiveness, UI stability, and architecture/proactive tests (20 proposed improvements). Issue #657/PR #658 implement first bounded tranche: fail-close missing linked SQLCipher finance-domain schema, memoize large SMS-review selections, and harden exact-SHA CI evidence; preserve approved UI and all financial writers. No claim of all 20 done or real backup/Android UAT.",
   "user_requested_changes": [
-    "Axis 1 SQLCipher keyset pagination audit, with no unverified ledger fallback; retain previously merged bounded storage reads.",
-    "Axis 2 SMS review group ID caching to reduce repeated list materialization at thousands of notifications, synchronized on individual approval or bulk exclusion.",
-    "Axis 3 preserve authenticated opening balances, transfer net-zero, restore dedup and exact-halala parity; avoid touching money writers in this tranche.",
-    "Axis 4 preserve already extracted Home state and approved card, FAB, snackbar and RTL positions; do not invent removals.",
-    "Axis 5 make existing M937 JSON event reporting reject duplicate start/suite and missing suite references; add independent runnable negative regression tests.",
-    "Document evidence and status separately, run exact-sha CI before merge, no real handset or private historical backup verification claim."
+    "Axis 1: reject account-backed financial source when expected versioned domain linked tables or revision are missing even if account marker and foreign keys appear healthy.",
+    "Axis 2: protect bank-account links, account opening and V3/V24 restore parity with source readiness checks before reads, no speculative migration or real archive modification.",
+    "Axis 3: cache full sender-group and whole review ID lists at UI scope across repeated rebuilds, invalidating only on confirmed review or native exclusion while retaining 100-card rendering, full selection and original SMS.",
+    "Axis 4: preserve approved Home, Goals, Recurring visual composition, FAB, Snackbar, RTL and notification review transitions; do not change appearance without regression acceptance.",
+    "Axis 5: reject duplicated runner start, duplicate suite IDs or missing suite references in M937 exact-SHA fail-closed CI summary; add three hostile Python regressions and source/SQLCipher tests.",
+    "Track twenty-proposed-improvement work without claiming completed axes; no disabled tests, no fake Android or private backup proof."
   ],
   "allowed_changed_files": [
+    "docs/WAFFRA_REQUIREMENTS.md",
+    "docs/qa/M952_FIVE_AXES_FOLLOWUP.md",
+    "docs/qa/approved_change_scope.json",
+    "docs/qa/behavior_contract_review.json",
+    "docs/release/WAFFRA_APPROVED_CHANGES.txt",
+    "lib/storage/waffra_accounts_schema.dart",
     "lib/waffra_home_sms_inbox.part.dart",
     "scripts/qa/m937_flutter_test_report.py",
     "test/m940_sms_review_page_window_test.dart",
     "test/qa/m937_flutter_test_report_test.py",
-    "docs/WAFFRA_REQUIREMENTS.md",
-    "docs/qa/approved_change_scope.json",
-    "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "docs/qa/M952_FIVE_AXES_FOLLOWUP.md",
-    "docs/qa/behavior_contract_review.json"
+    "test/storage/m952_account_linked_schema_readiness_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
@@ -54,6 +56,12 @@
       {
         "start": "class SummaryTest(unittest.TestCase):",
         "end": "if __name__ == \"__main__\":"
+      }
+    ],
+    "lib/storage/waffra_accounts_schema.dart": [
+      {
+        "start": " static Future<void> requireReady(WaffraEncryptedStore db)async{",
+        "end": "  final found=await db.customSelect("
       }
     ]
   }
