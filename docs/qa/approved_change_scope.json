@@ -1,35 +1,43 @@
 {
   "contract_version": 1,
-  "change_id": "M978-ISSUE681-RECURRING-REMINDER-DATED-GOAL-INDEX-20261115",
-  "human_scope_review": "Five-axis Issue #657 follow-up #681 in reminder-only read logic, stacked above #680 and #678. In syncRecurringReminders, replace N recurring × N goals any() scans with one dated-goal ID Set from same loaded Home goals. Preserve active category, linked/unlinked reminders, duplicate-or-missing any() semantics, schedule ordering and times, no finance writer or notification content modifications. Exact 10000-goal/1000-recurring executable regression and existing boundary test in M946 experience. Bounded M385/M550, no physical Android or private archive claim.",
+  "change_id": "M979-ISSUE683-OWNER-ENCRYPTED-NATIVE-PURE-OTP-PREQUEUE-EXCLUSION-20261115",
+  "human_scope_review": "Five axes #657 / owner repeated Android OTP bug: Native WaffraAutoSmsStore.offer was queuing pure verification SMS and notifying review before Dart M954 exclusion. New pureVerificationOnly gate runs on ORIGINAL SMS, after existing finance/transfer/exclusion dedup and locked owner session guard, before review queue capacity and notification; mixed OTP+completed money stays in review. Persist only encrypted fingerprint and safe sender/timestamp/exclusion time using one preferences commit, no raw OTP/code and no finance writer. Existing 30-day reversible label vs durable replay denial preserved; fail closed on persistence error; historical queued messages still rely on Dart original classifier. Native regex aligned with high-confidence Arabic/English challenge patterns. Real Kotlin Android build and handset acceptance required; 4 executable Dart rule/source tests and existing M954 in mandatory M946 safety. Strict bounded M385/M550; no private backup.",
   "user_requested_changes": [
-    "Continue owner five axes toward audited 95% with actual source performance improvement.",
-    "Index eligible dated goal IDs once per reminder sync while preserving original any() filtering and duplicate/undated semantics.",
-    "Keep original scheduling order, active/category guards, reminder permission and exact oneTimeDueAt; no financial writes.",
-    "Run new 10k-goal/1k-linked-bill executable test with existing M86 in M946 and exact-head CI."
+    "Continue after merged #682 and fix owner's real-world new app verification SMS still appearing in Waffra review despite auto exclusion policy.",
+    "Auto-exclude only high-confidence pure OTP from any sender at native encrypted intake before queue/notification, with encrypted per-message fingerprint+safe label and durable rescan anti-replay, not blanket sender exclusion.",
+    "Retain all SMS with actual completed money movement or action plus currency for manual bank review; preserve confirmed finance/transfer dedupe and exact original user Flutter rules.",
+    "Add nonduplicate Arabic/English/mixed-finance/atomic source tests, keep M954 and all M385/M550/M946 safety gates; no code-only real handset success claim."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "lib/waffra_home_finance_persistence_due.part.dart",
+    "native/WaffraAutoSmsStore.kt",
     "scripts/qa/m946_full_app_smoke_matrix.py",
-    "test/m978_recurring_reminder_goal_index_test.dart"
+    "test/m979_native_otp_prequeue_exclusion_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
   "bounded_sections": {
-    "lib/waffra_home_finance_persistence_due.part.dart": [
+    "native/WaffraAutoSmsStore.kt": [
       {
-        "start": " Future<void> syncRecurringReminders()async {",
-        "end": " Future<void> toggleRecurringReminders("
+        "start": "    private val otp = Regex(",
+        "end": "    private val action = Regex("
+      },
+      {
+        "start": "    fun qualifies(sender: String, body: String)",
+        "end": "    // M437: Unknown-finance lookup"
+      },
+      {
+        "start": "    fun offer(context: Context, sender: String, body: String, at: Long,",
+        "end": "    fun pending(context: Context)"
       }
     ],
     "scripts/qa/m946_full_app_smoke_matrix.py": [
       {
         "start": "FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {",
-        "end": "    \"m977_large_argon2id_backup_envelope_integrity\""
+        "end": "    \"m978_reminder_linked_goal_index_parity\""
       }
     ]
   }
