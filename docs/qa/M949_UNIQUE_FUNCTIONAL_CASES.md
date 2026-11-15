@@ -112,10 +112,10 @@ Compared with: Baseline M448 account policy, M86 recurring, M948 amount/dates; n
 | M950-P15 | changing account header cannot alter global budget warning threshold |
 | M950-P16 | rejected invalid budget row cannot be dismissed by selected other bank |
 | M950-P17 | budget ignores nonmatching invalid row and does not consume unrelated category |
-| M950-P18 | goal funding and release on different accounts reconcile separately |
+| M950-P18 | fully released source ends at exact zero while unrelated bank savings persist |
 | M950-P19 | duplicated goal wallet movement across accounts rejects whole projection |
-| M950-P20 | one-time recurring account override leaves future bank unchanged |
-| M950-P21 | recurring permanent account switch updates selected and next bank |
+| M950-P20 | two successive one-time due account overrides leave original future bank intact |
+| M950-P21 | first recurring default creation then explicit future switch does not reuse prior owner |
 | M950-P22 | one-time recurring selection cleared retains future default |
 | M950-P23 | clearing future recurring account never silently uses previous bank |
 | M950-P24 | overdue unpaid recurring schedule remains actionable on prior due day |
@@ -138,7 +138,7 @@ Compared with: Baseline M448 encrypted context single-month, M684 month reader, 
 | M950-S06 | unassigned summary nets positive incomes and negative expenses across years |
 | M950-S07 | unassigned 13-item review pages never skip tie timestamps |
 | M950-S08 | explicit zero-opening association updates selected month and unassigned net |
-| M950-S09 | repeated explicit attachment keeps exact one link and balance |
+| M950-S09 | two legacy cash movements reattach once and survive encrypted cold reopen |
 | M950-S10 | failed reassignment after original bank link cannot steal transaction |
 | M950-S11 | rejected historical confirmation leaves review queue and bank untouched |
 | M950-S12 | invalid year-month spellings cannot query historical bank data |
@@ -180,7 +180,7 @@ Compared with existing `test/waffra_auto_sms_policy_test.dart` and `test/m444_bu
 | M951-A15 | blank SMS is ignored before sender or money validation |
 | M951-A16 | oversized SMS above review allowance is ignored before financial posting |
 | M951-B01 | two budgets under same owner do not share a threshold token |
-| M951-B02 | two owners of the same budget have independent alert history |
+| M951-B02 | interleaved owners crossing different budget stages cannot consume others alerts |
 | M951-B03 | changing calendar day inside same month does not repeat warning |
 | M951-B04 | same month next year receives a new independent alert threshold |
 | M951-B05 | blank owner never persists invalid notification history |

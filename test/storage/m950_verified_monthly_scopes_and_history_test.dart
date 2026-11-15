@@ -146,13 +146,24 @@ void main() {
     expect(after.netMinor,-250);
     expect(await balances(),{'bank':1000});
   });
-  test('M950-S09 repeated explicit attachment keeps exact one link and balance',()async{
+  test('M950-S09 two legacy cash movements reattach once and survive encrypted cold reopen',()async{
     await make('bank');
-    await add('old',750,'2026-09-09T13:00:00');
-    expect(await attach('old','bank'),1);
-    expect(await attach('old','bank'),1);
-    expect(await links(),1);
-    expect(await balances(),{'bank':-750});
+    await add('legacy-income',1000,'2026-09-09T13:00:00',income:true);
+    await add('legacy-expense',750,'2026-09-10T13:00:00');
+    expect(await attach('legacy-income','bank'),1);
+    expect(await attach('legacy-expense','bank'),1);
+    expect(await attach('legacy-income','bank'),1);
+    expect(await links(),2);
+    expect(await balances(),{'bank':250});
+    await db.close();
+    db=WaffraEncryptedStore.openAt(
+      File('${directory.path}/finance.sqlite'),key:key);
+    expect(await month('2026-09',account:'bank'),
+      ['legacy-expense','legacy-income']);
+    expect(await links(),2);
+    expect(await balances(),{'bank':250});
+    expect((await WaffraAccountContextRead.unassignedSummary(
+      store:db)).count,0);
   });
   test('M950-S10 failed reassignment after original bank link cannot steal transaction',()async{
     await make('bank');await make('wallet');

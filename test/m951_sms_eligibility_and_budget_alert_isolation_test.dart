@@ -113,11 +113,14 @@ void main(){
   expect(await alert('person','rent',at,[75]),true);
   expect(await alert('person','food',at,[75]),false);
  });
- test('M951-B02 two owners of the same budget have independent alert history',()async{
+ test('M951-B02 interleaved owners crossing different budget stages cannot consume others alerts',()async{
   final at=DateTime(2026,11,15);
-  expect(await alert('person-a','food',at,[80]),true);
-  expect(await alert('person-b','food',at,[80]),true);
-  expect(await alert('person-a','food',at,[80]),false);
+  expect(await alert('person-a','food',at,[50]),true);
+  expect(await alert('person-b','food',at,[75]),true);
+  expect(await alert('person-a','food',at,[75]),true);
+  expect(await alert('person-b','food',at,[50]),true);
+  expect(await alert('person-a','food',at,[50]),false);
+  expect(await alert('person-b','food',at,[75]),false);
  });
  test('M951-B03 changing calendar day inside same month does not repeat warning',()async{
   expect(await alert('person','food',DateTime(2026,11,1),[60]),true);

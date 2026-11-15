@@ -145,12 +145,13 @@ void main() {
     expect(food.globalSpentMinor,275);
     expect(food.selectedAccountSpentMinor,275);
   });
-  test('M950-P18 goal funding and release on different accounts reconcile separately',(){
-    final events=[movement('fund-bank','bank',8000),
-      movement('fund-wallet','wallet',3500),
-      movement('release-bank','bank',2400,release:true)];
-    expect(WaffraAccountContextPolicy.goalContribution(events,'bank'),5600);
-    expect(WaffraAccountContextPolicy.goalContribution(events,'wallet'),3500);
+  test('M950-P18 fully released source ends at exact zero while unrelated bank savings persist',(){
+    final events=[movement('fund-bank-1','bank',2000),
+      movement('fund-wallet','wallet',1500),
+      movement('release-bank-1','bank',1200,release:true),
+      movement('release-bank-2','bank',800,release:true)];
+    expect(WaffraAccountContextPolicy.goalContribution(events,'bank'),0);
+    expect(WaffraAccountContextPolicy.goalContribution(events,'wallet'),1500);
     expect(WaffraAccountContextPolicy.goalContribution(events,'cash'),0);
   });
   test('M950-P19 duplicated goal wallet movement across accounts rejects whole projection',(){
@@ -159,19 +160,30 @@ void main() {
     expect(()=>WaffraAccountContextPolicy.goalContribution(events,'bank'),
       throwsStateError);
   });
-  test('M950-P20 one-time recurring account override leaves future bank unchanged',(){
-    final actual=WaffraAccountContextPolicy.recurringAccount(
+  test('M950-P20 two successive one-time due account overrides leave original future bank intact',(){
+    final first=WaffraAccountContextPolicy.recurringAccount(
       savedDefaultAccountId:'bank',chosenAccountId:'wallet',
       change:WaffraRecurringAccountChange.thisPaymentOnly);
-    expect(actual.paymentAccountId,'wallet');
-    expect(actual.nextDefaultAccountId,'bank');
+    final second=WaffraAccountContextPolicy.recurringAccount(
+      savedDefaultAccountId:first.nextDefaultAccountId,
+      chosenAccountId:'cash',
+      change:WaffraRecurringAccountChange.thisPaymentOnly);
+    expect(first.paymentAccountId,'wallet');
+    expect(second.paymentAccountId,'cash');
+    expect(first.nextDefaultAccountId,'bank');
+    expect(second.nextDefaultAccountId,'bank');
   });
-  test('M950-P21 recurring permanent account switch updates selected and next bank',(){
-    final actual=WaffraAccountContextPolicy.recurringAccount(
-      savedDefaultAccountId:'bank',chosenAccountId:'wallet',
+  test('M950-P21 first recurring default creation then explicit future switch does not reuse prior owner',(){
+    final first=WaffraAccountContextPolicy.recurringAccount(
+      savedDefaultAccountId:null,chosenAccountId:'wallet',
       change:WaffraRecurringAccountChange.futurePayments);
-    expect(actual.paymentAccountId,'wallet');
-    expect(actual.nextDefaultAccountId,'wallet');
+    final next=WaffraAccountContextPolicy.recurringAccount(
+      savedDefaultAccountId:first.nextDefaultAccountId,
+      chosenAccountId:'bank',change:WaffraRecurringAccountChange.futurePayments);
+    expect(first.paymentAccountId,'wallet');
+    expect(first.nextDefaultAccountId,'wallet');
+    expect(next.paymentAccountId,'bank');
+    expect(next.nextDefaultAccountId,'bank');
   });
   test('M950-P22 one-time recurring selection cleared retains future default',(){
     final actual=WaffraAccountContextPolicy.recurringAccount(
