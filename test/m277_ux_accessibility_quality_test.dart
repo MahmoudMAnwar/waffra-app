@@ -54,10 +54,10 @@ void main() {
   }
 
   const labelsAr = <String>[
-    'الرئيسية', 'الأقسام', 'الأدوات', 'الأهداف', 'المتكررة',
+    'الرئيسية', 'الأقسام', 'الأدوات', 'الأهداف', 'الاستحقاقات',
   ];
   const labelsEn = <String>[
-    'Home', 'Categories', 'Smart tools', 'Goals', 'Recurring',
+    'Home', 'Categories', 'Smart tools', 'Goals', 'Dues',
   ];
 
   for (final width in <double>[320, 393]) {
