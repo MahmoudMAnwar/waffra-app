@@ -69,6 +69,14 @@ class WaffraAutoSmsWorker(context: Context, parameters: WorkerParameters) :
                                 ?.filterIsInstance<String>()?.toSet() ?: emptySet()
                             result.success(WaffraAutoSmsStore.acknowledge(context, ids))
                         }
+                        "excludeAutoBankSms" -> {
+                            // M982: match foreground MainActivity's channel.
+                            // Exclusion is a distinct owner-encrypted fingerprint
+                            // and 30-day label, NEVER a financial commit ACK.
+                            val ids = (call.arguments as? List<*>)
+                                ?.filterIsInstance<String>()?.toSet() ?: emptySet()
+                            result.success(WaffraAutoSmsStore.excludeMessages(context, ids))
+                        }
                         "ackCommittedAutoBankSms" -> {
                             // Only Flutter's independent verified finance-hash
                             // evidence may call this committed-only API.
