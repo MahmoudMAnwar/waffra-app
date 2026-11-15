@@ -110,7 +110,7 @@
         "end": "    // A goal is its own savings wallet. Display the overall saved total"
       },
       {
-        "start": "    final goalRows=await store.customSelect('''",
+        "start": "    // A goal is its own savings wallet. Display the overall saved total",
         "end": "    final goals=List<WaffraAccountGoalSummary>.unmodifiable("
       }
     ],
