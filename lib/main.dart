@@ -1190,6 +1190,38 @@ Map<String,Object?> waffraM632ClassifySmsQueue(Map<String,Object?> input){
     };
    }
   }
+  // M983: a matched rule should update an unknown message's DISPLAY
+  // status even when its amount/date/SAR are not verified enough for money.
+  // This never creates an excluded ID or a finance write. Mixed OTP and
+  // conflicting saved rule directions retain their Needs Review status.
+  if(local==null&&!facts.pending&&annotated['sensitiveOtp']!=true){
+   final customKinds=fourWay.where((r)=>!r.builtIn&&
+    const <String>{'income','expense','transfer'}.contains(r.resolvedKind))
+    .toList(growable:false);
+   final allKinds=customKinds.isNotEmpty?customKinds:fourWay.where((r)=>
+    const <String>{'income','expense','transfer'}.contains(r.resolvedKind))
+    .toList(growable:false);
+   final ownerConflicts=fourWay.where((r)=>!r.builtIn)
+    .map((r)=>r.resolvedKind).toSet();
+   final typeKinds=allKinds.map((r)=>r.resolvedKind).toSet();
+   if(ownerConflicts.length<=1&&typeKinds.length==1){
+    final kind=typeKinds.single;
+    final directionSafe=facts.kind==WaffraBankOperationKind.uncertain||
+     kind=='income'&&facts.kind==WaffraBankOperationKind.income||
+     kind=='expense'&&facts.kind==WaffraBankOperationKind.expense||
+     kind=='transfer'&&facts.kind==WaffraBankOperationKind.transfer;
+    if(directionSafe){
+     final categoriesFound=allKinds.map((r)=>r.category)
+      .where((name)=>name.isNotEmpty).toSet();
+     local=<String,Object?>{
+      'rule':allKinds.first.name,'kind':kind,
+      'category':categoriesFound.length==1?categoriesFound.single:'',
+      'income':kind=='income','suggestedOnly':true,
+      'defaultSeed':allKinds.first.builtIn,
+     };
+    }
+   }
+  }
   if(local!=null){
    annotated['local']=local;
    if(local['kind']=='excluded'){
