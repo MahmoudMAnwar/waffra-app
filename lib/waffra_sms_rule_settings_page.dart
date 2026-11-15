@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'waffra_sms_local_rules.dart';
+import 'waffra_auto_sms.dart';
 import 'waffra_sms_rule_simulator.dart';
 import 'waffra_bank_sms_facts.dart';
 import 'waffra_centered_dropdown.dart';
@@ -33,6 +34,9 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
  List<WaffraSmsLocalRule> saved=const [];
  bool loading=true,busy=false,canUndo=false;
  String? error;
+ // Native exclusions are a DIFFERENT owner-encrypted policy from keyword rules.
+ // A missing Android/consent read is unknown, never reported as zero.
+ int? excludedSmsCount,blockedSenderCount;
  @override void initState(){
   super.initState();
   _load();
@@ -41,8 +45,18 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
   try{
    final rules=await store.read(widget.ownerKey);
    final undoAvailable=await store.hasUndo(widget.ownerKey);
+   List<Map<String,Object?>>? excluded;
+   List<String>? blocked;
+   try{
+    excluded=await WaffraAutoSms.excludedMessages();
+    blocked=await WaffraAutoSms.excludedSenders();
+   }catch(_){/* Native exclusions unavailable; do NOT show a false zero. */}
    if(!mounted)return;
-   setState((){saved=rules;canUndo=undoAvailable;loading=false;error=null;});
+   setState((){
+    saved=rules;canUndo=undoAvailable;loading=false;error=null;
+    excludedSmsCount=excluded?.length;
+    blockedSenderCount=blocked?.length;
+   });
    if(widget.seedMessage!=null){
     WidgetsBinding.instance.addPostFrameCallback((_){
      if(mounted)_edit(seed:widget.seedMessage,kindHint:widget.seedKind);
@@ -60,7 +74,7 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
   if(busy||error!=null)return false;
   setState(()=>busy=true);
   try{
-   await store.write(widget.ownerKey,next);
+   await store.writeIfCurrent(widget.ownerKey,expected:saved,next:next);
    if(mounted){
     setState((){saved=next;canUndo=true;});
     // M661: a seedless user-created rule has no route result to signal Home.
@@ -69,9 +83,12 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
    }
    return true;
   }catch(_){
-   if(mounted)widget.onNotice(widget.english?
-    'Could not save rules securely. Nothing changed.':
-    'تعذر حفظ القواعد بأمان. لم يتغير شيء.');
+   if(mounted){
+    widget.onNotice(widget.english?
+     'Rules changed or could not be saved securely. Reloaded the current rules; no overwrite was performed.':
+     'القواعد اتغيرت أو تعذر حفظها. أعدنا تحميل القواعد الحالية بدون الكتابة فوقها.');
+    await _load();
+   }
    return false;
   }finally{if(mounted)setState(()=>busy=false);}
  }
@@ -560,6 +577,24 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
      'Rules run locally on your device and suggest categories; financial changes require your verified approval.':
      'القواعد تحلل الرسائل محليًا على جهازك وتقترح النوع والقسم، والعملية المالية تتطلب تأكيدك الموثق.',
      style:Theme.of(context).textTheme.bodyMedium),
+    const SizedBox(height:12),
+    Card(child:ListTile(
+     key:const Key('m1002-native-exclusion-counts'),
+     leading:const Icon(Icons.shield_outlined),
+     title:Text(widget.english?'Previously excluded SMS':'الرسائل المستبعدة بالفعل'),
+     subtitle:Text(excludedSmsCount==null||blockedSenderCount==null?
+      (widget.english?'Native exclusion counts unavailable. This does not mean zero.':
+       'تعذر قراءة سجل الاستبعاد على الجهاز. ده مش معناه إن العدد صفر.'):
+      (widget.english?
+       '${excludedSmsCount!} individually excluded SMS • ${blockedSenderCount!} blocked senders':
+       '${excludedSmsCount!} رسالة مستبعدة • ${blockedSenderCount!} مرسل مستبعد')),
+     trailing:IconButton(
+      tooltip:widget.english?'Refresh exclusion counts':'تحديث عداد الاستبعاد',
+      onPressed:busy?null:_load,icon:const Icon(Icons.refresh_outlined)),
+    )),
+    Text(widget.english?
+     'Saved patterns below are reusable classification rules, not a count of SMS you excluded. Financial messages do not automatically become future-blocking rules.':
+     'الأنماط المحفوظة تحت هي قواعد قابلة لإعادة الاستخدام، مش عدد الرسائل اللي استبعدتها. الرسائل المالية لا تتحول تلقائيًا لقواعد تحجب رسائل مستقبلية.'),
     const SizedBox(height:16),
     if(canUndo)Align(alignment:AlignmentDirectional.centerStart,
      child:OutlinedButton.icon(
