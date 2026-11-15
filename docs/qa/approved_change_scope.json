@@ -61,7 +61,7 @@
     "lib/storage/waffra_accounts_schema.dart": [
       {
         "start": " static Future<void> requireReady(WaffraEncryptedStore db)async{",
-        "end": "  final found=await db.customSelect("
+        "end": "  if(found.length!=1)throw StateError('Accounts database has not been initialized.');"
       }
     ]
   }
