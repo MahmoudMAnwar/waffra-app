@@ -22,7 +22,8 @@
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/waffra_home_ledger_query.part.dart",
     "lib/waffra_home_dashboard_analytics.part.dart",
-    "test/m944_home_progressive_window_test.dart"
+    "test/m944_home_progressive_window_test.dart",
+    "test/storage/m944_transfer_replay_and_opening_parity_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
