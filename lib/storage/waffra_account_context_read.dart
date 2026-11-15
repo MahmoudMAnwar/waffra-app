@@ -103,19 +103,27 @@ FROM fresh_finance_standalone_budgets
 WHERE archived_at_iso IS NULL
 ORDER BY name, budget_id
 ''').get();
-    final monthEntries = entries.where((row) =>
-      row.occurredIso.startsWith(monthIso + '-')).map((row) => row.scoped);
-    final monthly = monthEntries.toList(growable: false);
+    final monthly = entries.where((row) =>
+      row.occurredIso.startsWith(monthIso + '-'))
+      .map((row) => row.scoped).toList(growable: false);
+    // The previous per-budget loop rescanned every matching entry B times.
+    // One pure O(E+B) pass preserves global/unassigned and selected-account
+    // totals as exact integer halalas, without changing the source ledger.
+    final budgetTotals = WaffraAccountContextPolicy.budgetSummaries(
+      entries: monthly,
+      limitsMinor: {
+        for (final row in budgets)
+          row.read<String>('budget_id'):
+            row.read<int>('monthly_limit_minor'),
+      },
+      selectedAccountId: selectedAccountId,
+    );
     final summed = List<WaffraAccountBudgetRow>.unmodifiable(
       budgets.map((row) {
         final id = row.read<String>('budget_id');
         return WaffraAccountBudgetRow(
           id: id, name: row.read<String>('name'),
-          usage: WaffraAccountContextPolicy.budget(
-            entries: monthly, budgetId: id,
-            limitMinor: row.read<int>('monthly_limit_minor'),
-            selectedAccountId: selectedAccountId,
-          ),
+          usage: budgetTotals[id]!,
         );
       }),
     );
