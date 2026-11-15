@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
   "change_id": "M953+M954-ISSUES659-661-ANDROID-SCREENSHOTS-AND-ALL-SMS-RULE-PARITY-20261115",
-  "human_scope_review": "Owner provided eight real Android screenshots and explicitly requests correcting historical transaction date edit rejection, comprehensive income/expense edit regression coverage, newest-first native SMS notification ordering, readable all-action bank SMS review, numbered transaction cards, RTL scrollbar inset, no duplicate Goals/Dues count next to All, user-facing renaming of recurring to due dates. This PR is independently branched from main and MUST NOT modify unrelated PR #658, user backups, account-money transfer writers, restored archived data or security gates. Existing linked-account reassignment and editing settled transfer/goal payments REQUIRE a separate atomic writer and are NOT made safe by UI changes. Exact protected source sections and retained tests are enumerated. User has not accepted signed Android visuals yet. M954 owner follow-up requires all SMS to be classified against default and user-created rules before foreground/background/historical review, including nonfinancial OTP automatically excluded with 30-day native durable IDs; finance/transfer/mixed cues remain reviewable, no auto-money posting. Issue #661 tracks this bounded addition to same Draft PR #660. Included only source + regression tests + M550/M385/release docs.",
+  "human_scope_review": "Owner provided eight real Android screenshots and explicitly requests correcting historical transaction date edit rejection, comprehensive income/expense edit regression coverage, newest-first native SMS notification ordering, readable all-action bank SMS review, numbered transaction cards, RTL scrollbar inset, no duplicate Goals/Dues count next to All, user-facing renaming of recurring to due dates. This PR is independently branched from main and MUST NOT modify unrelated PR #658, user backups, account-money transfer writers, restored archived data or security gates. Existing linked-account reassignment and editing settled transfer/goal payments REQUIRE a separate atomic writer and are NOT made safe by UI changes. Exact protected source sections and retained tests are enumerated. User has not accepted signed Android visuals yet. M954 owner follow-up requires all SMS to be classified against default and user-created rules before foreground/background/historical review, including nonfinancial OTP automatically excluded with 30-day native durable IDs; finance/transfer/mixed cues remain reviewable, no auto-money posting. Issue #661 tracks this bounded addition to same Draft PR #660. Included only source + regression tests + M550/M385/release docs. M160 exact-head 3105-case long-suite uncovered two obsolete source-string assertions, not a money-writer defect: verified transaction Undo now saves via authenticated per-row edit then reads source back; default SMS exclusions are durable 30-day native records, not transient acknowledge. Extend only those specific tests to assert the new secure paths, preserve 3103 passing cases, release notes after source changes.",
   "user_requested_changes": [
     "One-row source-verified SQLCipher transaction edit for older historical date/amount/notes/category/budget and safe readback. No reserializing untouched SMS/V24 rows or changing financial ID/receipt/SMS hash; failure re-reads authenticated source.",
     "Display-only sequential numbering beside all current-filter financial activity cards (income, expense, transfer, savings, due), preserving verified account ordering and existing UI geometry.",
@@ -14,7 +14,9 @@
     "Existing receipt-rollback source contract now verifies source-reloaded error copy and still requires physical cleanup after a failed save, never disables stage cleanup or swallows failures.",
     "M954 (#661): unify new-app OTP/verification and owner rule matching across native masking, all-queue foreground isolate, on-demand local inspection, and WorkManager before notifications. Safe built-in/user exclusion is durable native 30-day anti-replay, never mere queue acknowledge; completed financial event/transfer and owner-rule-load failures remain fail-closed. Add 15 targeted regression cases and device acceptance.",
     "Fix exact-HEAD M954 owner exclusion failure by allowing only vetted event phrase 'تفعيل الحساب' in excluded custom rules while retaining a completed-money veto; keep legacy financial-keyword privacy rules unchanged.",
-    "Fix stale M652 numbered-activity source expectation and M221 renamed dues empty-state assertion; new tests must check current approved behaviors rather than legacy map or label."
+    "Fix stale M652 numbered-activity source expectation and M221 renamed dues empty-state assertion; new tests must check current approved behaviors rather than legacy map or label.",
+    "Fix M160 stale M684 undo assertion: verify source-witnessed edit Undo and legacy period index invalidation without reintroducing the original historical date edit error.",
+    "Fix M160 stale M462 exclusion assertion: verify native durable exclusion instead of transient acknowledge; keep committed-money and SMS-fingerprint idempotent ack separately and do not weaken 30-day retention."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -55,7 +57,9 @@
     "test/storage/m953_verified_historical_edit_regression_test.dart",
     "test/waffra_concept2_final_visual_test.dart",
     "test/m647_m652_financial_activity_regression_test.dart",
-    "test/m221_approved_financial_ui_test.dart"
+    "test/m221_approved_financial_ui_test.dart",
+    "test/m684_finance_period_index_test.dart",
+    "test/m462_smart_sms_rule_review_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
@@ -242,6 +246,18 @@
       {
         "start": " test('M652 Home mixes five kinds chronologically without new money writes', () {",
         "end": " test('M648 transfer shows opposite signed effect on the selected account', () {"
+      }
+    ],
+    "test/m684_finance_period_index_test.dart": [
+      {
+        "start": " test('M684 index invalidation covers insert/edit/delete, restore and reset',(){",
+        "end": null
+      }
+    ],
+    "test/m462_smart_sms_rule_review_test.dart": [
+      {
+        "start": " test('M462 background safely acknowledges verified exclusions',(){",
+        "end": " test('M636 transfers cannot silently post through SMS expense editor',(){"
       }
     ]
   }
