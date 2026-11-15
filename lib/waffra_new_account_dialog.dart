@@ -13,6 +13,29 @@ class WaffraNewAccountDraft {
  final String? lastFour,providerId,subtype,customSubtypeLabel;
 }
 
+/// Resolve a user's selected institution via the exact supported catalog ID.
+WaffraSaudiProvider? waffraProviderForAccountGroup(String? groupId){
+ if(groupId==null)return null;
+ for(final p in WaffraSaudiFinancialProviders.all){
+  if(p.groupId==groupId)return p;
+ }
+ return null;
+}
+
+/// Validate the parent BEFORE the verified SQLCipher creation write.
+bool waffraNewAccountMatchesGroup(String? group,WaffraNewAccountDraft draft){
+ if(group==null)return true;
+ final institution=waffraProviderForAccountGroup(group);
+ if(institution!=null)return draft.providerId==institution.id&&
+  draft.kind==(institution.category==WaffraSaudiFinancialProviders.wallet?
+   'wallet':'bank');
+ if(group=='bank:institution:other')return
+  draft.kind=='bank'&&draft.providerId=='other';
+ if(group=='wallet:institution:other')return
+  draft.kind=='wallet'&&draft.providerId=='other';
+ return group=='cash'&&draft.kind=='cash';
+}
+
 /// A form only: the same verified SQLCipher account API authorizes saving.
 /// Bank names decorate labels, not trusted financial account provenance.
 class WaffraNewAccountDialog extends StatefulWidget {

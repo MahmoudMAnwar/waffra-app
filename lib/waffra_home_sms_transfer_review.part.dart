@@ -90,8 +90,8 @@ extension _WaffraHomeSmsTransferReview on _HomeScreenState {
         // #416: never infer transfer source or destination from SMS sender.
         final existing=await api.balances();
         if(!mounted)return null;
-        final bank=RegExp(r'^bank:institution:(rajhi|inma|snb|riyad|bilad|stc)$')
-         .firstMatch(createProvider?'':group??'')?.group(1);
+        final selectedGroup=createProvider?null:group;
+        final bank=waffraProviderForAccountGroup(selectedGroup)?.id;
         final custom=<String,List<String>>{
          for(final kind in const ['bank','wallet'])
           kind:existing.where((a)=>!a.archived&&a.kind==kind&&
@@ -114,8 +114,8 @@ extension _WaffraHomeSmsTransferReview on _HomeScreenState {
           suggestedLastFour:proposedSuffix,
           customSubtypeOptions:custom));
         if(choice==null||!mounted)return null;
-        if(bank!=null&&(choice.kind!='bank'||choice.providerId!=bank)){
-         throw StateError('Child account changed bank group');
+        if(!waffraNewAccountMatchesGroup(selectedGroup,choice)){
+         throw StateError('Child account changed bank/wallet group');
         }
         final createdId='m499-sms-transfer-'+
          DateTime.now().microsecondsSinceEpoch.toString();

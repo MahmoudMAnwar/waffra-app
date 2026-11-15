@@ -109,12 +109,14 @@ extension _WaffraHomeVerifiedAccountFlows on _HomeScreenState {
   return monthRows.where((e)=>ids.contains(e.id)).toList(growable:false);
  }
 
+ double? _m942VerifiedAllAccountsBalance(){
+  if(!_m468VerifiedAccountsLoaded)return null;
+  return _m467Accounts.fold<int>(0,(total,a)=>total+a.balanceMinor)/100;
+ }
+
  double _m467ShownBalance(){
   if(_m467SelectedAccount=='all'){
-   if(!_m468VerifiedAccountsLoaded)return waffraAvailableCash(entries,goals);
-   // The sum of verified balances includes openings, account transfers and
-   // wallet movements. Unassigned ledger entries do not alter accounts.
-   return _m467Accounts.fold<int>(0,(total,a)=>total+a.balanceMinor)/100;
+   return _m942VerifiedAllAccountsBalance()??waffraAvailableCash(entries,goals);
   }
   for(final a in _m467Accounts){
    if(a.id==_m467SelectedAccount)return a.balanceMinor/100;
@@ -234,7 +236,6 @@ extension _WaffraHomeVerifiedAccountFlows on _HomeScreenState {
    final accounts=await api.balances();
    if(!mounted)return;
    // Two different verified accounts are checked only on final submit.
-   final knownIds=accounts.map((a)=>a.id).toSet();
    await Navigator.of(context).push<void>(MaterialPageRoute(
     builder:(transferContext)=>Scaffold(
      appBar:AppBar(title:WaffraText(waffraIsEnglish?
@@ -243,13 +244,10 @@ extension _WaffraHomeVerifiedAccountFlows on _HomeScreenState {
       accounts:accounts,english:waffraIsEnglish,
       initialOperation:WaffraAccountOperation.transfer,
       onCreateAccount:(group,createProvider)async{
-       await openVerifiedAccounts();
-       if(!mounted)return null;
-       final updated=await api.balances();
-       final created=updated.where((a)=>
-        !a.archived&&!knownIds.contains(a.id)).toList();
-       knownIds.addAll(updated.map((a)=>a.id));
-       return created.length==1?created.single:null;
+       final created=await _m641CreateGoalRecurringAccount(
+        createProvider?null:group);
+       if(created!=null&&mounted)await _m467RefreshHomeAccounts();
+       return created;
       },
       onConfirmTransfer:(draft)async{
        await api.transfer(id:draft.requestId,

@@ -360,8 +360,9 @@ extension _WaffraHomeBudgetCardsModule on _HomeScreenState {
   });
   final pendingIncome=pending.where((r)=>r.income).fold<double>(0,(v,r)=>v+r.amount);
   final pendingExpense=pending.where((r)=>!r.income).fold<double>(0,(v,r)=>v+r.amount);
-  final balance=waffraAvailableCash(entries,goals);
-  final projection=WaffraFinancialInsights.projectedEndBalance(
+  final balance=_m942VerifiedAllAccountsBalance();
+  final projection=balance==null?null:
+   WaffraFinancialInsights.projectedEndBalance(
    currentBalance:balance,variableExpensesSoFar:variableSpent,daysElapsed:now.day,
    daysInMonth:DateTime(now.year,now.month+1,0).day,
    pendingRecurringIncome:pendingIncome,pendingRecurringExpense:pendingExpense);
@@ -395,7 +396,7 @@ extension _WaffraHomeBudgetCardsModule on _HomeScreenState {
     const SizedBox(height:12),
     Row(children:[
      Expanded(child:_summaryBox(waffraIsEnglish?'End-of-month estimate':'الرصيد المتوقع آخر الشهر',
-      cash(projection),Icons.trending_up,emerald)),
+      projection==null?'—':cash(projection),Icons.trending_up,emerald)),
      const SizedBox(width:8),
      Expanded(child:_summaryBox(waffraIsEnglish?'Daily spending limit':'الحد اليومي المقترح',
       activeCap>0?cash(daily):(waffraIsEnglish?'Set a budget':'حدد ميزانية'),

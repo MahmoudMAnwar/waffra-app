@@ -275,9 +275,8 @@ class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {
     english:widget.english,suggestedProviderId:bank,
     customSubtypeOptions:custom));
   if(choice==null||!mounted)return null;
-  if(bank!=null&&(
-   choice.kind!=(chosenProvider!.category==WaffraSaudiFinancialProviders.wallet?'wallet':'bank')||
-   choice.providerId!=bank)){
+  if(!createProvider&&
+     !waffraNewAccountMatchesGroup(providerGroup,choice)){
    throw StateError('Child account must be under the selected bank');
   }
   final newId='m499-account-composer-'+

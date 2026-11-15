@@ -63,7 +63,8 @@ extension _WaffraHomeDashboardAnalyticsModule on _HomeScreenState {
          heading:waffraIsEnglish?'Total balance':'إجمالي الرصيد',
          compact:true,
          monthlyChangePercent:_m467SelectedAccount=='all'&&
-          _m467AccountContext==null?monthChange:null,
+          _m467AccountContext==null&& !_m468VerifiedAccountsLoaded?
+          monthChange:null,
          refreshVerifiedWidgetBalance:_refreshWidget)),
       SliverPadding(padding:const EdgeInsets.fromLTRB(14,10,14,96),
        sliver:SliverToBoxAdapter(child:Column(
@@ -448,6 +449,7 @@ extension _WaffraHomeDashboardAnalyticsModule on _HomeScreenState {
   _m684Periods.year(year):_m684Periods.month(year,month);
 
  Widget nextMonthForecast(){
+  final verifiedCash=_m942VerifiedAllAccountsBalance();
   final now=DateTime.now();
   final months=List.generate(3,(i)=>DateTime(now.year,now.month-i));
   final used=months.where((m)=>
@@ -500,7 +502,8 @@ extension _WaffraHomeDashboardAnalyticsModule on _HomeScreenState {
     const SizedBox(height:10),
     Row(children:[const Icon(Icons.account_balance_wallet_outlined,color:emerald),
      const SizedBox(width:8),Expanded(child:WaffraText(waffraIsEnglish?'Expected balance':'الرصيد المتوقع')),
-     WaffraText(cash(waffraAvailableCash(entries,goals)+nextIncome-nextExpenses),
+     WaffraText(verifiedCash==null?'—':
+      cash(verifiedCash+nextIncome-nextExpenses),
       style:const TextStyle(fontWeight:FontWeight.bold))]),
     const SizedBox(height:12),
     WaffraText(waffraIsEnglish?'Current month vs forecast':'مقارنة الشهر الحالي بالشهر القادم',

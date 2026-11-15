@@ -762,6 +762,16 @@ M938 / #643 (2026-11-14, Draft #640 — CODE IN REVIEW, NOT RELEASED): Owner's a
 - Updated only two M675 Flutter legacy expectations that still required 7dp of empty gap. All original bottom-edge, color/RTL, backup, finance and biometric safety checks retained; M938 strict growing-message tests stay active.
 
 
+[M942 / #649 — bank child opening balances & inline dropdowns, 2026-11-14, DRAFT NOT RELEASED]
+- Fix mismatched projected/forecast balance: never infer account cash from income minus expenses; read the authenticated sum of independent active SQLCipher account balances, including initial SAR opening funds, verified transfers and goal debits. When the verified account source is unavailable, forecast balances use a nonnumeric placeholder instead of implying 0 SAR. Do not record any opening as income or alter historical entries.
+- Reject a child account under any mismatched or unverified bank/wallet group before its first SQLCipher write. Apply to manual income/expense, goals/recurring, transfer, My Accounts and SMS transfer review. The supported Saudi local/digital bank and wallet catalog (not a hard-coded 6-bank regex) is authoritative for the selected provider.
+- In SMS money-account picker, present both Add bank/provider and Add linked account, preserve all existing account selections and original user-reviewed message details, refresh the account witness after verified account creation, and do not auto-post a transaction when opening an account. Standalone transfer also uses the same in-place account form without routing to My Accounts.
+- Synthetic SQLCipher tests cover two independent openings (5,000+2,000 SAR), no income inserts, exact provider IDs, cold reopen and a balanced transfer. Real Android screenshot, imported spouse backup, full CI and signed release remain pending. Separate from #648; no core finance writer or backup alteration.
+
+[M942 follow-up — SQLCipher account-details provider schema, DRAFT NOT RELEASED]
+- Root cause confirmed: the existing v1 account-details SQL CHECK accepts only a six-bank/two-wallet subset while the UI catalog offers more local/digital banks and wallets. Add an authenticated, transactional details-only v1→v2 migration; preserve every source identity, opening balance, transfer, entry, FK and original account ID. Reject unsupported institutions without writing. New migration tests cover D360, برق, original الراجحي, cold SQLCipher reopen and fail-closed rollback. No source bank account metadata is fabricated.
+
+
 M940/M941 2026-11-14 DRAFT UNRELEASED: Owner-approved «تحسين الأداء واستكمال هيكلة وفرة». Planned read-only chronological indexed ledger view, bounded account-scoped page reads and extracted Home query/cache with synthetic regression tests. No changes to verified SQLCipher finance source, UI, + FAB, Snackbar, user backups or spouse handset. Real-phone performance acceptance remains pending. Issues #646 and #647.
 
 M940/M941 implementation source commit fe7da708452349d08f6361d698f556a4cf03420b, Draft PR #648, never released. Chronology order is cached per hydrated ledger snapshot with explicit invalidation. Android/legacy-backup certification pending.
@@ -769,3 +779,7 @@ M940/M941 implementation source commit fe7da708452349d08f6361d698f556a4cf03420b,
 M940 #646 Draft PR #648 extension: bank SMS review displays verified sender messages in 100-row batches while scrolling and still preserves all sender selected IDs for bulk actions. Source SHA 93b5df78dcabd86175c8acee2a25008cd547b276. No new automatic financial writing, no change to approved cards, +, notices or encryption. Pending physical Android profiling.
 
 M940/M941 Draft PR #648 M486 regression correction (unreleased): coalesced future event-loop sender review paging, no WidgetsBinding post-frame scheduling in nested SMS editor picker. Restore original M486 navigation contract and retain every negative test; finance data is untouched.
+
+
+[M942 / #649 Draft #650 — CI root-cause, merged PR #648 main 2026-11-15, NOT RELEASED]
+- Reconciled exact latest main M940/M941 indexed Home and SMS review read-only improvements without removing M942 verified opening-balance forecasts or SQLCipher typed bank/account migration. Protected M385 scope covers four preserved original Flutter regressions (M268/M371/M470) updated to assert actual verified source and latest finance generation, not obsolete literal comments. No QA test skipped or deleted. Exact new SHA and physical Android / original owner backup parity still pending.

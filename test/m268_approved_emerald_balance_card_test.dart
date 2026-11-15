@@ -19,7 +19,9 @@ void main(){
   // The M467 verified account header only compares months on the
   // all-account legacy fallback; account-scoped balances cannot invent it.
   expect(main,contains("monthlyChangePercent:_m467SelectedAccount=='all'&&"));
-  expect(main,contains('_m467AccountContext==null?monthChange:null'));
+  expect(main,contains('_m467AccountContext==null&& !_m468VerifiedAccountsLoaded?'));
+  expect(main,contains('monthChange:null,'));
+  expect(main,contains('_m942VerifiedAllAccountsBalance()'));
   expect(main,contains('hasPreviousMonthEntries&&previousClosingBalance>0'));
   expect(artwork,contains('class WaffraBalanceIllustration'));
   expect(artwork,contains('linearGradient id="gold"'));

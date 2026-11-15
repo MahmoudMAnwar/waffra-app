@@ -1,83 +1,144 @@
 {
   "contract_version": 1,
-  "change_id": "M940-M941-ISSUES646-647-PR648-HOME-INDEXED-READ-20261114",
-  "human_scope_review": "User approved named stage «تحسين الأداء واستكمال هيكلة وفرة» items 2 and 3: speed reading 2,000+ MoneyEntry and split Home State read responsibilities. PR #648 Draft, issues #646 #647. No change to SQLCipher finance writers, backup, saved account IDs, UI, + FAB or Snackbar. Source modifications are bounded to verified read index/state/filter, not entire files; existing M385/M550/M449 tests remain enabled. 2-phone Android benchmark remains pending. M940 #646 owner approved 1000-2000+ bank SMS reading: sender-list retains all IDs/selection, only already-hydrated per-sender message cards show in progressive bounded pages. No native SMS scan, classification, decision, debit or excluded message changes. M940 M486 root fix: sender-sheet scroll pagination uses coalesced zero-delay event loop turn instead of prohibited post-frame callback; preserves original M486 negative nested-navigation contract, no test weakening. Retain current exact bounded SMS source section.",
+  "change_id": "M942-ISSUE649-BANK-OPENING-FORECAST-DROPDOWNS-20261114",
+  "human_scope_review": "Owner explicitly requests a new separate PR to fix all three identified account dropdown and opening forecast problems. Every finance account opening goes through existing verified SQLCipher writer. Catalog parent identity checked before saving. No core ledger, backup, biometric, approved +, Snackbar or UI redesign. Phone proof pending.",
   "user_requested_changes": [
-    "M940 #646 cache descending date order exactly once per immutable verified finance-ledger revision with stable source order on timestamp ties, read-only bounded pages and strict SQLCipher account row ID scoping.",
-    "M940 #646 wire cached chronological read to Home dashboard and income-expense summary, preserving original search/date/amount/type/category and PDF semantics and all finance authority gates.",
-    "M941 #647 separate read-cache ownership and transaction filter policy from giant _HomeScreenState, maintaining existing add/edit/delete/restore/reset invalidation methods without altering approved Home, Goals, Recurring, stationary FAB or Snackbar.",
-    "M940/M941 create synthetic 2,500+ page/ID/amount/filter/cache regression, align exact M810 source contract and M385 scope + behavior review + QA + requirements/release notes; real device acceptance remains pending.",
-    "M940 #646 show large bank SMS review sender queues using progressively revealed in-memory 100-row pages while preserving all-message sender bulk selection, identity and original review/approval flow; no financial writes or native scan changes.",
-    "Resolve original M486 sender-sheet nested editor navigation regression caused by pagination post-frame scheduling using coalesced guarded event-loop pagination; test remains untouched and must pass on exact SHA."
+    "Align projected balance and budget projection with verified total of all active SQLCipher bank accounts including opening balance, no forged balance when not verified.",
+    "Reject bank/wallet child under mismatched or unknown selected provider before writer call in every inline account creation path including SMS transfers.",
+    "Make creation of a bank/child with opening balance available through review SMS dropdown and separate transfer; refresh exact verified account witness after creation.",
+    "Add two distinct opening balances persisted across SQLCipher reopen with no income posting, unit/UI source acceptance and release/QA documentation.",
+    "M942 extend SQLCipher typed provider constraints and valid provider IDs to all approved Saudi local/digital banks and wallets. Upgrade legacy account-details v1 to v2 transactionally without altering opening_minor, account IDs, archived status or ledger.",
+    "M942 align M447 SMS regression with new approved verified in-context first account creation while retaining mandatory account and no-shadow-DB writer checks.",
+    "Repair four existing M470/M371/M268 positive QA assertions after M942 source relocation/verification: preserve provider-changed account reset, latest verified generation, exact SQLCipher opening and dashboard comparison; no tests skipped, removed or weakened."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
-    "docs/qa/M940_M941_HOME_PERFORMANCE.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
+    "docs/qa/M942_ACCOUNT_OPENING_DROPDOWN_REVIEW.md",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "lib/main.dart",
-    "lib/waffra_finance_period_index.part.dart",
+    "lib/waffra_new_account_dialog.dart",
     "lib/waffra_home_dashboard_analytics.part.dart",
-    "lib/waffra_home_ledger_query.part.dart",
-    "lib/waffra_home_sms_inbox.part.dart",
-    "lib/waffra_home_transaction_summary.part.dart",
-    "lib/waffra_sms_review_page_window.dart",
-    "test/m810_home_transaction_summary_extraction_test.dart",
-    "test/m940_m941_home_ledger_pagination_test.dart",
-    "test/m940_sms_review_page_window_test.dart"
+    "lib/waffra_home_budget_cards.part.dart",
+    "lib/waffra_home_verified_account_flows.part.dart",
+    "lib/waffra_home_sms_transfer_review.part.dart",
+    "lib/waffra_home_verified_finance_pickers.part.dart",
+    "lib/waffra_home_goal_actions.part.dart",
+    "lib/waffra_home_entry_sheet.part.dart",
+    "lib/waffra_accounts_manager_page.dart",
+    "test/m942_opening_account_dropdown_regression_test.dart",
+    "test/storage/m942_two_child_openings_sqlcipher_test.dart",
+    "lib/storage/waffra_account_details_schema.dart",
+    "test/storage/m942_account_details_v1_upgrade_test.dart",
+    "test/qa/m447_verified_sms_account_linking_test.py",
+    "test/m470_recurring_provider_accounts_test.dart",
+    "test/m371_goal_wallet_and_budgets_regression_test.dart",
+    "test/m470_sms_first_sender_account_test.dart",
+    "test/m268_approved_emerald_balance_card_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
   "bounded_sections": {
-    "lib/main.dart": [
+    "lib/waffra_new_account_dialog.dart": [
       {
-        "start": "import 'waffra_sms_review_groups.dart';",
-        "end": "import 'waffra_sms_account_learning.dart';"
-      },
-      {
-        "start": "part 'waffra_finance_period_index.part.dart';",
-        "end": "part 'waffra_deleted_item_card.part.dart';"
-      },
-      {
-        "start": " final entries=<MoneyEntry>[],categories=<BudgetCategory>[],goals=<SavingGoal>[],recurring=<RecurringBill>[];",
-        "end": " final namedBudgets=<WaffraNamedBudget>[];"
-      }
-    ],
-    "lib/waffra_finance_period_index.part.dart": [
-      {
-        "start": "class WaffraFinancePeriodIndex {",
-        "end": null
+        "start": "class WaffraNewAccountDraft {",
+        "end": "/// A form only:"
       }
     ],
     "lib/waffra_home_dashboard_analytics.part.dart": [
       {
         "start": " Widget dashboard(){",
-        "end": "  return RefreshIndicator("
+        "end": " List<MoneyEntry> get analysisEntries=>"
+      },
+      {
+        "start": " Widget nextMonthForecast(){",
+        "end": " Widget _analysisStat("
       }
     ],
-    "lib/waffra_home_transaction_summary.part.dart": [
+    "lib/waffra_home_budget_cards.part.dart": [
       {
-        "start": " Future<void> showSummaryTransactions(bool income)async {",
-        "end": "  if(items.isEmpty){"
-      }
-    ],
-    "test/m810_home_transaction_summary_extraction_test.dart": [
-      {
-        "start": "  expect(part,contains('extension _WaffraHomeTransactionSummary on _HomeScreenState'));",
-        "end": "  expect(part,contains('sum(items,income)'));"
-      }
-    ],
-    "lib/waffra_home_sms_inbox.part.dart": [
-      {
-        "start": " Future<void> _openAutoSmsInbox()async{",
-        "end": "       if(selectedIds.isNotEmpty)Padding("
-      }
-    ],
-    "lib/waffra_sms_review_page_window.dart": [
-      {
-        "start": "final class WaffraSmsReviewPageWindow {",
+        "start": " Widget smartMoneyInsightsCard(){",
         "end": null
+      }
+    ],
+    "lib/waffra_home_verified_account_flows.part.dart": [
+      {
+        "start": " List<MoneyEntry> _m684ScopedMonthEntries(int year,int month){",
+        "end": " Future<void> _m467PickHomeAccount()async{"
+      },
+      {
+        "start": " Future<void> openVerifiedTransfer()async{",
+        "end": null
+      }
+    ],
+    "lib/waffra_home_goal_actions.part.dart": [
+      {
+        "start": " Future<WaffraAccountBalance?> _m641CreateGoalRecurringAccount(",
+        "end": " /// Release an earmark back to spendable cash."
+      }
+    ],
+    "lib/waffra_home_entry_sheet.part.dart": [
+      {
+        "start": "    Future<void> createAccountInsideEntryDropdown(",
+        "end": "    Widget operationPicker(){"
+      }
+    ],
+    "lib/waffra_accounts_manager_page.dart": [
+      {
+        "start": " Future<WaffraAccountBalance?> createAccountInsideComposer(",
+        "end": " Future<void> compose("
+      }
+    ],
+    "lib/waffra_home_sms_transfer_review.part.dart": [
+      {
+        "start": "       onCreateSmsAccount:(group,createProvider,isDestination)async{",
+        "end": "       onConfirmTransfer:(draft)async{"
+      }
+    ],
+    "lib/waffra_home_verified_finance_pickers.part.dart": [
+      {
+        "start": " Future<({List<String?>? ids,int? generation})?> reviewSmsAccountLinks(",
+        "end": "/// Budget assignment is OPTIONAL"
+      }
+    ],
+    "lib/storage/waffra_account_details_schema.dart": [
+      {
+        "start": "import 'package:drift/drift.dart';",
+        "end": " static Future<void> assign("
+      },
+      {
+        "start": " static Future<void> assign(",
+        "end": null
+      }
+    ],
+    "test/qa/m447_verified_sms_account_linking_test.py": [
+      {
+        "start": "    def test_verified_source_only_with_no_shadow_db(self):",
+        "end": "    def test_no_guarded_legacy_sms_account_override(self):"
+      }
+    ],
+    "test/m470_recurring_provider_accounts_test.dart": [
+      {
+        "start": " test('M470 SMS review has bank and account cascade with sender-match gate',(){",
+        "end": " test('M470 money form requires an explicit provider before a linked source or destination',(){"
+      }
+    ],
+    "test/m371_goal_wallet_and_budgets_regression_test.dart": [
+      {
+        "start": "  test('M371 goal creation cannot post an expense or negative cash debit',",
+        "end": null
+      }
+    ],
+    "test/m470_sms_first_sender_account_test.dart": [
+      {
+        "start": " test('M470 #11 account suggestion only starts on confirmed bank SMS review',(){",
+        "end": " test('M636 SMS posting remains a separately confirmed atomic finance write',(){"
+      }
+    ],
+    "test/m268_approved_emerald_balance_card_test.dart": [
+      {
+        "start": " test('approved balance artwork stays embedded and never uses external images',(){",
+        "end": " for(final brightness in [Brightness.light,Brightness.dark]){"
       }
     ]
   }
