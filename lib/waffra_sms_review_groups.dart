@@ -57,16 +57,27 @@ class WaffraSmsReviewGroups {
  }
 }
 
+/// Metadata-only receipt of an already-booked bank SMS operation.
+class WaffraSmsCalendarBookedEvent {
+ const WaffraSmsCalendarBookedEvent({
+  required this.id,required this.date,required this.income,
+ });
+ final String id;
+ final DateTime date;
+ final bool income;
+}
+
 /// M984: an O(N) presentation-only index for an authenticated SMS inbox.
 /// Dates use SMS *receivedAt*, not any unverified bank posting timestamp.
 /// Confirmed recurring/goal-due entries are separate events and NEVER counted
 /// as SMS. No raw SMS body, OTP, financial write or persistent state is used.
 class WaffraSmsReviewCalendarIndex {
  WaffraSmsReviewCalendarIndex._(
-  this._smsCount,this._dueCount,this._kinds,this._dayByMessageId);
+  this._smsCount,this._dueCount,this._bookedCount,this._kinds,this._dayByMessageId);
 
  final Map<DateTime,int> _smsCount;
  final Map<DateTime,int> _dueCount;
+ final Map<DateTime,int> _bookedCount;
  final Map<DateTime,List<String>> _kinds;
  final Map<String,DateTime> _dayByMessageId;
 
@@ -82,8 +93,10 @@ class WaffraSmsReviewCalendarIndex {
  factory WaffraSmsReviewCalendarIndex.from(
   Iterable<Map<String,Object?>> messages,{
   Iterable<DateTime> paidDueDates=const <DateTime>[],
+  Iterable<WaffraSmsCalendarBookedEvent> bookedBankEntries=
+   const <WaffraSmsCalendarBookedEvent>[],
  }){
-  final sms=<DateTime,int>{},due=<DateTime,int>{};
+  final sms=<DateTime,int>{},due=<DateTime,int>{},booked=<DateTime,int>{};
   final colored=<DateTime,List<String>>{},identities=<String,DateTime>{};
   for(final row in messages){
    final id=row['id'];
@@ -105,6 +118,16 @@ class WaffraSmsReviewCalendarIndex {
    final when=day(date);
    due[when]=(due[when]??0)+1;
   }
+  // The booked ledger has unique financial IDs distinct from native pending SMS.
+  // No message body, sender, notes, amount or finance authority enters index.
+  final bookedIds=<String>{};
+  for(final entry in bookedBankEntries){
+   if(entry.id.isEmpty||!bookedIds.add(entry.id))continue;
+   final when=day(entry.date);
+   booked[when]=(booked[when]??0)+1;
+   final dots=colored.putIfAbsent(when,()=>[]);
+   if(dots.length<3)dots.add(entry.income?'income':'expense');
+  }
   // Preserve one visible violet due marker in mixed days, and never show
   // more than three dots even when the real event count is much larger.
   for(final entry in due.entries){
@@ -118,6 +141,7 @@ class WaffraSmsReviewCalendarIndex {
   return WaffraSmsReviewCalendarIndex._(
    Map<DateTime,int>.unmodifiable(sms),
    Map<DateTime,int>.unmodifiable(due),
+   Map<DateTime,int>.unmodifiable(booked),
    Map<DateTime,List<String>>.unmodifiable({
     for(final e in colored.entries)
      e.key:List<String>.unmodifiable(e.value),
@@ -127,7 +151,8 @@ class WaffraSmsReviewCalendarIndex {
 
  int smsCount(DateTime date)=>_smsCount[day(date)]??0;
  int dueCount(DateTime date)=>_dueCount[day(date)]??0;
- int totalCount(DateTime date)=>smsCount(date)+dueCount(date);
+ int bookedCount(DateTime date)=>_bookedCount[day(date)]??0;
+ int totalCount(DateTime date)=>smsCount(date)+bookedCount(date)+dueCount(date);
  List<String> dots(DateTime date)=>_kinds[day(date)]??const <String>[];
  bool matchesId(String id,DateTime date)=>_dayByMessageId[id]==day(date);
  bool hasDay(DateTime date)=>totalCount(date)>0;

@@ -51,6 +51,8 @@ void main(){
   // M984 date-filtered list pages only the currently visible sender rows;
   // full native ID index remains available for appropriate bulk selection.
   expect(source,contains('messageWindow.visibleCount(visibleSenderRows.length)'));
+  expect(source,contains('final count=visibleSenderRows.length;'));
+  expect(source,contains('final latest=visibleSenderRows.length;'));
   expect(source,contains('allReviewIds=List<String>.unmodifiable(combined);'));
   expect(source,contains('selectedDay==null?source:source.where('));
   expect(source,contains('selectedIds.addAll(visibleIds());'));
