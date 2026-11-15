@@ -37,16 +37,30 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
    return rows.map((row)=>row['id']).whereType<String>()
     .toList(growable:false);
   }
+  // M984: date filtering is presentation-only, no native SMS or finance write.
+  // Keep selected IDs across dates until an exact native ACK removes them.
+  DateTime? selectedDay;
+  final displayBySender=<String,List<Map<String,Object?>>>{};
+  final displaySenders=<String>[];
   final senderIds=<String,List<String>>{};
   var allReviewIds=<String>[];
   void refreshReviewIds(){
    idsCache.clear();
    senderIds.clear();
+   displayBySender.clear();
+   displaySenders.clear();
    final combined=<String>[];
    for(final sender in senders){
     final group=bySender[sender];
     if(group==null)continue;
-    final ids=idsOf(group);
+    final rows=selectedDay==null?group:group.where((row){
+     final received=WaffraSmsReviewCalendarData.localDay(row);
+     return received!=null&&DateUtils.isSameDay(received,selectedDay);
+    }).toList(growable:false);
+    if(rows.isEmpty)continue;
+    displayBySender[sender]=rows;
+    displaySenders.add(sender);
+    final ids=idsOf(rows);
     senderIds[sender]=ids;
     combined.addAll(ids);
    }
@@ -86,7 +100,7 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
            style:const TextStyle(fontSize:22,fontWeight:FontWeight.bold)),
           WaffraText(visibleIds().length.toString()+
            (waffraIsEnglish?' messages from ':' رسالة من ')+
-           senders.length.toString()+
+           displaySenders.length.toString()+
            (waffraIsEnglish?' senders':' مرسلين'),
            style:TextStyle(fontSize:12,
             color:Theme.of(ctx).colorScheme.onSurfaceVariant)),
@@ -95,7 +109,7 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
        Padding(padding:const EdgeInsets.fromLTRB(12,1,12,6),
         child:WaffraSmsReviewMetrics(
          shown:visibleIds().length,selected:selectedIds.length,
-         senderCount:senders.length,english:waffraIsEnglish)),
+         senderCount:displaySenders.length,english:waffraIsEnglish)),
        Padding(padding:const EdgeInsets.fromLTRB(13,4,13,7),
         child:Container(
          decoration:BoxDecoration(
@@ -117,7 +131,36 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
           WaffraText(selectedIds.length.toString()+
            (waffraIsEnglish?' selected':' محددة'),
            style:const TextStyle(fontSize:12,color:emerald)),
-          const SizedBox(width:12),
+          IconButton(
+           key:const Key('m984-sms-review-calendar'),
+           tooltip:waffraIsEnglish?'Filter by date':'التقويم وتصفية الرسائل',
+           icon:const Icon(Icons.calendar_month_outlined,color:forest),
+           onPressed:bulkBusy?null:()async{
+            final picked=await showModalBottomSheet<DateTime>(
+             context:ctx,isScrollControlled:true,showDragHandle:true,
+             builder:(calendar)=>SafeArea(child:SingleChildScrollView(
+              padding:const EdgeInsets.only(bottom:8),
+              child:WaffraSmsReviewCalendar(
+               messages:List<Map<String,Object?>>.unmodifiable(
+                _autoSmsPending),
+               selectedDay:selectedDay,english:waffraIsEnglish,
+               onSelected:(date)=>Navigator.pop(calendar,date),
+               onClear:()=>Navigator.pop(calendar,DateTime(1))))));
+            if(picked!=null&&ctx.mounted)refresh((){
+             selectedDay=picked.year==1?null:picked;
+             selectedSender=null;
+             messageWindow.reset();
+             refreshReviewIds();
+            });
+           }),
+          if(selectedDay!=null)IconButton(
+           key:const Key('m984-sms-clear-day-filter'),
+           tooltip:waffraIsEnglish?'Show all days':'عرض كل الأيام',
+           icon:const Icon(Icons.filter_alt_off_outlined,size:18),
+           onPressed:()=>refresh((){
+            selectedDay=null;messageWindow.reset();refreshReviewIds();
+           })),
+
          ]),
         )),
        Expanded(child:NotificationListener<ScrollNotification>(
@@ -125,7 +168,7 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
          if(selectedSender==null||
             notification.metrics.axis!=Axis.vertical||
             notification.metrics.extentAfter>360)return false;
-         final count=bySender[selectedSender]?.length??0;
+         final count=displayBySender[selectedSender]?.length??0;
          if(messageWindow.visibleCount(count)>=count)return false;
          // M486: do not post a frame callback inside the sender picker:
          // this route must stay mounted throughout nested SMS editing.
@@ -137,21 +180,35 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
          unawaited(Future<void>.delayed(Duration.zero,(){
           pageRevealScheduled=false;
           if(!ctx.mounted||selectedSender!=requestedSender)return;
-          final latest=bySender[requestedSender]?.length??0;
+          final latest=displayBySender[requestedSender]?.length??0;
           if(messageWindow.visibleCount(latest)<latest){
            refresh(()=>messageWindow.revealNext(latest));
           }
          }));
          return false;
         },
+        child:GestureDetector(
+        key:const Key('m984-sms-sender-horizontal-swipe'),
+        behavior:HitTestBehavior.translucent,
+        onHorizontalDragEnd:selectedSender==null||bulkBusy?null:(details){
+         final velocity=details.primaryVelocity??0;
+         if(velocity.abs()<100)return;
+         final current=displaySenders.indexOf(selectedSender!);
+         final next=current+(velocity<0?1:-1);
+         if(current<0||next<0||next>=displaySenders.length)return;
+         refresh((){
+          selectedSender=displaySenders[next];
+          messageWindow.reset();
+         });
+        },
         child:ListView.builder(
         key:Key(selectedSender==null?'waffra-sms-sender-list':
          'waffra-sms-sender-transactions'),
-        itemCount:selectedSender==null?senders.length:
-         messageWindow.visibleCount(bySender[selectedSender]?.length??0),
+        itemCount:selectedSender==null?displaySenders.length:
+         messageWindow.visibleCount(displayBySender[selectedSender]?.length??0),
         itemBuilder:(rowContext,index){
          if(selectedSender==null){
-          final sender=senders[index],count=bySender[sender]!.length;
+          final sender=displaySenders[index],count=displayBySender[sender]!.length;
           return Card(
            margin:const EdgeInsets.symmetric(horizontal:13,vertical:5),
            elevation:0,
@@ -187,7 +244,7 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
             }),
            ));
          }
-         final item=bySender[selectedSender]![index];
+         final item=displayBySender[selectedSender]![index];
          final id=item['id'],at=item['receivedAt'];
          final date=at is int?DateTime.fromMillisecondsSinceEpoch(at)
           .toLocal().toString().substring(0,16):'';
@@ -213,7 +270,10 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
             bySender..clear()..addAll(fresh.bySender);
             senders..clear()..addAll(fresh.senders);
             refreshReviewIds();
-            final active=allReviewIds.toSet();
+            final active=<String>{
+             for(final row in _autoSmsPending)
+              if(row['id'] is String)row['id'] as String,
+            };
             selectedIds.removeWhere((selected)=>!active.contains(selected));
             if(selectedSender!=null&&!senders.contains(selectedSender)){
              selectedSender=null;
@@ -304,7 +364,7 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
             const <String>{'income','expense','transfer'}.contains(suggestedKind)?
              suggestedKind:null),
          );
-        }))),
+        })))),
        if(selectedIds.isNotEmpty)Padding(
         padding:const EdgeInsets.fromLTRB(12,8,12,4),
         child:SizedBox(width:double.infinity,child:FilledButton.icon(
