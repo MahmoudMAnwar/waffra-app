@@ -718,6 +718,8 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
           refresh(()=>bulkBusy=true);
           final done=<String>{};
           var failed=false;
+          var learnedPatterns=0;
+          String? learningWarning;
           try{
            // One native encrypted commit blocks selected senders and purges
            // their queued and previous individually excluded SMS metadata.
@@ -739,13 +741,12 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
             done.addAll(batch);
            }
            if(done.isNotEmpty){
-            // Bulk and individual exclusions learn identical safe,
-            // owner-encrypted review-only keywords after native success.
+            // Excluded message IDs and blocked senders are owner-encrypted
+            // NATIVE policies. Reusable keyword patterns are a second,
+            // optional encrypted policy; only explicit safe templates qualify.
             if(_smsRuleOwnerKey.isNotEmpty){
              try{
-              final store=const WaffraSmsLocalRuleStore();
-              final previous=await store.read(_smsRuleOwnerKey);
-              var next=previous;
+              final candidates=<WaffraSmsLocalRule>[];
               for(final row in _autoSmsPending.where(
                   (row)=>done.contains(row['id']))){
                final body=row['body'],sender=row['sender'];
@@ -754,27 +755,21 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
                final candidate=WaffraSmsLocalRules.suggestedRule(
                 body:body,sender:sender,kind:'excluded',
                 confidentOnly:true);
-               if(candidate!=null){
-                next=WaffraSmsLocalRules.upsertLearned(
-                 existing:next,candidate:candidate);
-               }
+               if(candidate!=null)candidates.add(candidate);
               }
-              // Do not retain automatically learned exclusion keywords for
-              // sender-blocked messages. Keep explicit user-authored rules.
-              final blocked=senderBlockChoices.map(
-               WaffraSmsLocalRules.normalized).toSet();
-              final clean=next.where((rule)=>!(rule.id.startsWith('smart_')&&
-               rule.resolvedKind=='excluded'&&blocked.contains(
-                WaffraSmsLocalRules.normalized(rule.sender)))).toList();
-              if(clean.length!=next.length)next=clean;
-              if(!identical(previous,next)){
-               await store.write(_smsRuleOwnerKey,next);
-              }
+              final saved=await const WaffraSmsLocalRuleStore()
+               .learnReviewedCandidates(_smsRuleOwnerKey,candidates);
+              learnedPatterns=saved.addedOrUpdated;
+              if(saved.changed)_receiveAutoSmsNotice();
              }catch(_){
-              if(mounted)snack(context,waffraIsEnglish?
-               'Messages excluded; safe rule learning unavailable.':
-               'تم الاستبعاد، لكن تعذر حفظ قاعدة تعلم آمنة.',isError:true);
+              learningWarning=waffraIsEnglish?
+               'Exclusion saved on Android, but the encrypted rule update could not be verified.':
+               'تم حفظ الاستبعاد على أندرويد، لكن تعذر التحقق من حفظ القواعد المشفرة.';
              }
+            }else{
+             learningWarning=waffraIsEnglish?
+              'Exclusion saved, but rules need a verified signed-in owner.':
+              'تم الاستبعاد، لكن حفظ القواعد يحتاج تسجيل دخول موثق.';
             }
             if(mounted)setState(()=>
              _autoSmsPending.removeWhere((row)=>done.contains(row['id'])));
@@ -793,9 +788,10 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
             if(failed)snack(context,waffraIsEnglish?
              'Only ${done.length} messages were excluded. Retry remaining items.':
              'تم استبعاد ${done.length} فقط. أعد محاولة الباقي.',isError:true);
+            else if(learningWarning!=null)snack(context,learningWarning!,isError:true);
             else snackSuccess(context,waffraIsEnglish?
-             'Excluded ${done.length} messages from review.':
-             'تم استبعاد ${done.length} رسالة من المراجعة.');
+             'Excluded ${done.length} messages. ${learnedPatterns} safe reusable rule changes saved. Other messages remain excluded individually or by sender.':
+             'تم استبعاد ${done.length} رسالة. اتحفظ ${learnedPatterns} تغيير آمن في القواعد؛ باقي الرسائل مستبعدة منفردة أو حسب المرسل.');
             // Keep the queue and counts synced without silently launching
             // another historical import during the bulk-exclusion animation.
             // The user can continue an incomplete history via Rescan.
