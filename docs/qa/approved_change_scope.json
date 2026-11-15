@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
   "change_id": "M953+M954-ISSUES659-661-ANDROID-SCREENSHOTS-AND-ALL-SMS-RULE-PARITY-20261115",
-  "human_scope_review": "Owner provided eight real Android screenshots and explicitly requests correcting historical transaction date edit rejection, comprehensive income/expense edit regression coverage, newest-first native SMS notification ordering, readable all-action bank SMS review, numbered transaction cards, RTL scrollbar inset, no duplicate Goals/Dues count next to All, user-facing renaming of recurring to due dates. This PR is independently branched from main and MUST NOT modify unrelated PR #658, user backups, account-money transfer writers, restored archived data or security gates. Existing linked-account reassignment and editing settled transfer/goal payments REQUIRE a separate atomic writer and are NOT made safe by UI changes. Exact protected source sections and retained tests are enumerated. User has not accepted signed Android visuals yet. M954 owner follow-up requires all SMS to be classified against default and user-created rules before foreground/background/historical review, including nonfinancial OTP automatically excluded with 30-day native durable IDs; finance/transfer/mixed cues remain reviewable, no auto-money posting. Issue #661 tracks this bounded addition to same Draft PR #660. Included only source + regression tests + M550/M385/release docs. M160 exact-head 3105-case long-suite uncovered two obsolete source-string assertions, not a money-writer defect: verified transaction Undo now saves via authenticated per-row edit then reads source back; default SMS exclusions are durable 30-day native records, not transient acknowledge. Extend only those specific tests to assert the new secure paths, preserve 3103 passing cases, release notes after source changes. Integration conflict resolved AFTER #658 was squash-merged to main fc07c1dd98d526cb27c41e16315149b3a53019f5; retain every M952 source, SQLCipher budget/goal and safety test unchanged, while reapplying all 41 M953/M954 approved files and tests. Exact new-head CI required. M955 follow-up on independent branch.",
+  "human_scope_review": "Owner provided eight real Android screenshots and explicitly requests correcting historical transaction date edit rejection, comprehensive income/expense edit regression coverage, newest-first native SMS notification ordering, readable all-action bank SMS review, numbered transaction cards, RTL scrollbar inset, no duplicate Goals/Dues count next to All, user-facing renaming of recurring to due dates. This PR is independently branched from main and MUST NOT modify unrelated PR #658, user backups, account-money transfer writers, restored archived data or security gates. Existing linked-account reassignment and editing settled transfer/goal payments REQUIRE a separate atomic writer and are NOT made safe by UI changes. Exact protected source sections and retained tests are enumerated. User has not accepted signed Android visuals yet. M954 owner follow-up requires all SMS to be classified against default and user-created rules before foreground/background/historical review, including nonfinancial OTP automatically excluded with 30-day native durable IDs; finance/transfer/mixed cues remain reviewable, no auto-money posting. Issue #661 tracks this bounded addition to same Draft PR #660. Included only source + regression tests + M550/M385/release docs. M160 exact-head 3105-case long-suite uncovered two obsolete source-string assertions, not a money-writer defect: verified transaction Undo now saves via authenticated per-row edit then reads source back; default SMS exclusions are durable 30-day native records, not transient acknowledge. Extend only those specific tests to assert the new secure paths, preserve 3103 passing cases, release notes after source changes. Integration conflict resolved AFTER #658 was squash-merged to main fc07c1dd98d526cb27c41e16315149b3a53019f5; retain every M952 source, SQLCipher budget/goal and safety test unchanged, while reapplying all 41 M953/M954 approved files and tests. Exact new-head CI required. M955 follow-up on independent branch. M956 owner follow-up explicitly asks to finish #660, including the incomplete existing-linked account edit. Permit one authenticated SQLCipher transaction for prelinked manual/SMS account move with exact ledger source, explicit consent and fallback refusal; device acceptance pending.",
   "user_requested_changes": [
     "One-row source-verified SQLCipher transaction edit for older historical date/amount/notes/category/budget and safe readback. No reserializing untouched SMS/V24 rows or changing financial ID/receipt/SMS hash; failure re-reads authenticated source.",
     "Display-only sequential numbering beside all current-filter financial activity cards (income, expense, transfer, savings, due), preserving verified account ordering and existing UI geometry.",
@@ -59,7 +59,9 @@
     "test/m647_m652_financial_activity_regression_test.dart",
     "test/m221_approved_financial_ui_test.dart",
     "test/m684_finance_period_index_test.dart",
-    "test/m462_smart_sms_rule_review_test.dart"
+    "test/m462_smart_sms_rule_review_test.dart",
+    "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
+    "test/m495_pr402_ui_performance_regression_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
@@ -108,7 +110,7 @@
     ],
     "lib/waffra_home_entry_sheet.part.dart": [
       {
-        "start": "      try{final file=File(copy);if(await file.exists())await file.delete();}",
+        "start": "  WaffraVerifiedAccountsApi? editAccountLinkApi;",
         "end": null
       }
     ],

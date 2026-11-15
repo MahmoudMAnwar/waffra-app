@@ -2300,3 +2300,6 @@ Separate Draft PR stacked on #650. Fix unverified Home balance display; remove u
 - Add 26 distinct direct functional `test()` cases: 16 bank SMS posting/review/ignore eligibility boundary combinations, and 10 one-time budget warning owner/budget/month isolation and replay cases. Together with the 43 M949 and 46 M950 additions, **115 new executable functional test cases across six new Dart files** are registered into mandatory M946 every-PR smoke.
 - Keep 618 pre-existing tests and 18 Android integrations untouched. Three uniqueness/scope audits for M949, M950 and M951 reject old exact-title duplication, skipped or removed tests. Do not count audit mutation tests in 115.
 - A finite host suite is not proof that no other test can ever be added. Outstanding device-only checks remain actual Android permissions, OS notification delivery, biometrics, physical delete sheet and old backup restore on an authorized phone.
+
+## M956 — تعديل الحساب المرتبط بعملية مالية سابقة (15 نوفمبر 2026)
+- **Issue #659 / Draft PR #660:** بعد موافقة المستخدم، تعديل عملية دخل/مصروف يدوية أو SMS مربوطة سابقًا ونقل ارتباطها لحساب سعودي موثق في معاملة SQLCipher واحدة، مع إعادة حساب رصيد الحسابين ومنع التكرار، وعدم تغيير هوية العملية أو مرفقاتها. استحقاق الهدف المدفوع لا يستخدم هذا المسار. الاختبارات والجهاز الفعلي ما زالا بحاجة لاعتماد النتائج.

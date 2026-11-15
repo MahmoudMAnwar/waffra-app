@@ -934,3 +934,6 @@ M954 #660 M160 3105-case full-suite regression correction (2026-11-15, unrelease
 
 [M952 + M953 + M954 main reconciliation — 2026-11-15, integration only]
 #658 merged to main fc07c1dd98d526cb27c41e16315149b3a53019f5 after full 25/25 exact-head validation. This integration preserves ALL #658 exact-halala SQLCipher budget/goal accounting, encrypted account-read gates and keyset safety, while replaying the distinct #660 approved historical finance edit, numbering, notification, native OTP filtering, default/custom rule, Arabic label and RTL corrections and existing tests onto current main. No claim of private old Backup/Restore or actual handset acceptance. #660 must pass its new exact-head CI before merging; separate #665 Home summary remains a Draft follow-up. Financial writer, SMS privacy and unchanged user backup are not bypassed.
+
+[M956 — Verified historical account reassignment — PR #660 — 2026-11-15]
+- Source-witnessed metadata + linked account change in one Home/Widget SQLCipher lock/transaction, explicit dialog, no new money, no account mismatch, no paid goal due, no unsafe single-step Undo. Added encrypted rollback and exact amount/date regression; real device and exact-head CI remain release gates.

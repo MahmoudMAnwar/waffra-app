@@ -30,3 +30,7 @@ Eight owner-supplied Android screenshots, Nov 15 2026, latest installed main. Th
 - M385 exact per-file/section change scope and M550 full registered-source behavior review required; legacy tests updated only when the owner approved a different visual contract.
 - Exact HEAD **passed/failed/skipped** counts must be collected from CI, not estimated from authored test files. Android text/keyboard overflow and restore with real archive cannot be marked passing based on source-only tests.
 - Keep as Draft until CI passes and owner reviews. No change to + FAB or Snackbar geometry, no restoration of deleted cloud AI/receipt OCR.
+
+## M956 — Existing prelinked account reassignment (2026-11-15)
+
+After the screenshot correction, the owner requested the remaining #660 fixes. The verified edit now supports explicitly changing a prelinked ordinary manual/SMS entry to an active SAR account, with one witnessed, shared-lock SQLCipher ledger projection + account-link commit. It changes both calculated account balances without adding a second entry; a stale link, missing/archived destination, protected source type or failed readback rejects the entire commit. User approval dialog is mandatory and metadata-only Undo is suppressed for this operation. SQLCipher disposable tests cover an old-date and amount edit with account change and a stale-link rollback. Goal-due and special settlement flows retain independent safety routes. Do not claim a physical Android test, private archive migration or exact-head CI acceptance before results.

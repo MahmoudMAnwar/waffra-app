@@ -5424,6 +5424,31 @@
         ".github/workflows/m946-whole-app-feature-smoke.yml",
         ".github/workflows/finance-full-regression.yml"
       ]
+    },
+    {
+      "id": "M956-VERIFIED-ACCOUNT-RELINK-ONE-TRANSACTION",
+      "issue": "#659 / PR #660",
+      "previous_behavior": "Changing an existing linked income/expense account from transaction Edit was disabled; old detail update and account relocation could not occur together.",
+      "approved_behavior": "Ordinary manual/SMS Edit can explicitly move the recorded entry to another active Saudi account while updating existing detail fields, in one shared Home/Widget lock and SQLCipher transaction; compute both balances from typed source with no new posted transaction.",
+      "source_paths": [
+        "lib/waffra_home_entry_sheet.part.dart",
+        "lib/storage/waffra_verified_encrypted_finance_bridge.dart"
+      ],
+      "test_paths": [
+        "test/storage/m953_verified_historical_edit_regression_test.dart",
+        "test/m495_pr402_ui_performance_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m946-whole-app-feature-smoke.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "No second debit/credit, dedupe change, deleted receipt, or saved goal-due settlement mutation.",
+        "Stale account link or snapshot and archived destination refuse with transaction rollback.",
+        "A confirmed cross-account change has no metadata-only Undo button, but normal edits still do.",
+        "Physical Android/signed build/private historical backup acceptance remain outstanding."
+      ]
     }
   ]
 }
