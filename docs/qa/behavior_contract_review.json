@@ -1,12 +1,34 @@
 {
   "schema_version": 1,
-  "pr": "M977 Draft — synthetic large V2 backup integrity smoke (#679/#657)",
-  "issue": "Issue #679, five-axis #657, stacked on #678",
+  "pr": "M978 Draft — dated-goal ID set for recurring reminder filter (#681/#657)",
+  "issue": "Issue #681, five-axis #657, stacked on #680",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at f0def360ea75b9c865548b6f1b4fc07e9640f2c2 after #656",
   "reviewed_at": "2026-11-15",
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
+    {
+      "id": "M978-RECURRING-REMINDER-GOAL-ID-SET-PARITY",
+      "issue": "Issues #681 and #657",
+      "previous_behavior": "Every recurring reminder filters via a separate `goals.any` full-goal scan for a linked goal with a non-null dueDate, repeated for each active bill.",
+      "approved_behavior": "Use a single set of dated goal IDs derived from same currently loaded Home goals immediately before constructing reminders. Linked goal membership is identical to the original any(), including duplicate/undated/missing goal IDs; same active/category conditions, schedule order/time and errors. No changes to finance or reminders writer.",
+      "source_paths": [
+        "lib/waffra_home_finance_persistence_due.part.dart"
+      ],
+      "test_paths": [
+        "test/m978_recurring_reminder_goal_index_test.dart",
+        "test/m86_recurring_schedule_boundary_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m946-whole-app-feature-smoke.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "Reminders disabled short circuit preserved; no notification content, time, account or finance changes.",
+        "No SQLCipher, recurring posting or goal wallet writer modified, source and user confirmation unchanged.",
+        "No real Android device or private original backup acceptance inferred."
+      ]
+    },
     {
       "id": "M977-V2-LARGE-ARGON2ID-AEAD-SYNTHETIC-ENVELOPE",
       "issue": "Issues #679 and #657",
