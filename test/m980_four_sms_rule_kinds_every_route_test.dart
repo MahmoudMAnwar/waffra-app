@@ -74,6 +74,23 @@ void main() {
     }
   });
 
+  test('M980 old safe exclusion guard is preserved for payment reminder cues',(){
+    const body='Payment reminder: your bill is due tomorrow';
+    const unsafePersonal=WaffraSmsLocalRule(
+      id:'m980_overbroad_personal_exclude',name:'payment keyword',
+      kind:'excluded',income:false,category:'',
+      sender:'MyBank',keywords:['payment reminder'],matchAll:false);
+    final matched=WaffraSmsLocalRules.matchAllFourKinds(
+      body:body,sender:'MyBank',custom:const [unsafePersonal]);
+    expect(matched.any((r)=>r.id==unsafePersonal.id),isTrue,
+      reason:'The four-way matcher must still consider the owner rule');
+    final resolved=WaffraSmsLocalRules.resolveSpecial(
+      body:body,sender:'MyBank',bankKind:WaffraBankOperationKind.uncertain,
+      custom:const [unsafePersonal],matchedRules:matched);
+    expect(resolved?.id,isNot(unsafePersonal.id),
+      reason:'Do not relax the legacy owner exclusion finance-action guard');
+  });
+
   test('M980 independent direction cannot be inverted by a matching personal rule',(){
     const sms='شراء عبر نقاط البيع مبلغ 236 ريال التاجر العثيم';
     const wrong=WaffraSmsLocalRule(id:'m980_wrong_income',
