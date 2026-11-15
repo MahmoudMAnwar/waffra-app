@@ -289,11 +289,13 @@ class WaffraVerifiedAccountsApi implements WaffraAccountOperations {
  /// database handle to widgets or silently fall back to a legacy list.
  Future<WaffraSqlcipherHistoryPage> readKeysetHistoryPage({
   String? monthIso,String? selectedAccountId,bool? income,
+  bool unassignedOnly=false,
   int limit=100,WaffraSqlcipherHistoryCursor? after,
  })=>bridge.readVerifiedAccountMetadata((context)=>
   WaffraSqlcipherHistoryPager.load(
    store:context.store,monthIso:monthIso,accountId:selectedAccountId,
-   income:income,limit:limit,after:after));
+   income:income,unassignedOnly:unassignedOnly,
+   limit:limit,after:after));
 
  /// Attach a past unassigned entry only AFTER the account screen has a
  /// witnessed generation and the user explicitly confirms. This does not

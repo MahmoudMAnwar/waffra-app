@@ -40,6 +40,13 @@ void main(){
  test('M940 production review wires page window and original full-ID selection',(){
   final source=File('lib/waffra_home_sms_inbox.part.dart').readAsStringSync();
   expect(source,contains('WaffraSmsReviewPageWindow()'));
+  // M952: full sender ID selection is cached, NOT the 100 visible cards.
+  expect(source,contains('final idsCache=<List<Map<String,Object?>>,List<String>>{};'));
+  expect(source,contains('final senderIds=<String,List<String>>{};'));
+  expect(source,contains('allReviewIds=List<String>.unmodifiable(combined);'));
+  expect(source,contains('senderIds[selectedSender]??const <String>[]'));
+  expect(source,contains('idsCache.clear();'));
+  expect(RegExp(r'refreshReviewIds\(\);').allMatches(source).length,3);
   expect(source,contains('NotificationListener<ScrollNotification>('));
   expect(source,contains('messageWindow.visibleCount(bySender[selectedSender]?.length??0)'));
   expect(source,contains('selectedIds.addAll(visibleIds());'));

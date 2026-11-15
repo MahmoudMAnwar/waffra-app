@@ -103,34 +103,65 @@ FROM fresh_finance_standalone_budgets
 WHERE archived_at_iso IS NULL
 ORDER BY name, budget_id
 ''').get();
-    final monthEntries = entries.where((row) =>
-      row.occurredIso.startsWith(monthIso + '-')).map((row) => row.scoped);
-    final monthly = monthEntries.toList(growable: false);
+    // SQLCipher source rows are unique by entry in the ledger, but each
+    // separately confirmed budget allocation must still count for its budget.
+    final allocationRows = await store.customSelect('''
+SELECT a.entry_id,a.budget_id,a.amount_minor,e.is_income,l.account_id
+FROM fresh_finance_standalone_allocations a
+JOIN fresh_finance_entries e ON e.entry_id=a.entry_id
+LEFT JOIN fresh_finance_account_entry_links l ON l.entry_id=a.entry_id
+WHERE e.occurred_iso>=? AND e.occurred_iso<?
+''', variables: [
+      Variable.withString(monthIso+'-01'),
+      Variable.withString(_nextMonthIso(monthIso)),
+    ]).get();
+    final monthly = allocationRows.map((row) => WaffraScopedEntry(
+      id: row.read<String>('entry_id'),
+      amountMinor: row.read<int>('amount_minor'),
+      income: row.read<int>('is_income') == 1,
+      accountId: row.readNullable<String>('account_id'),
+      budgetId: row.read<String>('budget_id'),
+    )).toList(growable: false);
+    // The previous per-budget loop rescanned every matching entry B times.
+    // One pure O(E+B) pass preserves global/unassigned and selected-account
+    // totals as exact integer halalas, without changing the source ledger.
+    final budgetTotals = WaffraAccountContextPolicy.budgetSummaries(
+      entries: monthly,
+      limitsMinor: {
+        for (final row in budgets)
+          row.read<String>('budget_id'):
+            row.read<int>('monthly_limit_minor'),
+      },
+      selectedAccountId: selectedAccountId,
+    );
     final summed = List<WaffraAccountBudgetRow>.unmodifiable(
       budgets.map((row) {
         final id = row.read<String>('budget_id');
         return WaffraAccountBudgetRow(
           id: id, name: row.read<String>('name'),
-          usage: WaffraAccountContextPolicy.budget(
-            entries: monthly, budgetId: id,
-            limitMinor: row.read<int>('monthly_limit_minor'),
-            selectedAccountId: selectedAccountId,
-          ),
+          usage: budgetTotals[id]!,
         );
       }),
     );
     // A goal is its own savings wallet. Display the overall saved total
     // independently of the selected account contribution. These are read
     // projections only; viewing a goal never debits a bank.
+    // M952: calculate account-sourced goal contributions in ONE grouped
+    // SQLCipher aggregate, not a correlated movement scan per goal. A goal
+    // wallet's saved_minor stays independent from its bank contribution.
+    // Non-funding wallet movements never debit or credit a bank.
     final goalRows=await store.customSelect('''
-SELECT g.goal_id,g.name,g.saved_minor,
- COALESCE((SELECT SUM(CASE
-  WHEN m.kind='fund' THEN m.amount_minor
-  WHEN m.kind='release' THEN -m.amount_minor ELSE 0 END)
+SELECT g.goal_id,g.name,g.saved_minor,COALESCE(own.own_minor,0) AS own_minor
+FROM fresh_finance_goals g
+LEFT JOIN (
+ SELECT m.goal_id,
+  SUM(CASE WHEN m.kind='fund' THEN m.amount_minor
+           WHEN m.kind='release' THEN -m.amount_minor ELSE 0 END) AS own_minor
  FROM fresh_finance_goal_account_sources s
  JOIN fresh_finance_goal_wallet_movements m ON m.movement_id=s.movement_id
- WHERE m.goal_id=g.goal_id AND s.account_id=?),0) AS own_minor
-FROM fresh_finance_goals g
+ WHERE s.account_id=?
+ GROUP BY m.goal_id
+) own ON own.goal_id=g.goal_id
 ORDER BY g.name,g.goal_id
 ''',variables:[Variable.withString(selectedAccountId??'')]).get();
     final goals=List<WaffraAccountGoalSummary>.unmodifiable(

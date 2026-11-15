@@ -102,6 +102,45 @@ abstract final class WaffraAccountContextPolicy {
         selectedAccountSpentMinor: selected, limitMinor: limitMinor);
   }
 
+  /// M952: one O(entries + budgets) projection for the monthly Account
+  /// Context screen. Calling budget() once PER budget traversed the same
+  /// 1,000–10,000 encrypted ledger rows repeatedly on each read/refresh.
+  /// This is read-only: no account allocations, balances or limits are
+  /// changed. Unassigned expenses count globally but never for one bank.
+  static Map<String, WaffraBudgetUse> budgetSummaries({
+    required Iterable<WaffraScopedEntry> entries,
+    required Map<String, int> limitsMinor,
+    String? selectedAccountId,
+  }) {
+    for (final amount in limitsMinor.values) {
+      if (amount <= 0) throw ArgumentError('Budget limit must be positive.');
+    }
+    final global = <String, int>{};
+    final selected = <String, int>{};
+    for (final entry in entries) {
+      final id = entry.budgetId;
+      if (id == null || entry.income || !limitsMinor.containsKey(id)) {
+        continue;
+      }
+      if (entry.amountMinor <= 0) {
+        throw StateError('Invalid budget posting.');
+      }
+      global[id] = (global[id] ?? 0) + entry.amountMinor;
+      if (selectedAccountId != null &&
+          entry.accountId == selectedAccountId) {
+        selected[id] = (selected[id] ?? 0) + entry.amountMinor;
+      }
+    }
+    return Map<String, WaffraBudgetUse>.unmodifiable({
+      for (final budget in limitsMinor.entries)
+        budget.key: WaffraBudgetUse(
+          globalSpentMinor: global[budget.key] ?? 0,
+          selectedAccountSpentMinor: selected[budget.key] ?? 0,
+          limitMinor: budget.value,
+        ),
+    });
+  }
+
   /// Only an actual, account-sourced goal funding/release affects the bank.
   /// Creating the goal or paying from its already-funded wallet does not.
   static int goalContribution(Iterable<WaffraGoalSource> movements,

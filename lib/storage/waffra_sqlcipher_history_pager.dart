@@ -47,6 +47,7 @@ abstract final class WaffraSqlcipherHistoryPager {
     String? monthIso,
     String? accountId,
     bool? income,
+    bool unassignedOnly = false,
     WaffraSqlcipherHistoryCursor? after,
   }) async {
     if (limit < 1 || limit > maxPageSize) {
@@ -55,6 +56,9 @@ abstract final class WaffraSqlcipherHistoryPager {
     if (monthIso != null &&
         !RegExp(r'^[0-9]{4}-(0[1-9]|1[0-2])$').hasMatch(monthIso)) {
       throw ArgumentError.value(monthIso, 'monthIso');
+    }
+    if (unassignedOnly && accountId != null) {
+      throw ArgumentError('Unassigned-only pages cannot select an account.');
     }
     if (accountId != null &&
         (accountId.trim().isEmpty || accountId.length > 256)) {
@@ -94,7 +98,11 @@ abstract final class WaffraSqlcipherHistoryPager {
         Variable.withString(endMonth),
       ]);
     }
-    if (accountId != null) {
+    if (unassignedOnly) {
+      // All-time historical unassigned queue: SQLCipher applies the filter
+      // before LIMIT, never load every old entry or use OFFSET for page N.
+      clauses.add('l.account_id IS NULL');
+    } else if (accountId != null) {
       clauses.add('l.account_id=?');
       variables.add(Variable.withString(accountId));
     }

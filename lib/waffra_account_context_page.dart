@@ -26,8 +26,8 @@ class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {
  String filter='all';
  int pageOffset=0;
  static const int pageSize=50;
- // M944: keep one cursor per visited account-month page; never OFFSET-scan
- // an unbounded SQLCipher history for the verified monthly list.
+ // M952: one cursor per visited page for BOTH monthly ledger and historical
+ // unassigned entries. Do not OFFSET-scan older 1,000–10,000 rows.
  final Map<int,WaffraSqlcipherHistoryCursor?> _m944MonthCursors={0:null};
  void resetPages(){
   pageOffset=0;
@@ -47,18 +47,16 @@ class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {
  void reload(){
   future=widget.api.readAccountContext(
    monthIso:month,selectedAccountId:accountId,summaryOnly:true);
-  // Historical unassigned reconciliation retains its existing independent
-  // OFFSET queue; account/month ledger uses source-witnessed keyset reads.
-  if(filter!='none'&&!_m944MonthCursors.containsKey(pageOffset)){
+  // Both filters must have a verified cursor from the previous displayed
+  // page. Reset whenever month, account or link state changes.
+  if(!_m944MonthCursors.containsKey(pageOffset)){
    throw StateError('Missing encrypted history cursor; refresh before paging.');
   }
-  ledgerPage=filter=='none'
-   ?widget.api.readUnassignedPage(limit:pageSize,offset:pageOffset).then(
-     (items)=>WaffraSqlcipherHistoryPage(entries:items,
-      hasMore:items.length==pageSize,nextCursor:null))
-   :widget.api.readKeysetHistoryPage(
-     monthIso:month,selectedAccountId:accountId,
-     limit:pageSize,after:_m944MonthCursors[pageOffset]);
+  ledgerPage=widget.api.readKeysetHistoryPage(
+   monthIso:filter=='none'?null:month,
+   selectedAccountId:filter=='none'?null:accountId,
+   unassignedOnly:filter=='none',
+   limit:pageSize,after:_m944MonthCursors[pageOffset]);
   unassignedPreview=widget.api.readUnassignedSummary();
  }
  String money(int minor)=>(minor/100).toStringAsFixed(2)+' SAR';
@@ -275,11 +273,9 @@ class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {
          if(page?.hasMore==true)TextButton(
           key:const Key('m684-ledger-page-next'),
           onPressed:()=>setState((){
-           if(filter!='none'){
-            final next=page!.nextCursor;
-            if(next==null)throw StateError('Missing encrypted next-page cursor.');
-            _m944MonthCursors[pageOffset+pageSize]=next;
-           }
+           final next=page!.nextCursor;
+           if(next==null)throw StateError('Missing encrypted next-page cursor.');
+           _m944MonthCursors[pageOffset+pageSize]=next;
            pageOffset+=pageSize;
            reload();
           }),

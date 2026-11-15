@@ -32,11 +32,16 @@ def summary(stream, sha):
             issues.add("events_after_end")
             continue
         if kind == "start":
+            if began:
+                issues.add("duplicate_runner_start")
             began = True
         elif kind == "suite":
             obj = item.get("suite", {})
             if not isinstance(obj, dict) or type(obj.get("id")) is not int:
                 issues.add("invalid_suite")
+                continue
+            if obj["id"] in suites:
+                issues.add("duplicate_suite_id")
                 continue
             path = obj.get("path")
             suites[obj["id"]] = (path if isinstance(path, str) and ".." not in path
@@ -82,6 +87,8 @@ def summary(stream, sha):
         issues.add("missing_runner_events")
     if any(t["result"] is None for t in tests.values()):
         issues.add("unfinished_test")
+    if any(t["suite"] not in suites for t in tests.values()):
+        issues.add("missing_suite_provenance")
     counts = {"passed": 0, "failed": 0, "skipped": 0}
     groups = defaultdict(lambda: {"tests": [], "files": set()})
     for test in tests.values():

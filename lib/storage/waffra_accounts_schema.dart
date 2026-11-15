@@ -62,6 +62,11 @@ CREATE TABLE fresh_finance_account_revision(
   });
  }
  static Future<void> requireReady(WaffraEncryptedStore db)async{
+  // M952: an accounts marker does not prove the linked finance-domain
+  // tables still exist. A restored/interrupted vault must fail closed before
+  // account-linked history, goals, recurring or budget reads can proceed.
+  // The domain check is read-only and verifies the versioned schema.
+  await WaffraFreshFinanceDomainSchema.requireReady(db);
   final found=await db.customSelect(
    "SELECT name FROM sqlite_master WHERE type='table' "
    "AND name='fresh_finance_account_revision'").get();
