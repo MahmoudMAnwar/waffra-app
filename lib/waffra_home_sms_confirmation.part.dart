@@ -178,6 +178,17 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
    await _reviewAutoSmsCandidates(targetId:id);
    return;
   }
+  final lifecycle=WaffraSmsLifecycleEvidence.inspect(body,sender:sender);
+  final requiresSeparateReview=
+   WaffraSmsStructuredBankContext.multipleEvents(body)||
+   lifecycle.stage==WaffraSmsLifecycleStage.reversed||
+   lifecycle.stage==WaffraSmsLifecycleStage.refunded;
+  if(requiresSeparateReview){
+   // A combined/refunded/reversed SMS must not use the ordinary
+   // single-income/expense editor or silently ACK the original bank SMS.
+   await _reviewAutoSmsCandidates(targetId:id);
+   return;
+  }
   if(kind=='transfer'){
    if(facts.kind==WaffraBankOperationKind.transfer&&!facts.pending){
     await _reviewSmsAccountTransfer(item:row,facts:facts);
@@ -254,6 +265,11 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
    final sensitive=selected['sensitiveOtp']==true||
     WaffraBankSmsFactsParser.isVerificationChallenge(body);
    final localMatches=_autoSmsPending.where((row)=>row['id']==id);
+   final lifecycle=WaffraSmsLifecycleEvidence.inspect(body,sender:sender);
+   final composite=WaffraSmsStructuredBankContext.multipleEvents(body);
+   final requiresSeparateReview=composite||
+    lifecycle.stage==WaffraSmsLifecycleStage.reversed||
+    lifecycle.stage==WaffraSmsLifecycleStage.refunded;
    final local=localMatches.isEmpty?null:localMatches.first['local'];
    final localFacts=local is Map?local:null;
    final understood=facts.kind==WaffraBankOperationKind.income||
@@ -293,7 +309,8 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
    // an amount even when verified original SAR facts did extract one.
    // The atomic writer validates original facts, NOT that optional second
    // parser. A present conflicting parsed amount/direction still blocks Yes.
-   bool canConfirm=understood&&facts.canAutoPostAsIncomeExpense&&
+   bool canConfirm=!requiresSeparateReview&&
+    understood&&facts.canAutoPostAsIncomeExpense&&
     originalAmount!=null&&originalAmount.currency=='SAR'&&
     originalDate!=null&&!bankSmsHasUnverifiedTimestamp(body)&&
     (parsed.amount==null||
@@ -405,7 +422,8 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
      reviewedCategory=chosen.name;
      reviewedMainName=parent.single.displayName;
      reviewCategoryValid=unambiguous;
-     canConfirm=understood&&facts.canAutoPostAsIncomeExpense&&
+     canConfirm=!requiresSeparateReview&&
+      understood&&facts.canAutoPostAsIncomeExpense&&
       originalAmount!=null&&originalAmount.currency=='SAR'&&
       originalDate!=null&&!bankSmsHasUnverifiedTimestamp(body)&&
       (parsed.amount==null||
@@ -530,6 +548,16 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
         child:WaffraText(waffraIsEnglish?
          'Verification SMS content is hidden for your safety.':
          'نص رسالة التحقق مخفي لحمايتك.'))),
+       if(requiresSeparateReview)Card(
+        key:const Key('m989-lifecycle-manual-review-warning'),
+        child:Padding(padding:const EdgeInsets.all(12),
+         child:Row(children:[
+          const Icon(Icons.report_problem_outlined),
+          const SizedBox(width:8),
+          Expanded(child:WaffraText(waffraIsEnglish?
+           'Multiple events, a refund, or a reversal require separate review. No automatic financial confirmation is allowed.':
+           'الرسالة فيها أكثر من حدث أو استرداد أو عكس. تحتاج مراجعة مستقلة، وممنوع تأكيدها تلقائيًا كعملية عادية.')),
+         ]))),
        if(!sensitive&&!understood&&
           facts.kind!=WaffraBankOperationKind.transfer)...[
         const SizedBox(height:8),
