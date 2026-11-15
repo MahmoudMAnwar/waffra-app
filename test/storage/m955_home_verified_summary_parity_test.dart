@@ -38,13 +38,17 @@ void main() {
 
       await db.transaction(() async {
         for (final (id,limit) in <(String,int)>[
-          ('food',300000),('commute',400000)
+          ('food',300000),('commute',400000),
+          ('unused',1000),('archived',5000)
         ]) {
           await db!.customStatement(
             'INSERT INTO fresh_finance_standalone_budgets '
             '(budget_id,name,monthly_limit_minor,created_at_iso,source_json) '
             'VALUES (?,?,?,?,?)',[id,id,limit,stamp,'{}']);
         }
+        await db!.customStatement(
+          "UPDATE fresh_finance_standalone_budgets SET archived_at_iso=? "
+          "WHERE budget_id='archived'",[stamp]);
         for(var i=0;i<900;i++){
           final id='expense-$i';
           final month=i<870?'11':'10';
@@ -63,12 +67,13 @@ void main() {
               '(entry_id,account_id,confirmed_iso) VALUES (?,?,?)',
               [id,i%3==0?'bank':'wallet',stamp]);
           }
-          if(i%4<2){
+          if(i%4<3){
             await db!.customStatement(
               'INSERT INTO fresh_finance_standalone_allocations '
               '(allocation_id,budget_id,entry_id,amount_minor,assigned_at_iso,'
               'explicitly_confirmed) VALUES (?,?,?,?,?,1)',
-              ['alloc-$i',i%4==0?'food':'commute',id,minor,stamp]);
+              ['alloc-$i',i%4==0?'food':i%4==1?'commute':'archived',
+                id,minor,stamp]);
           }
         }
       });
@@ -107,6 +112,11 @@ void main() {
         final regularBudgets={for(final b in regular.budgets)b.id:b};
         final compactBudgets={for(final b in compact.budgets)b.id:b};
         expect(compactBudgets.keys.toSet(),regularBudgets.keys.toSet());
+        expect(compactBudgets.keys.toSet(),
+          {'food','commute','unused'},
+          reason:'Archived budgets are not silently revived by SQL aggregation.');
+        expect(compactBudgets['unused']!.usage.globalSpentMinor,0);
+        expect(compactBudgets['unused']!.usage.selectedAccountSpentMinor,0);
         for(final key in regularBudgets.keys){
           final old=regularBudgets[key]!.usage;
           final current=compactBudgets[key]!.usage;
