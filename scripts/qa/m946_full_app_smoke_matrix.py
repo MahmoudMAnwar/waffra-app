@@ -18,6 +18,27 @@ GROUPS = ("money", "experience", "safety")
 # Each user-facing capability has a real runnable suite. Tests can be reused
 # across capabilities; the runner de-duplicates within each CI shard.
 FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {
+    "exact_month_end_date_range_filters": ("money", (
+        "test/m948_financial_properties_and_performance_test.dart",
+        "test/m940_m941_home_ledger_pagination_test.dart")),
+    "ten_thousand_row_read_index_and_render_window": ("safety", (
+        "test/m948_financial_properties_and_performance_test.dart",
+        "test/m940_m941_home_ledger_pagination_test.dart")),
+    "cent_accurate_randomized_finance_arithmetic": ("money", (
+        "test/m948_financial_properties_and_performance_test.dart",
+        "test/m86_recurring_schedule_boundary_test.dart")),
+    "leap_year_long_horizon_scheduling": ("money", (
+        "test/m948_financial_properties_and_performance_test.dart",
+        "test/m86_recurring_schedule_boundary_test.dart")),
+    "concurrent_manual_sms_no_double_booking": ("safety", (
+        "test/storage/m946_whole_app_money_journey_smoke_test.dart",
+        "test/storage/m141_sqlcipher_multi_step_transaction_rollback_test.dart")),
+    "bad_finance_inputs_and_rollback": ("safety", (
+        "test/storage/m946_whole_app_money_journey_smoke_test.dart",
+        "test/storage/m440_account_linked_entry_writer_test.dart")),
+    "narrow_rtl_high_text_scale_metric_layout": ("experience", (
+        "test/m948_financial_properties_and_performance_test.dart",
+        "test/m674_approved_page_designs_test.dart")),
     "accounts_opening_and_subaccounts": ("money", (
         "test/storage/m440_account_linked_entry_writer_test.dart",
         "test/m470_new_account_dialog_test.dart")),
