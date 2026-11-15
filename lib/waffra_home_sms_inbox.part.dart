@@ -240,7 +240,13 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
           key:Key('waffra-sms-sender-message-'+index.toString()),
           leading:const Icon(Icons.sms_outlined,color:emerald),
           title:WaffraText(local==null?
-           (waffraIsEnglish?'Needs review':'عملية تحتاج مراجعة'):
+           (confidential||
+            !const <String>{'income','expense','transfer'}.contains(suggestedKind)?
+            (waffraIsEnglish?'Needs review':'عملية تحتاج مراجعة'):
+            (waffraIsEnglish?'Suggested • ':'مقترح • ')+
+             (suggestedKind=='income'?(waffraIsEnglish?'Income':'دخل'):
+              suggestedKind=='expense'?(waffraIsEnglish?'Expense':'مصروف'):
+              (waffraIsEnglish?'Transfer':'تحويل'))):
            (waffraIsEnglish?'Local rule • ':'قاعدة محلية • ')+
             (local['kind']=='transfer'?
              (waffraIsEnglish?'Transfer':'تحويل'):
