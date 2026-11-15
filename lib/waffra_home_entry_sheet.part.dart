@@ -1265,6 +1265,24 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
          ]));
         if(approved!=true||!sheetContext.mounted)return;
        }
+       if(initial!=null&&canMoveLinkedAccount&&
+          originalLinkedAccountId!=null&&chosenManualAccount!=null&&
+          originalLinkedAccountId!=chosenManualAccount){
+        final approved=await showWaffraDialog<bool>(
+         context:sheetContext,builder:(dialog)=>AlertDialog(
+          title:WaffraText(waffraIsEnglish?
+           'Confirm linked account move':'تأكيد تغيير الحساب المرتبط'),
+          content:WaffraText(waffraIsEnglish?
+           'Move the existing entry between accounts, recalculating both balances without posting money twice.':
+           'سيتم نقل العملية للحساب الجديد وإعادة حساب رصيد الحسابين دون تسجيل العملية مرة ثانية.'),
+          actions:[
+           TextButton(onPressed:()=>Navigator.pop(dialog,false),
+            child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+           FilledButton(onPressed:()=>Navigator.pop(dialog,true),
+            child:WaffraText(waffraIsEnglish?'Confirm':'تأكيد')),
+          ]));
+        if(approved!=true||!sheetContext.mounted)return;
+       }
        if(!income&&selectedBudgetId==null&&
           waffraHasSelectableBudget(namedBudgets)){
         final confirmed=await waffraConfirmUnlinkedBudgetSave(
@@ -1646,7 +1664,9 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
     // Older imported SMS rows can contain extra original fields which
     // MoneyEntry.fromJson/toJson intentionally does not expose.
     // Preserve unrelated original JSON bytes under the witnessed SQL lock.
-    if(!await _m953SaveExistingVerifiedEntry(initial,result))return;
+    if(!await _m953SaveExistingVerifiedEntry(initial,result,
+     fromAccountId:canMoveLinkedAccount?originalLinkedAccountId:null,
+     toAccountId:canMoveLinkedAccount?chosenManualAccount:null))return;
    }else{
    // Optimistic in-memory edits must roll back if durable save is rejected.
    // A spinner is NOT proof of a completed financial write.
@@ -1715,6 +1735,9 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
    }
    }
   }
+  final movedLinkedAccountInThisEdit=initial!=null&&canMoveLinkedAccount&&
+   originalLinkedAccountId!=null&&chosenManualAccount!=null&&
+   originalLinkedAccountId!=chosenManualAccount;
   bool linkedHistoricalAccountInThisEdit=false;
   // #420: witnessed idempotent association for the existing entry;
   // never append another income or expense.
@@ -1739,14 +1762,17 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
   if(mounted)await budgetAlert(result,previousSpent);
   if(mounted)unawaited(_m467RefreshHomeAccounts());
   if(initial!=null&&mounted){
-   snack(context,linkedHistoricalAccountInThisEdit?
+   snack(context,movedLinkedAccountInThisEdit?
+     (waffraIsEnglish?'Transaction moved to the selected account':
+      'تم نقل العملية للحساب الجديد'):
+    linkedHistoricalAccountInThisEdit?
      (waffraIsEnglish?'Transaction updated and linked to account':'تم تعديل العملية وربطها بالحساب'):
      (waffraIsEnglish?'Transaction updated':'تم تعديل المعاملة'),
     isError:false,duration:const Duration(seconds:5),
     // Existing legacy Undo reverts only metadata, not a confirmed bank link.
     // Do not offer a misleading Undo after money attribution is committed.
-    actionLabel:linkedHistoricalAccountInThisEdit?null:(waffraIsEnglish?'Undo':'تراجع'),
-    onAction:linkedHistoricalAccountInThisEdit?null:()async{
+    actionLabel:linkedHistoricalAccountInThisEdit||movedLinkedAccountInThisEdit?null:(waffraIsEnglish?'Undo':'تراجع'),
+    onAction:linkedHistoricalAccountInThisEdit||movedLinkedAccountInThisEdit?null:()async{
      if(!mounted)return;
      final index=entries.indexWhere((e)=>e.id==initial.id);
      if(index<0)return;
@@ -1770,7 +1796,8 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
  /// do not regenerate the full ledger via MoneyEntry.toJson().
  /// This modifies neither an account association nor a second money row.
  Future<bool> _m953SaveExistingVerifiedEntry(
-  MoneyEntry original,MoneyEntry edited)async{
+  MoneyEntry original,MoneyEntry edited,
+  {String? fromAccountId,String? toAccountId})async{
   try{
    if(original.id!=edited.id||original.sourceType!=edited.sourceType||
       original.receiptPath!=edited.receiptPath||
@@ -1811,12 +1838,33 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
     patched.add(revised);
    }
    if(matches!=1)throw StateError('Transaction identity missing or duplicated.');
-   final committed=await _saveProgress.track(
-    'm953-verified-transaction-edit',()=>_financeAuthority.saveCaptured(
-     route:WaffraFinanceRoute.transactionEdit,
-     baseline:baseline,captured:<String,Object>{
-      'entries':jsonEncode(patched),
-     },userConfirmed:true));
+   final moved=fromAccountId!=null&&toAccountId!=null&&
+    fromAccountId!=toAccountId;
+   final WaffraFinanceAuthorityRead committed;
+   if(moved){
+    final bridge=_financeBinding?.accountsBridge;
+    if(bridge==null||baseline.encryptedWitness==null){
+     throw StateError('Verified account move source is unavailable.');
+    }
+    await _saveProgress.track(
+     'm956-existing-account-move',
+     ()=>bridge.editExistingAndMoveAccount(
+      baseline:baseline.encryptedWitness!,
+      expectedOriginal:Map<String,Object?>.from(
+       (decoded as List).cast<Map>().singleWhere((e)=>e['id']==original.id)),
+      replacement:patched.singleWhere((e)=>e['id']==original.id),
+      fromAccountId:fromAccountId,toAccountId:toAccountId,
+      userConfirmed:true));
+    committed=await _financeAuthority.load(
+     route:WaffraFinanceRoute.transactionEdit);
+   }else{
+    committed=await _saveProgress.track(
+     'm953-verified-transaction-edit',()=>_financeAuthority.saveCaptured(
+      route:WaffraFinanceRoute.transactionEdit,
+      baseline:baseline,captured:<String,Object>{
+       'entries':jsonEncode(patched),
+      },userConfirmed:true));
+   }
    final verifiedRaw=committed.ledgerRaw;
    if(verifiedRaw==null)throw StateError('Edit witness has no ledger.');
    final verifiedData=await WaffraLargeJsonDecode.parse(verifiedRaw);
@@ -1835,7 +1883,10 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
     _lastLedgerSavedRaw=verifiedRaw;
     _lastWidgetRevision=committed.widgetRevision;
    });
-   if(mounted)unawaited(_refreshWidget());
+   if(mounted){
+    unawaited(_refreshWidget());
+    if(moved)unawaited(_m467RefreshHomeAccounts());
+   }
    return true;
   }catch(error){
    debugPrint('M953 verified edit rejected: ${error.runtimeType}');
