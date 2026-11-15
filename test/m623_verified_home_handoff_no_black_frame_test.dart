@@ -8,7 +8,8 @@ void main(){
   .split(' @override Widget build(BuildContext context)=>MaterialApp(')[0];
  final homeLoader=source.split(' Future<void> _loadFinanceSafely()async{')[1]
   .split(' Widget _financialRecoveryScreen()')[0];
- final shell=source.split(' @override Widget build(BuildContext context)=>PopScope(')[1]
+ final rootShell=File('lib/waffra_home_root_shell.part.dart').readAsStringSync();
+ final shell=rootShell.split(' Widget _m944BuildHome()=>PopScope(')[1]
   .split('  // A fixed 58x58 FAB:')[0];
 
  test('M623 keeps prior authenticated UI until one complete verified Home',(){
