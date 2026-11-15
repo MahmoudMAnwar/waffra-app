@@ -1,28 +1,35 @@
 {
   "contract_version": 1,
-  "change_id": "M977-ISSUE679-LARGE-V2-ARGON2-AEAD-ENVELOPE-QA-20261115",
-  "human_scope_review": "Actual owner archive inspection was LOCAL, HEADER-ONLY: confirmed V2 encrypted envelope layout without decrypting, storing, or uploading private data. This bounded Issue #679 / #657 test-only tranche adds a >1MiB synthetic V2 Argon2id AES-256-GCM round-trip and ciphertext-bit-tamper/invalid KDF/malformed encoded data rejection. No private bytes, secret, password, real account, SQLCipher writer, backup migration or screen. Register new real Dart suite plus existing WaffraSecureBackup suite in M946 safety; same M385/M550 protection. Stacked #678 M976 parent; exact head CI pending. Do not interpret as owner private restore or 95% milestone.",
+  "change_id": "M978-ISSUE681-RECURRING-REMINDER-DATED-GOAL-INDEX-20261115",
+  "human_scope_review": "Five-axis Issue #657 follow-up #681 in reminder-only read logic, stacked above #680 and #678. In syncRecurringReminders, replace N recurring × N goals any() scans with one dated-goal ID Set from same loaded Home goals. Preserve active category, linked/unlinked reminders, duplicate-or-missing any() semantics, schedule ordering and times, no finance writer or notification content modifications. Exact 10000-goal/1000-recurring executable regression and existing boundary test in M946 experience. Bounded M385/M550, no physical Android or private archive claim.",
   "user_requested_changes": [
-    "Continue five axis #657 toward audited 95 percent without inventing backup/user device success.",
-    "Add new nonduplicate, fully synthetic >1MiB V2 Argon2id AES-GCM archive structural, Unicode and AEAD authentication tests based solely on current public source format.",
-    "Refuse tampered ciphertext and wrong KDF metadata; never upload/commit any private user archive, password, salt, nonce, or payload.",
-    "Register with M946 safety alongside existing crypto test without disabling prior cases or changing production backup/finance/UI code."
+    "Continue owner five axes toward audited 95% with actual source performance improvement.",
+    "Index eligible dated goal IDs once per reminder sync while preserving original any() filtering and duplicate/undated semantics.",
+    "Keep original scheduling order, active/category guards, reminder permission and exact oneTimeDueAt; no financial writes.",
+    "Run new 10k-goal/1k-linked-bill executable test with existing M86 in M946 and exact-head CI."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
+    "lib/waffra_home_finance_persistence_due.part.dart",
     "scripts/qa/m946_full_app_smoke_matrix.py",
-    "test/m977_large_v2_encrypted_backup_envelope_test.dart"
+    "test/m978_recurring_reminder_goal_index_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
   "bounded_sections": {
+    "lib/waffra_home_finance_persistence_due.part.dart": [
+      {
+        "start": " Future<void> syncRecurringReminders()async {",
+        "end": " Future<void> toggleRecurringReminders("
+      }
+    ],
     "scripts/qa/m946_full_app_smoke_matrix.py": [
       {
         "start": "FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {",
-        "end": "    \"m976_lazy_goal_due_card_viewport_build\""
+        "end": "    \"m977_large_argon2id_backup_envelope_integrity\""
       }
     ]
   }
