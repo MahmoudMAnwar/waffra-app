@@ -810,3 +810,9 @@ M940/M941 Draft PR #648 M486 regression correction (unreleased): coalesced futur
 
 [M944 #653 / Draft #654 — Additional Home read-window update; NOT RELEASED]
 - Existing Home and unified transaction/transfer/savings Show more now reveal up to 50 additional read-only financial cards per action instead of eagerly building all cards on expansion. Source-verified full PDF export remains complete; approved card UI, FAB/Snackbar and record writes are untouched. Adds M944 window regression; Flutter CI and physical Android/old owner archive checks remain pending.
+
+
+[M944 #653 / PR #654 — AXIS 4 CODE SPLIT, DRAFT / NOT RELEASED — 2026-11-15]
+- Extracted the original HomeScreenState root build (246 source lines) to an owner-bound same-library `waffra_home_root_shell.part.dart`, retaining a single State.build delegate. Original Flutter tree, 58x58 anchored + FAB, fixed footer, two-line Snackbar placement, backdrop blur, navigation and first verified finance frame remain source-identical.
+- Extracted 304 unchanged source lines for recurring create/edit, due-date calculation and linked-goal action routing to `waffra_home_recurring_workflows.part.dart`. Original Goals/Recurring pages, saved values, account authority and financial postings have not changed.
+- Strengthened Dart/Python source reconstruction plus M707/M830/M644/M938 and added M944 root-shell regression. M550 source-provenance list now recognizes the real registered parts rather than a fake inline source. Same-HEAD CI, Android build and owner-device/backup validation remain separate; do not market as released or 100% complete until proven.
