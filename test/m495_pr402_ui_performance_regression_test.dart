@@ -117,13 +117,15 @@ void main(){
   expect(edit,contains('if(initial==null||canLinkExistingAccount)...['));
   // Verified historical association is locked by each live picker;
   // an unlinked old entry may still create/select its first actual account.
-  expect(edit,contains('onChanged:initial!=null&&originalLinkedAccountId!=null?null:(type)=>'));
-  expect(edit,contains('onChanged:chosenManualProviderCategory==null||\n         (initial!=null&&originalLinkedAccountId!=null)?null:(provider)async'));
-  expect(edit,contains('onChanged:chosenManualProvider==null||\n         (initial!=null&&originalLinkedAccountId!=null)?null:(id)async'));
+  expect(edit,contains('!canMoveLinkedAccount?null:(type)=>'));
+  expect(edit,contains('!canMoveLinkedAccount)?null:(provider)async'));
+  expect(edit,contains('!canMoveLinkedAccount)?null:(id)async'));
    expect(edit,contains('chosenManualProviderCategory==null||'));
   expect(edit,contains('accountId:chosenManualAccount!,userConfirmed:true'));
   expect(edit,contains('await api.linkUnassignedEntry(entryId:initial.id'));
   expect(edit,contains('linkedHistoricalAccountInThisEdit=true;'));
+  expect(edit,contains('editExistingAndMoveAccount('));
+  expect(edit,contains('تأكيد تغيير الحساب المرتبط'));
   expect(edit,contains("'Confirm historical account link'"));
   expect(edit,contains("'تأكيد ربط العملية القديمة'"));
   expect(edit,contains('if(approved!=true||!sheetContext.mounted)return;'));
