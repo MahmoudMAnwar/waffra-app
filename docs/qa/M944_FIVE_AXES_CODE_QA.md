@@ -4,8 +4,8 @@ Issue: #653. Branch: `feat/m944-five-axis-code-reliability-20261115`. Draft PR, 
 
 | Axis | Implementation evidence | Regressions | Same-head CI | Status |
 |---|---|---|---|---|
-| 1. SQLCipher database paging | Not implemented | Pending | Pending | Pending |
-| 2. Large lists / sender review | Not implemented | Pending | Pending | Pending |
+| 1. SQLCipher database paging | Keyset source pager + verified API bridge + account history cursor UI committed | 2,700 SQLCipher rows, account/month scope, ties, duplicate-free pages, cold reopen and M611 source contract added (not yet run) | Pending | Partial |
+| 2. Large lists / sender review | Account history avoids SQL OFFSET; Home expanded list and full SMS native cursor still pending | Account history paging test pending | Pending | Partial |
 | 3. Financial parity | Not implemented | Pending | Pending | Pending |
 | 4. Home state extraction | Not implemented | Pending | Pending | Pending |
 | 5. CI failure diagnostics | Not implemented | Pending | Pending | Pending |
