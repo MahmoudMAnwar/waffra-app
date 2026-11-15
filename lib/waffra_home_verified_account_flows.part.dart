@@ -28,33 +28,39 @@ extension _WaffraHomeVerifiedAccountFlows on _HomeScreenState {
 
  Future<void> _m468ReadVerifiedAccountsOnce()async{
   final readEpoch=_m627AccountEpoch;
+  String? failedReadRequested;
   if(_m627ClosingSession)return;
   try{
    await _ensureFinanceBound();
    final bridge=_financeBinding?.accountsBridge;
    if(bridge==null)throw StateError('No verified account bridge');
    final api=WaffraVerifiedAccountsApi(bridge:bridge);
-   final accounts=await api.balances();
    var chosen=_m467SelectedAccount;
    if(!_m467AccountChoiceRestored){
     final p=await SharedPreferences.getInstance();
     chosen=p.getString(_m467ChoiceKey)??'all';
    }
-   if(chosen!='all'&&
-      !accounts.any((a)=>!a.archived&&a.id==chosen))chosen='all';
+   // Compare late responses against the account the user REQUESTED, not
+   // a verified fallback ('all') when that account was archived/deleted.
+   // Otherwise every refresh sees old selected != fallback and retries
+   // forever without applying the safe account correction.
+   final requested=chosen;
+   failedReadRequested=requested;
    final now=DateTime.now();
    final month=now.year.toString().padLeft(4,'0')+'-'+
     now.month.toString().padLeft(2,'0');
-   // Month-only context plus lightweight all-time account membership.
-   final contextView=chosen=='all'?null:await api.readAccountContext(
-    monthIso:month,
-    selectedAccountId:chosen,summaryOnly:true);
-   final scopedIds=chosen=='all'?null:
-    await api.readAccountEntryIds(accountId:chosen);
+   // One verified SQLCipher source lock for balances, compact month totals
+   // and complete historical account links; no mixed-generation Home cards.
+   final verified=await api.readHomeAccountView(
+    monthIso:month,selectedAccountId:chosen);
+   chosen=verified.selectedAccountId;
+   final accounts=verified.balances;
+   final contextView=verified.context;
+   final scopedIds=verified.entryIds;
    if(!mounted||_m627ClosingSession||readEpoch!=_m627AccountEpoch)return;
    // A user may switch accounts while this async SQL projection is running.
    // Never repaint that newly chosen view with a stale older selection.
-   if(_m467AccountChoiceRestored&&_m467SelectedAccount!=chosen){
+   if(_m467AccountChoiceRestored&&_m467SelectedAccount!=requested){
     _m468AccountReadAgain=true;
     return;
    }
@@ -72,6 +78,19 @@ extension _WaffraHomeVerifiedAccountFlows on _HomeScreenState {
   }catch(error){
    debugPrint('Home accounts view unavailable: '+error.runtimeType.toString());
    if(!mounted||_m627ClosingSession||readEpoch!=_m627AccountEpoch)return;
+   // The older read failed after the owner selected another account.
+   // Do not overwrite the new selection with 'all'; fail closed on money
+   // and let the already queued refresh verify the newer requested view.
+   if(failedReadRequested!=null&&_m467AccountChoiceRestored&&
+      _m467SelectedAccount!=failedReadRequested){
+    _m468AccountReadAgain=true;
+    setState((){
+     _m467AccountContext=null;
+     _m684ScopedEntryIds=null;
+     _m468VerifiedAccountsLoaded=false;
+    });
+    return;
+   }
    // Never show a stale bank balance when verified SQL projection is absent.
    setState((){
     _m467Accounts=const <WaffraAccountBalance>[];
@@ -109,7 +128,7 @@ extension _WaffraHomeVerifiedAccountFlows on _HomeScreenState {
   if(_m467AccountContext==null)return const <MoneyEntry>[];
   final ids=_m684ScopedEntryIds;
   if(ids==null)return const <MoneyEntry>[];
-  return monthRows.where((e)=>ids.contains(e.id)).toList(growable:false);
+  return _m940LedgerReads.scopedMonth(monthRows,ids);
  }
 
  double? _m942VerifiedAllAccountsBalance(){

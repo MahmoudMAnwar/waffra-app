@@ -200,27 +200,48 @@ class WaffraAccountsRepository implements WaffraAccountOperations {
    'c.label AS custom_subtype_label':'NULL AS custom_subtype_label';
   final customJoin=hasCustom?
    'LEFT JOIN fresh_finance_custom_account_subtypes c ON c.account_id=a.account_id':'';
+  // M960: aggregate each finance posting source ONCE for all accounts.
+  // The previous per-account correlated SUMs repeated the same SQL scans
+  // for every bank/wallet; each independent CTE prevents join fan-out.
+  // This is a verified read: account openings, due cash-only debits,
+  // opposite transfers and independent goal wallets keep exact halalas.
   final rows=await db.customSelect('''
+WITH entry_postings AS (
+ SELECT l.account_id,
+   SUM(CASE WHEN e.is_income=1 THEN e.amount_minor
+     WHEN due.entry_id IS NOT NULL THEN -due.current_cash_minor
+     ELSE -e.amount_minor END) AS net_minor
+ FROM fresh_finance_account_entry_links l
+ JOIN fresh_finance_entries e ON e.entry_id=l.entry_id
+ LEFT JOIN fresh_finance_goal_due_settlements due ON due.entry_id=e.entry_id
+ GROUP BY l.account_id
+),
+transfer_in AS (
+ SELECT to_account_id AS account_id,SUM(amount_minor) AS total_minor
+ FROM fresh_finance_internal_transfers GROUP BY to_account_id
+),
+transfer_out AS (
+ SELECT from_account_id AS account_id,SUM(amount_minor) AS total_minor
+ FROM fresh_finance_internal_transfers GROUP BY from_account_id
+),
+goal_postings AS (
+ SELECT s.account_id,
+   SUM(CASE WHEN m.kind='fund' THEN -m.amount_minor
+     WHEN m.kind='release' THEN m.amount_minor ELSE 0 END) AS net_minor
+ FROM fresh_finance_goal_account_sources s
+ JOIN fresh_finance_goal_wallet_movements m ON m.movement_id=s.movement_id
+ GROUP BY s.account_id
+)
 SELECT a.account_id,a.label,a.kind,a.archived,
  $detailColumns,$customColumn,$institutionColumn,
- a.opening_minor +
- COALESCE((SELECT SUM(CASE WHEN e.is_income=1 THEN e.amount_minor
-   WHEN due.entry_id IS NOT NULL THEN -due.current_cash_minor
-   ELSE -e.amount_minor END)
-  FROM fresh_finance_account_entry_links l
-  JOIN fresh_finance_entries e ON e.entry_id=l.entry_id
-  LEFT JOIN fresh_finance_goal_due_settlements due ON due.entry_id=e.entry_id
-  WHERE l.account_id=a.account_id),0) +
- COALESCE((SELECT SUM(t.amount_minor) FROM fresh_finance_internal_transfers t
-  WHERE t.to_account_id=a.account_id),0) -
- COALESCE((SELECT SUM(t.amount_minor) FROM fresh_finance_internal_transfers t
-  WHERE t.from_account_id=a.account_id),0) +
- COALESCE((SELECT SUM(CASE WHEN m.kind='fund' THEN -m.amount_minor
-   WHEN m.kind='release' THEN m.amount_minor ELSE 0 END)
-  FROM fresh_finance_goal_account_sources s
-  JOIN fresh_finance_goal_wallet_movements m ON m.movement_id=s.movement_id
-  WHERE s.account_id=a.account_id),0) AS balance_minor
+ a.opening_minor+COALESCE(ep.net_minor,0)+COALESCE(ti.total_minor,0)
+  -COALESCE(tout.total_minor,0)+COALESCE(gp.net_minor,0)
+ AS balance_minor
 FROM fresh_finance_money_accounts a
+LEFT JOIN entry_postings ep ON ep.account_id=a.account_id
+LEFT JOIN transfer_in ti ON ti.account_id=a.account_id
+LEFT JOIN transfer_out tout ON tout.account_id=a.account_id
+LEFT JOIN goal_postings gp ON gp.account_id=a.account_id
 $detailJoin
 $customJoin
 $institutionJoin

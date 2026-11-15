@@ -253,9 +253,20 @@ class WaffraVerifiedAccountsApi implements WaffraAccountOperations {
  /// independent monthly budget totals for the selected account context.
  Future<WaffraAccountContextReadResult> readAccountContext({
   required String monthIso,String? selectedAccountId,bool summaryOnly=false,
+  bool includeEntries=true,
  })=>bridge.readVerifiedAccountContext(
   monthIso:monthIso,selectedAccountId:selectedAccountId,
-  summaryOnly:summaryOnly);
+  summaryOnly:summaryOnly,includeEntries:includeEntries);
+
+ /// M956: the Home header must read balances, month summary and
+ /// all-time account association from one authenticated finance generation.
+ Future<({List<WaffraAccountBalance> balances,
+          String selectedAccountId,
+          WaffraAccountContextReadResult? context,
+          Set<String>? entryIds})> readHomeAccountView({
+  required String monthIso,required String selectedAccountId,
+ })=>bridge.readVerifiedHomeAccountView(
+  monthIso:monthIso,selectedAccountId:selectedAccountId);
 
  /// M684: all-time account entry IDs without full historical SQL detail.
  Future<Set<String>> readAccountEntryIds({required String accountId})=>

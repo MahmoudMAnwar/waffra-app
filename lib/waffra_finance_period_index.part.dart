@@ -22,6 +22,8 @@ class WaffraFinancePeriodIndex {
  final Map<int,List<int>> _byMonth=<int,List<int>>{};
  final Map<int,List<int>> _byYear=<int,List<int>>{};
  final Map<String,List<int>> _byId=<String,List<int>>{};
+ // This index is owned by one explicitly invalidated finance snapshot.
+ final Map<int,List<MoneyEntry>> _cachedMonths=<int,List<MoneyEntry>>{};
  List<int>? _newestPositions;
 
  /// Stable newest-first read order, computed once per immutable ledger
@@ -109,7 +111,9 @@ class WaffraFinancePeriodIndex {
  /// A month-specific read only touches the requested monthly bucket.
  List<MoneyEntry> month(int year,int month){
   if(month<1||month>12)throw ArgumentError('Month must be 1..12.');
-  return _select(_byMonth[_monthKey(year,month)]??const <int>[]);
+  final key=_monthKey(year,month);
+  return _cachedMonths.putIfAbsent(key,
+    ()=>_select(_byMonth[key]??const <int>[]));
  }
 
  /// Analytics annual view retains precisely the same historical entries.

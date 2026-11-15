@@ -29,11 +29,20 @@ void main(){
   expect(src,contains('onPressed:WaffraHaptics.tap(()=>unawaited(_m467PickHomeAccount()))'));
   expect(src,isNot(contains('child:WaffraHomeAccountChip(')));
   expect(src,contains('_m467ScopedEntries().toList()'));
-  expect(src,contains('api.readAccountContext('));
-  expect(src,contains('selectedAccountId:chosen,summaryOnly:true'));
-  expect(src,contains('api.readAccountEntryIds(accountId:chosen)'));
+  expect(src,contains('api.readHomeAccountView('));
+  expect(src,contains('monthIso:month,selectedAccountId:chosen'));
+  expect(src,contains('final scopedIds=verified.entryIds;'));
+  expect(src,isNot(contains('api.readAccountEntryIds(accountId:chosen)')));
   expect(src,contains('final ids=_m684ScopedEntryIds;'));
-  expect(src,contains('if(_m467AccountChoiceRestored&&_m467SelectedAccount!=chosen)'));
+  expect(src,contains('final requested=chosen;'));
+  // M959: a failed old read must not erase the user's newer account pick.
+  expect(src,contains('String? failedReadRequested;'));
+  expect(src,contains('failedReadRequested=requested;'));
+  expect(src,contains('_m467SelectedAccount!=failedReadRequested'));
+  expect(src,contains('_m468AccountReadAgain=true;'));
+  expect(src,contains('_m468VerifiedAccountsLoaded=false;'));
+  expect(src,contains('if(_m467AccountChoiceRestored&&_m467SelectedAccount!=requested)'));
+  expect(src,isNot(contains('_m467SelectedAccount!=chosen')));
   expect(src,contains('_m467Accounts.fold<int>(0,(total,a)=>total+a.balanceMinor)/100'));
   expect(src,contains('if(transferCommitted&&mounted){'));
   expect(src,contains('unawaited(_m467RefreshHomeAccounts());'));

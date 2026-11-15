@@ -20,7 +20,19 @@ void main(){
   final s=readWaffraMainSourceForContracts();
   expect(s,contains('final active=_m468AccountReadInFlight;'));
   expect(s,contains('_m468AccountReadAgain=true;'));
-  expect(s,contains("final contextView=chosen=='all'?null:await api.readAccountContext("));
+  // M956: a single owner-witnessed SQLCipher read replaces three separately
+  // locked Home projections, without dropping the full account membership.
+  expect(s,contains('await api.readHomeAccountView('));
+  expect(s,contains('monthIso:month,selectedAccountId:chosen'));
+  expect(s,contains('final scopedIds=verified.entryIds;'));
+  final home=s.split(' Future<void> _m468ReadVerifiedAccountsOnce()async{')[1]
+    .split(' String get _m467AccountLabel{')[0];
+  expect(home,isNot(contains('await api.balances();')));
+  expect(home,isNot(contains('await api.readAccountContext(')));
+  expect(home,isNot(contains('await api.readAccountEntryIds(')));
+  expect(home,contains('readEpoch!=_m627AccountEpoch'));
+  expect(home,contains('final requested=chosen;'));
+  expect(home,contains('_m467SelectedAccount!=requested'));
   expect(s,contains('AppLifecycleListener(onResume:_m468OnResume)'));
   expect(s,contains('WaffraExternalMediaSession.shouldSkipResumeBackgroundWork'));
   expect(s,contains('importMonth:!_autoSmsHistoryComplete'));

@@ -21,8 +21,20 @@ GROUPS = ("money", "experience", "safety")
 # Each user-facing capability has a real runnable suite. Tests can be reused
 # across capabilities; the runner de-duplicates within each CI shard.
 FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {
+    "m963_verified_edit_undo_updates_home_account_view": ("experience", (
+        "test/m963_verified_edit_undo_account_refresh_test.dart",
+        "test/storage/m953_verified_historical_edit_regression_test.dart")),
+    "m961_home_account_month_cache_and_witness_invalidation": ("experience", (
+        "test/m961_verified_month_scope_cache_test.dart",
+        "test/m684_finance_period_index_test.dart")),
+    "m960_grouped_sqlcipher_account_balances_source_parity": ("money", (
+        "test/storage/m960_grouped_account_balance_parity_test.dart",
+        "test/storage/m440_accounts_repository_test.dart")),
     # M952: all new finance/goal/readiness regressions execute on exact PR SHA
     # rather than existing only as locally runnable, unregistered test files.
+    "m955_home_verified_month_summary_without_ledger_hydration": ("money", (
+        "test/storage/m955_home_verified_summary_parity_test.dart",
+        "test/storage/m448_account_context_read_test.dart")),
     "m952_encrypted_account_domain_fail_closed": ("safety", (
         "test/storage/m952_account_linked_schema_readiness_test.dart",
         "test/storage/m440_accounts_portable_v3_test.dart")),

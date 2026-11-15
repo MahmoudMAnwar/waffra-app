@@ -1779,6 +1779,9 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
      if(_lastFinanceAuthorityRead?.source==
         WaffraRuntimeFinanceBackend.verifiedEncrypted){
       if(!await _m953SaveExistingVerifiedEntry(result,initial))return;
+      // M963: Undo is a second verified money edit. A parent editor refresh
+      // runs on ordinary Save, but this direct Snackbar Undo path has none.
+      if(mounted)unawaited(_m467RefreshHomeAccounts());
      }else{
       _m684InvalidatePeriodRead();
       setState(()=>entries[index]=initial);

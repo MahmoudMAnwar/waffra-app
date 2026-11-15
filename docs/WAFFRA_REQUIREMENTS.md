@@ -1,3 +1,53 @@
+## M963 — تحديث الحسابات بعد التراجع عن تعديل معاملة موثقة
+
+- التراجع عن تعديل مبلغ أو تاريخ معاملة مربوطة بحساب كان يرجع المعاملة ماليًا لكن لا يستدعي تحديث كارت الحساب من نفس مسار الـUndo. تمت إضافة تحديث الحسابات بعد نجاح التراجع فقط، مع الحفاظ على قاعدة منع زر التراجع بعد نقل الحساب أو ربطه وعدم تغيير كاتب الأموال.
+- تم ربط اختبار UI مصدر جديد باختبار SQLCipher التاريخي الموجود في M946، دون تخفيف اختبارات الأمان أو تغيير تصميم الرئيسية.
+
+## M962 — إصلاح اختبار إبطال كاش الرئيسية بعد M961
+
+- تصحيح توقع اختبار M944 القديم بعد تحسين M961: يجب التحقق من إبطال فهرس المعاملات ونتيجة فلتر الشهر والحساب الموثقة، مع إعادة عداد كروت العمليات إلى 50. اختبارات صفحات PDF وتوسعة الكروت تظل كما هي، ولا حذف لأي اختبار أو تعديل لبيانات مالية.
+
+## M961 — منع إعادة فلترة معاملات الشهر في كل إعادة بناء للرئيسية
+
+- تحسين للأداء: الاحتفاظ بقائمة عمليات الشهر غير القابلة للتعديل داخل فهرس المعاملات الحالي، ونتيجة تصفية الحساب المختار فقط وفق مجموعة معرّفات العمليات الموثقة من SQLCipher. عند تغيير الحساب أو وصول مجموعة معرّفات موثقة جديدة لا تُستخدم نتيجة الحساب السابق.
+- أي إضافة أو تعديل أو حذف أو استعادة تستدعي مسار إبطال فهرس المعاملات الأصلي، وبذلك يتم إبطال هذين التخزينين أيضًا. اختبار 12,000 عملية يشمل اختلاف الحسابات والشهور والترتيب وإبطال الفهرس في M946، ولا يغيّر قاعدة البيانات أو تصميم الواجهة. تحقق Android الفعلي ما زال مطلوبًا.
+
+## M960 — تجميع أرصدة الحسابات بدون استعلامات متكررة
+
+- تسريع القراءة المعتمدة للأرصدة في SQLCipher بتجميع حركات الدخل والمصروف والاستحقاق والتحويلات وتمويل/صرف الأهداف لكل الحسابات، مرة واحدة لكل مصدر بدلاً من إعادة جمعه لكل بنك ومحفظة على حدة. نفس المعادلات الأصلية بالهللات، بدون تغيير الكتابة أو تحويل الحسابات أو الـBackup.
+- إضافة اختبار SQLCipher مشفر وفعلي لعدد 360 معاملة، 12 تحويلًا، 3 حركات أهداف، استحقاق مدفوع جزئيًا من المحفظة، حساب مؤرشف وإعادة فتح باردة؛ يقارن حرفيًا بالاستعلام القديم ويشترك في اختبارات M946 الإلزامية. اعتماد Android والنسخة الخاصة لم يتحقق بعد.
+
+## M959 — حماية اختيار الحساب أثناء فشل قراءة قديمة
+
+- إصلاح تسابق طلبات تحديث الحساب في الرئيسية: فشل قراءة SQLCipher قديمة بعد اختيار المستخدم حسابًا جديدًا لا يعيد اختياره إلى «كل الحسابات». يُحجب عرض أي ملخص أو رصيد لم يعد موثقًا حتى تنتهي إعادة القراءة الآمنة، مع إبقاء فحص الجلسة والجيل والإلغاء كما هو.
+- تعزيز اختبار M467 من غير إلغاء اختبارات سابقة أو تغيير كاتب الأموال أو مسار الاستعادة أو واجهة المستخدم. التحقق النهائي عبر CI وجهاز Android لا يزال مطلوبًا.
+
+## M958 — عدم تنفيذ استعلام معاملات بلا نتيجة في ملخص الرئيسية
+
+- تحسين أداء المحور الثالث: عندما تطلب الرئيسية ملخص الحساب فقط، لا يتم تشغيل استعلام بطاقات المعاملات حتى بصيغة `LIMIT 0`؛ تُقرأ الموازنات والأهداف الموثقة بالهللات وتظل كل معرّفات الحسابات التاريخية متاحة. القراءة الكاملة للمعاملات في شاشات الحسابات والتقارير لم تتغير.
+- اختبار انحدار جديد داخل M955، مع استمرار اختبارات SQLCipher المشفرة ذات 900 معاملة والحالة التاريخية بدون حسابات على نفس PR #665. لا تغيير في كاتب الأموال أو Backup أو تصميم الواجهة. تحقق CI والجهاز والنسخة الحقيقية ما زال مطلوبًا.
+
+## M957 — تحديث اختبارات مصدر الحسابات بعد الإصلاح M956
+
+- إبقاء اختبارات M468 وM470 شغالة كما هي، مع تحديث التوقعات القديمة التي كانت تشترط قراءة الحساب ثلاث مرات بدل المسار المشفر الواحد الصحيح. يشمل التحقق منع اختيار «بدون حساب»، وعدم رجوع الحساب المؤرشف تلقائيًا، وسلامة معرفات جميع العمليات التاريخية. فشل آخر CI تم تحديده من سجل التشغيل ولا يجوز إيقاف الاختبارات لتجاوزه.
+
+- M956 follow-up: a stale or archived chosen account must resolve to «كل الحسابات» in one read, not endlessly re-enter the refresh; concurrency guard must compare with the requested account before SQLCipher validation. No money writer or UI geometry changes.
+
+## M956 — تحميل حسابات الرئيسية من مصدر مالي واحد (Issue #664 / Draft PR #665)
+
+- استبدال ثلاث قراءات منفصلة (الأرصدة، ملخص الشهر، ومعرّفات العمليات المرتبطة بالحساب) بقراءة SQLCipher واحدة تحت قفل المصدر المالي المعتمد، والتحقق من تطابق الجيل والبصمة قبل وبعد كل مكونات القراءة.
+- التراجع الآمن إلى «كل الحسابات» للحساب المحذوف/المؤرشف، ومنع استخدام نتائج مالية قديمة عند تغيير الحساب أو الجلسة. الاحتفاظ بالتواريخ والقيم بالهللات دون تقريب وتجنّب إنشاء حساب من عمليات قديمة غير مربوطة.
+- تحديث اختبارات ربط الكود والـSQLCipher وعقد الواجهة بدون تعديل التصميم أو زر الإضافة أو Snackbar أو بيانات Backup/Restore الحقيقية. لا يُعلن اكتمال المحاور الخمسة قبل CI وتحقق Android والنسخة التاريخية.
+
+## M955 — مواصلة المحاور الخمسة: ملخص الحساب في الرئيسية دون تحميل كل المعاملات (2026-11-15)
+
+- **Issue:** [#664](https://github.com/MahmoudMAnwar/waffra-app/issues/664), follow-up [#657](https://github.com/MahmoudMAnwar/waffra-app/issues/657). **Stacked Draft:** [PR #665](https://github.com/MahmoudMAnwar/waffra-app/pull/665) targeting PR #658 branch, not main. PR #660 remains independent.
+- **Financial integrity / accounts:** the verified SQLCipher account/budget/goal projection runs behind the original native source gate and pre/post digest checks. The new `includeEntries` switch defaults to true; never change amounts, account links, balances or source ownership. `false` is only valid with `summaryOnly:true`.
+- **Performance:** the Home account chip can now request month-scoped budget/goal totals without decoding a full month's transaction cards it never renders from `context.entries`. Use SQLite `LIMIT 0` for that optional row projection, keep independently source-backed monthly allocations and one grouped goal contribution query. All-time historical account ID filtering and normal Account Context/reports keep their old semantics.
+- **Second tranche — native budget aggregation:** when Home sets `includeEntries:false`, do not allocate a Dart list for every standalone expense-budget association; SQLCipher uses one month-scoped `SUM/GROUP BY` budget-source query with exact integer halalas, no account-header fallback, preserved unassigned expenses and fail-closed invalid limits/postings. Regular Account Context reads keep the original pure Dart one-pass budget algorithm. The 900-row encrypted fixture verifies old-vs-new amounts per bank, wallet and all accounts. No bank writer or archive transformation occurs.
+- **Accountless old-history acceptance:** a second disposable SQLCipher test models legacy archive money records that have not been explicitly assigned a bank account. Preserve the exact two historical entries, 7,000 halalas of globally allocated spending and 15,000 saved-goal wallet after cold reopen; do not silently create a bank or claim a verified balance of 2,500 halalas just because historical income minus expense is positive. No real private user archive is inspected.
+- **QA:** `test/storage/m955_home_verified_summary_parity_test.dart` seeds 900 encrypted entries, two independent budgets, a bank/wallet/unassigned mix and account-sourced goal, checks exact selected/global/goal halala parity against original reads, one-to-one history, no bank/source changes, no ledger card hydration, and rejects misuse for unbounded history. Register in M946 exact-head money test; M385/M550/M449 required. Physical Android, old private archive, further Home architecture remain unverified. All 5 axes remain Partial, not 100%.
+
 ## M958 — منع تراجع غير صحيح بعد نقل معاملة بين الحسابات
 
 - تصحيح اختبار M495 القديم الذي فشل في CI بعد توسيع حظر زر «تراجع» ليشمل نقل معاملة مرتبطة بالفعل إلى حساب آخر؛ لا يجوز التراجع عن بيانات العملية دون الرجوع الذري عن تأثير الحساب. التأكد من تعطيل الزر ووظيفته مع الاحتفاظ بإمكانية التراجع عن تعديل البيانات الوصفية العادي. لا حذف لاختبارات ولا تعديل مباشر لمعاملات مالية.
@@ -2307,6 +2357,12 @@ Separate Draft PR stacked on #650. Fix unverified Home balance display; remove u
 
 ## M956 — تعديل الحساب المرتبط بعملية مالية سابقة (15 نوفمبر 2026)
 - **Issue #659 / Draft PR #660:** بعد موافقة المستخدم، تعديل عملية دخل/مصروف يدوية أو SMS مربوطة سابقًا ونقل ارتباطها لحساب سعودي موثق في معاملة SQLCipher واحدة، مع إعادة حساب رصيد الحسابين ومنع التكرار، وعدم تغيير هوية العملية أو مرفقاتها. استحقاق الهدف المدفوع لا يستخدم هذا المسار. الاختبارات والجهاز الفعلي ما زالا بحاجة لاعتماد النتائج.
+
+
+### M969 — إغلاق محاكي Android بعد نجاح اختبارات المرفقات (Issue #670, 15 نوفمبر 2026)
+- سجل PR #665 عند SHA acbed078 أثبت نجاح اختبار SQLCipher/Receipt Cold Reopen على المحاكي، ثم توقف Android Emulator Runner أثناء مرحلة إغلاق المحاكي حتى ألغي الـWorkflow بعد 45 دقيقة. نجاح الاختبارات المنفّذة لا يُحوِّل Workflow ملغى إلى Passed.
+- إغلاق QEMU المرحلي أصبح من داخل سكربت M120 مع ADB timeout قصير، وإشارة إنهاء ثم إيقاف قسري للمحاكي المؤقت فقط عند الحاجة، واستعادة رمز خروج اختبار Flutter الأصلي بالكامل، بما في ذلك الفشل.
+- الاختبار الجديد في CI يفحص سكربت التنفيذ، حالة الخروج، وربط اختبار Android الحقيقي؛ لا تُعطّل حواجز SQLCipher أو الاستعادة أو M385/M550. التحقق على جهاز المستخدم وأرشيفه الخاص ما زال مستقلًا ومطلوبًا.
 
 
 ### M968 — CI smoke for stacked PRs (Issue #668, 2026-11-15)
