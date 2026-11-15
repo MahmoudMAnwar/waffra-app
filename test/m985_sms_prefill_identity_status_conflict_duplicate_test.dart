@@ -21,7 +21,7 @@ void main(){
    'شراء بمبلغ 125 ريال رقم العملية 9876',income:false),isNull);
   expect(WaffraBankSmsFactsParser.suggestedAccountLastFour(
    'شراء بمبلغ 125 ريال من حساب ****1234 إلى حساب ****5678',
-   income:false),'1234',reason:'Source is the only candidate for a verified debit');
+   income:false),isNull,reason:'Two different masked identities require explicit account choice');
   expect(WaffraBankSmsFactsParser.suggestedAccountLastFour(
    'حوالة صادرة بمبلغ 100 ريال من حساب ****1234',income:false),isNull);
   expect(WaffraBankSmsFactsParser.suggestedAccountLastFour(
