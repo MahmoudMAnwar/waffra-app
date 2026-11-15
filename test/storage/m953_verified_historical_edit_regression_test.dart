@@ -35,6 +35,7 @@ void main(){
  late WaffraEncryptedStore store;
  late WaffraAtomicFinanceSnapshot snapshot;
  late WaffraVerifiedFinanceAuthority authority;
+ late WaffraVerifiedEncryptedFinanceBridge bridge;
  String? key;
 
  setUp(()async{
@@ -51,7 +52,7 @@ void main(){
   snapshot=WaffraAtomicFinanceSnapshot(store:store,experimentalEnabled:true);
   final journal=WaffraEncryptedCutoverJournal(
    store:store,snapshot:snapshot,experimentalEnabled:true);
-  final bridge=WaffraVerifiedEncryptedFinanceBridge(
+  bridge=WaffraVerifiedEncryptedFinanceBridge(
    snapshot:snapshot,cutoverJournal:journal,writerDirectory:directory,
    allWritersRoutedVerified:true,secureKeyVerified:true,
    experimentalEnabled:true);
@@ -193,6 +194,53 @@ void main(){
   expect(changed['date'],'2022-08-09T04:40:00.000Z');
   final hashes=(await snapshot.read()).values['waffra_sms_hashes_v1'] as List;
   expect(hashes,[hash]);
+ });
+
+
+ test('M956 existing old expense moves to another bank without double posting',()async{
+  final accounts=WaffraAccountsRepository(db:store,experimentalEnabled:true);
+  await accounts.createAccount(id:'second',name:'Second',kind:'bank',
+   openingMinor:8000,createdIso:'2026-11-15T00:00:00Z',userConfirmed:true);
+  await append(entry('expense',amount:12.25));
+  final witness=await bridge.loadForHomeAndWidget();
+  final old=Map<String,Object?>.from(
+   (jsonDecode(witness.ledgerRaw!) as List).single as Map);
+  final revised=Map<String,Object?>.from(old)
+   ..['amount']=22.75..['date']='2020-02-29T10:30:00.000Z';
+  await bridge.editExistingAndMoveAccount(
+   baseline:witness,expectedOriginal:old,replacement:revised,
+   fromAccountId:'cash',toAccountId:'second',userConfirmed:true);
+  final balances=await accounts.balances();
+  expect(balances.firstWhere((a)=>a.id=='cash').balanceMinor,12500);
+  expect(balances.firstWhere((a)=>a.id=='second').balanceMinor,5725);
+  final sql=await store.customSelect(
+   'SELECT entry_id,amount_minor,occurred_iso FROM fresh_finance_entries').get();
+  expect(sql.length,1);
+  expect(sql.single.read<int>('amount_minor'),2275);
+  expect(sql.single.read<String>('occurred_iso'),'2020-02-29T10:30:00.000Z');
+  final link=await store.customSelect(
+   "SELECT account_id FROM fresh_finance_account_entry_links WHERE entry_id='expense'").getSingle();
+  expect(link.read<String>('account_id'),'second');
+ });
+
+ test('M956 rejects stale original account and rolls back ledger',()async{
+  final accounts=WaffraAccountsRepository(db:store,experimentalEnabled:true);
+  await accounts.createAccount(id:'second',name:'Second',kind:'bank',
+   openingMinor:8000,createdIso:'2026-11-15T00:00:00Z',userConfirmed:true);
+  await append(entry('expense',amount:12.25));
+  final witness=await bridge.loadForHomeAndWidget();
+  final old=Map<String,Object?>.from(
+   (jsonDecode(witness.ledgerRaw!) as List).single as Map);
+  final revised=Map<String,Object?>.from(old)..['amount']=99.0;
+  final digest=(await snapshot.read()).digest;
+  await expectLater(bridge.editExistingAndMoveAccount(
+   baseline:witness,expectedOriginal:old,replacement:revised,
+   fromAccountId:'wrong',toAccountId:'second',userConfirmed:true),
+   throwsStateError);
+  expect((await snapshot.read()).digest,digest);
+  final balances=await accounts.balances();
+  expect(balances.firstWhere((a)=>a.id=='cash').balanceMinor,11275);
+  expect(balances.firstWhere((a)=>a.id=='second').balanceMinor,8000);
  });
 
  test('M953 stale edit and accidental inserted third row fail closed',()async{
