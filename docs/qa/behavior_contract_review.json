@@ -8,6 +8,27 @@
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
     {
+      "id": "M962-M944-HOME-CACHE-INVALIDATION-CONTRACT",
+      "issue": "Issue #657 / Draft PR #665 M961 follow-up",
+      "previous_behavior": "M944 old positive test asserted a one-line invalidate method and fails after M961 adds verified account/month cache invalidation.",
+      "approved_behavior": "Keep bounded 50-card and full PDF expectations; assert cache invalidation clears snapshot, month rows, witnessed account ID set, cached filtered result and expanded window.",
+      "source_paths": [
+        "lib/waffra_home_ledger_query.part.dart"
+      ],
+      "test_paths": [
+        "test/m944_home_progressive_window_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m147-final-main-safe-merge-review.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "No disabled tests or weakened source checks.",
+        "M961 immutable month/account cache is fully dropped when ledger or account witness changes.",
+        "No finance writer, SMS, original backup or Android UI code changed."
+      ]
+    },
+    {
       "id": "M958-LINKED-ACCOUNT-MOVE-NO-METADATA-UNDO",
       "issue": "PR #660 / Issue #659 / source-backed M956 linked account move",
       "previous_behavior": "M495 source-only regression expected Undo suppression for new historical link only, failing after new source correctly disabled it also for an existing linked-account move.",

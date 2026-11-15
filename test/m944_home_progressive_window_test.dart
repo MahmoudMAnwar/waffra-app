@@ -27,7 +27,23 @@ void main(){
   final dashboard=File('lib/waffra_home_dashboard_analytics.part.dart')
    .readAsStringSync();
   expect(q,contains('static const int expandedPageSize=50;'));
-  expect(q,contains('void invalidate(){_snapshot=null;resetExpanded();}'));
+  // M961 keeps the 50-card window and now invalidates month/account views.
+  // Assert each real cache field is cleared; never lock the test to a
+  // superseded one-line source formatting of invalidate().
+  final invalidateStart=q.indexOf('void invalidate(){');
+  final invalidateEnd=q.indexOf('}\n}',invalidateStart);
+  expect(invalidateStart,greaterThanOrEqualTo(0));
+  expect(invalidateEnd,greaterThan(invalidateStart));
+  final invalidation=q.substring(invalidateStart,invalidateEnd);
+  for(final field in const [
+    '_snapshot=null;',
+    '_scopedMonthSource=null;',
+    '_scopedMonthIds=null;',
+    '_scopedMonthResult=null;',
+    'resetExpanded();',
+  ]) {
+    expect(invalidation,contains(field));
+  }
   expect(dashboard,contains(
    'limit:min(requestedWindow,_m940LedgerReads.expandedLimit)'));
   expect(dashboard,contains(
