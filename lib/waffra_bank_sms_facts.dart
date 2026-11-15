@@ -13,12 +13,12 @@ class WaffraBankSmsFacts {
   this.fee,
   this.reference,
   this.counterparty,
-  this.pending=false,
+  this.pending=false,this.securityChallenge=false,
  });
  final WaffraBankOperationKind kind;
  final String? sourceSuffix,destinationSuffix,reference,counterparty;
  final double? fee;
- final bool pending;
+ final bool pending,securityChallenge;
  bool get canAutoPostAsIncomeExpense=>
   !pending&&(kind==WaffraBankOperationKind.income||
              kind==WaffraBankOperationKind.expense);
@@ -99,9 +99,14 @@ abstract final class WaffraBankSmsFactsParser {
  /// M985: the owner may review a bank/card's final four digits.
  /// Only explicitly masked or 'ends in' identifiers are suggestions;
  /// naked four-digit numbers could be an OTP, reference or amount.
- static String? suggestedAccountLastFour(String body,{required bool income}){
-  final facts=parse(body);
-  if(facts.pending||isVerificationChallenge(body)||
+ static String? suggestedAccountLastFour(String body,{
+  required bool income,WaffraBankSmsFacts? preParsed,
+ }){
+  // The structured context already parsed these exact bank facts; reusing
+  // them avoids a second fee, reference, suffix and OTP scan per SMS.
+  final facts=preParsed??parse(body);
+  if(facts.pending||facts.securityChallenge||
+     (preParsed==null&&isVerificationChallenge(body))||
      facts.kind!=(income?WaffraBankOperationKind.income:
       WaffraBankOperationKind.expense))return null;
   final digits=body.replaceAllMapped(RegExp(r'[٠-٩۰-۹]'),(m){
@@ -194,10 +199,19 @@ abstract final class WaffraBankSmsFactsParser {
   final feeMentioned=RegExp(
    r'الرسوم|رسوم|\bfees?\b|\bcommission\b',caseSensitive:false)
     .hasMatch(normalized);
-  final feeWindow=feeMatch==null?'':normalized.substring(
-   feeMatch.start>8?feeMatch.start-8:0,
+  // Currency tokens belong to this fee CLAUSE only. A following
+  // VAT/REF/Balance line is metadata, not a foreign currency on the fee.
+  // Preserve eight same-line characters before the matched fee label and
+  // sixteen after its amount, but never scan into a different field.
+  final feePrefix=feeMatch==null?'':normalized.substring(0,feeMatch.start)
+   .split(RegExp(r'[\r\n;|]')).last;
+  final feeSuffix=feeMatch==null?'':normalized.substring(
+   feeMatch.start,
    feeMatch.end+16<normalized.length?
-    feeMatch.end+16:normalized.length);
+    feeMatch.end+16:normalized.length
+  ).split(RegExp(r'[\r\n;|]')).first;
+  final feeWindow=(feePrefix.length>8?
+    feePrefix.substring(feePrefix.length-8):feePrefix)+feeSuffix;
   final unsupportedFeeCurrency=RegExp(
    r'\b(?:USD|EUR|GBP|AED|KWD|BHD|QAR|OMR|JPY|CAD|AUD|CHF|CNY)\b',
    caseSensitive:false).hasMatch(feeWindow)||
@@ -219,6 +233,7 @@ abstract final class WaffraBankSmsFactsParser {
    reference:_ref.firstMatch(normalized)?.group(1),
    counterparty:_counterparty.firstMatch(normalized)?.group(1)?.trim(),
    pending:securityChallenge||_pending.hasMatch(normalized)||feeRequiresReview,
+   securityChallenge:securityChallenge,
   );
  }
  /// Display-only accounting preview. A fee never modifies an internal

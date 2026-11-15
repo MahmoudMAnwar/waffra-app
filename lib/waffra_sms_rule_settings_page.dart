@@ -197,7 +197,7 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
      // M988 sample-only before/after impact, never a write or approval.
      final impact=WaffraSmsRuleSimulator.compare(
       samples:inspected,existing:saved,preview:previewRule,
-      replacingId:existing?.id);
+      replacingId:existing?.id,maxMessages:2000);
      return SafeArea(top:false,child:Padding(
       padding:EdgeInsets.fromLTRB(18,8,18,MediaQuery.viewInsetsOf(ctx).bottom+12),
       child:ConstrainedBox(constraints:BoxConstraints(
@@ -321,9 +321,15 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
          style:Theme.of(ctx).textTheme.bodySmall),
         const SizedBox(height:5),
         Text(widget.english?
-         'Estimated change: ${impact.changed} of ${impact.examined} sampled messages (no changes saved).':
-         'التغيير المتوقع: ${impact.changed} من ${impact.examined} رسالة ضمن العينة (دون حفظ).',
+         'Estimated change: ${impact.changed} of ${impact.examined} queued messages checked (max 2000, nothing saved).':
+         'التغيير المتوقع: ${impact.changed} من ${impact.examined} رسالة في طابور المراجعة (بحد ٢٠٠٠، دون حفظ).',
          style:Theme.of(ctx).textTheme.bodySmall),
+        if(impact.blockedExclusions>0)Padding(
+         padding:const EdgeInsets.only(top:6),
+         child:Text(widget.english?
+          '${impact.blockedExclusions} keyword exclusion matches are blocked by financial safety rules and stay in review.':
+          '${impact.blockedExclusions} رسالة طابقت قاعدة الاستبعاد لكن شروط الأمان تمنع استبعادها وستبقى للمراجعة.',
+          style:TextStyle(color:Theme.of(ctx).colorScheme.error))),
         const SizedBox(height:8),
         if(conflicts>0)Padding(
          padding:const EdgeInsets.only(top:5),

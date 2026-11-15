@@ -1,3 +1,29 @@
+M998 (#708) Final 4 code gap work: reuse WaffraBankSmsFacts and securityChallenge across structured suffix suggestions and template registry (standalone backward-compatible). Expand read-only template families to beneficiary notice, balance, wallet top-up, cashback, and card activation across all 17 catalogued Saudi providers. Add 26 conservative Saudi merchant aliases and explicit Merchant Name/Store/Shop/التاجر/المتجر field extraction; reject OTP, PIN, account and IBAN. No user rule is saved automatically; manual confirmed category teaching stays non-posting. Test 100/1000/2000 rule parity and all 17 providers with safe fixtures; M946 registers four new real test bundles. Real-device Android and pre-account backup scenarios explicitly NOT CERTIFIED in docs/qa/M998_ANDROID_SMS_UAT_MATRIX.md. Merge remains blocked on final same-SHA CI and physical acceptance.
+
+M992 wallet safety: allowlisted digital wallet SMS may show read-only family, but cannot prefill bank/card last-four or imply bank account ownership. Updated sender fixtures and reviewed behavior safety contract.
+
+M997 smoke registration: M946 explicitly includes 11 complete SMS regression bundles in money/experience/safety for M986–M996 (sender indexed rules, structured SAR/fees, encrypted history, local rule previews, live sender review, Saudi templates, cross-restart advisory, currency parity). Existing tests retained and deduplicated by CI shards. Physical Android bank SMS/backup not certified.
+
+M996 sender review: localized advisory possible-duplicate, pending-settlement, reversal/refund or related-needs-review hints displayed inline with original message; read-only, no changes to three edit actions, account confirmation, finance writer, native ACK or exclusion. Tests for source visibility and safety.
+
+M995: reuse one source currency discovery and conservative action amount across structured SMS context and legacy BankParser inside native queue isolate; standalone old BankParser API retains same behavior. Regression parity on Arabic/English, foreign SAR rejection, fees/ref and 2000 repeated inputs. Draft/CI and Android UAT pending.
+
+M994 full current-queue rule impact preview: inspect up to 2000 owner pending SMS instead of 100, using built-once sender/keyword indexes for before and after. Count later conflicts and blocked exclusions, disclose bounded inspection in rule settings; never save/ack/post from simulation. Added 2000-row functional and scope tests.
+
+M993 read-only cross-session bank notification relation hints: exact reference/account/sender/SAR amount are SHA256 hashed with native ID digest and stage; owner-keyed encrypted local storage capped to 256 records/30 days. No raw SMS, account data or finance posting/ACK in this store. Pending->posted can be suggested after restart and identical native ID remains idempotent. M993 2000-message, malformed, TTL and owner-epoch tests added; Draft pending CI and real device review.
+
+M992 Draft offline v1 Saudi provider SMS template family registry: 11 read-only message families and 20 Arabic/English fixtures, across 12 known providers. Unknown sender, multi-financial-event SMS, OTP and pending remain safely unposted. Structured bank context exposes family/version only as metadata.
+
+M991 (#708) Draft: verified native queue still authoritative. Same-Home-session SMS rule reclassification now reuses only exact ID+sender+body-SHA256 hints unaffected by edited/removed owner rules or category changes; native ACK/exclusion and all financial/OTP/lifecycle gates always freshly assessed. Open sender review sheet refreshes counts, calendar, checkbox selection and grouped statuses from current owner queue on revision. Added runnable M991 regression/source tests. Pending exact-SHA CI, Android acceptance; not a 14/14 claim.
+
+M990 fee parser clause-boundary fix: ignore a following labelled VAT/REF as foreign fee code, but block unsupported foreign currency on actual fee clause; added regression tests for both outcomes.
+
+M990 safe-rule simulation: explicitly count candidate exclusions vetoed by real four-kind SMS safety resolver; show blocked count alongside existing rule-preview impact; regress posted purchase, standalone OTP, and mixed OTP+purchase. No finance writer/native ACK changed.
+
+M990 update: strict read-only VAT (explicit SAR) and bank fee fields; no automatic principal addition, foreign/unlabelled VAT rejected. Executable rule-index parity/timing telemetry for 100/1000/2000 and 12 Saudi sender fixtures added. Still Draft/unmerged pending CI.
+
+M990 / Issue #708 / Draft: lifecycle parsing reuses a single read-only bank SAR quote, including pending status only for related-event evidence. Does not modify verified finance writer, native SMS ACK, rules, sender identity, UI or restore. Tests: M990 pending/posted, foreign and 1000 distinct references. 14-item roadmap not yet fully completed; requires exact SHA CI and physical Android acceptance.
+
 M988 inherited merchant alias suggestions for Saudi shopping/health/food categories, history safe and no changes to stored keys.
 
 M989 safety follow-up: reviewed-message typed editor and Yes confirmation now both block multi-event, refunded or reversed bank SMS from ordinary single income/expense posts and show explicit manual-review warning, independent of cached background annotations; source QA added.
@@ -1004,4 +1030,4 @@ M969 / Issue #670 / Draft #665: real M120 Android SQLCipher receipt restart asse
 [M968 / #668] Prevent silent omission of mandatory M946 whole-app exact-head Flutter tests for stacked PRs based on feature branches: remove main-only pull_request filter while keeping push-main, 3 shards, reports and all safety gates; regression test added. Source/app money and UI unchanged; handset and owner historic backup NOT certified.
 [M968 / #668] Also trigger unchanged M550/M385 behavior and source-boundary gate for stacked PRs with non-main base; QA source test covers both M946/M550, no check disabled.
 
-[M987–M989 / #701–#703 / 2026-11-16 stacked-main integration] Original M987 structured bank facts and fail-closed composite handling, M988 owner-encrypted rule undo/simulation and M989 exact-evidence lifecycle/duplicate advisory tests reapplied onto verified M988 head without editing their application sources. No financial posting or native SMS ACK changes; original SMS retained. Exact-head CI and real Android UAT still required before each sequential merge.
+[M987–M999 / #701–#703 and #708 / 2026-11-16 staged integration] Original source snapshots for structured bank SMS facts, encrypted rule undo, exact-evidence lifecycle, 14-part SMS roadmap, curated Saudi-provider templates, merchant aliases/OTP protection, indexed 2000-message impact and exact-SHA Flutter regressions are reproduced on the updated M989 stack. No finance auto-post, native ACK, backup, SQLCipher ownership or original message content changed by integration. The 34 non-note changed-file blobs are verified against original #709 before rewrite; latest-head full CI and physical Android/user-backup UAT remain release gates.

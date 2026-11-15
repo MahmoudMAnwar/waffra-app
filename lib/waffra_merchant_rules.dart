@@ -6,7 +6,9 @@ bool _waffraSafeMerchantCandidate(String name) {
   final value=name.trim();
   if(value.runes.length<2||value.runes.length>100||
       RegExp(r'^[0-9٠-٩۰-۹]+$').hasMatch(value))return false;
-  if(RegExp(r'[0-9٠-٩۰-۹]{4,}|[*xX]{2,}[0-9٠-٩۰-۹]{2,}|iban|account|acct|card|حساب|بطاقة',
+  if(RegExp(r'[0-9٠-٩۰-۹]{4,}|[*xX]{2,}[0-9٠-٩۰-۹]{2,}|iban|account|acct|card|حساب|بطاقة|'
+      r'\b(?:otp|pin|password|security\s+code|verification\s+code)\b|'
+      r'رمز\s*(?:التحقق|التفعيل|التأكيد)|كلمة\s+المرور',
       caseSensitive:false).hasMatch(value))return false;
   return true;
 }
@@ -26,7 +28,10 @@ String? waffraMerchantName(String raw,{bool income=false}) {
   }
  }
  if(!transfer){
-  matches.add(RegExp(r'^\s*(?:At|Merchant)\s*[:：]\s*([^\n\r;]{2,100})',
+  matches.add(RegExp(
+   r'^\s*(?:At|Merchant(?:\s+Name)?|Store(?:\s+Name)?|Shop|'
+   r'التاجر|اسم\s+التاجر|المتجر|اسم\s+المتجر)'
+   r'\s*[:：]\s*([^\n\r;|]{2,100})',
    multiLine:true,caseSensitive:false));
   // Some English banks embed merchant after "account ending with ... at"
   // on the SAME line. Only capture the bounded merchant, never the
@@ -133,6 +138,32 @@ String? waffraRecognizedMerchantLeaf(String merchant,{required bool income}){
   'star bucks coffee':'starbucks',
   'mcdonald s':'mcdonalds',
   'mcdonalds ksa':'mcdonalds',
+  'al othaim super market':'alothaim',
+  'othaim market':'alothaim',
+  'أسواق عبدالله العثيم':'العثيم',
+  'abdullah al othaim':'alothaim',
+  'al nahdi pharmacies':'alnahdi pharmacy',
+  'صيدلية النهدي':'النهدي',
+  'bin dawood':'bindawood',
+  'bin dawud':'bindawood',
+  'tamimi markets':'tamimi',
+  'اسواق التميمي':'التميمي',
+  'panda supermarket':'panda retail',
+  'هايبر بنده':'بنده',
+  'danube stores':'danube',
+  'danube supermarket':'danube',
+  'keeta food':'keeta',
+  'jahez food':'jahez',
+  'hunger station ksa':'hungerstation',
+  'al baik':'albaik',
+  'mcdonalds sa':'mcdonalds',
+  'aljarir bookstore':'jarir',
+  'jarir bookstore':'jarir',
+  'amazon saudi arabia':'amazon sa',
+  'noon saudi':'noon',
+  'stc telecom sa':'stc telecom',
+  'saudi electricity company':'electricity',
+  'riyadh metro bus':'riyadh metro',
  };
  key=aliases[key]??key;
  if(key.isEmpty)return null;

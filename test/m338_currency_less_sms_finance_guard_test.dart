@@ -32,7 +32,11 @@ void main() {
   final from=code.indexOf('class BankParser {');
   final end=code.indexOf('DateTime? bankSmsDate(',from);
   final segment=code.substring(from,end);
-  expect(segment,contains("final verifiedSource=WaffraSmsCurrencies.originalAmount(s);"));
+  // M995: worker may share source amount, standalone parser must scan itself.
+  // Both routes still refuse any mismatch, missing evidence, or non-SAR.
+  expect(segment,contains('sourceAmount??WaffraSmsCurrencies.originalAmount('));
+  expect(segment,contains('s,detectedCurrencies:discoveredCurrencies);'));
+  expect(segment,contains("verifiedSource.currency!='SAR'"));
   expect(segment,contains("(verifiedSource.amount-value).abs()>0.00001"));
   expect(segment,contains("value=null;"));
  });

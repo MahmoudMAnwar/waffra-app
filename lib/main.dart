@@ -86,6 +86,8 @@ import 'waffra_sms_review_page_window.dart';
 import 'waffra_sms_account_learning.dart';
 import 'waffra_sms_structured_bank_context.dart';
 import 'waffra_sms_lifecycle_evidence.dart';
+import 'waffra_sms_lifecycle_history_store.dart';
+import 'waffra_sms_incremental_rule_review.dart';
 import 'waffra_sms_rule_settings_page.dart';
 import 'waffra_unknown_financial_sms_page.dart';
 import 'waffra_auto_sms_consent.dart';
@@ -932,7 +934,10 @@ List<BankResult> waffraParseBankSmsBatchInIsolate(List<String> messages)=>
  messages.map(BankParser.parse).toList(growable:false);
 
 class BankParser {
- static BankResult parse(String original) {
+ static BankResult parse(String original,{
+  Set<String>? detectedCurrencies,
+  ({double amount,String currency,String formatted})? sourceAmount,
+ }) {
   final s=digits(original).replaceAll('\u200f','').replaceAll('\u200e','').replaceAll('\u00a0',' ');
   // English bank SMS types must be classified from their first line, not
   // from merchant names, remaining balance, or unrelated message body text.
@@ -944,7 +949,10 @@ class BankParser {
   }
   // Current finance records lack original currency and a verified FX
   // witness. Never auto-import a foreign-currency SMS as Saudi riyals.
-  final discoveredCurrencies=WaffraSmsCurrencies.currenciesForMessage(s);
+  final discoveredCurrencies=detectedCurrencies??
+   WaffraSmsCurrencies.currenciesForMessage(s);
+  final currencyNeedsReview=discoveredCurrencies.length>1||
+   discoveredCurrencies.any((code)=>code!='SAR');
   // A transfer between the user's own accounts, or a credit-card settlement,
   // must not be silently counted as everyday income/expense. Account ownership
   // and card liability need explicit user review before ledger classification.
@@ -956,9 +964,9 @@ class BankParser {
     currencyCode:discoveredCurrencies.length==1
       ?discoveredCurrencies.single:null,
     requiresCurrencyReview:
-      WaffraSmsCurrencies.requiresReviewForSarLedger(s));
+      currencyNeedsReview);
   }
-  if(WaffraSmsCurrencies.requiresReviewForSarLedger(s)){
+  if(currencyNeedsReview){
     // Preserve direction while blocking foreign amount from SAR-only ledger.
     final credited=RegExp(
       r'\b(?:credited|received|incoming|deposited|refund)\b|'
@@ -1032,7 +1040,8 @@ class BankParser {
   // that the chosen number was the transaction amount. The exact source
   // amount MUST agree with the conservative action-only currency parser.
   if(value!=null){
-   final verifiedSource=WaffraSmsCurrencies.originalAmount(s);
+   final verifiedSource=sourceAmount??WaffraSmsCurrencies.originalAmount(
+    s,detectedCurrencies:discoveredCurrencies);
    if(verifiedSource==null||verifiedSource.currency!='SAR'||
       (verifiedSource.amount-value).abs()>0.00001)value=null;
   }
@@ -1141,8 +1150,26 @@ Map<String,Object?> waffraM632ClassifySmsQueue(Map<String,Object?> input){
  final ruleIndex=WaffraSmsRuleCandidateIndex(rules);
  final validCategories=(input['categories'] as List).whereType<String>().toSet();
  final hashes=(input['hashes'] as List).whereType<String>().toSet();
+ // Session-only old hints are NOT authoritative; all new native IDs and
+ // verified finance hashes are processed before considering any reuse.
+ final oldRows=<String,Map<String,Object?>>{};
+ for(final row in (input['cached'] as List? ?? const [])){
+  if(row is! Map)continue;
+  final value=Map<String,Object?>.from(row);
+  final id=value['id'];
+  if(id is String&&id.isNotEmpty)oldRows[id]=value;
+ }
+ final oldRules=(input['previousRules'] as List? ?? const [])
+  .whereType<Map>()
+  .map((row)=>WaffraSmsLocalRule.fromJson(Map<String,dynamic>.from(row)))
+  .toList(growable:false);
+ final changedRules=WaffraSmsIncrementalRuleReview.changedRules(oldRules,rules);
+ var cacheHits=0;
  // M989: exact-reference lifecycle links remain in isolate memory only.
- final relatedEventIndex=WaffraSmsRelatedEventIndex();
+ final previousHistory=(input['history'] as List? ?? const [])
+  .whereType<Map>()
+  .map((row)=>Map<String,Object?>.from(row)).toList(growable:false);
+ final relatedEventIndex=WaffraSmsRelatedEventIndex(prior:previousHistory);
  final waiting=<Map<String,Object?>>[];
  final excluded=<String>[];
  final committed=<String>[];
@@ -1156,6 +1183,7 @@ Map<String,Object?> waffraM632ClassifySmsQueue(Map<String,Object?> input){
    continue;
   }
   final annotated=Map<String,Object?>.from(candidate);
+  annotated['m991SourceHash']=bankSmsHash(body);
   if(WaffraBankSmsFactsParser.isVerificationChallenge(body)){
    annotated['sensitiveOtp']=true;
   }
@@ -1164,7 +1192,7 @@ Map<String,Object?> waffraM632ClassifySmsQueue(Map<String,Object?> input){
   final facts=contextFacts.facts;
   final lifecycle=WaffraSmsLifecycleEvidence.inspect(body,
    sender:sender,context:contextFacts);
-  final relation=relatedEventIndex.inspectAndRemember(lifecycle);
+  final relation=relatedEventIndex.inspectAndRemember(lifecycle,nativeId:id);
   if(relation!=WaffraSmsRelatedEvent.none){
    annotated['relatedSmsEvent']=relation.name;
   }
@@ -1184,7 +1212,25 @@ Map<String,Object?> waffraM632ClassifySmsQueue(Map<String,Object?> input){
    waiting.add(annotated);
    continue;
   }
-  final parsed=BankParser.parse(body);
+  // No bypass for an excluded rule: each exclusion is freshly validated
+  // against all four rule kinds and current OTP/financial safety gates.
+  final prior=oldRows[id];
+  if(prior!=null&&WaffraSmsIncrementalRuleReview.canReuse(
+     previous:prior,currentId:id,currentSender:sender,
+     currentBodyHash:annotated['m991SourceHash'] as String,
+     currentBody:body,changed:changedRules)){
+   final previousLocal=prior['local'];
+   if(previousLocal is Map){
+    annotated['local']=Map<String,Object?>.from(previousLocal);
+   }
+   annotated['m991Evaluated']=true;
+   waiting.add(annotated);
+   cacheHits++;
+   continue;
+  }
+  final parsed=BankParser.parse(body,
+   detectedCurrencies:contextFacts.sourceCurrencies,
+   sourceAmount:contextFacts.sourceAmount);
   // M980: ALL FOUR owner/default kinds match before a safety branch can
   // select a review suggestion or request a durable native exclusion.
   final fourWay=WaffraSmsLocalRules.matchAllFourKinds(
@@ -1251,6 +1297,7 @@ Map<String,Object?> waffraM632ClassifySmsQueue(Map<String,Object?> input){
     }
    }
   }
+  annotated['m991Evaluated']=true;
   if(local!=null){
    annotated['local']=local;
    if(local['kind']=='excluded'){
@@ -1265,7 +1312,8 @@ Map<String,Object?> waffraM632ClassifySmsQueue(Map<String,Object?> input){
  }
  return <String,Object?>{
   'waiting':waiting,'excluded':excluded,'committed':committed,
-  'retainOnAckFailure':retainOnAckFailure,
+  'retainOnAckFailure':retainOnAckFailure,'cacheHits':cacheHits,
+  'latestHistory':relatedEventIndex.safeHistory(),
  };
 }
 List<String> splitBankMessages(String raw){
@@ -4503,6 +4551,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  // M661: warn once while saved encrypted custom rules are unavailable.
  bool _m661RuleLoadErrorNotified=false;
  final List<Map<String,Object?>> _autoSmsPending=<Map<String,Object?>>[];
+ // Reuse is allowed only within this verified owner's live Home session;
+ // no SMS body, classification or prior rules are written to disk.
+ String? _m991CachedSmsOwner;
+ String _m991CachedCategorySignature='';
+ List<Map<String,Object?>> _m991CachedRules=const [];
+ final ValueNotifier<int> _m991SmsReviewRevision=ValueNotifier<int>(0);
 
  // M964: pure Home helper now lives in registered same-library part.
  // M741: original local SMS rule and learning methods moved to registered same-library part.
@@ -4537,7 +4591,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  // M791: original fail-closed Home finance startup and recovery UI in registered part.
  bool _m621NoticeOpening=false;
  // M929: verified notification-to-SMS/saved-ledger route lives in registered Home part.
- @override void dispose(){if(!_m663FirstInteractiveFrame.isCompleted)_m663FirstInteractiveFrame.complete();_m632SmsNoticeTimer?.cancel();if(identical(WaffraBackNavigation.onHomeBack,_registeredBackHandler))WaffraBackNavigation.onHomeBack=null;_dashboardScrollController.dispose();_categoryScrollController.dispose();_goalsScrollController.dispose();_recurringScrollController.dispose();waffraReturnHome.removeListener(_returnToHome);waffraIncomingSms.removeListener(_receiveSharedSms);waffraAutoSmsUpdates.removeListener(_receiveAutoSmsNotice);waffraFinanceNoticeTap.removeListener(_m621OnFinanceNoticeTap);waffraWidgetAction.removeListener(_receiveWidgetAction);_widgetReloadListener?.dispose();_saveProgress.dispose();final binding=_financeBinding;if(binding!=null)unawaited(_financialWriteQueue.drain().whenComplete(binding.close));super.dispose();}
+ @override void dispose(){if(!_m663FirstInteractiveFrame.isCompleted)_m663FirstInteractiveFrame.complete();_m632SmsNoticeTimer?.cancel();if(identical(WaffraBackNavigation.onHomeBack,_registeredBackHandler))WaffraBackNavigation.onHomeBack=null;_dashboardScrollController.dispose();_categoryScrollController.dispose();_goalsScrollController.dispose();_recurringScrollController.dispose();waffraReturnHome.removeListener(_returnToHome);waffraIncomingSms.removeListener(_receiveSharedSms);waffraAutoSmsUpdates.removeListener(_receiveAutoSmsNotice);waffraFinanceNoticeTap.removeListener(_m621OnFinanceNoticeTap);waffraWidgetAction.removeListener(_receiveWidgetAction);_widgetReloadListener?.dispose();_saveProgress.dispose();_m991SmsReviewRevision.dispose();final binding=_financeBinding;if(binding!=null)unawaited(_financialWriteQueue.drain().whenComplete(binding.close));super.dispose();}
  // M840: original verified Home/Widget synchronization now in registered Dart part.
  Future<void>? _m474PullRefreshInFlight;
  // M782: verified pull-to-refresh and finance reload moved to registered Home part.

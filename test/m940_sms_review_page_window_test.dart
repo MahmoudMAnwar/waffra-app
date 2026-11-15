@@ -46,7 +46,7 @@ void main(){
   expect(source,contains('allReviewIds=List<String>.unmodifiable(combined);'));
   expect(source,contains('senderIds[selectedSender]??const <String>[]'));
   expect(source,contains('idsCache.clear();'));
-  expect(RegExp(r'refreshReviewIds\(\);').allMatches(source).length,9);
+  // M991 adds owner-verified reclassification refresh routes to the\n  // original nine; sender selection and bounded paging remain unchanged.\n  expect(RegExp(r'refreshReviewIds\(\);').allMatches(source).length,11);
   expect(source,contains('NotificationListener<ScrollNotification>('));
   // M984 date-filtered list pages only the currently visible sender rows;
   // full native ID index remains available for appropriate bulk selection.

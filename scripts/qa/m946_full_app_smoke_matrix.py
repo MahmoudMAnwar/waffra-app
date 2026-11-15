@@ -21,6 +21,52 @@ GROUPS = ("money", "experience", "safety")
 # Each user-facing capability has a real runnable suite. Tests can be reused
 # across capabilities; the runner de-duplicates within each CI shard.
 FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {
+    "m998_last_four_sender_bank_facts_and_otp_single_pass": ("safety", (
+        "test/m998_sms_shared_facts_parity_test.dart",
+        "test/m995_sms_single_currency_scan_test.dart")),
+    "m998_17_saudi_provider_versioned_offline_templates": ("experience", (
+        "test/m998_saudi_sms_all_provider_templates_test.dart",
+        "test/m992_saudi_sms_template_registry_test.dart")),
+    "m998_reviewed_merchant_alias_correction_and_otp_guards": ("safety", (
+        "test/m998_merchant_corrections_and_alias_safety_test.dart",
+        "test/m988_sms_merchant_alias_test.dart")),
+    "m998_2000_sender_rules_and_currency_stress_corpus": ("experience", (
+        "test/m998_sms_2000_corpus_benchmark_test.dart",
+        "test/m994_full_sms_rule_impact_test.dart")),
+    "m997_sms_14_roadmap_four_kind_owner_sender_index": ("safety", (
+        "test/m986_sms_rule_sender_index_test.dart",
+        "test/m980_four_sms_rule_kinds_every_route_test.dart")),
+    "m997_sms_saudi_structured_principal_and_composite": ("safety", (
+        "test/m987_sms_structured_bank_context_test.dart",
+        "test/m989_sms_reference_currency_regression_test.dart")),
+    "m997_sms_rule_undo_merchant_alias_and_simulation": ("safety", (
+        "test/m988_sms_rule_simulation_history_test.dart",
+        "test/m988_sms_merchant_alias_test.dart")),
+    "m997_sms_lifecycle_strict_duplicate_and_review_guard": ("safety", (
+        "test/m989_sms_lifecycle_related_events_test.dart",
+        "test/m989_sms_review_lifecycle_guard_test.dart")),
+    "m997_sms_sar_principal_vat_fee_and_2000_parity": ("money", (
+        "test/m990_sms_single_pass_structured_facts_test.dart",
+        "test/m989_sms_reference_currency_regression_test.dart")),
+    "m997_sms_incremental_rule_rescan_live_sender_calendar": ("experience", (
+        "test/m991_sms_incremental_rule_review_test.dart",
+        "test/m991_sms_live_counts_source_test.dart",
+        "test/m547_sms_incremental_jank_regression_test.dart")),
+    "m997_sms_offline_versioned_saudi_bank_templates": ("experience", (
+        "test/m992_saudi_sms_template_registry_test.dart",
+        "test/m987_sms_structured_bank_context_test.dart")),
+    "m997_sms_encrypted_owner_cross_restart_relation_history": ("safety", (
+        "test/m993_sms_lifecycle_history_test.dart",
+        "test/m989_sms_lifecycle_related_events_test.dart")),
+    "m997_sms_full_2000_rule_impact_and_safe_exclusion": ("safety", (
+        "test/m994_full_sms_rule_impact_test.dart",
+        "test/m990_sms_rule_impact_safe_exclusion_test.dart")),
+    "m997_sms_one_pass_currency_legacy_parity": ("safety", (
+        "test/m995_sms_single_currency_scan_test.dart",
+        "test/m300_jod_cliq_bank_sms_test.dart")),
+    "m997_sms_related_duplicate_settlement_refund_advisory_ui": ("experience", (
+        "test/m996_sms_related_advisory_ui_test.dart",
+        "test/m989_sms_review_lifecycle_guard_test.dart")),
     "m985_sms_identity_prefill_rule_conflict_and_status_guard": ("safety", (
         "test/m985_sms_prefill_identity_status_conflict_duplicate_test.dart",
         "test/m983_sms_direct_kind_prefill_refresh_test.dart",
