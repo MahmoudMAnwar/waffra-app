@@ -873,3 +873,7 @@ M940/M941 Draft PR #648 M486 regression correction (unreleased): coalesced futur
 - Follow-up of merged #654/#656; targets SMS sender-group selection ID caching and strict M937 event-stream validation. No finance writer or approved UI change.
 - New regression evidence required and exact-HEAD CI not yet passed; five axes remain partly audited. No handset/private backup claim.
 
+
+[M952 REVIEWED AFTER APPLICATION COMMIT 6d2f2ca70f33 — 2026-11-15]
+- Reviewed the exact bank SMS inbox source change: full sender-ID caches are invalidated after explicitly confirmed individual review and after successful native batch exclusion, without altering financial writer, native SMS deletion or existing app UI.
+- Confirmed new M937 report strictness is QA-only (duplicate run/suite and missing provenance blocked). Real Android and private archive checks remain pending; this is not a release approval.
