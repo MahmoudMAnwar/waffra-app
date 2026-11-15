@@ -44,6 +44,53 @@ void main(){
   expect(form,contains('userConfirmed:true'));
  });
 
+ test('M983 matched custom rules update status before verifying amounts, never post',(){
+  const rules=<WaffraSmsLocalRule>[
+   WaffraSmsLocalRule(id:'suggest-income',name:'Salary hint',
+    kind:'income',income:true,category:'راتب / راتب أساسي',
+    keywords:['راتب'],sender:'MyBank',matchAll:false),
+   WaffraSmsLocalRule(id:'suggest-expense',name:'Expense hint',
+    kind:'expense',income:false,category:'أخرى / مصروف غير مصنف',
+    keywords:['مصروف'],sender:'MyBank',matchAll:false),
+   WaffraSmsLocalRule(id:'suggest-transfer',name:'Transfer hint',
+    kind:'transfer',income:false,category:'',
+    keywords:['حوالة'],sender:'MyBank',matchAll:false),
+  ];
+  final rows=<Map<String,Object?>>[
+   {'id':'1','sender':'MyBank','body':'وصل راتب بدون مبلغ'},
+   {'id':'2','sender':'MyBank','body':'رسالة مصروف بدون مبلغ'},
+   {'id':'3','sender':'MyBank','body':'حوالة خاصة بدون مبلغ'},
+  ];
+  final result=waffraM632ClassifySmsQueue(<String,Object?>{
+   'results':rows,
+   'rules':rules.map((r)=>r.toJson()).toList(),
+   'categories':<String>[],
+   'hashes':<String>[],
+  });
+  final waiting=(result['waiting'] as List).cast<Map<String,Object?>>();
+  expect(waiting,hasLength(3));
+  for(var i=0;i<waiting.length;i++){
+   final local=waiting[i]['local'] as Map?;
+   expect(local,isNotNull,reason:'No money amount is required for a display hint');
+   expect(local!['kind'],const <String>['income','expense','transfer'][i]);
+   expect(local['suggestedOnly'],isTrue);
+  }
+  expect(result['excluded'],isEmpty);
+  expect(result['committed'],isEmpty);
+  final conflict=waffraM632ClassifySmsQueue(<String,Object?>{
+   'results':[rows[0]],'categories':<String>[],
+   'hashes':<String>[],
+   'rules':[
+    rules[0].toJson(),
+    WaffraSmsLocalRule(id:'opposing',name:'Conflicting expense',
+     kind:'expense',income:false,category:'',
+     sender:'MyBank',keywords:['راتب'],matchAll:false).toJson(),
+   ],
+  });
+  expect(((conflict['waiting'] as List).single as Map)['local'],isNull,
+   reason:'Conflicting stored kinds stay Needs Review');
+ });
+
  test('M983 Inbox offers exact type chips and refreshes native list after save',(){
   final inbox=File('lib/waffra_home_sms_inbox.part.dart').readAsStringSync();
   expect(inbox,contains("for(final kind in const <String>['income','expense','transfer'])"));
