@@ -29,9 +29,10 @@ void main(){
   expect(src,contains('onPressed:WaffraHaptics.tap(()=>unawaited(_m467PickHomeAccount()))'));
   expect(src,isNot(contains('child:WaffraHomeAccountChip(')));
   expect(src,contains('_m467ScopedEntries().toList()'));
-  expect(src,contains('api.readAccountContext('));
-  expect(src,contains('selectedAccountId:chosen,summaryOnly:true'));
-  expect(src,contains('api.readAccountEntryIds(accountId:chosen)'));
+  expect(src,contains('api.readHomeAccountView('));
+  expect(src,contains('monthIso:month,selectedAccountId:chosen'));
+  expect(src,contains('final scopedIds=verified.entryIds;'));
+  expect(src,isNot(contains('api.readAccountEntryIds(accountId:chosen)')));
   expect(src,contains('final ids=_m684ScopedEntryIds;'));
   expect(src,contains('if(_m467AccountChoiceRestored&&_m467SelectedAccount!=chosen)'));
   expect(src,contains('_m467Accounts.fold<int>(0,(total,a)=>total+a.balanceMinor)/100'));

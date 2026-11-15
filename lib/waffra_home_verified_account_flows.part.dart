@@ -34,23 +34,22 @@ extension _WaffraHomeVerifiedAccountFlows on _HomeScreenState {
    final bridge=_financeBinding?.accountsBridge;
    if(bridge==null)throw StateError('No verified account bridge');
    final api=WaffraVerifiedAccountsApi(bridge:bridge);
-   final accounts=await api.balances();
    var chosen=_m467SelectedAccount;
    if(!_m467AccountChoiceRestored){
     final p=await SharedPreferences.getInstance();
     chosen=p.getString(_m467ChoiceKey)??'all';
    }
-   if(chosen!='all'&&
-      !accounts.any((a)=>!a.archived&&a.id==chosen))chosen='all';
    final now=DateTime.now();
    final month=now.year.toString().padLeft(4,'0')+'-'+
     now.month.toString().padLeft(2,'0');
-   // Month-only context plus lightweight all-time account membership.
-   final contextView=chosen=='all'?null:await api.readAccountContext(
-    monthIso:month,
-    selectedAccountId:chosen,summaryOnly:true,includeEntries:false);
-   final scopedIds=chosen=='all'?null:
-    await api.readAccountEntryIds(accountId:chosen);
+   // One verified SQLCipher source lock for balances, compact month totals
+   // and complete historical account links; no mixed-generation Home cards.
+   final verified=await api.readHomeAccountView(
+    monthIso:month,selectedAccountId:chosen);
+   chosen=verified.selectedAccountId;
+   final accounts=verified.balances;
+   final contextView=verified.context;
+   final scopedIds=verified.entryIds;
    if(!mounted||_m627ClosingSession||readEpoch!=_m627AccountEpoch)return;
    // A user may switch accounts while this async SQL projection is running.
    // Never repaint that newly chosen view with a stale older selection.

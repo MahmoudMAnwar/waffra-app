@@ -1516,6 +1516,50 @@ class WaffraVerifiedEncryptedFinanceBridge {
     });
   }
 
+
+  /// M956: One source-locked Home view. Previously balances, monthly
+  /// budget/goal summary and historical linked IDs were three independent
+  /// lock acquisitions and could describe different finance generations.
+  /// Never synthesize a selected balance or assign unlinked legacy money.
+  Future<({List<WaffraAccountBalance> balances,
+           String selectedAccountId,
+           WaffraAccountContextReadResult? context,
+           Set<String>? entryIds})> readVerifiedHomeAccountView({
+    required String monthIso,
+    required String selectedAccountId,
+  }) async {
+    if (!experimentalEnabled) {
+      throw StateError('Encrypted Home account source is not active.');
+    }
+    return WaffraExperimentalWriterGate(
+      disposableDirectory: writerDirectory, experimentalEnabled: true,
+    ).withExclusiveAccess(() async {
+      await _requireActivatedUnderLock();
+      final before = await snapshot.read();
+      final balances = await WaffraAccountsRepository(
+        db: snapshot.store, experimentalEnabled: true).balances();
+      // Resolve stale/archived preferences only against owner-verified banks.
+      final chosen = selectedAccountId != 'all' &&
+          balances.any((a) => !a.archived && a.id == selectedAccountId)
+          ? selectedAccountId : 'all';
+      final context = chosen == 'all' ? null :
+          await WaffraAccountContextRead.load(
+            store: snapshot.store, monthIso: monthIso,
+            selectedAccountId: chosen,
+            summaryOnly: true, includeEntries: false);
+      final ids = chosen == 'all' ? null :
+          await WaffraAccountContextRead.loadAccountEntryIds(
+            store: snapshot.store, accountId: chosen);
+      final after = await snapshot.read();
+      if (before.generation != after.generation ||
+          before.digest != after.digest) {
+        throw StateError('Finance changed while reading Home account view.');
+      }
+      return (balances: balances, selectedAccountId: chosen,
+          context: context, entryIds: ids);
+    });
+  }
+
   /// Read account balances with a source witness, not from UI preferences.
   /// The result must be presented together with its snapshot generation.
   Future<({WaffraEncryptedHomeWitness witness,

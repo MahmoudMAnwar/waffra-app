@@ -15,12 +15,52 @@ import 'package:waffra/storage/waffra_fresh_encrypted_vault_bootstrap.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  test('M956 Home bank selection is a single authenticated source read', () {
+    final bridge=File(
+      'lib/storage/waffra_verified_encrypted_finance_bridge.dart')
+        .readAsStringSync();
+    final start=bridge.indexOf('readVerifiedHomeAccountView({');
+    final end=bridge.indexOf(
+      '/// Read account balances with a source witness',start);
+    expect(start,greaterThan(0));
+    expect(end,greaterThan(start));
+    final guarded=bridge.substring(start,end);
+    expect(RegExp(r'withExclusiveAccess\\(\\(\\) async').allMatches(
+      guarded).length,1);
+    expect(guarded,contains('await _requireActivatedUnderLock();'));
+    expect(guarded,contains('final before = await snapshot.read();'));
+    expect(guarded,contains('final after = await snapshot.read();'));
+    expect(guarded,contains('before.digest != after.digest'));
+    expect(guarded,contains('before.generation != after.generation'));
+    expect(guarded,contains('!a.archived && a.id == selectedAccountId'));
+    expect(guarded,contains('includeEntries: false'));
+    expect(guarded,contains('WaffraAccountContextRead.loadAccountEntryIds('));
+    final api=File('lib/storage/waffra_verified_accounts_api.dart')
+      .readAsStringSync();
+    expect(api,contains('readHomeAccountView({'));
+    expect(api,contains('bridge.readVerifiedHomeAccountView('));
+    final home=File('lib/waffra_home_verified_account_flows.part.dart')
+      .readAsStringSync();
+    final begin=home.indexOf('Future<void> _m468ReadVerifiedAccountsOnce()');
+    final last=home.indexOf('String get _m467AccountLabel',begin);
+    expect(begin,greaterThan(0));
+    expect(last,greaterThan(begin));
+    final read=home.substring(begin,last);
+    expect(read,contains('await api.readHomeAccountView('));
+    expect(read,isNot(contains('await api.balances();')));
+    expect(read,isNot(contains('await api.readAccountContext(')));
+    expect(read,isNot(contains('await api.readAccountEntryIds(')));
+    expect(read,contains('chosen=verified.selectedAccountId;'));
+    expect(read,contains('readEpoch!=_m627AccountEpoch'));
+    expect(read,contains('_m467SelectedAccount!=chosen'));
+  });
+
   test('M955 900-row verified Home summary equals monthly budgets/goals '
       'without loading ledger cards or writing account money', () async {
     final home=File('lib/waffra_home_verified_account_flows.part.dart')
       .readAsStringSync();
-    expect(home,contains(
-      'selectedAccountId:chosen,summaryOnly:true,includeEntries:false)'));
+    expect(home,contains('await api.readHomeAccountView('));
+    expect(home,contains('chosen=verified.selectedAccountId;'));
     final dir=await Directory.systemTemp.createTemp('m955-home-summary-');
     WaffraEncryptedStore? db;
     try {

@@ -1,12 +1,38 @@
 {
   "schema_version": 1,
-  "pr": "M955 / Draft PR #665 stacked on #658 — verified ledger-free Home summary, original M952 contracts retained",
+  "pr": "M955/M956 Draft PR #665 — ledger-free Home and single-witness verified account view",
   "issue": "Issue #664 (follow-up #657) — five-axis Home performance and exact-money parity",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at f0def360ea75b9c865548b6f1b4fc07e9640f2c2 after #656",
   "reviewed_at": "2026-11-15",
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
+    {
+      "id": "M956-HOME-ACCOUNT-VIEW-ONE-ATOMIC-WITNESS",
+      "issue": "Issue #664 / PR #665 continuation, 5-axis performance/finance integrity",
+      "previous_behavior": "Home obtains balances, month context and all-time linked IDs via three independently locked, generation-divergent finance reads.",
+      "approved_behavior": "Home calls readHomeAccountView once; bridge locks verified SQLCipher source once, reads balances, validates active selected account, then reads compact month summary and historical IDs without unlock, rejects mismatched before/after generation/digest. Session epoch and chosen-account race guards remain.",
+      "source_paths": [
+        "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
+        "lib/storage/waffra_verified_accounts_api.dart",
+        "lib/waffra_home_verified_account_flows.part.dart"
+      ],
+      "test_paths": [
+        "test/storage/m955_home_verified_summary_parity_test.dart",
+        "test/m467_account_header_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m946-whole-app-feature-smoke.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "No money posting, budget allocation, goal wallet or bank association changes; read-only path.",
+        "Absent or archived requested accounts resolve to all under the same verified balance witness.",
+        "Compact month summary stays ledger-free; historical membership IDs stay complete.",
+        "No mixed finance generations: one exclusive source lock and before/after snapshot digest and generation.",
+        "No claim of real old Backup/Restore archive or physical Android acceptance."
+      ]
+    },
     {
       "id": "M955-VERIFIED-HOME-BUDGET-GOAL-SUMMARY-NO-LEDGER-ROWS",
       "issue": "Issue #664 / Draft PR #665 stacked on #658",
