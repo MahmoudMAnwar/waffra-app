@@ -2223,3 +2223,12 @@ Separate Draft PR stacked on #650. Fix unverified Home balance display; remove u
 - Use original SAMA Saudi Riyal artwork for Goals/Dues financial amounts. Dues keeps linked goal, recurring editing, reminders and deleted access, adds a gold total/active/count strip and a purposeful zero-state Add due button without changing the global +.
 - Home shows one Show more/less control inside the search/filter/more toolbar; read-only combined finance/transfer/savings history remains progressively rendered in 50-card windows.
 - Release acceptance requires same-commit CI and independent decrypted owner archive validation on an expendable Android handset; no private password or archive is committed.
+
+### M946 — Mandatory proactive all-feature smoke / cross-feature wiring (#653, same Draft PR #654)
+- Run all current feature smoke areas at every PR change, and again on main: no paths-only bypass and no all-skipped/synthetic-green results.
+- Maintain a documented executable matrix with 33 active functional areas and 60 real Flutter test files, distributed among three independent groups: finance/data, experience, and safety/recovery.
+- Always exercise real disposable SQLCipher storage for critical account, income, expense, historical unassigned records, duplicate/replay, cold reopen and balance assertions; keep existing goal/due/budget/transfer/SMS UI and finance tests in the same matrix.
+- Enforce each area has at least two existing runnable tests. New feature work must extend the matrix and preserve the old group coverage rather than replacing it.
+- Summarize actual passed/failed/skipped test cases by exact commit SHA. Reject missing reports, missing source/tests, test failures, and unverified app-source checkouts; do not silence test or static-analyzer failures.
+- Hardware-only risks remain OPEN and must not be reported as green: Android SMS/background, biometric/OS behavior, signed APK installation, RTL/font scaling, notifications, owner-private V24 restore and real third-party quote freshness.
+- The test device and its disposable data must never be confused with the spouse device containing irreplaceable historical records.
