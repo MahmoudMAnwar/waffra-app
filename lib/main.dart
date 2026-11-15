@@ -82,6 +82,7 @@ import 'waffra_auto_sms_policy.dart';
 import 'waffra_bank_sms_facts.dart';
 import 'waffra_sms_local_rules.dart';
 import 'waffra_sms_review_groups.dart';
+import 'waffra_sms_review_page_window.dart';
 import 'waffra_sms_account_learning.dart';
 import 'waffra_sms_rule_settings_page.dart';
 import 'waffra_unknown_financial_sms_page.dart';
@@ -179,6 +180,7 @@ part 'waffra_home_goals_recurring_pages.part.dart';
 part 'waffra_home_goal_actions.part.dart';
 part 'waffra_home_dashboard_analytics.part.dart';
 part 'waffra_finance_period_index.part.dart';
+part 'waffra_home_ledger_query.part.dart';
 part 'waffra_deleted_item_card.part.dart';
 part 'waffra_auto_sms_autopost.part.dart';
 
@@ -4340,12 +4342,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  final expandedCategoryIds=<String>{};
  final learnedMerchantCategories=<String,String>{};
  final entries=<MoneyEntry>[],categories=<BudgetCategory>[],goals=<SavingGoal>[],recurring=<RecurringBill>[];
- // Verified/legacy hydrated entries are immutable only for this read
- // projection; every ledger mutation invalidates it before the next view.
- WaffraFinancePeriodIndex? _m684PeriodCache;
- WaffraFinancePeriodIndex get _m684Periods=>
-  _m684PeriodCache??=WaffraFinancePeriodIndex(entries);
- void _m684InvalidatePeriodRead(){_m684PeriodCache=null;}
+ // M940/M941: the verified display index lives in one Home read session,
+ // separate from widget State. Existing mutation/restore/reset invalidates it.
+ final WaffraHomeLedgerReadCache _m940LedgerReads=WaffraHomeLedgerReadCache();
+ WaffraFinancePeriodIndex get _m684Periods=>_m940LedgerReads.index(entries);
+ void _m684InvalidatePeriodRead()=>_m940LedgerReads.invalidate();
  final namedBudgets=<WaffraNamedBudget>[];
  // One repaint-isolated saving indicator for every confirmed Home finance edit.
  final WaffraSmoothOperationController _saveProgress=WaffraSmoothOperationController();
