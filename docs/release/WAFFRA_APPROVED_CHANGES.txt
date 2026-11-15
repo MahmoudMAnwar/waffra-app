@@ -868,3 +868,8 @@ M940/M941 Draft PR #648 M486 regression correction (unreleased): coalesced futur
 - 26 additional executable functional tests for bank SMS pre-posting eligibility and budget alert unique owner/month scope, plus fail-closed M951 case audit.
 - Final newly added test() total: 115 across six NEW Dart files (M949 43 + M950 46 + M951 26), all in mandatory M946 smoke. Existing tests and all production code remain unchanged. Four+four+two Python audit tests are separate and do not inflate functional count.
 - Still require exact-head CI pass/failed/skipped and real Android UAT for biometric, actual SMS delivery and encrypted backup compatibility.
+
+[M952 / Issue #657 — 2026-11-15, NEW DRAFT CODE HARDENING]
+- Follow-up of merged #654/#656; targets SMS sender-group selection ID caching and strict M937 event-stream validation. No finance writer or approved UI change.
+- New regression evidence required and exact-HEAD CI not yet passed; five axes remain partly audited. No handset/private backup claim.
+
