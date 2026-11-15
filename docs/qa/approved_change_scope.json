@@ -28,7 +28,14 @@
     "lib/waffra_home_root_shell.part.dart",
     "test/support/waffra_main_source.dart",
     "test/m830_home_navigation_helpers_extraction_test.dart",
-    "test/m644_no_fab_snackbar_width_test.dart"
+    "test/m644_no_fab_snackbar_width_test.dart",
+    "test/m944_home_root_shell_extraction_test.dart",
+    "test/qa/waffra_home_source.py",
+    "test/m938_goals_restore_fab_contract_test.dart",
+    "test/m707_home_goals_recurring_extraction_test.dart",
+    "scripts/qa/m550_behavior_contract_preflight.py",
+    "lib/waffra_home_goals_recurring_pages.part.dart",
+    "lib/waffra_home_recurring_workflows.part.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
@@ -85,11 +92,19 @@
         "end": "part 'waffra_home_presentation_controls.part.dart';"
       },
       {
+        "start": "part 'waffra_home_goals_recurring_pages.part.dart';",
+        "end": "part 'waffra_home_goal_actions.part.dart';"
+      },
+      {
         "start": " Future<void> showInternalTransferTransactions()async{",
         "end": "class WaffraDeletedItemsButton extends StatelessWidget {"
       }
     ],
     "test/support/waffra_main_source.dart": [
+      {
+        "start": " const t=' // M707: approved Goals and Recurring pages moved to registered Home part.",
+        "end": " final goalSource=File('lib/waffra_home_goal_actions.part.dart').readAsStringSync();"
+      },
       {
         "start": " const m930_widgets=' // M930: original widgets Home session helper moved without behavioral change.",
         "end": " return s;\n}"
@@ -105,6 +120,44 @@
       {
         "start": "  test('M644 all no-FAB routes including opened account show wide notice', () {",
         "end": null
+      }
+    ],
+    "test/qa/waffra_home_source.py": [
+      {
+        "start": "    restore(\" // M707: approved Goals and Recurring pages moved to registered Home part.",
+        "end": "    goal = _read(root, \"lib/waffra_home_goal_actions.part.dart\", overrides)"
+      },
+      {
+        "start": "    restore(\" // M930: original widgets Home session helper moved without behavioral change.",
+        "end": "    return source"
+      }
+    ],
+    "test/m938_goals_restore_fab_contract_test.dart": [
+      {
+        "start": " test('M938 home restore notice retains FAB anchor during Settings handoff',(){",
+        "end": " for(final english in [false,true]){"
+      }
+    ],
+    "test/m707_home_goals_recurring_extraction_test.dart": [
+      {
+        "start": " test('M707 production goal and recurring UI is registered and not duplicated',(){",
+        "end": " test('M707 source-based finance tests see actual same-library pages in old order',(){"
+      }
+    ],
+    "lib/waffra_home_goals_recurring_pages.part.dart": [
+      {
+        "start": " Widget goalsPage(){",
+        "end": " Widget recurringPage(){"
+      }
+    ],
+    "scripts/qa/m550_behavior_contract_preflight.py": [
+      {
+        "start": "        \"lib/waffra_home_navigation_helpers.part.dart\",",
+        "end": "        \"lib/waffra_home_presentation_controls.part.dart\","
+      },
+      {
+        "start": "        \"lib/waffra_home_goals_recurring_pages.part.dart\",",
+        "end": "        \"lib/waffra_home_goal_actions.part.dart\","
       }
     ]
   }
