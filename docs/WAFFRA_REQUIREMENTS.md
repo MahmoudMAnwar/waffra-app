@@ -1,3 +1,15 @@
+## M953 — إصلاح مشاكل تعديل العمليات وإشعارات Android (2026-11-15)
+
+- **Issue [#659](https://github.com/MahmoudMAnwar/waffra-app/issues/659)**; independent Draft PR from main, separate from #658.
+- Financial edits must preserve existing IDs, SMS hash/original notes, attachments, verified account source/links and all other rows. A change to a past date must save correctly against verified one-row projection without whole-ledger normalization of old imported records. Every rejected/uncertain write reloads the verified source; never assert unchanged money without verifying.
+- Number all dashboard activity cards by newest-first visible display order (1,2,...), including income/expense/transfer/savings; never mutate financial IDs.
+- Sort notifications newest-first using native `receivedAt`, consistently for All and sender filters, preserving selection and original SMS.
+- Bank SMS review buttons: readable full labels, Exclude for unknown nonsensitive messages, unchanged sensitive OTP confidentiality and transfer confirmation.
+- Separate RTL dialog scrollbar from text in Backup/Restore and Due editor. Remove redundant Goals/Due count chip beside All, while retaining each filter's count and all saved records.
+- Rename **only user-facing** recurring terminology to «الاستحقاقات» / «الاستحقاق» across app; retain database keys, Dart types, account and backup formats.
+- Cover income, expense, old-date, amount, notes, category, budget, account provenance, mixed SMS, unconfirmed transfer/goal/due, timestamp ties and source conflicts. Linked-account reassignment, changing existing settled transfer and paid Goal/Due **remain pending separate atomic writers** and must never be implied safe/complete by a UI-only change.
+- [M953 screenshot acceptance and exact test matrix](qa/M953_ANDROID_SCREENSHOT_REPAIR.md). Host smoke is not physical Android/old private archive UAT. Do not mark Done or merge unless source-specific tests and exact-head CI succeed.
+
 ## M944 — تحسين الأداء العميق واستقرار البيانات: المحاور الخمسة (2026-11-15)
 
 - **Issue:** [#653](https://github.com/MahmoudMAnwar/waffra-app/issues/653). **Owner instruction:** implement and report only independently verified milestones as «تم انتهاء محور 1 من 5» ... «تم انتهاء محور 5 من 5».
