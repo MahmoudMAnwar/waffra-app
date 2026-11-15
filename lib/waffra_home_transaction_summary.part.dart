@@ -4,8 +4,11 @@ part of 'main.dart';
 /// Same-library source relocation, zero finance writer modifications.
 extension _WaffraHomeTransactionSummary on _HomeScreenState {
  Future<void> showSummaryTransactions(bool income)async {
-  final items=_m467ScopedEntries().where((e)=>e.income==income).toList()
-   ..sort((a,b)=>b.date.compareTo(a.date));
+  // M940: source-verified account history, already sorted by the cache.
+  final items=_m684Periods.newestFirst(
+   verifiedEntryIds:_m467SelectedAccount=='all'?null:
+    (_m684ScopedEntryIds??const <String>{}),
+   where:(e)=>e.income==income);
   if(items.isEmpty){
    if(!mounted)return;
    await showWaffraDialog<void>(context:context,builder:(ctx){

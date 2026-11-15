@@ -11,7 +11,9 @@ void main() {
   expect(part,contains('extension _WaffraHomeTransactionSummary on _HomeScreenState'));
   expect(main,isNot(contains(' Future<void> showSummaryTransactions(bool income)async {')));
   expect(part,contains(' Future<void> showSummaryTransactions(bool income)async {'));
-  expect(part,contains('_m467ScopedEntries()'));
+  expect(part,contains('_m684Periods.newestFirst('));
+  expect(part,contains('_m684ScopedEntryIds'));
+  expect(part,isNot(contains('..sort((a,b)=>b.date.compareTo(a.date))')));
   expect(part,contains('sum(items,income)'));
   expect(part,contains('showModalBottomSheet<void>('));
   expect(part,contains('WaffraText(cash(e.amount)'));
