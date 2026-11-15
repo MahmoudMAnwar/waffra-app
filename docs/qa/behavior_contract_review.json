@@ -23,7 +23,8 @@
       "safety_invariants": [
         "Direct original source-action currency and amount evidence is required, including when a cached hint exists.",
         "Never accept balance, fees, SMS reference or unknown currency as SAR posted amount.",
-        "M340, M174, M928, and all existing negative QA remain active, no skips or workflow edits."
+        "M340, M174, M928, and all existing negative QA remain active, no skips or workflow edits.",
+        "The exact PR change-scope manifest declares only this parser body and documentation, after restoring original source-action amount verification; no exempted tests or workflows."
       ]
     },
     {
