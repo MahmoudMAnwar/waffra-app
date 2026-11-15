@@ -396,7 +396,7 @@ extension _WaffraHomeGoalsRecurringPagesModule on _HomeScreenState {
       Widget amountLabel(String label,double amount){
        return Expanded(child:Column(children:[
         SizedBox(width:double.infinity,child:FittedBox(
-         fit:BoxFit.scaleDown,child:WaffraCurrencyAmount(amount,fontSize:19)),
+         fit:BoxFit.scaleDown,child:WaffraCurrencyAmount(amount,fontSize:19))),
         WaffraText(label,style:const TextStyle(fontSize:11)),
        ]));
       }

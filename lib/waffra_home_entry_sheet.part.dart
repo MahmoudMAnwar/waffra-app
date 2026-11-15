@@ -1417,7 +1417,7 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
      throw StateError('Verified receipt was not associated with entry.');
     }
     if(mounted)setState((){
-     entries..clear()..addAll(verified);
+     _m684InvalidatePeriodRead();entries..clear()..addAll(verified);
      _lastFinanceAuthorityRead=current;
      _lastLedgerSavedRaw=current.ledgerRaw;
      _lastWidgetRevision=current.widgetRevision;
@@ -1495,7 +1495,7 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
     Map<String,dynamic>.from(item as Map))).toList();
    if(!mounted)return;
    setState((){
-    entries..clear()..addAll(verified);
+    _m684InvalidatePeriodRead();entries..clear()..addAll(verified);
     smsHashes..clear()..addAll(
      applied.current.finance.getStringList('waffra_sms_hashes_v1')??const <String>[]);
     _lastFinanceAuthorityRead=applied.current;
@@ -1599,7 +1599,8 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
         _lastLedgerSavedRaw=raw;
         _lastWidgetRevision=committed.widgetRevision;
         if(mounted){
-         setState((){entries..clear()..addAll(verified);});
+         setState((){_m684InvalidatePeriodRead();entries..clear()..addAll(verified);});
+         unawaited(_m467RefreshHomeAccounts());
          unawaited(_refreshWidget());
         }
        },
@@ -1664,7 +1665,7 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
    }catch(e){
     if(mounted){
      setState((){
-      entries..clear()..addAll(previousEntries);
+      _m684InvalidatePeriodRead();entries..clear()..addAll(previousEntries);
       learnedMerchantCategories..clear()..addAll(previousLearned);
      });
      snack(context,waffraIsEnglish?
