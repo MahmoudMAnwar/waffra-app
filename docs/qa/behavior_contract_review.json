@@ -8,6 +8,26 @@
   "review_policy": "Owner requested code-only, no manual tests or test files. Prior safety contracts remain binding. Full same-SHA QA required later.",
   "contracts": [
     {
+      "id": "M1002-OWNER-SMS-EXCLUSION-COUNT-AND-RULE-PERSISTENCE",
+      "issue": "Issue #714 / Draft #711",
+      "previous_behavior": "An Android owner excluded around 38 messages, but Rules > Excluded displayed 0 patterns. Native encrypted message exclusions and sender blocks are separate from optional safe reusable SMS rules; concurrent read-modify-write and missing read-back could silently lose or hide learned classifications. Sender blocking also removed some learned exclusion patterns.",
+      "approved_behavior": "Display genuine native excluded-message and blocked-sender counts alongside the independent saved reusable pattern count, never represent unavailable state as 0. After confirmed native exclusion, derive only safe reusable sender-scoped OTP/beneficiary templates; serialize encrypted owner rule merging and verify read-back. Never delete preexisting learned patterns simply for blocking sender. Use same owner-serialized learning for income, expense, transfer and manual review paths, with stale-form protection.",
+      "source_paths": [
+        "lib/waffra_sms_local_rules.dart",
+        "lib/waffra_sms_rule_settings_page.dart",
+        "lib/waffra_home_sms_inbox.part.dart",
+        "lib/waffra_home_sms_management.part.dart",
+        "lib/waffra_home_sms_rules.part.dart"
+      ],
+      "test_paths": [],
+      "safety_invariants": [
+        "Already excluded native SMS and sender policy are distinct from learned rules, and neither source may be reported as empty when unavailable.",
+        "Do not automatically create a future-message exclusion rule from an ambiguous financial SMS, or store OTP codes, numbers, bank balances or whole SMS bodies.",
+        "No automatic finance posts, source migration or SMS deletion. All four custom rule kinds use the same owner-verified secure storage.",
+        "No new test files or manually executed QA yet per owner code-only instruction; actual Android 38-message UAT remains pending."
+      ]
+    },
+    {
       "id": "M1000-INTEGRITY",
       "issue": "Issue #710 / Draft PR #711",
       "previous_behavior": "Financial accounts previously had reconciliation readers, but no dedicated independently reconstructed witnessed trust-center display.",
