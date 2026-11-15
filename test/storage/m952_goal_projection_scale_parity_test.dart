@@ -34,9 +34,6 @@ void main() {
           id: id, name: id, kind: 'bank', openingMinor: 750000,
           createdIso: '2026-11-15T00:00:00', userConfirmed: true);
       }
-      final balancesBefore = {
-        for (final a in await accounts.balances()) a.id: a.balanceMinor,
-      };
       const stamp = '2026-11-15T10:00:00';
       const totalGoals = 80, movementsPerGoal = 9;
       await db.transaction(() async {
@@ -66,6 +63,12 @@ void main() {
           }
         }
       });
+
+      // Fixture inserts have their own real source-backed bank effects.
+      // Snapshot AFTER seeding: the read-only projection must add none.
+      final balancesBefore = {
+        for (final a in await accounts.balances()) a.id: a.balanceMinor,
+      };
 
       Future<int> originalPerGoal(String id, String bank) async {
         final result = await db!.customSelect('''
