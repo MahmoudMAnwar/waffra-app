@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
@@ -771,10 +772,37 @@ abstract final class WaffraSmsLocalRules {
  }
 }
 
+/// The number of excluded SMS is NOT the number of generated rules.
+/// Only safe, confirmed patterns can become reusable suggestions.
+class WaffraSmsRuleLearningResult {
+ const WaffraSmsRuleLearningResult({
+  required this.proposals,required this.addedOrUpdated,
+  required this.activeRules,
+ });
+ final int proposals,addedOrUpdated,activeRules;
+ bool get changed=>addedOrUpdated>0;
+}
+
 /// Per-user encrypted app configuration, not a new unverified finance writer.
 /// No source SMS or transaction amount is ever persisted here.
 class WaffraSmsLocalRuleStore {
  const WaffraSmsLocalRuleStore();
+ // Serialize ALL rule writes for the same authenticated owner in this isolate.
+ // A bulk-exclusion save cannot overwrite a concurrent manual/confirmation
+ // rule update with a stale read-modify-write snapshot.
+ static final Map<String,Future<void>> _writeTail={};
+ Future<T> _exclusive<T>(String owner,Future<T> Function() action)async{
+  _key(owner);
+  final before=_writeTail[owner];
+  final gate=Completer<void>();
+  _writeTail[owner]=gate.future;
+  if(before!=null)await before;
+  try{return await action();}
+  finally{
+   if(identical(_writeTail[owner],gate.future))_writeTail.remove(owner);
+   gate.complete();
+  }
+ }
  static const _storage=FlutterSecureStorage(
   aOptions:AndroidOptions(encryptedSharedPreferences:true));
 
@@ -830,32 +858,39 @@ class WaffraSmsLocalRuleStore {
  }
  Future<bool> hasUndo(String owner)async=>
   (await _readHistory(owner)).isNotEmpty;
- Future<List<WaffraSmsLocalRule>?> undoLast(String owner)async{
-  final history=await _readHistory(owner);
-  if(history.isEmpty)return null;
-  final previous=history.last;
-  final parsed=jsonDecode(previous);
-  if(parsed is! List||parsed.length>100){
-   throw const FormatException('Invalid prior SMS rules');
-  }
-  final restored=<WaffraSmsLocalRule>[];
-  for(final row in parsed){
-   if(row is! Map)throw const FormatException('Invalid rule revision row');
-   final rule=WaffraSmsLocalRule.fromJson(Map<String,dynamic>.from(row));
-   WaffraSmsLocalRules.validate(rule);
-   restored.add(rule);
-  }
-  if(restored.map((r)=>r.id).toSet().length!=restored.length){
-   throw const FormatException('Duplicate ID in rule revision');
-  }
-  // The same encrypted owner-scoped key remains the sole active rule set.
-  // This never modifies bank entries or auto-confirms pending SMS.
-  await _storage.write(key:_key(owner),value:previous);
-  await _storage.write(key:_historyKey(owner),
-   value:jsonEncode(history.sublist(0,history.length-1)));
-  return List<WaffraSmsLocalRule>.unmodifiable(restored);
- }
- Future<void> write(String owner,List<WaffraSmsLocalRule> rules)async{
+
+ Future<List<WaffraSmsLocalRule>?> undoLast(String owner)=>
+  _exclusive(owner,()async{
+   final history=await _readHistory(owner);
+   if(history.isEmpty)return null;
+   final previous=history.last;
+   final parsed=jsonDecode(previous);
+   if(parsed is! List||parsed.length>100){
+    throw const FormatException('Invalid prior SMS rules');
+   }
+   final restored=<WaffraSmsLocalRule>[];
+   for(final row in parsed){
+    if(row is! Map)throw const FormatException('Invalid rule revision row');
+    final rule=WaffraSmsLocalRule.fromJson(Map<String,dynamic>.from(row));
+    WaffraSmsLocalRules.validate(rule);
+    restored.add(rule);
+   }
+   if(restored.map((r)=>r.id).toSet().length!=restored.length){
+    throw const FormatException('Duplicate ID in rule revision');
+   }
+   await _storage.write(key:_key(owner),value:previous);
+   await _storage.write(key:_historyKey(owner),
+    value:jsonEncode(history.sublist(0,history.length-1)));
+   // Secure storage read-back: a successful API call must really be visible.
+   final verified=await read(owner);
+   if(jsonEncode(verified.map((r)=>r.toJson()).toList())!=
+      jsonEncode(restored.map((r)=>r.toJson()).toList())) {
+    throw StateError('SMS rule revision was not persisted.');
+   }
+   return List<WaffraSmsLocalRule>.unmodifiable(restored);
+  });
+
+ Future<void> _writeUnlocked(String owner,List<WaffraSmsLocalRule> rules)async{
   if(rules.length>100||rules.map((e)=>e.id).toSet().length!=rules.length){
    throw const FormatException('Too many or duplicate rules');
   }
@@ -866,8 +901,57 @@ class WaffraSmsLocalRuleStore {
   if(previous==next)return;
   final history=await _readHistory(owner);
   final updated=boundedHistory(history,previous);
-  // Store at most five encrypted prior user-rule snapshots, never raw SMS.
+  // Only safe patterns, NEVER raw messages or OTP codes, are persisted.
   await _storage.write(key:_historyKey(owner),value:jsonEncode(updated));
   await _storage.write(key:key,value:next);
+  final confirmed=await _storage.read(key:key);
+  if(confirmed!=next)throw StateError('Encrypted SMS rules were not persisted.');
  }
+
+ Future<void> write(String owner,List<WaffraSmsLocalRule> rules)=>
+  _exclusive(owner,()=>_writeUnlocked(owner,rules));
+
+ /// Prevent the settings screen from overwriting rules learned while it was
+ /// open. Caller should refresh and ask for the edit again on a stale version.
+ Future<void> writeIfCurrent(String owner,{
+  required List<WaffraSmsLocalRule> expected,
+  required List<WaffraSmsLocalRule> next,
+ })=>_exclusive(owner,()async{
+  final current=await read(owner);
+  String fingerprint(List<WaffraSmsLocalRule> rows)=>
+   jsonEncode(rows.map((r)=>r.toJson()).toList(growable:false));
+  if(fingerprint(current)!=fingerprint(expected)){
+   throw StateError('SMS rules changed in another review. Reload first.');
+  }
+  await _writeUnlocked(owner,next);
+ });
+
+ /// Atomically combine safe financial/exclusion suggestions with latest
+ /// encrypted owner rules instead of racing the four entry points.
+ Future<WaffraSmsRuleLearningResult> learnReviewedCandidates(
+  String owner,Iterable<WaffraSmsLocalRule> candidates,
+ )=>_exclusive(owner,()async{
+  final current=await read(owner);
+  var next=current;
+  var offered=0;
+  for(final candidate in candidates){
+   offered++;
+   next=WaffraSmsLocalRules.upsertLearned(existing:next,candidate:candidate);
+  }
+  final changed=next.length!=current.length||
+   jsonEncode(next.map((r)=>r.toJson()).toList())!=
+    jsonEncode(current.map((r)=>r.toJson()).toList());
+  if(changed)await _writeUnlocked(owner,next);
+  final verified=await read(owner);
+  if(jsonEncode(verified.map((r)=>r.toJson()).toList())!=
+     jsonEncode(next.map((r)=>r.toJson()).toList())){
+   throw StateError('Saved SMS rules differ from the requested patterns.');
+  }
+  return WaffraSmsRuleLearningResult(
+   proposals:offered,addedOrUpdated:changed?
+    next.where((r)=>!current.any((c)=>c.id==r.id&&
+     jsonEncode(c.toJson())==jsonEncode(r.toJson()))).length:0,
+   activeRules:verified.length);
+  });
+
 }
