@@ -74,7 +74,14 @@ SELECT e.entry_id, e.title, e.amount_minor, e.is_income, e.occurred_iso,
        l.account_id, a.budget_id, a.amount_minor AS budget_allocated_minor
 FROM fresh_finance_entries e
 LEFT JOIN fresh_finance_account_entry_links l ON l.entry_id=e.entry_id
-LEFT JOIN fresh_finance_standalone_allocations a ON a.entry_id=e.entry_id
+-- One entry stays one ledger row even with several named budgets.
+LEFT JOIN (
+ SELECT entry_id,
+  CASE WHEN COUNT(*)=1 THEN MAX(budget_id) END AS budget_id,
+  CASE WHEN COUNT(*)=1 THEN MAX(amount_minor) END AS amount_minor
+ FROM fresh_finance_standalone_allocations
+ GROUP BY entry_id
+) a ON a.entry_id=e.entry_id
 ${summaryOnly ? 'WHERE e.occurred_iso>=? AND e.occurred_iso<?' : ''}
 ORDER BY e.occurred_iso DESC, e.entry_id DESC
 ''',variables:[
@@ -103,9 +110,25 @@ FROM fresh_finance_standalone_budgets
 WHERE archived_at_iso IS NULL
 ORDER BY name, budget_id
 ''').get();
-    final monthly = entries.where((row) =>
-      row.occurredIso.startsWith(monthIso + '-'))
-      .map((row) => row.scoped).toList(growable: false);
+    // SQLCipher source rows are unique by entry in the ledger, but each
+    // separately confirmed budget allocation must still count for its budget.
+    final allocationRows = await store.customSelect('''
+SELECT a.entry_id,a.budget_id,a.amount_minor,e.is_income,l.account_id
+FROM fresh_finance_standalone_allocations a
+JOIN fresh_finance_entries e ON e.entry_id=a.entry_id
+LEFT JOIN fresh_finance_account_entry_links l ON l.entry_id=a.entry_id
+WHERE e.occurred_iso>=? AND e.occurred_iso<?
+''', variables: [
+      Variable.withString(monthIso+'-01'),
+      Variable.withString(_nextMonthIso(monthIso)),
+    ]).get();
+    final monthly = allocationRows.map((row) => WaffraScopedEntry(
+      id: row.read<String>('entry_id'),
+      amountMinor: row.read<int>('amount_minor'),
+      income: row.read<int>('is_income') == 1,
+      accountId: row.readNullable<String>('account_id'),
+      budgetId: row.read<String>('budget_id'),
+    )).toList(growable: false);
     // The previous per-budget loop rescanned every matching entry B times.
     // One pure O(E+B) pass preserves global/unassigned and selected-account
     // totals as exact integer halalas, without changing the source ledger.
@@ -212,7 +235,14 @@ SELECT e.entry_id,e.title,e.amount_minor,e.is_income,e.occurred_iso,
  l.account_id,a.budget_id,a.amount_minor AS budget_allocated_minor
 FROM fresh_finance_entries e
 LEFT JOIN fresh_finance_account_entry_links l ON l.entry_id=e.entry_id
-LEFT JOIN fresh_finance_standalone_allocations a ON a.entry_id=e.entry_id
+-- One entry stays one ledger row even with several named budgets.
+LEFT JOIN (
+ SELECT entry_id,
+  CASE WHEN COUNT(*)=1 THEN MAX(budget_id) END AS budget_id,
+  CASE WHEN COUNT(*)=1 THEN MAX(amount_minor) END AS amount_minor
+ FROM fresh_finance_standalone_allocations
+ GROUP BY entry_id
+) a ON a.entry_id=e.entry_id
 WHERE e.occurred_iso>=? AND e.occurred_iso<?
  '''+(selectedAccountId==null?'':'AND l.account_id=?')+'''
 ORDER BY e.occurred_iso DESC,e.entry_id DESC
