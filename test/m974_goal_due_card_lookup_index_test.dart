@@ -46,7 +46,7 @@ void main() {
         'id': 'entry-${i ~/ 2}',
         'sourceType': i.isEven ? 'manual' : 'goal_due',
         'amountMinor': i,
-      }, growable: false);
+      }, growable: true);
     rows.addAll(<Map<String, Object?>>[
       {'id': 'duplicate-paid', 'sourceType': 'goal_due', 'amountMinor': 200},
       {'id': 'duplicate-paid', 'sourceType': 'goal_due', 'amountMinor': 300},
