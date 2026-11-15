@@ -1,12 +1,41 @@
 {
   "schema_version": 1,
-  "pr": "M952 / Draft PR #658 — five-axis 20-improvement continuation with verified unassigned SQLCipher keyset and single-pass budget parity",
-  "issue": "Issue #657 — financial integrity, accounts/restore, responsiveness, UI stability, architecture and proactive QA",
+  "pr": "M953 / Draft #663 stacked on latest M952 / Draft #658 — nonfinancial OTP review + protected money evidence",
+  "issue": "Issue #662 continuation of Issue #657 five axes",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at f0def360ea75b9c865548b6f1b4fc07e9640f2c2 after #656",
   "reviewed_at": "2026-11-15",
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
+    {
+      "id": "M953-NEW-APP-OTP-EXCLUSION-FOREGROUND-BACKGROUND",
+      "issue": "Issue #662 stacked on PR #658; ongoing Issue #657 axes 1,3,4,5",
+      "previous_behavior": "Unfamiliar application sign-in/authorization codes without curated exact seed phrases remained in bank SMS review. Background worker only acknowledged owner custom exclusions; verified built-in challenges could generate notifications while app was closed.",
+      "approved_behavior": "Recognize bounded Arabic/English security challenges; only if no independent evidence of completed money movement exists, apply built-in nonposting exclusion in the foreground. Apply the same independently verified exclusion in background, retaining stricter previous owner-custom ACK policy and all ledger rules.",
+      "source_paths": [
+        "lib/waffra_bank_sms_facts.dart",
+        "lib/waffra_sms_local_rules.dart",
+        "lib/waffra_auto_sms_autopost.part.dart",
+        "scripts/qa/m946_full_app_smoke_matrix.py"
+      ],
+      "test_paths": [
+        "test/m953_new_app_otp_exclusion_test.dart",
+        "test/m508_saudi_default_sms_rules_test.dart",
+        "test/m661_exclusion_rule_apply_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m946-whole-app-feature-smoke.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "Any completed bank purchase, debit, credited transfer or due settlement with OTP words is still protected from exclusion and remains manual review.",
+        "OTP rule never contains amount, account, sender identity or posting permission; never creates SQLCipher money record.",
+        "WorkManager exclusion acknowledges only owner custom rules or independently verified nonfinancial security challenge; native failure leaves pending unchanged.",
+        "Approved Arabic/English Home/Goals/Recurring UI, fixed +, Snackbar, original protected SMS, account balances and private backup unchanged.",
+        "Flutter test suite and exact-head CI required; Android live delivery/notifications and archive restores are separate owner acceptance."
+      ]
+    },
     {
       "id": "M952-UNASSIGNED-HISTORICAL-SQLCIPHER-KEYSET",
       "issue": "Issue #657 axes 2/3/4/5: unassigned old bank transactions cannot scan thousands of records using OFFSET",
