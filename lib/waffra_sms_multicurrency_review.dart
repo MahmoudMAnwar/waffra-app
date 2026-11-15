@@ -102,6 +102,15 @@ abstract final class WaffraSmsCurrencies {
       // Split combined SMS lines: "Purchase USD 10; Balance SAR 400".
       // Ignore only the balance/fee clause, never the transaction clause.
       for (final clause in line.split(RegExp(r'[;|]'))) {
+        // A labelled bank reference is an opaque transaction identifier,
+        // not an ISO-currency/amount pair (example: Ref: ABC12345).
+        // Ignore ONLY a standalone metadata clause, never mixed money.
+        if (RegExp(
+          r'^\s*(?:ref(?:erence)?|transaction\s+(?:ref(?:erence)?|id)|'
+          r'مرجع|رقم\s*(?:المرجع|العملية))\s*[:：#-]\s*'
+          r'[A-Za-z0-9_-]{5,}\s*$',
+          caseSensitive:false,
+        ).hasMatch(clause)) continue;
         final footer = RegExp(
           r'available balance|remaining balance|current balance|'
           r'\bbalance\b|الرصيد|المتاح|saldo disponible|solde disponible|'
