@@ -138,7 +138,7 @@ void main(){
  test('M949-F11 account scoped pagination with simultaneous category/amount constraints',(){
   final rows=List<MoneyEntry>.generate(113,(i)=>item(i,
    title:i.isEven?'فواتير':'بقالة',
-   category:i%3==0?'فواتير':'طعام',amount:50+i,
+   category:i%3==0?'فواتير':'طعام',amount:(50+i).toDouble(),
    date:DateTime(2026,11,15).add(Duration(minutes:i))));
   final index=WaffraFinancePeriodIndex(rows);
   final scope={for(var i=0;i<113;i++)if(i%4==0)'m949-'+i.toString()};
