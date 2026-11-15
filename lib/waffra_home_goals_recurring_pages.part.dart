@@ -228,6 +228,11 @@ extension _WaffraHomeGoalsRecurringPagesModule on _HomeScreenState {
  // M944: original recurring editor and linked-goal actions live in the recurring-workflows part.
  Widget recurringPage(){
   final today=DateUtils.dateOnly(DateTime.now());
+  // One due amount per payable schedule, excluding income.
+  final payable=recurring.where((r)=>!r.income);
+  final dueTotal=payable.fold<double>(0,(v,r)=>v+r.amount);
+  final dueActive=payable.where((r)=>r.active)
+   .fold<double>(0,(v,r)=>v+r.amount);
   bool duePass(RecurringBill r,String filter){
    final date=DateUtils.dateOnly(
     r.linkedGoalId==null?nextRecurringDue(r):r.startAt);
@@ -284,6 +289,17 @@ extension _WaffraHomeGoalsRecurringPagesModule on _HomeScreenState {
        'Your upcoming obligations and related transactions':
        'التزاماتك القادمة والعمليات المرتبطة بها',
        style:TextStyle(fontSize:12,color:Theme.of(context).hintColor))),
+     const SizedBox(height:12),
+     WaffraApprovedMetrics(metrics:[
+      WaffraApprovedMetric(waffraIsEnglish?'Total dues':'إجمالي المستحقات',
+       cash(dueTotal),Icons.payments_outlined,
+       valueWidget:WaffraCurrencyAmount(dueTotal,fontSize:17)),
+      WaffraApprovedMetric(waffraIsEnglish?'Active dues':'المستحقات النشطة',
+       cash(dueActive),Icons.event_available_outlined,
+       valueWidget:WaffraCurrencyAmount(dueActive,fontSize:17)),
+      WaffraApprovedMetric(waffraIsEnglish?'Due items':'عدد الاستحقاقات',
+       recurring.length.toString(),Icons.event_repeat_rounded),
+     ]),
      const SizedBox(height:16),
      SingleChildScrollView(scrollDirection:Axis.horizontal,
       child:Row(children:[
@@ -291,12 +307,23 @@ extension _WaffraHomeGoalsRecurringPagesModule on _HomeScreenState {
         label:waffraIsEnglish?'Due items':'الاستحقاقات',
         count:recurring.length)),
        const SizedBox(width:6),
-       _filterChip('${dueLabel(recurringDisplay)} (${dueCounts[recurringDisplay]??0})',
-        true,()=>setState(()=>recurringDisplay='all')),
        PopupMenuButton<String>(
         key:const Key('m938-dues-filter-menu'),
         tooltip:waffraIsEnglish?'Filter due dates':'فلترة الاستحقاقات',
-        icon:const Icon(Icons.filter_alt_outlined,color:emerald),
+        child:Container(
+         key:const Key('m945-dues-filter-dropdown'),
+         padding:const EdgeInsets.symmetric(horizontal:12,vertical:9),
+         decoration:BoxDecoration(border:Border.all(color:emerald),
+          borderRadius:BorderRadius.circular(24)),
+         child:Row(mainAxisSize:MainAxisSize.min,children:[
+          WaffraText(dueLabel(recurringDisplay),
+           style:const TextStyle(fontWeight:FontWeight.bold,color:forest)),
+          const SizedBox(width:5),
+          WaffraText('(${dueCounts[recurringDisplay]??0})',
+           style:const TextStyle(fontWeight:FontWeight.bold,color:emerald)),
+          const SizedBox(width:5),
+          const Icon(Icons.keyboard_arrow_down_rounded,color:emerald,size:20),
+         ])),
         onSelected:(v)=>setState(()=>recurringDisplay=v),
         itemBuilder:(ctx)=>[
          for(final filter in dueFilters)
@@ -369,8 +396,7 @@ extension _WaffraHomeGoalsRecurringPagesModule on _HomeScreenState {
       Widget amountLabel(String label,double amount){
        return Expanded(child:Column(children:[
         SizedBox(width:double.infinity,child:FittedBox(
-         fit:BoxFit.scaleDown,child:WaffraText(cash(amount),maxLines:1,
-          style:const TextStyle(fontSize:19,fontWeight:FontWeight.bold)))),
+         fit:BoxFit.scaleDown,child:WaffraCurrencyAmount(amount,fontSize:19)),
         WaffraText(label,style:const TextStyle(fontSize:11)),
        ]));
       }
@@ -500,10 +526,30 @@ extension _WaffraHomeGoalsRecurringPagesModule on _HomeScreenState {
         ])),
       );
      }),
-     if(recurring.isEmpty)Padding(padding:const EdgeInsets.all(26),
-      child:WaffraText(waffraIsEnglish?
-       'No due payments yet':'ما عندك استحقاقات حتى الآن',
-       textAlign:TextAlign.center)),
+     if(recurring.isEmpty)Card(
+      key:const Key('m945-dues-empty-state'),
+      elevation:0,color:Theme.of(context).cardColor,
+      shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(20),
+       side:BorderSide(color:Theme.of(context).dividerColor)),
+      child:Padding(padding:const EdgeInsets.symmetric(
+       horizontal:20,vertical:28),child:Column(children:[
+       const Icon(Icons.event_available_outlined,size:45,color:emerald),
+       const SizedBox(height:11),
+       WaffraText(waffraIsEnglish?'No due payments yet':
+        'ما عندك استحقاقات حتى الآن',
+        textAlign:TextAlign.center,
+        style:const TextStyle(fontSize:17,fontWeight:FontWeight.bold)),
+       const SizedBox(height:7),
+       WaffraText(waffraIsEnglish?
+        'Add a due date to track upcoming obligations, linked accounts and payments.':
+        'أضف استحقاقًا لمتابعة الالتزامات القادمة والحسابات والعمليات المرتبطة بها.',
+        textAlign:TextAlign.center),
+       const SizedBox(height:14),
+       OutlinedButton.icon(
+        onPressed:WaffraHaptics.tap(()=>unawaited(recurringDialog())),
+        icon:const Icon(Icons.add_rounded),
+        label:WaffraText(waffraIsEnglish?'Add due date':'إضافة استحقاق')),
+      ]))),
      if(recurring.isNotEmpty&&shown.isEmpty)Padding(
       padding:const EdgeInsets.all(26),
       child:WaffraText(waffraIsEnglish?
