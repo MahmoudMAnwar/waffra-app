@@ -26,7 +26,7 @@
   "bounded_sections": {
     "lib/waffra_home_sms_inbox.part.dart": [
       {
-        "start": "  List<String> idsOf(Iterable<Map<String,Object?>> rows)=>",
+        "start": "  var bulkBusy=false;",
         "end": "  await showModalBottomSheet<void>("
       },
       {
