@@ -1,36 +1,58 @@
 {
   "contract_version": 1,
-  "change_id": "M981-ISSUE685-HISTORICAL-OTP-ATOMIC-DEDUP-20261115",
-  "human_scope_review": "Owner approved SMS next phase after PR #684 all-four rules: make Android importConsentMonth (historical encrypted SMS scan) use the SAME M979 pureVerificationOnly predicate as live offer, before storing masked SMS in review. Collect per-ID encrypted exclusion fingerprints and sender/time/30-day label only in shard caches, and write all changed shards with the SAME SharedPreferences editor as encrypted review queue and scan cursor/count in a single commit. On failure no cursor advancement/partial persistence; cache invalidation after commit. No SMS body/OTP, user accounts, sender blacklist or finance writer modified; mixed OTP and actual completed debit/transfer still go to four-way Flutter review. 5 independent synthetic Dart/source safety tests, M946 safety and existing M954/M979/M980, M385 source-bound exact 7-file allowlist and M550 behavior contract. Stacked Draft after PR #684, no Android live-device acceptance.",
+  "change_id": "M983-ISSUE689-DIRECT-SMS-TYPED-EDITOR-PREFILL-REFRESH-20261115",
+  "human_scope_review": "Owner 2026-11-15 requests direct income/expense/transfer SMS templates, safe auto-filled title, amount, date, category and bank provider suggestions, no second three-way type choice on edit, and immediate sender review list update and rule status after saving. Existing native secured ID and account-SQLCipher writer remain; direct transfer SMS uses two-owner-account verified form, and manual transfer for uncertain evidence remains unacknowledged. One source-bounded native review and editor view plus sender Inbox, executable new tests, existing M580/M669/M980 in mandatory M946; no hardware UAT or calendar/swipe conflated (separate issue).",
   "user_requested_changes": [
-    "Unify live and historical Android SMS OTP-only security intake before queue without undermining income/expense/transfer/excluded rules in Flutter.",
-    "Persist per-message historical OTP denial IDs and 30d safe sender/time labels with existing encrypted queue and history cursor in ONE atomic commit; never save original SMS code.",
-    "Keep account-session ownership, sender block, financial transfer/commit/exclusion replay, queue capacity, scanned/accepted count and history resumability unchanged.",
-    "Ensure mixed verified money plus OTP remains in review and no financial posting automatically triggered.",
-    "Add nonduplicate 1000 synthetic SMS and native source atomicity tests in mandatory M946 safety + exact M385/M550 contracts, then CI including Android Kotlin compilation."
+    "Tap an SMS income, expense or transfer type to OPEN THAT EXACT existing editor directly without another three-way selector.",
+    "Prefill independently trusted SAR principal, title, current saved/default four-way category hints, bank provider and verified SMS date; never guess account identity or make an unconfirmed amount authoritative.",
+    "Editing a correctly classified SMS opens the same type rather than asking to select income/expense/transfer again; a transfer never saves as income/expense.",
+    "After editor saves and native ACK succeeds, immediately refresh current sender list and reclassify waiting rows using all four owner/default SMS rule kinds; preserve selected sender/multi-selection, status updates and safe failure retention.",
+    "Keep original SMS text visible where permitted, OTP hidden, no finance write until owner and account/date/category verified; test no duplicate and regression."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "native/WaffraAutoSmsStore.kt",
+    "lib/waffra_home_entry_sheet.part.dart",
+    "lib/waffra_home_sms_confirmation.part.dart",
+    "lib/waffra_home_sms_inbox.part.dart",
     "scripts/qa/m946_full_app_smoke_matrix.py",
-    "test/m981_historical_otp_atomic_intake_test.dart"
+    "test/m983_sms_direct_kind_prefill_refresh_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
   "bounded_sections": {
-    "native/WaffraAutoSmsStore.kt": [
+    "lib/waffra_home_entry_sheet.part.dart": [
       {
-        "start": "    fun importConsentMonth(context: Context, maxRead: Int = 500): Int {",
-        "end": "    /** Claim each review notification once;"
+        "start": "  // Direct SMS corrections and native review use the same latest offline",
+        "end": "  String? selectedParentId;"
+      },
+      {
+        "start": "    Widget operationPicker(){",
+        "end": "     if(manualIncomeOverride!=null&&initial==null&&!sms){"
+      }
+    ],
+    "lib/waffra_home_sms_confirmation.part.dart": [
+      {
+        "start": " Widget _m615ReviewDetail(",
+        "end": " Future<void> _reviewAutoSmsCandidates({String? targetId})async {"
+      },
+      {
+        "start": " Future<void> _reviewAutoSmsCandidates({String? targetId})async {",
+        "end": null
+      }
+    ],
+    "lib/waffra_home_sms_inbox.part.dart": [
+      {
+        "start": " Future<void> _openAutoSmsInbox()async{",
+        "end": null
       }
     ],
     "scripts/qa/m946_full_app_smoke_matrix.py": [
       {
         "start": "FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {",
-        "end": "    \"m980_four_sms_rule_kinds_every_route\""
+        "end": "    \"m982_background_auto_sms_exclusion_channel_parity\""
       }
     ]
   }
