@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
-  "change_id": "M953-ISSUE659-ANDROID-SCREENSHOTS-VERIFIED-EDIT-NOTIFICATION-DUES-20261115",
-  "human_scope_review": "Owner provided eight real Android screenshots and explicitly requests correcting historical transaction date edit rejection, comprehensive income/expense edit regression coverage, newest-first native SMS notification ordering, readable all-action bank SMS review, numbered transaction cards, RTL scrollbar inset, no duplicate Goals/Dues count next to All, user-facing renaming of recurring to due dates. This PR is independently branched from main and MUST NOT modify unrelated PR #658, user backups, account-money transfer writers, restored archived data or security gates. Existing linked-account reassignment and editing settled transfer/goal payments REQUIRE a separate atomic writer and are NOT made safe by UI changes. Exact protected source sections and retained tests are enumerated. User has not accepted signed Android visuals yet.",
+  "change_id": "M953+M954-ISSUES659-661-ANDROID-SCREENSHOTS-AND-ALL-SMS-RULE-PARITY-20261115",
+  "human_scope_review": "Owner provided eight real Android screenshots and explicitly requests correcting historical transaction date edit rejection, comprehensive income/expense edit regression coverage, newest-first native SMS notification ordering, readable all-action bank SMS review, numbered transaction cards, RTL scrollbar inset, no duplicate Goals/Dues count next to All, user-facing renaming of recurring to due dates. This PR is independently branched from main and MUST NOT modify unrelated PR #658, user backups, account-money transfer writers, restored archived data or security gates. Existing linked-account reassignment and editing settled transfer/goal payments REQUIRE a separate atomic writer and are NOT made safe by UI changes. Exact protected source sections and retained tests are enumerated. User has not accepted signed Android visuals yet. M954 owner follow-up requires all SMS to be classified against default and user-created rules before foreground/background/historical review, including nonfinancial OTP automatically excluded with 30-day native durable IDs; finance/transfer/mixed cues remain reviewable, no auto-money posting. Issue #661 tracks this bounded addition to same Draft PR #660. Included only source + regression tests + M550/M385/release docs.",
   "user_requested_changes": [
     "One-row source-verified SQLCipher transaction edit for older historical date/amount/notes/category/budget and safe readback. No reserializing untouched SMS/V24 rows or changing financial ID/receipt/SMS hash; failure re-reads authenticated source.",
     "Display-only sequential numbering beside all current-filter financial activity cards (income, expense, transfer, savings, due), preserving verified account ordering and existing UI geometry.",
@@ -11,15 +11,20 @@
     "Remove redundant counter beside All dropdown in Goals/Dues; filter still carries live count and deleted actions.",
     "Rename every visible recurring page/footer/Tools/Trash label to الاستحقاقات or الاستحقاق, without renaming saved keys, enums, finance types, or old archives.",
     "New executable encrypted historical edit, notification/sender widget, source contracts; update only obsolete visual baseline tests, never skip or weaken money/security/regression gates.",
-    "Existing receipt-rollback source contract now verifies source-reloaded error copy and still requires physical cleanup after a failed save, never disables stage cleanup or swallows failures."
+    "Existing receipt-rollback source contract now verifies source-reloaded error copy and still requires physical cleanup after a failed save, never disables stage cleanup or swallows failures.",
+    "M954 (#661): unify new-app OTP/verification and owner rule matching across native masking, all-queue foreground isolate, on-demand local inspection, and WorkManager before notifications. Safe built-in/user exclusion is durable native 30-day anti-replay, never mere queue acknowledge; completed financial event/transfer and owner-rule-load failures remain fail-closed. Add 15 targeted regression cases and device acceptance."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/M953_ANDROID_SCREENSHOT_REPAIR.md",
+    "docs/qa/M954_SMS_RULE_PIPELINE_ACCEPTANCE.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
+    "lib/main.dart",
     "lib/waffra_approved_notifications.dart",
+    "lib/waffra_auto_sms_autopost.part.dart",
+    "lib/waffra_bank_sms_facts.dart",
     "lib/waffra_financial_tools.dart",
     "lib/waffra_footer.dart",
     "lib/waffra_home_account_tools.part.dart",
@@ -32,13 +37,19 @@
     "lib/waffra_home_recurring_workflows.part.dart",
     "lib/waffra_home_sms_confirmation.part.dart",
     "lib/waffra_home_sms_management.part.dart",
+    "lib/waffra_home_sms_rules.part.dart",
     "lib/waffra_i18n.dart",
     "lib/waffra_recurring_trash.part.dart",
+    "lib/waffra_sms_local_rules.dart",
+    "lib/waffra_sms_saudi_seed_rules.part.dart",
+    "native/WaffraAutoSmsStore.kt",
     "test/m277_ux_accessibility_quality_test.dart",
     "test/m339_failed_finance_save_receipt_cleanup_test.dart",
+    "test/m509_all_sender_sms_rescan_dedup_test.dart",
     "test/m672_m678_activity_account_regression_test.dart",
     "test/m938_goals_restore_fab_contract_test.dart",
     "test/m953_notifications_actions_and_edit_contract_test.dart",
+    "test/m954_all_sms_rule_routes_regression_test.dart",
     "test/storage/m953_verified_historical_edit_regression_test.dart",
     "test/waffra_concept2_final_visual_test.dart"
   ],
@@ -163,6 +174,54 @@
       {
         "start": "  expect(editor,contains('stagedReceiptCopies.add(copied)'));",
         "end": "  expect(cleanup,greaterThan(catchPoint));"
+      }
+    ],
+    "lib/main.dart": [
+      {
+        "start": "Map<String,Object?> waffraM632ClassifySmsQueue(",
+        "end": "List<String> splitBankMessages(String raw){"
+      }
+    ],
+    "lib/waffra_sms_local_rules.dart": [
+      {
+        "start": " static WaffraSmsLocalRule? resolveSpecial({",
+        "end": " /// Keep a single safe auto-learned bucket"
+      }
+    ],
+    "lib/waffra_bank_sms_facts.dart": [
+      {
+        "start": " static final _pending=RegExp(",
+        "end": " static bool isVerificationChallenge("
+      }
+    ],
+    "lib/waffra_sms_saudi_seed_rules.part.dart": [
+      {
+        "start": " WaffraSmsLocalRule(id:\"sa_expense_155\", name:\"ضيافة\",",
+        "end": "const List<WaffraSmsLocalRule> waffraSaudiSpecialSeedRules ="
+      }
+    ],
+    "native/WaffraAutoSmsStore.kt": [
+      {
+        "start": "    private val otp = Regex(",
+        "end": "    private val action = Regex("
+      }
+    ],
+    "lib/waffra_auto_sms_autopost.part.dart": [
+      {
+        "start": "  final prefs=await SharedPreferences.getInstance();",
+        "end": "  WaffraProductionFinanceAuthorityBinding? binding;"
+      }
+    ],
+    "lib/waffra_home_sms_rules.part.dart": [
+      {
+        "start": "  final special=WaffraSmsLocalRules.resolveSpecial(",
+        "end": "  if(special!=null)return <String,Object?>{"
+      }
+    ],
+    "test/m509_all_sender_sms_rescan_dedup_test.dart": [
+      {
+        "start": "  expect(worker,contains('WaffraAutoSms.acknowledgeCommitted([id])'));",
+        "end": "  expect(nativeMain,contains('\"ackCommittedAutoBankSms\" -> {'));"
       }
     ]
   }
