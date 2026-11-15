@@ -1,12 +1,98 @@
 {
   "schema_version": 1,
-  "pr": "M943 — independent stacked Draft PR for #651 (base #650)",
-  "issue": "Issue #651 — M943 eight financial followups",
+  "pr": "M944 — 5-axis code reliability PR #654 (Draft; Issue #653)",
+  "issue": "Issue #653 — M944 code-only performance, consistency, modularity, CI",
   "workflow_review_policy": "scan-all-registered-workflows",
-  "baseline": "main at new branch start",
-  "reviewed_at": "2026-11-14",
+  "baseline": "main merge #652 at efba4d1f0b20b4111b60a1720de682059aac63fe",
+  "reviewed_at": "2026-11-15",
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
+    {
+      "id": "M944-ROOT-SHELL-AND-RECURRING-WORKFLOW-EXTRACTION",
+      "issue": "Issue #653 / PR #654 axis 4: finish Home State extraction without UI changes",
+      "previous_behavior": "One 246-line HomeScreenState.build method mixed session gating, account header, navigation, fixed 58px FAB, owner-approved Snackbar and overlays. The 855-line Goals/Recurring page part also mixed 304 lines of recurring edit / due-date / linked-goal mutations with pure page composition. Main source QA had hard-coded direct-file assumptions despite same-library Dart parts.",
+      "approved_behavior": "Move the exact unchanged Home root widget composition into registered waffra_home_root_shell.part.dart with a one-line State.build delegate; move the exact unchanged recurring workflow methods to registered wa ffra_home_recurring_workflows.part.dart. Keep full original source order in Dart/Python source-contract reconstruction; tests point at actual registered part files instead of assuming the UI is in main.dart. Owner-verified sources and all existing amount, Snackbar, RTL, + FAB, goals/recurring UI are untouched. State retains only lifecycle, owner-scoped state and brief event adapters.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_root_shell.part.dart",
+        "lib/waffra_home_goals_recurring_pages.part.dart",
+        "lib/waffra_home_recurring_workflows.part.dart"
+      ],
+      "test_paths": [
+        "test/m944_home_root_shell_extraction_test.dart",
+        "test/m707_home_goals_recurring_extraction_test.dart",
+        "test/m830_home_navigation_helpers_extraction_test.dart",
+        "test/m644_no_fab_snackbar_width_test.dart",
+        "test/m938_goals_restore_fab_contract_test.dart",
+        "test/m622_immediate_home_without_loader_test.dart",
+        "test/m623_verified_home_handoff_no_black_frame_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml"
+      ],
+      "safety_invariants": [
+        "Moved root build is source-identical to approved current main except method name; no new widget gate, no money source or DB writer.",
+        "Recurring editor/due workflow code is verbatim, not reimplemented; linked Goal charge and anti-duplicate protection unchanged.",
+        "No change to Arabic/English FAB anchor (58x58), placement, dropdown, snackbar expansion, original SMS text, or goal/recurring designs.",
+        "Dart and Python source-contract reconstruction is explicit and fail-closed if one registered part is missing; no QA gates disabled or tests skipped."
+      ]
+    },
+    {
+      "id": "M944-BOUNDED-HOME-AND-UNIFIED-ACTIVITY",
+      "issue": "Issue #653 / PR #654 axis 2: large financial activity lists",
+      "previous_behavior": "When Home financial activity was expanded, wa ffraDashboardTransactionDisplayCount returned every match, eagerly building thousands of transaction, transfer and savings activity cards in one widget tree. Read-cache invalidation only cleared its date index.",
+      "approved_behavior": "Keep the approved Home cards and Show more/Show less controls, but cap the expanded rendered window to 50 transactions per intentional step, including unified transfers and savings. Reset window on finance reload, preserve all matching verified records for actual PDF export and account source verification, and retain original SMS/group selection independently.",
+      "source_paths": [
+        "lib/waffra_home_ledger_query.part.dart",
+        "lib/waffra_home_dashboard_analytics.part.dart"
+      ],
+      "test_paths": [
+        "test/m944_home_progressive_window_test.dart",
+        "test/m940_m941_home_ledger_pagination_test.dart",
+        "test/m296_monthly_budget_and_transactions_test.dart",
+        "test/m670_feedback_transfer_dashboard_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "Do not alter global + FAB/Snackbar geometry or Home/Goals/Recurring card styling and RTL layout.",
+        "Do not change finance writer, account linkage, verified currency source, monthly sums or duplicate-suppression policies.",
+        "Export still uses all filtered verified ledger entries; no financial history is deleted or permanently hidden by a display-window boundary.",
+        "Per-action progressive rendering is a UI optimization; no claim that all hydrated finance database reads are on-demand or the owner's Android frame rate has been measured."
+      ]
+    },
+    {
+      "id": "M944-VERIFIED-LEDGER-KEYSET-READS",
+      "issue": "Issue #653 / PR #654 axis 1: encrypted database level paging and account screen",
+      "previous_behavior": "Account history used OFFSET on each 50-entry SQL query and in-memory Home display pagination, so high offsets rescan past rows. No source-locked keyset API was exposed; a cursor was not retained by account/month filter across Previous/Next navigation.",
+      "approved_behavior": "Only the verified account source-lock adapter exposes deterministic SQLCipher keyset pages by occurred_iso DESC and entry_id DESC, with explicit account and month filters; no full-table row materialization for the account-history widget, no new financial writers, and no unrelated historical account linking. Previous/Next preserve back cursors and reset on account/month switch and confirmed accountless link. Unassigned historical reconciliation remains an independent source-verified queue and Home screen still uses existing display index until separately changed.",
+      "source_paths": [
+        "lib/storage/waffra_sqlcipher_history_pager.dart",
+        "lib/storage/waffra_verified_accounts_api.dart",
+        "lib/waffra_account_context_page.dart"
+      ],
+      "test_paths": [
+        "test/storage/m944_sqlcipher_keyset_paging_test.dart",
+        "test/m611_manual_home_finance_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml"
+      ],
+      "safety_invariants": [
+        "No unverified legacy finance fallback, inferred account ownership, posting, migration or bank balance modification from read pagination.",
+        "Retain 50-row account history UI styling, sender original message, owner-approved + FAB and Snackbar position, and accountless user-confirmed linking.",
+        "Use only already activated, owner-verified SQLCipher account source read via readVerifiedAccountMetadata; reject unsupported schemas and altered generation under lock.",
+        "2,700-row synthetic SQLCipher parity and cold reopen are not proof of physical Android FPS or private V24 archive compatibility."
+      ]
+    },
     {
       "id": "M943-VERIFIED-BALANCE-ACCOUNT-SENDER-SUFFIX-QA",
       "issue": "Issue #651 — 8-point post-M942 code review",
@@ -4774,6 +4860,115 @@
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ]
+    },
+    {
+      "id": "M945-OWNER-RESTORE-VIEW-CONSISTENCY",
+      "issue": "Issue #653, user-approved M945 follow-up in Draft PR #654",
+      "previous_behavior": "After restoring 19 historical entries then saving a manual expense, a cached Home month view could remain stale and show neither the new expense nor two older income entries. The user also reported duplicate Goals and Dues filter controls, incomplete Dues empty state and incorrect textual Riyal presentation. Home Show more or less appeared on a separate row and sometimes twice.",
+      "approved_behavior": "Every authoritative manual or bank SMS ledger replacement invalidates the read-only Home finance index, manual confirmed posts refresh verified accounts, and rejected writes invalidate their optimistic view. A 19-plus-1 synthetic record test retains every original ID including two income entries. Goals and Dues have single count dropdowns and official SAR monetary widgets; Goals More retains Deleted goals only, Dues shows approved metrics and a useful add-state, and Home has one inline Show more or less driven by verified mixed activities. The selected-account read view now consumes verified context and refuses a stale selection without it, preserving All accounts history. A post-restore canonical identity parity correction also invalidates the Home period index before rebinding the verified ledger rows.",
+      "source_paths": [
+        "lib/waffra_home_entry_sheet.part.dart",
+        "lib/waffra_home_goals_recurring_pages.part.dart",
+        "lib/waffra_approved_page_designs.dart",
+        "lib/waffra_home_dashboard_analytics.part.dart",
+        "lib/main.dart",
+        "lib/waffra_home_verified_account_flows.part.dart",
+        "lib/waffra_home_account_tools.part.dart"
+      ],
+      "test_paths": [
+        "test/m945_restored_history_filters_ui_test.dart",
+        "test/m944_home_progressive_window_test.dart",
+        "test/m684_finance_period_index_test.dart",
+        "test/m938_goals_restore_fab_contract_test.dart"
+      ],
+      "safety_invariants": [
+        "Do not rewrite historical money, erase old income or silently link unassigned old transactions when a manual expense is committed.",
+        "Only verified SQLCipher snapshots and account source may be used for balances and account scopes.",
+        "The owner's password-encrypted archive is not decrypted by synthetic tests, and five missing goals remain an open acceptance issue until the archive is verified on a disposable device.",
+        "No duplicate posting or transfer booked as income; the existing 58px plus icon, bottom footer and stationary Snackbar are unchanged.",
+        "The linked-goal due, savings balance, deleted goals and recurring reminders remain accessible.",
+        "Source-based tests and full exact-head CI are separate from signed Android owner acceptance.",
+        "Account-scoped month/history reads need loaded verified account context and certified account-entry IDs; All accounts continues to include unassigned records."
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ]
+    },
+    {
+      "id": "M947-DESTRUCTIVE-ACTIONS-SMOKE-AND-REVERSE",
+      "issue": "#653 / Draft PR #654, 2026-11-15 user asked proactive delete testing",
+      "previous_behavior": "M946 whole-app smoke inventory mentioned deleted features but did not execute encrypted transaction recycle, cancellation, 30-day Goal and category/recurring trash, Delete All nor uncommitted session navigation checks.",
+      "approved_behavior": "Run runnable deletion/restore regression on every PR and main: 19 source-matched SQLCipher rows with two incomes, decline and accept one expense deletion, verify other eighteen exact rows remain after cold reopen, preserve anti-replay SMS hashes, then undo to the original 19. Independently run preexisting receipt and 30-day expiry, Goal/Recurring/category, UI and Delete All tests; source contract guards cancellation, verified-before-setState, no page replacement and full-finance reset biometric requirement. Treat cloud account deletion as a separately disabled release gate.",
+      "source_paths": [
+        "lib/waffra_home_transaction_ledger_actions.part.dart",
+        "lib/waffra_home_delete_all_transactions.part.dart",
+        "lib/waffra_home_category_confirmations.part.dart",
+        "lib/waffra_recurring_trash.part.dart",
+        "lib/storage/waffra_encrypted_transaction_recycle.dart",
+        "lib/storage/waffra_encrypted_goal_recycle.dart",
+        "lib/storage/waffra_encrypted_module_recycle.dart",
+        "lib/waffra_home_account_tools.part.dart",
+        "scripts/qa/m946_full_app_smoke_matrix.py"
+      ],
+      "test_paths": [
+        "test/storage/m183_encrypted_transaction_recycle_test.dart",
+        "test/storage/m183_transaction_home_ui_guard_test.dart",
+        "test/storage/m185_encrypted_module_recycle_test.dart",
+        "test/storage/encrypted_goal_recycle_test.dart",
+        "test/storage/m938_legacy_goal_recycle_repair_test.dart",
+        "test/m947_deletion_flow_contract_test.dart",
+        "test/m907_home_delete_all_extraction_test.dart",
+        "test/m638_sms_inbox_delete_sync_test.dart",
+        "test/m107_release_backend_gating_test.dart"
+      ],
+      "safety_invariants": [
+        "Cancellation and stale or changed receipt IDs must never persist deletion or change money.",
+        "A single deleted expense cannot rewrite other eighteen historical rows or remove two original income entries; undo restores all 19 exactly.",
+        "Bank SMS anti-replay hashes survive selected deletion, no duplicate charges after recovery.",
+        "Deleted goal/recurring/category documents are reversible with authenticated 30-day clock, and settled history is unchanged.",
+        "Published Home ledger and read index update only after source-authorized success, no navigation replacement causing black screen.",
+        "Full-vault deletion requires device biometrics and separate explicit confirmation route; unavailable OS biometrics cannot be marked tested by source guards.",
+        "Private owner backup and Android delete navigation/biometrics require separately observed device UAT."
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m946-whole-app-feature-smoke.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ]
+    },
+    {
+      "id": "M948-RISK-PROPERTY-LOAD-QUALITY",
+      "issue": "#653 / Draft PR #654 owner requested broader functional and non-functional testing, Nov 15 2026",
+      "previous_behavior": "DateRange filter could include previous calendar day; whole-app smoke passed with skipped tests and did not stress 10k ledger queries, randomized halalas, 16-year recurring dates, 320px RTL, or overlapping manual/SMS writers.",
+      "approved_behavior": "Prove the date picker includes only exact selected calendar days, all 10k authenticated synthetic ledger identities/period summaries, immutable source and 50-card windows; negative/invalid/cancelled finance input and parallel authenticated SQLCipher writer cannot damage/double-post. Host 320px RTL 200% font widget must lay out without overflow; CI must report actual zero skipped and exact HEAD.",
+      "source_paths": [
+        "lib/waffra_home_ledger_query.part.dart",
+        "lib/waffra_finance_period_index.part.dart",
+        "lib/waffra_home_dashboard_analytics.part.dart",
+        "lib/storage/waffra_unified_finance_writer.dart",
+        "scripts/qa/m946_full_app_smoke_matrix.py",
+        "scripts/qa/m948_smoke_quality_gate.py",
+        ".github/workflows/m946-whole-app-feature-smoke.yml"
+      ],
+      "test_paths": [
+        "test/m948_financial_properties_and_performance_test.dart",
+        "test/storage/m946_whole_app_money_journey_smoke_test.dart",
+        "test/m940_m941_home_ledger_pagination_test.dart",
+        "test/m86_recurring_schedule_boundary_test.dart",
+        "test/qa/m948_smoke_quality_gate_test.py"
+      ],
+      "safety_invariants": [
+        "Do not fabricate bank account history or mutate the owner's records for tests.",
+        "Every invalid/unconfirmed/stale write leaves both financial digest and source balances unchanged.",
+        "Two parallel writers with one witnessed source generation must not both post.",
+        "Date filter never contains a transaction prior to first selected date or after last date.",
+        "Nonfunctional host tests do not substitute for device FPS, physical biometric, backup UAT or screen-reader checks.",
+        "No skipped test, missing event, stale SHA or unverified physical claim can pass M946 quality gate."
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m946-whole-app-feature-smoke.yml",
         ".github/workflows/finance-full-regression.yml"
       ]
     }

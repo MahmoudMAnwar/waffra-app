@@ -183,6 +183,107 @@ void main() {
     }
   });
 
+  test('M947 nineteen restored rows: deleting one expense preserves both '
+      'income rows and all eighteen other IDs; undo is exact', () async {
+    // Synthetic old-archive shape, never the owner's actual backup.
+    await seed(withReceipt: false);
+    final original = entry(hasImage: false);
+    final historical = <Map<String, Object?>>[];
+    final baseline = await snapshot.read();
+    await store.transaction(() async {
+      for (var index = 0; index < 18; index++) {
+        final row = <String, Object?>{
+          'id': 'm947-old-$index',
+          'title': 'Historical row $index',
+          'category': index < 2 ? 'Income' : 'Expenses',
+          'amount': (100 + index).toDouble(),
+          'income': index < 2,
+          'date': DateTime.utc(2026, 10, 24, 10, index).toIso8601String(),
+          'receiptPath': null,
+          'sourceType': 'manual',
+        };
+        historical.add(row);
+        await store.customStatement(
+          'INSERT INTO fresh_finance_entries('
+          'entry_id,title,category_snapshot,amount_minor,is_income,'
+          'occurred_iso,receipt_count,source_json) '
+          'VALUES (?,?,?,?,?,?,0,?)',
+          [
+            row['id'],row['title'],row['category'],
+            ((row['amount'] as double) * 100).round(),
+            row['income'] == true ? 1 : 0,row['date'],jsonEncode(row),
+          ],
+        );
+      }
+      await snapshot.commit(
+        expectedGeneration:baseline.generation,
+        fullFinanceSnapshot:<String,Object?>{
+          ...baseline.values,
+          'entries':jsonEncode([original,...historical]),
+          'waffra_sms_hashes_v1':<String>[
+            'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          ],
+        },
+      );
+    });
+    final verified = await snapshot.read();
+    final oldRows = jsonDecode(verified.values['entries'] as String) as List;
+    expect(oldRows.length, 19);
+    expect(await typedCount(), 19);
+    expect(oldRows.where((r)=>r['income']==true).length, 2);
+
+    await expectLater(recycle.delete(
+      baseline:verified, entryId:id,expectedImageHashes:const [],
+      now:deletedAt,userConfirmed:false,
+    ),throwsStateError);
+    expect((await snapshot.read()).digest,verified.digest);
+    expect(await typedCount(),19);
+
+    final deleted = await recycle.delete(
+      baseline:verified, entryId:id,expectedImageHashes:const [],
+      now:deletedAt,userConfirmed:true,
+    );
+    expect(deleted.restored,isFalse);
+    expect(await typedCount(),18);
+    final left = await snapshot.read();
+    final leftRows = jsonDecode(left.values['entries'] as String) as List;
+    expect(leftRows, historical);
+    expect(leftRows.where((r)=>r['income']==true).length,2);
+    expect(leftRows.map((r)=>r['id']).toSet().length,18);
+    expect(left.values['waffra_sms_hashes_v1'],
+     verified.values['waffra_sms_hashes_v1']);
+    expect((await recycle.pendingRecoveries()).containsKey(id),true);
+
+    await store.close();
+    store = WaffraEncryptedStore.openAt(
+      File('${temporary.path}/synthetic.sqlite'),
+      key:'m183-synthetic-disposable-key-only',
+    );
+    snapshot=WaffraAtomicFinanceSnapshot(
+      store:store,experimentalEnabled:true,
+    );
+    recycle=WaffraEncryptedTransactionRecycle(
+      snapshot:snapshot,writerDirectory:temporary,
+      verifySourceUnderLock:sourceWitness,experimentalEnabled:true,
+    );
+    // Reloading SQLCipher after deletion must not repopulate deleted rows or
+    // lose other historical income. The recycle is persisted separately.
+    expect(await typedCount(),18);
+    expect(jsonDecode((await snapshot.read()).values['entries'] as String),
+     historical);
+    final restored = await recycle.restore(
+      baseline:await snapshot.read(),entryId:id,
+      now:deletedAt.add(const Duration(minutes:1)),
+    );
+    expect(restored.restored,true);
+    final finalRows = jsonDecode(
+      (await snapshot.read()).values['entries'] as String) as List;
+    expect(finalRows,oldRows);
+    expect(finalRows.where((r)=>r['income']==true).length,2);
+    expect(await typedCount(),19);
+    expect(await recycle.pendingRecoveries(),isEmpty);
+  });
+
   test('M183 deletes transaction and encrypted invoice as one reversible SQL commit',
       () async {
     await seed();

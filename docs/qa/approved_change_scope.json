@@ -1,253 +1,255 @@
 {
   "contract_version": 1,
-  "change_id": "M943-ISSUE651-EIGHT-FINANCE-FOLLOWUPS-20261114",
-  "human_scope_review": "Eight explicit owner-approved followups; independent stacked PR base #650 to avoid stale SQLCipher provider schema changes. All financial SQLCipher writer and authenticated source invariants; no unreviewed money writes and no changed approved UI geometry. Phone backup proof separate.",
+  "change_id": "M944-ISSUE653-FIVE-AXIS-RELIABILITY-20261115",
+  "human_scope_review": "2026-11-15 owner approved modifications in SAME Draft PR #654: preserve original 19 backup identities and two income entries after new manual append, update period index and account balance projection, Goals/Dues count filters and official Riyal, Dues empty-state and gold metrics, Home inline Show more/less. Original encrypted archive requires owner-device proof. On 2026-11-15 the user additionally instructed autonomous smoke testing of EVERY feature (small and large) and every cross-feature account/database linkage, all within existing draft PR #654. Added mandatory all-PR M946 matrix and synthetic encrypted SQLCipher end-to-end test, no real-owner backup bytes. M947 Nov 15 2026 user asked whether deletion was actually tested. Confirmed omission from all-feature smoke and authorized same Draft PR #654 coverage of transaction delete/cancel/undo, 19-row SQLCipher historical preservation, 30-day goal/recurring/category recycle, Delete All and full-vault biometric gate, SMS deletion, and cloud account deletion disabled gate. No private backup or real device used. M948 on 2026-11-15 owner explicitly requested additional functional/non-functional QA to minimize production bugs in same PR #654. Approved new real load/property/fuzz/concurrency/RTL suites, zero-skipped exact-SHA smoke gate, and fixing a discovered Home date-filter previous-day inclusion defect. No private credentials, backup or financial history changed. User reported failure in #654 on Nov 15 2026; root-cause verified M282 old M275 component looked up in main.dart after M944 extraction. Correct only scoped M282 guard and retain source evidence; do not weaken consent/production-cutover gates.",
   "user_requested_changes": [
-    "Align projected balance and budget projection with verified total of all active SQLCipher bank accounts including opening balance, no forged balance when not verified.",
-    "Reject bank/wallet child under mismatched or unknown selected provider before writer call in every inline account creation path including SMS transfers.",
-    "Make creation of a bank/child with opening balance available through review SMS dropdown and separate transfer; refresh exact verified account witness after creation.",
-    "Add two distinct opening balances persisted across SQLCipher reopen with no income posting, unit/UI source acceptance and release/QA documentation.",
-    "M942 extend SQLCipher typed provider constraints and valid provider IDs to all approved Saudi local/digital banks and wallets. Upgrade legacy account-details v1 to v2 transactionally without altering opening_minor, account IDs, archived status or ledger.",
-    "M942 align M447 SMS regression with new approved verified in-context first account creation while retaining mandatory account and no-shadow-DB writer checks.",
-    "NO fabricated Home bank balance on verified SQLCipher failure; show readable placeholder instead.",
-    "Bound Home transaction result list and count with stable index, keeping verified account scope and filters.",
-    "Remove unsupported monthly growth % until authenticated historical balances exist.",
-    "Expand bank/wallet SMS sender identification to approved catalog only; keep no unconfirmed account selection or posting.",
-    "Support Other institution child accounts without conflating different banks; preserve encrypted identity or fail closed.",
-    "Allow user to clear verified bank last four atomically with rename and authenticated SQLCipher writer.",
-    "Add historical V24/V3 restore/reconciliation regression matrix; owner original handset verification separate.",
-    "Audit retired AI helper graph and remove truly unreachable code only with preserved security regression coverage.",
-    "Repair original M343/M296/M470 assertions after new shared M940 transaction filter, latest SQLCipher SMS account generation and bounded dashboard; retain independent financial/security tests without skips."
+    "Implement authenticated SQLCipher paging for thousands of finance entries with stable order and verified account scope, no financial write changes.",
+    "Improve large-list pagination for transactions, native SMS sender review, goals and recurring without changing approved layouts or selection semantics.",
+    "Protect financial balance, backup restore, due, transfer and budget source parity using synthetic encrypted regression cases and cold reopen.",
+    "Complete safe Home state read/query extraction and remove only demonstrably dead legacy compatibility code without weakening runtime authority.",
+    "Produce exact-head QA passed, failed, skipped counts and repeated-failure signatures and fix source causes without disabling gates.",
+    "Fix stale verified finance period index after confirmed manual/SMS append and confirmed account balance reread without rewriting old finance rows.",
+    "Use one count-bearing status dropdown in Goals and Dues; remove redundant funnel and duplicate inactive/incomplete goals More options.",
+    "Use original Saudi Riyal artwork for Goals/Dues money, add due gold metrics and useful add-due empty state while preserving functions.",
+    "Move Home Show more/less to the search/filter/More row for verified combined financial history.",
+    "Update one obsolete positive M940/M941 assumption on exact Home finance-index method form; add explicit checks that the new unified-history cache is invalidated, retaining all old read-only finance guard assertions.",
+    "Require the verified active SQLCipher account context, not only a cached selected-account ID, before rendering scoped ledger/month entries; resolves unused-field analyzer warning and prevents stale account transitions.",
+    "Ensure restored 19-entry source parity repair invalidates the stale Home monthly read cache after authenticated SQLCipher ledger correction, without changing archive or old stored records.",
+    "Proactively test the entire Waffra application on every PR: all feature-level smoke and linked-feature scenarios, including auth, biometric, Home, manual/SMS, accounts, transfers, recurring/Goals, budgets, categories, notifications, deleted/restore, PDFs, Riyal, settings and tools. Report real pass/fail/skip and device-only gaps.",
+    "Add synthetic SQLCipher integration smoke: account creation/opening balances, linked manual income/expense, selected account scoping, unassigned legacy income, duplicate manual ID, SMS anti-replay, cold reopen and invariant balances. All on disposable database, not owner device.",
+    "Correct old Home pagination smoke expectations following inline Show more/less approved UI; preserve required assertions for one toolbar and combined activity counts.",
+    "Proactive full-app smoke M946 exposed three stale test source anchors after approved Goals/Dues empty-state and Home toolbar redesign: repair M665's two due Card boundaries and M670's one-inline verified history expansion expectations without removing linked goal money validations.",
+    "Add all destructive financial and nonfinancial deletion paths to mandatory every-PR smoke, with reversible delete and rollback: original 19 archived rows, 2 incomes, independent SMS hashes, encrypted receipts, 30-day goal and recurring bins, Delete All, SMS inbox, and account closure gating; avoid a black-screen navigation reset after delete.",
+    "Add deterministic property and 10,000-row indexed query/pagination performance tests, randomized integer-halalas, 16-year leap-date and due schedule boundary, RTL 200% text on 320px viewports, and simultaneous user/manual and bank SMS SQLCipher writes preserving exactly-once balances.",
+    "Close discovered functional defect: dashboard selected date range erroneously included the entire calendar day before requested start. Compare exact inclusive date-only selected boundaries; add month/year/leap date regression.",
+    "Make M946 always fail if any skipped/incomplete test, stale checked SHA, no test evidence, or host report falsely claims physical Android/UAT proof. Test the gate itself by mutations, enforce in each mandatory money/experience/safety CI shard.",
+    "Scope anchor encompasses the existing M944 Home ledger cache AND the M948 exact-day filter in the same registered Home read-only query source; no finance writer is modified.",
+    "Fix current M282 failed source-completeness job by updating the M275 anchor to the extracted lib/waffra_smooth_confirmation.dart component and explicitly verifying main.dart imports and uses the real saving controller, preserving all M274–M281 and no-production-SQLCipher-cutover checks."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
-    "docs/qa/M943_FINANCE_FOLLOWUP_SCOPE.md",
+    "docs/qa/M944_FIVE_AXES_CODE_QA.md",
     "docs/qa/approved_change_scope.json",
+    "lib/storage/waffra_sqlcipher_history_pager.dart",
+    "test/storage/m944_sqlcipher_keyset_paging_test.dart",
+    "lib/storage/waffra_verified_accounts_api.dart",
+    "lib/waffra_account_context_page.dart",
+    "test/m611_manual_home_finance_regression_test.dart",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "lib/storage/waffra_account_context_repository.dart",
-    "lib/storage/waffra_accounts_portable_backup_v3.dart",
-    "lib/storage/waffra_accounts_repository.dart",
-    "lib/storage/waffra_custom_institution_links.dart",
-    "lib/storage/waffra_verified_accounts_api.dart",
-    "lib/waffra_accounts_manager_page.dart",
-    "lib/waffra_finance_period_index.part.dart",
-    "lib/waffra_home_balance_header.part.dart",
+    "lib/waffra_home_ledger_query.part.dart",
     "lib/waffra_home_dashboard_analytics.part.dart",
+    "test/m944_home_progressive_window_test.dart",
+    "test/storage/m944_transfer_replay_and_opening_parity_test.dart",
+    "lib/main.dart",
+    "lib/waffra_home_root_shell.part.dart",
+    "test/support/waffra_main_source.dart",
+    "test/m830_home_navigation_helpers_extraction_test.dart",
+    "test/m644_no_fab_snackbar_width_test.dart",
+    "test/m944_home_root_shell_extraction_test.dart",
+    "test/qa/waffra_home_source.py",
+    "test/m938_goals_restore_fab_contract_test.dart",
+    "test/m707_home_goals_recurring_extraction_test.dart",
+    "scripts/qa/m550_behavior_contract_preflight.py",
+    "lib/waffra_home_goals_recurring_pages.part.dart",
+    "lib/waffra_home_recurring_workflows.part.dart",
+    "test/m930_home_lifecycle_helpers_extraction_test.dart",
+    "test/m944_home_residual_state_audit_test.dart",
+    "test/m622_immediate_home_without_loader_test.dart",
+    "test/m623_verified_home_handoff_no_black_frame_test.dart",
     "lib/waffra_home_entry_sheet.part.dart",
-    "lib/waffra_home_goal_actions.part.dart",
-    "lib/waffra_home_sms_confirmation.part.dart",
-    "lib/waffra_home_sms_transfer_review.part.dart",
+    "lib/waffra_approved_page_designs.dart",
+    "test/m945_restored_history_filters_ui_test.dart",
+    "test/m940_m941_home_ledger_pagination_test.dart",
     "lib/waffra_home_verified_account_flows.part.dart",
-    "lib/waffra_home_verified_finance_pickers.part.dart",
-    "lib/waffra_new_account_dialog.dart",
-    "lib/waffra_recurring_account_groups.dart",
-    "lib/waffra_sms_account_learning.dart",
-    "scripts/qa/m268_scope_review.py",
-    "test/m268_approved_emerald_balance_card_test.dart",
+    "lib/waffra_home_account_tools.part.dart",
     "test/m296_monthly_budget_and_transactions_test.dart",
-    "test/m343_goal_recurring_named_budgets_test.dart",
-    "test/m371_goal_wallet_and_budgets_regression_test.dart",
-    "test/m470_recurring_provider_accounts_test.dart",
-    "test/m470_sms_first_sender_account_test.dart",
-    "test/m684_finance_period_index_test.dart",
-    "test/m943_backup_retired_graph_test.dart",
-    "test/m943_home_balance_and_paging_test.dart",
-    "test/m943_sms_bank_catalog_test.dart",
-    "test/storage/m943_custom_institution_and_backup_test.dart",
-    "test/storage/m943_verified_bank_suffix_clear_test.dart"
+    "test/storage/m946_whole_app_money_journey_smoke_test.dart",
+    "scripts/qa/m946_full_app_smoke_matrix.py",
+    "test/qa/m946_full_app_smoke_matrix_test.py",
+    ".github/workflows/m946-whole-app-feature-smoke.yml",
+    "test/m665_goal_due_display_and_linked_edit_test.dart",
+    "test/m670_feedback_transfer_dashboard_test.dart",
+    "test/storage/m183_encrypted_transaction_recycle_test.dart",
+    "test/m947_deletion_flow_contract_test.dart",
+    "test/m948_financial_properties_and_performance_test.dart",
+    "scripts/qa/m948_smoke_quality_gate.py",
+    "test/qa/m948_smoke_quality_gate_test.py",
+    ".github/workflows/m282-combined-candidate.yml"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
   "bounded_sections": {
-    "lib/storage/waffra_account_context_repository.dart": [
-      {
-        "start": " Future<void> setVerifiedBankSuffix({",
-        "end": " /// Read only the user-confirmed four-digit suffix"
-      }
-    ],
-    "lib/storage/waffra_accounts_portable_backup_v3.dart": [
-      {
-        "start": "import 'waffra_account_details_backup.dart';",
-        "end": "/// Authenticated account-aware envelope."
-      },
-      {
-        "start": "class WaffraAccountsBackupV3Preview {",
-        "end": "abstract final class WaffraAccountsPortableBackupV3"
-      },
-      {
-        "start": " static Future<Map<String,Object?>> capture(",
-        "end": " static List<Map<String,Object?>> _rows("
-      },
-      {
-        "start": " static Future<String> bundle(",
-        "end": " static Future<WaffraAccountsBackupV3Preview> verifyAndPreview("
-      },
-      {
-        "start": " static Future<WaffraAccountsBackupV3Preview> verifyAndPreview(",
-        "end": " /// Restores ONLY"
-      },
-      {
-        "start": " static Future<WaffraPortableEncryptedRestoreResult> restoreToEmptyEncryptedVault(",
-        "end": null
-      }
-    ],
-    "lib/storage/waffra_accounts_repository.dart": [
-      {
-        "start": "import 'waffra_custom_account_subtype_schema.dart';",
-        "end": "class WaffraAccountBalance {"
-      },
-      {
-        "start": "class WaffraAccountBalance {",
-        "end": "/// M440. Account movements"
-      },
-      {
-        "start": " Future<List<WaffraAccountBalance>> balances()async{",
-        "end": " Future<void> renameAccount({required String id,required String name,\n  required bool userConfirmed})async{"
-      },
-      {
-        "start": " Future<void> archiveEmptyAccount({required String id,\n  required bool userConfirmed})async{",
-        "end": null
-      }
-    ],
     "lib/storage/waffra_verified_accounts_api.dart": [
       {
-        "start": "import 'waffra_account_details_schema.dart';",
-        "end": "class WaffraVerifiedAccountsApi"
+        "start": "import 'waffra_accounts_repository.dart';",
+        "end": "/// Production-facing M440 account adapter."
       },
       {
-        "start": " Future<void> createTypedAccountWithIdentity(",
-        "end": " /// Create a bank account"
-      },
-      {
-        "start": " Future<String?> verifiedBankSuffix",
-        "end": " /// Null account means"
-      },
-      {
-        "start": " Future<void> renameAccountWithSuffix",
-        "end": " @override\n Future<void> archiveEmptyAccount"
+        "start": " /// M684: actual bounded SQL read. No historical ledger mutation.",
+        "end": " /// Attach a past unassigned entry only AFTER"
       }
     ],
-    "lib/waffra_accounts_manager_page.dart": [
+    "lib/waffra_account_context_page.dart": [
       {
-        "start": " Future<void> rename(",
-        "end": " Future<void> archive("
+        "start": "import 'storage/waffra_account_context_read.dart';",
+        "end": "/// Account-aware ledger review, with a real \"unassigned\" work queue."
       },
       {
-        "start": " Future<WaffraAccountBalance?> createAccountInsideComposer(",
-        "end": " Future<void> compose("
-      }
-    ],
-    "lib/waffra_finance_period_index.part.dart": [
+        "start": "class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {",
+        "end": " String money(int minor)"
+      },
       {
-        "start": "class WaffraFinancePeriodIndex {",
+        "start": "   await widget.api.linkUnassignedEntry(",
+        "end": "  }catch(error){"
+      },
+      {
+        "start": " @override Widget build(BuildContext context)=>Scaffold(",
         "end": null
       }
     ],
-    "lib/waffra_home_balance_header.part.dart": [
+    "test/m611_manual_home_finance_regression_test.dart": [
       {
-        "start": "class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {",
-        "end": "/// A cancelled budget warning"
+        "start": " test('M681-M684 Account review uses SQL page, consent and all-time unassigned',(){",
+        "end": " test('M684 card extraction preserves original + and compact layout',(){"
+      }
+    ],
+    "lib/waffra_home_ledger_query.part.dart": [
+      {
+        "start": "final class WaffraHomeLedgerReadCache {",
+        "end": null
       }
     ],
     "lib/waffra_home_dashboard_analytics.part.dart": [
       {
         "start": " Widget dashboard(){",
-        "end": " List<MoneyEntry> get analysisEntries=>"
+        "end": " List<MoneyEntry> get analysisEntries=>period=='سنوي'?"
+      }
+    ],
+    "lib/main.dart": [
+      {
+        "start": "part 'waffra_home_navigation_helpers.part.dart';",
+        "end": "part 'waffra_home_presentation_controls.part.dart';"
+      },
+      {
+        "start": "part 'waffra_home_goals_recurring_pages.part.dart';",
+        "end": "part 'waffra_home_goal_actions.part.dart';"
+      },
+      {
+        "start": " Future<void> showInternalTransferTransactions()async{",
+        "end": "class WaffraDeletedItemsButton extends StatelessWidget {"
+      },
+      {
+        "start": " final WaffraHomeLedgerReadCache _m940LedgerReads=WaffraHomeLedgerReadCache();",
+        "end": " final namedBudgets=<WaffraNamedBudget>[];"
+      }
+    ],
+    "test/support/waffra_main_source.dart": [
+      {
+        "start": " const t=' // M707: approved Goals and Recurring pages moved to registered Home part.",
+        "end": " final goalSource=File('lib/waffra_home_goal_actions.part.dart').readAsStringSync();"
+      },
+      {
+        "start": " const m930_widgets=' // M930: original widgets Home session helper moved without behavioral change.",
+        "end": " return s;\n}"
+      }
+    ],
+    "test/m830_home_navigation_helpers_extraction_test.dart": [
+      {
+        "start": " test('M830 Home navigation and user-approved FAB/back behavior retain registered code',(){",
+        "end": " test('M830 original Home navigation source is reconstructed identically',(){"
+      }
+    ],
+    "test/m644_no_fab_snackbar_width_test.dart": [
+      {
+        "start": "  test('M644 all no-FAB routes including opened account show wide notice', () {",
+        "end": null
+      }
+    ],
+    "test/qa/waffra_home_source.py": [
+      {
+        "start": "    restore(\" // M707: approved Goals and Recurring pages moved to registered Home part.",
+        "end": "    goal = _read(root, \"lib/waffra_home_goal_actions.part.dart\", overrides)"
+      },
+      {
+        "start": "    restore(\" // M930: original widgets Home session helper moved without behavioral change.",
+        "end": "    return source\n"
+      }
+    ],
+    "test/m938_goals_restore_fab_contract_test.dart": [
+      {
+        "start": " test('M938 home restore notice retains FAB anchor during Settings handoff',(){",
+        "end": " for(final english in [false,true]){\n  testWidgets('M938 "
+      }
+    ],
+    "test/m707_home_goals_recurring_extraction_test.dart": [
+      {
+        "start": " test('M707 production goal and recurring UI is registered and not duplicated',(){",
+        "end": " test('M707 source-based finance tests see actual same-library pages in old order',(){"
+      }
+    ],
+    "lib/waffra_home_goals_recurring_pages.part.dart": [
+      {
+        "start": " Widget goalsPage(){",
+        "end": null
+      }
+    ],
+    "scripts/qa/m550_behavior_contract_preflight.py": [
+      {
+        "start": "        \"lib/waffra_home_navigation_helpers.part.dart\",",
+        "end": "        \"lib/waffra_home_presentation_controls.part.dart\","
+      },
+      {
+        "start": "        \"lib/waffra_home_goals_recurring_pages.part.dart\",",
+        "end": "        \"lib/waffra_home_goal_actions.part.dart\","
+      }
+    ],
+    "test/m930_home_lifecycle_helpers_extraction_test.dart": [
+      {
+        "start": " test('M930 verified Home session/nav methods are real same-library parts, unchanged',(){",
+        "end": null
+      }
+    ],
+    "test/m622_immediate_home_without_loader_test.dart": [
+      {
+        "start": " test('M622 never renders fake balance or loading screen while verifying vault',(){",
+        "end": " test('M622 entire real Home values come from one completed verified load',(){"
+      }
+    ],
+    "test/m623_verified_home_handoff_no_black_frame_test.dart": [
+      {
+        "start": " final homeLoader=source.split(' Future<void> _loadFinanceSafely()async{')[1]",
+        "end": " test('M623 keeps prior authenticated UI until one complete verified Home',(){"
       }
     ],
     "lib/waffra_home_entry_sheet.part.dart": [
       {
-        "start": "    Future<void> createAccountInsideEntryDropdown(",
-        "end": "    Widget operationPicker(){"
+        "start": "  // A paid goal due is an immutable verified two-source settlement.",
+        "end": "  bool linkedHistoricalAccountInThisEdit=false;"
       }
     ],
-    "lib/waffra_home_goal_actions.part.dart": [
+    "lib/waffra_approved_page_designs.dart": [
       {
-        "start": " Future<WaffraAccountBalance?> _m641CreateGoalRecurringAccount(",
-        "end": " /// Release an earmark back to spendable cash."
+        "start": "class WaffraApprovedMetric {",
+        "end": "class WaffraApprovedDashboardLink extends StatelessWidget {"
       }
     ],
-    "lib/waffra_home_sms_confirmation.part.dart": [
+    "test/m940_m941_home_ledger_pagination_test.dart": [
       {
-        "start": "   Future<void> selectAccountBeforeYes(",
-        "end": "     if(pickedId==null||!mounted||!dialog.mounted)return;"
-      }
-    ],
-    "lib/waffra_home_sms_transfer_review.part.dart": [
-      {
-        "start": "       onCreateSmsAccount:(group,createProvider,isDestination)async{",
-        "end": "       onConfirmTransfer:(draft)async{"
+        "start": " test('M940/M941 production Home and summary share source-verified read query',(){",
+        "end": null
       }
     ],
     "lib/waffra_home_verified_account_flows.part.dart": [
       {
-        "start": " List<MoneyEntry> _m684ScopedMonthEntries(int year,int month){",
-        "end": " Future<void> _m467PickHomeAccount()async{"
+        "start": " Iterable<MoneyEntry> _m467ScopedEntries(){",
+        "end": " double? _m942VerifiedAllAccountsBalance(){"
       }
     ],
-    "lib/waffra_home_verified_finance_pickers.part.dart": [
+    "lib/waffra_home_account_tools.part.dart": [
       {
-        "start": " Future<({List<String?>? ids,int? generation})?> reviewSmsAccountLinks(",
-        "end": "/// Budget assignment is OPTIONAL"
-      }
-    ],
-    "lib/waffra_new_account_dialog.dart": [
-      {
-        "start": "class WaffraNewAccountDraft {",
-        "end": "class WaffraNewAccountDialog extends StatefulWidget {"
-      }
-    ],
-    "lib/waffra_recurring_account_groups.dart": [
-      {
-        "start": " static List<WaffraRecurringAccountGroup> fromAccounts(",
-        "end": null
-      }
-    ],
-    "lib/waffra_sms_account_learning.dart": [
-      {
-        "start": "import 'package:flutter_secure_storage/flutter_secure_storage.dart';",
-        "end": "/// Independent from income/expense/transfer classification rules."
-      },
-      {
-        "start": " static String? bankGroup(String text){",
-        "end": " /// One actual source-verified user confirmation"
-      }
-    ],
-    "scripts/qa/m268_scope_review.py": [
-      {
-        "start": "    for key in (\"waffra-approved-emerald-balance-card\"",
-        "end": "        demand(key in main_text,\"data-safe reference balance card missing: \"+key)"
-      }
-    ],
-    "test/m268_approved_emerald_balance_card_test.dart": [
-      {
-        "start": "  expect(header,contains('WaffraBalanceWavePainter('));",
-        "end": "  expect(artwork,contains('class WaffraBalanceIllustration'));"
-      }
-    ],
-    "test/m371_goal_wallet_and_budgets_regression_test.dart": [
-      {
-        "start": "    expect(source,contains('balance:_m467ShownBalance()'));",
-        "end": "    expect(source,contains('goalWalletPaidMinor:allocation.fromGoalMinor'));"
-      }
-    ],
-    "test/m470_sms_first_sender_account_test.dart": [
-      {
-        "start": " test('M470 #11 account suggestion only starts on confirmed bank SMS review',(){",
-        "end": " test('M636 SMS posting remains a separately confirmed atomic finance write',(){"
-      }
-    ],
-    "test/m684_finance_period_index_test.dart": [
-      {
-        "start": "  expect(s,contains('final previousRows=_m684Periods.month('));",
-        "end": "  expect(s,contains('final ids=_m684ScopedEntryIds;'));"
-      }
-    ],
-    "test/m343_goal_recurring_named_budgets_test.dart": [
-      {
-        "start": " test('M343 goal/recurring UI uses one saved total and budget remains independent',(){",
-        "end": null
+        "start": " Future<void> backupDialog()async {",
+        "end": " // System credentials are never saved"
       }
     ],
     "test/m296_monthly_budget_and_transactions_test.dart": [
@@ -256,10 +258,32 @@
         "end": null
       }
     ],
-    "test/m470_recurring_provider_accounts_test.dart": [
+    "test/m665_goal_due_display_and_linked_edit_test.dart": [
       {
-        "start": " test('M470 SMS review has bank and account cascade with sender-match gate',(){",
-        "end": " test('M470 money form requires an explicit provider before a linked source or destination',(){"
+        "start": " test('M665.7 recurring goal payment shows paid split, not zero saved progress',(){",
+        "end": " test('M689 goal action sheet retains fund/edit/release/delete/active',(){"
+      },
+      {
+        "start": " test('M665.7 linked due edit explains without changing finance; standalone still editable',(){",
+        "end": " testWidgets('M665.7 widget shows labelled wallet and bank, never tech notes/restaurant',"
+      }
+    ],
+    "test/m670_feedback_transfer_dashboard_test.dart": [
+      {
+        "start": " test('M670 all Home filters have a real limit and reversible expansion',(){",
+        "end": " test('M670 goals, recurring and category stats share layout geometry',(){"
+      }
+    ],
+    "test/storage/m183_encrypted_transaction_recycle_test.dart": [
+      {
+        "start": "  tearDown(() async {",
+        "end": "  test('M183 deletes transaction and encrypted invoice as one reversible SQL commit',"
+      }
+    ],
+    ".github/workflows/m282-combined-candidate.yml": [
+      {
+        "start": "      - name: Prove the whole M274 through M281 integration is present",
+        "end": "  whole-flutter-regression:"
       }
     ]
   }

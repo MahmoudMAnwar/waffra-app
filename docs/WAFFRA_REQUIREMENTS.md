@@ -1,3 +1,13 @@
+## M944 — تحسين الأداء العميق واستقرار البيانات: المحاور الخمسة (2026-11-15)
+
+- **Issue:** [#653](https://github.com/MahmoudMAnwar/waffra-app/issues/653). **Owner instruction:** implement and report only independently verified milestones as «تم انتهاء محور 1 من 5» ... «تم انتهاء محور 5 من 5».
+- **Axis 1 — SQLCipher:** verified read-only bounded database-level paging with deterministic timestamp/ID keyset, correct account scope and source lease; do not silently fall back to in-memory financial results or unverified balances.
+- **Axis 2 — large lists:** source-consistent windows for finance, SMS sender review, goals and recurring, preserving original select-all semantics, filter/search and unchanged approved UI/+ FAB/Snackbar geometry.
+- **Axis 3 — finance parity:** authenticated disposable-vault duplicate prevention, restores (V24/V3 synthetic only), transfer/savings/due/income/budget invariants, stable IDs, report totals and crash/cold reopen.
+- **Axis 4 — state extraction:** separate remaining Home read/query responsibilities and remove only proven unreachable code without changing live production writer, verified authority or app design.
+- **Axis 5 — repeatable QA:** exact-SHA passed/failed/skipped totals, group recurring failures by test/signature, permanent regression checks without skipping or relaxing security gates.
+- **QA:** [M944 verification matrix](qa/M944_FIVE_AXES_CODE_QA.md). **All five axes initially Pending.** Source commits + same-head CI are required for each completed axis. The owner's real Android test and historical private archive acceptance remain separate and are not claimed.
+
 ## M942 — إصلاح تباين أرصدة الحسابات البنكية التابعة وإنشائها من القوائم (2026-11-14)
 
 - **Issue:** [#649](https://github.com/MahmoudMAnwar/waffra-app/issues/649). Independent Draft PR from main; no changes to #648.
@@ -2199,3 +2209,38 @@ M939 verification correction: Flutter's fixed FAB follower host must shrink-wrap
 
 ### M943 — Issue #651: owner follow-up after M942, 8 workstreams
 Separate Draft PR stacked on #650. Fix unverified Home balance display; remove unfounded monthly comparison; bound Home displayed transactions without changing financial ordering; expand Saudi SMS bank/wallet recognition without auto-post; preserve explicit independent identities for custom Other institutions; support authenticated clearance of bank last four; add V24/V3 backup reconciliation QA; audit retired AI source compatibility without breaking currency security or changing active app routes. Keep all approved Home/Goals/Recurring cards, FAB and Snackbar unchanged. Full exact-SHA CI, original owner encrypted backup and actual signed Android UAT are independent gates.
+
+### M944 محور 4 — تجزئة Home والعمليات المتكررة (تنفيذ ضمن PR #654)
+- فصل `HomeScreenState.build` (246 سطرًا، نسخة مطابقة للمصدر الأصلي) إلى `waffra_home_root_shell.part.dart` مع إبقاء State ومرجع الـFAB/الفوتر/Snackbar كما هما.
+- فصل محرر المتكررة وحساب موعدها وإجراءات الهدف المرتبط (304 أسطر مطابقة) إلى `waffra_home_recurring_workflows.part.dart`، وإبقاء Goals/Recurring UI الأصلي في ملف الصفحات.
+- تحديث اختبار Dart/Python لإعادة تركيب المصدر الأصلي ومراجعة الاختبارات القديمة؛ بدون إزالة أو تعطيل أي حارس أموال أو بيانات، وبدون تعديل شكل القوالب المعتمدة.
+- الحالة: **Partial** لحين اجتياز CI على أحدث SHA؛ فصل الحقول المشتركة العشوائي أو نسخ الحالة في Controllers ثانية ليس هدفًا بحد ذاته وقد يسبب أخطاء رصيد/Logout.
+
+### M945 — Owner finance archive and approved Goals/Dues/Home UI (#653, Draft #654)
+- Preserve 19 authenticated restored transaction identities, including two income entries, after a twentieth manual expense is committed. Never recreate, drop or double-charge historical entries; old unattached account history stays visible in All accounts until the user explicitly assigns it.
+- On confirmed source-authorized manual/SMS append, invalidate the Home monthly read index; after manual commit refresh verified balances and account context. Restore/rollback must not display stale totals.
+- Goals and Dues filters each use one count-labelled drop-down with all date/status options, no duplicated filter icon. Goals three-dot menu includes Deleted only, while inactive and incomplete remain in the drop-down.
+- Use original SAMA Saudi Riyal artwork for Goals/Dues financial amounts. Dues keeps linked goal, recurring editing, reminders and deleted access, adds a gold total/active/count strip and a purposeful zero-state Add due button without changing the global +.
+- Home shows one Show more/less control inside the search/filter/more toolbar; read-only combined finance/transfer/savings history remains progressively rendered in 50-card windows.
+- Release acceptance requires same-commit CI and independent decrypted owner archive validation on an expendable Android handset; no private password or archive is committed.
+
+### M946 — Mandatory proactive all-feature smoke / cross-feature wiring (#653, same Draft PR #654)
+- Run all current feature smoke areas at every PR change, and again on main: no paths-only bypass and no all-skipped/synthetic-green results.
+- Maintain a documented executable matrix with 33 active functional areas and 60 real Flutter test files, distributed among three independent groups: finance/data, experience, and safety/recovery.
+- Always exercise real disposable SQLCipher storage for critical account, income, expense, historical unassigned records, duplicate/replay, cold reopen and balance assertions; keep existing goal/due/budget/transfer/SMS UI and finance tests in the same matrix.
+- Enforce each area has at least two existing runnable tests. New feature work must extend the matrix and preserve the old group coverage rather than replacing it.
+- Summarize actual passed/failed/skipped test cases by exact commit SHA. Reject missing reports, missing source/tests, test failures, and unverified app-source checkouts; do not silence test or static-analyzer failures.
+- Hardware-only risks remain OPEN and must not be reported as green: Android SMS/background, biometric/OS behavior, signed APK installation, RTL/font scaling, notifications, owner-private V24 restore and real third-party quote freshness.
+- The test device and its disposable data must never be confused with the spouse device containing irreplaceable historical records.
+
+### M947 — Deletion/restore must be proactively smoke tested (same #654)
+- Mandatory regression for transaction Delete / Cancel / Undo, including 19-item restored ledger with two historic income entries, SQLCipher cold reopen, unchanged eighteen sibling rows and SMS dedup hashes; no owner data touched.
+- Mandatory regression for 30-day deleted Goals, Recurring, Categories, receipts, SMS inbox, and the distinct Delete All and Cloud Account Delete controls. Preserve settled Goal due, bank wallet balances and receipt hashes; confirm stale snapshots are rejected.
+- UI transitions must not replace the Home screen, set loading to black frame or present success before durable SQLCipher commit; the full-financial-data erase remains behind biometric confirmation. Real Android OS biometric/black-frame proof is an independent UAT requirement, never a host-test PASS.
+
+### M948 — Risk-driven functional/nonfunctional regression before release (same #654)
+- **Financial property tests (P0):** exact SQLCipher manual/SMS writes when two writers compete for the same generation; both must never post. Invalid/cancelled writes cannot change ledger, account balance or encrypted snapshot. Reopen vault after winning write and verify exact ID and halala amount.
+- **Fuzz and date boundaries (P0/P1):** 10,000 seeded random historical entries, independent brute-force comparison of indexed period/filter/account reads and 50-item pagination. Require no old rows dropped, no duplicate ID and no unassigned account guessed; date picker must include exactly user-selected calendar days, even around year-end and February 29. Check 10,000 money amounts using integer halalas, 16-year recurring schedule and paid/postponed boundaries.
+- **Non-functional (P1):** a 10k-entry host-index/property smoke under a conservative 15-second budget, plus small 320px viewport and 200% RTL text scaling for approved Goal/Due metrics. This benchmark is not proof of real Android frame timing.
+- **Evidence gate (P0):** M946 independently runs every PR HEAD, each shard must contain at least 10 passed test cases with zero Failed, zero Skipped, a complete valid M937 event report and exact SHA. Missing/incomplete/mismatched evidence MUST fail, never green. Device, biometrics, private Backup and live SMS remain separately pending.
+- **Release policy:** zero unresolved P0 financial-loss or data-corruption issues and no known P1 regression before release candidate; no guarantee of a zero-defect app. Archive exact-head reports and reopen every discovered bug as regression.

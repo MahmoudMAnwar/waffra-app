@@ -1,5 +1,6 @@
 import 'waffra_accounts_repository.dart';
 import 'waffra_account_context_read.dart';
+import 'waffra_sqlcipher_history_pager.dart';
 import 'waffra_account_context_repository.dart';
 import 'waffra_account_details_schema.dart';
 import 'waffra_custom_institution_links.dart';
@@ -281,6 +282,18 @@ class WaffraVerifiedAccountsApi implements WaffraAccountOperations {
   WaffraAccountContextRead.loadMonthEntries(
    store:context.store,monthIso:monthIso,
    selectedAccountId:selectedAccountId,limit:limit,offset:offset));
+
+ /// M944: keyset pagination remains under the verified Home/Widget source
+ /// lock, with immutable finance generation checked before and after the
+ /// SQLCipher query by readVerifiedAccountMetadata. Never expose a raw
+ /// database handle to widgets or silently fall back to a legacy list.
+ Future<WaffraSqlcipherHistoryPage> readKeysetHistoryPage({
+  String? monthIso,String? selectedAccountId,bool? income,
+  int limit=100,WaffraSqlcipherHistoryCursor? after,
+ })=>bridge.readVerifiedAccountMetadata((context)=>
+  WaffraSqlcipherHistoryPager.load(
+   store:context.store,monthIso:monthIso,accountId:selectedAccountId,
+   income:income,limit:limit,after:after));
 
  /// Attach a past unassigned entry only AFTER the account screen has a
  /// witnessed generation and the user explicitly confirms. This does not

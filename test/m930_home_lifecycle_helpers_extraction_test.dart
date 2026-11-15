@@ -50,8 +50,9 @@ void main(){
     expect(joined,contains(value),reason:'real source: ${entry.key}: $value');
    }
   }
-  expect(main,contains('floatingActionButtonAnimator:const WaffraStationaryFabAnimator()'));
-  expect(main,contains('width:58,height:58'));
+  final shell=File('lib/waffra_home_root_shell.part.dart').readAsStringSync();
+  expect(shell,contains('floatingActionButtonAnimator:const WaffraStationaryFabAnimator()'));
+  expect(shell,contains('width:58,height:58'));
   expect(main,contains('waffraWidgetAction.addListener(_receiveWidgetAction)'));
  });
 }

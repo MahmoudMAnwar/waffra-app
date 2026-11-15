@@ -4,6 +4,19 @@ part of 'main.dart';
 /// analytics methods moved together without changing calculations or UI.
 extension _WaffraHomeDashboardAnalyticsModule on _HomeScreenState {
  Widget dashboard(){
+  // M944: incremental presentation windows avoid thousands of built Cards
+  // in the same frame. PDF/export continues to use complete verified data.
+  void advanceHistoryWindow(int total){
+   setState((){
+    if(!showAllTransactions){
+     showAllTransactions=true;
+     _m940LedgerReads.resetExpanded();
+    }else if(!_m940LedgerReads.revealNext(total)){
+     showAllTransactions=false;
+     _m940LedgerReads.resetExpanded();
+    }
+   });
+  }
   final scopedEntries=_m467ScopedEntries().toList();
   final unverifiedFxEntries=entries.where(waffraNeedsLegacyFxReview).toList();
   // M943: authenticated historical bank closing/opening not available here.
@@ -17,6 +30,15 @@ extension _WaffraHomeDashboardAnalyticsModule on _HomeScreenState {
    (_m684ScopedEntryIds??const <String>{});
   final visibleCount=_m684Periods.countNewestFirst(
    verifiedEntryIds:verifiedIds,where:transactionFilter.accepts);
+  final renderVersion=++_m945DashboardRenderVersion;
+  final historyScope='${_m467SelectedAccount}|$typeFilter|$search|'
+   '$categoryFilter|${transactionsDateRange?.start.toIso8601String()}|'
+   '${transactionsDateRange?.end.toIso8601String()}|'
+   '$minTransactionAmount|$maxTransactionAmount';
+  final unifiedView=_m468VerifiedAccountsLoaded&&
+   (typeFilter=='الكل'||typeFilter=='التحويلات'||typeFilter=='الادخار');
+  final toolbarCount=unifiedView&&_m945UnifiedHistoryScope==historyScope
+   ?(_m945UnifiedHistoryCount??visibleCount):visibleCount;
   final filterCats=<String>{'الكل',...scopedEntries
    .where(transactionFilter.acceptsType).map((e)=>e.category)}.toList();
   final selected=filterCats.contains(categoryFilter)?categoryFilter:'الكل';
@@ -25,10 +47,11 @@ extension _WaffraHomeDashboardAnalyticsModule on _HomeScreenState {
   // Home first page. PDF exports must include all matching transactions.
   List<MoneyEntry> fullFilteredTransactions()=>
    _m684Periods.newestFirst(verifiedEntryIds:verifiedIds,where:transactionFilter.accepts);
+  final requestedWindow=waffraDashboardTransactionDisplayCount(
+   visibleCount,expanded:showAllTransactions);
   final shown=_m684Periods.pageNewestFirst(
    verifiedEntryIds:verifiedIds,where:transactionFilter.accepts,offset:0,
-   limit:waffraDashboardTransactionDisplayCount(
-    visibleCount,expanded:showAllTransactions));
+   limit:min(requestedWindow,_m940LedgerReads.expandedLimit));
   return RefreshIndicator(
    onRefresh:()=>_refreshAndSettle(_dashboardScrollController,0),
    child:NotificationListener<ScrollStartNotification>(
@@ -208,18 +231,6 @@ extension _WaffraHomeDashboardAnalyticsModule on _HomeScreenState {
              style:const TextStyle(fontSize:19,fontWeight:FontWeight.bold))),
            ]),
            // M689: the financial history and its tools are always mounted.
-            if(waffraCanExpandDashboardTransactions(visibleCount)&&
-               (!_m468VerifiedAccountsLoaded||
-                (typeFilter!='التحويلات'&&typeFilter!='الادخار'&&
-                 typeFilter!='الكل')))
-             Align(alignment:AlignmentDirectional.centerEnd,
-              child:TextButton(
-               key:const Key('waffra-dashboard-transactions-expand'),
-               onPressed:WaffraHaptics.tap(
-                ()=>setState(()=>showAllTransactions=!showAllTransactions)),
-               child:WaffraText(showAllTransactions?
-                (waffraIsEnglish?'Show less':'عرض أقل'):
-                (waffraIsEnglish?'Show more':'عرض أكثر')))),
            const SizedBox(height:10),
            Divider(color:forest.withValues(alpha:0.10)),
            Row(children:[
@@ -239,6 +250,20 @@ extension _WaffraHomeDashboardAnalyticsModule on _HomeScreenState {
              decoration:InputDecoration(isDense:true,
               hintText:waffraIsEnglish?'Search':'ابحث عن عملية',
               border:const OutlineInputBorder()))),
+            if(waffraCanExpandDashboardTransactions(toolbarCount))
+             TextButton(
+              key:const Key('waffra-dashboard-transactions-expand'),
+              style:TextButton.styleFrom(
+               padding:const EdgeInsets.symmetric(horizontal:5),
+               minimumSize:const Size(60,40),
+               tapTargetSize:MaterialTapTargetSize.shrinkWrap),
+              onPressed:WaffraHaptics.tap(
+               ()=>advanceHistoryWindow(toolbarCount)),
+              child:WaffraText(showAllTransactions&&
+               _m940LedgerReads.expandedLimit>=toolbarCount?
+               (waffraIsEnglish?'Show less':'عرض أقل'):
+               (waffraIsEnglish?'Show more':'عرض أكثر'),
+               style:const TextStyle(fontSize:12))),
             if(!showTransactionSearch)const Spacer(),
             PopupMenuButton<String>(
              tooltip:waffraIsEnglish?'More actions':'المزيد من الخيارات',
@@ -363,20 +388,25 @@ extension _WaffraHomeDashboardAnalyticsModule on _HomeScreenState {
                 (when:DateTime.tryParse(m.occurredIso)??DateTime(1970),
                  activity:m),
               ]..sort((a,b)=>b.when.compareTo(a.when));
-              final maxShown=waffraDashboardTransactionDisplayCount(
+              // One toolbar control counts the combined verified timeline.
+              if(_m945UnifiedHistoryScope!=historyScope||
+                 _m945UnifiedHistoryCount!=history.length){
+               WidgetsBinding.instance.addPostFrameCallback((_){
+                if(!mounted||_m945DashboardRenderVersion!=renderVersion||
+                   (_m945UnifiedHistoryScope==historyScope&&
+                    _m945UnifiedHistoryCount==history.length))return;
+                setState((){
+                 _m945UnifiedHistoryScope=historyScope;
+                 _m945UnifiedHistoryCount=history.length;
+                });
+               });
+              }
+              final requestedUnified=waffraDashboardTransactionDisplayCount(
                history.length,expanded:showAllTransactions);
+              final maxShown=min(requestedUnified,_m940LedgerReads.expandedLimit);
               return Column(children:[
                // Count the verified unified timeline (not just money entries).
                // Applies to All, Transfers and Savings alike.
-               if(waffraCanExpandDashboardTransactions(history.length))
-                Align(alignment:AlignmentDirectional.centerEnd,
-                 child:TextButton(
-                  key:const Key('waffra-dashboard-unified-activity-expand'),
-                  onPressed:WaffraHaptics.tap(
-                   ()=>setState(()=>showAllTransactions=!showAllTransactions)),
-                  child:WaffraText(showAllTransactions?
-                   (waffraIsEnglish?'Show less':'عرض أقل'):
-                   (waffraIsEnglish?'Show more':'عرض أكثر')))),
                if(history.isEmpty)Padding(
                 padding:const EdgeInsets.symmetric(vertical:26),
                 child:WaffraText(waffraIsEnglish?

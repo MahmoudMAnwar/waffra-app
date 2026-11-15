@@ -52,6 +52,10 @@ String readWaffraMainSourceForContracts(){
  if(s.split(t).length!=2)throw StateError('Missing or repeated M707 page marker');
  s=s.replaceFirst(t,_method('lib/waffra_home_goals_recurring_pages.part.dart',
   ' Widget goalsPage(){'));
+ const m944Recurring=' // M944: original recurring editor and linked-goal actions live in the recurring-workflows part.\n';
+ if(s.split(m944Recurring).length!=2)throw StateError('M944 recurring workflow marker absent/duplicate');
+ s=s.replaceFirst(m944Recurring,_method('lib/waffra_home_recurring_workflows.part.dart',
+  ' Future<void> recurringDialog('));
  final goalSource=File('lib/waffra_home_goal_actions.part.dart').readAsStringSync();
  final goalStart=goalSource.indexOf(' Future<void> goalDialog(');
  final goalActionStart=goalSource.indexOf(' Future<void> _m689GoalActions(');
@@ -199,5 +203,12 @@ String readWaffraMainSourceForContracts(){
  const m930_widgets=' // M930: original widgets Home session helper moved without behavioral change.\n';
  if(s.split(m930_widgets).length!=2)throw StateError('M930 widgets original production Dart part missing/duplicate');
  s=s.replaceFirst(m930_widgets,_method('lib/waffra_home_widget_action_routes.part.dart',' void _returnToHome(){'));
+ const m944Shell=' // M944: original Home shell moved unchanged to registered same-library part.\n'
+  ' @override Widget build(BuildContext context)=>_m944BuildHome();';
+ if(s.split(m944Shell).length!=2)throw StateError('M944 Home root shell marker missing or duplicate');
+ s=s.replaceFirst(m944Shell,_method('lib/waffra_home_root_shell.part.dart',
+  ' Widget _m944BuildHome()=>PopScope(').replaceFirst(
+    ' Widget _m944BuildHome()=>PopScope(',
+    ' @override Widget build(BuildContext context)=>PopScope('));
  return s;
 }

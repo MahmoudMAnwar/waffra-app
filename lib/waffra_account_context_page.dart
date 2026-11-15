@@ -5,6 +5,7 @@ import 'waffra_account_context_settings.dart';
 import 'waffra_i18n.dart';
 
 import 'storage/waffra_account_context_read.dart';
+import 'storage/waffra_sqlcipher_history_pager.dart';
 import 'storage/waffra_accounts_repository.dart';
 import 'storage/waffra_verified_accounts_api.dart';
 
@@ -25,9 +26,17 @@ class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {
  String filter='all';
  int pageOffset=0;
  static const int pageSize=50;
+ // M944: keep one cursor per visited account-month page; never OFFSET-scan
+ // an unbounded SQLCipher history for the verified monthly list.
+ final Map<int,WaffraSqlcipherHistoryCursor?> _m944MonthCursors={0:null};
+ void resetPages(){
+  pageOffset=0;
+  _m944MonthCursors.clear();
+  _m944MonthCursors[0]=null;
+ }
  DateTime selectedMonth=DateTime(DateTime.now().year,DateTime.now().month,1);
  late Future<WaffraAccountContextReadResult> future;
- late Future<List<WaffraAccountLedgerRow>> ledgerPage;
+ late Future<WaffraSqlcipherHistoryPage> ledgerPage;
  late Future<({int count,int netMinor})> unassignedPreview;
  String t(String ar,String en)=>widget.english?en:ar;
  String get month=>selectedMonth.year.toString().padLeft(4,'0')+'-'+
@@ -38,10 +47,18 @@ class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {
  void reload(){
   future=widget.api.readAccountContext(
    monthIso:month,selectedAccountId:accountId,summaryOnly:true);
+  // Historical unassigned reconciliation retains its existing independent
+  // OFFSET queue; account/month ledger uses source-witnessed keyset reads.
+  if(filter!='none'&&!_m944MonthCursors.containsKey(pageOffset)){
+   throw StateError('Missing encrypted history cursor; refresh before paging.');
+  }
   ledgerPage=filter=='none'
-   ?widget.api.readUnassignedPage(limit:pageSize,offset:pageOffset)
-   :widget.api.readMonthlyPage(monthIso:month,selectedAccountId:accountId,
-     limit:pageSize,offset:pageOffset);
+   ?widget.api.readUnassignedPage(limit:pageSize,offset:pageOffset).then(
+     (items)=>WaffraSqlcipherHistoryPage(entries:items,
+      hasMore:items.length==pageSize,nextCursor:null))
+   :widget.api.readKeysetHistoryPage(
+     monthIso:month,selectedAccountId:accountId,
+     limit:pageSize,after:_m944MonthCursors[pageOffset]);
   unassignedPreview=widget.api.readUnassignedSummary();
  }
  String money(int minor)=>(minor/100).toStringAsFixed(2)+' SAR';
@@ -101,7 +118,7 @@ class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {
    await widget.api.linkUnassignedEntry(
     entryId:entry.id,accountId:chosen,userConfirmed:true,
     openingExcludesHistory:openingVerified);
-   if(mounted)setState(reload);
+   if(mounted)setState((){resetPages();reload();});
   }catch(error){
    final opening=error is StateError &&
     error.toString().contains('opening balance');
@@ -144,7 +161,7 @@ class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {
            'Historical net, not available bank cash.')),
          ]),
          trailing:v.count==0?null:TextButton(
-          onPressed:()=>setState((){filter='none';pageOffset=0;reload();}),
+          onPressed:()=>setState((){filter='none';resetPages();reload();}),
           child:Text(t('مراجعة','Review'))),
         ));}),
      if(filter!='none')Padding(
@@ -155,7 +172,7 @@ class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {
         tooltip:t('الشهر السابق','Previous month'),
         onPressed:()=>setState((){
          selectedMonth=DateTime(selectedMonth.year,selectedMonth.month-1,1);
-         pageOffset=0;reload();
+         resetPages();reload();
         }),icon:const Icon(Icons.chevron_right)),
        Expanded(child:Text(month,textAlign:TextAlign.center,
         style:Theme.of(context).textTheme.titleMedium)),
@@ -164,7 +181,7 @@ class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {
         tooltip:t('الشهر التالي','Next month'),
         onPressed:()=>setState((){
          selectedMonth=DateTime(selectedMonth.year,selectedMonth.month+1,1);
-         pageOffset=0;reload();
+         resetPages();reload();
         }),icon:const Icon(Icons.chevron_left)),
       ])),
      Padding(padding:const EdgeInsets.all(12),
@@ -182,7 +199,7 @@ class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {
          value:'account:'+account.id,child:Text(account.name))),
        ],
        onChanged:(value){if(value==null)return;setState((){
-        filter=value;pageOffset=0;reload();
+        filter=value;resetPages();reload();
        });},
       )),
      WaffraAccountContextSettings(
@@ -218,7 +235,7 @@ class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {
      Padding(padding:const EdgeInsets.all(12),
       child:Text(t('العمليات','Transactions'),
        style:Theme.of(context).textTheme.titleMedium)),
-     FutureBuilder<List<WaffraAccountLedgerRow>>(
+     FutureBuilder<WaffraSqlcipherHistoryPage>(
       future:ledgerPage,builder:(ctx,result){
        if(result.connectionState!=ConnectionState.done){
         return const Center(child:Padding(padding:EdgeInsets.all(18),
@@ -228,7 +245,8 @@ class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {
         return Padding(padding:const EdgeInsets.all(16),
          child:Text(t('تعذر تحميل صفحة العمليات.', 'Failed loading entries.')));
        }
-       final items=result.data??const <WaffraAccountLedgerRow>[];
+       final page=result.data;
+       final items=page?.entries??const <WaffraAccountLedgerRow>[];
        return Column(children:[
         if(items.isEmpty)Padding(padding:const EdgeInsets.all(16),
          child:Text(t('لا توجد عمليات في هذا الفلتر.', 'No entries for this filter.'))),
@@ -254,9 +272,17 @@ class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {
           onPressed:()=>setState((){pageOffset-=pageSize;reload();}),
           child:Text(t('السابق','Previous'))),
          const Spacer(),
-         if(items.length==pageSize)TextButton(
+         if(page?.hasMore==true)TextButton(
           key:const Key('m684-ledger-page-next'),
-          onPressed:()=>setState((){pageOffset+=pageSize;reload();}),
+          onPressed:()=>setState((){
+           if(filter!='none'){
+            final next=page!.nextCursor;
+            if(next==null)throw StateError('Missing encrypted next-page cursor.');
+            _m944MonthCursors[pageOffset+pageSize]=next;
+           }
+           pageOffset+=pageSize;
+           reload();
+          }),
           child:Text(t('التالي','Next'))),
         ])),
        ]);

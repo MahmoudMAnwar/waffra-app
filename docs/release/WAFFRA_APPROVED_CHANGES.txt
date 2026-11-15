@@ -801,3 +801,55 @@ M940/M941 Draft PR #648 M486 regression correction (unreleased): coalesced futur
 
 [M943 #651 / stacked Draft #652 — 2026-11-15 CI correction, NOT RELEASED]
 - Restored safe grouping of existing untyped bank account labels by anchored institution prefix without weakening verified sender matching; added exact alrajhibank sender alias. Kept M940/M941 read-only search/filter semantics with M943 bounded display + complete PDF export. Corrected original M343/M296/M470 Flutter source assertions to validate these real contracts; no disabled tests. Reconciled latest M942 branch/main and staged 8-point source regression; physical owner archive and latest CI still pending.
+
+
+[M944 #653 / Draft #654 — 2026-11-15, CODE-ONLY / NOT RELEASED]
+- SQLCipher account history read now supports a source-locked keyset cursor, ordered by occurred_iso DESC and entry_id DESC, with explicit month/account/income filters and bounded page size. The account history screen keeps Previous/Next and resets cursor on month, account, and confirmed-link changes. Historical accountless rows remain separate and require user confirmation to link.
+- Added a disposable encrypted 2,700-row regression for page ordering, duplicate avoidance, account/period filtering, money-read-only parity, and cold reopen; strengthened original M611 positive contract. App + FAB, Snackbar, original SMS review, finance writers, account openings, transfer balance, backup and stored money are untouched.
+- This is a staging record, not a customer release: Flutter exact-head CI, expanded Home list pagination, native SMS source paging, parity and cleanup/QA axes remain pending; no physical Android or owner's private V24 backup has been validated.
+
+[M944 #653 / Draft #654 — Additional Home read-window update; NOT RELEASED]
+- Existing Home and unified transaction/transfer/savings Show more now reveal up to 50 additional read-only financial cards per action instead of eagerly building all cards on expansion. Source-verified full PDF export remains complete; approved card UI, FAB/Snackbar and record writes are untouched. Adds M944 window regression; Flutter CI and physical Android/old owner archive checks remain pending.
+
+
+[M944 #653 / PR #654 — AXIS 4 CODE SPLIT, DRAFT / NOT RELEASED — 2026-11-15]
+- Extracted the original HomeScreenState root build (246 source lines) to an owner-bound same-library `waffra_home_root_shell.part.dart`, retaining a single State.build delegate. Original Flutter tree, 58x58 anchored + FAB, fixed footer, two-line Snackbar placement, backdrop blur, navigation and first verified finance frame remain source-identical.
+- Extracted 304 unchanged source lines for recurring create/edit, due-date calculation and linked-goal action routing to `waffra_home_recurring_workflows.part.dart`. Original Goals/Recurring pages, saved values, account authority and financial postings have not changed.
+- Strengthened Dart/Python source reconstruction plus M707/M830/M644/M938 and added M944 root-shell regression. M550 source-provenance list now recognizes the real registered parts rather than a fake inline source. Same-HEAD CI, Android build and owner-device/backup validation remain separate; do not market as released or 100% complete until proven.
+
+[M945 — #653 / Draft #654, NOT RELEASED, 2026-11-15]
+- Fix source-verified manual/SMS ledger replacement to invalidate Home period cache; refresh SQLCipher accounts after confirmed manual commit, preserving original entries and balances.
+- Goals/Dues unified count dropdowns and official SAR mark; Goals overflow retains deleted items without redundant status filters. Gold Dues metrics and actionable empty state retain linked-goal/recurring features.
+- Place the single Home activity expand/collapse action on the same toolbar as filter, search and More for ledger and combined transfer/savings history. Existing windowing/full PDF remain.
+- Original user encrypted archive and physical Android behavior are NOT verified by these source changes; no release/merge claimed.
+
+[M945 #653 / Draft PR #654 — EXACT-HEAD FINANCE SAFETY ADDENDUM — 2026-11-15, NOT RELEASED]
+- After the previously noted user-approved UI changes, financial account selection now requires both an authenticated account context and exact verified account-entry IDs before presenting selected-account rows. The All accounts view still includes old unassigned transactions; no old ledger row or personal balance is rewritten.
+- Repaired the original read-only M940/M941 source contract to require invalidation of both the month index and combined-activity count when the financial snapshot changes; no regression gate removed.
+- The selected-account context analyzer warning was a source-level blocker in M429; this change consumes the existing SQLCipher-backed read rather than disabling analyzer warnings. M385 scope retains tight file and function boundaries.
+- Original user's password-encrypted 19-record archive is NOT part of CI. Real goals/dues and two historic income rows remain subject to owner-device restore verification after exact-head CI passes.
+
+[M945 backup parity cache follow-up — #654 DRAFT, not released, 2026-11-15]
+- Corrected a second read-only display-index invalidation gap specifically in the authenticated V24-to-SQLCipher post-restore canonical ledger UI repair. When trusted SQLCipher records are used to correct a stale Home list, the month cache is now invalidated in the same setState. No owner archive content, opening account amount, goal savings or transaction row is modified by this UI correction.
+- A source contract asserts the parity repair and all previous manual/SMS guards. Device validation with the encrypted owner archive still requires authorization; there is no claim of recovered invisible goals without it.
+
+[M946 #653 / PR #654 — autonomous whole-app smoke, DRAFT / NOT RELEASED — 2026-11-15]
+- Adds fail-closed whole-app smoke inventory for 33 active features with 60 actual Dart test files across finance, experience and safety; triggers with every PR/main commit regardless of touched file paths. Exact-head results are reported by the existing M937 event parser, not inferred from a green workflow label.
+- Adds a real synthetic encrypted SQLCipher end-to-end journey across account opening balances, manual account-linked income/expense, cold reopen, legacy unassigned transaction read, duplicate manual reject and reviewed SMS anti-replay.
+- Updates obsolete M296 Home Show more/less assertions to test one inline operations toolbar and verified mixed-activity counts. Does NOT remove previous finance, security or native Android CI gates.
+- The owner-private V24 archive, device biometric/SMS/background and signed APK installation require separate, authorized physical acceptance; none are claimed as tested by a synthetic archive.
+
+[M947 #653 / Draft PR #654 — deletion smoke extension, NOT RELEASED, 2026-11-15]
+- Existing automated suite previously omitted all real SQLCipher transaction deletion from the all-feature smoke. M946 now runs encrypted transaction/receipt Delete, Cancel, Undo, 30-day Goals/Recurring/Category recycle, SMS inbox delete, Delete All and account deletion release-gate validations on every PR.
+- New M183 regression runs 19 historical SQLCipher rows including two incomes, declines deletion, deletes one expense, closes and reopens encrypted vault, verifies all other historic records and bank SMS hashes survive and restores the deleted item to exact original snapshot order.
+- UI source tests require verified before-publish and stable Home navigation; physical Android black-frame and OS biometrics remain separate acceptance gates. No user backup ever uploaded to CI.
+
+[M948 risk-driven regression & QA integrity — #654 Draft, not released — 2026-11-15]
+- Functional: correct Home start-day date filter; 10,000-record property fuzz matches independent ledger source/order/filter and account ID selection; 10,000 cent math and 16-year leap-month due schedule; simultaneous manual/bank SMS writer uses one authoritative generation and cannot double-credit; unconfirmed, malformed, stale and non-owned input cannot mutate the encrypted ledger.
+- Non-functional: 10,000-record indexed-reading/pagination host benchmark capped at 15 sec and approved Goals/Dues RTL 320px screen at 200% font-size host widget check. These DO NOT prove Android scroll FPS, OS notifications or physical biometric screens.
+- CI quality: M946 shards fail on any Skipped, Failed, invalid report, wrong SHA or fake physical-approval assertion, with mutation self-tests; no silent 0-test green. Keep full core finance CI and QA scope gates intact.
+- Gate remains Draft; actual encrypted spouse archive and Android black-screen/delete remain user-device acceptance items; no claim of zero bugs.
+
+[M282 CI exact-head source guard correction — Draft PR #654, NOT RELEASED — 2026-11-15]
+- After Home source extraction, M275 WaffraSmoothConfirmationOverlay is now defined in lib/waffra_smooth_confirmation.dart instead of lib/main.dart. The original M282 source-completeness check falsely flagged the component as missing; verify the actual widget declaration there AND that main.dart imports it and instantiates WaffraSmoothOperationController, keeping runtime feedback and double-tap tests active.
+- All M274–M281 provenance markers and the explicit automaticallyActivateSqlCipher=false production release guard remain in force; no CI step disabled or skipped. No real user financial record, APK release setting, or private encrypted backup changed.

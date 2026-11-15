@@ -423,6 +423,7 @@ def build_report(base: str, head: str, root: Path = ROOT) -> dict:
         "lib/waffra_home_budget_alert_charts.part.dart",
         "lib/waffra_home_verified_finance_pickers.part.dart",
         "lib/waffra_home_navigation_helpers.part.dart",
+        "lib/waffra_home_root_shell.part.dart",
         "lib/waffra_home_presentation_controls.part.dart",
         "lib/waffra_home_logout_guard.part.dart",
         "lib/waffra_home_finance_notification_route.part.dart",
@@ -434,6 +435,7 @@ def build_report(base: str, head: str, root: Path = ROOT) -> dict:
         "lib/waffra_home_widget_action_routes.part.dart",
         "lib/waffra_home_sms_review_indicator.part.dart",
         "lib/waffra_home_goals_recurring_pages.part.dart",
+        "lib/waffra_home_recurring_workflows.part.dart",
         "lib/waffra_home_goal_actions.part.dart",
         "lib/waffra_home_dashboard_analytics.part.dart",
     )

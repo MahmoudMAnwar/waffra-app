@@ -1,0 +1,294 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:waffra/storage/waffra_accounts_repository.dart';
+import 'package:waffra/storage/waffra_accounts_schema.dart';
+import 'package:waffra/storage/waffra_account_context_read.dart';
+import 'package:waffra/storage/waffra_atomic_finance_snapshot.dart';
+import 'package:waffra/storage/waffra_encrypted_store.dart';
+import 'package:waffra/storage/waffra_fresh_encrypted_vault_bootstrap.dart';
+import 'package:waffra/storage/waffra_unified_finance_writer.dart';
+import 'package:waffra/storage/waffra_fresh_finance_modules_repository.dart';
+import 'package:waffra/main.dart' show SavingGoal, RecurringBill;
+
+/// M946: actual SQLCipher cross-feature smoke, not a source-text inspection.
+/// Every run uses a new disposable encrypted vault with synthetic records.
+void main(){
+ TestWidgetsFlutterBinding.ensureInitialized();
+ late Directory work;
+ late File vault;
+ late WaffraEncryptedStore db;
+ const key='m946-disposable-sqlcipher-smoke-key-2026';
+ WaffraAtomicFinanceSnapshot snapshot()=>WaffraAtomicFinanceSnapshot(
+  store:db,experimentalEnabled:true);
+ WaffraUnifiedFinanceWriter writer()=>WaffraUnifiedFinanceWriter(
+  writerDirectory:work,snapshot:snapshot(),experimentalEnabled:true);
+ WaffraAccountsRepository accounts()=>WaffraAccountsRepository(
+  db:db,experimentalEnabled:true);
+ Future<int> count(String table)async{
+  final row=await db.customSelect('SELECT count(*) AS n FROM '+table).getSingle();
+  return row.read<int>('n');
+ }
+ Map<String,Object?> entry(String id,{required bool income,required double amount,
+  String source='manual'})=><String,Object?>{
+   'id':id,'title':'M946 synthetic $id','category':income?'الراتب':'طعام',
+   'amount':amount,'income':income,'date':'2026-11-15T10:00:00.000',
+   'sourceType':source,'notes':'','receiptPath':null,
+  };
+ setUp(()async{
+  work=await Directory.systemTemp.createTemp('waffra-m946-all-features-');
+  vault=File('${work.path}/finance.sqlite');
+  db=WaffraEncryptedStore.openAt(vault,key:key);
+  await WaffraFreshEncryptedVaultBootstrap(store:db,experimentalEnabled:true)
+   .initialize(decision:WaffraFirstRunDecision.freshCandidate);
+  await snapshot().initializeEmpty();
+  await WaffraAccountsSchema.install(db);
+  await accounts().createAccount(
+   id:'bank',name:'Synthetic local bank',kind:'bank',openingMinor:100000,
+   createdIso:'2026-11-15T08:00:00Z',userConfirmed:true);
+  await accounts().createAccount(
+   id:'wallet',name:'Synthetic digital wallet',kind:'cash',openingMinor:50000,
+   createdIso:'2026-11-15T08:01:00Z',userConfirmed:true);
+ });
+ tearDown(()async{
+  await db.close();
+  if(await work.exists())await work.delete(recursive:true);
+ });
+
+ test('M946 account creation -> manual income/expense -> balance -> history '
+  '-> cold reopen: no cross-account leak',()async{
+  final original=await snapshot().read();
+  final posted=await writer().appendTransactions(
+   records:[
+    entry('m946-salary',income:true,amount:250),
+    entry('m946-groceries',income:false,amount:45),
+   ],
+   messageHashes:[null,null],selectedAccountIds:['bank','bank'],
+   userConfirmed:true,expectedAccountGeneration:original.generation);
+  expect(posted.saved,2);
+  expect(await count('fresh_finance_entries'),2);
+  expect(await count('fresh_finance_account_entry_links'),2);
+  final before=await accounts().balances();
+  expect(before.singleWhere((a)=>a.id=='bank').balanceMinor,120500);
+  expect(before.singleWhere((a)=>a.id=='wallet').balanceMinor,50000);
+  final month=await WaffraAccountContextRead.loadMonthEntries(
+   store:db,monthIso:'2026-11',selectedAccountId:'bank');
+  expect(month.map((e)=>e.id).toSet(),{'m946-salary','m946-groceries'});
+  final wallet=await WaffraAccountContextRead.loadMonthEntries(
+   store:db,monthIso:'2026-11',selectedAccountId:'wallet');
+  expect(wallet,isEmpty);
+  final canonical=(await snapshot().read()).values['entries'] as String;
+  final rows=(jsonDecode(canonical) as List).cast<Map>();
+  expect(rows.map((e)=>e['id']).toSet(),{'m946-salary','m946-groceries'});
+  await db.close();
+  db=WaffraEncryptedStore.openAt(vault,key:key);
+  expect(await count('fresh_finance_entries'),2);
+  expect(await count('fresh_finance_account_entry_links'),2);
+  final reopened=await accounts().balances();
+  expect(reopened.singleWhere((a)=>a.id=='bank').balanceMinor,120500);
+  expect(reopened.singleWhere((a)=>a.id=='wallet').balanceMinor,50000);
+  expect((await snapshot().read()).values['entries'],canonical);
+ });
+
+ test('M946 old unassigned finance stays visible but cannot silently '
+  'credit a bank; duplicate manual ID cannot charge twice',()async{
+  final s=await snapshot().read();
+  await writer().appendTransactions(
+   records:[entry('m946-old-income',income:true,amount:90)],
+   messageHashes:[null],userConfirmed:true);
+  final unknown=await WaffraAccountContextRead.unassignedSummary(store:db);
+  expect(unknown.count,1);
+  expect(unknown.netMinor,9000);
+  expect(await count('fresh_finance_entries'),1);
+  expect(await count('fresh_finance_account_entry_links'),0);
+  expect((await accounts().balances()).singleWhere(
+   (a)=>a.id=='bank').balanceMinor,100000);
+  final next=(await snapshot().read()).generation;
+  await writer().appendTransactions(
+   records:[entry('m946-current-expense',income:false,amount:15)],
+   messageHashes:[null],selectedAccountIds:['bank'],
+   userConfirmed:true,expectedAccountGeneration:next);
+  expect(await count('fresh_finance_entries'),2);
+  expect((await WaffraAccountContextRead.unassignedSummary(store:db)).count,1);
+  expect((await accounts().balances()).singleWhere(
+   (a)=>a.id=='bank').balanceMinor,98500);
+  final locked=await snapshot().read();
+  await expectLater(writer().appendTransactions(
+   records:[entry('m946-current-expense',income:false,amount:15)],
+   messageHashes:[null],selectedAccountIds:['bank'],
+   userConfirmed:true,expectedAccountGeneration:locked.generation),
+   throwsA(isA<StateError>()));
+  expect(await count('fresh_finance_entries'),2);
+  expect((await snapshot().read()).digest,locked.digest);
+  expect((await accounts().balances()).singleWhere(
+   (a)=>a.id=='bank').balanceMinor,98500);
+  expect(s.generation,0);
+ });
+
+
+ test('M946 income/expense + bank-to-wallet transfer conserves net worth '
+  'without a third income entry and replays only once',()async{
+  final first=await snapshot().read();
+  await writer().appendTransactions(records:[
+    entry('m946-transfer-salary',income:true,amount:250),
+    entry('m946-transfer-food',income:false,amount:100)],
+    messageHashes:[null,null],selectedAccountIds:['bank','bank'],
+    userConfirmed:true,expectedAccountGeneration:first.generation);
+  final original={for(final a in await accounts().balances())a.id:a.balanceMinor};
+  expect(original,{'bank':115000,'wallet':50000});
+  expect(await accounts().transfer(
+   id:'m946-bank-wallet',fromAccountId:'bank',toAccountId:'wallet',
+   amountMinor:25000,occurredIso:'2026-11-15T13:00:00Z',
+   userConfirmed:true),isTrue);
+  final moved={for(final a in await accounts().balances())a.id:a.balanceMinor};
+  expect(moved,{'bank':90000,'wallet':75000});
+  expect(moved.values.reduce((a,b)=>a+b),
+   original.values.reduce((a,b)=>a+b));
+  expect(await count('fresh_finance_entries'),2);
+  expect(await count('fresh_finance_internal_transfers'),1);
+  expect(await accounts().transfer(
+   id:'m946-bank-wallet',fromAccountId:'bank',toAccountId:'wallet',
+   amountMinor:25000,occurredIso:'2026-11-15T13:00:00Z',
+   userConfirmed:true),isFalse);
+  expect(await count('fresh_finance_entries'),2);
+  expect(await count('fresh_finance_internal_transfers'),1);
+  await db.close();
+  db=WaffraEncryptedStore.openAt(vault,key:key);
+  expect({for(final a in await accounts().balances())a.id:a.balanceMinor},moved);
+ });
+
+ test('M946 Goal -> linked recurring due retains same verified bank source '
+  'after cold reopen and rejects cross-account or direct saved-money edit',()async{
+  final goal=SavingGoal(id:'m946-goal',name:'هدف مؤقت',
+   target:1000,saved:0,active:true,accountId:'bank');
+  final due=RecurringBill(id:'m946-due',title:'استحقاق مؤقت',
+   category:'أخرى',amount:1000,income:false,day:15,active:true,
+   startAt:DateTime.utc(2027,1,15),linkedGoalId:goal.id,
+   accountId:'bank');
+  final modules=WaffraFreshModulesRepository(
+   store:db,experimentalEnabled:true);
+  await modules.save(WaffraFinanceModule.goals,goal.toJson());
+  await modules.save(WaffraFinanceModule.recurring,due.toJson());
+  await expectLater(modules.save(WaffraFinanceModule.recurring,
+   {...due.toJson(),'accountId':'wallet'},replaceExisting:true),
+   throwsA(isA<StateError>()));
+  await expectLater(modules.save(WaffraFinanceModule.goals,
+   {...goal.toJson(),'saved':25.0},replaceExisting:true),
+   throwsA(isA<StateError>()));
+  expect(await count('fresh_finance_entries'),0);
+  expect((await accounts().balances()).singleWhere(
+   (a)=>a.id=='bank').balanceMinor,100000);
+  await db.close();
+  db=WaffraEncryptedStore.openAt(vault,key:key);
+  final cold=WaffraFreshModulesRepository(
+   store:db,experimentalEnabled:true);
+  final g=(await cold.list(WaffraFinanceModule.goals)).single;
+  final r=(await cold.list(WaffraFinanceModule.recurring)).single;
+  expect(g['accountId'],'bank');
+  expect(r['linkedGoalId'],g['id']);
+  expect(r['accountId'],g['accountId']);
+  expect(g['saved'],0.0);
+  expect(await count('fresh_finance_entries'),0);
+  expect((await db.customSelect('PRAGMA foreign_key_check').get()),isEmpty);
+ });
+
+
+ test('M948 competing manual and SMS writes with SAME witnessed generation '
+  'never both debit or credit the bank; cold reopen retains one',()async{
+  final generation=(await snapshot().read()).generation;
+  Future<bool> attempt(String id,bool income)async{
+   try{
+    final saved=await writer().appendTransactions(
+     records:[entry(id,income:income,amount:37.25,
+      source:income?'bank_sms':'manual')],
+     messageHashes:[income?
+      'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb':null],
+     selectedAccountIds:['bank'],userConfirmed:true,
+     expectedAccountGeneration:generation);
+    return saved.saved==1;
+   }on StateError{
+    return false;
+   }
+  }
+  final verdict=await Future.wait([
+   attempt('m948-concurrent-manual',false),
+   attempt('m948-concurrent-sms',true),
+  ]);
+  expect(verdict.where((ok)=>ok).length,1,
+   reason:'Two stale source writers must never both charge an account');
+  expect(await count('fresh_finance_entries'),1);
+  expect(await count('fresh_finance_account_entry_links'),1);
+  final ledger=(jsonDecode((await snapshot().read()).values['entries']
+   as String) as List).cast<Map>();
+  expect(ledger.length,1);
+  final income=ledger.single['income']==true;
+  expect(ledger.single['id'],
+   income?'m948-concurrent-sms':'m948-concurrent-manual');
+  final expectedMinor=income?103725:96275;
+  expect((await accounts().balances()).singleWhere(
+   (a)=>a.id=='bank').balanceMinor,expectedMinor);
+  await db.close();
+  db=WaffraEncryptedStore.openAt(vault,key:key);
+  expect(await count('fresh_finance_entries'),1);
+  expect((await accounts().balances()).singleWhere(
+   (a)=>a.id=='bank').balanceMinor,expectedMinor);
+  expect(jsonDecode((await snapshot().read()).values['entries'] as String),
+   ledger);
+ });
+
+ test('M948 invalid inputs, stale account choice and cancelled confirmation '
+  'must never write to encrypted finance or accounts',()async{
+  final original=(await snapshot().read()).digest;
+  final generation=(await snapshot().read()).generation;
+  Future<void> reject({
+   required Map<String,Object?> record,
+   List<String?> hashes=const [null],
+   List<String?> ids=const ['bank'],
+   bool confirmed=true,
+  })async{
+   await expectLater(writer().appendTransactions(
+    records:[record],messageHashes:hashes,
+    selectedAccountIds:ids,userConfirmed:confirmed,
+    expectedAccountGeneration:generation),
+    throwsA(anyOf(isA<ArgumentError>(),isA<StateError>())));
+   expect((await snapshot().read()).digest,original);
+   expect(await count('fresh_finance_entries'),0);
+   expect((await accounts().balances()).singleWhere(
+    (a)=>a.id=='bank').balanceMinor,100000);
+  }
+  await reject(record:entry('m948-no-consent',income:false,amount:13),
+   confirmed:false);
+  await reject(record:{...entry('m948-empty',income:false,amount:13),
+   'id':''});
+  await reject(record:entry('m948-wrong-bank',income:false,amount:13),
+   ids:const ['unknown-account']);
+  await reject(record:entry('m948-bad-hash',income:false,amount:13),
+   hashes:const ['not-a-64-character-sha']);
+  await reject(record:{...entry('m948-file',income:false,amount:13),
+   'receiptPath':'/storage/emulated/0/secret.jpg'});
+ });
+
+ test('M946 reviewed SMS hash is idempotent and never double-posts '
+  'into linked bank or wallet',()async{
+  const hash='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+  final first=await writer().appendTransactions(
+   records:[entry('m946-reviewed-sms',income:true,amount:75,
+    source:'bank_sms')],
+   messageHashes:[hash],selectedAccountIds:['wallet'],
+   userConfirmed:true,expectedAccountGeneration:(await snapshot().read()).generation);
+  expect(first.saved,1);
+  final after=await snapshot().read();
+  final repeated=await writer().appendTransactions(
+   records:[entry('m946-sms-duplicate',income:true,amount:75,
+    source:'bank_sms')],
+   messageHashes:[hash],selectedAccountIds:['wallet'],
+   userConfirmed:true,expectedAccountGeneration:after.generation);
+  expect(repeated.saved,0);
+  expect(await count('fresh_finance_entries'),1);
+  expect(await count('fresh_finance_account_entry_links'),1);
+  final balances=await accounts().balances();
+  expect(balances.singleWhere((a)=>a.id=='wallet').balanceMinor,57500);
+  expect(balances.singleWhere((a)=>a.id=='bank').balanceMinor,100000);
+ });
+}

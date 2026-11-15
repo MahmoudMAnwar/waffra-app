@@ -50,9 +50,10 @@ class WaffraApprovedPageHero extends StatelessWidget {
 }
 
 class WaffraApprovedMetric {
- const WaffraApprovedMetric(this.title,this.value,this.icon);
+ const WaffraApprovedMetric(this.title,this.value,this.icon,{this.valueWidget});
  final String title,value;
  final IconData icon;
+ final Widget? valueWidget;
 }
 
 class WaffraApprovedMetrics extends StatelessWidget {
@@ -83,7 +84,7 @@ class WaffraApprovedMetrics extends StatelessWidget {
        // decimals and unit. Scale to fit a narrow metric; never ellipsize it.
        SizedBox(width:double.infinity,child:FittedBox(
         fit:BoxFit.scaleDown,
-        child:Text(metrics[i].value,softWrap:false,maxLines:1,
+        child:metrics[i].valueWidget??Text(metrics[i].value,softWrap:false,maxLines:1,
          textAlign:TextAlign.center,
          style:TextStyle(fontWeight:FontWeight.w800,fontSize:17,
           color:Theme.of(context).colorScheme.onSurface)))),
