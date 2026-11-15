@@ -21,6 +21,7 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
   WaffraVerifiedAccountsApi? editAccountLinkApi;
   bool canLinkExistingAccount=false;
   String? originalLinkedAccountId;
+  bool canMoveLinkedAccount=false;
   if(initial!=null){
    try{
     await _ensureFinanceBound();
@@ -31,6 +32,8 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
      if(found.exists){
       canLinkExistingAccount=true;
       originalLinkedAccountId=found.accountId;
+      canMoveLinkedAccount=found.accountId!=null&&
+       const <String>{'manual','sms'}.contains(initial.sourceType);
       editAccountLinkApi=api;
      }
     }
@@ -785,7 +788,8 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
          ])DropdownMenuItem<String>(value:type,
           child:WaffraText(WaffraSaudiFinancialProviders.labelAr(type))),
         ],
-        onChanged:initial!=null&&originalLinkedAccountId!=null?null:(type)=>update((){
+        onChanged:initial!=null&&originalLinkedAccountId!=null&&
+          !canMoveLinkedAccount?null:(type)=>update((){
          chosenManualProviderCategory=type;
          chosenManualProvider=null;
          chosenManualAccount=null;
@@ -811,7 +815,8 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
           ])),
         ],
         onChanged:chosenManualProviderCategory==null||
-         (initial!=null&&originalLinkedAccountId!=null)?null:(provider)async{
+         (initial!=null&&originalLinkedAccountId!=null&&
+           !canMoveLinkedAccount)?null:(provider)async{
          if(provider=='__create_provider__'){
           await createAccountInsideEntryDropdown(mainProvider:true);
           // Synthetic Add must not replace a chosen provider on cancel.
@@ -848,7 +853,8 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
            ])),
         ],
         onChanged:chosenManualProvider==null||
-         (initial!=null&&originalLinkedAccountId!=null)?null:(id)async{
+         (initial!=null&&originalLinkedAccountId!=null&&
+           !canMoveLinkedAccount)?null:(id)async{
          if(id=='__create_child__'){
           await createAccountInsideEntryDropdown(mainProvider:false);
           if(sheetContext.mounted)update(()=>accountChildMenuRevision++);
@@ -1187,7 +1193,8 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
          waffraAmountFieldError(value.text)!=null||
          (sms?amountOf(value.text):amountOfDisplay(value.text))==null||
          !waffraCanAssignManualCategory(categories,income,selectedParentId,category)||
-         ((initial==null||(canLinkExistingAccount&&originalLinkedAccountId==null))&&
+         ((initial==null||(canLinkExistingAccount&&originalLinkedAccountId==null)||
+            canMoveLinkedAccount)&&
           chosenManualAccount==null)||
          (sms&&!smsDateConfirmed))?null:()async {
        if(submitTapped)return;
@@ -1220,7 +1227,8 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
         return;
        }
        if(initial!=null&&canLinkExistingAccount&&
-          originalLinkedAccountId==null&&chosenManualAccount!=null&&
+          (originalLinkedAccountId==null||canMoveLinkedAccount)&&
+          chosenManualAccount!=null&&
           !entryProviders.any((p)=>p.id==chosenManualProvider&&
            p.accounts.any((a)=>a.id==chosenManualAccount))){
         snack(sheetContext,waffraIsEnglish?
