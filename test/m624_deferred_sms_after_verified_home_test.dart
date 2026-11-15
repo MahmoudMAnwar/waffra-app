@@ -52,8 +52,11 @@ void main() {
   expect(startup,contains('await Future<void>.delayed(const Duration(milliseconds:900));'));
   expect(startup,contains('final activeOwner=(await widget.onVerifiedHomeSmsResume?.call())??true;'));
   expect(startup,contains('if(!activeOwner||!_m630SmsSessionCurrent(startupEpoch))return;'));
-  expect(source,contains('epoch==_m630HomeStartupEpoch;'));
-  expect(source,contains('mounted&&ready&&widget.postAuthVisible&&'));
+  // M966: source gate was extracted to its registered same-library part.
+  final gate=File('lib/waffra_home_state_core_helpers.part.dart').readAsStringSync();
+  expect(gate,contains('bool _m630SmsSessionCurrent(int epoch)=>'));
+  expect(gate,contains('epoch==_m630HomeStartupEpoch;'));
+  expect(gate,contains('mounted&&ready&&widget.postAuthVisible&&'));
   expect(startup.indexOf('final activeOwner=(await widget.onVerifiedHomeSmsResume?.call())??true;'),
    lessThan(startup.indexOf('await _refreshAutoSmsInbox(importMonth:')));
  });

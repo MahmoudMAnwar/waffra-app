@@ -8,6 +8,30 @@
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
     {
+      "id": "M966-EXTRACTED-SMS-SESSION-EPOCH-SOURCE-REGRESSION",
+      "issue": "Issue #666 / stacked PR #667",
+      "previous_behavior": "M624/M548/M622 source tests assumed the native SMS session predicate was defined inside reconstructed main.dart even after M964 extracted it to a same-library Dart part.",
+      "approved_behavior": "Keep original verified Home frame/owner/logout/SMS-ACK safety assertions and prove the exact epoch predicate body in its actual registered Dart file. Register only M624/M548 as newly required M946 tests since M622 is already registered.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_state_core_helpers.part.dart"
+      ],
+      "test_paths": [
+        "test/m624_deferred_sms_after_verified_home_test.dart",
+        "test/m548_review_grouping_and_signup_perf_test.dart",
+        "test/m622_immediate_home_without_loader_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m946-whole-app-feature-smoke.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Original mounted, ready, postAuthVisible, closingSession, finance failure and exact startup epoch clauses all remain verified.",
+        "No duplicate session gate or altered SMS/finance writer, no disabled tests.",
+        "New M946 smoke registration does not duplicate existing M622 suite and M385 source boundaries are preserved."
+      ]
+    },
+    {
       "id": "M965-HOME-LEDGER-INVALIDATION-AND-SMS-PERMISSION-EXTRACTION",
       "issue": "Issue #666 / stacked Draft PR #667",
       "previous_behavior": "Home core State carried ledger period-cache invalidation and memoized SMS permission future implementations, while other pure helpers were moved in M964.",
