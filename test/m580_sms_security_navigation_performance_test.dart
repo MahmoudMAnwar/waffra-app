@@ -274,10 +274,10 @@ void main(){
    .split(' void _receiveSharedSms(){')[0];
   final corrected=review.split("if(decision=='correct-type'&&mounted&&reviewType!=null)")[1]
    .split("else if(decision=='exclude'&&mounted)")[0];
-  expect(corrected,contains('await openVerifiedTransfer()'));
+  expect(corrected,contains('await openReviewedSmsManualTransfer(body:body,sender:sender)'));
   expect(corrected,contains('await entrySheet(sms:true,initialSms:body,'));
   expect(corrected,contains("reviewedSender:sender,reviewedIncomeOverride:reviewType=='income'"));
-  expect(corrected,contains('if(approved==true&&mounted)await openVerifiedTransfer()'));
+  expect(corrected,contains('if(approved==true&&mounted)await openReviewedSmsManualTransfer(body:body,sender:sender)'));
   expect(corrected,contains('The message does not prove both accounts are yours'));
   final editor=app.split(' Future<void> entrySheet({')[1]
    .split(' Future<void> showReceipt(')[0];
@@ -317,7 +317,7 @@ void main(){
   final manual=review.split("}else if(decision=='transfer-manual'&&mounted){")[1]
    .split("}else if(decision=='yes'&&mounted")[0];
   expect(manual,contains("await entrySheet(manualIncomeOverride:kind=='income',"));
-  expect(manual,contains('reviewedOriginalSms:body);'));
+  expect(manual,contains('reviewedOriginalSms:body,reviewedSender:sender);'));
   expect(manual,contains("kind=='income'||kind=='expense'"));
   expect(manual,isNot(contains('acknowledgeCompletedTransfer(')));
   expect(manual,isNot(contains('acknowledgeCommitted(')));

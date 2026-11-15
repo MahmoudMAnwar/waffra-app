@@ -30,7 +30,8 @@ void main(){
   final source=File('lib/waffra_sms_rule_settings_page.dart').readAsStringSync();
   expect(source,isNot(contains('selected.add(seedChoices.first)')));
   expect(source,contains('selected.clear();'));
-  expect(source,contains('final previewMessages=seed!=null?'));
+  expect(source,contains('final inspected=seed!=null?'));
+   expect(source,contains('final conflicts=previewMatches.where('));
   expect(source,contains('WaffraBankSmsFactsParser.parse(seed)'));
   expect(source,contains('WaffraSmsLocalRules.matches('));
   expect(source,contains('القاعدة لا تطابق المرسل أو الرسالة الأصلية'));

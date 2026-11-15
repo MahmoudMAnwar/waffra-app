@@ -128,7 +128,40 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
  /// M983: the selected SMS kind opens ONLY its own verified/editor form.
  /// The native ID is re-read under the active owner before it is used.
  /// No rule suggestion can choose a bank account or commit a ledger entry.
- Future<void> _m983OpenSmsTypedTemplate({
+ /// M985: learn ONLY after a new, verified, user-confirmed manual
+  /// correction and a second explicit consent. The rule editor still reviews
+  /// safe keyword suggestions; no automatic finance or queue ACK follows.
+  Future<void> _m985OfferLearnManualCorrection({
+   required String body,required String sender,required bool income,
+   required Set<String> beforeIds,
+  })async{
+   if(!mounted||_smsRuleOwnerKey.isEmpty)return;
+   final confirmed=entries.where((e)=>!beforeIds.contains(e.id)&&
+    e.sourceType=='manual'&&e.income==income&&
+    categories.any((c)=>c.isSubcategory&&c.income==income&&
+     c.name==e.category&&
+     waffraCategoryAvailableForNewEntry(categories,c))).toList();
+   if(confirmed.length!=1)return;
+   final learn=await showWaffraDialog<bool>(context:context,
+    builder:(dialog)=>AlertDialog(
+     title:WaffraText(waffraIsEnglish?
+      'Use this correction for future SMS?':'تتعلم وفرة من التصحيح ده؟'),
+     content:WaffraText(waffraIsEnglish?
+      'Review and approve a safe keyword rule for similar messages. The transaction is already saved; no message will be posted automatically.':
+      'راجع قاعدة كلمات آمنة للرسائل المشابهة. العملية اتحفظت بالفعل، ومفيش تسجيل تلقائي لأي رسالة.'),
+     actions:[
+      TextButton(onPressed:()=>Navigator.pop(dialog,false),
+       child:WaffraText(waffraIsEnglish?'Not now':'مش دلوقتي')),
+      FilledButton(onPressed:()=>Navigator.pop(dialog,true),
+       child:WaffraText(waffraIsEnglish?'Review rule':'مراجعة القاعدة')),
+     ]));
+   if(learn==true&&mounted){
+    await _openSmsRules(seedMessage:body,seedKind:income?'income':'expense',
+     seedSender:sender,seedCategory:confirmed.single.category);
+   }
+  }
+
+  Future<void> _m983OpenSmsTypedTemplate({
   required String id,required String kind,
  })async{
   if(!mounted||!ready||_financeLoadFailure!=null||
@@ -154,7 +187,7 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
     snack(context,waffraIsEnglish?
      'This message does not verify a transfer between your accounts. Select both accounts manually.':
      'الرسالة لا تثبت تحويلًا بين حساباتك. اختار حسابَي التحويل بنفسك.');
-    await openVerifiedTransfer();
+    await openReviewedSmsManualTransfer(body:body,sender:sender);
    }
   }else{
    final expected=kind=='income'?
@@ -175,8 +208,11 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
    }else{
     // A different type is a SEPARATE manual entry. Show the original
     // message, do not impersonate its proven bank direction or ACK it.
+    final beforeIds=entries.map((e)=>e.id).toSet();
     await entrySheet(manualIncomeOverride:kind=='income',
-     reviewedOriginalSms:body);
+     reviewedOriginalSms:body,reviewedSender:sender);
+    if(mounted)await _m985OfferLearnManualCorrection(
+     body:body,sender:sender,income:kind=='income',beforeIds:beforeIds);
    }
   }
   // M983: refresh all FOUR saved/default rule kinds and native ACK state
@@ -727,17 +763,27 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
          child:WaffraText(waffraIsEnglish?'Continue':'متابعة')),
        ],
       ));
-     if(approved==true&&mounted)await openVerifiedTransfer();
+     if(approved==true&&mounted)await openReviewedSmsManualTransfer(body:body,sender:sender);
     }else{
-     // Preserve source identity for manual correction; posting remains
-     // user-confirmed through the existing atomic SQLCipher SMS writer.
-     await entrySheet(sms:true,initialSms:body,
-      reviewedSender:sender,reviewedIncomeOverride:reviewType=='income');
-     if(smsHashes.contains(bankSmsHash(body))){
-      final ack=await WaffraAutoSms.acknowledgeCommitted([id]);
-      if(ack&&mounted){
-       setState(()=>_autoSmsPending.removeWhere((r)=>r['id']==id));
+     // M985: a different owner-chosen type is a separate prefilled MANUAL
+     // entry. Only the proven bank direction can use SMS hash/ACK writer.
+     final expected=reviewType=='income'?
+      WaffraBankOperationKind.income:WaffraBankOperationKind.expense;
+     if(facts.kind==expected&&!facts.pending){
+      await entrySheet(sms:true,initialSms:body,
+       reviewedSender:sender,reviewedIncomeOverride:reviewType=='income');
+      if(smsHashes.contains(bankSmsHash(body))){
+       final ack=await WaffraAutoSms.acknowledgeCommitted([id]);
+       if(ack&&mounted){
+        setState(()=>_autoSmsPending.removeWhere((r)=>r['id']==id));
+       }
       }
+     }else{
+      final beforeIds=entries.map((e)=>e.id).toSet();
+      await entrySheet(manualIncomeOverride:reviewType=='income',
+       reviewedOriginalSms:body,reviewedSender:sender);
+      if(mounted)await _m985OfferLearnManualCorrection(
+       body:body,sender:sender,income:reviewType=='income',beforeIds:beforeIds);
      }
     }
    }else if(decision=='exclude'&&mounted){
@@ -787,7 +833,7 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
      // The chosen entry is a genuinely separate MANUAL operation: show
      // the original transfer SMS for reference, but never ACK or relabel it.
      await entrySheet(manualIncomeOverride:kind=='income',
-      reviewedOriginalSms:body);
+      reviewedOriginalSms:body,reviewedSender:sender);
     }
    }else if(decision=='yes'&&mounted&&canConfirm&&
              reviewedAccount!=null&&originalAmount!=null&&

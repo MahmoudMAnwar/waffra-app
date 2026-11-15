@@ -118,7 +118,7 @@ void main(){
   expect(snippet,contains("row['id']!=id"));
   expect(snippet,contains("if(kind=='transfer'){"));
   expect(snippet,contains('await _reviewSmsAccountTransfer(item:row,facts:facts)'));
-  expect(snippet,contains('await openVerifiedTransfer()'));
+  expect(snippet,contains('await openReviewedSmsManualTransfer(body:body,sender:sender)'));
   expect(snippet,contains("await entrySheet(sms:true,initialSms:body,"));
   expect(snippet,contains("reviewedSender:sender,reviewedIncomeOverride:kind=='income'"));
   expect(snippet,contains('await WaffraAutoSms.acknowledgeCommitted([id])'));

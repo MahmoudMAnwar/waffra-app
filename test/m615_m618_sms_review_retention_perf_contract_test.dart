@@ -34,7 +34,7 @@ void main(){
   expect(s,contains("Key('m618-correct-to-'+kind)"));
   expect(s,contains("decision='correct-type'"));
   expect(s,contains("if(reviewType=='transfer'){"));
-  expect(s,contains('await openVerifiedTransfer();'));
+  expect(s,contains('await openReviewedSmsManualTransfer(body:body,sender:sender);'));
   expect(s,contains("reviewedIncomeOverride:reviewType=='income'"));
   expect(s,contains('await WaffraAutoSms.acknowledgeCommitted([id])'));
   expect(s,contains("await WaffraAutoSms.excludeMessages([id])"));

@@ -49,8 +49,9 @@ abstract final class WaffraBankSmsFactsParser {
   r'حوال[ةه].{0,35}صادر|تحويل.{0,35}صادر',
   caseSensitive:false);
  static final _pending=RegExp(
-  r'\b(?:pending|declined|rejected|failed|preauth|otp|'
-  r'verification\s+code)\b|معلق[ةه]?|غير\s+مكتمل|مرفوض|'
+  r'\b(?:pending|declined|rejected|failed|cancelled|canceled|voided|reversed|reversal|unsuccessful|preauth|otp|'
+  r'verification\s+code)\b|معلق[ةه]?|غير\s+مكتمل|مرفوض|ملغ[يىاهة]|'
+  r'تم\s+(?:إلغاء|الغاء)|لم\s+تتم|لم\s+تكتمل|غير\s+ناجح[ةه]?|فشلت|عكس\s+العملي[ةه]|'
   r'رمز\s+(?:التحقق|التفعيل)',
   caseSensitive:false);
  /// Security/OTP evidence never authorizes a debit. Verified nonfinancial
@@ -94,6 +95,62 @@ abstract final class WaffraBankSmsFactsParser {
   r'(?:إلى|الى|لصالح|beneficiary|payee|to\s+person)'
   r'\s*[:：]\s*([^\r\n]{2,90})',
   caseSensitive:false);
+
+ /// M985: the owner may review a bank/card's final four digits.
+ /// Only explicitly masked or 'ends in' identifiers are suggestions;
+ /// naked four-digit numbers could be an OTP, reference or amount.
+ static String? suggestedAccountLastFour(String body,{required bool income}){
+  final facts=parse(body);
+  if(facts.pending||isVerificationChallenge(body)||
+     facts.kind!=(income?WaffraBankOperationKind.income:
+      WaffraBankOperationKind.expense))return null;
+  final digits=body.replaceAllMapped(RegExp(r'[٠-٩۰-۹]'),(m){
+   const ar='٠١٢٣٤٥٦٧٨٩',fa='۰۱۲۳۴۵۶۷۸۹';
+   final ch=m.group(0)!;
+   return (ar.contains(ch)?ar.indexOf(ch):fa.indexOf(ch)).toString();
+  });
+  final endings=<String>{
+   if((income?facts.destinationSuffix:facts.sourceSuffix)!=null)
+    (income?facts.destinationSuffix:facts.sourceSuffix)!,
+  };
+  final masked=RegExp(
+   r'(?:حسابك|الحساب|حساب|بطاقتك|البطاقة|بطاقة|account|acct|card)'
+   r'(?:\s+(?:number|no\.?|رقم))?\s*[:：#\-]?\s*'
+   r'(?:\*{2,}|[xX]{2,}|[•●]{2,})\s*([0-9]{4})\b',
+   caseSensitive:false);
+  final ending=RegExp(
+   r'(?:حسابك|الحساب|حساب|بطاقتك|البطاقة|بطاقة|account|acct|card)'
+   r'\s+(?:المنتهي[ةه]?\s*(?:ب|بالرقم)?|'
+   r'ending\s+(?:in|with)|ends\s+(?:in|with))'
+   r'\s*[:：#\-]?\s*([0-9]{4})\b',
+   caseSensitive:false);
+  for(final matcher in <RegExp>[masked,ending]){
+   for(final hit in matcher.allMatches(digits))endings.add(hit.group(1)!);
+  }
+  return endings.length==1?endings.single:null;
+ }
+
+ /// M985: advisory duplicate evidence across differently formatted SMS.
+ /// Exact reference PLUS direction PLUS account suffix are required.
+ /// Identical amounts alone never identify a bank transaction.
+ static bool sameReferenceAccountHint(String first,String second){
+  final a=parse(first),b=parse(second);
+  if(a.pending||b.pending||a.kind!=b.kind||
+     a.reference==null||b.reference==null||
+     a.reference!.toUpperCase()!=b.reference!.toUpperCase())return false;
+  if(a.kind!=WaffraBankOperationKind.income&&
+     a.kind!=WaffraBankOperationKind.expense&&
+     a.kind!=WaffraBankOperationKind.transfer)return false;
+  if(a.kind==WaffraBankOperationKind.transfer){
+   return a.sourceSuffix!=null&&a.destinationSuffix!=null&&
+    a.sourceSuffix==b.sourceSuffix&&
+    a.destinationSuffix==b.destinationSuffix;
+  }
+  final income=a.kind==WaffraBankOperationKind.income;
+  final firstSuffix=suggestedAccountLastFour(first,income:income);
+  final secondSuffix=suggestedAccountLastFour(second,income:income);
+  return firstSuffix!=null&&firstSuffix==secondSuffix;
+ }
 
  static WaffraBankSmsFacts parse(String raw){
   final normalized=raw.replaceAll(RegExp(r'[\u200e\u200f\u00a0]'),' ').trim();

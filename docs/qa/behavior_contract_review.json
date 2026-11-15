@@ -1,12 +1,53 @@
 {
   "schema_version": 1,
-  "pr": "M982 rebase Draft — owner-encrypted Android Worker exclusion bridge (#687, after #696)",
-  "issue": "Issue #687 / #683 / five axes #657, old Draft #688 replaced due QA conflict",
+  "pr": "M985 Draft — SMS safety + form prefill #2–#7 (#698, child of #697)",
+  "issue": "Issue #698 / #697 / #696 / five axes #657",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at f0def360ea75b9c865548b6f1b4fc07e9640f2c2 after #656",
   "reviewed_at": "2026-11-15",
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
+    {
+      "id": "M985-OWNER-CORRECTED-SMS-ACCOUNT-SUFFIX-SAFETY-AND-IMPACT",
+      "issue": "Issue #698",
+      "previous_behavior": "Opposite-direction SMS corrections opened a blank independent manual editor; manual transfers lost SAR/date; account setup missed some masked suffixes; rule preview showed only matches without conflicts; cancelled/reversed wording did not all fail close.",
+      "approved_behavior": "Protect non-posted status; suggest only explicitly masked/ending unique suffix for verified same-bank sender; prefill safe SAR/date/title/valid category and selected bank provider when correcting income/expense, without SMS hash/ACK. Corrected transfer opens manual two-account form with safe date/amount, no owner-account guess. Rule preview shows conflicting, nonposted and verification matches, optional post-save correction rule consent, reference+suffix+date+amount advisory duplicate warning only.",
+      "source_paths": [
+        "lib/waffra_bank_sms_facts.dart",
+        "lib/waffra_home_entry_sheet.part.dart",
+        "lib/waffra_account_transaction_form.dart",
+        "lib/waffra_home_verified_account_flows.part.dart",
+        "lib/waffra_home_sms_confirmation.part.dart",
+        "lib/waffra_sms_rule_settings_page.dart"
+      ],
+      "test_paths": [
+        "test/m985_sms_prefill_identity_status_conflict_duplicate_test.dart",
+        "test/m983_sms_direct_kind_prefill_refresh_test.dart",
+        "test/m580_sms_security_navigation_performance_test.dart",
+        "test/m615_m618_sms_review_retention_perf_contract_test.dart",
+        "test/m470_sms_sender_and_rule_accuracy_test.dart",
+        "test/m304_cross_source_duplicate_review_test.dart",
+        "test/m304_cross_source_duplicate_review_test.dart",
+        "test/m661_exclusion_rule_apply_regression_test.dart",
+        "test/m302_duplicate_receipt_cleanup_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m946-whole-app-feature-smoke.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m417-automatic-bank-sms-opt-in.yml"
+      ],
+      "safety_invariants": [
+        "No OTP/reversed/failed transaction can automatically post money",
+        "No SMS sender or last four is ownership proof; both transfer accounts require user confirmation",
+        "Manual correction is never ACKed as if the original bank kind was proven",
+        "Stored owner/ledger/SQLCipher writer, existing identity and accounts stay unchanged",
+        "Original SMS remains available for read-only inspection; no logging or new network channel",
+        "Physical RTL Android, bank SMS intake and old backup UAT not asserted by synthetic CI",
+        "Bank last-four prefill is disabled for wallet subtype; existing cross-source duplicate advisory still runs with user override.",
+        "Unknown original bank date on manually corrected income/expense requires explicit day and time selection; never silently accept device date.",
+        "Sender-scoped preview uses each live sender+message pair, including seeded review; duplicate rejection still deletes only staged receipt copies and exits before finance writer."
+      ]
+    },
     {
       "id": "M982-REBASED-MISSING-BACKGROUND-EXCLUDE-AUTOSMS-CHANNEL",
       "issue": "Issues #687 / #657",

@@ -1,36 +1,39 @@
 {
   "contract_version": 1,
-  "change_id": "M982-REBASED-ISSUE687-SMS-BACKGROUND-EXCLUSION-BRIDGE-20261115",
-  "human_scope_review": "Port of previously tested five-green Draft #688, now stacked on latest M984 branch because old #688 conflicts with merged #684/#686/#690 docs and QA. Owner confirmed all four rule groups (income, expense, transfer, excluded) must execute foreground/history/background. Android Worker has no `excludeAutoBankSms` handler even though Flutter calls it and MainActivity supports it. Add exact owner-encrypted native store delegate for exclusion SHA256 IDs and 30-day label, not finance commit. Retain original M982 three executable synthetic source/route tests without dilution, register safety M946 with M980 and M954; exact seven-file M385 and M550 guards, Android Kotlin required. UI calendar remains parent untouched; once parent #696 merges, retarget Draft child to main, require exact-head CI and close old #688 only after replacement.",
+  "change_id": "M985-ISSUE698-SMS-REVIEW-SAFE-PREFILL-20261115",
+  "human_scope_review": "Owner approved improvements #2-#7, explicitly excluded explanation UI #1. Status safety, owner-approved correction learning, rule conflict preview, conservative reference-account duplicate warning, bank suffix/provider and date/amount/category prefill for income/expense/transfer, new runnable regressions. Separate draft stacked on #697 which is stacked on #696; no merging before exact-SHA CI and Android device acceptance. Financial authority unchanged.",
   "user_requested_changes": [
-    "Finish previously approved Issue #687: ensure every background `excluded` rule (user+default) persists through the same Android store method as foreground and never produces a false review notification.",
-    "Restore exact `excludeAutoBankSms` MethodChannel branch on the latest SMS UI base branch after stale old PR source/QA conflicts.",
-    "Keep owner session, SHA-256 IDs, encryption, 30-day safe sender/time labels, zero financial ACK or autoPost authority, zero original SMS body logging.",
-    "Keep 3 original nonduplicate executable M982 tests plus M980/M954 and M385/M550/Kotlin CI on new head, no actual Android hardware assertion."
+    "#2 classify cancelled/failed/reversed/pending as not yet posted",
+    " #3 offer consent-based learning only after verified manual correction, no silent rule creation",
+    " #4 preview saved-rule conflicts and sensitive/pending impact",
+    " #5 warn duplicate only with matching reference and exact bank/account suffix+same day+amount",
+    " #6 suggest masked/ending last four in account add and prefill manual reclassified income/expense/transfer SAR amount, bank provider, leaf/parent where valid, exact SMS date if known; owner chooses account",
+    " #7 run distinct unit and source tests, retain prior cases; #1 not requested",
+    "M985 full regression suite: preserve previous duplicate advisory source test while testing added reference+account+SAR+date proof; account suffix only on true bank, not wallet.",
+    "Retain M661 sender-scoped preview proof and M302 duplicate-rejection staged-receipt cleanup with current M985 source shape; no skipped tests."
   ],
   "allowed_changed_files": [
+    "lib/waffra_bank_sms_facts.dart",
+    "lib/waffra_home_entry_sheet.part.dart",
+    "lib/waffra_account_transaction_form.dart",
+    "lib/waffra_home_verified_account_flows.part.dart",
+    "lib/waffra_home_sms_confirmation.part.dart",
+    "lib/waffra_sms_rule_settings_page.dart",
+    "test/m985_sms_prefill_identity_status_conflict_duplicate_test.dart",
+    "test/m983_sms_direct_kind_prefill_refresh_test.dart",
+    "test/m580_sms_security_navigation_performance_test.dart",
+    "test/m615_m618_sms_review_retention_perf_contract_test.dart",
+    "test/m470_sms_sender_and_rule_accuracy_test.dart",
+    "scripts/qa/m946_full_app_smoke_matrix.py",
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "native/WaffraAutoSmsWorker.kt",
-    "scripts/qa/m946_full_app_smoke_matrix.py",
-    "test/m982_background_sms_exclusion_bridge_test.dart"
+    "test/m304_cross_source_duplicate_review_test.dart",
+    "test/m661_exclusion_rule_apply_regression_test.dart",
+    "test/m302_duplicate_receipt_cleanup_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
-  "bounded_sections": {
-    "native/WaffraAutoSmsWorker.kt": [
-      {
-        "start": "                        \"ackAutoBankSms\" -> {",
-        "end": "                        \"notifyAutoSmsSaved\" -> {"
-      }
-    ],
-    "scripts/qa/m946_full_app_smoke_matrix.py": [
-      {
-        "start": "FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {",
-        "end": "    \"m984_sms_received_calendar_dots_and_rtl_sender_swipe\""
-      }
-    ]
-  }
+  "bounded_sections": {}
 }

@@ -175,10 +175,11 @@ void main() {
 
   test('live confirm shows advisory with explicit override, no auto discard', () {
     final source = readWaffraMainSourceForContracts();
-    final anchor = source.indexOf('if(initial==null&&entries.any((e)=>');
+    final anchor = source.indexOf('if(initial==null&&(bankReferenceReplay||entries.any((e)=>');
     expect(anchor, greaterThanOrEqualTo(0));
     final snippet = source.substring(anchor, anchor + 1800);
     expect(snippet, contains('WaffraCrossSourceDuplicateReview.mightBeSame'));
+    expect(snippet, contains('bankReferenceReplay||entries.any('));
     expect(snippet, contains('Possible duplicate'));
     expect(snippet, contains("'Add anyway'"));
     expect(snippet, contains("Navigator.pop(ctx,true)"));

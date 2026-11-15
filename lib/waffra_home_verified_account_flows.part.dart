@@ -246,6 +246,100 @@ extension _WaffraHomeVerifiedAccountFlows on _HomeScreenState {
 
  /// Internal transfers use the verified account ledger, never expense.
  /// New manual income and expenses require an explicit money account.
+ /// M985: SMS reclassified as transfer stays MANUAL and unacknowledged.
+ /// Prefill only independently checked SAR/date. Both accounts stay empty
+ /// until the user picks or creates them in the verified transfer form.
+ Future<void> openReviewedSmsManualTransfer({
+  required String body,required String sender,
+ })async{
+  if(!mounted||WaffraBankSmsFactsParser.isVerificationChallenge(body))return;
+  final facts=WaffraBankSmsFactsParser.parse(body);
+  if(facts.pending)return;
+  final money=WaffraSmsCurrencies.originalAmount(body);
+  final safeAmount=money!=null&&money.currency=='SAR'&&
+   !WaffraSmsCurrencies.requiresReviewForSarLedger(body)?
+    waffraSarAmountMinor(money.amount.toString()):null;
+  final confirmedDate=bankSmsDate(body,referenceDate:DateTime.now());
+  try{
+   await _ensureFinanceBound();
+   final bridge=_financeBinding?.accountsBridge;
+   if(bridge==null)throw StateError('Verified account source unavailable');
+   final api=WaffraVerifiedAccountsApi(bridge:bridge);
+   final accounts=await api.balances();
+   if(!mounted)return;
+   await Navigator.of(context).push<void>(MaterialPageRoute(
+    builder:(ctx)=>Scaffold(
+     appBar:AppBar(title:WaffraText(waffraIsEnglish?
+      'Manual transfer from SMS':'تحويل يدوي من رسالة')),
+     body:WaffraAccountTransactionForm(
+      accounts:accounts,english:waffraIsEnglish,
+      initialOperation:WaffraAccountOperation.transfer,
+      originalSmsText:body,initialSarMinor:safeAmount,
+      initialOccurredDate:confirmedDate,
+      requireSmsDateConfirmation:confirmedDate==null||
+       bankSmsHasUnverifiedTimestamp(body),
+      onCreateSmsAccount:(group,createProvider,isDestination)async{
+       final before=await api.balances();
+       if(!mounted)return null;
+       final parent=createProvider?null:group;
+       final selectedBank=waffraProviderForAccountGroup(parent)?.id;
+       final senderBank=WaffraSmsAccountLearning.bankGroup(sender);
+       final bank=selectedBank??(createProvider?senderBank:null);
+       // A confirmed outgoing purchase proves at most SOURCE suffix.
+       // Never put source digits in the destination account's field.
+       final suffix=!isDestination&&bank!=null&&bank==senderBank&&
+        WaffraSaudiFinancialProviders.byId(bank)?.category!=
+         WaffraSaudiFinancialProviders.wallet?
+        WaffraBankSmsFactsParser.suggestedAccountLastFour(
+         body,income:false):null;
+       final custom=<String,List<String>>{
+        for(final kind in const ['bank','wallet'])
+         kind:before.where((a)=>!a.archived&&a.kind==kind&&
+          a.customSubtypeLabel!=null)
+           .map((a)=>a.customSubtypeLabel!).toSet().toList()..sort(),
+       };
+       final choice=await showWaffraDialog<WaffraNewAccountDraft>(
+        context:context,builder:(dialog)=>WaffraNewAccountDialog(
+         english:waffraIsEnglish,suggestedProviderId:bank,
+         suggestedLastFour:suffix,customSubtypeOptions:custom));
+       if(choice==null||!mounted)return null;
+       if(!waffraNewAccountMatchesGroup(parent,choice))
+        throw StateError('Wrong bank group for new account');
+       final createdId='m985-corrected-transfer-'+newId();
+       await api.createTypedAccountWithIdentity(
+        id:createdId,name:choice.name,kind:choice.kind,
+        providerId:choice.providerId??'none',
+        subtype:choice.subtype??'other',
+        openingMinor:choice.openingMinor,
+        createdIso:DateTime.now().toUtc().toIso8601String(),
+        lastFour:choice.lastFour,
+        customSubtypeLabel:choice.customSubtypeLabel,
+        customInstitutionRootId:waffraCustomInstitutionRootForGroup(parent),
+        userConfirmed:true);
+       final current=await api.balances();
+       final created=current.where((a)=>a.id==createdId&&!a.archived).toList();
+       if(created.length!=1)throw StateError('Account identity not verified');
+       unawaited(_m467RefreshHomeAccounts());
+       return created.single;
+      },
+      onConfirmTransfer:(draft)async{
+       await api.transfer(id:draft.requestId,
+        fromAccountId:draft.fromId,toAccountId:draft.toId,
+        amountMinor:draft.amountMinor,occurredIso:draft.occurredIso,
+        note:draft.memo,userConfirmed:true);
+       if(ctx.mounted)Navigator.of(ctx).pop();
+      },
+     ),
+    )));
+   if(mounted)await _m467RefreshHomeAccounts();
+  }catch(error){
+   debugPrint('M985 manual transfer unavailable');
+   if(mounted)snack(context,waffraIsEnglish?
+    'Transfer was not verified. Check both accounts.':
+    'تعذر تأكيد التحويل. راجع الحسابين.',isError:true);
+  }
+ }
+
  Future<void> openVerifiedTransfer()async{
   try{
    await _ensureFinanceBound();
