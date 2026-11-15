@@ -191,8 +191,51 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
          final id=item['id'],at=item['receivedAt'];
          final date=at is int?DateTime.fromMillisecondsSinceEpoch(at)
           .toLocal().toString().substring(0,16):'';
+         // M983: when a typed SMS editor returns, refresh this same modal
+         // against current owner-verified native IDs and ALL four local rules.
+         Future<void> openTypedRow({String? kind})async{
+          if(id is! String||bulkBusy||openingReviewId!=null)return;
+          refresh(()=>openingReviewId=id);
+          try{
+           if(kind==null)await _reviewAutoSmsCandidates(targetId:id);
+           else await _m983OpenSmsTypedTemplate(id:id,kind:kind);
+           if(mounted)await _refreshAutoSmsInbox();
+          }finally{
+           if(ctx.mounted)refresh((){
+            openingReviewId=null;
+            if(!_autoSmsPending.any((row)=>row['id']==id)){
+             grouped.removeReviewedId(id);
+             selectedIds.remove(id);
+            }
+            final fresh=WaffraSmsReviewGroups.from(_autoSmsPending,
+             unknownSender:waffraIsEnglish?
+              'Unknown sender':'مرسل غير محدد');
+            bySender..clear()..addAll(fresh.bySender);
+            senders..clear()..addAll(fresh.senders);
+            refreshReviewIds();
+            final active=allReviewIds.toSet();
+            selectedIds.removeWhere((selected)=>!active.contains(selected));
+            if(selectedSender!=null&&!senders.contains(selectedSender)){
+             selectedSender=null;
+             messageWindow.reset();
+            }
+           });
+          }
+         }
          // Legacy external guesses remain untrusted; the user reviews SMS text.
          final local=item['local'] is Map?item['local'] as Map:null;
+         final smsFacts=WaffraBankSmsFactsParser.parse(
+          item['body'] is String?item['body'] as String:'');
+         final suggestedKind=local?['kind'] is String?
+          local!['kind'] as String:switch(smsFacts.kind){
+           WaffraBankOperationKind.income=>'income',
+           WaffraBankOperationKind.expense=>'expense',
+           WaffraBankOperationKind.transfer=>'transfer',
+           _=>null,
+          };
+         final confidential=item['sensitiveOtp']==true||
+          (item['body'] is String&&
+           WaffraBankSmsFactsParser.isVerificationChallenge(item['body'] as String));
          return ListTile(
           key:Key('waffra-sms-sender-message-'+index.toString()),
           leading:const Icon(Icons.sms_outlined,color:emerald),
@@ -208,12 +251,36 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
               (waffraIsEnglish?'Expense':'مصروف'))),
           // Preserve the real original SMS text in the history review, with
           // sender and date without presenting untrusted suggestions.
-          subtitle:WaffraText(
-           ((item['body'] as String?)??'')+'\n'+
-           (local!=null?"${local['category']} • ":'')+
-           (waffraIsEnglish?'Review amount, category and budget':
-            'راجع المبلغ والقسم والميزانية')+
-           (date.isEmpty?'':' • '+date),maxLines:5),
+          subtitle:Column(
+           crossAxisAlignment:CrossAxisAlignment.start,children:[
+            WaffraText(
+             ((item['body'] as String?)??'')+'\n'+
+             (local!=null?"${local['category']} • ":'')+
+             (waffraIsEnglish?'Review amount, category and budget':
+              'راجع المبلغ والقسم والميزانية')+
+             (date.isEmpty?'':' • '+date),maxLines:5),
+            if(!confidential)Padding(
+             padding:const EdgeInsets.only(top:7),
+             child:Wrap(spacing:6,runSpacing:5,children:[
+              for(final kind in const <String>['income','expense','transfer'])
+               ActionChip(
+                key:Key('m983-sms-direct-'+kind+'-'+index.toString()),
+                avatar:Icon(kind=='income'?Icons.south_west_rounded:
+                 kind=='expense'?Icons.north_east_rounded:
+                  Icons.swap_horiz_rounded,
+                 size:16,color:kind=='income'?emerald:
+                  kind=='expense'?Colors.red:const Color(0xFFD8A400)),
+                label:WaffraText(kind=='income'?
+                 (waffraIsEnglish?'Income':'دخل'):
+                 kind=='expense'?(waffraIsEnglish?'Expense':'مصروف'):
+                  (waffraIsEnglish?'Transfer':'تحويل'),
+                 style:TextStyle(fontSize:11,
+                  fontWeight:suggestedKind==kind?
+                   FontWeight.bold:FontWeight.normal)),
+                onPressed:bulkBusy||openingReviewId!=null?null:
+                 ()=>openTypedRow(kind:kind)),
+             ])),
+           ]),
           trailing:Row(mainAxisSize:MainAxisSize.min,children:[
            Checkbox(
             key:Key('waffra-sms-select-message-'+index.toString()),
@@ -224,29 +291,10 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
             })),
            const Icon(Icons.chevron_left_rounded),
           ]),
-          onTap:bulkBusy||openingReviewId!=null?null:(id is String)?()async{
-           // M486: keep the sender inbox underneath review/editor so Back
-           // returns one level and preserves the sender's selection.
-           refresh(()=>openingReviewId=id);
-           try{
-            await _reviewAutoSmsCandidates(targetId:id);
-           }finally{
-            if(ctx.mounted)refresh((){
-             openingReviewId=null;
-             if(!_autoSmsPending.any((row)=>row['id']==id)){
-
-              // M973: native pending queue has already confirmed removal.
-              grouped.removeReviewedId(id);
-              selectedIds.remove(id);
-              senders.removeWhere((name)=>bySender[name]?.isEmpty??true);
-              refreshReviewIds();
-              if(selectedSender!=null&&!senders.contains(selectedSender)){
-               selectedSender=null;
-              }
-             }
-            });
-           }
-          }:null,
+          onTap:bulkBusy||openingReviewId!=null||id is! String?null:
+           ()=>openTypedRow(kind:!confidential&&
+            const <String>{'income','expense','transfer'}.contains(suggestedKind)?
+             suggestedKind:null),
          );
         }))),
        if(selectedIds.isNotEmpty)Padding(
