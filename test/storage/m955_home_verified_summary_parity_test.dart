@@ -153,6 +153,31 @@ void main() {
       expect((await db.customSelect(
         'SELECT COUNT(*) AS n FROM fresh_finance_entries')
         .getSingle()).read<int>('n'),sourceRows);
+      // Real SQLCipher close/reopen: no in-memory cache may be required for
+      // selected-account header source parity or historical membership.
+      final warmBank=await WaffraAccountContextRead.load(
+        store:db,monthIso:'2026-11',selectedAccountId:'bank',
+        summaryOnly:true,includeEntries:false);
+      final warmBudgets={for(final b in warmBank.budgets)
+        b.id:(b.usage.globalSpentMinor,b.usage.selectedAccountSpentMinor)};
+      await db.close();
+      db=WaffraEncryptedStore.openAt(File('${dir.path}/finance.sqlite'),
+        key:'m955-isolated-encrypted-performance-fixture');
+      final coldBank=await WaffraAccountContextRead.load(
+        store:db,monthIso:'2026-11',selectedAccountId:'bank',
+        summaryOnly:true,includeEntries:false);
+      expect(coldBank.entries,isEmpty);
+      expect({for(final b in coldBank.budgets)
+        b.id:(b.usage.globalSpentMinor,b.usage.selectedAccountSpentMinor)},
+        warmBudgets);
+      expect(coldBank.goals.single.totalSavedMinor,24000);
+      expect(coldBank.goals.single.selectedAccountNetMinor,12000);
+      final reopenedAccounts=WaffraAccountsRepository(
+        db:db,experimentalEnabled:true);
+      expect({for(final row in await reopenedAccounts.balances())
+        row.id:row.balanceMinor},before);
+      expect(await WaffraAccountContextRead.loadAccountEntryIds(
+        store:db,accountId:'bank'),hasLength(300));
     } finally {
       await db?.close();
       if(await dir.exists())await dir.delete(recursive:true);
