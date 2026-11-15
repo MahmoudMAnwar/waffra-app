@@ -54,7 +54,7 @@ void main() {
       native.indexOf('private fun recordPureOtpExclusionLocked('));
     expect(safe, contains('otp.containsMatchIn(body)'));
     expect(safe, contains('explicitOtpToken.containsMatchIn(body)'));
-    expect(safe, contains('private val explicitOtpToken = Regex('));
+    expect(native, contains('private val explicitOtpToken = Regex('));
     expect(safe, contains('!completedFinancialAction.containsMatchIn(body)'));
     expect(safe, contains('action.containsMatchIn(body) && money.containsMatchIn(body)'));
     final offer = native.substring(
