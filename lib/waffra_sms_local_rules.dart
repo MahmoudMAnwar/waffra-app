@@ -152,7 +152,9 @@ abstract final class WaffraSmsLocalRules {
   return rule;
  }
 
- static bool matches(WaffraSmsLocalRule rule,String body,{String sender=''}) {
+ static bool matches(WaffraSmsLocalRule rule,String body,{
+  String sender='',String? preNormalizedBody,
+ }) {
   final trustedSeed=rule.builtIn&&rule.id.startsWith('sa_');
   if(rule.keywords.isEmpty||rule.keywords.any((word)=>
     trustedSeed?!_safeSaudiSeedKeyword(word,rule.resolvedKind):
@@ -165,7 +167,8 @@ abstract final class WaffraSmsLocalRules {
   if(rule.templateFamily=='beneficiary_management'){
    return _beneficiaryManagement(body)&&!_hasCompletedFinanceCue(body);
   }
-  final source=' ${normalized(body)} ';
+  // M980: same normalization reused by all four rule groups per SMS.
+  final source=' ${preNormalizedBody??normalized(body)} ';
   bool has(String keyword){
    final safe=normalized(keyword);
    // M980: avoid full regex work for unmentioned keywords across 4 groups.
@@ -247,10 +250,12 @@ abstract final class WaffraSmsLocalRules {
   Iterable<WaffraSmsLocalRule> custom=const <WaffraSmsLocalRule>[],
  }){
   final found=<WaffraSmsLocalRule>[];
+  final normalizedBody=normalized(body);
   for(final rule in <WaffraSmsLocalRule>[...custom,...allDefaultRules]){
    if(!const <String>{'income','expense','transfer','excluded'}
      .contains(rule.resolvedKind))continue;
-   if(matches(rule,body,sender:sender))found.add(rule);
+   if(matches(rule,body,sender:sender,
+     preNormalizedBody:normalizedBody))found.add(rule);
   }
   return List<WaffraSmsLocalRule>.unmodifiable(found);
  }
