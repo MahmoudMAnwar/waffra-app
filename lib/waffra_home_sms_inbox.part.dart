@@ -352,7 +352,7 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
          if(selectedSender==null||
             notification.metrics.axis!=Axis.vertical||
             notification.metrics.extentAfter>360)return false;
-         final count=bySender[selectedSender]?.length??0;
+         final count=visibleSenderRows.length;
          if(messageWindow.visibleCount(count)>=count)return false;
          // M486: do not post a frame callback inside the sender picker:
          // this route must stay mounted throughout nested SMS editing.
@@ -364,7 +364,7 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
          unawaited(Future<void>.delayed(Duration.zero,(){
           pageRevealScheduled=false;
           if(!ctx.mounted||selectedSender!=requestedSender)return;
-          final latest=bySender[requestedSender]?.length??0;
+          final latest=visibleSenderRows.length;
           if(messageWindow.visibleCount(latest)<latest){
            refresh(()=>messageWindow.revealNext(latest));
           }
