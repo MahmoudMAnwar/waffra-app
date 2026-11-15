@@ -853,3 +853,8 @@ M940/M941 Draft PR #648 M486 regression correction (unreleased): coalesced futur
 [M282 CI exact-head source guard correction — Draft PR #654, NOT RELEASED — 2026-11-15]
 - After Home source extraction, M275 WaffraSmoothConfirmationOverlay is now defined in lib/waffra_smooth_confirmation.dart instead of lib/main.dart. The original M282 source-completeness check falsely flagged the component as missing; verify the actual widget declaration there AND that main.dart imports it and instantiates WaffraSmoothOperationController, keeping runtime feedback and double-tap tests active.
 - All M274–M281 provenance markers and the explicit automaticallyActivateSqlCipher=false production release guard remain in force; no CI step disabled or skipped. No real user financial record, APK release setting, or private encrypted backup changed.
+
+[M949 Issue #655 / NEW Draft PR — exactly 43 nonduplicated FUNCTIONAL tests; NOT RELEASED — 2026-11-15]
+- Adds 14 tested account lifecycle and transfer/partial-history journeys, 17 multi-step Goal/Recurring/Category change and rollback journeys, and 12 intersecting Home filter and account-scope user journeys. 3 new Dart files; no existing test modified or disabled.
+- Registers new suites in the mandatory M946 exact-SHA money/experience smoke, together with a fail-closed case/duplicate-title audit; audit self-test count separate.
+- No production finance, SMS, backup or Android code changed. A green Flutter run does not establish physical Android biometric, backup or SMS permission UAT.
