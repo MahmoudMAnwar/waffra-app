@@ -13,12 +13,12 @@ permissions:
 
 # No paths filter: even a tiny finance/shared-helper change runs ALL feature smoke.
 concurrency:
-  group: m946-whole-app-smoke-${ github.event.pull_request.number || github.ref }}
+  group: m946-whole-app-smoke-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   whole-app-smoke:
-    name: Full-app ${ matrix.group }} smoke, exact SHA
+    name: Full-app ${{ matrix.group }} smoke, exact SHA
     runs-on: ubuntu-latest
     timeout-minutes: 40
     strategy:
@@ -29,18 +29,18 @@ jobs:
       - name: Checkout exact PR source, never synthetic merge
         uses: actions/checkout@v4
         with:
-          ref: ${ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
 
       - name: Require exact tested revision
         env:
-          EXPECTED_HEAD: ${ github.event.pull_request.head.sha || github.sha }}
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
         run: test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
 
       - name: Verify every current feature has real tests
         shell: bash
         env:
-          TESTED_HEAD: ${ github.event.pull_request.head.sha || github.sha }}
+          TESTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           set -euo pipefail
           python3 -m unittest discover -s test/qa -p 'm946_full_app_smoke_matrix_test.py' -v
@@ -57,7 +57,7 @@ jobs:
       - name: Prefetch SHA256-verified SQLCipher native dependencies
         uses: ./.github/actions/prefetch-sqlite3mc
         with:
-          github-token: ${ github.token }}
+          github-token: ${{ github.token }}
 
       - name: Install Flutter dependencies
         run: flutter pub get
@@ -69,7 +69,7 @@ jobs:
       - name: Execute every registered test for this feature shard
         shell: bash
         env:
-          FEATURE_GROUP: ${ matrix.group }}
+          FEATURE_GROUP: ${{ matrix.group }}
         run: |
           set -euo pipefail
           mkdir -p build/qa
@@ -84,8 +84,8 @@ jobs:
         if: always()
         shell: bash
         env:
-          FEATURE_GROUP: ${ matrix.group }}
-          TESTED_SHA: ${ github.event.pull_request.head.sha || github.sha }}
+          FEATURE_GROUP: ${{ matrix.group }}
+          TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           set +e
           python3 scripts/qa/m937_flutter_test_report.py \
@@ -105,9 +105,9 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: m946-${ matrix.group }}-${ github.event.pull_request.head.sha || github.sha }}
+          name: m946-${{ matrix.group }}-${{ github.event.pull_request.head.sha || github.sha }}
           path: |
             build/qa/m946-feature-inventory.json
-            build/qa/m946-${ matrix.group }}-result.json
-            build/qa/m946-${ matrix.group }}-result.md
+            build/qa/m946-${{ matrix.group }}-result.json
+            build/qa/m946-${{ matrix.group }}-result.md
           if-no-files-found: warn
