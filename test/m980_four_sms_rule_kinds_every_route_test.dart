@@ -47,6 +47,22 @@ void main() {
       matchedRules:matched),isNull);
   });
 
+  test('M980 one normalization is byte-equivalent across Arabic/English rules',(){
+    for(final body in const <String>[
+      'تـم إيداع راتب 7000 ريال', 'تم إيداع راتب 7000 ريال',
+      'شراء عبر نقاط البيع التاجر العثيم', 'حوالة صادرة بمبلغ 90 ريال',
+      'رمز التحقق ١٢٣٤٥٦', 'OTP code for your new app',
+    ]){
+      final text=WaffraSmsLocalRules.normalized(body);
+      for(final rule in rules){
+        expect(WaffraSmsLocalRules.matches(
+          rule,body,sender:'MyBank',preNormalizedBody:text),
+          WaffraSmsLocalRules.matches(rule,body,sender:'MyBank'),
+          reason:'No classification drift for ${rule.id}');
+      }
+    }
+  });
+
   test('M980 category evidence uses the same four-way matches and real bank direction',(){
     const income='تم إيداع راتب 7000 ريال في حسابك';
     const expense='شراء عبر نقاط البيع مبلغ 236 ريال التاجر العثيم';
