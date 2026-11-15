@@ -11,7 +11,7 @@
       "id": "M955-VERIFIED-HOME-BUDGET-GOAL-SUMMARY-NO-LEDGER-ROWS",
       "issue": "Issue #664 / Draft PR #665 stacked on #658",
       "previous_behavior": "The Home selected-account header requests summaryOnly=true but the encrypted AccountContext read still hydrates every current-month entry to return a list Home never displays. Account context/reconciliation pages use the full entry list and MUST retain it.",
-      "approved_behavior": "A new default-true includeEntries option is passed through existing witnessed SQLCipher snapshot and account API. Only Home sets includeEntries=false with summaryOnly=true, causing SQL LIMIT 0 for the card query while leaving independent monthly confirmed budget aggregates and grouped goal-source totals unchanged. Other callers default true; all-time ledger-free misuse is rejected. Source witness checks before/after remain identical, all-time verified account-linked ID filtering remains untouched; neither writes money nor invents empty bank data.",
+      "approved_behavior": "A new default-true includeEntries option is passed through existing witnessed SQLCipher snapshot and account API. Only Home sets includeEntries=false with summaryOnly=true, causing SQL LIMIT 0 for the card query while leaving independent monthly confirmed budget aggregates and grouped goal-source totals unchanged. Other callers default true; all-time ledger-free misuse is rejected. Source witness checks before/after remain identical, all-time verified account-linked ID filtering remains untouched; neither writes money nor invents empty bank data. As a second read-only optimization specifically for includeEntries=false, aggregate each active budget's confirmed monthly expense allocations directly inside SQLCipher with integer SUM/GROUP BY, avoiding allocation Dart-list hydration. Preserve null selected-account isolation, unassigned global budget spend, goal wallet source semantics and failure on invalid positive limits/postings. Standard includeEntries=true keeps its original pure-policy allocation calculation unchanged.",
       "source_paths": [
         "lib/storage/waffra_account_context_read.dart",
         "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
@@ -34,7 +34,8 @@
         "For both selected bank/wallet and all accounts, exact monthly budget global/selected amounts and goal saved/source amounts match the pre-optimization projection.",
         "Historical/reconciliation/export call sites still default includeEntries=true; unscoped ledger-free read fails closed.",
         "Only existing verified SQLCipher snapshot lock and generation/digest are used; missing linked financial domain fails closed.",
-        "No fixed plus, RTL, notification, approved Home/Goals/Dues design or owner private archived data changes; owner handset and old backup remain unverified."
+        "No fixed plus, RTL, notification, approved Home/Goals/Dues design or owner private archived data changes; owner handset and old backup remain unverified.",
+        "The new direct SQLCipher integer budget aggregation and the old Dart one-pass policy must produce identical global and selected-account results for 900 encrypted entries over bank, wallet and all-account contexts; no legacy full-entry path change."
       ]
     },
     {
