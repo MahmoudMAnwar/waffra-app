@@ -116,11 +116,16 @@ extension _WaffraHomeFinancePersistenceDue on _HomeScreenState {
 
  Future<void> syncRecurringReminders()async {
   if(!recurringRemindersEnabled)return;
+  // M978: same source and any()-equivalent membership for repeated goals.
+  final datedGoalIds=<String>{
+   for(final goal in goals)
+    if(goal.dueDate!=null)goal.id,
+  };
   try {
    await WaffraReminders.schedule(
     recurring.where((r)=>r.active&&waffraCategoryNameAvailableForPosting(
      categories,r.income,r.category)&&(r.linkedGoalId==null||
-      goals.any((g)=>g.id==r.linkedGoalId&&g.dueDate!=null)))
+      datedGoalIds.contains(r.linkedGoalId)))
      .map((r)=>WaffraReminder(id:r.id,title:r.title,day:r.day,
       startAt:r.startAt,
       oneTimeDueAt:r.linkedGoalId==null?null:r.startAt)).toList(),
