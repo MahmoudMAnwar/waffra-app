@@ -17,7 +17,8 @@
     "Ensure restored 19-entry source parity repair invalidates the stale Home monthly read cache after authenticated SQLCipher ledger correction, without changing archive or old stored records.",
     "Proactively test the entire Waffra application on every PR: all feature-level smoke and linked-feature scenarios, including auth, biometric, Home, manual/SMS, accounts, transfers, recurring/Goals, budgets, categories, notifications, deleted/restore, PDFs, Riyal, settings and tools. Report real pass/fail/skip and device-only gaps.",
     "Add synthetic SQLCipher integration smoke: account creation/opening balances, linked manual income/expense, selected account scoping, unassigned legacy income, duplicate manual ID, SMS anti-replay, cold reopen and invariant balances. All on disposable database, not owner device.",
-    "Correct old Home pagination smoke expectations following inline Show more/less approved UI; preserve required assertions for one toolbar and combined activity counts."
+    "Correct old Home pagination smoke expectations following inline Show more/less approved UI; preserve required assertions for one toolbar and combined activity counts.",
+    "Proactive full-app smoke M946 exposed three stale test source anchors after approved Goals/Dues empty-state and Home toolbar redesign: repair M665's two due Card boundaries and M670's one-inline verified history expansion expectations without removing linked goal money validations."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -60,7 +61,9 @@
     "test/storage/m946_whole_app_money_journey_smoke_test.dart",
     "scripts/qa/m946_full_app_smoke_matrix.py",
     "test/qa/m946_full_app_smoke_matrix_test.py",
-    ".github/workflows/m946-whole-app-feature-smoke.yml"
+    ".github/workflows/m946-whole-app-feature-smoke.yml",
+    "test/m665_goal_due_display_and_linked_edit_test.dart",
+    "test/m670_feedback_transfer_dashboard_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
@@ -241,6 +244,22 @@
       {
         "start": " test('Eleven or more matching transactions start at ten and can expand',(){",
         "end": null
+      }
+    ],
+    "test/m665_goal_due_display_and_linked_edit_test.dart": [
+      {
+        "start": " test('M665.7 recurring goal payment shows paid split, not zero saved progress',(){",
+        "end": " test('M689 goal action sheet retains fund/edit/release/delete/active',(){"
+      },
+      {
+        "start": " test('M665.7 linked due edit explains without changing finance; standalone still editable',(){",
+        "end": " testWidgets('M665.7 widget shows labelled wallet and bank, never tech notes/restaurant',"
+      }
+    ],
+    "test/m670_feedback_transfer_dashboard_test.dart": [
+      {
+        "start": " test('M670 all Home filters have a real limit and reversible expansion',(){",
+        "end": " test('M670 goals, recurring and category stats share layout geometry',(){"
       }
     ]
   }
