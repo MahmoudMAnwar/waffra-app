@@ -64,10 +64,15 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
     .read(_smsRuleOwnerKey);}catch(_){/* Editable review still available. */}
   }
   if(!mounted)return;
+  // M983: use the SAME owner+default four-kind rules and conflict guards
+  // as the SMS review isolate; prefill is a hint, never posting authority.
+  final editorFourWay=sms&&initialSms!=null?
+   WaffraSmsLocalRules.matchAllFourKinds(
+    body:initialSms,sender:reviewedSender??'',custom:editorRules):null;
   final editorMatchedRule=sms&&initialSms!=null&&factsSms!=null?
    WaffraSmsLocalRules.resolve(body:initialSms,
     sender:reviewedSender??'',bankKind:factsSms.kind,
-    custom:editorRules):null;
+    custom:editorRules,matchedRules:editorFourWay):null;
   final editorLearnedCategory=editorMatchedRule!=null&&
    categories.any((c)=>c.isSubcategory&&
     c.income==editorMatchedRule.income&&
