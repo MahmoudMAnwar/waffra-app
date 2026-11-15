@@ -94,14 +94,21 @@ void main(){
    where:f.accepts).map((e)=>e.id).toList(),['m949-1','m949-3']);
  });
 
- test('M949-F08 reversed selected day range cannot show any account transaction',(){
-  final rows=[item(1,date:DateTime(2026,12,31)),
-   item(2,date:DateTime(2027,1,1))];
+ test('M949-F08 year rollover date and account scope combine without spilling',(){
+  final rows=[
+   item(1,category:'فواتير',amount:90,date:DateTime(2026,12,31,23,59)),
+   item(2,category:'فواتير',amount:90,date:DateTime(2027,1,1,0,0)),
+   item(3,category:'فواتير',amount:90,date:DateTime(2027,1,2,0,0)),
+   item(4,category:'طعام',amount:90,date:DateTime(2027,1,1,12,0)),
+  ];
   final index=WaffraFinancePeriodIndex(rows);
-  final bad=filter(dates:DateTimeRange(
-   start:DateTime(2027,1,2),end:DateTime(2026,12,30)));
-  expect(index.newestFirst(verifiedEntryIds:{'m949-1','m949-2'},
-   where:bad.accepts),isEmpty);
+  final f=filter(category:'فواتير',min:80,max:100,
+   dates:DateTimeRange(start:DateTime(2026,12,31),
+    end:DateTime(2027,1,1)));
+  expect(index.newestFirst(verifiedEntryIds:{'m949-2','m949-3','m949-4'},
+   where:f.accepts).map((r)=>r.id).toList(),['m949-2']);
+  expect(index.newestFirst(where:f.accepts).map((r)=>r.id).toList(),
+   ['m949-2','m949-1']);
  });
 
  test('M949-F09 zero verified IDs cannot leak matching unassigned receipt card',(){
