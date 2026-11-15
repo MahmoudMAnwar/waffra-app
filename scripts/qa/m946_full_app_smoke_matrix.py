@@ -12,6 +12,7 @@ import json
 from pathlib import Path
 import subprocess
 from m949_unique_functional_case_audit import audit as audit_m949
+from m950_extended_functional_audit import audit as audit_m950
 
 ROOT = Path(__file__).resolve().parents[2]
 GROUPS = ("money", "experience", "safety")
@@ -19,6 +20,15 @@ GROUPS = ("money", "experience", "safety")
 # Each user-facing capability has a real runnable suite. Tests can be reused
 # across capabilities; the runner de-duplicates within each CI shard.
 FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {
+    "m950_exact_unicode_sms_last_four_bank_provenance": ("experience", (
+        "test/m950_account_sms_due_budget_decision_matrix_test.dart",
+        "test/storage/m448_account_context_policy_test.dart")),
+    "m950_due_override_global_budget_goal_source_conservation": ("money", (
+        "test/m950_account_sms_due_budget_decision_matrix_test.dart",
+        "test/storage/m448_account_context_policy_test.dart")),
+    "m950_verified_monthly_budget_and_historical_account_paging": ("money", (
+        "test/storage/m950_verified_monthly_scopes_and_history_test.dart",
+        "test/storage/m448_account_context_read_test.dart")),
     "m949_account_rename_transfer_archive_and_partial_legacy_link": ("money", (
         "test/storage/m949_account_lifecycle_cross_feature_test.dart",
         "test/storage/m440_accounts_repository_test.dart")),
@@ -226,13 +236,16 @@ def validate(root: Path = ROOT) -> dict[str, object]:
         raise ValueError(f"M946 uncovered feature/source: missing={sorted(set(missing))} "
                          f"weak={sorted(set(weak))}")
     new_functional = audit_m949(root)
+    extended_functional = audit_m950(root)
     buckets = {g: group_tests(g) for g in GROUPS}
     if any(len(v) < 10 for v in buckets.values()):
         raise ValueError("A critical smoke shard was silently reduced")
     return {
         "gate": "M946 full app actionable smoke; physical device acceptance separate",
         "features_count": len(FEATURES),
-        "new_nonduplicate_functional_cases": new_functional["unique_case_count"],
+        "new_nonduplicate_functional_cases": new_functional["unique_case_count"] + extended_functional["new_functional_case_count"],
+        "new_functional_case_breakdown": {"M949":new_functional["unique_case_count"],
+                                          "M950":extended_functional["new_functional_case_count"]},
         "test_files_count": len({p for _, t in FEATURES.values() for p in t}),
         "groups": {g: {"files": list(files), "count": len(files)}
                    for g, files in buckets.items()},
