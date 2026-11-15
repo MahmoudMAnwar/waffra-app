@@ -130,15 +130,22 @@ ORDER BY name, budget_id
     // A goal is its own savings wallet. Display the overall saved total
     // independently of the selected account contribution. These are read
     // projections only; viewing a goal never debits a bank.
+    // M952: calculate account-sourced goal contributions in ONE grouped
+    // SQLCipher aggregate, not a correlated movement scan per goal. A goal
+    // wallet's saved_minor stays independent from its bank contribution.
+    // Non-funding wallet movements never debit or credit a bank.
     final goalRows=await store.customSelect('''
-SELECT g.goal_id,g.name,g.saved_minor,
- COALESCE((SELECT SUM(CASE
-  WHEN m.kind='fund' THEN m.amount_minor
-  WHEN m.kind='release' THEN -m.amount_minor ELSE 0 END)
+SELECT g.goal_id,g.name,g.saved_minor,COALESCE(own.own_minor,0) AS own_minor
+FROM fresh_finance_goals g
+LEFT JOIN (
+ SELECT m.goal_id,
+  SUM(CASE WHEN m.kind='fund' THEN m.amount_minor
+           WHEN m.kind='release' THEN -m.amount_minor ELSE 0 END) AS own_minor
  FROM fresh_finance_goal_account_sources s
  JOIN fresh_finance_goal_wallet_movements m ON m.movement_id=s.movement_id
- WHERE m.goal_id=g.goal_id AND s.account_id=?),0) AS own_minor
-FROM fresh_finance_goals g
+ WHERE s.account_id=?
+ GROUP BY m.goal_id
+) own ON own.goal_id=g.goal_id
 ORDER BY g.name,g.goal_id
 ''',variables:[Variable.withString(selectedAccountId??'')]).get();
     final goals=List<WaffraAccountGoalSummary>.unmodifiable(
