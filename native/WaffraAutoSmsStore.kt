@@ -723,6 +723,48 @@ object WaffraAutoSmsStore {
         return named
     }
 
+    /**
+     * M979: A verification challenge is NOT a money transaction. However,
+     * completed debits/transfers and currency-bearing money actions mixed
+     * with a code must remain in the encrypted review queue, never excluded.
+     * This runs on the ORIGINAL SMS before numeric OTP masking.
+     */
+    private fun pureVerificationOnly(body: String): Boolean =
+        otp.containsMatchIn(body) &&
+        !completedFinancialAction.containsMatchIn(body) &&
+        !(action.containsMatchIn(body) && money.containsMatchIn(body))
+
+    /**
+     * An automatic OTP exclusion is an owner-encrypted, reversible LABEL plus
+     * permanent exact-message denial fingerprint. No code/body is persisted.
+     * Call under mutex AFTER existing finance/exclusion/transfer replay gates.
+     */
+    private fun recordPureOtpExclusionLocked(
+        context: Context, fingerprint: String, sender: String, receivedAt: Long
+    ): Boolean {
+        if (receivedAt < 0L) return false
+        val current = excludedMessageBucket(context, fingerprint)
+        if (fingerprint in current) return true
+        val labels = excludedMessageInfo(context, fingerprint).toMutableMap()
+        if (labels.containsKey(fingerprint))
+            throw IllegalStateException("Orphaned automatic OTP exclusion label")
+        val safeLabel = JSONObject()
+            .put("id", fingerprint)
+            .put("sender", sender.trim().take(100))
+            .put("receivedAt", receivedAt)
+            .put("excludedAt", System.currentTimeMillis())
+        labels[fingerprint] = safeLabel
+        val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+        val saved = prefs.edit()
+            .putString(excludedMessageBucketPrefix + fingerprint.take(2),
+                seal(JSONArray((current + fingerprint).toList()).toString()))
+            .putString(excludedMessageInfoBucketPrefix + fingerprint.take(2),
+                seal(JSONArray(labels.values.toList()).toString()))
+            .commit()
+        if (saved) excludedMessageCipherCache.remove(fingerprint.take(2))
+        return saved
+    }
+
     // M437: Unknown-finance lookup is strictly ON-DEMAND, and scans from
     // the first day of the installation month with standing SMS consent.
     // Never treat invoice/debt IDs as a paid transaction or send unknown SMS
@@ -836,6 +878,14 @@ object WaffraAutoSmsStore {
                 for (i in 0 until queue.length()) {
                     if (queue.getJSONObject(i).optString("id") == fingerprint)
                         return@synchronized false
+                }
+                // M979: exclude pure OTP at intake, BEFORE queue capacity and
+                // review notifications. If encrypted persistence fails, do NOT
+                // fall through and expose a sensitive OTP as a money candidate.
+                if (pureVerificationOnly(body)) {
+                    recordPureOtpExclusionLocked(
+                        context, fingerprint, sender, receivedAt)
+                    return@synchronized false
                 }
                 if (queue.length() >= maxCandidates) return@synchronized false
                 val sensitive = otp.containsMatchIn(body)
