@@ -25,7 +25,7 @@ void main() {
       await WaffraFreshEncryptedVaultBootstrap(
         store: db!, experimentalEnabled: true,
       ).initialize(decision: WaffraFirstRunDecision.freshCandidate);
-      await WaffraAccountsSchema.install(db);
+      await WaffraAccountsSchema.install(db!);
       final accounts = WaffraAccountsRepository(
         db: db!, experimentalEnabled: true);
       for (final id in ['bank-a', 'bank-b']) {
