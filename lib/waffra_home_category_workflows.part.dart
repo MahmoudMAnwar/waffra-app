@@ -106,7 +106,7 @@ extension _WaffraHomeCategoryWorkflows on _HomeScreenState {
      title:WaffraText(waffraIsEnglish?'Pause category?':'إيقاف القسم مؤقتًا؟'),
      content:WaffraText(waffraIsEnglish?
       'The category and ${affected>0?'its $affected subcategories ':''}will no longer be selectable for new transactions. Existing transactions, recurring references and budgets are kept unchanged.':
-      'القسم ${affected>0?'وعدد $affected قسم فرعي تابع له ':''}لن يكون متاحًا للعمليات الجديدة. معاملاتك القديمة والعمليات المتكررة والميزانيات محفوظة بدون تغيير.'),
+      'القسم ${affected>0?'وعدد $affected قسم فرعي تابع له ':''}لن يكون متاحًا للعمليات الجديدة. معاملاتك القديمة والاستحقاقات والميزانيات محفوظة بدون تغيير.'),
      actions:[
       TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx,false)),
        child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
@@ -330,7 +330,7 @@ extension _WaffraHomeCategoryWorkflows on _HomeScreenState {
     ?<String>['Categories','الأقسام']
     :module==WaffraFinanceModule.goals
      ?<String>['Savings goals','الأهداف']
-     :<String>['Recurring','المتكررة'];
+     :<String>['Dues','الاستحقاقات'];
    final choice=await showWaffraDialog<String>(
     context:context,builder:(ctx)=>AlertDialog(
      title:WaffraText(waffraIsEnglish?
@@ -391,7 +391,7 @@ extension _WaffraHomeCategoryWorkflows on _HomeScreenState {
     title:WaffraText(waffraIsEnglish?'Category cannot be deleted':'لا يمكن حذف القسم'),
     content:WaffraText(waffraIsEnglish
      ?'This category has $linkedEntries transactions and $linkedRecurring recurring items. Remove linked items first.'
-     :'القسم مرتبط بـ$linkedEntries معاملة و$linkedRecurring عملية متكررة. احذف العناصر المرتبطة أولًا.'),
+     :'القسم مرتبط بـ$linkedEntries معاملة و$linkedRecurring استحقاق. احذف العناصر المرتبطة أولًا.'),
     actions:[
      TextButton(onPressed:WaffraHaptics.tap(()=>Navigator.pop(ctx)),child:const WaffraText('حسنًا')),
      if(linkedEntries>0)TextButton(onPressed:WaffraHaptics.tap((){
@@ -406,7 +406,7 @@ extension _WaffraHomeCategoryWorkflows on _HomeScreenState {
      }),child:WaffraText(waffraIsEnglish?'View transactions':'عرض المعاملات المرتبطة'))
      else TextButton(onPressed:WaffraHaptics.tap((){
       Navigator.pop(ctx);setState((){tab=4;goalsOpened=false;addFabExpanded=false;});
-     }),child:WaffraText(waffraIsEnglish?'View recurring':'عرض العمليات المتكررة')),
+     }),child:WaffraText(waffraIsEnglish?'View dues':'عرض الاستحقاقات')),
     ]));
    return;
   }
