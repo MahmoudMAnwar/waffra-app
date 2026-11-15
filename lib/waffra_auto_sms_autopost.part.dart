@@ -42,57 +42,55 @@ abstract final class WaffraAutoSmsAutoPoster {
   final prefs=await SharedPreferences.getInstance();
   await prefs.reload();
   final rawProfile=prefs.getString('waffra_profile');
-  if(rawProfile==null||rawProfile.isEmpty){
-   for(final row in pending)await keepForReview(row);
-   return summary;
-  }
+  // Reuse the same source-independent rule evaluator as Home's isolate:
+  // built-in safe exclusions must work even if account/rule recovery fails.
+  // A missing owner or unreadable custom store only disables custom rules
+  // and account-bound auto posting; never invents a bank account.
   String owner='';
-  try{
-   final profile=Person.fromJson(
-    Map<String,dynamic>.from(jsonDecode(rawProfile) as Map));
-   owner=WaffraSmsLocalRuleStore.ownerKey(
-    provider:profile.provider,phone:profile.phone,email:profile.email);
-  }catch(_){}
-  if(owner.isEmpty){
-   for(final row in pending)await keepForReview(row);
-   return summary;
+  if(rawProfile!=null&&rawProfile.isNotEmpty){
+   try{
+    final profile=Person.fromJson(
+     Map<String,dynamic>.from(jsonDecode(rawProfile) as Map));
+    owner=WaffraSmsLocalRuleStore.ownerKey(
+     provider:profile.provider,phone:profile.phone,email:profile.email);
+   }catch(_){}
   }
-  List<WaffraSmsLocalRule> rules;
-  try{
-   rules=await const WaffraSmsLocalRuleStore().read(owner);
-  }catch(_){
-   // A broken user-specific key may not silently fall back to generic
-   // rules or erase the encrypted review queue.
-   for(final row in pending)await keepForReview(row);
-   return summary;
+  var ruleStoreReady=false;
+  var rules=<WaffraSmsLocalRule>[];
+  if(owner.isNotEmpty){
+   try{
+    rules=await const WaffraSmsLocalRuleStore().read(owner);
+    ruleStoreReady=true;
+   }catch(_){
+    // Do not silently apply unknown/corrupt custom rules.
+    // All non-excluded SMS remain available for owner review.
+   }
   }
-  // User-confirmed exclusions are safe local queue operations, even when
-  // app is closed and no rule has permission to post financial records.
-  // Never suppress bank-classified income, expenses, transfers or settlements.
   final actionable=<Map<String,Object?>>[];
   summary['excluded']=0;
   for(final row in pending){
    final id=row['id'],body=row['body'],sender=row['sender'];
    if(id is String&&body is String&&sender is String){
     final facts=WaffraBankSmsFactsParser.parse(body);
-    if(facts.kind==WaffraBankOperationKind.uncertain){
-     final rule=WaffraSmsLocalRules.resolveSpecial(
-      body:body,sender:sender,bankKind:facts.kind,custom:rules);
-     if(rule?.resolvedKind=='excluded'&&rule?.builtIn==false&&
-        (facts.pending||BankParser.parse(body).amount==null)){
-      // Immutable Saudi exclusion hints cannot silently delete SMS in
-      // WorkManager. Only an owner-approved saved rule may do that.
-      if(await WaffraAutoSms.acknowledge([id])){
-       summary['excluded']=summary['excluded']!+1;
-       continue;
-      }
+    final kind=row['sensitiveOtp']==true?
+     WaffraBankOperationKind.uncertain:facts.kind;
+    final rule=WaffraSmsLocalRules.resolveSpecial(
+     body:body,sender:sender,bankKind:kind,custom:rules,
+     nativeSensitiveOtp:row['sensitiveOtp']==true);
+    if(rule?.resolvedKind=='excluded'){
+     // The exact native fingerprint goes into the durable 30-day excluded
+     // ledger, not just a transient acknowledge(). No repeat after rescan.
+     // resolveSpecial already rejects posted and mixed financial notices.
+     if(await WaffraAutoSms.excludeMessages([id])){
+      summary['excluded']=summary['excluded']!+1;
+      continue;
      }
     }
    }
    actionable.add(row);
   }
   if(actionable.isEmpty)return summary;
-  if(!rules.any((r)=>r.autoPost)){
+  if(!ruleStoreReady||!rules.any((r)=>r.autoPost)){
    for(final row in actionable)await keepForReview(row);
    return summary;
   }
