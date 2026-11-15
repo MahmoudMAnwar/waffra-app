@@ -8,6 +8,27 @@
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants. Preserve the six M952 verified SQLCipher, budget, goal, keyset, schema and sender review contracts alongside all eight M953/M954 native/Flutter QA contracts. Separate actual handset and private legacy backup acceptance.",
   "contracts": [
     {
+      "id": "M958-LINKED-ACCOUNT-MOVE-NO-METADATA-UNDO",
+      "issue": "PR #660 / Issue #659 / source-backed M956 linked account move",
+      "previous_behavior": "M495 source-only regression expected Undo suppression for new historical link only, failing after new source correctly disabled it also for an existing linked-account move.",
+      "approved_behavior": "An account link or account move may not be reversed by the metadata-only edit Undo button. Both actionLabel and onAction must be disabled for either committed attribution; ordinary metadata-only editing keeps a real authenticated Undo.",
+      "source_paths": [
+        "lib/waffra_home_entry_sheet.part.dart",
+        "lib/storage/waffra_verified_encrypted_finance_bridge.dart"
+      ],
+      "test_paths": [
+        "test/m495_pr402_ui_performance_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Never expose an Undo button that can reverse metadata but leave moved account cash untouched.",
+        "Maintain on-action guard and separate active encrypted writer, without weakening regressions.",
+        "No changes to financial writer or legacy archive data in M958."
+      ]
+    },
+    {
       "id": "M952-UNIQUE-ENTRY-BUDGET-ASSOCIATION-SQLCIPHER",
       "issue": "Issue #657 / PR #658: enforce actual UNIQUE(entry_id) and distinct standalone budget attribution without duplicating bank money",
       "previous_behavior": "The initial M952 synthetic test incorrectly assumed two budget allocations could refer to one expense. Actual SQLCipher source rejects that case with UNIQUE(entry_id), as the exact-head M946 and encrypted-storage failures demonstrated.",

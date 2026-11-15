@@ -129,7 +129,14 @@ void main(){
   expect(edit,contains("'Confirm historical account link'"));
   expect(edit,contains("'تأكيد ربط العملية القديمة'"));
   expect(edit,contains('if(approved!=true||!sheetContext.mounted)return;'));
-  expect(edit,contains('actionLabel:linkedHistoricalAccountInThisEdit?null'));
+  // A newly linked OR deliberately moved verified bank attribution cannot
+  // be undone by the metadata-only Undo path: both are financial changes.
+  expect(edit,contains(
+   'actionLabel:linkedHistoricalAccountInThisEdit||movedLinkedAccountInThisEdit?null'));
+  expect(edit,contains(
+   'onAction:linkedHistoricalAccountInThisEdit||movedLinkedAccountInThisEdit?null'));
+  expect(edit,contains(
+   'originalLinkedAccountId!=chosenManualAccount;'));
  });
 
  testWidgets('M499 #416 child picker is disabled without provider, cancel preserves amount',

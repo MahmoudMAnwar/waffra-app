@@ -34,3 +34,7 @@ Eight owner-supplied Android screenshots, Nov 15 2026, latest installed main. Th
 ## M956 — Existing prelinked account reassignment (2026-11-15)
 
 After the screenshot correction, the owner requested the remaining #660 fixes. The verified edit now supports explicitly changing a prelinked ordinary manual/SMS entry to an active SAR account, with one witnessed, shared-lock SQLCipher ledger projection + account-link commit. It changes both calculated account balances without adding a second entry; a stale link, missing/archived destination, protected source type or failed readback rejects the entire commit. User approval dialog is mandatory and metadata-only Undo is suppressed for this operation. SQLCipher disposable tests cover an old-date and amount edit with account change and a stale-link rollback. Goal-due and special settlement flows retain independent safety routes. Do not claim a physical Android test, private archive migration or exact-head CI acceptance before results.
+
+### M958 CI M495 linked-account Undo expectation (2026-11-15)
+
+- Full Flutter CI (M160, M147, M340/M282) found one outdated M495 source assertion. The newer linked-account move deliberately disables the metadata-only Undo action for both newly linked historical entries and existing verified bank-to-bank moves. A partial Undo would mislead users about financial account attribution; test now requires `actionLabel` and `onAction` both null for either case. No test disabled or production money writer modified.
