@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/storage/waffra_accounts_repository.dart';
 import 'package:waffra/storage/waffra_accounts_schema.dart';
 import 'package:waffra/storage/waffra_account_context_read.dart';
+import 'package:waffra/storage/waffra_account_context_schema.dart';
 import 'package:waffra/storage/waffra_encrypted_store.dart';
 import 'package:waffra/storage/waffra_fresh_encrypted_vault_bootstrap.dart';
 
@@ -62,6 +63,9 @@ void main() {
     await WaffraFreshEncryptedVaultBootstrap(store:db,experimentalEnabled:true)
       .initialize(decision:WaffraFirstRunDecision.freshCandidate);
     await WaffraAccountsSchema.install(db);
+    // The monthly read projection joins goal source links, even with zero goals.
+    // Install the actual account-context schema, not a mock or skipped join.
+    await WaffraAccountContextSchema.install(db);
   });
   tearDown(()async{
     await db.close();
