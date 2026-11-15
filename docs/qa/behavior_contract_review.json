@@ -1,12 +1,34 @@
 {
   "schema_version": 1,
-  "pr": "M976 Draft — defer offscreen Goals/Dues card construction (#677, #657)",
-  "issue": "Issue #677, five-axis Issue #657, stacked on #676",
+  "pr": "M977 Draft — synthetic large V2 backup integrity smoke (#679/#657)",
+  "issue": "Issue #679, five-axis #657, stacked on #678",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at f0def360ea75b9c865548b6f1b4fc07e9640f2c2 after #656",
   "reviewed_at": "2026-11-15",
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
+    {
+      "id": "M977-V2-LARGE-ARGON2ID-AEAD-SYNTHETIC-ENVELOPE",
+      "issue": "Issues #679 and #657",
+      "previous_behavior": "Existing WaffraSecureBackup test only covered small V2 Argon2id user backup round-trip, wrong password, and old V1 fallback. No dedicated large encrypted archive bit-flip auth denial test in M946.",
+      "approved_behavior": "Add only synthetic >1MiB Unicode archive: actual public encryptUserBackup → decrypt parity, exact V2 Argon2id AES-256-GCM envelope parameters and lengths, verify ciphertext not plaintext, fail GCM authentication on one-bit mutation, reject altered memory/algorithm and invalid ciphertext. No private user backup bytes are committed or decrypted, and no misleading claim of real V3 restore is made.",
+      "source_paths": [
+        "test/m977_large_v2_encrypted_backup_envelope_test.dart"
+      ],
+      "test_paths": [
+        "test/m977_large_v2_encrypted_backup_envelope_test.dart",
+        "test/waffra_secure_backup_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m946-whole-app-feature-smoke.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "Never include private user backup, raw amounts/accounts, credentials, actual MAC or ciphertext in repository fixtures; all sensitive fixture content is synthetic.",
+        "No change to production WaffraSecureBackup, finance writers, V3 migration, restore approval or old archive.",
+        "Passing host tests does not authorize private archive restore, real physical Android UAT, APK release, or 95% completion."
+      ]
+    },
     {
       "id": "M976-APPROVED-GOAL-DUE-LAZY-WIDGET-CARD-BUILDER",
       "issue": "Issues #677 and #657",

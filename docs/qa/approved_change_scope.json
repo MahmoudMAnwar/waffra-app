@@ -1,39 +1,28 @@
 {
   "contract_version": 1,
-  "change_id": "M976-ISSUE677-LAZY-GOAL-DUE-CARDS-VIEWPORT-20261115",
-  "human_scope_review": "Issue #677 / approved five axes #657: preserve existing ListView and full same Goal/Due card widget subtree, but wrap only each individual card's construction in Builder(builder:(_){...}) to defer expensive offscreen widget creation until sliver viewport mount. Keep exact original cards, keys, chronology, status, source-backed money and SQLCipher behavior. New executable 1500-row viewport widget regression plus existing real goal_due UI suite, M946 experience required. Stacked on #676 and parent #674/#672, no real phone FPS/backup claim; require exact-head M385/M550 and Flutter CI.",
+  "change_id": "M977-ISSUE679-LARGE-V2-ARGON2-AEAD-ENVELOPE-QA-20261115",
+  "human_scope_review": "Actual owner archive inspection was LOCAL, HEADER-ONLY: confirmed V2 encrypted envelope layout without decrypting, storing, or uploading private data. This bounded Issue #679 / #657 test-only tranche adds a >1MiB synthetic V2 Argon2id AES-256-GCM round-trip and ciphertext-bit-tamper/invalid KDF/malformed encoded data rejection. No private bytes, secret, password, real account, SQLCipher writer, backup migration or screen. Register new real Dart suite plus existing WaffraSecureBackup suite in M946 safety; same M385/M550 protection. Stacked #678 M976 parent; exact head CI pending. Do not interpret as owner private restore or 95% milestone.",
   "user_requested_changes": [
-    "Continue implementation for five axes #657, aiming for at least 95 percent based on audited completion rather than optimistic claims.",
-    "Avoid constructing thousands of Goal and Recurring cards offscreen on each rebuild while keeping original designs and flows precisely unchanged.",
-    "Use only lightweight Builder wrappers in the existing approved ListView children; preserve original Card keys, filters, SMS, payments and all data writes.",
-    "Add real nonduplicate viewport scrolling widget test for 1500 proxy cards and approved Goals/Due source regression, run via mandatory M946 experience."
+    "Continue five axis #657 toward audited 95 percent without inventing backup/user device success.",
+    "Add new nonduplicate, fully synthetic >1MiB V2 Argon2id AES-GCM archive structural, Unicode and AEAD authentication tests based solely on current public source format.",
+    "Refuse tampered ciphertext and wrong KDF metadata; never upload/commit any private user archive, password, salt, nonce, or payload.",
+    "Register with M946 safety alongside existing crypto test without disabling prior cases or changing production backup/finance/UI code."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "lib/waffra_home_goals_recurring_pages.part.dart",
     "scripts/qa/m946_full_app_smoke_matrix.py",
-    "test/m976_lazy_goal_due_cards_viewport_test.dart"
+    "test/m977_large_v2_encrypted_backup_envelope_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
   "bounded_sections": {
-    "lib/waffra_home_goals_recurring_pages.part.dart": [
-      {
-        "start": "if(_m689GoalSearchOpen)...[",
-        "end": "if(goals.isEmpty)Padding"
-      },
-      {
-        "start": "if(_m689DueSearchOpen)...[",
-        "end": "if(recurring.isEmpty)Card"
-      }
-    ],
     "scripts/qa/m946_full_app_smoke_matrix.py": [
       {
         "start": "FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {",
-        "end": "    \"m975_recurring_due_paid_id_snapshot_parity\""
+        "end": "    \"m976_lazy_goal_due_card_viewport_build\""
       }
     ]
   }
