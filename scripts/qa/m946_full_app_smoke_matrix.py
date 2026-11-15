@@ -22,7 +22,8 @@ GROUPS = ("money", "experience", "safety")
 # across capabilities; the runner de-duplicates within each CI shard.
 FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {
     "m973_single_sms_review_indexed_sender_cleanup": ("experience", (
-        "test/m973_sms_review_group_owner_index_test.dart",)),
+        "test/m973_sms_review_group_owner_index_test.dart",
+        "test/m548_review_grouping_and_signup_perf_test.dart")),
     "m967_verified_preload_and_sms_isolate_session_gate": ("experience", (
         "test/m631_verified_finance_prewarm_test.dart",
         "test/m632_sms_account_splash_isolate_contract_test.dart")),
