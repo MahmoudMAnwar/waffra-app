@@ -1,3 +1,5 @@
+- M956 follow-up: a stale or archived chosen account must resolve to «كل الحسابات» in one read, not endlessly re-enter the refresh; concurrency guard must compare with the requested account before SQLCipher validation. No money writer or UI geometry changes.
+
 ## M956 — تحميل حسابات الرئيسية من مصدر مالي واحد (Issue #664 / Draft PR #665)
 
 - استبدال ثلاث قراءات منفصلة (الأرصدة، ملخص الشهر، ومعرّفات العمليات المرتبطة بالحساب) بقراءة SQLCipher واحدة تحت قفل المصدر المالي المعتمد، والتحقق من تطابق الجيل والبصمة قبل وبعد كل مكونات القراءة.

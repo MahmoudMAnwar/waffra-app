@@ -34,7 +34,9 @@ void main(){
   expect(src,contains('final scopedIds=verified.entryIds;'));
   expect(src,isNot(contains('api.readAccountEntryIds(accountId:chosen)')));
   expect(src,contains('final ids=_m684ScopedEntryIds;'));
-  expect(src,contains('if(_m467AccountChoiceRestored&&_m467SelectedAccount!=chosen)'));
+  expect(src,contains('final requested=chosen;'));
+  expect(src,contains('if(_m467AccountChoiceRestored&&_m467SelectedAccount!=requested)'));
+  expect(src,isNot(contains('_m467SelectedAccount!=chosen')));
   expect(src,contains('_m467Accounts.fold<int>(0,(total,a)=>total+a.balanceMinor)/100'));
   expect(src,contains('if(transferCommitted&&mounted){'));
   expect(src,contains('unawaited(_m467RefreshHomeAccounts());'));

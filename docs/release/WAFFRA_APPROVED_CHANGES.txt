@@ -910,3 +910,5 @@ M955 #665 accountless older-history QA (2026-11-15; Draft, not shipped): a disti
 [ENGINEERING SOURCE REVIEW: M956 / ISSUE #664 / DRAFT PR #665 — 2026-11-15]
 - Home verified bank/account header now uses one owner-witnessed SQLCipher source lock for balances, selected monthly compact budgets/goals and all-time account linked IDs instead of three separately locked reads. The previous UI visuals, SAR halala accounting and session epoch guards remain unchanged.
 - Read-only source gate compares finance generation and digest before and after and reverts stale/archived account preferences to all accounts; real device and private Backup/Restore acceptance are explicitly not claimed. Exact-HEAD CI remains required.
+
+- M956 source guard correction: compare the asynchronous Home selection response with the originally requested account rather than the safe 'all' fallback; archived or deleted accounts no longer initiate an infinite refresh loop. Physical Android confirmation remains separate.

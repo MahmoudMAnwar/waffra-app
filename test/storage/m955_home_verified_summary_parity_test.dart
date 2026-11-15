@@ -153,7 +153,9 @@ void main() {
     expect(read,isNot(contains('await api.readAccountEntryIds(')));
     expect(read,contains('chosen=verified.selectedAccountId;'));
     expect(read,contains('readEpoch!=_m627AccountEpoch'));
-    expect(read,contains('_m467SelectedAccount!=chosen'));
+    expect(read,contains('final requested=chosen;'));
+    expect(read,contains('_m467SelectedAccount!=requested'));
+    expect(read,isNot(contains('_m467SelectedAccount!=chosen')));
   });
 
   test('M955 900-row verified Home summary equals monthly budgets/goals '

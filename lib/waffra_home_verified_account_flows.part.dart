@@ -39,6 +39,11 @@ extension _WaffraHomeVerifiedAccountFlows on _HomeScreenState {
     final p=await SharedPreferences.getInstance();
     chosen=p.getString(_m467ChoiceKey)??'all';
    }
+   // Compare late responses against the account the user REQUESTED, not
+   // a verified fallback ('all') when that account was archived/deleted.
+   // Otherwise every refresh sees old selected != fallback and retries
+   // forever without applying the safe account correction.
+   final requested=chosen;
    final now=DateTime.now();
    final month=now.year.toString().padLeft(4,'0')+'-'+
     now.month.toString().padLeft(2,'0');
@@ -53,7 +58,7 @@ extension _WaffraHomeVerifiedAccountFlows on _HomeScreenState {
    if(!mounted||_m627ClosingSession||readEpoch!=_m627AccountEpoch)return;
    // A user may switch accounts while this async SQL projection is running.
    // Never repaint that newly chosen view with a stale older selection.
-   if(_m467AccountChoiceRestored&&_m467SelectedAccount!=chosen){
+   if(_m467AccountChoiceRestored&&_m467SelectedAccount!=requested){
     _m468AccountReadAgain=true;
     return;
    }
