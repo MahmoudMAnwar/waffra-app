@@ -84,6 +84,7 @@ import 'waffra_sms_local_rules.dart';
 import 'waffra_sms_review_groups.dart';
 import 'waffra_sms_review_page_window.dart';
 import 'waffra_sms_account_learning.dart';
+import 'waffra_sms_structured_bank_context.dart';
 import 'waffra_sms_rule_settings_page.dart';
 import 'waffra_unknown_financial_sms_page.dart';
 import 'waffra_auto_sms_consent.dart';
@@ -1156,7 +1157,15 @@ Map<String,Object?> waffraM632ClassifySmsQueue(Map<String,Object?> input){
    annotated['sensitiveOtp']=true;
   }
   final sender=candidate['sender'] is String?candidate['sender'] as String:'';
-  final facts=WaffraBankSmsFactsParser.parse(body);
+  final contextFacts=WaffraSmsStructuredBankContext.parse(body,sender:sender);
+  final facts=contextFacts.facts;
+  // A combined SMS can contain two independent financial events. Neither
+  // an exclusion nor the first amount may classify the complete message.
+  if(contextFacts.composite){
+   annotated['multipleEvents']=true;
+   waiting.add(annotated);
+   continue;
+  }
   final parsed=BankParser.parse(body);
   // M980: ALL FOUR owner/default kinds match before a safety branch can
   // select a review suggestion or request a durable native exclusion.
