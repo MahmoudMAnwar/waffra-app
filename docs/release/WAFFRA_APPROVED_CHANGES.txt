@@ -890,3 +890,9 @@ M940/M941 Draft PR #648 M486 regression correction (unreleased): coalesced futur
 - Monthly account budget usage is now computed with one immutable pure aggregate over ledger rows plus budgets instead of rescanning every month transaction separately for each budget. The original integer-halalas policy, unassigned global spent totals and selected-account totals must match exactly. No financial writer, budget posting or historical restored data changed.
 - Added or expanded disposable tests for 2700 encrypted rows/900 unassigned, 10000 synthetic transaction entries and 120 budgets (per-budget exact parity), unsupported account+unassigned scoping, and missing due/standalone allocation tables on an interrupted restore. Existing original finance/security tests remain enabled. Performance time logs are host diagnostic only.
 - The five overarching axes remain partial/audit: real Android FPS, on-phone UX/overflow checks, complete safe Home decomposition and physical historical encrypted user backup remain outstanding. Exact-head CI and owner verification are still necessary before merge.
+
+[M449 REVIEWED UPDATE — ISSUE #662 — PR #663]
+- Reviewed source SHA: cf1aa131b60edc3555e3c9aa46459865ada5da5f
+- Approved change: M953 adds bounded Arabic/English app authentication-code detection for unfamiliar SMS senders, resolves safe nonfinancial challenges for native queue exclusion, and aligns background WorkManager with the same completed-financial-event veto as foreground review. Six direct Dart tests are registered in mandatory M946; verified money receipts and user-approved layouts are unchanged.
+- Changed production paths: lib/waffra_auto_sms_autopost.part.dart, lib/waffra_bank_sms_facts.dart, lib/waffra_sms_local_rules.dart
+- Verification: exact-head CI and physical Android SMS/notification evidence remain separate, not approved merely by these notes.
