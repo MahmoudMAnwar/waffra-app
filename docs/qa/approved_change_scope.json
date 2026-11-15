@@ -24,15 +24,7 @@
     "lib/waffra_sms_review_groups.dart": [
       {
         "start": "class WaffraSmsReviewGroups {",
-        "end": " factory WaffraSmsReviewGroups.from("
-      },
-      {
-        "start": "  final bySender=<String,List<Map<String,Object?>>>{};",
-        "end": "  final senders=bySender.keys.toList()"
-      },
-      {
-        "start": "  return WaffraSmsReviewGroups._(bySender,senders,ownersById);",
-        "end": "  return WaffraSmsReviewGroups._(bySender,senders,ownersById);"
+        "end": "\n}"
       }
     ],
     "lib/waffra_home_sms_inbox.part.dart": [
