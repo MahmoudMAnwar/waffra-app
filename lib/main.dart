@@ -1040,10 +1040,13 @@ class BankParser {
   // that the chosen number was the transaction amount. The exact source
   // amount MUST agree with the conservative action-only currency parser.
   if(value!=null){
-   final verifiedSource=sourceAmount??WaffraSmsCurrencies.originalAmount(
-    s,detectedCurrencies:discoveredCurrencies);
+   // M1001: independently verify the amount in the original bank action.
+   // A precomputed SMS hint cannot replace the trusted source witness.
+   final verifiedSource=WaffraSmsCurrencies.originalAmount(s);
    if(verifiedSource==null||verifiedSource.currency!='SAR'||
-      (verifiedSource.amount-value).abs()>0.00001)value=null;
+      (verifiedSource.amount-value).abs()>0.00001||
+      (sourceAmount!=null&&(sourceAmount.currency!='SAR'||
+       (sourceAmount.amount-value).abs()>0.00001)))value=null;
   }
   var title=income?'مبلغ وارد':'عملية بنكية',cat=income?'دخل آخر':'أخرى';
   String? suggestion;
