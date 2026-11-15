@@ -15,7 +15,9 @@
     "docs/qa/approved_change_scope.json",
     "lib/storage/waffra_sqlcipher_history_pager.dart",
     "test/storage/m944_sqlcipher_keyset_paging_test.dart",
-    "lib/storage/waffra_verified_accounts_api.dart"
+    "lib/storage/waffra_verified_accounts_api.dart",
+    "lib/waffra_account_context_page.dart",
+    "test/m611_manual_home_finance_regression_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
@@ -28,6 +30,30 @@
       {
         "start": " /// M684: actual bounded SQL read. No historical ledger mutation.",
         "end": " /// Attach a past unassigned entry only AFTER"
+      }
+    ],
+    "lib/waffra_account_context_page.dart": [
+      {
+        "start": "import 'storage/waffra_account_context_read.dart';",
+        "end": "/// Account-aware ledger review, with a real \"unassigned\" work queue."
+      },
+      {
+        "start": "class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {",
+        "end": " String money(int minor)"
+      },
+      {
+        "start": "   await widget.api.linkUnassignedEntry(",
+        "end": "  }catch(error){"
+      },
+      {
+        "start": " @override Widget build(BuildContext context)=>Scaffold(",
+        "end": null
+      }
+    ],
+    "test/m611_manual_home_finance_regression_test.dart": [
+      {
+        "start": " test('M681-M684 Account review uses SQL page, consent and all-time unassigned',(){",
+        "end": " test('M684 card extraction preserves original + and compact layout',(){"
       }
     ]
   }
