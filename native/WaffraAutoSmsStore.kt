@@ -648,7 +648,11 @@ object WaffraAutoSmsStore {
     private val otp = Regex(
         "(?:\\botp\\b|one.?time.?password|verification.?code|security.?code|" +
         "رمز\\s*(?:التحقق|التفعيل|الدخول|المرور)|كود\\s*(?:التحقق|الدخول)|" +
-        "password|login.?code|authentication.?code|رمزك\\s*السري)",
+        "password|login.?code|authentication.?code|رمزك\\s*السري|" +
+        "(?:رمز|كود)\\s*(?:تسجيل\\s+الدخول|التوثيق|المصادقة|التأكيد)|" +
+        "(?:رمزك|كودك|الكود\\s+الخاص\\s+بك)\\s*(?:(?:هو|هي)\\s*|[:：]\\s*)[0-9٠-٩۰-۹]{4,8}|" +
+        "\\b(?:login|sign[ -]?in|auth|activation|access|2fa)\\s+(?:pass)?code\\b|" +
+        "\\byour\\s+(?:(?:login|security|verification|app)\\s+)?code\\s*(?:is|[:：])\\s*[0-9]{4,8}\\b)",
         RegexOption.IGNORE_CASE)
     private val action = Regex(
         "(?:شراء|خصم|سحب|حوالة|تحويل|إيداع|ايداع|راتب|استرداد|سداد|شحن|دفع|" +

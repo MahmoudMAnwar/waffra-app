@@ -1,12 +1,33 @@
 {
   "schema_version": 1,
-  "pr": "M952 / Draft PR #658 — five-axis 20-improvement continuation with verified unassigned SQLCipher keyset and single-pass budget parity",
-  "issue": "Issue #657 — financial integrity, accounts/restore, responsiveness, UI stability, architecture and proactive QA",
+  "pr": "M952 integrated + PR #660 M953/M954 exact-head reconciliation after #658 merged",
+  "issue": "Issues #657 (merged #658), #659/#661 (#660), source-protected integration",
   "workflow_review_policy": "scan-all-registered-workflows",
-  "baseline": "main at f0def360ea75b9c865548b6f1b4fc07e9640f2c2 after #656",
+  "baseline": "main fc07c1dd98d526cb27c41e16315149b3a53019f5 after #658",
   "reviewed_at": "2026-11-15",
-  "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
+  "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants. Preserve the six M952 verified SQLCipher, budget, goal, keyset, schema and sender review contracts alongside all eight M953/M954 native/Flutter QA contracts. Separate actual handset and private legacy backup acceptance.",
   "contracts": [
+    {
+      "id": "M958-LINKED-ACCOUNT-MOVE-NO-METADATA-UNDO",
+      "issue": "PR #660 / Issue #659 / source-backed M956 linked account move",
+      "previous_behavior": "M495 source-only regression expected Undo suppression for new historical link only, failing after new source correctly disabled it also for an existing linked-account move.",
+      "approved_behavior": "An account link or account move may not be reversed by the metadata-only edit Undo button. Both actionLabel and onAction must be disabled for either committed attribution; ordinary metadata-only editing keeps a real authenticated Undo.",
+      "source_paths": [
+        "lib/waffra_home_entry_sheet.part.dart",
+        "lib/storage/waffra_verified_encrypted_finance_bridge.dart"
+      ],
+      "test_paths": [
+        "test/m495_pr402_ui_performance_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Never expose an Undo button that can reverse metadata but leave moved account cash untouched.",
+        "Maintain on-action guard and separate active encrypted writer, without weakening regressions.",
+        "No changes to financial writer or legacy archive data in M958."
+      ]
+    },
     {
       "id": "M952-UNIQUE-ENTRY-BUDGET-ASSOCIATION-SQLCIPHER",
       "issue": "Issue #657 / PR #658: enforce actual UNIQUE(entry_id) and distinct standalone budget attribution without duplicating bank money",
@@ -157,6 +178,216 @@
         "All sender/message selection continues over complete grouped IDs and does not truncate to the 100-card display window.",
         "Original user SMS text and per-sender grouping order and exact UI / + FAB / Snackbar behavior are unchanged.",
         "Cache is discarded after a confirmed queue mutation, not reused across dialogs, users or owner sessions."
+      ]
+    },
+    {
+      "id": "M954-M160-VERIFIED-UNDO-30DAY-EXCLUSION-FULL-SUITE-PARITY",
+      "issue": "Issues #659/#661 / Draft #660: two full-suite stale assertions after approved edit and durable SMS exclusion changes",
+      "previous_behavior": "M684 expected the old legacy in-memory index rollback string even in a verified SQLCipher row-edit path; M462 expected excluded SMS to be acknowledged transiently, permitting the same excluded message to reappear during rescan.",
+      "approved_behavior": "Verified historical edit Undo uses `_m953SaveExistingVerifiedEntry` under an authenticated source witness and reread, while legacy Undo still invalidates period index prior to in-memory rollback. Exclusions use `WaffraAutoSms.excludeMessages([id])` to preserve native 30-day exclusion identity; duplicate/confirmed finance rows retain `acknowledgeCommitted` separately. No financial source writer or native exclusion retention is modified by the test-only correction.",
+      "source_paths": [
+        "lib/waffra_home_entry_sheet.part.dart",
+        "lib/waffra_auto_sms_autopost.part.dart",
+        "native/WaffraAutoSmsStore.kt"
+      ],
+      "test_paths": [
+        "test/m684_finance_period_index_test.dart",
+        "test/m462_smart_sms_rule_review_test.dart",
+        "test/m954_all_sms_rule_routes_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m160-main-reconcile-backup-regression.yml",
+        ".github/workflows/m946-whole-app-feature-smoke.yml"
+      ],
+      "safety_invariants": [
+        "Secure SQLCipher row edit and Undo may not fall back to changing guessed legacy finance balances.",
+        "A 30-day exclusion is persisted, never just acknowledged with no durable record; a later scan must not re-add the same OTP.",
+        "M385 tests are changed inside explicit exact sections, not by loosening guard; M449 approved release notes remain current.",
+        "3105-case full-suite success required before PR readiness, no skip or masking."
+      ]
+    },
+    {
+      "id": "M954-FAILED-CI-OWNER-EXCLUSION-AND-APPROVED-LABELS",
+      "issue": "Issues #659 and #661 / Draft #660 exact-HEAD failed CI follow-up",
+      "previous_behavior": "Owner custom exclude keyword 'تفعيل الحساب' was blocked as any word containing 'حساب' is considered account-sensitive; three M954 tests failed. Older M652 source and M221 widget tests asserted removed legacy map/recurring labels despite user-approved numbered timeline and 'استحقاقات'.",
+      "approved_behavior": "Whitelist the single contextual event phrase only for the user-owned excluded rule kind; completed financial movement still blocks exclusion. Update two old regressions to assert the actual numbered five-kind chronological iteration and current due empty-state text, with no user-facing UI or money changes.",
+      "source_paths": [
+        "lib/waffra_sms_local_rules.dart",
+        "lib/waffra_home_dashboard_analytics.part.dart",
+        "lib/waffra_financial_tools.dart"
+      ],
+      "test_paths": [
+        "test/m954_all_sms_rule_routes_regression_test.dart",
+        "test/m647_m652_financial_activity_regression_test.dart",
+        "test/m221_approved_financial_ui_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m946-whole-app-feature-smoke.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m103-whole-app-release-certification.yml"
+      ],
+      "safety_invariants": [
+        "No account number, opening balance, full SMS content or bank/currency text is allowed as a general user keyword.",
+        "A real posted bank transaction overrides both default and custom exclusions even when verification text is present.",
+        "M652 and M221 test refreshes retain their functional assertions; no tests removed, skipped or marked passed without execution.",
+        "No production finance writer, active receipt, old backup or approved UI layout is changed."
+      ]
+    },
+    {
+      "id": "M954-ALL-ARRIVALS-DEFAULT-AND-OWNER-RULE-PIPELINE",
+      "issue": "Issue #661 / user report: new-installed-app verification SMS appears even with exclusion and all other message rules activated",
+      "previous_behavior": "Native OTP parser omitted common new-app registration/login phrases. Home isolate and background WorkManager differed: Home used seeded plus owner rules, but background excluded only explicitly owner-created matches, required uncertain bank facts, and used transient acknowledge([id]) instead of a durable 30-day native exclusion. Sensitive OTP digits masked natively could not match legacy exact text fragments later in Dart.",
+      "approved_behavior": "Every newly received, foreground/rescanned and background SMS is evaluated using the common source-independent normalized rule resolver. Preserve native sensitiveOtp after masked digits and recognize additional Arabic/English sign-in codes. Custom owner + curated default exclusion matches use native excludeMessages (durable 30-day marker), before notifying for review; income, expense and transfer rules remain review-only unless separately source-confirmed and account-authorized. Unknown/ambiguous and completed-money+OTP items remain pending and never disappear. User rules load failures never enable account auto-posting.",
+      "source_paths": [
+        "lib/waffra_bank_sms_facts.dart",
+        "native/WaffraAutoSmsStore.kt",
+        "lib/waffra_sms_local_rules.dart",
+        "lib/waffra_sms_saudi_seed_rules.part.dart",
+        "lib/main.dart",
+        "lib/waffra_home_sms_rules.part.dart",
+        "lib/waffra_auto_sms_autopost.part.dart"
+      ],
+      "test_paths": [
+        "test/m954_all_sms_rule_routes_regression_test.dart",
+        "test/m509_all_sender_sms_rescan_dedup_test.dart",
+        "test/m661_exclusion_rule_apply_regression_test.dart",
+        "test/m580_sms_security_navigation_performance_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m946-whole-app-feature-smoke.yml"
+      ],
+      "safety_invariants": [
+        "Never persist raw OTP digits after native SMS ingestion or expose them as ordinary notification text; do not upload messages to cloud.",
+        "Never exclude a completed bank debit/credit, actual outgoing/incoming transfer, card settlement or mixed financial transaction solely for matching OTP/marketing keywords.",
+        "Only the existing native 30-day excluded ledger records excluded message fingerprints; no credit/debit entry or bank account is posted or inferred by this change.",
+        "Default categories, owner-encrypted manual rules, sender scoping, rule keyword boundaries, account consent and duplicate finance protection remain independent safeguards.",
+        "Source-level and synthetic tests do not prove live Android SMS on a phone; no signed release or private backup was tested."
+      ]
+    },
+    {
+      "id": "M953-VERIFIED-ONE-ROW-HISTORICAL-EDIT",
+      "issue": "Issue #659 / Android user screenshot: older date update fails while other transactions must not change",
+      "previous_behavior": "Home transaction editor reserializes all loaded MoneyEntry objects for an existing edit, changing the raw shape of untouched imported SMS/V24 rows and triggering authoritative SQL source projection mismatch. Save failure did not re-read the source before stating old data unchanged.",
+      "approved_behavior": "For a verified encrypted source, fetch current authenticated ledger under save queue, compare exactly the chosen displayed entry ID and immutable provenance, patch ONLY one raw row while preserving all other raw original maps and all receipt paths, commit the original transactionEdit route under source lock, read back exact ID and fields, and refresh on any uncertainty. Keep separate atomic rules for account move, transfer and paid goal due.",
+      "source_paths": [
+        "lib/waffra_home_entry_sheet.part.dart"
+      ],
+      "test_paths": [
+        "test/storage/m953_verified_historical_edit_regression_test.dart",
+        "test/m953_notifications_actions_and_edit_contract_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m946-whole-app-feature-smoke.yml"
+      ],
+      "safety_invariants": [
+        "Never duplicate an existing signed debit, overwrite another account/source, mutate unrelated old SMS fields or reassign a linked account without a separate atomic writer.",
+        "No UI success is claimed before certified SQLCipher source write plus readback; failed/unknown writes re-read the source, not falsely assert money unchanged.",
+        "Restore, transaction ID, authenticated bank SMS hash, receipts, goal wallet and original prior old-date entries retain identity.",
+        "Only disposable synthetic encrypted fixtures are tested; actual phone and private backup are not asserted verified."
+      ]
+    },
+    {
+      "id": "M953-NATIVE-SMS-ARRIVAL-ORDER",
+      "issue": "Issue #659 notifications screen shows oldest messages first; latest must be above",
+      "previous_behavior": "Notifications screen displayed pending native SMS queue in provider returned order, including oldest messages at top and most recent lower, and preserved that order in sender filter.",
+      "approved_behavior": "Carry native receivedAt epoch milliseconds into a notification immutable view, sort a new presentation list descending with deterministic original order for equal/missing timestamps, apply same order in All and each sender filter, preserving selected IDs and original text.",
+      "source_paths": [
+        "lib/waffra_approved_notifications.dart",
+        "lib/waffra_home_sms_management.part.dart"
+      ],
+      "test_paths": [
+        "test/m953_notifications_actions_and_edit_contract_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "Never rewrite, acknowledge, classify, persist or parse a raw native bank SMS merely to sort its review card.",
+        "Select-all and sender filtering remain independently owner-controlled and use all queued IDs.",
+        "Sensitive OTP data is never decrypted or exposed by notification ordering."
+      ]
+    },
+    {
+      "id": "M953-SMS-REVIEW-ACTIONS",
+      "issue": "Issue #659 screenshots: Arabic SMS approval button titles truncated and unknown messages lack exclusion",
+      "previous_behavior": "Three equally constrained action buttons truncate Arabic labels while some unknown nonsensitive sender review paths have no visible exclude button, pushing users toward incorrect finance categorization.",
+      "approved_behavior": "Put Done and Edit on readable primary row and nonsensitive Exclude on its own full-width row; present separate Exclude for unrecognized nonsensitive sender review; retain transfer-specific confirmation and sensitive OTP exclusion route.",
+      "source_paths": [
+        "lib/waffra_home_sms_confirmation.part.dart"
+      ],
+      "test_paths": [
+        "test/m953_notifications_actions_and_edit_contract_test.dart",
+        "test/m669_sms_review_category_search_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "Unrecognized or informational bank SMS is never converted to income/expense merely to dismiss review.",
+        "Transfer still requires separate verified account source and destination approval.",
+        "Sensitive security/OTP message bodies remain protected; Exclude does not post money."
+      ]
+    },
+    {
+      "id": "M953-CHRONOLOGICAL-HOME-NUMBERED-ACTIVITY",
+      "issue": "Issue #659 screenshots: number all Home financial cards 1,2,...",
+      "previous_behavior": "Home financial activity cards were chronological but lacked a visible row index; transfers and savings share the one unified timeline with ordinary income and expense.",
+      "approved_behavior": "Render a small display-only ordinal for each currently shown activity, computed from its 1-based position in the filtered newest-first unified Home timeline (and fallback MoneyEntry-only view); include income, expense, transfer, savings and paid due without modifying IDs.",
+      "source_paths": [
+        "lib/waffra_home_dashboard_analytics.part.dart",
+        "lib/waffra_home_compact_activity_cards.part.dart"
+      ],
+      "test_paths": [
+        "test/m953_notifications_actions_and_edit_contract_test.dart",
+        "test/m672_m678_activity_account_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "Never change database order, amount, transaction IDs, SMS hashes or account links to produce display numbers.",
+        "Keep original user-approved activity cards, colors, FAB and Snackbar geometry unchanged except small ordinal rail.",
+        "Number every visible activity type from the same filtered timeline, without re-posting transfers or goal savings."
+      ]
+    },
+    {
+      "id": "M953-DUES-NAME-AND-RTL-SCROLL-FILTERS",
+      "issue": "Issue #659 screenshot: duplicate Goals/Due count and scrollbar covers content, recurring tab is renamed dues",
+      "previous_behavior": "A separate outlined Goal/Due count tile repeated the All filter count; Due and backup dialog scrollbar painted over Arabic text; footer and related user-facing labels still said recurring.",
+      "approved_behavior": "Remove only redundant adjacent count widgets and retain correct counts per filter and header; add RTL directional dialog scroll content inset; use الاستحقاقات/استحقاق and Dues in user-visible tab/buttons/descriptions/trash while preserving persistent 'recurring' identifiers and data format.",
+      "source_paths": [
+        "lib/waffra_home_goals_recurring_pages.part.dart",
+        "lib/waffra_home_recurring_workflows.part.dart",
+        "lib/waffra_home_account_tools.part.dart",
+        "lib/waffra_footer.dart",
+        "lib/waffra_i18n.dart",
+        "lib/waffra_recurring_trash.part.dart",
+        "lib/waffra_financial_tools.dart",
+        "lib/waffra_home_profile.part.dart",
+        "lib/waffra_home_category_workflows.part.dart"
+      ],
+      "test_paths": [
+        "test/m953_notifications_actions_and_edit_contract_test.dart",
+        "test/m938_goals_restore_fab_contract_test.dart",
+        "test/m277_ux_accessibility_quality_test.dart",
+        "test/waffra_concept2_final_visual_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m274-production-ui-journeys.yml"
+      ],
+      "safety_invariants": [
+        "All stored recurring IDs, account schedules, goal links, due charges and backup schema keys remain byte-for-byte unchanged.",
+        "Approved Home/Goals/Dues card layout and system RTL/LTR direction, fixed add button and anchored Snackbar remain in place.",
+        "Scrollbar inset must not hide text, keyboard actions or confirmation button at narrow Android widths."
       ]
     },
     {
@@ -5213,6 +5444,31 @@
       "ci_workflows_to_watch": [
         ".github/workflows/m946-whole-app-feature-smoke.yml",
         ".github/workflows/finance-full-regression.yml"
+      ]
+    },
+    {
+      "id": "M956-VERIFIED-ACCOUNT-RELINK-ONE-TRANSACTION",
+      "issue": "#659 / PR #660",
+      "previous_behavior": "Changing an existing linked income/expense account from transaction Edit was disabled; old detail update and account relocation could not occur together.",
+      "approved_behavior": "Ordinary manual/SMS Edit can explicitly move the recorded entry to another active Saudi account while updating existing detail fields, in one shared Home/Widget lock and SQLCipher transaction; compute both balances from typed source with no new posted transaction.",
+      "source_paths": [
+        "lib/waffra_home_entry_sheet.part.dart",
+        "lib/storage/waffra_verified_encrypted_finance_bridge.dart"
+      ],
+      "test_paths": [
+        "test/storage/m953_verified_historical_edit_regression_test.dart",
+        "test/m495_pr402_ui_performance_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m946-whole-app-feature-smoke.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "No second debit/credit, dedupe change, deleted receipt, or saved goal-due settlement mutation.",
+        "Stale account link or snapshot and archived destination refuse with transaction rollback.",
+        "A confirmed cross-account change has no metadata-only Undo button, but normal edits still do.",
+        "Physical Android/signed build/private historical backup acceptance remain outstanding."
       ]
     }
   ]

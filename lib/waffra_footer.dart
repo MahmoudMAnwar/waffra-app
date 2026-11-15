@@ -22,8 +22,8 @@ class WaffraFooterNavigation extends StatelessWidget {
  ];
  String _label(int i){
   final labels=english?
-   <String>['Home','Categories','Smart tools','Goals','Recurring']:
-   <String>['الرئيسية','الأقسام','الأدوات','الأهداف','المتكررة'];
+   <String>['Home','Categories','Smart tools','Goals','Dues']:
+   <String>['الرئيسية','الأقسام','الأدوات','الأهداف','الاستحقاقات'];
   return labels[i];
  }
 

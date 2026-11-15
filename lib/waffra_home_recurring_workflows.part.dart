@@ -63,8 +63,10 @@ extension _WaffraHomeRecurringWorkflows on _HomeScreenState {
      ...options.map((c)=>c.name),
      if(historicalSelected)initial.category,
     ];
-    return AlertDialog(title:WaffraText(initial==null?(waffraIsEnglish?'New recurring item':'عملية شهرية متكررة'):(waffraIsEnglish?'Edit recurring item':'تعديل العملية المتكررة')),
-     content:SizedBox(width:340,child:SingleChildScrollView(child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,mainAxisSize:MainAxisSize.min,children:[
+    return AlertDialog(title:WaffraText(initial==null?(waffraIsEnglish?'New due item':'استحقاق جديد'):(waffraIsEnglish?'Edit due item':'تعديل الاستحقاق')),
+     content:SizedBox(width:340,child:SingleChildScrollView(
+      padding:const EdgeInsetsDirectional.only(end:18),
+      child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,mainAxisSize:MainAxisSize.min,children:[
       const SizedBox(height:12),
       TextField(controller:title,onChanged:(_)=>update((){}),decoration:InputDecoration(labelText:waffraIsEnglish?'Description *':'الوصف *',
        errorText:attempted?waffraTextFieldError(title.text):null)),
@@ -286,7 +288,7 @@ extension _WaffraHomeRecurringWorkflows on _HomeScreenState {
        }
        if(v!='delete')return;
        final hasHistory=entries.any((e)=>e.id.startsWith('rec_${r.id}_'));
-       final ok=await confirmDeletion(waffraIsEnglish?'Delete recurring transaction?':'حذف العملية المتكررة',
+       final ok=await confirmDeletion(waffraIsEnglish?'Delete due item?':'حذف الاستحقاق',
         waffraRecurringDeleteWarning(r.title,hasHistory,waffraIsEnglish));
        if(ok==true&&mounted){
         if(_lastFinanceAuthorityRead?.source==

@@ -21,6 +21,7 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
   WaffraVerifiedAccountsApi? editAccountLinkApi;
   bool canLinkExistingAccount=false;
   String? originalLinkedAccountId;
+  bool canMoveLinkedAccount=false;
   if(initial!=null){
    try{
     await _ensureFinanceBound();
@@ -31,6 +32,8 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
      if(found.exists){
       canLinkExistingAccount=true;
       originalLinkedAccountId=found.accountId;
+      canMoveLinkedAccount=found.accountId!=null&&
+       const <String>{'manual','sms'}.contains(initial.sourceType);
       editAccountLinkApi=api;
      }
     }
@@ -764,8 +767,8 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
         padding:const EdgeInsets.only(bottom:9),
         child:WaffraText(originalLinkedAccountId!=null?
          (waffraIsEnglish?
-          'Already linked; editing details cannot move it to another account.':
-          'العملية مربوطة بحساب بالفعل، وتعديل التفاصيل مش هينقلها لحساب آخر.'):
+          'Changing the linked account moves the existing transaction, without another posting.':
+          'تقدر تنقل العملية للحساب الصحيح دون تسجيل دخل أو مصروف مرة ثانية.'):
          (waffraIsEnglish?
           'Link this older transaction without posting a second income or expense.':
           'اربط العملية القديمة بحساب دون إضافة دخل أو مصروف مرة ثانية.'),
@@ -785,7 +788,8 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
          ])DropdownMenuItem<String>(value:type,
           child:WaffraText(WaffraSaudiFinancialProviders.labelAr(type))),
         ],
-        onChanged:initial!=null&&originalLinkedAccountId!=null?null:(type)=>update((){
+        onChanged:initial!=null&&originalLinkedAccountId!=null&&
+          !canMoveLinkedAccount?null:(type)=>update((){
          chosenManualProviderCategory=type;
          chosenManualProvider=null;
          chosenManualAccount=null;
@@ -811,7 +815,8 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
           ])),
         ],
         onChanged:chosenManualProviderCategory==null||
-         (initial!=null&&originalLinkedAccountId!=null)?null:(provider)async{
+         (initial!=null&&originalLinkedAccountId!=null&&
+           !canMoveLinkedAccount)?null:(provider)async{
          if(provider=='__create_provider__'){
           await createAccountInsideEntryDropdown(mainProvider:true);
           // Synthetic Add must not replace a chosen provider on cancel.
@@ -848,7 +853,8 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
            ])),
         ],
         onChanged:chosenManualProvider==null||
-         (initial!=null&&originalLinkedAccountId!=null)?null:(id)async{
+         (initial!=null&&originalLinkedAccountId!=null&&
+           !canMoveLinkedAccount)?null:(id)async{
          if(id=='__create_child__'){
           await createAccountInsideEntryDropdown(mainProvider:false);
           if(sheetContext.mounted)update(()=>accountChildMenuRevision++);
@@ -1187,7 +1193,8 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
          waffraAmountFieldError(value.text)!=null||
          (sms?amountOf(value.text):amountOfDisplay(value.text))==null||
          !waffraCanAssignManualCategory(categories,income,selectedParentId,category)||
-         ((initial==null||(canLinkExistingAccount&&originalLinkedAccountId==null))&&
+         ((initial==null||(canLinkExistingAccount&&originalLinkedAccountId==null)||
+            canMoveLinkedAccount)&&
           chosenManualAccount==null)||
          (sms&&!smsDateConfirmed))?null:()async {
        if(submitTapped)return;
@@ -1220,7 +1227,8 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
         return;
        }
        if(initial!=null&&canLinkExistingAccount&&
-          originalLinkedAccountId==null&&chosenManualAccount!=null&&
+          (originalLinkedAccountId==null||canMoveLinkedAccount)&&
+          chosenManualAccount!=null&&
           !entryProviders.any((p)=>p.id==chosenManualProvider&&
            p.accounts.any((a)=>a.id==chosenManualAccount))){
         snack(sheetContext,waffraIsEnglish?
@@ -1255,6 +1263,24 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
           FilledButton(onPressed:()=>Navigator.pop(dialog,true),
            child:WaffraText(waffraIsEnglish?'Confirm link':'تأكيد الربط')),
          ]));
+        if(approved!=true||!sheetContext.mounted)return;
+       }
+       if(initial!=null&&canMoveLinkedAccount&&
+          originalLinkedAccountId!=null&&chosenManualAccount!=null&&
+          originalLinkedAccountId!=chosenManualAccount){
+        final approved=await showWaffraDialog<bool>(
+         context:sheetContext,builder:(dialog)=>AlertDialog(
+          title:WaffraText(waffraIsEnglish?
+           'Confirm linked account move':'تأكيد تغيير الحساب المرتبط'),
+          content:WaffraText(waffraIsEnglish?
+           'Move the existing entry between accounts, recalculating both balances without posting money twice.':
+           'سيتم نقل العملية للحساب الجديد وإعادة حساب رصيد الحسابين دون تسجيل العملية مرة ثانية.'),
+          actions:[
+           TextButton(onPressed:()=>Navigator.pop(dialog,false),
+            child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+           FilledButton(onPressed:()=>Navigator.pop(dialog,true),
+            child:WaffraText(waffraIsEnglish?'Confirm':'تأكيد')),
+          ]));
         if(approved!=true||!sheetContext.mounted)return;
        }
        if(!income&&selectedBudgetId==null&&
@@ -1632,6 +1658,15 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
      }
      return;
     }
+   }else if(initial!=null&&_lastFinanceAuthorityRead?.source==
+      WaffraRuntimeFinanceBackend.verifiedEncrypted){
+    // Do not reserialize the entire Home list during an existing row edit.
+    // Older imported SMS rows can contain extra original fields which
+    // MoneyEntry.fromJson/toJson intentionally does not expose.
+    // Preserve unrelated original JSON bytes under the witnessed SQL lock.
+    if(!await _m953SaveExistingVerifiedEntry(initial,result,
+     fromAccountId:canMoveLinkedAccount?originalLinkedAccountId:null,
+     toAccountId:canMoveLinkedAccount?chosenManualAccount:null))return;
    }else{
    // Optimistic in-memory edits must roll back if durable save is rejected.
    // A spinner is NOT proof of a completed financial write.
@@ -1668,9 +1703,13 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
       _m684InvalidatePeriodRead();entries..clear()..addAll(previousEntries);
       learnedMerchantCategories..clear()..addAll(previousLearned);
      });
-     snack(context,waffraIsEnglish?
-      'Could not save the transaction. Your previous data is unchanged.':
-      'تعذر حفظ المعاملة. بياناتك السابقة لم تتغير.');
+     // An asynchronous durable write can commit before the response fails.
+     // Never claim previous data is unchanged until source was reloaded.
+     await _refreshFromVerifiedFinance();
+     if(mounted)snack(context,waffraIsEnglish?
+      'Save was not confirmed; verified finance was reloaded before retry.':
+      'لم يتأكد حفظ التعديل. تم تحديث بياناتك المالية من المصدر قبل إعادة المحاولة.',
+      isError:true);
     }
     // Cleanup must also run if the route disposed while persistence awaited.
     // These files were created by this editor; never delete original photos.
@@ -1696,6 +1735,9 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
    }
    }
   }
+  final movedLinkedAccountInThisEdit=initial!=null&&canMoveLinkedAccount&&
+   originalLinkedAccountId!=null&&chosenManualAccount!=null&&
+   originalLinkedAccountId!=chosenManualAccount;
   bool linkedHistoricalAccountInThisEdit=false;
   // #420: witnessed idempotent association for the existing entry;
   // never append another income or expense.
@@ -1720,25 +1762,142 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
   if(mounted)await budgetAlert(result,previousSpent);
   if(mounted)unawaited(_m467RefreshHomeAccounts());
   if(initial!=null&&mounted){
-   snack(context,linkedHistoricalAccountInThisEdit?
+   snack(context,movedLinkedAccountInThisEdit?
+     (waffraIsEnglish?'Transaction moved to the selected account':
+      'تم نقل العملية للحساب الجديد'):
+    linkedHistoricalAccountInThisEdit?
      (waffraIsEnglish?'Transaction updated and linked to account':'تم تعديل العملية وربطها بالحساب'):
      (waffraIsEnglish?'Transaction updated':'تم تعديل المعاملة'),
     isError:false,duration:const Duration(seconds:5),
     // Existing legacy Undo reverts only metadata, not a confirmed bank link.
     // Do not offer a misleading Undo after money attribution is committed.
-    actionLabel:linkedHistoricalAccountInThisEdit?null:(waffraIsEnglish?'Undo':'تراجع'),
-    onAction:linkedHistoricalAccountInThisEdit?null:()async{
+    actionLabel:linkedHistoricalAccountInThisEdit||movedLinkedAccountInThisEdit?null:(waffraIsEnglish?'Undo':'تراجع'),
+    onAction:linkedHistoricalAccountInThisEdit||movedLinkedAccountInThisEdit?null:()async{
      if(!mounted)return;
      final index=entries.indexWhere((e)=>e.id==initial.id);
      if(index<0)return;
-     _m684InvalidatePeriodRead();
-     setState(()=>entries[index]=initial);
-     if(!await _persistModuleOrReload(
-      WaffraFinanceRoute.transactionEdit,
-      operation:'transaction-edit-undo'))return;
+     if(_lastFinanceAuthorityRead?.source==
+        WaffraRuntimeFinanceBackend.verifiedEncrypted){
+      if(!await _m953SaveExistingVerifiedEntry(result,initial))return;
+     }else{
+      _m684InvalidatePeriodRead();
+      setState(()=>entries[index]=initial);
+      if(!await _persistModuleOrReload(
+       WaffraFinanceRoute.transactionEdit,
+       operation:'transaction-edit-undo'))return;
+     }
      if(mounted)snackSuccess(context,waffraIsEnglish?
       'Transaction change reverted':'تم التراجع عن تعديل المعاملة');
     });
+  }
+ }
+ /// M953: edit exactly one historical row against its CURRENT encrypted
+ /// witness. Legacy SMS/V24 rows may have extra fields or old date encoding:
+ /// do not regenerate the full ledger via MoneyEntry.toJson().
+ /// This modifies neither an account association nor a second money row.
+ Future<bool> _m953SaveExistingVerifiedEntry(
+  MoneyEntry original,MoneyEntry edited,
+  {String? fromAccountId,String? toAccountId})async{
+  try{
+   if(original.id!=edited.id||original.sourceType!=edited.sourceType||
+      original.receiptPath!=edited.receiptPath||
+      original.goalWalletPaidMinor!=edited.goalWalletPaidMinor||
+      original.sourceType=='goal_due'){
+    throw StateError('Immutable transaction provenance or receipt changed.');
+   }
+   await _financialWriteQueue.drain();
+   await _ensureFinanceBound();
+   final baseline=await _financeAuthority.load(
+    route:WaffraFinanceRoute.transactionEdit);
+   if(baseline.source!=WaffraRuntimeFinanceBackend.verifiedEncrypted||
+      baseline.encryptedWitness==null||baseline.ledgerRaw==null){
+    throw StateError('Verified SQLCipher edit witness missing.');
+   }
+   final decoded=await WaffraLargeJsonDecode.parse(baseline.ledgerRaw!);
+   if(decoded is! List)throw StateError('Verified edit ledger malformed.');
+   var matches=0;
+   final patched=<Map<String,Object?>>[];
+   for(final record in decoded){
+    if(record is! Map)throw StateError('Invalid verified ledger row.');
+    final raw=Map<String,dynamic>.from(record);
+    if(raw['id']!=original.id){
+     patched.add(Map<String,Object?>.from(raw));
+     continue;
+    }
+    matches++;
+    // Old imported rows can omit personalNotes/merchantKey or encode
+    // timestamps without fractional seconds. Compare their *displayed*
+    // complete finance identity, not their differently serialized JSON.
+    final current=MoneyEntry.fromJson(raw);
+    if(jsonEncode(current.toJson())!=jsonEncode(original.toJson())){
+     throw StateError('Transaction changed since editor opened.');
+    }
+    final revised=Map<String,Object?>.from(raw)..addAll(edited.toJson());
+    if(edited.budgetId==null)revised.remove('budgetId');
+    if(edited.goalWalletPaidMinor==0)revised.remove('goalWalletPaidMinor');
+    patched.add(revised);
+   }
+   if(matches!=1)throw StateError('Transaction identity missing or duplicated.');
+   final moved=fromAccountId!=null&&toAccountId!=null&&
+    fromAccountId!=toAccountId;
+   final WaffraFinanceAuthorityRead committed;
+   if(moved){
+    final bridge=_financeBinding?.accountsBridge;
+    if(bridge==null||baseline.encryptedWitness==null){
+     throw StateError('Verified account move source is unavailable.');
+    }
+    await _saveProgress.track(
+     'm956-existing-account-move',
+     ()=>bridge.editExistingAndMoveAccount(
+      baseline:baseline.encryptedWitness!,
+      expectedOriginal:Map<String,Object?>.from(
+       (decoded as List).cast<Map>().singleWhere((e)=>e['id']==original.id)),
+      replacement:patched.singleWhere((e)=>e['id']==original.id),
+      fromAccountId:fromAccountId,toAccountId:toAccountId,
+      userConfirmed:true));
+    committed=await _financeAuthority.load(
+     route:WaffraFinanceRoute.transactionEdit);
+   }else{
+    committed=await _saveProgress.track(
+     'm953-verified-transaction-edit',()=>_financeAuthority.saveCaptured(
+      route:WaffraFinanceRoute.transactionEdit,
+      baseline:baseline,captured:<String,Object>{
+       'entries':jsonEncode(patched),
+      },userConfirmed:true));
+   }
+   final verifiedRaw=committed.ledgerRaw;
+   if(verifiedRaw==null)throw StateError('Edit witness has no ledger.');
+   final verifiedData=await WaffraLargeJsonDecode.parse(verifiedRaw);
+   if(verifiedData is! List)throw StateError('Edit ledger could not be read.');
+   final verified=verifiedData.map((row)=>MoneyEntry.fromJson(
+    Map<String,dynamic>.from(row as Map))).toList(growable:false);
+   if(verified.where((e)=>e.id==edited.id).length!=1||
+      jsonEncode(verified.singleWhere((e)=>e.id==edited.id).toJson())!=
+       jsonEncode(edited.toJson())){
+    throw StateError('Edited entry failed source read-back parity.');
+   }
+   if(mounted)setState((){
+    _m684InvalidatePeriodRead();
+    entries..clear()..addAll(verified);
+    _lastFinanceAuthorityRead=committed;
+    _lastLedgerSavedRaw=verifiedRaw;
+    _lastWidgetRevision=committed.widgetRevision;
+   });
+   if(mounted){
+    unawaited(_refreshWidget());
+    if(moved)unawaited(_m467RefreshHomeAccounts());
+   }
+   return true;
+  }catch(error){
+   debugPrint('M953 verified edit rejected: ${error.runtimeType}');
+   if(mounted){
+    await _refreshFromVerifiedFinance();
+    if(mounted)snack(context,waffraIsEnglish?
+     'Edit not confirmed. Verified transactions were refreshed; retry from the latest record.':
+     'لم يتأكد تعديل المعاملة. حدّثنا السجل المالي الموثق؛ افتح العملية مجددًا وحاول.',
+     isError:true);
+   }
+   return false;
   }
  }
 }

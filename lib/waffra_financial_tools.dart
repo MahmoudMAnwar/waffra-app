@@ -74,7 +74,7 @@ class _WaffraFinancialCalendarState extends State<WaffraFinancialCalendar> {
        color:dark?Colors.white:const Color(0xFF19221D))),
      const SizedBox(height:5),
      Text(item.scheduled?
-       (widget.english?'Scheduled recurring transaction':'عملية متكررة مجدولة'):
+       (widget.english?'Scheduled due':'استحقاق مجدول'):
        '${date(item.date)} • ${item.date.hour.toString().padLeft(2,'0')}:${item.date.minute.toString().padLeft(2,'0')}',
        style:TextStyle(fontSize:11,color:dark?Colors.white70:const Color(0xFF64736A))),
     ])),
@@ -369,7 +369,7 @@ class _WaffraSubscriptionScreenState extends State<WaffraSubscriptionScreen> {
       Row(children:[
        const Icon(Icons.autorenew_rounded,color:Colors.white),
        const SizedBox(width:8),
-       Expanded(child:Text(t('Recorded recurring expenses','المصروفات المتكررة المسجلة'),
+       Expanded(child:Text(t('Recorded dues','الاستحقاقات المسجلة'),
         style:const TextStyle(color:Colors.white,fontSize:16,fontWeight:FontWeight.bold))),
       ]),
       const SizedBox(height:14),
@@ -389,7 +389,7 @@ class _WaffraSubscriptionScreenState extends State<WaffraSubscriptionScreen> {
       ]),
       const SizedBox(height:8),
       Text(t('Estimated from currently registered monthly recurring payments',
-       'تقدير بناءً على المصروفات المتكررة الشهرية المسجلة'),
+       'تقدير بناءً على الاستحقاقات الشهرية المسجلة'),
        style:const TextStyle(color:Color(0xFFC5E6D9),fontSize:11)),
      ])),
     const SizedBox(height:22),
@@ -401,13 +401,13 @@ class _WaffraSubscriptionScreenState extends State<WaffraSubscriptionScreen> {
       'أضف معاملات من أشهر مختلفة لاكتشاف المدفوعات المتشابهة.'))
     else ...suggestions.map(candidateTile),
     const SizedBox(height:20),
-    section(t('Registered recurring expenses','المصروفات المتكررة المسجلة'),
+    section(t('Registered dues','الاستحقاقات المسجلة'),
      Icons.event_repeat_rounded,known.length),
     const SizedBox(height:12),
     if(known.isEmpty)emptyState(
-     t('No recurring payments yet','لا توجد مصروفات متكررة مسجلة'),
+     t('No registered dues yet','لا توجد استحقاقات مسجلة'),
      t('Review a detected payment to add it as a recurring operation.',
-      'راجع الاشتراك المكتشف لإضافته كعملية متكررة.'))
+      'راجع الاشتراك المكتشف لإضافته كاستحقاق.'))
     else ...known.map(registeredTile),
     const SizedBox(height:18),
     panel(Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
@@ -419,7 +419,7 @@ class _WaffraSubscriptionScreenState extends State<WaffraSubscriptionScreen> {
      ]),
      const SizedBox(height:8),
      Text(t('Suggestions are estimates based only on transactions stored on this device. Review all details before adding a recurring payment.',
-      'الاقتراحات تقديرية وتعتمد على معاملات الجهاز فقط. راجع التفاصيل قبل إضافة عملية متكررة.'),
+      'الاقتراحات تقديرية وتعتمد على معاملات الجهاز فقط. راجع التفاصيل قبل إضافة استحقاق.'),
       style:TextStyle(fontSize:12,color:theme.hintColor)),
     ]),bg:theme.brightness==Brightness.dark?theme.cardColor:const Color(0xFFE8F4ED)),
    ]),
