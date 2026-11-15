@@ -1632,6 +1632,13 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
      }
      return;
     }
+   }else if(initial!=null&&_lastFinanceAuthorityRead?.source==
+      WaffraRuntimeFinanceBackend.verifiedEncrypted){
+    // Do not reserialize the entire Home list during an existing row edit.
+    // Older imported SMS rows can contain extra original fields which
+    // MoneyEntry.fromJson/toJson intentionally does not expose.
+    // Preserve unrelated original JSON bytes under the witnessed SQL lock.
+    if(!await _m953SaveExistingVerifiedEntry(initial,result))return;
    }else{
    // Optimistic in-memory edits must roll back if durable save is rejected.
    // A spinner is NOT proof of a completed financial write.
@@ -1668,9 +1675,13 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
       _m684InvalidatePeriodRead();entries..clear()..addAll(previousEntries);
       learnedMerchantCategories..clear()..addAll(previousLearned);
      });
-     snack(context,waffraIsEnglish?
-      'Could not save the transaction. Your previous data is unchanged.':
-      'تعذر حفظ المعاملة. بياناتك السابقة لم تتغير.');
+     // An asynchronous durable write can commit before the response fails.
+     // Never claim previous data is unchanged until source was reloaded.
+     await _refreshFromVerifiedFinance();
+     if(mounted)snack(context,waffraIsEnglish?
+      'Save was not confirmed; verified finance was reloaded before retry.':
+      'لم يتأكد حفظ التعديل. تم تحديث بياناتك المالية من المصدر قبل إعادة المحاولة.',
+      isError:true);
     }
     // Cleanup must also run if the route disposed while persistence awaited.
     // These files were created by this editor; never delete original photos.
@@ -1731,14 +1742,103 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
      if(!mounted)return;
      final index=entries.indexWhere((e)=>e.id==initial.id);
      if(index<0)return;
-     _m684InvalidatePeriodRead();
-     setState(()=>entries[index]=initial);
-     if(!await _persistModuleOrReload(
-      WaffraFinanceRoute.transactionEdit,
-      operation:'transaction-edit-undo'))return;
+     if(_lastFinanceAuthorityRead?.source==
+        WaffraRuntimeFinanceBackend.verifiedEncrypted){
+      if(!await _m953SaveExistingVerifiedEntry(result,initial))return;
+     }else{
+      _m684InvalidatePeriodRead();
+      setState(()=>entries[index]=initial);
+      if(!await _persistModuleOrReload(
+       WaffraFinanceRoute.transactionEdit,
+       operation:'transaction-edit-undo'))return;
+     }
      if(mounted)snackSuccess(context,waffraIsEnglish?
       'Transaction change reverted':'تم التراجع عن تعديل المعاملة');
     });
+  }
+ }
+ /// M953: edit exactly one historical row against its CURRENT encrypted
+ /// witness. Legacy SMS/V24 rows may have extra fields or old date encoding:
+ /// do not regenerate the full ledger via MoneyEntry.toJson().
+ /// This modifies neither an account association nor a second money row.
+ Future<bool> _m953SaveExistingVerifiedEntry(
+  MoneyEntry original,MoneyEntry edited)async{
+  try{
+   if(original.id!=edited.id||original.sourceType!=edited.sourceType||
+      original.receiptPath!=edited.receiptPath||
+      original.goalWalletPaidMinor!=edited.goalWalletPaidMinor||
+      original.sourceType=='goal_due'){
+    throw StateError('Immutable transaction provenance or receipt changed.');
+   }
+   await _financialWriteQueue.drain();
+   await _ensureFinanceBound();
+   final baseline=await _financeAuthority.load(
+    route:WaffraFinanceRoute.transactionEdit);
+   if(baseline.source!=WaffraRuntimeFinanceBackend.verifiedEncrypted||
+      baseline.encryptedWitness==null||baseline.ledgerRaw==null){
+    throw StateError('Verified SQLCipher edit witness missing.');
+   }
+   final decoded=await WaffraLargeJsonDecode.parse(baseline.ledgerRaw!);
+   if(decoded is! List)throw StateError('Verified edit ledger malformed.');
+   var matches=0;
+   final patched=<Map<String,Object?>>[];
+   for(final record in decoded){
+    if(record is! Map)throw StateError('Invalid verified ledger row.');
+    final raw=Map<String,dynamic>.from(record);
+    if(raw['id']!=original.id){
+     patched.add(Map<String,Object?>.from(raw));
+     continue;
+    }
+    matches++;
+    // Old imported rows can omit personalNotes/merchantKey or encode
+    // timestamps without fractional seconds. Compare their *displayed*
+    // complete finance identity, not their differently serialized JSON.
+    final current=MoneyEntry.fromJson(raw);
+    if(jsonEncode(current.toJson())!=jsonEncode(original.toJson())){
+     throw StateError('Transaction changed since editor opened.');
+    }
+    final revised=Map<String,Object?>.from(raw)..addAll(edited.toJson());
+    if(edited.budgetId==null)revised.remove('budgetId');
+    if(edited.goalWalletPaidMinor==0)revised.remove('goalWalletPaidMinor');
+    patched.add(revised);
+   }
+   if(matches!=1)throw StateError('Transaction identity missing or duplicated.');
+   final committed=await _saveProgress.track(
+    'm953-verified-transaction-edit',()=>_financeAuthority.saveCaptured(
+     route:WaffraFinanceRoute.transactionEdit,
+     baseline:baseline,captured:<String,Object>{
+      'entries':jsonEncode(patched),
+     },userConfirmed:true));
+   final verifiedRaw=committed.ledgerRaw;
+   if(verifiedRaw==null)throw StateError('Edit witness has no ledger.');
+   final verifiedData=await WaffraLargeJsonDecode.parse(verifiedRaw);
+   if(verifiedData is! List)throw StateError('Edit ledger could not be read.');
+   final verified=verifiedData.map((row)=>MoneyEntry.fromJson(
+    Map<String,dynamic>.from(row as Map))).toList(growable:false);
+   if(verified.where((e)=>e.id==edited.id).length!=1||
+      jsonEncode(verified.singleWhere((e)=>e.id==edited.id).toJson())!=
+       jsonEncode(edited.toJson())){
+    throw StateError('Edited entry failed source read-back parity.');
+   }
+   if(mounted)setState((){
+    _m684InvalidatePeriodRead();
+    entries..clear()..addAll(verified);
+    _lastFinanceAuthorityRead=committed;
+    _lastLedgerSavedRaw=verifiedRaw;
+    _lastWidgetRevision=committed.widgetRevision;
+   });
+   if(mounted)unawaited(_refreshWidget());
+   return true;
+  }catch(error){
+   debugPrint('M953 verified edit rejected: ${error.runtimeType}');
+   if(mounted){
+    await _refreshFromVerifiedFinance();
+    if(mounted)snack(context,waffraIsEnglish?
+     'Edit not confirmed. Verified transactions were refreshed; retry from the latest record.':
+     'لم يتأكد تعديل المعاملة. حدّثنا السجل المالي الموثق؛ افتح العملية مجددًا وحاول.',
+     isError:true);
+   }
+   return false;
   }
  }
 }
