@@ -53,8 +53,10 @@ void main(){
    lessThan(homeLoader.indexOf('WidgetsBinding.instance.addPostFrameCallback')));
   expect(homeLoader,contains('Duration(milliseconds:900)'));
   expect(homeLoader,contains('if(!_m630SmsSessionCurrent(startupEpoch))return;'));
-  expect(source,contains('mounted&&ready&&widget.postAuthVisible&&'));
-  expect(source,contains('epoch==_m630HomeStartupEpoch;'));
+  final gate=File('lib/waffra_home_state_core_helpers.part.dart').readAsStringSync();
+  expect(gate,contains('bool _m630SmsSessionCurrent(int epoch)=>'));
+  expect(gate,contains('mounted&&ready&&widget.postAuthVisible&&'));
+  expect(gate,contains('epoch==_m630HomeStartupEpoch;'));
   expect(homeLoader,contains('await _refreshAutoSmsInbox(importMonth:!_autoSmsHistoryComplete)'));
  });
 }

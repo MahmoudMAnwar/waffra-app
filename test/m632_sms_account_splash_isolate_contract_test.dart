@@ -114,7 +114,9 @@ void main(){
   expect(refresher,contains('await compute(waffraM632ClassifySmsQueue,'));
   expect(refresher,contains('if(!mounted||!ready||_m627ClosingSession||_financeLoadFailure!=null)return;'));
   expect(refresher,contains('if(!_m630SmsSessionCurrent(smsEpoch))return;'));
-  expect(source,contains('epoch==_m630HomeStartupEpoch;'));
+  final gate=File('lib/waffra_home_state_core_helpers.part.dart').readAsStringSync();
+  expect(gate,contains('bool _m630SmsSessionCurrent(int epoch)=>'));
+  expect(gate,contains('epoch==_m630HomeStartupEpoch;'));
   expect(refresher,contains('WaffraAutoSms.pendingChecked()'));
   expect(refresher,contains('WaffraAutoSms.excludeMessages(batch)'));
   expect(refresher,contains('WaffraAutoSms.acknowledgeCommitted(batch)'));

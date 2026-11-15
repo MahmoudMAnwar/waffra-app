@@ -94,8 +94,10 @@ void main() {
   expect(load.indexOf('setState(()=>ready=true);'),
     lessThan(load.indexOf('Duration(milliseconds:400)')));
   expect(load,contains('if(!_m630SmsSessionCurrent(startupEpoch))return;'));
-  expect(home,contains('mounted&&ready&&widget.postAuthVisible&&'));
-  expect(home,contains('epoch==_m630HomeStartupEpoch;'));
+  final gate=File('lib/waffra_home_state_core_helpers.part.dart').readAsStringSync();
+  expect(gate,contains('bool _m630SmsSessionCurrent(int epoch)=>'));
+  expect(gate,contains('mounted&&ready&&widget.postAuthVisible&&'));
+  expect(gate,contains('epoch==_m630HomeStartupEpoch;'));
   expect(load,contains('_m630PostFrameFinanceWork=postFrameFinance;'));
   expect(load,contains('if(!verifiedEncryptedStartup)await applyRecurring();'));
   expect(load,isNot(contains('unawaited(_refreshWidget());')));

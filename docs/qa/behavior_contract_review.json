@@ -8,6 +8,30 @@
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
     {
+      "id": "M967-RELOCATED-POST-AUTH-SMS-SOURCE-GATE-COVERAGE",
+      "issue": "Issue #666 / Draft PR #667",
+      "previous_behavior": "M623, M631 and M632 positive assertions still seek the SMS post-auth ready/owner epoch predicate in reconstructed main.dart after M964 moved the exact implementation into the registered helper part.",
+      "approved_behavior": "Each existing test must inspect the verified same-library helper's actual session/body guard and keep its unchanged post-frame SMS, owner and isolate checks. M946 adds only missing M631/M632, M623 already registered.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_state_core_helpers.part.dart"
+      ],
+      "test_paths": [
+        "test/m623_verified_home_handoff_no_black_frame_test.dart",
+        "test/m631_verified_finance_prewarm_test.dart",
+        "test/m632_sms_account_splash_isolate_contract_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m946-whole-app-feature-smoke.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Same mounted/ready/postAuthVisible+epoch check with no code change.",
+        "No test skipped or removed, no duplicate M946 file.",
+        "No change to finance writer, native SMS callbacks, archive or approved UI."
+      ]
+    },
+    {
       "id": "M966-EXTRACTED-SMS-SESSION-EPOCH-SOURCE-REGRESSION",
       "issue": "Issue #666 / stacked PR #667",
       "previous_behavior": "M624/M548/M622 source tests assumed the native SMS session predicate was defined inside reconstructed main.dart even after M964 extracted it to a same-library Dart part.",
