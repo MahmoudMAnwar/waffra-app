@@ -43,7 +43,7 @@ def read_waffra_home_source(root=ROOT, overrides=None):
             "lib/waffra_home_entry_sheet.part.dart"," Future<void> entrySheet(")
     restore(" // M707: approved Goals and Recurring pages moved to registered Home part.\n",
             "lib/waffra_home_goals_recurring_pages.part.dart"," Widget goalsPage(){")
-    recurring_marker = ' // M944: original recurring editor and linked-goal actions live in the recurring-workflows part.\\n'
+    recurring_marker = ' // M944: original recurring editor and linked-goal actions live in the recurring-workflows part.\n'
     restore(recurring_marker, 'lib/waffra_home_recurring_workflows.part.dart',
             ' Future<void> recurringDialog(')
     goal = _read(root, "lib/waffra_home_goal_actions.part.dart", overrides)
@@ -150,7 +150,7 @@ def read_waffra_home_source(root=ROOT, overrides=None):
             "lib/waffra_home_resume_handler.part.dart", " void _m468OnResume(){")
     restore(" // M930: original widgets Home session helper moved without behavioral change.\n",
             "lib/waffra_home_widget_action_routes.part.dart", " void _returnToHome(){")
-    shell_marker = (' // M944: original Home shell moved unchanged to registered same-library part.\\n'
+    shell_marker = (' // M944: original Home shell moved unchanged to registered same-library part.\n'
                     ' @override Widget build(BuildContext context)=>_m944BuildHome();')
     if source.count(shell_marker) != 1:
         raise AssertionError('Missing or duplicate M944 Home shell registered delegate')
