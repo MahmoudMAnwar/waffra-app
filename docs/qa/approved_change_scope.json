@@ -1,51 +1,61 @@
 {
   "contract_version": 1,
-  "change_id": "M974-ISSUE673-GOAL-DUE-CARD-ID-READ-INDEX-20261115",
-  "human_scope_review": "Five axes #657 Axis 3/5 and money-source preserving Axis 1/4: replace repeated per-card full linked goal, goal_due settlement and active-account scans on Goal and Recurring screens with one immutable index per already-verified Home screen build. Preserve source order/duplicates, unique goal/paid/account predicates, UI/FAB/Snackbar geometry, all SQLCipher writers and backups. New 10000-row Dart regression plus existing goal-due display test, required M946 experience; exact-source M385/M550 scope. Stacked on #672 M973 without altering that parent branch. Physical Android/live SMS/private V3 UAT is separate.",
+  "change_id": "M975-ISSUE675-RECURRING-DUE-ID-MEMOIZATION-20261115",
+  "human_scope_review": "Owner requested 95% eventual five-axis coverage #657; this is bounded source improvement for the actual recurring due-date hot path: one source-authenticated in-memory entry ID set and per-bill-identity memoization per recurring UI build, not repeated ledger scans for each of 7 filter headings, sorting, and cards. Original nextRecurringDue without optional paidEntryIds continues scanning source as before. All WaffraRecurringPolicy date semantics, recurringPostponed, linked-goal behavior, bank posting and UI unchanged. Existing M302 test remains enabled and now asserts both branches, new 10000-row parity test added in M946 experience. Stacked above #674 and #672, CI not hardware certification.",
   "user_requested_changes": [
-    "Advance latest five axes #657 toward code completeness with an actual production performance fix rather than an estimated percentage increase.",
-    "Create immutable per-page lookup for verified active accounts, goal IDs and goal_due transaction IDs instead of O(cards × entire ledger) repeated predicate scans.",
-    "Keep exact ambiguity semantics: one verified account name, duplicate goal IDs still fail, only one matching goal_due receipt counts paid, no change to dates/filters/money/approved visuals.",
-    "Register nonduplicate 10000-row and source-boundary regression with existing goal-due suite; no test bypass or real device sign-off claim."
+    "Advance the latest five Waffra axes #657 toward 95 with independently testable code performance and integrity improvement.",
+    "Stop scanning entire Home finance list once per recurring bill per filter/paint while preserving exact settled-month source membership and archived/legacy historical entries.",
+    "Maintain optional argument fallback in nextRecurringDue for every existing caller; only recurringPage supplies one immutable set and an exact-instance due-date memo.",
+    "Run existing M302 regression and new nonduplicate 10000-record due-date parity/source test in M946, preserve M385/M550 and unchanged finance writer/UX."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
+    "lib/waffra_home_recurring_workflows.part.dart",
     "lib/waffra_home_goals_recurring_pages.part.dart",
     "scripts/qa/m946_full_app_smoke_matrix.py",
-    "test/m974_goal_due_card_lookup_index_test.dart"
+    "test/m302_recurring_first_due_regression_test.dart",
+    "test/m975_recurring_paid_id_read_cache_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
   "bounded_sections": {
+    "lib/waffra_home_recurring_workflows.part.dart": [
+      {
+        "start": " DateTime nextRecurringDue(",
+        "end": " Future<void> _setRecurringActiveFromCard"
+      }
+    ],
     "lib/waffra_home_goals_recurring_pages.part.dart": [
       {
-        "start": "part of 'main.dart';",
-        "end": "/// M707 / #633/#635: byte-identical owner-approved Goals/Recurring real pages."
+        "start": " Widget recurringPage(){",
+        "end": "  // One due amount per payable schedule, excluding income."
       },
       {
-        "start": "  final ordered=filtered.toList()..sort((a,b){",
-        "end": "  return Scrollbar(\n   controller:_goalsScrollController"
-      },
-      {
-        "start": "     ...ordered.map((g){",
-        "end": "      final completed=g.target>0&&g.saved>=g.target;"
+        "start": "  bool duePass(RecurringBill r,String filter){",
+        "end": "  const dueFilters=<String>['all','today','week','month','overdue','active','paused'];"
       },
       {
         "start": "  final shown=recurring.where((r)=>",
-        "end": "  return Scrollbar(\n   controller:_recurringScrollController"
+        "end": "  // Reuse already verified snapshot membership without per-card full scans."
       },
       {
         "start": "     ...shown.map((r){",
-        "end": "      final savedDue=goal==null?0.0:min(r.amount,max(0,goal.saved));"
+        "end": "      final settledId=WaffraRecurringPolicy.entryId"
+      }
+    ],
+    "test/m302_recurring_first_due_regression_test.dart": [
+      {
+        "start": "  expect(code,contains('WaffraRecurringPolicy.nextActionableDue('));",
+        "end": "  expect(code,contains(\"postponedUntil:DateTime.tryParse(recurringPostponed[monthId]??'')\"));"
       }
     ],
     "scripts/qa/m946_full_app_smoke_matrix.py": [
       {
         "start": "FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {",
-        "end": "    \"m973_single_sms_review_indexed_sender_cleanup\""
+        "end": "    \"m974_goal_due_card_source_index_and_settlement_parity\""
       }
     ]
   }
