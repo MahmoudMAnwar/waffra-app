@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
   "change_id": "M944-ISSUE653-FIVE-AXIS-RELIABILITY-20261115",
-  "human_scope_review": "2026-11-15 owner approved modifications in SAME Draft PR #654: preserve original 19 backup identities and two income entries after new manual append, update period index and account balance projection, Goals/Dues count filters and official Riyal, Dues empty-state and gold metrics, Home inline Show more/less. Original encrypted archive requires owner-device proof. On 2026-11-15 the user additionally instructed autonomous smoke testing of EVERY feature (small and large) and every cross-feature account/database linkage, all within existing draft PR #654. Added mandatory all-PR M946 matrix and synthetic encrypted SQLCipher end-to-end test, no real-owner backup bytes. M947 Nov 15 2026 user asked whether deletion was actually tested. Confirmed omission from all-feature smoke and authorized same Draft PR #654 coverage of transaction delete/cancel/undo, 19-row SQLCipher historical preservation, 30-day goal/recurring/category recycle, Delete All and full-vault biometric gate, SMS deletion, and cloud account deletion disabled gate. No private backup or real device used.",
+  "human_scope_review": "2026-11-15 owner approved modifications in SAME Draft PR #654: preserve original 19 backup identities and two income entries after new manual append, update period index and account balance projection, Goals/Dues count filters and official Riyal, Dues empty-state and gold metrics, Home inline Show more/less. Original encrypted archive requires owner-device proof. On 2026-11-15 the user additionally instructed autonomous smoke testing of EVERY feature (small and large) and every cross-feature account/database linkage, all within existing draft PR #654. Added mandatory all-PR M946 matrix and synthetic encrypted SQLCipher end-to-end test, no real-owner backup bytes. M947 Nov 15 2026 user asked whether deletion was actually tested. Confirmed omission from all-feature smoke and authorized same Draft PR #654 coverage of transaction delete/cancel/undo, 19-row SQLCipher historical preservation, 30-day goal/recurring/category recycle, Delete All and full-vault biometric gate, SMS deletion, and cloud account deletion disabled gate. No private backup or real device used. M948 on 2026-11-15 owner explicitly requested additional functional/non-functional QA to minimize production bugs in same PR #654. Approved new real load/property/fuzz/concurrency/RTL suites, zero-skipped exact-SHA smoke gate, and fixing a discovered Home date-filter previous-day inclusion defect. No private credentials, backup or financial history changed.",
   "user_requested_changes": [
     "Implement authenticated SQLCipher paging for thousands of finance entries with stable order and verified account scope, no financial write changes.",
     "Improve large-list pagination for transactions, native SMS sender review, goals and recurring without changing approved layouts or selection semantics.",
@@ -19,7 +19,10 @@
     "Add synthetic SQLCipher integration smoke: account creation/opening balances, linked manual income/expense, selected account scoping, unassigned legacy income, duplicate manual ID, SMS anti-replay, cold reopen and invariant balances. All on disposable database, not owner device.",
     "Correct old Home pagination smoke expectations following inline Show more/less approved UI; preserve required assertions for one toolbar and combined activity counts.",
     "Proactive full-app smoke M946 exposed three stale test source anchors after approved Goals/Dues empty-state and Home toolbar redesign: repair M665's two due Card boundaries and M670's one-inline verified history expansion expectations without removing linked goal money validations.",
-    "Add all destructive financial and nonfinancial deletion paths to mandatory every-PR smoke, with reversible delete and rollback: original 19 archived rows, 2 incomes, independent SMS hashes, encrypted receipts, 30-day goal and recurring bins, Delete All, SMS inbox, and account closure gating; avoid a black-screen navigation reset after delete."
+    "Add all destructive financial and nonfinancial deletion paths to mandatory every-PR smoke, with reversible delete and rollback: original 19 archived rows, 2 incomes, independent SMS hashes, encrypted receipts, 30-day goal and recurring bins, Delete All, SMS inbox, and account closure gating; avoid a black-screen navigation reset after delete.",
+    "Add deterministic property and 10,000-row indexed query/pagination performance tests, randomized integer-halalas, 16-year leap-date and due schedule boundary, RTL 200% text on 320px viewports, and simultaneous user/manual and bank SMS SQLCipher writes preserving exactly-once balances.",
+    "Close discovered functional defect: dashboard selected date range erroneously included the entire calendar day before requested start. Compare exact inclusive date-only selected boundaries; add month/year/leap date regression.",
+    "Make M946 always fail if any skipped/incomplete test, stale checked SHA, no test evidence, or host report falsely claims physical Android/UAT proof. Test the gate itself by mutations, enforce in each mandatory money/experience/safety CI shard."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -66,7 +69,10 @@
     "test/m665_goal_due_display_and_linked_edit_test.dart",
     "test/m670_feedback_transfer_dashboard_test.dart",
     "test/storage/m183_encrypted_transaction_recycle_test.dart",
-    "test/m947_deletion_flow_contract_test.dart"
+    "test/m947_deletion_flow_contract_test.dart",
+    "test/m948_financial_properties_and_performance_test.dart",
+    "scripts/qa/m948_smoke_quality_gate.py",
+    "test/qa/m948_smoke_quality_gate_test.py"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
@@ -107,8 +113,8 @@
     ],
     "lib/waffra_home_ledger_query.part.dart": [
       {
-        "start": "final class WaffraHomeLedgerReadCache {",
-        "end": "/// M941: the original dashboard search/date/amount/type/category predicate"
+        "start": "final class WaffraHomeTransactionFilter {",
+        "end": null
       }
     ],
     "lib/waffra_home_dashboard_analytics.part.dart": [
