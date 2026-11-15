@@ -937,3 +937,6 @@ M954 #660 M160 3105-case full-suite regression correction (2026-11-15, unrelease
 
 [M956 — Verified historical account reassignment — PR #660 — 2026-11-15]
 - Source-witnessed metadata + linked account change in one Home/Widget SQLCipher lock/transaction, explicit dialog, no new money, no account mismatch, no paid goal due, no unsafe single-step Undo. Added encrypted rollback and exact amount/date regression; real device and exact-head CI remain release gates.
+
+[M956 — PR #660 exact-head source and M385/M449 follow-up — 2026-11-15]
+- Post-source review: Arabic/English historical-account move helper copy now correctly distinguishes an explicit linked account move from metadata-only edits. The one locked encrypted transaction keeps amount/date projection and preexisting bank link in sync. M385 bounded both the new bridge import and writer, preserving unrelated financial code. Confirm CI on this latest commit; real Android and private backup acceptance remain pending.
