@@ -6,7 +6,8 @@ void main(){
  final source=readWaffraMainSourceForContracts();
 
  test('M622 never renders fake balance or loading screen while verifying vault',(){
-  final scaffold=source.split(' @override Widget build(BuildContext context)=>PopScope(')[1]
+  final shell=File('lib/waffra_home_root_shell.part.dart').readAsStringSync();
+  final scaffold=shell.split(' Widget _m944BuildHome()=>PopScope(')[1]
    .split('  // A fixed 58x58 FAB:')[0];
   expect(scaffold,contains('child:!ready&&_financeLoadFailure==null?'));
   expect(scaffold,contains('const SizedBox.shrink():Stack(children:[Scaffold('));
