@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "pr": "M944 — 5-axis code reliability PR #654 (Draft; Issue #653)",
-  "issue": "Issue #653 — M944 code-only performance, consistency, modularity, CI",
+  "pr": "M949 — new Draft PR, Issue #655, 43 genuinely new functional cases",
+  "issue": "Issue #655 — nonduplicated functional test journeys",
   "workflow_review_policy": "scan-all-registered-workflows",
-  "baseline": "main merge #652 at efba4d1f0b20b4111b60a1720de682059aac63fe",
+  "baseline": "main after merged PR #654 at b624100a040d2a05c02d9ea9827dd36494c39538",
   "reviewed_at": "2026-11-15",
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
@@ -4966,6 +4966,38 @@
         "Date filter never contains a transaction prior to first selected date or after last date.",
         "Nonfunctional host tests do not substitute for device FPS, physical biometric, backup UAT or screen-reader checks.",
         "No skipped test, missing event, stale SHA or unverified physical claim can pass M946 quality gate."
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m946-whole-app-feature-smoke.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ]
+    },
+    {
+      "id": "M949-43-NEW-DIRECT-FUNCTIONAL-JOURNEYS",
+      "issue": "#655; new Draft PR from merged #654",
+      "previous_behavior": "M946 has full-app broad smoke, but not chained three-bank transactions and archive, partially mapped historical incomes, category-parent rename preserving child, linked goal/due account switch and rollback across siblings, or simultaneous five/six-dimensional Home search and account filter.",
+      "approved_behavior": "Add EXACTLY 43 new real runnable Flutter test cases without editing 618 pre-existing test or 18 integration test files. Accounts A01–A14 exercise multi-action SQLCipher transactions; modules M01–M17 exercise state changes and failed edit atomicity; Home F01–F12 combine amount,date,category,search,type and account scopes. Register suites in mandatory M946 every-head smoke and audit case IDs/title uniqueness/no skip. No owner data touched.",
+      "source_paths": [
+        "lib/storage/waffra_accounts_repository.dart",
+        "lib/storage/waffra_fresh_finance_modules_repository.dart",
+        "lib/waffra_home_ledger_query.part.dart",
+        "lib/waffra_finance_period_index.part.dart",
+        "scripts/qa/m946_full_app_smoke_matrix.py",
+        "scripts/qa/m949_unique_functional_case_audit.py"
+      ],
+      "test_paths": [
+        "test/storage/m949_account_lifecycle_cross_feature_test.dart",
+        "test/storage/m949_goal_recurring_category_sequences_test.dart",
+        "test/m949_home_filter_combined_user_journeys_test.dart",
+        "test/qa/m949_unique_functional_case_audit_test.py"
+      ],
+      "safety_invariants": [
+        "Original test suites untouched; zero production lib files changed.",
+        "Rejected transfer, bank archive, goal/due/category edit never mutates unrelated encrypted records.",
+        "Authenticated source account IDs and linked due/source integrity survive metadata rename and cold logic.",
+        "Compound Home filters cannot leak old accountless entries into selected verified account.",
+        "Exactly 43 distinct test() cases and 0 skipped on exact PR SHA; separate 4 Python audit mutation tests not counted as functional.",
+        "No physical Android device, real user encrypted backup or SMS originals sent to CI."
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/m946-whole-app-feature-smoke.yml",
