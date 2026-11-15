@@ -27,3 +27,13 @@
 - Improve the source and message lifecycle interactions after code review.
 
 **Exit criteria for code-only stage:** all eight rows show implemented-in-source, then hand over to owner for an explicitly separate QA phase. Current Draft is **not** 8/8 complete.
+
+## M1002 — Urgent owner SMS exclusion discrepancy (#714)
+- Owner reported **~38 excluded SMS** but **zero** under SMS rule category Excluded. Code reading confirms two independent policies: native Android blocked senders / individual excluded message IDs, and FlutterSecureStorage **reusable safely learned rule templates**.
+- Added native counts to rules editor and Excluded bucket, with explicit unavailable state (never a fake zero).
+- Native success is separate from optional learning success; both Inbox and Notifications surface number of safe pattern changes or a storage warning.
+- Only safe OTP or beneficiary-management templates can be auto-learned; mixed/posted financial SMS never automatically becomes an exclusion rule.
+- All four rule kinds and manual learning now share owner-scoped serialized encrypted read/merge/write and strict read-back, while manual user edits fail closed on stale snapshots.
+- Blocking senders no longer removes already learned safe user rules.
+- **Existing historical exclusions are not retroactively converted to new keyword rules without the original authenticated SMS body and fresh owner approval.**
+- New test files / manual tests intentionally **not added** under owner's code-first request; handset verification of 38-message scenario is outstanding.
