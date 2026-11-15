@@ -32,12 +32,12 @@ void main(){
    'limit:min(requestedWindow,_m940LedgerReads.expandedLimit)'));
   expect(dashboard,contains(
    'final maxShown=min(requestedUnified,_m940LedgerReads.expandedLimit)'));
-  expect(dashboard,contains('advanceHistoryWindow(visibleCount)'));
-  expect(dashboard,contains('advanceHistoryWindow(history.length)'));
+  expect(dashboard,contains('advanceHistoryWindow(toolbarCount)'));
+  expect(dashboard,contains('_m945UnifiedHistoryCount=history.length;'));
   expect(dashboard,contains('exportEntriesPdf(fullFilteredTransactions()'));
   expect(dashboard,contains(
    'waffraDashboardTransactionDisplayCount('));
   expect(dashboard,contains("Key('waffra-dashboard-transactions-expand')"));
-  expect(dashboard,contains("Key('waffra-dashboard-unified-activity-expand')"));
+  expect(dashboard,isNot(contains("Key('waffra-dashboard-unified-activity-expand')")));
  });
 }

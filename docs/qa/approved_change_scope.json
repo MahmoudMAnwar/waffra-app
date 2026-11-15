@@ -1,13 +1,17 @@
 {
   "contract_version": 1,
   "change_id": "M944-ISSUE653-FIVE-AXIS-RELIABILITY-20261115",
-  "human_scope_review": "User approved five code-only improvement axes and requested sequential completion reporting. Preserve existing finance and UI invariants. Human review and real-device parity are separate.",
+  "human_scope_review": "2026-11-15 owner approved modifications in SAME Draft PR #654: preserve original 19 backup identities and two income entries after new manual append, update period index and account balance projection, Goals/Dues count filters and official Riyal, Dues empty-state and gold metrics, Home inline Show more/less. Original encrypted archive requires owner-device proof.",
   "user_requested_changes": [
     "Implement authenticated SQLCipher paging for thousands of finance entries with stable order and verified account scope, no financial write changes.",
     "Improve large-list pagination for transactions, native SMS sender review, goals and recurring without changing approved layouts or selection semantics.",
     "Protect financial balance, backup restore, due, transfer and budget source parity using synthetic encrypted regression cases and cold reopen.",
     "Complete safe Home state read/query extraction and remove only demonstrably dead legacy compatibility code without weakening runtime authority.",
-    "Produce exact-head QA passed, failed, skipped counts and repeated-failure signatures and fix source causes without disabling gates."
+    "Produce exact-head QA passed, failed, skipped counts and repeated-failure signatures and fix source causes without disabling gates.",
+    "Fix stale verified finance period index after confirmed manual/SMS append and confirmed account balance reread without rewriting old finance rows.",
+    "Use one count-bearing status dropdown in Goals and Dues; remove redundant funnel and duplicate inactive/incomplete goals More options.",
+    "Use original Saudi Riyal artwork for Goals/Dues money, add due gold metrics and useful add-due empty state while preserving functions.",
+    "Move Home Show more/less to the search/filter/More row for verified combined financial history."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -39,7 +43,10 @@
     "test/m930_home_lifecycle_helpers_extraction_test.dart",
     "test/m944_home_residual_state_audit_test.dart",
     "test/m622_immediate_home_without_loader_test.dart",
-    "test/m623_verified_home_handoff_no_black_frame_test.dart"
+    "test/m623_verified_home_handoff_no_black_frame_test.dart",
+    "lib/waffra_home_entry_sheet.part.dart",
+    "lib/waffra_approved_page_designs.dart",
+    "test/m945_restored_history_filters_ui_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
@@ -102,6 +109,10 @@
       {
         "start": " Future<void> showInternalTransferTransactions()async{",
         "end": "class WaffraDeletedItemsButton extends StatelessWidget {"
+      },
+      {
+        "start": " final WaffraHomeLedgerReadCache _m940LedgerReads=WaffraHomeLedgerReadCache();",
+        "end": " final namedBudgets=<WaffraNamedBudget>[];"
       }
     ],
     "test/support/waffra_main_source.dart": [
@@ -151,7 +162,7 @@
     "lib/waffra_home_goals_recurring_pages.part.dart": [
       {
         "start": " Widget goalsPage(){",
-        "end": " Widget recurringPage(){"
+        "end": null
       }
     ],
     "scripts/qa/m550_behavior_contract_preflight.py": [
@@ -180,6 +191,18 @@
       {
         "start": " final homeLoader=source.split(' Future<void> _loadFinanceSafely()async{')[1]",
         "end": " test('M623 keeps prior authenticated UI until one complete verified Home',(){"
+      }
+    ],
+    "lib/waffra_home_entry_sheet.part.dart": [
+      {
+        "start": "  // A paid goal due is an immutable verified two-source settlement.",
+        "end": "  bool linkedHistoricalAccountInThisEdit=false;"
+      }
+    ],
+    "lib/waffra_approved_page_designs.dart": [
+      {
+        "start": "class WaffraApprovedMetric {",
+        "end": "class WaffraApprovedDashboardLink extends StatelessWidget {"
       }
     ]
   }
