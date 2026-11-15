@@ -16,6 +16,10 @@ void main() {
 
   test('M955 900-row verified Home summary equals monthly budgets/goals '
       'without loading ledger cards or writing account money', () async {
+    final home=File('lib/waffra_home_verified_account_flows.part.dart')
+      .readAsStringSync();
+    expect(home,contains(
+      'selectedAccountId:chosen,summaryOnly:true,includeEntries:false)'));
     final dir=await Directory.systemTemp.createTemp('m955-home-summary-');
     WaffraEncryptedStore? db;
     try {
