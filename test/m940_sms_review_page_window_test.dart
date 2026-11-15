@@ -46,7 +46,7 @@ void main(){
   expect(source,contains('allReviewIds=List<String>.unmodifiable(combined);'));
   expect(source,contains('senderIds[selectedSender]??const <String>[]'));
   expect(source,contains('idsCache.clear();'));
-  expect(RegExp(r'refreshReviewIds\(\);').allMatches(source).length,3);
+  // M984: the two additional calendar Pick Day / Clear Day paths rebuild\n  // only the currently displayed sender/paged ID snapshot, without ACK.\n  expect(RegExp(r'refreshReviewIds\(\);').allMatches(source).length,5);
   expect(source,contains('NotificationListener<ScrollNotification>('));
   expect(source,contains('messageWindow.visibleCount(displayBySender[selectedSender]?.length??0)'));
   expect(source,contains('selectedIds.addAll(visibleIds());'));
