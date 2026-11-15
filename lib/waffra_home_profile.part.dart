@@ -241,7 +241,7 @@ extension _WaffraHomeProfileModule on _HomeScreenState {
       waffraIsEnglish?'Cash, bank accounts and internal transfers':'النقد والحسابات البنكية والتحويلات الداخلية',
       Icons.account_balance_outlined,onTap:WaffraHaptics.tap(openVerifiedAccounts)),
     _accountTile(waffraIsEnglish?'Financial calendar':'التقويم المالي',
-     waffraIsEnglish?'Transactions and recurring dates':'المعاملات ومواعيد العمليات المتكررة',
+     waffraIsEnglish?'Transactions and due dates':'المعاملات ومواعيد الاستحقاقات',
      Icons.calendar_month_outlined,onTap:WaffraHaptics.tap(openFinancialCalendar)),
     _accountTile(waffraIsEnglish?'Subscription insights':'كشف الاشتراكات',
      waffraIsEnglish?'Recurring costs and possible subscriptions':'المدفوعات الدورية والاشتراكات المحتملة',
