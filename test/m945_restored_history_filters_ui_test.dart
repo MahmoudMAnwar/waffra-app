@@ -6,7 +6,7 @@ import 'package:waffra/main.dart' show MoneyEntry,WaffraHomeLedgerReadCache;
 import 'package:waffra/waffra_approved_page_designs.dart';
 
 MoneyEntry row(int i,{bool income=false})=>MoneyEntry(
- id:'restored-\$i',title:'Verified historical row \$i',
+ id:'restored-$i',title:'Verified historical row $i',
  category:'اختبار',amount:100+i.toDouble(),income:income,
  date:DateTime(2026,11,15,12,i),sourceType:'manual');
 
