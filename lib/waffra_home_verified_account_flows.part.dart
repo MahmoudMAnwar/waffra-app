@@ -95,6 +95,8 @@ extension _WaffraHomeVerifiedAccountFlows on _HomeScreenState {
  Iterable<MoneyEntry> _m467ScopedEntries(){
   final selected=_m467SelectedAccount;
   if(selected=='all')return entries;
+  // A selected money account must have both verified context and exact IDs.
+  if(_m467AccountContext==null)return const <MoneyEntry>[];
   final ids=_m684ScopedEntryIds;
   if(ids==null)return const <MoneyEntry>[];
   // Read-only exact-ID projection over the authenticated hydrated ledger.
@@ -104,6 +106,7 @@ extension _WaffraHomeVerifiedAccountFlows on _HomeScreenState {
  List<MoneyEntry> _m684ScopedMonthEntries(int year,int month){
   final monthRows=_m684Periods.month(year,month);
   if(_m467SelectedAccount=='all')return monthRows;
+  if(_m467AccountContext==null)return const <MoneyEntry>[];
   final ids=_m684ScopedEntryIds;
   if(ids==null)return const <MoneyEntry>[];
   return monthRows.where((e)=>ids.contains(e.id)).toList(growable:false);
