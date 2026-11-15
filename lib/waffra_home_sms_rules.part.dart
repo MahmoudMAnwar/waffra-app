@@ -155,7 +155,7 @@ extension _WaffraHomeSmsRules on _HomeScreenState {
    body:body,sender:sender is String?sender:'',
    bankKind:item['sensitiveOtp']==true?
     WaffraBankOperationKind.uncertain:facts.kind,
-   custom:custom);
+   custom:custom,nativeSensitiveOtp:item['sensitiveOtp']==true);
   if(special!=null)return <String,Object?>{
    'rule':special.name,'kind':special.resolvedKind,
    'category':special.category,'income':false,
