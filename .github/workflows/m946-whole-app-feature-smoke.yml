@@ -1,0 +1,113 @@
+name: M946 Whole-App Feature and Cross-Link Smoke
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# No paths filter: even a tiny finance/shared-helper change runs ALL feature smoke.
+concurrency:
+  group: m946-whole-app-smoke-${ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  whole-app-smoke:
+    name: Full-app ${ matrix.group }} smoke, exact SHA
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [money, experience, safety]
+    steps:
+      - name: Checkout exact PR source, never synthetic merge
+        uses: actions/checkout@v4
+        with:
+          ref: ${ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Require exact tested revision
+        env:
+          EXPECTED_HEAD: ${ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+
+      - name: Verify every current feature has real tests
+        shell: bash
+        env:
+          TESTED_HEAD: ${ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s test/qa -p 'm946_full_app_smoke_matrix_test.py' -v
+          python3 scripts/qa/m946_full_app_smoke_matrix.py --verify \
+            --head "$TESTED_HEAD" \
+            --output build/qa/m946-feature-inventory.json
+
+      - name: Set up Flutter stable
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Prefetch SHA256-verified SQLCipher native dependencies
+        uses: ./.github/actions/prefetch-sqlite3mc
+        with:
+          github-token: ${ github.token }}
+
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Strict analyzer for real encrypted money journey
+        if: matrix.group == 'money'
+        run: dart analyze test/storage/m946_whole_app_money_journey_smoke_test.dart
+
+      - name: Execute every registered test for this feature shard
+        shell: bash
+        env:
+          FEATURE_GROUP: ${ matrix.group }}
+        run: |
+          set -euo pipefail
+          mkdir -p build/qa
+          mapfile -t suite < <(python3 scripts/qa/m946_full_app_smoke_matrix.py --group "$FEATURE_GROUP")
+          test "${#suite[@]}" -ge 10
+          printf 'M946: %s has %s runnable test files\n' "$FEATURE_GROUP" "${#suite[@]}"
+          flutter test --no-pub --reporter expanded \
+            --file-reporter "json:build/qa/m946-${FEATURE_GROUP}-events.jsonl" \
+            "${suite[@]}"
+
+      - name: Produce true test pass/fail/skip totals from Flutter events
+        if: always()
+        shell: bash
+        env:
+          FEATURE_GROUP: ${ matrix.group }}
+          TESTED_SHA: ${ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set +e
+          python3 scripts/qa/m937_flutter_test_report.py \
+            --source-sha "$TESTED_SHA" \
+            --input "build/qa/m946-${FEATURE_GROUP}-events.jsonl" \
+            --output "build/qa/m946-${FEATURE_GROUP}-result.json" \
+            --markdown "build/qa/m946-${FEATURE_GROUP}-result.md"
+          status=$?
+          if [ -f "build/qa/m946-${FEATURE_GROUP}-result.md" ]; then
+            cat "build/qa/m946-${FEATURE_GROUP}-result.md" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "M946 $FEATURE_GROUP: NO test evidence; NOT PASSED." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit "$status"
+
+      - name: Archive exact-head feature matrix and results on every outcome
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m946-${ matrix.group }}-${ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            build/qa/m946-feature-inventory.json
+            build/qa/m946-${ matrix.group }}-result.json
+            build/qa/m946-${ matrix.group }}-result.md
+          if-no-files-found: warn
