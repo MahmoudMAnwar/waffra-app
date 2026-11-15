@@ -125,6 +125,65 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
      textAlign:TextAlign.start,style:const TextStyle(fontSize:12))),
    ]));
 
+ /// M983: the selected SMS kind opens ONLY its own verified/editor form.
+ /// The native ID is re-read under the active owner before it is used.
+ /// No rule suggestion can choose a bank account or commit a ledger entry.
+ Future<void> _m983OpenSmsTypedTemplate({
+  required String id,required String kind,
+ })async{
+  if(!mounted||!ready||_financeLoadFailure!=null||
+     !const <String>{'income','expense','transfer'}.contains(kind))return;
+  final row=await WaffraAutoSms.pendingById(id);
+  if(!mounted||row==null||row['id']!=id)return;
+  final body=row['body'],sender=row['sender'];
+  if(body is! String||body.trim().isEmpty||sender is! String)return;
+  final facts=WaffraBankSmsFactsParser.parse(body);
+  final sensitive=row['sensitiveOtp']==true||
+   WaffraBankSmsFactsParser.isVerificationChallenge(body);
+  if(sensitive){
+   // Never show OTP details in the money editor.
+   await _reviewAutoSmsCandidates(targetId:id);
+   return;
+  }
+  if(kind=='transfer'){
+   if(facts.kind==WaffraBankOperationKind.transfer&&!facts.pending){
+    await _reviewSmsAccountTransfer(item:row,facts:facts);
+   }else{
+    // The SMS does not prove both accounts belong to the owner. A manual
+    // two-account transfer form is the only safe path; SMS remains pending.
+    snack(context,waffraIsEnglish?
+     'This message does not verify a transfer between your accounts. Select both accounts manually.':
+     'الرسالة لا تثبت تحويلًا بين حساباتك. اختار حسابَي التحويل بنفسك.');
+    await openVerifiedTransfer();
+   }
+  }else{
+   final expected=kind=='income'?
+    WaffraBankOperationKind.income:WaffraBankOperationKind.expense;
+   if(facts.kind==expected&&!facts.pending){
+    // Safe SMS editor shares same verified principal/date/account writer.
+    await entrySheet(sms:true,initialSms:body,
+     reviewedSender:sender,reviewedIncomeOverride:kind=='income');
+    if(smsHashes.contains(bankSmsHash(body))){
+     final ack=await WaffraAutoSms.acknowledgeCommitted([id]);
+     if(ack&&mounted)setState(()=>
+      _autoSmsPending.removeWhere((r)=>r['id']==id));
+     if(!ack&&mounted)snack(context,waffraIsEnglish?
+      'Saved, but SMS review acknowledgement failed. Try refreshing.':
+      'اتحفظت العملية لكن تأكيد إزالة الرسالة فشل. حدّث المراجعة.',
+      isError:true);
+    }
+   }else{
+    // A different type is a SEPARATE manual entry. Show the original
+    // message, do not impersonate its proven bank direction or ACK it.
+    await entrySheet(manualIncomeOverride:kind=='income',
+     reviewedOriginalSms:body);
+   }
+  }
+  // M983: refresh all FOUR saved/default rule kinds and native ACK state
+  // before showing this sender again (the inbox rebuilds its group snapshot).
+  if(mounted)await _refreshAutoSmsInbox();
+ }
+
  Future<void> _reviewAutoSmsCandidates({String? targetId})async {
   if(!mounted||!ready||_autoSmsReviewOpen||
      _financeLoadFailure!=null)return;
@@ -526,7 +585,7 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
           const SizedBox(width:8),
           Expanded(child:OutlinedButton.icon(
            key:const Key('m565-sms-no-edit'),
-           onPressed:()=>Navigator.pop(dialog,'no'),
+           onPressed:()=>Navigator.pop(dialog,'m983-direct-edit'),
            icon:const Icon(Icons.edit_outlined,size:18),
            label:WaffraText(waffraIsEnglish?'Edit':'تعديل',maxLines:1))),
          ]),
@@ -602,6 +661,11 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
         child:WaffraText(waffraIsEnglish?'Later':'لاحقًا')),
      ])));
    reviewScroll.dispose();
+   if(decision=='m983-direct-edit'&&understood&&!sensitive&&mounted){
+    // Edit means the current verified kind, not another three-kind picker.
+    reviewType=expectedIncome?'income':'expense';
+    decision='correct-type';
+   }
    if(decision=='no'&&understood&&!sensitive&&
       facts.kind!=WaffraBankOperationKind.transfer&&mounted){
     // For suggested Expense, only Income / Transfer are alternative types.
