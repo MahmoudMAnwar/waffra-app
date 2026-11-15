@@ -23,7 +23,9 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
   var calendarIndex=WaffraSmsReviewCalendarIndex.from(_autoSmsPending,
    paidDueDates:entries.where((e)=>
     e.sourceType=='recurring'||e.sourceType=='goal_due')
-    .map((e)=>e.date));
+    .map((e)=>e.date),
+   bookedBankEntries:entries.where((e)=>e.sourceType=='sms').map((e)=>
+    WaffraSmsCalendarBookedEvent(id:e.id,date:e.date,income:e.income)));
   final visibleSenderNames=<String>[];
   var visibleSenderRows=<Map<String,Object?>>[];
   var visibleReviewIds=<String>[];
@@ -31,7 +33,57 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
    calendarIndex=WaffraSmsReviewCalendarIndex.from(_autoSmsPending,
     paidDueDates:entries.where((e)=>
      e.sourceType=='recurring'||e.sourceType=='goal_due')
-     .map((e)=>e.date));
+     .map((e)=>e.date),
+    bookedBankEntries:entries.where((e)=>e.sourceType=='sms').map((e)=>
+     WaffraSmsCalendarBookedEvent(id:e.id,date:e.date,income:e.income)));
+  }
+  // Read-only saved bank entries for a selected calendar day, deduped by
+  // owner-verified ledger ID. No native SMS ACK or finance mutation.
+  List<MoneyEntry> bookedBankOnDay(DateTime date){
+   final target=WaffraSmsReviewCalendarIndex.day(date);
+   final seen=<String>{};
+   return entries.where((e)=>e.sourceType=='sms'&&e.id.isNotEmpty&&
+    WaffraSmsReviewCalendarIndex.day(e.date)==target&&seen.add(e.id))
+    .toList(growable:false);
+  }
+  Future<void> openBookedBankDay(BuildContext ctx)async{
+   final date=selectedDay;
+   if(date==null)return;
+   final booked=bookedBankOnDay(date);
+   if(booked.isEmpty)return;
+   await showModalBottomSheet<void>(
+    context:ctx,isScrollControlled:true,showDragHandle:true,
+    builder:(history)=>SafeArea(child:SizedBox(
+     height:min(MediaQuery.sizeOf(history).height*.70,560.0),
+     child:Column(children:[
+      Padding(padding:const EdgeInsets.symmetric(horizontal:18,vertical:12),
+       child:WaffraText(waffraIsEnglish?
+        'Saved bank transactions':'العمليات البنكية المحفوظة',
+        style:const TextStyle(fontSize:17,fontWeight:FontWeight.bold))),
+      Expanded(child:ListView.builder(
+       itemCount:booked.length,itemBuilder:(itemCtx,index){
+        final entry=booked[index];
+        return ListTile(
+         key:Key('m984-booked-sms-entry-${entry.id}'),
+         leading:Icon(entry.income?Icons.south_west_rounded:
+          Icons.north_east_rounded,
+          color:entry.income?emerald:Colors.deepOrange),
+         title:WaffraText(entry.title,maxLines:1),
+         subtitle:WaffraText(dayText(entry.date)),
+         trailing:ConstrainedBox(
+          constraints:const BoxConstraints(maxWidth:110),
+          child:FittedBox(fit:BoxFit.scaleDown,
+           child:RiyalAmount(entry.amount))),
+         onTap:()async{
+          Navigator.pop(history);
+          if(!mounted)return;
+          final verified=entries.where((e)=>
+           e.id==entry.id&&e.sourceType=='sms').toList();
+          if(verified.length==1)await transactionDetails(verified.single);
+         },
+        );
+       })),
+     ]))));
   }
   // M940: a bounded display window only; bulk selection always sees full IDs.
   final messageWindow=WaffraSmsReviewPageWindow();
@@ -191,8 +243,8 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
          ]),
          const SizedBox(height:8),
          WaffraText(waffraIsEnglish?
-          'Dots mark SMS received on each day (max 3); confirmed paid dues are counted separately.':
-          'النقاط حسب تاريخ وصول الرسالة (بحد أقصى ٣)؛ الاستحقاقات المدفوعة منفصلة عن عدد الرسائل.',
+          'Max 3 dots: SMS by received day, saved bank entries by booked date and confirmed paid dues; counts are separate.':
+          'حتى ٣ نقاط للرسائل حسب وصولها، والعمليات البنكية المحفوظة حسب تاريخها، والاستحقاقات المدفوعة؛ الأعداد مستقلة.',
           style:const TextStyle(fontSize:11)),
         ])),
        actions:[
@@ -307,11 +359,20 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
          const Icon(Icons.event_note_outlined,size:17,color:emerald),
          const SizedBox(width:6),
          Expanded(child:WaffraText(waffraIsEnglish?
-          'Received ${calendarIndex.smsCount(selectedDay!)} SMS on ${dayText(selectedDay!)} • ${calendarIndex.dueCount(selectedDay!)} paid dues':
-          'وصل ${calendarIndex.smsCount(selectedDay!)} رسالة يوم ${dayText(selectedDay!)} • ${calendarIndex.dueCount(selectedDay!)} استحقاق مدفوع',
+          'Received ${calendarIndex.smsCount(selectedDay!)} SMS on ${dayText(selectedDay!)} • ${calendarIndex.bookedCount(selectedDay!)} saved bank transactions • ${calendarIndex.dueCount(selectedDay!)} paid dues':
+          'وصل ${calendarIndex.smsCount(selectedDay!)} رسالة يوم ${dayText(selectedDay!)} • ${calendarIndex.bookedCount(selectedDay!)} عملية بنكية محفوظة • ${calendarIndex.dueCount(selectedDay!)} استحقاق مدفوع',
           style:const TextStyle(fontSize:12))),
         ])),
-       if(selectedSender!=null&&visibleSenderNames.length>1)Padding(
+       if(selectedDay!=null&&calendarIndex.bookedCount(selectedDay!)>0)
+         Padding(padding:const EdgeInsets.symmetric(horizontal:14),
+          child:Align(alignment:AlignmentDirectional.centerStart,
+           child:TextButton.icon(
+            key:const Key('m984-open-booked-bank-day'),
+            onPressed:bulkBusy?null:()=>openBookedBankDay(ctx),
+            icon:const Icon(Icons.receipt_long_outlined,size:17),
+            label:WaffraText(waffraIsEnglish?
+             'View saved bank transactions':'عرض العمليات البنكية المحفوظة')))),
+        if(selectedSender!=null&&visibleSenderNames.length>1)Padding(
         padding:const EdgeInsets.symmetric(horizontal:12),
         child:Row(children:[
          IconButton(key:const Key('m984-sender-previous'),
