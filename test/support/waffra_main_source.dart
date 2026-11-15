@@ -52,6 +52,10 @@ String readWaffraMainSourceForContracts(){
  if(s.split(t).length!=2)throw StateError('Missing or repeated M707 page marker');
  s=s.replaceFirst(t,_method('lib/waffra_home_goals_recurring_pages.part.dart',
   ' Widget goalsPage(){'));
+ const m944Recurring=' // M944: original recurring editor and linked-goal actions live in the recurring-workflows part.\n';
+ if(s.split(m944Recurring).length!=2)throw StateError('M944 recurring workflow marker absent/duplicate');
+ s=s.replaceFirst(m944Recurring,_method('lib/waffra_home_recurring_workflows.part.dart',
+  ' Future<void> recurringDialog('));
  final goalSource=File('lib/waffra_home_goal_actions.part.dart').readAsStringSync();
  final goalStart=goalSource.indexOf(' Future<void> goalDialog(');
  final goalActionStart=goalSource.indexOf(' Future<void> _m689GoalActions(');
