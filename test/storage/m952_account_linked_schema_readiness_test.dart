@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:waffra/storage/waffra_account_context_read.dart';
 import 'package:waffra/storage/waffra_accounts_schema.dart';
 import 'package:waffra/storage/waffra_encrypted_store.dart';
 import 'package:waffra/storage/waffra_fresh_encrypted_vault_bootstrap.dart';
@@ -77,4 +78,32 @@ void main() {
       ).getSingle()).read<int>('n'), accountRowsBefore);
     });
   });
+  test('M952 damaged due settlement or budget link table rejects account '
+      'context reads, rather than silently showing zero allocations', () async {
+    for (final table in const <String>[
+      'fresh_finance_goal_due_settlements',
+      'fresh_finance_standalone_allocations',
+    ]) {
+      await withFreshVault((db) async {
+        await db.customStatement('DROP TABLE $table');
+        final prior = await db.customSelect(
+          'SELECT version FROM fresh_finance_account_revision '
+          "WHERE slot='accounts'",
+        ).getSingle();
+        expect(prior.read<int>('version'), WaffraAccountsSchema.version);
+        await expectLater(
+          WaffraAccountContextRead.load(
+            store: db, monthIso: '2026-11', summaryOnly: true,
+          ),
+          throwsStateError,
+          reason: 'Missing $table must never be presented as empty finance.',
+        );
+        final persisted = (await db.customSelect(
+          'SELECT COUNT(*) AS n FROM fresh_finance_entries',
+        ).getSingle()).read<int>('n');
+        expect(persisted, 0);
+      });
+    }
+  });
+
 }
