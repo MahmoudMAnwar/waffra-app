@@ -247,6 +247,12 @@ extension _WaffraHomeGoalsRecurringPagesModule on _HomeScreenState {
  // M944: original recurring editor and linked-goal actions live in the recurring-workflows part.
  Widget recurringPage(){
   final today=DateUtils.dateOnly(DateTime.now());
+  // M975: one witnessed Home snapshot membership per render, then one
+  // computed due per exact bill OBJECT (never combine duplicate schedule IDs).
+  final paidEntryIds=Set<String>.unmodifiable(entries.map((e)=>e.id));
+  final dueDates=Map<RecurringBill,DateTime>.identity();
+  DateTime dueFor(RecurringBill r)=>dueDates.putIfAbsent(r,
+   ()=>nextRecurringDue(r,paidEntryIds:paidEntryIds));
   // One due amount per payable schedule, excluding income.
   final payable=recurring.where((r)=>!r.income);
   final dueTotal=payable.fold<double>(0,(v,r)=>v+r.amount);
@@ -254,7 +260,7 @@ extension _WaffraHomeGoalsRecurringPagesModule on _HomeScreenState {
    .fold<double>(0,(v,r)=>v+r.amount);
   bool duePass(RecurringBill r,String filter){
    final date=DateUtils.dateOnly(
-    r.linkedGoalId==null?nextRecurringDue(r):r.startAt);
+    r.linkedGoalId==null?dueFor(r):r.startAt);
    final days=date.difference(today).inDays;
    return switch(filter){
     'today'=>r.active&&days==0,
@@ -284,8 +290,8 @@ extension _WaffraHomeGoalsRecurringPagesModule on _HomeScreenState {
    duePass(r,recurringDisplay)&&
    waffraSearchAny([r.title,r.category,waffraTr(r.category)],recurringSearch)
   ).toList()..sort((a,b){
-   final aa=a.linkedGoalId==null?nextRecurringDue(a):a.startAt;
-   final bb=b.linkedGoalId==null?nextRecurringDue(b):b.startAt;
+   final aa=a.linkedGoalId==null?dueFor(a):a.startAt;
+   final bb=b.linkedGoalId==null?dueFor(b):b.startAt;
    return aa.compareTo(bb);
   });
   // Reuse already verified snapshot membership without per-card full scans.
@@ -395,7 +401,7 @@ extension _WaffraHomeGoalsRecurringPagesModule on _HomeScreenState {
      ...shown.map((r){
       final linked=linkedGoalById.matches(r.linkedGoalId);
       final goal=linked.isEmpty?null:linked.single;
-      final due=goal==null?nextRecurringDue(r):r.startAt;
+      final due=goal==null?dueFor(r):r.startAt;
       final settledId=WaffraRecurringPolicy.entryId(r.id,
        DateTime(r.startAt.year,r.startAt.month,r.startAt.day));
       final paid=paidGoalDueById.matches(settledId);
