@@ -61,9 +61,11 @@ extension _WaffraHomeGoalsRecurringPagesModule on _HomeScreenState {
      const SizedBox(height:12),
      WaffraApprovedMetrics(metrics:[
       WaffraApprovedMetric(waffraIsEnglish?'Total targets':'إجمالي المستهدفات',
-       cash(target),Icons.trending_up_rounded),
+       cash(target),Icons.trending_up_rounded,
+        valueWidget:WaffraCurrencyAmount(target,fontSize:17)),
       WaffraApprovedMetric(waffraIsEnglish?'Total saved':'إجمالي المدخرات',
-       cash(saved),Icons.toll_outlined),
+       cash(saved),Icons.toll_outlined,
+        valueWidget:WaffraCurrencyAmount(saved,fontSize:17)),
       WaffraApprovedMetric(waffraIsEnglish?'Active goals':'أهداف نشطة',
        goals.where((g)=>g.active).length.toString(),Icons.track_changes),
      ]),
@@ -75,12 +77,23 @@ extension _WaffraHomeGoalsRecurringPagesModule on _HomeScreenState {
        SizedBox(width:118,child:WaffraOutlinedItemsCount(
         label:waffraIsEnglish?'Goals':'الأهداف',count:goals.length)),
        const SizedBox(width:6),
-       _filterChip('${filterLabel(goalDisplay)} (${goalCounts[goalDisplay]??0})',
-        true,()=>setState(()=>goalDisplay='all')),
        PopupMenuButton<String>(
         key:const Key('m938-goals-filter-menu'),
         tooltip:waffraIsEnglish?'Filter goals':'فلترة الأهداف',
-        icon:const Icon(Icons.filter_alt_outlined,color:emerald),
+        child:Container(
+         key:const Key('m945-goals-filter-dropdown'),
+         padding:const EdgeInsets.symmetric(horizontal:12,vertical:9),
+         decoration:BoxDecoration(border:Border.all(color:emerald),
+          borderRadius:BorderRadius.circular(24)),
+         child:Row(mainAxisSize:MainAxisSize.min,children:[
+          WaffraText(filterLabel(goalDisplay),
+           style:const TextStyle(fontWeight:FontWeight.bold,color:forest)),
+          const SizedBox(width:5),
+          WaffraText('(${goalCounts[goalDisplay]??0})',
+           style:const TextStyle(fontWeight:FontWeight.bold,color:emerald)),
+          const SizedBox(width:5),
+          const Icon(Icons.keyboard_arrow_down_rounded,color:emerald,size:20),
+         ])),
         onSelected:(v)=>setState(()=>goalDisplay=v),
         itemBuilder:(ctx)=>[
          for(final filter in filterValues)
@@ -105,15 +118,10 @@ extension _WaffraHomeGoalsRecurringPagesModule on _HomeScreenState {
         icon:const Icon(Icons.more_vert_rounded,color:emerald),
         onSelected:(v){
          if(v=='trash')unawaited(deletedGoalsDialog());
-         if(v=='inactive'||v=='incomplete')setState(()=>goalDisplay=v);
         },
         itemBuilder:(ctx)=>[
          PopupMenuItem<String>(value:'trash',child:WaffraText(
           waffraIsEnglish?'Deleted goals':'الأهداف المحذوفة')),
-         PopupMenuItem<String>(value:'inactive',child:WaffraText(
-          '${waffraIsEnglish?'Inactive goals':'الأهداف غير النشطة'} (${goalCounts['inactive']??0})')),
-         PopupMenuItem<String>(value:'incomplete',child:WaffraText(
-          '${waffraIsEnglish?'Incomplete goals':'الأهداف غير المكتملة'} (${goalCounts['incomplete']??0})')),
         ]),
       ])),
      if(_m689GoalSearchOpen)...[
@@ -146,9 +154,8 @@ extension _WaffraHomeGoalsRecurringPagesModule on _HomeScreenState {
         const SizedBox(height:3),
         SizedBox(width:double.infinity,child:FittedBox(
          fit:BoxFit.scaleDown,
-         child:WaffraText(cash(money),maxLines:1,
-          style:TextStyle(fontSize:14,fontWeight:FontWeight.bold,
-           color:label==(waffraIsEnglish?'Saved':'المدخر')?emerald:null)))),
+         child:WaffraCurrencyAmount(money,fontSize:14,
+          color:label==(waffraIsEnglish?'Saved':'المدخر')?emerald:null))),
        ]));
       }
       return Card(
