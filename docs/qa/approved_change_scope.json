@@ -133,7 +133,7 @@
       },
       {
         "start": "    restore(\" // M930: original widgets Home session helper moved without behavioral change.",
-        "end": "    return source"
+        "end": "    return source\n"
       }
     ],
     "test/m938_goals_restore_fab_contract_test.dart": [
