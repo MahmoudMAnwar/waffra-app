@@ -1043,10 +1043,15 @@ class BankParser {
    // M1001: independently verify the amount in the original bank action.
    // A precomputed SMS hint cannot replace the trusted source witness.
    final verifiedSource=WaffraSmsCurrencies.originalAmount(s);
+   // M338/M995: retain the optional worker-supplied source witness as an
+   // ADDITIONAL agreement check. The independent action-only scan above
+   // cannot be replaced by an untrusted cached or extracted amount.
+   final cachedOrSource=sourceAmount??WaffraSmsCurrencies.originalAmount(
+    s,detectedCurrencies:discoveredCurrencies);
    if(verifiedSource==null||verifiedSource.currency!='SAR'||
       (verifiedSource.amount-value).abs()>0.00001||
-      (sourceAmount!=null&&(sourceAmount.currency!='SAR'||
-       (sourceAmount.amount-value).abs()>0.00001)))value=null;
+      cachedOrSource==null||cachedOrSource.currency!='SAR'||
+      (cachedOrSource.amount-value).abs()>0.00001)value=null;
   }
   var title=income?'مبلغ وارد':'عملية بنكية',cat=income?'دخل آخر':'أخرى';
   String? suggestion;
