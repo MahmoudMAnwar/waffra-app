@@ -19,12 +19,13 @@ void main() {
     WaffraEncryptedStore? db;
     try {
       db=WaffraEncryptedStore.openAt(file,key:key);
+      final seeded=db!;
       await WaffraFreshEncryptedVaultBootstrap(
-        store:db,experimentalEnabled:true,
+        store:seeded,experimentalEnabled:true,
       ).initialize(decision:WaffraFirstRunDecision.freshCandidate);
-      await WaffraAccountsSchema.install(db);
+      await WaffraAccountsSchema.install(seeded);
       final accounts=WaffraAccountsRepository(
-        db:db,experimentalEnabled:true);
+        db:seeded,experimentalEnabled:true);
       const stamp='2026-11-15T09:00:00';
       for(final (id,opening) in <(String,int)>[
         ('bank-a',500000),('bank-b',400000),
@@ -34,48 +35,48 @@ void main() {
           id:id,name:id,kind:id=='wallet'?'wallet':'bank',
           openingMinor:opening,createdIso:stamp,userConfirmed:true);
       }
-      await db.customStatement(
+      await seeded.customStatement(
         "UPDATE fresh_finance_money_accounts SET archived=1 "
         "WHERE account_id='archived'");
-      await db.transaction(()async{
+      await seeded.transaction(()async{
         for(var i=0;i<360;i++){
           final id='tx-$i';
           final income=i%7==0;
           final amount=103+i%49;
-          await db!.customStatement(
+          await seeded.customStatement(
             'INSERT INTO fresh_finance_entries '
             '(entry_id,title,category_snapshot,amount_minor,is_income,'
             'occurred_iso,receipt_count,source_json) VALUES (?,?,?,?,?,?,0,?)',
             [id,id,'Test',amount,income?1:0,stamp,'{}']);
           if(i%8!=0) {
-            await db.customStatement(
+            await seeded.customStatement(
               'INSERT INTO fresh_finance_account_entry_links '
               '(entry_id,account_id,confirmed_iso) VALUES (?,?,?)',
               [id,i%3==0?'bank-a':i%3==1?'bank-b':'wallet',stamp]);
           }
         }
-        await db!.customStatement(
+        await seeded.customStatement(
           'INSERT INTO fresh_finance_goals '
           '(goal_id,name,target_minor,saved_minor,source_json) '
           'VALUES (?,?,?,?,?)',
           ['home-goal','Home',200000,75000,'{}']);
-        await db.customStatement(
+        await seeded.customStatement(
           'INSERT INTO fresh_finance_recurring '
           '(recurring_id,amount_minor,is_income,due_day,source_json) '
           'VALUES (?,?,?,?,?)',['rent',20000,0,15,'{}']);
-        await db.customStatement(
+        await seeded.customStatement(
           'INSERT INTO fresh_finance_entries '
           '(entry_id,title,category_snapshot,amount_minor,is_income,'
           'occurred_iso,receipt_count,source_json) VALUES (?,?,?,?,?,?,0,?)',
           ['rent-2026','Rent','Rent',20000,0,stamp,'{}']);
-        await db.customStatement(
+        await seeded.customStatement(
           'INSERT INTO fresh_finance_goal_due_settlements '
           '(due_key,goal_id,recurring_id,entry_id,amount_minor,'
           'goal_wallet_minor,current_cash_minor,confirmed_at_iso) '
           'VALUES (?,?,?,?,?,?,?,?)',
           ['rent-due','home-goal','rent','rent-2026',
             20000,17000,3000,stamp]);
-        await db.customStatement(
+        await seeded.customStatement(
           'INSERT INTO fresh_finance_account_entry_links '
           '(entry_id,account_id,confirmed_iso) VALUES (?,?,?)',
           ['rent-2026','bank-a',stamp]);
@@ -85,12 +86,12 @@ void main() {
               ('release-one','release',2000,'bank-a'),
               ('save-two','fund',4000,'bank-b')
             ]){
-          await db.customStatement(
+          await seeded.customStatement(
             'INSERT INTO fresh_finance_goal_wallet_movements '
             '(movement_id,goal_id,kind,amount_minor,idempotency_key,'
             'occurred_at_iso) VALUES (?,?,?,?,?,?)',
             [id,'home-goal',kind,amount,id,stamp]);
-          await db.customStatement(
+          await seeded.customStatement(
             'INSERT INTO fresh_finance_goal_account_sources '
             '(movement_id,account_id,linked_iso) VALUES (?,?,?)',
             [id,bank,stamp]);
@@ -106,7 +107,7 @@ void main() {
           id:'transfer-$i',fromAccountId:from,toAccountId:to,
           amountMinor:1100+i,occurredIso:stamp,userConfirmed:true),true);
       }
-      final expected=await db.customSelect('''
+      final expected=await seeded.customSelect('''
 SELECT a.account_id,a.opening_minor+
  COALESCE((SELECT SUM(CASE WHEN e.is_income=1 THEN e.amount_minor
    WHEN due.entry_id IS NOT NULL THEN -due.current_cash_minor
@@ -139,16 +140,16 @@ ORDER BY a.created_iso,a.account_id
       expect(newAccounts.singleWhere((a)=>a.id=='archived').archived,true);
       expect(newAccounts.fold<int>(0,(sum,a)=>sum+a.balanceMinor),
         sumBefore,reason:'All internal transfers conserve total money.');
-      expect((await db.customSelect(
+      expect((await seeded.customSelect(
         "SELECT COUNT(*) AS n FROM fresh_finance_entries")
         .getSingle()).read<int>('n'),361);
-      expect((await db.customSelect(
+      expect((await seeded.customSelect(
         "SELECT COUNT(*) AS n FROM fresh_finance_internal_transfers")
         .getSingle()).read<int>('n'),12);
       await db.close();
       db=WaffraEncryptedStore.openAt(file,key:key);
       final reopened=WaffraAccountsRepository(
-        db:db,experimentalEnabled:true);
+        db:db!,experimentalEnabled:true);
       expect({for(final a in await reopened.balances())
         a.id:a.balanceMinor},oldBalances);
     } finally {
