@@ -35,7 +35,9 @@
     "test/m707_home_goals_recurring_extraction_test.dart",
     "scripts/qa/m550_behavior_contract_preflight.py",
     "lib/waffra_home_goals_recurring_pages.part.dart",
-    "lib/waffra_home_recurring_workflows.part.dart"
+    "lib/waffra_home_recurring_workflows.part.dart",
+    "test/m930_home_lifecycle_helpers_extraction_test.dart",
+    "test/m944_home_residual_state_audit_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
@@ -158,6 +160,12 @@
       {
         "start": "        \"lib/waffra_home_goals_recurring_pages.part.dart\",",
         "end": "        \"lib/waffra_home_goal_actions.part.dart\","
+      }
+    ],
+    "test/m930_home_lifecycle_helpers_extraction_test.dart": [
+      {
+        "start": " test('M930 verified Home session/nav methods are real same-library parts, unchanged',(){",
+        "end": null
       }
     ]
   }
