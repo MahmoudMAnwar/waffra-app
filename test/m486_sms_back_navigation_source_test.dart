@@ -17,7 +17,13 @@ void main(){
   expect(inbox,contains('await showModalBottomSheet<void>('));
   expect(inbox,contains('await _reviewAutoSmsCandidates(targetId:id);'));
   expect(inbox,contains('openingReviewId=null;'));
-  expect(inbox,contains('refresh(()=>selectedSender=null);'));
+  // M984 preserves the owned sender route under nested review, while both
+  // the Android Back guard and the visible arrow now rebuild the day-filtered
+  // full-ID index instead of the old one-expression clear callback.
+  expect(inbox,contains('canPop:selectedSender==null||openingReviewId!=null'));
+  expect(inbox,contains('if(!didPop&&selectedSender!=null&&openingReviewId==null){'));
+  expect(RegExp(r'refresh\(\(\)\{\s*selectedSender=null;\s*refreshReviewIds\(\);\s*\}\);')
+    .allMatches(inbox).length,greaterThanOrEqualTo(2));
   expect(inbox,contains('if(selectedSender==null){Navigator.pop(ctx);}'));
   expect(inbox,contains('if(!_autoSmsPending.any((row)=>row[\'id\']==id))'));
   expect(inbox,contains('selectedIds.remove(id);'));
