@@ -74,6 +74,30 @@ void main() {
     }
   });
 
+  test('M980 conflicting saved exclusion versus confirmed income blocks autoPost',(){
+    const body='تم إيداع راتب 7000 ريال في حسابك';
+    const savedIncome=WaffraSmsLocalRule(
+      id:'m980_posted_income',name:'Verified salary',kind:'income',
+      income:true,category:'راتب / راتب أساسي',
+      keywords:['راتب'],sender:'MyBank',matchAll:false,autoPost:true,
+      accountId:'synthetic-verified-id',accountSuffix:'1234');
+    const opposingExclude=WaffraSmsLocalRule(
+      id:'m980_conflicting_exclusion',name:'Wrong salary exclusion',
+      kind:'excluded',income:false,category:'',
+      keywords:['راتب'],sender:'MyBank',matchAll:false);
+    final facts=WaffraBankSmsFactsParser.parse(body);
+    expect(facts.kind,WaffraBankOperationKind.income);
+    final matches=WaffraSmsLocalRules.matchAllFourKinds(
+      body:body,sender:'MyBank',
+      custom:const [savedIncome,opposingExclude]);
+    expect(matches.where((r)=>!r.builtIn)
+      .map((r)=>r.resolvedKind).toSet(),{'income','excluded'});
+    expect(WaffraSmsLocalRules.resolve(body:body,sender:'MyBank',
+      bankKind:facts.kind,custom:const [savedIncome,opposingExclude],
+      matchedRules:matches),isNull,
+      reason:'A contradictory owner exclusion must block automatic posting');
+  });
+
   test('M980 old safe exclusion guard is preserved for payment reminder cues',(){
     const body='Payment reminder: your bill is due tomorrow';
     const unsafePersonal=WaffraSmsLocalRule(
