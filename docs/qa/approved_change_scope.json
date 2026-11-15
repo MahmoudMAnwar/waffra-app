@@ -1,61 +1,39 @@
 {
   "contract_version": 1,
-  "change_id": "M975-ISSUE675-RECURRING-DUE-ID-MEMOIZATION-20261115",
-  "human_scope_review": "Owner requested 95% eventual five-axis coverage #657; this is bounded source improvement for the actual recurring due-date hot path: one source-authenticated in-memory entry ID set and per-bill-identity memoization per recurring UI build, not repeated ledger scans for each of 7 filter headings, sorting, and cards. Original nextRecurringDue without optional paidEntryIds continues scanning source as before. All WaffraRecurringPolicy date semantics, recurringPostponed, linked-goal behavior, bank posting and UI unchanged. Existing M302 test remains enabled and now asserts both branches, new 10000-row parity test added in M946 experience. Stacked above #674 and #672, CI not hardware certification.",
+  "change_id": "M976-ISSUE677-LAZY-GOAL-DUE-CARDS-VIEWPORT-20261115",
+  "human_scope_review": "Issue #677 / approved five axes #657: preserve existing ListView and full same Goal/Due card widget subtree, but wrap only each individual card's construction in Builder(builder:(_){...}) to defer expensive offscreen widget creation until sliver viewport mount. Keep exact original cards, keys, chronology, status, source-backed money and SQLCipher behavior. New executable 1500-row viewport widget regression plus existing real goal_due UI suite, M946 experience required. Stacked on #676 and parent #674/#672, no real phone FPS/backup claim; require exact-head M385/M550 and Flutter CI.",
   "user_requested_changes": [
-    "Advance the latest five Waffra axes #657 toward 95 with independently testable code performance and integrity improvement.",
-    "Stop scanning entire Home finance list once per recurring bill per filter/paint while preserving exact settled-month source membership and archived/legacy historical entries.",
-    "Maintain optional argument fallback in nextRecurringDue for every existing caller; only recurringPage supplies one immutable set and an exact-instance due-date memo.",
-    "Run existing M302 regression and new nonduplicate 10000-record due-date parity/source test in M946, preserve M385/M550 and unchanged finance writer/UX."
+    "Continue implementation for five axes #657, aiming for at least 95 percent based on audited completion rather than optimistic claims.",
+    "Avoid constructing thousands of Goal and Recurring cards offscreen on each rebuild while keeping original designs and flows precisely unchanged.",
+    "Use only lightweight Builder wrappers in the existing approved ListView children; preserve original Card keys, filters, SMS, payments and all data writes.",
+    "Add real nonduplicate viewport scrolling widget test for 1500 proxy cards and approved Goals/Due source regression, run via mandatory M946 experience."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "lib/waffra_home_recurring_workflows.part.dart",
     "lib/waffra_home_goals_recurring_pages.part.dart",
     "scripts/qa/m946_full_app_smoke_matrix.py",
-    "test/m302_recurring_first_due_regression_test.dart",
-    "test/m975_recurring_paid_id_read_cache_test.dart"
+    "test/m976_lazy_goal_due_cards_viewport_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
   "bounded_sections": {
-    "lib/waffra_home_recurring_workflows.part.dart": [
-      {
-        "start": " DateTime nextRecurringDue(",
-        "end": " Future<void> _setRecurringActiveFromCard"
-      }
-    ],
     "lib/waffra_home_goals_recurring_pages.part.dart": [
       {
-        "start": " Widget recurringPage(){",
-        "end": "  // One due amount per payable schedule, excluding income."
+        "start": "if(_m689GoalSearchOpen)...[",
+        "end": "if(goals.isEmpty)Padding"
       },
       {
-        "start": "  bool duePass(RecurringBill r,String filter){",
-        "end": "  const dueFilters=<String>['all','today','week','month','overdue','active','paused'];"
-      },
-      {
-        "start": "  final shown=recurring.where((r)=>",
-        "end": "  // Reuse already verified snapshot membership without per-card full scans."
-      },
-      {
-        "start": "     ...shown.map((r){",
-        "end": "      final settledId=WaffraRecurringPolicy.entryId"
-      }
-    ],
-    "test/m302_recurring_first_due_regression_test.dart": [
-      {
-        "start": "  expect(code,contains('WaffraRecurringPolicy.nextActionableDue('));",
-        "end": "  expect(code,contains(\"postponedUntil:DateTime.tryParse(recurringPostponed[monthId]??'')\"));"
+        "start": "if(_m689DueSearchOpen)...[",
+        "end": "if(recurring.isEmpty)Card"
       }
     ],
     "scripts/qa/m946_full_app_smoke_matrix.py": [
       {
         "start": "FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {",
-        "end": "    \"m974_goal_due_card_source_index_and_settlement_parity\""
+        "end": "    \"m975_recurring_due_paid_id_snapshot_parity\""
       }
     ]
   }
