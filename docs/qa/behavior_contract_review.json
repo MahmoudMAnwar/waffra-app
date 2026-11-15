@@ -1,12 +1,41 @@
 {
   "schema_version": 1,
-  "pr": "M983 Draft — one-click SMS typed templates, safe field prefill and immediate sender review refresh (#689)",
-  "issue": "Issue #689 / five-axis #657, after merged M979–M981",
+  "pr": "M984 Draft — sender swipe and three-dot SMS review calendar (#691, stacked on M983 #690)",
+  "issue": "Issue #691 / five-axis #657, parent Issue #689",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at f0def360ea75b9c865548b6f1b4fc07e9640f2c2 after #656",
   "reviewed_at": "2026-11-15",
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
+    {
+      "id": "M984-OFFLINE-RTL-SENDER-SWIPE-DAY-DOT-COUNTS-SELECTION",
+      "issue": "Issues #691 and #657",
+      "previous_behavior": "Authenticated bank-SMS review modal groups 1000 pending SMS by sender and supports vertical pagination, selection and review, but requires Back-to-senders to switch sender and has no daily activity calendar, day count/dot visualization or day-filter support.",
+      "approved_behavior": "A horizontal gesture navigates ordered senders in-place (left swipe next, right swipe previous), without interfering with vertical ListView pagination or selected messages. A monthly date picker next to Select All uses ONLY currently owner-authorized encrypted pending review rows to count actual arrival dates; one dot per SMS capped at THREE displayed dots/day while keeping exact day counts separately. Colors match activity cards (income emerald, expense red/deep orange, transfer gold, recurring/goal due violet, uncertain neutral). Selecting a day filters visible senders and SMS, including count and select all, and Show All resets filter; previously selected message IDs on other dates remain until the native ACK is verified. Screen maintains the existing trusted SMS save/exclusion flows; NO money, SMS, account or permission state is changed by gestures/dots. Existing M940 source assertion is updated from unfiltered bySender length to the date-filtered displayBySender source (pagination window and batch reveal remain identical). M984 selection reconciliation after a saved entry intersects selected IDs with the entire current native pending queue rather than only date-filtered allReviewIds, so tapping an entry from today does not erase selections from another day. This update is covered by the new M984 source test. Sender-level checkbox now selects only `displayBySender[sender]` in the filtered day. Blocking the entire sender still requires explicit selection of all IDs from unfiltered owner `bySender`, so choosing one day never blocks future or hidden-day messages by accident.",
+      "source_paths": [
+        "lib/waffra_sms_review_calendar.dart",
+        "lib/waffra_home_sms_inbox.part.dart",
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/m984_sms_calendar_sender_swipe_test.dart",
+        "test/m983_sms_direct_kind_prefill_refresh_test.dart",
+        "test/m973_sms_review_group_owner_index_test.dart",
+        "test/m548_review_grouping_and_signup_perf_test.dart",
+        "test/m940_sms_review_page_window_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m946-whole-app-feature-smoke.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "Calendar rendering requires only in-memory authenticated pending SMS; never scans private device SMS nor fabricates arrival dates for already ACKed entries.",
+        "The date dot cap only affects the graphical display, not real counts or ID lists; one native ID corresponds to at most one displayed dot.",
+        "Any filtered bulk selection selects only currently displayed IDs, preserves selections from other days, and cannot prematurely ACK or exclude another owner's rows.",
+        "RTL and dark-mode views preserve the approved + footer and Financial Activity color semantics; physical Android visual validation remains necessary.",
+        "A date-filtered sender checkbox cannot operate on SMS IDs from other days; bulk whole-sender blocking still requires complete unfiltered sender IDs."
+      ]
+    },
     {
       "id": "M983-EXACT-SMS-TEMPLATE-PREFILL-REFRESH-NO-SHADOW-MONEY",
       "issue": "Issues #689 and #657",
