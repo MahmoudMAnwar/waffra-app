@@ -118,9 +118,10 @@ void main() {
   }
   expect(dashboard,contains(
    'waffraDashboardTransactionDisplayCount(\n               history.length,expanded:showAllTransactions)'));
-  expect(dashboard,contains(
-   'waffraCanExpandDashboardTransactions(history.length)'));
-  expect(dashboard,contains("Key('waffra-dashboard-unified-activity-expand')"));
+  expect(dashboard,contains('waffraCanExpandDashboardTransactions(toolbarCount)'));
+  expect(dashboard,contains('advanceHistoryWindow(toolbarCount)'));
+  expect(dashboard,contains('_m945UnifiedHistoryCount=history.length;'));
+  expect(dashboard,isNot(contains("Key('waffra-dashboard-unified-activity-expand')")));
   expect(dashboard,contains("Key('waffra-dashboard-transactions-expand')"));
   expect(dashboard,contains('showAllTransactions=false;'));
  });
