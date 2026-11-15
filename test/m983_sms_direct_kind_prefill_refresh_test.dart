@@ -56,7 +56,8 @@ void main(){
   expect(inbox,contains('selectedIds.removeWhere((selected)=>!active.contains(selected))'));
   expect(inbox,contains("suggestedKind=='income'"));
   expect(inbox,contains("suggestedKind=='expense'"));
-  expect(inbox,contains("suggestedKind=='transfer'"));
+  expect(inbox,contains("WaffraBankOperationKind.transfer=>'transfer'"));
+  expect(inbox,contains("'transfer'}.contains(suggestedKind)"));
  });
 
  test('M983 direct reviewer uses exact owner native ID, never financial inference',(){
