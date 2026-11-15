@@ -1,11 +1,12 @@
 {
   "contract_version": 1,
-  "change_id": "M968-ISSUE668-STACKED-PR-EXACT-HEAD-M946-20261115",
-  "human_scope_review": "Issue #668 follows owner's five-axis #657 request to complete code-side tests. Current PR #667 is stacked on #665 and did not start mandatory M946 because the workflow allowed main-only pull_request bases. Change ONLY that PR trigger, keep main push and all three real smoke shards, exact-head checkout, original tests and report gate untouched. Keep official device and private restore acceptance separate.",
+  "change_id": "M968-ISSUE668-STACKED-PR-M946-M550-CI-20261115",
+  "human_scope_review": "Issue #668 follows owner's five-axis #657 request to complete code-side tests. Current PR #667 is stacked on #665 and did not start mandatory M946 because the workflow allowed main-only pull_request bases. Change ONLY that PR trigger, keep main push and all three real smoke shards, exact-head checkout, original tests and report gate untouched. Keep official device and private restore acceptance separate. Also cover required M550/M385 exact-head behavior/scope preflight; it too silently omitted stacked PRs because of main-only pull_request base filter. Preserve its exact checkout/guard, not a skip.",
   "user_requested_changes": [
     "Run M946 whole-app real Flutter money/experience/safety smoke for pull requests targeting any feature-branch base as well as main, without weakening branch-specific source SHA verification or removing test cases.",
     "Add a mandatory QA unittest to prevent future main-only trigger regression; retain M937 test evidence and immutable signed-Android/private-backup limitations.",
-    "Document the five-axis CI blind spot and exact declared scope in requirements, source QA behavior contract and release notes without changing application code."
+    "Document the five-axis CI blind spot and exact declared scope in requirements, source QA behavior contract and release notes without changing application code.",
+    "Apply the same branch-neutral pull-request trigger to mandatory M550 source-boundary and behavior contract preflight so nested PRs cannot bypass M385/M550 while M946 executes."
   ],
   "allowed_changed_files": [
     ".github/workflows/m946-whole-app-feature-smoke.yml",
@@ -13,7 +14,8 @@
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/WAFFRA_REQUIREMENTS.md",
-    "docs/release/WAFFRA_APPROVED_CHANGES.txt"
+    "docs/release/WAFFRA_APPROVED_CHANGES.txt",
+    ".github/workflows/m550-behavior-contract-preflight.yml"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
@@ -28,6 +30,12 @@
       {
         "start": "    def test_hardware_and_private_backup_are_never_marked_automated_pass(self):",
         "end": "\n\nif __name__"
+      }
+    ],
+    ".github/workflows/m550-behavior-contract-preflight.yml": [
+      {
+        "start": "  pull_request:\n",
+        "end": "  workflow_dispatch:\n"
       }
     ]
   }

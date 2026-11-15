@@ -64,6 +64,17 @@ class FullAppSmokeMatrixTest(unittest.TestCase):
         self.assertIn("github.event.pull_request.head.sha || github.sha", workflow)
         self.assertIn("--file-reporter", workflow)
         self.assertIn("m937_flutter_test_report.py", workflow)
+        behavior = (ROOT / ".github/workflows/m550-behavior-contract-preflight.yml"
+                    ).read_text(encoding="utf-8")
+        preflight_trigger = behavior.split("  pull_request:\n", 1)[1].split(
+            "  workflow_dispatch:\n", 1)[0]
+        self.assertIn(
+            "    types: [opened, synchronize, reopened, ready_for_review]",
+            preflight_trigger,
+        )
+        self.assertNotIn("branches:", preflight_trigger)
+        self.assertNotIn("branches-ignore:", preflight_trigger)
+        self.assertIn("m550_behavior_contract_preflight.py", behavior)
 
 if __name__ == "__main__":
     unittest.main()
