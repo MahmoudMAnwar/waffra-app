@@ -81,13 +81,15 @@ void main() {
         String? monthIso,
         String? accountId,
         bool? income,
+        bool unassignedOnly = false,
       }) async {
         final result = <String>[];
         WaffraSqlcipherHistoryCursor? after;
         for (var i = 0; i < 100; i++) {
           final page = await WaffraSqlcipherHistoryPager.load(
             store: db!, limit: limit, monthIso: monthIso,
-            accountId: accountId, income: income, after: after);
+            accountId: accountId, income: income,
+            unassignedOnly: unassignedOnly, after: after);
           expect(page.entries.length, lessThanOrEqualTo(limit));
           result.addAll(page.entries.map((row) => row.id));
           if (!page.hasMore) {
@@ -116,6 +118,32 @@ void main() {
         accountId: 'bank-a', income: false);
       expect(scoped, scopedExpected);
       expect(scoped.toSet().length, scoped.length);
+      // M952: the historic unassigned reconciliation queue must also be
+      // actual DB-level keyset, not OFFSET, with equal-time tie fidelity.
+      final unassignedExpected = await queryIds(
+        'SELECT e.entry_id FROM fresh_finance_entries e '
+        'WHERE NOT EXISTS (SELECT 1 FROM fresh_finance_account_entry_links l '
+        'WHERE l.entry_id=e.entry_id) '
+        'ORDER BY e.occurred_iso DESC,e.entry_id DESC');
+      final unassigned = await collect(unassignedOnly: true, limit: 31);
+      expect(unassigned, unassignedExpected);
+      expect(unassigned.toSet().length, unassigned.length);
+      expect(unassigned.length, 900);
+      final oldMonthExpected = await queryIds(
+        'SELECT e.entry_id FROM fresh_finance_entries e '
+        'WHERE NOT EXISTS (SELECT 1 FROM fresh_finance_account_entry_links l '
+        'WHERE l.entry_id=e.entry_id) '
+        'AND e.occurred_iso>=? AND e.occurred_iso<? '
+        'ORDER BY e.occurred_iso DESC,e.entry_id DESC',
+        ['2026-10-01', '2026-11-01']);
+      expect(
+        await collect(
+          unassignedOnly: true, monthIso: '2026-10', limit: 19),
+        oldMonthExpected);
+      await expectLater(
+        WaffraSqlcipherHistoryPager.load(
+          store: db, unassignedOnly: true, accountId: 'bank-a'),
+        throwsArgumentError);
       final november = await WaffraSqlcipherHistoryPager.load(
         store: db, monthIso: '2026-11', limit: 75);
       final legacy = await WaffraAccountContextRead.loadMonthEntries(
