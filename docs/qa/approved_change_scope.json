@@ -231,6 +231,18 @@
         "start": "  expect(worker,contains('WaffraAutoSms.acknowledgeCommitted([id])'));",
         "end": "  expect(nativeMain,contains('\"ackCommittedAutoBankSms\" -> {'));"
       }
+    ],
+    "test/m221_approved_financial_ui_test.dart": [
+      {
+        "start": " testWidgets('M221 financial tools subscriptions empty state uses real data',",
+        "end": " testWidgets('M221 subscription suggestion opens functional recurring form',"
+      }
+    ],
+    "test/m647_m652_financial_activity_regression_test.dart": [
+      {
+        "start": " test('M652 Home mixes five kinds chronologically without new money writes', () {",
+        "end": " test('M648 transfer shows opposite signed effect on the selected account', () {"
+      }
     ]
   }
 }
