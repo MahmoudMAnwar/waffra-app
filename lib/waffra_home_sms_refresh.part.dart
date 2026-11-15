@@ -47,6 +47,9 @@ extension _WaffraHomeSmsRefresh on _HomeScreenState {
     _autoSmsHistoryComplete=false;
     _autoSmsPending.clear();
    });
+   _m991CachedSmsOwner=null;
+   _m991CachedRules=const [];
+   _m991SmsReviewRevision.value++;
    return;
   }
   if(importMonth){
@@ -89,6 +92,9 @@ extension _WaffraHomeSmsRefresh on _HomeScreenState {
      'Could not read encrypted SMS queue. Nothing was deleted. Retry.':
      'تعذر قراءة الرسائل المشفرة. لم يُحذف شيء. حاول التحديث.';
    });
+   _m991CachedSmsOwner=null;
+   _m991CachedRules=const [];
+   _m991SmsReviewRevision.value++;
    return;
   }
   // Update counts on *every* completed refresh, not just initial import.
@@ -128,15 +134,50 @@ extension _WaffraHomeSmsRefresh on _HomeScreenState {
     if(c.isSubcategory&&waffraCategoryAvailableForNewEntry(categories,c))
      '${c.income?'1':'0'}:${c.name}',
   ];
+  final signature=categoryNames.join('\u001F');
+  // In-memory hints are only valid for the same verified owner and category
+  // catalogue. The worker still examines every CURRENT native pending item.
+  final canReuse=_smsRuleOwnerKey.isNotEmpty&&
+   !_m661RuleLoadErrorNotified&&
+   _m991CachedSmsOwner==_smsRuleOwnerKey&&
+   _m991CachedCategorySignature==signature;
+  // Encrypted owner-only relation digests. Invalid/missing history never
+  // authorizes an ACK or financial post and cannot disable current review.
+  final historyOwner=_smsRuleOwnerKey;
+  var historyReadable=false;
+  List<Map<String,Object?>> previousHistory=const [];
+  if(historyOwner.isNotEmpty){
+   try{
+    previousHistory=await const WaffraSmsLifecycleHistoryStore()
+     .read(historyOwner);
+    historyReadable=true;
+   }catch(_){
+    historyReadable=false; // Keep owner review open, never invent history.
+   }
+  }
+  if(!_m630SmsSessionCurrent(smsEpoch))return;
   final classified=await compute(waffraM632ClassifySmsQueue,<String,Object?>{
    'results':results,
    'rules':customRules.map((r)=>r.toJson()).toList(growable:false),
    'categories':categoryNames,
    'hashes':smsHashes.toList(growable:false),
+   'history':historyReadable?previousHistory:const <Map<String,Object?>>[],
+   'previousRules':canReuse?_m991CachedRules:const <Map<String,Object?>>[],
+   'cached':canReuse?<Map<String,Object?>>[
+    for(final row in _autoSmsPending)
+     if(row['id'] is String&&row['m991SourceHash'] is String)
+      <String,Object?>{
+       'id':row['id'],'sender':row['sender'],
+       'm991SourceHash':row['m991SourceHash'],
+       'm991Evaluated':row['m991Evaluated'],
+       if(row['local'] is Map)'local':row['local'],
+      },
+   ]:const <Map<String,Object?>>[],
   });
   if(!_m630SmsSessionCurrent(smsEpoch))return;
   if(kProfileMode&&classifyClock!=null){
    debugPrint('WAFFRA_SMS_PERF classify_count=${results.length} '
+    'cache_hits=${classified['cacheHits']} '
     'isolate_ms=${classifyClock.elapsedMilliseconds}');
   }
   final waiting=(classified['waiting'] as List).cast<Map<String,Object?>>();
@@ -181,6 +222,9 @@ extension _WaffraHomeSmsRefresh on _HomeScreenState {
      'SMS tracking was paused while reading. Refresh after sign-in.':
      'متابعة الرسائل توقفت أثناء القراءة. حدّث بعد تسجيل الدخول.';
    });
+   _m991CachedSmsOwner=null;
+   _m991CachedRules=const [];
+   _m991SmsReviewRevision.value++;
    return;
   }
   setState((){
@@ -189,6 +233,27 @@ extension _WaffraHomeSmsRefresh on _HomeScreenState {
    _autoSmsHistoryComplete=progress?['historyComplete']==true;
    _autoSmsPending..clear()..addAll(waiting);
   });
+  _m991CachedSmsOwner=_smsRuleOwnerKey;
+  _m991CachedCategorySignature=signature;
+  _m991CachedRules=customRules.map((r)=>r.toJson())
+   .toList(growable:false);
+  // The open sender sheet listens to this revision, so counts and filters
+  // reflect rule changes without closing/reopening or history rescan.
+  _m991SmsReviewRevision.value++;
+  // Do not block the already-painted review UI on storage latency. This
+  // only saves opaque hashed suggestions in encrypted owner-scoped storage.
+  if(historyReadable&&historyOwner.isNotEmpty&&
+     historyOwner==_smsRuleOwnerKey&&_m630SmsSessionCurrent(smsEpoch)){
+   final snapshot=classified['latestHistory'];
+   if(snapshot is List){
+    final hints=snapshot.whereType<Map>()
+     .map((value)=>Map<String,Object?>.from(value)).toList(growable:false);
+    try{
+     await const WaffraSmsLifecycleHistoryStore()
+      .write(historyOwner,hints);
+    }catch(_){/* Retain live review; no raw SMS or ledger mutation. */}
+   }
+  }
   // Passive SMS review is local-only; it never sends a message to
   // cloud analysis or posts money from an unconfirmed match.
  }
