@@ -42,11 +42,19 @@ final class WaffraHomeTransactionFilter {
   (typeFilter=='الاستحقاقات'&&
    (entry.sourceType=='recurring'||entry.sourceType=='goal_due'));
 
+ // DateRangePicker selects calendar DAYS, not a 24-hour window before
+ // the start timestamp. Never include yesterday's bank transaction.
+ bool acceptsCalendarDate(DateTime when){
+  final period=dateRange;
+  if(period==null)return true;
+  final day=DateTime(when.year,when.month,when.day);
+  final first=DateTime(period.start.year,period.start.month,period.start.day);
+  final last=DateTime(period.end.year,period.end.month,period.end.day);
+  return !day.isBefore(first)&&!day.isAfter(last);
+ }
  bool accepts(MoneyEntry entry)=>
   waffraSearchAny([entry.title,entry.category,waffraTr(entry.category)],search)&&
-  (dateRange==null||
-   (entry.date.isAfter(dateRange!.start.subtract(const Duration(days:1)))&&
-    entry.date.isBefore(dateRange!.end.add(const Duration(days:1)))))&&
+  acceptsCalendarDate(entry.date)&&
   (minAmount==null||entry.amount>=minAmount!)&&
   (maxAmount==null||entry.amount<=maxAmount!)&&
   acceptsType(entry)&&
