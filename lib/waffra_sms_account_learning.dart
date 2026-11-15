@@ -48,7 +48,8 @@ abstract final class WaffraSmsAccountLearning {
    .replaceAll('أ','ا').replaceAll('إ','ا').replaceAll('آ','ا')
    .replaceAll('ى','ي');
   const aliases=<String,String>{
-   'rajhi':'rajhi','alrajhi':'rajhi','الراجحي':'rajhi',
+   'rajhi':'rajhi','alrajhi':'rajhi','alrajhibank':'rajhi',
+   'الراجحي':'rajhi',
    'inma':'inma','alinma':'inma','alinmah':'inma','الانماء':'inma',
    'snb':'snb','alahli':'snb','الاهلي':'snb','البنكالاهليالسعودي':'snb',
    'riyad':'riyad','riyadbank':'riyad','بنكالرياض':'riyad',
