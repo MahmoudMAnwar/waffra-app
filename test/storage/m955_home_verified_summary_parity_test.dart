@@ -193,4 +193,79 @@ void main() {
       if(await dir.exists())await dir.delete(recursive:true);
     }
   });
+
+  test('M955 accountless legacy finance summary preserves unassigned money '
+      'without creating bank accounts or duplicate cards', () async {
+    // Model the restored accountless domain: old entries and wallets exist,
+    // but the owner has not explicitly created/linked any money account.
+    final dir=await Directory.systemTemp.createTemp('m955-accountless-');
+    WaffraEncryptedStore? db;
+    try {
+      db=WaffraEncryptedStore.openAt(File('${dir.path}/accountless.sqlite'),
+        key:'m955-disposable-accountless-legacy-source');
+      await WaffraFreshEncryptedVaultBootstrap(store:db,
+        experimentalEnabled:true).initialize(
+          decision:WaffraFirstRunDecision.freshCandidate);
+      await WaffraAccountsSchema.install(db);
+      const stamp='2026-11-04T10:00:00';
+      for(final (id,amount,income) in <(String,int,bool)>[
+        ('legacy-expense',7000,false),
+        ('legacy-income',9500,true),
+      ]){
+        await db.customStatement(
+          'INSERT INTO fresh_finance_entries '
+          '(entry_id,title,category_snapshot,amount_minor,is_income,'
+          'occurred_iso,receipt_count,source_json) VALUES (?,?,?,?,?,?,0,?)',
+          [id,id,'Legacy',amount,income?1:0,stamp,'{}']);
+      }
+      await db.customStatement(
+        'INSERT INTO fresh_finance_standalone_budgets '
+        '(budget_id,name,monthly_limit_minor,created_at_iso,source_json) '
+        'VALUES (?,?,?,?,?)',['legacy-budget','Legacy',12000,stamp,'{}']);
+      await db.customStatement(
+        'INSERT INTO fresh_finance_standalone_allocations '
+        '(allocation_id,budget_id,entry_id,amount_minor,assigned_at_iso,'
+        'explicitly_confirmed) VALUES (?,?,?,?,?,1)',
+        ['legacy-budget-link','legacy-budget','legacy-expense',7000,stamp]);
+      await db.customStatement(
+        'INSERT INTO fresh_finance_goals '
+        '(goal_id,name,target_minor,saved_minor,source_json) '
+        'VALUES (?,?,?,?,?)',['old-goal','Old goal',30000,15000,'{}']);
+      final legacy=await WaffraAccountContextRead.load(
+        store:db,monthIso:'2026-11',summaryOnly:true);
+      final compact=await WaffraAccountContextRead.load(
+        store:db,monthIso:'2026-11',summaryOnly:true,
+        includeEntries:false);
+      expect(legacy.entries.map((e)=>e.id).toSet(),
+        {'legacy-expense','legacy-income'});
+      expect(compact.entries,isEmpty);
+      expect(compact.budgets.single.usage.globalSpentMinor,7000);
+      expect(compact.budgets.single.usage.selectedAccountSpentMinor,0);
+      expect(legacy.budgets.single.usage.globalSpentMinor,
+        compact.budgets.single.usage.globalSpentMinor);
+      expect(compact.goals.single.totalSavedMinor,15000);
+      expect(compact.goals.single.selectedAccountNetMinor,0);
+      expect(await WaffraAccountsRepository(db:db,
+        experimentalEnabled:true).balances(),isEmpty,
+        reason:'Never guess a bank opening balance from legacy net flow.');
+      await db.close();
+      db=WaffraEncryptedStore.openAt(File('${dir.path}/accountless.sqlite'),
+        key:'m955-disposable-accountless-legacy-source');
+      final reopened=await WaffraAccountContextRead.load(
+        store:db,monthIso:'2026-11',summaryOnly:true,
+        includeEntries:false);
+      expect(reopened.entries,isEmpty);
+      expect(reopened.budgets.single.usage.globalSpentMinor,7000);
+      expect(reopened.goals.single.totalSavedMinor,15000);
+      expect(await WaffraAccountsRepository(db:db,
+        experimentalEnabled:true).balances(),isEmpty);
+      expect((await db.customSelect(
+        'SELECT COUNT(*) AS n FROM fresh_finance_entries')
+        .getSingle()).read<int>('n'),2);
+    }finally{
+      await db?.close();
+      if(await dir.exists())await dir.delete(recursive:true);
+    }
+  });
+
 }
