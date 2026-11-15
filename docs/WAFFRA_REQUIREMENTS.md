@@ -1,12 +1,13 @@
-## M952 — متابعة المحاور الخمسة بعد دمج #654 و#656 (2026-11-15)
+## M952 — Proactive Financial Reliability & Code Hardening: المحاور الخمسة (2026-11-15)
 
-- **Issue:** [#657](https://github.com/MahmoudMAnwar/waffra-app/issues/657). **Draft PR:** يتحدد بعد رفع التغييرات.
-- **Axis 1:** Audit the merged verified SQLCipher keyset source read; no reimplementation or unverified fallback. Status: **Audit in progress**.
-- **Axis 2:** Cache complete sender-group SMS review IDs once per queue revision; refresh only on review completion or confirmed bulk exclusion. Preserve 100-card window, full select-all/exclude, original SMS and sender-navigation UI. Status: **Implementation in progress**.
-- **Axis 3:** No change to financial writer/ledger; retain account opening, transfer net-zero, goal/recurring/due and Restore anti-replay invariants while inspecting gaps. Status: **Audit in progress**.
-- **Axis 4:** Preserve registered Home parts, session source leases and approved + / Snackbar geometry; only proven dead code may be removed. Status: **Audit in progress**.
-- **Axis 5:** Fail-closed Dart JSON reporter on duplicate runner-start, duplicate suite identity and test referring to an unreported suite, without changing zero-fail/skipped counts or output privacy. New hostile-event unit tests. Status: **Implementation in progress**.
-- **Safety:** no genuine Android/biometric/UAT or original encrypted archive claims, no CI weakening, no new financial write, no change to approved layouts. Only mark an axis **Done** after exact HEAD validation passes. [Verification tracker](qa/M952_FIVE_AXES_FOLLOWUP.md).
+- **Issue:** [#657](https://github.com/MahmoudMAnwar/waffra-app/issues/657). **Draft:** [PR #658](https://github.com/MahmoudMAnwar/waffra-app/pull/658). The latest user-requested plan has **five axes and 20 proposed improvements**; these are NOT the older M944 five axes. Do not mark the entire plan done from the first tranche.
+- **1 — سلامة الأموال (financial integrity):** integer-halalas, no double charges, source-verified account openings/expenses, transfers net-zero, Goal/Due settlements, budget and report parity. First tranche fail-closes incomplete linked finance-domain tables before account reads.
+- **2 — تكامل الحسابات والنسخ الاحتياطية (accounts/backup):** main/child accounts, controlled migrations, verified source, historical encrypted V24/V3 restore without duplicating transactions, or falsely resetting balance to zero. First tranche checks full domain schema readiness and unsupported revision before accepting accounts.
+- **3 — الأداء والاستجابة (performance):** SQLCipher source-level Keyset Pagination, reduce full Home rehydration after saves, sender-group review and goals/recurring list work, preserve responsive navigation. First tranche caches all pending SMS IDs per sender instead of recomputing on each widget rebuild; refresh after confirmed removal.
+- **4 — استقرار الواجهات (UI):** no changes to approved Home/Goals/Recurring designs, FAB + position, Snackbar, RTL, original SMS, text scaling or account dropdowns. Audit and practical Android UAT remain.
+- **5 — الهيكلة والاختبارات الاستباقية:** continue safe Home responsibility separation, eliminate only proven dead code, add new nonduplicate functional/security/performance checks, exact-SHA CI totals and recurring-failure classification. First tranche tightens M937 event parsing and adds three adverse-protocol Python tests.
+- **QA:** [M952 verification matrix](qa/M952_FIVE_AXES_FOLLOWUP.md). Two additional executable disposable SQLCipher readiness regressions assert missing linked table and unsupported domain revision fail closed, without modifying real data.
+- **Definition of done:** committed change + executing regression + green exact HEAD, preserve M385/M550 and original security gates. User private encrypted archives, actual Android/biometric/visual checks and signed builds are not claimed. All axes remain Partial or Audit in first tranche.
 
 ## M944 — تحسين الأداء العميق واستقرار البيانات: المحاور الخمسة (2026-11-15)
 
