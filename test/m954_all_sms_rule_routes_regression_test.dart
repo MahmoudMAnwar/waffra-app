@@ -192,6 +192,29 @@ void main(){
    lessThan(background.indexOf('keepForReview(candidate);')));
  });
 
+ test('M954 explicit owner exclusion is checked even if bank heuristic is expense',(){
+  // A weak parser decision is not posted-money evidence or a veto on
+  // a confirmed sender-scoped rule.
+  const body='تفعيل الحساب لتطبيق تجريبي';
+  final matched=WaffraSmsLocalRules.resolveSpecial(
+   body:body,sender:'MyApp',bankKind:WaffraBankOperationKind.expense,
+   custom:[savedExclude]);
+  expect(matched?.resolvedKind,'excluded');
+  expect(matched?.id,savedExclude.id);
+ });
+
+ test('M954 curated reminder is excluded but a completed payment plus OTP is kept',(){
+  const reminder='Payment reminder: your bill is due tomorrow';
+  final rule=WaffraSmsLocalRules.resolveSpecial(body:reminder,
+   sender:'Bank',bankKind:WaffraBankOperationKind.uncertain);
+  expect(rule?.resolvedKind,'excluded');
+  const posted='Payment completed SAR 75.00. Your verification code is 123456';
+  final unsafe=WaffraSmsLocalRules.resolveSpecial(body:posted,
+   sender:'Bank',bankKind:WaffraBankOperationKind.uncertain,
+   nativeSensitiveOtp:true);
+  expect(unsafe?.resolvedKind,isNot('excluded'));
+ });
+
  test('M954 no raw security code persisted by native SMS intake',(){
   final source=File('native/WaffraAutoSmsStore.kt').readAsStringSync();
   expect(source,contains('val masked = if (sensitive) body.trim().replace('));
