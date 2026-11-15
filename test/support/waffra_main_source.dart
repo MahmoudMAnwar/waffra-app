@@ -199,5 +199,12 @@ String readWaffraMainSourceForContracts(){
  const m930_widgets=' // M930: original widgets Home session helper moved without behavioral change.\n';
  if(s.split(m930_widgets).length!=2)throw StateError('M930 widgets original production Dart part missing/duplicate');
  s=s.replaceFirst(m930_widgets,_method('lib/waffra_home_widget_action_routes.part.dart',' void _returnToHome(){'));
+ const m944Shell=' // M944: original Home shell moved unchanged to registered same-library part.\n'
+  ' @override Widget build(BuildContext context)=>_m944BuildHome();';
+ if(s.split(m944Shell).length!=2)throw StateError('M944 Home root shell marker missing or duplicate');
+ s=s.replaceFirst(m944Shell,_method('lib/waffra_home_root_shell.part.dart',
+  ' Widget _m944BuildHome()=>PopScope(').replaceFirst(
+    ' Widget _m944BuildHome()=>PopScope(',
+    ' @override Widget build(BuildContext context)=>PopScope('));
  return s;
 }
