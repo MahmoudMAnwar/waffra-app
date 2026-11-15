@@ -30,7 +30,7 @@
     "lib/waffra_home_sms_inbox.part.dart": [
       {
         "start": "if(!_autoSmsPending.any((row)=>row['id']==id)){",
-        "end": "selectedIds.remove(id);"
+        "end": "selectedIds.remove(id);\n              senders.removeWhere((name)=>bySender[name]?.isEmpty??true);"
       }
     ],
     "scripts/qa/m946_full_app_smoke_matrix.py": [
