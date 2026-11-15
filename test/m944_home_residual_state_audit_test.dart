@@ -44,7 +44,8 @@ void main() {
   expect(editor,contains(' _handleRecurringCardAction('));
   expect(editor,contains(' nextRecurringDue('));
   final reconstructed=readWaffraMainSourceForContracts();
-  expect(reconstructed,contains(' @override Widget build(BuildContext context)=>PopScope('));
+  expect(main,contains(' @override Widget build(BuildContext context)=>_m944BuildHome();'));
+  expect(reconstructed,contains(' Widget recurringPage(){'));
   expect(reconstructed.indexOf(' Future<void> recurringDialog('),
    lessThan(reconstructed.indexOf(' Widget recurringPage(){')));
  });
