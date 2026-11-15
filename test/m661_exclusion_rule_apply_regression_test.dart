@@ -108,8 +108,11 @@ void main() {
     .readAsStringSync();
    final home = readWaffraMainSourceForContracts();
    expect(source, contains('final List<String> scannedSenders;'));
-   expect(source, contains('widget.scannedMessages.asMap().entries.where'));
-   expect(source, contains('widget.scannedSenders[row.key]'));
+   expect(source, contains('for(var i=0;i<widget.scannedMessages.length;i++)'));
+   expect(source, contains('final previewMatches=inspected.where((row)=>'));
+   expect(source, contains('widget.scannedSenders[i]'));
+   expect(source, contains('sender:row.key'));
+   expect(source, contains('MapEntry(widget.seedSender,seed)'));
    expect(home, contains('scannedSenders:_autoSmsPending.map((row)=>'));
   });
 

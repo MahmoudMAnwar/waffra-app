@@ -1,3 +1,5 @@
+M985 follow-up QA: the two unique M103/Full Flutter failures were stale source-shape contracts. M661 now proves sender-ID pairing through the updated indexed MapEntry/previewMatches pipeline; M302 now proves the reference+suffix advisory is before the original duplicate refusal and staged receipt cleanup. All original business assertions retained; no production ledger logic changed.
+
 M985 date guard: reclassified income/expense no longer inherits today's date silently when original SMS date is unknown; date and time picker confirmation is required before enabling save, without changing ordinary manual entry behavior.
 
 M985 QA follow-up: refreshed retained M304 and M580 source assertions to verify added sender preservation and compound duplicate advisory; wallet child creation never inherits bank-only masked last-four. No removed functional tests.

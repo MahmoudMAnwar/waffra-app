@@ -27,7 +27,9 @@
         "test/m615_m618_sms_review_retention_perf_contract_test.dart",
         "test/m470_sms_sender_and_rule_accuracy_test.dart",
         "test/m304_cross_source_duplicate_review_test.dart",
-        "test/m304_cross_source_duplicate_review_test.dart"
+        "test/m304_cross_source_duplicate_review_test.dart",
+        "test/m661_exclusion_rule_apply_regression_test.dart",
+        "test/m302_duplicate_receipt_cleanup_test.dart"
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/m946-whole-app-feature-smoke.yml",
@@ -42,7 +44,8 @@
         "Original SMS remains available for read-only inspection; no logging or new network channel",
         "Physical RTL Android, bank SMS intake and old backup UAT not asserted by synthetic CI",
         "Bank last-four prefill is disabled for wallet subtype; existing cross-source duplicate advisory still runs with user override.",
-        "Unknown original bank date on manually corrected income/expense requires explicit day and time selection; never silently accept device date."
+        "Unknown original bank date on manually corrected income/expense requires explicit day and time selection; never silently accept device date.",
+        "Sender-scoped preview uses each live sender+message pair, including seeded review; duplicate rejection still deletes only staged receipt copies and exits before finance writer."
       ]
     },
     {
