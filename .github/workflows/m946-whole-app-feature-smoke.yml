@@ -44,6 +44,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m unittest discover -s test/qa -p 'm946_full_app_smoke_matrix_test.py' -v
+          python3 -m unittest discover -s test/qa -p 'm948_smoke_quality_gate_test.py' -v
           python3 scripts/qa/m946_full_app_smoke_matrix.py --verify \
             --head "$TESTED_HEAD" \
             --output build/qa/m946-feature-inventory.json
@@ -62,9 +63,11 @@ jobs:
       - name: Install Flutter dependencies
         run: flutter pub get
 
-      - name: Strict analyzer for real encrypted money journey
+      - name: Static analysis for encrypted and non-functional smoke tests
         if: matrix.group == 'money'
-        run: dart analyze test/storage/m946_whole_app_money_journey_smoke_test.dart
+        run: |
+          dart analyze test/storage/m946_whole_app_money_journey_smoke_test.dart
+          dart analyze test/m948_financial_properties_and_performance_test.dart
 
       - name: Independently prove all five new SQLCipher cross-feature journeys
         if: matrix.group == 'money'
@@ -103,7 +106,13 @@ jobs:
           else
             echo "M946 $FEATURE_GROUP: NO test evidence; NOT PASSED." >> "$GITHUB_STEP_SUMMARY"
           fi
-          exit "$status"
+          if [ "$status" -ne 0 ]; then
+            exit "$status"
+          fi
+          python3 scripts/qa/m948_smoke_quality_gate.py \
+            --sha "$TESTED_SHA" \
+            --group "$FEATURE_GROUP" \
+            --input "build/qa/m946-${FEATURE_GROUP}-result.json"
 
       - name: Archive exact-head feature matrix and results on every outcome
         if: always()
