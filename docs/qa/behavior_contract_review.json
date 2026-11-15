@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "pr": "M944 — 5-axis code reliability PR #654 (Draft; Issue #653)",
-  "issue": "Issue #653 — M944 code-only performance, consistency, modularity, CI",
+  "pr": "M949–M951 — 115 NEW nonduplicate executable functional tests on Draft PR #656",
+  "issue": "Issue #655 — nonduplicated functional test journeys",
   "workflow_review_policy": "scan-all-registered-workflows",
-  "baseline": "main merge #652 at efba4d1f0b20b4111b60a1720de682059aac63fe",
+  "baseline": "main after merged PR #654 at b624100a040d2a05c02d9ea9827dd36494c39538",
   "reviewed_at": "2026-11-15",
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
@@ -4966,6 +4966,97 @@
         "Date filter never contains a transaction prior to first selected date or after last date.",
         "Nonfunctional host tests do not substitute for device FPS, physical biometric, backup UAT or screen-reader checks.",
         "No skipped test, missing event, stale SHA or unverified physical claim can pass M946 quality gate."
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m946-whole-app-feature-smoke.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ]
+    },
+    {
+      "id": "M949-43-NEW-DIRECT-FUNCTIONAL-JOURNEYS",
+      "issue": "#655; new Draft PR from merged #654",
+      "previous_behavior": "M946 has full-app broad smoke, but not chained three-bank transactions and archive, partially mapped historical incomes, category-parent rename preserving child, linked goal/due account switch and rollback across siblings, or simultaneous five/six-dimensional Home search and account filter.",
+      "approved_behavior": "Add EXACTLY 43 new real runnable Flutter test cases without editing 618 pre-existing test or 18 integration test files. Accounts A01–A14 exercise multi-action SQLCipher transactions; modules M01–M17 exercise state changes and failed edit atomicity; Home F01–F12 combine amount,date,category,search,type and account scopes. Register suites in mandatory M946 every-head smoke and audit case IDs/title uniqueness/no skip. No owner data touched.",
+      "source_paths": [
+        "lib/storage/waffra_accounts_repository.dart",
+        "lib/storage/waffra_fresh_finance_modules_repository.dart",
+        "lib/waffra_home_ledger_query.part.dart",
+        "lib/waffra_finance_period_index.part.dart",
+        "scripts/qa/m946_full_app_smoke_matrix.py",
+        "scripts/qa/m949_unique_functional_case_audit.py"
+      ],
+      "test_paths": [
+        "test/storage/m949_account_lifecycle_cross_feature_test.dart",
+        "test/storage/m949_goal_recurring_category_sequences_test.dart",
+        "test/m949_home_filter_combined_user_journeys_test.dart",
+        "test/qa/m949_unique_functional_case_audit_test.py"
+      ],
+      "safety_invariants": [
+        "Original test suites untouched; zero production lib files changed.",
+        "Rejected transfer, bank archive, goal/due/category edit never mutates unrelated encrypted records.",
+        "Authenticated source account IDs and linked due/source integrity survive metadata rename and cold logic.",
+        "Compound Home filters cannot leak old accountless entries into selected verified account.",
+        "Exactly 43 distinct test() cases and 0 skipped on exact PR SHA; separate 4 Python audit mutation tests not counted as functional.",
+        "No physical Android device, real user encrypted backup or SMS originals sent to CI."
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m946-whole-app-feature-smoke.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ]
+    },
+    {
+      "id": "M950-46-EXTENDED-FUNCTIONAL-JOURNEYS",
+      "issue": "#655 / PR #656; user explicitly requested further unique test expansion",
+      "previous_behavior": "M949 covered 43 new compound cases, but unique SMS source/destination unicode numeral collisions, recurring one-time vs future account identity, account-linked budgets across months, verified original legacy review queue page boundaries and exact selected account reconciliation were not directly combined in these tests.",
+      "approved_behavior": "Add 28 M950-P pure business policy test() calls for verified multi-script bank SMS source/destination and ambiguity, recurring action/override identity, goal fund/release cross-account projection, global budget threshold vs selected header; plus 18 M950-S actual disposable SQLCipher tests for December/January and leap-February month boundaries, tied dated paging, partial unassigned association, budget across months, source-account ID filter, archive and immutable read results. All independently runnable, no source text asserts. M946 mandatory every-head smoke rejects removed, duplicated, skipped or already named test cases; report 89 new distinct functional cases across M949/M950.",
+      "source_paths": [
+        "lib/storage/waffra_account_context_policy.dart",
+        "lib/storage/waffra_account_context_read.dart",
+        "lib/storage/waffra_accounts_repository.dart",
+        "lib/waffra_recurring_policy.dart",
+        "scripts/qa/m946_full_app_smoke_matrix.py",
+        "scripts/qa/m950_extended_functional_audit.py"
+      ],
+      "test_paths": [
+        "test/m950_account_sms_due_budget_decision_matrix_test.dart",
+        "test/storage/m950_verified_monthly_scopes_and_history_test.dart",
+        "test/qa/m950_extended_functional_audit_test.py"
+      ],
+      "safety_invariants": [
+        "Only selected unique case IDs P01–P28 and S01–S18 contribute to 46 new M950 cases. No existing tests replaced and M949's 43 unaffected.",
+        "Bank SMS not uniquely verified by exact last-four digits stays unassigned; no inferred bank/sender selection.",
+        "One-time recurring payment bank override cannot silently change the recurring future default.",
+        "Global category budget expense spending includes independently authenticated unassigned and other account rows but never income; account header only changes scoped numerator.",
+        "Selected bank month queries never reveal an accountless or different bank entry and cannot double-post internal transfers as income/expense.",
+        "Historical association requires consent and preserves signed integer halalas, old IDs, source and other bank links.",
+        "Disposable encrypted fixtures only; Android SMS interception, biometric, real device backup and external notifications remain device-only."
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m946-whole-app-feature-smoke.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ]
+    },
+    {
+      "id": "M951-26-SMS-ELIGIBILITY-AND-ALERT-ISOLATION",
+      "issue": "#655 / Draft PR #656; user's final gap sweep on 2026-11-15",
+      "previous_behavior": "SMS allow/review decisions at exact verified source-date edges, missing account/category intersection, spoofed bank sender with long numeric digits, one-halala precision and budget alert dedup across owners, budgets and calendar months lacked dedicated multi-condition M951 regression cases.",
+      "approved_behavior": "Test actual WaffraAutoSmsPolicy.decide with 16 independently named synthetic bank purchase scenarios and actual WaffraBudgetAlertOnce.claim with 10 independently named SharedPreferences isolated user/budget/month/replay cases, plus exact IDs and uniqueness anti-skipped gate. Add all 26 to M946 every-head smoke; total 115 new functional tests in M949, M950, M951.",
+      "source_paths": [
+        "lib/waffra_auto_sms_policy.dart",
+        "lib/waffra_budget_alert_once.dart",
+        "scripts/qa/m946_full_app_smoke_matrix.py",
+        "scripts/qa/m951_last_functional_gap_audit.py"
+      ],
+      "test_paths": [
+        "test/m951_sms_eligibility_and_budget_alert_isolation_test.dart",
+        "test/qa/m951_last_functional_gap_audit_test.py"
+      ],
+      "safety_invariants": [
+        "Untrusted, invalid, incomplete or not account-linked bank SMS must never become a posted income/expense automatically.",
+        "Only confirmed financial source-date windows and halala accuracy can be accepted; mismatched income/expense direction is rejected.",
+        "Budget notices are independent per owner, budget ID, calendar month, never replay a crossed stage and do not mutate ledger state.",
+        "All 115 new test() cases appear in mandatory M946 with zero skipped; physical Android SMS and notification actual delivery unproven.",
+        "Existing original tests, production code and real private backup unchanged."
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/m946-whole-app-feature-smoke.yml",

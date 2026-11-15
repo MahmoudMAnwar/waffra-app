@@ -853,3 +853,18 @@ M940/M941 Draft PR #648 M486 regression correction (unreleased): coalesced futur
 [M282 CI exact-head source guard correction — Draft PR #654, NOT RELEASED — 2026-11-15]
 - After Home source extraction, M275 WaffraSmoothConfirmationOverlay is now defined in lib/waffra_smooth_confirmation.dart instead of lib/main.dart. The original M282 source-completeness check falsely flagged the component as missing; verify the actual widget declaration there AND that main.dart imports it and instantiates WaffraSmoothOperationController, keeping runtime feedback and double-tap tests active.
 - All M274–M281 provenance markers and the explicit automaticallyActivateSqlCipher=false production release guard remain in force; no CI step disabled or skipped. No real user financial record, APK release setting, or private encrypted backup changed.
+
+[M949 Issue #655 / NEW Draft PR — exactly 43 nonduplicated FUNCTIONAL tests; NOT RELEASED — 2026-11-15]
+- Adds 14 tested account lifecycle and transfer/partial-history journeys, 17 multi-step Goal/Recurring/Category change and rollback journeys, and 12 intersecting Home filter and account-scope user journeys. 3 new Dart files; no existing test modified or disabled.
+- Registers new suites in the mandatory M946 exact-SHA money/experience smoke, together with a fail-closed case/duplicate-title audit; audit self-test count separate.
+- No production finance, SMS, backup or Android code changed. A green Flutter run does not establish physical Android biometric, backup or SMS permission UAT.
+
+[M950 extension of M949 new functional QA PR #656 — 2026-11-15, NOT RELEASED]
+- 46 additional nonduplicate executable Dart test cases: 28 SMS verified source/destination, recurring payment override, budget and goal movement policy; 18 SQLCipher month-account history, scoped paging, account budget and consent association scenarios.
+- New total = 89 executable functional tests across five new Dart files. Existing test suites/production app unchanged. M946 mandatory CI shards and M950 strict identity audit validate exact-head evidence; Python mutation audit tests separately excluded from functional count.
+- These host tests do NOT prove physical Android biometric, SMS permissions or owner's password-authenticated legacy backup.
+
+[M951 final risk-based gap sweep in Draft #656 — 2026-11-15, NOT RELEASED]
+- 26 additional executable functional tests for bank SMS pre-posting eligibility and budget alert unique owner/month scope, plus fail-closed M951 case audit.
+- Final newly added test() total: 115 across six NEW Dart files (M949 43 + M950 46 + M951 26), all in mandatory M946 smoke. Existing tests and all production code remain unchanged. Four+four+two Python audit tests are separate and do not inflate functional count.
+- Still require exact-head CI pass/failed/skipped and real Android UAT for biometric, actual SMS delivery and encrypted backup compatibility.

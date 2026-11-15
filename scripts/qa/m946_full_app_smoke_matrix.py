@@ -11,6 +11,9 @@ import argparse
 import json
 from pathlib import Path
 import subprocess
+from m949_unique_functional_case_audit import audit as audit_m949
+from m950_extended_functional_audit import audit as audit_m950
+from m951_last_functional_gap_audit import audit as audit_m951
 
 ROOT = Path(__file__).resolve().parents[2]
 GROUPS = ("money", "experience", "safety")
@@ -18,6 +21,30 @@ GROUPS = ("money", "experience", "safety")
 # Each user-facing capability has a real runnable suite. Tests can be reused
 # across capabilities; the runner de-duplicates within each CI shard.
 FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {
+    "m951_preposting_bank_sms_eligibility_thresholds": ("experience", (
+        "test/m951_sms_eligibility_and_budget_alert_isolation_test.dart",
+        "test/waffra_auto_sms_policy_test.dart")),
+    "m951_owner_budget_alert_notifications_and_months": ("money", (
+        "test/m951_sms_eligibility_and_budget_alert_isolation_test.dart",
+        "test/m444_budget_alert_once_test.dart")),
+    "m950_exact_unicode_sms_last_four_bank_provenance": ("experience", (
+        "test/m950_account_sms_due_budget_decision_matrix_test.dart",
+        "test/storage/m448_account_context_policy_test.dart")),
+    "m950_due_override_global_budget_goal_source_conservation": ("money", (
+        "test/m950_account_sms_due_budget_decision_matrix_test.dart",
+        "test/storage/m448_account_context_policy_test.dart")),
+    "m950_verified_monthly_budget_and_historical_account_paging": ("money", (
+        "test/storage/m950_verified_monthly_scopes_and_history_test.dart",
+        "test/storage/m448_account_context_read_test.dart")),
+    "m949_account_rename_transfer_archive_and_partial_legacy_link": ("money", (
+        "test/storage/m949_account_lifecycle_cross_feature_test.dart",
+        "test/storage/m440_accounts_repository_test.dart")),
+    "m949_goal_recurring_category_multi_step_atomicity": ("money", (
+        "test/storage/m949_goal_recurring_category_sequences_test.dart",
+        "test/storage/m641_goal_account_integrity_test.dart")),
+    "m949_combined_date_amount_search_category_account_filters": ("experience", (
+        "test/m949_home_filter_combined_user_journeys_test.dart",
+        "test/m940_m941_home_ledger_pagination_test.dart")),
     "exact_month_end_date_range_filters": ("money", (
         "test/m948_financial_properties_and_performance_test.dart",
         "test/m940_m941_home_ledger_pagination_test.dart")),
@@ -215,12 +242,19 @@ def validate(root: Path = ROOT) -> dict[str, object]:
     if missing or weak:
         raise ValueError(f"M946 uncovered feature/source: missing={sorted(set(missing))} "
                          f"weak={sorted(set(weak))}")
+    new_functional = audit_m949(root)
+    extended_functional = audit_m950(root)
+    final_functional = audit_m951(root)
     buckets = {g: group_tests(g) for g in GROUPS}
     if any(len(v) < 10 for v in buckets.values()):
         raise ValueError("A critical smoke shard was silently reduced")
     return {
         "gate": "M946 full app actionable smoke; physical device acceptance separate",
         "features_count": len(FEATURES),
+        "new_nonduplicate_functional_cases": new_functional["unique_case_count"] + extended_functional["new_functional_case_count"] + final_functional["new_M951_functional_case_count"],
+        "new_functional_case_breakdown": {"M949":new_functional["unique_case_count"],
+                                          "M950":extended_functional["new_functional_case_count"],
+                                          "M951":final_functional["new_M951_functional_case_count"]},
         "test_files_count": len({p for _, t in FEATURES.values() for p in t}),
         "groups": {g: {"files": list(files), "count": len(files)}
                    for g, files in buckets.items()},
