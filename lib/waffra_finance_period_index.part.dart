@@ -49,6 +49,21 @@ class WaffraFinancePeriodIndex {
    (where==null||where(row));
  }));
 
+ /// Exact match count without an all-results allocation on filter repaint.
+ int countNewestFirst({
+  Set<String>? verifiedEntryIds,
+  bool Function(MoneyEntry)? where,
+ }){
+  var count=0;
+  for(final index in _newestFirstPositions){
+   final row=_source[index];
+   if(verifiedEntryIds!=null&&!verifiedEntryIds.contains(row.id))continue;
+   if(where!=null&&!where(row))continue;
+   count++;
+  }
+  return count;
+ }
+
  /// In-memory bounded page through the already sorted immutable index.
  /// This API does not claim SQLCipher database-level pagination.
  List<MoneyEntry> pageNewestFirst({

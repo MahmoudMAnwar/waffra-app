@@ -127,6 +127,9 @@ void main() {
   expect(directory,contains('deleteNamedBudget(b)'));
   expect(app,contains('releaseGoalFunds(SavingGoal goal)'));
   expect(app,contains('final saved=goals.fold<double>'));
-  expect(app,contains('waffraAvailableCash(entries,goals)'));
+  // Never show a historical income/expense net as verified bank cash.
+  expect(app,contains('_m942VerifiedAllAccountsBalance()'));
+  expect(app,contains('balanceVerified:_m468VerifiedAccountsLoaded'));
+  expect(app,isNot(contains('??waffraAvailableCash(entries,goals)')));
  });
 }

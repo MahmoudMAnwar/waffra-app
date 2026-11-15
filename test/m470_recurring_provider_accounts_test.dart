@@ -73,8 +73,6 @@ void main() {
   expect(source,contains("Key('m470-review-provider-'"));
   expect(source,contains("providerGroups.where((p)=>p.id==chosenProviders[n])"));
   expect(source,contains("chosenProviders[n]=value;"));
-  // Changing a provider must remove a previously selected child account.
-  // The reset is the security contract, not a literal implementation comment.
   expect(source,contains('chosenProviders[n]=value;'));
   expect(source,contains('assigned[n]=null;'));
   expect(source,contains('if(mustSelectAccount&&assigned.any((account)=>account==null))return null;'));

@@ -105,7 +105,8 @@ void main(){
   expect(s,contains('final history=_m684Periods.months(used);'));
   expect(s,contains('final recent=_m684Periods.between('));
   expect(s,contains('final previousRows=_m684Periods.month('));
-  expect(s,contains('_m684Periods.before(monthStart)'));
+  expect(s,contains('monthlyChangePercent:null'));
+  expect(s,isNot(contains('final monthChange=')));
   expect(s,contains('final ids=_m684ScopedEntryIds;'));
   expect(s,contains('return _m684Periods.byIds(ids);'));
   // No persistent app-authority writes or duplicate financial ledger postings.

@@ -100,8 +100,8 @@ def main():
                 "linearGradient id=\"leaf\"", "class WaffraBalanceWavePainter"):
         demand(key in balance,"approved savings cover artwork absent: "+key)
     for key in ("waffra-approved-emerald-balance-card", "waffra-balance-privacy-eye",
-                "إجمالي رصيدك", "monthlyChangePercent:monthChange",
-                "hasPreviousMonthEntries&&previousClosingBalance>0",
+                "إجمالي رصيدك", "monthlyChangePercent:null",
+                "balanceVerified:_m468VerifiedAccountsLoaded",
                 "await refreshVerifiedWidgetBalance()"):
         demand(key in main_text,"data-safe reference balance card missing: "+key)
     demand("test/m268_approved_emerald_balance_card_test.dart" in FILES,

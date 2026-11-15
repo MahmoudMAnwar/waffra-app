@@ -121,14 +121,15 @@ class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {
   }
   final name=TextEditingController(text:item.name);
   final suffix=TextEditingController(text:savedSuffix??'');
+  var clearSavedSuffix=false;
   try{
-   final edited=await showDialog<({String name,String? lastFour})>(
+   final edited=await showDialog<({String name,String? lastFour,bool clearSuffix})>(
     context:context,builder:(ctx)=>StatefulBuilder(
      builder:(ctx,update){
       final candidate=name.text.trim();
       final digits=suffix.text.trim();
       final suffixValid=!bankWithVerifiedSource||
-       (digits.isEmpty&&savedSuffix==null)||
+       (digits.isEmpty&&(savedSuffix==null||clearSavedSuffix))||
        RegExp(r'^[0-9]{4}$').hasMatch(digits);
       return AlertDialog(
        title:Text(t('تعديل بيانات الحساب','Edit account details')),
@@ -152,7 +153,7 @@ class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {
             FilteringTextInputFormatter.digitsOnly,
             LengthLimitingTextInputFormatter(4),
            ],
-           onChanged:(_)=>update((){}),
+           onChanged:(_)=>update((){if(digits.isNotEmpty)clearSavedSuffix=false;}),
            decoration:InputDecoration(
             labelText:t('آخر 4 أرقام للحساب','Account last four digits'),
             hintText:t('أدخل 4 أرقام','Enter 4 digits'),
@@ -162,6 +163,16 @@ class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {
              'القيمة المحفوظة ظاهرة ويمكنك تصحيحها.',
              'The saved digits are displayed and editable.'),
             border:const OutlineInputBorder())),
+          if(savedSuffix!=null)CheckboxListTile(
+           key:const Key('m943-clear-bank-last-four'),
+           contentPadding:EdgeInsets.zero,
+           value:clearSavedSuffix,
+           title:Text(t('مسح آخر 4 أرقام المحفوظة',
+            'Clear saved bank last four digits')),
+           onChanged:(next)=>update((){
+            clearSavedSuffix=next==true;
+            if(clearSavedSuffix)suffix.clear();
+           })),
          ],
         ])),
        actions:[
@@ -171,13 +182,15 @@ class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {
          onPressed:candidate.isEmpty||candidate.runes.length>80||!suffixValid
           ?null:()=>Navigator.pop(ctx,(
            name:candidate,
-           lastFour:bankWithVerifiedSource&&digits.isNotEmpty?digits:null)),
+           lastFour:bankWithVerifiedSource&&digits.isNotEmpty?digits:null,
+           clearSuffix:bankWithVerifiedSource&&clearSavedSuffix&&digits.isEmpty)), 
          child:Text(t('حفظ','Save'))),
        ],
       );
      }));
    if(edited==null)return;
-   if(edited.name==item.name&&edited.lastFour==savedSuffix)return;
+   if(edited.name==item.name&&edited.lastFour==savedSuffix&&
+      !edited.clearSuffix)return;
    if(verified!=null){
     // Revalidate what the user actually reviewed before a witnessed write.
     final latest=await verified.balances();
@@ -189,7 +202,10 @@ class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {
      throw StateError('Bank suffix changed while being edited.');
     }
    }
-   if(bankWithVerifiedSource&&edited.lastFour!=null){
+   if(bankWithVerifiedSource&&edited.clearSuffix){
+    await verified.renameAccountAndClearSuffix(
+     id:item.id,name:edited.name,userConfirmed:true);
+   }else if(bankWithVerifiedSource&&edited.lastFour!=null){
     await verified.renameAccountWithSuffix(
      id:item.id,name:edited.name,lastFour:edited.lastFour!,
      userConfirmed:true);
@@ -287,6 +303,7 @@ class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {
    subtype:choice.subtype??'other',openingMinor:choice.openingMinor,
    createdIso:DateTime.now().toIso8601String(),
    lastFour:choice.lastFour,customSubtypeLabel:choice.customSubtypeLabel,
+   customInstitutionRootId:waffraCustomInstitutionRootForGroup(providerGroup),
    userConfirmed:true);
   final refreshed=await verified.balances();
   final found=refreshed.where((a)=>a.id==newId&&!a.archived).toList();

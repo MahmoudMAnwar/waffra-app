@@ -341,7 +341,10 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
         english:waffraIsEnglish,suggestedProviderId:knownBank,
         suggestedSenderName:sender,suggestedLastFour:suffix));
       if(draft==null||!mounted||!dialog.mounted)return;
-      if(knownBank!=null&&(draft.kind!='bank'||
+      final suggestedInstitution=WaffraSaudiFinancialProviders.byId(knownBank);
+      final suggestedKind=suggestedInstitution?.category==
+       WaffraSaudiFinancialProviders.wallet?'wallet':'bank';
+      if(knownBank!=null&&(draft.kind!=suggestedKind||
          draft.providerId!=knownBank||draft.subtype==null)){
        throw StateError('SMS account must match the verified bank sender');
       }

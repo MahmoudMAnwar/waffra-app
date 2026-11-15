@@ -33,7 +33,19 @@ bool waffraNewAccountMatchesGroup(String? group,WaffraNewAccountDraft draft){
   draft.kind=='bank'&&draft.providerId=='other';
  if(group=='wallet:institution:other')return
   draft.kind=='wallet'&&draft.providerId=='other';
+ if(group.startsWith('bank:account:'))return
+  draft.kind=='bank'&&draft.providerId=='other';
+ if(group.startsWith('wallet:account:'))return
+  draft.kind=='wallet'&&draft.providerId=='other';
  return group=='cash'&&draft.kind=='cash';
+}
+
+/// Extract only account-specific institution roots; the SQLCipher writer
+/// verifies the matching bank/wallet provider and actual active root.
+String? waffraCustomInstitutionRootForGroup(String? group){
+ if(group==null)return null;
+ final match=RegExp(r'^(bank|wallet):account:([^\s]{1,128})$').firstMatch(group);
+ return match?.group(2);
 }
 
 /// A form only: the same verified SQLCipher account API authorizes saving.

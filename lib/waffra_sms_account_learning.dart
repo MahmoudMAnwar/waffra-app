@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'waffra_saudi_financial_providers.dart';
 
 /// Independent from income/expense/transfer classification rules.
 /// Confirmations are saved per verified owner, on device, encrypted.
@@ -40,16 +41,37 @@ abstract final class WaffraSmsAccountLearning {
   return RegExp(r'^[0-9]{4}$').hasMatch(normalized)?normalized:null;
  }
  static String? bankGroup(String text){
-  final n=senderKey(text).replaceAll(RegExp(r'[ _-]'),'');
-  if(n.contains('alrajhi')||n.contains('rajhi')||n.contains('الراجحي'))return 'rajhi';
-  if(n.contains('alinma')||n.contains('alinmah')||
-     n.contains('الانماء')||n.contains('الإنماء'))return 'inma';
-  if(n.contains('snb')||n.contains('alahli')||n.contains('الأهلي')||
-     n.contains('الاهلي'))return 'snb';
-  if(n.contains('riyadbank')||n.contains('بنكالرياض'))return 'riyad';
-  if(n.contains('albilad')||n.contains('البلاد'))return 'bilad';
-  if(n.contains('stcpay')||n.contains('stcbank'))return 'stc';
-  return null;
+  // Only anchored, published institution aliases qualify as *suggestions*.
+  // SMS wording, merchant names and arbitrary substrings never authorize
+  // a new account, suffix association or financial ledger POST.
+  final compact=senderKey(text).replaceAll(RegExp(r'[ _\\-]'),'')
+   .replaceAll('أ','ا').replaceAll('إ','ا').replaceAll('آ','ا')
+   .replaceAll('ى','ي');
+  const aliases=<String,String>{
+   'rajhi':'rajhi','alrajhi':'rajhi','alrajhibank':'rajhi',
+   'الراجحي':'rajhi',
+   'inma':'inma','alinma':'inma','alinmah':'inma','الانماء':'inma',
+   'snb':'snb','alahli':'snb','الاهلي':'snb','البنكالاهليالسعودي':'snb',
+   'riyad':'riyad','riyadbank':'riyad','بنكالرياض':'riyad',
+   'bilad':'bilad','albilad':'bilad','البلاد':'bilad','بنكالبلاد':'bilad',
+   'stcbank':'stc','stcpay':'stc','بنكاستيسي':'stc',
+   'sabb':'sabb','saudiawwalbank':'sabb','البنكالسعودياالاول':'sabb',
+   'البنكالسعوديالاول':'sabb',
+   'anb':'anb','arabnationalbank':'anb','البنكالعربيالوطني':'anb',
+   'bsf':'bsf','banquesaudifransi':'bsf','البنكالسعوديالفرنسي':'bsf',
+   'saib':'saib','saudiinvestmentbank':'saib','البنكالسعوديللاستثمار':'saib',
+   'jazira':'jazira','aljazira':'jazira','bankaljazira':'jazira','بنكالجزيرة':'jazira',
+   'gib':'gib','gulfinternationalbank':'gib','بنكالخليجالدولي':'gib',
+   'vision':'vision','visionbank':'vision','بنكفيجن':'vision',
+   'd360':'d360','d360bank':'d360',
+   'barq':'barq','barqpay':'barq','برق':'barq',
+   'enjazpay':'enjazpay','انجازباي':'enjazpay',
+   'alinmapay':'alinmapay','الانماءباي':'alinmapay',
+  };
+  final id=aliases[compact]??(compact.startsWith('bank')?
+   aliases[compact.substring(4)]:null);
+  // The catalog, not the untrusted SMS sender, is the allowlist.
+  return WaffraSaudiFinancialProviders.byId(id)==null?null:id;
  }
  /// One actual source-verified user confirmation permits exact sender+last4
  /// reuse on subsequent messages; unverified sender-only never does.

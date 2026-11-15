@@ -6,33 +6,29 @@ extension _WaffraHomeDashboardAnalyticsModule on _HomeScreenState {
  Widget dashboard(){
   final scopedEntries=_m467ScopedEntries().toList();
   final unverifiedFxEntries=entries.where(waffraNeedsLegacyFxReview).toList();
-  // Show the month comparison only when there are genuine prior-month
-  // transactions and a positive comparison base. Never show a fake +12%.
-  final nowBalanceDate=DateTime.now();
-  final monthStart=DateTime(nowBalanceDate.year,nowBalanceDate.month);
-  final priorMonthStart=DateTime(nowBalanceDate.year,nowBalanceDate.month-1);
-  final hasPreviousMonthEntries=_m684Periods.month(
-   priorMonthStart.year,priorMonthStart.month).isNotEmpty;
-  final previousClosingBalance=waffraAvailableCash(
-   _m684Periods.before(monthStart),goals);
-  final monthChange=hasPreviousMonthEntries&&previousClosingBalance>0
-   ?((waffraAvailableCash(entries,goals)-previousClosingBalance)/previousClosingBalance)*100:null;
-  // M940: time order is cached once for the authenticated ledger revision.
-  // On search/filter/UI repaint, scan the sorted read-only positions without
-  // re-sorting every account-scoped financial record.
+  // M943: authenticated historical bank closing/opening not available here.
+  // Never render a comparison percentage from unassigned ledger net.
+  // Preserve the M940/M941 shared account-scoped filter policy exactly.
   final transactionFilter=WaffraHomeTransactionFilter(
    search:search,typeFilter:typeFilter,categoryFilter:categoryFilter,
    dateRange:transactionsDateRange,minAmount:minTransactionAmount,
    maxAmount:maxTransactionAmount);
-  final visible=_m684Periods.newestFirst(
-   verifiedEntryIds:_m467SelectedAccount=='all'?null:
-    (_m684ScopedEntryIds??const <String>{}),
-   where:transactionFilter.accepts);
+  final verifiedIds=_m467SelectedAccount=='all'?null:
+   (_m684ScopedEntryIds??const <String>{});
+  final visibleCount=_m684Periods.countNewestFirst(
+   verifiedEntryIds:verifiedIds,where:transactionFilter.accepts);
   final filterCats=<String>{'الكل',...scopedEntries
    .where(transactionFilter.acceptsType).map((e)=>e.category)}.toList();
   final selected=filterCats.contains(categoryFilter)?categoryFilter:'الكل';
-  final shown=visible.take(waffraDashboardTransactionDisplayCount(
-   visible.length,expanded:showAllTransactions)).toList();
+  // Full verified transaction history is materialized only for an explicit
+  // export or an expanded combined activity view, never for the collapsed
+  // Home first page. PDF exports must include all matching transactions.
+  List<MoneyEntry> fullFilteredTransactions()=>
+   _m684Periods.newestFirst(verifiedEntryIds:verifiedIds,where:transactionFilter.accepts);
+  final shown=_m684Periods.pageNewestFirst(
+   verifiedEntryIds:verifiedIds,where:transactionFilter.accepts,offset:0,
+   limit:waffraDashboardTransactionDisplayCount(
+    visibleCount,expanded:showAllTransactions));
   return RefreshIndicator(
    onRefresh:()=>_refreshAndSettle(_dashboardScrollController,0),
    child:NotificationListener<ScrollStartNotification>(
@@ -60,11 +56,10 @@ extension _WaffraHomeDashboardAnalyticsModule on _HomeScreenState {
        pinned:false,
        delegate:WaffraBalanceHeader(
          balance:_m467ShownBalance(),english:waffraIsEnglish,
+         balanceVerified:_m468VerifiedAccountsLoaded,
          heading:waffraIsEnglish?'Total balance':'إجمالي الرصيد',
          compact:true,
-         monthlyChangePercent:_m467SelectedAccount=='all'&&
-          _m467AccountContext==null&& !_m468VerifiedAccountsLoaded?
-          monthChange:null,
+         monthlyChangePercent:null,
          refreshVerifiedWidgetBalance:_refreshWidget)),
       SliverPadding(padding:const EdgeInsets.fromLTRB(14,10,14,96),
        sliver:SliverToBoxAdapter(child:Column(
@@ -213,7 +208,7 @@ extension _WaffraHomeDashboardAnalyticsModule on _HomeScreenState {
              style:const TextStyle(fontSize:19,fontWeight:FontWeight.bold))),
            ]),
            // M689: the financial history and its tools are always mounted.
-            if(waffraCanExpandDashboardTransactions(visible.length)&&
+            if(waffraCanExpandDashboardTransactions(visibleCount)&&
                (!_m468VerifiedAccountsLoaded||
                 (typeFilter!='التحويلات'&&typeFilter!='الادخار'&&
                  typeFilter!='الكل')))
@@ -251,7 +246,7 @@ extension _WaffraHomeDashboardAnalyticsModule on _HomeScreenState {
              onSelected:WaffraHaptics.selection((action){
               if(action=='delete-all')confirmDeleteAllEntries();
               if(action=='restore-transactions')_showVerifiedDeletedTransactions();
-              if(action=='pdf')exportEntriesPdf(visible,'تقرير عمليات وفرة',activityFilter:typeFilter);
+              if(action=='pdf')exportEntriesPdf(fullFilteredTransactions(),'تقرير عمليات وفرة',activityFilter:typeFilter);
              }),
              itemBuilder:(ctx)=>[
               if(_lastFinanceAuthorityRead?.source==
@@ -359,7 +354,7 @@ extension _WaffraHomeDashboardAnalyticsModule on _HomeScreenState {
                 ])).toList(growable:false):
                <WaffraVerifiedGoalMovement>[];
               final history=<({DateTime when,Object activity})>[
-               if(typeFilter=='الكل')for(final e in visible)
+               if(typeFilter=='الكل')for(final e in fullFilteredTransactions())
                 (when:e.date,activity:e),
                for(final t in transfers)
                 (when:DateTime.tryParse(t.occurredIso)??DateTime(1970),
@@ -410,7 +405,7 @@ extension _WaffraHomeDashboardAnalyticsModule on _HomeScreenState {
                   style:const TextStyle(color:Colors.grey,fontSize:12)),
                  const Spacer(),
                  TextButton.icon(onPressed:WaffraHaptics.tap(()=>
-                  exportEntriesPdf(visible,'تقرير عمليات وفرة',
+                  exportEntriesPdf(fullFilteredTransactions(),'تقرير عمليات وفرة',
                    activityFilter:typeFilter)),
                   icon:const Icon(Icons.picture_as_pdf_outlined,size:18),
                   label:WaffraText(waffraIsEnglish?'Export PDF':'تصدير PDF')),
@@ -420,21 +415,21 @@ extension _WaffraHomeDashboardAnalyticsModule on _HomeScreenState {
            if(!_m468VerifiedAccountsLoaded||
               (typeFilter!='الكل'&&typeFilter!='التحويلات'&&
                typeFilter!='الادخار'))...[
-            if(visible.isEmpty)Padding(
+            if(visibleCount==0)Padding(
              padding:const EdgeInsets.symmetric(vertical:26),
              child:WaffraText(waffraIsEnglish?
               'No matching transactions':'ما عندك عمليات مطابقة')),
             ...shown.map(compactTransaction),
-            if(visible.isNotEmpty)Padding(
+            if(visibleCount>0)Padding(
              padding:const EdgeInsets.only(top:7),
              child:Row(children:[
               WaffraText(waffraIsEnglish?
-               'Transactions: ${visible.length}':
-               'عدد العمليات: ${visible.length}',
+               'Transactions: ${visibleCount}':
+               'عدد العمليات: ${visibleCount}',
                style:const TextStyle(color:Colors.grey,fontSize:12)),
               const Spacer(),
               TextButton.icon(onPressed:WaffraHaptics.tap(()=>
-               exportEntriesPdf(visible,'تقرير عمليات وفرة',
+               exportEntriesPdf(fullFilteredTransactions(),'تقرير عمليات وفرة',
                 activityFilter:typeFilter)),
                icon:const Icon(Icons.picture_as_pdf_outlined,size:18),
                label:WaffraText(waffraIsEnglish?'Export PDF':'تصدير PDF')),

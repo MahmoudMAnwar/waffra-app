@@ -2,6 +2,8 @@ part of 'main.dart';
 
 class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
  final double balance;
+ /// False when the Home balance has no authenticated SQLCipher witness.
+ final bool balanceVerified;
  final bool english;
  final String? heading;
  final bool goalWallet;
@@ -12,6 +14,7 @@ class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
  final Future<void> Function() refreshVerifiedWidgetBalance;
  const WaffraBalanceHeader({
   required this.balance,required this.english,this.heading,this.goalWallet=false,this.compact=false,
+  this.balanceVerified=true,
   required this.refreshVerifiedWidgetBalance,this.monthlyChangePercent,
   this.selectedAccountLabel,this.onAccountTap,
  });
@@ -85,8 +88,12 @@ class WaffraBalanceHeader extends SliverPersistentHeaderDelegate {
        bottom:compact?8:44,
        child:Center(child:FittedBox(
         alignment:Alignment.center,fit:BoxFit.scaleDown,
-        child:WaffraCurrencyAmount(balance,fontSize:31-2*progress,
-         color:Colors.white,weight:FontWeight.w800)))),
+        child:balanceVerified?
+         WaffraCurrencyAmount(balance,fontSize:31-2*progress,
+          color:Colors.white,weight:FontWeight.w800):
+         const Text('—',key:Key('m943-unverified-home-balance'),
+          style:TextStyle(fontSize:31,color:Colors.white,
+           fontWeight:FontWeight.w800))))),
       if(validCompare)Positioned(left:18,bottom:14,
        child:Column(crossAxisAlignment:CrossAxisAlignment.start,
         mainAxisSize:MainAxisSize.min,children:[

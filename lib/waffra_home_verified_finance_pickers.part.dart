@@ -42,6 +42,8 @@ extension _WaffraHomeVerifiedFinancePickers on _HomeScreenState {
    // account for that institution can offer a NEW account. Neither sender
    // text nor a suggested bank automatically creates a financial account.
    final knownBank=WaffraSmsAccountLearning.bankGroup(smsSender);
+   final suggestedKind=WaffraSaudiFinancialProviders.byId(knownBank)?.category==
+    WaffraSaudiFinancialProviders.wallet?'wallet':'bank';
    final firstSenderIncomeExpense=knownBank!=null&&candidates.length==1&&
     candidates.single.sourceType=='sms'&&
     candidates.single.notes.trim().isNotEmpty&&
@@ -110,18 +112,18 @@ extension _WaffraHomeVerifiedFinancePickers on _HomeScreenState {
       reviewedIncome?verifiedFacts.destinationSuffix:
        verifiedFacts.sourceSuffix);
      final savedCustomTypes=active.where((account)=>
-       account.kind=='bank'&&account.customSubtypeLabel!=null)
+       account.kind==suggestedKind&&account.customSubtypeLabel!=null)
        .map((account)=>account.customSubtypeLabel!).toSet().toList()..sort();
      final draft=await showWaffraDialog<WaffraNewAccountDraft>(
       context:context,builder:(dialog)=>WaffraNewAccountDialog(
        english:waffraIsEnglish,suggestedProviderId:knownBank,
        suggestedSenderName:smsSender,suggestedLastFour:proposedSuffix,
-       customSubtypeOptions:{'bank':savedCustomTypes}));
+       customSubtypeOptions:{suggestedKind:savedCustomTypes}));
      if(!mounted)return null;
      if(draft!=null){
       // Users may edit the form. Never silently approve a different bank
       // than the reviewed sender or convert a bank SMS to a cash account.
-      if(draft.kind!='bank'||draft.providerId!=knownBank||
+      if(draft.kind!=suggestedKind||draft.providerId!=knownBank||
          draft.subtype==null)throw StateError(
         'New SMS account does not match verified sender institution.');
       final id='m470-sms-'+DateTime.now().microsecondsSinceEpoch.toString();
@@ -129,9 +131,10 @@ extension _WaffraHomeVerifiedFinancePickers on _HomeScreenState {
       final api=WaffraVerifiedAccountsApi(bridge:bridge);
       await api.balances();
       await api.createTypedAccountWithIdentity(
-       id:id,name:draft.name,kind:'bank',providerId:knownBank,
+       id:id,name:draft.name,kind:suggestedKind,providerId:knownBank,
        subtype:draft.subtype!,openingMinor:draft.openingMinor,
-       createdIso:createdIso,lastFour:draft.lastFour,
+       createdIso:createdIso,
+       lastFour:suggestedKind=='bank'?draft.lastFour:null,
        customSubtypeLabel:draft.customSubtypeLabel,userConfirmed:true);
       // A bank account creation is one verified SQLCipher transaction.
       // The later SMS posting is a SEPARATE user-confirmed transaction;
@@ -292,7 +295,9 @@ extension _WaffraHomeVerifiedFinancePickers on _HomeScreenState {
       subtype:draft.subtype??'other',openingMinor:draft.openingMinor,
       createdIso:DateTime.now().toUtc().toIso8601String(),
       lastFour:draft.lastFour,
-      customSubtypeLabel:draft.customSubtypeLabel,userConfirmed:true);
+      customSubtypeLabel:draft.customSubtypeLabel,
+      customInstitutionRootId:waffraCustomInstitutionRootForGroup(selectedGroup),
+      userConfirmed:true);
      accountWasWritten=true;
      final current=await bridge.readVerifiedAccounts();
      final list=current.balances.where((a)=>!a.archived).toList();

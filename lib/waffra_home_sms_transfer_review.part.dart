@@ -125,6 +125,7 @@ extension _WaffraHomeSmsTransferReview on _HomeScreenState {
          subtype:choice.subtype??'other',openingMinor:choice.openingMinor,
          createdIso:DateTime.now().toUtc().toIso8601String(),
          lastFour:choice.lastFour,customSubtypeLabel:choice.customSubtypeLabel,
+         customInstitutionRootId:waffraCustomInstitutionRootForGroup(selectedGroup),
          userConfirmed:true);
         final refreshed=await api.balances();
         final created=refreshed.where((a)=>a.id==createdId&&!a.archived).toList();
