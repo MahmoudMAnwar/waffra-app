@@ -147,4 +147,13 @@ def read_waffra_home_source(root=ROOT, overrides=None):
             "lib/waffra_home_resume_handler.part.dart", " void _m468OnResume(){")
     restore(" // M930: original widgets Home session helper moved without behavioral change.\n",
             "lib/waffra_home_widget_action_routes.part.dart", " void _returnToHome(){")
+    shell_marker = (' // M944: original Home shell moved unchanged to registered same-library part.\\n'
+                    ' @override Widget build(BuildContext context)=>_m944BuildHome();')
+    if source.count(shell_marker) != 1:
+        raise AssertionError('Missing or duplicate M944 Home shell registered delegate')
+    shell = _method(root, 'lib/waffra_home_root_shell.part.dart',
+                    ' Widget _m944BuildHome()=>PopScope(', overrides)
+    source = source.replace(shell_marker, shell.replace(
+        ' Widget _m944BuildHome()=>PopScope(',
+        ' @override Widget build(BuildContext context)=>PopScope(', 1), 1)
     return source
