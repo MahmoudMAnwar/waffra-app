@@ -2307,3 +2307,8 @@ Separate Draft PR stacked on #650. Fix unverified Home balance display; remove u
 
 ## M956 — تعديل الحساب المرتبط بعملية مالية سابقة (15 نوفمبر 2026)
 - **Issue #659 / Draft PR #660:** بعد موافقة المستخدم، تعديل عملية دخل/مصروف يدوية أو SMS مربوطة سابقًا ونقل ارتباطها لحساب سعودي موثق في معاملة SQLCipher واحدة، مع إعادة حساب رصيد الحسابين ومنع التكرار، وعدم تغيير هوية العملية أو مرفقاتها. استحقاق الهدف المدفوع لا يستخدم هذا المسار. الاختبارات والجهاز الفعلي ما زالا بحاجة لاعتماد النتائج.
+
+
+### M968 — CI smoke for stacked PRs (Issue #668, 2026-11-15)
+- M946 was only triggered for pull requests whose base was `main`: stacked Draft PR #667 targeting #665 could therefore show other green checks with **no M946 whole-app smoke**. Its pull-request trigger must cover all bases; preserve main-only push, actual three Flutter smoke groups, exact SHA evidence, M937 reporting and zero skipped/failed policy. Add an executable QA test that prohibits narrowing the trigger again.
+- This is CI wiring only, not a claim of passed M946 on #667 or physical Android, signed APK, SMS, biometric and owner-private archive acceptance.

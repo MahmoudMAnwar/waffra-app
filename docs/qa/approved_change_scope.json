@@ -1,282 +1,33 @@
 {
   "contract_version": 1,
-  "change_id": "M958-ISSUE659-FIX-CI-M495-LINKED-ACCOUNT-UNDO-20261115",
-  "human_scope_review": "Owner provided eight real Android screenshots and explicitly requests correcting historical transaction date edit rejection, comprehensive income/expense edit regression coverage, newest-first native SMS notification ordering, readable all-action bank SMS review, numbered transaction cards, RTL scrollbar inset, no duplicate Goals/Dues count next to All, user-facing renaming of recurring to due dates. This PR is independently branched from main and MUST NOT modify unrelated PR #658, user backups, account-money transfer writers, restored archived data or security gates. Existing linked-account reassignment and editing settled transfer/goal payments REQUIRE a separate atomic writer and are NOT made safe by UI changes. Exact protected source sections and retained tests are enumerated. User has not accepted signed Android visuals yet. M954 owner follow-up requires all SMS to be classified against default and user-created rules before foreground/background/historical review, including nonfinancial OTP automatically excluded with 30-day native durable IDs; finance/transfer/mixed cues remain reviewable, no auto-money posting. Issue #661 tracks this bounded addition to same Draft PR #660. Included only source + regression tests + M550/M385/release docs. M160 exact-head 3105-case long-suite uncovered two obsolete source-string assertions, not a money-writer defect: verified transaction Undo now saves via authenticated per-row edit then reads source back; default SMS exclusions are durable 30-day native records, not transient acknowledge. Extend only those specific tests to assert the new secure paths, preserve 3103 passing cases, release notes after source changes. Integration conflict resolved AFTER #658 was squash-merged to main fc07c1dd98d526cb27c41e16315149b3a53019f5; retain every M952 source, SQLCipher budget/goal and safety test unchanged, while reapplying all 41 M953/M954 approved files and tests. Exact new-head CI required. M955 follow-up on independent branch. M956 owner follow-up explicitly asks to finish #660, including the incomplete existing-linked account edit. Permit one authenticated SQLCipher transaction for prelinked manual/SMS account move with exact ledger source, explicit consent and fallback refusal; device acceptance pending. M958 #660 full CI showed exactly one obsolete M495 string check after implementation of safer account reassignment. Test strengthens the guarded no-Undo contract for both new link and existing linked account move; test remains enabled and no financial writer is altered.",
+  "change_id": "M968-ISSUE668-STACKED-PR-EXACT-HEAD-M946-20261115",
+  "human_scope_review": "Issue #668 follows owner's five-axis #657 request to complete code-side tests. Current PR #667 is stacked on #665 and did not start mandatory M946 because the workflow allowed main-only pull_request bases. Change ONLY that PR trigger, keep main push and all three real smoke shards, exact-head checkout, original tests and report gate untouched. Keep official device and private restore acceptance separate.",
   "user_requested_changes": [
-    "One-row source-verified SQLCipher transaction edit for older historical date/amount/notes/category/budget and safe readback. No reserializing untouched SMS/V24 rows or changing financial ID/receipt/SMS hash; failure re-reads authenticated source.",
-    "Display-only sequential numbering beside all current-filter financial activity cards (income, expense, transfer, savings, due), preserving verified account ordering and existing UI geometry.",
-    "Chronological newest-first notifications using native SMS arrival time and stable tie order, including All/sender filter.",
-    "Readable Done/Edit/Exclude bank SMS decisions and Exclude for unknown nonsensitive messages; preserve OTP exclusion and unverified transfer owner safety.",
-    "RTL scrollbar/text separation in Due/Recurring editor and encrypted backup/restore dialog, preserving original keyboard and buttons.",
-    "Remove redundant counter beside All dropdown in Goals/Dues; filter still carries live count and deleted actions.",
-    "Rename every visible recurring page/footer/Tools/Trash label to الاستحقاقات or الاستحقاق, without renaming saved keys, enums, finance types, or old archives.",
-    "New executable encrypted historical edit, notification/sender widget, source contracts; update only obsolete visual baseline tests, never skip or weaken money/security/regression gates.",
-    "Existing receipt-rollback source contract now verifies source-reloaded error copy and still requires physical cleanup after a failed save, never disables stage cleanup or swallows failures.",
-    "M954 (#661): unify new-app OTP/verification and owner rule matching across native masking, all-queue foreground isolate, on-demand local inspection, and WorkManager before notifications. Safe built-in/user exclusion is durable native 30-day anti-replay, never mere queue acknowledge; completed financial event/transfer and owner-rule-load failures remain fail-closed. Add 15 targeted regression cases and device acceptance.",
-    "Fix exact-HEAD M954 owner exclusion failure by allowing only vetted event phrase 'تفعيل الحساب' in excluded custom rules while retaining a completed-money veto; keep legacy financial-keyword privacy rules unchanged.",
-    "Fix stale M652 numbered-activity source expectation and M221 renamed dues empty-state assertion; new tests must check current approved behaviors rather than legacy map or label.",
-    "Fix M160 stale M684 undo assertion: verify source-witnessed edit Undo and legacy period index invalidation without reintroducing the original historical date edit error.",
-    "Fix M160 stale M462 exclusion assertion: verify native durable exclusion instead of transient acknowledge; keep committed-money and SMS-fingerprint idempotent ack separately and do not weaken 30-day retention.",
-    "M958: repair failing M495 test outdated one-condition Undo expectation following safer M956 atomic existing-linked account move; require Undo suppressed for both account linking and bank move, prevent metadata-only undo of a committed account attribution; no disabling tests."
+    "Run M946 whole-app real Flutter money/experience/safety smoke for pull requests targeting any feature-branch base as well as main, without weakening branch-specific source SHA verification or removing test cases.",
+    "Add a mandatory QA unittest to prevent future main-only trigger regression; retain M937 test evidence and immutable signed-Android/private-backup limitations.",
+    "Document the five-axis CI blind spot and exact declared scope in requirements, source QA behavior contract and release notes without changing application code."
   ],
   "allowed_changed_files": [
-    "docs/WAFFRA_REQUIREMENTS.md",
-    "docs/qa/M953_ANDROID_SCREENSHOT_REPAIR.md",
-    "docs/qa/M954_SMS_RULE_PIPELINE_ACCEPTANCE.md",
+    ".github/workflows/m946-whole-app-feature-smoke.yml",
+    "test/qa/m946_full_app_smoke_matrix_test.py",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
-    "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "lib/main.dart",
-    "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
-    "lib/waffra_approved_notifications.dart",
-    "lib/waffra_auto_sms_autopost.part.dart",
-    "lib/waffra_bank_sms_facts.dart",
-    "lib/waffra_financial_tools.dart",
-    "lib/waffra_footer.dart",
-    "lib/waffra_home_account_tools.part.dart",
-    "lib/waffra_home_category_workflows.part.dart",
-    "lib/waffra_home_compact_activity_cards.part.dart",
-    "lib/waffra_home_dashboard_analytics.part.dart",
-    "lib/waffra_home_entry_sheet.part.dart",
-    "lib/waffra_home_goals_recurring_pages.part.dart",
-    "lib/waffra_home_profile.part.dart",
-    "lib/waffra_home_recurring_workflows.part.dart",
-    "lib/waffra_home_sms_confirmation.part.dart",
-    "lib/waffra_home_sms_management.part.dart",
-    "lib/waffra_home_sms_rules.part.dart",
-    "lib/waffra_i18n.dart",
-    "lib/waffra_recurring_trash.part.dart",
-    "lib/waffra_sms_local_rules.dart",
-    "lib/waffra_sms_saudi_seed_rules.part.dart",
-    "native/WaffraAutoSmsStore.kt",
-    "test/m221_approved_financial_ui_test.dart",
-    "test/m277_ux_accessibility_quality_test.dart",
-    "test/m339_failed_finance_save_receipt_cleanup_test.dart",
-    "test/m462_smart_sms_rule_review_test.dart",
-    "test/m495_pr402_ui_performance_regression_test.dart",
-    "test/m509_all_sender_sms_rescan_dedup_test.dart",
-    "test/m647_m652_financial_activity_regression_test.dart",
-    "test/m672_m678_activity_account_regression_test.dart",
-    "test/m684_finance_period_index_test.dart",
-    "test/m938_goals_restore_fab_contract_test.dart",
-    "test/m953_notifications_actions_and_edit_contract_test.dart",
-    "test/m954_all_sms_rule_routes_regression_test.dart",
-    "test/storage/m953_verified_historical_edit_regression_test.dart",
-    "test/waffra_concept2_final_visual_test.dart"
+    "docs/WAFFRA_REQUIREMENTS.md",
+    "docs/release/WAFFRA_APPROVED_CHANGES.txt"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
   "bounded_sections": {
-    "lib/waffra_approved_notifications.dart": [
+    ".github/workflows/m946-whole-app-feature-smoke.yml": [
       {
-        "start": "  required this.id,required this.sender,required this.preview,",
-        "end": "  // One linear pass and sender-key reuse; no message body parsing in build."
+        "start": "  pull_request:\n",
+        "end": "  push:\n"
       }
     ],
-    "lib/waffra_financial_tools.dart": [
+    "test/qa/m946_full_app_smoke_matrix_test.py": [
       {
-        "start": "     Text(item.scheduled?",
-        "end": "      style:TextStyle(fontSize:12,color:theme.hintColor)),"
-      }
-    ],
-    "lib/waffra_footer.dart": [
-      {
-        "start": "  final labels=english?",
-        "end": "  return labels[i];"
-      }
-    ],
-    "lib/waffra_home_account_tools.part.dart": [
-      {
-        "start": "   title:WaffraText(waffraIsEnglish?'Secure backup':'نسختك الاحتياطية الآمنة',",
-        "end": "    crossAxisAlignment:CrossAxisAlignment.stretch,children:["
-      }
-    ],
-    "lib/waffra_home_category_workflows.part.dart": [
-      {
-        "start": "      'The category and ${affected>0?'its $affected subcategories ':''}will no longer be selectable for new transactions. Existing transactions, recurring references and budgets are kept unchanged.':",
-        "end": "   waffraIsEnglish?'Delete category?':'حذف القسم',"
-      }
-    ],
-    "lib/waffra_home_compact_activity_cards.part.dart": [
-      {
-        "start": "extension _WaffraHomeCompactActivityCards on _HomeScreenState {",
-        "end": " Widget compactTransaction(MoneyEntry entry){"
-      }
-    ],
-    "lib/waffra_home_dashboard_analytics.part.dart": [
-      {
-        "start": "         Row(key:const Key('m674-home-approved-shortcuts'),children:[",
-        "end": "        style:const TextStyle(fontSize:11)),"
-      }
-    ],
-    "lib/waffra_home_entry_sheet.part.dart": [
-      {
-        "start": "  WaffraVerifiedAccountsApi? editAccountLinkApi;",
-        "end": null
-      }
-    ],
-    "lib/waffra_home_goals_recurring_pages.part.dart": [
-      {
-        "start": "     // The independent 3-dot menu contains Deleted/Inactive goal actions.",
-        "end": "      Widget amountLabel(String label,double amount){"
-      }
-    ],
-    "lib/waffra_home_profile.part.dart": [
-      {
-        "start": "    _accountTile(waffraIsEnglish?'Financial calendar':'التقويم المالي',",
-        "end": "     Icons.calendar_month_outlined,onTap:WaffraHaptics.tap(openFinancialCalendar)),"
-      }
-    ],
-    "lib/waffra_home_recurring_workflows.part.dart": [
-      {
-        "start": "     if(historicalSelected)initial.category,",
-        "end": "        waffraRecurringDeleteWarning(r.title,hasHistory,waffraIsEnglish));"
-      }
-    ],
-    "lib/waffra_home_sms_confirmation.part.dart": [
-      {
-        "start": "          (waffraIsEnglish?'Choose money account':'اختيار الحساب المالي'))),",
-        "end": "       const SizedBox(height:12),"
-      }
-    ],
-    "lib/waffra_home_sms_management.part.dart": [
-      {
-        "start": "     kind:noticeKind,",
-        "end": "     amount:sensitive?null:(amount is num?amount.toDouble():null));"
-      }
-    ],
-    "lib/waffra_i18n.dart": [
-      {
-        "start": " 'الادخار': 'Savings',",
-        "end": "  en:'Keep your JSON backup safe. Restore replaces transactions, categories, goals and recurring items.'),"
-      }
-    ],
-    "lib/waffra_recurring_trash.part.dart": [
-      {
-        "start": "   ?'Move “$name” to Deleted Recurring for 30 days. ${hasHistory?'Completed transactions remain in your financial history. ':''}Restoring this schedule does not charge you; it stays paused until you set a new due date.'",
-        "end": "           ?'Permanently delete “${original.title}”? You cannot restore this schedule. Past payments stay in your financial history.'"
-      }
-    ],
-    "test/m277_ux_accessibility_quality_test.dart": [
-      {
-        "start": "  const labelsAr = <String>[",
-        "end": "  for (final width in <double>[320, 393]) {"
-      }
-    ],
-    "test/m672_m678_activity_account_regression_test.dart": [
-      {
-        "start": "     reason:'Only one expanded/live account-history future is needed');",
-        "end": "        isNot(contains(\"WaffraText(waffraIsEnglish?'Income':'الدخل'\")));"
-      }
-    ],
-    "test/m938_goals_restore_fab_contract_test.dart": [
-      {
-        "start": "  expect(page,contains('Icons.more_vert_rounded'));",
-        "end": "  expect(page,contains(\"key:const Key('m938-dues-filter-menu')\"));"
-      }
-    ],
-    "test/waffra_concept2_final_visual_test.dart": [
-      {
-        "start": "    expect(footerSource.contains('static const itemCount=5'),isTrue);",
-        "end": "    expect(source.contains(\"Key('waffra-header-account-entry')\"),isTrue);"
-      }
-    ],
-    "test/m339_failed_finance_save_receipt_cleanup_test.dart": [
-      {
-        "start": "  expect(editor,contains('stagedReceiptCopies.add(copied)'));",
-        "end": "  expect(cleanup,greaterThan(catchPoint));"
-      }
-    ],
-    "lib/main.dart": [
-      {
-        "start": "Map<String,Object?> waffraM632ClassifySmsQueue(",
-        "end": "List<String> splitBankMessages(String raw){"
-      }
-    ],
-    "lib/waffra_sms_local_rules.dart": [
-      {
-        "start": " static WaffraSmsLocalRule? resolveSpecial({",
-        "end": " /// Keep a single safe auto-learned bucket"
-      },
-      {
-        "start": " static bool safeRuleKeyword(String text,String kind)=>",
-        "end": " // Built-in phrases are manually curated"
-      }
-    ],
-    "lib/waffra_bank_sms_facts.dart": [
-      {
-        "start": " static final _pending=RegExp(",
-        "end": " static bool isVerificationChallenge("
-      }
-    ],
-    "lib/waffra_sms_saudi_seed_rules.part.dart": [
-      {
-        "start": " WaffraSmsLocalRule(id:\"sa_expense_155\", name:\"ضيافة\",",
-        "end": "const List<WaffraSmsLocalRule> waffraSaudiSpecialSeedRules ="
-      }
-    ],
-    "native/WaffraAutoSmsStore.kt": [
-      {
-        "start": "    private val otp = Regex(",
-        "end": "    private val action = Regex("
-      }
-    ],
-    "lib/waffra_auto_sms_autopost.part.dart": [
-      {
-        "start": "  final prefs=await SharedPreferences.getInstance();",
-        "end": "  WaffraProductionFinanceAuthorityBinding? binding;"
-      }
-    ],
-    "lib/waffra_home_sms_rules.part.dart": [
-      {
-        "start": "  final special=WaffraSmsLocalRules.resolveSpecial(",
-        "end": "  if(special!=null)return <String,Object?>{"
-      }
-    ],
-    "test/m509_all_sender_sms_rescan_dedup_test.dart": [
-      {
-        "start": "  expect(worker,contains('WaffraAutoSms.acknowledgeCommitted([id])'));",
-        "end": "  expect(nativeMain,contains('\"ackCommittedAutoBankSms\" -> {'));"
-      }
-    ],
-    "test/m221_approved_financial_ui_test.dart": [
-      {
-        "start": " testWidgets('M221 financial tools subscriptions empty state uses real data',",
-        "end": " testWidgets('M221 subscription suggestion opens functional recurring form',"
-      }
-    ],
-    "test/m647_m652_financial_activity_regression_test.dart": [
-      {
-        "start": " test('M652 Home mixes five kinds chronologically without new money writes', () {",
-        "end": " test('M648 transfer shows opposite signed effect on the selected account', () {"
-      }
-    ],
-    "test/m684_finance_period_index_test.dart": [
-      {
-        "start": " test('M684 index invalidation covers insert/edit/delete, restore and reset',(){",
-        "end": null
-      }
-    ],
-    "test/m462_smart_sms_rule_review_test.dart": [
-      {
-        "start": " test('M462 background safely acknowledges verified exclusions',(){",
-        "end": " test('M636 transfers cannot silently post through SMS expense editor',(){"
-      }
-    ],
-    "lib/storage/waffra_verified_encrypted_finance_bridge.dart": [
-      {
-        "start": "import 'waffra_encrypted_finance_ui_patch.dart';",
-        "end": "import 'waffra_encrypted_module_projection_guard.dart';"
-      },
-      {
-        "start": "    ).saveScreenChanges(",
-        "end": "  /// M514 #451: add the FIRST batch"
-      }
-    ],
-    "test/m495_pr402_ui_performance_regression_test.dart": [
-      {
-        "start": " test('M500 #420 Details Edit enables verified retroactive account link',(){",
-        "end": " testWidgets('M499 #416 child picker is disabled without provider, cancel preserves amount',"
+        "start": "    def test_hardware_and_private_backup_are_never_marked_automated_pass(self):",
+        "end": "\n\nif __name__"
       }
     ]
   }
