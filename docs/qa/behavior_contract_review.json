@@ -14,11 +14,11 @@
       "approved_behavior": "Register an EXIT trap in the existing M120 real Flutter-drive runner. Bound adb emulator kill, then stop only the disposable qemu host if still alive, preserve original driver status exactly across cleanup; configure native wait 5s, execute a shell syntax and source regression before emulator boot, retain exact PR SHA, Android test and all original error classifiers.",
       "source_paths": [
         ".github/workflows/m120-android-receipt-cold-reopen.yml",
-        ".github/scripts/run-m120-android-receipt-reopen.sh"
+        ".github/scripts/run-m120-android-receipt-reopen.sh",
+        "integration_test/m120_verified_receipt_reopen_android_test.dart"
       ],
       "test_paths": [
-        "test/qa/m969_m120_emulator_shutdown_test.py",
-        "integration_test/m120_verified_receipt_reopen_android_test.dart"
+        "test/qa/m969_m120_emulator_shutdown_test.py"
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/m120-android-receipt-cold-reopen.yml",
