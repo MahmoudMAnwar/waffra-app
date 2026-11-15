@@ -145,7 +145,7 @@
     "test/m944_home_progressive_window_test.dart": [
       {
         "start": "  expect(q,contains('static const int expandedPageSize=50;'));",
-        "end": "  expect(dashboard,contains("
+        "end": "  expect(dashboard,contains(\n   'limit:min(requestedWindow,_m940LedgerReads.expandedLimit)'));"
       }
     ]
   }
