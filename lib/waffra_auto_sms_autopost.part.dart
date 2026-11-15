@@ -78,10 +78,16 @@ abstract final class WaffraAutoSmsAutoPoster {
     if(facts.kind==WaffraBankOperationKind.uncertain){
      final rule=WaffraSmsLocalRules.resolveSpecial(
       body:body,sender:sender,bankKind:facts.kind,custom:rules);
-     if(rule?.resolvedKind=='excluded'&&rule?.builtIn==false&&
-        (facts.pending||BankParser.parse(body).amount==null)){
-      // Immutable Saudi exclusion hints cannot silently delete SMS in
-      // WorkManager. Only an owner-approved saved rule may do that.
+     final verifiedChallenge=rule?.resolvedKind=='excluded'&&
+       WaffraBankSmsFactsParser.isVerificationChallenge(body);
+     final approvedCustom=rule?.builtIn==false&&
+       (facts.pending||BankParser.parse(body).amount==null);
+     if(rule?.resolvedKind=='excluded'&&
+        (verifiedChallenge||approvedCustom)){
+      // A strictly verified nonfinancial OTP uses the SAME fail-closed
+      // resolver as foreground SMS review. Other built-in exclusions are
+      // NOT silently acknowledged by WorkManager. Owner-custom exclusions
+      // retain their original consent and pending guards.
       if(await WaffraAutoSms.acknowledge([id])){
        summary['excluded']=summary['excluded']!+1;
        continue;
