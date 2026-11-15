@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:drift/drift.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/storage/waffra_account_context_read.dart';
 import 'package:waffra/storage/waffra_accounts_repository.dart';
@@ -22,11 +23,11 @@ void main() {
     try {
       db = WaffraEncryptedStore.openAt(path, key: key);
       await WaffraFreshEncryptedVaultBootstrap(
-        store: db, experimentalEnabled: true,
+        store: db!, experimentalEnabled: true,
       ).initialize(decision: WaffraFirstRunDecision.freshCandidate);
       await WaffraAccountsSchema.install(db);
       final accounts = WaffraAccountsRepository(
-        db: db, experimentalEnabled: true);
+        db: db!, experimentalEnabled: true);
       for (final id in ['bank-a', 'bank-b']) {
         await accounts.createAccount(
           id: id, name: id, kind: 'bank',
@@ -40,7 +41,7 @@ void main() {
           'occurred_iso,receipt_count,source_json) VALUES (?,?,?,?,?,?,0,?)';
       const link = 'INSERT INTO fresh_finance_account_entry_links '
           '(entry_id,account_id,confirmed_iso) VALUES (?,?,?)';
-      await db.transaction(() async {
+      await db!.transaction(() async {
         for (var i = 0; i < 2700; i++) {
           final id = 'm944-' + i.toString().padLeft(5, '0');
           final month = i % 5 == 0 ? '10' : '11';
@@ -49,7 +50,7 @@ void main() {
             insert, [id, id, 'Synthetic', 125, i % 17 == 0 ? 1 : 0,
               date, '{}']);
           if (i % 3 != 2) {
-            await db.customStatement(link, [
+            await db!.customStatement(link, [
               id, i % 3 == 0 ? 'bank-a' : 'bank-b',
               '2026-11-15T00:00:00',
             ]);
@@ -116,15 +117,15 @@ void main() {
       expect(scoped, scopedExpected);
       expect(scoped.toSet().length, scoped.length);
       final november = await WaffraSqlcipherHistoryPager.load(
-        store: db, monthIso: '2026-11', limit: 75);
+        store: db!, monthIso: '2026-11', limit: 75);
       final legacy = await WaffraAccountContextRead.loadMonthEntries(
-        store: db, monthIso: '2026-11', limit: 75);
+        store: db!, monthIso: '2026-11', limit: 75);
       expect(november.entries.map((r) => r.id).toList(),
           legacy.map((r) => r.id).toList());
       expect(
         (await collect(monthIso: '2026-09')).isEmpty, isTrue);
 
-      final countBefore = (await db.customSelect(
+      final countBefore = (await db!.customSelect(
         'SELECT COUNT(*) AS n FROM fresh_finance_entries')
         .getSingle()).read<int>('n');
       final balancesBefore = await accounts.balances();
@@ -132,11 +133,11 @@ void main() {
         store: db!, limit: 0), throwsArgumentError);
       await expectLater(
         WaffraSqlcipherHistoryPager.load(
-          store: db, accountId: 'missing-bank'), throwsStateError);
+          store: db!, accountId: 'missing-bank'), throwsStateError);
       await expectLater(
         WaffraSqlcipherHistoryPager.load(
-          store: db, monthIso: '2026-13'), throwsArgumentError);
-      expect((await db.customSelect(
+          store: db!, monthIso: '2026-13'), throwsArgumentError);
+      expect((await db!.customSelect(
         'SELECT COUNT(*) AS n FROM fresh_finance_entries')
         .getSingle()).read<int>('n'), countBefore);
       expect(await accounts.balances(), hasLength(balancesBefore.length));
@@ -144,11 +145,11 @@ void main() {
         (await accounts.balances()).map((a) => a.balanceMinor).toList(),
         balancesBefore.map((a) => a.balanceMinor).toList());
 
-      await db.close();
+      await db!.close();
       db = null;
       db = WaffraEncryptedStore.openAt(path, key: key);
       final reopened = await WaffraSqlcipherHistoryPager.load(
-        store: db, limit: 43);
+        store: db!, limit: 43);
       expect(reopened.entries.map((e) => e.id).toList(),
           expected.take(43).toList());
     } finally {
