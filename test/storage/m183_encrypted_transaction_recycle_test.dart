@@ -259,6 +259,13 @@ void main() {
       File('${temporary.path}/synthetic.sqlite'),
       key:'m183-synthetic-disposable-key-only',
     );
+    snapshot=WaffraAtomicFinanceSnapshot(
+      store:store,experimentalEnabled:true,
+    );
+    recycle=WaffraEncryptedTransactionRecycle(
+      snapshot:snapshot,writerDirectory:temporary,
+      verifySourceUnderLock:sourceWitness,experimentalEnabled:true,
+    );
     // Reloading SQLCipher after deletion must not repopulate deleted rows or
     // lose other historical income. The recycle is persisted separately.
     expect(await typedCount(),18);
