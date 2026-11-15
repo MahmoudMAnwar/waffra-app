@@ -14,9 +14,21 @@
     "docs/qa/M944_FIVE_AXES_CODE_QA.md",
     "docs/qa/approved_change_scope.json",
     "lib/storage/waffra_sqlcipher_history_pager.dart",
-    "test/storage/m944_sqlcipher_keyset_paging_test.dart"
+    "test/storage/m944_sqlcipher_keyset_paging_test.dart",
+    "lib/storage/waffra_verified_accounts_api.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
-  "bounded_sections": {}
+  "bounded_sections": {
+    "lib/storage/waffra_verified_accounts_api.dart": [
+      {
+        "start": "import 'waffra_accounts_repository.dart';",
+        "end": "/// Production-facing M440 account adapter."
+      },
+      {
+        "start": " /// M684: actual bounded SQL read. No historical ledger mutation.",
+        "end": " /// Attach a past unassigned entry only AFTER"
+      }
+    ]
+  }
 }
