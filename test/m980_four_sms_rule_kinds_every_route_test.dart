@@ -172,10 +172,21 @@ void main() {
     expect(waiting.map((r)=>r['id']).toSet(),
       rows.take(3).map((r)=>r['id']).toSet());
     expect(excluded,[rows[3]['id']]);
-    expect(waiting[0]['local'],isA<Map>());
-    expect((waiting[0]['local'] as Map)['kind'],'income');
-    expect((waiting[1]['local'] as Map)['kind'],'expense');
-    expect((waiting[2]['local'] as Map)['kind'],'transfer');
+    // All four kinds must be MATCHED. A financial category suggestion
+    // remains optional when the independent amount/direction/SAR gates
+    // cannot verify it; do not fabricate a 'local' category in that case.
+    const expected=<String>['income','expense','transfer'];
+    for(var i=0;i<expected.length;i++){
+      final matches=WaffraSmsLocalRules.matchAllFourKinds(
+        body:rows[i]['body'] as String,sender:'MyBank',custom:rules);
+      expect(matches.where((r)=>!r.builtIn)
+        .any((r)=>r.resolvedKind==expected[i]),isTrue);
+      final suggested=waiting[i]['local'];
+      if(suggested!=null){
+        expect(suggested,isA<Map>());
+        expect((suggested as Map)['kind'],expected[i]);
+      }
+    }
     expect(result['committed'],isEmpty);
   });
 
