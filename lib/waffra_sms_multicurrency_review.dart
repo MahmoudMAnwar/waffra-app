@@ -249,8 +249,10 @@ abstract final class WaffraSmsCurrencies {
   /// insufficient evidence. Never includes a balance, fee or second amount.
   /// This parser is a *suggestion* and must not write into the SAR ledger.
   static ({double amount,String currency,String formatted})? originalAmount(
-      String raw) {
-    final found=currenciesForMessage(raw);
+      String raw,{Set<String>? detectedCurrencies}) {
+    // Reuse previously verified source-currency evidence within the same
+    // offline message; old direct callers still perform their own scan.
+    final found=detectedCurrencies??currenciesForMessage(raw);
     if(found.length!=1 || found.contains('UNKNOWN'))return null;
     final currency=found.single;
     final scale=minorDigits(currency);
