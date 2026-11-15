@@ -5,6 +5,7 @@ import 'package:waffra/storage/waffra_encrypted_store.dart';
 import 'package:waffra/storage/waffra_fresh_encrypted_vault_bootstrap.dart';
 import 'package:waffra/storage/waffra_fresh_finance_modules_repository.dart';
 import 'package:waffra/storage/waffra_accounts_repository.dart';
+import 'package:waffra/storage/waffra_accounts_schema.dart';
 
 /// M949: NEW category -> goal -> recurring transitions, not primitive CRUD repeats.
 void main(){
@@ -47,6 +48,7 @@ void main(){
   await WaffraFreshEncryptedVaultBootstrap(
    store:db,experimentalEnabled:true).initialize(
     decision:WaffraFirstRunDecision.freshCandidate);
+  await WaffraAccountsSchema.install(db);
   for(final id in ['bank','wallet']){
    await accounts().createAccount(id:id,name:id,kind:id=='bank'?'bank':'wallet',
     openingMinor:id=='bank'?100000:50000,
