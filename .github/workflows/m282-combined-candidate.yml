@@ -39,7 +39,7 @@ jobs:
           from pathlib import Path
           sources = {
               'M274': ('test/m274_responsive_ui_journeys_test.dart',''),
-              'M275': ('lib/main.dart','WaffraSmoothConfirmationOverlay('),
+              'M275': ('lib/waffra_smooth_confirmation.dart','class WaffraSmoothConfirmationOverlay'),
               'M276': ('tool/performance/m276_finance_microbench_test.dart',''),
               'M277': ('lib/main.dart','minimumSize:const Size(64,48)'),
               'M278': ('test/m278_system_bars_responsive_matrix_test.dart',''),
@@ -51,6 +51,12 @@ jobs:
               f=Path(path)
               if not f.is_file() or (marker and marker not in f.read_text()):
                   raise SystemExit(f'{milestone}: actual production source missing: {path}')
+          # A refactor may move a component out of main.dart, but must NOT
+          # disconnect the real Home saving indicator or cancel its tests.
+          main=Path('lib/main.dart').read_text()
+          if ("import 'waffra_smooth_confirmation.dart';" not in main or
+              'WaffraSmoothOperationController _saveProgress=' not in main):
+              raise SystemExit('M275 confirmation overlay disconnected from Home')
           for path in (
               'lib/waffra_smart_features.dart',
               'lib/waffra_practical_ledger_engine.dart',
