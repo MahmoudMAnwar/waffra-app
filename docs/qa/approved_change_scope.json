@@ -1,116 +1,50 @@
 {
   "contract_version": 1,
-  "change_id": "M967-ISSUE666-OLD-SMS-PREWARM-SOURCE-CONTRACTS-20261115",
-  "human_scope_review": "Owner explicitly requires finishing code-side architecture for the five axes #657. After #658 merged and Draft #665 M955-M963 source-based integration, this stacked Issue #666 tranche moves only four pure Home helper methods to one registered same-library part: SMS session epoch guard, owner-scoped display key, immutable period-index accessor, SMS rule owner key. Preserve exact method contents, lifecycle callbacks, finance writer, SQLCipher source, SMS rules, original UI/FAB/Snackbar, original backup and physical device. Update exact tested extraction scope without weakening M385/M550. No claim whole five axes 100%. M965 finishes the two remaining nonlistener Home helpers requested in Issue #666: finance-period invalidation and memoized native SMS permission future. Extract unchanged method bodies to existing same-library part, leave field storage, owner session and callbacks in State. Update old M528/M940/M964 source contracts and a new M965 registration without disabling tests; guard bounded main.dart and test edits. M966: real in-progress exact-head full Flutter logs discovered M624/M548/M622 stale source assertions checking the SMS session-epoch helper body only in reconstructed main.dart. M964 moved its exact original body into the registered same-library part. Correct old tests to attest the actual helper file while still proving owner guard and post-frame scheduling; add only missing M624/M548 tests to M946 because M622 already registered. No runtime change or disabled test. M967 proactive search after real M966 failures found three more obsolete source-extraction assertions in M623/M631/M632 expecting the session epoch predicate in inlined main.dart. Preserve all tests, assert real registered Dart-part predicate source without changing any production behavior. M623 already exists in M946 so add only M631 and M632 as separate experience feature.",
+  "change_id": "M973-ISSUE671-SMS-REVIEW-OWNER-INDEX-20261115",
+  "human_scope_review": "Issue #671 under owner-approved five axes #657: remove a completed SMS ID from only indexed owning sender groups after authoritative pending-queue disappearance. Handle duplicate ID across groups and empty groups, retain all grouped full IDs, sender selection, native encrypted bulk exclusions and no auto-post. Only 2 SMS presentation files plus M946 test, requirements, release notes and strict QA metadata. Zero bank/SQLCipher writes, widget geometry or real Android/backup claims.",
   "user_requested_changes": [
-    "Extract the four non-mutating Home State helper methods into one registered Dart part with identical source and owner/session semantics, no financial writes or UI changes.",
-    "Retain listener-bound SMS callback, State init/dispose, verified money and entry-history cache invalidation in their original lifecycle owner.",
-    "Add a mandatory exact-HEAD source-contract regression through existing M946 experience shard and preserve old first-frame, owner rule and 50-card tests.",
-    "M965: finish Issue #666 extraction of finance-ledger display-index invalidation and the session-scoped native SMS permission future into the Home same-library helpers, with original method signatures and source operations unchanged.",
-    "M965: preserve old M940/M528/M964 assertions by asserting moved method definitions inside the registered library part, retaining source index invalidation, SMS permissions, callback lifecycle and prior test coverage.",
-    "M966 fix three exact-head full-Flutter regression failures caused by stale source checks after moving the original SMS session epoch guard to a registered Dart part, checking the real implementation rather than reintroducing duplicate methods.",
-    "M967: verify relocated exact Home/SMS post-frame session epoch guard through three additional original prewarm/Android review source tests, preserving the guard and real full Flutter behavior."
+    "Continue the five Waffra axes, prioritize code-only performance and robust functional regression; keep physical device and private V3 restore separate.",
+    "Single reviewed SMS should update only its owning sender group(s), not rescan all sender groups, after authenticated queue confirms it is absent.",
+    "Preserve duplicate legacy SMS IDs across sender groups, complete bulk selection and 30-day native exclusion semantics, original SMS and UI.",
+    "Register a nonduplicate 2000-row behavior/source regression in mandatory M946 experience and retain M385/M550 strict exact-head gates."
   ],
   "allowed_changed_files": [
-    "lib/main.dart",
-    "lib/waffra_home_state_core_helpers.part.dart",
-    "test/m964_home_state_pure_helpers_extraction_test.dart",
-    "scripts/qa/m946_full_app_smoke_matrix.py",
+    "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
-    "docs/WAFFRA_REQUIREMENTS.md",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "test/m940_m941_home_ledger_pagination_test.dart",
-    "test/m528_settings_async_cache_regression_test.dart",
-    "test/m965_home_state_cache_lifecycle_extraction_test.dart",
-    "test/m624_deferred_sms_after_verified_home_test.dart",
-    "test/m548_review_grouping_and_signup_perf_test.dart",
-    "test/m622_immediate_home_without_loader_test.dart",
-    "test/m623_verified_home_handoff_no_black_frame_test.dart",
-    "test/m631_verified_finance_prewarm_test.dart",
-    "test/m632_sms_account_splash_isolate_contract_test.dart"
+    "lib/waffra_sms_review_groups.dart",
+    "lib/waffra_home_sms_inbox.part.dart",
+    "scripts/qa/m946_full_app_smoke_matrix.py",
+    "test/m973_sms_review_group_owner_index_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
   "bounded_sections": {
-    "lib/main.dart": [
+    "lib/waffra_sms_review_groups.dart": [
       {
-        "start": "part 'waffra_home_ledger_query.part.dart';",
-        "end": "part 'waffra_deleted_item_card.part.dart';"
+        "start": "class WaffraSmsReviewGroups {",
+        "end": " factory WaffraSmsReviewGroups.from("
       },
       {
-        "start": " Future<void>? _m630PostFrameFinanceWork;",
-        "end": " // A signout must not close SQLCipher while a Home load still owns a read."
+        "start": "  final bySender=<String,List<Map<String,Object?>>>{};",
+        "end": "  final senders=bySender.keys.toList()"
       },
       {
-        "start": " bool _m468AccountReadAgain=false;",
-        "end": " // Concurrent save, transfer, resume and refresh events share one account read."
-      },
+        "start": "  return WaffraSmsReviewGroups._(bySender,senders,ownersById);",
+        "end": "  return WaffraSmsReviewGroups._(bySender,senders,ownersById);"
+      }
+    ],
+    "lib/waffra_home_sms_inbox.part.dart": [
       {
-        "start": " int? _m945UnifiedHistoryCount;",
-        "end": " final namedBudgets=<WaffraNamedBudget>[];"
-      },
-      {
-        "start": " final List<Map<String,Object?>> _autoSmsPending=<Map<String,Object?>>[];",
-        "end": " // M741: original local SMS rule and learning methods moved to registered same-library part."
-      },
-      {
-        "start": " // M528: stable permission/consent futures across unrelated profile repaints.",
-        "end": " String? _accountOpenSection;"
+        "start": "if(!_autoSmsPending.any((row)=>row['id']==id)){",
+        "end": "selectedIds.remove(id);"
       }
     ],
     "scripts/qa/m946_full_app_smoke_matrix.py": [
       {
         "start": "FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {",
-        "end": "# Must remain listed; CI cannot pretend that unit/widget tests prove these."
-      }
-    ],
-    "test/m940_m941_home_ledger_pagination_test.dart": [
-      {
-        "start": "  final main=File('lib/main.dart').readAsStringSync();",
-        "end": "  expect(dash,contains('where:transactionFilter.accepts'));"
-      }
-    ],
-    "test/m528_settings_async_cache_regression_test.dart": [
-      {
-        "start": "  final state=between('bool protectRecentApps=true;','String? _accountOpenSection;');",
-        "end": "  expect(state,isNot(contains('_m528CloudConsentFuture')));"
-      }
-    ],
-    "test/m624_deferred_sms_after_verified_home_test.dart": [
-      {
-        "start": "  expect(startup,contains('if(!activeOwner||!_m630SmsSessionCurrent(startupEpoch))return;'));",
-        "end": "  expect(startup.indexOf('final activeOwner=(await widget.onVerifiedHomeSmsResume?.call())??true;'),"
-      }
-    ],
-    "test/m548_review_grouping_and_signup_perf_test.dart": [
-      {
-        "start": "  expect(refresh,contains('if(!_m630SmsSessionCurrent(smsEpoch))return;'));",
-        "end": "  expect(refresh,contains('WaffraAutoSms.pendingChecked()'));"
-      }
-    ],
-    "test/m622_immediate_home_without_loader_test.dart": [
-      {
-        "start": "  expect(startup,contains('if(!_m630SmsSessionCurrent(startupEpoch))return;'));",
-        "end": "\n });\n}"
-      }
-    ],
-    "test/m623_verified_home_handoff_no_black_frame_test.dart": [
-      {
-        "start": "  expect(homeLoader,contains('if(!_m630SmsSessionCurrent(startupEpoch))return;'));",
-        "end": "  expect(homeLoader,contains('await _refreshAutoSmsInbox(importMonth:!_autoSmsHistoryComplete)'));"
-      }
-    ],
-    "test/m631_verified_finance_prewarm_test.dart": [
-      {
-        "start": "  expect(load,contains('if(!_m630SmsSessionCurrent(startupEpoch))return;'));",
-        "end": "  expect(load,contains('_m630PostFrameFinanceWork=postFrameFinance;'));"
-      }
-    ],
-    "test/m632_sms_account_splash_isolate_contract_test.dart": [
-      {
-        "start": "  expect(refresher,contains('if(!_m630SmsSessionCurrent(smsEpoch))return;'));",
-        "end": "  expect(refresher,contains('WaffraAutoSms.pendingChecked()'));"
+        "end": "    \"m967_verified_preload_and_sms_isolate_session_gate\""
       }
     ]
   }
