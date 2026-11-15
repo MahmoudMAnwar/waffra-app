@@ -2215,3 +2215,11 @@ Separate Draft PR stacked on #650. Fix unverified Home balance display; remove u
 - فصل محرر المتكررة وحساب موعدها وإجراءات الهدف المرتبط (304 أسطر مطابقة) إلى `waffra_home_recurring_workflows.part.dart`، وإبقاء Goals/Recurring UI الأصلي في ملف الصفحات.
 - تحديث اختبار Dart/Python لإعادة تركيب المصدر الأصلي ومراجعة الاختبارات القديمة؛ بدون إزالة أو تعطيل أي حارس أموال أو بيانات، وبدون تعديل شكل القوالب المعتمدة.
 - الحالة: **Partial** لحين اجتياز CI على أحدث SHA؛ فصل الحقول المشتركة العشوائي أو نسخ الحالة في Controllers ثانية ليس هدفًا بحد ذاته وقد يسبب أخطاء رصيد/Logout.
+
+### M945 — Owner finance archive and approved Goals/Dues/Home UI (#653, Draft #654)
+- Preserve 19 authenticated restored transaction identities, including two income entries, after a twentieth manual expense is committed. Never recreate, drop or double-charge historical entries; old unattached account history stays visible in All accounts until the user explicitly assigns it.
+- On confirmed source-authorized manual/SMS append, invalidate the Home monthly read index; after manual commit refresh verified balances and account context. Restore/rollback must not display stale totals.
+- Goals and Dues filters each use one count-labelled drop-down with all date/status options, no duplicated filter icon. Goals three-dot menu includes Deleted only, while inactive and incomplete remain in the drop-down.
+- Use original SAMA Saudi Riyal artwork for Goals/Dues financial amounts. Dues keeps linked goal, recurring editing, reminders and deleted access, adds a gold total/active/count strip and a purposeful zero-state Add due button without changing the global +.
+- Home shows one Show more/less control inside the search/filter/more toolbar; read-only combined finance/transfer/savings history remains progressively rendered in 50-card windows.
+- Release acceptance requires same-commit CI and independent decrypted owner archive validation on an expendable Android handset; no private password or archive is committed.
