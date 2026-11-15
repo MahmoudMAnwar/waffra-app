@@ -1,3 +1,11 @@
+## M953 — Verified nonfinancial OTP exclusions for unfamiliar apps (Issue #662, after PR #658; 2026-11-15)
+
+- **Scope and lineage:** continue M952's five-axis Issue #657 in a separate stacked Draft PR, without reopening #658's first-tranche source changes. Six new direct executable tests are in `test/m953_new_app_otp_exclusion_test.dart` and required M946 experience smoke.
+- **New-app verification:** recognize bounded English `login code`, `sign-in code`, `authentication code`, `access code` and Arabic `رمز المصادقة` / `كود التحقق` etc. Apply a conservative built-in exclusion for genuine security challenges only when no independently completed bank debit/transfer is evidenced.
+- **Background parity:** foreground review and WorkManager use the same special-rule resolver; verified nonfinancial OTPs may be acknowledged in the native review queue even while the app is closed, while prior approved owner-custom exclusion guards remain. An ACK failure retains the pending message.
+- **Never auto-post:** OTP rules cannot hold a bank account, spend money, assume a source identity, update SQLCipher, restore a private archive or modify the Home/Goals/Recurring and Snackbar/+ layouts.
+- **Release gates:** source changes and tests committed, but exact-head CI, actual Android SMS/notifications, physical layout, owner account balances and private legacy backup restoration still require separate confirmation. This tranche does NOT complete all 20 improvement candidates.
+
 ## M952 — Proactive Financial Reliability & Code Hardening: المحاور الخمسة (2026-11-15)
 
 - **Issue:** [#657](https://github.com/MahmoudMAnwar/waffra-app/issues/657). **Draft:** [PR #658](https://github.com/MahmoudMAnwar/waffra-app/pull/658). The latest user-requested plan has **five axes and 20 proposed improvements**; these are NOT the older M944 five axes. Do not mark the entire plan done from the first tranche.
