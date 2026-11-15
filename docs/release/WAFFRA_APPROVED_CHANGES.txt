@@ -943,3 +943,6 @@ M954 #660 M160 3105-case full-suite regression correction (2026-11-15, unrelease
 
 [M958 CI CONTRACT — PR #660]
 - The failing M495 linked-account edit regression now verifies that metadata-only Undo is suppressed for both newly linked historical entries and verified account-to-account moves, including the actual Undo callback. Existing normal metadata Undo remains. No financial writer, old backup, SMS receipt, or app UI style changed in this test-only CI repair.
+
+[M968 / #668] Prevent silent omission of mandatory M946 whole-app exact-head Flutter tests for stacked PRs based on feature branches: remove main-only pull_request filter while keeping push-main, 3 shards, reports and all safety gates; regression test added. Source/app money and UI unchanged; handset and owner historic backup NOT certified.
+[M968 / #668] Also trigger unchanged M550/M385 behavior and source-boundary gate for stacked PRs with non-main base; QA source test covers both M946/M550, no check disabled.
