@@ -1,12 +1,37 @@
 {
   "schema_version": 1,
-  "pr": "M984 Draft — three-dot SMS/paid-due calendar and RTL sender swipe (#695)",
-  "issue": "Issue #695, owner exact SMS calendar/sender UX after merged #690",
+  "pr": "M982 rebase Draft — owner-encrypted Android Worker exclusion bridge (#687, after #696)",
+  "issue": "Issue #687 / #683 / five axes #657, old Draft #688 replaced due QA conflict",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at f0def360ea75b9c865548b6f1b4fc07e9640f2c2 after #656",
   "reviewed_at": "2026-11-15",
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
+    {
+      "id": "M982-REBASED-MISSING-BACKGROUND-EXCLUDE-AUTOSMS-CHANNEL",
+      "issue": "Issues #687 / #657",
+      "previous_behavior": "The independent Dart background SMS poster invokes excludeAutoBankSms when a custom or default rule matches excluded, but Android Worker returned MethodChannel notImplemented despite the same native method working in MainActivity; background could leave messages pending and re-notify.",
+      "approved_behavior": "Add `excludeAutoBankSms` branch on Worker to call existing `WaffraAutoSmsStore.excludeMessages(context, ids)` with List<String> parsed as Set<String>. Owner session + exact SMS SHA256 fingerprint + encrypted exclusion and 30-day label persisted via pre-existing verified store only. No finance ACK, no original SMS logging, no sender-wide block, no new network, no change to four-way M980 classifier, M983 editor, or M984 calendar.",
+      "source_paths": [
+        "native/WaffraAutoSmsWorker.kt"
+      ],
+      "test_paths": [
+        "test/m982_background_sms_exclusion_bridge_test.dart",
+        "test/m980_four_sms_rule_kinds_every_route_test.dart",
+        "test/m954_all_sms_rule_routes_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m946-whole-app-feature-smoke.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m417-automatic-bank-sms-opt-in.yml"
+      ],
+      "safety_invariants": [
+        "No background store exclusion can call acknowledgeCommitted, financial SQLCipher writer or transfer ACK.",
+        "Exact previously owner-authenticated pending SMS native IDs only; malformed, stale-owner, oversized batches fail closed in unchanged store.",
+        "Matching user/default excluded rules cannot be treated as bank debit/credit or posted financial activity.",
+        "Source-build green cannot replace two-phone real SMS background and RTL/manual UAT."
+      ]
+    },
     {
       "id": "M984-SMS-DAY-INDEX-COLORED-CAPPED-DOTS-RTL-SENDER-SWIPES",
       "issue": "Issue #695 / five axes #657",

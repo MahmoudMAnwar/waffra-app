@@ -21,6 +21,10 @@ GROUPS = ("money", "experience", "safety")
 # Each user-facing capability has a real runnable suite. Tests can be reused
 # across capabilities; the runner de-duplicates within each CI shard.
 FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {
+    "m982_rebased_owner_background_sms_exclusion_bridge": ("safety", (
+        "test/m982_background_sms_exclusion_bridge_test.dart",
+        "test/m980_four_sms_rule_kinds_every_route_test.dart",
+        "test/m954_all_sms_rule_routes_regression_test.dart")),
     "m984_sms_received_calendar_dots_and_rtl_sender_swipe": ("experience", (
         "test/m984_sms_calendar_dots_sender_swipe_test.dart",
         "test/m983_sms_direct_kind_prefill_refresh_test.dart",
