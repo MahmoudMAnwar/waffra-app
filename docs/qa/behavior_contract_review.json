@@ -1,12 +1,34 @@
 {
   "schema_version": 1,
-  "pr": "M975 Draft — verified recurring due paid-ID source cache (#675, #657)",
-  "issue": "Issue #675, five-axis Issue #657, stacked on #674/#672",
+  "pr": "M976 Draft — defer offscreen Goals/Dues card construction (#677, #657)",
+  "issue": "Issue #677, five-axis Issue #657, stacked on #676",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at f0def360ea75b9c865548b6f1b4fc07e9640f2c2 after #656",
   "reviewed_at": "2026-11-15",
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
+    {
+      "id": "M976-APPROVED-GOAL-DUE-LAZY-WIDGET-CARD-BUILDER",
+      "issue": "Issues #677 and #657",
+      "previous_behavior": "Both Goal and Recurring ListView(children: [...rows.map((r){...full Card widget...})]) eagerly construct every card widget subtree during page rebuild even when outside viewport, increasing first-frame work on restored histories.",
+      "approved_behavior": "Retain approved ListView and every card's existing Card content, exact keys, money/SMS callbacks, date/filter order, RTL, FAB and Snackbar, but supply a lightweight Builder per item. The sliver instantiates actual card content only when its Builder child is mounted for display. No SQLCipher source, writer, backup, status logic or navigation changed.",
+      "source_paths": [
+        "lib/waffra_home_goals_recurring_pages.part.dart"
+      ],
+      "test_paths": [
+        "test/m976_lazy_goal_due_cards_viewport_test.dart",
+        "test/m665_goal_due_display_and_linked_edit_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m946-whole-app-feature-smoke.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "No transaction/account/goal_due posting or receipt mutation, original Card keys/handlers preserved.",
+        "Avoid modifying the design of Goals/Recurring, fixed add FAB, Snackbar, dropdowns and approved RTL layout.",
+        "No claim of actual Android phone FPS, private backup UAT, signed APK or original live SMS from host-only viewport tests."
+      ]
+    },
     {
       "id": "M975-RECURRING-DUE-SNAPSHOT-ID-SET-PARITY",
       "issue": "Issues #675 and #657",

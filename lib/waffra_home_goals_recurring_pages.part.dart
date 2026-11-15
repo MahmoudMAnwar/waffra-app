@@ -156,7 +156,7 @@ extension _WaffraHomeGoalsRecurringPagesModule on _HomeScreenState {
       ),
      ],
      const SizedBox(height:12),
-     ...ordered.map((g){
+     ...ordered.map((g)=>Builder(builder:(_){
       final percent=g.target<=0?0.0:(g.saved/g.target).clamp(0.0,1.0);
       final storedAccount=activeAccountById.matches(g.accountId);
       final accountName=storedAccount.length==1?storedAccount.single.name:
@@ -227,7 +227,7 @@ extension _WaffraHomeGoalsRecurringPagesModule on _HomeScreenState {
           ]),
          ]))),
       );
-     }),
+     })),
      if(goals.isEmpty)Padding(padding:const EdgeInsets.all(28),
       child:Column(children:[
        const Icon(Icons.track_changes_rounded,size:48,color:emerald),
@@ -398,7 +398,7 @@ extension _WaffraHomeGoalsRecurringPagesModule on _HomeScreenState {
         border:OutlineInputBorder(borderRadius:BorderRadius.circular(14)))),
      ],
      const SizedBox(height:14),
-     ...shown.map((r){
+     ...shown.map((r)=>Builder(builder:(_){
       final linked=linkedGoalById.matches(r.linkedGoalId);
       final goal=linked.isEmpty?null:linked.single;
       final due=goal==null?dueFor(r):r.startAt;
@@ -551,7 +551,7 @@ extension _WaffraHomeGoalsRecurringPagesModule on _HomeScreenState {
          ],
         ])),
       );
-     }),
+     })),
      if(recurring.isEmpty)Card(
       key:const Key('m945-dues-empty-state'),
       elevation:0,color:Theme.of(context).cardColor,
