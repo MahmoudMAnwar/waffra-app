@@ -877,3 +877,9 @@ M940/M941 Draft PR #648 M486 regression correction (unreleased): coalesced futur
 [M952 REVIEWED AFTER APPLICATION COMMIT 6d2f2ca70f33 — 2026-11-15]
 - Reviewed the exact bank SMS inbox source change: full sender-ID caches are invalidated after explicitly confirmed individual review and after successful native batch exclusion, without altering financial writer, native SMS deletion or existing app UI.
 - Confirmed new M937 report strictness is QA-only (duplicate run/suite and missing provenance blocked). Real Android and private archive checks remain pending; this is not a release approval.
+
+[M952 FIVE-AXIS FOLLOW-UP / Issue #657 / Draft #658 — 2026-11-15]
+- **Reviewed app source through 9979e0a753ad**: Account-ready reads now require the existing read-only finance-domain table/revision checker to succeed before accepting the original three account tables and FK checks. Synthetic encrypted tests cover missing goal-wallet table and changed domain revision. Financial writer, historic backup source, account opening, bank transfer and balances are unchanged.
+- **Performance**: The bank-SMS review dialog retains all message IDs in memoized sender/full-selection lists, invalidating after confirmed review or native exclusion only. Display remains windowed to 100 cards, and original SMS plus approved UI anchors are unchanged.
+- **Proactive tests**: M937 JSON runner diagnostics reject duplicate start/suite events and missing suite provenance; additional hostile-test regressions. No original tests disabled or skipped into green.
+- **Unfinished**: other 20-point improvements, live handset performance, real archive restore compatibility and every exact-head CI result remain pending. This text is a change log, not release approval.
