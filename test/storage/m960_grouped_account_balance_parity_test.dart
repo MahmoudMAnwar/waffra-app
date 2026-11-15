@@ -146,7 +146,7 @@ ORDER BY a.created_iso,a.account_id
       expect((await seeded.customSelect(
         "SELECT COUNT(*) AS n FROM fresh_finance_internal_transfers")
         .getSingle()).read<int>('n'),12);
-      await db.close();
+      await seeded.close();
       db=WaffraEncryptedStore.openAt(file,key:key);
       final reopened=WaffraAccountsRepository(
         db:db!,experimentalEnabled:true);
