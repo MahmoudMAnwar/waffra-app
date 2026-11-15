@@ -2,7 +2,8 @@ name: M946 Whole-App Feature and Cross-Link Smoke
 
 on:
   pull_request:
-    branches: [main]
+    # M968 / #668: run the exact-head full-app smoke for stacked PRs too.
+    # Main-only filtering silently omitted M946 for PRs based on feature refs.
     types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches: [main]

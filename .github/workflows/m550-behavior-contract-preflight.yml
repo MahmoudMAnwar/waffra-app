@@ -2,7 +2,7 @@ name: M550 Every-PR Behavior and Test Contract Preflight
 
 on:
   pull_request:
-    branches: [main]
+    # M968 / #668: protect feature-base stacked PR heads with M385/M550 too.
     types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 

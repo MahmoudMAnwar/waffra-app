@@ -2384,3 +2384,10 @@ Separate Draft PR stacked on #650. Fix unverified Home balance display; remove u
 - سجل PR #665 عند SHA acbed078 أثبت نجاح اختبار SQLCipher/Receipt Cold Reopen على المحاكي، ثم توقف Android Emulator Runner أثناء مرحلة إغلاق المحاكي حتى ألغي الـWorkflow بعد 45 دقيقة. نجاح الاختبارات المنفّذة لا يُحوِّل Workflow ملغى إلى Passed.
 - إغلاق QEMU المرحلي أصبح من داخل سكربت M120 مع ADB timeout قصير، وإشارة إنهاء ثم إيقاف قسري للمحاكي المؤقت فقط عند الحاجة، واستعادة رمز خروج اختبار Flutter الأصلي بالكامل، بما في ذلك الفشل.
 - الاختبار الجديد في CI يفحص سكربت التنفيذ، حالة الخروج، وربط اختبار Android الحقيقي؛ لا تُعطّل حواجز SQLCipher أو الاستعادة أو M385/M550. التحقق على جهاز المستخدم وأرشيفه الخاص ما زال مستقلًا ومطلوبًا.
+
+
+### M968 — CI smoke for stacked PRs (Issue #668, 2026-11-15)
+- M946 was only triggered for pull requests whose base was `main`: stacked Draft PR #667 targeting #665 could therefore show other green checks with **no M946 whole-app smoke**. Its pull-request trigger must cover all bases; preserve main-only push, actual three Flutter smoke groups, exact SHA evidence, M937 reporting and zero skipped/failed policy. Add an executable QA test that prohibits narrowing the trigger again.
+- This is CI wiring only, not a claim of passed M946 on #667 or physical Android, signed APK, SMS, biometric and owner-private archive acceptance.
+
+- M968 follow-up: extend the same stacked-PR base-agnostic trigger to M550 exact-HEAD M385 scope/behavior preflight; both M946 and M550 are mandatory and remain unmodified beyond their PR event filters.

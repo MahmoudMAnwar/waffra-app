@@ -46,5 +46,35 @@ class FullAppSmokeMatrixTest(unittest.TestCase):
         self.assertIn("sms", limitations)
 
 
+    def test_stacked_feature_branch_pr_runs_real_three_shard_ci(self):
+        workflow = (ROOT / ".github/workflows/m946-whole-app-feature-smoke.yml"
+                    ).read_text(encoding="utf-8")
+        self.assertIn("  pull_request:\n", workflow)
+        pr_trigger = workflow.split("  pull_request:\n", 1)[1].split(
+            "  push:\n", 1)[0]
+        self.assertIn(
+            "    types: [opened, synchronize, reopened, ready_for_review]",
+            pr_trigger,
+        )
+        # Any feature-branch base must be included, not just PRs to main.
+        self.assertNotIn("branches:", pr_trigger)
+        self.assertNotIn("branches-ignore:", pr_trigger)
+        self.assertIn("  push:\n    branches: [main]", workflow)
+        self.assertIn("group: [money, experience, safety]", workflow)
+        self.assertIn("github.event.pull_request.head.sha || github.sha", workflow)
+        self.assertIn("--file-reporter", workflow)
+        self.assertIn("m937_flutter_test_report.py", workflow)
+        behavior = (ROOT / ".github/workflows/m550-behavior-contract-preflight.yml"
+                    ).read_text(encoding="utf-8")
+        preflight_trigger = behavior.split("  pull_request:\n", 1)[1].split(
+            "  workflow_dispatch:\n", 1)[0]
+        self.assertIn(
+            "    types: [opened, synchronize, reopened, ready_for_review]",
+            preflight_trigger,
+        )
+        self.assertNotIn("branches:", preflight_trigger)
+        self.assertNotIn("branches-ignore:", preflight_trigger)
+        self.assertIn("m550_behavior_contract_preflight.py", behavior)
+
 if __name__ == "__main__":
     unittest.main()
