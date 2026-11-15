@@ -472,8 +472,9 @@ const List<WaffraSmsLocalRule> waffraSaudiFinancialSeedRules = <WaffraSmsLocalRu
   keywords:<String>["ضيافة مناسبة", "event catering payment", "guest hospitality supplies"], matchAll:false, builtIn:true),
 ];
 
-/// Default transfer/exclusion signals are REVIEW ONLY. No seed exclusion
-/// may acknowledge or delete a native pending message without approval.
+/// Transfers remain REVIEW ONLY. Curated nonfinancial exclusion signals may
+/// enter the durable 30-day native excluded ledger after the shared rule
+/// engine verifies no completed financial evidence; never acknowledge money.
 const List<WaffraSmsLocalRule> waffraSaudiSpecialSeedRules = <WaffraSmsLocalRule>[
  WaffraSmsLocalRule(id:"sa_transfer_001", name:"تحويل محلي صادر",
   kind:"transfer", income:false, category:"",
