@@ -897,3 +897,5 @@ M940/M941 Draft PR #648 M486 regression correction (unreleased): coalesced futur
 - Changed production paths: lib/waffra_sms_local_rules.dart
 - Changed tests: test/m647_m652_financial_activity_regression_test.dart, test/m221_approved_financial_ui_test.dart; existing M954 owner-rule tests unchanged.
 - Verification: exact-head CI plus physical SMS/Android evidence are separate. This entry is NOT approval of all 5 axes or legacy restore.
+
+M954 #660 CI scope/numbered-history correction (2026-11-15, unreleased): the verified activation exclusion phrase stays inside the approved SMS-rule bounded function without widening privacy guard anchors; historical finance activity contract asserts the actual indexed five-type rendering, not the obsolete unnumbered iteration. No financial writer, DB schema, existing SMS retention, bank posting approval or user vault is changed. Reviewed source commit 0b40f9690d4a295e2639fc4e90eae3600fcdfa12 and tests through a8543f36376634c63a38cf9ae329321b26964c92; protected section manifest review c333437a74bd8dc8682a9d00fbf50b3e70598dc1.
