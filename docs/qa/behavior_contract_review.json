@@ -1,12 +1,63 @@
 {
   "schema_version": 1,
-  "pr": "M952 — five actual axes: financial integrity, accounts/backup, performance, UI stability, architecture/proactive QA; Draft #658",
-  "issue": "Issue #657 — 20-improvement M952 proactive financial reliability and code hardening",
+  "pr": "M952 / Draft PR #658 — five-axis 20-improvement continuation with verified unassigned SQLCipher keyset and single-pass budget parity",
+  "issue": "Issue #657 — financial integrity, accounts/restore, responsiveness, UI stability, architecture and proactive QA",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at f0def360ea75b9c865548b6f1b4fc07e9640f2c2 after #656",
   "reviewed_at": "2026-11-15",
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
+    {
+      "id": "M952-UNASSIGNED-HISTORICAL-SQLCIPHER-KEYSET",
+      "issue": "Issue #657 axes 2/3/4/5: unassigned old bank transactions cannot scan thousands of records using OFFSET",
+      "previous_behavior": "M944 source-backed keyset protected monthly account screens, but filter='none' still read historical unassigned SQLCipher entries via readUnassignedPage(offset:...), doing increasing OFFSET work as old restored accounts grew. UI used different next-page handling and had no cursor safety on unassigned pages.",
+      "approved_behavior": "Extend the same existing verified SQLCipher history pager with unassignedOnly read predicate (LEFT JOIN entry links IS NULL) which cannot be used together with an account ID. The Account Context screen now requires a witnessed cursor for both month and unassigned filters and records a next cursor only when the source returns more rows; reset on month/account/filter/user-approved historical link. Retain legacy offset API solely for existing callers, no money write, no new account and no UI layout redesign.",
+      "source_paths": [
+        "lib/storage/waffra_sqlcipher_history_pager.dart",
+        "lib/storage/waffra_verified_accounts_api.dart",
+        "lib/waffra_account_context_page.dart"
+      ],
+      "test_paths": [
+        "test/storage/m944_sqlcipher_keyset_paging_test.dart",
+        "test/m611_manual_home_finance_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m946-whole-app-feature-smoke.yml"
+      ],
+      "safety_invariants": [
+        "Read page cursors must be derived from last source-verified (occurred_iso DESC, entry_id DESC) row, with every equal-time tie preserved across 2700 synthetic records and multiple pages.",
+        "Account and unassigned filters are mutually exclusive; unassigned includes all historical months without treating unlinked money as bank cash.",
+        "Page state is reset before querying after account, month, filter or historical link change; no cursor is carried across different user-approved scopes.",
+        "Original accounting source, financial writer, opening balance, backup V3/V24 representation, approved FAB and Flutter card layout remain intact."
+      ]
+    },
+    {
+      "id": "M952-ONE-PASS-MONTHLY-BUDGET-HALALA",
+      "issue": "Issue #657 axes 1/3/5: 10k ledger rows and 120 budgets must not incur B repeated scans",
+      "previous_behavior": "WaffraAccountContextRead.load iterated each budget and ran WaffraAccountContextPolicy.budget on the same entire selected month's finance entry list once per budget. This did O(E*B) repeated Dart work at every verified account context read.",
+      "approved_behavior": "Expose immutable read-only single-pass WaffraAccountContextPolicy.budgetSummaries mapping exact integer-halalas per known budget in O(E+B), preserving zero for unspent budgets, global inclusion of unassigned expenses, selected bank account attribution, ignored income and unknown allocation rows, fail-closed nonpositive budget limits/known invalid postings and original alert thresholds. SQLCipher source reader consumes this pure projection with no state mutation or extra writer.",
+      "source_paths": [
+        "lib/storage/waffra_account_context_policy.dart",
+        "lib/storage/waffra_account_context_read.dart"
+      ],
+      "test_paths": [
+        "test/storage/m952_budget_single_pass_parity_test.dart",
+        "test/storage/m448_account_context_read_test.dart",
+        "test/storage/m692_large_ledger_month_read_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml"
+      ],
+      "safety_invariants": [
+        "Every budget exact-halala global and selected-account spent totals must match original policy across 10,000 synthetic entries/120 budgets.",
+        "Unassigned expense contributes globally, not to any individual bank balance; income and unknown budget rows do not fabricate spending.",
+        "Projection is immutable and read-only, with no background finance posting, account linking, money balance adjustment or budget allocation creation.",
+        "Read-only host timings are diagnostic, never claimed to establish actual Android app FPS or first-frame speed."
+      ]
+    },
     {
       "id": "M952-ACCOUNTS-DOMAIN-READINESS-GATE",
       "issue": "Issue #657 / Draft #658 axes 1–2: fail-closed encrypted finance link readiness",
