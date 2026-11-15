@@ -730,8 +730,15 @@ object WaffraAutoSmsStore {
      * with a code must remain in the encrypted review queue, never excluded.
      * This runs on the ORIGINAL SMS before numeric OTP masking.
      */
+    // The older OTP regex also matches bare "password" security warnings.
+    // Never silently hide an advisory unless it actually signals a code.
+    private val explicitOtpToken = Regex(
+        "(?:\\botp\\b|one.?time.?password|\\b(?:code|passcode)\\b|" +
+        "رمز|كود|كلمة\\s+مرور\\s+مؤقت)",
+        RegexOption.IGNORE_CASE)
     private fun pureVerificationOnly(body: String): Boolean =
         otp.containsMatchIn(body) &&
+        explicitOtpToken.containsMatchIn(body) &&
         !completedFinancialAction.containsMatchIn(body) &&
         !(action.containsMatchIn(body) && money.containsMatchIn(body))
 
