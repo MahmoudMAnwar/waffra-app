@@ -21,6 +21,17 @@ GROUPS = ("money", "experience", "safety")
 # Each user-facing capability has a real runnable suite. Tests can be reused
 # across capabilities; the runner de-duplicates within each CI shard.
 FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {
+    # M952: all new finance/goal/readiness regressions execute on exact PR SHA
+    # rather than existing only as locally runnable, unregistered test files.
+    "m952_encrypted_account_domain_fail_closed": ("safety", (
+        "test/storage/m952_account_linked_schema_readiness_test.dart",
+        "test/storage/m440_accounts_portable_v3_test.dart")),
+    "m952_historical_unassigned_keyset_and_month": ("money", (
+        "test/storage/m944_sqlcipher_keyset_paging_test.dart",
+        "test/storage/m952_account_linked_schema_readiness_test.dart")),
+    "m952_many_goal_contributions_and_budget_parity": ("money", (
+        "test/storage/m952_goal_projection_scale_parity_test.dart",
+        "test/storage/m952_budget_single_pass_parity_test.dart")),
     "m951_preposting_bank_sms_eligibility_thresholds": ("experience", (
         "test/m951_sms_eligibility_and_budget_alert_isolation_test.dart",
         "test/waffra_auto_sms_policy_test.dart")),
