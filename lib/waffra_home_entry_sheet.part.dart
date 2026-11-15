@@ -51,6 +51,31 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
   // M485 / #403 #404: correction of a detected SMS is still a reviewed
   // bank-SMS transaction, not a new unrelated manual entry. Use parsed
   // values only when source amount, SAR, direction and status agree.
+  // M985: a deliberately corrected SMS kind opens a SEPARATE manual
+  // template. Reuse only trustworthy SAR/date hints; no SMS ACK/ledger
+  // posting, account ownership or category inference is authorized here.
+  final manualReviewBody=!sms&&initial==null?reviewedOriginalSms:null;
+  final manualReviewFacts=manualReviewBody==null?null:
+   WaffraBankSmsFactsParser.parse(manualReviewBody);
+  final manualReviewParsed=manualReviewBody==null?null:
+   BankParser.parse(manualReviewBody);
+  final manualReviewMoney=manualReviewBody==null?null:
+   WaffraSmsCurrencies.originalAmount(manualReviewBody);
+  final manualReviewSafeMoney=manualReviewBody!=null&&
+   manualReviewFacts!=null&&!manualReviewFacts.pending&&
+   !WaffraBankSmsFactsParser.isVerificationChallenge(manualReviewBody)&&
+   manualReviewMoney?.currency=='SAR'&&
+   !WaffraSmsCurrencies.requiresReviewForSarLedger(manualReviewBody)&&
+   manualReviewMoney!.amount>0&&
+   (manualReviewParsed?.amount==null||
+    (manualReviewParsed!.amount!-manualReviewMoney.amount).abs()<0.00001)?
+    manualReviewMoney.amount:null;
+  final manualReviewDate=manualReviewBody==null||
+   bankSmsHasUnverifiedTimestamp(manualReviewBody)?null:
+   bankSmsDate(manualReviewBody,referenceDate:DateTime.now());
+  final manualReviewTitle=manualReviewParsed!=null&&
+   waffraTransactionTitleAllowed(manualReviewParsed.title)?
+    manualReviewParsed.title:'';
   final parsedSms=sms&&initialSms!=null?BankParser.parse(initialSms):null;
   final factsSms=sms&&initialSms!=null?
    WaffraBankSmsFactsParser.parse(initialSms):null;
@@ -111,14 +136,15 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
     sourceAmount?.amount:null;
   final title=TextEditingController(text:
    (smsEditorDraft?['title'] as String?)??initial?.title??
-   suggestedSmsTitle);
+   (manualReviewBody!=null?manualReviewTitle:suggestedSmsTitle));
   final notes=TextEditingController(text:
    (smsEditorDraft?['notes'] as String?)??
    (initial?.sourceType=='sms'?initial?.personalNotes:initial?.notes)??'');
   final value=TextEditingController(text:
    (smsEditorDraft?['amount'] as String?)??(initial!=null?
    formatWaffraEditAmount(initial.amount):
-   safeSmsAmount!=null&&safeSmsAmount>0?formatWaffraMoney(safeSmsAmount):''));
+   safeSmsAmount!=null&&safeSmsAmount>0?formatWaffraMoney(safeSmsAmount):
+   manualReviewSafeMoney!=null?formatWaffraMoney(manualReviewSafeMoney):''));
   final message=TextEditingController(text:initialSms??'');
   // Explicit compact correction outranks an OLD uncommitted SMS draft.
   // Ordinary manual/receipt editing still preserves previous precedence.
@@ -134,6 +160,21 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
   String category=(smsEditorDraft?['category'] as String?)??
    initial?.category??(sms?
     (trustedSms?(editorLearnedCategory??parsedSms.category):'أخرى'):'');
+  // For a mismatched chosen kind, use an explicitly unclassified child
+  // only if it is valid for that direction; never copy an opposing category.
+  if(manualReviewBody!=null&&initial==null&&reviewedIncomeOverride!=null){
+   final expected=reviewedIncomeOverride?
+    WaffraBankOperationKind.income:WaffraBankOperationKind.expense;
+   final proposed=manualReviewFacts?.kind==expected?
+    manualReviewParsed?.category:null;
+   final fallback=reviewedIncomeOverride?
+    'دخل آخر / دخل غير مصنف':'أخرى / مصروف غير مصنف';
+   bool validLeaf(String? candidate)=>candidate!=null&&categories.any(
+    (c)=>c.isSubcategory&&c.income==reviewedIncomeOverride&&
+      c.name==candidate&&waffraCategoryAvailableForNewEntry(categories,c));
+   category=validLeaf(proposed)?proposed!:
+    validLeaf(fallback)?fallback:'';
+  }
   // M983: override legacy bank-SMS fallback only for a fresh typed SMS.
   // An existing draft/edit wins; fresh MANUAL always stays unselected.
   if(sms&&initial==null&&smsEditorDraft==null){
@@ -149,7 +190,7 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
   // The sender identifies a bank/provider only, NEVER a financial account.
   // Prefer a matching existing bank/wallet group; otherwise show the bank
   // catalog entry, allowing the user to create a linked account directly.
-  if(sms&&initial==null&&chosenManualProvider==null&&
+  if((sms||manualReviewBody!=null)&&initial==null&&chosenManualProvider==null&&
      reviewedSender!=null){
    final bank=WaffraSmsAccountLearning.bankGroup(reviewedSender);
    if(bank!=null){
@@ -209,7 +250,7 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
   }
   // Unknown original SMS timestamp requires an explicit calendar pick.
   final originalSmsDate=sms&&initialSms!=null?
-   bankSmsDate(initialSms,referenceDate:DateTime.now()):null;
+   bankSmsDate(initialSms,referenceDate:DateTime.now()):manualReviewDate;
   var smsDateConfirmed=initial!=null||
    smsEditorDraft?['dateConfirmed']==true||originalSmsDate!=null;
   DateTime date=(smsEditorDraft?['date'] as DateTime?)??
@@ -341,14 +382,21 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
       // Never inherit a suffix from a different bank or an uncertain SMS.
       final bankFromSender=WaffraSmsAccountLearning.bankGroup(
        reviewedSender??'');
-      final bankFacts=initialSms!=null?
-       WaffraBankSmsFactsParser.parse(initialSms):null;
-      final proposedSuffix=trustedSms&&expectedBank!=null&&
-       expectedBank==bankFromSender&&bankFacts!=null&&
-       bankFacts.canAutoPostAsIncomeExpense?
-       WaffraSmsAccountLearning.suffix4(
-        bankFacts.kind==WaffraBankOperationKind.income?
-         bankFacts.destinationSuffix:bankFacts.sourceSuffix):null;
+      final accountSourceSms=initialSms??manualReviewBody??
+       (initial?.sourceType=='sms'?initial?.notes:null);
+      final bankFacts=accountSourceSms!=null?
+       WaffraBankSmsFactsParser.parse(accountSourceSms):null;
+      // A masked suffix is a suggestion only after owner bank alignment.
+      // Transfers have separate from/to markers and never share a suffix.
+      final trustedProvider=bankFromSender!=null&&
+       expectedBank==bankFromSender;
+      final proposedSuffix=accountSourceSms!=null&&expectedBank!=null&&
+       trustedProvider&&bankFacts!=null?
+       (forTransfer&&bankFacts.kind==WaffraBankOperationKind.transfer?
+        WaffraSmsAccountLearning.suffix4(transferTarget?
+         bankFacts.destinationSuffix:bankFacts.sourceSuffix):
+        WaffraBankSmsFactsParser.suggestedAccountLastFour(
+         accountSourceSms,income:income)):null;
       final customOptions=<String,List<String>>{
        for(final kind in const ['bank','wallet'])
         kind:before.where((a)=>!a.archived&&a.kind==kind&&
@@ -1407,9 +1455,20 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
    }
    return;
   }
+  // M985: a bank reference is useful only alongside identical card/account
+  // suffix, status, date and SAR amount. It is an advisory, never a hidden
+  // exclusion or an override of the verified SQLCipher idempotency writer.
+  final bankReferenceReplay=initial==null&&manualReviewBody!=null&&
+   entries.any((e)=>e.sourceType=='sms'&&
+    WaffraBankSmsFactsParser.sameReferenceAccountHint(
+     manualReviewBody,e.notes)&&
+    e.amount==result.amount&&
+    e.date.year==result.date.year&&
+    e.date.month==result.date.month&&
+    e.date.day==result.date.day);
   // Compare manual and SMS entries across source types before commit.
   // This is an advisory warning: same-day equal purchases are legitimate.
-  if(initial==null&&entries.any((e)=>
+  if(initial==null&&(bankReferenceReplay||entries.any((e)=>
     WaffraCrossSourceDuplicateReview.mightBeSame(
       candidateTitle:result.title,candidateCategory:result.category,
       candidateMerchantKey:result.merchantKey,
@@ -1417,7 +1476,7 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
       candidateDate:result.date,existingTitle:e.title,
       existingCategory:e.category,existingMerchantKey:e.merchantKey,
       existingAmount:e.amount,existingIncome:e.income,
-      existingDate:e.date))){
+      existingDate:e.date)))){
    final proceed=await showWaffraDialog<bool>(context:context,builder:(ctx)=>AlertDialog(
     title:WaffraText(waffraIsEnglish?'⚠️ Possible duplicate':'⚠️ عملية مكررة'),
     content:WaffraText(waffraIsEnglish?

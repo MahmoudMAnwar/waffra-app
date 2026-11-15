@@ -153,17 +153,26 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
      // A seeded bank sender is known. Never fake a 0-match preview by
      // evaluating a sender-scoped rule against senderless queue text.
      // When teaching a specific SMS, preview THAT sender and SMS only.
-     final previewMessages=seed!=null?<String>{seed}:<String>{};
-     // M661: manual preview used sender='' for every current SMS, so a
-     // properly scoped rule incorrectly showed zero matches. Pair each body
-     // with its verified live native sender; do not store extra SMS data.
-     final matches=seed!=null?
-      previewMessages.where((sms)=>WaffraSmsLocalRules.matches(
-       previewRule,sms,sender:widget.seedSender)).length:
-      widget.scannedMessages.asMap().entries.where((row)=>
-       WaffraSmsLocalRules.matches(previewRule,row.value,
-        sender:row.key<widget.scannedSenders.length?
-         widget.scannedSenders[row.key]:'')).length;
+     final inspected=seed!=null?
+      <MapEntry<String,String>>[MapEntry(widget.seedSender,seed)]:
+      <MapEntry<String,String>>[
+       for(var i=0;i<widget.scannedMessages.length;i++)
+        MapEntry(i<widget.scannedSenders.length?
+         widget.scannedSenders[i]:'',widget.scannedMessages[i]),
+      ];
+     final previewMatches=inspected.where((row)=>
+      WaffraSmsLocalRules.matches(previewRule,row.value,
+       sender:row.key)).toList(growable:false);
+     final matches=previewMatches.length;
+     // M985: previews show conflict and unsettled-money impact. Read-only.
+     final conflicts=previewMatches.where((row)=>saved.any((old)=>
+      old.id!=existing?.id&&old.resolvedKind!=kind&&
+      WaffraSmsLocalRules.matches(old,row.value,sender:row.key))).length;
+     final statusBlocked=previewMatches.where((row)=>
+      WaffraBankSmsFactsParser.parse(row.value).pending&&
+      kind!='excluded').length;
+     final otpSensitive=previewMatches.where((row)=>
+      WaffraBankSmsFactsParser.isVerificationChallenge(row.value)).length;
      return SafeArea(top:false,child:Padding(
       padding:EdgeInsets.fromLTRB(18,8,18,MediaQuery.viewInsetsOf(ctx).bottom+12),
       child:ConstrainedBox(constraints:BoxConstraints(
@@ -286,6 +295,18 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
          'تنطبق على $matches رسالة تم فحصها (معاينة فقط).',
          style:Theme.of(ctx).textTheme.bodySmall),
         const SizedBox(height:8),
+        if(conflicts>0)Padding(
+         padding:const EdgeInsets.only(top:5),
+         child:Text(widget.english?
+          '$conflicts messages conflict with another saved rule; they stay in review.':
+          '$conflicts رسالة متعارضة مع قاعدة أخرى وستبقى للمراجعة.',
+          style:TextStyle(color:Theme.of(ctx).colorScheme.error))),
+        if(statusBlocked>0||otpSensitive>0)Padding(
+         padding:const EdgeInsets.only(top:5),
+         child:Text(widget.english?
+          '$statusBlocked unsettled transactions and $otpSensitive verification messages need review.':
+          '$statusBlocked عملية معلقة أو فاشلة، و$otpSensitive رسالة تحقق تحتاج تعامل آمن.',
+          style:Theme.of(ctx).textTheme.bodySmall)),
         ExpansionTile(
          key:const Key('waffra-sms-advanced-rule-edit'),
          tilePadding:EdgeInsets.zero,

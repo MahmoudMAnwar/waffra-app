@@ -60,6 +60,7 @@ class WaffraAccountTransactionForm extends StatefulWidget {
   this.incomeCategories=const [],this.expenseCategories=const [],
   this.availableBudgets=const {},this.requireKnownCategory=false,
   this.initialSmsTransfer,this.originalSmsText,
+   this.initialSarMinor,this.initialOccurredDate,
   this.requireSmsDateConfirmation=false,
   this.initialOperation=WaffraAccountOperation.income,
  });
@@ -68,6 +69,9 @@ class WaffraAccountTransactionForm extends StatefulWidget {
  final Map<String,String> availableBudgets;
  final bool requireKnownCategory;
  final WaffraInternalTransferDraft? initialSmsTransfer;
+ /// Display-only hints for deliberately reclassified MANUAL transfers.
+ final int? initialSarMinor;
+ final DateTime? initialOccurredDate;
  /// The reviewed, immutable source SMS; preview only, never user-editable.
  final String? originalSmsText;
  /// Unknown/ambiguous SMS dates require an explicit in-form date selection.
@@ -90,7 +94,7 @@ class _WaffraAccountTransactionFormState extends State<WaffraAccountTransactionF
  final amount=TextEditingController(),memo=TextEditingController();
  final title=TextEditingController(),category=TextEditingController();
  late final DateTime requestTime=DateTime.tryParse(
-  widget.initialSmsTransfer?.occurredIso??'')??DateTime.now();
+  widget.initialSmsTransfer?.occurredIso??'')??widget.initialOccurredDate??DateTime.now();
  late DateTime transferDate=requestTime;
  late final String requestId=widget.initialSmsTransfer?.requestId??
   'm440-'+requestTime.microsecondsSinceEpoch.toString();
@@ -122,6 +126,10 @@ class _WaffraAccountTransactionFormState extends State<WaffraAccountTransactionF
    source=initial.fromId.isEmpty?null:initial.fromId;
    destination=initial.toId.isEmpty?null:initial.toId;
    memo.text=initial.memo;
+  }else if(widget.initialOperation==WaffraAccountOperation.transfer){
+   final minor=widget.initialSarMinor;
+   if(minor!=null&&minor>0)amount.text=(minor/100).toStringAsFixed(2);
+   if(widget.originalSmsText!=null)memo.text='تحويل - مراجعة رسالة بنكية';
   }
  }
  @override void dispose(){
@@ -192,6 +200,11 @@ class _WaffraAccountTransactionFormState extends State<WaffraAccountTransactionF
  Future<void> submit()async{
   if(saving||saved||creatingAccount)return;
   if(widget.initialSmsTransfer!=null&&!smsDateConfirmed){
+   setState(()=>error=tr('أكد تاريخ التحويل من زر التاريخ أولًا',
+    'Confirm the transfer date with the date picker first'));
+   return;
+  }
+  if(widget.initialSmsTransfer==null&&widget.requireSmsDateConfirmation&&!smsDateConfirmed){
    setState(()=>error=tr('أكد تاريخ التحويل من زر التاريخ أولًا',
     'Confirm the transfer date with the date picker first'));
    return;
@@ -351,7 +364,7 @@ class _WaffraAccountTransactionFormState extends State<WaffraAccountTransactionF
      tr('مراجعة حوالة بنكية','Review bank transfer'):
      tr('معاملة جديدة','New transaction'),
      style:Theme.of(context).textTheme.titleLarge),
-    if(widget.initialSmsTransfer!=null&&widget.originalSmsText!=null)...[
+    if(widget.originalSmsText!=null) ...[
      const SizedBox(height:8),
      Card(child:ExpansionTile(
       key:const Key('m662-transfer-original-sms-expand'),
@@ -429,7 +442,7 @@ class _WaffraAccountTransactionFormState extends State<WaffraAccountTransactionF
        '${transferDate.month.toString().padLeft(2,'0')}/'
        '${transferDate.year}'),
      ),
-     if(widget.initialSmsTransfer!=null&&!smsDateConfirmed)
+     if(widget.requireSmsDateConfirmation&&!smsDateConfirmed)
       Padding(padding:const EdgeInsets.symmetric(vertical:5),
        child:Text(tr('تاريخ الرسالة غير مؤكد؛ اختر التاريخ قبل الحفظ.',
         'SMS transaction date is unverified. Choose the date before saving.'),
