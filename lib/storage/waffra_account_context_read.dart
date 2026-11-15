@@ -112,6 +112,12 @@ ORDER BY name, budget_id
 ''').get();
     // SQLCipher source rows are unique by entry in the ledger, but each
     // separately confirmed budget allocation must still count for its budget.
+    // Ledger-bearing account context screens keep the original pure Dart
+    // allocation projection. Home's ledger-free monthly summary instead
+    // aggregates confirmed allocations inside SQLite and receives only one
+    // row per budget, avoiding allocation-list hydration on each refresh.
+    late final Map<String, WaffraBudgetUse> budgetTotals;
+    if(includeEntries){
     final allocationRows = await store.customSelect('''
 SELECT a.entry_id,a.budget_id,a.amount_minor,e.is_income,l.account_id
 FROM fresh_finance_standalone_allocations a
@@ -132,7 +138,7 @@ WHERE e.occurred_iso>=? AND e.occurred_iso<?
     // The previous per-budget loop rescanned every matching entry B times.
     // One pure O(E+B) pass preserves global/unassigned and selected-account
     // totals as exact integer halalas, without changing the source ledger.
-    final budgetTotals = WaffraAccountContextPolicy.budgetSummaries(
+    budgetTotals = WaffraAccountContextPolicy.budgetSummaries(
       entries: monthly,
       limitsMinor: {
         for (final row in budgets)
@@ -141,6 +147,46 @@ WHERE e.occurred_iso>=? AND e.occurred_iso<?
       },
       selectedAccountId: selectedAccountId,
     );
+    }else{
+      final grouped=await store.customSelect('''
+SELECT a.budget_id,
+       SUM(a.amount_minor) AS global_minor,
+       SUM(CASE WHEN ?=1 AND l.account_id=?
+           THEN a.amount_minor ELSE 0 END) AS selected_minor,
+       SUM(CASE WHEN a.amount_minor<=0 THEN 1 ELSE 0 END) AS invalid_count
+FROM fresh_finance_entries e
+JOIN fresh_finance_standalone_allocations a ON a.entry_id=e.entry_id
+LEFT JOIN fresh_finance_account_entry_links l ON l.entry_id=e.entry_id
+WHERE e.occurred_iso>=? AND e.occurred_iso<? AND e.is_income=0
+GROUP BY a.budget_id
+''',variables:[
+        Variable.withInt(selectedAccountId==null?0:1),
+        Variable.withString(selectedAccountId??''),
+        Variable.withString(monthIso+'-01'),
+        Variable.withString(_nextMonthIso(monthIso)),
+      ]).get();
+      final sums={for(final row in grouped)row.read<String>('budget_id'):row};
+      for(final row in budgets){
+        if(row.read<int>('monthly_limit_minor')<=0){
+          throw ArgumentError('Budget limit must be positive.');
+        }
+        final id=row.read<String>('budget_id');
+        final amount=sums[id];
+        if(amount!=null&&amount.read<int>('invalid_count')!=0){
+          throw StateError('Invalid budget posting.');
+        }
+      }
+      budgetTotals=Map<String,WaffraBudgetUse>.unmodifiable({
+        for(final row in budgets)
+          row.read<String>('budget_id'):WaffraBudgetUse(
+            globalSpentMinor:sums[row.read<String>('budget_id')]
+              ?.read<int>('global_minor')??0,
+            selectedAccountSpentMinor:sums[row.read<String>('budget_id')]
+              ?.read<int>('selected_minor')??0,
+            limitMinor:row.read<int>('monthly_limit_minor'),
+          ),
+      });
+    }
     final summed = List<WaffraAccountBudgetRow>.unmodifiable(
       budgets.map((row) {
         final id = row.read<String>('budget_id');
