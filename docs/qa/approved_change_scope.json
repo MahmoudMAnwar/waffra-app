@@ -1,48 +1,42 @@
 {
   "contract_version": 1,
-  "change_id": "M986-ISSUE700-SMS-RULE-SENDER-INDEX-20261115",
-  "human_scope_review": "Owner approved 14 improvements; M986 first increment builds conservative prefix+sender index once per isolate batch, preserves full per-message four-kind rules, own sender scope, order, OTP safety. No ledgers or posting affected. Four full phases not complete.",
+  "change_id": "M987-ISSUE701-STRUCTURED-SMS-AND-COMPOSITE-20261115",
+  "human_scope_review": "Owner requested all SMS improvements; this PR adds read-only structured bank context with Saudi bank sender identity, currency-safe amount and masked suffix proposals, composite financial SMS fail-close in the existing review isolate. No ledger finance changes.",
   "user_requested_changes": [
-    "M986 A initial: index custom rules by normalized sender once per background batch; all matching kinds and global rules remain evaluated.",
-    "Add executable regression against legacy matching with multiple senders and no cross-owner leaks.",
-    "Plan M987 B, M988 C, M989 D in their own issues; no claim of completion.",
-    "Maintain original saved/default rule order with two-character conservative prefix candidate lookup; validated against full matcher.",
-    "M174 stale M578 source assertion now verifies both SMS and corrected manual-review date guards, retaining mandatory date and clock checks."
+    "M987 identify transaction principal distinctly from balance and fees, preserve original SAR currency; unknown or foreign => review.",
+    "M987 identify likely Saudi bank by allowlisted sender, suggest only unambiguous last four; provider never proves account.",
+    "M987 if SMS contains multiple separate financial events, keep complete original pending for manual review without auto-excluding or selecting first amount.",
+    "Add executable four-case regression tests and preserve owner isolation.",
+    "Refresh retained source-based isolation test to verify read-only structured bank context extracts facts and composites in worker, without native ACK or finance writes."
   ],
   "allowed_changed_files": [
-    "lib/waffra_sms_local_rules.dart",
     "lib/main.dart",
     "docs/qa/approved_change_scope.json",
-    "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "docs/WAFFRA_REQUIREMENTS.md",
-    "test/m986_sms_rule_sender_index_test.dart",
-    "test/qa/m578_sms_time_confirmation_test.py"
+    "docs/qa/behavior_contract_review.json",
+    "lib/waffra_sms_structured_bank_context.dart",
+    "test/m987_sms_structured_bank_context_test.dart",
+    "test/m548_review_grouping_and_signup_perf_test.dart"
   ],
-  "allowed_workflow_changes": [],
-  "human_review_required": false,
   "bounded_sections": {
     "lib/main.dart": [
+      {
+        "start": "import 'waffra_sms_account_learning.dart';",
+        "end": "import 'waffra_sms_rule_settings_page.dart';"
+      },
       {
         "start": "Map<String,Object?> waffraM632ClassifySmsQueue(",
         "end": "List<String> splitBankMessages("
       }
     ],
-    "lib/waffra_sms_local_rules.dart": [
+    "test/m548_review_grouping_and_signup_perf_test.dart": [
       {
-        "start": "/// Local-only, user-reviewable SMS classification",
-        "end": "/// Approved keywords only. Never suggest bank identifiers"
-      },
-      {
-        "start": "/// Transfers cannot create ledger income/expense entries;",
-        "end": " static WaffraSmsLocalRule? resolveSpecial("
-      }
-    ],
-    "test/qa/m578_sms_time_confirmation_test.py": [
-      {
-        "start": "  for marker in (",
-        "end": "  self.assertIn('var smsDateConfirmed=initial!=null||',editor)"
+        "start": " test('SMS classification runs outside UI isolate; native ACK stays checked',(){",
+        "end": " test('fresh registration proves exact read-back without duplicate KDF',(){"
       }
     ]
-  }
+  },
+  "approved_deleted_files": [],
+  "allowed_workflow_changes": []
 }

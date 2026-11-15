@@ -1,3 +1,7 @@
+M987 CI correction: deduplicate M385 allowed-file manifest and update retained M548 source audit to assert the new structured SMS facts parsing in background isolate; all native ACK and finance isolation checks stay intact.
+
+M987 (#701) read-only structured SMS extraction: recognized bank sender, transaction amount separate from balance/fee, masked suffix candidate, composite multi-event detection. Composite events remain in review; never auto-excluded or converted to ledger entries; new fixtures cover SAR/foreign/OTP/unknown sender. Phase B further template variants and UI checks pending.
+
 M986 M174 regression: keep calendar AND clock verification for bank SMS and corrected manual SMS; update stale source-test conditional to assert the broader new guard without removing any required date assertions. Sender index now honors sender scoping even for template-family entries.
 
 M986 CI correction: removed duplicate M385 allowed test path, added bounded source ranges and required M550 source_paths. Upgraded initial sender index to preserve exact original rule precedence and safely skip irrelevant 2-character keyword prefixes; new four-kind parity cases. No financial write change.
@@ -993,3 +997,5 @@ M969 / Issue #670 / Draft #665: real M120 Android SQLCipher receipt restart asse
 
 [M968 / #668] Prevent silent omission of mandatory M946 whole-app exact-head Flutter tests for stacked PRs based on feature branches: remove main-only pull_request filter while keeping push-main, 3 shards, reports and all safety gates; regression test added. Source/app money and UI unchanged; handset and owner historic backup NOT certified.
 [M968 / #668] Also trigger unchanged M550/M385 behavior and source-boundary gate for stacked PRs with non-main base; QA source test covers both M946/M550, no check disabled.
+
+[M987 / #701 — 2026-11-16 integration review] Stacked bank SMS structured-context changes were reapplied onto merged M986 without changing their source content: recognized Saudi sender, masked suffix, conservative SAR action amount separate from balance/fees, and mixed-event fail-closed review. Existing finance writer and SMS ACK unchanged. Original 8-file snapshot verified against M987 before CI; full exact-HEAD checks and physical Android UAT remain separate release gates.
