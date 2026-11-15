@@ -60,7 +60,7 @@ void main(){
  test('M665.7 recurring goal payment shows paid split, not zero saved progress',(){
   final main=readWaffraMainSourceForContracts();
   final start=main.indexOf(' Widget recurringPage(){');
-  final end=main.indexOf('   if(recurring.isEmpty)Padding',start);
+  final end=main.indexOf('     if(recurring.isEmpty)Card',start);
   final card=main.substring(start,end);
   expect(card,contains('paidGoalDue=goal!=null&&paid.length==1?paid.single:null'));
   expect(card,contains('if(paidGoalDue!=null)...['));
@@ -111,7 +111,7 @@ void main(){
   expect(actions,contains("if(entry.sourceType=='goal_due')"));
   expect(actions,contains('await entrySheet(initial:entry)'));
   final card=main.substring(main.indexOf(' Widget recurringPage(){'),
-   main.indexOf('   if(recurring.isEmpty)Padding',
+   main.indexOf('     if(recurring.isEmpty)Card',
     main.indexOf(' Widget recurringPage(){')));
   expect(card,contains("key:Key('m665-recurring-edit-'+r.id)"));
   // In M689 the linked goal may only be edited through its own verified route.
