@@ -8,6 +8,33 @@
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
     {
+      "id": "M954-FAILED-CI-OWNER-EXCLUSION-AND-APPROVED-LABELS",
+      "issue": "Issues #659 and #661 / Draft #660 exact-HEAD failed CI follow-up",
+      "previous_behavior": "Owner custom exclude keyword 'تفعيل الحساب' was blocked as any word containing 'حساب' is considered account-sensitive; three M954 tests failed. Older M652 source and M221 widget tests asserted removed legacy map/recurring labels despite user-approved numbered timeline and 'استحقاقات'.",
+      "approved_behavior": "Whitelist the single contextual event phrase only for the user-owned excluded rule kind; completed financial movement still blocks exclusion. Update two old regressions to assert the actual numbered five-kind chronological iteration and current due empty-state text, with no user-facing UI or money changes.",
+      "source_paths": [
+        "lib/waffra_sms_local_rules.dart",
+        "lib/waffra_home_dashboard_analytics.part.dart",
+        "lib/waffra_financial_tools.dart"
+      ],
+      "test_paths": [
+        "test/m954_all_sms_rule_routes_regression_test.dart",
+        "test/m647_m652_financial_activity_regression_test.dart",
+        "test/m221_approved_financial_ui_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m946-whole-app-feature-smoke.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m103-whole-app-release-certification.yml"
+      ],
+      "safety_invariants": [
+        "No account number, opening balance, full SMS content or bank/currency text is allowed as a general user keyword.",
+        "A real posted bank transaction overrides both default and custom exclusions even when verification text is present.",
+        "M652 and M221 test refreshes retain their functional assertions; no tests removed, skipped or marked passed without execution.",
+        "No production finance writer, active receipt, old backup or approved UI layout is changed."
+      ]
+    },
+    {
       "id": "M954-ALL-ARRIVALS-DEFAULT-AND-OWNER-RULE-PIPELINE",
       "issue": "Issue #661 / user report: new-installed-app verification SMS appears even with exclusion and all other message rules activated",
       "previous_behavior": "Native OTP parser omitted common new-app registration/login phrases. Home isolate and background WorkManager differed: Home used seeded plus owner rules, but background excluded only explicitly owner-created matches, required uncertain bank facts, and used transient acknowledge([id]) instead of a durable 30-day native exclusion. Sensitive OTP digits masked natively could not match legacy exact text fragments later in Dart.",
