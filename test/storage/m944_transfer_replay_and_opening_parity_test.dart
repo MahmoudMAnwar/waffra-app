@@ -22,9 +22,9 @@ void main(){
    try{
     store=WaffraEncryptedStore.openAt(path,key:key);
     await WaffraFreshEncryptedVaultBootstrap(
-     store:store,experimentalEnabled:true).initialize(
+     store:store!,experimentalEnabled:true).initialize(
      decision:WaffraFirstRunDecision.freshCandidate);
-    await WaffraAccountsSchema.install(store);
+    await WaffraAccountsSchema.install(store!);
     WaffraAccountsRepository repo()=>WaffraAccountsRepository(
      db:store!,experimentalEnabled:true);
     await repo().createAccount(id:'a',name:'Verified Bank A',kind:'bank',
@@ -83,13 +83,13 @@ void main(){
     await store.close();
     store=null;
     store=WaffraEncryptedStore.openAt(path,key:key);
-    await WaffraAccountsSchema.requireReady(store);
+    await WaffraAccountsSchema.requireReady(store!);
     expect(await balances(),before);
     expect(await count('fresh_finance_internal_transfers'),81);
     expect(await count('fresh_finance_entries'),0);
-    final persisted=await store.customSelect(
+    final persisted=await store!.customSelect(
      'SELECT COUNT(*) AS n FROM fresh_finance_internal_transfers '
-     'WHERE amount_minor=?',variables:[const Variable.withInt(500)]
+     'WHERE amount_minor=?',variables:[Variable.withInt(500)]
     ).getSingle();
     expect(persisted.read<int>('n'),80);
    }finally{
