@@ -11,7 +11,8 @@
     "Fix stale verified finance period index after confirmed manual/SMS append and confirmed account balance reread without rewriting old finance rows.",
     "Use one count-bearing status dropdown in Goals and Dues; remove redundant funnel and duplicate inactive/incomplete goals More options.",
     "Use original Saudi Riyal artwork for Goals/Dues money, add due gold metrics and useful add-due empty state while preserving functions.",
-    "Move Home Show more/less to the search/filter/More row for verified combined financial history."
+    "Move Home Show more/less to the search/filter/More row for verified combined financial history.",
+    "Update one obsolete positive M940/M941 assumption on exact Home finance-index method form; add explicit checks that the new unified-history cache is invalidated, retaining all old read-only finance guard assertions."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -46,7 +47,8 @@
     "test/m623_verified_home_handoff_no_black_frame_test.dart",
     "lib/waffra_home_entry_sheet.part.dart",
     "lib/waffra_approved_page_designs.dart",
-    "test/m945_restored_history_filters_ui_test.dart"
+    "test/m945_restored_history_filters_ui_test.dart",
+    "test/m940_m941_home_ledger_pagination_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
@@ -203,6 +205,12 @@
       {
         "start": "class WaffraApprovedMetric {",
         "end": "class WaffraApprovedDashboardLink extends StatelessWidget {"
+      }
+    ],
+    "test/m940_m941_home_ledger_pagination_test.dart": [
+      {
+        "start": "  test('M940/M941 production Home and summary share source-verified read query',(){",
+        "end": null
       }
     ]
   }
