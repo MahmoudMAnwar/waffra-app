@@ -8,34 +8,25 @@ extension _WaffraHomeDashboardAnalyticsModule on _HomeScreenState {
   final unverifiedFxEntries=entries.where(waffraNeedsLegacyFxReview).toList();
   // M943: authenticated historical bank closing/opening not available here.
   // Never render a comparison percentage from unassigned ledger net.
-  bool matches(MoneyEntry e){
-   final q=search.trim();
-   return(waffraSearchAny([e.title,e.category,waffraTr(e.category)],q))&&
-    (transactionsDateRange==null||(e.date.isAfter(transactionsDateRange!.start.subtract(const Duration(days:1)))&&e.date.isBefore(transactionsDateRange!.end.add(const Duration(days:1)))))&&
-    (minTransactionAmount==null||e.amount>=minTransactionAmount!)&&
-    (maxTransactionAmount==null||e.amount<=maxTransactionAmount!)&&
-    (typeFilter=='الكل'||(typeFilter=='الدخل'&&e.income)||
-     (typeFilter=='المصروفات'&&!e.income)||
-     (typeFilter=='الاستحقاقات'&&
-      (e.sourceType=='recurring'||e.sourceType=='goal_due')))&&
-    (categoryFilter=='الكل'||categoryFilter==e.category);
-  }
+  // Preserve the M940/M941 shared account-scoped filter policy exactly.
+  final transactionFilter=WaffraHomeTransactionFilter(
+   search:search,typeFilter:typeFilter,categoryFilter:categoryFilter,
+   dateRange:transactionsDateRange,minAmount:minTransactionAmount,
+   maxAmount:maxTransactionAmount);
   final verifiedIds=_m467SelectedAccount=='all'?null:
    (_m684ScopedEntryIds??const <String>{});
   final visibleCount=_m684Periods.countNewestFirst(
-   verifiedEntryIds:verifiedIds,where:matches);
-  final filterCats=<String>{'الكل',...scopedEntries.where((e)=>typeFilter=='الكل'||
-   (typeFilter=='الدخل'&&e.income)||(typeFilter=='المصروفات'&&!e.income)||
-   (typeFilter=='الاستحقاقات'&&
-    (e.sourceType=='recurring'||e.sourceType=='goal_due'))).map((e)=>e.category)}.toList();
+   verifiedEntryIds:verifiedIds,where:transactionFilter.accepts);
+  final filterCats=<String>{'الكل',...scopedEntries
+   .where(transactionFilter.acceptsType).map((e)=>e.category)}.toList();
   final selected=filterCats.contains(categoryFilter)?categoryFilter:'الكل';
   // Full verified transaction history is materialized only for an explicit
   // export or an expanded combined activity view, never for the collapsed
   // Home first page. PDF exports must include all matching transactions.
   List<MoneyEntry> fullFilteredTransactions()=>
-   _m684Periods.newestFirst(verifiedEntryIds:verifiedIds,where:matches);
+   _m684Periods.newestFirst(verifiedEntryIds:verifiedIds,where:transactionFilter.accepts);
   final shown=_m684Periods.pageNewestFirst(
-   verifiedEntryIds:verifiedIds,where:matches,offset:0,
+   verifiedEntryIds:verifiedIds,where:transactionFilter.accepts,offset:0,
    limit:waffraDashboardTransactionDisplayCount(
     visibleCount,expanded:showAllTransactions));
   return RefreshIndicator(
