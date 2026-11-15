@@ -1,15 +1,40 @@
 {
   "schema_version": 1,
-  "pr": "M952 — five-axis follow-up; bank SMS ID cache and strict CI evidence, Draft PR for Issue #657",
-  "issue": "Issue #657 — post-M944 five-axis source and CI continuation",
+  "pr": "M952 — five actual axes: financial integrity, accounts/backup, performance, UI stability, architecture/proactive QA; Draft #658",
+  "issue": "Issue #657 — 20-improvement M952 proactive financial reliability and code hardening",
   "workflow_review_policy": "scan-all-registered-workflows",
-  "baseline": "main after merged PR #656 at f0def360ea75b9c865548b6f1b4fc07e9640f2c2",
+  "baseline": "main at f0def360ea75b9c865548b6f1b4fc07e9640f2c2 after #656",
   "reviewed_at": "2026-11-15",
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
     {
+      "id": "M952-ACCOUNTS-DOMAIN-READINESS-GATE",
+      "issue": "Issue #657 / Draft #658 axes 1–2: fail-closed encrypted finance link readiness",
+      "previous_behavior": "Account-linked storage checks verified account revision, three account tables and foreign key consistency, but not whether required finance-domain tables (goal wallet/due settlement/budget and other linked tables) and domain revision survived corruption or a partial restore. Account reads could appear ready with lost domain linkage.",
+      "approved_behavior": "Before declaring the accounts schema ready, verify its underlying versioned finance-domain schema and all required domain tables through the existing read-only domain checker, then continue the original account revision, table presence and foreign-key integrity checks. Do not create missing schema, mutate user ledger, change migration or financial writer.",
+      "source_paths": [
+        "lib/storage/waffra_accounts_schema.dart",
+        "lib/storage/waffra_fresh_finance_domain_schema.dart"
+      ],
+      "test_paths": [
+        "test/storage/m952_account_linked_schema_readiness_test.dart",
+        "test/storage/m440_accounts_portable_v3_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m946-whole-app-feature-smoke.yml"
+      ],
+      "safety_invariants": [
+        "Lost domain money tables and unsupported domain version prevent account-verified reads, even if accounts revision and foreign key check pass.",
+        "Existing domain-readiness checker is read-only and performs no implicit destructive recovery, opening-balance change, restored-account relink or alternate finance-source creation.",
+        "Disposable encrypted fixture only; no real backup, private device data or Android UAT is claimed.",
+        "All original account table presence, foreign-key checks, consent and verified finance source locks remain unchanged."
+      ]
+    },
+    {
       "id": "M952-SMS-SENDER-REVISION-ID-CACHE",
-      "issue": "Issue #657 — axis 2: bounded SMS review with complete selection",
+      "issue": "Issue #657 / Draft #658 axis 3: performance of high-volume bank SMS review with full sender selection",
       "previous_behavior": "Every StatefulBuilder rebuild repeatedly flattened all pending bank SMS IDs in the heading, metrics, select-all checkbox, and action handlers, additionally mapping per-sender IDs for each row. This scaled with all queued messages even for an unchanged sender selection and 100-card display window.",
       "approved_behavior": "Snapshot a complete, immutable ID list per sender and for the whole queue on dialog entry. Reuse list identity for repeated sender-card and full selection reads; invalidate once after a confirmed individual review removal or successful native batch exclusion, before any subsequent UI rebuild. Preserve native confirmation, full sender selection independent of 100 visible rows, original message and navigation behavior.",
       "source_paths": [
