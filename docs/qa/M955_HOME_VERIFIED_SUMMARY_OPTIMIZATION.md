@@ -66,3 +66,7 @@ Stacked work on #658 / Issue #657. PR base is `feat/m952-five-axes-followup-2026
 - The mandatory M946 experience test seeds 12,000 synthetic ledger entries and asserts source order, stable repeated identity, bank A→B isolation, fresh account witness, other months, and invalidation after insertion. Original Home/Goals/Dues/Snackbar/FAB unchanged. This tests host logic, not handset FPS.
 
 - Cache-safety contract: `WaffraAccountContextRead.loadAccountEntryIds` returns an unmodifiable SQLCipher-witnessed ID set. UI callers must never mutate that set in place; each new owner source witness supplies a fresh set object and therefore recomputes filtered month data. The ledger index is explicitly rebuilt after existing write/restore invalidation, not by guessing from a bank name or relying on a timer.
+
+## M963 — verified edit Undo refreshes bank summary
+
+- The main editor already refreshes verified accounts on ordinary successful Save; no extra refresh was added there. The direct Snackbar Undo path bypassed that parent call after an authenticated metadata/amount/date rollback. It now queues the existing source-witnessed account refresh only after successful Undo, keeping balance and budget context current. Account linking/moving still has no misleading metadata-only Undo. Registered in M946 experience with existing encrypted history-edit integration coverage.

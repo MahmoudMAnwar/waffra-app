@@ -8,6 +8,28 @@
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
     {
+      "id": "M963-VERIFIED-EDIT-UNDO-ACCOUNT-REFRESH",
+      "issue": "Issue #657 / Draft PR #665 after merged #660",
+      "previous_behavior": "Ordinary approved historical transaction edits refresh verified accounts in the outer editor, but Snackbar Undo calls the encrypted one-ID save directly without refreshing account balances or month budgets.",
+      "approved_behavior": "Only after verified Undo writer success, queue the existing Home account-source refresh. Preserve the unchanged financial writer, receipt source, original transaction ID, source witnesses and no Undo for linked account moves.",
+      "source_paths": [
+        "lib/waffra_home_entry_sheet.part.dart"
+      ],
+      "test_paths": [
+        "test/m963_verified_edit_undo_account_refresh_test.dart",
+        "test/storage/m953_verified_historical_edit_regression_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m946-whole-app-feature-smoke.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Never refresh a failed Undo as if money changed; preserve existing verified fail-closed recovery.",
+        "Never offer metadata-only Undo for confirmed account link/move.",
+        "Do not alter posted money/SQLCipher source or any approved FAB/Snackbar geometry."
+      ]
+    },
+    {
       "id": "M962-M944-HOME-CACHE-INVALIDATION-CONTRACT",
       "issue": "Issue #657 / Draft PR #665 M961 follow-up",
       "previous_behavior": "M944 old positive test asserted a one-line invalidate method and fails after M961 adds verified account/month cache invalidation.",
