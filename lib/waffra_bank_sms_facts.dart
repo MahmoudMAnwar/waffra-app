@@ -58,8 +58,10 @@ abstract final class WaffraBankSmsFactsParser {
  static final _securityChallenge=RegExp(
   r'\b(?:otp|one[ -]?time[ -]?(?:password|code|passcode)|'
   r'verification[ -]?code|security[ -]?code|authorization[ -]?code|'
-  r'confirm(?:ation)?[ -]?code|temporary[ -]?(?:password|code))\b|'
-  r'رمز\s*(?:مؤقت|التحقق|تفعيل|التفعيل|الدخول|تأكيد|التأكيد|الامان|الأمان)|'
+  r'confirm(?:ation)?[ -]?code|temporary[ -]?(?:password|code)|'
+  r'(?:login|sign[ -]?in|access|authentication)[ -]?code)\b|'
+  r'رمز\s*(?:مؤقت|التحقق|تفعيل|التفعيل|الدخول|تأكيد|التأكيد|الامان|الأمان|المصادقة)|'
+  r'كود\s*(?:التحقق|الدخول|التفعيل|المصادقة|التأكيد)|'
   r'كلم[ةه]\s*مرور\s*مؤقت[ةه]?|'
   r'رمز\s*(?:إضافة|اضافة|تأكيد)\s*المستفيد',
   caseSensitive:false);
