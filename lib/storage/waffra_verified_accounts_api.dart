@@ -253,9 +253,10 @@ class WaffraVerifiedAccountsApi implements WaffraAccountOperations {
  /// independent monthly budget totals for the selected account context.
  Future<WaffraAccountContextReadResult> readAccountContext({
   required String monthIso,String? selectedAccountId,bool summaryOnly=false,
+  bool includeEntries=true,
  })=>bridge.readVerifiedAccountContext(
   monthIso:monthIso,selectedAccountId:selectedAccountId,
-  summaryOnly:summaryOnly);
+  summaryOnly:summaryOnly,includeEntries:includeEntries);
 
  /// M684: all-time account entry IDs without full historical SQL detail.
  Future<Set<String>> readAccountEntryIds({required String accountId})=>
