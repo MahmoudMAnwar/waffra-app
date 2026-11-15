@@ -37,7 +37,7 @@ void main() {
         .allMatches(dashboard).map((m)=>m.start).toList();
     expect(reads,hasLength(1),
      reason:'Only one expanded/live account-history future is needed');
-    expect(dashboard,contains('for(final event in history.take(maxShown))'));
+    expect(dashboard,contains('for(final (index,event) in history.take(maxShown).indexed)'));
     expect(dashboard,
         isNot(contains("WaffraText(waffraIsEnglish?'Income':'الدخل'")));
   });
