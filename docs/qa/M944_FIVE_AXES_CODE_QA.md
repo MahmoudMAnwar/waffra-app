@@ -35,3 +35,9 @@ Issue: #653. Branch: `feat/m944-five-axis-code-reliability-20261115`. Draft PR, 
 - Reconciled obsolete Home activity expansion assertions in M296 without removing tests: the only button now lives in the original operations toolbar and reflects verified unified activity count.
 - CI job writes actual JSON/Markdown test pass-fail-skip evidence per group through existing M937 parser and archives feature matrix and results. Existing full offline finance regression still independently tests all Flutter suites.
 - IMPORTANT: code uploaded does not equal passing CI, and Flutter tests cannot validate real Android permissions, OS notifications, bank SMS delivery, visual overflow or owner password-encrypted restore; record those gaps separately until device acceptance.
+
+## M947 — destructive-action end-to-end smoke and 19-row retention (Nov 15)
+- Prior M946 inventory did NOT test encrypted transaction deletion; owner called it out. Added real SQLCipher 19-row source/ledger parity test in M183: declines deletion, deletes one expense, verifies both incomes and eighteen other identities survive, cold reopens and undoes to the original nineteen. Also verifies old SMS dedup fingerprint remains.
+- Added UI source contract for confirmed-only commit, source-witness and receipt verification, no navigation replacement/reset, index invalidation, Delete All and biometric full-vault reset distinct flows.
+- Added mandatory M946 smoke paths for SQL transaction and receipt recycle, 30-day Goals/Recurring/category restoration, SMS inbox delete, Delete All, and cloud account release guard. These source contracts do not replace on-device OS permissions, visual black-screen, or biometric testing.
+- Actual head CI outcome, including Passed/Failed/Skipped, remains separate; tests are not claimed passing merely because code was pushed.
