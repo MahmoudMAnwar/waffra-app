@@ -10,7 +10,8 @@
     "RTL scrollbar/text separation in Due/Recurring editor and encrypted backup/restore dialog, preserving original keyboard and buttons.",
     "Remove redundant counter beside All dropdown in Goals/Dues; filter still carries live count and deleted actions.",
     "Rename every visible recurring page/footer/Tools/Trash label to الاستحقاقات or الاستحقاق, without renaming saved keys, enums, finance types, or old archives.",
-    "New executable encrypted historical edit, notification/sender widget, source contracts; update only obsolete visual baseline tests, never skip or weaken money/security/regression gates."
+    "New executable encrypted historical edit, notification/sender widget, source contracts; update only obsolete visual baseline tests, never skip or weaken money/security/regression gates.",
+    "Existing receipt-rollback source contract now verifies source-reloaded error copy and still requires physical cleanup after a failed save, never disables stage cleanup or swallows failures."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -34,6 +35,7 @@
     "lib/waffra_i18n.dart",
     "lib/waffra_recurring_trash.part.dart",
     "test/m277_ux_accessibility_quality_test.dart",
+    "test/m339_failed_finance_save_receipt_cleanup_test.dart",
     "test/m672_m678_activity_account_regression_test.dart",
     "test/m938_goals_restore_fab_contract_test.dart",
     "test/m953_notifications_actions_and_edit_contract_test.dart",
@@ -155,6 +157,12 @@
       {
         "start": "    expect(footerSource.contains('static const itemCount=5'),isTrue);",
         "end": "    expect(source.contains(\"Key('waffra-header-account-entry')\"),isTrue);"
+      }
+    ],
+    "test/m339_failed_finance_save_receipt_cleanup_test.dart": [
+      {
+        "start": "  expect(editor,contains('stagedReceiptCopies.add(copied)'));",
+        "end": "  expect(cleanup,greaterThan(catchPoint));"
       }
     ]
   }
