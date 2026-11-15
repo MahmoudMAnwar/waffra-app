@@ -1,3 +1,7 @@
+M987 CI correction: deduplicate M385 allowed-file manifest and update retained M548 source audit to assert the new structured SMS facts parsing in background isolate; all native ACK and finance isolation checks stay intact.
+
+M987 (#701) read-only structured SMS extraction: recognized bank sender, transaction amount separate from balance/fee, masked suffix candidate, composite multi-event detection. Composite events remain in review; never auto-excluded or converted to ledger entries; new fixtures cover SAR/foreign/OTP/unknown sender. Phase B further template variants and UI checks pending.
+
 M986 M174 regression: keep calendar AND clock verification for bank SMS and corrected manual SMS; update stale source-test conditional to assert the broader new guard without removing any required date assertions. Sender index now honors sender scoping even for template-family entries.
 
 M986 CI correction: removed duplicate M385 allowed test path, added bounded source ranges and required M550 source_paths. Upgraded initial sender index to preserve exact original rule precedence and safely skip irrelevant 2-character keyword prefixes; new four-kind parity cases. No financial write change.
