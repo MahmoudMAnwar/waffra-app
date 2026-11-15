@@ -11,6 +11,8 @@
 - **QA:** [M952 verification matrix](qa/M952_FIVE_AXES_FOLLOWUP.md). Two additional executable disposable SQLCipher readiness regressions assert missing linked table and unsupported domain revision fail closed, without modifying real data.
 - **Definition of done:** committed change + executing regression + green exact HEAD, preserve M385/M550 and original security gates. User private encrypted archives, actual Android/biometric/visual checks and signed builds are not claimed. All axes remain Partial or Audit in first tranche.
 
+- **Third tranche (same PR #658, 2026-11-15):** replace Account Context's per-goal correlated SQL query with one grouped SQLCipher source-verified sum; preserve fund/release sign, unsourced due-debits and independent wallet total. Add real disposable 80-goal/720-movement parity test and register all new M952 SQLCipher/pager/10k budget suites in mandatory M946 exact-HEAD money/safety groups. No user archives or device evidence claimed.
+
 ## M944 — تحسين الأداء العميق واستقرار البيانات: المحاور الخمسة (2026-11-15)
 
 - **Issue:** [#653](https://github.com/MahmoudMAnwar/waffra-app/issues/653). **Owner instruction:** implement and report only independently verified milestones as «تم انتهاء محور 1 من 5» ... «تم انتهاء محور 5 من 5».
