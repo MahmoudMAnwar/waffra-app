@@ -268,10 +268,32 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
     }
    });
   }
+  // Keep the current sender, day, checkbox selection and calendar active
+  // while receiver/rule changes update the underlying verified native queue.
+  var renderedRevision=_m991SmsReviewRevision.value;
   await showModalBottomSheet<void>(
    context:context,isScrollControlled:true,showDragHandle:true,
    builder:(sheet)=>StatefulBuilder(
-    builder:(ctx,refresh)=>PopScope(
+    builder:(ctx,refresh)=>ValueListenableBuilder<int>(
+     valueListenable:_m991SmsReviewRevision,
+     builder:(ctx,revision,_) {
+      if(revision!=renderedRevision){
+       renderedRevision=revision;
+       final fresh=WaffraSmsReviewGroups.from(_autoSmsPending,
+        unknownSender:waffraIsEnglish?'Unknown sender':'مرسل غير محدد');
+       bySender..clear()..addAll(fresh.bySender);
+       senders..clear()..addAll(fresh.senders);
+       rebuildCalendarIndex();
+       refreshReviewIds();
+       final currentIds=allReviewIds.toSet();
+       selectedIds.removeWhere((id)=>!currentIds.contains(id));
+       if(selectedSender!=null&&!senders.contains(selectedSender)){
+        selectedSender=null;
+        messageWindow.reset();
+        refreshReviewIds();
+       }
+      }
+      return PopScope(
      // Explicit SMS selection must bypass Back-to-senders guard.
      canPop:selectedSender==null||openingReviewId!=null,
      onPopInvokedWithResult:(didPop,result){
@@ -528,6 +550,23 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
            WaffraBankOperationKind.transfer=>'transfer',
            _=>null,
           };
+         // Advisory only: relation fingerprints never approve a ledger write.
+         final related=item['relatedSmsEvent'];
+         final relatedLabel=switch(related){
+          'possibleDuplicate'=>waffraIsEnglish?
+           'Possibly repeated notification — verify before saving':
+           'قد يكون إشعارًا مكررًا — تأكد قبل الحفظ',
+          'possibleSettlement'=>waffraIsEnglish?
+           'May settle an earlier pending operation — review':
+           'قد تكون تسوية لعملية معلقة سابقة — راجعها',
+          'possibleReversal'=>waffraIsEnglish?
+           'Possible refund/reversal of a related operation':
+           'قد يكون استردادًا أو عكسًا لعملية مرتبطة',
+          'relatedNeedsReview'=>waffraIsEnglish?
+           'Possibly related bank message — needs review':
+           'قد يكون إشعارًا مرتبطًا بعملية سابقة — يحتاج مراجعة',
+          _=>null,
+         };
          final confidential=item['sensitiveOtp']==true||
           (item['body'] is String&&
            WaffraBankSmsFactsParser.isVerificationChallenge(item['body'] as String));
@@ -562,6 +601,11 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
              (waffraIsEnglish?'Review amount, category and budget':
               'راجع المبلغ والقسم والميزانية')+
              (date.isEmpty?'':' • '+date),maxLines:5),
+            if(relatedLabel!=null)Padding(
+             padding:const EdgeInsets.only(top:5),
+             child:WaffraText(relatedLabel,
+              style:TextStyle(fontSize:12,
+               color:Theme.of(ctx).colorScheme.onSurfaceVariant))),
             if(!confidential)Padding(
              padding:const EdgeInsets.only(top:7),
              child:Wrap(spacing:6,runSpacing:5,children:[
@@ -782,6 +826,8 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
       ]),
      ),
     ),
+    );
+     },
     ),
    ),
   );
