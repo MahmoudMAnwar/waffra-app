@@ -9,6 +9,8 @@ import 'package:waffra/storage/waffra_atomic_finance_snapshot.dart';
 import 'package:waffra/storage/waffra_encrypted_store.dart';
 import 'package:waffra/storage/waffra_fresh_encrypted_vault_bootstrap.dart';
 import 'package:waffra/storage/waffra_unified_finance_writer.dart';
+import 'package:waffra/storage/waffra_fresh_finance_modules_repository.dart';
+import 'package:waffra/main.dart' show SavingGoal, RecurringBill;
 
 /// M946: actual SQLCipher cross-feature smoke, not a source-text inspection.
 /// Every run uses a new disposable encrypted vault with synthetic records.
@@ -122,6 +124,73 @@ void main(){
   expect((await accounts().balances()).singleWhere(
    (a)=>a.id=='bank').balanceMinor,98500);
   expect(s.generation,0);
+ });
+
+
+ test('M946 income/expense + bank-to-wallet transfer conserves net worth '
+  'without a third income entry and replays only once',()async{
+  final first=await snapshot().read();
+  await writer().appendTransactions(records:[
+    entry('m946-transfer-salary',income:true,amount:250),
+    entry('m946-transfer-food',income:false,amount:100)],
+    messageHashes:[null,null],selectedAccountIds:['bank','bank'],
+    userConfirmed:true,expectedAccountGeneration:first.generation);
+  final original={for(final a in await accounts().balances())a.id:a.balanceMinor};
+  expect(original,{'bank':115000,'wallet':50000});
+  expect(await accounts().transfer(
+   id:'m946-bank-wallet',fromAccountId:'bank',toAccountId:'wallet',
+   amountMinor:25000,occurredIso:'2026-11-15T13:00:00Z',
+   userConfirmed:true),isTrue);
+  final moved={for(final a in await accounts().balances())a.id:a.balanceMinor};
+  expect(moved,{'bank':90000,'wallet':75000});
+  expect(moved.values.reduce((a,b)=>a+b),
+   original.values.reduce((a,b)=>a+b));
+  expect(await count('fresh_finance_entries'),2);
+  expect(await count('fresh_finance_internal_transfers'),1);
+  expect(await accounts().transfer(
+   id:'m946-bank-wallet',fromAccountId:'bank',toAccountId:'wallet',
+   amountMinor:25000,occurredIso:'2026-11-15T13:00:00Z',
+   userConfirmed:true),isFalse);
+  expect(await count('fresh_finance_entries'),2);
+  expect(await count('fresh_finance_internal_transfers'),1);
+  await db.close();
+  db=WaffraEncryptedStore.openAt(vault,key:key);
+  expect({for(final a in await accounts().balances())a.id:a.balanceMinor},moved);
+ });
+
+ test('M946 Goal -> linked recurring due retains same verified bank source '
+  'after cold reopen and rejects cross-account or direct saved-money edit',()async{
+  final goal=SavingGoal(id:'m946-goal',name:'هدف مؤقت',
+   target:1000,saved:0,active:true,accountId:'bank');
+  final due=RecurringBill(id:'m946-due',title:'استحقاق مؤقت',
+   category:'أخرى',amount:1000,income:false,day:15,active:true,
+   startAt:DateTime.utc(2027,1,15),linkedGoalId:goal.id,
+   accountId:'bank');
+  final modules=WaffraFreshModulesRepository(
+   store:db,experimentalEnabled:true);
+  await modules.save(WaffraFinanceModule.goals,goal.toJson());
+  await modules.save(WaffraFinanceModule.recurring,due.toJson());
+  await expectLater(modules.save(WaffraFinanceModule.recurring,
+   {...due.toJson(),'accountId':'wallet'},replaceExisting:true),
+   throwsA(isA<StateError>()));
+  await expectLater(modules.save(WaffraFinanceModule.goals,
+   {...goal.toJson(),'saved':25.0},replaceExisting:true),
+   throwsA(isA<StateError>()));
+  expect(await count('fresh_finance_entries'),0);
+  expect((await accounts().balances()).singleWhere(
+   (a)=>a.id=='bank').balanceMinor,100000);
+  await db.close();
+  db=WaffraEncryptedStore.openAt(vault,key:key);
+  final cold=WaffraFreshModulesRepository(
+   store:db,experimentalEnabled:true);
+  final g=(await cold.list(WaffraFinanceModule.goals)).single;
+  final r=(await cold.list(WaffraFinanceModule.recurring)).single;
+  expect(g['accountId'],'bank');
+  expect(r['linkedGoalId'],g['id']);
+  expect(r['accountId'],g['accountId']);
+  expect(g['saved'],0.0);
+  expect(await count('fresh_finance_entries'),0);
+  expect((await db.customSelect('PRAGMA foreign_key_check').get()),isEmpty);
  });
 
  test('M946 reviewed SMS hash is idempotent and never double-posts '
