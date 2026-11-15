@@ -48,7 +48,7 @@ void main(){
   expect(source,contains('idsCache.clear();'));
   expect(RegExp(r'refreshReviewIds\(\);').allMatches(source).length,3);
   expect(source,contains('NotificationListener<ScrollNotification>('));
-  expect(source,contains('messageWindow.visibleCount(bySender[selectedSender]?.length??0)'));
+  expect(source,contains('messageWindow.visibleCount(displayBySender[selectedSender]?.length??0)'));
   expect(source,contains('selectedIds.addAll(visibleIds());'));
   expect(source,contains('selectedIds.removeAll(visibleIds());'));
   expect(source,contains('messageWindow.revealNext(latest)'));
