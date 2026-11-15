@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:drift/drift.dart';
+import 'package:drift/drift.dart' show Variable;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/storage/waffra_account_context_read.dart';
 import 'package:waffra/storage/waffra_accounts_repository.dart';
