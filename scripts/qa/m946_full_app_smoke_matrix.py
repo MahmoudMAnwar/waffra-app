@@ -32,6 +32,9 @@ FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {
     "m952_many_goal_contributions_and_budget_parity": ("money", (
         "test/storage/m952_goal_projection_scale_parity_test.dart",
         "test/storage/m952_budget_single_pass_parity_test.dart")),
+    "m952_legacy_multibudget_entry_dedup_and_account_balance": ("money", (
+        "test/storage/m952_multibudget_ledger_dedup_test.dart",
+        "test/storage/m944_sqlcipher_keyset_paging_test.dart")),
     "m951_preposting_bank_sms_eligibility_thresholds": ("experience", (
         "test/m951_sms_eligibility_and_budget_alert_isolation_test.dart",
         "test/waffra_auto_sms_policy_test.dart")),
