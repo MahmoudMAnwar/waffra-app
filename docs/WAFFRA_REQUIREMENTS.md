@@ -2244,3 +2244,10 @@ Separate Draft PR stacked on #650. Fix unverified Home balance display; remove u
 - **Non-functional (P1):** a 10k-entry host-index/property smoke under a conservative 15-second budget, plus small 320px viewport and 200% RTL text scaling for approved Goal/Due metrics. This benchmark is not proof of real Android frame timing.
 - **Evidence gate (P0):** M946 independently runs every PR HEAD, each shard must contain at least 10 passed test cases with zero Failed, zero Skipped, a complete valid M937 event report and exact SHA. Missing/incomplete/mismatched evidence MUST fail, never green. Device, biometrics, private Backup and live SMS remain separately pending.
 - **Release policy:** zero unresolved P0 financial-loss or data-corruption issues and no known P1 regression before release candidate; no guarantee of a zero-defect app. Archive exact-head reports and reopen every discovered bug as regression.
+
+### M949 — 43 NEW functional tests only (Issue #655, Nov 15)
+- Preserve the 618 existing test files and 18 Android integrations from merged main #654; do NOT duplicate old standalone CRUD, transfer replay, goal due, date boundary or 10k tests.
+- Add 43 **new executable functional test() cases** in 3 files: 14 account lifecycle/transfers/partial historic mapping, 17 Goals/Recurring/Categories multi-step linkage, and 12 Home search/date/type/category/amount/verified-account intersections.
+- Mandatory every-PR M946 coverage must run these against the exact SHA. An executable uniqueness guard ensures exactly ordered IDs, no title duplicates against other suite titles, no skip and no source-text-only substitutes.
+- Maintain the individual case inventory and old-test differentiation in docs/qa/M949_UNIQUE_FUNCTIONAL_CASES.md. Four QA Python self-tests are separate from the 43 functional tests.
+- No production app source, old automated tests, user backup or device data changes. Real Android, biometrics and owner-data restore require independent verification.
