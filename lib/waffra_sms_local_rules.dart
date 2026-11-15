@@ -340,6 +340,10 @@ abstract final class WaffraSmsLocalRules {
   // All transfers, card settlements, unconfirmed and uncertain SMS need review.
   if(bankKind!=WaffraBankOperationKind.income&&
      bankKind!=WaffraBankOperationKind.expense)return null;
+  // M980: even a fully verified direction never grants autoPost when two
+  // saved owner rules disagree about this SAME message's classification.
+  if(matchedRules!=null&&matchedRules.where((r)=>!r.builtIn)
+    .map((r)=>r.resolvedKind).toSet().length>1)return null;
   final income=bankKind==WaffraBankOperationKind.income;
   final personal=(matchedRules??custom).where((rule)=>
    !rule.builtIn&&rule.financial&&
