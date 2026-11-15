@@ -11,11 +11,12 @@
       "id": "M983-EXACT-SMS-TEMPLATE-PREFILL-REFRESH-NO-SHADOW-MONEY",
       "issue": "Issues #689 and #657",
       "previous_behavior": "Sender SMS inbox tap opens a generic review dialog. Edit may open a second type selector; the income/expense editor starts with blank fields unless every parser independently verified the whole amount, and transfer can route through an unrelated three-way manual operation picker. After returning from the nested editor the open sender dialog does not rebuild grouped local-rule suggestion/rows, so statuses and selection can remain stale.",
-      "approved_behavior": "Sender SMS row exposes explicit income, expense and transfer actions; selecting one loads exact native owner-scoped SMS ID and opens only the corresponding existing validated editor. Confident income/expense SMS displays safe parsed title, SAR principal, date and four-way owner/default local category hints without overriding user editing or inventing bank account; transfer facts route to original verified two-account SMS transfer editor, uncertain transfer invokes separate manual two-account editor while leaving original SMS pending. The edit action on known SMS goes directly into the same type, not a second type-picker. After saving/returning, the current sender modal re-reads encrypted pending state and reclassifies all 4 rule types, preserves valid multi-select and selected sender, and reflects exact ACK/posting; unconfirmed or failed ACK stays reviewable.",
+      "approved_behavior": "Sender SMS row exposes explicit income, expense and transfer actions; selecting one loads exact native owner-scoped SMS ID and opens only the corresponding existing validated editor. Confident income/expense SMS displays safe parsed title, SAR principal, date and four-way owner/default local category hints without overriding user editing or inventing bank account; transfer facts route to original verified two-account SMS transfer editor, uncertain transfer invokes separate manual two-account editor while leaving original SMS pending. The edit action on known SMS goes directly into the same type, not a second type-picker. After saving/returning, the current sender modal re-reads encrypted pending state and reclassifies all 4 rule types, preserves valid multi-select and selected sender, and reflects exact ACK/posting; unconfirmed or failed ACK stays reviewable. M983 further updates the in-memory SMS row's displayed type from Needs Review to a clearly marked suggestedOnly Income/Expense/Transfer whenever owner/custom/default four-way rules match a single conflict-free type even if the money amount/category cannot be verified. That fallback NEVER excludes, ACKs or saves money, and SMS with OTP/pending or direction conflicts stays Needs Review. A newly added executable M983 pure-classifier test covers all three kinds and opposing saved-rule conflict.",
       "source_paths": [
         "lib/waffra_home_entry_sheet.part.dart",
         "lib/waffra_home_sms_confirmation.part.dart",
-        "lib/waffra_home_sms_inbox.part.dart"
+        "lib/waffra_home_sms_inbox.part.dart",
+        "lib/main.dart"
       ],
       "test_paths": [
         "test/m983_sms_direct_kind_prefill_refresh_test.dart",
@@ -32,7 +33,8 @@
         "When the user manually selects a type conflicting with independent bank facts, keep a separate manual transaction with original SMS as reference and leave the source SMS pending.",
         "Sole type-specific editor never shows original OTP contents and cannot bypass SAR/direction/pending/date/category/account/generation confirmation.",
         "Sender review groups are refreshed after a completed edit and four-way rules re-run, with all selection IDs intersected against current verified encrypted queue.",
-        "Real Android device and RTL visual verification remain required; source/unit CI alone does not certify UI screenshots."
+        "Real Android device and RTL visual verification remain required; source/unit CI alone does not certify UI screenshots.",
+        "Rule-only visual status hints never bypass SAR principal/date/account/confirmed category evidence, never become a finance writer or a durable native excluded fingerprint."
       ]
     },
     {
