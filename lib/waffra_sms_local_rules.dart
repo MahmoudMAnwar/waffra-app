@@ -63,6 +63,27 @@ class WaffraSmsLocalRule {
  }
 }
 
+/// M986: index owner rules by sender once per classification batch. Rules with
+/// an empty sender remain global. This is a candidate filter only: every
+/// selected rule still passes the original keyword and safety checks.
+class WaffraSmsRuleSenderIndex {
+ WaffraSmsRuleSenderIndex(Iterable<WaffraSmsLocalRule> rules){
+  for(final rule in rules){
+   final sender=WaffraSmsLocalRules.normalized(rule.sender);
+   if(sender.isEmpty){
+    _global.add(rule);
+   }else{
+    _bySender.putIfAbsent(sender,()=>[]).add(rule);
+   }
+  }
+ }
+ final List<WaffraSmsLocalRule> _global=[];
+ final Map<String,List<WaffraSmsLocalRule>> _bySender={};
+ List<WaffraSmsLocalRule> candidates(String sender)=>[
+  ..._global,...?_bySender[WaffraSmsLocalRules.normalized(sender)],
+ ];
+}
+
 /// Approved keywords only. Never suggest bank identifiers, long numbers,
 /// statement balances, OTPs, account/card suffixes or unredacted SMS bodies.
 abstract final class WaffraSmsLocalRules {

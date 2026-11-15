@@ -1135,6 +1135,8 @@ Map<String,Object?> waffraM632ClassifySmsQueue(Map<String,Object?> input){
  final rules=(input['rules'] as List).map((entry)=>
   WaffraSmsLocalRule.fromJson(Map<String,dynamic>.from(entry as Map)))
   .toList(growable:false);
+ // M986: build the owner sender index once per background batch.
+ final ruleIndex=WaffraSmsRuleSenderIndex(rules);
  final validCategories=(input['categories'] as List).whereType<String>().toSet();
  final hashes=(input['hashes'] as List).whereType<String>().toSet();
  final waiting=<Map<String,Object?>>[];
@@ -1159,7 +1161,7 @@ Map<String,Object?> waffraM632ClassifySmsQueue(Map<String,Object?> input){
   // M980: ALL FOUR owner/default kinds match before a safety branch can
   // select a review suggestion or request a durable native exclusion.
   final fourWay=WaffraSmsLocalRules.matchAllFourKinds(
-   body:body,sender:sender,custom:rules);
+   body:body,sender:sender,custom:ruleIndex.candidates(sender));
   final special=WaffraSmsLocalRules.resolveSpecial(
    body:body,sender:sender,
    bankKind:annotated['sensitiveOtp']==true?
