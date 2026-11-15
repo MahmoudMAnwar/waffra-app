@@ -211,7 +211,7 @@
     ],
     "test/m940_m941_home_ledger_pagination_test.dart": [
       {
-        "start": "  test('M940/M941 production Home and summary share source-verified read query',(){",
+        "start": " test('M940/M941 production Home and summary share source-verified read query',(){",
         "end": null
       }
     ],
