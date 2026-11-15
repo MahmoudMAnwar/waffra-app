@@ -136,7 +136,7 @@ ORDER BY a.created_iso,a.account_id
       final newBalances={for(final a in newAccounts)a.id:a.balanceMinor};
       expect(newBalances,oldBalances);
       expect(newAccounts.map((a)=>a.id).toList(),
-        ['bank-a','bank-b','wallet','archived']);
+        ['archived','bank-a','bank-b','wallet']);
       expect(newAccounts.singleWhere((a)=>a.id=='archived').archived,true);
       expect(newAccounts.fold<int>(0,(sum,a)=>sum+a.balanceMinor),
         sumBefore,reason:'All internal transfers conserve total money.');
