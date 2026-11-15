@@ -95,7 +95,15 @@ void main(){
   expect(waiting.any((m)=>m['id']=='fresh'),isFalse);
   expect(restore.map((m)=>m['id']),containsAll(['dupe','fresh']));
   // Background classification cannot authorize or post an account debit.
-  expect(result.keys.toSet(),{'waiting','excluded','committed','retainOnAckFailure'});
+  expect(result.keys.toSet(),containsAll(
+   {'waiting','excluded','committed','retainOnAckFailure'}));
+  // The original four authoritative queue/ACK lists remain unchanged.
+  // Extra values are read-only M991/M993 metrics and encrypted digests.
+  expect(result.keys.toSet().difference(
+   {'waiting','excluded','committed','retainOnAckFailure'}),
+   {'cacheHits','latestHistory'});
+  expect(result['cacheHits'],isA<int>());
+  expect(result['latestHistory'],isA<List>());
  });
 
  test('large input uses worker without main-isolate message parser loop',()async{
@@ -151,7 +159,15 @@ void main(){
   expect(waiting.map((row)=>row['id']),
     containsAll(<String>['expense-plus-otp','credit-plus-promo','salary-plus-promo','salary-plus-otp']));
   // An immutable seed doesn't create a money entry or sender-wide block.
-  expect(result.keys.toSet(),{'waiting','excluded','committed','retainOnAckFailure'});
+  expect(result.keys.toSet(),containsAll(
+   {'waiting','excluded','committed','retainOnAckFailure'}));
+  // The original four authoritative queue/ACK lists remain unchanged.
+  // Extra values are read-only M991/M993 metrics and encrypted digests.
+  expect(result.keys.toSet().difference(
+   {'waiting','excluded','committed','retainOnAckFailure'}),
+   {'cacheHits','latestHistory'});
+  expect(result['cacheHits'],isA<int>());
+  expect(result['latestHistory'],isA<List>());
   expect((result['committed'] as List),isEmpty);
  });
 
