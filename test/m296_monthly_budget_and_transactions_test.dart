@@ -59,8 +59,11 @@ void main(){
   final source=readWaffraMainSourceForContracts();
   // M648: the entry preview remains capped at ten, while the same
   // activity list also exposes verified transfer/savings cards.
-  expect(source,contains('if(waffraCanExpandDashboardTransactions(visibleCount)&&'));
-  expect(source,contains("waffraCanExpandDashboardTransactions(history.length)"));
+  expect(source,contains('if(waffraCanExpandDashboardTransactions(toolbarCount))'));
+  expect(source,contains('advanceHistoryWindow(toolbarCount)'));
+  expect(source,contains("Key('waffra-dashboard-transactions-expand')"));
+  expect(source,isNot(contains("Key('waffra-dashboard-unified-activity-expand')")));
+  expect(source,contains('_m945UnifiedHistoryCount=history.length;'));
   expect(source,contains('visibleCount,expanded:showAllTransactions'));
   expect(source,contains('_m684Periods.pageNewestFirst('));
   expect(source,contains('_m684Periods.countNewestFirst('));
