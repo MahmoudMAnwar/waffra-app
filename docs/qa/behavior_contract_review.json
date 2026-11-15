@@ -8,6 +8,32 @@
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
     {
+      "id": "M965-HOME-LEDGER-INVALIDATION-AND-SMS-PERMISSION-EXTRACTION",
+      "issue": "Issue #666 / stacked Draft PR #667",
+      "previous_behavior": "Home core State carried ledger period-cache invalidation and memoized SMS permission future implementations, while other pure helpers were moved in M964.",
+      "approved_behavior": "Move both exact original bodies to registered same-library Home helpers. Keep State-owned fields, original authenticated source invalidation, permission refresh lifecycle and SMS app code unchanged; update existing M528/M940/M964 source tests rather than weaken them.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_state_core_helpers.part.dart"
+      ],
+      "test_paths": [
+        "test/m965_home_state_cache_lifecycle_extraction_test.dart",
+        "test/m940_m941_home_ledger_pagination_test.dart",
+        "test/m528_settings_async_cache_regression_test.dart",
+        "test/m964_home_state_pure_helpers_extraction_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m946-whole-app-feature-smoke.yml",
+        ".github/workflows/m147-final-main-safe-merge-review.yml"
+      ],
+      "safety_invariants": [
+        "Home ledger invalidation clears the period-cache index, unified history count and scope exactly as before.",
+        "SMS native permission is only fetched and cached once per Home owner session, with existing callers able to reset it.",
+        "No mutation to finance writers, accounts, SMS rules, real backup or UI geometry.",
+        "Old tests remain enabled; new M965 source and full Flutter verification required."
+      ]
+    },
+    {
       "id": "M964-REMAINING-HOME-STATE-PURE-HELPER-EXTRACTION",
       "issue": "Issue #666 / Draft stacked PR",
       "previous_behavior": "A handful of pure presentation/session helper methods remained in _HomeScreenState although most finance and UI behaviors are split into same-library Dart parts.",

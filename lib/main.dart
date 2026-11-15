@@ -4344,11 +4344,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  String? _m945UnifiedHistoryScope;
  int? _m945UnifiedHistoryCount;
  // M964: pure Home helper now lives in registered same-library part.
- void _m684InvalidatePeriodRead(){
-  _m940LedgerReads.invalidate();
-  _m945UnifiedHistoryScope=null;
-  _m945UnifiedHistoryCount=null;
- }
+ // M965: cache invalidation retained exactly in registered Home core helpers.
  final namedBudgets=<WaffraNamedBudget>[];
  // One repaint-isolated saving indicator for every confirmed Home finance edit.
  final WaffraSmoothOperationController _saveProgress=WaffraSmoothOperationController();
@@ -4405,8 +4401,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
  bool protectRecentApps=true;
  // M528: stable permission/consent futures across unrelated profile repaints.
  Future<bool>? _m528SmsEnabledFuture;
- Future<bool> _m528SmsEnabled()=>
-  _m528SmsEnabledFuture??=WaffraAutoSms.enabled();
+ // M965: SMS permission memoization lives in registered Home core helpers.
  String? _accountOpenSection;
  String accountSearch='';
  bool addFabExpanded=false;

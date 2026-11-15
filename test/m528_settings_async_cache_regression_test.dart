@@ -13,7 +13,10 @@ void main(){
  }
  test('M690 settings keep SMS cache but remove AI/cloud analysis switch',(){
   final state=between('bool protectRecentApps=true;','String? _accountOpenSection;');
-  expect(state,contains('_m528SmsEnabledFuture??=WaffraAutoSms.enabled()'));
+  expect(state,contains('Future<bool>? _m528SmsEnabledFuture;'));
+  final helpers=File('lib/waffra_home_state_core_helpers.part.dart').readAsStringSync();
+  expect(helpers,contains('Future<bool> _m528SmsEnabled()=>'));
+  expect(helpers,contains('_m528SmsEnabledFuture??=WaffraAutoSms.enabled()'));
   expect(state,isNot(contains('_m528CloudConsentFuture')));
   final profile=between('Widget profilePage(){','Widget _addMenuOption({');
   expect(profile,contains('future:_m528SmsEnabled()'));

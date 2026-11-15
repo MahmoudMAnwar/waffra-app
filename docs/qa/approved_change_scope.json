@@ -1,11 +1,13 @@
 {
   "contract_version": 1,
-  "change_id": "M964-ISSUE666-HOME-STATE-PURE-HELPER-EXTRACTION-20261115",
-  "human_scope_review": "Owner explicitly requires finishing code-side architecture for the five axes #657. After #658 merged and Draft #665 M955-M963 source-based integration, this stacked Issue #666 tranche moves only four pure Home helper methods to one registered same-library part: SMS session epoch guard, owner-scoped display key, immutable period-index accessor, SMS rule owner key. Preserve exact method contents, lifecycle callbacks, finance writer, SQLCipher source, SMS rules, original UI/FAB/Snackbar, original backup and physical device. Update exact tested extraction scope without weakening M385/M550. No claim whole five axes 100%.",
+  "change_id": "M965-ISSUE666-FINISH-HOME-CACHE-HELPER-EXTRACTION-20261115",
+  "human_scope_review": "Owner explicitly requires finishing code-side architecture for the five axes #657. After #658 merged and Draft #665 M955-M963 source-based integration, this stacked Issue #666 tranche moves only four pure Home helper methods to one registered same-library part: SMS session epoch guard, owner-scoped display key, immutable period-index accessor, SMS rule owner key. Preserve exact method contents, lifecycle callbacks, finance writer, SQLCipher source, SMS rules, original UI/FAB/Snackbar, original backup and physical device. Update exact tested extraction scope without weakening M385/M550. No claim whole five axes 100%. M965 finishes the two remaining nonlistener Home helpers requested in Issue #666: finance-period invalidation and memoized native SMS permission future. Extract unchanged method bodies to existing same-library part, leave field storage, owner session and callbacks in State. Update old M528/M940/M964 source contracts and a new M965 registration without disabling tests; guard bounded main.dart and test edits.",
   "user_requested_changes": [
     "Extract the four non-mutating Home State helper methods into one registered Dart part with identical source and owner/session semantics, no financial writes or UI changes.",
     "Retain listener-bound SMS callback, State init/dispose, verified money and entry-history cache invalidation in their original lifecycle owner.",
-    "Add a mandatory exact-HEAD source-contract regression through existing M946 experience shard and preserve old first-frame, owner rule and 50-card tests."
+    "Add a mandatory exact-HEAD source-contract regression through existing M946 experience shard and preserve old first-frame, owner rule and 50-card tests.",
+    "M965: finish Issue #666 extraction of finance-ledger display-index invalidation and the session-scoped native SMS permission future into the Home same-library helpers, with original method signatures and source operations unchanged.",
+    "M965: preserve old M940/M528/M964 assertions by asserting moved method definitions inside the registered library part, retaining source index invalidation, SMS permissions, callback lifecycle and prior test coverage."
   ],
   "allowed_changed_files": [
     "lib/main.dart",
@@ -15,7 +17,10 @@
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/WAFFRA_REQUIREMENTS.md",
-    "docs/release/WAFFRA_APPROVED_CHANGES.txt"
+    "docs/release/WAFFRA_APPROVED_CHANGES.txt",
+    "test/m940_m941_home_ledger_pagination_test.dart",
+    "test/m528_settings_async_cache_regression_test.dart",
+    "test/m965_home_state_cache_lifecycle_extraction_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
@@ -35,17 +40,33 @@
       },
       {
         "start": " int? _m945UnifiedHistoryCount;",
-        "end": " void _m684InvalidatePeriodRead(){"
+        "end": " final namedBudgets=<WaffraNamedBudget>[];"
       },
       {
         "start": " final List<Map<String,Object?>> _autoSmsPending=<Map<String,Object?>>[];",
         "end": " // M741: original local SMS rule and learning methods moved to registered same-library part."
+      },
+      {
+        "start": " // M528: stable permission/consent futures across unrelated profile repaints.",
+        "end": " String? _accountOpenSection;"
       }
     ],
     "scripts/qa/m946_full_app_smoke_matrix.py": [
       {
         "start": "FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {",
         "end": "# Must remain listed; CI cannot pretend that unit/widget tests prove these."
+      }
+    ],
+    "test/m940_m941_home_ledger_pagination_test.dart": [
+      {
+        "start": "  final main=File('lib/main.dart').readAsStringSync();",
+        "end": "  expect(dash,contains('where:transactionFilter.accepts'));"
+      }
+    ],
+    "test/m528_settings_async_cache_regression_test.dart": [
+      {
+        "start": "  final state=between('bool protectRecentApps=true;','String? _accountOpenSection;');",
+        "end": "  expect(state,isNot(contains('_m528CloudConsentFuture')));"
       }
     ]
   }

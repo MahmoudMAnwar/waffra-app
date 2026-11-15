@@ -28,8 +28,10 @@ void main(){
   // Session-bound callback identity, first-frame flow, finance invalidation,
   // consent and disposal deliberately remain owned by Home State.
   expect(main,contains('void _receiveSharedSms(){'));
-  expect(main,contains('void _m684InvalidatePeriodRead(){'));
-  expect(main,contains('Future<bool> _m528SmsEnabled()=>'));
+  expect(helper,contains('void _m684InvalidatePeriodRead(){'));
+  expect(main,isNot(contains('void _m684InvalidatePeriodRead(){')));
+  expect(helper,contains('Future<bool> _m528SmsEnabled()=>'));
+  expect(main,isNot(contains('Future<bool> _m528SmsEnabled()=>')));
   expect(main,contains('@override void dispose(){'));
   expect(main,contains('@override void initState(){'));
   expect(main,contains('@override Widget build(BuildContext context)=>'));

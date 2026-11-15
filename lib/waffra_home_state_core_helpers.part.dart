@@ -20,4 +20,17 @@ extension _WaffraHomeStatePureHelpers on _HomeScreenState {
  String get _smsRuleOwnerKey=>WaffraSmsLocalRuleStore.ownerKey(
   provider:widget.profile.provider,phone:widget.profile.phone,
   email:widget.profile.email);
+
+ // M965: preserve the original authenticated ledger revision and Home
+ // unified-timeline invalidation on every explicit state mutation.
+ void _m684InvalidatePeriodRead(){
+  _m940LedgerReads.invalidate();
+  _m945UnifiedHistoryScope=null;
+  _m945UnifiedHistoryCount=null;
+ }
+
+ // M965: preserve the same single local permission future per Home session.
+ Future<bool> _m528SmsEnabled()=>
+  _m528SmsEnabledFuture??=WaffraAutoSms.enabled();
+
 }
