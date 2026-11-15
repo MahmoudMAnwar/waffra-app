@@ -1,3 +1,9 @@
+M986 M174 regression: keep calendar AND clock verification for bank SMS and corrected manual SMS; update stale source-test conditional to assert the broader new guard without removing any required date assertions. Sender index now honors sender scoping even for template-family entries.
+
+M986 CI correction: removed duplicate M385 allowed test path, added bounded source ranges and required M550 source_paths. Upgraded initial sender index to preserve exact original rule precedence and safely skip irrelevant 2-character keyword prefixes; new four-kind parity cases. No financial write change.
+
+M986 (Issue #700): initial performance improvement indexes saved SMS rules by normalized sender once per background classification batch, preserving all four rule kinds, default rules, OTP and finance safety. New behavioral regression tests; phases #701-#703 remain planned, not implemented. No auto-post or UI design changes.
+
 M985 follow-up QA: the two unique M103/Full Flutter failures were stale source-shape contracts. M661 now proves sender-ID pairing through the updated indexed MapEntry/previewMatches pipeline; M302 now proves the reference+suffix advisory is before the original duplicate refusal and staged receipt cleanup. All original business assertions retained; no production ledger logic changed.
 
 M985 date guard: reclassified income/expense no longer inherits today's date silently when original SMS date is unknown; date and time picker confirmation is required before enabling save, without changing ordinary manual entry behavior.

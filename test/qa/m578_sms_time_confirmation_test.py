@@ -12,7 +12,7 @@ class BankSmsTimeConfirmation(unittest.TestCase):
    'DateTime(d.year,d.month,d.day,time.hour,time.minute)',
    'if(time==null||!sheetContext.mounted)return;',
    'confirmed.isAfter(DateTime.now())',
-   'smsDateConfirmed=true;', 'sms&&!smsDateConfirmed?',
+   'smsDateConfirmed=true;', '(sms||manualReviewBody!=null)&&!smsDateConfirmed?',
    'اختر التاريخ والوقت',
    "date.hour.toString().padLeft(2,'0')", 
    "date.minute.toString().padLeft(2,'0')"):

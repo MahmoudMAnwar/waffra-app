@@ -63,6 +63,68 @@ class WaffraSmsLocalRule {
  }
 }
 
+/// M986: compact conservative candidate index for four-kind SMS review.
+/// All rules stay ordered exactly as before (custom first, then defaults).
+/// Prefix pruning only removes rules whose normalized keywords are absent.
+/// Structured/verification templates bypass keyword pruning entirely.
+class WaffraSmsRuleCandidateIndex {
+ WaffraSmsRuleCandidateIndex(Iterable<WaffraSmsLocalRule> custom){
+  final all=<WaffraSmsLocalRule>[
+   ...custom,...WaffraSmsLocalRules.allDefaultRules,
+  ];
+  for(var i=0;i<all.length;i++){
+   final rule=all[i];
+   final key=WaffraSmsLocalRules.normalized(rule.sender);
+   final entry=MapEntry<int,WaffraSmsLocalRule>(i,rule);
+   _senderByIndex[i]=key;
+   final tokens=<String>{};
+   if(rule.templateFamily.isNotEmpty||rule.keywords.isEmpty){
+    _always.add(entry);
+    continue;
+   }
+   for(final word in rule.keywords){
+    final norm=WaffraSmsLocalRules.normalized(word);
+    if(norm.length<2){
+     _always.add(entry);
+     continue;
+    }
+    tokens.add(norm.substring(0,2));
+   }
+   for(final token in tokens){
+    _prefix.putIfAbsent(token,()=>[]).add(entry);
+   }
+  }
+ }
+ final Map<String,List<MapEntry<int,WaffraSmsLocalRule>>> _prefix={};
+ final List<MapEntry<int,WaffraSmsLocalRule>> _always=[];
+ final Map<int,String> _senderByIndex={};
+ List<WaffraSmsLocalRule> candidates({
+  required String body,required String sender,
+ }){
+  final senderKey=WaffraSmsLocalRules.normalized(sender);
+  final norm=WaffraSmsLocalRules.normalized(body);
+  final picked=<int,WaffraSmsLocalRule>{};
+  void add(MapEntry<int,WaffraSmsLocalRule> item){
+   final scoped=_senderByIndex[item.key]??'';
+   if(scoped.isNotEmpty&&scoped!=senderKey)return;
+   picked[item.key]=item.value;
+  }
+  for(final rule in _always)add(rule);
+  final seen=<String>{};
+  for(var i=0;i+1<norm.length;i++){
+   final prefix=norm.substring(i,i+2);
+   if(!seen.add(prefix))continue;
+   for(final rule in _prefix[prefix]??const <MapEntry<int,WaffraSmsLocalRule>>[]){
+    add(rule);
+   }
+  }
+  final ordered=picked.keys.toList()..sort();
+  return List<WaffraSmsLocalRule>.unmodifiable([
+   for(final id in ordered)picked[id]!,
+  ]);
+ }
+}
+
 /// Approved keywords only. Never suggest bank identifiers, long numbers,
 /// statement balances, OTPs, account/card suffixes or unredacted SMS bodies.
 abstract final class WaffraSmsLocalRules {
@@ -248,10 +310,14 @@ abstract final class WaffraSmsLocalRules {
  static List<WaffraSmsLocalRule> matchAllFourKinds({
   required String body,required String sender,
   Iterable<WaffraSmsLocalRule> custom=const <WaffraSmsLocalRule>[],
+  WaffraSmsRuleCandidateIndex? candidateIndex,
  }){
   final found=<WaffraSmsLocalRule>[];
   final normalizedBody=normalized(body);
-  for(final rule in <WaffraSmsLocalRule>[...custom,...allDefaultRules]){
+  final candidates=candidateIndex==null?
+   <WaffraSmsLocalRule>[...custom,...allDefaultRules]:
+   candidateIndex.candidates(body:body,sender:sender);
+  for(final rule in candidates){
    if(!const <String>{'income','expense','transfer','excluded'}
      .contains(rule.resolvedKind))continue;
    if(matches(rule,body,sender:sender,

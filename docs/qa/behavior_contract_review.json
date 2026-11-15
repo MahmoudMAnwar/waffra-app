@@ -1,12 +1,34 @@
 {
   "schema_version": 1,
-  "pr": "M985 Draft — SMS safety + form prefill #2–#7 (#698, child of #697)",
-  "issue": "Issue #698 / #697 / #696 / five axes #657",
+  "pr": "M986 Draft — sender-indexed SMS rules (#700)",
+  "issue": "Issue #700; roadmap #701 #702 #703",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at f0def360ea75b9c865548b6f1b4fc07e9640f2c2 after #656",
   "reviewed_at": "2026-11-15",
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
+    {
+      "id": "M986-INDEX-OWNER-SENDER-SAFETY",
+      "issue": "Issue #700",
+      "previous_behavior": "Every queued SMS checked all custom owner rules, including rules for unrelated senders.",
+      "approved_behavior": "Construct a sender- and keyword-prefix candidate index once per background isolate batch; preserve matching rule order, all four categories and templates including beneficiary/OTP, default rules, verified financial authority, native ACK behavior; never turn suggestions into posting permission.",
+      "test_paths": [
+        "test/m986_sms_rule_sender_index_test.dart",
+        "test/m980_four_sms_rule_kinds_every_route_test.dart",
+        "test/m548_review_grouping_and_signup_perf_test.dart",
+        "test/qa/m578_sms_time_confirmation_test.py"
+      ],
+      "safety_invariants": [
+        "A rule scoped to one sender cannot be considered for a different sender; normalized sender identity is used for both index and match.",
+        "Every rule candidate is still evaluated with existing keyword and safety guards; all default rules remain active.",
+        "No finance write, no SMS auto ACK from indexing; other roadmap phases remain incomplete.",
+        "Existing date/time source QA asserts both bank SMS and manually corrected SMS use explicit calendar and clock before finance save."
+      ],
+      "source_paths": [
+        "lib/waffra_sms_local_rules.dart",
+        "lib/main.dart"
+      ]
+    },
     {
       "id": "M985-OWNER-CORRECTED-SMS-ACCOUNT-SUFFIX-SAFETY-AND-IMPACT",
       "issue": "Issue #698",
