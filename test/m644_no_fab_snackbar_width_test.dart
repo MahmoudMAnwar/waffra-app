@@ -64,7 +64,7 @@ void main() {
   }
 
   test('M644 all no-FAB routes including opened account show wide notice', () {
-    final source = File('lib/main.dart').readAsStringSync();
+    final source = File('lib/waffra_home_root_shell.part.dart').readAsStringSync();
     expect(source, contains('if(!accountOpened&&ready&&tab!=2)'));
     expect(source, contains('floatingActionButton:!ready||accountOpened||tab==2?null:'));
     expect(source, contains('if(accountOpened||tab==2||!ready)'));
