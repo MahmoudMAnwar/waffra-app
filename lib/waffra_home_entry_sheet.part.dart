@@ -133,7 +133,13 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
   // Keep existing edit categories and previously-approved SMS suggestions.
   String category=(smsEditorDraft?['category'] as String?)??
    initial?.category??(sms?
-    (directionKnown?(editorLearnedCategory??(trustedSms?parsedSms!.category:'')):''):'');
+    (trustedSms?(editorLearnedCategory??parsedSms.category):'أخرى'):'');
+  // M983: override legacy bank-SMS fallback only for a fresh typed SMS.
+  // An existing draft/edit wins; fresh MANUAL always stays unselected.
+  if(sms&&initial==null&&smsEditorDraft==null){
+   category=directionKnown?
+    (editorLearnedCategory??(trustedSms?parsedSms!.category:'')):'';
+  }
   String? selectedParentId;
   String? selectedBudgetId=(smsEditorDraft?['budget'] as String?)??initial?.budgetId;
   var entryAccounts=_m467Accounts.where((a)=>!a.archived).toList();
