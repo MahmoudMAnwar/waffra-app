@@ -345,14 +345,14 @@ extension _WaffraHomeDashboardAnalyticsModule on _HomeScreenState {
              future:_m652UnifiedActivities(_m467SelectedAccount),
              builder:(ctx,snapshot){
               if(snapshot.hasError)return Column(children:[
-               if(typeFilter=='الكل')...shown.map(compactTransaction),
+               if(typeFilter=='الكل')...shown.indexed.map((row)=>_m953NumberedActivity(row.$1+1,compactTransaction(row.$2))),
                Padding(padding:const EdgeInsets.all(12),
                 child:WaffraText(waffraIsEnglish?
                  'Transfer or savings history could not be verified. Refresh to retry.':
                  'تعذر التحقق من التحويلات أو الادخار. أعد التحديث.')),
               ]);
               if(!snapshot.hasData)return Column(children:[
-               if(typeFilter=='الكل')...shown.map(compactTransaction),
+               if(typeFilter=='الكل')...shown.indexed.map((row)=>_m953NumberedActivity(row.$1+1,compactTransaction(row.$2))),
               ]);
               final names={for(final a in _m467Accounts)a.id:_m647VerifiedAccountLabel(a)};
               bool accepted(DateTime? when,int amountMinor,List<String> terms)=>
@@ -411,11 +411,12 @@ extension _WaffraHomeDashboardAnalyticsModule on _HomeScreenState {
                 padding:const EdgeInsets.symmetric(vertical:26),
                 child:WaffraText(waffraIsEnglish?
                  'No matching transactions':'ما عندك عمليات مطابقة')),
-               for(final event in history.take(maxShown))
+               for(final (index,event) in history.take(maxShown).indexed)
                 if(event.activity is MoneyEntry)
-                 compactTransaction(event.activity as MoneyEntry)
+                 _m953NumberedActivity(index+1,
+                  compactTransaction(event.activity as MoneyEntry))
                 else if(event.activity is WaffraInternalTransferHistory)
-                 InkWell(
+                 _m953NumberedActivity(index+1,InkWell(
                   key:Key('m648-home-transfer-'+
                    (event.activity as WaffraInternalTransferHistory).id),
                   onTap:WaffraHaptics.tap(()=>
@@ -423,9 +424,10 @@ extension _WaffraHomeDashboardAnalyticsModule on _HomeScreenState {
                     (event.activity as WaffraInternalTransferHistory).id)),
                   child:_m647TransferCard(
                    event.activity as WaffraInternalTransferHistory,
-                   compact:true))
+                   compact:true)))
                 else if(event.activity is WaffraVerifiedGoalMovement)
-                 _m649SavingsCard(event.activity as WaffraVerifiedGoalMovement),
+                 _m953NumberedActivity(index+1,
+                  _m649SavingsCard(event.activity as WaffraVerifiedGoalMovement)),
                if(history.isNotEmpty)Padding(
                 padding:const EdgeInsets.only(top:7),
                 child:Row(children:[
@@ -449,7 +451,7 @@ extension _WaffraHomeDashboardAnalyticsModule on _HomeScreenState {
              padding:const EdgeInsets.symmetric(vertical:26),
              child:WaffraText(waffraIsEnglish?
               'No matching transactions':'ما عندك عمليات مطابقة')),
-            ...shown.map(compactTransaction),
+            ...shown.indexed.map((row)=>_m953NumberedActivity(row.$1+1,compactTransaction(row.$2))),
             if(visibleCount>0)Padding(
              padding:const EdgeInsets.only(top:7),
              child:Row(children:[
