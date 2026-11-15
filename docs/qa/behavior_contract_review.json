@@ -8,6 +8,32 @@
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
     {
+      "id": "M952-GOAL-CONTRIBUTION-GROUPED-SQLCIPHER-80-GOAL-PARITY",
+      "issue": "Issue #657 / PR #658 axes 1/2/3/5: eliminate per-goal correlated account-source SQL scans while conserving every SAR halala",
+      "previous_behavior": "The Account Context reader queried one correlated bank goal contribution subquery per savings goal. With many goals and wallet movements that repeats movement scans while reading an unchanged bank account.",
+      "approved_behavior": "Perform one grouped SELECT by goal_id for the chosen account from the verified encrypted goal-account source rows, LEFT JOIN with all actual goal wallet records, preserve fund positive, release negative, other unsourced movements excluded, zero for no source, and keep saved_minor unchanged. This read is not a goal-wallet writer, does not post income/expense, and does not change bank balances.",
+      "source_paths": [
+        "lib/storage/waffra_account_context_read.dart",
+        "scripts/qa/m946_full_app_smoke_matrix.py"
+      ],
+      "test_paths": [
+        "test/storage/m952_goal_projection_scale_parity_test.dart",
+        "test/storage/m952_budget_single_pass_parity_test.dart",
+        "test/storage/m952_account_linked_schema_readiness_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/m946-whole-app-feature-smoke.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/finance-full-regression.yml"
+      ],
+      "safety_invariants": [
+        "Compare exact per-goal previous-SQL results for 80 independent savings goals with 720 generated movements for bank A, bank B, and no selected bank.",
+        "Stored user goal wallet balance remains independent of contribution and no account opening or verified account balance changes during the query.",
+        "M946 exact-head money and safety smoke must actually execute M952 goal, budget, schema readiness and keyset tests; no source-only claims.",
+        "Scope is restricted to the current verified read and CI execution matrix; no user backup/Android/biometrics accepted as tested."
+      ]
+    },
+    {
       "id": "M952-UNASSIGNED-HISTORICAL-SQLCIPHER-KEYSET",
       "issue": "Issue #657 axes 2/3/4/5: unassigned old bank transactions cannot scan thousands of records using OFFSET",
       "previous_behavior": "M944 source-backed keyset protected monthly account screens, but filter='none' still read historical unassigned SQLCipher entries via readUnassignedPage(offset:...), doing increasing OFFSET work as old restored accounts grew. UI used different next-page handling and had no cursor safety on unassigned pages.",
