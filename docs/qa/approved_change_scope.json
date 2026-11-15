@@ -41,7 +41,7 @@
     "test/qa/m578_sms_time_confirmation_test.py": [
       {
         "start": "  for marker in (",
-        "end": "   self.assertIn('var smsDateConfirmed=initial!=null||',editor)"
+        "end": "  self.assertIn('var smsDateConfirmed=initial!=null||',editor)"
       }
     ]
   }
