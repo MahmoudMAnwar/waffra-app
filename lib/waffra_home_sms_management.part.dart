@@ -214,6 +214,7 @@ extension _WaffraHomeSmsManagement on _HomeScreenState {
      id:id,sender:sender.isEmpty?(waffraIsEnglish?'Unknown sender':'مرسل غير محدد'):sender,
      preview:summary.isEmpty?(waffraIsEnglish?'Bank message':'رسالة بنكية'):summary,
      kind:noticeKind,
+     receivedAtMs:row['receivedAt'] is int?row['receivedAt'] as int:0,
      amount:sensitive?null:(amount is num?amount.toDouble():null));
    }).toList(growable:false);
  }
