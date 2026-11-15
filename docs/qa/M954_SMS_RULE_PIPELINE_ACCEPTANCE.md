@@ -23,8 +23,8 @@
 | Group | Synthetic verification |
 |---|---|
 | New app | Arabic numeric OTP, native-masked English registration code, Arabic/English login alternatives |
-| Rule priority | User sender-specific exclusion; wrong-sender refusal; default promotion; default plus custom simultaneously |
-| Finance safety | Completed debit + OTP retained; completed transfer + OTP retained; income + expense remain reviewable with original facts; conflicting personalized income rule cannot override source-confirmed expense |
+| Rule priority | User sender-specific exclusion; wrong-sender refusal; default promotion and payment reminder; default plus custom simultaneously; weak bank direction must not override a safe confirmed sender rule |
+| Finance safety | Completed debit + OTP retained; completed transfer + OTP retained; actual completed payment plus OTP not excluded; income + expense remain reviewable with original facts; conflicting personalized income rule cannot override source-confirmed expense |
 | Unknown | Unrecognized messages remain reviewable |
 | Replay | Precommitted hash takes precedence; failed native exclusion ACK restores review candidate; 30-day native excluded fingerprint survives rescan |
 | Routing/privacy | WorkManager and Home use same resolver; native intake masks original security digits; no automatic money creation or account guessing |
