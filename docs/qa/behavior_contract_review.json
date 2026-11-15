@@ -40,7 +40,10 @@
         "test/storage/m943_custom_institution_and_backup_test.dart",
         "test/m268_approved_emerald_balance_card_test.dart",
         "test/m470_sms_first_sender_account_test.dart",
-        "test/m684_finance_period_index_test.dart"
+        "test/m684_finance_period_index_test.dart",
+        "test/m343_goal_recurring_named_budgets_test.dart",
+        "test/m296_monthly_budget_and_transactions_test.dart",
+        "test/m470_recurring_provider_accounts_test.dart"
       ],
       "ci_workflows_to_watch": [
         ".github/workflows/finance-full-regression.yml",
@@ -52,7 +55,8 @@
         "No guessed institution ownership or SMS auto-post; every writer requires verified owner and user confirmation.",
         "Never change approved FAB/Snackbar position or original encrypted device backup.",
         "Do not remove old model currency safety negative tests without replacement; all CI exact SHA.",
-        "Only user-confirmed Other institutions may join by root account FK, never by shared label or SMS guessing; link/backup restore fail closed."
+        "Only user-confirmed Other institutions may join by root account FK, never by shared label or SMS guessing; link/backup restore fail closed.",
+        "Preserve previous untyped bank names as display-only groups via anchored prefixes, while sender-only account suggestions remain exact-catalog and separately consented."
       ]
     },
     {
