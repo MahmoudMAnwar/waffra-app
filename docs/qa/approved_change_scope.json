@@ -1,14 +1,18 @@
 {
   "contract_version": 1,
-  "change_id": "M952-ISSUE657-FIVE-AXIS-CODE-RELIABILITY-CONTINUATION-20261115",
-  "human_scope_review": "Owner's latest prior-chat five axes are financial integrity, account & Backup/Restore integration, performance/responsiveness, UI stability, and architecture/proactive tests (20 proposed improvements). Issue #657/PR #658 implement first bounded tranche: fail-close missing linked SQLCipher finance-domain schema, memoize large SMS-review selections, and harden exact-SHA CI evidence; preserve approved UI and all financial writers. No claim of all 20 done or real backup/Android UAT.",
+  "change_id": "M952-ISSUE657-FIVE-AXIS-CONTINUATION-KEYSET-BUDGET-PARITY-20261115",
+  "human_scope_review": "Owner's latest prior-chat five axes are financial integrity, account & Backup/Restore integration, performance/responsiveness, UI stability, and architecture/proactive tests (20 proposed improvements). Issue #657/PR #658 implement first bounded tranche: fail-close missing linked SQLCipher finance-domain schema, memoize large SMS-review selections, and harden exact-SHA CI evidence; preserve approved UI and all financial writers. No claim of all 20 done or real backup/Android UAT. Owner authorized continuing unfinished five axes after first 24/24 CI green. Second safe tranche: use verified SQLCipher keyset for historical UNASSIGNED account reconciliation (not just monthly), remove per-budget repeated full-month scan using pure O(entries + budgets) parity-checked halala aggregates, extend absent due/budget-table fail-closed tests, and preserve existing UI/finance writers. One independent 2700-row SQLCipher parity expansion and 10000-entry/120-budget synthetic test protect correctness. This does NOT complete all five axes or prove physical phone/old private backup.",
   "user_requested_changes": [
     "Axis 1: reject account-backed financial source when expected versioned domain linked tables or revision are missing even if account marker and foreign keys appear healthy.",
     "Axis 2: protect bank-account links, account opening and V3/V24 restore parity with source readiness checks before reads, no speculative migration or real archive modification.",
     "Axis 3: cache full sender-group and whole review ID lists at UI scope across repeated rebuilds, invalidating only on confirmed review or native exclusion while retaining 100-card rendering, full selection and original SMS.",
     "Axis 4: preserve approved Home, Goals, Recurring visual composition, FAB, Snackbar, RTL and notification review transitions; do not change appearance without regression acceptance.",
     "Axis 5: reject duplicated runner start, duplicate suite IDs or missing suite references in M937 exact-SHA fail-closed CI summary; add three hostile Python regressions and source/SQLCipher tests.",
-    "Track twenty-proposed-improvement work without claiming completed axes; no disabled tests, no fake Android or private backup proof."
+    "Track twenty-proposed-improvement work without claiming completed axes; no disabled tests, no fake Android or private backup proof.",
+    "Second tranche Axis 3: replace historical unassigned account-context OFFSET UI with source-witnessed SQLCipher keyset and cursor invalidation on filter/month/link, preserving old offset read API for old consumers.",
+    "Second tranche Axes 1/3: compute account-context budget usage with a single O(entries+budgets) pass instead of B times scanning E entries, comparing every budget exact halalas to existing policy in 10000-entry synthetic tests.",
+    "Second tranche Axes 1/2: reject finance account context when due-settlement or standalone allocation tables disappeared even if account revision survives.",
+    "Second tranche Axes 4/5: preserve account-page navigation/RTL/FAB/card layouts and update only source-contract assertions for verified historical pagination, maintain failing CI detection and no skipped tests."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -16,12 +20,20 @@
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
+    "lib/storage/waffra_account_context_policy.dart",
+    "lib/storage/waffra_account_context_read.dart",
     "lib/storage/waffra_accounts_schema.dart",
+    "lib/storage/waffra_sqlcipher_history_pager.dart",
+    "lib/storage/waffra_verified_accounts_api.dart",
+    "lib/waffra_account_context_page.dart",
     "lib/waffra_home_sms_inbox.part.dart",
     "scripts/qa/m937_flutter_test_report.py",
+    "test/m611_manual_home_finance_regression_test.dart",
     "test/m940_sms_review_page_window_test.dart",
     "test/qa/m937_flutter_test_report_test.py",
-    "test/storage/m952_account_linked_schema_readiness_test.dart"
+    "test/storage/m944_sqlcipher_keyset_paging_test.dart",
+    "test/storage/m952_account_linked_schema_readiness_test.dart",
+    "test/storage/m952_budget_single_pass_parity_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
@@ -62,6 +74,48 @@
       {
         "start": " static Future<void> requireReady(WaffraEncryptedStore db)async{",
         "end": "  if(found.length!=1)throw StateError('Accounts database has not been initialized.');"
+      }
+    ],
+    "lib/storage/waffra_sqlcipher_history_pager.dart": [
+      {
+        "start": "    bool? income,",
+        "end": "      clauses.add('l.account_id=?');"
+      }
+    ],
+    "lib/storage/waffra_verified_accounts_api.dart": [
+      {
+        "start": "  String? monthIso,String? selectedAccountId,bool? income,",
+        "end": " /// Attach a past unassigned entry only AFTER the account screen has a"
+      }
+    ],
+    "lib/waffra_account_context_page.dart": [
+      {
+        "start": " static const int pageSize=50;",
+        "end": "           pageOffset+=pageSize;"
+      }
+    ],
+    "lib/storage/waffra_account_context_policy.dart": [
+      {
+        "start": "        selectedAccountSpentMinor: selected, limitMinor: limitMinor);",
+        "end": "  /// Only an actual, account-sourced goal funding/release affects the bank."
+      }
+    ],
+    "lib/storage/waffra_account_context_read.dart": [
+      {
+        "start": "ORDER BY name, budget_id",
+        "end": "    // A goal is its own savings wallet. Display the overall saved total"
+      }
+    ],
+    "test/storage/m944_sqlcipher_keyset_paging_test.dart": [
+      {
+        "start": "        bool? income,",
+        "end": "      final november = await WaffraSqlcipherHistoryPager.load("
+      }
+    ],
+    "test/m611_manual_home_finance_regression_test.dart": [
+      {
+        "start": "  expect(page,contains('openingExcludesHistory:openingVerified'));",
+        "end": "  expect(page,contains('_m944MonthCursors[pageOffset]'));"
       }
     ]
   }
