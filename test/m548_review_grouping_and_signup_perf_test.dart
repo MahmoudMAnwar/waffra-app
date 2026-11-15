@@ -67,7 +67,10 @@ void main() {
   expect(refresh,contains('WaffraAutoSms.pendingChecked()'));
   expect(refresh,contains('WaffraAutoSms.acknowledgeCommitted(batch)'));
   expect(refresh,contains('WaffraAutoSms.excludeMessages(batch)'));
-  expect(worker,contains('WaffraBankSmsFactsParser.parse(body)'));
+  expect(worker,contains('WaffraSmsStructuredBankContext.parse(body,sender:sender)'));
+  expect(worker,contains('final facts=contextFacts.facts;'));
+  expect(worker,contains('if(contextFacts.composite){'));
+  expect(worker,contains('waiting.add(annotated);'));
   expect(worker,contains('WaffraSmsLocalRules.resolve('));
   expect(worker,contains('waiting.add(annotated);'));
   expect(worker,isNot(contains('WaffraAutoSms.')));
