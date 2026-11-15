@@ -1,3 +1,13 @@
+## M944 — تحسين الأداء العميق واستقرار البيانات: المحاور الخمسة (2026-11-15)
+
+- **Issue:** [#653](https://github.com/MahmoudMAnwar/waffra-app/issues/653). **Owner instruction:** implement and report only independently verified milestones as «تم انتهاء محور 1 من 5» ... «تم انتهاء محور 5 من 5».
+- **Axis 1 — SQLCipher:** verified read-only bounded database-level paging with deterministic timestamp/ID keyset, correct account scope and source lease; do not silently fall back to in-memory financial results or unverified balances.
+- **Axis 2 — large lists:** source-consistent windows for finance, SMS sender review, goals and recurring, preserving original select-all semantics, filter/search and unchanged approved UI/+ FAB/Snackbar geometry.
+- **Axis 3 — finance parity:** authenticated disposable-vault duplicate prevention, restores (V24/V3 synthetic only), transfer/savings/due/income/budget invariants, stable IDs, report totals and crash/cold reopen.
+- **Axis 4 — state extraction:** separate remaining Home read/query responsibilities and remove only proven unreachable code without changing live production writer, verified authority or app design.
+- **Axis 5 — repeatable QA:** exact-SHA passed/failed/skipped totals, group recurring failures by test/signature, permanent regression checks without skipping or relaxing security gates.
+- **QA:** [M944 verification matrix](qa/M944_FIVE_AXES_CODE_QA.md). **All five axes initially Pending.** Source commits + same-head CI are required for each completed axis. The owner's real Android test and historical private archive acceptance remain separate and are not claimed.
+
 ## M942 — إصلاح تباين أرصدة الحسابات البنكية التابعة وإنشائها من القوائم (2026-11-14)
 
 - **Issue:** [#649](https://github.com/MahmoudMAnwar/waffra-app/issues/649). Independent Draft PR from main; no changes to #648.
