@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
-  "change_id": "M956-ISSUE664-ATOMIC-HOME-READ-AND-ARCHIVED-ACCOUNT-FALLBACK-20261115",
-  "human_scope_review": "Owner's latest prior-chat five axes are financial integrity, account & Backup/Restore integration, performance/responsiveness, UI stability, and architecture/proactive tests (20 proposed improvements). Issue #657/PR #658 implement first bounded tranche: fail-close missing linked SQLCipher finance-domain schema, memoize large SMS-review selections, and harden exact-SHA CI evidence; preserve approved UI and all financial writers. No claim of all 20 done or real backup/Android UAT. Owner authorized continuing unfinished five axes after first 24/24 CI green. Second safe tranche: use verified SQLCipher keyset for historical UNASSIGNED account reconciliation (not just monthly), remove per-budget repeated full-month scan using pure O(entries + budgets) parity-checked halala aggregates, extend absent due/budget-table fail-closed tests, and preserve existing UI/finance writers. One independent 2700-row SQLCipher parity expansion and 10000-entry/120-budget synthetic test protect correctness. This does NOT complete all five axes or prove physical phone/old private backup. Third bounded tranche of same five axes: use one grouped SQLCipher per-account goal-source aggregation instead of per-goal correlated scans, preserving original fund/release signs, independent saved wallet and no bank mutation; add real 80-goal/720-movement disposable encrypted parity regression, register this and existing M952 tests in exact-head M946 smoke. No owner backup, hardware acceptance or new ledger writes. Fourth tranche corrected from actual encrypted CI: SQLite UNIQUE(entry_id) prevents a second standalone budget allocation for one entry; remove redundant grouped ledger joins and retain direct unique joins. The source-backed monthly allocation read and grouped goal projection remain. A disposable encrypted regression now tests that a duplicate allocation is rejected, distinct budgets retain independent correct totals and full/month/keyset pages and account balances are stable. Do not change database uniqueness, finance writers, owner backup or UI. M955 stacked draft PR #665 onto #658 (Issue #664) safely optimizes selected-account Home finance summary: opt-in includeEntries:false under SAME verified SQLCipher snapshot lock skips all current-month transaction cards while still computing exact-halala independent monthly budgets, grouped goal sources and complete historical account IDs. Existing context exports/pages keep includeEntries:true. Encrypted 900-row cross-account parity and CI matrix are mandatory. No bank money, restore payload, original SMS or FAB changes; hardware/legacy backup and further Home architecture remain open. M956 follows on the same draft: Home account refresh now uses one source-locked SQLCipher read for verified account balances, monthly ledger-free context and complete historical account IDs, all at a single pre/post finance generation/digest. The original three-read gap is closed, no new writer, unlinked-entry reparenting or UI redesign. Same test suite checks source gate and account/legacy encrypted parity; real Android remains external.",
+  "change_id": "M956-ISSUE664-MAIN-BASED-EXACT-SCOPE-20261115",
+  "human_scope_review": "Owner's latest prior-chat five axes are financial integrity, account & Backup/Restore integration, performance/responsiveness, UI stability, and architecture/proactive tests (20 proposed improvements). Issue #657/PR #658 implement first bounded tranche: fail-close missing linked SQLCipher finance-domain schema, memoize large SMS-review selections, and harden exact-SHA CI evidence; preserve approved UI and all financial writers. No claim of all 20 done or real backup/Android UAT. Owner authorized continuing unfinished five axes after first 24/24 CI green. Second safe tranche: use verified SQLCipher keyset for historical UNASSIGNED account reconciliation (not just monthly), remove per-budget repeated full-month scan using pure O(entries + budgets) parity-checked halala aggregates, extend absent due/budget-table fail-closed tests, and preserve existing UI/finance writers. One independent 2700-row SQLCipher parity expansion and 10000-entry/120-budget synthetic test protect correctness. This does NOT complete all five axes or prove physical phone/old private backup. Third bounded tranche of same five axes: use one grouped SQLCipher per-account goal-source aggregation instead of per-goal correlated scans, preserving original fund/release signs, independent saved wallet and no bank mutation; add real 80-goal/720-movement disposable encrypted parity regression, register this and existing M952 tests in exact-head M946 smoke. No owner backup, hardware acceptance or new ledger writes. Fourth tranche corrected from actual encrypted CI: SQLite UNIQUE(entry_id) prevents a second standalone budget allocation for one entry; remove redundant grouped ledger joins and retain direct unique joins. The source-backed monthly allocation read and grouped goal projection remain. A disposable encrypted regression now tests that a duplicate allocation is rejected, distinct budgets retain independent correct totals and full/month/keyset pages and account balances are stable. Do not change database uniqueness, finance writers, owner backup or UI. M955 stacked draft PR #665 onto #658 (Issue #664) safely optimizes selected-account Home finance summary: opt-in includeEntries:false under SAME verified SQLCipher snapshot lock skips all current-month transaction cards while still computing exact-halala independent monthly budgets, grouped goal sources and complete historical account IDs. Existing context exports/pages keep includeEntries:true. Encrypted 900-row cross-account parity and CI matrix are mandatory. No bank money, restore payload, original SMS or FAB changes; hardware/legacy backup and further Home architecture remain open. M956 follows on the same draft: Home account refresh now uses one source-locked SQLCipher read for verified account balances, monthly ledger-free context and complete historical account IDs, all at a single pre/post finance generation/digest. The original three-read gap is closed, no new writer, unlinked-entry reparenting or UI redesign. Same test suite checks source gate and account/legacy encrypted parity; real Android remains external. After merged #658 and exact tree-equivalent reconciliation to main, the current PR changes exactly 12 files. Previous M952 source files are now baseline on main, not re-declared in M385. Sections for unchanged files are removed (not security gates); M385 still compares original main and full exact HEAD source changes.",
   "user_requested_changes": [
     "Axis 1: reject account-backed financial source when expected versioned domain linked tables or revision are missing even if account marker and foreign keys appear healthy.",
     "Axis 2: protect bank-account links, account opening and V3/V24 restore parity with source readiness checks before reads, no speculative migration or real archive modification.",
@@ -23,84 +23,21 @@
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
-    "docs/qa/M952_FIVE_AXES_FOLLOWUP.md",
+    "docs/qa/M955_HOME_VERIFIED_SUMMARY_OPTIMIZATION.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "lib/storage/waffra_account_context_policy.dart",
     "lib/storage/waffra_account_context_read.dart",
-    "lib/storage/waffra_accounts_schema.dart",
-    "lib/storage/waffra_sqlcipher_history_pager.dart",
     "lib/storage/waffra_verified_accounts_api.dart",
-    "lib/waffra_account_context_page.dart",
-    "lib/waffra_home_sms_inbox.part.dart",
-    "scripts/qa/m937_flutter_test_report.py",
-    "test/m611_manual_home_finance_regression_test.dart",
-    "test/m940_sms_review_page_window_test.dart",
-    "test/qa/m937_flutter_test_report_test.py",
-    "test/storage/m944_sqlcipher_keyset_paging_test.dart",
-    "test/storage/m952_account_linked_schema_readiness_test.dart",
-    "test/storage/m952_budget_single_pass_parity_test.dart",
-    "test/storage/m952_goal_projection_scale_parity_test.dart",
-    "scripts/qa/m946_full_app_smoke_matrix.py",
-    "test/storage/m952_multibudget_ledger_dedup_test.dart",
-    "docs/qa/M955_HOME_VERIFIED_SUMMARY_OPTIMIZATION.md",
     "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
     "lib/waffra_home_verified_account_flows.part.dart",
-    "test/storage/m955_home_verified_summary_parity_test.dart",
-    "test/m467_account_header_test.dart"
+    "scripts/qa/m946_full_app_smoke_matrix.py",
+    "test/m467_account_header_test.dart",
+    "test/storage/m955_home_verified_summary_parity_test.dart"
   ],
   "approved_deleted_files": [],
   "approved_full_test_replacements": [],
   "bounded_sections": {
-    "lib/waffra_home_sms_inbox.part.dart": [
-      {
-        "start": "  var bulkBusy=false;",
-        "end": "  await showModalBottomSheet<void>("
-      },
-      {
-        "start": "for(final group in bySender.values){",
-        "end": "if(selectedSender!=null&&!senders.contains(selectedSender)){"
-      },
-      {
-        "start": "for(final rows in bySender.values){",
-        "end": "selectedIds.removeAll(done);"
-      }
-    ],
-    "scripts/qa/m937_flutter_test_report.py": [
-      {
-        "start": "def summary(stream, sha):",
-        "end": "def markdown(r):"
-      }
-    ],
-    "test/m940_sms_review_page_window_test.dart": [
-      {
-        "start": "void main(){",
-        "end": null
-      }
-    ],
-    "test/qa/m937_flutter_test_report_test.py": [
-      {
-        "start": "class SummaryTest(unittest.TestCase):",
-        "end": "if __name__ == \"__main__\":"
-      }
-    ],
-    "lib/storage/waffra_accounts_schema.dart": [
-      {
-        "start": " static Future<void> requireReady(WaffraEncryptedStore db)async{",
-        "end": "  if(found.length!=1)throw StateError('Accounts database has not been initialized.');"
-      }
-    ],
-    "lib/storage/waffra_sqlcipher_history_pager.dart": [
-      {
-        "start": "    bool? income,",
-        "end": "      clauses.add('l.account_id=?');"
-      },
-      {
-        "start": "    final query = '''",
-        "end": "    final rows = await store.customSelect(query, variables: variables).get();"
-      }
-    ],
     "lib/storage/waffra_verified_accounts_api.dart": [
       {
         "start": "  String? monthIso,String? selectedAccountId,bool? income,",
@@ -109,18 +46,6 @@
       {
         "start": " Future<WaffraAccountContextReadResult> readAccountContext({",
         "end": " /// M684: all-time account entry IDs without full historical SQL detail."
-      }
-    ],
-    "lib/waffra_account_context_page.dart": [
-      {
-        "start": " static const int pageSize=50;",
-        "end": "           pageOffset+=pageSize;"
-      }
-    ],
-    "lib/storage/waffra_account_context_policy.dart": [
-      {
-        "start": "        selectedAccountSpentMinor: selected, limitMinor: limitMinor);",
-        "end": "  /// Only an actual, account-sourced goal funding/release affects the bank."
       }
     ],
     "lib/storage/waffra_account_context_read.dart": [
@@ -143,18 +68,6 @@
       {
         "start": "  static Future<WaffraAccountContextReadResult> load({",
         "end": "    final rows = await store.customSelect('''"
-      }
-    ],
-    "test/storage/m944_sqlcipher_keyset_paging_test.dart": [
-      {
-        "start": "        bool? income,",
-        "end": "      final november = await WaffraSqlcipherHistoryPager.load("
-      }
-    ],
-    "test/m611_manual_home_finance_regression_test.dart": [
-      {
-        "start": "  expect(page,contains('openingExcludesHistory:openingVerified'));",
-        "end": "  expect(page,contains('_m944MonthCursors[pageOffset]'));"
       }
     ],
     "scripts/qa/m946_full_app_smoke_matrix.py": [
