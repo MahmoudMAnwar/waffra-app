@@ -1,12 +1,45 @@
 {
   "schema_version": 1,
-  "pr": "M944 — five-axis code reliability Draft PR #654",
-  "issue": "Issue #653 — M944 five-axis code improvements",
+  "pr": "M944 — 5-axis code reliability PR #654 (Draft; Issue #653)",
+  "issue": "Issue #653 — M944 code-only performance, consistency, modularity, CI",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main merge #652 at efba4d1f0b20b4111b60a1720de682059aac63fe",
   "reviewed_at": "2026-11-15",
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
+    {
+      "id": "M944-ROOT-SHELL-AND-RECURRING-WORKFLOW-EXTRACTION",
+      "issue": "Issue #653 / PR #654 axis 4: finish Home State extraction without UI changes",
+      "previous_behavior": "One 246-line HomeScreenState.build method mixed session gating, account header, navigation, fixed 58px FAB, owner-approved Snackbar and overlays. The 855-line Goals/Recurring page part also mixed 304 lines of recurring edit / due-date / linked-goal mutations with pure page composition. Main source QA had hard-coded direct-file assumptions despite same-library Dart parts.",
+      "approved_behavior": "Move the exact unchanged Home root widget composition into registered waffra_home_root_shell.part.dart with a one-line State.build delegate; move the exact unchanged recurring workflow methods to registered wa ffra_home_recurring_workflows.part.dart. Keep full original source order in Dart/Python source-contract reconstruction; tests point at actual registered part files instead of assuming the UI is in main.dart. Owner-verified sources and all existing amount, Snackbar, RTL, + FAB, goals/recurring UI are untouched. State retains only lifecycle, owner-scoped state and brief event adapters.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_root_shell.part.dart",
+        "lib/waffra_home_goals_recurring_pages.part.dart",
+        "lib/waffra_home_recurring_workflows.part.dart"
+      ],
+      "test_paths": [
+        "test/m944_home_root_shell_extraction_test.dart",
+        "test/m707_home_goals_recurring_extraction_test.dart",
+        "test/m830_home_navigation_helpers_extraction_test.dart",
+        "test/m644_no_fab_snackbar_width_test.dart",
+        "test/m938_goals_restore_fab_contract_test.dart",
+        "test/m622_immediate_home_without_loader_test.dart",
+        "test/m623_verified_home_handoff_no_black_frame_test.dart"
+      ],
+      "ci_workflows_to_watch": [
+        ".github/workflows/finance-full-regression.yml",
+        ".github/workflows/m550-behavior-contract-preflight.yml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        ".github/workflows/m449-release-notes-ancestry.yml"
+      ],
+      "safety_invariants": [
+        "Moved root build is source-identical to approved current main except method name; no new widget gate, no money source or DB writer.",
+        "Recurring editor/due workflow code is verbatim, not reimplemented; linked Goal charge and anti-duplicate protection unchanged.",
+        "No change to Arabic/English FAB anchor (58x58), placement, dropdown, snackbar expansion, original SMS text, or goal/recurring designs.",
+        "Dart and Python source-contract reconstruction is explicit and fail-closed if one registered part is missing; no QA gates disabled or tests skipped."
+      ]
+    },
     {
       "id": "M944-BOUNDED-HOME-AND-UNIFIED-ACTIVITY",
       "issue": "Issue #653 / PR #654 axis 2: large financial activity lists",
