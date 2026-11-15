@@ -21,6 +21,9 @@ GROUPS = ("money", "experience", "safety")
 # Each user-facing capability has a real runnable suite. Tests can be reused
 # across capabilities; the runner de-duplicates within each CI shard.
 FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {
+    "m976_lazy_goal_due_card_viewport_build": ("experience", (
+        "test/m976_lazy_goal_due_cards_viewport_test.dart",
+        "test/m665_goal_due_display_and_linked_edit_test.dart")),
     "m975_recurring_due_paid_id_snapshot_parity": ("experience", (
         "test/m975_recurring_paid_id_read_cache_test.dart",
         "test/m302_recurring_first_due_regression_test.dart")),
