@@ -122,7 +122,9 @@ void main() {
     // The approved Home account selector displays VERIFIED money balances,
     // while the goal wallet stays separate and cannot debit cash on creation.
     expect(source,contains('balance:_m467ShownBalance()'));
-    expect(source,contains('if(!_m468VerifiedAccountsLoaded)return waffraAvailableCash(entries,goals);'));
+    expect(source,contains('_m942VerifiedAllAccountsBalance()'));
+    expect(source,contains('if(!_m468VerifiedAccountsLoaded)return null;'));
+    expect(source,contains('_m467Accounts.fold<int>(0,(total,a)=>total+a.balanceMinor)/100'));
     expect(source,contains('_m467Accounts.fold<int>(0,(total,a)=>total+a.balanceMinor)/100'));
     expect(source,contains('goalWalletPaidMinor:allocation.fromGoalMinor'));
     expect(source,isNot(contains('inc-exp-waffraGoalWalletBalance(goals)')));
