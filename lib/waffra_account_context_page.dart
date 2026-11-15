@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'waffra_centered_dropdown.dart';
 import 'main.dart' show snack;
 import 'waffra_account_context_settings.dart';
+import 'waffra_financial_trust_page.dart';
+import 'waffra_financial_trust_policy.dart';
 import 'waffra_i18n.dart';
 
 import 'storage/waffra_account_context_read.dart';
@@ -14,15 +16,62 @@ import 'storage/waffra_verified_accounts_api.dart';
 class WaffraAccountContextPage extends StatefulWidget {
  const WaffraAccountContextPage({
   super.key, required this.api, required this.accounts,
-  this.english=false,
+  this.english=false,this.upcomingDues=const <WaffraTrustDue>[],
  });
  final WaffraVerifiedAccountsApi api;
  final List<WaffraAccountBalance> accounts;
  final bool english;
+ final List<WaffraTrustDue> upcomingDues;
  @override State<WaffraAccountContextPage> createState()=>_WaffraAccountContextPageState();
 }
 
 class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {
+ final _search=TextEditingController();
+ final _category=TextEditingController();
+ final _minimum=TextEditingController();
+ final _maximum=TextEditingController();
+ String searchTerm='',categoryTerm='';
+ int? minimumMinor,maximumMinor;
+ bool? incomeFilter;
+ DateTimeRange? searchDates;
+ String? searchError;
+ int? parseMinor(String raw){
+  if(raw.trim().isEmpty)return null;
+  final value=num.tryParse(raw.trim());
+  if(value==null||!value.isFinite||value<0||value>1000000000000){
+   throw const FormatException('Invalid amount');
+  }
+  final minor=(value*100).round();
+  if((minor/100-value).abs()>0.000001)throw const FormatException('Non-SAR fraction');
+  return minor;
+ }
+ bool get advancedActive=>searchTerm.isNotEmpty||categoryTerm.isNotEmpty||
+  minimumMinor!=null||maximumMinor!=null||incomeFilter!=null||
+  searchDates!=null;
+ void applySearch(){
+  try{
+   final min=parseMinor(_minimum.text),max=parseMinor(_maximum.text);
+   if(min!=null&&max!=null&&min>max)throw const FormatException('Invalid range');
+   setState((){
+    searchTerm=_search.text.trim();categoryTerm=_category.text.trim();
+    minimumMinor=min;maximumMinor=max;searchError=null;
+    resetPages();reload();
+   });
+  }catch(_){setState(()=>searchError=t('راجع حدود المبالغ بالريال والهللة.',
+    'Check the SAR amount range.'));}
+ }
+ void clearSearch(){
+  _search.clear();_category.clear();_minimum.clear();_maximum.clear();
+  setState((){
+   searchTerm='';categoryTerm='';minimumMinor=null;maximumMinor=null;
+   incomeFilter=null;searchDates=null;searchError=null;
+   resetPages();reload();
+  });
+ }
+ @override void dispose(){
+  _search.dispose();_category.dispose();_minimum.dispose();_maximum.dispose();
+  super.dispose();
+ }
  String filter='all';
  int pageOffset=0;
  static const int pageSize=50;
@@ -53,9 +102,13 @@ class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {
    throw StateError('Missing encrypted history cursor; refresh before paging.');
   }
   ledgerPage=widget.api.readKeysetHistoryPage(
-   monthIso:filter=='none'?null:month,
+   monthIso:filter=='none'||advancedActive?null:month,
    selectedAccountId:filter=='none'?null:accountId,
    unassignedOnly:filter=='none',
+   income:incomeFilter,
+   searchTerm:searchTerm,categoryTerm:categoryTerm,
+   minimumMinor:minimumMinor,maximumMinor:maximumMinor,
+   startDate:searchDates?.start,endDate:searchDates?.end,
    limit:pageSize,after:_m944MonthCursors[pageOffset]);
   unassignedPreview=widget.api.readUnassignedSummary();
  }
@@ -129,7 +182,15 @@ class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {
  }
 
  @override Widget build(BuildContext context)=>Scaffold(
-  appBar:AppBar(title:Text(t('عمليات الحسابات','Account transactions'))),
+  appBar:AppBar(title:Text(t('عمليات الحسابات','Account transactions')),
+   actions:[IconButton(
+    tooltip:t('فحص سلامة البيانات المالية','Financial integrity check'),
+    icon:const Icon(Icons.fact_check_outlined),
+    onPressed:()=>Navigator.of(context).push(MaterialPageRoute<void>(
+     builder:(_)=>WaffraFinancialTrustPage(
+      api:widget.api,english:widget.english,
+      upcomingDues:widget.upcomingDues))),
+   )]),
   body:FutureBuilder<WaffraAccountContextReadResult>(
    future:future,builder:(ctx,snapshot){
     if(snapshot.connectionState!=ConnectionState.done){
@@ -200,6 +261,73 @@ class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {
         filter=value;resetPages();reload();
        });},
       )),
+     Card(margin:const EdgeInsets.symmetric(horizontal:12,vertical:6),
+      child:Padding(padding:const EdgeInsets.all(12),child:Column(
+       crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+       Text(t('بحث موحّد في سجل SQLCipher','Verified ledger search'),
+        style:Theme.of(context).textTheme.titleSmall),
+       const SizedBox(height:8),
+       TextField(controller:_search,maxLength:160,
+        textInputAction:TextInputAction.search,onSubmitted:(_)=>applySearch(),
+        decoration:InputDecoration(prefixIcon:const Icon(Icons.search),
+         labelText:t('التاجر أو وصف المعاملة','Merchant or description'),
+         border:const OutlineInputBorder())),
+       TextField(controller:_category,maxLength:120,
+        textInputAction:TextInputAction.search,onSubmitted:(_)=>applySearch(),
+        decoration:InputDecoration(
+         labelText:t('القسم الرئيسي أو الفرعي','Main or subcategory'),
+         border:const OutlineInputBorder())),
+       const SizedBox(height:6),
+       DropdownButtonFormField<String>(
+        value:incomeFilter==null?'all':incomeFilter!?'in':'out',
+        isExpanded:true,
+        decoration:InputDecoration(labelText:t('نوع العملية','Transaction type'),
+         border:const OutlineInputBorder()),
+        items:[
+         DropdownMenuItem(value:'all',child:Text(t('الكل','All'))),
+         DropdownMenuItem(value:'in',child:Text(t('دخل','Income'))),
+         DropdownMenuItem(value:'out',child:Text(t('مصروف','Expense'))),
+        ],
+        onChanged:(value)=>setState((){
+         incomeFilter=value=='all'?null:value=='in';
+         resetPages();reload();
+        })),
+       const SizedBox(height:8),
+       Row(children:[
+        Expanded(child:TextField(controller:_minimum,
+         keyboardType:const TextInputType.numberWithOptions(decimal:true),
+         decoration:InputDecoration(labelText:t('من ريال','Minimum SAR'),
+          border:const OutlineInputBorder()),
+         onSubmitted:(_)=>applySearch())),
+        const SizedBox(width:8),
+        Expanded(child:TextField(controller:_maximum,
+         keyboardType:const TextInputType.numberWithOptions(decimal:true),
+         decoration:InputDecoration(labelText:t('إلى ريال','Maximum SAR'),
+          border:const OutlineInputBorder()),
+         onSubmitted:(_)=>applySearch())),
+       ]),
+       const SizedBox(height:8),
+       Wrap(spacing:8,runSpacing:4,children:[
+        OutlinedButton.icon(icon:const Icon(Icons.date_range_outlined),
+         label:Text(searchDates==null?t('التاريخ','Date range'):
+          t('التاريخ محدد','Date selected')),
+         onPressed:()async{
+          final chosen=await showDateRangePicker(context:context,
+           firstDate:DateTime(2000),lastDate:DateTime(2100),
+           initialDateRange:searchDates);
+          if(chosen!=null&&mounted)setState((){
+           searchDates=chosen;resetPages();reload();
+          });
+         }),
+        FilledButton.icon(icon:const Icon(Icons.search),
+         onPressed:applySearch,label:Text(t('بحث','Search'))),
+        TextButton(onPressed:clearSearch,child:Text(t('مسح','Clear'))),
+       ]),
+       if(searchError!=null)Text(searchError!,
+        style:TextStyle(color:Theme.of(context).colorScheme.error)),
+       if(advancedActive)Text(t('البحث في كل الفترات، دون تحميل كل العمليات.',
+        'Searching all periods with bounded SQLCipher pages.')),
+      ]))),
      WaffraAccountContextSettings(
       api:widget.api,accounts:widget.accounts,english:widget.english),
      if(data.goals.isNotEmpty)...[
