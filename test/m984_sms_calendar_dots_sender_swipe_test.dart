@@ -74,6 +74,38 @@ void main(){
   expect(i.matchesId('unknown',next),isTrue);
  });
 
+ test('M984 booked bank SMS entries count separately and dedupe finance IDs',(){
+  final index=WaffraSmsReviewCalendarIndex.from([
+   msg('pending',first,'income'),
+  ],bookedBankEntries:[
+   WaffraSmsCalendarBookedEvent(id:'saved-a',date:first,income:true),
+   WaffraSmsCalendarBookedEvent(id:'saved-b',date:first,income:false),
+   WaffraSmsCalendarBookedEvent(id:'saved-a',date:first,income:false),
+   WaffraSmsCalendarBookedEvent(id:'',date:next,income:true),
+  ]);
+  expect(index.smsCount(first),1);
+  expect(index.bookedCount(first),2);
+  expect(index.dueCount(first),0);
+  expect(index.totalCount(first),3);
+  expect(index.dots(first),['income','income','expense']);
+  expect(index.bookedCount(next),0);
+  expect(index.matchesId('saved-a',first),isFalse); // not pending
+ });
+
+ test('M984 mixed booked bank activity and due dots cap at three',(){
+  final index=WaffraSmsReviewCalendarIndex.from([
+   msg('pending',first,'income'),
+  ],bookedBankEntries:[
+   WaffraSmsCalendarBookedEvent(id:'saved-a',date:first,income:false),
+   WaffraSmsCalendarBookedEvent(id:'saved-b',date:first,income:true),
+  ],paidDueDates:[first,first]);
+  expect(index.smsCount(first),1);
+  expect(index.bookedCount(first),2);
+  expect(index.dueCount(first),2);
+  expect(index.totalCount(first),5);
+  expect(index.dots(first),['income','expense','due']);
+ });
+
  test('M984 local midnight and leap-month boundaries match received timestamps',(){
   final feb=DateTime(2028,2,29,23,59,58);
   final march=DateTime(2028,3,1,0,0,1);
@@ -126,6 +158,11 @@ void main(){
   expect(source,contains('refresh(()=>moveSender(offset))'));
   expect(source,contains('selectedIds.removeWhere((selected)=>!active.contains(selected))'));
   expect(source,contains('rebuildCalendarIndex();'));
+  expect(source,contains("bookedBankEntries:entries.where((e)=>e.sourceType=='sms')"));
+  expect(source,contains('calendarIndex.bookedCount(selectedDay!)'));
+  expect(source,contains("Key('m984-open-booked-bank-day')"));
+  expect(source,contains('bookedBankOnDay(date)'));
+  expect(source,contains('transactionDetails(verified.single)'));
   expect(source,isNot(contains('WaffraAutoSms.acknowledgeCompletedTransfer(')));
  });
 
