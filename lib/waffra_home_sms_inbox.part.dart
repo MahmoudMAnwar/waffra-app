@@ -114,7 +114,7 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
       final labels=waffraIsEnglish?
        const <String>['Su','Mo','Tu','We','Th','Fr','Sa']:
        const <String>['أح','إث','ثل','أر','خم','جم','سب'];
-      return AlertDialog(
+      return AlertDialog(scrollable:true,
        title:WaffraText(waffraIsEnglish?'SMS review calendar':
         'تقويم رسائل المراجعة'),
        content:SizedBox(width:360,child:Column(
@@ -538,7 +538,7 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
             const <String>{'income','expense','transfer'}.contains(suggestedKind)?
              suggestedKind:null),
          );
-        }))),
+        })))),
        if(selectedIds.isNotEmpty)Padding(
         padding:const EdgeInsets.fromLTRB(12,8,12,4),
         child:SizedBox(width:double.infinity,child:FilledButton.icon(
