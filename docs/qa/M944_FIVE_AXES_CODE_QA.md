@@ -6,7 +6,7 @@ Issue: #653. Branch: `feat/m944-five-axis-code-reliability-20261115`. Draft PR, 
 |---|---|---|---|---|
 | 1. SQLCipher database paging | Keyset source pager + verified API bridge + account history cursor UI committed | 2,700 SQLCipher rows, account/month scope, ties, duplicate-free pages, cold reopen and M611 source contract added (not yet run) | Pending | Partial |
 | 2. Large lists / sender review | Account history uses keyset; Home and unified activity now render in 50-card progressive windows; native SMS cursor and goals/recurring profiling remain pending | Added M944 Home window + existing full filtered PDF contract tests (not yet passed) | Pending | Partial |
-| 3. Financial parity | Not implemented | Pending | Pending | Pending |
+| 3. Financial parity | No financial writer changes; new replay/idempotence and opening parity SQLCipher test committed | 81 transfers, replay, conflicting ID, unapproved move, original openings, net zero, no ledger income, cold reopen (not yet run); V24/V3 restore matrix still pending | Pending | Partial |
 | 4. Home state extraction | Not implemented | Pending | Pending | Pending |
 | 5. CI failure diagnostics | Not implemented | Pending | Pending | Pending |
 
