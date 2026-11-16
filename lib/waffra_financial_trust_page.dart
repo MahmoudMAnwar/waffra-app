@@ -45,12 +45,33 @@ class _WaffraFinancialTrustPageState extends State<WaffraFinancialTrustPage> {
     final data=snapshot.data!;
     final collisions=WaffraTrustRecurringReview.possibleDuplicates(
       widget.upcomingDues);
+    // M1000: a forecast is advisory only when the underlying verified
+    // balances reconcile. Never silently label mismatched source money safe.
     final verified=data.matches;
     final now=DateTime.now();
-    final projected=WaffraTrustCashflow.project(
+    final horizon=DateTime(now.year,now.month+1,now.day);
+    final projected=verified?WaffraTrustCashflow.project(
       verifiedCurrentMinor:data.totalMinor,
-      today:now,through:DateTime(now.year,now.month+1,now.day),
-      dues:widget.upcomingDues);
+      today:now,through:horizon,
+      dues:widget.upcomingDues):null;
+    final accountForecasts=verified?<({String id,String name,
+     int opening,int ending,int pendingCount})>[
+      for(final account in data.accounts)
+       if(widget.upcomingDues.any((due)=>
+        !due.paid&&due.accountId==account.id))
+        (
+         id:account.id,name:account.name,opening:account.actualMinor,
+         ending:WaffraTrustCashflow.project(
+          verifiedCurrentMinor:account.actualMinor,today:now,
+          through:horizon,accountId:account.id,
+          dues:widget.upcomingDues).endingMinor,
+         pendingCount:widget.upcomingDues.where((due)=>
+          !due.paid&&due.accountId==account.id&&
+          !DateTime(due.due.year,due.due.month,due.due.day).isAfter(horizon))
+          .length,
+        ),
+    ]:const <({String id,String name,int opening,int ending,
+      int pendingCount})>[];
     Widget header(String ar,String en)=>Padding(
      padding:const EdgeInsets.fromLTRB(16,18,16,6),
      child:Text(t(ar,en),style:Theme.of(context).textTheme.titleMedium));
@@ -112,13 +133,39 @@ class _WaffraFinancialTrustPageState extends State<WaffraFinancialTrustPage> {
         subtitle:Text(c.firstId+' / '+c.secondId)),
       ],
       header('توقع السيولة','Cashflow forecast'),
-      Card(margin:const EdgeInsets.symmetric(horizontal:12),child:ListTile(
-       leading:const Icon(Icons.timeline_outlined),
-       title:Text(t('المتوقع بنهاية الشهر القادم','Forecast through next month')),
-       subtitle:Text(t('توقع مستقل عن الرصيد الحقيقي. لا يشمل إلا الاستحقاقات المؤكدة غير المدفوعة.',
-        'Separate from real balance. Includes only supplied confirmed, unpaid dues.')),
-       trailing:Text(cash(projected.endingMinor),textDirection:TextDirection.ltr),
-      )),
+      if(projected==null)
+       Padding(padding:const EdgeInsets.symmetric(horizontal:16),
+        child:Text(t('التوقع متوقف لأن الأرصدة لا تتطابق مع سجل الحسابات. راجع الفروقات أولًا.',
+         'Forecast withheld because verified balances do not reconcile. Review discrepancies first.'))),
+      if(projected!=null)...[
+       Card(margin:const EdgeInsets.symmetric(horizontal:12),child:ListTile(
+        leading:const Icon(Icons.timeline_outlined),
+        title:Text(t('المتوقع بنهاية الشهر القادم',
+         'Forecast through next month')),
+        subtitle:Text(t('توقع مستقل عن الرصيد الحقيقي. لا يشمل إلا الاستحقاقات المؤكدة غير المدفوعة.',
+         'Separate from real balance. Includes only supplied confirmed, unpaid dues.')),
+        trailing:Text(cash(projected.endingMinor),textDirection:TextDirection.ltr),
+       )),
+       for(final account in accountForecasts)
+        Card(margin:const EdgeInsets.symmetric(horizontal:12,vertical:4),
+         child:Semantics(
+          label:t('توقع حساب '+account.name,'Forecast for '+account.name),
+          child:ListTile(
+           leading:Icon(account.ending<0?
+            Icons.warning_amber_outlined:Icons.account_balance_wallet_outlined,
+            color:account.ending<0?Colors.orange:null),
+           title:Text(account.name),
+           subtitle:Text(t('رصيد حالي: ','Current: ')+cash(account.opening)+
+            '\\n'+t('استحقاقات غير مدفوعة: ','Unpaid dues: ')+
+            account.pendingCount.toString()+
+            (account.ending<0?
+             '\\n'+t('تحذير: سيولة متوقعة سالبة','Warning: projected negative cashflow'):
+             '')),
+           isThreeLine:account.ending<0,
+           trailing:Text(cash(account.ending),
+            textDirection:TextDirection.ltr),
+          ))),
+      ],
       Padding(padding:const EdgeInsets.all(16),
        child:Text(t('لا يثبت هذا الفحص صحة كل كشف بنكي أو ملف باكب. راجع المعاملات مع البنك عند وجود فرق.',
         'This check does not certify external bank statements or backup archives. Review any discrepancy with the bank.'),
