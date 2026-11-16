@@ -86,10 +86,13 @@ extension _WaffraHomeSmsRules on _HomeScreenState {
  Future<bool> _learnSafeSmsRule({
   required String body,required String sender,
   required String kind,String category='',
+  bool confirmedCorrection=false,String description='',
  })async{
   if(_smsRuleOwnerKey.isEmpty)return false;
   final candidate=WaffraSmsLocalRules.suggestedGlobalRule(
-   body:body,sender:sender,kind:kind,category:category,confidentOnly:true);
+   body:body,sender:sender,kind:kind,category:category,confidentOnly:true)??
+   (confirmedCorrection?WaffraSmsLocalRules.suggestedConfirmedGlobalCorrection(
+    body:body,description:description,kind:kind,category:category):null);
   if(candidate==null)return false;
   final store=const WaffraSmsLocalRuleStore();
   // M1002: an atomic owner-scoped read/merge/write prevents a bulk exclusion
