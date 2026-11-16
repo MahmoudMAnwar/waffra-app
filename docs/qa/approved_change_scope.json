@@ -1,45 +1,106 @@
 {
   "contract_version": 1,
   "change_id": "M1006-ISSUE719-STACKED-ON-716-RETRY-THEME-A11Y-20261116",
-  "human_scope_review": "Owner requested a new Draft PR and better black-screen evidence. Existing Draft #716 already fixes the verified restore Home background. This stacked PR adds dark/light and Arabic/English visible-retry presentation, retaining #716 restore verification and existing nonfinancial fallback.",
+  "human_scope_review": "Owner requested a new Draft PR and better black-screen evidence. Existing Draft #716 already fixes the verified restore Home background. This stacked PR adds dark/light and Arabic/English visible-retry presentation, retaining #716 restore verification and existing nonfinancial fallback. M174/M385 currently compares exact HEAD to main even for stacked PRs. The manifest therefore retains the strictly bounded inherited #716 edits and declares the exact cumulative 22 changed paths. All upstream behavior is preserved; after #716 merges, reduce the scope to the smaller #720-only diff.",
   "user_requested_changes": [
+    "Inherited unchanged from approved Draft #716: Fix restored historical entry budget/account association with explicit opening-balance attestation and one encrypted edit+link transaction.",
+    "Inherited unchanged from approved Draft #716: Avoid blank/black visuals on ready=false and missing auth retained-stage states without exposing financial values.",
+    "Inherited unchanged from approved Draft #716: Add new and retained regressions; verify via exact-head CI, physical Android remains pending.",
+    "Inherited unchanged from approved Draft #716: After successful SQLCipher restore do not hide the Home under a dark/black canvas: use an explicit pale nonfinancial verification surface during reload, and do not display success if _loadFinanceSafely caught a verification error.",
     "Investigate possible black/empty screens via the actual authenticated Home navigation lifecycle rather than relying on keyword search.",
     "Improve visible verified finance retry feedback under dark and light themes and accessible Arabic/English UI.",
     "Preserve #716 restored-ledger source checks, backup protection and finance safety; do not introduce conflicting independent fixes.",
     "Add executable Flutter widget test and source/route regressions in mandatory M946 without weakening existing signed-release safeguards."
   ],
   "allowed_changed_files": [
+    ".github/scripts/run-m274-android-tap-smoke.sh",
     "docs/WAFFRA_REQUIREMENTS.md",
+    "docs/qa/M1003_RESTORE_BLANK_ROUTE_REVIEW.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
+    "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
     "lib/waffra_finance_reloading_view.dart",
+    "lib/waffra_home_account_tools.part.dart",
+    "lib/waffra_home_entry_sheet.part.dart",
     "lib/waffra_home_root_shell.part.dart",
     "scripts/qa/m946_full_app_smoke_matrix.py",
+    "test/m1003_restore_budget_and_blank_surface_contract_test.dart",
     "test/m1006_restore_handoff_no_black_background_test.dart",
     "test/m1006_visible_recovery_loading_gate_test.dart",
+    "test/m495_pr402_ui_performance_regression_test.dart",
     "test/m622_immediate_home_without_loader_test.dart",
     "test/m623_verified_home_handoff_no_black_frame_test.dart",
-    "test/m944_home_root_shell_extraction_test.dart"
+    "test/m944_home_root_shell_extraction_test.dart",
+    "test/storage/m1003_atomic_restored_budget_account_link_test.dart",
+    "test/waffra_m206_day_theme_tour_sms_regression_test.dart"
   ],
   "bounded_sections": {
+    "lib/waffra_home_entry_sheet.part.dart": [
+      {
+        "start": " Future<void> entrySheet({MoneyEntry? initial",
+        "end": "  // The sender identifies a bank/provider only"
+      },
+      {
+        "start": "        key:ValueKey('m470-home-manual-account-'",
+        "end": "        onChanged:chosenManualProvider==null||"
+      },
+      {
+        "start": "       key:const Key('waffra-entry-confirm-save'),",
+        "end": "// Historical entries can predate creation of their money account."
+      },
+      {
+        "start": "// Historical entries can predate creation of their money account.",
+        "end": "       if(initial!=null&&canMoveLinkedAccount&&"
+      },
+      {
+        "start": "  if(result==null||!mounted){",
+        "end": "  // M985: a bank reference is useful only alongside identical card/account"
+      },
+      {
+        "start": "    if(!await _m953SaveExistingVerifiedEntry(initial,result,",
+        "end": "   }else{\n   // Optimistic in-memory edits"
+      },
+      {
+        "start": "  final movedLinkedAccountInThisEdit=initial!=null",
+        "end": "  if(mounted)await budgetAlert(result,previousSpent);"
+      },
+      {
+        "start": " Future<bool> _m953SaveExistingVerifiedEntry(",
+        "end": "   final verifiedRaw=committed.ledgerRaw;"
+      }
+    ],
+    "lib/storage/waffra_verified_encrypted_finance_bridge.dart": [
+      {
+        "start": "  Future<WaffraFinanceSnapshotState> saveHomeChanges({",
+        "end": "  /// M956: source-witnessed metadata edit plus account reassignment, atomic."
+      }
+    ],
+    "lib/waffra_home_root_shell.part.dart": [
+      {
+        "start": "extension _WaffraHomeRootShell on _HomeScreenState {",
+        "end": "  appBar:AppBar("
+      }
+    ],
     "lib/main.dart": [
+      {
+        "start": "  final showCountry=needsCountry||",
+        "end": "   if(showLoginScreen)KeyedSubtree("
+      },
+      {
+        "start": "  builder:(context,child)=>WaffraNoticeTapDismissArea(",
+        "end": "  theme:ThemeData("
+      },
       {
         "start": "import 'waffra_mandatory_biometric_gate.dart';",
         "end": "import 'waffra_idle_biometric_overlay.dart';"
       }
     ],
-    "lib/waffra_home_root_shell.part.dart": [
+    "test/m495_pr402_ui_performance_regression_test.dart": [
       {
-        "start": "  child:!ready&&_financeLoadFailure==null?",
-        "end": "  appBar:AppBar("
-      }
-    ],
-    "scripts/qa/m946_full_app_smoke_matrix.py": [
-      {
-        "start": "FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {",
-        "end": "    \"m998_last_four_sender_bank_facts_and_otp_single_pass\":"
+        "start": " test('M500 #420 Details Edit enables verified retroactive account link',(){",
+        "end": " testWidgets('M499 #416 child picker"
       }
     ],
     "test/m622_immediate_home_without_loader_test.dart": [
@@ -50,14 +111,38 @@
     ],
     "test/m623_verified_home_handoff_no_black_frame_test.dart": [
       {
-        "start": "  expect(shell,contains('child:!ready&&_financeLoadFailure==null?'));",
-        "end": "  expect(source,contains('_m623HomeReady=false;_m623RetainedStage=null;'));"
+        "start": " test('M623 authenticated Home transition cannot expose unverified money',(){",
+        "end": " test('M623 background SMS runs only after the complete Home frame',(){"
       }
     ],
     "test/m944_home_root_shell_extraction_test.dart": [
       {
         "start": "  expect(shell, contains('child:!ready&&_financeLoadFailure==null?'));",
         "end": "  expect(shell, contains('body:_financeLoadFailure!=null?_financialRecoveryScreen():'));"
+      }
+    ],
+    "test/waffra_m206_day_theme_tour_sms_regression_test.dart": [
+      {
+        "start": "    expect(root,contains('child:ValueListenableBuilder<bool>('));",
+        "end": "    expect(root,isNot(contains('KeyedSubtree(key:ValueKey(language)')));"
+      }
+    ],
+    ".github/scripts/run-m274-android-tap-smoke.sh": [
+      {
+        "start": "  if (( result == 0 )); then\n    echo \"M274_ANDROID_UI_PASS:real_footer_and_privacy_taps\"",
+        "end": "  echo \"::error::M274 Android UI smoke failed (exit $result); blocking integration\""
+      }
+    ],
+    "lib/waffra_home_account_tools.part.dart": [
+      {
+        "start": "       restoreStage='HOME_REFRESH';",
+        "end": "       if(authenticatedLegacyRows!=null&&mounted){"
+      }
+    ],
+    "scripts/qa/m946_full_app_smoke_matrix.py": [
+      {
+        "start": "FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {",
+        "end": "    \"m998_last_four_sender_bank_facts_and_otp_single_pass\":"
       }
     ],
     "test/m1006_restore_handoff_no_black_background_test.dart": [
