@@ -1,3 +1,7 @@
+[M1031 / ACTIVE CI CONTRACT RECONCILIATION]
+- Updated M620/M983 regression assertions to point to shared review predictor and kept strict unattended AutoPost guard.
+- Restored M385 earlier scan-settings boundary plus narrowly scoped notification and regression-test boundaries, without disabling tests.
+
 [M1031 / ISSUE #750 / POST-COMMIT FINANCE LEARNING]
 - Added owner-scoped encrypted, readback-verified category-learning receipt after each confirmed manual/bank SMS income or expense, including authorized background finance commits. Receipts store digest/category/source only, no SMS body, account identifiers, raw phone or amounts. Dedupes recent transaction IDs and preserves bounded per-category observation counts.
 - Existing safe description-based categories remain reusable local matching rules. Unsafe/generic descriptions are recorded as non-posting observations only; no broad financially dangerous rule. Opposing income/expense learned keywords cannot create contradictory matching rules.

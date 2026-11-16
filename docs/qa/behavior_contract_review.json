@@ -25,7 +25,9 @@
       ],
       "test_paths": [
         "test/m1031_sms_unified_review_contract_test.dart",
-        "test/m462_smart_sms_rule_review_test.dart"
+        "test/m462_smart_sms_rule_review_test.dart",
+        "test/m620_m621_finance_notification_routing_test.dart",
+        "test/m983_sms_direct_kind_prefill_refresh_test.dart"
       ],
       "safety_invariants": [
         "AutoPost remains blocked on unresolved beneficiary, pending, OTP and foreign currency",

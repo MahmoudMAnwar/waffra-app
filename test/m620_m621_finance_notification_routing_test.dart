@@ -63,7 +63,8 @@ void main(){
   expect(native,contains('وفرة — عملية تحتاج مراجعة'));
   final worker=File('lib/waffra_auto_sms_autopost.part.dart').readAsStringSync();
   expect(worker,contains('await WaffraAutoSms.notifyReview(id,kind:kind)'));
-  expect(worker,contains('WaffraBankOperationKind.transfer'));
+  expect(worker,contains('WaffraBankSmsFactsParser.reviewSuggestedKind('));
+  expect(worker,contains('!facts.canAutoPostAsIncomeExpense'));
   expect(worker,contains('if(committed.saved==1&&persisted&&'));
   expect(worker,contains('linkedBudget:false,entryId:entry.id'));
  });

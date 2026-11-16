@@ -68,7 +68,9 @@
     "lib/waffra_approved_notifications.dart",
     "test/m1031_sms_unified_review_contract_test.dart",
     "lib/waffra_sms_local_rules.dart",
-    "lib/waffra_home_sms_rules.part.dart"
+    "lib/waffra_home_sms_rules.part.dart",
+    "test/m620_m621_finance_notification_routing_test.dart",
+    "test/m983_sms_direct_kind_prefill_refresh_test.dart"
   ],
   "allowed_workflow_changes": [],
   "approved_deleted_files": [],
@@ -192,6 +194,10 @@
       }
     ],
     "lib/waffra_home_sms_management.part.dart": [
+      {
+        "start": " Future<void> _scanPreviousBankSmsFromSettings()async{",
+        "end": " Future<void> _openUnknownSmsFromSettings()async{"
+      },
       {
         "start": " List<WaffraReviewNotice> _m549ReviewNotices(){",
         "end": " /// Only owner-confirmed SMS IDs"
@@ -395,6 +401,18 @@
       {
         "start": " Future<void> _learnManualCategoryPreference(",
         "end": " // Retained single-message reference"
+      }
+    ],
+    "test/m620_m621_finance_notification_routing_test.dart": [
+      {
+        "start": "void main(){",
+        "end": null
+      }
+    ],
+    "test/m983_sms_direct_kind_prefill_refresh_test.dart": [
+      {
+        "start": "void main(){",
+        "end": null
       }
     ]
   }
