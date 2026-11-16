@@ -35,7 +35,7 @@
         "end": "       if(initial!=null&&canMoveLinkedAccount&&"
       },
       {
-        "start": "   if(result==null||!mounted){",
+        "start": "  if(result==null||!mounted){",
         "end": "  // M985: a bank reference is useful only alongside identical card/account"
       },
       {
