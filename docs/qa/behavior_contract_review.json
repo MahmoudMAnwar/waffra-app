@@ -1,12 +1,39 @@
 {
   "schema_version": 1,
-  "pr": "M1010-M1012 Issues #726, #728, #729 — goals/dues UI, SMS provenance, due reminders",
-  "issue": "Issues #726, #728, #729",
+  "pr": "M1010–M1014 Issues #726/#728/#729/#730 — goals, SMS, dues, reminders and fail-closed preflight",
+  "issue": "Issues #726, #728, #729, #730",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main after merged PR #725 (16 November 2026)",
   "reviewed_at": "2026-11-16",
-  "review_policy": "Screenshots reviewed; explicit user Paid confirmation required; optional notifications remain opt-in and local. No finance debit on funded target or reminder event. Old test contract for M640 retired manual correction conflicts with M1011 fixed provenance; update it with matching test expectations.",
+  "review_policy": "All PR #727 user-visible changes require exact-source validation, original finance and SQLCipher contracts, and all full CI. Seven failing jobs came from three stale due-signature tests; M550 must now detect those regressions before long test suites. No automatic money posting; device UAT not claimed.",
   "contracts": [
+    {
+      "id": "M1013-M1014-GOAL-DUE-12-MONTH-ID-POSTPONE-AND-M550-FAIL-CLOSED-REGRESSIONS",
+      "issue": "Issue #730",
+      "previous_behavior": "Goal due typed SQLCipher writer expected zero-padded month identity while canonical entryId used unpadded months, rejecting Jan-Sep payment confirmations. Postponement left old scheduled Android alerts and active-row status alone could permit stale paid reminders. Three old tests asserted the removed no-argument applyRecurring signature while M550 preflight passed because File reader regex missed newline before .readAsStringSync, helper between(start,end) boundary was not tracked, and baseline registered Home parts were not reconstructed.",
+      "approved_behavior": "Every month uses the same canonical unpadded due identity, retaining atomic user-confirmed and idempotent settlement. Postponed goal reminders follow the recorded effective due date and paid goal_due IDs are filtered; no reminder ever posts a payment. All three legacy regression tests target the protected goalLinkedOnly signature and retain their financial assertions. M550 scans multiline Dart source readers and reconstructed Home helper source boundaries with base and HEAD registered part parity, including when main.dart is unchanged; a removed positive assertion causes early failure, not a hidden full-suite error.",
+      "source_paths": [
+        "lib/storage/waffra_fresh_finance_domain_repository.dart",
+        "lib/waffra_home_finance_persistence_due.part.dart",
+        "scripts/qa/m550_behavior_contract_preflight.py"
+      ],
+      "test_paths": [
+        "test/m1013_goal_due_month_identity_postponement_test.dart",
+        "test/m978_recurring_reminder_goal_index_test.dart",
+        "test/storage/m470_verified_recurring_payment_capture_test.dart",
+        "test/storage/m266_home_bound_source_regression_test.dart",
+        "test/m762_home_finance_persistence_due_extraction_test.dart",
+        "test/qa/m550_behavior_contract_preflight_test.py"
+      ],
+      "safety_invariants": [
+        "Canonical Home and SQLCipher goal due identities agree in all twelve months without rewriting prior receipt identities.",
+        "Full goal funding and notification delivery never create a ledger write, only explicit user-confirmed Paid with verified account authority.",
+        "Postponed reminders move to the confirmed due date; confirmed paid goal_due IDs suppress future notifications.",
+        "Existing SQLCipher settlement replay, owner/account checks and fee split tests are retained and not skipped.",
+        "M550 raises a failed preflight for stale source-expectations before expensive whole-app Flutter CI; no continue-on-error added.",
+        "Real Android payment, notification delivery and restore remain pending physical device verification."
+      ]
+    },
     {
       "id": "M1012-VERIFIED-GOAL-DUE-PAID-CONFIRMATION-AND-321-OPTIONAL-NOTIFICATIONS",
       "issue": "Issue #729",
