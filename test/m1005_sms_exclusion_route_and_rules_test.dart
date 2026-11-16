@@ -1,0 +1,111 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:waffra/waffra_approved_notifications.dart';
+import 'package:waffra/main.dart' show waffraM632ClassifySmsQueue;
+import 'package:waffra/waffra_bank_sms_facts.dart';
+import 'package:waffra/waffra_sms_local_rules.dart';
+
+void main(){
+ const id='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+ const notice=WaffraReviewNotice(
+  id:id,sender:'AlRajhiBank',preview:'Test SMS only',
+  kind:'needsReview',receivedAtMs:1763280000000);
+
+ testWidgets('M1005 excluded action failure stays selected and visible',(
+  tester)async{
+  var result=false;
+  var calls=0;
+  final current=<WaffraReviewNotice>[notice];
+  await tester.pumpWidget(MaterialApp(home:WaffraApprovedNotificationsPage(
+   english:false,readPending:()=>current,
+   onReviewAll:()async{},onReviewOne:(_)async{},onRescan:()async{},
+   canRescan:()=>true,
+   onBulkExclude:(ids,senders)async{
+    calls++;
+    expect(ids,[id]);
+    expect(senders,isEmpty);
+    if(result)current.clear();
+    return result;
+   },
+  )));
+  await tester.tap(find.byKey(const Key('m589-open-bulk-sms-review')));
+  await tester.pump();
+  await tester.tap(find.byKey(const Key('m592-select-all-visible')));
+  await tester.pump();
+  await tester.tap(find.byKey(const Key('m592-confirm-bulk-exclude')));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('الرسائل فقط'));
+  await tester.pump(const Duration(milliseconds:200));
+  expect(calls,1);
+  expect(find.byKey(const Key('m592-confirm-bulk-exclude')),findsOneWidget);
+  expect(find.textContaining('لم يتم تأكيد الاستبعاد'),findsOneWidget);
+  expect(current.length,1);
+  result=true;
+  await tester.tap(find.byKey(const Key('m592-confirm-bulk-exclude')));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('الرسائل فقط'));
+  await tester.pump(const Duration(milliseconds:200));
+  expect(calls,2);
+  expect(current,isEmpty);
+  expect(find.byKey(const Key('m592-confirm-bulk-exclude')),findsNothing);
+  expect(find.textContaining('تم استبعاد 1 رسالة'),findsOneWidget);
+  expect(tester.takeException(),isNull);
+ });
+
+ test('M1005 classify all current queued SMS again when exclusion saved',(){
+  const body='تم تحديث بيانات الملف الشخصي';
+  const sender='AdminAlerts';
+  const rule=WaffraSmsLocalRule(
+   id:'custom_m1005_alert',name:'تنبيهات الحساب غير المالية',
+   sender:sender,kind:'excluded',keywords:['تحديث بيانات'],
+   income:false,category:'',matchAll:false);
+  WaffraSmsLocalRules.validate(rule);
+  final row=<String,Object?>{
+   'id':id,'sender':sender,'body':body,'receivedAt':1763280000000,
+  };
+  Map<String,Object?> classify(List<Map<String,dynamic>> rules,{
+   List<Map<String,Object?>> cache=const [],
+   List<Map<String,dynamic>> previous=const [],
+  })=>waffraM632ClassifySmsQueue({
+   'results':<Map<String,Object?>>[row],
+   'rules':rules,'categories':<String>[], 'hashes':<String>[],
+   'history':<Map<String,Object?>>[],
+   'previousRules':previous,
+   'cached':cache,
+  });
+  final before=classify([]);
+  expect(before['excluded'],isEmpty);
+  final prior=(before['waiting'] as List).single as Map;
+  final after=classify([rule.toJson()],cache:[
+   Map<String,Object?>.from(prior),
+  ]);
+  expect(after['excluded'],contains(id));
+  expect((after['waiting'] as List),isEmpty);
+  // A valid exclusion for one sender cannot hide financial posted money
+  // or a superficially similar notification from another sender.
+  const paid='تم خصم 85 ريال. تم تحديث بيانات الملف الشخصي';
+  final facts=WaffraBankSmsFactsParser.parse(paid);
+  expect(WaffraSmsLocalRules.resolveSpecial(
+   body:paid,sender:sender,bankKind:facts.kind,
+   custom:[rule])?.resolvedKind,isNot('excluded'));
+  expect(WaffraSmsLocalRules.matches(
+   rule,body,sender:'AnotherSender'),isFalse);
+ });
+
+ test('M1005 BRKH bilingual OTP variants are security, never posted money',(){
+  for(final text in <String>[
+   '7814 is your code for Barakah رمز دخولك لبركة',
+   'is your code for Barakah 7814 رمز دخولك لبركة',
+  ]){
+   expect(WaffraBankSmsFactsParser.isVerificationChallenge(text),isTrue);
+   final facts=WaffraBankSmsFactsParser.parse(text);
+   expect(facts.canAutoPostAsIncomeExpense,isFalse);
+   expect(WaffraSmsLocalRules.resolveSpecial(body:text,
+    sender:'BRKH',bankKind:facts.kind)?.resolvedKind,'excluded');
+  }
+  const paid='Purchase approved SAR 85.00; 7814 is your code for Barakah';
+  final facts=WaffraBankSmsFactsParser.parse(paid);
+  expect(WaffraSmsLocalRules.resolveSpecial(body:paid,
+   sender:'BRKH',bankKind:facts.kind)?.resolvedKind,isNot('excluded'));
+ });
+}
