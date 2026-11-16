@@ -14,13 +14,15 @@ class WaffraBankSmsFacts {
   this.reference,
   this.counterparty,
   this.pending=false,this.securityChallenge=false,
+  this.requiresBeneficiaryReview=false,
  });
  final WaffraBankOperationKind kind;
  final String? sourceSuffix,destinationSuffix,reference,counterparty;
  final double? fee;
- final bool pending,securityChallenge;
+ final bool pending,securityChallenge,requiresBeneficiaryReview;
  bool get canAutoPostAsIncomeExpense=>
-  !pending&&(kind==WaffraBankOperationKind.income||
+  !pending&&!requiresBeneficiaryReview&&
+   (kind==WaffraBankOperationKind.income||
              kind==WaffraBankOperationKind.expense);
 }
 
@@ -253,6 +255,10 @@ abstract final class WaffraBankSmsFactsParser {
    counterparty:_counterparty.firstMatch(normalized)?.group(1)?.trim(),
    pending:securityChallenge||_pending.hasMatch(normalized)||feeRequiresReview,
    securityChallenge:securityChallenge,
+   // SAMA describes debit/credit direction, not ownership of beneficiary.
+   // Even when this notice is an Expense/Income suggestion, no automatic
+   // money posting is authorized until the owner reviews account/recipient.
+   requiresBeneficiaryReview:isTransfer,
   );
  }
  /// Display-only accounting preview. A fee never modifies an internal
