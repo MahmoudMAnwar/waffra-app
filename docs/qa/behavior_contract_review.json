@@ -1,12 +1,33 @@
 {
   "schema_version": 1,
-  "pr": "M1006 #720 — safe accessible finance revalidation UI after #711/#716/#718",
-  "issue": "Issue #719",
+  "pr": "M1007 #722 — owner-controlled SMS rule matching across senders",
+  "issue": "Issue #721",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at f0def360ea75b9c865548b6f1b4fc07e9640f2c2 after #656",
   "reviewed_at": "2026-11-16",
   "review_policy": "Owner requested code-only, no manual tests or test files. Prior safety contracts remain binding. Full same-SHA QA required later.",
   "contracts": [
+    {
+      "id": "M1007-USER-APPROVED-GLOBAL-VS-SPECIFIC-FOUR-KIND-SMS-SCOPE",
+      "issue": "Issue #721 / Draft PR #722",
+      "previous_behavior": "Rules learned from an SMS default to a sender-specific encrypted owner rule. Manual rules may be senderless but the UI has no explicit scope. A sender-bound OTP/beneficiary structural template cannot be converted to safe global scope by its owner.",
+      "approved_behavior": "Owner chooses All senders or Specific sender per income, expense, transfer or excluded rule. Existing rules remain scoped. A manually approved global rule matches every sender for safe keyword/structural event only; pending queue re-evaluates. Global rule cannot auto-post financial money. The corrected-SMS learning popup still requires a saved manual correction plus explicit review.",
+      "source_paths": [
+        "lib/waffra_sms_local_rules.dart",
+        "lib/waffra_sms_rule_settings_page.dart"
+      ],
+      "test_paths": [
+        "test/m1007_sms_rule_scope_test.dart",
+        "test/m980_four_sms_rule_kinds_every_route_test.dart"
+      ],
+      "safety_invariants": [
+        "Do not convert existing learned sender-specific rules to all senders without owner edit and save.",
+        "Do not auto-exclude money posted, composite notices, conflicts, or mixed OTP+financial SMS; keep native encrypted pending ID and finance authority.",
+        "Preserve structural verification/beneficiary matching when expanding scope, never expand to free-text unverified financial patterns.",
+        "Global financial rule is suggestion only; auto-post requires exact sender, verified bank account and four-digit suffix.",
+        "Real Android/SMS/owner restore acceptance remains unverified, exact-head CI required."
+      ]
+    },
     {
       "id": "M1006-VISIBLE-RETRY-DARK-RTL-A11Y-STACKED-ON-716",
       "issue": "Issue #719 / Draft PR #720 stacked on Draft #716",
