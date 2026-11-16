@@ -1,3 +1,8 @@
+[M1031 / ENCRYPTED LEARNING COUNTS VISIBLE IN RULE SETTINGS]
+- The classification rules screen now distinguishes owner-encrypted observation counts from validated reusable keyword rules, across manual and bank-SMS income/expense; unavailable encrypted counters are never shown as zero.
+- Source totals are retained alongside bounded learning receipts, with compatibility for the first M1031 receipt format and no SMS plaintext, bank details or money amounts.
+- Added M1031 regression source contract; real Android test and exact-HEAD CI pending.
+
 [M1031 / RELIABLE LEARNING WRITE ORDER]
 - After a verified foreground manual/SMS finance commit, the owner-encrypted learning receipt is written BEFORE optional safe-pattern extraction, so failure in the latter cannot silently skip the receipt. Test M1031 now asserts all four foreground routes preserve this order. Still no second money write.
 

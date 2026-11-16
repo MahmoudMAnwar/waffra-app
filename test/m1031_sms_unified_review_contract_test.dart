@@ -26,6 +26,12 @@ void main(){
   expect(rules,contains('Future<void> _m1031RecordConfirmedLearning('));
   expect(store,contains('Future<bool> recordConfirmedFinanceLearning('));
   expect(store,contains('waffra_sms_confirmed_finance_learning_v1_'));
+  expect(store,contains('Future<Map<String,int>> confirmedFinanceLearningCounts('));
+  expect(store,contains("'sourceTotals':bySource"));
+  final settings=File('lib/waffra_sms_rule_settings_page.dart').readAsStringSync();
+  expect(settings,contains('m1031-confirmed-learning-counts'));
+  expect(settings,contains('confirmedFinanceLearningCounts(widget.ownerKey)'));
+  expect(settings,contains('قواعد كلمات آمنة قابلة لإعادة الاستخدام'));
   expect(store,contains('await _storage.write(key:key,value:next)'));
   expect(store,contains('if(reloaded!=next)'));
   expect(sheet.split('await _m1031RecordConfirmedLearning(result);').length-1,3);

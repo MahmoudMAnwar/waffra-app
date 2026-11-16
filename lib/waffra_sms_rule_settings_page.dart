@@ -32,6 +32,7 @@ class WaffraSmsRuleSettingsPage extends StatefulWidget {
 class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
  final store=const WaffraSmsLocalRuleStore();
  List<WaffraSmsLocalRule> saved=const [];
+ Map<String,int>? confirmedLearningCounts;
  bool loading=true,busy=false,canUndo=false;
  String? error;
  // Native exclusions are a DIFFERENT owner-encrypted policy from keyword rules.
@@ -47,6 +48,13 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
   try{
    final rules=await store.read(widget.ownerKey);
    final undoAvailable=await store.hasUndo(widget.ownerKey);
+   Map<String,int>? confirmed;
+   try{
+    confirmed=await store.confirmedFinanceLearningCounts(widget.ownerKey);
+   }catch(_){
+    // Learning receipts and classification rules use separate encrypted
+    // records. An unreadable receipt must not hide otherwise valid rules.
+   }
    List<Map<String,Object?>>? excluded;
    List<String>? blocked;
    try{
@@ -55,7 +63,8 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
    }catch(_){/* Native exclusions unavailable; do NOT show a false zero. */}
    if(!mounted)return;
    setState((){
-    saved=rules;canUndo=undoAvailable;loading=false;error=null;
+    saved=rules;confirmedLearningCounts=confirmed;
+    canUndo=undoAvailable;loading=false;error=null;
     excludedSmsCount=excluded?.length;
     blockedSenderCount=blocked?.length;
     nativeExcluded=excluded;
@@ -641,6 +650,28 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
      'Rules run locally on your device and suggest categories; financial changes require your verified approval.':
      'القواعد تحلل الرسائل محليًا على جهازك وتقترح النوع والقسم، والعملية المالية تتطلب تأكيدك الموثق.',
      style:Theme.of(context).textTheme.bodyMedium),
+    const SizedBox(height:12),
+    Card(child:ListTile(
+     key:const Key('m1031-confirmed-learning-counts'),
+     leading:const Icon(Icons.school_outlined),
+     title:Text(widget.english?
+      'Confirmed local financial learning':
+      'التعلم المحلي من العمليات المؤكدة'),
+     subtitle:Text(confirmedLearningCounts==null?
+      (widget.english?
+       'Encrypted learning counts unavailable — this is not zero.':
+       'تعذر قراءة عدادات التعلم المشفرة؛ ده مش معناه إن العدد صفر.'):
+      (widget.english?
+       'Manual income ${confirmedLearningCounts!['manual|income']} • manual expense ${confirmedLearningCounts!['manual|expense']}\n'
+       'Bank SMS income ${confirmedLearningCounts!['sms|income']} • bank SMS expense ${confirmedLearningCounts!['sms|expense']}\n'
+       'Reusable safe patterns: ${saved.where((r)=>r.financial).length}':
+       'دخل يدوي ${confirmedLearningCounts!['manual|income']} • مصروف يدوي ${confirmedLearningCounts!['manual|expense']}\n'
+       'دخل بنكي ${confirmedLearningCounts!['sms|income']} • مصروف بنكي ${confirmedLearningCounts!['sms|expense']}\n'
+       'قواعد كلمات آمنة قابلة لإعادة الاستخدام: ${saved.where((r)=>r.financial).length}')),
+     trailing:IconButton(
+      tooltip:widget.english?'Refresh learning counts':'تحديث عداد التعلم',
+      onPressed:busy?null:_load,icon:const Icon(Icons.refresh_outlined)),
+    )),
     const SizedBox(height:12),
     Card(child:ListTile(
      key:const Key('m1002-native-exclusion-counts'),

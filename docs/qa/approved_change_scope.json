@@ -13,7 +13,8 @@
     "8. Do not concatenate independent multipart SMS only because sender matches",
     "9. Avoid synchronous encrypted queue I/O on BroadcastReceiver main thread",
     "10. M1031 unify SMS review suggestions/notification states and allow verified explicit owner confirmation of external outgoing expenses without AutoPost authority",
-    "11. M1031 persist owner-scoped encrypted post-commit learning evidence for manual/SMS income/expense and prevent conflicting learned financial directions"
+    "11. M1031 persist owner-scoped encrypted post-commit learning evidence for manual/SMS income/expense and prevent conflicting learned financial directions",
+    "12. M1031 accurately display per-source verified encrypted learning events alongside distinct count of reusable matching rules"
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -70,7 +71,8 @@
     "lib/waffra_sms_local_rules.dart",
     "lib/waffra_home_sms_rules.part.dart",
     "test/m620_m621_finance_notification_routing_test.dart",
-    "test/m983_sms_direct_kind_prefill_refresh_test.dart"
+    "test/m983_sms_direct_kind_prefill_refresh_test.dart",
+    "lib/waffra_sms_rule_settings_page.dart"
   ],
   "allowed_workflow_changes": [],
   "approved_deleted_files": [],
@@ -412,6 +414,16 @@
     "test/m983_sms_direct_kind_prefill_refresh_test.dart": [
       {
         "start": "void main(){",
+        "end": null
+      }
+    ],
+    "lib/waffra_sms_rule_settings_page.dart": [
+      {
+        "start": "class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{",
+        "end": " Future<bool> _persist("
+      },
+      {
+        "start": " @override Widget build(BuildContext context)=>Scaffold(",
         "end": null
       }
     ]

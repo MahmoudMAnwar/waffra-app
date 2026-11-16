@@ -1101,8 +1101,29 @@ class WaffraSmsLocalRuleStore {
     totals[pair.key as String]=pair.value as int;
    }
   }
+  final bySource=<String,int>{};
+  if(doc['sourceTotals'] is Map){
+   for(final entry in (doc['sourceTotals'] as Map).entries){
+    if(entry.key is! String||entry.value is! int||
+       (entry.value as int)<0)throw const FormatException(
+        'Invalid source learning totals');
+    bySource[entry.key as String]=entry.value as int;
+   }
+  }else{
+   // Backward compatibility for the first M1031 verified receipts created
+   // before the by-source counter existed.
+   for(final row in recent){
+    final src=row['source'],type=row['kind'];
+    if(src is String&&type is String){
+     final key='$src|$type';
+     bySource[key]=(bySource[key]??0)+1;
+    }
+   }
+  }
   final bucket='$kind|$category';
   totals[bucket]=(totals[bucket]??0)+1;
+  final sourceKey='$sourceType|$kind';
+  bySource[sourceKey]=(bySource[sourceKey]??0)+1;
   recent.add(<String,Object?>{
    'id':digest,'kind':kind,'category':category.trim(),
    'source':sourceType,
@@ -1110,6 +1131,7 @@ class WaffraSmsLocalRuleStore {
   if(recent.length>512)recent.removeRange(0,recent.length-512);
   final next=jsonEncode(<String,Object?>{
    'version':1,'recent':recent,'totals':totals,
+   'sourceTotals':bySource,
   });
   await _storage.write(key:key,value:next);
   final reloaded=await _storage.read(key:key);
@@ -1117,6 +1139,47 @@ class WaffraSmsLocalRuleStore {
    'Confirmed local learning did not survive encrypted readback');
   return true;
  });
+
+ /// Read-only statistics: a confirmed learning observation is NOT
+ /// necessarily a safely reusable SMS keyword pattern. Never display
+ /// missing/decryption-failed statistics as a misleading zero.
+ Future<Map<String,int>> confirmedFinanceLearningCounts(String owner)async{
+  _key(owner);
+  final raw=await _storage.read(
+   key:'waffra_sms_confirmed_finance_learning_v1_$owner');
+  if(raw==null)return const <String,int>{
+   'manual|income':0,'manual|expense':0,
+   'sms|income':0,'sms|expense':0,
+  };
+  final doc=jsonDecode(raw);
+  if(doc is! Map)throw const FormatException(
+   'Confirmed local learning ledger unreadable');
+  final counts=<String,int>{
+   'manual|income':0,'manual|expense':0,
+   'sms|income':0,'sms|expense':0,
+  };
+  final encoded=doc['sourceTotals'];
+  if(encoded is Map){
+   for(final entry in encoded.entries){
+    if(entry.key is! String||entry.value is! int||
+       (entry.value as int)<0)throw const FormatException(
+        'Invalid confirmed local learning counter');
+    if(counts.containsKey(entry.key))counts[entry.key as String]=entry.value as int;
+   }
+  }else{
+   // Read legacy M1031 bounded history without erasing or changing it.
+   final rows=doc['recent'];
+   if(rows is! List)throw const FormatException(
+    'Confirmed learning snapshot missing');
+   for(final row in rows){
+    if(row is! Map)throw const FormatException('Invalid learning record');
+    final source=row['source'],kind=row['kind'];
+    final bucket='$source|$kind';
+    if(counts.containsKey(bucket))counts[bucket]=counts[bucket]!+1;
+   }
+  }
+  return Map<String,int>.unmodifiable(counts);
+ }
 
  Future<WaffraSmsRuleLearningResult> learnReviewedCandidates(
   String owner,Iterable<WaffraSmsLocalRule> candidates,
