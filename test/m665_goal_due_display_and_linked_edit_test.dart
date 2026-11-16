@@ -71,21 +71,24 @@ void main(){
   expect(card,contains('icon:goal!=null?Icons.track_changes:Icons.event_repeat_rounded'));
  });
 
- test('M689 goal action sheet retains fund/edit/release/delete/active',(){
+ test('M1021 goal card uses three inline controls; management stays explicit',(){
   final main=readWaffraMainSourceForContracts();
   final start=main.indexOf(' Future<void> _m689GoalActions(');
   final end=main.indexOf(' Widget goalsPage(){',start);
-  final quick=main.substring(start,end);
-  expect(quick,contains('SwitchListTile.adaptive('));
-  expect(quick,contains("Key('waffra-goal-active-switch-'+g.id)"));
-  expect(quick,contains('setGoalActive(g,enabled)'));
-  expect(quick,contains("fundGoal(g)"));
-  expect(quick,contains("_handleGoalCardAction(g,'edit')"));
-  expect(quick,contains("_handleGoalCardAction(g,'release')"));
-  expect(quick,contains("_handleGoalCardAction(g,'delete')"));
+  final manage=main.substring(start,end);
+  expect(manage,isNot(contains('showModalBottomSheet<void>(')));
+  expect(manage,contains("setGoalActive(g,!g.active)"));
+  expect(manage,contains("_handleGoalCardAction(g,'release')"));
+  expect(manage,contains("_handleGoalCardAction(g,'delete')"));
   final goals=main.substring(end,main.indexOf(' Future<void> recurringDialog(',end));
   expect(goals,contains("Key('m689-goal-card-'+g.id)"));
-  expect(goals,isNot(contains("'View':'عرض'")));
+  expect(goals,contains("Key('m1021-goal-deposit-'+g.id)"));
+  expect(goals,contains("Key('m1021-goal-edit-'+g.id)"));
+  expect(goals,contains("Key('m1021-goal-account-'+g.id)"));
+  expect(goals,contains("Key('m1021-goal-manage-'+g.id)"));
+  expect(goals,contains("()=>unawaited(_handleGoalCardAction(g,'edit'))"));
+  expect(goals,contains('()=>unawaited(openVerifiedAccounts())'));
+  expect(goals,isNot(contains("onTap:WaffraHaptics.tap(()=>unawaited(_m689GoalActions(g)))")));
  });
 
  test('M665.7 linked due edit explains without changing finance; standalone still editable',(){
