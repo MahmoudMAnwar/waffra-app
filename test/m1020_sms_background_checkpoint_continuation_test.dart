@@ -78,7 +78,8 @@ void main(){
   expect(entry,isNot(contains('await WaffraAutoSmsAutoPoster.run();\n   return true;')));
   final worker=File('native/WaffraAutoSmsWorker.kt').readAsStringSync();
   expect(worker,contains('reply is Map<*, *>'));
-  expect(worker,contains('needsContinuation = reply["hasMore"] == true'));
+  expect(worker,contains('needsContinuation = reply is Map<*, *> &&'));
+  expect(worker,contains('reply["hasMore"] == true'));
   expect(worker,contains('if (completed && successful && needsContinuation) enqueue(context)'));
   expect(worker,contains('done.await(55, TimeUnit.SECONDS)'));
   expect(worker,contains('ExistingWorkPolicy.APPEND_OR_REPLACE'));
