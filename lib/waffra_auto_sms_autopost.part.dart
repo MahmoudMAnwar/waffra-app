@@ -53,8 +53,9 @@ abstract final class WaffraAutoSmsAutoPoster {
   // reclassification, but never a retroactive unconfirmed money write.
   final ruleRevision=waffraSmsRulesRevision(owner,ruleStoreReady,
    rules.map((r)=>Map<String,Object?>.from(r.toJson())).toList(growable:false));
+  final notificationsAllowed=await WaffraAutoSms.notificationsAllowed();
   final pass=WaffraSmsBackgroundCheckpoint.select(pending,maxPerPass:25,
-   currentRulesRevision:ruleRevision);
+   currentRulesRevision:ruleRevision,notificationsAllowed:notificationsAllowed);
   if(pass.candidates.isEmpty)return summary;
   var completed=0;
   summary['remaining']=pass.unattempted;
@@ -85,8 +86,9 @@ abstract final class WaffraAutoSmsAutoPoster {
     }
     // A classification is not a verified financial commit. Every suggested
     // transaction, including transfers, still opens explicit user review.
-    await WaffraAutoSms.notifyReview(id,kind:kind);
-    if(!await WaffraAutoSms.markBackgroundReviewed(id,revision:ruleRevision)){
+    final delivered=await WaffraAutoSms.notifyReview(id,kind:kind);
+    if(!await WaffraAutoSms.markBackgroundReviewed(id,revision:ruleRevision,
+      notificationDelivered:delivered)){
      throw retryCheckpoint;
     }
     summary['review']=summary['review']!+1;
