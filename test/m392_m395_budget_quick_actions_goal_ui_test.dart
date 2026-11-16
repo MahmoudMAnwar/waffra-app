@@ -28,14 +28,19 @@ void main() {
   expect(waffraAvailableCash([], [loaded]),0);
  });
 
- test('M393 goal pause is explicit in Quick Actions, with guarded finance writes',(){
+ test('M1021 explicit goal header management preserves pause, money and delete guards',(){
   final source=readWaffraMainSourceForContracts();
   final linked=File('lib/waffra_goal_recurring_actions.part.dart').readAsStringSync();
-  expect(source,contains("'waffra-goal-quick-actions-'"));
-  expect(source,contains("'waffra-goal-active-switch-'"));
+  final goal=source.split(' Widget goalsPage(){').last
+   .split(' Widget recurringPage(){').first;
+  expect(goal,contains("Key('m1021-goal-manage-'+g.id)"));
+  expect(goal,contains("value:'toggle'"));
+  expect(goal,contains("value:'delete'"));
+  expect(goal,contains('if(g.saved>0)PopupMenuItem<String>('));
   expect(source,contains("_handleGoalCardAction(g,'edit')"));
   expect(source,contains("_handleGoalCardAction(g,'delete')"));
-  expect(source,contains("setGoalActive(g,enabled)"));
+  expect(source,contains("setGoalActive(g,!g.active)"));
+  expect(goal,isNot(contains('onTap:WaffraHaptics.tap(()=>unawaited(_m689GoalActions(g)))')));
   expect(linked,contains('Future<void> setGoalActive('));
   expect(linked,contains("operation:'goal-active-and-due'"));
   expect(linked,contains('date==null||updated.target<=0||!updated.active'));
