@@ -9,28 +9,45 @@
     "Store safe repeatable nonfinancial notice exclusions across single, bulk and Notifications center paths without copying OTP, personal identifiers or entire message text.",
     "Prefill actual original bank transaction date including HH:mm in manual correction and transfer-manual routes; fail closed on ambiguous timestamps.",
     "Allow horizontal RTL/LTR sender swipe within Notifications center; retain filter selection and vertical refresh/scroll.",
-    "Run end-to-end regression against example outgoing SAR 60 Nov 15 2026 10:14, varied amounts, Etimad excluded notices, and real notifications Widget gestures. Register in M946."
+    "Run end-to-end regression against example outgoing SAR 60 Nov 15 2026 10:14, varied amounts, Etimad excluded notices, and real notifications Widget gestures. Register in M946.",
+    "Preserve original account-aware-review and beneficiary safety tests after SAMA change, adjusting only outdated synthetic fixtures whose old assertion incorrectly treated an external outgoing transfer as a two-owned-account movement; add requiresBeneficiaryReview to prevent auto-post of external transfer suggestions."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "lib/waffra_bank_sms_facts.dart",
     "lib/main.dart",
-    "lib/waffra_sms_local_rules.dart",
     "lib/waffra_approved_notifications.dart",
-    "lib/waffra_home_sms_inbox.part.dart",
+    "lib/waffra_auto_sms_policy.dart",
+    "lib/waffra_bank_sms_facts.dart",
     "lib/waffra_home_entry_sheet.part.dart",
     "lib/waffra_home_sms_confirmation.part.dart",
+    "lib/waffra_home_sms_inbox.part.dart",
+    "lib/waffra_sms_local_rules.dart",
     "scripts/qa/m946_full_app_smoke_matrix.py",
-    "test/m1009_sama_notification_swipe_regression_test.dart"
+    "test/bank_sms_test.dart",
+    "test/m1009_sama_notification_swipe_regression_test.dart",
+    "test/m580_sms_security_navigation_performance_test.dart",
+    "test/m669_sms_review_category_search_test.dart",
+    "test/m980_four_sms_rule_kinds_every_route_test.dart",
+    "test/m983_sms_direct_kind_prefill_refresh_test.dart",
+    "test/m985_sms_prefill_identity_status_conflict_duplicate_test.dart",
+    "test/waffra_bank_sms_facts_test.dart"
   ],
   "bounded_sections": {
     "lib/waffra_bank_sms_facts.dart": [
       {
+        "start": "class WaffraBankSmsFacts {",
+        "end": "abstract final class WaffraBankSmsFactsParser {"
+      },
+      {
         "start": "  // M514 #449: \"incoming credit\" describes movement into this account,",
         "end": "  String? normalizeSuffix(String? value)=>"
+      },
+      {
+        "start": "  return WaffraBankSmsFacts(",
+        "end": " /// Display-only accounting preview."
       }
     ],
     "lib/main.dart": [
@@ -97,6 +114,12 @@
       {
         "start": "FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {",
         "end": "    \"m1008_two_account_sms_balance_and_history_parity\""
+      }
+    ],
+    "lib/waffra_auto_sms_policy.dart": [
+      {
+        "start": "  // A transfer, card settlement or message with a separate fee cannot",
+        "end": "  if(!facts.canAutoPostAsIncomeExpense){"
       }
     ]
   },
