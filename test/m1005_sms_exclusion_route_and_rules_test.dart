@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_approved_notifications.dart';
-import 'package:waffra/main.dart' show waffraM632ClassifySmsQueue;
+import 'package:waffra/main.dart' show snack, waffraM632ClassifySmsQueue;
 import 'package:waffra/waffra_bank_sms_facts.dart';
 import 'package:waffra/waffra_sms_local_rules.dart';
 
@@ -16,11 +16,17 @@ void main(){
   tester)async{
   var result=false;
   var calls=0;
+  String? feedback;
+  bool? lastError;
   final current=<WaffraReviewNotice>[notice];
   await tester.pumpWidget(MaterialApp(home:WaffraApprovedNotificationsPage(
    english:false,readPending:()=>current,
    onReviewAll:()async{},onReviewOne:(_)async{},onRescan:()async{},
    canRescan:()=>true,
+   onFeedback:(ctx,message,isError){
+    feedback=message;lastError=isError;
+    snack(ctx,message,isError:isError);
+   },
    onBulkExclude:(ids,senders)async{
     calls++;
     expect(ids,[id]);
@@ -38,6 +44,9 @@ void main(){
   await tester.tap(find.text('الرسائل فقط'));
   await tester.pump(const Duration(milliseconds:200));
   expect(calls,1);
+  expect(feedback,contains('لم يتم تأكيد الاستبعاد'));
+  expect(lastError,isTrue);
+  await tester.pump(const Duration(milliseconds:350));
   expect(find.byKey(const Key('m592-confirm-bulk-exclude')),findsOneWidget);
   expect(find.textContaining('لم يتم تأكيد الاستبعاد'),findsOneWidget);
   expect(current.length,1);
@@ -47,6 +56,9 @@ void main(){
   await tester.tap(find.text('الرسائل فقط'));
   await tester.pump(const Duration(milliseconds:200));
   expect(calls,2);
+  expect(feedback,contains('تم استبعاد 1 رسالة'));
+  expect(lastError,isFalse);
+  await tester.pump(const Duration(milliseconds:350));
   expect(current,isEmpty);
   expect(find.byKey(const Key('m592-confirm-bulk-exclude')),findsNothing);
   expect(find.textContaining('تم استبعاد 1 رسالة'),findsOneWidget);

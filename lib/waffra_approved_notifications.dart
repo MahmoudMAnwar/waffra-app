@@ -20,6 +20,7 @@ class WaffraApprovedNotificationsPage extends StatefulWidget {
   super.key,required this.english,required this.readPending,
   required this.onReviewAll,required this.onReviewOne,
   required this.onRescan,required this.canRescan,this.onBulkExclude,
+  this.onFeedback,
  });
  final bool english;
  final List<WaffraReviewNotice> Function() readPending;
@@ -32,6 +33,8 @@ class WaffraApprovedNotificationsPage extends StatefulWidget {
  /// the user. The caller still verifies the live encrypted owner queue.
  final Future<bool> Function(List<String> ids,List<String> senders)?
   onBulkExclude;
+ /// Use the shared Waffra notice presenter in the CURRENT route context.
+ final void Function(BuildContext route,String message,bool isError)? onFeedback;
  @override State<WaffraApprovedNotificationsPage> createState()=>
   _WaffraApprovedNotificationsPageState();
 }
@@ -51,24 +54,16 @@ class _WaffraApprovedNotificationsPageState
  // hidden footer. False means NO confirmed exclusion, never a silent no-op.
  void _m1005ExclusionFeedback({required bool success,required int count}){
   if(!mounted)return;
-  final messenger=ScaffoldMessenger.maybeOf(context);
-  if(messenger==null)return;
-  messenger.hideCurrentSnackBar();
-  messenger.showSnackBar(SnackBar(
-   key:const Key('m1005-notification-exclusion-feedback'),
-   behavior:SnackBarBehavior.floating,
-   margin:const EdgeInsets.fromLTRB(12,0,12,8),
-   backgroundColor:cream,
-   shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(14)),
-   content:Text(success?
-    (widget.english?'Excluded $count messages from review. Existing SMS rules rechecked.':
-     'تم استبعاد $count رسالة من المراجعة، وإعادة فحص القواعد على الرسائل الحالية.'):
-    (widget.english?'Exclusion was not confirmed. Messages remain selected; retry or refresh.':
-     'لم يتم تأكيد الاستبعاد. الرسائل ما زالت محددة؛ أعد المحاولة أو حدّث القائمة.'),
-    textAlign:TextAlign.center,
-    style:TextStyle(color:success?green:const Color(0xFF9C2929),
-     fontWeight:FontWeight.bold)),
-  ));
+  // Route feedback through the existing app-wide Waffra notice presenter;
+  // do NOT create another Snackbar or use the hidden Home/footer context.
+  final message=success?
+   (widget.english?
+    'Excluded $count messages from review. Existing SMS rules rechecked.':
+    'تم استبعاد $count رسالة من المراجعة، وإعادة فحص القواعد على الرسائل الحالية.'):
+   (widget.english?
+    'Exclusion was not confirmed. Messages remain selected; retry or refresh.':
+    'لم يتم تأكيد الاستبعاد. الرسائل ما زالت محددة؛ أعد المحاولة أو حدّث القائمة.');
+  widget.onFeedback?.call(context,message,!success);
  }
  Future<void> run(Future<void> Function() action)async{
   if(busy)return;

@@ -326,6 +326,7 @@ extension _WaffraHomeSmsManagement on _HomeScreenState {
     english:waffraIsEnglish,readPending:_m549ReviewNotices,
     onReviewAll:_openAutoSmsInbox,
     onBulkExclude:_m592ExcludeNotificationSelection,
+    onFeedback:(route,message,isError)=>snack(route,message,isError:isError),
     onReviewOne:(id)=>_reviewAutoSmsCandidates(targetId:id),
     onRescan:()=>_rescanAutoSmsInbox(feedbackContext:route),
     // A user refresh always checks the real incremental native cursor;

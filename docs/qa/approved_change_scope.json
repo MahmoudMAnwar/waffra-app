@@ -24,6 +24,10 @@
   "bounded_sections": {
     "lib/waffra_approved_notifications.dart": [
       {
+        "start": " const WaffraApprovedNotificationsPage({",
+        "end": " @override State<WaffraApprovedNotificationsPage> createState()=>"
+      },
+      {
         "start": " static const cream=Color(0xFFF8F6EF);",
         "end": " Widget category("
       },
@@ -36,6 +40,10 @@
       {
         "start": " Future<bool> _m592ExcludeNotificationSelection(",
         "end": " Future<void> _m549OpenNotifications()async{"
+      },
+      {
+        "start": " Future<void> _m549OpenNotifications()async{",
+        "end": "    onReviewOne:(id)=>_reviewAutoSmsCandidates(targetId:id),"
       }
     ],
     "lib/waffra_bank_sms_facts.dart": [
