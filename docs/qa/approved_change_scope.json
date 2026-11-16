@@ -10,7 +10,8 @@
     "Prefill actual original bank transaction date including HH:mm in manual correction and transfer-manual routes; fail closed on ambiguous timestamps.",
     "Allow horizontal RTL/LTR sender swipe within Notifications center; retain filter selection and vertical refresh/scroll.",
     "Run end-to-end regression against example outgoing SAR 60 Nov 15 2026 10:14, varied amounts, Etimad excluded notices, and real notifications Widget gestures. Register in M946.",
-    "Preserve original account-aware-review and beneficiary safety tests after SAMA change, adjusting only outdated synthetic fixtures whose old assertion incorrectly treated an external outgoing transfer as a two-owned-account movement; add requiresBeneficiaryReview to prevent auto-post of external transfer suggestions."
+    "Preserve original account-aware-review and beneficiary safety tests after SAMA change, adjusting only outdated synthetic fixtures whose old assertion incorrectly treated an external outgoing transfer as a two-owned-account movement; add requiresBeneficiaryReview to prevent auto-post of external transfer suggestions.",
+    "Update only the obsolete M514 outgoing external beneficiary expected kind, preserving its income and manual-review safety assertions and the immutable remaining test suite."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -28,6 +29,7 @@
     "scripts/qa/m946_full_app_smoke_matrix.py",
     "test/bank_sms_test.dart",
     "test/m1009_sama_notification_swipe_regression_test.dart",
+    "test/m514_sms_review_regressions_test.dart",
     "test/m580_sms_security_navigation_performance_test.dart",
     "test/m669_sms_review_category_search_test.dart",
     "test/m980_four_sms_rule_kinds_every_route_test.dart",
@@ -166,6 +168,12 @@
       {
         "start": " test('M985 never guesses account digits from OTP/ref or opposing direction',(){",
         "end": " test('M985 cancelled, declined and reversed purchases cannot be posted',(){"
+      }
+    ],
+    "test/m514_sms_review_regressions_test.dart": [
+      {
+        "start": " test('M514 incoming money is income, not owned-account transfer',(){",
+        "end": " test('M514 per-button scanned number is never native history total',(){"
       }
     ]
   },
