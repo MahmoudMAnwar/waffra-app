@@ -1,12 +1,49 @@
 {
   "schema_version": 1,
-  "pr": "M1010 Issue #726 — required account cascade validation and green dues hero (Draft)",
-  "issue": "Issue #726",
+  "pr": "M1010 + M1011 Issues #726/#728 — required account fields, green dues hero, SMS provenance/ack (Draft #727)",
+  "issue": "Issues #726, #728",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main after merged PR #725 (16 November 2026)",
   "reviewed_at": "2026-11-16",
-  "review_policy": "Owner-provided Android screenshots; align both account picker forms with existing inline error messages and change only dues page header; preserve owner-verified account gate and monetary writers.",
+  "review_policy": "Owner-approved screenshots: inline goal/due errors and hero plus verified SMS finance provenance and native ACK with no duplicate ledger effect. Explicit native source receipt and SQLCipher owner verification are mandatory; no private device data imported or printed.",
   "contracts": [
+    {
+      "id": "M1011-SMS-CORRECTION-ORIGINAL-TEXT-NATIVE-ID-ACK-AND-SAFE-TRANSFER",
+      "issue": "Issue #728",
+      "previous_behavior": "SMS whose selected Income/Expense differed from classifier saved as manual, original SMS shown only during editing then lost; no finance hash committed, native review stayed pending. Corrected manual transfers generated a new ID with every attempt and retained unacknowledged SMS. Malformed 3-digit bank dates could parse a day substring.",
+      "approved_behavior": "Explicit confirmed Income/Expense from native SMS always goes through verified SQLCipher SMS commit, retaining source text, hash, user-chosen direction, category, original timestamp or explicit calendar selection, and verified account. Native committed ACK requires verified source ledger+hash after save; cancel and ACK failure never post twice. Explicit own-account transfer must select two verified accounts; its source native SMS ID becomes a stable idempotent transfer ID, original text stored in encrypted transfer note with protected opt-in view, native transfer ACK follows successful commit. Fee-aware transfer persists source in encrypted transfer and fee row. Bill payment is expense review suggestion, three-digit day is rejected.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_bank_sms_facts.dart",
+        "lib/waffra_home_sms_confirmation.part.dart",
+        "lib/waffra_home_entry_sheet.part.dart",
+        "lib/waffra_home_verified_account_flows.part.dart",
+        "lib/waffra_home_sms_transfer_review.part.dart",
+        "lib/waffra_account_transaction_form.dart",
+        "lib/waffra_home_verified_transfer_cards.part.dart",
+        "lib/storage/waffra_verified_accounts_api.dart",
+        "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
+        "lib/storage/waffra_unified_finance_writer.dart"
+      ],
+      "test_paths": [
+        "test/m1011_reviewed_sms_provenance_ack_transfer_regression_test.dart",
+        "test/m580_sms_security_navigation_performance_test.dart",
+        "test/m615_m618_sms_review_retention_perf_contract_test.dart",
+        "test/m662_sms_review_activity_pdf_regression_test.dart",
+        "test/m670_feedback_transfer_dashboard_test.dart",
+        "test/m983_sms_direct_kind_prefill_refresh_test.dart",
+        "test/m985_sms_prefill_identity_status_conflict_duplicate_test.dart"
+      ],
+      "safety_invariants": [
+        "No SMS correction uses sourceType manual; no new finance writer or insecure SMS storage.",
+        "Verified account, category, SAR, timestamp and user confirmation gates stay mandatory.",
+        "No OTP, pending, reversed, refunded or multiple financial events post through direct correction.",
+        "SMS native ACK only follows matched saved source/hash+direction; ACK failure retains review and no double money.",
+        "Internal transfer uses independently selected non-identical owned accounts and native-derived idempotent ID.",
+        "Fee-aware writer retains one atomic SQLCipher transfer+fee+hash commit and cannot replay with conflicting note.",
+        "No physical Android/iOS success is claimed by source-level tests."
+      ]
+    },
     {
       "id": "M1010-GOAL-DUE-REQUIRED-ACCOUNT-VALIDATION-AND-APPROVED-HERO",
       "issue": "Issue #726",
