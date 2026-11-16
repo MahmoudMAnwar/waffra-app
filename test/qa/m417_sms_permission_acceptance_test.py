@@ -121,6 +121,27 @@ class M417AutoSmsContractTest(unittest.TestCase):
             self.assertIn("RECEIVE_SMS",script)
             self.assertNotIn("android.permission.SEND_SMS",script)
 
+    def test_m1020_background_pass_is_bounded_and_retry_safe(self):
+        poster=self.read("lib/waffra_auto_sms_autopost.part.dart")
+        bridge=self.read("lib/waffra_auto_sms.dart")
+        store=self.read("native/WaffraAutoSmsStore.kt")
+        worker=self.read("native/WaffraAutoSmsWorker.kt")
+        main=self.read("lib/main.dart")
+        self.assertIn("const budget=Duration(seconds:35)",poster)
+        self.assertIn("WaffraSmsBackgroundCheckpoint.select(pending,maxPerPass:25)",poster)
+        self.assertIn("WaffraAutoSms.markBackgroundReviewed(id)",poster)
+        self.assertIn("if(!await WaffraAutoSms.acknowledgeCommitted([id]))",poster)
+        self.assertIn("if(identical(error,retryAck)||identical(error,retryCheckpoint))rethrow",poster)
+        self.assertIn("backgroundAttempted",store)
+        self.assertIn("fun markBackgroundSmsReviewed(context: Context, id: String): Boolean",store)
+        self.assertIn("row.put(\"backgroundAttempted\", true)",store)
+        self.assertIn("return _boolCall('markAutoBankSmsBackgroundReviewed',id);",bridge)
+        self.assertIn("'hasMore':(summary['remaining']??0)>0",main)
+        self.assertIn('needsContinuation = reply is Map<*, *> &&',worker)
+        self.assertIn('if (completed && successful && needsContinuation) enqueue(context)',worker)
+        self.assertIn('ExistingWorkPolicy.APPEND_OR_REPLACE',worker)
+        self.assertNotIn('successful = reply == true',worker)
+
     def test_m1019_saturation_replay_is_bounded_and_privacy_preserving(self):
         store=self.read("native/WaffraAutoSmsStore.kt")
         worker=self.read("native/WaffraAutoSmsWorker.kt")
