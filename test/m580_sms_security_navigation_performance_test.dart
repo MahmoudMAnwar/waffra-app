@@ -267,39 +267,40 @@ void main(){
   expect(review,contains("WaffraAutoSms.excludeMessages([id])"));
  });
 
- test('M595 correction must not auto-post, guess a transfer, or auto ACK',(){
+ test('M595 correction commits original SMS before native ACK, never by type tap',(){
   final app=readWaffraMainSourceForContracts();
   final review=app.split(
    ' Future<void> _reviewAutoSmsCandidates({String? targetId})async {')[1]
    .split(' void _receiveSharedSms(){')[0];
   final corrected=review.split("if(decision=='correct-type'&&mounted&&reviewType!=null)")[1]
    .split("else if(decision=='exclude'&&mounted)")[0];
-  expect(corrected,contains('await openReviewedSmsManualTransfer(body:body,sender:sender)'));
-  expect(corrected,contains('await entrySheet(sms:true,initialSms:body,'));
-  expect(corrected,contains("reviewedSender:sender,reviewedIncomeOverride:reviewType=='income'"));
-  expect(corrected,contains('if(approved==true&&mounted)await openReviewedSmsManualTransfer(body:body,sender:sender)'));
-  expect(corrected,contains('The message does not prove both accounts are yours'));
+  expect(corrected,contains(
+   'openReviewedSmsManualTransfer(id:id,body:body,sender:sender)'));
+  expect(corrected,contains('await _m1011SaveReviewedSmsKind('));
+  expect(corrected,contains("sender:sender,income:reviewType=='income'"));
+  // Classifier mismatch must not post or ACK immediately.
+  expect(corrected,isNot(contains('commitConfirmedSms(')));
+  expect(corrected,isNot(contains('acknowledgeCommitted([id])')));
+  expect(corrected,isNot(contains('excludeMessages(')));
+  final source=File('lib/waffra_home_sms_confirmation.part.dart').readAsStringSync();
+  final helper=source.split(' Future<void> _m1011SaveReviewedSmsKind({')[1]
+   .split('  Future<void> _m983OpenSmsTypedTemplate({')[0];
+  expect(helper,contains('await entrySheet(sms:true,initialSms:body,'));
+  expect(helper,contains('reviewedIncomeOverride:income'));
+  expect(helper,contains("e.sourceType=='sms'"));
+  expect(helper,contains('smsHashes.contains(hash)'));
+  expect(helper,contains('await WaffraAutoSms.acknowledgeCommitted([id])'));
+  expect(helper.indexOf('smsHashes.contains(hash)'),
+   lessThan(helper.indexOf('await WaffraAutoSms.acknowledgeCommitted([id])')));
+  expect(helper,isNot(contains('await entrySheet(manualIncomeOverride:')));
   final editor=app.split(' Future<void> entrySheet({')[1]
    .split(' Future<void> showReceipt(')[0];
   expect(editor,contains('String? reviewedSender,bool? reviewedIncomeOverride,'));
   expect(editor,contains("bool income=reviewedIncomeOverride??(smsEditorDraft?['income'] as bool?)"));
-  expect(corrected,contains('if(smsHashes.contains(bankSmsHash(body)))'));
-  expect(corrected,isNot(contains('commitConfirmedSms(')));
-  expect(corrected,isNot(contains('excludeMessages(')));
-  // M618 moves actions into a revised layout. Keep the behavioral guards
-  // independent of a specific widget tree or old conditional delimiter.
   expect(review,contains("Key('m565-sms-yes-confirm')"));
   expect(review,contains("Key('m565-sms-no-edit')"));
   expect(review,contains("Key('m595-review-single-exclude')"));
   expect(review,contains('reviewedAccount?.ids?.single!=null'));
-  expect(corrected,isNot(contains("await _financeAuthority.commitConfirmedSms(")));
-  // A corrected SMS may be ACKed only AFTER the verified SQLCipher writer
-  // has recorded its exact source hash; choosing a different type alone
-  // never ACKs or posts a transaction.
-  expect(corrected,contains('if(smsHashes.contains(bankSmsHash(body)))'));
-  expect(corrected,contains('await WaffraAutoSms.acknowledgeCommitted([id])'));
-  expect(corrected.indexOf('if(smsHashes.contains(bankSmsHash(body)))'),
-    lessThan(corrected.indexOf('await WaffraAutoSms.acknowledgeCommitted([id])')));
  });
 
  test('M587 bank transfer shows exactly three non-posting choices',(){
@@ -312,13 +313,13 @@ void main(){
   expect(review,contains("Key('m587-sms-transfer-exclude')"));
   expect(review,contains("Navigator.pop(dialog,'transfer-manual')"));
   expect(review,contains("await _reviewSmsAccountTransfer(item:selected,facts:facts)"));
-  // M664: No means a separate manual transaction. The pending transfer
-  // SMS stays unacknowledged and is visible in the editor as a reference.
+  // M1011: No preserves immutable SMS provenance through the verified
+  // income/expense writer and only ACKs a durable confirmed SMS.
   final manual=review.split("}else if(decision=='transfer-manual'&&mounted){")[1]
    .split("}else if(decision=='yes'&&mounted")[0];
-  expect(manual,contains("await entrySheet(manualIncomeOverride:kind=='income',"));
-  expect(manual,contains('reviewedOriginalSms:body,reviewedSender:sender,'));
-  expect(manual,contains('reviewedOriginalDate:originalDate'));
+  expect(manual,contains('await _m1011SaveReviewedSmsKind('));
+  expect(manual,contains("income:kind=='income'"));
+  expect(manual,isNot(contains('await entrySheet(manualIncomeOverride:')));
   expect(manual,contains("kind=='income'||kind=='expense'"));
   expect(manual,isNot(contains('acknowledgeCompletedTransfer(')));
   expect(manual,isNot(contains('acknowledgeCommitted(')));
