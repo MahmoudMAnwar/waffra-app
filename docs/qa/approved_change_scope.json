@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
-  "change_id": "M1016-M1019-ISSUES732-734-735-736-SMS-INTAKE-BATCH-WAKEUP-CAPACITY-20261116",
-  "human_scope_review": "Issue #732 native financial intake, Issue #734 bounded all-candidate background draining, Issue #735 lossless event-driven wakeup for later bank SMS using WorkManager APPEND_OR_REPLACE and single enqueue per Android broadcast. No changes to verified money auth, rules, encrypted queue, 55-second timeout or 1000 native capacity. Physical device UAT required. Issue #736 capacity saturation: track non-sensitive retry-needed marker; enqueue worker even when finance-eligible live SMS cannot be offered because encrypted queue is full; after background run attempt bounded cursor-safe native history refill if space exists. Requires Android inbox retention; no eviction or money bypass.",
+  "change_id": "M1016-M1020-ISSUES732-734-735-736-737-SMS-CHECKPOINTED-BACKGROUND-20261116",
+  "human_scope_review": "Issue #732 native financial intake, Issue #734 bounded all-candidate background draining, Issue #735 lossless event-driven wakeup for later bank SMS using WorkManager APPEND_OR_REPLACE and single enqueue per Android broadcast. No changes to verified money auth, rules, encrypted queue, 55-second timeout or 1000 native capacity. Physical device UAT required. Issue #736 capacity saturation: track non-sensitive retry-needed marker; enqueue worker even when finance-eligible live SMS cannot be offered because encrypted queue is full; after background run attempt bounded cursor-safe native history refill if space exists. Requires Android inbox retention; no eviction or money bypass. Issue #737: bound Dart processing to <=25 newly-unattempted SMS and target 35s, persist encrypted per-SMS review attempts only after review decision or verified finance ACK, return needsContinuation to Java worker and APPEND_OR_REPLACE next work. Reconcile stale M506/M549/M1018 tests from CI; preserve 55s native watchdog and fail-closed safety.",
   "user_requested_changes": [
     "Prevent arbitrary nonfinancial personal SMS from entering finance review based solely on a nonblank sender and body.",
     "Reject marketing discount offers without completed transaction evidence even if an amount or SAR text exists.",
@@ -10,7 +10,8 @@
     "Update previously permissive M549 source test, add M1016 regression and register exact M946 safety test matrix before invoking CI.",
     "Issue #734: process all actionable encrypted SMS candidates in bounded sequential batches, not just the first 25, preserving every owner-reviewed financial guard and durable exclusion.",
     "Issue #735 third SMS gap: new messages arriving during an active WorkManager job must enqueue a successor, never silently ignored by KEEP, with one schedule per accepted SMS broadcast and no cancellation of active verified money work.",
-    "Issue #736: recover bank SMS that arrived while 1000-slot encrypted queue was full via durable owner-scoped recovery marker and bounded re-import after space frees, without silent eviction, cursor skipping, or unsafe finance posting."
+    "Issue #736: recover bank SMS that arrived while 1000-slot encrypted queue was full via durable owner-scoped recovery marker and bounded re-import after space frees, without silent eviction, cursor skipping, or unsafe finance posting.",
+    "Issue #737 fifth gap: prevent 55-second FlutterEngine timeout from silently stopping a large SMS queue using bounded 35-second/25-message passes, durable per-row checkpoint, safe continuation scheduling, idempotent finance ACK and no repeated notifications."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -30,7 +31,11 @@
     "native/WaffraAutoSmsReceiver.kt",
     "test/m1018_sms_workmanager_wakeup_race_test.dart",
     "test/qa/m417_sms_permission_acceptance_test.py",
-    "test/m1019_sms_intake_capacity_recovery_test.dart"
+    "test/m1019_sms_intake_capacity_recovery_test.dart",
+    "lib/waffra_auto_sms.dart",
+    "lib/waffra_sms_background_checkpoint.dart",
+    "test/m1020_sms_background_checkpoint_continuation_test.dart",
+    "test/m506_android_nine_regressions_test.dart"
   ],
   "bounded_sections": {
     "native/WaffraAutoSmsStore.kt": [
@@ -53,12 +58,20 @@
       {
         "start": "    fun importConsentMonth(context: Context, maxRead: Int = 500): Int {",
         "end": "    /** Claim each review notification once; history never floods the shade. */"
+      },
+      {
+        "start": "    fun pending(context: Context): List<Map<String, Any>>",
+        "end": "    fun pendingById(context: Context, id: String)"
       }
     ],
     "test/m549_sms_review_owner_scoped_test.dart": [
       {
         "start": "void main() {",
         "end": " test('M549 sender exclusion drops queue and previous labelled exclusions atomically',(){"
+      },
+      {
+        "start": " test('M549 completed rescan dims unless fresh provider rows or unfinished history',(){",
+        "end": " test('M549 all sender lists still hide actual Android messages from deletion',(){"
       }
     ],
     "scripts/qa/m946_full_app_smoke_matrix.py": [
@@ -71,12 +84,16 @@
       {
         "start": "import 'waffra_auto_sms.dart';",
         "end": "import 'waffra_bank_sms_facts.dart';"
+      },
+      {
+        "start": "@pragma('vm:entry-point')",
+        "end": "Future<void> main()async {"
       }
     ],
     "lib/waffra_auto_sms_autopost.part.dart": [
       {
-        "start": "  if(actionable.isEmpty)return summary;",
-        "end": "  }catch(_){\n   // Vault unavailable:"
+        "start": " static Future<Map<String,int>> run()async{",
+        "end": null
       }
     ],
     "test/m462_smart_sms_rule_review_test.dart": [
@@ -87,12 +104,16 @@
     ],
     "native/WaffraAutoSmsWorker.kt": [
       {
+        "start": "                workerChannel.setMethodCallHandler { call, result ->",
+        "end": "                created.dartExecutor.executeDartEntrypoint("
+      },
+      {
         "start": "        val completed = try { done.await(55, TimeUnit.SECONDS) }",
         "end": "    companion object {"
       },
       {
         "start": "        fun enqueue(context: Context) {",
-        "end": "            } catch (_: Exception) {"
+        "end": null
       }
     ],
     "native/WaffraAutoSmsReceiver.kt": [
@@ -105,6 +126,24 @@
       {
         "start": "    def test_android_build_uses_explicit_scoped_receiver(self):",
         "end": "if __name__==\"__main__\":"
+      }
+    ],
+    "lib/waffra_auto_sms.dart": [
+      {
+        "start": " static Future<List<Map<String,Object?>>?> pendingChecked()async{",
+        "end": " static Future<List<Map<String,Object?>>> pending()async{"
+      }
+    ],
+    "test/m506_android_nine_regressions_test.dart": [
+      {
+        "start": "  test('M506 native bank sender aliases preserve OTP and consented review', () {",
+        "end": null
+      }
+    ],
+    "test/m1018_sms_workmanager_wakeup_race_test.dart": [
+      {
+        "start": " test('M1018 accepts encrypted messages before scheduling exactly once per broadcast',(){",
+        "end": " test('M1018 a new SMS appends a worker while older worker may still be running',(){"
       }
     ]
   },
