@@ -185,13 +185,15 @@ abstract final class WaffraBankSmsFactsParser {
   final explicitlyIncoming=RegExp(
    r'حوال[ةه](?:\s+(?:مالي[ةه]|داخلي[ةه]|محلي[ةه]|دولي[ةه]))?\s+وارد[ةه]|'
    r'تحويل(?:\s+(?:بنكي|داخلي|محلي|دولي))?\s+وارد|'
-   r'\b(?:incoming\s+(?:bank\s+)?transfer|credit\s+transfer)\b|'
+   r'\bincoming\s+(?:bank\s+)?transfer\b|'
+   r'\bcredit\s+transfer\s+(?:internal|local|international|salary|citizen\s+account|student\s+reward|sponsor|hafiz)\b|'
    r'\btransfer\s+received\b',
    caseSensitive:false).hasMatch(header);
   final explicitlyOutgoing=RegExp(
    r'حوال[ةه](?:\s+(?:مالي[ةه]|داخلي[ةه]|محلي[ةه]|دولي[ةه]))?\s+صادر[ةه]|'
    r'تحويل(?:\s+(?:بنكي|محلي|داخلي|دولي))?\s+صادر|'
-   r'\b(?:outgoing\s+(?:bank\s+)?transfer|debit\s+transfer)\b|'
+   r'\boutgoing\s+(?:bank\s+)?transfer\b|'
+   r'\bdebit\s+transfer\s+(?:internal|local|international|salary|sponsored|to\s+card|loan\s+instalment)\b|'
    r'\btransfer\s+(?:sent|out|to)\b',
    caseSensitive:false).hasMatch(header);
   final kind=securityChallenge?WaffraBankOperationKind.uncertain:
