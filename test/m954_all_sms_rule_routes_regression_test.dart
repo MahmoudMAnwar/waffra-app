@@ -157,13 +157,14 @@ void main(){
   expect(result['committed'],isEmpty);
  });
 
- test('M954 known finance hash takes priority over local exclusion',(){
+ test('M954 legacy body-only finance hash needs owner review, never silent duplicate ACK',(){
   const body='رمز التحقق ••••••';
   final row=sms('e','ServiceApp',body,nativeSensitive:true);
   final result=scan([row],hashes:[bankSmsHash(body)]);
-  expect(ids(result,'committed'),[row['id']]);
+  expect(result['committed'],isEmpty);
   expect(result['excluded'],isEmpty);
-  expect(result['waiting'],isEmpty);
+  expect(ids(result,'waiting'),[row['id']]);
+  expect((result['waiting'] as List).single['possibleLegacyDuplicate'],isTrue);
  });
 
  test('M954 excluded candidate remains recoverable on native ACK failure',(){
