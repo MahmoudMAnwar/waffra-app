@@ -1,88 +1,42 @@
 {
   "contract_version": 1,
-  "change_id": "M1006-ISSUE719-MAIN-REBASED-RETRY-THEME-A11Y-20261116",
-  "human_scope_review": "Owner asked to merge completed #711, #716, #718, #720 in order. Latest main includes #711/#716/#718. This #720-only change adds a theme-aware accessible Arabic/English progress indicator on authenticated Home finance reload, preserving original hidden-login safe surface and all previous SQLCipher restore and SMS rule behavior. Exact changed paths below are bounded to the final #720-only diff, inherited changes are not replayed.",
+  "change_id": "M1007-ISSUE721-PR722-GLOBAL-SMS-SENDER-RULE-SCOPE-20261116",
+  "human_scope_review": "Owner approved explicit All senders vs Specific sender for reusable income/expense/transfer/exclusion rules, with cross-sender safe exclusion comparison. Existing learned rules remain sender-scoped until reviewed; no wallet, finance, account, restore or native ACK source changes.",
   "user_requested_changes": [
-    "Inherited unchanged from approved Draft #716: Fix restored historical entry budget/account association with explicit opening-balance attestation and one encrypted edit+link transaction.",
-    "Inherited unchanged from approved Draft #716: Avoid blank/black visuals on ready=false and missing auth retained-stage states without exposing financial values.",
-    "Inherited unchanged from approved Draft #716: Add new and retained regressions; verify via exact-head CI, physical Android remains pending.",
-    "Inherited unchanged from approved Draft #716: After successful SQLCipher restore do not hide the Home under a dark/black canvas: use an explicit pale nonfinancial verification surface during reload, and do not display success if _loadFinanceSafely caught a verification error.",
-    "Investigate possible black/empty screens via the actual authenticated Home navigation lifecycle rather than relying on keyword search.",
-    "Improve visible verified finance retry feedback under dark and light themes and accessible Arabic/English UI.",
-    "Preserve #716 restored-ledger source checks, backup protection and finance safety; do not introduce conflicting independent fixes.",
-    "Add executable Flutter widget test and source/route regressions in mandatory M946 without weakening existing signed-release safeguards."
+    "Add visible and editable All senders / Specific sender scope in four-kind SMS rule editor, including SMS correction review.",
+    "Re-evaluate new and existing pending messages against global safe rule fragments independently of the open sender group.",
+    "Keep previously learned sender-specific rules scoped unless user explicitly changes and persists them.",
+    "Preserve structural OTP/beneficiary exclusions during owner-approved global conversion and never hide posted or mixed financial SMS.",
+    "Disable any financial auto-post authorization for global rules and retain exact sender/account/suffix checks.",
+    "Add executable sender-scope and safety tests and register mandatory M946 smoke while preserving the SMS correction review popup."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "lib/main.dart",
-    "lib/waffra_finance_reloading_view.dart",
-    "lib/waffra_home_root_shell.part.dart",
+    "lib/waffra_sms_local_rules.dart",
+    "lib/waffra_sms_rule_settings_page.dart",
     "scripts/qa/m946_full_app_smoke_matrix.py",
-    "test/m1003_restore_budget_and_blank_surface_contract_test.dart",
-    "test/m1006_restore_handoff_no_black_background_test.dart",
-    "test/m1006_visible_recovery_loading_gate_test.dart",
-    "test/m622_immediate_home_without_loader_test.dart",
-    "test/m623_verified_home_handoff_no_black_frame_test.dart",
-    "test/m944_home_root_shell_extraction_test.dart"
+    "test/m1007_sms_rule_scope_test.dart"
   ],
   "bounded_sections": {
-    "lib/waffra_home_root_shell.part.dart": [
+    "lib/waffra_sms_local_rules.dart": [
       {
-        "start": "extension _WaffraHomeRootShell on _HomeScreenState {",
-        "end": "  appBar:AppBar("
+        "start": " static void validate(WaffraSmsLocalRule rule){",
+        "end": "/// The number of excluded SMS is NOT the number of generated rules."
       }
     ],
-    "lib/main.dart": [
+    "lib/waffra_sms_rule_settings_page.dart": [
       {
-        "start": "  final showCountry=needsCountry||",
-        "end": "   if(showLoginScreen)KeyedSubtree("
-      },
-      {
-        "start": "  builder:(context,child)=>WaffraNoticeTapDismissArea(",
-        "end": "  theme:ThemeData("
-      },
-      {
-        "start": "import 'waffra_mandatory_biometric_gate.dart';",
-        "end": "import 'waffra_idle_biometric_overlay.dart';"
-      }
-    ],
-    "test/m622_immediate_home_without_loader_test.dart": [
-      {
-        "start": "  expect(scaffold,contains('child:!ready&&_financeLoadFailure==null?'));",
-        "end": "  expect(scaffold,contains('Stack(clipBehavior:Clip.none,children:[GestureDetector('));"
-      }
-    ],
-    "test/m623_verified_home_handoff_no_black_frame_test.dart": [
-      {
-        "start": " test('M623 authenticated Home transition cannot expose unverified money',(){",
-        "end": " test('M623 background SMS runs only after the complete Home frame',(){"
-      }
-    ],
-    "test/m944_home_root_shell_extraction_test.dart": [
-      {
-        "start": "  expect(shell, contains('child:!ready&&_financeLoadFailure==null?'));",
-        "end": "  expect(shell, contains('body:_financeLoadFailure!=null?_financialRecoveryScreen():'));"
+        "start": " Future<void> _edit({WaffraSmsLocalRule? existing,String? seed,String? kindHint})async{",
+        "end": " /// Curated built-in patterns are read-only and lazily rendered."
       }
     ],
     "scripts/qa/m946_full_app_smoke_matrix.py": [
       {
         "start": "FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {",
         "end": "    \"m998_last_four_sender_bank_facts_and_otp_single_pass\":"
-      }
-    ],
-    "test/m1006_restore_handoff_no_black_background_test.dart": [
-      {
-        "start": "  expect(source,contains('child:!ready&&_financeLoadFailure==null?'));",
-        "end": "  expect(source,contains('body:_financeLoadFailure!=null?_financialRecoveryScreen():'));"
-      }
-    ],
-    "test/m1003_restore_budget_and_blank_surface_contract_test.dart": [
-      {
-        "start": "  expect(shell,contains('Widget _m1003FinanceHandoffSurface()=>Scaffold('));",
-        "end": "  expect(shell,contains('body:_financeLoadFailure!=null?_financialRecoveryScreen():'));"
       }
     ]
   },
