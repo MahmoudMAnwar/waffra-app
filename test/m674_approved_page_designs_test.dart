@@ -268,6 +268,11 @@ void main(){
   final goalCard=src.substring(goalStart,goalEnd);
   expect(goalCard,contains("_handleGoalCardAction(g,'edit')"));
   expect(goalCard,isNot(contains('unawaited(editGoal(g))')));
+  expect(goalCard,contains("Key('m1021-goal-manage-'+g.id)"));
+  expect(goalCard,contains("Key('m1021-goal-deposit-'+g.id)"));
+  expect(goalCard,contains("Key('m1021-goal-edit-'+g.id)"));
+  expect(goalCard,contains("Key('m1021-goal-account-'+g.id)"));
+  expect(goalCard,isNot(contains('showModalBottomSheet<void>(')));
   expect(src,contains('event.activity is WaffraVerifiedGoalMovement'));
   expect(src,contains('event.activity is WaffraInternalTransferHistory'));
  });
