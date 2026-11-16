@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'waffra_sms_local_rules.dart';
+import 'waffra_auto_sms.dart';
 import 'waffra_sms_rule_simulator.dart';
 import 'waffra_bank_sms_facts.dart';
 import 'waffra_centered_dropdown.dart';
@@ -33,6 +34,11 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
  List<WaffraSmsLocalRule> saved=const [];
  bool loading=true,busy=false,canUndo=false;
  String? error;
+ // Native exclusions are a DIFFERENT owner-encrypted policy from keyword rules.
+ // A missing Android/consent read is unknown, never reported as zero.
+ int? excludedSmsCount,blockedSenderCount;
+ List<Map<String,Object?>>? nativeExcluded;
+ List<String>? nativeBlockedSenders;
  @override void initState(){
   super.initState();
   _load();
@@ -41,8 +47,20 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
   try{
    final rules=await store.read(widget.ownerKey);
    final undoAvailable=await store.hasUndo(widget.ownerKey);
+   List<Map<String,Object?>>? excluded;
+   List<String>? blocked;
+   try{
+    excluded=await WaffraAutoSms.excludedMessages();
+    blocked=await WaffraAutoSms.excludedSenders();
+   }catch(_){/* Native exclusions unavailable; do NOT show a false zero. */}
    if(!mounted)return;
-   setState((){saved=rules;canUndo=undoAvailable;loading=false;error=null;});
+   setState((){
+    saved=rules;canUndo=undoAvailable;loading=false;error=null;
+    excludedSmsCount=excluded?.length;
+    blockedSenderCount=blocked?.length;
+    nativeExcluded=excluded;
+    nativeBlockedSenders=blocked;
+   });
    if(widget.seedMessage!=null){
     WidgetsBinding.instance.addPostFrameCallback((_){
      if(mounted)_edit(seed:widget.seedMessage,kindHint:widget.seedKind);
@@ -60,7 +78,7 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
   if(busy||error!=null)return false;
   setState(()=>busy=true);
   try{
-   await store.write(widget.ownerKey,next);
+   await store.writeIfCurrent(widget.ownerKey,expected:saved,next:next);
    if(mounted){
     setState((){saved=next;canUndo=true;});
     // M661: a seedless user-created rule has no route result to signal Home.
@@ -69,9 +87,12 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
    }
    return true;
   }catch(_){
-   if(mounted)widget.onNotice(widget.english?
-    'Could not save rules securely. Nothing changed.':
-    'تعذر حفظ القواعد بأمان. لم يتغير شيء.');
+   if(mounted){
+    widget.onNotice(widget.english?
+     'Rules changed or could not be saved securely. Reloaded the current rules; no overwrite was performed.':
+     'القواعد اتغيرت أو تعذر حفظها. أعدنا تحميل القواعد الحالية بدون الكتابة فوقها.');
+    await _load();
+   }
    return false;
   }finally{if(mounted)setState(()=>busy=false);}
  }
@@ -560,6 +581,24 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
      'Rules run locally on your device and suggest categories; financial changes require your verified approval.':
      'القواعد تحلل الرسائل محليًا على جهازك وتقترح النوع والقسم، والعملية المالية تتطلب تأكيدك الموثق.',
      style:Theme.of(context).textTheme.bodyMedium),
+    const SizedBox(height:12),
+    Card(child:ListTile(
+     key:const Key('m1002-native-exclusion-counts'),
+     leading:const Icon(Icons.shield_outlined),
+     title:Text(widget.english?'Previously excluded SMS':'الرسائل المستبعدة بالفعل'),
+     subtitle:Text(excludedSmsCount==null||blockedSenderCount==null?
+      (widget.english?'Native exclusion counts unavailable. This does not mean zero.':
+       'تعذر قراءة سجل الاستبعاد على الجهاز. ده مش معناه إن العدد صفر.'):
+      (widget.english?
+       '${excludedSmsCount!} individually excluded SMS • ${blockedSenderCount!} blocked senders':
+       '${excludedSmsCount!} رسالة مستبعدة • ${blockedSenderCount!} مرسل مستبعد')),
+     trailing:IconButton(
+      tooltip:widget.english?'Refresh exclusion counts':'تحديث عداد الاستبعاد',
+      onPressed:busy?null:_load,icon:const Icon(Icons.refresh_outlined)),
+    )),
+    Text(widget.english?
+     'Saved patterns below are reusable classification rules, not a count of SMS you excluded. Financial messages do not automatically become future-blocking rules.':
+     'الأنماط المحفوظة تحت هي قواعد قابلة لإعادة الاستخدام، مش عدد الرسائل اللي استبعدتها. الرسائل المالية لا تتحول تلقائيًا لقواعد تحجب رسائل مستقبلية.'),
     const SizedBox(height:16),
     if(canUndo)Align(alignment:AlignmentDirectional.centerStart,
      child:OutlinedButton.icon(
@@ -585,10 +624,44 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
        'transfer'=>widget.english?'Transfers':'تحويل',
        _=>widget.english?'Excluded messages':'الرسائل المستبعدة',
       }),
-      subtitle:Text(widget.english?
-       '${saved.where((r)=>r.resolvedKind==kind).length} saved patterns':
-       '${saved.where((r)=>r.resolvedKind==kind).length} أنماط محفوظة'),
+      subtitle:Text(kind=='excluded'&&
+        excludedSmsCount!=null&&blockedSenderCount!=null?
+       (widget.english?
+        '${saved.where((r)=>r.resolvedKind==kind).length} reusable patterns • ${excludedSmsCount!} excluded SMS • ${blockedSenderCount!} blocked senders':
+        '${saved.where((r)=>r.resolvedKind==kind).length} قواعد متعلّمة • ${excludedSmsCount!} رسالة مستبعدة • ${blockedSenderCount!} مرسل مستبعد'):
+       (widget.english?
+        '${saved.where((r)=>r.resolvedKind==kind).length} saved patterns':
+        '${saved.where((r)=>r.resolvedKind==kind).length} أنماط محفوظة')),
       children:[
+       if(kind=='excluded'&&nativeExcluded!=null&&
+          nativeBlockedSenders!=null)...[
+        ListTile(
+         leading:const Icon(Icons.lock_outline),
+         title:Text(widget.english?'Stored Android exclusions':
+          'الاستبعادات المحفوظة فعليًا في أندرويد'),
+         subtitle:Text(widget.english?
+          'These are saved message IDs or whole blocked senders, not reusable keyword rules. You can restore them from Settings > Excluded.':
+          'دي رسائل مستبعدة أو مرسلون محجوبون فعليًا، مش قواعد كلمات. تقدر ترجعهم من إعدادات المستبعدين.'),
+        ),
+        for(final blocked in nativeBlockedSenders!.take(30))
+         ListTile(dense:true,leading:const Icon(Icons.block_outlined),
+          title:Text(blocked,maxLines:1,overflow:TextOverflow.ellipsis),
+          subtitle:Text(widget.english?'Blocked sender':'مرسل مستبعد')),
+        for(final message in nativeExcluded!.take(40))
+         ListTile(dense:true,leading:const Icon(Icons.mark_email_read_outlined),
+          title:Text((message['sender'] as String?)?.trim().isNotEmpty==true?
+           message['sender'] as String:
+           (widget.english?'Unknown sender':'مرسل غير معروف'),
+           maxLines:1,overflow:TextOverflow.ellipsis),
+          subtitle:Text(widget.english?
+           'Excluded individual message (encrypted on device)':
+           'رسالة مستبعدة منفردة (محفوظة مشفرة على الجهاز)')),
+        if(nativeExcluded!.length>40||nativeBlockedSenders!.length>30)
+         Padding(padding:const EdgeInsets.all(12),
+          child:Text(widget.english?
+           'Only the first 40 messages and 30 senders are shown here. Open Settings > Excluded for full management.':
+           'يظهر أول 40 رسالة و30 مرسل هنا. افتح الإعدادات > المستبعدون للإدارة الكاملة.')),
+       ],
        if(!saved.any((r)=>r.resolvedKind==kind))
         Padding(padding:const EdgeInsets.all(14),
          child:Text(widget.english?

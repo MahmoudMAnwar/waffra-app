@@ -92,35 +92,24 @@ extension _WaffraHomeSmsRules on _HomeScreenState {
    body:body,sender:sender,kind:kind,category:category,confidentOnly:true);
   if(candidate==null)return false;
   final store=const WaffraSmsLocalRuleStore();
-  final prior=await store.read(_smsRuleOwnerKey);
-  // Same sender, category and direction are reused. Never change an
-  // already-authorized autoPost rule's matching criteria behind the user.
-  final updated=WaffraSmsLocalRules.upsertLearned(
-   existing:prior,candidate:candidate);
-  if(identical(updated,prior))return prior.any((r)=>
-   r.resolvedKind==kind&&r.category==category&&
-   WaffraSmsLocalRules.matches(r,body,sender:sender));
-  await store.write(_smsRuleOwnerKey,updated);
-  // M651: a newly confirmed sender-specific rule must update old pending
-  // SMS suggestions too. The existing debounce refresh imports no history,
-  // classifies on a worker isolate, and never authorizes a money posting.
-  _receiveAutoSmsNotice();
-  return true;
+  // M1002: an atomic owner-scoped read/merge/write prevents a bulk exclusion
+  // from silently reverting the latest income/expense/transfer learned rule.
+  final saved=await store.learnReviewedCandidates(
+   _smsRuleOwnerKey,[candidate]);
+  if(saved.changed)_receiveAutoSmsNotice();
+  final latest=await store.read(_smsRuleOwnerKey);
+  return latest.any((r)=>r.resolvedKind==kind&&
+   r.category==category&&WaffraSmsLocalRules.matches(
+    r,body,sender:sender));
  }
 
  /// Manual entries have no bank SMS sender. Learn only a non-posting
  /// description/category hint after an independently verified save.
  Future<void> _learnManualTransferPreference()async{
   if(_smsRuleOwnerKey.isEmpty)return;
-  final store=const WaffraSmsLocalRuleStore();
-  final original=await store.read(_smsRuleOwnerKey);
-  final updated=WaffraSmsLocalRules.upsertLearned(
-   existing:original,candidate:WaffraSmsLocalRules.manualTransferPattern());
-  if(!identical(original,updated)){
-   await store.write(_smsRuleOwnerKey,updated);
-   // Debounced non-posting review refresh; no Android history import.
-   _receiveAutoSmsNotice();
-  }
+  final saved=await const WaffraSmsLocalRuleStore().learnReviewedCandidates(
+   _smsRuleOwnerKey,[WaffraSmsLocalRules.manualTransferPattern()]);
+  if(saved.changed)_receiveAutoSmsNotice();
  }
  // Reuse one senderless review-only category bucket after a committed
  // manual OR bank-SMS entry; sender/suffix account learning stays separate.
@@ -131,15 +120,9 @@ extension _WaffraHomeSmsRules on _HomeScreenState {
   final candidate=WaffraSmsLocalRules.manualCategoryPattern(
    description:merchant,category:record.category,income:record.income);
   if(candidate==null)return;
-  final store=const WaffraSmsLocalRuleStore();
-  final previous=await store.read(_smsRuleOwnerKey);
-  final next=WaffraSmsLocalRules.upsertLearned(
-   existing:previous,candidate:candidate);
-  if(!identical(next,previous)){
-   await store.write(_smsRuleOwnerKey,next);
-   // The pending queue is reclassified on its existing background isolate.
-   _receiveAutoSmsNotice();
-  }
+  final saved=await const WaffraSmsLocalRuleStore().learnReviewedCandidates(
+   _smsRuleOwnerKey,[candidate]);
+  if(saved.changed)_receiveAutoSmsNotice();
  }
 
  // Retained single-message reference for on-demand review and M473 parity;

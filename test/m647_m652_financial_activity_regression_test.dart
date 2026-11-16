@@ -95,8 +95,10 @@ void main() {
   final from = app.indexOf('Future<void> _learnManualTransferPreference()');
   final to = app.indexOf(' Map<String,Object?>? _localSmsClassification(',from);
   final learning = app.substring(from,to);
-  expect(learning, contains('await store.write('));
-  expect(learning, contains('_receiveAutoSmsNotice()'));
+  expect(learning, contains('learnReviewedCandidates('));
+  expect(learning, contains('if(saved.changed)_receiveAutoSmsNotice();'));
+  expect(learning.indexOf('learnReviewedCandidates('),
+   lessThan(learning.indexOf('if(saved.changed)_receiveAutoSmsNotice();')));
   expect(learning, isNot(contains('_refreshAutoSmsInbox(importMonth:true)')));
   final start = app.indexOf('void _receiveAutoSmsNotice()');
   final end = app.indexOf(' Future<void> _rescanAutoSmsInbox({BuildContext? feedbackContext})',start);
@@ -115,8 +117,16 @@ void main() {
   expect(start, greaterThan(0));
   expect(end, greaterThan(start));
   final learned = app.substring(start, end);
-  final savedAt = learned.indexOf('await store.write(_smsRuleOwnerKey,updated);');
-  final notifiedAt = learned.indexOf('_receiveAutoSmsNotice();');
+  // Owner-exclusive encrypted read/merge/write must resolve first; do not
+  // restore the old stale read-modify-write race just to match a string.
+  final savedAt = learned.indexOf('await store.learnReviewedCandidates(');
+  final notifiedAt = learned.indexOf('if(saved.changed)_receiveAutoSmsNotice();');
+  expect(learned,contains('final latest=await store.read(_smsRuleOwnerKey);'));
+  final store=File('lib/waffra_sms_local_rules.dart').readAsStringSync();
+  expect(store,contains('learnReviewedCandidates('));
+  expect(store,contains('_exclusive(owner,()async{'));
+  expect(store,contains('if(changed)await _writeUnlocked(owner,next);'));
+  expect(store,contains('final verified=await read(owner);'));
   expect(savedAt, greaterThan(0));
   expect(notifiedAt, greaterThan(savedAt),
       reason:'Never announce learned SMS changes before the durable local rule write.');

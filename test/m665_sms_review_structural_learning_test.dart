@@ -212,8 +212,14 @@ void main() {
    final start=main.indexOf(' Future<bool> _learnSafeSmsRule({');
    final end=main.indexOf(' Future<void> _learnManualTransferPreference()',start);
    final fragment=main.substring(start,end);
-   expect(fragment,contains('await store.write(_smsRuleOwnerKey,updated);'));
-   expect(fragment,contains('_receiveAutoSmsNotice();'));
+   expect(fragment,contains('await store.learnReviewedCandidates('));
+   expect(fragment,contains('if(saved.changed)_receiveAutoSmsNotice();'));
+   expect(fragment.indexOf('await store.learnReviewedCandidates('),
+    lessThan(fragment.indexOf('if(saved.changed)_receiveAutoSmsNotice();')));
+   expect(fragment,contains('final latest=await store.read(_smsRuleOwnerKey);'));
+   final store=File('lib/waffra_sms_local_rules.dart').readAsStringSync();
+   expect(store,contains('if(changed)await _writeUnlocked(owner,next);'));
+   expect(store,contains('final verified=await read(owner);'));
    expect(fragment,isNot(contains('importConsentMonthChecked()')));
    expect(main,contains('await compute(waffraM632ClassifySmsQueue'));
    expect(main,contains("if(local['kind']=='excluded'){"));

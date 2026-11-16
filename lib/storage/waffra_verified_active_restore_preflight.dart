@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
+import '../waffra_backup_safety_preview.dart';
+import '../waffra_financial_change_review.dart';
 
 import 'waffra_accounts_portable_backup_v3.dart';
 import 'waffra_accounts_finance_history.dart';
@@ -31,8 +33,12 @@ class WaffraVerifiedRestorePreflightResult {
     required this.archiveChecksum,
     required this.transactionCount,
     required this.receiptCount,
-    required this.receiptBytes,
+    required this.receiptBytes,required this.backupReport,
+    this.comparison,
   });
+
+  final WaffraBackupSafetyPreview backupReport;
+  final WaffraFinancialChangeReview? comparison;
 
   final int sourceGeneration;
   final String sourceDigest;
@@ -117,6 +123,34 @@ class WaffraVerifiedActiveRestorePreflight {
       encryptedArchive: accounts?.encryptedV2 ?? encryptedArchive,
       password: password,
     );
+    // Password-authenticated metadata only; the actual restore remains
+    // governed by disposable SQLCipher cold-reopen and source witness.
+    int countFinanceRows(String key){
+     final raw=preview.financialSnapshot[key];
+     if(raw==null)return 0;
+     if(raw is! String)throw const FormatException('Invalid finance collection.');
+     final values=jsonDecode(raw);
+     if(values is! List)throw const FormatException('Invalid finance list.');
+     return values.length;
+    }
+    final backupReport=WaffraBackupSafetyPreview.v3(
+     entries:WaffraBackupSafetyPreview.extractV2Entries(
+      preview.financialSnapshot),
+     accounts:accounts?.accounts.length??0,
+     transfers:accounts?.transfers.length??0,
+     goals:countFinanceRows('waffra_goals_v24'),
+     recurring:countFinanceRows('waffra_recurring_v24'),
+     receipts:preview.receipts.length);
+    if(!backupReport.safeToContinue)throw StateError(
+     'Authenticated backup contains duplicate transaction IDs.');
+    // Compare immutable entry IDs and SAR before/after fields only from
+    // verified authority and authenticated backup. No writes or guesses.
+    final loadedCurrent=current.ledgerRaw;
+    final financeDifference=loadedCurrent==null?null:
+     WaffraFinancialDiff.compare(
+      before:jsonDecode(loadedCurrent) as List<dynamic>,
+      after:WaffraBackupSafetyPreview.extractV2Entries(
+       preview.financialSnapshot));
 
     // These bytes live only in a uniquely generated temporary SQLCipher file.
     // The user cannot select an active vault path or provide its secure key.
@@ -215,6 +249,8 @@ class WaffraVerifiedActiveRestorePreflight {
         transactionCount: result.transactionCount,
         receiptCount: result.receiptCount,
         receiptBytes: result.receiptBytes,
+        backupReport:backupReport,
+        comparison:financeDifference,
       );
     } on Object catch (_) {
       // UI-visible stage only; underlying exception may include sensitive
