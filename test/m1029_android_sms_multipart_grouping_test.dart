@@ -20,8 +20,10 @@ void main(){
  });
  test('M1029 receiver uses original segment identity and one worker job',(){
   final r=File('native/WaffraAutoSmsReceiver.kt').readAsStringSync();
-  expect(r,contains('val bySenderAndTimestamp = linkedMapOf<Triple<String, Long, String>, StringBuilder>()'));
-  expect(r,contains('Triple(sender, sms.timestampMillis, sms.serviceCenterAddress ?: "")'));
+  expect(r,contains('val bySenderAndTimestamp ='));
+  expect(r,contains('linkedMapOf<Triple<String, Long, String>, StringBuilder>()'));
+  expect(r,contains('val identity = Triple('));
+  expect(r,contains('sender, sms.timestampMillis, sms.serviceCenterAddress ?: "")'));
   expect(r,contains('for ((messageKey, parts) in bySenderAndTimestamp)'));
   expect(r,contains('val sender = messageKey.first'));
   expect(r,contains('val receivedAt = messageKey.second'));
