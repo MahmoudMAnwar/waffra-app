@@ -40,7 +40,7 @@
       },
       {
         "start": "  final fourWay=WaffraSmsLocalRules.matchAllFourKinds(",
-        "end": "  annotated['m991Evaluated']=true;"
+        "end": "  if(local!=null){\n   annotated['local']=local;"
       }
     ],
     "lib/waffra_sms_local_rules.dart": [
