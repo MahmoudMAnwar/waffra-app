@@ -1,4 +1,6 @@
 import 'waffra_accounts_repository.dart';
+import 'waffra_financial_trust_read.dart';
+import '../waffra_financial_trust_policy.dart';
 import 'waffra_account_context_read.dart';
 import 'waffra_sqlcipher_history_pager.dart';
 import 'waffra_account_context_repository.dart';
@@ -25,6 +27,11 @@ class WaffraVerifiedAccountsApi implements WaffraAccountOperations {
   _lastDisplayed=data.witness;
   return data.balances;
  }
+
+ /// M1000: source-witnessed, read-only independent account reconciliation.
+ Future<WaffraTrustScan> inspectFinanceIntegrity()=>
+  bridge.readVerifiedAccountMetadata((context)=>
+   WaffraFinancialTrustRead.inspect(context.store));
 
  /// M611: owner-scoped verified read; transfers never enter income/expense.
  Future<List<WaffraInternalTransferHistory>> readInternalTransferHistory({
@@ -302,11 +309,15 @@ class WaffraVerifiedAccountsApi implements WaffraAccountOperations {
   String? monthIso,String? selectedAccountId,bool? income,
   bool unassignedOnly=false,
   int limit=100,WaffraSqlcipherHistoryCursor? after,
+  String searchTerm='',String categoryTerm='',
+  int? minimumMinor,int? maximumMinor,DateTime? startDate,DateTime? endDate,
  })=>bridge.readVerifiedAccountMetadata((context)=>
   WaffraSqlcipherHistoryPager.load(
    store:context.store,monthIso:monthIso,accountId:selectedAccountId,
    income:income,unassignedOnly:unassignedOnly,
-   limit:limit,after:after));
+   limit:limit,after:after,searchTerm:searchTerm,
+   categoryTerm:categoryTerm,minimumMinor:minimumMinor,
+   maximumMinor:maximumMinor,startDate:startDate,endDate:endDate));
 
  /// Attach a past unassigned entry only AFTER the account screen has a
  /// witnessed generation and the user explicitly confirms. This does not
