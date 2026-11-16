@@ -1048,9 +1048,11 @@ class BankParser {
    // cannot be replaced by an untrusted cached or extracted amount.
    final cachedOrSource=sourceAmount??WaffraSmsCurrencies.originalAmount(
     s,detectedCurrencies:discoveredCurrencies);
-   if(verifiedSource==null||verifiedSource.currency!='SAR'||
+   if(verifiedSource==null||!verifiedSource.amount.isFinite||
+      verifiedSource.amount<=0||verifiedSource.currency!='SAR'||
       (verifiedSource.amount-value).abs()>0.00001||
-      cachedOrSource==null||cachedOrSource.currency!='SAR'||
+      cachedOrSource==null||!cachedOrSource.amount.isFinite||
+      cachedOrSource.amount<=0||cachedOrSource.currency!='SAR'||
       (cachedOrSource.amount-value).abs()>0.00001)value=null;
   }
   var title=income?'مبلغ وارد':'عملية بنكية',cat=income?'دخل آخر':'أخرى';
