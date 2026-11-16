@@ -121,6 +121,20 @@ class M417AutoSmsContractTest(unittest.TestCase):
             self.assertIn("RECEIVE_SMS",script)
             self.assertNotIn("android.permission.SEND_SMS",script)
 
+    def test_m1020_sms_bridge_is_single_and_well_formed(self):
+        # M1020 regression: source must not duplicate half the WaffraAutoSms
+        # class when inserting a regex with a dollar anchor into the bridge.
+        bridge=self.read("lib/waffra_auto_sms.dart")
+        self.assertEqual(bridge.count("abstract final class WaffraAutoSms {"),1)
+        self.assertEqual(bridge.count("static Future<List<Map<String,Object?>>> pending()async{"),1)
+        self.assertEqual(bridge.count("static Future<bool> markBackgroundReviewed(String id)async{"),1)
+        self.assertIn("if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(id))return false;",bridge)
+        self.assertIn("return _boolCall('markAutoBankSmsBackgroundReviewed',id);",bridge)
+        self.assertLess(bridge.index("static Future<bool> markBackgroundReviewed(String id)async{"),
+                        bridge.index("static Future<List<Map<String,Object?>>> pending()async{"))
+        self.assertTrue(bridge.rstrip().endswith("}"))
+        self.assertEqual(bridge.count("static Future<Map<String,Object?>?> pendingById("),1)
+
     def test_m1020_background_pass_is_bounded_and_retry_safe(self):
         poster=self.read("lib/waffra_auto_sms_autopost.part.dart")
         bridge=self.read("lib/waffra_auto_sms.dart")
