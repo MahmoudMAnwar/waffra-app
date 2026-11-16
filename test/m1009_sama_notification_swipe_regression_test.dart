@@ -5,9 +5,9 @@ import 'package:waffra/waffra_bank_sms_facts.dart';
 import 'package:waffra/waffra_sms_local_rules.dart';
 import 'package:waffra/main.dart' show bankSmsDate, bankSmsHasUnverifiedTimestamp, waffraM632ClassifySmsQueue;
 
-const outgoing='حوالة داخلية صادرة\nمن: محمود شحاته\nمبلغ:SAR 60.00\n'
- 'إلى: أنور عبد الله\nحساب:**8647\nالرسوم:0\n'
- 'الرقم المرجعي:FT26319QPRW3\nفي:15-11-2026 10:14';
+const outgoing='حوالة داخلية صادرة\nمن: حساب تجريبي\nمبلغ:SAR 60.00\n'
+ 'إلى: مستفيد تجريبي\nحساب:**0000\nالرسوم:0\n'
+ 'الرقم المرجعي:TESTREF0001\nفي:15-11-2026 10:14';
 
 void main(){
  test('M1009 SAMA outgoing is an expense candidate, not own account transfer',(){
@@ -78,10 +78,10 @@ void main(){
  });
 
  test('M1009 explicit exclusion learns repeatable service notice without numeric refs',(){
-  const first='عزيزنا المالك/المفوض للمنشأة مؤسسة معادن '
-    'المنتهية برقم 8219 نشعركم بصدور مديونية 2611447992';
-  const second='عزيزنا المالك/المفوض للمنشأة شركة خالد '
-    'المنتهية برقم 6290 نشعركم بصدور مديونية 881122';
+  const first='عزيزنا المالك/المفوض للمنشأة منشأة تجريبية '
+    'المنتهية برقم 1111 نشعركم بصدور مديونية 1111111111';
+  const second='عزيزنا المالك/المفوض للمنشأة منشأة أخرى '
+    'المنتهية برقم 0000 نشعركم بصدور مديونية 222222';
   final rule=WaffraSmsLocalRules.suggestedGlobalRule(
    body:first,sender:'Etimad',kind:'excluded');
   expect(rule,isNotNull);
