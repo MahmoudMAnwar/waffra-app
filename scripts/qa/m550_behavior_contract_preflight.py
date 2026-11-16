@@ -40,7 +40,7 @@ INDEXOF_DART = re.compile(
 BINDING_DART = re.compile(
     r"\b(?:final|var)\s+(?P<var>[A-Za-z_]\w*)\s*=\s*File\(\s*"
     r"(?P<q>['\"])(?P<path>(?:lib|native|android|ios|firebase|assets)/[^'\"]+)\2\s*\)"
-    r"\.readAsStringSync\(\s*\)",
+    r"\s*\.readAsStringSync\(\s*\)",
 )
 # M687: explicit source-inspection helper still targets the actual main.dart
 # library and its declared Dart parts, not an unverified mock of the source.
