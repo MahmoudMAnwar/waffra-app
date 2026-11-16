@@ -185,12 +185,10 @@ extension _WaffraHomeGoalsRecurringPagesModule on _HomeScreenState {
         borderRadius:BorderRadius.circular(21),
         side:BorderSide(color:Theme.of(context).brightness==Brightness.dark?
          const Color(0xFF456451):const Color(0xFFD1E1D9))),
-       child:InkWell(
-        key:Key('waffra-goal-quick-actions-'+g.id),
-        borderRadius:BorderRadius.circular(21),
-        onTap:WaffraHaptics.tap(()=>unawaited(_m689GoalActions(g))),
-        child:Padding(padding:const EdgeInsets.all(12),
-         child:Column(children:[
+       // M1021: the goal card body is informational. Actions are inline
+       // (as on linked goal dues), never a whole-card tap-to-open sheet.
+       child:Padding(padding:const EdgeInsets.all(12),
+        child:Column(children:[
           Row(children:[
            WaffraIllustration(topic:g.name,size:44),
            const SizedBox(width:10),
@@ -205,6 +203,23 @@ extension _WaffraHomeGoalsRecurringPagesModule on _HomeScreenState {
            const SizedBox(width:6),
            WaffraApprovedStatusPill(label:stateLabel,
             icon:Icons.verified_outlined,attention:!g.active),
+           PopupMenuButton<String>(
+            key:Key('m1021-goal-manage-'+g.id),
+            tooltip:waffraIsEnglish?'Manage goal':'إدارة الهدف',
+            icon:const Icon(Icons.more_vert_rounded,color:emerald,size:20),
+            onSelected:(v)=>unawaited(_m689GoalActions(g,v)),
+            itemBuilder:(_)=>[
+             if(g.saved>0)PopupMenuItem<String>(
+              value:'release',child:WaffraText(
+               waffraIsEnglish?'Release savings':'سحب المدخرات')),
+             PopupMenuItem<String>(
+              value:'toggle',child:WaffraText(g.active?
+               (waffraIsEnglish?'Pause goal':'إيقاف الهدف'):
+               (waffraIsEnglish?'Activate goal':'تفعيل الهدف'))),
+             PopupMenuItem<String>(
+              value:'delete',child:WaffraText(
+               waffraIsEnglish?'Delete goal':'حذف الهدف')),
+            ]),
           ]),
           const SizedBox(height:13),
           Row(children:[
@@ -225,7 +240,34 @@ extension _WaffraHomeGoalsRecurringPagesModule on _HomeScreenState {
            amountColumn(waffraIsEnglish?'Remaining':'المتبقي',
             max(0,g.target-g.saved)),
           ]),
-         ]))),
+          const SizedBox(height:10),
+          // Same compact three-button row as linked goal due cards.
+          Row(children:[
+           Expanded(child:TextButton.icon(
+            key:Key('m1021-goal-deposit-'+g.id),
+            onPressed:g.active&&(g.target<=0||g.saved<g.target)?
+             WaffraHaptics.tap(()=>unawaited(fundGoal(g))):null,
+            icon:const Icon(Icons.bolt_outlined,size:17),
+            label:FittedBox(fit:BoxFit.scaleDown,child:WaffraText(
+             waffraIsEnglish?'Quick deposit':'إيداع سريع',
+             style:const TextStyle(fontSize:11,fontWeight:FontWeight.bold))))),
+           Expanded(child:TextButton.icon(
+            key:Key('m1021-goal-edit-'+g.id),
+            onPressed:WaffraHaptics.tap(
+             ()=>unawaited(_handleGoalCardAction(g,'edit'))),
+            icon:const Icon(Icons.edit_outlined,size:17),
+            label:FittedBox(fit:BoxFit.scaleDown,child:WaffraText(
+             waffraIsEnglish?'Edit goal':'تعديل الهدف',
+             style:const TextStyle(fontSize:11,fontWeight:FontWeight.bold))))),
+           Expanded(child:TextButton.icon(
+            key:Key('m1021-goal-account-'+g.id),
+            onPressed:WaffraHaptics.tap(()=>unawaited(openVerifiedAccounts())),
+            icon:const Icon(Icons.account_balance_wallet_outlined,size:17),
+            label:FittedBox(fit:BoxFit.scaleDown,child:WaffraText(
+             waffraIsEnglish?'Account details':'تفاصيل الحساب',
+             style:const TextStyle(fontSize:11,fontWeight:FontWeight.bold))))),
+          ]),
+         ])),
       );
      })),
      if(goals.isEmpty)Padding(padding:const EdgeInsets.all(28),
