@@ -1103,3 +1103,9 @@ M969 / Issue #670 / Draft #665: real M120 Android SQLCipher receipt restart asse
 - Approved change: Use official SAMA outgoing/incoming terms as non-posting finance direction and keep two-sided own-account transfers gated on verified ownership; global privacy-safe learning after confirmed exclusion/correction; redo pending review statuses; original banking date and time in manual corrections; sender swipe in actual Notifications center, preserving selection and vertical refresh.
 - Changed production paths: lib/waffra_bank_sms_facts.dart, lib/main.dart, lib/waffra_sms_local_rules.dart, lib/waffra_approved_notifications.dart, lib/waffra_home_sms_inbox.part.dart, lib/waffra_home_entry_sheet.part.dart, lib/waffra_home_sms_confirmation.part.dart
 - QA: dedicated Flutter widget SAMA/date/different-amount/safe-exclusion swipe test in mandatory M946; current-head CI plus real Android remain separate, not certified by this note.
+
+[M449 REVIEWED UPDATE — ISSUE #724 — PR #725 / Notification velocity type correction]
+- Reviewed source SHA: 78148b684c870103c75ae993ef07033e2fee203d
+- Approved change: Notification gesture direction uses a strict double velocity fallback; gesture still changes sender chip, preserves selected SMS and vertical refresh. No financial write, SMS ACK or account behavior changed by this type-only fix.
+- Changed production paths: lib/waffra_approved_notifications.dart
+- Verification: PR #725 exact-head CI and Android real-device acceptance are separate and still pending.
