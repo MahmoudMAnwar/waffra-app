@@ -5,7 +5,7 @@ part of 'main.dart';
 extension _WaffraHomeEntrySheetModule on _HomeScreenState {
  Future<void> entrySheet({MoneyEntry? initial,bool sms=false,String? initialSms,
   String? reviewedSender,bool? reviewedIncomeOverride,bool? manualIncomeOverride,
-  String? reviewedOriginalSms})async {
+  String? reviewedOriginalSms,DateTime? reviewedOriginalDate})async {
   // A paid goal due is an immutable verified two-source settlement.
   // There is no independent edit path that can rewrite its wallet/bank split.
   if(initial?.sourceType=='goal_due'){
@@ -68,9 +68,12 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
    (manualReviewParsed?.amount==null||
     (manualReviewParsed!.amount!-manualReviewMoney.amount).abs()<0.00001)?
     manualReviewMoney.amount:null;
+  // Source datetime is extracted at the original review boundary and
+  // survives the transfer->manual expense/income correction route.
   final manualReviewDate=manualReviewBody==null||
    bankSmsHasUnverifiedTimestamp(manualReviewBody)?null:
-   bankSmsDate(manualReviewBody,referenceDate:DateTime.now());
+   (reviewedOriginalDate??bankSmsDate(manualReviewBody,
+    referenceDate:DateTime.now()));
   final manualReviewTitle=manualReviewParsed!=null&&
    waffraTransactionTitleAllowed(manualReviewParsed.title)?
     manualReviewParsed.title:'';
