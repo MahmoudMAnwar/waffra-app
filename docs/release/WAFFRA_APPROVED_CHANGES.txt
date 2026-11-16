@@ -1049,3 +1049,9 @@ M969 / Issue #670 / Draft #665: real M120 Android SQLCipher receipt restart asse
 [M968 / #668] Also trigger unchanged M550/M385 behavior and source-boundary gate for stacked PRs with non-main base; QA source test covers both M946/M550, no check disabled.
 
 [M987–M999 / #701–#703 and #708 / 2026-11-16 staged integration] Original source snapshots for structured bank SMS facts, encrypted rule undo, exact-evidence lifecycle, 14-part SMS roadmap, curated Saudi-provider templates, merchant aliases/OTP protection, indexed 2000-message impact and exact-SHA Flutter regressions are reproduced on the updated M989 stack. No finance auto-post, native ACK, backup, SQLCipher ownership or original message content changed by integration. The 34 non-note changed-file blobs are verified against original #709 before rewrite; latest-head full CI and physical Android/user-backup UAT remain release gates.
+
+[M449 REVIEWED UPDATE — ISSUE #719 — PR #720, STACKED AFTER #716]
+- Reviewed source SHA: 9f5d0ad91f0f5a6f93c5269741a0f6fd9d4664c0
+- Approved change: Preserve #716 verified encrypted restore source check and nonfinancial Home background. Only when the already authenticated Home retries failed verified SQLCipher data, show a theme-matched Arabic/English accessible progress surface rather than the old fixed light backdrop; hidden biometric/login handoff and the original recovery error remain. Widget regression covers dark Arabic and light English, no financial values are guessed, no money/restore writer is altered.
+- Changed production paths: lib/main.dart, lib/waffra_finance_reloading_view.dart, lib/waffra_home_root_shell.part.dart
+- Verification: exact-head CI and physical Android evidence remain separate, not approved merely by these notes.
