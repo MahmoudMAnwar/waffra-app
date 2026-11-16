@@ -131,7 +131,6 @@ class M417AutoSmsContractTest(unittest.TestCase):
         self.assertIn("WaffraAutoSmsStore.capacityRecoveryNeeded(context)",receiver)
         self.assertIn("if (queue.length() >= maxCandidates)",store)
         self.assertIn("if (currentSize >= maxCandidates)",store)
-        self.assertIn("val nextAt = originalCursor.first",store) if False else None
         self.assertNotIn("FirebaseFirestore",worker+receiver+store)
         self.assertNotIn("commitConfirmedSms(",worker+receiver+store)
 
@@ -141,7 +140,7 @@ class M417AutoSmsContractTest(unittest.TestCase):
         self.assertIn("ExistingWorkPolicy.APPEND_OR_REPLACE",worker)
         self.assertNotIn("ExistingWorkPolicy.KEEP",worker)
         self.assertNotIn("ExistingWorkPolicy.REPLACE,",worker)
-        self.assertIn("if (shouldEnqueue) WaffraAutoSmsWorker.enqueue(context)",receiver)
+        self.assertIn("if (shouldEnqueue || WaffraAutoSmsStore.capacityRecoveryNeeded(context))",receiver)
         self.assertEqual(receiver.count("WaffraAutoSmsWorker.enqueue(context)"),1)
         self.assertLess(receiver.index("WaffraAutoSmsStore.offer("),
                         receiver.index("WaffraAutoSmsWorker.enqueue(context)"))
