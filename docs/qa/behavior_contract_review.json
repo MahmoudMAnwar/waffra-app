@@ -11,7 +11,7 @@
       "id": "M1013-M1014-GOAL-DUE-12-MONTH-ID-POSTPONE-AND-M550-FAIL-CLOSED-REGRESSIONS",
       "issue": "Issue #730",
       "previous_behavior": "Goal due typed SQLCipher writer expected zero-padded month identity while canonical entryId used unpadded months, rejecting Jan-Sep payment confirmations. Postponement left old scheduled Android alerts and active-row status alone could permit stale paid reminders. Three old tests asserted the removed no-argument applyRecurring signature while M550 preflight passed because File reader regex missed newline before .readAsStringSync, helper between(start,end) boundary was not tracked, and baseline registered Home parts were not reconstructed.",
-      "approved_behavior": "Every month uses the same canonical unpadded due identity, retaining atomic user-confirmed and idempotent settlement. Postponed goal reminders follow the recorded effective due date and paid goal_due IDs are filtered; no reminder ever posts a payment. All three legacy regression tests target the protected goalLinkedOnly signature and retain their financial assertions. M550 scans multiline Dart source readers and reconstructed Home helper source boundaries with base and HEAD registered part parity, including when main.dart is unchanged; a removed positive assertion causes early failure, not a hidden full-suite error.",
+      "approved_behavior": "Every month uses the same canonical unpadded due identity, retaining atomic user-confirmed and idempotent settlement. Postponed goal reminders follow the recorded effective due date and paid goal_due IDs are filtered; no reminder ever posts a payment. All three legacy regression tests target the protected goalLinkedOnly signature and retain their financial assertions. M550 scans multiline Dart source readers and reconstructed Home helper source boundaries with base and HEAD registered part parity, including when main.dart is unchanged; a removed positive assertion causes early failure, not a hidden full-suite error. The Python M444 notification safety contract also verifies the postponed effective date and paid due-key suppression rather than an obsolete original-date literal.",
       "source_paths": [
         "lib/storage/waffra_fresh_finance_domain_repository.dart",
         "lib/waffra_home_finance_persistence_due.part.dart",
@@ -23,7 +23,8 @@
         "test/storage/m470_verified_recurring_payment_capture_test.dart",
         "test/storage/m266_home_bound_source_regression_test.dart",
         "test/m762_home_finance_persistence_due_extraction_test.dart",
-        "test/qa/m550_behavior_contract_preflight_test.py"
+        "test/qa/m550_behavior_contract_preflight_test.py",
+        "test/qa/m444_notification_safety_test.py"
       ],
       "safety_invariants": [
         "Canonical Home and SQLCipher goal due identities agree in all twelve months without rewriting prior receipt identities.",
