@@ -594,7 +594,7 @@ abstract final class WaffraSmsLocalRules {
    category:category,confidentOnly:confidentOnly);
   if(scoped==null)return null;
   final global=WaffraSmsLocalRule(
-   id:'smart_global_${sha256.convert(utf8.encode(
+   id:'${scoped.templateFamily.isEmpty?'smart_global':'template_global'}_${sha256.convert(utf8.encode(
     '$kind|${normalized(scoped.keywords.join('|'))}|${normalized(category)}|${scoped.templateFamily}'
    )).toString().substring(0,32)}',
    name:scoped.name,keywords:scoped.keywords,
