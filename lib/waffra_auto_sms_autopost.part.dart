@@ -10,14 +10,31 @@ abstract final class WaffraAutoSmsAutoPoster {
  static bool get reviewOnly => false; // Only an approved per-rule match can post.
 
  static Future<Map<String,int>> run()async{
-  final summary=<String,int>{'saved':0,'duplicates':0,'review':0};
+  final stopwatch=Stopwatch()..start();
+  const budget=Duration(seconds:35);
+  final summary=<String,int>{
+   'saved':0,'duplicates':0,'review':0,'remaining':0,
+  };
   if(!await WaffraAutoSms.enabled())return summary;
   final pending=await WaffraAutoSms.pendingChecked();
-  if(pending==null)return summary;
-  if(pending.isEmpty)return summary;
+  if(pending==null){
+   // Missing native data is NOT a clean or completed queue.
+   throw StateError('Encrypted SMS queue unavailable');
+  }
+  final pass=WaffraSmsBackgroundCheckpoint.select(pending,maxPerPass:25);
+  if(pass.candidates.isEmpty)return summary;
+  var completed=0;
+  summary['remaining']=pass.unattempted;
+  void completedOne(){
+   completed++;
+   summary['remaining']=WaffraSmsBackgroundCheckpoint.remainingAfter(
+    pass.unattempted,completed);
+  }
+  // A failed native ACK or encrypted checkpoint cannot be called complete.
+  final retryAck=StateError('Native SMS ACK pending verification');
+  final retryCheckpoint=StateError('Encrypted SMS checkpoint unavailable');
 
   Future<void> keepForReview(Map<String,Object?> candidate)async{
-   summary['review']=summary['review']!+1;
    final id=candidate['id'];
    final body=candidate['body'];
    if(id is String){
@@ -36,6 +53,13 @@ abstract final class WaffraAutoSmsAutoPoster {
     // A classification is not a verified financial commit. Every suggested
     // transaction, including transfers, still opens explicit user review.
     await WaffraAutoSms.notifyReview(id,kind:kind);
+    if(!await WaffraAutoSms.markBackgroundReviewed(id)){
+     throw retryCheckpoint;
+    }
+    summary['review']=summary['review']!+1;
+    completedOne();
+   }else{
+    throw retryCheckpoint;
    }
   }
 
@@ -71,7 +95,8 @@ abstract final class WaffraAutoSmsAutoPoster {
   // exactly once, then reuse the same matches for safe posting eligibility.
   final matchedById=<String,List<WaffraSmsLocalRule>>{};
   summary['excluded']=0;
-  for(final row in pending){
+  for(final row in pass.candidates){
+   if(stopwatch.elapsed>=budget)break;
    final id=row['id'],body=row['body'],sender=row['sender'];
    if(id is String&&body is String&&sender is String){
     final facts=WaffraBankSmsFactsParser.parse(body);
@@ -90,6 +115,7 @@ abstract final class WaffraAutoSmsAutoPoster {
      // resolveSpecial already rejects posted and mixed financial notices.
      if(await WaffraAutoSms.excludeMessages([id])){
       summary['excluded']=summary['excluded']!+1;
+      completedOne();
       continue;
      }
     }
@@ -98,7 +124,10 @@ abstract final class WaffraAutoSmsAutoPoster {
   }
   if(actionable.isEmpty)return summary;
   if(!ruleStoreReady||!rules.any((r)=>r.autoPost)){
-   for(final row in actionable)await keepForReview(row);
+   for(final row in actionable){
+    if(stopwatch.elapsed>=budget)break;
+    await keepForReview(row);
+   }
    return summary;
   }
 
@@ -110,12 +139,17 @@ abstract final class WaffraAutoSmsAutoPoster {
     installedApp:true,legacy:const WaffraHomeFinancePersistence(),
     startupRoute:WaffraFinanceRoute.widgetStartup);
    if(binding.accountsBridge==null){
-    for(final row in actionable)await keepForReview(row);
+    for(final row in actionable){
+     if(stopwatch.elapsed>=budget)break;
+     await keepForReview(row);
+    }
     return summary;
    }
    // M1017: traverse every candidate; 25 is batch size, NOT a hard cap.
    for(final batch in waffraSmsBackgroundBatches(actionable)){
+    if(stopwatch.elapsed>=budget)break;
     for(final candidate in batch){
+    if(stopwatch.elapsed>=budget)break;
     final id=candidate['id'];
     final body=candidate['body'];
     final sender=candidate['sender'];
@@ -207,8 +241,11 @@ abstract final class WaffraAutoSmsAutoPoster {
      final fingerprint=bankSmsHash(body);
      if((before.finance.getStringList('waffra_sms_hashes_v1')??
          const <String>[]).contains(fingerprint)){
-      await WaffraAutoSms.acknowledgeCommitted([id]);
+      if(!await WaffraAutoSms.acknowledgeCommitted([id])){
+       throw retryAck;
+      }
       summary['duplicates']=summary['duplicates']!+1;
+      completedOne();
       continue;
      }
      final entry=MoneyEntry(
@@ -239,19 +276,26 @@ abstract final class WaffraAutoSmsAutoPoster {
        item is Map&&item['id']==entry.id);
      if(committed.saved==1&&persisted&&
         finalHashes.contains(fingerprint)){
-      await WaffraAutoSms.acknowledgeCommitted([id]);
+      if(!await WaffraAutoSms.acknowledgeCommitted([id])){
+       throw retryAck;
+      }
+      completedOne();
       await WaffraAutoSms.notifyCommitted(
        hash:id,amount:parsed.amount!,income:parsed.income,
        linkedBudget:false,entryId:entry.id);
       summary['saved']=summary['saved']!+1;
      }else if(committed.saved==0&&
          finalHashes.contains(fingerprint)){
-      await WaffraAutoSms.acknowledgeCommitted([id]);
+      if(!await WaffraAutoSms.acknowledgeCommitted([id])){
+       throw retryAck;
+      }
       summary['duplicates']=summary['duplicates']!+1;
+      completedOne();
      }else{
       await keepForReview(candidate);
      }
-    }catch(_){
+    }catch(error){
+     if(identical(error,retryAck)||identical(error,retryCheckpoint))rethrow;
      // Never log bank SMS, account ID, or secure-store exceptions.
      await keepForReview(candidate);
     }
@@ -260,9 +304,18 @@ abstract final class WaffraAutoSmsAutoPoster {
     // groups. Never perform parallel encrypted financial writes.
     await Future<void>.delayed(Duration.zero);
    }
-  }catch(_){
-   // Vault unavailable: keep all SMS for human review, no legacy writes.
-   for(final row in actionable)await keepForReview(row);
+  }catch(error){
+   if(identical(error,retryAck)||identical(error,retryCheckpoint))rethrow;
+   // Vault unavailable: keep the limited pass for human review, no legacy
+   // writes. Any remaining uncheckpointed SMS is resumed by WorkManager.
+   for(final row in actionable){
+    if(stopwatch.elapsed>=budget)break;
+    if(row['id'] is String && !(await WaffraAutoSms.pendingChecked()??
+       const <Map<String,Object?>>[]).any((e)=>e['id']==row['id'])){
+     continue;
+    }
+    await keepForReview(row);
+   }
   }finally{
    await binding?.close();
   }
