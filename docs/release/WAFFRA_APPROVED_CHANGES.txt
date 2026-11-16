@@ -1115,3 +1115,9 @@ M969 / Issue #670 / Draft #665: real M120 Android SQLCipher receipt restart asse
 - Approved change: External SAMA debit/credit transfer message displays expense/income candidate while requiring verified beneficiary/account review; neither automatic finance SMS policy nor direct SMS writer can post this transfer-like notice without owner verification. Unqualified Credit Transfer via intermediary stays review-only.
 - Changed production paths: lib/waffra_bank_sms_facts.dart, lib/waffra_auto_sms_policy.dart
 - Verification: current PR CI and physical Android acceptance remain separately required.
+
+[M1010 / Issue #726 / Draft PR / 2026-11-16]
+- Approved scope: inline required-field messages and error styling in the shared Goals/Dues verified-account cascade (institution type, bank/primary institution and linked financial account), displayed after the Save button is tapped. The original financial-account verification, safe save boundaries, optional goal due date and open-ended savings target behavior are preserved; no SQLCipher ledger/balance writer is changed.
+- Dues page replaces its plain heading with the same approved WaffraApprovedPageHero green header used by Savings goals; existing calendar action moves into the filter/action row, retaining its navigation.
+- Changed production paths: lib/waffra_goal_recurring_account_picker.dart; lib/waffra_home_goal_actions.part.dart; lib/waffra_home_recurring_workflows.part.dart; lib/waffra_home_goals_recurring_pages.part.dart.
+- QA: new Arabic/English Widget and source-contract test/m1010_goal_due_required_account_hero_test.dart, M946 feature mapping, M385 exact bounded-file manifest and behavior contract. CI plus physical Android/RTL acceptance are required; no success claimed yet.
