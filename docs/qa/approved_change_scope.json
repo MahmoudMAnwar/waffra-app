@@ -22,7 +22,8 @@
     "test/m623_verified_home_handoff_no_black_frame_test.dart",
     "test/m944_home_root_shell_extraction_test.dart",
     "test/m1003_restore_budget_and_blank_surface_contract_test.dart",
-    "test/storage/m1003_atomic_restored_budget_account_link_test.dart"
+    "test/storage/m1003_atomic_restored_budget_account_link_test.dart",
+    "test/waffra_m206_day_theme_tour_sms_regression_test.dart"
   ],
   "bounded_sections": {
     "lib/waffra_home_entry_sheet.part.dart": [
@@ -75,6 +76,10 @@
       {
         "start": "  final showCountry=needsCountry||",
         "end": "   if(showLoginScreen)KeyedSubtree("
+      },
+      {
+        "start": "  builder:(context,child)=>WaffraNoticeTapDismissArea(",
+        "end": "  theme:ThemeData("
       }
     ],
     "test/m495_pr402_ui_performance_regression_test.dart": [
@@ -99,6 +104,12 @@
       {
         "start": "  expect(shell, contains('child:!ready&&_financeLoadFailure==null?'));",
         "end": "  expect(shell, contains('body:_financeLoadFailure!=null?_financialRecoveryScreen():'));"
+      }
+    ],
+    "test/waffra_m206_day_theme_tour_sms_regression_test.dart": [
+      {
+        "start": "    expect(root,contains('child:ValueListenableBuilder<bool>('));",
+        "end": "    expect(root,isNot(contains('KeyedSubtree(key:ValueKey(language)')));"
       }
     ]
   },

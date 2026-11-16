@@ -37,6 +37,8 @@ void main(){
   expect(root,contains('final missingRetainedStage=beforeReady&&'));
   expect(root,contains('!showLoginScreen&&!showConsent&&!showGate&&!showCountry;'));
   expect(root,contains('if(missingRetainedStage)'));
+  expect(root,contains('child:child??const ColoredBox(color:forest,'));
+  expect(root,isNot(contains('child:child??const SizedBox.shrink()')));
   expect(root,contains('child:Offstage(offstage:!homeInteractive,'));
   expect(root,contains('WaffraMandatoryBiometricGate('));
   expect(root,contains('onVerifiedReady:()=>_m623HomeLoaded(account)'));

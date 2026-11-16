@@ -2230,7 +2230,8 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
     textDirection:language=='ar'?TextDirection.rtl:TextDirection.ltr,
     // Language is an immediate LTR/RTL layout change, never a
     // navigator replacement or whole-screen slide of the FAB.
-    child:child??const SizedBox.shrink())))),
+    child:child??const ColoredBox(color:forest,
+     child:Center(child:Icon(Icons.shield_outlined,color:Colors.white,size:42))))))),
 
   theme:ThemeData(
    useMaterial3:true,
