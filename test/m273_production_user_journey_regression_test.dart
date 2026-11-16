@@ -74,7 +74,7 @@ void main() {
     // The 101st message must be refused at the confirmation boundary,
     // not silently truncated to 100 during import.
     final savePath = readWaffraMainSourceForContracts();
-    expect(savePath, contains('await entrySheet(sms:true,initialSms:body,reviewedSender:sender);'));
+    expect(savePath, contains('await entrySheet(sms:true,initialSms:body,reviewedSender:sender,reviewedSmsId:id);'));
   });
 
   test('P0: incoming credit and credit-card expense keep opposite directions',
