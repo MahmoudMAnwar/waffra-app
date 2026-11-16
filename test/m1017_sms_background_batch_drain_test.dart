@@ -36,7 +36,7 @@ void main() {
   expect(source,isNot(contains('for(final candidate in actionable.take(25))')));
   expect(source,contains('await keepForReview(candidate)'));
   expect(source,contains('WaffraAutoSms.acknowledgeCommitted([id])'));
-  expect(source,contains('WaffraAutoSms.excludeMessages([id])'),
+  expect(worker,contains('WaffraAutoSms.excludeMessages([id])'),
    reason:'durable excluded IDs must survive rescan');
   expect(source,contains('binding?.close()'));
  });
