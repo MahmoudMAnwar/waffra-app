@@ -45,7 +45,10 @@
     "test/m1018_sms_workmanager_wakeup_race_test.dart",
     "test/m1016_sms_background_financial_intake_test.dart",
     "test/qa/m417_sms_permission_acceptance_test.py",
-    "lib/waffra_home_entry_sheet.part.dart"
+    "lib/waffra_home_entry_sheet.part.dart",
+    "lib/waffra_home_profile.part.dart",
+    "lib/waffra_home_sms_management.part.dart",
+    "native/WaffraMainActivity.kt"
   ],
   "allowed_workflow_changes": [],
   "approved_deleted_files": [],
@@ -96,6 +99,10 @@
       {
         "start": " static Future<List<Map<String,Object?>>?> pendingChecked()async{",
         "end": " static Future<List<Map<String,Object?>>> pending()async{"
+      },
+      {
+        "start": " static Future<bool> restartCompletedHistory()=>",
+        "end": " static Future<int> importConsentMonthChecked()async{"
       }
     ],
     "lib/main.dart": [
@@ -174,6 +181,24 @@
       {
         "start": "        final h=sha256.convert(utf8.encode(digits(message.text)",
         "end": "        pendingHash=h;"
+      }
+    ],
+    "lib/waffra_home_profile.part.dart": [
+      {
+        "start": "   if(Platform.isAndroid)_accountSection(",
+        "end": "   _accountSection(waffraIsEnglish?'Security & privacy'"
+      }
+    ],
+    "lib/waffra_home_sms_management.part.dart": [
+      {
+        "start": " Future<void> _scanPreviousBankSmsFromSettings()async{",
+        "end": " Future<void> _openUnknownSmsFromSettings()async{"
+      }
+    ],
+    "native/WaffraMainActivity.kt": [
+      {
+        "start": "                \"restartCompletedSmsHistory\" -> {",
+        "end": "                \"importConsentMonthBankSms\" -> {"
       }
     ]
   }
