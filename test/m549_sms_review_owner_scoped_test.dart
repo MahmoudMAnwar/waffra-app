@@ -4,13 +4,17 @@ import 'support/waffra_main_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
- test('M549 any sender enters review-only queue, with independent finance safety',(){
+ test('M549 credible financial senders enter review; personal/promos filtered',(){
   final native=File('native/WaffraAutoSmsStore.kt').readAsStringSync();
   final eligible=native.substring(native.indexOf('fun reviewEligible('),
    native.indexOf('fun qualifies('));
-  expect(eligible,contains('sender.isNotBlank()'));
-  expect(eligible,contains('body.isNotBlank()'));
-  expect(eligible,isNot(contains('institutionalSender')));
+  expect(eligible,contains('sender.isBlank()'));
+  expect(eligible,contains('body.isBlank()'));
+  expect(eligible,contains('if (pureVerificationOnly(body)) return true'));
+  expect(eligible,contains('nonTransactionPromotion.containsMatchIn(body)'));
+  expect(eligible,contains('return qualifies(sender, body) ||'));
+  expect(eligible,contains('unknownFinancialKind(sender, body) != null'));
+  expect(eligible,isNot(contains('brand.matches(sender)')));
   final importer=native.substring(native.indexOf('fun importConsentMonth('));
   expect(importer,contains('reviewEligible(row.sender, row.body)'));
   final live=native.substring(native.indexOf('fun offer('),
@@ -76,7 +80,9 @@ void main() {
  test('M549 completed rescan dims unless fresh provider rows or unfinished history',(){
   final native=File('native/WaffraAutoSmsStore.kt').readAsStringSync();
   expect(native,contains('private fun hasUnseenInboxRows('));
-  expect(native,contains('"rescanNeeded" to (waiting in 0 until maxCandidates'));
+  expect(native,contains('"rescanNeeded" to ('));
+  expect(native,contains('prefs.getBoolean(capacityRecoveryRequestedName, false)'));
+  expect(native,contains('waiting in 0 until maxCandidates'));
   expect(native,contains('hasUnseenInboxRows(context, prefs)'));
   expect(native,contains('historyCursorAt'));
   expect(native,contains('historyCursorId'));

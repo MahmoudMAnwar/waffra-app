@@ -121,5 +121,67 @@ class M417AutoSmsContractTest(unittest.TestCase):
             self.assertIn("RECEIVE_SMS",script)
             self.assertNotIn("android.permission.SEND_SMS",script)
 
+    def test_m1020_sms_bridge_is_single_and_well_formed(self):
+        # M1020 regression: source must not duplicate half the WaffraAutoSms
+        # class when inserting a regex with a dollar anchor into the bridge.
+        bridge=self.read("lib/waffra_auto_sms.dart")
+        self.assertEqual(bridge.count("abstract final class WaffraAutoSms {"),1)
+        self.assertEqual(bridge.count("static Future<List<Map<String,Object?>>> pending()async{"),1)
+        self.assertEqual(bridge.count("static Future<bool> markBackgroundReviewed(String id)async{"),1)
+        self.assertIn("if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(id))return false;",bridge)
+        self.assertIn("return _boolCall('markAutoBankSmsBackgroundReviewed',id);",bridge)
+        self.assertLess(bridge.index("static Future<bool> markBackgroundReviewed(String id)async{"),
+                        bridge.index("static Future<List<Map<String,Object?>>> pending()async{"))
+        self.assertTrue(bridge.rstrip().endswith("}"))
+        self.assertEqual(bridge.count("static Future<Map<String,Object?>?> pendingById("),1)
+
+    def test_m1020_background_pass_is_bounded_and_retry_safe(self):
+        poster=self.read("lib/waffra_auto_sms_autopost.part.dart")
+        bridge=self.read("lib/waffra_auto_sms.dart")
+        store=self.read("native/WaffraAutoSmsStore.kt")
+        worker=self.read("native/WaffraAutoSmsWorker.kt")
+        main=self.read("lib/main.dart")
+        self.assertIn("const budget=Duration(seconds:35)",poster)
+        self.assertIn("WaffraSmsBackgroundCheckpoint.select(pending,maxPerPass:25)",poster)
+        self.assertIn("WaffraAutoSms.markBackgroundReviewed(id)",poster)
+        self.assertIn("if(!await WaffraAutoSms.acknowledgeCommitted([id]))",poster)
+        self.assertIn("if(identical(error,retryAck)||identical(error,retryCheckpoint))rethrow",poster)
+        self.assertIn("backgroundAttempted",store)
+        self.assertIn("fun markBackgroundSmsReviewed(context: Context, id: String): Boolean",store)
+        self.assertIn("row.put(\"backgroundAttempted\", true)",store)
+        self.assertIn("return _boolCall('markAutoBankSmsBackgroundReviewed',id);",bridge)
+        self.assertIn("'hasMore':(summary['remaining']??0)>0",main)
+        self.assertIn('needsContinuation = reply is Map<*, *> &&',worker)
+        self.assertIn('if (completed && successful && needsContinuation) enqueue(context)',worker)
+        self.assertIn('ExistingWorkPolicy.APPEND_OR_REPLACE',worker)
+        self.assertNotIn('successful = reply == true',worker)
+
+    def test_m1019_saturation_replay_is_bounded_and_privacy_preserving(self):
+        store=self.read("native/WaffraAutoSmsStore.kt")
+        worker=self.read("native/WaffraAutoSmsWorker.kt")
+        receiver=self.read("native/WaffraAutoSmsReceiver.kt")
+        self.assertIn("capacityRecoveryRequestedName",store)
+        self.assertIn("fun capacityRecoveryNeeded(context: Context): Boolean",store)
+        self.assertIn("importConsentMonth(context, maxRead = 100)",worker)
+        self.assertIn("WaffraAutoSmsStore.capacityRecoveryNeeded(context)",receiver)
+        self.assertIn("if (queue.length() >= maxCandidates)",store)
+        self.assertIn("if (currentSize >= maxCandidates)",store)
+        self.assertNotIn("FirebaseFirestore",worker+receiver+store)
+        self.assertNotIn("commitConfirmedSms(",worker+receiver+store)
+
+    def test_m1018_background_worker_appends_new_arrivals_without_cancellation(self):
+        worker=self.read("native/WaffraAutoSmsWorker.kt")
+        receiver=self.read("native/WaffraAutoSmsReceiver.kt")
+        self.assertIn("ExistingWorkPolicy.APPEND_OR_REPLACE",worker)
+        self.assertNotIn("ExistingWorkPolicy.KEEP",worker)
+        self.assertNotIn("ExistingWorkPolicy.REPLACE,",worker)
+        self.assertIn("if (shouldEnqueue || WaffraAutoSmsStore.capacityRecoveryNeeded(context))",receiver)
+        self.assertEqual(receiver.count("WaffraAutoSmsWorker.enqueue(context)"),1)
+        self.assertLess(receiver.index("WaffraAutoSmsStore.offer("),
+                        receiver.index("WaffraAutoSmsWorker.enqueue(context)"))
+        self.assertIn("if (isForegroundUiActive() || !WaffraAutoSmsStore.enabled(context)) return",worker)
+        self.assertNotIn("commitConfirmedSms(",worker+receiver)
+        self.assertNotIn("FirebaseFirestore",worker+receiver)
+
 if __name__=="__main__":
     unittest.main()

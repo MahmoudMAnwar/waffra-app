@@ -21,6 +21,28 @@ GROUPS = ("money", "experience", "safety")
 # Each user-facing capability has a real runnable suite. Tests can be reused
 # across capabilities; the runner de-duplicates within each CI shard.
 FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {
+    "m1020_sms_background_35_second_checkpointed_continuation": ("safety", (
+        "test/m1020_sms_background_checkpoint_continuation_test.dart",
+        "test/m1017_sms_background_batch_drain_test.dart",
+        "test/m1019_sms_intake_capacity_recovery_test.dart")),
+    "m1019_android_sms_capacity_replay": ("safety", (
+        "test/m1019_sms_intake_capacity_recovery_test.dart",
+        "test/m1018_sms_workmanager_wakeup_race_test.dart",
+        "test/m1017_sms_background_batch_drain_test.dart")),
+    "m1018_android_sms_workmanager_late_wakeup_no_keep_race": ("safety", (
+        "test/m1018_sms_workmanager_wakeup_race_test.dart",
+        "test/m1016_sms_background_financial_intake_test.dart",
+        "test/m1017_sms_background_batch_drain_test.dart")),
+    "m1017_all_actionable_sms_background_batches": ("safety", (
+        "test/m1017_sms_background_batch_drain_test.dart",
+        "test/m462_smart_sms_rule_review_test.dart",
+        "test/m1016_sms_background_financial_intake_test.dart")),
+    "m1016_nonfinancial_sms_native_intake_financial_evidence_only": ("safety", (
+        "test/m1016_sms_background_financial_intake_test.dart",
+        "test/m549_sms_review_owner_scoped_test.dart",
+        "test/m979_native_otp_prequeue_exclusion_test.dart",
+        "test/m981_historical_otp_atomic_intake_test.dart",
+        "test/m954_all_sms_rule_routes_regression_test.dart")),
     "m1015_verified_standalone_expense_due_payment_approval": ("money", (
         "test/m1015_standalone_due_confirmed_payment_test.dart",
         "test/m1012_due_reminder_verified_confirmation_test.dart",

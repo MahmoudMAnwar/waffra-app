@@ -1,12 +1,129 @@
 {
   "schema_version": 1,
-  "pr": "M1010–M1015 Issues #726/#728/#729/#730/#731 — UI, verified SMS, goal & standalone dues",
-  "issue": "Issues #726, #728, #729, #730, #731",
+  "pr": "M1016–M1020 Issues #732/#734/#735/#736/#737 — SMS bounded background reconciliation (Draft)",
+  "issue": "Issues #732, #734, #735, #736 and #737",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main after merged PR #725 (16 November 2026)",
   "reviewed_at": "2026-11-16",
-  "review_policy": "User explicitly requests verified owner-paid or postpone confirmation for BOTH independent recurring expenses and linked goal dues on Android after authenticated Home, without any automatic debit. All exact-head CI/backup/finance and manual device tests required before merge.",
+  "review_policy": "Authorized scope covers owner-requested native SMS intake filtering, all-candidate bounded processing and WorkManager KEEP wakeup fix. Do not relax owner/permission/OTP safety or enable unapproved finance posting. Synthetic source tests are not physical Android proof.",
   "contracts": [
+    {
+      "id": "M1020-NATIVE-SMS-35S-DURABLE-BACKGROUND-CHECKPOINT",
+      "issue": "Issue #737",
+      "previous_behavior": "Native Worker destroys FlutterEngine after 55 seconds while Dart may iterate up to 1000 candidates; 25-size batches do not bound overall run and restart repeatedly reviews the first pending bank SMSs without durable background progress.",
+      "approved_behavior": "Each worker pass selects up to 25 owner-encrypted pending candidates without backgroundAttempted flag, checks monotonic 35-second budget between candidates, stores per-review checkpoint only after safe review notification attempt or verified atomic ACK/exclusion, returns remaining count and Java schedules another APPEND_OR_REPLACE work when work remains. No false true from pendingChecked error and no unsafe finance writes.",
+      "source_paths": [
+        "native/WaffraAutoSmsStore.kt",
+        "native/WaffraAutoSmsWorker.kt",
+        "lib/main.dart",
+        "lib/waffra_auto_sms.dart",
+        "lib/waffra_auto_sms_autopost.part.dart",
+        "lib/waffra_sms_background_checkpoint.dart"
+      ],
+      "test_paths": [
+        "test/m1020_sms_background_checkpoint_continuation_test.dart",
+        "test/m1017_sms_background_batch_drain_test.dart",
+        "test/m1018_sms_workmanager_wakeup_race_test.dart",
+        "test/m506_android_nine_regressions_test.dart",
+        "test/m549_sms_review_owner_scoped_test.dart",
+        "test/qa/m417_sms_permission_acceptance_test.py"
+      ],
+      "safety_invariants": [
+        "No review row is removed from native encrypted queue merely after backgroundAttempted flag.",
+        "If an SMS financially commits, only verified finance authority/hash and committed-only native ACK can clear its queue row.",
+        "Fail closed if no native pending queue or checkpoint persistence; never mark an unprocessed row.",
+        "Return continuation only if unattempted remain; avoid infinite reprocessing of already-review-only SMS.",
+        "35s is cooperative not hard per-transaction execution guarantee; physical Android/WorkManager OS kill remains UAT."
+      ]
+    },
+    {
+      "id": "M1019-ENCRYPTED-SMS-CAPACITY-SATURATION-REPLAY",
+      "issue": "Issue #736",
+      "previous_behavior": "Live bank SMS returns false when 1000 queued candidates exist and no worker wakeup is scheduled; history scan stops with cursor intact but no automatic refill after capacity returns.",
+      "approved_behavior": "Durably record owner-scoped non-sensitive capacity-replay-needed status for eligible messages not queued at saturation. Receiver schedules a WorkManager wakeup even when offer rejected because full. After background worker processing successfully finishes, perform bounded read-only Android provider replay into owner encrypted candidate queue if capacity free, queue another worker when new candidates imported; keep native high-water cursor and every immutable exclusion/committed hash guard.",
+      "source_paths": [
+        "native/WaffraAutoSmsStore.kt",
+        "native/WaffraAutoSmsReceiver.kt",
+        "native/WaffraAutoSmsWorker.kt"
+      ],
+      "test_paths": [
+        "test/m1019_sms_intake_capacity_recovery_test.dart",
+        "test/qa/m417_sms_permission_acceptance_test.py"
+      ],
+      "safety_invariants": [
+        "No old queued SMS eviction or capacity increase; owner/permission gates before replay.",
+        "No automatic finance write, no raw SMS upload or logging.",
+        "History cursor and queued candidate update remain atomic and deduplicated.",
+        "Replay only possible for SMS retained in Android SMS provider; hard OS deletion remains out of guarantee.",
+        "No infinite busy loop when queue remains full or read failed; auto-refill only on confirmed native import."
+      ]
+    },
+    {
+      "id": "M1018-ANDROID-SMS-LATE-WAKEUP-NO-KEEP-RACE",
+      "issue": "Issue #735",
+      "previous_behavior": "Native receiver offered each accepted bank SMS to encrypted queue then called WorkManager.enqueueUniqueWork with ExistingWorkPolicy.KEEP; new arrival after existing worker's snapshot could be ignored as a new scheduling request.",
+      "approved_behavior": "After enqueuing accepted SMS for all senders of an incoming Android broadcast, schedule at most one unique-work successor using APPEND_OR_REPLACE, which runs after current work without cancelling in-progress verified finance and survives failed/cancelled prior work; keep encryption and review restrictions.",
+      "source_paths": [
+        "native/WaffraAutoSmsReceiver.kt",
+        "native/WaffraAutoSmsWorker.kt"
+      ],
+      "test_paths": [
+        "test/m1018_sms_workmanager_wakeup_race_test.dart",
+        "test/qa/m417_sms_permission_acceptance_test.py"
+      ],
+      "safety_invariants": [
+        "No WorkManager REPLACE: never interrupt in-flight Flutter verified SQLCipher worker merely due to a new SMS.",
+        "No earlier receiver financial writes, raw SMS upload or logging; accepted messages saved before WorkManager enqueue.",
+        "One schedule per incoming SMS broadcast with any accepted candidates; multipart grouping and sender timestamps preserved.",
+        "No false real-time guarantee; Android may defer, and 55s Worker timeout or native 1000 cap still require separate fixes and real device UAT."
+      ]
+    },
+    {
+      "id": "M1017-BOUNDED-ALL-CANDIDATE-SMS-DRAIN-NO-25-CAP",
+      "issue": "Issue #734",
+      "previous_behavior": "When any verified autoPost rule exists, the background worker processed only actionable.take(25), leaving later messages unreviewed/unnotified on that cycle.",
+      "approved_behavior": "Traverse all actionable candidates with a stable bounded iterator (25 per batch) and sequential existing verified rules/writer. For each candidate select exact durable exclusion, approved account-bound idempotent commit or human review notification; do not silently strand candidate 26+. Native 55-second timeout and WorkManager KEEP race are separate risks and not asserted resolved.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_auto_sms_autopost.part.dart",
+        "lib/waffra_sms_background_batches.dart"
+      ],
+      "test_paths": [
+        "test/m1017_sms_background_batch_drain_test.dart",
+        "test/m462_smart_sms_rule_review_test.dart"
+      ],
+      "safety_invariants": [
+        "No unbounded parallel writes, no second finance authority or account guessing.",
+        "No difference in currency/amount/posted evidence, verified account suffix, category, budget, user authorization or immutable hash ACK guards.",
+        "Safe review-only when candidate cannot be independently verified.",
+        "Keep native 55s WorkManager timeout, KEEP race and queue capacity as unresolved separate gaps; Android device testing required."
+      ]
+    },
+    {
+      "id": "M1016-NATIVE-FINANCIAL-EVIDENCE-REVIEW-ELIGIBILITY-AND-OTP-ENCRYPTED-DENIAL",
+      "issue": "Issue #732",
+      "previous_behavior": "native reviewEligible accepted any nonblank sender <=100 and message <=1600, admitting arbitrary personal and marketing SMS into owner-encrypted finance review even without transaction evidence.",
+      "approved_behavior": "Reject irrelevant personal/advertising SMS at the same reviewEligible used by Android SMS_RECEIVED and consented historical scan. A candidate must be genuine pure verification (to remain eligible for native durable 30-day OTP-exclusion pipeline) or pass existing credible finance qualifies or read-only unknownFinancialKind. Explicit promotional calls to action without a completed bank-money action cannot enter queue even when a quote mentions SAR/discount; unknown genuine financial sender remains allowed on strong evidence, not a static bank list. Mixed completed-money plus OTP is always masked and review-only. No effect on finance ledger autoPost authorization, owner/sender exclusion, 1000 queue capacity, WorkManager run loop or CI skip policy.",
+      "source_paths": [
+        "native/WaffraAutoSmsStore.kt"
+      ],
+      "test_paths": [
+        "test/m1016_sms_background_financial_intake_test.dart",
+        "test/m549_sms_review_owner_scoped_test.dart",
+        "test/m979_native_otp_prequeue_exclusion_test.dart",
+        "test/m981_historical_otp_atomic_intake_test.dart",
+        "test/m954_all_sms_rule_routes_regression_test.dart"
+      ],
+      "safety_invariants": [
+        "SMS is never forwarded off-device or logged with sender/body/OTP.",
+        "Both live and historical intake use one predicate before encrypted queue write.",
+        "Pure OTP goes to exact encrypted native 30-day exclusion without showing digits.",
+        "Completed financial transaction containing OTP must not be excluded or auto-saved.",
+        "No guessed bank owner/account or unapproved money write, all financial rules remain in Dart secured verified authority.",
+        "Batch processing is separately reviewed in M1017; KEEP scheduling and queue limits remain out of scope.",
+        "Real Android SMS delivery and OS background timing remain unverified until physical device acceptance."
+      ]
+    },
     {
       "id": "M1015-VERIFIED-STANDALONE-DUE-USER-CONFIRMATION-AND-IDEMPOTENT-WRITER",
       "issue": "Issue #731",

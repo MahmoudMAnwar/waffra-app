@@ -312,7 +312,9 @@ void main(){
   expect(worker,contains('WaffraSmsLocalRules.resolveSpecial('));
   expect(worker,contains("rule?.resolvedKind=='excluded'"));
   expect(worker,contains('if(actionable.isEmpty)return summary'));
-  expect(worker,contains('for(final candidate in actionable.take(25))'));
+  expect(worker,contains('for(final batch in waffraSmsBackgroundBatches(actionable))'));
+  expect(worker,contains('for(final candidate in batch){'));
+  expect(worker,isNot(contains('actionable.take(25)')));
   // Exclusions must be durably retained for 30 days, not merely\n  // transiently acknowledged and reimported during the next SMS scan.\n  expect(worker,contains('if(await WaffraAutoSms.excludeMessages([id]))'));\n  expect(worker,contains("summary['excluded']=summary['excluded']!+1"));\n  expect(worker,isNot(contains('WaffraAutoSms.acknowledge([id])')));\n  // Confirmed finance postings and duplicate fingerprints keep their\n  // separate idempotent acknowledgment pathway.\n  expect(worker,contains('WaffraAutoSms.acknowledgeCommitted([id])'));
  });
 

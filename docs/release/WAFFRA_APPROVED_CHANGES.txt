@@ -1,3 +1,29 @@
+[M1020 CI REPAIR — Draft PR #733 — Dart SMS bridge restored]
+- A newly inserted native review-checkpoint bridge method previously broke Dart source syntax and duplicated part of lib/waffra_auto_sms.dart. That was a genuine source regression, not an obsolete job expectation. Restored the original complete class with exactly one pending() implementation and inserted only the verified markBackgroundReviewed() method.
+- Existing M417 privacy test now checks that class, method and regex remain well-formed and unique before expensive downstream jobs. M550 passed on the repaired source head. This does not constitute Android acceptance.
+- Source correction commit: 97228db086151cf4f4d5a012400e900ed29ca103; exact-head Flutter analyze, M946 and other CI gates must re-run before merge.
+
+[M1020 / Issue #737 / Draft PR #733 — DURABLE 35-SECOND BACKGROUND SMS CONTINUATION]
+- Corrected the fifth background SMS gap: a 55-second native FlutterEngine watchdog used to terminate an unbounded 25-per-batch Dart run that could contain 1000 candidates. Each Dart pass now targets at most 25 unattempted candidates under a monotonic 35-second budget. A per-message backgroundAttempted boolean is saved in the EXISTING owner-encrypted native queue only after user-review notification has been attempted. Review-only SMS stays in the foreground inbox and is not ACKed as a money transfer.
+- Verified account/rule-bound auto-post remains under the original exact SMS hash and SQLCipher writer. A confirmed financial write is only considered complete after native committed-only ACK, with an explicit WorkManager retry when that ACK or encrypted review checkpoint fails; no parallel finance writers.
+- Dart returns structured finished/hasMore; the native Android worker schedules APPEND_OR_REPLACE continuation after successful partial runs without reprocessing already reviewed SMS endlessly. The 55-second native watchdog remains, so a single blocked financial write or Android OS deferral still requires real-device UAT.
+- Updated original positive M506 and M549 1000-capacity assertions for correct durable overflow behavior and fixed M1018's stale enqueue-location expectation (no assertions removed). Added M1020 26/100/1000 synthetic checkpoint passes, clock/ACK/worker-channel contracts, M417 native safety test and M946 feature registration. Changes remain DRAFT, not merged or certified.
+
+[M1019 / Issue #736 / Draft PR #733 — ENCRYPTED SMS QUEUE CAPACITY REPLAY]
+- Addressed the existing native 1000-candidate queue saturation path without deleting old review entries, increasing unbounded memory, weakening AES-GCM or creating false finance ACK. A non-sensitive durable capacityRecoveryRequestedName boolean records that a bank SMS hit full intake, and receiver schedules WorkManager despite failed queue admission. Historical importer still stops before cursor skips rows and persists the queue and cursor atomically.
+- After a successful background verified Dart processing pass, the worker attempts one bounded (100-row) read of Android's user-consented SMS inbox and schedules an APPEND_OR_REPLACE successor if new encrypted candidates were imported OR the durable SMS cursor measurably advanced through nonfinancial/duplicate records. A full queue or failed provider read never creates a tight retry loop. The cursor/high-water checks, owner identity and original sender/OTP/financial guards remain intact.
+- This is **not** unlimited queue capacity or a guarantee if the OS SMS inbox entry is deleted before replay, permissions are revoked, or background jobs are deferred. It requires exact-head Kotlin compilation, M946/M417 and physical Android acceptance before delivery can be certified. M1019 test covers 999/1000/1001 and no-eviction/cursor/scheduling contracts.
+
+[M1018 / Issue #735 / Draft PR #733 — ANDROID SMS BACKGROUND WAKEUP]
+- Verified old native WorkManager used ExistingWorkPolicy.KEEP: bank SMS accepted after a running worker snapshot might not get a follow-up background pass. Replaced with APPEND_OR_REPLACE to serialize a successor after in-progress work without cancelling verified finance activity, and to avoid failed/cancelled predecessor poisoning new SMS wakeups.
+- Receiver now writes all eligible SMS in one Android incoming broadcast to owner-encrypted native intake, then enqueues one future job for the broadcast (rather than one per sender). No direct ledger writes or SMS uploads.
+- Tests written before the production source edit: M1018 source contracts and M417 Python fail-closed smoke, registered in M946 safety. CI and Android real-device message-during-running-job acceptance still required; WorkManager 55s timeout, OS deferral and native 1000-message capacity remain unrelated unresolved limits.
+
+[M1017 / Issue #734 / Draft PR #733 — BANK SMS BACKGROUND DRAIN]
+- Removed the first-25 actionable candidate processing ceiling when approved user autoPost rules exist. Every eligible candidate is traversed in sequential batches of at most 25, retaining existing encrypted native exclusions, review-only fallback, verified-account guards, SQLCipher authority, hash dedup and committed-only native ACK.
+- Added synthetic count/ordering/duplicate regression for 0, 1, 24, 25, 26, 50, 51, 100, 101 and 1000 messages; updated old M462 and mandatory M946 safety matrix before source rollout. No live device behavior or worker timeout success is claimed; WorkManager 55s/KEEP/1000-capacity remain separate gaps.
+- Also corrected M1016 historical OTP source-contract assertion to match the existing encrypted excludedMessageInfo helper; no weakening of excluded ledger behavior.
+
 [M1005 / #718 / CI regression fix] Shared-notice policy MWAFFRA footer: notifications exclusion reports via existing `snack(route,...)` injected from Home rather than declaring a second `SnackBar` presenter in `waffra_approved_notifications.dart`. Widget regression checks visible failure + retained selection then success + cleared selection, with same route presenter and animations. Existing Android/native exclusions, sender opt-in and bank money guards unchanged. Tests were previously 3279 pass 2 fail (root-cause failures in centralized notice policy and new UI feedback widget); rerun pending.
 
 [M1005 / #718 / stale row feedback] Verified native `pendingById` can no longer silently return an empty review after a tap; refresh the existing owner-encrypted queue and show a visible, nonfinancial error/recovery notice. No fabricated exclusion ACK or finance action. Ensures no-op feedback is explicit even when an SMS was already excluded by another concurrent callback.
@@ -1143,3 +1169,33 @@ M969 / Issue #670 / Draft #665: real M120 Android SQLCipher receipt restart asse
 - After actual verified SQLCipher Home first frame, restored Paid/Postpone/Not-now confirmation for standalone recurring expense dues as well as goal-linked one-time dues. The startup entrypoint now calls `applyRecurring(goalLinkedOnly:false)` on either backend. Verified recurring INCOME is excluded from the misleading 'Paid' expense dialog.
 - Standalone due Paid uses the EXISTING verified account choice and audited `recurringPostingAndPostponement` atomic SQLCipher writer; zero money writes on login, Not now, cancelled account selection, reminder, or Postpone. SQLCipher enforces exact recurring identity, current-month key, typed projection parity, account verification, one immutable ledger append and only that due's postponement removal.
 - Source regression M1015 confirms both due pathways, consent, replay and postponed dates; M631/M1012 startup contracts updated before CI and M946 money matrix extended. PR remains Draft until all latest-head CI and actual Android UAT are verified.
+
+[M1016 / Issue #732 / Draft PR / 2026-11-16]
+- Corrected broad native reviewEligible acceptance, which previously queued any nonempty 100-char sender and 1600-char message as financial review. The Android receiver and consented historical provider importer now share the same conservative pre-encryption gate requiring financial evidence via existing qualifies() or read-only unknownFinancialKind().
+- Explicit promotional CTAs such as Arabic 'احصل على خصم 50 ريال' or English 'special offer' are rejected unless a genuine completed financial action is also evidenced. Unfamiliar genuine financial senders are not denied solely for missing a known bank brand. This intake-only gate has NO finance posting authority.
+- Pure verification SMS continues to durable 30-day encrypted OTP exclusion (before review) and mixed completed-money-plus-OTP remains masked and review-only. Existing owner/sender exclusion, native fingerprint, exact finance ledger verification, WorkManager, and four-rule classifier are untouched.
+- Updated the previous M549 permissive-reception contract; added M1016 synthetic native security tests plus M979/M981/M954 to M946 safety matrix. Exact M385 change scope and behavior contract updated. CI and Android carrier/device UAT are required before merge.
+
+[M449 REVIEWED UPDATE — ISSUE #734 — PR #733]
+- Reviewed source SHA: cdc750f45cccc7fa8593b2093c8dffb5c0287811
+- Approved change: Owner-requested M1017 bounded sequential drain of all actionable bank SMS candidates, preserving all exact account, owner, exclusion, money and idempotent financial guards. No Android device or latest-head CI success claimed.
+- Changed production paths: lib/main.dart, lib/waffra_auto_sms_autopost.part.dart, lib/waffra_sms_background_batches.dart
+- Verification: exact-head CI and physical Android evidence remain separate, not approved merely by these notes.
+
+[M449 REVIEWED UPDATE — ISSUE #735 — PR #733]
+- Reviewed source SHA: fd9438442a709c9d79be30437367fe047c1dad3d
+- Approved change: Native SMS receiver coalesces one WorkManager wakeup per broadcast after encrypted queue writes. New arrivals chain with APPEND_OR_REPLACE instead of getting discarded by KEEP, preserving foreground guard, finance and privacy protection.
+- Changed production paths: native/WaffraAutoSmsReceiver.kt, native/WaffraAutoSmsWorker.kt
+- Verification: CI exact-head results and physical Android acceptance remain distinct; this note does not certify background delivery.
+
+[M449 REVIEWED UPDATE — ISSUE #736 — PR #733]
+- Reviewed source SHA: d36784b4c8fec78f8ac4c349304914ee7f35ff9f
+- Approved change: M1019 local owner-guarded overflow replay marker on full 1000-item encrypted review queue, receiver wakeup and cursor-safe bounded SMS provider refill after successful Worker pass, with no existing-row eviction or money authority change.
+- Changed production paths: native/WaffraAutoSmsStore.kt, native/WaffraAutoSmsReceiver.kt, native/WaffraAutoSmsWorker.kt
+- Verification: exact-head CI and physical Android SMS inbox retention and replay are unverified; notes alone do not certify operation.
+
+[M449 REVIEWED UPDATE — ISSUE #737 — PR #733]
+- Reviewed source SHA: 6cc17fcb05aa610c7a34794fe14d7d550facff52
+- Approved change: Bounded and checkpointed bank SMS background processing with native encrypted reviewAttempt marker, guarded SQLCipher commit/ACK and WorkManager partial continuation. Legacy review-only rows remain available; tests were reconciled with the actual protected code contracts.
+- Changed production paths: lib/main.dart, lib/waffra_auto_sms.dart, lib/waffra_auto_sms_autopost.part.dart, lib/waffra_sms_background_checkpoint.dart, native/WaffraAutoSmsStore.kt, native/WaffraAutoSmsWorker.kt
+- Verification: exact-head CI and physical Android UAT remain separate; notes alone do not certify successful execution within an OS-enforced deadline.
