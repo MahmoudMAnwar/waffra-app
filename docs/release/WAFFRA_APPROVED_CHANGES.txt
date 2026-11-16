@@ -1,3 +1,8 @@
+[M1018 / Issue #735 / Draft PR #733 — ANDROID SMS BACKGROUND WAKEUP]
+- Verified old native WorkManager used ExistingWorkPolicy.KEEP: bank SMS accepted after a running worker snapshot might not get a follow-up background pass. Replaced with APPEND_OR_REPLACE to serialize a successor after in-progress work without cancelling verified finance activity, and to avoid failed/cancelled predecessor poisoning new SMS wakeups.
+- Receiver now writes all eligible SMS in one Android incoming broadcast to owner-encrypted native intake, then enqueues one future job for the broadcast (rather than one per sender). No direct ledger writes or SMS uploads.
+- Tests written before the production source edit: M1018 source contracts and M417 Python fail-closed smoke, registered in M946 safety. CI and Android real-device message-during-running-job acceptance still required; WorkManager 55s timeout, OS deferral and native 1000-message capacity remain unrelated unresolved limits.
+
 [M1017 / Issue #734 / Draft PR #733 — BANK SMS BACKGROUND DRAIN]
 - Removed the first-25 actionable candidate processing ceiling when approved user autoPost rules exist. Every eligible candidate is traversed in sequential batches of at most 25, retaining existing encrypted native exclusions, review-only fallback, verified-account guards, SQLCipher authority, hash dedup and committed-only native ACK.
 - Added synthetic count/ordering/duplicate regression for 0, 1, 24, 25, 26, 50, 51, 100, 101 and 1000 messages; updated old M462 and mandatory M946 safety matrix before source rollout. No live device behavior or worker timeout success is claimed; WorkManager 55s/KEEP/1000-capacity remain separate gaps.
@@ -1160,3 +1165,9 @@ M969 / Issue #670 / Draft #665: real M120 Android SQLCipher receipt restart asse
 - Approved change: Owner-requested M1017 bounded sequential drain of all actionable bank SMS candidates, preserving all exact account, owner, exclusion, money and idempotent financial guards. No Android device or latest-head CI success claimed.
 - Changed production paths: lib/main.dart, lib/waffra_auto_sms_autopost.part.dart, lib/waffra_sms_background_batches.dart
 - Verification: exact-head CI and physical Android evidence remain separate, not approved merely by these notes.
+
+[M449 REVIEWED UPDATE — ISSUE #735 — PR #733]
+- Reviewed source SHA: fd9438442a709c9d79be30437367fe047c1dad3d
+- Approved change: Native SMS receiver coalesces one WorkManager wakeup per broadcast after encrypted queue writes. New arrivals chain with APPEND_OR_REPLACE instead of getting discarded by KEEP, preserving foreground guard, finance and privacy protection.
+- Changed production paths: native/WaffraAutoSmsReceiver.kt, native/WaffraAutoSmsWorker.kt
+- Verification: CI exact-head results and physical Android acceptance remain distinct; this note does not certify background delivery.
