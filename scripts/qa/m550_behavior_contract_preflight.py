@@ -403,6 +403,17 @@ def build_report(base: str, head: str, root: Path = ROOT) -> dict:
     # match the moved text. Keep the original baseline unchanged: a dropped
     # or unregistered implementation still fails the exact-head scan.
     home_path = "lib/main.dart"
+    # M1014: a changed Dart Home part must be scanned as part of the
+    # reconstructed Home even when main.dart itself has no diff.
+    changed_home_parts = any(
+        p.startswith("lib/waffra_home_") and p.endswith(".part.dart")
+        for p in sources
+    )
+    if changed_home_parts:
+        old_sources.setdefault(home_path, git("show", f"{base}:{home_path}"))
+        new_sources.setdefault(
+            home_path, (root / home_path).read_text(encoding="utf-8"))
+    comparison_sources = sources | ({home_path} if changed_home_parts else set())
     expected_parts = (
         "lib/waffra_home_pdf_reports.part.dart",
         "lib/waffra_home_profile.part.dart",
@@ -479,7 +490,7 @@ def build_report(base: str, head: str, root: Path = ROOT) -> dict:
                 continue
             if old_part.startswith("part of 'main.dart';"):
                 old_sources[home_path] += "\n" + old_part
-    stale, count = detect_stale(target_tests, old_sources, new_sources, sources)
+    stale, count = detect_stale(target_tests, old_sources, new_sources, comparison_sources)
     # M934: scan ALL Dart tests against the literal raw main.dart they read.
     # Static warnings are reported BEFORE 10-minute Flutter test suites run.
     raw_main = (root / home_path).read_text(encoding="utf-8")
