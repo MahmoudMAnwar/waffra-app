@@ -79,6 +79,7 @@ import 'waffra_pdf_reader.dart';
 import 'waffra_footer.dart';
 import 'waffra_messages.dart';
 import 'waffra_auto_sms.dart';
+import 'waffra_sms_background_batches.dart';
 import 'waffra_auto_sms_policy.dart';
 import 'waffra_bank_sms_facts.dart';
 import 'waffra_sms_local_rules.dart';
