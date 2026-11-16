@@ -1,3 +1,8 @@
+[M1017 / Issue #734 / Draft PR #733 — BANK SMS BACKGROUND DRAIN]
+- Removed the first-25 actionable candidate processing ceiling when approved user autoPost rules exist. Every eligible candidate is traversed in sequential batches of at most 25, retaining existing encrypted native exclusions, review-only fallback, verified-account guards, SQLCipher authority, hash dedup and committed-only native ACK.
+- Added synthetic count/ordering/duplicate regression for 0, 1, 24, 25, 26, 50, 51, 100, 101 and 1000 messages; updated old M462 and mandatory M946 safety matrix before source rollout. No live device behavior or worker timeout success is claimed; WorkManager 55s/KEEP/1000-capacity remain separate gaps.
+- Also corrected M1016 historical OTP source-contract assertion to match the existing encrypted excludedMessageInfo helper; no weakening of excluded ledger behavior.
+
 [M1005 / #718 / CI regression fix] Shared-notice policy MWAFFRA footer: notifications exclusion reports via existing `snack(route,...)` injected from Home rather than declaring a second `SnackBar` presenter in `waffra_approved_notifications.dart`. Widget regression checks visible failure + retained selection then success + cleared selection, with same route presenter and animations. Existing Android/native exclusions, sender opt-in and bank money guards unchanged. Tests were previously 3279 pass 2 fail (root-cause failures in centralized notice policy and new UI feedback widget); rerun pending.
 
 [M1005 / #718 / stale row feedback] Verified native `pendingById` can no longer silently return an empty review after a tap; refresh the existing owner-encrypted queue and show a visible, nonfinancial error/recovery notice. No fabricated exclusion ACK or finance action. Ensures no-op feedback is explicit even when an SMS was already excluded by another concurrent callback.
@@ -1149,3 +1154,9 @@ M969 / Issue #670 / Draft #665: real M120 Android SQLCipher receipt restart asse
 - Explicit promotional CTAs such as Arabic 'احصل على خصم 50 ريال' or English 'special offer' are rejected unless a genuine completed financial action is also evidenced. Unfamiliar genuine financial senders are not denied solely for missing a known bank brand. This intake-only gate has NO finance posting authority.
 - Pure verification SMS continues to durable 30-day encrypted OTP exclusion (before review) and mixed completed-money-plus-OTP remains masked and review-only. Existing owner/sender exclusion, native fingerprint, exact finance ledger verification, WorkManager, and four-rule classifier are untouched.
 - Updated the previous M549 permissive-reception contract; added M1016 synthetic native security tests plus M979/M981/M954 to M946 safety matrix. Exact M385 change scope and behavior contract updated. CI and Android carrier/device UAT are required before merge.
+
+[M449 REVIEWED UPDATE — ISSUE #734 — PR #733]
+- Reviewed source SHA: cdc750f45cccc7fa8593b2093c8dffb5c0287811
+- Approved change: Owner-requested M1017 bounded sequential drain of all actionable bank SMS candidates, preserving all exact account, owner, exclusion, money and idempotent financial guards. No Android device or latest-head CI success claimed.
+- Changed production paths: lib/main.dart, lib/waffra_auto_sms_autopost.part.dart, lib/waffra_sms_background_batches.dart
+- Verification: exact-head CI and physical Android evidence remain separate, not approved merely by these notes.
