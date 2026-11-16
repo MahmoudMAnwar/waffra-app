@@ -307,7 +307,11 @@ extension _WaffraHomeFinanceStartup on _HomeScreenState {
       try{
        await _refreshWidget();
        if(!_m630SmsSessionCurrent(startupEpoch))return;
-       if(!verifiedEncryptedStartup)await applyRecurring();
+       // M1012: verified SQLCipher startup previously skipped the due dialog
+       // altogether, even for fully funded one-time goals due today.
+       // Only goal-linked dues are re-enabled for this source: they require
+       // an explicit Paid tap and atomic settleLinkedGoalDue writer.
+       await applyRecurring(goalLinkedOnly:verifiedEncryptedStartup);
        if(!_m630SmsSessionCurrent(startupEpoch))return;
        if(recurringRemindersEnabled)await syncRecurringReminders();
       }catch(error){
