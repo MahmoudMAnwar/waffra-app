@@ -1215,7 +1215,12 @@ Map<String,Object?> waffraM632ClassifySmsQueue(Map<String,Object?> input){
  for(final candidate in results){
   final id=candidate['id'],body=candidate['body'];
   if(id is! String||body is! String)continue;
-  if(hashes.contains(bankSmsHash(body,nativeId:id))){
+  final verifiedNativeId=RegExp(r'^[a-f0-9]{64}$').hasMatch(id)?id:null;
+  // Older SMS review fixtures and manual/non-native candidates have no
+  // verified Android fingerprint. Keep their legacy review-only identity;
+  // never infer finance authorization from an unverified identifier.
+  final identityHash=bankSmsHash(body,nativeId:verifiedNativeId);
+  if(hashes.contains(identityHash)){
    committed.add(id);
    retainOnAckFailure.add(Map<String,Object?>.from(candidate));
    continue;
@@ -1230,7 +1235,7 @@ Map<String,Object?> waffraM632ClassifySmsQueue(Map<String,Object?> input){
    continue;
   }
   final annotated=Map<String,Object?>.from(candidate);
-  annotated['m991SourceHash']=bankSmsHash(body,nativeId:id);
+  annotated['m991SourceHash']=identityHash;
   if(WaffraBankSmsFactsParser.isVerificationChallenge(body)){
    annotated['sensitiveOtp']=true;
   }
