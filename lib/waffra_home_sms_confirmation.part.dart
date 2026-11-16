@@ -79,6 +79,9 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
    if(!updated.any((v)=>v.id==reviewed.id))throw StateError('Missing committed SMS');
    if(!mounted)return;
    setState((){
+    // M1008: invalidate the month/history cache as well as the ledger;
+    // merely replacing entries leaves filtered Home cards on old IDs.
+    _m684InvalidatePeriodRead();
     entries..clear()..addAll(updated);
     smsHashes..clear()..addAll(
      applied.current.finance.getStringList('waffra_sms_hashes_v1')??
@@ -87,6 +90,14 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
     _lastLedgerSavedRaw=applied.current.ledgerRaw;
     _lastWidgetRevision=applied.current.widgetRevision;
    });
+   // M1008 P0: commit and SMS hash are durable, but scoped account
+   // IDs and balances must be re-read from the authenticated SQLCipher
+   // source. Never treat failure to redraw as a reason to replay the debit.
+   var accountProjectionVerified=false;
+   try{
+    await _m467RefreshHomeAccounts();
+    accountProjectionVerified=mounted&&_m468VerifiedAccountsLoaded;
+   }catch(_){/* Post-commit presentation failure is not a failed save. */}
    if(sender.trim().isNotEmpty){
     unawaited(_recordConfirmedSmsAccountAssociation(
      record:reviewed,sender:sender,accountId:chosen.ids!.single));
@@ -97,6 +108,12 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
      kind:income?'income':'expense',category:category);}catch(_){}
    }
    unawaited(_refreshWidget());
+   if(mounted&&!accountProjectionVerified){
+    snack(context,waffraIsEnglish?
+     'Saved successfully. Account balance is not verified yet; refresh accounts.':
+     'العملية اتحفظت بنجاح، لكن رصيد الحساب لم يتم التحقق منه بعد. حدّث الحسابات.',
+     isError:true);
+   }
    final ack=await WaffraAutoSms.acknowledgeCommitted([id]);
    if(ack&&mounted){
     setState(()=>_autoSmsPending.removeWhere((r)=>r['id']==id));
@@ -128,38 +145,33 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
  /// M983: the selected SMS kind opens ONLY its own verified/editor form.
  /// The native ID is re-read under the active owner before it is used.
  /// No rule suggestion can choose a bank account or commit a ledger entry.
- /// M985: learn ONLY after a new, verified, user-confirmed manual
-  /// correction and a second explicit consent. The rule editor still reviews
-  /// safe keyword suggestions; no automatic finance or queue ACK follows.
-  Future<void> _m985OfferLearnManualCorrection({
-   required String body,required String sender,required bool income,
-   required Set<String> beforeIds,
-  })async{
-   if(!mounted||_smsRuleOwnerKey.isEmpty)return;
-   final confirmed=entries.where((e)=>!beforeIds.contains(e.id)&&
-    e.sourceType=='manual'&&e.income==income&&
-    categories.any((c)=>c.isSubcategory&&c.income==income&&
-     c.name==e.category&&
-     waffraCategoryAvailableForNewEntry(categories,c))).toList();
-   if(confirmed.length!=1)return;
-   final learn=await showWaffraDialog<bool>(context:context,
-    builder:(dialog)=>AlertDialog(
-     title:WaffraText(waffraIsEnglish?
-      'Use this correction for future SMS?':'تتعلم وفرة من التصحيح ده؟'),
-     content:WaffraText(waffraIsEnglish?
-      'Review and approve a safe keyword rule for similar messages. The transaction is already saved; no message will be posted automatically.':
-      'راجع قاعدة كلمات آمنة للرسائل المشابهة. العملية اتحفظت بالفعل، ومفيش تسجيل تلقائي لأي رسالة.'),
-     actions:[
-      TextButton(onPressed:()=>Navigator.pop(dialog,false),
-       child:WaffraText(waffraIsEnglish?'Not now':'مش دلوقتي')),
-      FilledButton(onPressed:()=>Navigator.pop(dialog,true),
-       child:WaffraText(waffraIsEnglish?'Review rule':'مراجعة القاعدة')),
-     ]));
-   if(learn==true&&mounted){
-    await _openSmsRules(seedMessage:body,seedKind:income?'income':'expense',
-     seedSender:sender,seedCategory:confirmed.single.category);
-   }
+ /// M1007: a committed manual correction learns safe, non-posting
+ /// category hints automatically. Do not ask the owner to "teach" Waffra
+ /// again; the confirmed save IS the learning signal. Bank-direction
+ /// conflicts and unverified phrases must never become posting authority.
+ Future<void> _m985AutoLearnManualCorrection({
+  required String body,required String sender,required bool income,
+  required Set<String> beforeIds,
+ })async{
+  if(!mounted||_smsRuleOwnerKey.isEmpty)return;
+  final confirmed=entries.where((e)=>!beforeIds.contains(e.id)&&
+   e.sourceType=='manual'&&e.income==income&&
+   categories.any((c)=>c.isSubcategory&&c.income==income&&
+    c.name==e.category&&
+    waffraCategoryAvailableForNewEntry(categories,c))).toList();
+  if(confirmed.length!=1)return;
+  // The entry form already learns its saved category; an idempotent
+  // recheck protects routes where the form was returned after a cold read.
+  try{await _learnManualCategoryPreference(confirmed.single);}catch(_){}
+  if(sender.trim().isEmpty)return;
+  try{
+   await _learnSafeSmsRule(body:body,sender:sender,
+    kind:income?'income':'expense',category:confirmed.single.category,
+    confirmedCorrection:true,description:confirmed.single.title);
+  }catch(_){
+   // No learning failure may roll back or repeat a committed finance entry.
   }
+ }
 
   Future<void> _m983OpenSmsTypedTemplate({
   required String id,required String kind,
@@ -222,7 +234,7 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
     final beforeIds=entries.map((e)=>e.id).toSet();
     await entrySheet(manualIncomeOverride:kind=='income',
      reviewedOriginalSms:body,reviewedSender:sender);
-    if(mounted)await _m985OfferLearnManualCorrection(
+    if(mounted)await _m985AutoLearnManualCorrection(
      body:body,sender:sender,income:kind=='income',beforeIds:beforeIds);
    }
   }
@@ -827,7 +839,7 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
       final beforeIds=entries.map((e)=>e.id).toSet();
       await entrySheet(manualIncomeOverride:reviewType=='income',
        reviewedOriginalSms:body,reviewedSender:sender);
-      if(mounted)await _m985OfferLearnManualCorrection(
+      if(mounted)await _m985AutoLearnManualCorrection(
        body:body,sender:sender,income:reviewType=='income',beforeIds:beforeIds);
      }
     }

@@ -42,6 +42,11 @@ extension _WaffraHomeVerifiedRefresh on _HomeScreenState {
       encryptedCurrent.generation==encryptedPrevious.generation&&
       encryptedCurrent.digest==encryptedPrevious.digest&&
       current.widgetRevision==previous?.widgetRevision){
+    // The finance witness may be unchanged while a previously completed
+    // SMS commit left the selected-account ID/balance projection stale.
+    // A user refresh must repair that read-only view too, without writing
+    // any account or guessing missing ledger data.
+    await _m467RefreshHomeAccounts();
     return;
    }
    // Legacy first installs may omit their empty ledger or category catalog.
@@ -107,6 +112,10 @@ extension _WaffraHomeVerifiedRefresh on _HomeScreenState {
    final nextReminders=view.getBool('waffra_recurring_reminders_enabled_v1')??false;
    if(!mounted)return;
    setState((){
+    // M1008: background SMS, restore and pull-to-refresh change the
+    // verified ledger outside entrySheet. Rebuild both chronological and
+    // account-scoped Home indexes, never leave the previous month cached.
+    _m684InvalidatePeriodRead();
     entries..clear()..addAll(nextEntries);
     categories..clear()..addAll(nextCategories);
     namedBudgets..clear()..addAll(nextNamedBudgets);
@@ -129,7 +138,9 @@ extension _WaffraHomeVerifiedRefresh on _HomeScreenState {
    // The verified pull read already includes the full authoritative ledger.
    // Reusing it prevents a second SQLCipher decrypt for the Home widget.
    unawaited(_publishVerifiedWidgetBalance(current));
-   unawaited(_m467RefreshHomeAccounts());
+   // Pull-to-refresh should complete with the same owner-verified account
+   // links and balances as the newly hydrated ledger, not a stale selection.
+   await _m467RefreshHomeAccounts();
   }catch(error) {
    debugPrint('Verified pull refresh failed closed: $error');
    if(mounted)setState((){

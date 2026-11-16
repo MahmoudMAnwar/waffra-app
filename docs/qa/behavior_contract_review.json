@@ -1,12 +1,63 @@
 {
   "schema_version": 1,
-  "pr": "M1006 #720 — safe accessible finance revalidation UI after #711/#716/#718",
-  "issue": "Issue #719",
+  "pr": "M1007 + P0 M1008 #722 — safe global learning plus two-account verified SMS presentation fix",
+  "issue": "Issues #721 and #723",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at f0def360ea75b9c865548b6f1b4fc07e9640f2c2 after #656",
   "reviewed_at": "2026-11-16",
-  "review_policy": "Owner requested code-only, no manual tests or test files. Prior safety contracts remain binding. Full same-SHA QA required later.",
+  "review_policy": "Owner approved automatic safe learning without teaching prompts, supported by new executable Dart tests; physical Android and old-owner backup acceptance remain separate.",
   "contracts": [
+    {
+      "id": "M1008-VERIFIED-TWO-ACCOUNT-SMS-SAVE-ACCOUNT-SCOPE-AND-PERIOD-REFRESH",
+      "issue": "Issue #723 / Draft PR #722",
+      "previous_behavior": "Confirmed bank SMS under entrySheet updated memory entries/period index but not the chosen account's verified all-time entry IDs/balance; direct m565 confirmed SMS did not invalidate period index or refresh account projection. Verified pull refresh could return early on unchanged generation without rechecking stale account scopes. Verified delete/undo/delete-all presentation similarly left account reads behind durable changes.",
+      "approved_behavior": "After both SMS commit routes, invalidate the read-only period index and request owner-verified SQLCipher readHomeAccountView to update the selected account's exact linked entry IDs, balances and selected-month summary; when a prior read is active await its newer follow-up. Pull refresh invalidates changed ledger index and refreshes account projections even for unchanged snapshot. Verified deletion/undo/delete-all also trigger new account reads. Do not repeat any financial write on post-commit presentation failure; tell user the durable write occurred while balances need verification. All-account month movement is distinct from account's historic opening/previous-month balance.",
+      "source_paths": [
+        "lib/waffra_home_entry_sheet.part.dart",
+        "lib/waffra_home_sms_confirmation.part.dart",
+        "lib/waffra_home_verified_refresh.part.dart",
+        "lib/waffra_home_verified_account_flows.part.dart",
+        "lib/waffra_home_transaction_ledger_actions.part.dart",
+        "lib/waffra_home_delete_all_transactions.part.dart"
+      ],
+      "test_paths": [
+        "test/storage/m1008_two_accounts_sms_reconciliation_test.dart",
+        "test/m1008_sms_account_projection_refresh_regression_test.dart",
+        "test/storage/m955_home_verified_summary_parity_test.dart"
+      ],
+      "safety_invariants": [
+        "Only the verified finance authority and single-writer SQLCipher source can modify ledger, source account balances or link IDs; Home refresh is strictly read-only.",
+        "After a durable commit, failure to refresh UI is an account-projection verification problem, not an invitation to resave or double-debit a message.",
+        "All current month movements and current balance use exactly linked owners' accounts with no guessed links; accountless history remains read-only and excluded from individual bank balances.",
+        "Preserve user-selected account, amount and full source SMS, fingerprint dedup, no deletion of existing ledger data or changing original balances.",
+        "Proof of two-account numeric reconciliation comes from disposable SQLCipher synthetic transactions; physical Android owner session, SMS screenshots and historic backup UAT remain separate."
+      ]
+    },
+    {
+      "id": "M1007-AUTOMATIC-GLOBAL-FOUR-KIND-SMS-LEARNING-NO-TEACH-POPUP",
+      "issue": "Issue #721 / Draft PR #722",
+      "previous_behavior": "Rules learned from an SMS default to a sender-specific encrypted owner rule. Manual rules may be senderless but the UI has no explicit scope. A sender-bound OTP/beneficiary structural template cannot be converted to safe global scope by its owner.",
+      "approved_behavior": "After confirmed SMS correction, verified income/expense/transfer save or explicit exclusion, automatically learn only safe classification or structural exclusion patterns and default to all senders. No teaching dialog or extra user approval. Preserve legacy sender-specific rules unless manually edited. Global rules may suggest classification, never auto-post; posted and mixed financial messages remain in review. The 4-kind matcher evaluates new and pending SMS independent of displayed sender.",
+      "source_paths": [
+        "lib/waffra_sms_local_rules.dart",
+        "lib/waffra_sms_rule_settings_page.dart",
+        "lib/waffra_home_sms_confirmation.part.dart",
+        "lib/waffra_home_sms_rules.part.dart",
+        "lib/waffra_home_sms_management.part.dart"
+      ],
+      "test_paths": [
+        "test/m1007_sms_rule_scope_test.dart",
+        "test/m980_four_sms_rule_kinds_every_route_test.dart"
+      ],
+      "safety_invariants": [
+        "Do not convert existing learned sender-specific rules to all senders without owner edit and save.",
+        "Do not auto-exclude money posted, composite notices, conflicts, or mixed OTP+financial SMS; keep native encrypted pending ID and finance authority.",
+        "Preserve structural verification/beneficiary matching when expanding scope, never expand to free-text unverified financial patterns.",
+        "Global financial rule is suggestion only; auto-post requires exact sender, verified bank account and four-digit suffix.",
+        "No teaching popup occurs after saved corrections; automatic learning never rewrites existing user rules or bypasses independent bank direction evidence.",
+        "Real Android/SMS/owner restore acceptance remains unverified, exact-head CI required."
+      ]
+    },
     {
       "id": "M1006-VISIBLE-RETRY-DARK-RTL-A11Y-STACKED-ON-716",
       "issue": "Issue #719 / Draft PR #720 stacked on Draft #716",

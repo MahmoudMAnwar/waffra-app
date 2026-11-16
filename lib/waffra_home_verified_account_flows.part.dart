@@ -6,8 +6,13 @@ extension _WaffraHomeVerifiedAccountFlows on _HomeScreenState {
  Future<void> _m467RefreshHomeAccounts()async{
   final active=_m468AccountReadInFlight;
   if(active!=null){
+   // M1008: a saved SMS can arrive while an older account projection is
+   // still loading. Await the follow-up verified read as well, not only
+   // the stale one; callers must not report refreshed balances too soon.
    _m468AccountReadAgain=true;
    await active;
+   final follower=_m468AccountReadInFlight;
+   if(follower!=null&&!identical(follower,active))await follower;
    return;
   }
   final running=_m468ReadVerifiedAccountsOnce();

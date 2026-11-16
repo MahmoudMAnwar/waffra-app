@@ -147,6 +147,12 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
   var income=kind=='income';
   var autoPost=existing?.autoPost??false;
   var accountId=existing?.accountId??'';
+  // M1007: legacy rules keep their original sender. Empty sender is global
+  // only after the owner deliberately picks that scope and saves the rule.
+  // New rules learn globally by default; historic rules keep their saved
+  // sender scope unless their owner explicitly edits it.
+  var allSenders=existing==null||existing.sender.trim().isEmpty;
+  if(allSenders)autoPost=false;
   // Exclusion rules normally match ANY verified keyword, not every word
   // suggested from one SMS. Matching all is an explicit advanced option.
   var all=existing?.matchAll??(seed==null&&kind!='excluded');
@@ -191,12 +197,27 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
      final previewRule=WaffraSmsLocalRule(
       id:'preview',name:name.text.trim().isEmpty?'Preview':name.text,
       keywords:selected.toList(),income:income,category:category??'',
-      kind:kind,matchAll:all,sender:sender.text.trim());
+      kind:kind,
+      matchAll:kind=='excluded'&&existing?.templateFamily.isNotEmpty==true?
+       true:all,
+      sender:allSenders?'':sender.text.trim(),
+      templateFamily:kind=='excluded'?existing?.templateFamily??'':'',
+      contextFragments:kind=='excluded'?
+       existing?.contextFragments??const <String>[]:const <String>[]);
      // A seeded bank sender is known. Never fake a 0-match preview by
      // evaluating a sender-scoped rule against senderless queue text.
      // When teaching a specific SMS, preview THAT sender and SMS only.
      final inspected=seed!=null?
-      <MapEntry<String,String>>[MapEntry(widget.seedSender,seed)]:
+      <MapEntry<String,String>>[
+       // A global rule must preview pending SMS from all senders, not
+       // just the selected teaching message.
+       if(allSenders)...[
+        for(var i=0;i<widget.scannedMessages.length;i++)
+         MapEntry(i<widget.scannedSenders.length?
+          widget.scannedSenders[i]:'',widget.scannedMessages[i]),
+       ],
+       MapEntry(widget.seedSender,seed),
+      ]:
       <MapEntry<String,String>>[
        for(var i=0;i<widget.scannedMessages.length;i++)
         MapEntry(i<widget.scannedSenders.length?
@@ -301,11 +322,36 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
           onChanged:(value)=>refresh(()=>category=value)),
          const SizedBox(height:12),
         ],
-        TextField(controller:sender,
+        Text(widget.english?'Apply this rule to':'نطاق تطبيق القاعدة',
+         style:Theme.of(ctx).textTheme.titleSmall),
+        const SizedBox(height:6),
+        Wrap(spacing:8,runSpacing:6,children:[
+         ChoiceChip(
+          key:const Key('waffra-sms-scope-all-senders'),
+          label:Text(widget.english?'All senders':'كل المرسلين'),
+          selected:allSenders,
+          onSelected:(_)=>refresh((){
+           allSenders=true;autoPost=false;accountId='';validation=null;
+          })),
+         ChoiceChip(
+          key:const Key('waffra-sms-scope-specific-sender'),
+          label:Text(widget.english?'Specific sender':'مرسل محدد'),
+          selected:!allSenders,
+          onSelected:(_)=>refresh((){
+           allSenders=false;validation=null;
+          })),
+        ]),
+        const SizedBox(height:10),
+        if(!allSenders)TextField(controller:sender,
          decoration:InputDecoration(
           prefixIcon:const Icon(Icons.account_balance_outlined),
           labelText:widget.english?'SMS sender':'مرسل الرسالة',
           border:const OutlineInputBorder())),
+        if(allSenders)Padding(padding:const EdgeInsets.only(top:4),
+         child:Text(widget.english?
+          'Matches safe phrases from all senders. Financial messages and conflicts stay in review; global rules never auto-post.':
+          'تُقارن المقاطع الآمنة مع كل المرسلين. الرسائل المالية والتعارضات تفضل للمراجعة، ومفيش تسجيل مالي تلقائي من القاعدة العامة.',
+          style:Theme.of(ctx).textTheme.bodySmall)),
         const SizedBox(height:14),
         Row(children:[
          const Icon(Icons.tag_outlined,size:21),
@@ -419,7 +465,7 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
            'matching 4-digit account suffix. Otherwise review manually.':
            'فقط عند تطابق البنك وآخر ٤ أرقام مع حساب مالي مؤكد. '
            'أي اختلاف يرجع للمراجعة.'),
-          onChanged:widget.bankAccounts.isEmpty?null:
+          onChanged:allSenders||widget.bankAccounts.isEmpty?null:
            (v)=>refresh(()=>autoPost=v)),
          if(autoPost)...[
           WaffraCenteredDropdownFormField<String>(
@@ -456,14 +502,28 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
            id:existing?.id??'custom_${DateTime.now().microsecondsSinceEpoch}',
            name:name.text.trim(),keywords:selected.toList(),
            kind:kind,income:income,category:financial?(category??''):'',
-           matchAll:all,sender:sender.text.trim(),
-           autoPost:autoPost&&financial,accountId:autoPost?accountId:'',
+           matchAll:kind=='excluded'&&existing?.templateFamily.isNotEmpty==true?
+            true:all,
+           sender:allSenders?'':sender.text.trim(),
+           // Keep a reviewed structural exclusion structural when its scope
+           // changes; broad literal conversion would hide unrelated SMS.
+           templateFamily:kind=='excluded'?existing?.templateFamily??'':'',
+           contextFragments:kind=='excluded'?
+            existing?.contextFragments??const <String>[]:const <String>[],
+           autoPost:autoPost&&financial&&!allSenders,
+           accountId:autoPost&&!allSenders?accountId:'',
            accountSuffix:autoPost?suffix.text.trim():'',
           );
           if(name.text.trim().length<2){
            refresh(()=>validation=widget.english?
             'Give the rule a name of at least two characters.':
             'اكتب اسمًا للقاعدة من حرفين على الأقل.');
+           return;
+          }
+          if(!allSenders&&sender.text.trim().isEmpty){
+           refresh(()=>validation=widget.english?
+            'Choose a sender for this rule, or switch to All senders.':
+            'اكتب اسم المرسل أو اختار كل المرسلين.');
            return;
           }
           if(selected.isEmpty){
