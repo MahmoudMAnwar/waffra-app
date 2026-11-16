@@ -1,12 +1,34 @@
 {
   "schema_version": 1,
-  "pr": "M1016–M1018 Issues #732/#734/#735 — SMS intake, batching and wakeup (Draft)",
+  "pr": "M1016–M1019 Issues #732/#734/#735/#736 — SMS intake, batching and wakeup (Draft)",
   "issue": "Issues #732, #734 and #735",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main after merged PR #725 (16 November 2026)",
   "reviewed_at": "2026-11-16",
   "review_policy": "Authorized scope covers owner-requested native SMS intake filtering, all-candidate bounded processing and WorkManager KEEP wakeup fix. Do not relax owner/permission/OTP safety or enable unapproved finance posting. Synthetic source tests are not physical Android proof.",
   "contracts": [
+    {
+      "id": "M1019-ENCRYPTED-SMS-CAPACITY-SATURATION-REPLAY",
+      "issue": "Issue #736",
+      "previous_behavior": "Live bank SMS returns false when 1000 queued candidates exist and no worker wakeup is scheduled; history scan stops with cursor intact but no automatic refill after capacity returns.",
+      "approved_behavior": "Durably record owner-scoped non-sensitive capacity-replay-needed status for eligible messages not queued at saturation. Receiver schedules a WorkManager wakeup even when offer rejected because full. After background worker processing successfully finishes, perform bounded read-only Android provider replay into owner encrypted candidate queue if capacity free, queue another worker when new candidates imported; keep native high-water cursor and every immutable exclusion/committed hash guard.",
+      "source_paths": [
+        "native/WaffraAutoSmsStore.kt",
+        "native/WaffraAutoSmsReceiver.kt",
+        "native/WaffraAutoSmsWorker.kt"
+      ],
+      "test_paths": [
+        "test/m1019_sms_intake_capacity_recovery_test.dart",
+        "test/qa/m417_sms_permission_acceptance_test.py"
+      ],
+      "safety_invariants": [
+        "No old queued SMS eviction or capacity increase; owner/permission gates before replay.",
+        "No automatic finance write, no raw SMS upload or logging.",
+        "History cursor and queued candidate update remain atomic and deduplicated.",
+        "Replay only possible for SMS retained in Android SMS provider; hard OS deletion remains out of guarantee.",
+        "No infinite busy loop when queue remains full or read failed; auto-refill only on confirmed native import."
+      ]
+    },
     {
       "id": "M1018-ANDROID-SMS-LATE-WAKEUP-NO-KEEP-RACE",
       "issue": "Issue #735",
