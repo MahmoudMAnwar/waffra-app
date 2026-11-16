@@ -21,6 +21,11 @@ GROUPS = ("money", "experience", "safety")
 # Each user-facing capability has a real runnable suite. Tests can be reused
 # across capabilities; the runner de-duplicates within each CI shard.
 FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {
+    "m1011_sms_original_provenance_review_ack_and_verified_transfer": ("money", (
+        "test/m1011_reviewed_sms_provenance_ack_transfer_regression_test.dart",
+        "test/m983_sms_direct_kind_prefill_refresh_test.dart",
+        "test/m985_sms_prefill_identity_status_conflict_duplicate_test.dart",
+        "test/m580_sms_security_navigation_performance_test.dart")),
     "m1010_goals_dues_inline_account_validation_and_green_hero": ("experience", (
         "test/m1010_goal_due_required_account_hero_test.dart",
         "test/m693_three_approved_pages_layout_matrix_test.dart")),
