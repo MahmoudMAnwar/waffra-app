@@ -1,3 +1,8 @@
+[M1020 CI REPAIR — Draft PR #733 — Dart SMS bridge restored]
+- A newly inserted native review-checkpoint bridge method previously broke Dart source syntax and duplicated part of lib/waffra_auto_sms.dart. That was a genuine source regression, not an obsolete job expectation. Restored the original complete class with exactly one pending() implementation and inserted only the verified markBackgroundReviewed() method.
+- Existing M417 privacy test now checks that class, method and regex remain well-formed and unique before expensive downstream jobs. M550 passed on the repaired source head. This does not constitute Android acceptance.
+- Source correction commit: 97228db086151cf4f4d5a012400e900ed29ca103; exact-head Flutter analyze, M946 and other CI gates must re-run before merge.
+
 [M1020 / Issue #737 / Draft PR #733 — DURABLE 35-SECOND BACKGROUND SMS CONTINUATION]
 - Corrected the fifth background SMS gap: a 55-second native FlutterEngine watchdog used to terminate an unbounded 25-per-batch Dart run that could contain 1000 candidates. Each Dart pass now targets at most 25 unattempted candidates under a monotonic 35-second budget. A per-message backgroundAttempted boolean is saved in the EXISTING owner-encrypted native queue only after user-review notification has been attempted. Review-only SMS stays in the foreground inbox and is not ACKed as a money transfer.
 - Verified account/rule-bound auto-post remains under the original exact SMS hash and SQLCipher writer. A confirmed financial write is only considered complete after native committed-only ACK, with an explicit WorkManager retry when that ACK or encrypted review checkpoint fails; no parallel finance writers.
