@@ -28,9 +28,6 @@
     "lib/waffra_auto_sms.dart",
     "lib/main.dart",
     "lib/waffra_home_sms_confirmation.part.dart",
-    "lib/waffra_home_sms_rules.part.dart",
-    "lib/waffra_sms_local_rules.dart",
-    "lib/waffra_bank_sms_facts.dart",
     "test/m1022_sms_rule_checkpoint_revision_test.dart",
     "test/m1023_sms_review_notification_ack_test.dart",
     "test/m1024_sms_autopost_date_guard_test.dart",
@@ -41,9 +38,7 @@
     "test/m1029_android_sms_multipart_grouping_test.dart",
     "test/m1030_android_sms_receiver_latency_test.dart",
     "test/m1020_sms_background_checkpoint_continuation_test.dart",
-    "test/m1019_sms_intake_capacity_recovery_test.dart",
     "test/m1018_sms_workmanager_wakeup_race_test.dart",
-    "test/m1016_sms_background_financial_intake_test.dart",
     "test/qa/m417_sms_permission_acceptance_test.py",
     "lib/waffra_home_entry_sheet.part.dart",
     "lib/waffra_home_profile.part.dart",
@@ -125,43 +120,13 @@
         "end": null
       }
     ],
-    "lib/waffra_home_sms_rules.part.dart": [
-      {
-        "start": "extension _WaffraHomeSmsRules on _HomeScreenState {",
-        "end": null
-      }
-    ],
-    "lib/waffra_sms_local_rules.dart": [
-      {
-        "start": "class WaffraSmsLocalRuleStore {",
-        "end": null
-      }
-    ],
-    "lib/waffra_bank_sms_facts.dart": [
-      {
-        "start": "abstract final class WaffraBankSmsFactsParser {",
-        "end": null
-      }
-    ],
     "test/m1020_sms_background_checkpoint_continuation_test.dart": [
       {
         "start": "void main(){",
         "end": null
       }
     ],
-    "test/m1019_sms_intake_capacity_recovery_test.dart": [
-      {
-        "start": "void main(){",
-        "end": null
-      }
-    ],
     "test/m1018_sms_workmanager_wakeup_race_test.dart": [
-      {
-        "start": "void main(){",
-        "end": null
-      }
-    ],
-    "test/m1016_sms_background_financial_intake_test.dart": [
       {
         "start": "void main(){",
         "end": null
