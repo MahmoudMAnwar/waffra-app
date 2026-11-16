@@ -46,7 +46,7 @@ void main(){
   expect(history,contains('if (queue.length() >= maxCandidates) {'));
   expect(history,contains('stoppedForCapacity = true'));
   expect(history,contains('break'));
-  expect(history,contains('val nextAt = originalCursor.first'));
+  expect(history,contains('var nextAt = originalCursor.first'));
   expect(history,contains('.putLong(historyCursorAt, nextAt)'));
   expect(history,contains('if (!editor.commit()) return@synchronized 0'));
   expect(store,contains('rescanNeeded'));
