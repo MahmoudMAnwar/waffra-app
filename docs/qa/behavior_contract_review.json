@@ -8,6 +8,32 @@
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
     {
+      "id": "M1003-ATOMIC-RESTORED-ENTRY-BUDGET-ACCOUNT-LINK",
+      "issue": "Issue #715 / Draft PR #716",
+      "previous_behavior": "Restored historical entry editor saved metadata before linking account; nonzero opening cash needs explicit confirmation absent from edit UI; Home ready=false can be an empty screen.",
+      "approved_behavior": "Require checked opening-balance exclusion and one source-witnessed SQLCipher transaction for existing entry edit, budgetId and first account link, full rollback on validation errors; nonfinancial private fallback on abnormal Home/auth handoff.",
+      "source_paths": [
+        "lib/waffra_home_entry_sheet.part.dart",
+        "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
+        "lib/waffra_home_root_shell.part.dart",
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/storage/m1003_atomic_restored_budget_account_link_test.dart",
+        "test/m1003_restore_budget_and_blank_surface_contract_test.dart",
+        "test/m495_pr402_ui_performance_regression_test.dart",
+        "test/m622_immediate_home_without_loader_test.dart",
+        "test/m623_verified_home_handoff_no_black_frame_test.dart",
+        "test/m944_home_root_shell_extraction_test.dart"
+      ],
+      "safety_invariants": [
+        "Explicit old-opening-cash attestation, no guessed link or duplicate debit, immutable source/receipt unchanged.",
+        "Exactly one existing source record/budget/link transaction with read-back and rollback on stale, missing or mismatched record.",
+        "Private screen fallback retains login, biometrics, SQLCipher and verified financial-data gates.",
+        "Real Android black-screen, historic backup, signed APK and exact-head CI require separate verification."
+      ]
+    },
+    {
       "id": "M1001-M340-ORIGINAL-SAR-WITNESS",
       "issue": "Issue #712 / PR #713",
       "previous_behavior": "The #709 merge optimized BankParser.parse to trust an optional precomputed sourceAmount shortcut when present, violating M340's independent original SMS source-action SAR witness requirement, causing main build and M174 M928 failures.",
