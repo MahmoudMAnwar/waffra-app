@@ -164,10 +164,14 @@ extension _WaffraHomeFinancePersistenceDue on _HomeScreenState {
  }
 
  // No recurring schedule may post money without a user's explicit confirmation.
- Future<void> applyRecurring()async {
+ Future<void> applyRecurring({bool goalLinkedOnly=false})async {
   if(!mounted||!ready||_dueDialogShowing)return;
   final today=DateTime.now();
   for(final r in recurring){
+   // Verified SQLCipher startup must never guess or automatically post an
+   // unrelated monthly charge. The audited goal settlement branch below
+   // handles only owner-confirmed, goal-linked, one-time dues.
+   if(goalLinkedOnly&&r.linkedGoalId==null)continue;
    if(!r.active||!waffraCategoryNameAvailableForPosting(
     categories,r.income,r.category))continue;
    // A goal is a one-time obligation. Its immutable original due month
