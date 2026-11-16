@@ -79,6 +79,9 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
    if(!updated.any((v)=>v.id==reviewed.id))throw StateError('Missing committed SMS');
    if(!mounted)return;
    setState((){
+    // M1008: invalidate the month/history cache as well as the ledger;
+    // merely replacing entries leaves filtered Home cards on old IDs.
+    _m684InvalidatePeriodRead();
     entries..clear()..addAll(updated);
     smsHashes..clear()..addAll(
      applied.current.finance.getStringList('waffra_sms_hashes_v1')??
@@ -87,6 +90,14 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
     _lastLedgerSavedRaw=applied.current.ledgerRaw;
     _lastWidgetRevision=applied.current.widgetRevision;
    });
+   // M1008 P0: commit and SMS hash are durable, but scoped account
+   // IDs and balances must be re-read from the authenticated SQLCipher
+   // source. Never treat failure to redraw as a reason to replay the debit.
+   var accountProjectionVerified=false;
+   try{
+    await _m467RefreshHomeAccounts();
+    accountProjectionVerified=mounted&&_m468VerifiedAccountsLoaded;
+   }catch(_){/* Post-commit presentation failure is not a failed save. */}
    if(sender.trim().isNotEmpty){
     unawaited(_recordConfirmedSmsAccountAssociation(
      record:reviewed,sender:sender,accountId:chosen.ids!.single));
@@ -97,6 +108,12 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
      kind:income?'income':'expense',category:category);}catch(_){}
    }
    unawaited(_refreshWidget());
+   if(mounted&&!accountProjectionVerified){
+    snack(context,waffraIsEnglish?
+     'Saved successfully. Account balance is not verified yet; refresh accounts.':
+     'العملية اتحفظت بنجاح، لكن رصيد الحساب لم يتم التحقق منه بعد. حدّث الحسابات.',
+     isError:true);
+   }
    final ack=await WaffraAutoSms.acknowledgeCommitted([id]);
    if(ack&&mounted){
     setState(()=>_autoSmsPending.removeWhere((r)=>r['id']==id));
