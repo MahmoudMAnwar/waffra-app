@@ -25,7 +25,8 @@ void main(){
   expect(worker,contains('if(finalHashesLegacy.contains(bankSmsHash(body)))'));
   expect(worker,contains('await keepForReview(candidate);continue;'));
   final main=File('lib/main.dart').readAsStringSync();
-  expect(main,contains('if(hashes.contains(bankSmsHash(body,nativeId:id)))'));
+  expect(main,contains("final identityHash=bankSmsHash(body,nativeId:verifiedNativeId);"));
+  expect(main,contains('if(hashes.contains(identityHash))'));
   expect(main,contains("'possibleLegacyDuplicate'"));
   final review=File('lib/waffra_home_sms_confirmation.part.dart').readAsStringSync();
   expect(review,contains('bankSmsHash(body,nativeId:id)'));
