@@ -653,7 +653,9 @@ object WaffraAutoSmsStore {
         "(?:رمز|كود)\\s*(?:تسجيل\\s+الدخول|التوثيق|المصادقة|التأكيد)|" +
         "(?:رمزك|كودك|الكود\\s+الخاص\\s+بك)\\s*(?:(?:هو|هي)\\s*|[:：]\\s*)[0-9٠-٩۰-۹]{4,8}|" +
         "\\b(?:login|sign[ -]?in|auth|activation|access|2fa)\\s+(?:pass)?code\\b|" +
-        "\\byour\\s+(?:(?:login|security|verification|app)\\s+)?code\\s*(?:is|[:：])\\s*[0-9]{4,8}\\b)",
+        "\\byour\\s+(?:(?:login|security|verification|app)\\s+)?code\\s*(?:is|[:：])\\s*[0-9]{4,8}\\b|" +
+        "\\b[0-9٠-٩۰-۹]{4,8}\\s+is\\s+your\\s+code\\s+for\\s+[A-Za-z][A-Za-z0-9._-]{1,39}\\b|" +
+        "\\bis\\s+your\\s+code\\s+for\\s+[A-Za-z][A-Za-z0-9._-]{1,39}\\s+[0-9٠-٩۰-۹]{4,8}\\b)",
         RegexOption.IGNORE_CASE)
     private val action = Regex(
         "(?:شراء|خصم|سحب|حوالة|تحويل|إيداع|ايداع|راتب|استرداد|سداد|شحن|دفع|" +

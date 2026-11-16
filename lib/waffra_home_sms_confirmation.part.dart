@@ -242,7 +242,24 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
    final direct=targetId==null?null:await WaffraAutoSms.pendingById(targetId);
    final items=targetId==null?await WaffraAutoSms.pending():
     direct==null?<Map<String,Object?>>[]:<Map<String,Object?>>[direct];
-   if(!mounted||items.isEmpty)return;
+   if(!mounted)return;
+   if(items.isEmpty){
+    // M1005: an already excluded or stale native ID must not look like
+    // a button that did nothing. Recheck the native owner queue and report
+    // on the visible Notifications route without inventing an ACK.
+    if(targetId!=null){
+     await _refreshAutoSmsInbox();
+     if(mounted){
+      final visibleContext=Navigator.of(context).canPop()?
+       Navigator.of(context).context:context;
+      snack(visibleContext,waffraIsEnglish?
+       'This message is no longer in verified review. List refreshed.':
+       'الرسالة لم تعد موجودة في قائمة المراجعة الموثقة. تم تحديث القائمة.',
+       isError:true);
+     }
+    }
+    return;
+   }
    Map<String,Object?>? selected;
    for(final item in items){
     final id=item['id'],body=item['body'];
@@ -815,6 +832,10 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
      }
     }
    }else if(decision=='exclude'&&mounted){
+    // M1005: if Notifications is pushed above Home, feedback must be
+    // displayed on that visible Navigator, not Home's obscured footer.
+    final visibleContext=Navigator.of(context).canPop()?
+     Navigator.of(context).context:context;
     // Never mark user-excluded SMS as a financially committed transaction.
     final acknowledged=await WaffraAutoSms.excludeMessages([id]);
     if(acknowledged&&mounted){
@@ -825,17 +846,17 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
      try{learned=await _learnSafeSmsRule(
       body:body,sender:sender,kind:'excluded');}catch(_){}
      if(mounted){
-      snackSuccess(context,learned?
+      snackSuccess(visibleContext,learned?
        (waffraIsEnglish?
         'Message excluded for 30 days; a reusable safe rule was saved.':
         'تم استبعاد الرسالة لمدة 30 يوم، واتحفظت قاعدة آمنة للرسائل المشابهة.'):
        (waffraIsEnglish?
         'Only this message was excluded for 30 days. No reusable rule was learned.':
         'تم استبعاد الرسالة دي فقط لمدة 30 يوم. لم يتم تعلّم قاعدة للرسائل المشابهة.'));
-      unawaited(_refreshAutoSmsInbox());
+      await _refreshAutoSmsInbox();
      }
     }else if(mounted){
-     snack(context,waffraIsEnglish?
+     snack(visibleContext,waffraIsEnglish?
       'Could not exclude the message safely. Try again.':
       'تعذر استبعاد الرسالة بأمان. حاول تاني.',isError:true);
     }

@@ -17,6 +17,8 @@ void main() {
       'Your login code is 481923 for NewApp',
       'Your verification code is 123456 for NewApp',
       'OTP 829105 for a newly installed app',
+      '492617 is your code for Barakah رمز دخولك لبركة',
+      'is your code for Barakah 492617 رمز دخولك لبركة',
     ];
     for (final body in samples) {
       expect(WaffraBankSmsFactsParser.isVerificationChallenge(body), isTrue,
@@ -34,6 +36,7 @@ void main() {
       'حوالة صادرة بمبلغ 140 ريال. رمز التحقق 987654',
       'Payment completed SAR 75.00. Your verification code is 123456',
       'Purchase approved for SAR 45.50. OTP 123456',
+      'Purchase approved SAR 45.50; 492617 is your code for Barakah',
     ];
     for (final body in messages) {
       expect(WaffraBankSmsFactsParser.isVerificationChallenge(body), isTrue,
@@ -56,6 +59,7 @@ void main() {
     expect(decision?.resolvedKind, isNot('excluded'));
     final native = File('native/WaffraAutoSmsStore.kt').readAsStringSync();
     expect(native, contains('explicitOtpToken.containsMatchIn(body)'));
+    expect(native, contains('is\\\\s+your\\\\s+code\\\\s+for'));
   });
 
   test('M979 native intake blocks pure OTP before queue capacity or notify',
