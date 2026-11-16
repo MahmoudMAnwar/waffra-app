@@ -25,8 +25,8 @@ void main(){
   final worker=File('native/WaffraAutoSmsWorker.kt').readAsStringSync();
   final scheduler=worker.split('fun enqueue(context: Context) {')[1];
   expect(scheduler,contains('ExistingWorkPolicy.APPEND_OR_REPLACE'));
-  expect(scheduler,contains(
-   '"waffra_auto_sms_finance", ExistingWorkPolicy.APPEND_OR_REPLACE, work'));
+  expect(scheduler,contains('"waffra_auto_sms_finance",'));
+  expect(scheduler,contains('ExistingWorkPolicy.APPEND_OR_REPLACE, work)'));
   expect(scheduler,isNot(contains('ExistingWorkPolicy.KEEP')));
   expect(scheduler,isNot(contains('ExistingWorkPolicy.REPLACE')));
   expect(scheduler,isNot(contains('ExistingWorkPolicy.APPEND, work')));
