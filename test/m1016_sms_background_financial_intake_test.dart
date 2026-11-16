@@ -38,7 +38,12 @@ void main(){
   expect(scan,contains('reviewEligible(row.sender, row.body)'));
   expect(scan,contains('if (pureVerificationOnly(row.body)) {'));
   expect(scan,contains('deniedOtpByShard'));
-  expect(scan,contains('excludedMessageInfoBucket(context, fingerprint)'));
+  // Historical OTP labels are loaded through the existing encrypted shard
+  // helper; this is not a direct bucket getter. Preserve the shared IDs,
+  // label and timestamp writes rather than asserting a nonexistent symbol.
+  expect(scan,contains('excludedMessageInfo(context, fingerprint)'));
+  expect(scan,contains('for ((shard, ids) in deniedOtpByShard) {'));
+  expect(scan,contains('editor.putString(excludedMessageInfoBucketPrefix + shard,'));
   expect(scan,isNot(contains('notifyReview(')));
   expect(native,contains('excludedLabelRetentionMs = 30L * 24 * 60 * 60 * 1000'));
  });
