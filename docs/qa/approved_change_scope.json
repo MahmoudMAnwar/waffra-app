@@ -159,6 +159,10 @@
     ],
     "test/qa/m417_sms_permission_acceptance_test.py": [
       {
+        "start": "    def test_writes_only_from_existing_verified_sms_review(self):",
+        "end": "    def test_auto_posting_requires_guarded_finance_and_verified_notification(self):"
+      },
+      {
         "start": "    def test_m1020_sms_bridge_is_single_and_well_formed(self):",
         "end": "if __name__==\"__main__\":"
       }
