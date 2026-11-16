@@ -92,7 +92,7 @@
     ],
     "lib/waffra_home_entry_sheet.part.dart": [
       {
-        "start": "   if(smsEditorDraftKey!=null)_m492SmsEditorDrafts.remove(smsEditorDraftKey);",
+        "start": "    _lastWidgetRevision=applied.current.widgetRevision;\n   });\n   if(smsEditorDraftKey!=null)_m492SmsEditorDrafts.remove(smsEditorDraftKey);",
         "end": "   // No -> edit learns a confirmed sender+last-four bank identity only"
       }
     ],
