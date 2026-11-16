@@ -70,6 +70,48 @@ native.split('old sender grouping');
         self.assertEqual(len(stale), 2)
 
 
+    def test_m1014_multiline_file_reader_catches_changed_method_signature(self):
+        sample = """
+void main() {
+ final duePart=File('lib/waffra_home_finance_persistence_due.part.dart')
+     .readAsStringSync();
+ expect(duePart,contains(' Future<void> applyRecurring()async {'));
+}
+"""
+        path = "lib/waffra_home_finance_persistence_due.part.dart"
+        stale, examined = guard.detect_stale(
+            {"test/storage/m470.dart": sample},
+            {path: " Future<void> applyRecurring()async {"},
+            {path: " Future<void> applyRecurring({bool goalLinkedOnly=false})async {"},
+            {path},
+        )
+        self.assertEqual(examined, 1)
+        self.assertEqual(len(stale), 1)
+        self.assertIn("applyRecurring()", stale[0]["old_expectation"])
+
+    def test_m1014_reconstructed_home_helper_catches_renamed_boundary(self):
+        sample = """
+final app=readWaffraMainSourceForContracts();
+String between(String start,String end)=>app.substring(0);
+void main(){
+ between('Future<void> toggleRecurringReminders(bool enabled,',
+         'Future<void> applyRecurring()async');
+}
+"""
+        old = (" Future<void> toggleRecurringReminders(bool enabled,\\n"
+               " Future<void> applyRecurring()async {")
+        new = (" Future<void> toggleRecurringReminders(bool enabled,\\n"
+               " Future<void> applyRecurring({bool goalLinkedOnly=false})async {")
+        stale, examined = guard.detect_stale(
+            {"test/storage/m266.dart": sample},
+            {"lib/main.dart": old},
+            {"lib/main.dart": new},
+            {"lib/main.dart"},
+        )
+        self.assertGreaterEqual(examined, 2)
+        self.assertEqual(len(stale), 1)
+        self.assertIn("applyRecurring()", stale[0]["old_expectation"])
+
     def test_m934_rejects_raw_main_reader_for_relocated_widget_guard(self):
         sample = """
 void main(){
