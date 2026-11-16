@@ -1,179 +1,63 @@
 {
   "contract_version": 1,
-  "change_id": "M1009-ISSUE724-SAMA-SMS-DIRECTION-EXCLUSION-DATETIME-NOTIFICATION-SWIPE-20261116",
-  "human_scope_review": "Owner approved fix of misclassified SAMA outgoing bank SMS as owner transfers, global safe excluded message learning, similar transaction review state, original bank timestamp prefill and actual Notifications center swipe. No new monetary writer or owner-verified balance mutations. Same Draft PR until exact-head CI succeeds; UAT remains pending.",
+  "change_id": "M1010-ISSUE726-GOAL-DUE-INLINE-REQUIRED-ACCOUNT-ERRORS-APPROVED-GREEN-DUES-HERO-20261116",
+  "human_scope_review": "Owner supplied screenshots and explicitly requested bugs fixed now: both goals and dues Save remain enabled; each missing institution/category, bank/primary group and linked account shows the same inline red required message after attempted save; dues page gets exactly the approved green goals-style hero. No finance writer changes. Same Draft PR until current-head CI passes; physical Android UAT pending.",
   "user_requested_changes": [
-    "Treat outgoing internal/local transfers to an external beneficiary as expense suggestions and incoming as income; require verified linked two-account ownership to call any movement transfer between my accounts.",
-    "Apply official SAMA Arabic and English names and transaction date/time as display hints, not evidence of account ownership or auto-post permission.",
-    "Learn a safe senderless heading from a confirmed classified entry; compare pending SMS from different senders irrespective of amount, while blocking contradictory posted/mixed financial auto-exclusions.",
-    "Store safe repeatable nonfinancial notice exclusions across single, bulk and Notifications center paths without copying OTP, personal identifiers or entire message text.",
-    "Prefill actual original bank transaction date including HH:mm in manual correction and transfer-manual routes; fail closed on ambiguous timestamps.",
-    "Allow horizontal RTL/LTR sender swipe within Notifications center; retain filter selection and vertical refresh/scroll.",
-    "Run end-to-end regression against example outgoing SAR 60 Nov 15 2026 10:14, varied amounts, Etimad excluded notices, and real notifications Widget gestures. Register in M946.",
-    "Preserve original account-aware-review and beneficiary safety tests after SAMA change, adjusting only outdated synthetic fixtures whose old assertion incorrectly treated an external outgoing transfer as a two-owned-account movement; add requiresBeneficiaryReview to prevent auto-post of external transfer suggestions.",
-    "Update only the obsolete M514 outgoing external beneficiary expected kind, preserving its income and manual-review safety assertions and the immutable remaining test suite."
+    "When adding a saving goal, show visible red inline 'هذا الحقل مطلوب' for each of the three missing mandatory institution, bank and child account dropdowns after tapping Add goal; keep the action enabled but refuse unverified save.",
+    "When adding a recurring due, show the same three inline required dropdown errors after Save, in addition to existing description, amount, category and day validation.",
+    "Use the approved green WaffraApprovedPageHero component for the Dues screen instead of the separate plain heading; keep the existing Financial calendar accessible in the filter and actions row, including metrics, search, filters, plus action and RTL layout.",
+    "Preserve goal open-ended target and optional due date, verified financial source/account link, all linked goal/schedule finance protections, existing records and SQLCipher writer.",
+    "Add real Arabic and English Flutter Widget tests plus save-action and page-hero source regressions and register in mandatory M946 without disabling any CI gate."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "lib/main.dart",
-    "lib/waffra_approved_notifications.dart",
-    "lib/waffra_auto_sms_policy.dart",
-    "lib/waffra_bank_sms_facts.dart",
-    "lib/waffra_home_entry_sheet.part.dart",
-    "lib/waffra_home_sms_confirmation.part.dart",
-    "lib/waffra_home_sms_inbox.part.dart",
-    "lib/waffra_sms_local_rules.dart",
+    "lib/waffra_goal_recurring_account_picker.dart",
+    "lib/waffra_home_goal_actions.part.dart",
+    "lib/waffra_home_recurring_workflows.part.dart",
+    "lib/waffra_home_goals_recurring_pages.part.dart",
     "scripts/qa/m946_full_app_smoke_matrix.py",
-    "test/bank_sms_test.dart",
-    "test/m1009_sama_notification_swipe_regression_test.dart",
-    "test/m514_sms_review_regressions_test.dart",
-    "test/m580_sms_security_navigation_performance_test.dart",
-    "test/m669_sms_review_category_search_test.dart",
-    "test/m980_four_sms_rule_kinds_every_route_test.dart",
-    "test/m983_sms_direct_kind_prefill_refresh_test.dart",
-    "test/m985_sms_prefill_identity_status_conflict_duplicate_test.dart",
-    "test/waffra_bank_sms_facts_test.dart"
+    "test/m1010_goal_due_required_account_hero_test.dart"
   ],
   "bounded_sections": {
-    "lib/waffra_bank_sms_facts.dart": [
+    "lib/waffra_goal_recurring_account_picker.dart": [
       {
-        "start": "class WaffraBankSmsFacts {",
-        "end": "abstract final class WaffraBankSmsFactsParser {"
+        "start": " const WaffraGoalRecurringAccountPicker({",
+        "end": " @override State<WaffraGoalRecurringAccountPicker> createState()=>"
       },
       {
-        "start": "  // M514 #449: \"incoming credit\" describes movement into this account,",
-        "end": "  String? normalizeSuffix(String? value)=>"
-      },
-      {
-        "start": "  return WaffraBankSmsFacts(",
-        "end": " /// Display-only accounting preview."
+        "start": " @override Widget build(BuildContext context){",
+        "end": null
       }
     ],
-    "lib/main.dart": [
+    "lib/waffra_home_goal_actions.part.dart": [
       {
-        "start": "  else if(income){",
-        "end": "  if(!income) {"
-      },
-      {
-        "start": "  final fourWay=WaffraSmsLocalRules.matchAllFourKinds(",
-        "end": "  if(local!=null){\n   annotated['local']=local;"
+        "start": "     WaffraGoalRecurringAccountPicker(\n      key:const Key('m641-goal-account-cascade'),",
+        "end": "     const SizedBox(height:12),\n     OutlinedButton.icon("
       }
     ],
-    "lib/waffra_sms_local_rules.dart": [
+    "lib/waffra_home_recurring_workflows.part.dart": [
       {
-        "start": " static List<WaffraSmsLocalRule> matchAllFourKinds({",
-        "end": " static WaffraSmsLocalRule? resolveSpecial({"
-      },
-      {
-        "start": " /// Make a conservative, sender-scoped draft from a reviewed bank message.",
-        "end": " /// Conservative, sender-agnostic keyword hints from a confirmed"
+        "start": "      else WaffraGoalRecurringAccountPicker(",
+        "end": "      const SizedBox(height:12),\n      WaffraCenteredDropdownFormField<bool>("
       }
     ],
-    "lib/waffra_approved_notifications.dart": [
+    "lib/waffra_home_goals_recurring_pages.part.dart": [
       {
-        "start": " String filter='all';",
-        "end": " static const green=Color(0xFF064D3B)"
+        "start": "   controller:_recurringScrollController,thumbVisibility:true,",
+        "end": "      WaffraApprovedMetric(waffraIsEnglish?'Total dues':'إجمالي المستحقات',"
       },
       {
-        "start": "     if(selecting&&widget.onBulkExclude!=null)Padding(",
-        "end": "     if(selecting&&widget.onBulkExclude!=null&&liveSelected.isNotEmpty)"
-      }
-    ],
-    "lib/waffra_home_sms_inbox.part.dart": [
-      {
-        "start": "           if(done.isNotEmpty){",
-        "end": "           // On a partial native failure,"
-      }
-    ],
-    "lib/waffra_home_entry_sheet.part.dart": [
-      {
-        "start": "extension _WaffraHomeEntrySheetModule on _HomeScreenState {",
-        "end": "  // A paid goal due"
-      },
-      {
-        "start": "  final manualReviewMoney=manualReviewBody==null?null:",
-        "end": "  final manualReviewTitle=manualReviewParsed!=null&&"
-      }
-    ],
-    "lib/waffra_home_sms_confirmation.part.dart": [
-      {
-        "start": "  Future<void> _m983OpenSmsTypedTemplate({",
-        "end": " Future<void> _reviewAutoSmsCandidates({"
-      },
-      {
-        "start": "   if(decision=='correct-type'&&mounted&&reviewType!=null){",
-        "end": "   }else if(decision=='exclude'&&mounted){"
-      },
-      {
-        "start": "   }else if(decision=='transfer-manual'&&mounted){",
-        "end": "   }else if(decision=='yes'&&mounted&&canConfirm"
+        "start": "     const SizedBox(height:16),\n     SingleChildScrollView(scrollDirection:Axis.horizontal,\n      child:Row(children:[",
+        "end": "       PopupMenuButton<String>(\n        key:const Key('m938-dues-filter-menu'),"
       }
     ],
     "scripts/qa/m946_full_app_smoke_matrix.py": [
       {
         "start": "FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {",
-        "end": "    \"m1008_two_account_sms_balance_and_history_parity\""
-      }
-    ],
-    "lib/waffra_auto_sms_policy.dart": [
-      {
-        "start": "  // A transfer, card settlement or message with a separate fee cannot",
-        "end": "  if(!facts.canAutoPostAsIncomeExpense){"
-      }
-    ],
-    "test/bank_sms_test.dart": [
-      {
-        "start": "  test('outgoing transfer parses correctly', () {",
-        "end": "  test('multiple bank SMS messages split by bank headings', () {"
-      }
-    ],
-    "test/waffra_bank_sms_facts_test.dart": [
-      {
-        "start": "void main(){",
-        "end": " test('cashback refund is true income',(){"
-      }
-    ],
-    "test/m980_four_sms_rule_kinds_every_route_test.dart": [
-      {
-        "start": "  test('M980 category evidence uses the same four-way matches and real bank direction',(){",
-        "end": "  test('M980 conflicting saved exclusion versus confirmed income blocks autoPost',(){"
-      },
-      {
-        "start": "  test('M980 direct frontend/historical isolate uses four rules and does not post money',(){",
-        "end": "  test('M980 foreground/history + background share the SAME matcher before action',(){"
-      }
-    ],
-    "test/m983_sms_direct_kind_prefill_refresh_test.dart": [
-      {
-        "start": " test('M983 tapped income expense and transfer have distinct bank evidence',(){",
-        "end": " test('M983 SMS data is suggested only; incomplete fields do not imply commit',(){"
-      }
-    ],
-    "test/m669_sms_review_category_search_test.dart": [
-      {
-        "start": "  test('M669 actual bank transfer is never treated as automatic expense',(){",
-        "end": null
-      }
-    ],
-    "test/m580_sms_security_navigation_performance_test.dart": [
-      {
-        "start": " test('M587 bank transfer shows exactly three non-posting choices',(){",
-        "end": " test('notification center never repeats a second review hero',(){"
-      }
-    ],
-    "test/m985_sms_prefill_identity_status_conflict_duplicate_test.dart": [
-      {
-        "start": " test('M985 never guesses account digits from OTP/ref or opposing direction',(){",
-        "end": " test('M985 cancelled, declined and reversed purchases cannot be posted',(){"
-      }
-    ],
-    "test/m514_sms_review_regressions_test.dart": [
-      {
-        "start": " test('M514 incoming money is income, not owned-account transfer',(){",
-        "end": " test('M514 per-button scanned number is never native history total',(){"
+        "end": "    \"m1009_sama_direction_sms_review_and_live_notifications_swipe\":"
       }
     ]
   },
