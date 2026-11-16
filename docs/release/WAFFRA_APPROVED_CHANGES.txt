@@ -1,3 +1,8 @@
+[M1031 / ISSUE #750 / DRAFT PR #749 / PREDICTION UNIFICATION]
+- Central bank direction prediction now reused for sender inbox, notifications and background review hints. Suggestions display as pending confirmation and never create a financial ledger write or native ACK.
+- Added separate explicit owner confirmation gate for verified external outgoing/incoming bank SMS (expense/income), preserving stricter unattended AutoPost and encrypted account/category/date/SAR validation. Disabled Done now shows an actionable blocking explanation when a verified finance field is missing or contradictory.
+- Dedicated M1031 regression suite registered in M946. All changes require exact-SHA CI and physical Android acceptance; no final production claim.
+
 [M1022–M1030 / CI REPAIR / PR #749 / SOURCE REVIEW]
 - Reviewed latest app source commit cdeff32af43a35fcc03a6fedcd27a9db127cc46e (lib/main.dart): legacy or synthetic non-Android IDs now remain review-only with legacy text fingerprint; verified 64-character native SMS IDs alone authorize v2 finance fingerprint. This prevents FormatException in existing M632/M983/M991 isolate paths without loosening finance provenance.
 - Updated existing M1016/M979 OTP source checks to match M1027 uniquely recognized OTP redaction, while retaining fail-closed ambiguous OTP masking.

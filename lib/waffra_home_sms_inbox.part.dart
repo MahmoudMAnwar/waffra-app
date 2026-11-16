@@ -541,15 +541,10 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
          }
          // Legacy external guesses remain untrusted; the user reviews SMS text.
          final local=item['local'] is Map?item['local'] as Map:null;
-         final smsFacts=WaffraBankSmsFactsParser.parse(
-          item['body'] is String?item['body'] as String:'');
-         final suggestedKind=local?['kind'] is String?
-          local!['kind'] as String:switch(smsFacts.kind){
-           WaffraBankOperationKind.income=>'income',
-           WaffraBankOperationKind.expense=>'expense',
-           WaffraBankOperationKind.transfer=>'transfer',
-           _=>null,
-          };
+         final suggestedKind=WaffraBankSmsFactsParser.reviewSuggestedKind(
+          body:item['body'] is String?item['body'] as String:'',
+          localKind:local?['kind'] is String?local!['kind'] as String:null,
+          sensitiveOtp:item['sensitiveOtp']==true);
          // Advisory only: relation fingerprints never approve a ledger write.
          final related=item['relatedSmsEvent'];
          final relatedLabel=switch(related){
@@ -573,24 +568,16 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
          return ListTile(
           key:Key('waffra-sms-sender-message-'+index.toString()),
           leading:const Icon(Icons.sms_outlined,color:emerald),
-          title:WaffraText(local==null?
-           (confidential||
-            !const <String>{'income','expense','transfer'}.contains(suggestedKind)?
-            (waffraIsEnglish?'Needs review':'عملية تحتاج مراجعة'):
-            (waffraIsEnglish?'Suggested • ':'مقترح • ')+
-             (suggestedKind=='income'?(waffraIsEnglish?'Income':'دخل'):
-              suggestedKind=='expense'?(waffraIsEnglish?'Expense':'مصروف'):
-              (waffraIsEnglish?'Transfer':'تحويل'))):
-           (local['suggestedOnly']==true?
+          title:WaffraText(suggestedKind==null?
+           (waffraIsEnglish?'Needs review':'عملية تحتاج مراجعة'):
+           suggestedKind=='excluded'?
+            (waffraIsEnglish?'Suggested • Excluded':'مقترح • مستبعدة'):
+           (local==null||local['suggestedOnly']==true?
             (waffraIsEnglish?'Suggested • ':'مقترح • '):
             (waffraIsEnglish?'Local rule • ':'قاعدة محلية • '))+
-            (local['kind']=='transfer'?
-             (waffraIsEnglish?'Transfer':'تحويل'):
-             local['kind']=='excluded'?
-             (waffraIsEnglish?'Excluded':'مستبعدة'):
-             local['income']==true?
-              (waffraIsEnglish?'Income':'دخل'):
-              (waffraIsEnglish?'Expense':'مصروف'))),
+           (suggestedKind=='income'?(waffraIsEnglish?'Income':'دخل'):
+            suggestedKind=='expense'?(waffraIsEnglish?'Expense':'مصروف'):
+             (waffraIsEnglish?'Transfer':'تحويل'))),
           // Preserve the real original SMS text in the history review, with
           // sender and date without presenting untrusted suggestions.
           subtitle:Column(

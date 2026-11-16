@@ -240,12 +240,12 @@ extension _WaffraHomeSmsManagement on _HomeScreenState {
     // One message's own verified local suggestion is authoritative for its
     // badge. Never infer Expense from a sibling sender or an OTP notice.
     final localKind=localInfo?['kind'];
+    final suggested=WaffraBankSmsFactsParser.reviewSuggestedKind(
+     body:body,localKind:localKind is String?localKind:null,
+     sensitiveOtp:sensitive);
     final noticeKind=sensitive?'otpReview':
-     localKind=='excluded'?'excludeSuggestion':
-     localKind=='transfer'?'transfer':
-     localKind=='income'?'income':
-     localKind=='expense'?'expense':
-     income is bool?(income?'income':'expense'):'needsReview';
+     suggested=='excluded'?'excludeSuggestion':
+     suggested??'needsReview';
     return WaffraReviewNotice(
      id:id,sender:sender.isEmpty?(waffraIsEnglish?'Unknown sender':'مرسل غير محدد'):sender,
      preview:summary.isEmpty?(waffraIsEnglish?'Bank message':'رسالة بنكية'):summary,

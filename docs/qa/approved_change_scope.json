@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
-  "change_id": "M1022-M1030-ISSUE740-SMS-NINE-GAPS-20261117",
-  "human_scope_review": "Owner-approved nine sequential SMS analysis and reliability corrections, single PR Draft. No financial write without original approval, verified account and source timestamp. OTP and permission safety remain. Registered tests before production.",
+  "change_id": "M1022-M1031-ISSUE740-750-SMS-REVIEW-UNIFICATION",
+  "human_scope_review": "Owner-approved nine sequential SMS analysis and reliability corrections, single PR Draft. No financial write without original approval, verified account and source timestamp. OTP and permission safety remain. Registered tests before production. Owner approved M1031 (#750) for shared review classification/status and explicit human confirmation; unattended posting retains strict checks.",
   "user_requested_changes": [
     "1. Re-evaluate pending SMS when approved rules or accounts become available/changed, without duplicate finance",
     "2. Require notification delivery confirmation before marking a review attempt complete",
@@ -11,7 +11,8 @@
     "6. Mask only OTP digits in mixed SMS while retaining amount/date/suffix safely",
     "7. Recover encrypted pending SMS after terminal Worker error without busy loops",
     "8. Do not concatenate independent multipart SMS only because sender matches",
-    "9. Avoid synchronous encrypted queue I/O on BroadcastReceiver main thread"
+    "9. Avoid synchronous encrypted queue I/O on BroadcastReceiver main thread",
+    "10. M1031 unify SMS review suggestions/notification states and allow verified explicit owner confirmation of external outgoing expenses without AutoPost authority"
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -60,7 +61,11 @@
     "test/m638_sms_inbox_delete_sync_test.dart",
     "test/m580_sms_security_navigation_performance_test.dart",
     "test/m979_native_otp_prequeue_exclusion_test.dart",
-    "test/m1011_reviewed_sms_provenance_ack_transfer_regression_test.dart"
+    "test/m1011_reviewed_sms_provenance_ack_transfer_regression_test.dart",
+    "lib/waffra_bank_sms_facts.dart",
+    "lib/waffra_home_sms_inbox.part.dart",
+    "lib/waffra_approved_notifications.dart",
+    "test/m1031_sms_unified_review_contract_test.dart"
   ],
   "allowed_workflow_changes": [],
   "approved_deleted_files": [],
@@ -189,8 +194,8 @@
     ],
     "lib/waffra_home_sms_management.part.dart": [
       {
-        "start": " Future<void> _scanPreviousBankSmsFromSettings()async{",
-        "end": " Future<void> _openUnknownSmsFromSettings()async{"
+        "start": " List<WaffraReviewNotice> _m549ReviewNotices(){",
+        "end": " /// Only owner-confirmed SMS IDs"
       }
     ],
     "native/WaffraMainActivity.kt": [
@@ -353,6 +358,28 @@
       {
         "start": "void main(){",
         "end": null
+      }
+    ],
+    "lib/waffra_bank_sms_facts.dart": [
+      {
+        "start": "class WaffraBankSmsFacts {",
+        "end": "abstract final class WaffraBankSmsFactsParser {"
+      },
+      {
+        "start": "abstract final class WaffraBankSmsFactsParser {",
+        "end": " static final _source=RegExp("
+      }
+    ],
+    "lib/waffra_home_sms_inbox.part.dart": [
+      {
+        "start": "         final local=item['local'] is Map?",
+        "end": "          // Preserve the real original SMS text"
+      }
+    ],
+    "lib/waffra_approved_notifications.dart": [
+      {
+        "start": " Widget noticeTile(WaffraReviewNotice notice){",
+        "end": "  final color=notice.kind=="
       }
     ]
   }

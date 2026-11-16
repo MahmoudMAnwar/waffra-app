@@ -36,7 +36,10 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
   final hash=bankSmsHash(body,nativeId:id);
   final facts=WaffraBankSmsFactsParser.parse(body);
   final original=WaffraSmsCurrencies.originalAmount(body);
-  if(!facts.canAutoPostAsIncomeExpense||
+  // Explicit owner review differs from unattended AutoPost permission:
+  // a confirmed external outgoing transfer is an Expense, not an own
+  // account Transfer. The secure finance writer still rechecks all fields.
+  if(!facts.canOwnerConfirmAsIncomeExpense||
     (facts.kind==WaffraBankOperationKind.income)!=income||
     original==null||original.currency!='SAR'||
     (original.amount-value).abs()>0.00001||
@@ -373,7 +376,7 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
    // The atomic writer validates original facts, NOT that optional second
    // parser. A present conflicting parsed amount/direction still blocks Yes.
    bool canConfirm=!requiresSeparateReview&&
-    understood&&facts.canAutoPostAsIncomeExpense&&
+    understood&&facts.canOwnerConfirmAsIncomeExpense&&
     originalAmount!=null&&originalAmount.currency=='SAR'&&
     originalDate!=null&&!bankSmsHasUnverifiedTimestamp(body)&&
     (parsed.amount==null||
@@ -486,7 +489,7 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
      reviewedMainName=parent.single.displayName;
      reviewCategoryValid=unambiguous;
      canConfirm=!requiresSeparateReview&&
-      understood&&facts.canAutoPostAsIncomeExpense&&
+      understood&&facts.canOwnerConfirmAsIncomeExpense&&
       originalAmount!=null&&originalAmount.currency=='SAR'&&
       originalDate!=null&&!bankSmsHasUnverifiedTimestamp(body)&&
       (parsed.amount==null||
@@ -698,6 +701,13 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
           (waffraIsEnglish?'Choose money account':'اختيار الحساب المالي'))),
         ),
         const SizedBox(height:6),
+        if(!canConfirm)Padding(
+         padding:const EdgeInsets.only(bottom:8),
+         child:WaffraText(waffraIsEnglish?
+          'The amount, date, transaction direction or category needs review. Use Edit to correct the original SMS safely.':
+          'تعذر تأكيد المبلغ أو التاريخ أو اتجاه العملية أو القسم. استخدم تعديل لمراجعة الرسالة بأمان.',
+          style:TextStyle(fontSize:12,
+           color:Theme.of(dialog).colorScheme.error))),
         // Two readable actions on the first row, with Exclude at full
         // width below. Three narrow Expanded buttons truncated Arabic text.
         Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[

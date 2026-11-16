@@ -8,6 +8,29 @@
   "review_policy": "Owner-approved narrow SMS reliability/security/finance changes; tests prior to code. No automated production proof without Android UAT.",
   "contracts": [
     {
+      "id": "M1031-SHARED-SMS-REVIEW-AND-OWNER-CONFIRM",
+      "issue": "Issue #750",
+      "previous_behavior": "Different notification/inbox/review classifiers could disagree, and external outgoing SMS confirmation remained disabled by unattended autopost guard.",
+      "approved_behavior": "Shared read-only prediction and explicit owner confirmation separate from automated posting; no financial writes from classifier; exact-SHA CI and Android acceptance.",
+      "source_paths": [
+        "lib/waffra_bank_sms_facts.dart",
+        "lib/waffra_home_sms_inbox.part.dart",
+        "lib/waffra_home_sms_management.part.dart",
+        "lib/waffra_approved_notifications.dart",
+        "lib/waffra_home_sms_confirmation.part.dart",
+        "lib/waffra_auto_sms_autopost.part.dart"
+      ],
+      "test_paths": [
+        "test/m1031_sms_unified_review_contract_test.dart",
+        "test/m462_smart_sms_rule_review_test.dart"
+      ],
+      "safety_invariants": [
+        "AutoPost remains blocked on unresolved beneficiary, pending, OTP and foreign currency",
+        "Owner confirmation still requires finance authority/account/category/date",
+        "Notifications and review predictions do not acknowledge or debit"
+      ]
+    },
+    {
       "id": "M1022-M1030-SMS-RELIABILITY-NINE-GAPS",
       "issue": "Issue #740",
       "previous_behavior": "1. Re-evaluate pending SMS when approved rules or accounts become available/changed, without duplicate finance; 2. Require notification delivery confirmation before marking a review attempt complete; 3. AutoPost must require verified transaction timestamp instead of arrival-time fallback; 4. Protect distinct same-text transactions while deduping exact re-delivery; 5. Offer explicitly-consented full SMS history scan with bounded cursor; 6. Mask only OTP digits in mixed SMS while retaining amount/date/suffix safely; 7. Recover encrypted pending SMS after terminal Worker error without busy loops; 8. Do not concatenate independent multipart SMS only because sender matches; 9. Avoid synchronous encrypted queue I/O on BroadcastReceiver main thread",

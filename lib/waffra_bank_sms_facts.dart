@@ -20,10 +20,15 @@ class WaffraBankSmsFacts {
  final String? sourceSuffix,destinationSuffix,reference,counterparty;
  final double? fee;
  final bool pending,securityChallenge,requiresBeneficiaryReview;
- bool get canAutoPostAsIncomeExpense=>
-  !pending&&!requiresBeneficiaryReview&&
+ /// Owner-facing confirmation may approve an externally directed transfer
+ /// as Income/Expense after category, amount, date and account checks.
+ /// Unattended auto-posting must still reject beneficiary-review events.
+ bool get canOwnerConfirmAsIncomeExpense=>
+  !pending&&!securityChallenge&&
    (kind==WaffraBankOperationKind.income||
-             kind==WaffraBankOperationKind.expense);
+    kind==WaffraBankOperationKind.expense);
+ bool get canAutoPostAsIncomeExpense=>
+  !requiresBeneficiaryReview&&canOwnerConfirmAsIncomeExpense;
 }
 
 abstract final class WaffraBankSmsFactsParser {
@@ -78,6 +83,27 @@ abstract final class WaffraBankSmsFactsParser {
  static bool isVerificationChallenge(String raw)=>
   _securityChallenge.hasMatch(raw.replaceAll(
    RegExp(r'[\u200e\u200f\u061c\u064B-\u065F]'),' '));
+
+ /// A single read-only review prediction used by notifications, sender
+ /// inbox and background prompts. Neither this label nor a local rule
+ /// authorizes a finance write or acknowledges the native SMS.
+ /// Objective bank direction outranks an older, conflicting local guess.
+ static String? reviewSuggestedKind({
+  required String body,String? localKind,bool sensitiveOtp=false,
+ }){
+  if(sensitiveOtp||isVerificationChallenge(body))return null;
+  final facts=parse(body);
+  if(facts.pending)return null;
+  final objective=switch(facts.kind){
+   WaffraBankOperationKind.income=>'income',
+   WaffraBankOperationKind.expense=>'expense',
+   WaffraBankOperationKind.transfer=>'transfer',
+   _=>null,
+  };
+  if(objective!=null)return objective;
+  return const <String>{'income','expense','transfer','excluded'}
+   .contains(localKind)?localKind:null;
+ }
  static final _source=RegExp(
   r'(?:من\s+(?:محفظ[ةه]|حساب|بطاق[ةه])|'
   r'(?:from|source|account|card|wallet|acct)\s*(?:no\.?|ending)?\s*[:：]?)'

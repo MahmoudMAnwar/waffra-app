@@ -72,18 +72,10 @@ abstract final class WaffraAutoSmsAutoPoster {
    final id=candidate['id'];
    final body=candidate['body'];
    if(id is String){
-    var kind='uncertain';
-    if(body is String&&candidate['sensitiveOtp']!=true){
-     final facts=WaffraBankSmsFactsParser.parse(body);
-     if(!facts.pending){
-      kind=switch(facts.kind){
-       WaffraBankOperationKind.income=>'income',
-       WaffraBankOperationKind.expense=>'expense',
-       WaffraBankOperationKind.transfer=>'transfer',
-       _=>'uncertain',
-      };
-     }
-    }
+    final kind=body is String?
+     (WaffraBankSmsFactsParser.reviewSuggestedKind(
+      body:body,sensitiveOtp:candidate['sensitiveOtp']==true)??
+      'uncertain'):'uncertain';
     // A classification is not a verified financial commit. Every suggested
     // transaction, including transfers, still opens explicit user review.
     final delivered=await WaffraAutoSms.notifyReview(id,kind:kind);

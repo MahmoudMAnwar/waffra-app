@@ -323,7 +323,7 @@ void main(){
   final confirmed=source.substring(
    source.indexOf(' Future<void> _m565ConfirmSms({'),
    source.indexOf(' Future<void> _reviewAutoSmsCandidates('));
-  expect(confirmed,contains('!facts.canAutoPostAsIncomeExpense'));
+  expect(confirmed,contains('!facts.canOwnerConfirmAsIncomeExpense'));
   expect(confirmed,contains('(facts.kind==WaffraBankOperationKind.income)!=income'));
   expect(confirmed,contains('original.currency!=\'SAR\''));
   expect(confirmed,contains('userConfirmed:true'));
