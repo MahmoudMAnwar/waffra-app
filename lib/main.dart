@@ -1115,7 +1115,10 @@ DateTime? bankSmsDate(String raw, {DateTime? referenceDate}) {
   return y==null||m==null||d==null||h==null||min==null?
    null:checked(y,m,d,h,min);
  }
- final match=RegExp(r'(\d{1,2})[/-](\d{1,2})[/-](\d{1,4})\s+(\d{1,2}):(\d{2})').firstMatch(normalized);
+ // M1011: do not parse a plausible DD/MM/YYYY substring within a
+ // malformed three-digit day (e.g. 318-11-2026 -> 18-11-2026).
+ // A missing trustworthy source timestamp requires explicit user choice.
+ final match=RegExp(r'\b(\d{1,2})[/-](\d{1,2})[/-](\d{1,4})\s+(\d{1,2}):(\d{2})').firstMatch(normalized);
  if(match==null)return null;
  final a=int.tryParse(match.group(1)!),month=int.tryParse(match.group(2)!),
   c=int.tryParse(match.group(3)!),hour=int.tryParse(match.group(4)!),
