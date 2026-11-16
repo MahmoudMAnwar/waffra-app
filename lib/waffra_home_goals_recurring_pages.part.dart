@@ -306,20 +306,12 @@ extension _WaffraHomeGoalsRecurringPagesModule on _HomeScreenState {
    child:ListView(controller:_recurringScrollController,
     physics:const ClampingScrollPhysics(parent:AlwaysScrollableScrollPhysics()),
     padding:const EdgeInsets.fromLTRB(12,14,12,28),children:[
-     Row(children:[
-      IconButton(
-       tooltip:waffraIsEnglish?'Financial calendar':'التقويم المالي',
-       onPressed:WaffraHaptics.tap(showWaffraFinancialCalendar),
-       icon:const Icon(Icons.calendar_month_outlined,size:29,color:emerald)),
-      const SizedBox(width:7),
-      Expanded(child:WaffraText(waffraIsEnglish?'Due dates':'الاستحقاقات',
-       style:const TextStyle(fontWeight:FontWeight.w800,fontSize:25))),
-     ]),
-     Padding(padding:const EdgeInsetsDirectional.only(start:5),
-      child:WaffraText(waffraIsEnglish?
-       'Your upcoming obligations and related transactions':
-       'التزاماتك القادمة والعمليات المرتبطة بها',
-       style:TextStyle(fontSize:12,color:Theme.of(context).hintColor))),
+     WaffraApprovedPageHero(
+      title:waffraIsEnglish?'Due dates':'الاستحقاقات',
+      subtitle:waffraIsEnglish?
+       'Track upcoming obligations and related transactions clearly':
+       'تابع التزاماتك القادمة والعمليات المرتبطة بها بسهولة ووضوح.',
+      icon:Icons.event_repeat_rounded),
      const SizedBox(height:12),
      WaffraApprovedMetrics(metrics:[
       WaffraApprovedMetric(waffraIsEnglish?'Total dues':'إجمالي المستحقات',
@@ -334,6 +326,12 @@ extension _WaffraHomeGoalsRecurringPagesModule on _HomeScreenState {
      const SizedBox(height:16),
      SingleChildScrollView(scrollDirection:Axis.horizontal,
       child:Row(children:[
+       // Calendar stays accessible next to the other due-page actions.
+       IconButton(
+        key:const Key('m1010-dues-financial-calendar'),
+        tooltip:waffraIsEnglish?'Financial calendar':'التقويم المالي',
+        onPressed:WaffraHaptics.tap(showWaffraFinancialCalendar),
+        icon:const Icon(Icons.calendar_month_outlined,color:emerald)),
        // The All filter already exposes the complete due count.
        PopupMenuButton<String>(
         key:const Key('m938-dues-filter-menu'),
