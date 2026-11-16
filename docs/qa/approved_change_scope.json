@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
-  "change_id": "M1010-M1012-ISSUES726-728-729-FORMS-SMS-DUES-REMINDERS-20261116",
-  "human_scope_review": "Three user-approved photo-evidenced incidents: inline goal/due account validation and green due hero; corrected verified SMS source/hash native ACK and transfer provenance; restored owner-confirmed SQLCipher linked goal due payment prompt (no automatic debit), opt-in Android 3/2/1 local reminders. Updated stale M640 and M631 tests BEFORE latest-head CI. Android real-device acceptance remains pending.",
+  "change_id": "M1010-M1014-ISSUES726-728-729-730-FORMS-SMS-VERIFIED-DUES-CI-GUARD-20261116",
+  "human_scope_review": "Owner reported lost SMS provenance, goal/due inline fields, missing 3/2/1 reminders, missed verified payment prompt, and seven CI failures despite approved M550. Source review found Jan–Sep due-key padding mismatch and post-Postpone reminder gap. Three obsolete tests were updated without weakening finance invariants; M550 scanner now checks multiline Dart File readers and old-versus-new registered Home source helper boundaries. All modified files and bounded source regions reviewed before final CI; no automated debit and no phone acceptance claimed.",
   "user_requested_changes": [
     "When adding a saving goal, show visible red inline 'هذا الحقل مطلوب' for each of the three missing mandatory institution, bank and child account dropdowns after tapping Add goal; keep the action enabled but refuse unverified save.",
     "When adding a recurring due, show the same three inline required dropdown errors after Save, in addition to existing description, amount, category and day validation.",
@@ -14,7 +14,11 @@
     "Audit and update every pre-existing test depending on incorrect manual correction semantics; run full M946 whole-app and M550/M385 gates before physical Android UAT.",
     "On verified SQLCipher Home after the first authenticated frame, show existing Paid/Postpone/Not-now dialog for active unpaid linked-goal dues today or overdue; never auto-post on login or 100% saved.",
     "If reminders explicitly enabled and Android OS grants permission, schedule local notifications at 09:00 exactly three/two/one days before each eligible due, unique request IDs and safe relative-day labels; skip past slots and do not cancel bank SMS notices.",
-    "Correct old M631 source test relying on the skipped due dialog and old M640 source test requiring proven-bug manual SMS save; preserve other whole-app contracts."
+    "Correct old M631 source test relying on the skipped due dialog and old M640 source test requiring proven-bug manual SMS save; preserve other whole-app contracts.",
+    "Detect and fix three stale applyRecurring() source-contract test failures (M470/M266/M762) on the current PR rather than claiming independent job faults; preserve financial checks.",
+    "Unify canonical due ID in SQLCipher with unpadded calendar month for all 12 months, retaining owner-confirmed atomic settlement and replay protection.",
+    "Update opt-in Android goal due reminders when user confirms Postpone and skip paid goal_due IDs even when presentation is temporarily stale.",
+    "Strengthen M550 preflight to catch multiline File(...).readAsStringSync Dart source checks and reconstructed Home between() signature checks when only Dart parts change, and prove failure using Python tests."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -22,6 +26,7 @@
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
+    "lib/storage/waffra_fresh_finance_domain_repository.dart",
     "lib/storage/waffra_unified_finance_writer.dart",
     "lib/storage/waffra_verified_accounts_api.dart",
     "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
@@ -39,18 +44,25 @@
     "lib/waffra_home_verified_account_flows.part.dart",
     "lib/waffra_home_verified_transfer_cards.part.dart",
     "lib/waffra_reminders.dart",
+    "scripts/qa/m550_behavior_contract_preflight.py",
     "scripts/qa/m946_full_app_smoke_matrix.py",
     "test/m1010_goal_due_required_account_hero_test.dart",
     "test/m1011_reviewed_sms_provenance_ack_transfer_regression_test.dart",
     "test/m1012_due_reminder_verified_confirmation_test.dart",
+    "test/m1013_goal_due_month_identity_postponement_test.dart",
     "test/m580_sms_security_navigation_performance_test.dart",
     "test/m615_m618_sms_review_retention_perf_contract_test.dart",
     "test/m631_verified_finance_prewarm_test.dart",
     "test/m640_receipt_reader_retirement_test.dart",
     "test/m662_sms_review_activity_pdf_regression_test.dart",
     "test/m670_feedback_transfer_dashboard_test.dart",
+    "test/m762_home_finance_persistence_due_extraction_test.dart",
+    "test/m978_recurring_reminder_goal_index_test.dart",
     "test/m983_sms_direct_kind_prefill_refresh_test.dart",
-    "test/m985_sms_prefill_identity_status_conflict_duplicate_test.dart"
+    "test/m985_sms_prefill_identity_status_conflict_duplicate_test.dart",
+    "test/qa/m550_behavior_contract_preflight_test.py",
+    "test/storage/m266_home_bound_source_regression_test.dart",
+    "test/storage/m470_verified_recurring_payment_capture_test.dart"
   ],
   "bounded_sections": {
     "lib/waffra_goal_recurring_account_picker.dart": [
@@ -211,8 +223,16 @@
     ],
     "lib/waffra_home_finance_persistence_due.part.dart": [
       {
+        "start": " Future<void> syncRecurringReminders()async {",
+        "end": " Future<void> toggleRecurringReminders("
+      },
+      {
         "start": " // No recurring schedule may post money without a user's explicit confirmation.",
         "end": "   if(!r.active||!waffraCategoryNameAvailableForPosting("
+      },
+      {
+        "start": "    }else if(action=='postpone'){",
+        "end": "   }finally{_dueDialogShowing=false;}"
       }
     ],
     "lib/waffra_home_finance_startup.part.dart": [
@@ -237,6 +257,56 @@
       {
         "start": " test('M640 all former scan-and-create paths, flags and model fetches are gone',(){",
         "end": " test('M640 M281 CI and feature inventory name the four surviving tools',(){"
+      }
+    ],
+    "lib/storage/waffra_fresh_finance_domain_repository.dart": [
+      {
+        "start": "      final dueDate = DateTime.tryParse(",
+        "end": "      if (dueKey != expectedDue ||"
+      }
+    ],
+    "scripts/qa/m550_behavior_contract_preflight.py": [
+      {
+        "start": "BINDING_DART = re.compile(",
+        "end": "BINDING_SHELL = re.compile("
+      },
+      {
+        "start": "def _positive_dart(",
+        "end": "def _positive_workflow("
+      },
+      {
+        "start": "    home_path = \"lib/main.dart\"",
+        "end": "    # M934: scan ALL Dart tests against the literal raw main.dart"
+      }
+    ],
+    "test/qa/m550_behavior_contract_preflight_test.py": [
+      {
+        "start": "    def test_catches_old_dart_expectation_and_source_split_boundary(self):",
+        "end": "    def test_m934_rejects_raw_main_reader_for_relocated_widget_guard(self):"
+      }
+    ],
+    "test/m762_home_finance_persistence_due_extraction_test.dart": [
+      {
+        "start": " test('M762 registered real finance persistence and due action retain authenticated writer',(){",
+        "end": " test('M762 original verified finance code and due source reconstruct exactly',(){"
+      }
+    ],
+    "test/m978_recurring_reminder_goal_index_test.dart": [
+      {
+        "start": "  test('M978 actual reminder route keeps exact app schedule and safe guard',",
+        "end": null
+      }
+    ],
+    "test/storage/m266_home_bound_source_regression_test.dart": [
+      {
+        "start": "  test('SMS fingerprints and recurring preferences use bound authority', () {",
+        "end": "  test('goals and backup request verified finance binding before reads', () {"
+      }
+    ],
+    "test/storage/m470_verified_recurring_payment_capture_test.dart": [
+      {
+        "start": " test('M470 due posting retains recurring provenance, never manual',(){",
+        "end": " test('M470 never rewrites guarded legacy capture',(){"
       }
     ]
   },
