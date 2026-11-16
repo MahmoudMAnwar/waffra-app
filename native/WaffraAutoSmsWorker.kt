@@ -77,13 +77,17 @@ class WaffraAutoSmsWorker(context: Context, parameters: WorkerParameters) :
                                 ?.filterIsInstance<String>()?.toSet() ?: emptySet()
                             result.success(WaffraAutoSmsStore.excludeMessages(context, ids))
                         }
+                        "canNotifyBankSms" ->
+                            result.success(WaffraAutoSmsNotifications.canNotify(context))
                         "markAutoBankSmsBackgroundReviewed" -> {
                             // M1020: this marks a reviewed SMS as attempted,
                             // but must never perform an ACK or finance write.
                             val args = call.arguments as? Map<*, *>
                             val id = args?.get("id") as? String ?: ""
                             val revision = args?.get("revision") as? String ?: ""
-                            result.success(WaffraAutoSmsStore.markBackgroundSmsReviewed(context, id, revision))
+                            val delivered = args?.get("delivered") == true
+                            result.success(WaffraAutoSmsStore.markBackgroundSmsReviewed(
+                                context, id, revision, delivered))
                         }
                         "ackCommittedAutoBankSms" -> {
                             // Only Flutter's independent verified finance-hash
