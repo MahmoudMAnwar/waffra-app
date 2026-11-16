@@ -121,9 +121,12 @@ void main(){
   expect(edit,contains('!canMoveLinkedAccount)?null:(provider)async'));
   expect(edit,contains('!canMoveLinkedAccount)?null:(id)async'));
    expect(edit,contains('chosenManualProviderCategory==null||'));
-  expect(edit,contains('accountId:chosenManualAccount!,userConfirmed:true'));
-  expect(edit,contains('await api.linkUnassignedEntry(entryId:initial.id'));
-  expect(edit,contains('linkedHistoricalAccountInThisEdit=true;'));
+  expect(edit,contains("Key('m1003-historical-opening-exclusion')"));
+  expect(edit,contains('if(approved!=true||!attested||!sheetContext.mounted)return;'));
+  expect(edit,contains('linkUnassignedAccountId:canLinkExistingAccount&&'));
+  expect(edit,contains('openingExcludesHistory:openingExcludesHistory'));
+  expect(edit,contains('editExistingAndLinkUnassigned('));
+  expect(edit,contains('final linkedHistoricalAccountInThisEdit=initial!=null&&'));
   expect(edit,contains('editExistingAndMoveAccount('));
   expect(edit,contains('تأكيد تغيير الحساب المرتبط'));
   expect(edit,contains("'Confirm historical account link'"));

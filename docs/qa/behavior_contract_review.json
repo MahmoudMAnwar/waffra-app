@@ -8,6 +8,32 @@
   "review_policy": "Owner requested code-only, no manual tests or test files. Prior safety contracts remain binding. Full same-SHA QA required later.",
   "contracts": [
     {
+      "id": "M1003-ATOMIC-RESTORED-ENTRY-BUDGET-ACCOUNT-LINK",
+      "issue": "Issue #715 / Draft PR #716",
+      "previous_behavior": "Restored historical entry editor saved metadata before linking account; nonzero opening cash needs explicit confirmation absent from edit UI; Home ready=false can be an empty screen.",
+      "approved_behavior": "Budget-only editing of a restored unassigned entry is independent of bank account association and never forces it. When the owner selects an account, require opening-balance exclusion confirmation and one source-witnessed SQLCipher transaction for existing entry edit, budgetId and first account link, with full rollback; nonfinancial private fallback on abnormal Home/auth handoff.",
+      "source_paths": [
+        "lib/waffra_home_entry_sheet.part.dart",
+        "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
+        "lib/waffra_home_root_shell.part.dart",
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/storage/m1003_atomic_restored_budget_account_link_test.dart",
+        "test/m1003_restore_budget_and_blank_surface_contract_test.dart",
+        "test/m495_pr402_ui_performance_regression_test.dart",
+        "test/m622_immediate_home_without_loader_test.dart",
+        "test/m623_verified_home_handoff_no_black_frame_test.dart",
+        "test/m944_home_root_shell_extraction_test.dart"
+      ],
+      "safety_invariants": [
+        "Explicit old-opening-cash attestation, no guessed link or duplicate debit, immutable source/receipt unchanged.",
+        "Exactly one existing source record/budget/link transaction with read-back and rollback on stale, missing or mismatched record.",
+        "Private screen fallback retains login, biometrics, SQLCipher and verified financial-data gates.",
+        "Real Android black-screen, historic backup, signed APK and exact-head CI require separate verification."
+      ]
+    },
+    {
       "id": "M1001-M340-ORIGINAL-SAR-WITNESS",
       "issue": "Issue #712 / PR #713",
       "previous_behavior": "The #709 merge optimized BankParser.parse to trust an optional precomputed sourceAmount shortcut when present, violating M340's independent original SMS source-action SAR witness requirement, causing main build and M174 M928 failures.",
@@ -6733,5 +6759,19 @@
         "Existing SQLCipher verified writer, biometric and backup staging must remain unchanged; all code remains Draft."
       ]
     }
-  ]
+  ],
+  "m1006_restore_handoff": {
+    "issue": "Issue #715 / Draft PR #716",
+    "source": "lib/waffra_home_account_tools.part.dart; lib/waffra_home_finance_recovery.part.dart; lib/waffra_home_root_shell.part.dart; lib/main.dart",
+    "evidence": "After SQLCipher restore, Home reload clears ready until verification. A dark modal barrier over an unmounted/green placeholder can appear black. _loadFinanceSafely returns normally after recording verification failure.",
+    "approved": "Render a pale, nonfinancial progress scene during unready Home. Do not treat a committed restore as fully verified until Home sets ready and no finance failure; otherwise surface safe post-commit recovery without deleting or retrying writes.",
+    "test_path": "test/m1006_restore_handoff_no_black_background_test.dart",
+    "safeguards": [
+      "No optimistic old finance data displayed while the verified source reloads.",
+      "Keep biometric, AEAD archive password, SQLCipher writer and transaction count checks.",
+      "No false restore-success toast or dialog dismissal after a swallowed Home verification error.",
+      "No records, attachment bytes, categories or linked balances modified by this presentation fix."
+    ],
+    "physical_android_reproduction": "pending"
+  }
 }

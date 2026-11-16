@@ -1,192 +1,131 @@
 {
   "contract_version": 1,
-  "change_id": "M1000-M1002-ISSUES710-714-TRUST-AND-SMS-EXCLUSION-20261116",
-  "human_scope_review": "Owner approved eight finance trust/control enhancements and explicitly requested source code first, with no manual tests or new test files until the owner opens a separate QA phase. Draft #711 must preserve single SQLCipher writer, source witness, verified archive staging, biometric approval, approved FAB/Snackbar and original app UI. Critical owner report: 38 excluded SMS showed zero saved exclusion rules. Consent-safe distinction between native excluded identities/senders and encrypted reusable patterns, serialized owner rule writes, read-back checks, and same treatment in Inbox/Notifications/income/expense/transfer flow added within the same Draft #711. No new tests or workflow edits. M1000/M1002 exact-head CI remediation: update six existing source-level expected literals to verify the safer serialized encrypted rule read/merge/write + readback rather than demand unsafe direct writes; add new owner rule regression and financial trust contract; replace one newly introduced native unsearchable account history dropdown with the shared searchable picker. No existing test skipped or removed.",
+  "change_id": "M1003-ISSUE715-RESTORE-BUDGET-ACCOUNT-AND-BLANK-ROUTES",
+  "human_scope_review": "Fix after-restore historical transaction budget/account link: user screenshot originates in Home M500 catch after metadata save, when SQLCipher rejects linking to nonzero opening balance without explicit openingExcludesHistory attestation. Require checkbox and one source-verified atomic edit+link, no duplicate money, rollback all fields on failure. Audit ready=false blank Home and missing retained authentication stage. Do not bypass security or change approved FAB/visual designs. Owner reports BLACK background specifically after restoring an encrypted backup. Confirmed source after applyVerifiedV3Restore awaits a fail-closed _loadFinanceSafely that temporarily clears ready and entries. The previous empty canvas under dark dialog barrier appeared black. Additionally _loadFinanceSafely suppresses thrown errors into _financeLoadFailure, allowing the restore dialog to close and claim success even when Home is unverified. Fix both while retaining the SQLCipher snapshot and archive.",
   "user_requested_changes": [
-    "1. Read-only independent financial account integrity screen, no balance auto-repair.",
-    "2. Authenticated V24/V3 backup preview, duplicate-ID check, before/after source transaction impact; preserve SQLCipher staging, biometric and restore preflight.",
-    "3. Durable change history (partially implemented: authenticated restore comparison; persistent edit audit still missing).",
-    "4. Bounded SQLCipher keyset data access and responsive large account history (device profiling pending).",
-    "5. Unified account history search on merchant/title, category, verified account, type, date and SAR halala amount bounds.",
-    "6. Read-only recurring/due collision advisories; never auto-delete or charge.",
-    "7. Read-only future liquidity projection from owner-verified account-linked scheduled obligations, no live balance edits.",
-    "8. Accessible localized trust page and safe RTL/error states without changing FAB or Snackbar. No tests added or manually executed yet.",
-    "M1002 fix discrepancy between actual native excluded SMS count and reusable exclusion rules; count them separately and report when safe rule learning is impossible without suppressing financial SMS.",
-    "M1002 protect all four rule kinds and the two SMS bulk-exclusion entry points against lost encrypted writes and stale editor overwrites.",
-    "Fix M1000/M1002 regressions against approved M661/M462/M651/M665 contracts: owner-serialized encrypted rule commits and read-back replace stale direct store.write; preserve source-level ordering assertions and restore searchable account-history transaction type filter."
+    "Fix restored historical entry budget/account association with explicit opening-balance attestation and one encrypted edit+link transaction.",
+    "Avoid blank/black visuals on ready=false and missing auth retained-stage states without exposing financial values.",
+    "Add new and retained regressions; verify via exact-head CI, physical Android remains pending.",
+    "After successful SQLCipher restore do not hide the Home under a dark/black canvas: use an explicit pale nonfinancial verification surface during reload, and do not display success if _loadFinanceSafely caught a verification error."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
-    "docs/qa/M1000_FINANCIAL_TRUST_CODE_ONLY.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
+    "docs/qa/M1003_RESTORE_BLANK_ROUTE_REVIEW.md",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
+    "lib/waffra_home_entry_sheet.part.dart",
+    "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
+    "lib/waffra_home_root_shell.part.dart",
     "lib/main.dart",
-    "lib/storage/waffra_financial_trust_read.dart",
-    "lib/storage/waffra_sqlcipher_history_pager.dart",
-    "lib/storage/waffra_verified_accounts_api.dart",
-    "lib/storage/waffra_verified_active_restore_preflight.dart",
-    "lib/waffra_account_context_page.dart",
-    "lib/waffra_accounts_manager_page.dart",
-    "lib/waffra_backup_safety_preview.dart",
-    "lib/waffra_financial_change_review.dart",
-    "lib/waffra_financial_trust_page.dart",
-    "lib/waffra_financial_trust_policy.dart",
+    "test/m495_pr402_ui_performance_regression_test.dart",
+    "test/m622_immediate_home_without_loader_test.dart",
+    "test/m623_verified_home_handoff_no_black_frame_test.dart",
+    "test/m944_home_root_shell_extraction_test.dart",
+    "test/m1003_restore_budget_and_blank_surface_contract_test.dart",
+    "test/storage/m1003_atomic_restored_budget_account_link_test.dart",
+    "test/waffra_m206_day_theme_tour_sms_regression_test.dart",
+    ".github/scripts/run-m274-android-tap-smoke.sh",
     "lib/waffra_home_account_tools.part.dart",
-    "lib/waffra_home_sms_inbox.part.dart",
-    "lib/waffra_home_sms_management.part.dart",
-    "lib/waffra_home_sms_rules.part.dart",
-    "lib/waffra_home_verified_account_flows.part.dart",
-    "lib/waffra_sms_local_rules.dart",
-    "lib/waffra_sms_rule_settings_page.dart",
-    "test/m661_exclusion_rule_apply_regression_test.dart",
-    "test/m462_smart_sms_rule_review_test.dart",
-    "test/m647_m652_financial_activity_regression_test.dart",
-    "test/m665_sms_review_structural_learning_test.dart",
-    "test/m1000_financial_trust_contract_regression_test.dart",
-    "test/m1002_owner_sms_rule_atomic_review_test.dart"
+    "test/m1006_restore_handoff_no_black_background_test.dart"
   ],
   "bounded_sections": {
+    "lib/waffra_home_entry_sheet.part.dart": [
+      {
+        "start": " Future<void> entrySheet({MoneyEntry? initial",
+        "end": "  // The sender identifies a bank/provider only"
+      },
+      {
+        "start": "        key:ValueKey('m470-home-manual-account-'",
+        "end": "        onChanged:chosenManualProvider==null||"
+      },
+      {
+        "start": "       key:const Key('waffra-entry-confirm-save'),",
+        "end": "// Historical entries can predate creation of their money account."
+      },
+      {
+        "start": "// Historical entries can predate creation of their money account.",
+        "end": "       if(initial!=null&&canMoveLinkedAccount&&"
+      },
+      {
+        "start": "  if(result==null||!mounted){",
+        "end": "  // M985: a bank reference is useful only alongside identical card/account"
+      },
+      {
+        "start": "    if(!await _m953SaveExistingVerifiedEntry(initial,result,",
+        "end": "   }else{\n   // Optimistic in-memory edits"
+      },
+      {
+        "start": "  final movedLinkedAccountInThisEdit=initial!=null",
+        "end": "  if(mounted)await budgetAlert(result,previousSpent);"
+      },
+      {
+        "start": " Future<bool> _m953SaveExistingVerifiedEntry(",
+        "end": "   final verifiedRaw=committed.ledgerRaw;"
+      }
+    ],
+    "lib/storage/waffra_verified_encrypted_finance_bridge.dart": [
+      {
+        "start": "  Future<WaffraFinanceSnapshotState> saveHomeChanges({",
+        "end": "  /// M956: source-witnessed metadata edit plus account reassignment, atomic."
+      }
+    ],
+    "lib/waffra_home_root_shell.part.dart": [
+      {
+        "start": "extension _WaffraHomeRootShell on _HomeScreenState {",
+        "end": "  appBar:AppBar("
+      }
+    ],
     "lib/main.dart": [
       {
-        "start": "import 'waffra_recurring_policy.dart';",
-        "end": "import 'storage/waffra_legacy_write_queue.dart';"
+        "start": "  final showCountry=needsCountry||",
+        "end": "   if(showLoginScreen)KeyedSubtree("
+      },
+      {
+        "start": "  builder:(context,child)=>WaffraNoticeTapDismissArea(",
+        "end": "  theme:ThemeData("
       }
     ],
-    "lib/storage/waffra_sqlcipher_history_pager.dart": [
+    "test/m495_pr402_ui_performance_regression_test.dart": [
       {
-        "start": "  static Future<WaffraSqlcipherHistoryPage> load({",
-        "end": "    // Fetch one extra row to prove whether another page exists"
+        "start": " test('M500 #420 Details Edit enables verified retroactive account link',(){",
+        "end": " testWidgets('M499 #416 child picker"
       }
     ],
-    "lib/storage/waffra_verified_accounts_api.dart": [
+    "test/m622_immediate_home_without_loader_test.dart": [
       {
-        "start": "import 'waffra_accounts_repository.dart';",
-        "end": "/// Production-facing M440 account adapter."
-      },
-      {
-        "start": " @override\n Future<List<WaffraAccountBalance>> balances()async{",
-        "end": " /// M611: owner-scoped verified read;"
-      },
-      {
-        "start": " Future<WaffraSqlcipherHistoryPage> readKeysetHistoryPage({",
-        "end": " /// Attach a past unassigned entry only AFTER"
+        "start": "  expect(scaffold,contains('child:!ready&&_financeLoadFailure==null?'));",
+        "end": "  expect(scaffold,contains('Stack(clipBehavior:Clip.none,children:[GestureDetector('));"
       }
     ],
-    "lib/storage/waffra_verified_active_restore_preflight.dart": [
+    "test/m623_verified_home_handoff_no_black_frame_test.dart": [
       {
-        "start": "import 'dart:math';",
-        "end": "/// This stage code never contains"
-      },
-      {
-        "start": "class WaffraVerifiedRestorePreflightResult {",
-        "end": "/// Read-only, password-authenticated preflight BEFORE"
-      },
-      {
-        "start": "  Future<WaffraVerifiedRestorePreflightResult> inspect({",
-        "end": null
+        "start": " test('M623 authenticated Home transition cannot expose unverified money',(){",
+        "end": " test('M623 background SMS runs only after the complete Home frame',(){"
       }
     ],
-    "lib/waffra_account_context_page.dart": [
+    "test/m944_home_root_shell_extraction_test.dart": [
       {
-        "start": "import 'waffra_account_context_settings.dart';",
-        "end": "import 'waffra_i18n.dart';"
-      },
-      {
-        "start": "class WaffraAccountContextPage extends StatefulWidget {",
-        "end": "class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {"
-      },
-      {
-        "start": "class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {",
-        "end": null
+        "start": "  expect(shell, contains('child:!ready&&_financeLoadFailure==null?'));",
+        "end": "  expect(shell, contains('body:_financeLoadFailure!=null?_financialRecoveryScreen():'));"
       }
     ],
-    "lib/waffra_accounts_manager_page.dart": [
+    "test/waffra_m206_day_theme_tour_sms_regression_test.dart": [
       {
-        "start": "import 'waffra_account_context_page.dart';",
-        "end": "import 'waffra_new_account_dialog.dart';"
-      },
+        "start": "    expect(root,contains('child:ValueListenableBuilder<bool>('));",
+        "end": "    expect(root,isNot(contains('KeyedSubtree(key:ValueKey(language)')));"
+      }
+    ],
+    ".github/scripts/run-m274-android-tap-smoke.sh": [
       {
-        "start": "class WaffraAccountsManagerPage extends StatefulWidget {",
-        "end": "class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {"
-      },
-      {
-        "start": " Future<void> openAccountReview()async{",
-        "end": " Future<void> addAccount()async{"
+        "start": "  if (( result == 0 )); then\n    echo \"M274_ANDROID_UI_PASS:real_footer_and_privacy_taps\"",
+        "end": "  echo \"::error::M274 Android UI smoke failed (exit $result); blocking integration\""
       }
     ],
     "lib/waffra_home_account_tools.part.dart": [
       {
-        "start": " Future<void> backupDialog()async {",
-        "end": " Future<String?> _askForPin({"
-      }
-    ],
-    "lib/waffra_home_sms_inbox.part.dart": [
-      {
-        "start": "          final done=<String>{};",
-        "end": "          }finally{\n           if(ctx.mounted)refresh(()=>bulkBusy=false);"
-      }
-    ],
-    "lib/waffra_home_sms_management.part.dart": [
-      {
-        "start": " Future<bool> _m592ExcludeNotificationSelection(",
-        "end": " Future<void> _m549OpenNotifications()async{"
-      }
-    ],
-    "lib/waffra_home_sms_rules.part.dart": [
-      {
-        "start": " Future<bool> _learnSafeSmsRule({",
-        "end": " // Retained single-message reference for on-demand review"
-      }
-    ],
-    "lib/waffra_home_verified_account_flows.part.dart": [
-      {
-        "start": " Future<void> openVerifiedAccounts()async{",
-        "end": " Future<void> openReviewedSmsManualTransfer({"
-      }
-    ],
-    "lib/waffra_sms_local_rules.dart": [
-      {
-        "start": "import 'dart:convert';",
-        "end": "import 'package:crypto/crypto.dart';"
-      },
-      {
-        "start": " static void validate(WaffraSmsLocalRule rule){",
-        "end": null
-      }
-    ],
-    "lib/waffra_sms_rule_settings_page.dart": [
-      {
-        "start": "import 'waffra_sms_local_rules.dart';",
-        "end": "import 'waffra_sms_rule_simulator.dart';"
-      },
-      {
-        "start": "class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{",
-        "end": null
-      }
-    ],
-    "test/m661_exclusion_rule_apply_regression_test.dart": [
-      {
-        "start": "  test('every successful manual create/edit/delete signals rule refresh', () {",
-        "end": "  test('manual sender preview uses paired live sender IDs'"
-      }
-    ],
-    "test/m462_smart_sms_rule_review_test.dart": [
-      {
-        "start": " test('M462 beginner review is prefilled and keeps finance approval separate',(){",
-        "end": " test('M462 background SMS respects explicit budget choice before auto-save',(){"
-      }
-    ],
-    "test/m647_m652_financial_activity_regression_test.dart": [
-      {
-        "start": " test('M651 durable local rule learning triggers debounced non-posting refresh', () {",
-        "end": " test('M652 PDF follows selected types and preserves non-posting internal movements', () {"
-      }
-    ],
-    "test/m665_sms_review_structural_learning_test.dart": [
-      {
-        "start": "  test('after secure rule write, classify queue without rescanning phone history', () {",
-        "end": " test('M665.5 built-in ready-rule UI keeps four expandable groups but no essay',(){"
+        "start": "       restoreStage='HOME_REFRESH';",
+        "end": "       if(authenticatedLegacyRows!=null&&mounted){"
       }
     ]
   },
