@@ -290,9 +290,8 @@ extension _WaffraHomeSmsManagement on _HomeScreenState {
      }
      if(changed){
       await store.write(_smsRuleOwnerKey,rules);
-      // Reclassify existing pending messages after the confirmed encrypted
-      // rule write; never trigger full SMS history import or financial post.
-      _receiveAutoSmsNotice();
+      // Existing messages, not just future SMS, must be re-evaluated.
+      // The refresh below reloads the full current native pending queue.
      }
     }catch(_){
      // A failed optional learning update cannot undo durable exclusion.
@@ -301,6 +300,12 @@ extension _WaffraHomeSmsManagement on _HomeScreenState {
   }catch(e){
    failed=true;
    debugPrint('M592 native exclusion rejected: ${e.runtimeType}');
+  }
+  // M1005: refresh the native owner queue on every durable exclusion,
+  // even when a safe reusable keyword cannot be learned. Otherwise the
+  // Notifications route can keep showing the old list and old rule matches.
+  if(mounted&&done.isNotEmpty){
+   await _refreshAutoSmsInbox();
   }
   if(!mounted)return false;
   if(failed||done.length!=selected.length){

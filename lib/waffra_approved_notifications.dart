@@ -47,6 +47,29 @@ class _WaffraApprovedNotificationsPageState
 
  static const green=Color(0xFF064D3B), emerald=Color(0xFF087A54);
  static const cream=Color(0xFFF8F6EF);
+ // M1005: feedback belongs to the pushed Notifications route, not Home's
+ // hidden footer. False means NO confirmed exclusion, never a silent no-op.
+ void _m1005ExclusionFeedback({required bool success,required int count}){
+  if(!mounted)return;
+  final messenger=ScaffoldMessenger.maybeOf(context);
+  if(messenger==null)return;
+  messenger.hideCurrentSnackBar();
+  messenger.showSnackBar(SnackBar(
+   key:const Key('m1005-notification-exclusion-feedback'),
+   behavior:SnackBarBehavior.floating,
+   margin:const EdgeInsets.fromLTRB(12,0,12,8),
+   backgroundColor:cream,
+   shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(14)),
+   content:Text(success?
+    (widget.english?'Excluded $count messages from review. Existing SMS rules rechecked.':
+     'تم استبعاد $count رسالة من المراجعة، وإعادة فحص القواعد على الرسائل الحالية.'):
+    (widget.english?'Exclusion was not confirmed. Messages remain selected; retry or refresh.':
+     'لم يتم تأكيد الاستبعاد. الرسائل ما زالت محددة؛ أعد المحاولة أو حدّث القائمة.'),
+    textAlign:TextAlign.center,
+    style:TextStyle(color:success?green:const Color(0xFF9C2929),
+     fontWeight:FontWeight.bold)),
+  ));
+ }
  Future<void> run(Future<void> Function() action)async{
   if(busy)return;
   setState(()=>busy=true);
@@ -275,10 +298,20 @@ class _WaffraApprovedNotificationsPageState
             ]));
           if(blockSenders==null||!mounted)return;
           await run(()async{
-           final ok=await widget.onBulkExclude!(ids,blockSenders?senders:const []);
-           if(ok&&mounted)setState((){
-            selectedIds.clear();selecting=false;
+           bool ok=false;
+           try{
+            ok=await widget.onBulkExclude!(
+             ids,blockSenders?senders:const []);
+           }catch(_){
+            // Native/storage errors are fail-closed; never lose selection.
+            ok=false;
+           }
+           if(!mounted)return;
+           setState((){
+            if(ok){selectedIds.clear();selecting=false;}
+            // On either result recalculate actual native-backed parent state.
            });
+           _m1005ExclusionFeedback(success:ok,count:ids.length);
           });
          },
         )),
