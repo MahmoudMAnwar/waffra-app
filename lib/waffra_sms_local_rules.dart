@@ -315,12 +315,20 @@ abstract final class WaffraSmsLocalRules {
  }){
   final found=<WaffraSmsLocalRule>[];
   final normalizedBody=normalized(body);
+  // M1009: a historic generic transfer keyword must not override a
+  // definite external SAMA income/expense direction. This also protects
+  // legacy saved manual_transfer_account_to_account rules containing
+  // merely 'transfer' or 'تحويل' from creating false conflicts.
+  final objectiveKind=WaffraBankSmsFactsParser.parse(body).kind;
   final candidates=candidateIndex==null?
    <WaffraSmsLocalRule>[...custom,...allDefaultRules]:
    candidateIndex.candidates(body:body,sender:sender);
   for(final rule in candidates){
    if(!const <String>{'income','expense','transfer','excluded'}
      .contains(rule.resolvedKind))continue;
+   if(rule.resolvedKind=='transfer'&&
+     (objectiveKind==WaffraBankOperationKind.income||
+      objectiveKind==WaffraBankOperationKind.expense))continue;
    if(matches(rule,body,sender:sender,
      preNormalizedBody:normalizedBody))found.add(rule);
   }
