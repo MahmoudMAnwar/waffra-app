@@ -17,17 +17,24 @@
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
-    "scripts/qa/m946_full_app_smoke_matrix.py",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
+    "lib/main.dart",
+    "lib/waffra_auto_sms.dart",
+    "lib/waffra_auto_sms_autopost.part.dart",
+    "lib/waffra_home_entry_sheet.part.dart",
+    "lib/waffra_home_profile.part.dart",
+    "lib/waffra_home_sms_confirmation.part.dart",
+    "lib/waffra_home_sms_management.part.dart",
+    "lib/waffra_sms_background_checkpoint.dart",
+    "native/WaffraAutoSmsNotifications.kt",
+    "native/WaffraAutoSmsReceiver.kt",
     "native/WaffraAutoSmsStore.kt",
     "native/WaffraAutoSmsWorker.kt",
-    "native/WaffraAutoSmsReceiver.kt",
-    "native/WaffraAutoSmsNotifications.kt",
-    "lib/waffra_auto_sms_autopost.part.dart",
-    "lib/waffra_sms_background_checkpoint.dart",
-    "lib/waffra_auto_sms.dart",
-    "lib/main.dart",
-    "lib/waffra_home_sms_confirmation.part.dart",
+    "native/WaffraMainActivity.kt",
+    "scripts/qa/m946_full_app_smoke_matrix.py",
+    "test/m1016_sms_background_financial_intake_test.dart",
+    "test/m1018_sms_workmanager_wakeup_race_test.dart",
+    "test/m1020_sms_background_checkpoint_continuation_test.dart",
     "test/m1022_sms_rule_checkpoint_revision_test.dart",
     "test/m1023_sms_review_notification_ack_test.dart",
     "test/m1024_sms_autopost_date_guard_test.dart",
@@ -37,13 +44,19 @@
     "test/m1028_sms_worker_retry_recovery_test.dart",
     "test/m1029_android_sms_multipart_grouping_test.dart",
     "test/m1030_android_sms_receiver_latency_test.dart",
-    "test/m1020_sms_background_checkpoint_continuation_test.dart",
-    "test/m1018_sms_workmanager_wakeup_race_test.dart",
+    "test/m273_production_user_journey_regression_test.dart",
+    "test/m320_ai_live_entrypoints_test.dart",
+    "test/m324_required_ai_sms_receipts_test.dart",
+    "test/m429_sms_phone_integration_test.dart",
+    "test/m436_cloud_review_pipeline_test.dart",
+    "test/m462_smart_sms_rule_review_test.dart",
+    "test/m470_sms_first_sender_account_test.dart",
+    "test/m509_all_sender_sms_rescan_dedup_test.dart",
+    "test/m547_sms_incremental_jank_regression_test.dart",
+    "test/m636_owner_approved_retirement_and_ui_test.dart",
+    "test/m954_all_sms_rule_routes_regression_test.dart",
     "test/qa/m417_sms_permission_acceptance_test.py",
-    "lib/waffra_home_entry_sheet.part.dart",
-    "lib/waffra_home_profile.part.dart",
-    "lib/waffra_home_sms_management.part.dart",
-    "native/WaffraMainActivity.kt"
+    "test/qa/m447_verified_sms_account_linking_test.py"
   ],
   "allowed_workflow_changes": [],
   "approved_deleted_files": [],
@@ -176,6 +189,138 @@
       {
         "start": "                \"restartCompletedSmsHistory\" -> {",
         "end": "                \"importConsentMonthBankSms\" -> {"
+      }
+    ],
+    "test/m1016_sms_background_financial_intake_test.dart": [
+      {
+        "start": "void main(){",
+        "end": null
+      }
+    ],
+    "test/m1022_sms_rule_checkpoint_revision_test.dart": [
+      {
+        "start": "void main(){",
+        "end": null
+      }
+    ],
+    "test/m1023_sms_review_notification_ack_test.dart": [
+      {
+        "start": "void main(){",
+        "end": null
+      }
+    ],
+    "test/m1024_sms_autopost_date_guard_test.dart": [
+      {
+        "start": "void main(){",
+        "end": null
+      }
+    ],
+    "test/m1025_sms_transaction_identity_test.dart": [
+      {
+        "start": "void main(){",
+        "end": null
+      }
+    ],
+    "test/m1026_sms_history_range_test.dart": [
+      {
+        "start": "void main(){",
+        "end": null
+      }
+    ],
+    "test/m1027_sms_mixed_otp_redaction_test.dart": [
+      {
+        "start": "void main(){",
+        "end": null
+      }
+    ],
+    "test/m1028_sms_worker_retry_recovery_test.dart": [
+      {
+        "start": "void main(){",
+        "end": null
+      }
+    ],
+    "test/m1029_android_sms_multipart_grouping_test.dart": [
+      {
+        "start": "void main(){",
+        "end": null
+      }
+    ],
+    "test/m1030_android_sms_receiver_latency_test.dart": [
+      {
+        "start": "void main(){",
+        "end": null
+      }
+    ],
+    "test/m273_production_user_journey_regression_test.dart": [
+      {
+        "start": "void main() {",
+        "end": null
+      }
+    ],
+    "test/m320_ai_live_entrypoints_test.dart": [
+      {
+        "start": "void main(){",
+        "end": null
+      }
+    ],
+    "test/m324_required_ai_sms_receipts_test.dart": [
+      {
+        "start": "void main(){",
+        "end": null
+      }
+    ],
+    "test/m429_sms_phone_integration_test.dart": [
+      {
+        "start": "void main(){",
+        "end": null
+      }
+    ],
+    "test/m436_cloud_review_pipeline_test.dart": [
+      {
+        "start": "void main() {",
+        "end": null
+      }
+    ],
+    "test/m462_smart_sms_rule_review_test.dart": [
+      {
+        "start": "void main(){",
+        "end": null
+      }
+    ],
+    "test/m470_sms_first_sender_account_test.dart": [
+      {
+        "start": "void main(){",
+        "end": null
+      }
+    ],
+    "test/m509_all_sender_sms_rescan_dedup_test.dart": [
+      {
+        "start": "void main() {",
+        "end": null
+      }
+    ],
+    "test/m547_sms_incremental_jank_regression_test.dart": [
+      {
+        "start": "void main() {",
+        "end": null
+      }
+    ],
+    "test/m636_owner_approved_retirement_and_ui_test.dart": [
+      {
+        "start": "void main(){",
+        "end": null
+      }
+    ],
+    "test/m954_all_sms_rule_routes_regression_test.dart": [
+      {
+        "start": "void main(){",
+        "end": null
+      }
+    ],
+    "test/qa/m447_verified_sms_account_linking_test.py": [
+      {
+        "start": "class VerifiedSmsAccountLinkingTest",
+        "end": null
       }
     ]
   }
