@@ -977,7 +977,9 @@ object WaffraAutoSmsStore {
                     "receivedAt" to row.getLong("receivedAt"),
                     "sensitiveOtp" to row.optBoolean("sensitiveOtp", false),
                     "backgroundAttempted" to row.optBoolean("backgroundAttempted", false),
-                    "backgroundRuleRevision" to row.optString("backgroundRuleRevision", ""))
+                    "backgroundRuleRevision" to row.optString("backgroundRuleRevision", ""),
+                    "backgroundNotificationPending" to row.optBoolean("backgroundNotificationPending", false),
+                    "backgroundNotificationRetryAt" to row.optLong("backgroundNotificationRetryAt", 0L))
                 if (row.has("cloud")) {
                     val proof = row.optJSONObject("cloud")
                     if (proof != null) {
@@ -1009,7 +1011,7 @@ object WaffraAutoSmsStore {
      * the owner-encrypted inbox for explicit foreground confirmation.
      */
     fun markBackgroundSmsReviewed(context: Context, id: String,
-                                   revision: String): Boolean =
+                                   revision: String, delivered: Boolean): Boolean =
         synchronized(mutex) {
             if (!enabled(context) || !Regex("^[a-f0-9]{64}$").matches(id) ||
                 !Regex("^[a-f0-9]{64}$").matches(revision))
@@ -1020,10 +1022,14 @@ object WaffraAutoSmsStore {
                     val row = data.getJSONObject(i)
                     if (row.optString("id") != id) continue
                     if (row.optBoolean("backgroundAttempted", false) &&
-                        row.optString("backgroundRuleRevision", "") == revision)
+                        row.optString("backgroundRuleRevision", "") == revision &&
+                        row.optBoolean("backgroundNotificationPending", false) == !delivered)
                         return@synchronized true
                     row.put("backgroundRuleRevision", revision)
                     row.put("backgroundAttempted", true)
+                    row.put("backgroundNotificationPending", !delivered)
+                    row.put("backgroundNotificationRetryAt", if (delivered) 0L
+                        else System.currentTimeMillis() + 300000L)
                     return@synchronized save(context, data)
                 }
                 false
@@ -1621,6 +1627,25 @@ object WaffraAutoSmsStore {
     }
 
     /** Claim each review notification once; history never floods the shade. */
+    /** Read-only status for an existing owner-encrypted SMS. Calling notify()
+     * before claim avoids losing a notification if Android throws or dies.
+     * Duplicate calls replace the same fingerprint-keyed OS notification.
+     */
+    fun reviewNotificationClaimed(context: Context, fingerprint: String): Boolean? =
+        synchronized(mutex) {
+            if (!enabled(context) || !Regex("^[a-f0-9]{64}$").matches(fingerprint))
+                return@synchronized null
+            try {
+                val data = read(context)
+                for (i in 0 until data.length()) {
+                    val row = data.getJSONObject(i)
+                    if (row.optString("id") == fingerprint)
+                        return@synchronized row.optBoolean("reviewNotified", false)
+                }
+                null
+            } catch (_: Exception) { null }
+        }
+
     fun claimReviewNotification(context: Context, fingerprint: String): Boolean =
         synchronized(mutex) {
             if (!enabled(context)) return@synchronized false
