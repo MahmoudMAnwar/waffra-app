@@ -46,8 +46,8 @@ class M417AutoSmsContractTest(unittest.TestCase):
         self.assertIn(marker,main)
         self.assertIn("part 'waffra_home_sms_transfer_review.part.dart';",main)
         home=read_waffra_home_source()
-        self.assertIn("await entrySheet(sms:true,initialSms:body,reviewedSender:sender);",home)
-        self.assertIn("smsHashes.contains(bankSmsHash(body))",home)
+        self.assertIn("await entrySheet(sms:true,initialSms:body,reviewedSender:sender,reviewedSmsId:id);",home)
+        self.assertIn("smsHashes.contains(bankSmsHash(body,nativeId:id))",home)
         # Income/expense and two-sided transfers have independent durable
         # acknowledgements. A queue-only ACK can replay money on rescan.
         self.assertIn(
@@ -130,7 +130,7 @@ class M417AutoSmsContractTest(unittest.TestCase):
         self.assertEqual(bridge.count("static Future<bool> markBackgroundReviewed(String id,{required String revision,"),1)
         self.assertIn("if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(id))return false;",bridge)
         self.assertIn("return _boolCall('markAutoBankSmsBackgroundReviewed',{'id':id,'revision':revision,",bridge)
-        self.assertLess(bridge.index("static Future<bool> markBackgroundReviewed(String id)async{"),
+        self.assertLess(bridge.index("static Future<bool> markBackgroundReviewed(String id,{required String revision,"),
                         bridge.index("static Future<List<Map<String,Object?>>> pending()async{"))
         self.assertTrue(bridge.rstrip().endswith("}"))
         self.assertEqual(bridge.count("static Future<Map<String,Object?>?> pendingById("),1)
