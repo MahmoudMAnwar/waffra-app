@@ -51,13 +51,13 @@
     ],
     "test/m392_m395_budget_quick_actions_goal_ui_test.dart": [
       {
-        "start": " test('M393 goal pause is explicit in Quick Actions, with guarded finance writes',(){",
+        "start": " test('M393 old goals still active, pause flag persists, and savings never vanish',(){",
         "end": " test('M393 recurring Quick Actions preserve original edit/delete/toggle',(){"
       }
     ],
     "test/m665_goal_due_display_and_linked_edit_test.dart": [
       {
-        "start": " test('M689 goal action sheet retains fund/edit/release/delete/active',(){",
+        "start": " test('M665.7 recurring goal payment shows paid split, not zero saved progress',(){",
         "end": " test('M665.7 linked due edit explains without changing finance; standalone still editable',(){"
       }
     ],
