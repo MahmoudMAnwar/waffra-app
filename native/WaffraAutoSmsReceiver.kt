@@ -29,12 +29,17 @@ class WaffraAutoSmsReceiver : BroadcastReceiver() {
                     sms.timestampMillis
                 )
             }
+            // M1018 / #735: first persist every accepted SMS, then request
+            // one successor for this broadcast. Multiple senders must not
+            // create multiple expensive FlutterEngine jobs.
+            var shouldEnqueue = false
             for ((sender, parts) in bySender) {
                 if (WaffraAutoSmsStore.offer(context, sender, parts.toString(),
                         receivedDates[sender] ?: System.currentTimeMillis())) {
-                    WaffraAutoSmsWorker.enqueue(context)
+                    shouldEnqueue = true
                 }
             }
+            if (shouldEnqueue) WaffraAutoSmsWorker.enqueue(context)
         } catch (_: Exception) {
             // Fail closed: neither text, sender, nor exception is logged.
         }
