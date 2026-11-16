@@ -436,6 +436,8 @@ extension _WaffraHomeFinancePersistenceDue on _HomeScreenState {
       if(!await _persistModuleOrReload(
        WaffraFinanceRoute.recurringPostingAndPostponement,
        operation:'recurring-postpone'))return;
+      // Immediately replace old OS reminders with the postponed goal date.
+      if(mounted)await syncRecurringReminders();
      }
     }else{return;}
    }finally{_dueDialogShowing=false;}
