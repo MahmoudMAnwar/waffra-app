@@ -683,12 +683,42 @@ object WaffraAutoSmsStore {
         "aljazira|jazeera|alahli|stcpay|stc.?bank|urpay|mobily.?pay|" +
         "alrajhi|albilad|الراجحي|الإنماء|الانماء|الأهلي|الاهلي|الرياض|البلاد)", RegexOption.IGNORE_CASE)
 
-    /** Any SMS inbox sender may enter review. This is NOT finance authority.
-     * Keep bounded ciphertext and mask OTP digits before it is persisted.
+    // M1016 / #732: a discount campaign is NOT a completed financial event,
+    // even if its copy contains "خصم 50 ريال" or "SAR 50". Match specific
+    // promotional invitations rather than broad money verbs; a genuinely
+    // completed debit/credit remains available for user review.
+    private val nonTransactionPromotion = Regex(
+        "(?:احصل\\s+على|استمتع\\s+ب|عرض\\s+(?:خاص|حصري|لفترة)|" +
+        "عروض\\s+(?:حصرية|خاصة)|تسوق\\s+الآن|تسوّق\\s+الآن|" +
+        "خصم\\s+(?:حتى|يصل\\s+إلى)|استخدم\\s+(?:كود|رمز|كوبون)|" +
+        "سارع\\s+بالاشتراك|اشترك\\s+الآن|" +
+        "\\b(?:shop\\s+now|exclusive\\s+offer|special\\s+offer|" +
+        "limited\\s+time\\s+offer|promo\\s+code|use\\s+code)\\b)",
+        RegexOption.IGNORE_CASE)
+
+    /** M1016: review is for plausible FINANCIAL SMS, not an SMS mirror.
+     * The same predicate protects LIVE receiver and user-requested history.
+     * A pure verification SMS must reach the existing owner-encrypted,
+     * durable 30-day native OTP exclusion gate; it NEVER enters review.
+     * Unknown branded banks need independent transaction evidence, not a
+     * hard-coded bank-name allowlist. This is only an intake/queue gate:
+     * it cannot authorize posting or infer an account.
      */
-    fun reviewEligible(sender: String, body: String): Boolean =
-        sender.isNotBlank() && sender.trim().length <= 100 &&
-        body.isNotBlank() && body.length <= 1600
+    fun reviewEligible(sender: String, body: String): Boolean {
+        if (sender.isBlank() || sender.trim().length > 100 ||
+            body.isBlank() || body.length > 1600) return false
+        if (pureVerificationOnly(body)) return true
+        // Unproven security/advice notices without a completed monetary
+        // event must not appear as bank income/expense to the user.
+        if (otp.containsMatchIn(body) &&
+            !completedFinancialAction.containsMatchIn(body) &&
+            !(action.containsMatchIn(body) && money.containsMatchIn(body)))
+            return false
+        if (nonTransactionPromotion.containsMatchIn(body) &&
+            !completedFinancialAction.containsMatchIn(body)) return false
+        return qualifies(sender, body) ||
+            unknownFinancialKind(sender, body) != null
+    }
 
     fun qualifies(sender: String, body: String): Boolean {
         val safe = body.trim()
