@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_approved_notifications.dart';
@@ -91,6 +92,25 @@ void main(){
   expect(WaffraSmsLocalRules.matches(
    rule,body,sender:'AnotherSender'),isFalse);
  });
+ test('M1005 single Exclude always reports on the visible route and rechecks queue',(){
+  // The review popup is dismissed before this code runs. The root
+  // Snackbar is hidden behind the pushed Notifications route otherwise.
+  final src=File('lib/waffra_home_sms_confirmation.part.dart')
+   .readAsStringSync();
+  final start=src.indexOf("}else if(decision=='exclude'&&mounted){");
+  final end=src.indexOf("}else if(decision=='transfer'&&mounted)",start);
+  expect(start,greaterThanOrEqualTo(0));
+  expect(end,greaterThan(start));
+  final block=src.substring(start,end);
+  expect(block,contains('final visibleContext=Navigator.of(context).canPop()?'));
+  expect(block,contains('Navigator.of(context).context:context;'));
+  expect(block,contains('await WaffraAutoSms.excludeMessages([id])'));
+  expect(block,contains('snackSuccess(visibleContext,learned?'));
+  expect(block,contains('snack(visibleContext,waffraIsEnglish?'));
+  expect(block,contains('await _refreshAutoSmsInbox();'));
+  expect(block,isNot(contains('unawaited(_refreshAutoSmsInbox());')));
+ });
+
 
  test('M1005 BRKH bilingual OTP variants are security, never posted money',(){
   for(final text in <String>[

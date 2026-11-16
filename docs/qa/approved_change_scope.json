@@ -18,7 +18,8 @@
     "lib/waffra_bank_sms_facts.dart",
     "native/WaffraAutoSmsStore.kt",
     "test/m979_native_otp_prequeue_exclusion_test.dart",
-    "test/m1005_sms_exclusion_route_and_rules_test.dart"
+    "test/m1005_sms_exclusion_route_and_rules_test.dart",
+    "lib/waffra_home_sms_confirmation.part.dart"
   ],
   "bounded_sections": {
     "lib/waffra_approved_notifications.dart": [
@@ -53,6 +54,12 @@
       {
         "start": "  test('M979 new-app Arabic and English OTP stay excluded by app rule engine',",
         "end": "  test('M979 mixed settled money and verification never auto-exclude', () {"
+      }
+    ],
+    "lib/waffra_home_sms_confirmation.part.dart": [
+      {
+        "start": "   }else if(decision=='exclude'&&mounted){",
+        "end": "   }else if(decision=='transfer'&&mounted){"
       }
     ]
   },
