@@ -759,7 +759,9 @@ abstract final class WaffraSmsLocalRules {
      rule.contextFragments.any((p)=>!safeRuleKeyword(p,rule.resolvedKind))||
      (rule.templateFamily.isNotEmpty&&
       (!rule.id.startsWith('template_')||rule.resolvedKind!='excluded'||
-       rule.sender.trim().isEmpty||!rule.matchAll||rule.autoPost||
+       // Explicit owner-reviewed global templates are permitted: their
+       // structural OTP/beneficiary guard still blocks posted money.
+       !rule.matchAll||rule.autoPost||
        !const {'verification','beneficiary_management'}
         .contains(rule.templateFamily)))||
      rule.accountId.length>128||
