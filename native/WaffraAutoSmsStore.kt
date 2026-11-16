@@ -975,7 +975,8 @@ object WaffraAutoSmsStore {
                     "sender" to row.getString("sender"),
                     "body" to row.getString("body"),
                     "receivedAt" to row.getLong("receivedAt"),
-                    "sensitiveOtp" to row.optBoolean("sensitiveOtp", false))
+                    "sensitiveOtp" to row.optBoolean("sensitiveOtp", false),
+                    "backgroundAttempted" to row.optBoolean("backgroundAttempted", false))
                 if (row.has("cloud")) {
                     val proof = row.optJSONObject("cloud")
                     if (proof != null) {
@@ -999,6 +1000,30 @@ object WaffraAutoSmsStore {
             throw IllegalStateException("Encrypted SMS review queue unreadable", failure)
         }
     }
+
+    /**
+     * M1020 / #737: durable attempt receipt for a background REVIEW decision.
+     * Unlike ACK, this cannot remove, exclude, or financially commit an SMS.
+     * It only skips redundant background retries; the message remains in
+     * the owner-encrypted inbox for explicit foreground confirmation.
+     */
+    fun markBackgroundSmsReviewed(context: Context, id: String): Boolean =
+        synchronized(mutex) {
+            if (!enabled(context) || !Regex("^[a-f0-9]{64}$").matches(id))
+                return@synchronized false
+            try {
+                val data = read(context)
+                for (i in 0 until data.length()) {
+                    val row = data.getJSONObject(i)
+                    if (row.optString("id") != id) continue
+                    if (row.optBoolean("backgroundAttempted", false))
+                        return@synchronized true
+                    row.put("backgroundAttempted", true)
+                    return@synchronized save(context, data)
+                }
+                false
+            } catch (_: Exception) { false }
+        }
 
     /** A single already-known SMS for a tapped notification.
      * This avoids marshalling all 1000 encrypted review items across the
