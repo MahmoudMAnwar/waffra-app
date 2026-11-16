@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_bank_sms_facts.dart';
 
 void main(){
- test('outgoing wallet transfer stays a transfer, not an expense',(){
+ test('outgoing wallet transfer to external recipient is expense suggestion only',(){
   final sms='عملية حوالة مالية صادرة مقبولة\n'
    'خصمت من محفظة: **8308\n'
    'إلى: TEST RECIPIENT\n'
@@ -12,7 +12,8 @@ void main(){
    'في: 02-11-2026 15:13\n'
    'الرقم المرجعي: DEMO1234TEST';
   final item=WaffraBankSmsFactsParser.parse(sms);
-  expect(item.kind,WaffraBankOperationKind.transfer);
+  expect(item.kind,WaffraBankOperationKind.expense);
+  expect(item.requiresBeneficiaryReview,isTrue);
   expect(item.canAutoPostAsIncomeExpense,isFalse);
   expect(item.sourceSuffix,'8308');
   expect(item.destinationSuffix,'9288');
@@ -22,7 +23,8 @@ void main(){
  test('credit transfer is a transfer even though incoming',(){
   final item=WaffraBankSmsFactsParser.parse(
    'Credit Transfer via Alinma Bank\nAmount: SAR 1900.00');
-  expect(item.kind,WaffraBankOperationKind.transfer);
+  expect(item.kind,WaffraBankOperationKind.expense);
+  expect(item.requiresBeneficiaryReview,isTrue);
   expect(item.canAutoPostAsIncomeExpense,isFalse);
  });
  test('cashback refund is true income',(){
