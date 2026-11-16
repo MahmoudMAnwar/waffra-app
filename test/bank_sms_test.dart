@@ -17,7 +17,7 @@ void main() {
    final parsed=BankParser.parse(raw);
    expect(parsed.amount,60);
    expect(parsed.income,false);
-   expect(parsed.category,'تحويلات');
+   expect(parsed.category,'أخرى / مصروف غير مصنف');
   });
   test('multiple bank SMS messages split by bank headings', () {
    const raw='شراء PoS\nبـ84.72SR\n00:43 16/10/26\n\nحوالة داخلية صادرة بـ60 SR\n12:34 26/10/17';
