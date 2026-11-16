@@ -1,12 +1,39 @@
 {
   "schema_version": 1,
-  "pr": "M1010 + M1011 Issues #726/#728 — required account fields, green dues hero, SMS provenance/ack (Draft #727)",
-  "issue": "Issues #726, #728",
+  "pr": "M1010-M1012 Issues #726, #728, #729 — goals/dues UI, SMS provenance, due reminders",
+  "issue": "Issues #726, #728, #729",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main after merged PR #725 (16 November 2026)",
   "reviewed_at": "2026-11-16",
-  "review_policy": "Owner-approved screenshots: inline goal/due errors and hero plus verified SMS finance provenance and native ACK with no duplicate ledger effect. Explicit native source receipt and SQLCipher owner verification are mandatory; no private device data imported or printed.",
+  "review_policy": "Screenshots reviewed; explicit user Paid confirmation required; optional notifications remain opt-in and local. No finance debit on funded target or reminder event. Old test contract for M640 retired manual correction conflicts with M1011 fixed provenance; update it with matching test expectations.",
   "contracts": [
+    {
+      "id": "M1012-VERIFIED-GOAL-DUE-PAID-CONFIRMATION-AND-321-OPTIONAL-NOTIFICATIONS",
+      "issue": "Issue #729",
+      "previous_behavior": "Verified SQLCipher Home skipped applyRecurring() entirely on authentication, suppressing the existing owner Paid/Postpone/Not now dialog for a funded goal due today. Android reminder scheduler offered only due-minus-one-day 09:00 notification if opted in. Old source test M631 explicitly asserted the incorrect startup guard.",
+      "approved_behavior": "After verified Home first frame, eligible linked-goal due today/overdue may show existing Paid/Postpone/Not-now dialog. Guard startup with goalLinkedOnly for verified SQLCipher; actual goal cash/wallet settlement requires explicit Paid and existing atomic SQLCipher writer, no auto debit, no double settlement; postponed/paid goals suppressed. When opt-in reminder flag and Android OS permission are enabled, schedule three distinct notifications at 09:00 local three/two/one days before each eligible due with separate IDs, never after scheduled time, without affecting bank SMS notifications. Upcoming unconfirmed goal remains actionable even if OS reminders disabled.",
+      "source_paths": [
+        "lib/waffra_home_finance_startup.part.dart",
+        "lib/waffra_home_finance_persistence_due.part.dart",
+        "lib/waffra_reminders.dart"
+      ],
+      "test_paths": [
+        "test/m1012_due_reminder_verified_confirmation_test.dart",
+        "test/m631_verified_finance_prewarm_test.dart",
+        "test/m444_notification_forecast_budget_test.dart",
+        "test/m86_recurring_schedule_boundary_test.dart",
+        "test/m978_recurring_reminder_goal_index_test.dart",
+        "test/m640_receipt_reader_retirement_test.dart"
+      ],
+      "safety_invariants": [
+        "No Android notification, login or full goal funding can post money.",
+        "Only an owner tap on Paid may reach SQLCipher settleLinkedGoalDue with required userConfirmed:true and verified account.",
+        "Existing paid IDs and postponement suppress additional settlement.",
+        "Reminders require explicit toggle, OS notification grant, active schedule and prior time; preserve one-time goal handling and timezone DST.",
+        "Do not cancel any bank SMS/goal progress/budget notification when rebuilding recurring reminders.",
+        "Latest-head CI and physical Android UAT remain unverified until results."
+      ]
+    },
     {
       "id": "M1011-SMS-CORRECTION-ORIGINAL-TEXT-NATIVE-ID-ACK-AND-SAFE-TRANSFER",
       "issue": "Issue #728",
