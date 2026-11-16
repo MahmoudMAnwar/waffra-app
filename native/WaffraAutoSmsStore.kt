@@ -54,6 +54,9 @@ object WaffraAutoSmsStore {
     private const val consentedOwnerName = "consented_account_sha256_v1"
     private const val suspendedAfterLogoutName = "suspended_after_logout_v1"
     private const val maxCandidates = 1000
+    // M1019 #736: no SMS body/number is stored in this durable marker.
+    // An OS inbox replay is required after the encrypted review queue fills.
+    private const val capacityRecoveryRequestedName = "sms_capacity_recovery_requested_v1"
     private const val activationMonth = "sms_activation_month_start"
     private const val historyCursorAt = "sms_history_cursor_at"
     private const val historyCursorId = "sms_history_cursor_id"
@@ -192,10 +195,18 @@ object WaffraAutoSmsStore {
             "capacity" to maxCandidates,
             "complete" to prefs.getBoolean(historyComplete, false),
             "initialComplete" to prefs.getBoolean(historyInitialCompleted, false),
-            "rescanNeeded" to (waiting in 0 until maxCandidates &&
-                (!prefs.getBoolean(historyComplete, false) ||
-                 hasUnseenInboxRows(context, prefs)))
+            "rescanNeeded" to (
+                prefs.getBoolean(capacityRecoveryRequestedName, false) ||
+                (waiting in 0 until maxCandidates &&
+                 (!prefs.getBoolean(historyComplete, false) ||
+                  hasUnseenInboxRows(context, prefs))))
         )
+    }
+
+    /** M1019: never pretend a 1000+ candidate was safely queued. */
+    fun capacityRecoveryNeeded(context: Context): Boolean = synchronized(mutex) {
+        enabled(context) && context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+            .getBoolean(capacityRecoveryRequestedName, false)
     }
 
     // Explicit opt-out must never auto-resume after a future login.
@@ -927,7 +938,13 @@ object WaffraAutoSmsStore {
                         context, fingerprint, sender, receivedAt)
                     return@synchronized false
                 }
-                if (queue.length() >= maxCandidates) return@synchronized false
+                if (queue.length() >= maxCandidates) {
+                    // M1019: signal replay from Android's original SMS inbox
+                    // when slots become free. Do not evict any existing row.
+                    context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+                        .edit().putBoolean(capacityRecoveryRequestedName, true).commit()
+                    return@synchronized false
+                }
                 val sensitive = otp.containsMatchIn(body)
                 // Mask every contiguous run of digits in OTP notices,
                 // including localized digit variants, before encryption.
@@ -1396,7 +1413,10 @@ object WaffraAutoSmsStore {
             if (!enabled(context)) return 0
             val currentSize = try { read(context).length() }
                 catch (_: Exception) { return 0 }
-            if (currentSize >= maxCandidates) return 0
+            if (currentSize >= maxCandidates) {
+                prefs.edit().putBoolean(capacityRecoveryRequestedName, true).commit()
+                return 0
+            }
             val sameSource = prefs.getLong(historySourceMonth, 0L) == start
             Pair(
                 if (sameSource) prefs.getLong(historyCursorAt, start - 1) else start - 1,
@@ -1541,7 +1561,12 @@ object WaffraAutoSmsStore {
                     .putLong(historyScannedCount, previousExamined + examined)
                     .putLong(historyAddedCount, previousAdded + accepted)
                     .putBoolean(historyComplete, complete)
-                if (complete) editor.putBoolean(historyInitialCompleted, true)
+                if (complete) {
+                    editor.putBoolean(historyInitialCompleted, true)
+                    editor.putBoolean(capacityRecoveryRequestedName, false)
+                } else if (stoppedForCapacity) {
+                    editor.putBoolean(capacityRecoveryRequestedName, true)
+                }
                 if (accepted > 0)
                     editor.putString(queueName, seal(queue.toString()))
                 // OTP exclusion IDs, recoverable 30d labels, cursor and queue
