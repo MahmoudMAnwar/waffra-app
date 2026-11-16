@@ -1,12 +1,33 @@
 {
   "schema_version": 1,
-  "pr": "M1016 Issue #732 — financial-evidence Android SMS intake (Draft)",
-  "issue": "Issue #732",
+  "pr": "M1016–M1017 Issues #732/#734 — SMS intake + batch drain (Draft)",
+  "issue": "Issues #732 and #734",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main after merged PR #725 (16 November 2026)",
   "reviewed_at": "2026-11-16",
-  "review_policy": "Authorized scope is ONLY native pre-encryption review eligibility on live SMS and consented historical import. Do not relax owner/permission/OTP safety or enable unapproved finance posting. Synthetic source tests are not physical Android proof.",
+  "review_policy": "Authorized scope covers native intake eligibility plus bounded processing of all queued candidates, both user requested. Do not relax owner/permission/OTP safety or enable unapproved finance posting. Synthetic source tests are not physical Android proof.",
   "contracts": [
+    {
+      "id": "M1017-BOUNDED-ALL-CANDIDATE-SMS-DRAIN-NO-25-CAP",
+      "issue": "Issue #734",
+      "previous_behavior": "When any verified autoPost rule exists, the background worker processed only actionable.take(25), leaving later messages unreviewed/unnotified on that cycle.",
+      "approved_behavior": "Traverse all actionable candidates with a stable bounded iterator (25 per batch) and sequential existing verified rules/writer. For each candidate select exact durable exclusion, approved account-bound idempotent commit or human review notification; do not silently strand candidate 26+. Native 55-second timeout and WorkManager KEEP race are separate risks and not asserted resolved.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_auto_sms_autopost.part.dart",
+        "lib/waffra_sms_background_batches.dart"
+      ],
+      "test_paths": [
+        "test/m1017_sms_background_batch_drain_test.dart",
+        "test/m462_smart_sms_rule_review_test.dart"
+      ],
+      "safety_invariants": [
+        "No unbounded parallel writes, no second finance authority or account guessing.",
+        "No difference in currency/amount/posted evidence, verified account suffix, category, budget, user authorization or immutable hash ACK guards.",
+        "Safe review-only when candidate cannot be independently verified.",
+        "Keep native 55s WorkManager timeout, KEEP race and queue capacity as unresolved separate gaps; Android device testing required."
+      ]
+    },
     {
       "id": "M1016-NATIVE-FINANCIAL-EVIDENCE-REVIEW-ELIGIBILITY-AND-OTP-ENCRYPTED-DENIAL",
       "issue": "Issue #732",
@@ -28,7 +49,7 @@
         "Pure OTP goes to exact encrypted native 30-day exclusion without showing digits.",
         "Completed financial transaction containing OTP must not be excluded or auto-saved.",
         "No guessed bank owner/account or unapproved money write, all financial rules remain in Dart secured verified authority.",
-        "Other work batching, WorkManager KEEP scheduling and queue limits are out of scope for this PR.",
+        "Batch processing is separately reviewed in M1017; KEEP scheduling and queue limits remain out of scope.",
         "Real Android SMS delivery and OS background timing remain unverified until physical device acceptance."
       ]
     },
