@@ -156,10 +156,10 @@ class _WaffraFinancialTrustPageState extends State<WaffraFinancialTrustPage> {
             color:account.ending<0?Colors.orange:null),
            title:Text(account.name),
            subtitle:Text(t('رصيد حالي: ','Current: ')+cash(account.opening)+
-            '\\n'+t('استحقاقات غير مدفوعة: ','Unpaid dues: ')+
+            '\n'+t('استحقاقات غير مدفوعة: ','Unpaid dues: ')+
             account.pendingCount.toString()+
             (account.ending<0?
-             '\\n'+t('تحذير: سيولة متوقعة سالبة','Warning: projected negative cashflow'):
+             '\n'+t('تحذير: سيولة متوقعة سالبة','Warning: projected negative cashflow'):
              '')),
            isThreeLine:account.ending<0,
            trailing:Text(cash(account.ending),
