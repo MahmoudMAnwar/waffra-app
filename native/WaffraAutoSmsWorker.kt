@@ -181,9 +181,12 @@ class WaffraAutoSmsWorker(context: Context, parameters: WorkerParameters) :
                 // Keep the durable capacity marker; next run can retry.
             }
         }
+        // M1028: failed owners do not lose their encrypted candidate queue
+        // after two attempts. WorkManager enforces exponential retry backoff;
+        // a logout or revoked consent stops the chain on the next run.
         return if (completed && successful) Result.success()
-            else if (runAttemptCount < 2) Result.retry()
-            else Result.failure()
+            else if (WaffraAutoSmsStore.enabled(context)) Result.retry()
+            else Result.success()
     }
 
     companion object {
