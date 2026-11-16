@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "pr": "M1001 PR #713 — restore source-action bank SAR evidence and unblock main APK",
-  "issue": "Issue #712",
+  "pr": "M1005 / #717 — native SMS exclusion confirmation and current-queue rules",
+  "issue": "Issue #717",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at f0def360ea75b9c865548b6f1b4fc07e9640f2c2 after #656",
   "reviewed_at": "2026-11-16",
@@ -6557,5 +6557,16 @@
         ".github/workflows/finance-full-regression.yml"
       ]
     }
-  ]
+  ],
+  "m1005": {
+    "previous_behavior": "Notification Exclude could return false without a visible route-level message and pending sender counters may look unchanged. OTP native/Flutter parsers did not cover common 'is your code for Barakah' pattern.",
+    "approved_behavior": "Confirm native encrypted exclusion, report visible route-local success/failure, refresh the existing queue against saved safe exclusion and four-way rules, and recognize nonfinancial English OTP service phrasing without logging secrets or excluding financial money.",
+    "safety_invariants": [
+      "Never delete Android SMS, saved SQLCipher transactions or undo a committed finance hash.",
+      "Exact owner+ID matched native excludes only; failed operation stays selected and retryable.",
+      "A user-selected message exclusion is different from a reusable rule; safe keyword patterns only, no silent sender-wide exclusion.",
+      "An OTP phrase alongside confirmed financial action remains in review, never automatically excluded.",
+      "No disabled CI or skipped Android testing claimed as success."
+    ]
+  }
 }
