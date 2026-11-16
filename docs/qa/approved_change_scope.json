@@ -104,6 +104,14 @@
     ],
     "native/WaffraAutoSmsWorker.kt": [
       {
+        "start": "        val done = CountDownLatch(1)",
+        "end": "        val main = Handler(Looper.getMainLooper())"
+      },
+      {
+        "start": "                messages.setMethodCallHandler { call, result ->",
+        "end": "                val workerChannel = MethodChannel("
+      },
+      {
         "start": "                workerChannel.setMethodCallHandler { call, result ->",
         "end": "                created.dartExecutor.executeDartEntrypoint("
       },
