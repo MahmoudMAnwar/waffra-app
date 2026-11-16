@@ -19,7 +19,13 @@
         "lib/waffra_home_sms_management.part.dart",
         "lib/waffra_home_sms_rules.part.dart"
       ],
-      "test_paths": [],
+      "test_paths": [
+        "test/m1002_owner_sms_rule_atomic_review_test.dart",
+        "test/m661_exclusion_rule_apply_regression_test.dart",
+        "test/m462_smart_sms_rule_review_test.dart",
+        "test/m647_m652_financial_activity_regression_test.dart",
+        "test/m665_sms_review_structural_learning_test.dart"
+      ],
       "safety_invariants": [
         "Already excluded native SMS and sender policy are distinct from learned rules, and neither source may be reported as empty when unavailable.",
         "Do not automatically create a future-message exclusion rule from an ambiguous financial SMS, or store OTP codes, numbers, bank balances or whole SMS bodies.",
@@ -37,7 +43,9 @@
         "lib/waffra_financial_trust_page.dart",
         "lib/storage/waffra_verified_accounts_api.dart"
       ],
-      "test_paths": [],
+      "test_paths": [
+        "test/m1000_financial_trust_contract_regression_test.dart"
+      ],
       "safety_invariants": [
         "This is owner-approved source-code-only work. No new tests were added or run manually; QA intentionally deferred.",
         "No unauthenticated financial read, backup/source switch, auto cash repair, duplicate deletion, or alternate money writer.",
@@ -55,7 +63,9 @@
         "lib/storage/waffra_verified_active_restore_preflight.dart",
         "lib/waffra_home_account_tools.part.dart"
       ],
-      "test_paths": [],
+      "test_paths": [
+        "test/m1000_financial_trust_contract_regression_test.dart"
+      ],
       "safety_invariants": [
         "This is owner-approved source-code-only work. No new tests were added or run manually; QA intentionally deferred.",
         "No unauthenticated financial read, backup/source switch, auto cash repair, duplicate deletion, or alternate money writer.",
@@ -70,7 +80,9 @@
       "source_paths": [
         "lib/waffra_financial_change_review.dart"
       ],
-      "test_paths": [],
+      "test_paths": [
+        "test/m1000_financial_trust_contract_regression_test.dart"
+      ],
       "safety_invariants": [
         "This is owner-approved source-code-only work. No new tests were added or run manually; QA intentionally deferred.",
         "No unauthenticated financial read, backup/source switch, auto cash repair, duplicate deletion, or alternate money writer.",
@@ -86,7 +98,9 @@
         "lib/storage/waffra_sqlcipher_history_pager.dart",
         "lib/waffra_account_context_page.dart"
       ],
-      "test_paths": [],
+      "test_paths": [
+        "test/m1000_financial_trust_contract_regression_test.dart"
+      ],
       "safety_invariants": [
         "This is owner-approved source-code-only work. No new tests were added or run manually; QA intentionally deferred.",
         "No unauthenticated financial read, backup/source switch, auto cash repair, duplicate deletion, or alternate money writer.",
@@ -103,7 +117,10 @@
         "lib/storage/waffra_sqlcipher_history_pager.dart",
         "lib/waffra_account_context_page.dart"
       ],
-      "test_paths": [],
+      "test_paths": [
+        "test/m1000_financial_trust_contract_regression_test.dart",
+        "test/m669_sms_review_category_search_test.dart"
+      ],
       "safety_invariants": [
         "This is owner-approved source-code-only work. No new tests were added or run manually; QA intentionally deferred.",
         "No unauthenticated financial read, backup/source switch, auto cash repair, duplicate deletion, or alternate money writer.",
@@ -120,7 +137,9 @@
         "lib/waffra_financial_trust_page.dart",
         "lib/waffra_home_verified_account_flows.part.dart"
       ],
-      "test_paths": [],
+      "test_paths": [
+        "test/m1000_financial_trust_contract_regression_test.dart"
+      ],
       "safety_invariants": [
         "This is owner-approved source-code-only work. No new tests were added or run manually; QA intentionally deferred.",
         "No unauthenticated financial read, backup/source switch, auto cash repair, duplicate deletion, or alternate money writer.",
@@ -137,7 +156,9 @@
         "lib/waffra_financial_trust_page.dart",
         "lib/waffra_accounts_manager_page.dart"
       ],
-      "test_paths": [],
+      "test_paths": [
+        "test/m1000_financial_trust_contract_regression_test.dart"
+      ],
       "safety_invariants": [
         "This is owner-approved source-code-only work. No new tests were added or run manually; QA intentionally deferred.",
         "No unauthenticated financial read, backup/source switch, auto cash repair, duplicate deletion, or alternate money writer.",
@@ -153,7 +174,9 @@
         "lib/waffra_financial_trust_page.dart",
         "lib/waffra_account_context_page.dart"
       ],
-      "test_paths": [],
+      "test_paths": [
+        "test/m1000_financial_trust_contract_regression_test.dart"
+      ],
       "safety_invariants": [
         "This is owner-approved source-code-only work. No new tests were added or run manually; QA intentionally deferred.",
         "No unauthenticated financial read, backup/source switch, auto cash repair, duplicate deletion, or alternate money writer.",
