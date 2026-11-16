@@ -105,6 +105,6 @@ void main(){
   expect(editor,contains('_financeAuthority.commitConfirmedSms('));
   expect(editor,contains('userConfirmed:true'));
   expect(editor,contains('expectedAccountGeneration:reviewedAccount.generation'));
-  expect(home,contains('await entrySheet(sms:true,initialSms:body,reviewedSender:sender);'));
+  expect(home,contains('await entrySheet(sms:true,initialSms:body,reviewedSender:sender,reviewedSmsId:id);'));
  });
 }
