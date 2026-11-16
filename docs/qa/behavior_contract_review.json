@@ -11,7 +11,7 @@
       "id": "M1003-ATOMIC-RESTORED-ENTRY-BUDGET-ACCOUNT-LINK",
       "issue": "Issue #715 / Draft PR #716",
       "previous_behavior": "Restored historical entry editor saved metadata before linking account; nonzero opening cash needs explicit confirmation absent from edit UI; Home ready=false can be an empty screen.",
-      "approved_behavior": "Require checked opening-balance exclusion and one source-witnessed SQLCipher transaction for existing entry edit, budgetId and first account link, full rollback on validation errors; nonfinancial private fallback on abnormal Home/auth handoff.",
+      "approved_behavior": "Budget-only editing of a restored unassigned entry is independent of bank account association and never forces it. When the owner selects an account, require opening-balance exclusion confirmation and one source-witnessed SQLCipher transaction for existing entry edit, budgetId and first account link, with full rollback; nonfinancial private fallback on abnormal Home/auth handoff.",
       "source_paths": [
         "lib/waffra_home_entry_sheet.part.dart",
         "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
