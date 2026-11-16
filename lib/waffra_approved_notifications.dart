@@ -43,6 +43,19 @@ class _WaffraApprovedNotificationsPageState
     extends State<WaffraApprovedNotificationsPage> {
  String filter='all';
  bool busy=false,selecting=false;
+ double _m1009SenderDrag=0;
+ // Horizontal swipe belongs in this Notifications center, not the other
+ // SMS review dialog. Keep cross-sender checkboxes as durable local state.
+ void _m1009SwipeSender(List<String> keys,double dx){
+  if(busy||keys.isEmpty||dx.abs()<50)return;
+  final key=filter.startsWith('sender:')?filter.substring(7):null;
+  final current=key==null?-1:keys.indexOf(key);
+  final forward=dx<0;
+  final next=current<0?(forward?0:keys.length-1):
+   (current+(forward?1:-1)+keys.length)%keys.length;
+  setState(()=>filter='sender:${keys[next]}');
+ }
+
  final selectedIds=<String>{};
  void toggle(String id)=>setState((){
   if(!selectedIds.add(id))selectedIds.remove(id);
@@ -226,7 +239,19 @@ class _WaffraApprovedNotificationsPageState
         style:const TextStyle(color:green,fontWeight:FontWeight.w700)),
       ]),
      ),
-     Expanded(child:RefreshIndicator(
+     Expanded(child:GestureDetector(
+      key:const Key('m1009-notifications-sender-swipe'),
+      behavior:HitTestBehavior.translucent,
+      onHorizontalDragStart:(_)=>_m1009SenderDrag=0,
+      onHorizontalDragUpdate:(d)=>_m1009SenderDrag+=d.delta.dx,
+      onHorizontalDragEnd:(d){
+       final speed=d.primaryVelocity??0;
+       final direction=_m1009SenderDrag.abs()>=50?
+        _m1009SenderDrag:(speed.abs()>=180?speed:0);
+       _m1009SwipeSender(keys,direction);
+       _m1009SenderDrag=0;
+      },
+      child:RefreshIndicator(
       key:const Key('m665-notification-pull-refresh'),
       onRefresh:()async{
        // Incremental native cursor; never re-import SMS history on a pull.
@@ -250,7 +275,7 @@ class _WaffraApprovedNotificationsPageState
         itemBuilder:(ctx,index)=>RepaintBoundary(
          key:ValueKey('m580-notice-'+shown[index].id),
          child:noticeTile(shown[index])),
-       ))),
+       )))),
      if(selecting&&widget.onBulkExclude!=null&&liveSelected.isNotEmpty)
       SafeArea(top:false,child:Padding(
        padding:const EdgeInsets.fromLTRB(12,8,12,10),
