@@ -113,7 +113,9 @@ abstract final class WaffraAutoSmsAutoPoster {
     for(final row in actionable)await keepForReview(row);
     return summary;
    }
-   for(final candidate in actionable.take(25)){
+   // M1017: traverse every candidate; 25 is batch size, NOT a hard cap.
+   for(final batch in waffraSmsBackgroundBatches(actionable)){
+    for(final candidate in batch){
     final id=candidate['id'];
     final body=candidate['body'];
     final sender=candidate['sender'];
@@ -253,6 +255,10 @@ abstract final class WaffraAutoSmsAutoPoster {
      // Never log bank SMS, account ID, or secure-store exceptions.
      await keepForReview(candidate);
     }
+    }
+    // Let platform-channel delivery and cancellation signals run between
+    // groups. Never perform parallel encrypted financial writes.
+    await Future<void>.delayed(Duration.zero);
    }
   }catch(_){
    // Vault unavailable: keep all SMS for human review, no legacy writes.
