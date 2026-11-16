@@ -143,7 +143,9 @@ void main() {
     // The new historical importer checks the encrypted queue at entry and
     // inside the batch, preserving the cursor when 1000 review slots fill.
     expect(native,contains('private const val maxCandidates = 1000'));
-    expect(native,contains('if (currentSize >= maxCandidates) return 0'));
+    expect(native,contains('if (currentSize >= maxCandidates) {'));
+    expect(native,contains('putBoolean(capacityRecoveryRequestedName, true).commit()'));
+    expect(native,contains('return 0'));
     expect(native,contains('if (queue.length() >= maxCandidates)'));
     expect(native,contains('stoppedForCapacity = true'));
     expect(native,contains('.putLong(historyCursorAt, nextAt)'));
