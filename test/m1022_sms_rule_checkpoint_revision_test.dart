@@ -51,8 +51,9 @@ void main(){
   expect(store,contains('return@synchronized save(context, data)'));
   final worker=File('native/WaffraAutoSmsWorker.kt').readAsStringSync();
   expect(worker,contains('args?.get("revision") as? String ?: ""'));
-  expect(worker,contains('WaffraAutoSmsStore.markBackgroundSmsReviewed(context, id, revision)'));
+  expect(worker,contains('WaffraAutoSmsStore.markBackgroundSmsReviewed('));
+  expect(worker,contains('context, id, revision, delivered)'));
   final dart=File('lib/waffra_auto_sms.dart').readAsStringSync();
-  expect(dart,contains("markAutoBankSmsBackgroundReviewed',{'id':id,'revision':revision}"));
+  expect(dart,contains("markAutoBankSmsBackgroundReviewed',{'id':id,'revision':revision,"));
  });
 }
