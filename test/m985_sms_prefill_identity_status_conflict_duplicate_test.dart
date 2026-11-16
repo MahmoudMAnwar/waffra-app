@@ -53,7 +53,7 @@ void main(){
   expect(WaffraBankSmsFactsParser.sameReferenceAccountHint(
    'شراء 19 ريال من حساب ****1234',same),isFalse);
  });
- test('M985 correction fills separate manual editor and protects source',(){
+ test('M985 reviewed SMS correction retains original source and verified hash',(){
   final editor=File('lib/waffra_home_entry_sheet.part.dart').readAsStringSync();
   final actions=File('lib/waffra_home_sms_confirmation.part.dart').readAsStringSync();
   expect(editor,contains('final manualReviewBody=!sms&&initial==null?reviewedOriginalSms:null'));
@@ -67,10 +67,13 @@ void main(){
   expect(editor,contains('suggestedAccountLastFour('));
   expect(editor,contains('WaffraSaudiFinancialProviders.wallet'));
   expect(editor,contains('bankReferenceReplay||entries.any('));
-  expect(actions,contains('await entrySheet(manualIncomeOverride:kind=='));
-  expect(actions,contains('reviewedOriginalSms:body,reviewedSender:sender'));
-  expect(actions,contains('if(facts.kind==expected&&!facts.pending)'));
+  expect(actions,contains('await _m1011SaveReviewedSmsKind('));
+  expect(actions,contains('await entrySheet(sms:true,initialSms:body,'));
+  expect(actions,contains('reviewedIncomeOverride:income'));
+  expect(actions,contains("e.sourceType=='sms'"));
+  expect(actions,contains('smsHashes.contains(hash)'));
   expect(actions,contains('await WaffraAutoSms.acknowledgeCommitted([id])'));
+  expect(actions,isNot(contains('await entrySheet(manualIncomeOverride:')));
  });
  test('M985 corrected transfers show amount/date and require manual accounts',(){
   final route=File('lib/waffra_home_verified_account_flows.part.dart')
@@ -81,7 +84,10 @@ void main(){
   expect(route,contains('initialOccurredDate:confirmedDate'));
   expect(route,contains('requireSmsDateConfirmation:confirmedDate==null'));
   expect(route,contains('originalSmsText:body'));
-  expect(route,contains('await api.transfer(id:draft.requestId'));
+  expect(route,contains('await api.transfer(id:stableTransferId'));
+  expect(route,contains('acknowledgeCompletedTransfer([id])'));
+  expect(route,contains('smsTransferRequestId:stableTransferId'));
+  expect(route,contains('نص الرسالة البنكية الأصلية:'));
   expect(route,isNot(contains('await WaffraAutoSms.acknowledgeCommitted([id])')));
   expect(form,contains('initialSarMinor'));
   expect(form,contains('initialOccurredDate'));
