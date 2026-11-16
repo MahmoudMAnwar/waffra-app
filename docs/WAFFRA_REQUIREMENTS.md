@@ -1,3 +1,17 @@
+## M1022–M1030 — مراجعة فجوات SMS التسع (Issue #740، 17 نوفمبر 2026)
+
+- 1. Re-evaluate pending SMS when approved rules or accounts become available/changed, without duplicate finance
+- 2. Require notification delivery confirmation before marking a review attempt complete
+- 3. AutoPost must require verified transaction timestamp instead of arrival-time fallback
+- 4. Protect distinct same-text transactions while deduping exact re-delivery
+- 5. Offer explicitly-consented full SMS history scan with bounded cursor
+- 6. Mask only OTP digits in mixed SMS while retaining amount/date/suffix safely
+- 7. Recover encrypted pending SMS after terminal Worker error without busy loops
+- 8. Do not concatenate independent multipart SMS only because sender matches
+- 9. Avoid synchronous encrypted queue I/O on BroadcastReceiver main thread
+
+**الترتيب:** 1→9؛ كل بند له اختبار مستقل قبل الكود؛ فرع واحد وPR Draft واحد. CI واختبار Android على جهاز فعلي ضروريان قبل أي دمج.
+
 ## M1021 — أزرار إجراءات ظاهرة تحت كل هدف ادخار، مثل كارت الاستحقاق (Issue #738، 16 نوفمبر 2026)
 
 **المرجع المرئي:** صورة صفحة الأهداف وصورة صفحة الاستحقاقات التي أرسلها مالك التطبيق.
