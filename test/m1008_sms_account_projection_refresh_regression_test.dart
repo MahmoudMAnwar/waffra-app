@@ -14,7 +14,7 @@ void main(){
  test('M1008 sheet bank SMS saves immutable ledger and refreshes verified '
   'account IDs and balances before presenting successful completion',(){
   final begin=entry.indexOf('  if(pendingHash!=null&&initial==null){');
-  final end=entry.indexOf('  }else if(initial==null)',begin);
+  final end=entry.indexOf('  }else{\n   // An account is selected',begin);
   expect(begin,greaterThan(0));
   expect(end,greaterThan(begin));
   final section=entry.substring(begin,end);
