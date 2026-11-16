@@ -18,6 +18,7 @@
         "lib/waffra_finance_reloading_view.dart"
       ],
       "test_paths": [
+        "test/m1003_restore_budget_and_blank_surface_contract_test.dart",
         "test/m1006_visible_recovery_loading_gate_test.dart",
         "test/m1006_restore_handoff_no_black_background_test.dart",
         "test/m622_immediate_home_without_loader_test.dart",
