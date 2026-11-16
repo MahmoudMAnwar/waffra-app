@@ -9,14 +9,14 @@ void main(){
   final receiver=File('native/WaffraAutoSmsReceiver.kt').readAsStringSync();
   expect(receiver,contains('SMS_RECEIVED_ACTION'));
   expect(receiver,contains('WaffraAutoSmsStore.enabled(context)'));
-  expect(receiver,contains('for ((sender, parts) in bySender) {'));
+  expect(receiver,contains('for ((messageKey, parts) in bySenderAndTimestamp)'));
   expect(receiver,contains('var shouldEnqueue = false'));
   expect(receiver,contains('shouldEnqueue = true'));
   expect(receiver,contains('if (shouldEnqueue || WaffraAutoSmsStore.capacityRecoveryNeeded(context))'));
   expect(receiver,contains('WaffraAutoSmsWorker.enqueue(context)'));
   expect('WaffraAutoSmsWorker.enqueue(context)'.allMatches(receiver),hasLength(1),
    reason:'one successor per received broadcast, not one expensive job per sender');
-  expect(receiver.indexOf('WaffraAutoSmsStore.offer(context, sender, parts.toString()'),
+  expect(receiver.indexOf('WaffraAutoSmsStore.offer(context, sender, parts.toString(), receivedAt)'),
    lessThan(receiver.indexOf('if (shouldEnqueue || WaffraAutoSmsStore.capacityRecoveryNeeded(context))')));
   expect(receiver,isNot(contains('commitConfirmedSms(')));
   expect(receiver,isNot(contains('acknowledgeCommitted(')));
