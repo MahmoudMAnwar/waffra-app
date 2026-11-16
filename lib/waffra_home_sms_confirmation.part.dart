@@ -262,11 +262,11 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
     await _reviewSmsAccountTransfer(item:row,facts:facts);
    }else{
     // The SMS does not prove both accounts belong to the owner. A manual
-    // two-account transfer form is the only safe path; SMS remains pending.
+    // two-account transfer form requires independent verified ownership.
     snack(context,waffraIsEnglish?
      'This message does not verify a transfer between your accounts. Select both accounts manually.':
      'الرسالة لا تثبت تحويلًا بين حساباتك. اختار حسابَي التحويل بنفسك.');
-    await openReviewedSmsManualTransfer(body:body,sender:sender);
+    await openReviewedSmsManualTransfer(id:id,body:body,sender:sender);
    }
   }else{
    await _m1011SaveReviewedSmsKind(
@@ -845,7 +845,7 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
         'to a new manual transfer with two verified accounts. The bank SMS '
         'will stay pending, and nothing is saved by this choice alone.':
         'الرسالة لا تثبت أن الحسابين ملكك. المتابعة هتفتح تحويلًا يدويًا '
-        'بحسابين موثّقين، والرسالة الأصلية هتفضل للمراجعة. '
+        'بحسابين موثّقين، والرسالة بتخرج من المراجعة بعد الحفظ المؤكد فقط. '
         'الاختيار وحده مش هيسجل أي مبلغ.'),
        actions:[
         TextButton(onPressed:()=>Navigator.pop(ctx,false),
@@ -854,7 +854,7 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
          child:WaffraText(waffraIsEnglish?'Continue':'متابعة')),
        ],
       ));
-     if(approved==true&&mounted)await openReviewedSmsManualTransfer(body:body,sender:sender);
+     if(approved==true&&mounted)await openReviewedSmsManualTransfer(id:id,body:body,sender:sender);
     }else{
      await _m1011SaveReviewedSmsKind(id:id,body:body,
       sender:sender,income:reviewType=='income');
