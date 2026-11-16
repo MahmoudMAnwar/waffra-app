@@ -62,7 +62,11 @@ void main(){
   expect(goal,contains('onSelected:(v)=>unawaited(_m689GoalActions(g,v))'));
   expect(actions,contains("if(action=='release'&&g.saved>0)"));
   expect(actions,contains("await _handleGoalCardAction(g,'release');"));
-  expect(actions,contains("if(action=='toggle')await setGoalActive(g,!g.active);"));
+  // The explicit toggle branch spans multiple lines, preserving the
+  // verified state update; do not assert a single-line formatting choice.
+  expect(actions,contains("if(action=='toggle'){"));
+  expect(actions,contains("await setGoalActive(g,!g.active);"));
+  expect(actions,contains("if(action=='delete')await _handleGoalCardAction(g,'delete');"));
   expect(actions,contains("if(action=='delete')await _handleGoalCardAction(g,'delete');"));
   expect(actions,contains('confirmDeletion('));
  });
