@@ -1161,7 +1161,19 @@ bool bankSmsHasUnverifiedTimestamp(String raw,{DateTime? referenceDate}){
  return hasExplicit&&bankSmsDate(raw,referenceDate:referenceDate)==null;
 }
 
-String bankSmsHash(String raw)=>sha256.convert(utf8.encode(digits(raw).replaceAll(RegExp(r'\s+'),' ').trim().toLowerCase())).toString();
+String bankSmsHash(String raw,{String? nativeId}){
+ final canonical=digits(raw).replaceAll(RegExp(r'\s+'),' ').trim().toLowerCase();
+ if(nativeId!=null){
+  if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(nativeId)){
+   throw const FormatException('Unverified Android bank SMS ID');
+  }
+  // M1025: two independently received bank notices with identical bodies
+  // must not collapse into one finance fingerprint. Legacy body-only hashes
+  // remain valid for pre-M1025 backups and generic SMS paste sources.
+  return sha256.convert(utf8.encode('waffra-sms-v2|$nativeId|$canonical')).toString();
+ }
+ return sha256.convert(utf8.encode(canonical)).toString();
+}
 
  // M632: a pure compute worker. No BuildContext, widget, native platform
  // channel, SQLCipher handle or owner identity is ever sent to this isolate.
@@ -1203,13 +1215,22 @@ Map<String,Object?> waffraM632ClassifySmsQueue(Map<String,Object?> input){
  for(final candidate in results){
   final id=candidate['id'],body=candidate['body'];
   if(id is! String||body is! String)continue;
-  if(hashes.contains(bankSmsHash(body))){
+  if(hashes.contains(bankSmsHash(body,nativeId:id))){
    committed.add(id);
    retainOnAckFailure.add(Map<String,Object?>.from(candidate));
    continue;
   }
+  // Old backups stored only the SMS text hash. Two genuine same-text
+  // transactions cannot be distinguished from that evidence alone:
+  // request explicit owner confirmation instead of dropping/ACKing either.
+  if(hashes.contains(bankSmsHash(body))){
+   final possible=Map<String,Object?>.from(candidate);
+   possible['possibleLegacyDuplicate']=true;
+   waiting.add(possible);
+   continue;
+  }
   final annotated=Map<String,Object?>.from(candidate);
-  annotated['m991SourceHash']=bankSmsHash(body);
+  annotated['m991SourceHash']=bankSmsHash(body,nativeId:id);
   if(WaffraBankSmsFactsParser.isVerificationChallenge(body)){
    annotated['sensitiveOtp']=true;
   }
