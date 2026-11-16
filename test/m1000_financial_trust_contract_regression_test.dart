@@ -24,6 +24,9 @@ void main(){
   final page=src('lib/waffra_account_context_page.dart');
   final pager=src('lib/storage/waffra_sqlcipher_history_pager.dart');
   expect(page,contains('WaffraCenteredDropdownFormField<String>('));
+  expect(page,contains('key:ValueKey<bool?>(incomeFilter),'));
+  expect(page,contains('onChanged:(value)=>setState((){'));
+  expect(page,contains("incomeFilter=value=='all'?null:value=='in';"));
   expect(page,isNot(contains('DropdownButtonFormField<String>(')));
   expect(page,contains('WaffraSqlcipherHistoryPage'));
   expect(pager,contains('WaffraSqlcipherHistoryPage'));

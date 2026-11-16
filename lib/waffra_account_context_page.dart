@@ -279,6 +279,7 @@ class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {
          border:const OutlineInputBorder())),
        const SizedBox(height:6),
        WaffraCenteredDropdownFormField<String>(
+        key:ValueKey<bool?>(incomeFilter),
         initialValue:incomeFilter==null?'all':incomeFilter!?'in':'out',
         isExpanded:true,
         decoration:InputDecoration(labelText:t('نوع العملية','Transaction type'),
