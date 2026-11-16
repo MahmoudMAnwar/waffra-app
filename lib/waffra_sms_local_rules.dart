@@ -611,6 +611,42 @@ abstract final class WaffraSmsLocalRules {
   }on FormatException{return null;}
  }
 
+ /// Confirmed manual correction of an UNKNOWN SMS kind may teach a
+ /// distinctive merchant phrase globally, without trusting an uncertain bank
+ /// direction. A conflicting proven direction, OTP, pending or posted-money
+ /// cue never becomes a broader automatic rule from mere text similarity.
+ static WaffraSmsLocalRule? suggestedConfirmedGlobalCorrection({
+  required String body,required String description,
+  required String kind,required String category,
+ }){
+  if(!const {'income','expense'}.contains(kind)||
+    category.trim().isEmpty)return null;
+  final facts=WaffraBankSmsFactsParser.parse(body);
+  if(facts.pending||facts.kind!=WaffraBankOperationKind.uncertain||
+     WaffraBankSmsFactsParser.isVerificationChallenge(body)||
+     _hasPostedMoneyEvidence(body))return null;
+  final text=waffraMerchantName(body,income:kind=='income')??description;
+  final normalizedBody=normalized(body);
+  final phrases=safeDescriptionKeywords(text).where((p)=>
+   normalized(p).length>=5&&normalizedBody.contains(normalized(p)))
+   .take(2).toList(growable:false);
+  if(phrases.isEmpty)return null;
+  final name=text.trim().length>=2&&text.trim().length<=60?
+   text.trim():phrases.first;
+  final candidate=WaffraSmsLocalRule(
+   id:'smart_global_${sha256.convert(utf8.encode(
+    '$kind|${normalized(phrases.join('|'))}|${normalized(category)}'
+   )).toString().substring(0,32)}',
+   name:name,kind:kind,income:kind=='income',category:category,
+   keywords:phrases,sender:'',matchAll:false,autoPost:false,
+  );
+  try{
+   validate(candidate);
+   if(!matches(candidate,body,sender:''))return null;
+   return candidate;
+  }on FormatException{return null;}
+ }
+
  /// Conservative, sender-agnostic keyword hints from a confirmed
  /// transaction description. Manual and user-reviewed SMS use this SAME
  /// extractor. Never retain amounts, account suffixes, secrets or identifiers.
