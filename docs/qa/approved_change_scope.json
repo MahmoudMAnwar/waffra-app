@@ -345,7 +345,7 @@
     ],
     "test/m979_native_otp_prequeue_exclusion_test.dart": [
       {
-        "start": "void main(){",
+        "start": "void main() {",
         "end": null
       }
     ],
