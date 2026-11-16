@@ -929,10 +929,10 @@ extension _WaffraHomeGoalActions on _HomeScreenState {
         }
 
  }
- /// M1021: the old tap-to-open "Save now" sheet was removed. Only the
- /// explicit goal-header management popup dispatches these secondary actions.
- /// Deposit, editing and account details appear directly below each card.
  Future<void> _m689GoalActions(SavingGoal g,String action)async{
+  // M1021: old tap-to-open "Save now" sheet is gone. Only explicit
+  // goal-header overflow actions may dispatch these secondary routes.
+  // Deposit, edit and account details are always inline below each card.
   if(action=='release'&&g.saved>0){
    await _handleGoalCardAction(g,'release');
    return;
