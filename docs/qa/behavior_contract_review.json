@@ -1,12 +1,38 @@
 {
   "schema_version": 1,
-  "pr": "M1010–M1014 Issues #726/#728/#729/#730 — goals, SMS, dues, reminders and fail-closed preflight",
-  "issue": "Issues #726, #728, #729, #730",
+  "pr": "M1010–M1015 Issues #726/#728/#729/#730/#731 — UI, verified SMS, goal & standalone dues",
+  "issue": "Issues #726, #728, #729, #730, #731",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main after merged PR #725 (16 November 2026)",
   "reviewed_at": "2026-11-16",
-  "review_policy": "All PR #727 user-visible changes require exact-source validation, original finance and SQLCipher contracts, and all full CI. Seven failing jobs came from three stale due-signature tests; M550 must now detect those regressions before long test suites. No automatic money posting; device UAT not claimed.",
+  "review_policy": "User explicitly requests verified owner-paid or postpone confirmation for BOTH independent recurring expenses and linked goal dues on Android after authenticated Home, without any automatic debit. All exact-head CI/backup/finance and manual device tests required before merge.",
   "contracts": [
+    {
+      "id": "M1015-VERIFIED-STANDALONE-DUE-USER-CONFIRMATION-AND-IDEMPOTENT-WRITER",
+      "issue": "Issue #731",
+      "previous_behavior": "Verified SQLCipher Home first-frame post-login called applyRecurring(goalLinkedOnly:verifiedEncryptedStartup), where true excluded all standalone recurring expense dues and prevented Paid/Postpone/Not-now review. The independent SQLCipher writer was implemented but unreachable at startup.",
+      "approved_behavior": "Authenticated Home first visible frame runs applyRecurring(goalLinkedOnly:false); active outstanding standalone recurring expenses and linked-goal dues receive explicit Paid/Postpone/Not-now, excluding standalone income from misleading payment prompts in verified SQLCipher. Paid requires verified financial account selection and routes standalone through the existing atomic recurringPostingAndPostponement writer that verifies the unique monthly schedule/entry, account, typed SQL ledger, and CAS; goal-linked uses existing atomic settleLinkedGoalDue. Postpone modifies its date only, Not now and cancel write no money; opening Home or receiving OS reminder never posts payment. Repeat login cannot post a duplicate monthly due.",
+      "source_paths": [
+        "lib/waffra_home_finance_startup.part.dart",
+        "lib/waffra_home_finance_persistence_due.part.dart"
+      ],
+      "test_paths": [
+        "test/m1015_standalone_due_confirmed_payment_test.dart",
+        "test/m1012_due_reminder_verified_confirmation_test.dart",
+        "test/m631_verified_finance_prewarm_test.dart",
+        "test/storage/m470_verified_recurring_payment_capture_test.dart",
+        "test/m86_recurring_schedule_boundary_test.dart"
+      ],
+      "safety_invariants": [
+        "Do not automatically post payment for a fully funded goal, reached date, Home startup or any Android reminder.",
+        "Standalone expense payment requires owner Paid plus an actual selected verified account and the pre-existing atomic SQLCipher recurring posting writer.",
+        "Income recurring amounts are not represented as Paid expense obligations on verified SQLCipher startup.",
+        "Postpone/Not now/cancelled account picker never add a ledger entry or debit financial account.",
+        "One deterministic recurringId+year+month entry is the only valid payment, with no duplicate on re-login or concurrent widget write.",
+        "Goal-linked savings wallet settlement remains separate and atomic, no duplicate bank cash deduction.",
+        "No physical Android acceptance or actual external bank payment is claimed until device UAT."
+      ]
+    },
     {
       "id": "M1013-M1014-GOAL-DUE-12-MONTH-ID-POSTPONE-AND-M550-FAIL-CLOSED-REGRESSIONS",
       "issue": "Issue #730",
