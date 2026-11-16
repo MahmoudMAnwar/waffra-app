@@ -39,7 +39,9 @@ void main(){
    lessThan(homeLoader.indexOf('widget.onVerifiedReady?.call();')));
   expect(homeLoader,contains('_financeLoadFailure=waffraIsEnglish?'));
   expect(shell,contains('child:!ready&&_financeLoadFailure==null?'));
-  expect(shell,contains('_m1003FinanceHandoffSurface():Stack(children:[Scaffold('));
+  expect(shell,contains('widget.postAuthVisible?'));
+  expect(shell,contains('WaffraFinanceReloadingView(english:waffraIsEnglish)'));
+  expect(shell,contains('_m1003FinanceHandoffSurface()):Stack(children:[Scaffold('));
   // The Home internal placeholder is never visible because the app root
   // keeps the authenticated stage on top and mounts Home Offstage.
   expect(root,contains('child:Offstage(offstage:!homeInteractive,'));
