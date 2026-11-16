@@ -36,7 +36,7 @@ void main(){
   expect(store,contains('"backgroundNotificationRetryAt" to row.optLong("backgroundNotificationRetryAt", 0L)'));
   expect(store,contains('row.put("backgroundNotificationPending", !delivered)'));
   expect(store,contains('row.put("backgroundNotificationRetryAt", if (delivered) 0L'));
-  expect(store,contains('WaffraAutoSmsStore.markBackgroundSmsReviewed(context, id, revision, delivered)')==false,isTrue);
+  expect(store,contains('fun markBackgroundSmsReviewed(context: Context, id: String,'));
   final worker=File('native/WaffraAutoSmsWorker.kt').readAsStringSync();
   expect(worker,contains('args?.get("delivered") == true'));
   expect(worker,contains('"canNotifyBankSms" ->'));
