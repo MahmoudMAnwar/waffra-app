@@ -293,6 +293,26 @@ abstract final class WaffraAutoSmsAutoPoster {
        throw retryAck;
       }
       completedOne();
+      // M1031: bank-SMS AutoPost is a verified income/expense commit too.
+      // Record its encrypted owner-scoped learning receipt; a failure
+      // must never replay the money writer or undo its acknowledged hash.
+      try{
+       if(owner.isNotEmpty){
+        final store=const WaffraSmsLocalRuleStore();
+        await store.recordConfirmedFinanceLearning(
+         owner:owner,transactionId:entry.id,sourceType:'sms',
+         income:entry.income,category:entry.category);
+        final safe=WaffraSmsLocalRules.manualCategoryPattern(
+         description:entry.title,category:entry.category,
+         income:entry.income);
+        if(safe!=null){
+         await store.learnReviewedCandidates(owner,[safe]);
+        }
+       }
+      }catch(_){
+       // The ledger was committed and the native ID acknowledged. Preserve
+       // that authority; the original ledger can be reconciled later.
+      }
       await WaffraAutoSms.notifyCommitted(
        hash:id,amount:parsed.amount!,income:parsed.income,
        linkedBudget:false,entryId:entry.id);

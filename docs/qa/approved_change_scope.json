@@ -12,7 +12,8 @@
     "7. Recover encrypted pending SMS after terminal Worker error without busy loops",
     "8. Do not concatenate independent multipart SMS only because sender matches",
     "9. Avoid synchronous encrypted queue I/O on BroadcastReceiver main thread",
-    "10. M1031 unify SMS review suggestions/notification states and allow verified explicit owner confirmation of external outgoing expenses without AutoPost authority"
+    "10. M1031 unify SMS review suggestions/notification states and allow verified explicit owner confirmation of external outgoing expenses without AutoPost authority",
+    "11. M1031 persist owner-scoped encrypted post-commit learning evidence for manual/SMS income/expense and prevent conflicting learned financial directions"
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -65,7 +66,9 @@
     "lib/waffra_bank_sms_facts.dart",
     "lib/waffra_home_sms_inbox.part.dart",
     "lib/waffra_approved_notifications.dart",
-    "test/m1031_sms_unified_review_contract_test.dart"
+    "test/m1031_sms_unified_review_contract_test.dart",
+    "lib/waffra_sms_local_rules.dart",
+    "lib/waffra_home_sms_rules.part.dart"
   ],
   "allowed_workflow_changes": [],
   "approved_deleted_files": [],
@@ -179,11 +182,7 @@
     "lib/waffra_home_entry_sheet.part.dart": [
       {
         "start": " Future<void> entrySheet({MoneyEntry? initial,bool sms=false,String? initialSms,",
-        "end": "  final manualReviewBody="
-      },
-      {
-        "start": "        if(WaffraSmsCurrencies.requiresReviewForSarLedger(message.text)){",
-        "end": "        pendingHash=h;"
+        "end": null
       }
     ],
     "lib/waffra_home_profile.part.dart": [
@@ -380,6 +379,22 @@
       {
         "start": " Widget noticeTile(WaffraReviewNotice notice){",
         "end": "  final color=notice.kind=="
+      }
+    ],
+    "lib/waffra_sms_local_rules.dart": [
+      {
+        "start": " static List<WaffraSmsLocalRule> upsertLearned({",
+        "end": " static void validate(WaffraSmsLocalRule rule){"
+      },
+      {
+        "start": "class WaffraSmsLocalRuleStore {",
+        "end": null
+      }
+    ],
+    "lib/waffra_home_sms_rules.part.dart": [
+      {
+        "start": " Future<void> _learnManualCategoryPreference(",
+        "end": " // Retained single-message reference"
       }
     ]
   }

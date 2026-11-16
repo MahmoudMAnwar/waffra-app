@@ -1,3 +1,8 @@
+[M1031 / ISSUE #750 / POST-COMMIT FINANCE LEARNING]
+- Added owner-scoped encrypted, readback-verified category-learning receipt after each confirmed manual/bank SMS income or expense, including authorized background finance commits. Receipts store digest/category/source only, no SMS body, account identifiers, raw phone or amounts. Dedupes recent transaction IDs and preserves bounded per-category observation counts.
+- Existing safe description-based categories remain reusable local matching rules. Unsafe/generic descriptions are recorded as non-posting observations only; no broad financially dangerous rule. Opposing income/expense learned keywords cannot create contradictory matching rules.
+- Learning failure on manual/foreground SMS is now visible after the money was already committed; no debit replay. Background failure still requires explicit later reconciliation/UAT. Exact-head CI/Android acceptance pending.
+
 [M1031 / ISSUE #750 / DRAFT PR #749 / PREDICTION UNIFICATION]
 - Central bank direction prediction now reused for sender inbox, notifications and background review hints. Suggestions display as pending confirmation and never create a financial ledger write or native ACK.
 - Added separate explicit owner confirmation gate for verified external outgoing/incoming bank SMS (expense/income), preserving stricter unattended AutoPost and encrypted account/category/date/SAR validation. Disabled Done now shows an actionable blocking explanation when a verified finance field is missing or contradictory.

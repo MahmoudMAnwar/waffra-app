@@ -105,7 +105,16 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
     unawaited(_recordConfirmedSmsAccountAssociation(
      record:reviewed,sender:sender,accountId:chosen.ids!.single));
    }
-   try{await _learnManualCategoryPreference(reviewed);}catch(_){}
+   try{
+    await _learnManualCategoryPreference(reviewed);
+    await _m1031RecordConfirmedLearning(reviewed);
+   }catch(error){
+    // The SQLCipher charge was already committed; warn, never replay it.
+    if(mounted)snack(context,waffraIsEnglish?
+     'Bank transaction saved; encrypted local learning could not be verified.':
+     'العملية البنكية محفوظة لكن تعذر التحقق من التعلم المحلي المشفر.',
+     isError:true);
+   }
    if(sender.trim().isNotEmpty){
     try{await _learnSafeSmsRule(body:body,sender:sender,
      kind:income?'income':'expense',category:category);}catch(_){}

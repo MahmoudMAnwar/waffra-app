@@ -11,14 +11,17 @@
       "id": "M1031-SHARED-SMS-REVIEW-AND-OWNER-CONFIRM",
       "issue": "Issue #750",
       "previous_behavior": "Different notification/inbox/review classifiers could disagree, and external outgoing SMS confirmation remained disabled by unattended autopost guard.",
-      "approved_behavior": "Shared read-only prediction and explicit owner confirmation separate from automated posting; no financial writes from classifier; exact-SHA CI and Android acceptance.",
+      "approved_behavior": "Shared read-only prediction and explicit owner confirmation separate from automated posting; no financial writes from classifier; exact-SHA CI and Android acceptance. Encrypted owner-scoped post-commit evidence for all verified manual/SMS income/expense, plus only safe reusable patterns and cross-kind conflict guard.",
       "source_paths": [
         "lib/waffra_bank_sms_facts.dart",
         "lib/waffra_home_sms_inbox.part.dart",
         "lib/waffra_home_sms_management.part.dart",
         "lib/waffra_approved_notifications.dart",
         "lib/waffra_home_sms_confirmation.part.dart",
-        "lib/waffra_auto_sms_autopost.part.dart"
+        "lib/waffra_auto_sms_autopost.part.dart",
+        "lib/waffra_sms_local_rules.dart",
+        "lib/waffra_home_sms_rules.part.dart",
+        "lib/waffra_home_entry_sheet.part.dart"
       ],
       "test_paths": [
         "test/m1031_sms_unified_review_contract_test.dart",
@@ -27,7 +30,8 @@
       "safety_invariants": [
         "AutoPost remains blocked on unresolved beneficiary, pending, OTP and foreign currency",
         "Owner confirmation still requires finance authority/account/category/date",
-        "Notifications and review predictions do not acknowledge or debit"
+        "Notifications and review predictions do not acknowledge or debit",
+        "Learning fails separately after finance commit without retrying charge; generic titles never become broad SMS rules"
       ]
     },
     {
