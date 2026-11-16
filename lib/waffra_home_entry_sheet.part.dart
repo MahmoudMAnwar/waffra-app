@@ -925,8 +925,11 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
         key:ValueKey('m470-home-manual-account-'+(chosenManualProvider??'none')+
          '-'+(chosenManualAccount??'none')+'-$accountChildMenuRevision'),
         isExpanded:true,initialValue:chosenManualAccount,
-        decoration:InputDecoration(labelText:waffraIsEnglish?
-         'Linked money account *':'الحساب المالي التابع *',
+        decoration:InputDecoration(
+         labelText:initial!=null&&originalLinkedAccountId==null?
+          (waffraIsEnglish?'Link to money account (optional)':
+           'ربط الحساب المالي (اختياري)'):
+          (waffraIsEnglish?'Linked money account *':'الحساب المالي التابع *'),
          errorText:attempted&&initial==null&&!sms&&chosenManualAccount==null
            ?waffraRequiredFieldMessage:null,
           border:const OutlineInputBorder()),
@@ -1284,8 +1287,9 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
          waffraAmountFieldError(value.text)!=null||
          (sms?amountOf(value.text):amountOfDisplay(value.text))==null||
          !waffraCanAssignManualCategory(categories,income,selectedParentId,category)||
-         ((initial==null||(canLinkExistingAccount&&originalLinkedAccountId==null)||
-            canMoveLinkedAccount)&&
+         // M1003: a restored unassigned entry may assign a budget WITHOUT
+         // also linking a bank account. Bank attribution remains opt-in.
+         ((initial==null||canMoveLinkedAccount)&&
           chosenManualAccount==null)||
          ((sms||manualReviewBody!=null)&&!smsDateConfirmed))?null:()async {
        if(submitTapped)return;
