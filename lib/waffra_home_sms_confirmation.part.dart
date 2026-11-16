@@ -33,7 +33,7 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
   if(selectedAccount.ids?.length!=1||
      selectedAccount.ids!.single==null||
      selectedAccount.generation==null)return;
-  final hash=bankSmsHash(body);
+  final hash=bankSmsHash(body,nativeId:id);
   final facts=WaffraBankSmsFactsParser.parse(body);
   final original=WaffraSmsCurrencies.originalAmount(body);
   if(!facts.canAutoPostAsIncomeExpense||
@@ -196,18 +196,18 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
     isError:true);
    return;
   }
-  final hash=bankSmsHash(body);
+  final hash=bankSmsHash(body,nativeId:id);
   if(!smsHashes.contains(hash)){
    // NEVER use manualIncomeOverride/reviewedOriginalSms for a reviewed SMS.
    // The manual writer loses sourceType and immutable original text/hash.
-   await entrySheet(sms:true,initialSms:body,reviewedSender:sender,
+   await entrySheet(sms:true,initialSms:body,reviewedSender:sender,reviewedSmsId:id,
     reviewedIncomeOverride:income);
   }
   if(!mounted)return;
   // Verify the exact original bank body AND owner-chosen direction from
   // the source-reloaded ledger, not a dialog success/toast or a rule match.
   final committed=entries.where((e)=>e.sourceType=='sms'&&
-   bankSmsHash(e.notes)==hash&&e.income==income).toList(growable:false);
+   e.notes==body&&e.income==income).toList(growable:false);
   if(!smsHashes.contains(hash)||committed.isEmpty)return;
   final ack=await WaffraAutoSms.acknowledgeCommitted([id]);
   if(!mounted)return;
@@ -311,7 +311,7 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
     final id=item['id'],body=item['body'];
     if(id is! String||body is! String||body.trim().isEmpty)continue;
     if(targetId!=null&&id!=targetId)continue;
-    if(smsHashes.contains(bankSmsHash(body))){
+    if(smsHashes.contains(bankSmsHash(body,nativeId:id))){
      final acknowledged=await WaffraAutoSms.acknowledgeCommitted([id]);
      if(acknowledged&&mounted){
       setState(()=>_autoSmsPending.removeWhere((row)=>row['id']==id));
@@ -918,8 +918,8 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
      value:originalAmount.amount,date:originalDate,
      selectedAccount:reviewedAccount!);
    }else if(decision=='no'&&mounted){
-    await entrySheet(sms:true,initialSms:body,reviewedSender:sender);
-    if(smsHashes.contains(bankSmsHash(body))){
+    await entrySheet(sms:true,initialSms:body,reviewedSender:sender,reviewedSmsId:id);
+    if(smsHashes.contains(bankSmsHash(body,nativeId:id))){
      final ack=await WaffraAutoSms.acknowledgeCommitted([id]);
      if(ack&&mounted){
       setState(()=>_autoSmsPending.removeWhere((r)=>r['id']==id));
@@ -928,8 +928,8 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
    }else if(decision=='manual'&&mounted){
     // Keep the SMS's verified source/hash instead of replacing it with
     // a blank 'manual' record. Uncertain fields remain editable.
-    await entrySheet(sms:true,initialSms:body,reviewedSender:sender);
-    if(smsHashes.contains(bankSmsHash(body))){
+    await entrySheet(sms:true,initialSms:body,reviewedSender:sender,reviewedSmsId:id);
+    if(smsHashes.contains(bankSmsHash(body,nativeId:id))){
      final acknowledged=await WaffraAutoSms.acknowledgeCommitted([id]);
      if(acknowledged&&mounted){
       setState(()=>_autoSmsPending.removeWhere((row)=>row['id']==id));
@@ -944,8 +944,8 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
     }
    }else if(decision=='review'&&mounted){
     // M636: the verified SMS editor remains, while the paste template is retired.
-    await entrySheet(sms:true,initialSms:body,reviewedSender:sender);
-    if(smsHashes.contains(bankSmsHash(body))){
+    await entrySheet(sms:true,initialSms:body,reviewedSender:sender,reviewedSmsId:id);
+    if(smsHashes.contains(bankSmsHash(body,nativeId:id))){
      // M484 #411: remove from review only after an exact saved SMS hash
      // and the native acknowledgement both succeed.
      final acknowledged=await WaffraAutoSms.acknowledgeCommitted([id]);
