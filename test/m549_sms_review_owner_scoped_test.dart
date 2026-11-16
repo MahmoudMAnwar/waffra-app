@@ -80,7 +80,9 @@ void main() {
  test('M549 completed rescan dims unless fresh provider rows or unfinished history',(){
   final native=File('native/WaffraAutoSmsStore.kt').readAsStringSync();
   expect(native,contains('private fun hasUnseenInboxRows('));
-  expect(native,contains('"rescanNeeded" to (waiting in 0 until maxCandidates'));
+  expect(native,contains('"rescanNeeded" to ('));
+  expect(native,contains('prefs.getBoolean(capacityRecoveryRequestedName, false)'));
+  expect(native,contains('waiting in 0 until maxCandidates'));
   expect(native,contains('hasUnseenInboxRows(context, prefs)'));
   expect(native,contains('historyCursorAt'));
   expect(native,contains('historyCursorId'));
