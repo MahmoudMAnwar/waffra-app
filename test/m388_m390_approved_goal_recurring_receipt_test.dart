@@ -89,7 +89,9 @@ void main() {
    .split('Widget recurringPage(){').first;
   expect(card,contains('g.target<=0?0.0:(g.saved/g.target).clamp(0.0,1.0)'));
   expect(card,contains('final completed=g.target>0&&g.saved>=g.target;'));
-  expect(actions,contains('if(g.target<=0||g.saved<g.target)'));
+  expect(card,contains('onPressed:g.active&&(g.target<=0||g.saved<g.target)?'));
+  expect(card,contains("()=>unawaited(fundGoal(g))"));
+  expect(actions,contains("if(action=='release'&&g.saved>0)"));
   expect(card,contains('g.target>0&&g.saved>=g.target'));
   expect(card,contains('max(0,g.target-g.saved)'));
   final edit=File('lib/waffra_goal_recurring_actions.part.dart').readAsStringSync();
