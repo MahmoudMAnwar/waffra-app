@@ -951,7 +951,10 @@ class BankParser {
   // witness. Never auto-import a foreign-currency SMS as Saudi riyals.
   final discoveredCurrencies=detectedCurrencies??
    WaffraSmsCurrencies.currenciesForMessage(s);
-  final currencyNeedsReview=discoveredCurrencies.length>1||
+  // M1001: never trust a worker's currency set without a fresh scan of
+  // the original SMS; mixed/non-SAR money always stays in review.
+  final currencyNeedsReview=WaffraSmsCurrencies.requiresReviewForSarLedger(s)||
+   discoveredCurrencies.length>1||
    discoveredCurrencies.any((code)=>code!='SAR');
   // A transfer between the user's own accounts, or a credit-card settlement,
   // must not be silently counted as everyday income/expense. Account ownership
