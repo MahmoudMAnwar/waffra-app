@@ -81,6 +81,12 @@ extension _WaffraHomeVerifiedLedgerActions on _HomeScreenState {
     _publishVerifiedTransactionLedger(committed);
    });
    if(!mounted)return;
+   // Wait for the owner-verified balance/link refresh before reporting the
+   // deletion as fully reflected by the selected account's Home view.
+   try{await _m467RefreshHomeAccounts();}catch(error){
+    debugPrint('M1008 verified-delete account view: ${error.runtimeType}');
+   }
+   if(!mounted)return;
    snack(context,waffraIsEnglish?
     'Transaction saved in encrypted Recently Deleted for 30 days.':
     'تم نقل المعاملة إلى المحذوفات لمدة 30 يومًا.',
@@ -113,8 +119,13 @@ extension _WaffraHomeVerifiedLedgerActions on _HomeScreenState {
      baseline:baseline,entryId:entryId,now:DateTime.now().toUtc());
     _publishVerifiedTransactionLedger(committed);
    });
-   if(mounted)snackSuccess(context,waffraIsEnglish?
-    'Transaction and invoices restored':'تم استرجاع المعاملة وفواتيرها');
+   if(mounted){
+    try{await _m467RefreshHomeAccounts();}catch(error){
+     debugPrint('M1008 verified-undo account view: ${error.runtimeType}');
+    }
+    if(mounted)snackSuccess(context,waffraIsEnglish?
+     'Transaction and invoices restored':'تم استرجاع المعاملة وفواتيرها');
+   }
   }catch(error){
    debugPrint('Encrypted transaction undo blocked safely: $error');
    if(mounted){
