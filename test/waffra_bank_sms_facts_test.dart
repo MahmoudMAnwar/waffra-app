@@ -20,10 +20,10 @@ void main(){
   expect(item.fee,0.58);
   expect(item.reference,'DEMO1234TEST');
  });
- test('credit transfer is a transfer even though incoming',(){
+ test('unqualified credit transfer via bank still requires own-account review',(){
   final item=WaffraBankSmsFactsParser.parse(
    'Credit Transfer via Alinma Bank\nAmount: SAR 1900.00');
-  expect(item.kind,WaffraBankOperationKind.expense);
+  expect(item.kind,WaffraBankOperationKind.transfer);
   expect(item.requiresBeneficiaryReview,isTrue);
   expect(item.canAutoPostAsIncomeExpense,isFalse);
  });
