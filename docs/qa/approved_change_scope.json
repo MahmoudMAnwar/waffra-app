@@ -1,25 +1,47 @@
 {
   "contract_version": 1,
-  "change_id": "M1010-ISSUE726-GOAL-DUE-INLINE-REQUIRED-ACCOUNT-ERRORS-APPROVED-GREEN-DUES-HERO-20261116",
-  "human_scope_review": "Owner supplied screenshots and explicitly requested bugs fixed now: both goals and dues Save remain enabled; each missing institution/category, bank/primary group and linked account shows the same inline red required message after attempted save; dues page gets exactly the approved green goals-style hero. No finance writer changes. Same Draft PR until current-head CI passes; physical Android UAT pending.",
+  "change_id": "M1010-M1011-ISSUES726-728-GOALS-DUES-SMS-PROVENANCE-NATIVE-ACK-20261116",
+  "human_scope_review": "Owner approved issues #726/#728 and provided Android screenshots. Goal/due form errors and green hero, plus restoring immutable bank SMS provenance on an explicitly reviewed Income/Expense, verified SQLCipher hash+account writer followed by native ACK, deterministic native-ID verified two-account transfer and original-SMS text, fee-aware encrypted transfer and malformed-date safe handling. No auto-post, accounts guessed, owner bypass or changes to unrelated finance writers. Android UAT and current CI required before merge.",
   "user_requested_changes": [
     "When adding a saving goal, show visible red inline 'هذا الحقل مطلوب' for each of the three missing mandatory institution, bank and child account dropdowns after tapping Add goal; keep the action enabled but refuse unverified save.",
     "When adding a recurring due, show the same three inline required dropdown errors after Save, in addition to existing description, amount, category and day validation.",
     "Use the approved green WaffraApprovedPageHero component for the Dues screen instead of the separate plain heading; keep the existing Financial calendar accessible in the filter and actions row, including metrics, search, filters, plus action and RTL layout.",
     "Preserve goal open-ended target and optional due date, verified financial source/account link, all linked goal/schedule finance protections, existing records and SQLCipher writer.",
-    "Add real Arabic and English Flutter Widget tests plus save-action and page-hero source regressions and register in mandatory M946 without disabling any CI gate."
+    "Add real Arabic and English Flutter Widget tests plus save-action and page-hero source regressions and register in mandatory M946 without disabling any CI gate.",
+    "Preserve immutable bank-SMS source text, saved category and native source reference on explicitly reviewed income/expense from any classifier branch; allow native ACK only after verified source/hash+account transaction commit.",
+    "Make corrected two-owned-account transfers idempotent by native ID, persist original message encrypted and acknowledge completed native SMS only after verified dual-account transfer commit; preserve fee-aware atomic writer and no double debit.",
+    "Recognize Arabic bill-payment heading as an expense review suggestion, and never silently infer a valid date from a malformed three-digit day. Require manual source date confirmation.",
+    "Audit and update every pre-existing test depending on incorrect manual correction semantics; run full M946 whole-app and M550/M385 gates before physical Android UAT."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
+    "lib/main.dart",
+    "lib/storage/waffra_unified_finance_writer.dart",
+    "lib/storage/waffra_verified_accounts_api.dart",
+    "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
+    "lib/waffra_account_transaction_form.dart",
+    "lib/waffra_bank_sms_facts.dart",
     "lib/waffra_goal_recurring_account_picker.dart",
+    "lib/waffra_home_entry_sheet.part.dart",
     "lib/waffra_home_goal_actions.part.dart",
-    "lib/waffra_home_recurring_workflows.part.dart",
     "lib/waffra_home_goals_recurring_pages.part.dart",
+    "lib/waffra_home_recurring_workflows.part.dart",
+    "lib/waffra_home_sms_confirmation.part.dart",
+    "lib/waffra_home_sms_transfer_review.part.dart",
+    "lib/waffra_home_verified_account_flows.part.dart",
+    "lib/waffra_home_verified_transfer_cards.part.dart",
     "scripts/qa/m946_full_app_smoke_matrix.py",
-    "test/m1010_goal_due_required_account_hero_test.dart"
+    "test/m1010_goal_due_required_account_hero_test.dart",
+    "test/m1011_reviewed_sms_provenance_ack_transfer_regression_test.dart",
+    "test/m580_sms_security_navigation_performance_test.dart",
+    "test/m615_m618_sms_review_retention_perf_contract_test.dart",
+    "test/m662_sms_review_activity_pdf_regression_test.dart",
+    "test/m670_feedback_transfer_dashboard_test.dart",
+    "test/m983_sms_direct_kind_prefill_refresh_test.dart",
+    "test/m985_sms_prefill_identity_status_conflict_duplicate_test.dart"
   ],
   "bounded_sections": {
     "lib/waffra_goal_recurring_account_picker.dart": [
@@ -58,6 +80,124 @@
       {
         "start": "FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {",
         "end": "    \"m1009_sama_direction_sms_review_and_live_notifications_swipe\":"
+      }
+    ],
+    "lib/main.dart": [
+      {
+        "start": "DateTime? bankSmsDate(String raw,",
+        "end": "bool bankSmsHasUnverifiedTimestamp(String raw,"
+      }
+    ],
+    "lib/storage/waffra_unified_finance_writer.dart": [
+      {
+        "start": "  Future<bool> appendReviewedSmsTransferWithFee({",
+        "end": "  /// Called AFTER explicit confirmation for bank SMS,"
+      }
+    ],
+    "lib/storage/waffra_verified_accounts_api.dart": [
+      {
+        "start": " Future<bool> transferReviewedSmsWithFee({",
+        "end": " /// One manual income/expense + its account association"
+      }
+    ],
+    "lib/storage/waffra_verified_encrypted_finance_bridge.dart": [
+      {
+        "start": "  Future<bool> commitReviewedSmsTransferWithFee({",
+        "end": "  /// Receives explicitly confirmed SMS/manual transaction JSON"
+      }
+    ],
+    "lib/waffra_account_transaction_form.dart": [
+      {
+        "start": "class WaffraAccountTransactionForm extends StatefulWidget {",
+        "end": "class _WaffraAccountTransactionFormState extends State<WaffraAccountTransactionForm> {"
+      },
+      {
+        "start": " late final String requestId=",
+        "end": " WaffraAccountOperation mode="
+      }
+    ],
+    "lib/waffra_bank_sms_facts.dart": [
+      {
+        "start": " static final _expense=RegExp(",
+        "end": " static final _pending=RegExp("
+      }
+    ],
+    "lib/waffra_home_entry_sheet.part.dart": [
+      {
+        "start": "  // M983: the SMS editor can display independently safe hints without",
+        "end": "  final title=TextEditingController(text:"
+      }
+    ],
+    "lib/waffra_home_sms_confirmation.part.dart": [
+      {
+        "start": " Future<void> _m985AutoLearnManualCorrection({",
+        "end": " Future<void> _reviewAutoSmsCandidates({String? targetId})async {"
+      },
+      {
+        "start": "   if(decision=='correct-type'&&mounted&&reviewType!=null){",
+        "end": "   }else if(decision=='exclude'&&mounted){"
+      },
+      {
+        "start": "   }else if(decision=='transfer-manual'&&mounted){",
+        "end": "   }else if(decision=='yes'&&mounted"
+      }
+    ],
+    "lib/waffra_home_sms_transfer_review.part.dart": [
+      {
+        "start": " Future<void> _reviewSmsAccountTransfer({",
+        "end": null
+      }
+    ],
+    "lib/waffra_home_verified_account_flows.part.dart": [
+      {
+        "start": " /// Internal transfers use the verified account ledger, never expense.",
+        "end": " Future<void> openVerifiedTransfer()async{"
+      }
+    ],
+    "lib/waffra_home_verified_transfer_cards.part.dart": [
+      {
+        "start": " Widget _m647TransferCard(",
+        "end": " /// M649: this gold card never writes"
+      }
+    ],
+    "test/m580_sms_security_navigation_performance_test.dart": [
+      {
+        "start": " test('M595 correction must not auto-post, guess a transfer, or auto ACK',(){",
+        "end": " test('M587 bank transfer shows exactly three non-posting choices',(){"
+      },
+      {
+        "start": " test('M587 bank transfer shows exactly three non-posting choices',(){",
+        "end": " test('notification center never repeats a second review hero',(){"
+      }
+    ],
+    "test/m615_m618_sms_review_retention_perf_contract_test.dart": [
+      {
+        "start": " test('M618 No/Edit alternatives are source-correct and must not auto-post',(){",
+        "end": " test('M616 30d reversible encrypted labels are distinct from immutable rescan denial',(){"
+      }
+    ],
+    "test/m662_sms_review_activity_pdf_regression_test.dart": [
+      {
+        "start": " test('M662 manual alternative shows transfer reference without false SMS ACK',(){",
+        "end": " test('M662 first new child remains selected after verified refresh',(){"
+      }
+    ],
+    "test/m670_feedback_transfer_dashboard_test.dart": [
+      {
+        "start": " test('M670 separate SMS alternative opens only selected income/expense editor',(){",
+        "end": " test('M670 all Home filters have a real limit and reversible expansion',(){"
+      }
+    ],
+    "test/m983_sms_direct_kind_prefill_refresh_test.dart": [
+      {
+        "start": " test('M983 direct reviewer uses exact owner native ID, never financial inference',(){",
+        "end": " test('M983 sensitive messages never expose income expense direct editor',(){"
+      }
+    ],
+    "test/m985_sms_prefill_identity_status_conflict_duplicate_test.dart": [
+      {
+        "start": " test('M985 correction fills separate manual editor and protects source',(){",
+        "end": " test('M985 rule preview evaluates owner conflicts without writing',(){"
       }
     ]
   },
