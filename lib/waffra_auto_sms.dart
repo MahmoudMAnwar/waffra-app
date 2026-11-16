@@ -102,11 +102,16 @@ abstract final class WaffraAutoSms {
  /// Only the short-lived Android background worker implements this
  /// receipt. It records a REVIEW ATTEMPT in the native encrypted queue;
  /// it never removes or ACKs a finance candidate.
- static Future<bool> markBackgroundReviewed(String id,{required String revision})async{
+ static Future<bool> markBackgroundReviewed(String id,{required String revision,
+  required bool notificationDelivered})async{
   if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(id))return false;
   if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(revision))return false;
-  return _boolCall('markAutoBankSmsBackgroundReviewed',{'id':id,'revision':revision});
+  return _boolCall('markAutoBankSmsBackgroundReviewed',{'id':id,'revision':revision,
+   'delivered':notificationDelivered});
  }
+
+ static Future<bool> notificationsAllowed()async=>
+  _boolCall('canNotifyBankSms');
 
  static Future<List<Map<String,Object?>>> pending()async{
   if(!Platform.isAndroid)return const [];
