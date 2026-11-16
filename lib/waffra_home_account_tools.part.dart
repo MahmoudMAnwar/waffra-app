@@ -330,6 +330,16 @@ extension _WaffraHomeAccountTools on _HomeScreenState {
        // The authoritative encrypted snapshot, not a decoded backup in
        // memory, becomes the source for Home and widget after one commit.
        await _loadFinanceSafely();
+       // M1006: _loadFinanceSafely() deliberately absorbs source errors and
+       // records _financeLoadFailure instead of throwing. The SQLCipher
+       // restore may be COMMITTED but its Home projection may NOT be ready.
+       // Do not close this modal or report success on an unverified reload.
+       restoreStage='HOME_VERIFICATION';
+       if(!mounted)return;
+       if(!ready||_financeLoadFailure!=null){
+        restoreStage='HOME_RELOAD_FAILED';
+        throw StateError('M1006_RESTORED_HOME_UNVERIFIED');
+       }
        if(authenticatedLegacyRows!=null&&mounted){
         // M620: preflight attests an isolated candidate; verify live SQLCipher
         // AGAIN after the transaction and compare stable IDs, money and dates.
