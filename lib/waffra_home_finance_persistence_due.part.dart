@@ -121,14 +121,25 @@ extension _WaffraHomeFinancePersistenceDue on _HomeScreenState {
    for(final goal in goals)
     if(goal.dueDate!=null)goal.id,
   };
+  // M1013: skip already-settled goal dues even if active flags are stale
+  // during a verified Home refresh. Notification scheduling posts no money.
+  final paidGoalDueKeys=<String>{
+   for(final entry in entries)
+    if(entry.sourceType=='goal_due')entry.id,
+  };
   try {
    await WaffraReminders.schedule(
     recurring.where((r)=>r.active&&waffraCategoryNameAvailableForPosting(
      categories,r.income,r.category)&&(r.linkedGoalId==null||
-      datedGoalIds.contains(r.linkedGoalId)))
+      (datedGoalIds.contains(r.linkedGoalId)&&
+       !paidGoalDueKeys.contains(WaffraRecurringPolicy.entryId(
+        r.id,r.startAt)))))
      .map((r)=>WaffraReminder(id:r.id,title:r.title,day:r.day,
       startAt:r.startAt,
-      oneTimeDueAt:r.linkedGoalId==null?null:r.startAt)).toList(),
+      // Postponement changes the reminder date, never the paid event ID.
+      oneTimeDueAt:r.linkedGoalId==null?null:
+       (DateTime.tryParse(recurringPostponed[
+        WaffraRecurringPolicy.entryId(r.id,r.startAt)]??'')??r.startAt))).toList(),
     english:waffraIsEnglish);
   }catch(e){debugPrint('Reminder scheduling failed: $e');}
  }
