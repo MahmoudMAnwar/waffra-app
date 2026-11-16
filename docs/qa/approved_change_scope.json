@@ -121,6 +121,52 @@
         "start": "  // A transfer, card settlement or message with a separate fee cannot",
         "end": "  if(!facts.canAutoPostAsIncomeExpense){"
       }
+    ],
+    "test/bank_sms_test.dart": [
+      {
+        "start": "  test('outgoing transfer parses correctly', () {",
+        "end": "  test('multiple bank SMS messages split by bank headings', () {"
+      }
+    ],
+    "test/waffra_bank_sms_facts_test.dart": [
+      {
+        "start": "void main(){",
+        "end": " test('cashback refund is true income',(){"
+      }
+    ],
+    "test/m980_four_sms_rule_kinds_every_route_test.dart": [
+      {
+        "start": "  test('M980 category evidence uses the same four-way matches and real bank direction',(){",
+        "end": "  test('M980 conflicting saved exclusion versus confirmed income blocks autoPost',(){"
+      },
+      {
+        "start": "  test('M980 direct frontend/historical isolate uses four rules and does not post money',(){",
+        "end": "  test('M980 foreground/history + background share the SAME matcher before action',(){"
+      }
+    ],
+    "test/m983_sms_direct_kind_prefill_refresh_test.dart": [
+      {
+        "start": " test('M983 tapped income expense and transfer have distinct bank evidence',(){",
+        "end": " test('M983 SMS data is suggested only; incomplete fields do not imply commit',(){"
+      }
+    ],
+    "test/m669_sms_review_category_search_test.dart": [
+      {
+        "start": "   test('M669 actual bank transfer is never treated as automatic expense',(){",
+        "end": null
+      }
+    ],
+    "test/m580_sms_security_navigation_performance_test.dart": [
+      {
+        "start": "  test('M587 bank transfer shows exactly three non-posting choices',(){",
+        "end": " test('notification center never repeats a second review hero',(){"
+      }
+    ],
+    "test/m985_sms_prefill_identity_status_conflict_duplicate_test.dart": [
+      {
+        "start": " test('M985 never guesses account digits from OTP/ref or opposing direction',(){",
+        "end": " test('M985 cancelled, declined and reversed purchases cannot be posted',(){"
+      }
     ]
   },
   "allowed_workflow_changes": [],
