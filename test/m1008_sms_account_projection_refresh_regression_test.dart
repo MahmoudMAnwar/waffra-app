@@ -87,6 +87,12 @@ void main(){
   expect(published,contains('_m684InvalidatePeriodRead();'));
   expect(published,contains('entries..clear()..addAll(loaded);'));
   expect(published,contains('unawaited(_m467RefreshHomeAccounts());'));
+  final deleteRoute=deletion.substring(deletion.indexOf(' Future<void> _deleteVerifiedEntry('),
+    deletion.indexOf(' Future<void> _undoVerifiedDeletedEntry('));
+  final undoRoute=deletion.substring(deletion.indexOf(' Future<void> _undoVerifiedDeletedEntry('),
+    deletion.indexOf(' Future<void> _showVerifiedDeletedTransactions('));
+  expect(deleteRoute,contains('try{await _m467RefreshHomeAccounts();}'));
+  expect(undoRoute,contains('try{await _m467RefreshHomeAccounts();}'));
   final fromAll=deleteAll.indexOf(' Future<void> confirmDeleteAllEntries() async {');
   expect(fromAll,greaterThan(0));
   final all=deleteAll.substring(fromAll);
