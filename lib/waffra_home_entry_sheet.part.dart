@@ -1670,6 +1670,18 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
     _lastWidgetRevision=applied.current.widgetRevision;
    });
    if(smsEditorDraftKey!=null)_m492SmsEditorDrafts.remove(smsEditorDraftKey);
+   // M1008 P0: the SMS was just committed atomically, but the currently
+   // selected account still holds its OLD verified entry IDs and balance.
+   // A ledger-only setState makes a newly linked SMS disappear from Home.
+   // Refresh the owner-verified bank/wallet account projection before the
+   // post-save success state; never modify or replay this committed entry.
+   await _m467RefreshHomeAccounts();
+   if(mounted&&!_m468VerifiedAccountsLoaded){
+    snack(context,waffraIsEnglish?
+     'Transaction saved, but account totals could not be verified. Refresh accounts before reviewing balances.':
+     'العملية اتحفظت، لكن تعذر تحديث أرصدة الحسابات. حدّث الحسابات قبل مراجعة الرصيد.',
+     isError:true);
+   }
    // No -> edit learns a confirmed sender+last-four bank identity only
    // after SQLCipher saved this exact reviewed SMS and its fingerprint.
    // This learning is not a finance write and cannot debit an account.
