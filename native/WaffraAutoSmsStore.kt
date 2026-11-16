@@ -976,7 +976,8 @@ object WaffraAutoSmsStore {
                     "body" to row.getString("body"),
                     "receivedAt" to row.getLong("receivedAt"),
                     "sensitiveOtp" to row.optBoolean("sensitiveOtp", false),
-                    "backgroundAttempted" to row.optBoolean("backgroundAttempted", false))
+                    "backgroundAttempted" to row.optBoolean("backgroundAttempted", false),
+                    "backgroundRuleRevision" to row.optString("backgroundRuleRevision", ""))
                 if (row.has("cloud")) {
                     val proof = row.optJSONObject("cloud")
                     if (proof != null) {
@@ -1007,17 +1008,21 @@ object WaffraAutoSmsStore {
      * It only skips redundant background retries; the message remains in
      * the owner-encrypted inbox for explicit foreground confirmation.
      */
-    fun markBackgroundSmsReviewed(context: Context, id: String): Boolean =
+    fun markBackgroundSmsReviewed(context: Context, id: String,
+                                   revision: String): Boolean =
         synchronized(mutex) {
-            if (!enabled(context) || !Regex("^[a-f0-9]{64}$").matches(id))
+            if (!enabled(context) || !Regex("^[a-f0-9]{64}$").matches(id) ||
+                !Regex("^[a-f0-9]{64}$").matches(revision))
                 return@synchronized false
             try {
                 val data = read(context)
                 for (i in 0 until data.length()) {
                     val row = data.getJSONObject(i)
                     if (row.optString("id") != id) continue
-                    if (row.optBoolean("backgroundAttempted", false))
+                    if (row.optBoolean("backgroundAttempted", false) &&
+                        row.optString("backgroundRuleRevision", "") == revision)
                         return@synchronized true
+                    row.put("backgroundRuleRevision", revision)
                     row.put("backgroundAttempted", true)
                     return@synchronized save(context, data)
                 }
