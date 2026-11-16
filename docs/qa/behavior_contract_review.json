@@ -19,7 +19,8 @@
         "lib/waffra_approved_notifications.dart",
         "lib/waffra_home_sms_inbox.part.dart",
         "lib/waffra_home_entry_sheet.part.dart",
-        "lib/waffra_home_sms_confirmation.part.dart"
+        "lib/waffra_home_sms_confirmation.part.dart",
+        "lib/waffra_auto_sms_policy.dart"
       ],
       "test_paths": [
         "test/m1009_sama_notification_swipe_regression_test.dart",
@@ -27,6 +28,7 @@
         "test/m980_four_sms_rule_kinds_every_route_test.dart"
       ],
       "safety_invariants": [
+        "External transfer head may display income/expense but requiresBeneficiaryReview prohibits finance auto-post in SMS policy and direct confirmation until owner validates account and recipient.",
         "No money auto-post, no alternate ledger writer, no auto-debit from SMS learning, preserve dual verified account witness for own-account transfer.",
         "No exclusion of posted-money SMS, mixed OTP plus money, finance reversal, unrelated bank messages or ambiguous source.",
         "No unredacted raw SMS, reference, OTP, last-four account suffix, amount or names may become saved global exclusion keywords.",
