@@ -30,6 +30,42 @@ extension _WaffraHomeSmsManagement on _HomeScreenState {
   }
   await _openAutoSmsInbox();
  }
+ /// M1026: never broaden Android SMS inbox history implicitly.
+ Future<void> _scanAllBankSmsHistoryFromSettings()async{
+  if(!mounted||!await WaffraAutoSms.enabled()){
+   if(mounted)snack(context,waffraIsEnglish?
+    'Sign in and enable bank SMS tracking first.':
+    'سجل دخولك وفعّل متابعة الرسائل البنكية أولًا.',isError:true);
+   return;
+  }
+  final confirmed=await showWaffraDialog<bool>(context:context,
+   builder:(dialog)=>AlertDialog(
+    title:WaffraText(waffraIsEnglish?'Scan all SMS history?':'فحص سجل الرسائل بالكامل؟'),
+    content:WaffraText(waffraIsEnglish?
+     'This will review bank SMS older than the installation month, in limited batches. It does not automatically save or delete financial entries.':
+     'سيتم فحص الرسائل البنكية الأقدم من شهر التثبيت على دفعات محدودة. لن تُحفظ أو تُحذف أي حركة مالية تلقائيًا.'),
+    actions:[
+     TextButton(onPressed:()=>Navigator.pop(dialog,false),
+      child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+     FilledButton(onPressed:()=>Navigator.pop(dialog,true),
+      child:WaffraText(waffraIsEnglish?'Scan history':'ابدأ الفحص')),
+    ]));
+  if(confirmed!=true)return;
+  final approved=await WaffraAutoSms.enableAllHistoryScan();
+  if(!mounted)return;
+  if(!approved){
+   snack(context,waffraIsEnglish?'Could not approve SMS history scan.':
+    'تعذر تفعيل فحص سجل الرسائل.',isError:true);
+   return;
+  }
+  await _refreshAutoSmsInbox(importMonth:true);
+  if(!mounted)return;
+  if(_autoSmsPending.isNotEmpty)await _openAutoSmsInbox();
+  else snack(context,waffraIsEnglish?
+   'History scan started. Repeat Scan previous SMS to continue bounded pages.':
+   'بدأ فحص السجل. استخدم فحص الرسائل السابقة لاستكمال الدفعات.');
+ }
+
  Future<void> _openUnknownSmsFromSettings()async{
   if(!await WaffraAutoSms.enabled()){
    final status=await WaffraAutoSms.trackingStatus();
