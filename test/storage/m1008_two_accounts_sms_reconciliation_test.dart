@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:waffra/main.dart' show MoneyEntry, defaultCategories;
 import 'package:waffra/storage/waffra_account_context_read.dart';
+import 'package:waffra/storage/waffra_accounts_repository.dart';
 import 'package:waffra/storage/waffra_atomic_finance_snapshot.dart';
 import 'package:waffra/storage/waffra_encrypted_cutover_journal.dart';
 import 'package:waffra/storage/waffra_encrypted_finance_session.dart';
@@ -147,6 +148,25 @@ void main(){
    final linkCount=await db.customSelect(
     'SELECT COUNT(*) AS n FROM fresh_finance_account_entry_links').getSingle();
    expect(linkCount.read<int>('n'),3);
+   // Physical owner backup is unavailable here, but an authenticated
+   // SQLCipher cold reopen must preserve both bank balances and exact IDs.
+   final beforeReopen=(await snapshot.read()).values['entries'];
+   await db.close();
+   db=WaffraEncryptedStore.openAt(
+    File('${dir.path}/${WaffraEncryptedStore.encryptedDatabaseFilename}'),
+    key:key!);
+   final reopened=WaffraAccountsRepository(
+    db:db,experimentalEnabled:true);
+   final balances=await reopened.balances();
+   expect(balances.singleWhere((a)=>a.id=='rajhi').balanceMinor,-20000);
+   expect(balances.singleWhere((a)=>a.id=='alinma').balanceMinor,-27935);
+   expect(await WaffraAccountContextRead.loadAccountEntryIds(
+    store:db,accountId:'rajhi'),{'old-expense','nov-income'});
+   expect(await WaffraAccountContextRead.loadAccountEntryIds(
+    store:db,accountId:'alinma'),{'nov-expense'});
+   final reopenedSnapshot=await WaffraAtomicFinanceSnapshot(
+    store:db,experimentalEnabled:true).read();
+   expect(reopenedSnapshot.values['entries'],beforeReopen);
   }finally{
    await db?.close();
    if(await dir.exists())await dir.delete(recursive:true);
