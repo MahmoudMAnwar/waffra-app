@@ -1,12 +1,35 @@
 {
   "schema_version": 1,
-  "pr": "M1009 Issue #724 — SAMA SMS accounting + Notifications-center swipe (Draft)",
-  "issue": "Issue #724",
+  "pr": "M1010 Issue #726 — required account cascade validation and green dues hero (Draft)",
+  "issue": "Issue #726",
   "workflow_review_policy": "scan-all-registered-workflows",
-  "baseline": "main at f0def360ea75b9c865548b6f1b4fc07e9640f2c2 after #656",
+  "baseline": "main after merged PR #725 (16 November 2026)",
   "reviewed_at": "2026-11-16",
-  "review_policy": "Owner authorized precise SAMA Arabic/English direction and verified-own-account separation, safe repeated SMS exclusion, original source datetime and swipe inside actual Notifications screen; fail-closed money, SQLCipher, backups and Android UAT preserved.",
+  "review_policy": "Owner-provided Android screenshots; align both account picker forms with existing inline error messages and change only dues page header; preserve owner-verified account gate and monetary writers.",
   "contracts": [
+    {
+      "id": "M1010-GOAL-DUE-REQUIRED-ACCOUNT-VALIDATION-AND-APPROVED-HERO",
+      "issue": "Issue #726",
+      "previous_behavior": "Both goal and due form Save actions reject a missing verified bank account but the three dependent provider dropdowns lack inline required errors, making Save appear inert. Dues uses a bare title and subtitle rather than the approved green savings-goals hero.",
+      "approved_behavior": "Retain the enabled Save action; once Save is attempted, each missing institution type, bank/primary provider and linked financial account dropdown visibly shows the same required message and red error field as text/amount controls. Preserve optional goal due date and open-ended target, existing category/month-day rules, verified parent-child account gates, and linked-goal finance protection. Use WaffraApprovedPageHero for dues header; keep calendar in the action/filter row.",
+      "source_paths": [
+        "lib/waffra_goal_recurring_account_picker.dart",
+        "lib/waffra_home_goal_actions.part.dart",
+        "lib/waffra_home_recurring_workflows.part.dart",
+        "lib/waffra_home_goals_recurring_pages.part.dart"
+      ],
+      "test_paths": [
+        "test/m1010_goal_due_required_account_hero_test.dart",
+        "test/m693_three_approved_pages_layout_matrix_test.dart"
+      ],
+      "safety_invariants": [
+        "Do not save an unlinked, archived or unverified account.",
+        "No finance writer, ledger, balance, backup or SMS behavior changes.",
+        "Errors only activate after attempted Save; cancel does not create data.",
+        "Original verified calendars, goal card, linked-account dropdown dependencies, FAB and due filters remain.",
+        "Android and iOS real-device validation remains unconfirmed until user tests."
+      ]
+    },
     {
       "id": "M1009-OWNER-SAMA-DIRECTION-SAFE-REUSE-ORIGINAL-TIMESTAMP-NOTIFICATIONS-SWIPE",
       "issue": "Issue #724 / Draft PR pending",
