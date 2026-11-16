@@ -2132,7 +2132,23 @@ class _WaffraAppState extends State<WaffraApp> with WidgetsBindingObserver {
   final showGate=needsGate||(beforeReady&&_m623RetainedStage=='biometric');
   final showCountry=needsCountry||
    (beforeReady&&_m623RetainedStage=='country');
+  // M1003: an authenticated handoff without a retained gate should not
+  // render an empty Stack. The real Home still remains Offstage and disabled.
+  final missingRetainedStage=beforeReady&&
+   !showLoginScreen&&!showConsent&&!showGate&&!showCountry;
   return Stack(fit:StackFit.expand,children:[
+   if(missingRetainedStage)
+    ColoredBox(color:forest,child:Center(child:Column(
+     mainAxisSize:MainAxisSize.min,children:[
+      const Icon(Icons.shield_outlined,color:Colors.white,size:48),
+      const SizedBox(height:14),
+      WaffraText(waffraIsEnglish?
+       'Verifying your secure session':
+       'جارٍ التحقق من الجلسة الآمنة',
+       textAlign:TextAlign.center,
+       style:const TextStyle(color:Colors.white)),
+     ]))),
+
    if(showLoginScreen)KeyedSubtree(
     key:const ValueKey('m623-login-stage'),
     child:IgnorePointer(ignoring:!needsLogin,
