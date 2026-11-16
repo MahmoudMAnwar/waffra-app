@@ -39,7 +39,7 @@ void main() {
   expect(reconstructed, isNot(contains(
     ' @override Widget build(BuildContext context)=>_m944BuildHome();')));
   expect(shell, contains('child:!ready&&_financeLoadFailure==null?'));
-  expect(shell, contains('const SizedBox.shrink():Stack(children:[Scaffold('));
+  expect(shell, contains('_m1003FinanceHandoffSurface():Stack(children:[Scaffold('));
   expect(shell, contains('body:_financeLoadFailure!=null?_financialRecoveryScreen():'));
   expect(shell, contains('child:currentTab()'));
   expect(shell, contains('if(!accountOpened&&ready&&tab!=2)'));
