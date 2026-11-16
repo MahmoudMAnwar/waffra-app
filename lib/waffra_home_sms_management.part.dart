@@ -305,6 +305,11 @@ extension _WaffraHomeSmsManagement on _HomeScreenState {
    failed=true;
    debugPrint('M592 native exclusion rejected: ${e.runtimeType}');
   }
+  // M1005: refresh current native pending rows after durable excludes.
+  // M1002 owner-serialized encrypted rule learning/read-back is retained.
+  if(mounted&&done.isNotEmpty){
+   await _refreshAutoSmsInbox();
+  }
   if(!mounted)return false;
   if(failed||done.length!=selected.length){
    snack(context,waffraIsEnglish?
@@ -328,6 +333,7 @@ extension _WaffraHomeSmsManagement on _HomeScreenState {
     english:waffraIsEnglish,readPending:_m549ReviewNotices,
     onReviewAll:_openAutoSmsInbox,
     onBulkExclude:_m592ExcludeNotificationSelection,
+    onFeedback:(route,message,isError)=>snack(route,message,isError:isError),
     onReviewOne:(id)=>_reviewAutoSmsCandidates(targetId:id),
     onRescan:()=>_rescanAutoSmsInbox(feedbackContext:route),
     // A user refresh always checks the real incremental native cursor;
