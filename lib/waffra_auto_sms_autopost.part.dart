@@ -21,7 +21,40 @@ abstract final class WaffraAutoSmsAutoPoster {
    // Missing native data is NOT a clean or completed queue.
    throw StateError('Encrypted SMS queue unavailable');
   }
-  final pass=WaffraSmsBackgroundCheckpoint.select(pending,maxPerPass:25);
+  final prefs=await SharedPreferences.getInstance();
+  await prefs.reload();
+  final rawProfile=prefs.getString('waffra_profile');
+  // Reuse the same source-independent rule evaluator as Home's isolate:
+  // built-in safe exclusions must work even if account/rule recovery fails.
+  // A missing owner or unreadable custom store only disables custom rules
+  // and account-bound auto posting; never invents a bank account.
+  String owner='';
+  if(rawProfile!=null&&rawProfile.isNotEmpty){
+   try{
+    final profile=Person.fromJson(
+     Map<String,dynamic>.from(jsonDecode(rawProfile) as Map));
+    owner=WaffraSmsLocalRuleStore.ownerKey(
+     provider:profile.provider,phone:profile.phone,email:profile.email);
+   }catch(_){}
+  }
+  var ruleStoreReady=false;
+  var rules=<WaffraSmsLocalRule>[];
+  if(owner.isNotEmpty){
+   try{
+    rules=await const WaffraSmsLocalRuleStore().read(owner);
+    ruleStoreReady=true;
+   }catch(_){
+    // Do not silently apply unknown/corrupt custom rules.
+    // All non-excluded SMS remain available for owner review.
+   }
+  }
+  // Rules unavailability is part of the revision. A later successful
+  // owner-rule load makes a previously reviewed SMS eligible for REVIEW
+  // reclassification, but never a retroactive unconfirmed money write.
+  final ruleRevision=waffraSmsRulesRevision(owner,ruleStoreReady,
+   rules.map((r)=>Map<String,Object?>.from(r.toJson())).toList(growable:false));
+  final pass=WaffraSmsBackgroundCheckpoint.select(pending,maxPerPass:25,
+   currentRulesRevision:ruleRevision);
   if(pass.candidates.isEmpty)return summary;
   var completed=0;
   summary['remaining']=pass.unattempted;
@@ -53,7 +86,7 @@ abstract final class WaffraAutoSmsAutoPoster {
     // A classification is not a verified financial commit. Every suggested
     // transaction, including transfers, still opens explicit user review.
     await WaffraAutoSms.notifyReview(id,kind:kind);
-    if(!await WaffraAutoSms.markBackgroundReviewed(id)){
+    if(!await WaffraAutoSms.markBackgroundReviewed(id,revision:ruleRevision)){
      throw retryCheckpoint;
     }
     summary['review']=summary['review']!+1;
@@ -63,33 +96,6 @@ abstract final class WaffraAutoSmsAutoPoster {
    }
   }
 
-  final prefs=await SharedPreferences.getInstance();
-  await prefs.reload();
-  final rawProfile=prefs.getString('waffra_profile');
-  // Reuse the same source-independent rule evaluator as Home's isolate:
-  // built-in safe exclusions must work even if account/rule recovery fails.
-  // A missing owner or unreadable custom store only disables custom rules
-  // and account-bound auto posting; never invents a bank account.
-  String owner='';
-  if(rawProfile!=null&&rawProfile.isNotEmpty){
-   try{
-    final profile=Person.fromJson(
-     Map<String,dynamic>.from(jsonDecode(rawProfile) as Map));
-    owner=WaffraSmsLocalRuleStore.ownerKey(
-     provider:profile.provider,phone:profile.phone,email:profile.email);
-   }catch(_){}
-  }
-  var ruleStoreReady=false;
-  var rules=<WaffraSmsLocalRule>[];
-  if(owner.isNotEmpty){
-   try{
-    rules=await const WaffraSmsLocalRuleStore().read(owner);
-    ruleStoreReady=true;
-   }catch(_){
-    // Do not silently apply unknown/corrupt custom rules.
-    // All non-excluded SMS remain available for owner review.
-   }
-  }
   final actionable=<Map<String,Object?>>[];
   // M980: classify each original, owner-scoped SMS against four rule kinds
   // exactly once, then reuse the same matches for safe posting eligibility.
@@ -151,6 +157,12 @@ abstract final class WaffraAutoSmsAutoPoster {
     for(final candidate in batch){
     if(stopwatch.elapsed>=budget)break;
     final id=candidate['id'];
+    // Once a prior incoming SMS was review-only, a new rule revision may
+    // update its suggestion but must not silently post historical money.
+    final previouslyAttempted=candidate['backgroundAttempted']==true;
+    if(previouslyAttempted){
+     await keepForReview(candidate);continue;
+    }
     final body=candidate['body'];
     final sender=candidate['sender'];
     final at=candidate['receivedAt'];
