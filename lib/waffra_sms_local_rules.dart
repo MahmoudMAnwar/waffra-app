@@ -531,6 +531,21 @@ abstract final class WaffraSmsLocalRules {
    if(family!=null&&matches(family,body,sender:sender))return family;
   }
   final safe=<String>[];
+  // M1009: learn the exact SAMA operation heading after owner-confirmed
+  // classification; amounts, beneficiaries and references never enter rules.
+  // This is review-only, and a changed amount must not invalidate the hint.
+  if(isIncome||isExpense){
+   final headings=isIncome?const <String>[
+    'حوالة داخلية واردة','حوالة محلية واردة','حوالة دولية واردة',
+    'حوالة واردة','credit transfer internal','received transfer',
+   ]:const <String>[
+    'حوالة داخلية صادرة','حوالة محلية صادرة','حوالة دولية صادرة',
+    'حوالة صادرة','debit transfer internal','outgoing transfer',
+   ];
+   final heading=headings.where((h)=>normalizedBody.contains(normalized(h)))
+    .where((h)=>safeRuleKeyword(h,kind)).take(1).toList();
+   if(heading.isNotEmpty)safe.addAll(heading);
+  }
   if(kind=='excluded'){
    for(final term in const <String>[
     'رمز التفعيل','رمز التحقق','رمز الدخول','verification code',
@@ -545,7 +560,7 @@ abstract final class WaffraSmsLocalRules {
     if(safeRuleKeyword(term,kind)&&
        normalizedBody.contains(normalized(term)))safe.add(term);
    }
-  }else{
+  }else if(safe.isEmpty){
    // A generic purchase/payment keyword is not a safe learned merchant rule.
    final merchant=waffraMerchantName(body,income:isIncome);
    if(merchant!=null&&safeKeyword(merchant)&&
@@ -586,13 +601,46 @@ abstract final class WaffraSmsLocalRules {
  /// owner decision. Previously learned sender-scoped rules are never promoted.
  /// Only a proven verification/beneficiary event can become a global
  /// structural exclusion; merely tapping Exclude never teaches arbitrary text.
+ /// M1009: only a user-confirmed exclusion of a recognisable service
+ /// announcement can teach text across senders. Never capture free-form
+ /// company names, debt references, suffixes or amounts; never hide a
+ /// posted financial movement merely because its greeting is similar.
+ static WaffraSmsLocalRule? _safeGlobalAnnouncementExclusion({
+  required String body,
+ }){
+  final facts=WaffraBankSmsFactsParser.parse(body);
+  if(facts.kind!=WaffraBankOperationKind.uncertain||
+    _hasPostedMoneyEvidence(body)||_hasCompletedFinanceCue(body)||
+    WaffraBankSmsFactsParser.isVerificationChallenge(body))return null;
+  final source=normalized(body);
+  const patterns=<List<String>>[
+   ['نشعركم بصدور','المالك'],
+   ['نحيطكم علما بصدور','المالك'],
+   ['اشعار بصدور','المنشاه'],
+  ];
+  for(final keywords in patterns){
+   if(!keywords.every((word)=>source.contains(normalized(word))))continue;
+   final rule=WaffraSmsLocalRule(
+    id:'smart_global_${sha256.convert(utf8.encode(
+     'excluded|${keywords.join('|')}')).toString().substring(0,32)}',
+    name:'تنبيه خدمي متكرر',kind:'excluded',
+    income:false,category:'',sender:'',
+    keywords:keywords,matchAll:true,autoPost:false,
+   );
+   try{validate(rule);if(matches(rule,body))return rule;}
+   on FormatException{/* No inferred exclusion on unsafe text. */}
+  }
+  return null;
+ }
+
  static WaffraSmsLocalRule? suggestedGlobalRule({
   required String body,required String sender,required String kind,
   String category='',bool confidentOnly=true,
  }) {
   final scoped=suggestedRule(body:body,sender:sender,kind:kind,
    category:category,confidentOnly:confidentOnly);
-  if(scoped==null)return null;
+  if(scoped==null)return kind=='excluded'?
+   _safeGlobalAnnouncementExclusion(body:body):null;
   final global=WaffraSmsLocalRule(
    id:'${scoped.templateFamily.isEmpty?'smart_global':'template_global'}_${sha256.convert(utf8.encode(
     '$kind|${normalized(scoped.keywords.join('|'))}|${normalized(category)}|${scoped.templateFamily}'
