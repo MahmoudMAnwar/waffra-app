@@ -6,7 +6,7 @@ import 'package:waffra/waffra_bank_sms_facts.dart';
 import 'package:waffra/waffra_auto_sms.dart';
 
 void main(){
- test('M514 incoming income and outgoing beneficiary expense require correct review',(){
+ test('M514 incoming money is income, not owned-account transfer',(){
   for(final sms in [
    'حوالة واردة\nالمبلغ: SAR 120.00\nإلى حساب: **8308',
    'حوالة داخلية واردة\nمن: طرف آخر\nمبلغ: SAR 1.00',
