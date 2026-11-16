@@ -1313,6 +1313,24 @@ Map<String,Object?> waffraM632ClassifySmsQueue(Map<String,Object?> input){
     }
    }
   }
+  // M1009: a verified completed SAMA debit/credit direction is a
+  // *display-only* suggestion even when no category rule was learned.
+  // Saved custom disagreement still needs review; this never ACKs an SMS,
+  // chooses a bank account, or writes a financial entry.
+  if(local==null&&!facts.pending&&annotated['sensitiveOtp']!=true&&
+    (facts.kind==WaffraBankOperationKind.income||
+     facts.kind==WaffraBankOperationKind.expense)&&
+    fourWay.where((r)=>!r.builtIn)
+     .map((r)=>r.resolvedKind).toSet().length<=1){
+   final kind=facts.kind==WaffraBankOperationKind.income?'income':'expense';
+   if(fourWay.where((r)=>!r.builtIn).every((r)=>r.resolvedKind==kind)){
+    local=<String,Object?>{
+     'rule':'SAMA verified direction','kind':kind,
+     'category':'','income':kind=='income',
+     'suggestedOnly':true,
+    };
+   }
+  }
   annotated['m991Evaluated']=true;
   if(local!=null){
    annotated['local']=local;
