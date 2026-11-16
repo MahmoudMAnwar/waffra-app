@@ -267,7 +267,7 @@ void main(){
   expect(review,contains("WaffraAutoSms.excludeMessages([id])"));
  });
 
- test('M595 correction commits original SMS before native ACK, never by type tap',(){
+ test('M595 correction must not auto-post, guess a transfer, or auto ACK',(){
   final app=readWaffraMainSourceForContracts();
   final review=app.split(
    ' Future<void> _reviewAutoSmsCandidates({String? targetId})async {')[1]
