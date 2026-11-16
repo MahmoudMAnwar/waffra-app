@@ -201,7 +201,7 @@ abstract final class WaffraAutoSmsAutoPoster {
      }
      final arrived=DateTime.fromMillisecondsSinceEpoch(at);
      final date=bankSmsDate(body,referenceDate:arrived);
-     if(bankSmsHasUnverifiedTimestamp(body,referenceDate:arrived)){
+     if(date==null||bankSmsHasUnverifiedTimestamp(body,referenceDate:arrived)){
       await keepForReview(candidate);continue;
      }
      final decision=WaffraAutoSmsPolicy.decide(
@@ -268,7 +268,7 @@ abstract final class WaffraAutoSmsAutoPoster {
        parsed.title,body,income:parsed.income),
       category:matched.category,
       amount:parsed.amount!,income:parsed.income,
-      date:date??arrived,notes:body,sourceType:'sms',
+      date:date,notes:body,sourceType:'sms',
       merchantKey:waffraMerchantKey(body,income:parsed.income)??'',
      );
      // Saving the account-bound AutoPost checkbox and rule was the user's
