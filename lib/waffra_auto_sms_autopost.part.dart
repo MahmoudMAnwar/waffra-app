@@ -308,12 +308,14 @@ abstract final class WaffraAutoSmsAutoPoster {
    if(identical(error,retryAck)||identical(error,retryCheckpoint))rethrow;
    // Vault unavailable: keep the limited pass for human review, no legacy
    // writes. Any remaining uncheckpointed SMS is resumed by WorkManager.
+   final latest=await WaffraAutoSms.pendingChecked();
+   if(latest==null)rethrow; // Never mistake vault failure for an empty queue.
+   final stillUnattempted=latest.where(
+    (row)=>row['backgroundAttempted']!=true,
+   ).map((row)=>row['id']).whereType<String>().toSet();
    for(final row in actionable){
     if(stopwatch.elapsed>=budget)break;
-    if(row['id'] is String && !(await WaffraAutoSms.pendingChecked()??
-       const <Map<String,Object?>>[]).any((e)=>e['id']==row['id'])){
-     continue;
-    }
+    if(!stillUnattempted.contains(row['id']))continue;
     await keepForReview(row);
    }
   }finally{
