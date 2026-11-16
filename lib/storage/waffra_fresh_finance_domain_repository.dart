@@ -648,8 +648,11 @@ class WaffraFreshFinanceDomainRepository {
       final goal = _decoded(goals.single.read<String>('source_json'));
       final dueDate = DateTime.tryParse('${schedule['startAt'] ?? ''}');
       if (dueDate == null) throw StateError('Original due date is missing.');
+      // M1013: the canonical Home recurring entryId uses an unpadded month.
+      // January..September previously disagreed with the SQLCipher writer,
+      // silently rejecting legitimate owner-confirmed due settlement.
       final expectedDue = 'rec_${recurringId}_${dueDate.year}_'
-          '${dueDate.month.toString().padLeft(2,'0')}';
+          '${dueDate.month}';
       if (dueKey != expectedDue || schedule['linkedGoalId'] != goalId ||
           schedule['active'] == false || schedule['income'] != false ||
           schedules.single.read<int>('is_income') != 0 ||
