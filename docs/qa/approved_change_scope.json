@@ -75,7 +75,7 @@
     ],
     "native/WaffraAutoSmsReceiver.kt": [
       {
-        "start": "            for ((sender, parts) in bySender) {",
+        "start": "            val bySender = linkedMapOf<String, StringBuilder>()",
         "end": "        } catch (_: Exception) {"
       }
     ],
