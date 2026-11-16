@@ -135,6 +135,19 @@ class WaffraAutoSmsWorker(context: Context, parameters: WorkerParameters) :
         val completed = try { done.await(55, TimeUnit.SECONDS) }
             catch (_: InterruptedException) { false }
         main.post { engine?.destroy() }
+        // M1019 / #736: after a successful bounded Dart processing pass,
+        // replay messages still in Android's SMS provider if the encrypted
+        // queue had been full. Never evict rows or write money from Kotlin.
+        // A subsequent WorkManager job handles newly imported candidates.
+        if (completed && successful && !isForegroundUiActive() &&
+            WaffraAutoSmsStore.capacityRecoveryNeeded(context)) {
+            try {
+                val recovered = WaffraAutoSmsStore.importConsentMonth(context, maxRead = 100)
+                if (recovered > 0) enqueue(context)
+            } catch (_: Exception) {
+                // Keep the durable capacity marker; next run can retry.
+            }
+        }
         return if (completed && successful) Result.success()
             else if (runAttemptCount < 2) Result.retry()
             else Result.failure()
