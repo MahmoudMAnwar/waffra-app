@@ -35,6 +35,7 @@ class WaffraAutoSmsWorker(context: Context, parameters: WorkerParameters) :
             return Result.success()
         val done = CountDownLatch(1)
         var successful = false
+        var needsContinuation = false
         var engine: FlutterEngine? = null
         val main = Handler(Looper.getMainLooper())
         main.post {
@@ -76,6 +77,12 @@ class WaffraAutoSmsWorker(context: Context, parameters: WorkerParameters) :
                                 ?.filterIsInstance<String>()?.toSet() ?: emptySet()
                             result.success(WaffraAutoSmsStore.excludeMessages(context, ids))
                         }
+                        "markAutoBankSmsBackgroundReviewed" -> {
+                            // M1020: this marks a reviewed SMS as attempted,
+                            // but must never perform an ACK or finance write.
+                            val id = call.arguments as? String ?: ""
+                            result.success(WaffraAutoSmsStore.markBackgroundSmsReviewed(context, id))
+                        }
                         "ackCommittedAutoBankSms" -> {
                             // Only Flutter's independent verified finance-hash
                             // evidence may call this committed-only API.
@@ -111,7 +118,14 @@ class WaffraAutoSmsWorker(context: Context, parameters: WorkerParameters) :
                         workerChannel.invokeMethod("process", null,
                             object : MethodChannel.Result {
                                 override fun success(reply: Any?) {
-                                    successful = reply == true
+                                    // A partial successful run has a durable
+                                    // follow-up marker; never confuse partial
+                                    // work with "all messages processed".
+                                    successful = reply is Map<*, *> &&
+                                        reply["finished"] == true &&
+                                        reply["hasMore"] is Boolean
+                                    needsContinuation = reply is Map<*, *> &&
+                                        reply["hasMore"] == true
                                     done.countDown()
                                 }
                                 override fun error(code: String, message: String?,
@@ -135,6 +149,11 @@ class WaffraAutoSmsWorker(context: Context, parameters: WorkerParameters) :
         val completed = try { done.await(55, TimeUnit.SECONDS) }
             catch (_: InterruptedException) { false }
         main.post { engine?.destroy() }
+        // M1020 / #737: the encrypted queue preserves unattempted rows.
+        // Schedule a successor only for an explicitly partial successful
+        // pass. No competing FlutterEngines and no tight reprocessing of
+        // already-review-only SMS after a completed full pass.
+        if (completed && successful && needsContinuation) enqueue(context)
         // M1019 / #736: after a successful bounded Dart processing pass,
         // replay messages still in Android's SMS provider if the encrypted
         // queue had been full. Never evict rows or write money from Kotlin.
