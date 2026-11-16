@@ -1,12 +1,37 @@
 {
   "schema_version": 1,
-  "pr": "M1016–M1020 Issues #732/#734/#735/#736/#737 — SMS bounded background reconciliation (Draft)",
-  "issue": "Issues #732, #734, #735, #736 and #737",
+  "pr": "M1021 Issue #738 — savings goal card direct actions (Draft)",
+  "issue": "Issue #738",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main after merged PR #725 (16 November 2026)",
   "reviewed_at": "2026-11-16",
   "review_policy": "Authorized scope covers owner-requested native SMS intake filtering, all-candidate bounded processing and WorkManager KEEP wakeup fix. Do not relax owner/permission/OTP safety or enable unapproved finance posting. Synthetic source tests are not physical Android proof.",
   "contracts": [
+    {
+      "id": "M1021-GOAL-CARD-INLINE-THREE-ACTIONS-NO-ON-TAP-SHEET",
+      "issue": "Issue #738",
+      "previous_behavior": "Every savings goal Card is wrapped in an InkWell onTap invoking _m689GoalActions, a modal bottom sheet with Save now, Edit goal, Release savings, active switch and Delete; due cards already have three direct inline actions.",
+      "approved_behavior": "Render exactly three inline due-style buttons per Savings Goal Card: Quick deposit (disabled for inactive/complete), Edit goal, Account details; card body is non-clickable and never opens the bottom sheet. Keep release/toggle/delete in per-item header popup only, using existing verified routes and confirmation.",
+      "source_paths": [
+        "lib/waffra_home_goals_recurring_pages.part.dart",
+        "lib/waffra_home_goal_actions.part.dart"
+      ],
+      "test_paths": [
+        "test/m1021_goal_card_inline_actions_test.dart",
+        "test/m388_m390_approved_goal_recurring_receipt_test.dart",
+        "test/m392_m395_budget_quick_actions_goal_ui_test.dart",
+        "test/m665_goal_due_display_and_linked_edit_test.dart",
+        "test/m670_feedback_transfer_dashboard_test.dart",
+        "test/m674_approved_page_designs_test.dart"
+      ],
+      "safety_invariants": [
+        "No editing fundGoal or verified finance persistence",
+        "Do not break due card; same account manager route",
+        "No menu opened from tapping the goal card body",
+        "No loss of release, active toggle or protected delete",
+        "One set of keyed actions per goal with aligned amount progress and RTL/LTR rendering"
+      ]
+    },
     {
       "id": "M1020-NATIVE-SMS-35S-DURABLE-BACKGROUND-CHECKPOINT",
       "issue": "Issue #737",
