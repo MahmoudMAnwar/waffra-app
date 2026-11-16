@@ -40,7 +40,7 @@ void main() {
   // service's redaction, permission and no-autopost safety contracts.
   expect(main,isNot(contains('Future<void> _analyzeAmbiguousSmsOnDemand(')));
   expect(main,isNot(contains('explicitlyRequested:true')));
-  expect(main,contains('await entrySheet(sms:true,initialSms:body,reviewedSender:sender);'));
+  expect(main,contains('await entrySheet(sms:true,initialSms:body,reviewedSender:sender,reviewedSmsId:id);'));
   expect(main,contains('reviewSmsBudgetLinks([record])'));
  });
 
