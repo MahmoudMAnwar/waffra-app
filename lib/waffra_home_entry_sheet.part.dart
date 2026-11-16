@@ -4,7 +4,7 @@ part of 'main.dart';
 /// save logic extracted verbatim. No writer, account source or field changed.
 extension _WaffraHomeEntrySheetModule on _HomeScreenState {
  Future<void> entrySheet({MoneyEntry? initial,bool sms=false,String? initialSms,
-  String? reviewedSender,bool? reviewedIncomeOverride,bool? manualIncomeOverride,
+  String? reviewedSender,String? reviewedSmsId,bool? reviewedIncomeOverride,bool? manualIncomeOverride,
   String? reviewedOriginalSms,DateTime? reviewedOriginalDate})async {
   // A paid goal due is an immutable verified two-source settlement.
   // There is no independent edit path that can rewrite its wallet/bank split.
@@ -43,7 +43,7 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
   // Restore an unfinished bank SMS editor after one-step Back. No money or
   // SMS acknowledgement happens until a separate verified commit.
   final smsEditorDraftKey=sms&&initial==null&&initialSms!=null?
-   bankSmsHash(initialSms):null;
+   bankSmsHash(initialSms,nativeId:reviewedSmsId):null;
   final smsEditorDraft=smsEditorDraftKey==null?
    null:_m492SmsEditorDrafts[smsEditorDraftKey];
   // M485 / #403 #404: correction of a detected SMS is still a reviewed
@@ -1436,8 +1436,8 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
           'عملة الرسالة أجنبية أو غير مؤكدة؛ لم نحفظ العملية بالريال. يلزم التحقق من المبلغ وسعر الصرف أولًا.');
          return;
         }
-        final h=sha256.convert(utf8.encode(digits(message.text).replaceAll(RegExp(r'\s+'),' ').trim().toLowerCase())).toString();
-        if(smsHashes.contains(h)){
+        final h=bankSmsHash(message.text,nativeId:reviewedSmsId);
+        if(smsHashes.contains(h)||smsHashes.contains(bankSmsHash(message.text))){
          final proceed=await showWaffraDialog<bool>(context:sheetContext,builder:(dialogContext)=>AlertDialog(
           title:const WaffraText('⚠️ الرسالة مكررة'),
           content:const WaffraText('هذي الرسالة البنكية أضفتها قبل كذا. ودّك تضيفها مرة ثانية؟'),
