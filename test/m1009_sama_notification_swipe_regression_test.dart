@@ -14,6 +14,8 @@ void main(){
   final facts=WaffraBankSmsFactsParser.parse(outgoing);
   expect(facts.kind,WaffraBankOperationKind.expense);
   expect(facts.pending,isFalse);
+  expect(facts.requiresBeneficiaryReview,isTrue);
+  expect(facts.canAutoPostAsIncomeExpense,isFalse);
   expect(bankSmsDate(outgoing),DateTime(2026,11,15,10,14));
   expect(bankSmsHasUnverifiedTimestamp(outgoing),isFalse);
   for(final text in [
