@@ -31,6 +31,14 @@
         "end": "  // The sender identifies a bank/provider only"
       },
       {
+        "start": "        key:ValueKey('m470-home-manual-account-'",
+        "end": "        onChanged:chosenManualProvider==null||"
+      },
+      {
+        "start": "        key:const Key('waffra-entry-confirm-save'),",
+        "end": "// Historical entries can predate creation of their money account."
+      },
+      {
         "start": "// Historical entries can predate creation of their money account.",
         "end": "       if(initial!=null&&canMoveLinkedAccount&&"
       },
