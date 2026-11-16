@@ -149,7 +149,9 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
   var accountId=existing?.accountId??'';
   // M1007: legacy rules keep their original sender. Empty sender is global
   // only after the owner deliberately picks that scope and saves the rule.
-  var allSenders=(existing?.sender??widget.seedSender).trim().isEmpty;
+  // New rules learn globally by default; historic rules keep their saved
+  // sender scope unless their owner explicitly edits it.
+  var allSenders=existing==null||existing.sender.trim().isEmpty;
   if(allSenders)autoPost=false;
   // Exclusion rules normally match ANY verified keyword, not every word
   // suggested from one SMS. Matching all is an explicit advanced option.
