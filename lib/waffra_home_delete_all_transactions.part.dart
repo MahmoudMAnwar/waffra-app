@@ -29,6 +29,19 @@ extension _WaffraHomeDeleteAllTransactions on _HomeScreenState {
    if(!mounted)return;
    setState((){_m684InvalidatePeriodRead();entries.clear();smsHashes.clear();});
    unawaited(_refreshWidget());
+   // M1008: delete-all updates the durable account source as well as the
+   // Home ledger. Refresh its read-only balances and selected-entry IDs.
+   // Post-commit refresh errors must not claim the deletion rolled back.
+   try{await _m467RefreshHomeAccounts();}catch(error){
+    debugPrint('M1008 delete-all account view: ${error.runtimeType}');
+   }
+   if(!mounted)return;
+   if(!_m468VerifiedAccountsLoaded){
+    snack(context,waffraIsEnglish?
+     'Transactions were deleted, but account balances need verification. Refresh accounts.':
+     'تم حذف العمليات، لكن أرصدة الحسابات تحتاج تحقق. حدّث الحسابات.',isError:true);
+    return;
+   }
    snackSuccess(context,waffraIsEnglish?'All transactions deleted':'تم حذف جميع المعاملات');
   }catch(e){
    debugPrint('Confirmed transaction deletion could not be verified: $e');
