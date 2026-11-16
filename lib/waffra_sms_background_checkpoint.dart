@@ -14,7 +14,8 @@ String waffraSmsRulesRevision(String owner,bool ready,
 
 final class WaffraSmsBackgroundCheckpoint {
  static WaffraSmsBackgroundSelection<Map<String,Object?>> select(
-  List<Map<String,Object?>> pending,{int maxPerPass=25,String? currentRulesRevision}
+  List<Map<String,Object?>> pending,{int maxPerPass=25,String? currentRulesRevision,
+  bool notificationsAllowed=false,int? nowMilliseconds}
  ){
   if(maxPerPass<=0){
    throw ArgumentError.value(maxPerPass,'maxPerPass','Must be positive');
@@ -24,7 +25,15 @@ final class WaffraSmsBackgroundCheckpoint {
   for(final item in pending){
    if(item['backgroundAttempted']==true &&
       (currentRulesRevision==null ||
-       item['backgroundRuleRevision']==currentRulesRevision))continue;
+       item['backgroundRuleRevision']==currentRulesRevision)){
+    // An undelivered OS review notice does not justify a busy loop.
+    // Retry it only after permission returns AND the encrypted cooldown.
+    final pendingNotice=item['backgroundNotificationPending']==true;
+    final nextAt=item['backgroundNotificationRetryAt'];
+    final now=nowMilliseconds??DateTime.now().millisecondsSinceEpoch;
+    if(!notificationsAllowed||!pendingNotice||
+       nextAt is! int||now<nextAt)continue;
+   }
    total++;
    if(selected.length<maxPerPass)selected.add(item);
   }
