@@ -21,6 +21,9 @@ GROUPS = ("money", "experience", "safety")
 # Each user-facing capability has a real runnable suite. Tests can be reused
 # across capabilities; the runner de-duplicates within each CI shard.
 FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {
+    "m1026_sms_history_explicit_all_inbox_opt_in": ("experience", (
+        "test/m1026_sms_history_range_test.dart",
+        "test/m1019_sms_intake_capacity_recovery_test.dart")),
     "m1025_sms_finance_native_identity_migration": ("money", (
         "test/m1025_sms_transaction_identity_test.dart",
         "test/m1024_sms_autopost_date_guard_test.dart")),
