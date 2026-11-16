@@ -32,7 +32,10 @@ void main(){
   final worker=File('native/WaffraAutoSmsWorker.kt').readAsStringSync();
   expect(worker,contains('WaffraAutoSmsStore.capacityRecoveryNeeded(context)'));
   expect(worker,contains('WaffraAutoSmsStore.importConsentMonth(context, maxRead = 100)'));
-  expect(worker,contains('if (recovered > 0) enqueue(context)'));
+  expect(worker,contains('if (recovered > 0 || afterScanned > beforeScanned) enqueue(context)'));
+  expect(worker,contains('WaffraAutoSmsStore.scanProgress(context)'));
+  expect(worker,contains('as? Long) ?: -1L'));
+  expect(worker,isNot(contains('if (recovered >= 0) enqueue(context)')));
   expect(worker,contains('ExistingWorkPolicy.APPEND_OR_REPLACE'));
   expect(worker,isNot(contains('FirebaseFirestore')));
   expect(worker,isNot(contains('commitConfirmedSms(')));
