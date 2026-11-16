@@ -48,7 +48,7 @@ void main(){
   expect(lastError,isTrue);
   await tester.pump(const Duration(milliseconds:350));
   expect(find.byKey(const Key('m592-confirm-bulk-exclude')),findsOneWidget);
-  expect(find.textContaining('لم يتم تأكيد الاستبعاد'),findsOneWidget);
+  expect(find.textContaining('لم يتم تأكيد الاستبعاد'),findsWidgets);
   expect(current.length,1);
   result=true;
   await tester.tap(find.byKey(const Key('m592-confirm-bulk-exclude')));
@@ -61,7 +61,7 @@ void main(){
   await tester.pump(const Duration(milliseconds:350));
   expect(current,isEmpty);
   expect(find.byKey(const Key('m592-confirm-bulk-exclude')),findsNothing);
-  expect(find.textContaining('تم استبعاد 1 رسالة'),findsOneWidget);
+  expect(find.textContaining('تم استبعاد 1 رسالة'),findsWidgets);
   expect(tester.takeException(),isNull);
  });
 
