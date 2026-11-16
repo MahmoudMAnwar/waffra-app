@@ -107,6 +107,29 @@ void main(){
   expect((await WaffraAccountsRepository(
    db:store,experimentalEnabled:true).balances()).single.balanceMinor,100000);
  });
+ test('M1003 budget-only edit leaves restored transaction without a bank account',()async{
+  await seedUnassigned();
+  final before=await authority.load(
+   route:WaffraFinanceRoute.transactionEdit);
+  final old=Map<String,Object?>.from(
+   (jsonDecode(before.ledgerRaw!) as List).single as Map);
+  final edited=Map<String,Object?>.from(old)
+   ..['budgetId']='test-active-budget';
+  final after=await authority.saveCaptured(
+   route:WaffraFinanceRoute.transactionEdit,
+   baseline:before,captured:<String,Object>{'entries':jsonEncode([edited])},
+   userConfirmed:true);
+  final saved=jsonDecode(after.ledgerRaw!) as List;
+  expect(saved.length,1);
+  expect((saved.single as Map)['budgetId'],'test-active-budget');
+  expect((saved.single as Map)['id'],'restored-expense');
+  expect((await store.customSelect(
+   'SELECT account_id FROM fresh_finance_account_entry_links').get()),isEmpty);
+  expect((await store.customSelect(
+   'SELECT entry_id FROM fresh_finance_entries').get()).length,1);
+  expect((await WaffraAccountsRepository(
+   db:store,experimentalEnabled:true).balances()).single.balanceMinor,100000);
+ });
  test('M1003 confirmed restored edit links one record without double debit',()async{
   await seedUnassigned();
   final (w,old)=await oldRow();
