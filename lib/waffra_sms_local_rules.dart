@@ -582,6 +582,35 @@ abstract final class WaffraSmsLocalRules {
   }on FormatException{return null;}
  }
 
+ /// Learn safe non-posting suggestions for EVERY sender after a committed
+ /// owner decision. Previously learned sender-scoped rules are never promoted.
+ /// Only a proven verification/beneficiary event can become a global
+ /// structural exclusion; merely tapping Exclude never teaches arbitrary text.
+ static WaffraSmsLocalRule? suggestedGlobalRule({
+  required String body,required String sender,required String kind,
+  String category='',bool confidentOnly=true,
+ }) {
+  final scoped=suggestedRule(body:body,sender:sender,kind:kind,
+   category:category,confidentOnly:confidentOnly);
+  if(scoped==null)return null;
+  final global=WaffraSmsLocalRule(
+   id:'smart_global_${sha256.convert(utf8.encode(
+    '$kind|${normalized(scoped.keywords.join('|'))}|${normalized(category)}|${scoped.templateFamily}'
+   )).toString().substring(0,32)}',
+   name:scoped.name,keywords:scoped.keywords,
+   income:scoped.income,category:scoped.category,
+   kind:scoped.resolvedKind,sender:'',matchAll:scoped.matchAll,
+   autoPost:false,accountId:'',accountSuffix:'',
+   templateFamily:scoped.templateFamily,
+   contextFragments:scoped.contextFragments,
+  );
+  try{
+   validate(global);
+   if(!matches(global,body,sender:sender))return null;
+   return global;
+  }on FormatException{return null;}
+ }
+
  /// Conservative, sender-agnostic keyword hints from a confirmed
  /// transaction description. Manual and user-reviewed SMS use this SAME
  /// extractor. Never retain amounts, account suffixes, secrets or identifiers.
