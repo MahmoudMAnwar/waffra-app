@@ -112,6 +112,14 @@
       {
         "start": " void _publishVerifiedTransactionLedger(",
         "end": " Future<void> _deleteVerifiedEntry("
+      },
+      {
+        "start": " Future<void> _deleteVerifiedEntry(MoneyEntry entry)async {",
+        "end": " Future<void> _undoVerifiedDeletedEntry(String entryId)async {"
+      },
+      {
+        "start": " Future<void> _undoVerifiedDeletedEntry(String entryId)async {",
+        "end": " Future<void> _showVerifiedDeletedTransactions()async {"
       }
     ],
     "lib/waffra_home_delete_all_transactions.part.dart": [
