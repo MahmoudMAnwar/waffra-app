@@ -32,7 +32,9 @@ extension _WaffraHomeRootShell on _HomeScreenState {
   // Let the root back policy route account/tabs before double-back exit.
   canPop:true,
   child:!ready&&_financeLoadFailure==null?
-   _m1003FinanceHandoffSurface():Stack(children:[Scaffold(
+   (widget.postAuthVisible?
+    WaffraFinanceReloadingView(english:waffraIsEnglish):
+    _m1003FinanceHandoffSurface()):Stack(children:[Scaffold(
   appBar:AppBar(
    toolbarHeight:_headerCompact?52:64,
    flexibleSpace:const ColoredBox(color:forest),
