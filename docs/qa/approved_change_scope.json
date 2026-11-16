@@ -152,13 +152,13 @@
     ],
     "test/m669_sms_review_category_search_test.dart": [
       {
-        "start": "   test('M669 actual bank transfer is never treated as automatic expense',(){",
+        "start": "  test('M669 actual bank transfer is never treated as automatic expense',(){",
         "end": null
       }
     ],
     "test/m580_sms_security_navigation_performance_test.dart": [
       {
-        "start": "  test('M587 bank transfer shows exactly three non-posting choices',(){",
+        "start": " test('M587 bank transfer shows exactly three non-posting choices',(){",
         "end": " test('notification center never repeats a second review hero',(){"
       }
     ],
