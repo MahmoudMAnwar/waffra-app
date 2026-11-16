@@ -93,7 +93,7 @@ void main() {
     expect(offer, contains('!enabled(context) || isExcludedLocked(context, sender)'));
     expect(offer, contains('isExcludedMessageLocked(context, fingerprint)'));
     expect(offer, contains('isCompletedTransferLocked(context, fingerprint)'));
-    expect(offer, contains('val masked = if (sensitive) body.trim().replace('));
+    expect(offer, contains('val masked = if (sensitive) redactMixedOtpSecrets(body) else body.trim()'));
   });
 
   test('M979 native exclusion persists only encrypted fingerprint and safe label',
