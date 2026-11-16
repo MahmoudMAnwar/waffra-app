@@ -179,10 +179,14 @@ extension _WaffraHomeFinancePersistenceDue on _HomeScreenState {
   if(!mounted||!ready||_dueDialogShowing)return;
   final today=DateTime.now();
   for(final r in recurring){
-   // Verified SQLCipher startup must never guess or automatically post an
-   // unrelated monthly charge. The audited goal settlement branch below
-   // handles only owner-confirmed, goal-linked, one-time dues.
+   // M1015 / #731: independent expense dues use the audited, owner-
+   // confirmed atomic recurringPostingAndPostponement writer below.
+   // Recurring INCOME is not a bill: never prompt 'Paid' for income at
+   // verified SQLCipher startup or infer that the bank received it.
    if(goalLinkedOnly&&r.linkedGoalId==null)continue;
+   if(_lastFinanceAuthorityRead?.source==
+      WaffraRuntimeFinanceBackend.verifiedEncrypted&&
+      r.linkedGoalId==null&&r.income)continue;
    if(!r.active||!waffraCategoryNameAvailableForPosting(
     categories,r.income,r.category))continue;
    // A goal is a one-time obligation. Its immutable original due month
