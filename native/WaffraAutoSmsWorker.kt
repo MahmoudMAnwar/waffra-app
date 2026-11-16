@@ -142,8 +142,16 @@ class WaffraAutoSmsWorker(context: Context, parameters: WorkerParameters) :
         if (completed && successful && !isForegroundUiActive() &&
             WaffraAutoSmsStore.capacityRecoveryNeeded(context)) {
             try {
+                val beforeScanned =
+                    (WaffraAutoSmsStore.scanProgress(context)["scanned"] as? Long) ?: -1L
                 val recovered = WaffraAutoSmsStore.importConsentMonth(context, maxRead = 100)
-                if (recovered > 0) enqueue(context)
+                val afterScanned =
+                    (WaffraAutoSmsStore.scanProgress(context)["scanned"] as? Long) ?: -1L
+                // An inbox page can have only promos/old duplicates. It
+                // still advances the durable cursor; schedule the next page
+                // as long as measurable progress happened. Never spin after
+                // a provider failure, full queue or unchanged cursor.
+                if (recovered > 0 || afterScanned > beforeScanned) enqueue(context)
             } catch (_: Exception) {
                 // Keep the durable capacity marker; next run can retry.
             }
