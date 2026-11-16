@@ -16,7 +16,7 @@ void main(){
    ' Future<void> _persistSmsHashes(',
    ' Future<void> syncRecurringReminders()async {',
    ' Future<void> toggleRecurringReminders(',
-   ' Future<void> applyRecurring()async {',
+   ' Future<void> applyRecurring({bool goalLinkedOnly=false})async {',
    '_financeAuthority.saveCaptured(',
    'WaffraFinanceRoute.recurringPostingAndPostponement',
    '_dueDialogShowing=false',
