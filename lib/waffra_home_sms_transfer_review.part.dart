@@ -194,12 +194,13 @@ extension _WaffraHomeSmsTransferReview on _HomeScreenState {
           feeIncludedInDebit:selected=='included',
           occurredIso:draft.occurredIso,messageHash:id,
           feeCategory:'خدمات مالية / رسوم تحويل',
-          userConfirmed:true);
+          originalSmsText:body,userConfirmed:true);
         }else{
          await api.transfer(id:draft.requestId,
           fromAccountId:draft.fromId,toAccountId:draft.toId,
           amountMinor:draft.amountMinor,occurredIso:draft.occurredIso,
-          note:draft.memo,userConfirmed:true);
+          note:'نص الرسالة البنكية الأصلية:\n$body',
+          userConfirmed:true);
         }
         saved=true;
         // The transfer is already committed. Queue-only ACK would replay
