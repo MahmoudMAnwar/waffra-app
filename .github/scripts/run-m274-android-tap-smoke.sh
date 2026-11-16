@@ -77,13 +77,24 @@ for attempt in 1 2; do
     exit 0
   fi
 
-  # A transient DDS startup failure can happen before any app assertion runs.
-  # Do not retry test assertion failures, crashes or timeouts.
+  # M1004: an Android VM may be alive while the host ADB forwarding
+  # handshake fails repeatedly. Retry once only for that verified transport
+  # failure, never for an assertion, a dead app or an emulator crash.
+  # Keep the 360-second timeout and mandatory Android completion gate.
+  vm_transport_failure=false
+  if grep -Eq 'Failed to start Dart Development Service|registerService:.*Service connection disposed' "$log"; then
+    vm_transport_failure=true
+  elif (( result == 124 )) \
+    && grep -q 'The Dart VM service is listening on' "$log" \
+    && grep -q 'Exception attempting to connect to the VM Service: SocketException: Connection refused' "$log"; then
+    vm_transport_failure=true
+  fi
   if (( attempt == 1 )) \
-    && grep -Eq 'Failed to start Dart Development Service|registerService:.*Service connection disposed' "$log" \
+    && [[ "$vm_transport_failure" == true ]] \
     && test "$(adb -s "$device" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" \
-    && ! grep -Eq '([+][1-9]|Test failed\.|Expected:|Actual:)' "$log"; then
-    echo "::warning::M274 DDS startup failed before test execution; retrying once after ADB port reset"
+    && timeout 5s adb -s "$device" shell pidof com.waffra.waffra >/dev/null 2>&1 \
+    && ! grep -Eq '([+][1-9]|Test failed\.|Expected:|Actual:|FATAL EXCEPTION|Unhandled Exception)' "$log"; then
+    echo "::warning::M1004 VM host transport refused while Android app was alive; reset ADB forwarding and retry exactly once"
     adb -s "$device" forward --remove-all || true
     adb -s "$device" reverse --remove-all || true
     adb -s "$device" shell am force-stop com.waffra.waffra || true
