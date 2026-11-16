@@ -39,7 +39,7 @@
     ],
     "lib/waffra_home_goal_actions.part.dart": [
       {
-        "start": " Future<void> _m689GoalActions(SavingGoal g)async{",
+        "start": " Future<void> _m689GoalActions(",
         "end": null
       }
     ],
