@@ -34,8 +34,9 @@ void main(){
   expect(s,contains("Key('m618-correct-to-'+kind)"));
   expect(s,contains("decision='correct-type'"));
   expect(s,contains("if(reviewType=='transfer'){"));
-  expect(s,contains('await openReviewedSmsManualTransfer(body:body,sender:sender);'));
-  expect(s,contains("reviewedIncomeOverride:reviewType=='income'"));
+  expect(s,contains('await openReviewedSmsManualTransfer(id:id,body:body,sender:sender);'));
+  expect(s,contains("sender:sender,income:reviewType=='income'"));
+  expect(s,contains('await _m1011SaveReviewedSmsKind('));
   expect(s,contains('await WaffraAutoSms.acknowledgeCommitted([id])'));
   expect(s,contains("await WaffraAutoSms.excludeMessages([id])"));
   // M661 keeps the 30-day promise while distinguishing a single excluded
