@@ -17,8 +17,8 @@ void main() {
       'Your login code is 481923 for NewApp',
       'Your verification code is 123456 for NewApp',
       'OTP 829105 for a newly installed app',
-      '7814 is your code for Barakah رمز دخولك لبركة',
-      'is your code for Barakah 7814 رمز دخولك لبركة',
+      '492617 is your code for Barakah رمز دخولك لبركة',
+      'is your code for Barakah 492617 رمز دخولك لبركة',
     ];
     for (final body in samples) {
       expect(WaffraBankSmsFactsParser.isVerificationChallenge(body), isTrue,
@@ -36,7 +36,7 @@ void main() {
       'حوالة صادرة بمبلغ 140 ريال. رمز التحقق 987654',
       'Payment completed SAR 75.00. Your verification code is 123456',
       'Purchase approved for SAR 45.50. OTP 123456',
-      'Purchase approved SAR 45.50; 7814 is your code for Barakah',
+      'Purchase approved SAR 45.50; 492617 is your code for Barakah',
     ];
     for (final body in messages) {
       expect(WaffraBankSmsFactsParser.isVerificationChallenge(body), isTrue,

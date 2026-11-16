@@ -114,8 +114,8 @@ void main(){
 
  test('M1005 BRKH bilingual OTP variants are security, never posted money',(){
   for(final text in <String>[
-   '7814 is your code for Barakah رمز دخولك لبركة',
-   'is your code for Barakah 7814 رمز دخولك لبركة',
+   '492617 is your code for Barakah رمز دخولك لبركة',
+   'is your code for Barakah 492617 رمز دخولك لبركة',
   ]){
    expect(WaffraBankSmsFactsParser.isVerificationChallenge(text),isTrue);
    final facts=WaffraBankSmsFactsParser.parse(text);
@@ -123,7 +123,7 @@ void main(){
    expect(WaffraSmsLocalRules.resolveSpecial(body:text,
     sender:'BRKH',bankKind:facts.kind)?.resolvedKind,'excluded');
   }
-  const paid='Purchase approved SAR 85.00; 7814 is your code for Barakah';
+  const paid='Purchase approved SAR 85.00; 492617 is your code for Barakah';
   final facts=WaffraBankSmsFactsParser.parse(paid);
   expect(WaffraSmsLocalRules.resolveSpecial(body:paid,
    sender:'BRKH',bankKind:facts.kind)?.resolvedKind,isNot('excluded'));
