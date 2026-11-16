@@ -75,7 +75,7 @@ void main(){
   }
   final source=File('native/WaffraAutoSmsStore.kt').readAsStringSync();
   expect(source,contains('!completedFinancialAction.containsMatchIn(body)'));
-  expect(source,contains('val masked = if (sensitive) redactMixedOtpSecrets(body)('));
+  expect(source,contains('val masked = if (sensitive) redactMixedOtpSecrets(body) else body.trim()'));
   expect(source,contains('.put("sensitiveOtp", sensitive)'));
  });
 
