@@ -81,14 +81,15 @@ extension _WaffraHomeSmsRules on _HomeScreenState {
   }
  }
 
- // Local classification learning never authorizes financial posting.
- // Only a specific, independently classified message may produce a rule.
+ // Local learning only follows a saved owner decision; it never authorizes
+ // financial posting. Safe phrases classify messages from ALL senders.
+ // A bank sender remains required for separately verified account binding.
  Future<bool> _learnSafeSmsRule({
   required String body,required String sender,
   required String kind,String category='',
  })async{
   if(_smsRuleOwnerKey.isEmpty)return false;
-  final candidate=WaffraSmsLocalRules.suggestedRule(
+  final candidate=WaffraSmsLocalRules.suggestedGlobalRule(
    body:body,sender:sender,kind:kind,category:category,confidentOnly:true);
   if(candidate==null)return false;
   final store=const WaffraSmsLocalRuleStore();
