@@ -53,7 +53,7 @@ void main(){
   expect(WaffraBankSmsFactsParser.sameReferenceAccountHint(
    'شراء 19 ريال من حساب ****1234',same),isFalse);
  });
- test('M985 reviewed SMS correction retains original source and verified hash',(){
+ test('M985 correction fills separate manual editor and protects source',(){
   final editor=File('lib/waffra_home_entry_sheet.part.dart').readAsStringSync();
   final actions=File('lib/waffra_home_sms_confirmation.part.dart').readAsStringSync();
   expect(editor,contains('final manualReviewBody=!sms&&initial==null?reviewedOriginalSms:null'));
