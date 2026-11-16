@@ -118,13 +118,17 @@ void main(){
   expect(snippet,contains("row['id']!=id"));
   expect(snippet,contains("if(kind=='transfer'){"));
   expect(snippet,contains('await _reviewSmsAccountTransfer(item:row,facts:facts)'));
-  expect(snippet,contains('await openReviewedSmsManualTransfer(body:body,sender:sender)'));
-  expect(snippet,contains("await entrySheet(sms:true,initialSms:body,"));
-  expect(snippet,contains("reviewedSender:sender,reviewedIncomeOverride:kind=='income'"));
-  expect(snippet,contains('await WaffraAutoSms.acknowledgeCommitted([id])'));
-  expect(snippet,contains('if(smsHashes.contains(bankSmsHash(body)))'));
-  expect(snippet,contains("await entrySheet(manualIncomeOverride:kind=='income',"));
-  expect(snippet,contains('reviewedOriginalSms:body'));
+  expect(snippet,contains('await openReviewedSmsManualTransfer(id:id,body:body,sender:sender)'));
+  expect(snippet,contains('await _m1011SaveReviewedSmsKind('));
+  expect(snippet,contains("income:kind=='income'"));
+  final correction=review.substring(
+   review.indexOf(' Future<void> _m1011SaveReviewedSmsKind('),start);
+  expect(correction,contains('await entrySheet(sms:true,initialSms:body,'));
+  expect(correction,contains('reviewedIncomeOverride:income'));
+  expect(correction,contains('e.sourceType==\'sms\''));
+  expect(correction,contains('smsHashes.contains(hash)'));
+  expect(correction,contains('await WaffraAutoSms.acknowledgeCommitted([id])'));
+  expect(correction,isNot(contains('await entrySheet(manualIncomeOverride:')));
   expect(snippet,isNot(contains('commitConfirmedSms(')));
   expect(snippet,isNot(contains('commitConfirmedManual(')));
   expect(snippet,isNot(contains('WaffraAutoSms.acknowledge([id])')));
@@ -136,7 +140,7 @@ void main(){
   expect(review,contains("if(decision=='m983-direct-edit'&&understood&&!sensitive&&mounted)"));
   expect(review,contains("reviewType=expectedIncome?'income':'expense'"));
   expect(review,contains("decision='correct-type'"));
-  expect(review,contains("reviewedSender:sender,reviewedIncomeOverride:reviewType=='income'"));
+  expect(review,contains("sender:sender,income:reviewType=='income'"));
  });
 
  test('M983 sensitive messages never expose income expense direct editor',(){
