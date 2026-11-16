@@ -23,10 +23,14 @@ GROUPS = ("money", "experience", "safety")
 FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {
     "m1012_verified_linked_goal_due_confirmation_and_321_reminders": ("money", (
         "test/m1012_due_reminder_verified_confirmation_test.dart",
+        "test/m1013_goal_due_month_identity_postponement_test.dart",
         "test/m444_notification_forecast_budget_test.dart",
         "test/m86_recurring_schedule_boundary_test.dart",
         "test/m978_recurring_reminder_goal_index_test.dart",
-        "test/m631_verified_finance_prewarm_test.dart")),
+        "test/m631_verified_finance_prewarm_test.dart",
+        "test/storage/m470_verified_recurring_payment_capture_test.dart",
+        "test/storage/m266_home_bound_source_regression_test.dart",
+        "test/m762_home_finance_persistence_due_extraction_test.dart")),
     "m1011_sms_original_provenance_review_ack_and_verified_transfer": ("money", (
         "test/m1011_reviewed_sms_provenance_ack_transfer_regression_test.dart",
         "test/m983_sms_direct_kind_prefill_refresh_test.dart",
