@@ -17,7 +17,7 @@ void main(){
   expect('WaffraAutoSmsWorker.enqueue(context)'.allMatches(receiver),hasLength(1),
    reason:'one successor per received broadcast, not one expensive job per sender');
   expect(receiver.indexOf('WaffraAutoSmsStore.offer(context, sender, parts.toString()'),
-   lessThan(receiver.indexOf('if (shouldEnqueue) WaffraAutoSmsWorker.enqueue(context)')));
+   lessThan(receiver.indexOf('if (shouldEnqueue || WaffraAutoSmsStore.capacityRecoveryNeeded(context))')));
   expect(receiver,isNot(contains('commitConfirmedSms(')));
   expect(receiver,isNot(contains('acknowledgeCommitted(')));
  });
