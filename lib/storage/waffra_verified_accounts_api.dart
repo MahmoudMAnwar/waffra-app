@@ -182,6 +182,7 @@ class WaffraVerifiedAccountsApi implements WaffraAccountOperations {
   required String occurredIso,
   required String messageHash,
   required String feeCategory,
+  String? originalSmsText,
   required bool userConfirmed,
  })async{
   final displayed=_lastDisplayed;
@@ -195,7 +196,8 @@ class WaffraVerifiedAccountsApi implements WaffraAccountOperations {
    principalMinor:principalMinor,feeMinor:feeMinor,
    feeIncludedInDebit:feeIncludedInDebit,
    occurredIso:occurredIso,messageHash:messageHash,
-   feeCategory:feeCategory,userConfirmed:true);
+   feeCategory:feeCategory,originalSmsText:originalSmsText,
+   userConfirmed:true);
  }
 
  /// One manual income/expense + its account association must share a
