@@ -47,7 +47,7 @@ void main(){
   expect(store,contains('"backgroundRuleRevision" to row.optString("backgroundRuleRevision", "")'));
   expect(store,contains('fun markBackgroundSmsReviewed(context: Context, id: String,'));
   expect(store,contains('row.put("backgroundRuleRevision", revision)'));
-  expect(store,contains('Regex("^[a-f0-9]{64}$").matches(revision)'));
+  expect(store,contains('Regex("^[a-f0-9]{64}\$").matches(revision)'));
   expect(store,contains('return@synchronized save(context, data)'));
   final worker=File('native/WaffraAutoSmsWorker.kt').readAsStringSync();
   expect(worker,contains('args?.get("revision") as? String ?: ""'));
