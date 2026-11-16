@@ -1,12 +1,41 @@
 {
   "schema_version": 1,
-  "pr": "M1016–M1019 Issues #732/#734/#735/#736 — SMS intake, batching and wakeup (Draft)",
-  "issue": "Issues #732, #734 and #735",
+  "pr": "M1016–M1020 Issues #732/#734/#735/#736/#737 — SMS bounded background reconciliation (Draft)",
+  "issue": "Issues #732, #734, #735, #736 and #737",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main after merged PR #725 (16 November 2026)",
   "reviewed_at": "2026-11-16",
   "review_policy": "Authorized scope covers owner-requested native SMS intake filtering, all-candidate bounded processing and WorkManager KEEP wakeup fix. Do not relax owner/permission/OTP safety or enable unapproved finance posting. Synthetic source tests are not physical Android proof.",
   "contracts": [
+    {
+      "id": "M1020-NATIVE-SMS-35S-DURABLE-BACKGROUND-CHECKPOINT",
+      "issue": "Issue #737",
+      "previous_behavior": "Native Worker destroys FlutterEngine after 55 seconds while Dart may iterate up to 1000 candidates; 25-size batches do not bound overall run and restart repeatedly reviews the first pending bank SMSs without durable background progress.",
+      "approved_behavior": "Each worker pass selects up to 25 owner-encrypted pending candidates without backgroundAttempted flag, checks monotonic 35-second budget between candidates, stores per-review checkpoint only after safe review notification attempt or verified atomic ACK/exclusion, returns remaining count and Java schedules another APPEND_OR_REPLACE work when work remains. No false true from pendingChecked error and no unsafe finance writes.",
+      "source_paths": [
+        "native/WaffraAutoSmsStore.kt",
+        "native/WaffraAutoSmsWorker.kt",
+        "lib/main.dart",
+        "lib/waffra_auto_sms.dart",
+        "lib/waffra_auto_sms_autopost.part.dart",
+        "lib/waffra_sms_background_checkpoint.dart"
+      ],
+      "test_paths": [
+        "test/m1020_sms_background_checkpoint_continuation_test.dart",
+        "test/m1017_sms_background_batch_drain_test.dart",
+        "test/m1018_sms_workmanager_wakeup_race_test.dart",
+        "test/m506_android_nine_regressions_test.dart",
+        "test/m549_sms_review_owner_scoped_test.dart",
+        "test/qa/m417_sms_permission_acceptance_test.py"
+      ],
+      "safety_invariants": [
+        "No review row is removed from native encrypted queue merely after backgroundAttempted flag.",
+        "If an SMS financially commits, only verified finance authority/hash and committed-only native ACK can clear its queue row.",
+        "Fail closed if no native pending queue or checkpoint persistence; never mark an unprocessed row.",
+        "Return continuation only if unattempted remain; avoid infinite reprocessing of already-review-only SMS.",
+        "35s is cooperative not hard per-transaction execution guarantee; physical Android/WorkManager OS kill remains UAT."
+      ]
+    },
     {
       "id": "M1019-ENCRYPTED-SMS-CAPACITY-SATURATION-REPLAY",
       "issue": "Issue #736",
