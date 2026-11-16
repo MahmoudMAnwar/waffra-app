@@ -1480,6 +1480,17 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
    }
    return;
   }
+  // Non-verified legacy sources cannot safely split an account link from an edit.
+  if(initial!=null&&canLinkExistingAccount&&
+     originalLinkedAccountId==null&&chosenManualAccount!=null&&
+     _lastFinanceAuthorityRead?.source!=
+      WaffraRuntimeFinanceBackend.verifiedEncrypted){
+   snack(context,waffraIsEnglish?
+    'This restored transaction needs verified finance. Reopen it and retry.':
+    'ربط العملية المستعادة يحتاج مصدرًا ماليًا موثقًا. افتح العملية مجددًا وحاول.',
+    isError:true);
+   return;
+  }
   // M985: a bank reference is useful only alongside identical card/account
   // suffix, status, date and SAR amount. It is an advisory, never a hidden
   // exclusion or an override of the verified SQLCipher idempotency writer.
@@ -1792,7 +1803,10 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
     // Preserve unrelated original JSON bytes under the witnessed SQL lock.
     if(!await _m953SaveExistingVerifiedEntry(initial,result,
      fromAccountId:canMoveLinkedAccount?originalLinkedAccountId:null,
-     toAccountId:canMoveLinkedAccount?chosenManualAccount:null))return;
+     toAccountId:canMoveLinkedAccount?chosenManualAccount:null,
+     linkUnassignedAccountId:canLinkExistingAccount&&
+      originalLinkedAccountId==null?chosenManualAccount:null,
+     openingExcludesHistory:historicalOpeningExcluded))return;
    }else{
    // Optimistic in-memory edits must roll back if durable save is rejected.
    // A spinner is NOT proof of a completed financial write.
@@ -1864,27 +1878,12 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
   final movedLinkedAccountInThisEdit=initial!=null&&canMoveLinkedAccount&&
    originalLinkedAccountId!=null&&chosenManualAccount!=null&&
    originalLinkedAccountId!=chosenManualAccount;
-  bool linkedHistoricalAccountInThisEdit=false;
-  // #420: witnessed idempotent association for the existing entry;
-  // never append another income or expense.
-  if(initial!=null&&canLinkExistingAccount&&
-     originalLinkedAccountId==null&&chosenManualAccount!=null){
-   try{
-    final api=editAccountLinkApi;
-    if(api==null)throw StateError('Verified entry link API unavailable');
-    await api.balances();
-    await api.linkUnassignedEntry(entryId:initial.id,
-     accountId:chosenManualAccount!,userConfirmed:true);
-    linkedHistoricalAccountInThisEdit=true;
-    if(mounted)await _m467RefreshHomeAccounts();
-   }catch(error){
-    debugPrint('M500 historical link failed: ${error.runtimeType}');
-    if(mounted)snack(context,waffraIsEnglish?
-     'Details may be saved, but account linking was not confirmed. Check Unassigned transactions.':
-     'قد يكون تعديل العملية اتحفظ، لكن ربط الحساب لم يتأكد. راجع عمليات بدون حساب.',isError:true);
-    return;
-   }
-  }
+  // M1003: the account association is now committed WITH the budget edit.
+  final linkedHistoricalAccountInThisEdit=initial!=null&&
+   canLinkExistingAccount&&originalLinkedAccountId==null&&
+   chosenManualAccount!=null&&historicalOpeningExcluded&&
+   _lastFinanceAuthorityRead?.source==
+    WaffraRuntimeFinanceBackend.verifiedEncrypted;
   if(mounted)await budgetAlert(result,previousSpent);
   if(mounted)unawaited(_m467RefreshHomeAccounts());
   if(initial!=null&&mounted){
@@ -1926,7 +1925,8 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
  /// This modifies neither an account association nor a second money row.
  Future<bool> _m953SaveExistingVerifiedEntry(
   MoneyEntry original,MoneyEntry edited,
-  {String? fromAccountId,String? toAccountId})async{
+  {String? fromAccountId,String? toAccountId,
+   String? linkUnassignedAccountId,bool openingExcludesHistory=false})async{
   try{
    if(original.id!=edited.id||original.sourceType!=edited.sourceType||
       original.receiptPath!=edited.receiptPath||
@@ -1969,6 +1969,8 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
    if(matches!=1)throw StateError('Transaction identity missing or duplicated.');
    final moved=fromAccountId!=null&&toAccountId!=null&&
     fromAccountId!=toAccountId;
+   final linking=linkUnassignedAccountId!=null;
+   if(moved&&linking)throw StateError('Account move and history link conflict.');
    final WaffraFinanceAuthorityRead committed;
    if(moved){
     final bridge=_financeBinding?.accountsBridge;
@@ -1983,6 +1985,23 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
        (decoded as List).cast<Map>().singleWhere((e)=>e['id']==original.id)),
       replacement:patched.singleWhere((e)=>e['id']==original.id),
       fromAccountId:fromAccountId,toAccountId:toAccountId,
+      userConfirmed:true));
+    committed=await _financeAuthority.load(
+     route:WaffraFinanceRoute.transactionEdit);
+   }else if(linking){
+    final bridge=_financeBinding?.accountsBridge;
+    if(bridge==null||baseline.encryptedWitness==null){
+     throw StateError('Verified historical account link source is unavailable.');
+    }
+    await _saveProgress.track(
+     'm1003-existing-edit-and-link',
+     ()=>bridge.editExistingAndLinkUnassigned(
+      baseline:baseline.encryptedWitness!,
+      expectedOriginal:Map<String,Object?>.from(
+       (decoded as List).cast<Map>().singleWhere((e)=>e['id']==original.id)),
+      replacement:patched.singleWhere((e)=>e['id']==original.id),
+      toAccountId:linkUnassignedAccountId!,
+      openingExcludesHistory:openingExcludesHistory,
       userConfirmed:true));
     committed=await _financeAuthority.load(
      route:WaffraFinanceRoute.transactionEdit);
