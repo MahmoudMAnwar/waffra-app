@@ -42,9 +42,7 @@ void main(){
  });
 
  test('M1009 confirmed expense teaches same safe heading across new amount/sender',(){
-  const category='أخرى / مصروف غير مصنف';
   // Unlike a financial write, learning only authorizes a screen suggestion.
-  const name='مصروف حوالة';
   final learned=WaffraSmsLocalRules.suggestedGlobalRule(
    body:outgoing,sender:'AlinmaPay',kind:'expense',
    category:'حوالات صادرة / حوالة محلية');
@@ -60,7 +58,7 @@ void main(){
   expect(matched.any((r)=>r.id==learned.id),isTrue);
   final worker=waffraM632ClassifySmsQueue({
    'results':[{
-     'id':'a'*64,'sender':'AnotherBank','body':second,
+     'id':'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa','sender':'AnotherBank','body':second,
      'receivedAt':1763200000000,
    }],
    'rules':[learned.toJson()],
@@ -89,9 +87,13 @@ void main(){
   expect(rule.autoPost,isFalse);
   expect(rule.keywords.any((v)=>RegExp(r'[0-9]').hasMatch(v)),isFalse);
   expect(WaffraSmsLocalRules.matches(rule,second,sender:'OtherSender'),isTrue);
-  expect(WaffraSmsLocalRules.matches(rule,
-   'تم خصم SAR 30.00 نشعركم بصدور عملية للمالك',sender:'OtherSender'),
-   isFalse,reason:'Never auto-exclude a posted financial movement');
+  final posted='تم خصم SAR 30.00 نشعركم بصدور عملية تخص المالك';
+  final matched=WaffraSmsLocalRules.matchAllFourKinds(
+   body:posted,sender:'OtherSender',custom:[rule]);
+  expect(WaffraSmsLocalRules.resolveSpecial(body:posted,
+   sender:'OtherSender',bankKind:WaffraBankOperationKind.expense,
+   custom:[rule],matchedRules:matched)?.resolvedKind,isNot('excluded'),
+   reason:'Posted money must never be auto-excluded');
  });
 
  testWidgets('M1009 swipe on ACTUAL Notifications center changes visible sender',
