@@ -1,11 +1,12 @@
 {
   "contract_version": 1,
   "change_id": "M1003-ISSUE715-RESTORE-BUDGET-ACCOUNT-AND-BLANK-ROUTES",
-  "human_scope_review": "Fix after-restore historical transaction budget/account link: user screenshot originates in Home M500 catch after metadata save, when SQLCipher rejects linking to nonzero opening balance without explicit openingExcludesHistory attestation. Require checkbox and one source-verified atomic edit+link, no duplicate money, rollback all fields on failure. Audit ready=false blank Home and missing retained authentication stage. Do not bypass security or change approved FAB/visual designs.",
+  "human_scope_review": "Fix after-restore historical transaction budget/account link: user screenshot originates in Home M500 catch after metadata save, when SQLCipher rejects linking to nonzero opening balance without explicit openingExcludesHistory attestation. Require checkbox and one source-verified atomic edit+link, no duplicate money, rollback all fields on failure. Audit ready=false blank Home and missing retained authentication stage. Do not bypass security or change approved FAB/visual designs. Owner reports BLACK background specifically after restoring an encrypted backup. Confirmed source after applyVerifiedV3Restore awaits a fail-closed _loadFinanceSafely that temporarily clears ready and entries. The previous empty canvas under dark dialog barrier appeared black. Additionally _loadFinanceSafely suppresses thrown errors into _financeLoadFailure, allowing the restore dialog to close and claim success even when Home is unverified. Fix both while retaining the SQLCipher snapshot and archive.",
   "user_requested_changes": [
     "Fix restored historical entry budget/account association with explicit opening-balance attestation and one encrypted edit+link transaction.",
     "Avoid blank/black visuals on ready=false and missing auth retained-stage states without exposing financial values.",
-    "Add new and retained regressions; verify via exact-head CI, physical Android remains pending."
+    "Add new and retained regressions; verify via exact-head CI, physical Android remains pending.",
+    "After successful SQLCipher restore do not hide the Home under a dark/black canvas: use an explicit pale nonfinancial verification surface during reload, and do not display success if _loadFinanceSafely caught a verification error."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -24,7 +25,9 @@
     "test/m1003_restore_budget_and_blank_surface_contract_test.dart",
     "test/storage/m1003_atomic_restored_budget_account_link_test.dart",
     "test/waffra_m206_day_theme_tour_sms_regression_test.dart",
-    ".github/scripts/run-m274-android-tap-smoke.sh"
+    ".github/scripts/run-m274-android-tap-smoke.sh",
+    "lib/waffra_home_account_tools.part.dart",
+    "test/m1006_restore_handoff_no_black_background_test.dart"
   ],
   "bounded_sections": {
     "lib/waffra_home_entry_sheet.part.dart": [
@@ -117,6 +120,12 @@
       {
         "start": "  # A transient DDS startup failure can happen before any app assertion runs.",
         "end": "  echo \"::error::M274 Android UI smoke failed (exit $result); blocking integration\""
+      }
+    ],
+    "lib/waffra_home_account_tools.part.dart": [
+      {
+        "start": "        restoreStage='HOME_REFRESH';",
+        "end": "        if(authenticatedLegacyRows!=null&&mounted){"
       }
     ]
   },

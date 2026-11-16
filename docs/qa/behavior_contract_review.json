@@ -6583,5 +6583,19 @@
         ".github/workflows/finance-full-regression.yml"
       ]
     }
-  ]
+  ],
+  "m1006_restore_handoff": {
+    "issue": "Issue #715 / Draft PR #716",
+    "source": "lib/waffra_home_account_tools.part.dart; lib/waffra_home_finance_recovery.part.dart; lib/waffra_home_root_shell.part.dart; lib/main.dart",
+    "evidence": "After SQLCipher restore, Home reload clears ready until verification. A dark modal barrier over an unmounted/green placeholder can appear black. _loadFinanceSafely returns normally after recording verification failure.",
+    "approved": "Render a pale, nonfinancial progress scene during unready Home. Do not treat a committed restore as fully verified until Home sets ready and no finance failure; otherwise surface safe post-commit recovery without deleting or retrying writes.",
+    "test_path": "test/m1006_restore_handoff_no_black_background_test.dart",
+    "safeguards": [
+      "No optimistic old finance data displayed while the verified source reloads.",
+      "Keep biometric, AEAD archive password, SQLCipher writer and transaction count checks.",
+      "No false restore-success toast or dialog dismissal after a swallowed Home verification error.",
+      "No records, attachment bytes, categories or linked balances modified by this presentation fix."
+    ],
+    "physical_android_reproduction": "pending"
+  }
 }
