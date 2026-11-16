@@ -10,6 +10,8 @@ void main(){
  final account=File('lib/waffra_home_verified_account_flows.part.dart').readAsStringSync();
  final summary=File('lib/waffra_home_budget_cards.part.dart').readAsStringSync();
  final timeline=File('lib/waffra_home_dashboard_analytics.part.dart').readAsStringSync();
+ final deletion=File('lib/waffra_home_transaction_ledger_actions.part.dart').readAsStringSync();
+ final deleteAll=File('lib/waffra_home_delete_all_transactions.part.dart').readAsStringSync();
 
  test('M1008 sheet bank SMS saves immutable ledger and refreshes verified '
   'account IDs and balances before presenting successful completion',(){
@@ -73,6 +75,36 @@ void main(){
   expect(assign,greaterThan(invalidate));
   expect(slowRefresh,greaterThan(assign));
   expect(code,isNot(contains('unawaited(_m467RefreshHomeAccounts());')));
+ });
+
+ test('M1008 delete and undo must refresh source account balances and '
+  'delete-all never claims rollback when refresh fails post-commit',(){
+  final from=deletion.indexOf('void _publishVerifiedTransactionLedger(');
+  final to=deletion.indexOf(' Future<void> _deleteVerifiedEntry(',from);
+  expect(from,greaterThan(0));
+  expect(to,greaterThan(from));
+  final published=deletion.substring(from,to);
+  expect(published,contains('_m684InvalidatePeriodRead();'));
+  expect(published,contains('entries..clear()..addAll(loaded);'));
+  expect(published,contains('unawaited(_m467RefreshHomeAccounts());'));
+  final fromAll=deleteAll.indexOf(' Future<void> confirmDeleteAllEntries() async {');
+  expect(fromAll,greaterThan(0));
+  final all=deleteAll.substring(fromAll);
+  expect(all,contains('await _m467RefreshHomeAccounts();'));
+  expect(all,contains('if(!_m468VerifiedAccountsLoaded)'));
+  expect(all.indexOf('await _m467RefreshHomeAccounts();'),
+    greaterThan(all.indexOf('entries.clear();smsHashes.clear();')));
+ });
+
+ test('M1008 active prior account read awaits a second verified SQLCipher '
+  'projection rather than returning an obsolete selected-account cache',(){
+  final begin=account.indexOf(' Future<void> _m467RefreshHomeAccounts()async{');
+  final end=account.indexOf(' Future<void> _m468ReadVerifiedAccountsOnce()async{');
+  expect(begin,greaterThan(0));expect(end,greaterThan(begin));
+  final call=account.substring(begin,end);
+  expect(call,contains('_m468AccountReadAgain=true;'));
+  expect(call,contains('final follower=_m468AccountReadInFlight;'));
+  expect(call,contains('if(follower!=null&&!identical(follower,active))await follower;'));
  });
 
  test('M1008 account choice and monthly summary read same verified IDs, '
