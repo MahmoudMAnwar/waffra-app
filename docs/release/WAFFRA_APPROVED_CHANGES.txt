@@ -1097,3 +1097,9 @@ M969 / Issue #670 / Draft #665: real M120 Android SQLCipher receipt restart asse
 - Approved change: Wait for owner-authenticated account balance and linked-transaction projection refresh after verified transaction deletion or Undo; preserve SQLCipher durable delete and original 30-day restore behavior without claiming a rolled-back debit from a UI refresh failure. Cross-finance audit and regressions recorded; device UAT pending.
 - Changed production paths: lib/waffra_home_transaction_ledger_actions.part.dart
 - Verification: exact-head CI and physical Android evidence remain separate, not approved merely by these notes.
+
+[M449 REVIEWED UPDATE — ISSUE #724 — M1009 SAMA and actual Notifications swipe]
+- Reviewed source SHA: 427ea11ff96f313a1f9333135cd1048bce70db8e
+- Approved change: Use official SAMA outgoing/incoming terms as non-posting finance direction and keep two-sided own-account transfers gated on verified ownership; global privacy-safe learning after confirmed exclusion/correction; redo pending review statuses; original banking date and time in manual corrections; sender swipe in actual Notifications center, preserving selection and vertical refresh.
+- Changed production paths: lib/waffra_bank_sms_facts.dart, lib/main.dart, lib/waffra_sms_local_rules.dart, lib/waffra_approved_notifications.dart, lib/waffra_home_sms_inbox.part.dart, lib/waffra_home_entry_sheet.part.dart, lib/waffra_home_sms_confirmation.part.dart
+- QA: dedicated Flutter widget SAMA/date/different-amount/safe-exclusion swipe test in mandatory M946; current-head CI plus real Android remain separate, not certified by this note.
