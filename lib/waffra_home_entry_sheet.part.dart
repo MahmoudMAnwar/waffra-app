@@ -18,7 +18,6 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
    if(!mounted)return;
   }
   // #420: a legacy-only entry is NOT treated as successfully migrated.
-  WaffraVerifiedAccountsApi? editAccountLinkApi;
   bool canLinkExistingAccount=false;
   String? originalLinkedAccountId;
   bool canMoveLinkedAccount=false;
@@ -34,7 +33,6 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
       originalLinkedAccountId=found.accountId;
       canMoveLinkedAccount=found.accountId!=null&&
        const <String>{'manual','sms'}.contains(initial.sourceType);
-      editAccountLinkApi=api;
      }
     }
    }catch(error){
@@ -183,6 +181,7 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
   }
   String? selectedParentId;
   String? selectedBudgetId=(smsEditorDraft?['budget'] as String?)??initial?.budgetId;
+  bool historicalOpeningExcluded=false; // M1003: explicit consent, never restored.
   var entryAccounts=_m467Accounts.where((a)=>!a.archived).toList();
   var entryProviders=WaffraRecurringAccountGroups.withBankProviderChoices(entryAccounts);
   String? chosenManualProvider=smsEditorDraft?['provider'] as String?;
@@ -1342,20 +1341,38 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
        // balance entered today as a pre-history opening balance.
        if(initial!=null&&canLinkExistingAccount&&
           originalLinkedAccountId==null&&chosenManualAccount!=null){
+        bool attested=false;
         final approved=await showWaffraDialog<bool>(
-         context:sheetContext,builder:(dialog)=>AlertDialog(
-         title:WaffraText(waffraIsEnglish?
-          'Confirm historical account link':'تأكيد ربط العملية القديمة'),
-         content:WaffraText(waffraIsEnglish?
-          'This will attribute the existing transaction to the selected account and affect its calculated balance. If the opening balance already represents today’s balance, review that opening balance first to avoid counting old money twice. The original transaction will not be added again.':
-          'ربط العملية القديمة هيؤثر على رصيد الحساب المحسوب. لو الرصيد الافتتاحي اللي أدخلته هو رصيدك الحالي، راجعه الأول عشان العمليات القديمة ما تتحسبش مرتين. مش هنضيف عملية جديدة.'),
-         actions:[
-          TextButton(onPressed:()=>Navigator.pop(dialog,false),
-           child:WaffraText(waffraIsEnglish?'Back':'العودة')),
-          FilledButton(onPressed:()=>Navigator.pop(dialog,true),
-           child:WaffraText(waffraIsEnglish?'Confirm link':'تأكيد الربط')),
-         ]));
-        if(approved!=true||!sheetContext.mounted)return;
+         context:sheetContext,builder:(dialog)=>StatefulBuilder(
+          builder:(dialog,redraw)=>AlertDialog(
+           title:WaffraText(waffraIsEnglish?
+            'Confirm historical account link':'تأكيد ربط العملية القديمة'),
+           content:SingleChildScrollView(child:Column(
+            mainAxisSize:MainAxisSize.min,children:[
+             WaffraText(waffraIsEnglish?
+              'Linking changes the calculated account balance. Confirm the old transaction was NOT included in the opening balance. No new transaction is created.':
+              'الربط سيغيّر الرصيد المحسوب للحساب. أكّد أن العملية القديمة ليست محسوبة في الرصيد الافتتاحي. لن نسجل العملية مرة ثانية.'),
+             CheckboxListTile(
+              key:const Key('m1003-historical-opening-exclusion'),
+              contentPadding:EdgeInsets.zero,
+              controlAffinity:ListTileControlAffinity.leading,
+              value:attested,
+              onChanged:(v)=>redraw(()=>attested=v??false),
+              title:WaffraText(waffraIsEnglish?
+               'I confirm the opening balance excludes this old transaction':
+               'أؤكد أن الرصيد الافتتاحي لا يشمل هذه العملية القديمة',
+               style:const TextStyle(fontSize:12)),
+             ),
+            ])),
+           actions:[
+            TextButton(onPressed:()=>Navigator.pop(dialog,false),
+             child:WaffraText(waffraIsEnglish?'Cancel':'إلغاء')),
+            FilledButton(onPressed:attested?()=>Navigator.pop(dialog,true):null,
+             child:WaffraText(waffraIsEnglish?'Confirm link':'تأكيد الربط')),
+           ],
+          )));
+        if(approved!=true||!attested||!sheetContext.mounted)return;
+        historicalOpeningExcluded=attested;
        }
        if(initial!=null&&canMoveLinkedAccount&&
           originalLinkedAccountId!=null&&chosenManualAccount!=null&&
