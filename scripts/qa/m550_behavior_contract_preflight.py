@@ -48,6 +48,13 @@ BINDING_MAIN_RECON = re.compile(
     r"\b(?:final|var)\s+(?P<var>[A-Za-z_]\w*)\s*=\s*"
     r"readWaffraMainSourceForContracts\(\s*\)",
 )
+# M1014: direct source-boundary assertions in 'between(start,end)' helpers.
+# They are positive anchors just like expect(contains(...)); the older
+# scanner missed obsolete function signatures passed as helper arguments.
+BETWEEN_DART = re.compile(
+    r"\bbetween\(\s*'(?P<first>[^'\n]+)'\s*,\s*'(?P<second>[^'\n]+)'\s*\)",
+    re.DOTALL,
+)
 BINDING_SHELL = re.compile(
     r"\b(?P<var>[A-Za-z_]\w*)\s*=\s*Path\(\s*"
     r"(?P<q>['\"])(?P<path>(?:lib|native|android|ios|firebase|assets)/[^'\"]+)\2\s*\)"
@@ -168,6 +175,14 @@ def _positive_dart(text: str) -> list[tuple[str, str, int, str]]:
             literal = _safe_literal(m["q"], m["literal"])
             if target and literal:
                 found.append((target, literal, text.count("\n", 0, m.start()) + 1, kind))
+    if BINDING_MAIN_RECON.search(text) and re.search(r"\bString\s+between\(", text):
+        for m in BETWEEN_DART.finditer(text):
+            for literal in (m["first"], m["second"]):
+                decoded = _safe_literal("'", literal)
+                if decoded:
+                    found.append(("lib/main.dart", decoded,
+                                  text.count("\n", 0, m.start()) + 1,
+                                  "reconstructed Home helper boundary"))
     return found
 
 
@@ -449,6 +464,21 @@ def build_report(base: str, head: str, root: Path = ROOT) -> dict:
             if not part_source.startswith("part of 'main.dart';"):
                 raise ContractError(f"Unregistered or foreign Dart part: {part_path}")
             new_sources[home_path] += "\\n" + part_source
+    # M1014: compare the same validated registered Home-part tree at
+    # baseline and HEAD. Without baseline reconstruction, a removed method
+    # signature from an old part looks as though it never existed.
+    if home_path in old_sources:
+        base_main = old_sources[home_path]
+        for part_path in expected_parts:
+            filename = Path(part_path).name
+            if f"part '{filename}';" not in base_main:
+                continue
+            try:
+                old_part = git("show", f"{base}:{part_path}")
+            except ContractError:
+                continue
+            if old_part.startswith("part of 'main.dart';"):
+                old_sources[home_path] += "\n" + old_part
     stale, count = detect_stale(target_tests, old_sources, new_sources, sources)
     # M934: scan ALL Dart tests against the literal raw main.dart they read.
     # Static warnings are reported BEFORE 10-minute Flutter test suites run.
