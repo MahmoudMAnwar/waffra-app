@@ -1,12 +1,36 @@
 {
   "schema_version": 1,
-  "pr": "M1001 PR #713 — restore source-action bank SAR evidence and unblock main APK",
-  "issue": "Issue #712",
+  "pr": "M1006 Draft PR #720 stacked on #716 — accessible dark/RTL verified Home retry",
+  "issue": "Issue #719",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at f0def360ea75b9c865548b6f1b4fc07e9640f2c2 after #656",
   "reviewed_at": "2026-11-16",
   "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
   "contracts": [
+    {
+      "id": "M1006-VISIBLE-RETRY-DARK-RTL-A11Y-STACKED-ON-716",
+      "issue": "Issue #719 / Draft PR #720 stacked on Draft #716",
+      "previous_behavior": "Draft #716 already replaces the blank/black restored Home with a bright nonfinancial source-verification view. That fixed light backdrop is not theme-aware while an already authenticated Home is visible, and no real Flutter widget test covers its Arabic/English light/dark presentation.",
+      "approved_behavior": "Keep #716 restore source verification and nonfinancial hidden cold startup surface, but when an authenticated Home re-verifies SQLCipher after a recoverable failure, use a theme-aware, bilingual live-region progress screen. No finance writer, backup transaction, logout or biometric auth shortcut is introduced.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_root_shell.part.dart",
+        "lib/waffra_finance_reloading_view.dart"
+      ],
+      "test_paths": [
+        "test/m1006_visible_recovery_loading_gate_test.dart",
+        "test/m1006_restore_handoff_no_black_background_test.dart",
+        "test/m622_immediate_home_without_loader_test.dart",
+        "test/m623_verified_home_handoff_no_black_frame_test.dart",
+        "test/m944_home_root_shell_extraction_test.dart"
+      ],
+      "safety_invariants": [
+        "Only an authenticated already visible Home may switch to the themed progress UI; first login remains held by the original Offstage auth handoff.",
+        "#716 restore HOME_REFRESH/HOME_VERIFICATION/HOME_RELOAD_FAILED and SQLCipher fail-closed checks remain unchanged.",
+        "Progress never displays old balances or speculative money and never changes account/restore writer, SMS ACK or source ownership.",
+        "M946 includes actual Flutter RTL dark and English light widget tests; device and owner backup runtime evidence remain pending."
+      ]
+    },
     {
       "id": "M1003-ATOMIC-RESTORED-ENTRY-BUDGET-ACCOUNT-LINK",
       "issue": "Issue #715 / Draft PR #716",
