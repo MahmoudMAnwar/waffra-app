@@ -247,7 +247,7 @@ class _WaffraApprovedNotificationsPageState
       onHorizontalDragEnd:(d){
        final speed=d.primaryVelocity??0;
        final direction=_m1009SenderDrag.abs()>=50?
-        _m1009SenderDrag:(speed.abs()>=180?speed:0);
+        _m1009SenderDrag:(speed.abs()>=180?speed:0.0);
        _m1009SwipeSender(keys,direction);
        _m1009SenderDrag=0;
       },
