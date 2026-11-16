@@ -59,7 +59,6 @@
     "test/qa/m447_verified_sms_account_linking_test.py",
     "test/m638_sms_inbox_delete_sync_test.dart",
     "test/m580_sms_security_navigation_performance_test.dart",
-    "test/m954_all_sms_rule_routes_regression_test.dart",
     "test/m979_native_otp_prequeue_exclusion_test.dart",
     "test/m1011_reviewed_sms_provenance_ack_transfer_regression_test.dart"
   ],
