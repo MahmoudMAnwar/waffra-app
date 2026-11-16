@@ -21,6 +21,9 @@ extension _WaffraHomeVerifiedLedgerActions on _HomeScreenState {
    _lastWidgetRevision=committed.widgetRevision;
   });
   unawaited(_refreshWidget());
+  // M1008: verified delete/undo changes account balances and history links;
+  // do not leave the selected account on the previous SQLCipher generation.
+  unawaited(_m467RefreshHomeAccounts());
  }
 
  Future<void> _deleteVerifiedEntry(MoneyEntry entry)async {
