@@ -68,6 +68,10 @@
     ],
     "native/WaffraAutoSmsReceiver.kt": [
       {
+        "start": "import android.provider.Telephony",
+        "end": "/**"
+      },
+      {
         "start": "    override fun onReceive(context: Context, intent: Intent) {",
         "end": null
       }
@@ -85,6 +89,10 @@
       }
     ],
     "lib/waffra_sms_background_checkpoint.dart": [
+      {
+        "start": "/// M1020 / #737:",
+        "end": "final class WaffraSmsBackgroundCheckpoint {"
+      },
       {
         "start": "final class WaffraSmsBackgroundCheckpoint {",
         "end": null
@@ -144,7 +152,7 @@
         "end": "  final manualReviewBody="
       },
       {
-        "start": "        final h=sha256.convert(utf8.encode(digits(message.text)",
+        "start": "        if(WaffraSmsCurrencies.requiresReviewForSarLedger(message.text)){",
         "end": "        pendingHash=h;"
       }
     ],
