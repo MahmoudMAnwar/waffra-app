@@ -120,8 +120,14 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
     factsSms.kind==WaffraBankOperationKind.expense)&&
    (reviewedIncomeOverride==null||
     reviewedIncomeOverride==(factsSms.kind==WaffraBankOperationKind.income));
-  final safeSmsTitle=directionKnown&&parsedSms!=null&&
-   waffraTransactionTitleAllowed(parsedSms.title)?parsedSms.title:'';
+  // M1011: a reviewed classifier correction can still suggest SAFE display
+  // fields. Selecting Income/Expense is NOT permission for auto posting:
+  // the existing category/account/date/currency gates and explicit Save stay.
+  final reviewedSmsCorrection=sms&&initialSms!=null&&
+   reviewedIncomeOverride!=null&&factsSms!=null&&!factsSms.pending;
+  final safeSmsTitle=(directionKnown||reviewedSmsCorrection)&&
+   parsedSms!=null&&waffraTransactionTitleAllowed(parsedSms.title)?
+    parsedSms.title:'';
   final suggestedSmsTitle=trustedSms?
    (RegExp(r'شحن\s*(?:جوال|هاتف|رصيد)|top[ -]?up',
     caseSensitive:false).hasMatch(initialSms!)?
@@ -130,11 +136,13 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
   // A verified SAR principal is a display suggestion ONLY: the existing
   // account, date, original facts and user confirmation guard still apply.
   final safeSmsAmount=trustedSms?parsedSms!.amount:
-   directionKnown&&sourceAmount?.currency=='SAR'&&
-   factsSms!.canAutoPostAsIncomeExpense&&
+   (directionKnown&&factsSms!.canAutoPostAsIncomeExpense||
+    reviewedSmsCorrection)&&
+   sourceAmount?.currency=='SAR'&&sourceAmount!.amount>0&&
    !WaffraSmsCurrencies.requiresReviewForSarLedger(initialSms!)&&
-   (parsedSms?.amount==null||parsedSms!.amount==sourceAmount!.amount)?
-    sourceAmount?.amount:null;
+   (parsedSms?.amount==null||
+    (parsedSms!.amount!-sourceAmount.amount).abs()<0.00001)?
+    sourceAmount.amount:null;
   final title=TextEditingController(text:
    (smsEditorDraft?['title'] as String?)??initial?.title??
    (manualReviewBody!=null?manualReviewTitle:suggestedSmsTitle));
