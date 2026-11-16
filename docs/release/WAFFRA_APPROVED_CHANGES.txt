@@ -1073,3 +1073,9 @@ M969 / Issue #670 / Draft #665: real M120 Android SQLCipher receipt restart asse
 - Approved change: Preserve #716 verified encrypted restore source check and nonfinancial Home background. Only when the already authenticated Home retries failed verified SQLCipher data, show a theme-matched Arabic/English accessible progress surface rather than the old fixed light backdrop; hidden biometric/login handoff and the original recovery error remain. Widget regression covers dark Arabic and light English, no financial values are guessed, no money/restore writer is altered.
 - Changed production paths: lib/main.dart, lib/waffra_finance_reloading_view.dart, lib/waffra_home_root_shell.part.dart
 - Verification: exact-head CI and physical Android evidence remain separate, not approved merely by these notes.
+
+[M449 REVIEWED UPDATE — ISSUE #721 — PR #722]
+- Reviewed source SHA: 056522c0eab30008ccbad36bf6a1b86765e57e00
+- Approved change: Owner-approved all/specific sender scope for four encrypted SMS rule kinds, global safe keyword preview, preserved structural exclusions and blocked global financial auto-post; device QA not yet run.
+- Changed production paths: lib/waffra_sms_local_rules.dart, lib/waffra_sms_rule_settings_page.dart
+- Verification: exact-head CI and physical Android evidence remain separate, not approved merely by these notes.
