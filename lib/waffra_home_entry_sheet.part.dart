@@ -1706,8 +1706,8 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
    // The expense/income learner applies only AFTER an authoritative commit,
    // and uses user-approved description/category, not the raw SMS body.
    try{
-      await _learnManualCategoryPreference(result);
       await _m1031RecordConfirmedLearning(result);
+      await _learnManualCategoryPreference(result);
      }catch(error){
       // No retry of the committed debit: learning is a separate encrypted
       // post-commit operation. Surface its failure instead of swallowing it.
@@ -1816,8 +1816,8 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
      }
      // A preference failure cannot retry an already-committed debit.
      try{
-      await _learnManualCategoryPreference(result);
       await _m1031RecordConfirmedLearning(result);
+      await _learnManualCategoryPreference(result);
      }catch(error){
       // No retry of the committed debit: learning is a separate encrypted
       // post-commit operation. Surface its failure instead of swallowing it.
@@ -1885,8 +1885,8 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
      selectedAccountId:initial==null?chosenManual?.ids?.single:null);
     if(initial==null&&result.sourceType=='manual'){
      try{
-      await _learnManualCategoryPreference(result);
       await _m1031RecordConfirmedLearning(result);
+      await _learnManualCategoryPreference(result);
      }catch(error){
       // No retry of the committed debit: learning is a separate encrypted
       // post-commit operation. Surface its failure instead of swallowing it.

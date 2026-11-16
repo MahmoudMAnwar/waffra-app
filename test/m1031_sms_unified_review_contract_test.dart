@@ -29,6 +29,10 @@ void main(){
   expect(store,contains('await _storage.write(key:key,value:next)'));
   expect(store,contains('if(reloaded!=next)'));
   expect(sheet.split('await _m1031RecordConfirmedLearning(result);').length-1,3);
+  // A failure in optional safe-pattern extraction cannot prevent the owner
+  // encrypted record of the already committed finance transaction.
+  expect(sheet.split('await _m1031RecordConfirmedLearning(result);\n      await _learnManualCategoryPreference(result);').length-1,3);
+  expect(confirmation,contains('await _m1031RecordConfirmedLearning(reviewed);\n    await _learnManualCategoryPreference(reviewed);'));
   expect(confirmation,contains('await _m1031RecordConfirmedLearning(reviewed);'));
   expect(background,contains('await store.recordConfirmedFinanceLearning('));
   expect(background,contains('await store.learnReviewedCandidates(owner,[safe]);'));

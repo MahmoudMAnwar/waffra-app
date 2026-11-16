@@ -106,8 +106,8 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
      record:reviewed,sender:sender,accountId:chosen.ids!.single));
    }
    try{
-    await _learnManualCategoryPreference(reviewed);
     await _m1031RecordConfirmedLearning(reviewed);
+    await _learnManualCategoryPreference(reviewed);
    }catch(error){
     // The SQLCipher charge was already committed; warn, never replay it.
     if(mounted)snack(context,waffraIsEnglish?
