@@ -1,3 +1,9 @@
+[M1022–M1030 / CI REPAIR / PR #749 / SOURCE REVIEW]
+- Reviewed latest app source commit cdeff32af43a35fcc03a6fedcd27a9db127cc46e (lib/main.dart): legacy or synthetic non-Android IDs now remain review-only with legacy text fingerprint; verified 64-character native SMS IDs alone authorize v2 finance fingerprint. This prevents FormatException in existing M632/M983/M991 isolate paths without loosening finance provenance.
+- Updated existing M1016/M979 OTP source checks to match M1027 uniquely recognized OTP redaction, while retaining fail-closed ambiguous OTP masking.
+- M954 historical body-only collision now explicitly requires owner review rather than auto ACK. M638 reconciliation scope is kept separate from new user-consented full-history cursor reset. M580 and M1011 SMS correction contracts now match explicit reviewedSmsId and verified body equality.
+- M385 scope allowlist deduplicated, no test disabled. Re-run exact-HEAD CI. Android device UAT remains unverified.
+
 [M1022–M1030 / ISSUES #740–#748 / DRAFT PR — 9 SMS AUDIT GAPS / 17 NOV 2026]
 - M1022 (#740) Owner-scoped SHA-256 rule revisions are bound to existing AES-GCM background review checkpoints. On a changed revision, a prior review may be reclassified on the next worker wakeup, but it does NOT silently create retroactive finance transactions. Unreadable rule stores fail closed.
 - M1023 (#741) Native review notifications are posted before an encrypted delivered claim; failures leave a retry-needed marker plus 5-minute cooldown in the original owner-encrypted queue. Never use a notification as finance-authorized ACK.
