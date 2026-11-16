@@ -39,7 +39,10 @@ class WaffraAutoSmsReceiver : BroadcastReceiver() {
                     shouldEnqueue = true
                 }
             }
-            if (shouldEnqueue) WaffraAutoSmsWorker.enqueue(context)
+            // M1019: full queue preserves the native inbox history marker.
+            // Wake worker to drain verified entries and attempt bounded replay.
+            if (shouldEnqueue || WaffraAutoSmsStore.capacityRecoveryNeeded(context))
+                WaffraAutoSmsWorker.enqueue(context)
         } catch (_: Exception) {
             // Fail closed: neither text, sender, nor exception is logged.
         }
