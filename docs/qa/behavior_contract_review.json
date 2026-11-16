@@ -1,12 +1,32 @@
 {
   "schema_version": 1,
-  "pr": "M1016–M1017 Issues #732/#734 — SMS intake + batch drain (Draft)",
-  "issue": "Issues #732 and #734",
+  "pr": "M1016–M1018 Issues #732/#734/#735 — SMS intake, batching and wakeup (Draft)",
+  "issue": "Issues #732, #734 and #735",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main after merged PR #725 (16 November 2026)",
   "reviewed_at": "2026-11-16",
-  "review_policy": "Authorized scope covers native intake eligibility plus bounded processing of all queued candidates, both user requested. Do not relax owner/permission/OTP safety or enable unapproved finance posting. Synthetic source tests are not physical Android proof.",
+  "review_policy": "Authorized scope covers owner-requested native SMS intake filtering, all-candidate bounded processing and WorkManager KEEP wakeup fix. Do not relax owner/permission/OTP safety or enable unapproved finance posting. Synthetic source tests are not physical Android proof.",
   "contracts": [
+    {
+      "id": "M1018-ANDROID-SMS-LATE-WAKEUP-NO-KEEP-RACE",
+      "issue": "Issue #735",
+      "previous_behavior": "Native receiver offered each accepted bank SMS to encrypted queue then called WorkManager.enqueueUniqueWork with ExistingWorkPolicy.KEEP; new arrival after existing worker's snapshot could be ignored as a new scheduling request.",
+      "approved_behavior": "After enqueuing accepted SMS for all senders of an incoming Android broadcast, schedule at most one unique-work successor using APPEND_OR_REPLACE, which runs after current work without cancelling in-progress verified finance and survives failed/cancelled prior work; keep encryption and review restrictions.",
+      "source_paths": [
+        "native/WaffraAutoSmsReceiver.kt",
+        "native/WaffraAutoSmsWorker.kt"
+      ],
+      "test_paths": [
+        "test/m1018_sms_workmanager_wakeup_race_test.dart",
+        "test/qa/m417_sms_permission_acceptance_test.py"
+      ],
+      "safety_invariants": [
+        "No WorkManager REPLACE: never interrupt in-flight Flutter verified SQLCipher worker merely due to a new SMS.",
+        "No earlier receiver financial writes, raw SMS upload or logging; accepted messages saved before WorkManager enqueue.",
+        "One schedule per incoming SMS broadcast with any accepted candidates; multipart grouping and sender timestamps preserved.",
+        "No false real-time guarantee; Android may defer, and 55s Worker timeout or native 1000 cap still require separate fixes and real device UAT."
+      ]
+    },
     {
       "id": "M1017-BOUNDED-ALL-CANDIDATE-SMS-DRAIN-NO-25-CAP",
       "issue": "Issue #734",
