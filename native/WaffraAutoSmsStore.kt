@@ -913,6 +913,26 @@ object WaffraAutoSmsStore {
             .joinToString("") { "%02x".format(it.toInt() and 255) }
     }
 
+    // M1027: mask only a uniquely identified challenge token. If any code
+    // syntax is uncertain, revert to the old mask-ALL-numbers behavior.
+    // This function is used only on OTP + completed-money mixed messages;
+    // pure OTP events are excluded before any queue persistence.
+    private val otpCodeCandidate = Regex(
+        """(?:\botp\b|verification\s+code|security\s+code|one[ -]?time\s+(?:password|code)|\bpasscode\b|رمز(?:ك|\s+(?:التحقق|التفعيل|التأكيد|الدخول|التوثيق))?|كود(?:ك|\s+(?:التحقق|الدخول|التفعيل))?)\s*(?:[:：=]|هو|هي|is)?\s*([0-9٠-٩۰-۹]{4,8})""",
+        RegexOption.IGNORE_CASE
+    )
+    private fun redactMixedOtpSecrets(body: String): String {
+        val text = body.trim()
+        val maskAllNumbers = text.replace(Regex("[0-9٠-٩۰-۹]+"), "••••")
+        val candidates = otpCodeCandidate.findAll(text).toList()
+        if (candidates.size != 1) return maskAllNumbers
+        val secret = candidates.single().groups[1] ?: return maskAllNumbers
+        if (secret.value.length !in 4..8) return maskAllNumbers
+        // The amount, account suffix and bank transaction timestamp remain
+        // readable in mixed notices; the OTP value never leaves this method.
+        return text.replaceRange(secret.range, "••••")
+    }
+
     fun offer(context: Context, sender: String, body: String, at: Long,
               historical: Boolean = false, receivedAt: Long = at): Boolean {
         if (!enabled(context)) return false
@@ -959,8 +979,7 @@ object WaffraAutoSmsStore {
                 // including localized digit variants, before encryption.
                 // The original is used only to derive the dedupe hash;
                 // it is never put in the review queue or cloud payload.
-                val masked = if (sensitive) body.trim().replace(
-                    Regex("[0-9٠-٩۰-۹]+"), "••••") else body.trim()
+                val masked = if (sensitive) redactMixedOtpSecrets(body) else body.trim()
                 queue.put(JSONObject().put("id", fingerprint)
                     .put("sender", sender.trim()).put("body", masked)
                     .put("sensitiveOtp", sensitive)
@@ -1594,7 +1613,7 @@ object WaffraAutoSmsStore {
                             } else {
                                 val sensitive = otp.containsMatchIn(row.body)
                                 val masked = if (sensitive)
-                                    row.body.trim().replace(Regex("[0-9٠-٩۰-۹]+"), "••••")
+                                    redactMixedOtpSecrets(row.body)
                                     else row.body.trim()
                                 queue.put(JSONObject().put("id", fingerprint)
                                     .put("sender", row.sender.trim()).put("body", masked)
