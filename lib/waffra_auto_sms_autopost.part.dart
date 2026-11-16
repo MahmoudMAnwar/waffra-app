@@ -252,14 +252,21 @@ abstract final class WaffraAutoSmsAutoPoster {
        waffraCategoryAvailableForNewEntry(categories,c))){
       await keepForReview(candidate);continue;
      }
-     final fingerprint=bankSmsHash(body);
-     if((before.finance.getStringList('waffra_sms_hashes_v1')??
-         const <String>[]).contains(fingerprint)){
+     final fingerprint=bankSmsHash(body,nativeId:id);
+     final finalHashesLegacy=before.finance.getStringList('waffra_sms_hashes_v1')??
+         const <String>[];
+     if(finalHashesLegacy.contains(fingerprint)){
       if(!await WaffraAutoSms.acknowledgeCommitted([id])){
        throw retryAck;
       }
       summary['duplicates']=summary['duplicates']!+1;
       completedOne();
+      continue;
+     }
+     if(finalHashesLegacy.contains(bankSmsHash(body))){
+      // An old body-only hash does not prove whether this independently
+      // received SMS is a duplicate. Leave it for owner review.
+      await keepForReview(candidate);
       continue;
      }
      final entry=MoneyEntry(
