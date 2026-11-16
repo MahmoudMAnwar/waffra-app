@@ -50,7 +50,7 @@ void main() {
     );
     ensureBefore(
       between('Future<void> toggleRecurringReminders(bool enabled,',
-          'Future<void> applyRecurring()async'),
+          'Future<void> applyRecurring({bool goalLinkedOnly=false})async'),
       '_financeAuthority.setRecurringReminderPreference(',
     );
   });
