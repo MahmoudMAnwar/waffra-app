@@ -59,7 +59,9 @@ void main(){
   expect(scene,isNot(contains('entries.')));
   expect(scene,isNot(contains('_m467ShownBalance()')));
   expect(source,contains('child:!ready&&_financeLoadFailure==null?'));
-  expect(source,contains('_m1003FinanceHandoffSurface():Stack(children:[Scaffold('));
+  expect(source,contains('widget.postAuthVisible?'));
+  expect(source,contains('WaffraFinanceReloadingView(english:waffraIsEnglish)'));
+  expect(source,contains('_m1003FinanceHandoffSurface()):Stack(children:[Scaffold('));
   expect(source,contains('body:_financeLoadFailure!=null?_financialRecoveryScreen():'));
   // The branded transition does not modify the original floating + button.
   expect(source,contains(' // A fixed 58x58 FAB:'));
