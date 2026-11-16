@@ -44,7 +44,8 @@
     "test/m1019_sms_intake_capacity_recovery_test.dart",
     "test/m1018_sms_workmanager_wakeup_race_test.dart",
     "test/m1016_sms_background_financial_intake_test.dart",
-    "test/qa/m417_sms_permission_acceptance_test.py"
+    "test/qa/m417_sms_permission_acceptance_test.py",
+    "lib/waffra_home_entry_sheet.part.dart"
   ],
   "allowed_workflow_changes": [],
   "approved_deleted_files": [],
@@ -101,12 +102,20 @@
       {
         "start": "DateTime? bankSmsDate(String raw,",
         "end": "Map<String,Object?> waffraM632ClassifySmsQueue("
+      },
+      {
+        "start": "  final id=candidate['id'],body=candidate['body'];",
+        "end": "  final sender=candidate['sender'] is String?"
       }
     ],
     "lib/waffra_home_sms_confirmation.part.dart": [
       {
         "start": " Future<void> _m565ConfirmSms({",
         "end": " Future<void> _reviewAutoSmsCandidates("
+      },
+      {
+        "start": " Future<void> _reviewAutoSmsCandidates(",
+        "end": null
       }
     ],
     "lib/waffra_home_sms_rules.part.dart": [
@@ -155,6 +164,16 @@
       {
         "start": "    def test_m1020_sms_bridge_is_single_and_well_formed(self):",
         "end": "if __name__==\"__main__\":"
+      }
+    ],
+    "lib/waffra_home_entry_sheet.part.dart": [
+      {
+        "start": " Future<void> entrySheet({MoneyEntry? initial,bool sms=false,String? initialSms,",
+        "end": "  final manualReviewBody="
+      },
+      {
+        "start": "        final h=sha256.convert(utf8.encode(digits(message.text)",
+        "end": "        pendingHash=h;"
       }
     ]
   }
