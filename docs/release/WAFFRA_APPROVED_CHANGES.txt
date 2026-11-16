@@ -1,6 +1,6 @@
 [M1019 / Issue #736 / Draft PR #733 — ENCRYPTED SMS QUEUE CAPACITY REPLAY]
 - Addressed the existing native 1000-candidate queue saturation path without deleting old review entries, increasing unbounded memory, weakening AES-GCM or creating false finance ACK. A non-sensitive durable capacityRecoveryRequestedName boolean records that a bank SMS hit full intake, and receiver schedules WorkManager despite failed queue admission. Historical importer still stops before cursor skips rows and persists the queue and cursor atomically.
-- After a successful background verified Dart processing pass, the worker attempts one bounded (100-row) read of Android's user-consented SMS inbox and schedules an APPEND_OR_REPLACE successor if new encrypted candidates were imported. The cursor/high-water checks, owner identity and original sender/OTP/financial guards remain intact.
+- After a successful background verified Dart processing pass, the worker attempts one bounded (100-row) read of Android's user-consented SMS inbox and schedules an APPEND_OR_REPLACE successor if new encrypted candidates were imported OR the durable SMS cursor measurably advanced through nonfinancial/duplicate records. A full queue or failed provider read never creates a tight retry loop. The cursor/high-water checks, owner identity and original sender/OTP/financial guards remain intact.
 - This is **not** unlimited queue capacity or a guarantee if the OS SMS inbox entry is deleted before replay, permissions are revoked, or background jobs are deferred. It requires exact-head Kotlin compilation, M946/M417 and physical Android acceptance before delivery can be certified. M1019 test covers 999/1000/1001 and no-eviction/cursor/scheduling contracts.
 
 [M1018 / Issue #735 / Draft PR #733 — ANDROID SMS BACKGROUND WAKEUP]
@@ -1178,7 +1178,7 @@ M969 / Issue #670 / Draft #665: real M120 Android SQLCipher receipt restart asse
 - Verification: CI exact-head results and physical Android acceptance remain distinct; this note does not certify background delivery.
 
 [M449 REVIEWED UPDATE — ISSUE #736 — PR #733]
-- Reviewed source SHA: 711c477b5b5d564f0e6ee55535e667d71985eedc
+- Reviewed source SHA: d36784b4c8fec78f8ac4c349304914ee7f35ff9f
 - Approved change: M1019 local owner-guarded overflow replay marker on full 1000-item encrypted review queue, receiver wakeup and cursor-safe bounded SMS provider refill after successful Worker pass, with no existing-row eviction or money authority change.
 - Changed production paths: native/WaffraAutoSmsStore.kt, native/WaffraAutoSmsReceiver.kt, native/WaffraAutoSmsWorker.kt
 - Verification: exact-head CI and physical Android SMS inbox retention and replay are unverified; notes alone do not certify operation.
