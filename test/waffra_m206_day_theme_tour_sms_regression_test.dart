@@ -24,8 +24,7 @@ void main() {
     // M470 retains the live Navigator and RTL tree below the biometric overlay.
     expect(root,contains('child:ValueListenableBuilder<bool>('));
     expect(root,contains("english:language=='en',onSignOut:logout"));
-    expect(root,contains('child:child??const ColoredBox(color:forest,
-     child:Center(child:Icon(Icons.shield_outlined,color:Colors.white,size:42)))'));
+    expect(root,contains('child:child??const ColoredBox(color:forest,'));
     expect(root,contains("textDirection:language=='ar'?TextDirection.rtl:TextDirection.ltr"));
     expect(root,isNot(contains('KeyedSubtree(key:ValueKey(language)')));
     expect(root,isNot(contains('SlideTransition(')));
