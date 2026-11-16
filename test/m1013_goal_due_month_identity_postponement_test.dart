@@ -11,7 +11,7 @@ void main() {
    .readAsStringSync();
   final writer=source.split('Future<WaffraGoalDueSqlReceipt> settleLinkedGoalDue({')[1];
   expect(writer,contains("final expectedDue = 'rec_"));
-  expect(writer,contains("'${dueDate.month}'"));
+  expect(writer,contains(r"'${dueDate.month}'"));
   expect(writer,isNot(contains("dueDate.month.toString().padLeft(2,'0')")));
   for(var month=1;month<=12;month++){
    final due=DateTime(2026,month,16);
