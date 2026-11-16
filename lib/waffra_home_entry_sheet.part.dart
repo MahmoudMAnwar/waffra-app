@@ -1675,7 +1675,9 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
    // A ledger-only setState makes a newly linked SMS disappear from Home.
    // Refresh the owner-verified bank/wallet account projection before the
    // post-save success state; never modify or replay this committed entry.
-   await _m467RefreshHomeAccounts();
+   try{await _m467RefreshHomeAccounts();}catch(error){
+    debugPrint('M1008 post-SMS account read: ${error.runtimeType}');
+   }
    if(mounted&&!_m468VerifiedAccountsLoaded){
     snack(context,waffraIsEnglish?
      'Transaction saved, but account totals could not be verified. Refresh accounts before reviewing balances.':
