@@ -1,20 +1,23 @@
 {
   "schema_version": 1,
-  "pr": "M1007 #722 — owner-controlled SMS rule matching across senders",
+  "pr": "M1007 #722 — silent automatic global safe learning, no teach dialog",
   "issue": "Issue #721",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at f0def360ea75b9c865548b6f1b4fc07e9640f2c2 after #656",
   "reviewed_at": "2026-11-16",
-  "review_policy": "Owner requested code-only, no manual tests or test files. Prior safety contracts remain binding. Full same-SHA QA required later.",
+  "review_policy": "Owner approved automatic safe learning without teaching prompts, supported by new executable Dart tests; physical Android and old-owner backup acceptance remain separate.",
   "contracts": [
     {
-      "id": "M1007-USER-APPROVED-GLOBAL-VS-SPECIFIC-FOUR-KIND-SMS-SCOPE",
+      "id": "M1007-AUTOMATIC-GLOBAL-FOUR-KIND-SMS-LEARNING-NO-TEACH-POPUP",
       "issue": "Issue #721 / Draft PR #722",
       "previous_behavior": "Rules learned from an SMS default to a sender-specific encrypted owner rule. Manual rules may be senderless but the UI has no explicit scope. A sender-bound OTP/beneficiary structural template cannot be converted to safe global scope by its owner.",
-      "approved_behavior": "Owner chooses All senders or Specific sender per income, expense, transfer or excluded rule. Existing rules remain scoped. A manually approved global rule matches every sender for safe keyword/structural event only; pending queue re-evaluates. Global rule cannot auto-post financial money. The corrected-SMS learning popup still requires a saved manual correction plus explicit review.",
+      "approved_behavior": "After confirmed SMS correction, verified income/expense/transfer save or explicit exclusion, automatically learn only safe classification or structural exclusion patterns and default to all senders. No teaching dialog or extra user approval. Preserve legacy sender-specific rules unless manually edited. Global rules may suggest classification, never auto-post; posted and mixed financial messages remain in review. The 4-kind matcher evaluates new and pending SMS independent of displayed sender.",
       "source_paths": [
         "lib/waffra_sms_local_rules.dart",
-        "lib/waffra_sms_rule_settings_page.dart"
+        "lib/waffra_sms_rule_settings_page.dart",
+        "lib/waffra_home_sms_confirmation.part.dart",
+        "lib/waffra_home_sms_rules.part.dart",
+        "lib/waffra_home_sms_management.part.dart"
       ],
       "test_paths": [
         "test/m1007_sms_rule_scope_test.dart",
@@ -25,6 +28,7 @@
         "Do not auto-exclude money posted, composite notices, conflicts, or mixed OTP+financial SMS; keep native encrypted pending ID and finance authority.",
         "Preserve structural verification/beneficiary matching when expanding scope, never expand to free-text unverified financial patterns.",
         "Global financial rule is suggestion only; auto-post requires exact sender, verified bank account and four-digit suffix.",
+        "No teaching popup occurs after saved corrections; automatic learning never rewrites existing user rules or bypasses independent bank direction evidence.",
         "Real Android/SMS/owner restore acceptance remains unverified, exact-head CI required."
       ]
     },
