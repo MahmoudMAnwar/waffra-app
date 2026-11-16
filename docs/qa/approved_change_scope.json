@@ -150,6 +150,12 @@
         "start": "  expect(source,contains('child:!ready&&_financeLoadFailure==null?'));",
         "end": "  expect(source,contains('body:_financeLoadFailure!=null?_financialRecoveryScreen():'));"
       }
+    ],
+    "test/m1003_restore_budget_and_blank_surface_contract_test.dart": [
+      {
+        "start": "  expect(shell,contains('Widget _m1003FinanceHandoffSurface()=>Scaffold('));",
+        "end": "  expect(shell,contains('body:_financeLoadFailure!=null?_financialRecoveryScreen():'));"
+      }
     ]
   },
   "allowed_workflow_changes": [],
