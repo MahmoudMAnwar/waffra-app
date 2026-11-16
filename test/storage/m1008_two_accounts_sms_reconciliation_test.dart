@@ -91,7 +91,7 @@ void main(){
    // Month-old activity explains why "this month's difference" is NOT the
    // same as the all-time current bank balance in the owner's screenshots.
    expect(await post(message('old-expense',230,false,DateTime(2026,10,15)),
-    'rajhi','${'a'*64}'),1);
+    'rajhi','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'),1);
    final beforeNovember=await api.readHomeAccountView(
     monthIso:'2026-11',selectedAccountId:'rajhi');
    expect(beforeNovember.balances.singleWhere(
@@ -100,9 +100,9 @@ void main(){
    expect(beforeNovember.entryIds,hasLength(1));
 
    expect(await post(message('nov-income',30,true,DateTime(2026,11,15)),
-    'rajhi','${'b'*64}'),1);
+    'rajhi','bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'),1);
    expect(await post(message('nov-expense',279.35,false,DateTime(2026,11,15)),
-    'alinma','${'c'*64}'),1);
+    'alinma','cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc'),1);
 
    final rajhi=await api.readHomeAccountView(
     monthIso:'2026-11',selectedAccountId:'rajhi');
@@ -136,7 +136,7 @@ void main(){
    // switching between two account contexts.
    final savedAgain=await post(
     message('attempt-duplicate',279.35,false,DateTime(2026,11,15)),
-    'alinma','${'c'*64}');
+    'alinma','cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc');
    expect(savedAgain,0);
    final after=await api.readHomeAccountView(
     monthIso:'2026-11',selectedAccountId:'alinma');
