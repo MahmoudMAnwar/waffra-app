@@ -37,7 +37,7 @@ void main() {
   expect(form,contains('source=created.id;'));
  });
 
- test('M662 corrected income/expense preserves SMS instead of posting a manual duplicate',(){
+ test('M662 manual alternative shows transfer reference without false SMS ACK',(){
   final begin=home.indexOf("}else if(decision=='transfer-manual'&&mounted){");
   final end=home.indexOf("}else if(decision=='yes'&&mounted",begin);
   expect(begin,greaterThan(0));
