@@ -1109,3 +1109,9 @@ M969 / Issue #670 / Draft #665: real M120 Android SQLCipher receipt restart asse
 - Approved change: Notification gesture direction uses a strict double velocity fallback; gesture still changes sender chip, preserves selected SMS and vertical refresh. No financial write, SMS ACK or account behavior changed by this type-only fix.
 - Changed production paths: lib/waffra_approved_notifications.dart
 - Verification: PR #725 exact-head CI and Android real-device acceptance are separate and still pending.
+
+[M449 REVIEWED UPDATE — ISSUE #724 — PR #725 / beneficiary-safe SAMA transfer]
+- Reviewed source SHA: fd5f2fa8c2af6d599597e6b45288dea3dcf1b478
+- Approved change: External SAMA debit/credit transfer message displays expense/income candidate while requiring verified beneficiary/account review; neither automatic finance SMS policy nor direct SMS writer can post this transfer-like notice without owner verification. Unqualified Credit Transfer via intermediary stays review-only.
+- Changed production paths: lib/waffra_bank_sms_facts.dart, lib/waffra_auto_sms_policy.dart
+- Verification: current PR CI and physical Android acceptance remain separately required.
