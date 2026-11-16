@@ -31,7 +31,9 @@ void main(){
   final shell=File('lib/waffra_home_root_shell.part.dart').readAsStringSync();
   final root=File('lib/main.dart').readAsStringSync();
   expect(shell,contains('Widget _m1003FinanceHandoffSurface()=>Scaffold('));
-  expect(shell,contains('_m1003FinanceHandoffSurface():Stack(children:[Scaffold('));
+  expect(shell,contains('widget.postAuthVisible?'));
+  expect(shell,contains('WaffraFinanceReloadingView(english:waffraIsEnglish)'));
+  expect(shell,contains('_m1003FinanceHandoffSurface()):Stack(children:[Scaffold('));
   expect(shell,isNot(contains('const SizedBox.shrink():Stack(children:[Scaffold(')));
   expect(shell,contains('body:_financeLoadFailure!=null?_financialRecoveryScreen():'));
   expect(root,contains('final missingRetainedStage=beforeReady&&'));

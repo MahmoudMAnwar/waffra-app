@@ -10,7 +10,9 @@ void main(){
   final scaffold=shell.split(' Widget _m944BuildHome()=>PopScope(')[1]
    .split('  // A fixed 58x58 FAB:')[0];
   expect(scaffold,contains('child:!ready&&_financeLoadFailure==null?'));
-  expect(scaffold,contains('_m1003FinanceHandoffSurface():Stack(children:[Scaffold('));
+  expect(scaffold,contains('widget.postAuthVisible?'));
+  expect(scaffold,contains('WaffraFinanceReloadingView(english:waffraIsEnglish)'));
+  expect(scaffold,contains('_m1003FinanceHandoffSurface()):Stack(children:[Scaffold('));
   expect(scaffold,contains('Stack(clipBehavior:Clip.none,children:[GestureDetector('));
   expect(scaffold,contains('duration:tab==0&&!accountOpened?Duration.zero:'));
   expect(source,isNot(contains('Widget _m622ImmediateHomeSurface()=>')));

@@ -39,7 +39,9 @@ void main() {
   expect(reconstructed, isNot(contains(
     ' @override Widget build(BuildContext context)=>_m944BuildHome();')));
   expect(shell, contains('child:!ready&&_financeLoadFailure==null?'));
-  expect(shell, contains('_m1003FinanceHandoffSurface():Stack(children:[Scaffold('));
+  expect(shell, contains('widget.postAuthVisible?'));
+  expect(shell, contains('WaffraFinanceReloadingView(english:waffraIsEnglish)'));
+  expect(shell, contains('_m1003FinanceHandoffSurface()):Stack(children:[Scaffold('));
   expect(shell, contains('body:_financeLoadFailure!=null?_financialRecoveryScreen():'));
   expect(shell, contains('child:currentTab()'));
   expect(shell, contains('if(!accountOpened&&ready&&tab!=2)'));
