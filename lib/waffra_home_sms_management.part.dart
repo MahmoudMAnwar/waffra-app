@@ -283,7 +283,7 @@ extension _WaffraHomeSmsManagement on _HomeScreenState {
       if(++index%16==0){
        await Future<void>.delayed(const Duration(milliseconds:1));
       }
-      final rule=WaffraSmsLocalRules.suggestedRule(
+      final rule=WaffraSmsLocalRules.suggestedGlobalRule(
        body:body,sender:sender,kind:'excluded',confidentOnly:true);
       if(rule!=null)candidates.add(rule);
      }
