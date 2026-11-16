@@ -217,7 +217,7 @@ void main(){
 
  test('M954 no raw security code persisted by native SMS intake',(){
   final source=File('native/WaffraAutoSmsStore.kt').readAsStringSync();
-  expect(source,contains('val masked = if (sensitive) body.trim().replace('));
+  expect(source,contains('val masked = if (sensitive) redactMixedOtpSecrets(body)('));
   expect(source,contains('.put("body", masked)'));
   expect(source,contains('.put("sensitiveOtp", sensitive)'));
   expect(source,contains('if (isCommittedLocked(context, fingerprint) ||'));
