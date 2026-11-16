@@ -24,7 +24,7 @@
   "bounded_sections": {
     "lib/waffra_approved_notifications.dart": [
       {
-        "start": " Future<void> run(Future<void> Function() action)async{",
+        "start": " static const cream=Color(0xFFF8F6EF);",
         "end": " Widget category("
       },
       {
@@ -54,6 +54,10 @@
       {
         "start": "  test('M979 new-app Arabic and English OTP stay excluded by app rule engine',",
         "end": "  test('M979 mixed settled money and verification never auto-exclude', () {"
+      },
+      {
+        "start": "  test('M979 mixed settled money and verification never auto-exclude', () {",
+        "end": "  test('M979 native intake blocks pure OTP before queue capacity or notify',"
       }
     ],
     "lib/waffra_home_sms_confirmation.part.dart": [
