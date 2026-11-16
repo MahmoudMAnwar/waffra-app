@@ -1,12 +1,153 @@
 {
   "schema_version": 1,
-  "pr": "M1009 Issue #724 — SAMA SMS accounting + Notifications-center swipe (Draft)",
-  "issue": "Issue #724",
+  "pr": "M1010–M1015 Issues #726/#728/#729/#730/#731 — UI, verified SMS, goal & standalone dues",
+  "issue": "Issues #726, #728, #729, #730, #731",
   "workflow_review_policy": "scan-all-registered-workflows",
-  "baseline": "main at f0def360ea75b9c865548b6f1b4fc07e9640f2c2 after #656",
+  "baseline": "main after merged PR #725 (16 November 2026)",
   "reviewed_at": "2026-11-16",
-  "review_policy": "Owner authorized precise SAMA Arabic/English direction and verified-own-account separation, safe repeated SMS exclusion, original source datetime and swipe inside actual Notifications screen; fail-closed money, SQLCipher, backups and Android UAT preserved.",
+  "review_policy": "User explicitly requests verified owner-paid or postpone confirmation for BOTH independent recurring expenses and linked goal dues on Android after authenticated Home, without any automatic debit. All exact-head CI/backup/finance and manual device tests required before merge.",
   "contracts": [
+    {
+      "id": "M1015-VERIFIED-STANDALONE-DUE-USER-CONFIRMATION-AND-IDEMPOTENT-WRITER",
+      "issue": "Issue #731",
+      "previous_behavior": "Verified SQLCipher Home first-frame post-login called applyRecurring(goalLinkedOnly:verifiedEncryptedStartup), where true excluded all standalone recurring expense dues and prevented Paid/Postpone/Not-now review. The independent SQLCipher writer was implemented but unreachable at startup.",
+      "approved_behavior": "Authenticated Home first visible frame runs applyRecurring(goalLinkedOnly:false); active outstanding standalone recurring expenses and linked-goal dues receive explicit Paid/Postpone/Not-now, excluding standalone income from misleading payment prompts in verified SQLCipher. Paid requires verified financial account selection and routes standalone through the existing atomic recurringPostingAndPostponement writer that verifies the unique monthly schedule/entry, account, typed SQL ledger, and CAS; goal-linked uses existing atomic settleLinkedGoalDue. Postpone modifies its date only, Not now and cancel write no money; opening Home or receiving OS reminder never posts payment. Repeat login cannot post a duplicate monthly due.",
+      "source_paths": [
+        "lib/waffra_home_finance_startup.part.dart",
+        "lib/waffra_home_finance_persistence_due.part.dart"
+      ],
+      "test_paths": [
+        "test/m1015_standalone_due_confirmed_payment_test.dart",
+        "test/m1012_due_reminder_verified_confirmation_test.dart",
+        "test/m631_verified_finance_prewarm_test.dart",
+        "test/storage/m470_verified_recurring_payment_capture_test.dart",
+        "test/m86_recurring_schedule_boundary_test.dart"
+      ],
+      "safety_invariants": [
+        "Do not automatically post payment for a fully funded goal, reached date, Home startup or any Android reminder.",
+        "Standalone expense payment requires owner Paid plus an actual selected verified account and the pre-existing atomic SQLCipher recurring posting writer.",
+        "Income recurring amounts are not represented as Paid expense obligations on verified SQLCipher startup.",
+        "Postpone/Not now/cancelled account picker never add a ledger entry or debit financial account.",
+        "One deterministic recurringId+year+month entry is the only valid payment, with no duplicate on re-login or concurrent widget write.",
+        "Goal-linked savings wallet settlement remains separate and atomic, no duplicate bank cash deduction.",
+        "No physical Android acceptance or actual external bank payment is claimed until device UAT."
+      ]
+    },
+    {
+      "id": "M1013-M1014-GOAL-DUE-12-MONTH-ID-POSTPONE-AND-M550-FAIL-CLOSED-REGRESSIONS",
+      "issue": "Issue #730",
+      "previous_behavior": "Goal due typed SQLCipher writer expected zero-padded month identity while canonical entryId used unpadded months, rejecting Jan-Sep payment confirmations. Postponement left old scheduled Android alerts and active-row status alone could permit stale paid reminders. Three old tests asserted the removed no-argument applyRecurring signature while M550 preflight passed because File reader regex missed newline before .readAsStringSync, helper between(start,end) boundary was not tracked, and baseline registered Home parts were not reconstructed.",
+      "approved_behavior": "Every month uses the same canonical unpadded due identity, retaining atomic user-confirmed and idempotent settlement. Postponed goal reminders follow the recorded effective due date and paid goal_due IDs are filtered; no reminder ever posts a payment. All three legacy regression tests target the protected goalLinkedOnly signature and retain their financial assertions. M550 scans multiline Dart source readers and reconstructed Home helper source boundaries with base and HEAD registered part parity, including when main.dart is unchanged; a removed positive assertion causes early failure, not a hidden full-suite error. The Python M444 notification safety contract also verifies the postponed effective date and paid due-key suppression rather than an obsolete original-date literal.",
+      "source_paths": [
+        "lib/storage/waffra_fresh_finance_domain_repository.dart",
+        "lib/waffra_home_finance_persistence_due.part.dart",
+        "scripts/qa/m550_behavior_contract_preflight.py"
+      ],
+      "test_paths": [
+        "test/m1013_goal_due_month_identity_postponement_test.dart",
+        "test/m978_recurring_reminder_goal_index_test.dart",
+        "test/storage/m470_verified_recurring_payment_capture_test.dart",
+        "test/storage/m266_home_bound_source_regression_test.dart",
+        "test/m762_home_finance_persistence_due_extraction_test.dart",
+        "test/qa/m550_behavior_contract_preflight_test.py",
+        "test/qa/m444_notification_safety_test.py"
+      ],
+      "safety_invariants": [
+        "Canonical Home and SQLCipher goal due identities agree in all twelve months without rewriting prior receipt identities.",
+        "Full goal funding and notification delivery never create a ledger write, only explicit user-confirmed Paid with verified account authority.",
+        "Postponed reminders move to the confirmed due date; confirmed paid goal_due IDs suppress future notifications.",
+        "Existing SQLCipher settlement replay, owner/account checks and fee split tests are retained and not skipped.",
+        "M550 raises a failed preflight for stale source-expectations before expensive whole-app Flutter CI; no continue-on-error added.",
+        "Real Android payment, notification delivery and restore remain pending physical device verification."
+      ]
+    },
+    {
+      "id": "M1012-VERIFIED-GOAL-DUE-PAID-CONFIRMATION-AND-321-OPTIONAL-NOTIFICATIONS",
+      "issue": "Issue #729",
+      "previous_behavior": "Verified SQLCipher Home skipped applyRecurring() entirely on authentication, suppressing the existing owner Paid/Postpone/Not now dialog for a funded goal due today. Android reminder scheduler offered only due-minus-one-day 09:00 notification if opted in. Old source test M631 explicitly asserted the incorrect startup guard.",
+      "approved_behavior": "After verified Home first frame, eligible linked-goal due today/overdue may show existing Paid/Postpone/Not-now dialog. Guard startup with goalLinkedOnly for verified SQLCipher; actual goal cash/wallet settlement requires explicit Paid and existing atomic SQLCipher writer, no auto debit, no double settlement; postponed/paid goals suppressed. When opt-in reminder flag and Android OS permission are enabled, schedule three distinct notifications at 09:00 local three/two/one days before each eligible due with separate IDs, never after scheduled time, without affecting bank SMS notifications. Upcoming unconfirmed goal remains actionable even if OS reminders disabled.",
+      "source_paths": [
+        "lib/waffra_home_finance_startup.part.dart",
+        "lib/waffra_home_finance_persistence_due.part.dart",
+        "lib/waffra_reminders.dart"
+      ],
+      "test_paths": [
+        "test/m1012_due_reminder_verified_confirmation_test.dart",
+        "test/m631_verified_finance_prewarm_test.dart",
+        "test/m444_notification_forecast_budget_test.dart",
+        "test/m86_recurring_schedule_boundary_test.dart",
+        "test/m978_recurring_reminder_goal_index_test.dart",
+        "test/m640_receipt_reader_retirement_test.dart"
+      ],
+      "safety_invariants": [
+        "No Android notification, login or full goal funding can post money.",
+        "Only an owner tap on Paid may reach SQLCipher settleLinkedGoalDue with required userConfirmed:true and verified account.",
+        "Existing paid IDs and postponement suppress additional settlement.",
+        "Reminders require explicit toggle, OS notification grant, active schedule and prior time; preserve one-time goal handling and timezone DST.",
+        "Do not cancel any bank SMS/goal progress/budget notification when rebuilding recurring reminders.",
+        "Latest-head CI and physical Android UAT remain unverified until results."
+      ]
+    },
+    {
+      "id": "M1011-SMS-CORRECTION-ORIGINAL-TEXT-NATIVE-ID-ACK-AND-SAFE-TRANSFER",
+      "issue": "Issue #728",
+      "previous_behavior": "SMS whose selected Income/Expense differed from classifier saved as manual, original SMS shown only during editing then lost; no finance hash committed, native review stayed pending. Corrected manual transfers generated a new ID with every attempt and retained unacknowledged SMS. Malformed 3-digit bank dates could parse a day substring.",
+      "approved_behavior": "Explicit confirmed Income/Expense from native SMS always goes through verified SQLCipher SMS commit, retaining source text, hash, user-chosen direction, category, original timestamp or explicit calendar selection, and verified account. Native committed ACK requires verified source ledger+hash after save; cancel and ACK failure never post twice. Explicit own-account transfer must select two verified accounts; its source native SMS ID becomes a stable idempotent transfer ID, original text stored in encrypted transfer note with protected opt-in view, native transfer ACK follows successful commit. Fee-aware transfer persists source in encrypted transfer and fee row. Bill payment is expense review suggestion, three-digit day is rejected.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_bank_sms_facts.dart",
+        "lib/waffra_home_sms_confirmation.part.dart",
+        "lib/waffra_home_entry_sheet.part.dart",
+        "lib/waffra_home_verified_account_flows.part.dart",
+        "lib/waffra_home_sms_transfer_review.part.dart",
+        "lib/waffra_account_transaction_form.dart",
+        "lib/waffra_home_verified_transfer_cards.part.dart",
+        "lib/storage/waffra_verified_accounts_api.dart",
+        "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
+        "lib/storage/waffra_unified_finance_writer.dart"
+      ],
+      "test_paths": [
+        "test/m1011_reviewed_sms_provenance_ack_transfer_regression_test.dart",
+        "test/m580_sms_security_navigation_performance_test.dart",
+        "test/m615_m618_sms_review_retention_perf_contract_test.dart",
+        "test/m662_sms_review_activity_pdf_regression_test.dart",
+        "test/m670_feedback_transfer_dashboard_test.dart",
+        "test/m983_sms_direct_kind_prefill_refresh_test.dart",
+        "test/m985_sms_prefill_identity_status_conflict_duplicate_test.dart"
+      ],
+      "safety_invariants": [
+        "No SMS correction uses sourceType manual; no new finance writer or insecure SMS storage.",
+        "Verified account, category, SAR, timestamp and user confirmation gates stay mandatory.",
+        "No OTP, pending, reversed, refunded or multiple financial events post through direct correction.",
+        "SMS native ACK only follows matched saved source/hash+direction; ACK failure retains review and no double money.",
+        "Internal transfer uses independently selected non-identical owned accounts and native-derived idempotent ID.",
+        "Fee-aware writer retains one atomic SQLCipher transfer+fee+hash commit and cannot replay with conflicting note.",
+        "No physical Android/iOS success is claimed by source-level tests."
+      ]
+    },
+    {
+      "id": "M1010-GOAL-DUE-REQUIRED-ACCOUNT-VALIDATION-AND-APPROVED-HERO",
+      "issue": "Issue #726",
+      "previous_behavior": "Both goal and due form Save actions reject a missing verified bank account but the three dependent provider dropdowns lack inline required errors, making Save appear inert. Dues uses a bare title and subtitle rather than the approved green savings-goals hero.",
+      "approved_behavior": "Retain the enabled Save action; once Save is attempted, each missing institution type, bank/primary provider and linked financial account dropdown visibly shows the same required message and red error field as text/amount controls. Preserve optional goal due date and open-ended target, existing category/month-day rules, verified parent-child account gates, and linked-goal finance protection. Use WaffraApprovedPageHero for dues header; keep calendar in the action/filter row.",
+      "source_paths": [
+        "lib/waffra_goal_recurring_account_picker.dart",
+        "lib/waffra_home_goal_actions.part.dart",
+        "lib/waffra_home_recurring_workflows.part.dart",
+        "lib/waffra_home_goals_recurring_pages.part.dart"
+      ],
+      "test_paths": [
+        "test/m1010_goal_due_required_account_hero_test.dart",
+        "test/m693_three_approved_pages_layout_matrix_test.dart"
+      ],
+      "safety_invariants": [
+        "Do not save an unlinked, archived or unverified account.",
+        "No finance writer, ledger, balance, backup or SMS behavior changes.",
+        "Errors only activate after attempted Save; cancel does not create data.",
+        "Original verified calendars, goal card, linked-account dropdown dependencies, FAB and due filters remain.",
+        "Android and iOS real-device validation remains unconfirmed until user tests."
+      ]
+    },
     {
       "id": "M1009-OWNER-SAMA-DIRECTION-SAFE-REUSE-ORIGINAL-TIMESTAMP-NOTIFICATIONS-SWIPE",
       "issue": "Issue #724 / Draft PR pending",

@@ -47,7 +47,8 @@ abstract final class WaffraBankSmsFactsParser {
   caseSensitive:false);
  static final _expense=RegExp(
   r'\b(?:purchase|debited|withdrawal|pos|paid|payment)\b|'
-  r'شراء|خصم|سحب|دفع|شحن\s*(?:الجوال|جوال|الرصيد|رصيد|الهاتف)(?![ء-ي])|' +
+  r'شراء|خصم|سحب|دفع|^\s*سداد\s+فاتور[ةه](?:\s|$)|'
+  r'شحن\s*(?:الجوال|جوال|الرصيد|رصيد|الهاتف)(?![ء-ي])|' +
   r'حوال[ةه].{0,35}صادر|تحويل.{0,35}صادر',
   caseSensitive:false);
  static final _pending=RegExp(

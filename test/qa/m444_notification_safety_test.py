@@ -15,6 +15,10 @@ class M444NotificationSafety(unittest.TestCase):
   self.assertIn('WaffraFinancialInsights.reachedBudgetThreshold(',main)
   self.assertIn('budget:b.budget,alertPercent:b.alertPercent',main)
   self.assertIn('WaffraFinancialInsights.pendingCurrentMonth(',main)
-  self.assertIn('oneTimeDueAt:r.linkedGoalId==null?null:r.startAt',main)
+  # M1013: linked-goal notification uses effective postponed date and
+  # suppresses already paid goal_due IDs, not the abandoned original date.
+  self.assertIn('oneTimeDueAt:r.linkedGoalId==null?null:',main)
+  self.assertIn('DateTime.tryParse(recurringPostponed[',main)
+  self.assertIn('paidGoalDueKeys.contains(WaffraRecurringPolicy.entryId(',main)
 
 if __name__=='__main__':unittest.main()

@@ -43,11 +43,13 @@ void main() {
   expect(begin,greaterThan(0));
   expect(end,greaterThan(begin));
   final segment=home.substring(begin,end);
-  expect(segment,contains('reviewedOriginalSms:body'));
-  expect(segment,contains("manualIncomeOverride:kind=='income'"));
+  expect(segment,contains('await _m1011SaveReviewedSmsKind('));
+  expect(segment,contains("income:kind=='income'"));
+  expect(segment,isNot(contains('await entrySheet(manualIncomeOverride:')));
   expect(segment,isNot(contains('acknowledgeCommitted(')));
-  expect(home,contains("Key('m662-manual-correction-original-text')"));
-  expect(home,contains('رسالة التحويل ستظل في المراجعة.'));
+  expect(home,contains('await entrySheet(sms:true,initialSms:body,'));
+  expect(home,contains('smsHashes.contains(hash)'));
+  expect(home,contains("e.sourceType=='sms'"));
   expect(home,contains("key:const Key('waffra-entry-original-sms-expand')"));
  });
 

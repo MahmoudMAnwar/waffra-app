@@ -307,7 +307,11 @@ extension _WaffraHomeFinanceStartup on _HomeScreenState {
       try{
        await _refreshWidget();
        if(!_m630SmsSessionCurrent(startupEpoch))return;
-       if(!verifiedEncryptedStartup)await applyRecurring();
+       // M1015 / #731: after the authenticated Home frame, request
+       // explicit Paid/Postpone/Not now for both goal-linked and standalone
+       // recurring expenses. Each uses an existing verified SQLCipher writer.
+       // A reminder or merely opening Home NEVER posts money.
+       await applyRecurring(goalLinkedOnly:false);
        if(!_m630SmsSessionCurrent(startupEpoch))return;
        if(recurringRemindersEnabled)await syncRecurringReminders();
       }catch(error){

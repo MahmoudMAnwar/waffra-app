@@ -121,14 +121,25 @@ extension _WaffraHomeFinancePersistenceDue on _HomeScreenState {
    for(final goal in goals)
     if(goal.dueDate!=null)goal.id,
   };
+  // M1013: skip already-settled goal dues even if active flags are stale
+  // during a verified Home refresh. Notification scheduling posts no money.
+  final paidGoalDueKeys=<String>{
+   for(final entry in entries)
+    if(entry.sourceType=='goal_due')entry.id,
+  };
   try {
    await WaffraReminders.schedule(
     recurring.where((r)=>r.active&&waffraCategoryNameAvailableForPosting(
      categories,r.income,r.category)&&(r.linkedGoalId==null||
-      datedGoalIds.contains(r.linkedGoalId)))
+      (datedGoalIds.contains(r.linkedGoalId)&&
+       !paidGoalDueKeys.contains(WaffraRecurringPolicy.entryId(
+        r.id,r.startAt)))))
      .map((r)=>WaffraReminder(id:r.id,title:r.title,day:r.day,
       startAt:r.startAt,
-      oneTimeDueAt:r.linkedGoalId==null?null:r.startAt)).toList(),
+      // Postponement changes the reminder date, never the paid event ID.
+      oneTimeDueAt:r.linkedGoalId==null?null:
+       (DateTime.tryParse(recurringPostponed[
+        WaffraRecurringPolicy.entryId(r.id,r.startAt)]??'')??r.startAt))).toList(),
     english:waffraIsEnglish);
   }catch(e){debugPrint('Reminder scheduling failed: $e');}
  }
@@ -164,10 +175,18 @@ extension _WaffraHomeFinancePersistenceDue on _HomeScreenState {
  }
 
  // No recurring schedule may post money without a user's explicit confirmation.
- Future<void> applyRecurring()async {
+ Future<void> applyRecurring({bool goalLinkedOnly=false})async {
   if(!mounted||!ready||_dueDialogShowing)return;
   final today=DateTime.now();
   for(final r in recurring){
+   // M1015 / #731: independent expense dues use the audited, owner-
+   // confirmed atomic recurringPostingAndPostponement writer below.
+   // Recurring INCOME is not a bill: never prompt 'Paid' for income at
+   // verified SQLCipher startup or infer that the bank received it.
+   if(goalLinkedOnly&&r.linkedGoalId==null)continue;
+   if(_lastFinanceAuthorityRead?.source==
+      WaffraRuntimeFinanceBackend.verifiedEncrypted&&
+      r.linkedGoalId==null&&r.income)continue;
    if(!r.active||!waffraCategoryNameAvailableForPosting(
     categories,r.income,r.category))continue;
    // A goal is a one-time obligation. Its immutable original due month
@@ -421,6 +440,8 @@ extension _WaffraHomeFinancePersistenceDue on _HomeScreenState {
       if(!await _persistModuleOrReload(
        WaffraFinanceRoute.recurringPostingAndPostponement,
        operation:'recurring-postpone'))return;
+      // Immediately replace old OS reminders with the postponed goal date.
+      if(mounted)await syncRecurringReminders();
      }
     }else{return;}
    }finally{_dueDialogShowing=false;}

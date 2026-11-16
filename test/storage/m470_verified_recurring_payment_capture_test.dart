@@ -68,7 +68,11 @@ void main() {
   // M921: prove the current recurring writer still lives in a real Home part.
   final duePart=File('lib/waffra_home_finance_persistence_due.part.dart')
    .readAsStringSync();
-  expect(duePart,contains(' Future<void> applyRecurring()async {'));
+  expect(duePart,contains(' Future<void> applyRecurring({bool goalLinkedOnly=false})async {'));
+  // Verified startup may show goal-linked dues, but must not auto-post
+  // unrelated recurring entries before explicit Paid confirmation.
+  expect(duePart,contains('if(goalLinkedOnly&&r.linkedGoalId==null)continue;'));
+  expect(duePart,contains("if(action=='paid'){"));
   final start=home.indexOf('if(!entries.any((e)=>e.id==id)){');
   final end=home.indexOf('recurringPostponed.remove(id);',start);
   expect(start,greaterThan(0));

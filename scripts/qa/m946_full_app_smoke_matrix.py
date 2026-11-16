@@ -21,6 +21,30 @@ GROUPS = ("money", "experience", "safety")
 # Each user-facing capability has a real runnable suite. Tests can be reused
 # across capabilities; the runner de-duplicates within each CI shard.
 FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {
+    "m1015_verified_standalone_expense_due_payment_approval": ("money", (
+        "test/m1015_standalone_due_confirmed_payment_test.dart",
+        "test/m1012_due_reminder_verified_confirmation_test.dart",
+        "test/m631_verified_finance_prewarm_test.dart",
+        "test/storage/m470_verified_recurring_payment_capture_test.dart",
+        "test/m86_recurring_schedule_boundary_test.dart")),
+    "m1012_verified_linked_goal_due_confirmation_and_321_reminders": ("money", (
+        "test/m1012_due_reminder_verified_confirmation_test.dart",
+        "test/m1013_goal_due_month_identity_postponement_test.dart",
+        "test/m444_notification_forecast_budget_test.dart",
+        "test/m86_recurring_schedule_boundary_test.dart",
+        "test/m978_recurring_reminder_goal_index_test.dart",
+        "test/m631_verified_finance_prewarm_test.dart",
+        "test/storage/m470_verified_recurring_payment_capture_test.dart",
+        "test/storage/m266_home_bound_source_regression_test.dart",
+        "test/m762_home_finance_persistence_due_extraction_test.dart")),
+    "m1011_sms_original_provenance_review_ack_and_verified_transfer": ("money", (
+        "test/m1011_reviewed_sms_provenance_ack_transfer_regression_test.dart",
+        "test/m983_sms_direct_kind_prefill_refresh_test.dart",
+        "test/m985_sms_prefill_identity_status_conflict_duplicate_test.dart",
+        "test/m580_sms_security_navigation_performance_test.dart")),
+    "m1010_goals_dues_inline_account_validation_and_green_hero": ("experience", (
+        "test/m1010_goal_due_required_account_hero_test.dart",
+        "test/m693_three_approved_pages_layout_matrix_test.dart")),
     "m1009_sama_direction_sms_review_and_live_notifications_swipe": ("money", (
         "test/m1009_sama_notification_swipe_regression_test.dart",
         "test/m980_four_sms_rule_kinds_every_route_test.dart",

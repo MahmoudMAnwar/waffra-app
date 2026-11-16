@@ -105,22 +105,39 @@ class WaffraReminders {
   return dueDates;
  }
 
+ /// M1012: calendar days avoid 24-hour arithmetic around DST/midnight.
+ static DateTime reminderTime(DateTime due,int daysBefore){
+  if(daysBefore<1||daysBefore>3)throw ArgumentError.value(daysBefore);
+  return DateTime(due.year,due.month,due.day-daysBefore,9);
+ }
+
  static Future<void> schedule(List<WaffraReminder> items,{bool english=false})async {
   if(!Platform.isAndroid)return;
   await initialize();
   await _cancelRecurringOnly();
   final now=DateTime.now();
+  // M1012 / #729: three opt-in reminders, at 09:00 device-local
+  // calendar time exactly 3, 2 and 1 days BEFORE a due. Never issue a
+  // notification for a past slot; none of these actions posts money.
+  // Give each slot a different native ID; the old single-day IDs are
+  // removed by _cancelRecurringOnly() without touching bank SMS notices.
   for(final item in items){
    for(final due in upcomingDueDates(item,now)){
-    final remindAt=DateTime(due.year,due.month,due.day-1,9);
-    await _plugin.zonedSchedule(
-     stableId(item.id,due.year*12+due.month),
-     english?'Waffra • Upcoming payment':'وفرة • تذكير بالتزام قادم',
-     english?'Upcoming: ${item.title} on ${due.day}/${due.month}':
-      'اقترب موعد «${item.title}» بتاريخ ${due.day}/${due.month}',
-     tz.TZDateTime.from(remindAt,tz.local),_details,
-     payload:'${_payload}${item.id}',
-     androidScheduleMode:AndroidScheduleMode.inexactAllowWhileIdle);
+    for(final daysBefore in const <int>[3,2,1]){
+     final remindAt=reminderTime(due,daysBefore);
+     if(!remindAt.isAfter(now.add(const Duration(minutes:2))))continue;
+     final until=english?
+      (daysBefore==1?'tomorrow':'in $daysBefore days'):
+      (daysBefore==1?'غدًا':daysBefore==2?'بعد يومين':'بعد 3 أيام');
+     await _plugin.zonedSchedule(
+      stableId(item.id,(due.year*12+due.month)*4+daysBefore),
+      english?'Waffra • Upcoming payment':'وفرة • تذكير بالتزام قادم',
+      english?'${item.title} is due $until (${due.day}/${due.month})':
+       'عندك استحقاق «${item.title}» $until (${due.day}/${due.month})',
+      tz.TZDateTime.from(remindAt,tz.local),_details,
+      payload:'${_payload}${item.id}',
+      androidScheduleMode:AndroidScheduleMode.inexactAllowWhileIdle);
+    }
    }
   }
  }

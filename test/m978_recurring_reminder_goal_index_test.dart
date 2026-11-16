@@ -84,7 +84,12 @@ void main() {
     expect(actual, contains('datedGoalIds.contains(r.linkedGoalId)'));
     expect(actual, contains('r.linkedGoalId==null||'));
     expect(actual, contains('waffraCategoryNameAvailableForPosting('));
-    expect(actual, contains('oneTimeDueAt:r.linkedGoalId==null?null:r.startAt'));
+    // M1013: a postponed goal due must use the effective date, and a
+    // confirmed settlement cannot keep scheduling pre-due notifications.
+    expect(actual, contains('paidGoalDueKeys.contains(WaffraRecurringPolicy.entryId('));
+    expect(actual, contains('oneTimeDueAt:r.linkedGoalId==null?null:'));
+    expect(actual, contains('DateTime.tryParse(recurringPostponed['));
+    expect(actual, contains('WaffraRecurringPolicy.entryId(r.id,r.startAt)'));
     expect(actual, contains('WaffraReminders.schedule('));
     expect(actual, isNot(contains('goals.any(')));
     expect(actual, isNot(contains('INSERT INTO')));

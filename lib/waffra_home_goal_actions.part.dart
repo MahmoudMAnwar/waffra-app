@@ -127,6 +127,7 @@ extension _WaffraHomeGoalActions on _HomeScreenState {
      WaffraGoalRecurringAccountPicker(
       key:const Key('m641-goal-account-cascade'),
       idPrefix:'m641-goal',english:waffraIsEnglish,
+      showRequiredErrors:attempted,
       accounts:goalAccounts,selectedAccountId:chosenGoalAccount,
       onChanged:(id)=>updateGoal(()=>chosenGoalAccount=id),
      onError:(message)=>snack(context,message),

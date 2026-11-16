@@ -73,6 +73,7 @@ class WaffraUnifiedFinanceWriter {
     required String occurredIso,
     required String messageHash,
     required String feeCategory,
+    String? originalSmsText,
     required bool userConfirmed,
   }) async {
     if (!experimentalEnabled || !userConfirmed ||
@@ -86,6 +87,14 @@ class WaffraUnifiedFinanceWriter {
         feeCategory != 'خدمات مالية / رسوم تحويل' ||
         DateTime.tryParse(occurredIso) == null) {
       throw StateError('Unverified SMS transfer or fee; nothing was posted.');
+    }
+    // Original source stays ONLY in the activated SQLCipher transfer and
+    // fee entry. Reject oversize text; never silently truncate it.
+    final protectedTransferNote=originalSmsText==null?
+      'تحويل مؤكد من رسالة بنكية':
+      'نص الرسالة البنكية الأصلية:\n$originalSmsText';
+    if(protectedTransferNote.runes.length>2000){
+      throw StateError('Reviewed SMS exceeds encrypted transfer note limit.');
     }
     // When bank states that the fee is INCLUDED, the recipient is credited
     // only principal minus fee. Otherwise it receives the full principal.
@@ -167,7 +176,7 @@ class WaffraUnifiedFinanceWriter {
           throw StateError('SMS fingerprint SQL parity failed.');
         }
         final transferRows = await snapshot.store.customSelect(
-          'SELECT from_account_id,to_account_id,amount_minor,occurred_iso '
+          'SELECT from_account_id,to_account_id,amount_minor,occurred_iso,note '
           'FROM fresh_finance_internal_transfers WHERE transfer_id=?',
           variables: [Variable.withString(transferId)]).get();
         if (hashes.contains(messageHash)) {
@@ -180,6 +189,7 @@ class WaffraUnifiedFinanceWriter {
               transferRows.single.read<String>('to_account_id') != toAccountId ||
               transferRows.single.read<int>('amount_minor') != creditedMinor ||
               transferRows.single.read<String>('occurred_iso') != occurredIso ||
+              transferRows.single.read<String>('note') != protectedTransferNote ||
               existingFee.single['amount'] != feeMinor / 100 ||
               existingFee.single['category'] != feeCategory) {
             throw StateError('Existing SMS is not this confirmed transfer.');
@@ -194,7 +204,7 @@ class WaffraUnifiedFinanceWriter {
         final inserted = await accounts.transfer(
           id: transferId, fromAccountId: fromAccountId,
           toAccountId: toAccountId, amountMinor: creditedMinor,
-          occurredIso: occurredIso, note: 'تحويل مؤكد من رسالة بنكية',
+          occurredIso: occurredIso, note: protectedTransferNote,
           userConfirmed: true);
         if (!inserted) {
           throw StateError('SMS transfer had already been posted.');
@@ -203,7 +213,8 @@ class WaffraUnifiedFinanceWriter {
           'id': entryId, 'title': 'رسوم تحويل بنكي',
           'category': feeCategory, 'amount': feeMinor / 100,
           'income': false, 'date': occurredIso, 'receiptPath': null,
-          'notes': '', 'personalNotes': '', 'sourceType': 'sms',
+          'notes': originalSmsText ?? '', 'personalNotes': '',
+          'sourceType': 'sms',
           'merchantKey': '',
         };
         await snapshot.store.customStatement(

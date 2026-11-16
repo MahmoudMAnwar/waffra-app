@@ -101,11 +101,12 @@ void main() {
   expect(review,contains('اختر نوع العملية التي تريد إضافتها:'));
   expect(review,contains("Navigator.pop(dialog,'income')"));
   expect(review,contains("Navigator.pop(dialog,'expense')"));
-  expect(review,contains("await entrySheet(manualIncomeOverride:kind=='income',"));
-  expect(review,contains('reviewedOriginalSms:body'));
+  expect(review,contains('await _m1011SaveReviewedSmsKind('));
+  expect(review,contains("income:kind=='income'"));
+  expect(review,isNot(contains('await entrySheet(manualIncomeOverride:')));
   expect(review,isNot(contains('acknowledgeCommitted(')));
-  expect(picker,contains('if(manualIncomeOverride!=null&&initial==null&&!sms)'));
-  expect(picker,contains('return const SizedBox.shrink();'));
+  expect(picker,contains('if(sms&&initial==null&&reviewedIncomeOverride!=null)'));
+  expect(picker,contains('return Padding('));
  });
 
  test('M670 all Home filters have a real limit and reversible expansion',(){

@@ -59,7 +59,7 @@ class WaffraAccountTransactionForm extends StatefulWidget {
   this.onCreateSmsAccount,
   this.incomeCategories=const [],this.expenseCategories=const [],
   this.availableBudgets=const {},this.requireKnownCategory=false,
-  this.initialSmsTransfer,this.originalSmsText,
+  this.initialSmsTransfer,this.originalSmsText,this.smsTransferRequestId,
    this.initialSarMinor,this.initialOccurredDate,
   this.requireSmsDateConfirmation=false,
   this.initialOperation=WaffraAccountOperation.income,
@@ -74,6 +74,9 @@ class WaffraAccountTransactionForm extends StatefulWidget {
  final DateTime? initialOccurredDate;
  /// The reviewed, immutable source SMS; preview only, never user-editable.
  final String? originalSmsText;
+ /// Exact native reviewed-SMS identity for idempotent manual correction.
+ /// Null for ordinary unsourced transfers; no account ownership is inferred.
+ final String? smsTransferRequestId;
  /// Unknown/ambiguous SMS dates require an explicit in-form date selection.
  final bool requireSmsDateConfirmation;
  final WaffraAccountOperation initialOperation;
@@ -97,6 +100,7 @@ class _WaffraAccountTransactionFormState extends State<WaffraAccountTransactionF
   widget.initialSmsTransfer?.occurredIso??'')??widget.initialOccurredDate??DateTime.now();
  late DateTime transferDate=requestTime;
  late final String requestId=widget.initialSmsTransfer?.requestId??
+  widget.smsTransferRequestId??
   'm440-'+requestTime.microsecondsSinceEpoch.toString();
  WaffraAccountOperation mode=WaffraAccountOperation.income;
  String? source,destination,error,selectedBudgetId;

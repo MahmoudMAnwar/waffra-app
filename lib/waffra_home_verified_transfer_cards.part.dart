@@ -25,6 +25,14 @@ extension _WaffraHomeVerifiedTransferCards on _HomeScreenState {
   final bg=dark?const Color(0xFF182C40):const Color(0xFFE7F0FA);
   final textColor=dark?const Color(0xFFC6DDF8):const Color(0xFF194B82);
   final when=DateTime.tryParse(t.occurredIso);
+  // The original reviewed SMS is private and encrypted in transfer notes.
+  // Show it only on an explicit details tap, never in compact Home previews.
+  const sourceMarker='نص الرسالة البنكية الأصلية:\n';
+  final sourceAt=t.id.startsWith('sms-transfer-')?
+   t.note.indexOf(sourceMarker):-1;
+  final originalSms=sourceAt<0?null:
+   t.note.substring(sourceAt+sourceMarker.length);
+  final visibleMemo=sourceAt<0?t.note:t.note.substring(0,sourceAt).trim();
   Widget endpoint(String label,String name)=>Expanded(child:Column(
    crossAxisAlignment:CrossAxisAlignment.start,children:[
     WaffraText(label,style:TextStyle(color:textColor,fontSize:11)),
@@ -90,16 +98,31 @@ extension _WaffraHomeVerifiedTransferCards on _HomeScreenState {
      Expanded(child:WaffraText(when==null?t.occurredIso:
       dayText(when),style:TextStyle(color:textColor,fontSize:11))),
     ]),
-    if(t.note.trim().isNotEmpty)...[
+    if(visibleMemo.trim().isNotEmpty)...[
      const SizedBox(height:6),
      Row(children:[
       Icon(Icons.notes_rounded,size:15,color:textColor),
       const SizedBox(width:5),
-      Expanded(child:WaffraText(t.note,maxLines:compact?1:4,
+      Expanded(child:WaffraText(visibleMemo,maxLines:compact?1:4,
        overflow:TextOverflow.ellipsis,
        style:TextStyle(fontSize:12,color:textColor))),
      ]),
     ],
+    if(originalSms!=null&&originalSms.trim().isNotEmpty)
+     Align(alignment:AlignmentDirectional.centerStart,
+      child:TextButton.icon(
+       key:Key('m1011-transfer-original-'+t.id),
+       icon:const Icon(Icons.lock_outline_rounded,size:17),
+       label:WaffraText(waffraIsEnglish?
+        'View original bank message':'عرض نص الرسالة البنكية الأصلية'),
+       onPressed:WaffraHaptics.tap(()=>showWaffraDialog<void>(
+        context:context,builder:(dialog)=>AlertDialog(
+         title:WaffraText(waffraIsEnglish?
+          'Original bank message':'نص الرسالة البنكية الأصلية'),
+         content:SingleChildScrollView(child:SelectableText(originalSms)),
+         actions:[TextButton(
+          onPressed:()=>Navigator.pop(dialog),
+          child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))]))))),
    ]));
  }
 

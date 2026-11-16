@@ -13,10 +13,11 @@ class WaffraGoalRecurringAccountPicker extends StatefulWidget {
   super.key,required this.accounts,required this.onChanged,
   required this.onCreateAccount,required this.onError,this.selectedAccountId,
   this.english=false,this.idPrefix='m641',
+  this.showRequiredErrors=false,
  });
  final List<WaffraAccountBalance> accounts;
  final String? selectedAccountId,idPrefix;
- final bool english;
+ final bool english,showRequiredErrors;
  final ValueChanged<String?> onChanged;
  final Future<WaffraAccountBalance?> Function(String? providerGroupId) onCreateAccount;
  final ValueChanged<String> onError;
@@ -105,6 +106,13 @@ class _WaffraGoalRecurringAccountPickerState
   final group=matching.where((g)=>g.id==groupId).toList();
   final linked=group.isEmpty?const <WaffraAccountBalance>[]:group.single.accounts;
   final chosenAccount=linked.any((a)=>a.id==accountId)?accountId:null;
+  // Both goal and due editors keep Save enabled, then render the same
+  // inline required-field errors as their text/amount inputs.
+  final requiredMessage=label('هذا الحقل مطلوب','This field is required');
+  final missingCategory=widget.showRequiredErrors&&category==null;
+  final missingProvider=widget.showRequiredErrors&&
+   (groupId==null||!matching.any((g)=>g.id==groupId));
+  final missingAccount=widget.showRequiredErrors&&chosenAccount==null;
   return Column(crossAxisAlignment:CrossAxisAlignment.stretch,
    mainAxisSize:MainAxisSize.min,children:[
    WaffraCenteredDropdownFormField<String>(
@@ -112,6 +120,8 @@ class _WaffraGoalRecurringAccountPickerState
     initialValue:category,isExpanded:true,
     decoration:InputDecoration(
      labelText:label('نوع الجهة *','Institution type *'),
+     errorText:missingCategory?requiredMessage:null,
+     errorMaxLines:2,
      border:const OutlineInputBorder()),
     items:const [
      DropdownMenuItem(value:WaffraSaudiFinancialProviders.local,
@@ -132,6 +142,8 @@ class _WaffraGoalRecurringAccountPickerState
     isExpanded:true,
     decoration:InputDecoration(
      labelText:label('البنك أو الجهة الأساسية *','Bank or primary institution *'),
+     errorText:missingProvider?requiredMessage:null,
+     errorMaxLines:2,
      border:const OutlineInputBorder()),
     items:matching.map((g)=>DropdownMenuItem<String>(
      value:g.id,child:Text(widget.english?g.labelEn:g.labelAr,
@@ -144,6 +156,8 @@ class _WaffraGoalRecurringAccountPickerState
     initialValue:chosenAccount,isExpanded:true,
     decoration:InputDecoration(
      labelText:label('الحساب المالي التابع *','Linked financial account *'),
+     errorText:missingAccount?requiredMessage:null,
+     errorMaxLines:2,
      border:const OutlineInputBorder()),
     items:linked.map((a)=>DropdownMenuItem<String>(
      value:a.id,child:Text(a.name,overflow:TextOverflow.ellipsis))).toList(),

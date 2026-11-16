@@ -173,6 +173,62 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
   }
  }
 
+ /// M1011 / #728: a reviewed SMS stays a BANK-SMS source even when the
+ /// classifier guessed another kind. Only a user-confirmed SQLCipher SMS
+ /// commit (body + hash + selected financial account) can ACK its native ID.
+ /// A cancellation, failed write or failed ACK never posts/reposts money.
+ Future<void> _m1011SaveReviewedSmsKind({
+  required String id,required String body,required String sender,
+  required bool income,
+ })async{
+  if(!mounted)return;
+  final facts=WaffraBankSmsFactsParser.parse(body);
+  final lifecycle=WaffraSmsLifecycleEvidence.inspect(body,sender:sender);
+  final unsafe=facts.pending||
+   WaffraBankSmsFactsParser.isVerificationChallenge(body)||
+   WaffraSmsStructuredBankContext.multipleEvents(body)||
+   lifecycle.stage==WaffraSmsLifecycleStage.reversed||
+   lifecycle.stage==WaffraSmsLifecycleStage.refunded;
+  if(unsafe){
+   snack(context,waffraIsEnglish?
+    'This bank message contains an unresolved or combined event. Review it separately.':
+    'الرسالة فيها عملية معلقة أو مركبة وتحتاج مراجعة منفصلة.',
+    isError:true);
+   return;
+  }
+  final hash=bankSmsHash(body);
+  if(!smsHashes.contains(hash)){
+   // NEVER use manualIncomeOverride/reviewedOriginalSms for a reviewed SMS.
+   // The manual writer loses sourceType and immutable original text/hash.
+   await entrySheet(sms:true,initialSms:body,reviewedSender:sender,
+    reviewedIncomeOverride:income);
+  }
+  if(!mounted)return;
+  // Verify the exact original bank body AND owner-chosen direction from
+  // the source-reloaded ledger, not a dialog success/toast or a rule match.
+  final committed=entries.where((e)=>e.sourceType=='sms'&&
+   bankSmsHash(e.notes)==hash&&e.income==income).toList(growable:false);
+  if(!smsHashes.contains(hash)||committed.isEmpty)return;
+  final ack=await WaffraAutoSms.acknowledgeCommitted([id]);
+  if(!mounted)return;
+  if(!ack){
+   snack(context,waffraIsEnglish?
+    'Saved once, but SMS acknowledgement failed. Reopen the message to retry safely.':
+    'العملية اتحفظت مرة واحدة، لكن إزالة الرسالة فشلت. افتحها تاني لإعادة التأكيد بأمان.',
+    isError:true);
+   return;
+  }
+  setState(()=>_autoSmsPending.removeWhere((r)=>r['id']==id));
+  // Classification hints are learned only after an authoritative owner
+  // choice and durable finance commit, never from an uncertain SMS alone.
+  if(sender.trim().isNotEmpty&&committed.length==1){
+   try{await _learnSafeSmsRule(body:body,sender:sender,
+    kind:income?'income':'expense',category:committed.single.category,
+    confirmedCorrection:true,description:committed.single.title);}catch(_){}
+  }
+  if(mounted)await _refreshAutoSmsInbox();
+ }
+
   Future<void> _m983OpenSmsTypedTemplate({
   required String id,required String kind,
  })async{
@@ -206,38 +262,15 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
     await _reviewSmsAccountTransfer(item:row,facts:facts);
    }else{
     // The SMS does not prove both accounts belong to the owner. A manual
-    // two-account transfer form is the only safe path; SMS remains pending.
+    // two-account transfer form requires independent verified ownership.
     snack(context,waffraIsEnglish?
      'This message does not verify a transfer between your accounts. Select both accounts manually.':
      'الرسالة لا تثبت تحويلًا بين حساباتك. اختار حسابَي التحويل بنفسك.');
-    await openReviewedSmsManualTransfer(body:body,sender:sender);
+    await openReviewedSmsManualTransfer(id:id,body:body,sender:sender);
    }
   }else{
-   final expected=kind=='income'?
-    WaffraBankOperationKind.income:WaffraBankOperationKind.expense;
-   if(facts.kind==expected&&!facts.pending){
-    // Safe SMS editor shares same verified principal/date/account writer.
-    await entrySheet(sms:true,initialSms:body,
-     reviewedSender:sender,reviewedIncomeOverride:kind=='income');
-    if(smsHashes.contains(bankSmsHash(body))){
-     final ack=await WaffraAutoSms.acknowledgeCommitted([id]);
-     if(ack&&mounted)setState(()=>
-      _autoSmsPending.removeWhere((r)=>r['id']==id));
-     if(!ack&&mounted)snack(context,waffraIsEnglish?
-      'Saved, but SMS review acknowledgement failed. Try refreshing.':
-      'اتحفظت العملية لكن تأكيد إزالة الرسالة فشل. حدّث المراجعة.',
-      isError:true);
-    }
-   }else{
-    // A different type is a SEPARATE manual entry. Show the original
-    // message, do not impersonate its proven bank direction or ACK it.
-    final beforeIds=entries.map((e)=>e.id).toSet();
-    await entrySheet(manualIncomeOverride:kind=='income',
-     reviewedOriginalSms:body,reviewedSender:sender,
-     reviewedOriginalDate:bankSmsDate(body));
-    if(mounted)await _m985AutoLearnManualCorrection(
-     body:body,sender:sender,income:kind=='income',beforeIds:beforeIds);
-   }
+   await _m1011SaveReviewedSmsKind(
+    id:id,body:body,sender:sender,income:kind=='income');
   }
   // M983: refresh all FOUR saved/default rule kinds and native ACK state
   // before showing this sender again (the inbox rebuilds its group snapshot).
@@ -812,7 +845,7 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
         'to a new manual transfer with two verified accounts. The bank SMS '
         'will stay pending, and nothing is saved by this choice alone.':
         'الرسالة لا تثبت أن الحسابين ملكك. المتابعة هتفتح تحويلًا يدويًا '
-        'بحسابين موثّقين، والرسالة الأصلية هتفضل للمراجعة. '
+        'بحسابين موثّقين، والرسالة بتخرج من المراجعة بعد الحفظ المؤكد فقط. '
         'الاختيار وحده مش هيسجل أي مبلغ.'),
        actions:[
         TextButton(onPressed:()=>Navigator.pop(ctx,false),
@@ -821,29 +854,10 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
          child:WaffraText(waffraIsEnglish?'Continue':'متابعة')),
        ],
       ));
-     if(approved==true&&mounted)await openReviewedSmsManualTransfer(body:body,sender:sender);
+     if(approved==true&&mounted)await openReviewedSmsManualTransfer(id:id,body:body,sender:sender);
     }else{
-     // M985: a different owner-chosen type is a separate prefilled MANUAL
-     // entry. Only the proven bank direction can use SMS hash/ACK writer.
-     final expected=reviewType=='income'?
-      WaffraBankOperationKind.income:WaffraBankOperationKind.expense;
-     if(facts.kind==expected&&!facts.pending){
-      await entrySheet(sms:true,initialSms:body,
-       reviewedSender:sender,reviewedIncomeOverride:reviewType=='income');
-      if(smsHashes.contains(bankSmsHash(body))){
-       final ack=await WaffraAutoSms.acknowledgeCommitted([id]);
-       if(ack&&mounted){
-        setState(()=>_autoSmsPending.removeWhere((r)=>r['id']==id));
-       }
-      }
-     }else{
-      final beforeIds=entries.map((e)=>e.id).toSet();
-      await entrySheet(manualIncomeOverride:reviewType=='income',
-       reviewedOriginalSms:body,reviewedSender:sender,
-       reviewedOriginalDate:originalDate);
-      if(mounted)await _m985AutoLearnManualCorrection(
-       body:body,sender:sender,income:reviewType=='income',beforeIds:beforeIds);
-     }
+     await _m1011SaveReviewedSmsKind(id:id,body:body,
+      sender:sender,income:reviewType=='income');
     }
    }else if(decision=='exclude'&&mounted){
     // M1005: if Notifications is pushed above Home, feedback must be
@@ -893,14 +907,8 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
         child:WaffraText(waffraIsEnglish?'Income':'دخل')),
       ]));
     if(mounted&&(kind=='income'||kind=='expense')){
-     // The chosen entry is a genuinely separate MANUAL operation: show
-     // the original transfer SMS for reference, but never ACK or relabel it.
-     final beforeIds=entries.map((e)=>e.id).toSet();
-     await entrySheet(manualIncomeOverride:kind=='income',
-      reviewedOriginalSms:body,reviewedSender:sender,
-      reviewedOriginalDate:originalDate);
-     if(mounted)await _m985AutoLearnManualCorrection(
-      body:body,sender:sender,income:kind=='income',beforeIds:beforeIds);
+     await _m1011SaveReviewedSmsKind(
+      id:id,body:body,sender:sender,income:kind=='income');
     }
    }else if(decision=='yes'&&mounted&&canConfirm&&
              reviewedAccount!=null&&originalAmount!=null&&

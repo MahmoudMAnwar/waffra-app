@@ -40,13 +40,20 @@ INDEXOF_DART = re.compile(
 BINDING_DART = re.compile(
     r"\b(?:final|var)\s+(?P<var>[A-Za-z_]\w*)\s*=\s*File\(\s*"
     r"(?P<q>['\"])(?P<path>(?:lib|native|android|ios|firebase|assets)/[^'\"]+)\2\s*\)"
-    r"\.readAsStringSync\(\s*\)",
+    r"\s*\.readAsStringSync\(\s*\)",
 )
 # M687: explicit source-inspection helper still targets the actual main.dart
 # library and its declared Dart parts, not an unverified mock of the source.
 BINDING_MAIN_RECON = re.compile(
     r"\b(?:final|var)\s+(?P<var>[A-Za-z_]\w*)\s*=\s*"
     r"readWaffraMainSourceForContracts\(\s*\)",
+)
+# M1014: direct source-boundary assertions in 'between(start,end)' helpers.
+# They are positive anchors just like expect(contains(...)); the older
+# scanner missed obsolete function signatures passed as helper arguments.
+BETWEEN_DART = re.compile(
+    r"\bbetween\(\s*'(?P<first>[^'\n]+)'\s*,\s*'(?P<second>[^'\n]+)'\s*\)",
+    re.DOTALL,
 )
 BINDING_SHELL = re.compile(
     r"\b(?P<var>[A-Za-z_]\w*)\s*=\s*Path\(\s*"
@@ -168,6 +175,14 @@ def _positive_dart(text: str) -> list[tuple[str, str, int, str]]:
             literal = _safe_literal(m["q"], m["literal"])
             if target and literal:
                 found.append((target, literal, text.count("\n", 0, m.start()) + 1, kind))
+    if BINDING_MAIN_RECON.search(text) and re.search(r"\bString\s+between\(", text):
+        for m in BETWEEN_DART.finditer(text):
+            for literal in (m["first"], m["second"]):
+                decoded = _safe_literal("'", literal)
+                if decoded:
+                    found.append(("lib/main.dart", decoded,
+                                  text.count("\n", 0, m.start()) + 1,
+                                  "reconstructed Home helper boundary"))
     return found
 
 
@@ -388,6 +403,17 @@ def build_report(base: str, head: str, root: Path = ROOT) -> dict:
     # match the moved text. Keep the original baseline unchanged: a dropped
     # or unregistered implementation still fails the exact-head scan.
     home_path = "lib/main.dart"
+    # M1014: a changed Dart Home part must be scanned as part of the
+    # reconstructed Home even when main.dart itself has no diff.
+    changed_home_parts = any(
+        p.startswith("lib/waffra_home_") and p.endswith(".part.dart")
+        for p in sources
+    )
+    if changed_home_parts:
+        old_sources.setdefault(home_path, git("show", f"{base}:{home_path}"))
+        new_sources.setdefault(
+            home_path, (root / home_path).read_text(encoding="utf-8"))
+    comparison_sources = sources | ({home_path} if changed_home_parts else set())
     expected_parts = (
         "lib/waffra_home_pdf_reports.part.dart",
         "lib/waffra_home_profile.part.dart",
@@ -449,7 +475,22 @@ def build_report(base: str, head: str, root: Path = ROOT) -> dict:
             if not part_source.startswith("part of 'main.dart';"):
                 raise ContractError(f"Unregistered or foreign Dart part: {part_path}")
             new_sources[home_path] += "\\n" + part_source
-    stale, count = detect_stale(target_tests, old_sources, new_sources, sources)
+    # M1014: compare the same validated registered Home-part tree at
+    # baseline and HEAD. Without baseline reconstruction, a removed method
+    # signature from an old part looks as though it never existed.
+    if home_path in old_sources:
+        base_main = old_sources[home_path]
+        for part_path in expected_parts:
+            filename = Path(part_path).name
+            if f"part '{filename}';" not in base_main:
+                continue
+            try:
+                old_part = git("show", f"{base}:{part_path}")
+            except ContractError:
+                continue
+            if old_part.startswith("part of 'main.dart';"):
+                old_sources[home_path] += "\n" + old_part
+    stale, count = detect_stale(target_tests, old_sources, new_sources, comparison_sources)
     # M934: scan ALL Dart tests against the literal raw main.dart they read.
     # Static warnings are reported BEFORE 10-minute Flutter test suites run.
     raw_main = (root / home_path).read_text(encoding="utf-8")
