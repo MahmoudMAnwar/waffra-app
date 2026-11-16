@@ -158,8 +158,14 @@ class WaffraAutoSmsWorker(context: Context, parameters: WorkerParameters) :
                     .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
                     .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 20, TimeUnit.SECONDS)
                     .build()
+                // M1018 / #735: KEEP silently drops a new wakeup when an
+                // existing worker already took its encrypted queue snapshot.
+                // APPEND_OR_REPLACE schedules a successor without stopping
+                // the currently running verified SQLCipher worker. Failed
+                // prerequisites must not poison new arrivals.
                 WorkManager.getInstance(context).enqueueUniqueWork(
-                    "waffra_auto_sms_finance", ExistingWorkPolicy.KEEP, work)
+                    "waffra_auto_sms_finance",
+                    ExistingWorkPolicy.APPEND_OR_REPLACE, work)
             } catch (_: Exception) {
                 // Encrypted candidates survive until next foreground review.
             }
