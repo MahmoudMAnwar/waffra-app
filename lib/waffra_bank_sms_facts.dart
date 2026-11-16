@@ -66,6 +66,9 @@ abstract final class WaffraBankSmsFactsParser {
   r'(?:رمزك|كودك|الكود\s+الخاص\s+بك)\s*(?:(?:هو|هي)\s*|[:：]\s*)[0-9٠-٩۰-۹]{4,8}|'
   r'\b(?:login|sign[ -]?in|authentication|auth|activation|access|2fa)\s+(?:pass)?code\b|'
   r'\byour\s+(?:(?:login|sign[ -]?in|security|verification|app)\s+)?code\s*(?:is|[:：])\s*[0-9]{4,8}\b|'
+  // M1005: bilingual code notifications use reverse English word order.
+  r'\b[0-9٠-٩۰-۹]{4,8}\s+is\s+your\s+code\s+for\s+[A-Za-z][A-Za-z0-9._-]{1,39}\b|'
+  r'\bis\s+your\s+code\s+for\s+[A-Za-z][A-Za-z0-9._-]{1,39}\s+[0-9٠-٩۰-۹]{4,8}\b|'
   r'كلم[ةه]\s*مرور\s*مؤقت[ةه]?|'
   r'رمز\s*(?:إضافة|اضافة|تأكيد)\s*المستفيد',
   caseSensitive:false);
