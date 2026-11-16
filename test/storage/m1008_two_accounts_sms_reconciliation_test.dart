@@ -66,6 +66,8 @@ void main(){
    await api.createAccount(id:'rajhi',name:'AlRajhiBank',
     kind:'bank',openingMinor:0,createdIso:'2026-10-01T08:00:00Z',
     userConfirmed:true);
+   // A second account requires a fresh verified generation witness.
+   await api.balances();
    await api.createAccount(id:'alinma',name:'AlinmaPay',
     kind:'wallet',openingMinor:0,createdIso:'2026-10-01T08:01:00Z',
     userConfirmed:true);
