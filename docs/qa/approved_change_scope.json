@@ -23,7 +23,8 @@
     "test/m944_home_root_shell_extraction_test.dart",
     "test/m1003_restore_budget_and_blank_surface_contract_test.dart",
     "test/storage/m1003_atomic_restored_budget_account_link_test.dart",
-    "test/waffra_m206_day_theme_tour_sms_regression_test.dart"
+    "test/waffra_m206_day_theme_tour_sms_regression_test.dart",
+    ".github/scripts/run-m274-android-tap-smoke.sh"
   ],
   "bounded_sections": {
     "lib/waffra_home_entry_sheet.part.dart": [
@@ -110,6 +111,12 @@
       {
         "start": "    expect(root,contains('child:ValueListenableBuilder<bool>('));",
         "end": "    expect(root,isNot(contains('KeyedSubtree(key:ValueKey(language)')));"
+      }
+    ],
+    ".github/scripts/run-m274-android-tap-smoke.sh": [
+      {
+        "start": "  # A transient DDS startup failure can happen before any app assertion runs.",
+        "end": "  echo \"::error::M274 Android UI smoke failed (exit $result); blocking integration\""
       }
     ]
   },
