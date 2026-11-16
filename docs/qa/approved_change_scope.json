@@ -72,6 +72,10 @@
         "end": "/**"
       },
       {
+        "start": "class WaffraAutoSmsReceiver : BroadcastReceiver() {",
+        "end": "    override fun onReceive(context: Context, intent: Intent) {"
+      },
+      {
         "start": "    override fun onReceive(context: Context, intent: Intent) {",
         "end": null
       }
