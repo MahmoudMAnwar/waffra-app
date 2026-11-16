@@ -84,6 +84,41 @@ void main() {
     expect(special?.resolvedKind,isNot('excluded'));
   });
 
+  test('M1007 automatic safe exclusion learns once, works across app senders',(){
+    final learned=WaffraSmsLocalRules.suggestedGlobalRule(
+      body:verification,sender:'App-A',kind:'excluded');
+    expect(learned,isNotNull);
+    WaffraSmsLocalRules.validate(learned!);
+    expect(learned.sender,isEmpty);
+    expect(learned.autoPost,isFalse);
+    expect(learned.templateFamily,'verification');
+    expect(WaffraSmsLocalRules.matches(
+      learned,verification,sender:'NewApp-B'),isTrue);
+    final other=WaffraSmsLocalRules.suggestedGlobalRule(
+      body:verification,sender:'NewApp-B',kind:'excluded');
+    expect(other,isNotNull);
+    expect(other!.id,learned.id);
+    expect(WaffraSmsLocalRules.upsertLearned(
+      existing:[learned],candidate:other),hasLength(1));
+    expect(WaffraSmsLocalRules.matches(learned,
+      'تم خصم 50 ريال، رمز التحقق',sender:'NewApp-B'),isFalse);
+  });
+
+  test('M1007 global learning is review-only for all four kinds',(){
+    for(final kind in const ['income','expense','transfer','excluded']){
+      final rule=WaffraSmsLocalRule(
+        id:'global_$kind',name:'قاعدة مراجعة',
+        keywords:[kind=='excluded'?'رمز التحقق':'transfer'],
+        income:kind=='income',category:kind=='income'||kind=='expense'?'أخرى':'',
+        kind:kind,sender:'',matchAll:false,autoPost:false);
+      WaffraSmsLocalRules.validate(rule);
+      expect(rule.sender,isEmpty);
+      expect(rule.autoPost,isFalse);
+      expect(WaffraSmsLocalRules.matches(rule,
+        rule.keywords.first,sender:'AnySender'),isTrue);
+    }
+  });
+
   test('M1007 owner scope editor shows both choices, impact and no global auto-post', () {
     final editor=File('lib/waffra_sms_rule_settings_page.dart')
       .readAsStringSync();
@@ -101,8 +136,14 @@ void main() {
     expect(pipeline,contains("if(mounted&&ruleSaved==true)unawaited(_refreshAutoSmsInbox());"));
     final confirmation=File('lib/waffra_home_sms_confirmation.part.dart')
       .readAsStringSync();
-    expect(confirmation,contains('تتعلم وفرة من التصحيح ده؟'));
+    expect(confirmation,isNot(contains('تتعلم وفرة من التصحيح ده؟')));
+    expect(confirmation,isNot(contains('Use this correction for future SMS?')));
     expect(confirmation,contains('confirmed.length!=1'));
-    expect(confirmation,contains('await _openSmsRules('));
+    expect(confirmation,contains('_m985AutoLearnManualCorrection('));
+    expect(confirmation,contains('await _learnManualCategoryPreference(confirmed.single)'));
+    expect(pipeline,contains('WaffraSmsLocalRules.suggestedGlobalRule('));
+    expect(editor,contains('var allSenders=existing==null||existing.sender.trim().isEmpty;'));
+    final bulk=File('lib/waffra_home_sms_management.part.dart').readAsStringSync();
+    expect(bulk,contains('WaffraSmsLocalRules.suggestedGlobalRule('));
   });
 }
