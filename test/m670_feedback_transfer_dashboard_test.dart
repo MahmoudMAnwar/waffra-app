@@ -135,7 +135,12 @@ void main() {
   expect(source,contains(
    "Key('m689-due-card-'"));
   expect(source,contains("WaffraApprovedMetrics(metrics:["));
-  expect(source,contains("_m689GoalActions(g)"));
+  expect(source,contains("_m689GoalActions(g,v)"));
+  final goals=source.split(' Widget goalsPage(){').last
+   .split(' Widget recurringPage(){').first;
+  expect(goals,contains("Key('m1021-goal-deposit-'+g.id)"));
+  expect(goals,contains("Key('m1021-goal-edit-'+g.id)"));
+  expect(goals,contains("Key('m1021-goal-account-'+g.id)"));
   expect(source,contains("Key('m689-due-settings')"));
   expect(source,contains('Tooltip(message:waffraIsEnglish?'));
  });
