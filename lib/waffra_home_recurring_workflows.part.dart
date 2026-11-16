@@ -98,6 +98,7 @@ extension _WaffraHomeRecurringWorkflows on _HomeScreenState {
       else WaffraGoalRecurringAccountPicker(
        key:const Key('m641-recurring-account-cascade'),
        idPrefix:'m641-recurring',english:waffraIsEnglish,
+       showRequiredErrors:attempted,
        accounts:liveAccounts,selectedAccountId:selectedRecurringAccount,
        onChanged:(id)=>update(()=>selectedRecurringAccount=id),
        onError:(message)=>snack(context,message),
