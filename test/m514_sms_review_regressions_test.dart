@@ -6,7 +6,7 @@ import 'package:waffra/waffra_bank_sms_facts.dart';
 import 'package:waffra/waffra_auto_sms.dart';
 
 void main(){
- test('M514 incoming money is income, not owned-account transfer',(){
+ test('M514 incoming income and outgoing beneficiary expense require correct review',(){
   for(final sms in [
    'حوالة واردة\nالمبلغ: SAR 120.00\nإلى حساب: **8308',
    'حوالة داخلية واردة\nمن: طرف آخر\nمبلغ: SAR 1.00',
@@ -20,7 +20,11 @@ void main(){
    'إيبان: **9288\n'
    'القيمة: SAR 882\nالرسوم: SAR 0.58';
   final fact=WaffraBankSmsFactsParser.parse(outgoing);
-  expect(fact.kind,WaffraBankOperationKind.transfer);
+  // M1009/SAMA: an outgoing payment to an unverified beneficiary is
+  // an expense suggestion, not proof of transfer between owned accounts.
+  expect(fact.kind,WaffraBankOperationKind.expense);
+  expect(fact.requiresBeneficiaryReview,isTrue);
+  expect(fact.canAutoPostAsIncomeExpense,isFalse);
   expect(fact.sourceSuffix,'8308');
   expect(fact.destinationSuffix,'9288');
   expect(fact.fee,0.58);
