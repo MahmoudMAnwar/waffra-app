@@ -9,6 +9,10 @@ void main(){
   expect(src,contains('onPressed:attested?()=>Navigator.pop(dialog,true):null'));
   expect(src,contains('if(approved!=true||!attested||!sheetContext.mounted)return;'));
   expect(src,contains('historicalOpeningExcluded=attested;'));
+  expect(src,contains('((initial==null||canMoveLinkedAccount)&&'));
+  expect(src,contains('Link to money account (optional)'));
+  expect(src,contains('ربط الحساب المالي (اختياري)'));
+  expect(src,isNot(contains('((initial==null||(canLinkExistingAccount&&originalLinkedAccountId==null)||')));
   expect(src,contains('openingExcludesHistory:historicalOpeningExcluded'));
   expect(src,contains('linkUnassignedAccountId:canLinkExistingAccount&&'));
   expect(src,contains('editExistingAndLinkUnassigned('));
