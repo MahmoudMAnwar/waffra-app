@@ -228,6 +228,22 @@ extension _WaffraHomeVerifiedAccountFlows on _HomeScreenState {
    builder:(_)=>WaffraAccountsManagerPage(
     repository:WaffraVerifiedAccountsApi(bridge:verifiedBridge),
     english:waffraIsEnglish,
+    upcomingDues:[
+     for(final r in recurring)
+      if(r.active&&r.accountId!=null&&r.accountId!.trim().isNotEmpty&&
+        r.amount>0&&r.amount.isFinite&&r.day>=1&&r.day<=31&&
+        _m467Accounts.any((a)=>a.id==r.accountId&&!a.archived))
+       WaffraTrustDue(
+        id:r.id,accountId:r.accountId!,title:r.title,
+        due:WaffraRecurringPolicy.nextActionableDue(
+         today:DateTime.now(),startAt:r.startAt,day:r.day,
+         currentMonthPaid:entries.any((e)=>e.id==
+          WaffraRecurringPolicy.entryId(r.id,
+           WaffraRecurringPolicy.dueDate(
+            DateTime.now().year,DateTime.now().month,r.day)))),
+        amountMinor:waffraSarMinorChecked(r.amount),
+        income:r.income),
+    ],
     // M667: the Accounts button enters the *same* Home three-mode sheet as +.
     // Keep the Home-owned verified finance and transfer save paths intact.
     onCreateHomeTransaction:()=>entrySheet(),

@@ -6,6 +6,7 @@ import 'storage/waffra_accounts_repository.dart';
 import 'storage/waffra_verified_accounts_api.dart';
 import 'waffra_account_transaction_form.dart';
 import 'waffra_account_context_page.dart';
+import 'waffra_financial_trust_policy.dart';
 import 'waffra_new_account_dialog.dart';
 import 'waffra_saudi_financial_providers.dart';
 import 'waffra_i18n.dart';
@@ -18,6 +19,7 @@ class WaffraAccountsManagerPage extends StatefulWidget {
   this.incomeCategories=const [],this.expenseCategories=const [],
   this.availableBudgets=const {},this.onTransferConfirmed,
   this.onCreateHomeTransaction,
+  this.upcomingDues=const <WaffraTrustDue>[],
  });
  final Future<void> Function(WaffraInternalTransferDraft)? onTransferConfirmed;
  /// M667: the Home parent injects its real three-mode entrySheet, not a
@@ -26,6 +28,7 @@ class WaffraAccountsManagerPage extends StatefulWidget {
  final Future<void> Function()? onCreateHomeTransaction;
  final WaffraAccountOperations repository;
  final bool english;
+ final List<WaffraTrustDue> upcomingDues;
  final List<String> incomeCategories,expenseCategories;
  final Map<String,String> availableBudgets;
  final Future<void> Function(WaffraAccountTransactionDraft)? onConfirmEntry;
@@ -61,7 +64,9 @@ class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {
    if(!mounted)return;
    await Navigator.of(context).push<void>(MaterialPageRoute(
     builder:(ctx)=>WaffraAccountContextPage(
-     api:api,accounts:accounts,english:widget.english)));
+     api:api,accounts:accounts,english:widget.english,
+     upcomingDues:widget.upcomingDues.where((d)=>accounts.any((a)=>
+      a.id==d.accountId&&!a.archived)).toList(growable:false))));
    reload();
   }catch(_){failed();}
  }

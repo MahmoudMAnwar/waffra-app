@@ -5,11 +5,34 @@ part of 'main.dart';
 /// the same Dart library; only their widget tree is now separated from State.
 /// Never navigate to a different finance source from a presentation build.
 extension _WaffraHomeRootShell on _HomeScreenState {
+ // M1003: nonfinancial recovery frame for a Home revealed while its
+ // authenticated finance source is briefly not ready. No fake balance.
+ // M1006: a restore modal blurs and darkens what is behind it. A forest
+ // background looked almost black while SQLCipher was reloading Home.
+ // Paint a full bright, protected (non-financial) surface instead of any
+ // blank/dark frame. Never expose pre-restore balances during verification.
+ Widget _m1003FinanceHandoffSurface()=>Scaffold(
+  key:const Key('m1006-protected-finance-reload-surface'),
+  backgroundColor:const Color(0xFFF8F6EF),
+  body:SafeArea(child:Center(child:Padding(
+   padding:const EdgeInsets.symmetric(horizontal:24),
+   child:Column(mainAxisSize:MainAxisSize.min,children:[
+    const Icon(Icons.shield_outlined,color:emerald,size:48),
+    const SizedBox(height:16),
+    WaffraText(waffraIsEnglish?
+     'Verifying encrypted financial data':
+     'جارٍ التحقق من البيانات المالية المشفرة',
+     textAlign:TextAlign.center,
+     style:const TextStyle(color:forest,fontWeight:FontWeight.w600)),
+    const SizedBox(height:18),
+    const SizedBox(width:28,height:28,
+     child:CircularProgressIndicator(strokeWidth:2.5,color:emerald)),
+   ])))));
  Widget _m944BuildHome()=>PopScope(
   // Let the root back policy route account/tabs before double-back exit.
   canPop:true,
   child:!ready&&_financeLoadFailure==null?
-   const SizedBox.shrink():Stack(children:[Scaffold(
+   _m1003FinanceHandoffSurface():Stack(children:[Scaffold(
   appBar:AppBar(
    toolbarHeight:_headerCompact?52:64,
    flexibleSpace:const ColoredBox(color:forest),

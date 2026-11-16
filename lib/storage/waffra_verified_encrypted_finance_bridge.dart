@@ -876,6 +876,108 @@ class WaffraVerifiedEncryptedFinanceBridge {
 
 
 
+  /// M1003 (#715): edit an existing imported row and add its FIRST account
+  /// link in ONE SQLCipher transaction. Failed validation rolls back both.
+  Future<WaffraFinanceSnapshotState> editExistingAndLinkUnassigned({
+    required WaffraEncryptedHomeWitness baseline,
+    required Map<String,Object?> expectedOriginal,
+    required Map<String,Object?> replacement,
+    required String toAccountId,
+    required bool openingExcludesHistory,
+    required bool userConfirmed,
+  })async{
+    final old=Map<String,Object?>.from(
+      jsonDecode(jsonEncode(expectedOriginal)) as Map);
+    final revised=Map<String,Object?>.from(
+      jsonDecode(jsonEncode(replacement)) as Map);
+    final id=old['id'];
+    final originalType=old['sourceType']??'manual';
+    if(!experimentalEnabled||!userConfirmed||!openingExcludesHistory||
+       id is! String||id.trim().isEmpty||id.length>128||
+       revised['id']!=id||toAccountId.trim().isEmpty||toAccountId.length>128||
+       !const {'manual','sms'}.contains(originalType)||
+       revised['sourceType']!=originalType||
+       revised['receiptPath']!=old['receiptPath']||
+       (old['goalWalletPaidMinor']??0)!=(revised['goalWalletPaidMinor']??0)||
+       (old['goalWalletPaidMinor']??0)!=0){
+      throw StateError('Unverified restored transaction account-link edit.');
+    }
+    const editable={'title','category','income','amount','date','notes',
+      'personalNotes','budgetId','merchantKey'};
+    for(final key in <String>{...old.keys,...revised.keys}){
+      if(editable.contains(key))continue;
+      if(key=='sourceType'&&old[key]==null&&revised[key]=='manual')continue;
+      if(key=='goalWalletPaidMinor'&&old[key]==null&&revised[key]==0)continue;
+      if(jsonEncode(old[key])!=jsonEncode(revised[key])){
+        throw StateError('Restored immutable finance field changed.');
+      }
+    }
+    return WaffraExperimentalWriterGate(
+      disposableDirectory:writerDirectory,experimentalEnabled:true,
+    ).withExclusiveAccess(()async{
+      await _requireActivatedUnderLock();
+      return snapshot.store.transaction(()async{
+        await WaffraAccountsSchema.requireReady(snapshot.store);
+        final before=await snapshot.read();
+        if(before.generation!=baseline.generation||
+           before.digest!=baseline.digest){
+          throw StateError('Historical finance witness changed during edit.');
+        }
+        final decoded=jsonDecode(before.values['entries'] as String? ?? '[]');
+        if(decoded is! List||decoded.any((e)=>e is! Map)){
+          throw StateError('Malformed restored encrypted ledger.');
+        }
+        final matches=decoded.where((e)=>(e as Map)['id']==id).toList();
+        if(matches.length!=1||jsonEncode(matches.single)!=jsonEncode(old)){
+          throw StateError('Historical ledger entry changed or missing.');
+        }
+        final sql=await snapshot.store.customSelect(
+          'SELECT source_json FROM fresh_finance_entries WHERE entry_id=?',
+          variables:[Variable.withString(id)]).get();
+        if(sql.length!=1||
+           jsonEncode(jsonDecode(sql.single.read<String>('source_json')))!=
+             jsonEncode(old)){
+          throw StateError('SQL restored entry projection is stale.');
+        }
+        final links=await snapshot.store.customSelect(
+          'SELECT account_id FROM fresh_finance_account_entry_links WHERE entry_id=?',
+          variables:[Variable.withString(id)]).get();
+        if(links.isNotEmpty){
+          throw StateError('Historical transaction is already account-linked.');
+        }
+        final updatedJson=jsonEncode(decoded.map((row)=>
+          (row as Map)['id']==id?revised:row).toList());
+        await WaffraEncryptedEntryProjectionGuard.reconcile(
+          store:snapshot.store,
+          previousJson:before.values['entries'] as String?,
+          updatedJson:updatedJson);
+        await WaffraAccountContextRead.attachPreviouslyUnassigned(
+          store:snapshot.store,entryId:id,accountId:toAccountId,
+          confirmedIso:DateTime.now().toIso8601String(),
+          userConfirmed:true,
+          openingExcludesHistory:openingExcludesHistory);
+        final values=Map<String,Object?>.from(before.values)
+          ..['entries']=updatedJson;
+        final committed=await snapshot.commit(
+          expectedGeneration:before.generation,fullFinanceSnapshot:values);
+        final accountReadBack=await snapshot.store.customSelect(
+          'SELECT account_id FROM fresh_finance_account_entry_links WHERE entry_id=?',
+          variables:[Variable.withString(id)]).get();
+        final rowReadBack=await snapshot.store.customSelect(
+          'SELECT source_json FROM fresh_finance_entries WHERE entry_id=?',
+          variables:[Variable.withString(id)]).get();
+        if(accountReadBack.length!=1||
+           accountReadBack.single.read<String>('account_id')!=toAccountId||
+           rowReadBack.length!=1||
+           jsonEncode(jsonDecode(rowReadBack.single.read<String>('source_json')))!=
+             jsonEncode(revised)){
+          throw StateError('Atomic restored edit/link read-back failed.');
+        }
+        return committed;
+      });
+    });
+  }
+
   /// M956: source-witnessed metadata edit plus account reassignment, atomic.
   Future<WaffraFinanceSnapshotState> editExistingAndMoveAccount({
     required WaffraEncryptedHomeWitness baseline,

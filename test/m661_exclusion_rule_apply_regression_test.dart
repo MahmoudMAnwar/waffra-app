@@ -94,10 +94,16 @@ void main() {
     source.indexOf(' Future<bool> _persist('),
     source.indexOf(' Future<void> _remove('),
    );
-   final storeWrite = persist.indexOf('await store.write(widget.ownerKey,next)');
+   // M1002: stale editor snapshots must be rejected without erasing a
+   // rule just learned through an independent SMS confirmation.
+   final storeWrite = persist.indexOf('await store.writeIfCurrent(');
    final signal = persist.indexOf('widget.onRulesChanged?.call()');
    expect(storeWrite, greaterThanOrEqualTo(0));
+   expect(persist,contains('expected:saved,next:next'));
    expect(signal, greaterThan(storeWrite));
+   final storage=File('lib/waffra_sms_local_rules.dart').readAsStringSync();
+   expect(storage,contains("throw StateError('SMS rules changed in another review. Reload first.')"));
+   expect(storage,contains('await _writeUnlocked(owner,next);'));
    expect(home, contains('onRulesChanged:()=>_receiveAutoSmsNotice()'));
    expect(home, contains('unawaited(_refreshAutoSmsInbox())'));
    expect(home, contains('await compute(waffraM632ClassifySmsQueue'));

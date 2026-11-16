@@ -5,8 +5,34 @@
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at f0def360ea75b9c865548b6f1b4fc07e9640f2c2 after #656",
   "reviewed_at": "2026-11-16",
-  "review_policy": "M942 follows original M685–M689: completion is distinct from passing tests; preserve exact owner-approved reference screens, account cash/source and authenticated SQLCipher receipt, original SMS and static FAB. Owner device/backup acceptance remains pending. M938 screenshot corrections preserve verified FAB, financial authority, explicit biometric and legacy SQLCipher recycle invariants.",
+  "review_policy": "Owner requested code-only, no manual tests or test files. Prior safety contracts remain binding. Full same-SHA QA required later.",
   "contracts": [
+    {
+      "id": "M1003-ATOMIC-RESTORED-ENTRY-BUDGET-ACCOUNT-LINK",
+      "issue": "Issue #715 / Draft PR #716",
+      "previous_behavior": "Restored historical entry editor saved metadata before linking account; nonzero opening cash needs explicit confirmation absent from edit UI; Home ready=false can be an empty screen.",
+      "approved_behavior": "Budget-only editing of a restored unassigned entry is independent of bank account association and never forces it. When the owner selects an account, require opening-balance exclusion confirmation and one source-witnessed SQLCipher transaction for existing entry edit, budgetId and first account link, with full rollback; nonfinancial private fallback on abnormal Home/auth handoff.",
+      "source_paths": [
+        "lib/waffra_home_entry_sheet.part.dart",
+        "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
+        "lib/waffra_home_root_shell.part.dart",
+        "lib/main.dart"
+      ],
+      "test_paths": [
+        "test/storage/m1003_atomic_restored_budget_account_link_test.dart",
+        "test/m1003_restore_budget_and_blank_surface_contract_test.dart",
+        "test/m495_pr402_ui_performance_regression_test.dart",
+        "test/m622_immediate_home_without_loader_test.dart",
+        "test/m623_verified_home_handoff_no_black_frame_test.dart",
+        "test/m944_home_root_shell_extraction_test.dart"
+      ],
+      "safety_invariants": [
+        "Explicit old-opening-cash attestation, no guessed link or duplicate debit, immutable source/receipt unchanged.",
+        "Exactly one existing source record/budget/link transaction with read-back and rollback on stale, missing or mismatched record.",
+        "Private screen fallback retains login, biometrics, SQLCipher and verified financial-data gates.",
+        "Real Android black-screen, historic backup, signed APK and exact-head CI require separate verification."
+      ]
+    },
     {
       "id": "M1001-M340-ORIGINAL-SAR-WITNESS",
       "issue": "Issue #712 / PR #713",
@@ -6556,8 +6582,198 @@
         ".github/workflows/m946-whole-app-feature-smoke.yml",
         ".github/workflows/finance-full-regression.yml"
       ]
+    },
+    {
+      "id": "M1002-OWNER-SMS-EXCLUSION-COUNT-AND-RULE-PERSISTENCE",
+      "issue": "Issue #714 / Draft #711",
+      "previous_behavior": "An Android owner excluded around 38 messages, but Rules > Excluded displayed 0 patterns. Native encrypted message exclusions and sender blocks are separate from optional safe reusable SMS rules; concurrent read-modify-write and missing read-back could silently lose or hide learned classifications. Sender blocking also removed some learned exclusion patterns.",
+      "approved_behavior": "Display genuine native excluded-message and blocked-sender counts alongside the independent saved reusable pattern count, never represent unavailable state as 0. After confirmed native exclusion, derive only safe reusable sender-scoped OTP/beneficiary templates; serialize encrypted owner rule merging and verify read-back. Never delete preexisting learned patterns simply for blocking sender. Use same owner-serialized learning for income, expense, transfer and manual review paths, with stale-form protection.",
+      "source_paths": [
+        "lib/waffra_sms_local_rules.dart",
+        "lib/waffra_sms_rule_settings_page.dart",
+        "lib/waffra_home_sms_inbox.part.dart",
+        "lib/waffra_home_sms_management.part.dart",
+        "lib/waffra_home_sms_rules.part.dart"
+      ],
+      "test_paths": [
+        "test/m1002_owner_sms_rule_atomic_review_test.dart",
+        "test/m661_exclusion_rule_apply_regression_test.dart",
+        "test/m462_smart_sms_rule_review_test.dart",
+        "test/m647_m652_financial_activity_regression_test.dart",
+        "test/m665_sms_review_structural_learning_test.dart"
+      ],
+      "safety_invariants": [
+        "Already excluded native SMS and sender policy are distinct from learned rules, and neither source may be reported as empty when unavailable.",
+        "Do not automatically create a future-message exclusion rule from an ambiguous financial SMS, or store OTP codes, numbers, bank balances or whole SMS bodies.",
+        "No automatic finance posts, source migration or SMS deletion. All four custom rule kinds use the same owner-verified secure storage.",
+        "No new test files or manually executed QA yet per owner code-only instruction; actual Android 38-message UAT remains pending."
+      ]
+    },
+    {
+      "id": "M1000-INTEGRITY",
+      "issue": "Issue #710 / Draft PR #711",
+      "previous_behavior": "Financial accounts previously had reconciliation readers, but no dedicated independently reconstructed witnessed trust-center display.",
+      "approved_behavior": "A read-only source-witnessed SQLCipher balance comparison reports disparities and unassigned old entries without modifying money.",
+      "source_paths": [
+        "lib/storage/waffra_financial_trust_read.dart",
+        "lib/waffra_financial_trust_page.dart",
+        "lib/storage/waffra_verified_accounts_api.dart"
+      ],
+      "test_paths": [
+        "test/m1000_financial_trust_contract_regression_test.dart"
+      ],
+      "safety_invariants": [
+        "This is owner-approved source-code-only work. No new tests were added or run manually; QA intentionally deferred.",
+        "No unauthenticated financial read, backup/source switch, auto cash repair, duplicate deletion, or alternate money writer.",
+        "Existing SQLCipher verified writer, biometric and backup staging must remain unchanged; all code remains Draft."
+      ]
+    },
+    {
+      "id": "M1000-BACKUP",
+      "issue": "Issue #710 / Draft PR #711",
+      "previous_behavior": "Restore confirmation showed counts only, without a complete authenticated transaction-impact preview.",
+      "approved_behavior": "Confirm archive fields, unique identities, amounts and account/goals/recurring counts; compare active vs candidate source before owner confirms; never bypass staging.",
+      "source_paths": [
+        "lib/waffra_backup_safety_preview.dart",
+        "lib/waffra_financial_change_review.dart",
+        "lib/storage/waffra_verified_active_restore_preflight.dart",
+        "lib/waffra_home_account_tools.part.dart"
+      ],
+      "test_paths": [
+        "test/m1000_financial_trust_contract_regression_test.dart"
+      ],
+      "safety_invariants": [
+        "This is owner-approved source-code-only work. No new tests were added or run manually; QA intentionally deferred.",
+        "No unauthenticated financial read, backup/source switch, auto cash repair, duplicate deletion, or alternate money writer.",
+        "Existing SQLCipher verified writer, biometric and backup staging must remain unchanged; all code remains Draft."
+      ]
+    },
+    {
+      "id": "M1000-AUDIT-PARTIAL",
+      "issue": "Issue #710 / Draft PR #711",
+      "previous_behavior": "No durable per-transaction before/after edit audit.",
+      "approved_behavior": "Introduce a read-only financial diff preview for verified before/after restores; persistent verified-writer audit history remains explicitly unimplemented in this Draft.",
+      "source_paths": [
+        "lib/waffra_financial_change_review.dart"
+      ],
+      "test_paths": [
+        "test/m1000_financial_trust_contract_regression_test.dart"
+      ],
+      "safety_invariants": [
+        "This is owner-approved source-code-only work. No new tests were added or run manually; QA intentionally deferred.",
+        "No unauthenticated financial read, backup/source switch, auto cash repair, duplicate deletion, or alternate money writer.",
+        "Existing SQLCipher verified writer, biometric and backup staging must remain unchanged; all code remains Draft."
+      ]
+    },
+    {
+      "id": "M1000-PERFORMANCE",
+      "issue": "Issue #710 / Draft PR #711",
+      "previous_behavior": "Account history already uses keyset cursor but searches were bounded to simple month/account filters.",
+      "approved_behavior": "Preserve stable SQLCipher keyset order and a bounded 50-row interface while applying optional searchable fields before database LIMIT; performance remains unprofiled.",
+      "source_paths": [
+        "lib/storage/waffra_sqlcipher_history_pager.dart",
+        "lib/waffra_account_context_page.dart"
+      ],
+      "test_paths": [
+        "test/m1000_financial_trust_contract_regression_test.dart"
+      ],
+      "safety_invariants": [
+        "This is owner-approved source-code-only work. No new tests were added or run manually; QA intentionally deferred.",
+        "No unauthenticated financial read, backup/source switch, auto cash repair, duplicate deletion, or alternate money writer.",
+        "Existing SQLCipher verified writer, biometric and backup staging must remain unchanged; all code remains Draft."
+      ]
+    },
+    {
+      "id": "M1000-SEARCH",
+      "issue": "Issue #710 / Draft PR #711",
+      "previous_behavior": "No cross-period typed encrypted query on account context page.",
+      "approved_behavior": "Only read from verified SQLCipher with account, text, category, time, type and exact halala range filters; reject unsafe amount precision.",
+      "source_paths": [
+        "lib/storage/waffra_verified_accounts_api.dart",
+        "lib/storage/waffra_sqlcipher_history_pager.dart",
+        "lib/waffra_account_context_page.dart"
+      ],
+      "test_paths": [
+        "test/m1000_financial_trust_contract_regression_test.dart",
+        "test/m669_sms_review_category_search_test.dart"
+      ],
+      "safety_invariants": [
+        "This is owner-approved source-code-only work. No new tests were added or run manually; QA intentionally deferred.",
+        "No unauthenticated financial read, backup/source switch, auto cash repair, duplicate deletion, or alternate money writer.",
+        "Existing SQLCipher verified writer, biometric and backup staging must remain unchanged; all code remains Draft."
+      ]
+    },
+    {
+      "id": "M1000-RECURRING",
+      "issue": "Issue #710 / Draft PR #711",
+      "previous_behavior": "Potential duplicate recurring schedule evidence not surfaced in financial integrity view.",
+      "approved_behavior": "Warn on matching account/day/title/halalas only, never remove or charge an entry; account-linked schedules only.",
+      "source_paths": [
+        "lib/waffra_financial_trust_policy.dart",
+        "lib/waffra_financial_trust_page.dart",
+        "lib/waffra_home_verified_account_flows.part.dart"
+      ],
+      "test_paths": [
+        "test/m1000_financial_trust_contract_regression_test.dart"
+      ],
+      "safety_invariants": [
+        "This is owner-approved source-code-only work. No new tests were added or run manually; QA intentionally deferred.",
+        "No unauthenticated financial read, backup/source switch, auto cash repair, duplicate deletion, or alternate money writer.",
+        "Existing SQLCipher verified writer, biometric and backup staging must remain unchanged; all code remains Draft."
+      ]
+    },
+    {
+      "id": "M1000-FORECAST",
+      "issue": "Issue #710 / Draft PR #711",
+      "previous_behavior": "Verified recurring schedules were not separately projected beside account balances.",
+      "approved_behavior": "Show calendar-bounded SAR halala projection from verified account-linked due items; include overdue unpaid items today, avoid any live balance write.",
+      "source_paths": [
+        "lib/waffra_financial_trust_policy.dart",
+        "lib/waffra_financial_trust_page.dart",
+        "lib/waffra_accounts_manager_page.dart"
+      ],
+      "test_paths": [
+        "test/m1000_financial_trust_contract_regression_test.dart"
+      ],
+      "safety_invariants": [
+        "This is owner-approved source-code-only work. No new tests were added or run manually; QA intentionally deferred.",
+        "No unauthenticated financial read, backup/source switch, auto cash repair, duplicate deletion, or alternate money writer.",
+        "Existing SQLCipher verified writer, biometric and backup staging must remain unchanged; all code remains Draft."
+      ]
+    },
+    {
+      "id": "M1000-A11Y-PARTIAL",
+      "issue": "Issue #710 / Draft PR #711",
+      "previous_behavior": "Full-app accessibility audit not yet executed.",
+      "approved_behavior": "Use localized integrity summary, screen semantics and safe error labels; preserve FAB/Snackbar. Full-app font/RTL audit still pending.",
+      "source_paths": [
+        "lib/waffra_financial_trust_page.dart",
+        "lib/waffra_account_context_page.dart"
+      ],
+      "test_paths": [
+        "test/m1000_financial_trust_contract_regression_test.dart"
+      ],
+      "safety_invariants": [
+        "This is owner-approved source-code-only work. No new tests were added or run manually; QA intentionally deferred.",
+        "No unauthenticated financial read, backup/source switch, auto cash repair, duplicate deletion, or alternate money writer.",
+        "Existing SQLCipher verified writer, biometric and backup staging must remain unchanged; all code remains Draft."
+      ]
     }
   ],
+  "m1006_restore_handoff": {
+    "issue": "Issue #715 / Draft PR #716",
+    "source": "lib/waffra_home_account_tools.part.dart; lib/waffra_home_finance_recovery.part.dart; lib/waffra_home_root_shell.part.dart; lib/main.dart",
+    "evidence": "After SQLCipher restore, Home reload clears ready until verification. A dark modal barrier over an unmounted/green placeholder can appear black. _loadFinanceSafely returns normally after recording verification failure.",
+    "approved": "Render a pale, nonfinancial progress scene during unready Home. Do not treat a committed restore as fully verified until Home sets ready and no finance failure; otherwise surface safe post-commit recovery without deleting or retrying writes.",
+    "test_path": "test/m1006_restore_handoff_no_black_background_test.dart",
+    "safeguards": [
+      "No optimistic old finance data displayed while the verified source reloads.",
+      "Keep biometric, AEAD archive password, SQLCipher writer and transaction count checks.",
+      "No false restore-success toast or dialog dismissal after a swallowed Home verification error.",
+      "No records, attachment bytes, categories or linked balances modified by this presentation fix."
+    ],
+    "physical_android_reproduction": "pending"
+  },
   "m1005": {
     "previous_behavior": "Notification Exclude could return false without a visible route-level message and pending sender counters may look unchanged. OTP native/Flutter parsers did not cover common 'is your code for Barakah' pattern.",
     "approved_behavior": "Confirm native encrypted exclusion, report visible route-local success/failure, refresh the existing queue against saved safe exclusion and four-way rules, and recognize nonfinancial English OTP service phrasing without logging secrets or excluding financial money.",

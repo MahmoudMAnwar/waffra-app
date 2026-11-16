@@ -227,7 +227,12 @@ void main(){
   expect(home,isNot(contains("Key('waffra-sms-teach-action')")));
   expect(home,isNot(contains("decision=='teach'")));
   expect(home,contains('Future<bool> _learnSafeSmsRule({'));
-  expect(home,contains('await store.write(_smsRuleOwnerKey,updated);'));
+  // M1002 serial owner-scoped learn+read-back replaces stale direct writes.
+  expect(home,contains('await store.learnReviewedCandidates('));
+  expect(home,contains('final latest=await store.read(_smsRuleOwnerKey);'));
+  final storage=File('lib/waffra_sms_local_rules.dart').readAsStringSync();
+  expect(storage,contains('return WaffraSmsRuleLearningResult('));
+  expect(storage,contains('Saved SMS rules differ from the requested patterns.'));
   final review=home.substring(
    home.indexOf(' Future<void> _reviewAutoSmsCandidates('),
    home.indexOf(' void _receiveSharedSms('));

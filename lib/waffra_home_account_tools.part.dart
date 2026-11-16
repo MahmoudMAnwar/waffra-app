@@ -262,6 +262,14 @@ extension _WaffraHomeAccountTools on _HomeScreenState {
       // candidate; the existing rescue/preflight/atomic restore then applies.
       // An in-place upgrade on legacy storage continues down its old route.
       if(raw['format']=='waffra-backup'&&raw['version']==24){
+       final preview=WaffraBackupSafetyPreview.legacy(raw);
+       if(!preview.safeToContinue)throw const FormatException(
+        'Duplicate immutable transaction IDs in authenticated backup.');
+       if(!ctx.mounted||!mounted)return;
+       final review=await confirm(
+        waffraIsEnglish?'Review old backup before restore':'معاينة النسخة القديمة قبل الاستعادة',
+        preview.summary(waffraIsEnglish));
+       if(review!=true||!ctx.mounted||!mounted)return;
        final source=await _financeAuthority.load(
         route:WaffraFinanceRoute.backupRestore);
        if(source.encryptedWitness!=null){
@@ -305,10 +313,13 @@ extension _WaffraHomeAccountTools on _HomeScreenState {
         password:restoreSecret.text,userConfirmed:true,accountArchive:true);
        if(!ctx.mounted||!mounted)return;
        final approved=await confirm(
-        waffraIsEnglish?'Replace encrypted finance?':'استبدال البيانات المالية؟',
-        waffraIsEnglish
-         ?'Restore ${result.transactionCount} transactions and ${result.receiptCount} receipts?'
-         :'هل تريد استعادة ${result.transactionCount} معاملة و${result.receiptCount} مرفق؟');
+        waffraIsEnglish?'Review verified backup before restore':'معاينة النسخة المشفرة قبل الاستعادة',
+        result.backupReport.summary(waffraIsEnglish)+
+         (result.comparison==null?'':
+          '\n'+result.comparison!.describe(waffraIsEnglish))+
+         (waffraIsEnglish?
+          '\nThe current encrypted data will be replaced after confirmation.':
+          '\nستُستبدل البيانات المشفرة الحالية بعد التأكيد.'));
        if(approved!=true||!mounted||!ctx.mounted)return;
        // M938: the user already passed mandatory biometric on opening
        // backupDialog(); this SAME modal keeps archive-password AEAD,
@@ -330,6 +341,16 @@ extension _WaffraHomeAccountTools on _HomeScreenState {
        // The authoritative encrypted snapshot, not a decoded backup in
        // memory, becomes the source for Home and widget after one commit.
        await _loadFinanceSafely();
+       // M1006: _loadFinanceSafely() deliberately absorbs source errors and
+       // records _financeLoadFailure instead of throwing. The SQLCipher
+       // restore may be COMMITTED but its Home projection may NOT be ready.
+       // Do not close this modal or report success on an unverified reload.
+       restoreStage='HOME_VERIFICATION';
+       if(!mounted)return;
+       if(!ready||_financeLoadFailure!=null){
+        restoreStage='HOME_RELOAD_FAILED';
+        throw StateError('M1006_RESTORED_HOME_UNVERIFIED');
+       }
        if(authenticatedLegacyRows!=null&&mounted){
         // M620: preflight attests an isolated candidate; verify live SQLCipher
         // AGAIN after the transaction and compare stable IDs, money and dates.

@@ -248,6 +248,8 @@ extension _WaffraHomeSmsManagement on _HomeScreenState {
   final individual=ids.where((id)=>!bySender.contains(id)).toList();
   final done=<String>{};
   var failed=false;
+  var learnedPatterns=0;
+  String? ruleWarning;
   try{
    if(senderNames.isNotEmpty){
     if(await WaffraAutoSms.excludeSenders(senderNames)){
@@ -267,13 +269,13 @@ extension _WaffraHomeSmsManagement on _HomeScreenState {
     setState(()=>_autoSmsPending.removeWhere(
      (row)=>done.contains(row['id'])));
    }
-   // Store only safe, sender-scoped exclusion keywords in one encrypted
-   // write. No OTP digits, account details, entire SMS texts or 1000 writes.
+   // These are two different owner-encrypted policies: native message
+   // exclusions and reusable safe local rules. Never interpret an absent
+   // reusable pattern as an absent/native-failed message exclusion.
    if(done.isNotEmpty&&_smsRuleOwnerKey.isNotEmpty){
     try{
-     final store=const WaffraSmsLocalRuleStore();
-     var rules=await store.read(_smsRuleOwnerKey);
-     var changed=false,index=0;
+     final candidates=<WaffraSmsLocalRule>[];
+     var index=0;
      for(final id in individual){
       if(!done.contains(id))continue;
       final row=pending[id],body=row?['body'],sender=row?['sender'];
@@ -283,27 +285,28 @@ extension _WaffraHomeSmsManagement on _HomeScreenState {
       }
       final rule=WaffraSmsLocalRules.suggestedRule(
        body:body,sender:sender,kind:'excluded',confidentOnly:true);
-      if(rule==null)continue;
-      final next=WaffraSmsLocalRules.upsertLearned(
-       existing:rules,candidate:rule);
-      if(!identical(next,rules)){changed=true;rules=next;}
+      if(rule!=null)candidates.add(rule);
      }
-     if(changed){
-      await store.write(_smsRuleOwnerKey,rules);
-      // Existing messages, not just future SMS, must be re-evaluated.
-      // The refresh below reloads the full current native pending queue.
-     }
+     final saved=await const WaffraSmsLocalRuleStore()
+      .learnReviewedCandidates(_smsRuleOwnerKey,candidates);
+     learnedPatterns=saved.addedOrUpdated;
+     if(saved.changed)_receiveAutoSmsNotice();
     }catch(_){
-     // A failed optional learning update cannot undo durable exclusion.
+     ruleWarning=waffraIsEnglish?
+      'Messages were excluded, but encrypted rule learning could not be verified.':
+      'الرسائل اتستبعدت، لكن تعذر التحقق من حفظ قواعد الاستبعاد المشفرة.';
     }
+   }else if(done.isNotEmpty){
+    ruleWarning=waffraIsEnglish?
+     'Messages were excluded; rules need a signed-in verified owner.':
+     'الرسائل اتستبعدت؛ حفظ القواعد يتطلب مستخدمًا موثقًا.';
    }
   }catch(e){
    failed=true;
    debugPrint('M592 native exclusion rejected: ${e.runtimeType}');
   }
-  // M1005: refresh the native owner queue on every durable exclusion,
-  // even when a safe reusable keyword cannot be learned. Otherwise the
-  // Notifications route can keep showing the old list and old rule matches.
+  // M1005: refresh current native pending rows after durable excludes.
+  // M1002 owner-serialized encrypted rule learning/read-back is retained.
   if(mounted&&done.isNotEmpty){
    await _refreshAutoSmsInbox();
   }
@@ -314,9 +317,13 @@ extension _WaffraHomeSmsManagement on _HomeScreenState {
     'بعض الرسائل المحددة ما زالت للمراجعة.',isError:true);
    return false;
   }
-  snackSuccess(context,waffraIsEnglish?
-   'Messages moved to Excluded for 30 days. Restore them there.':
-   'الرسائل بقت في قائمة المستبعدة لمدة 30 يوم، وتقدر ترجعها من هناك.');
+  if(ruleWarning!=null){
+   snack(context,ruleWarning,isError:true);
+  }else{
+   snackSuccess(context,waffraIsEnglish?
+    'Excluded ${done.length} messages; ${learnedPatterns} reusable safe rule changes saved. Individual exclusions remain in Android.':
+    'تم استبعاد ${done.length} رسالة وحفظ ${learnedPatterns} تغيير آمن في القواعد. الاستبعاد الفردي محفوظ على أندرويد.');
+  }
   return true;
  }
  Future<void> _m549OpenNotifications()async{
