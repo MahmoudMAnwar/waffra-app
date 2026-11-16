@@ -172,6 +172,16 @@ abstract final class WaffraBankSmsFactsParser {
   // NOT proof that the receiving owner also owns the source account.
   // Keep an otherwise unspecified "Credit Transfer" in manual transfer
   // review, but explicitly incoming/wāreda notices are income candidates.
+  // M1009: SAMA describes payment-rail direction, not that both bank
+  // accounts belong to this owner. Only an explicit own-account phrase is
+  // a transfer candidate; external outgoing/incoming is expense/income.
+  final ownAccountTransfer=RegExp(
+   r'بين\s+حسابات(?:ك|ي)|الى\s+حسابك\s+(?:الجاري|الاستثماري)|'
+   r'من\s+حسابك\s+(?:الجاري|الاستثماري)|'
+   r'between\s+(?:your|my|own)\s+accounts|'
+   r'to\s+your\s+(?:current|investment)\s+account|'
+   r'from\s+your\s+(?:current|investment)\s+account',
+   caseSensitive:false).hasMatch(header);
   final explicitlyIncoming=RegExp(
    r'حوال[ةه](?:\s+(?:مالي[ةه]|داخلي[ةه]))?\s+وارد[ةه]|'
    r'تحويل(?:\s+بنكي)?\s+وارد|'
@@ -179,12 +189,16 @@ abstract final class WaffraBankSmsFactsParser {
    r'\btransfer\s+received\b',
    caseSensitive:false).hasMatch(header);
   final explicitlyOutgoing=RegExp(
-   r'حوال[ةه](?:\s+(?:مالي[ةه]|داخلي[ةه]))?\s+صادر[ةه]|'
-   r'تحويل(?:\s+بنكي)?\s+صادر|'
-   r'\boutgoing\s+(?:bank\s+)?transfer\b',
+   r'حوال[ةه](?:\s+(?:مالي[ةه]|داخلي[ةه]|محلي[ةه]|دولي[ةه]))?\s+صادر[ةه]|'
+   r'تحويل(?:\s+(?:بنكي|محلي|داخلي|دولي))?\s+صادر|'
+   r'\b(?:outgoing|debit)\s+(?:bank\s+)?transfer\b|'
+   r'\btransfer\s+(?:sent|out|to)\b',
    caseSensitive:false).hasMatch(header);
   final kind=securityChallenge?WaffraBankOperationKind.uncertain:
    isCard?WaffraBankOperationKind.cardSettlement:
+   ownAccountTransfer&&isTransfer?WaffraBankOperationKind.transfer:
+   explicitlyOutgoing&&!explicitlyIncoming?
+    WaffraBankOperationKind.expense:
    explicitlyIncoming&&!explicitlyOutgoing?
     WaffraBankOperationKind.income:
    isTransfer?WaffraBankOperationKind.transfer:
