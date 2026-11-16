@@ -64,7 +64,8 @@ void main(){
 s.includes('currentRulesRevision:ruleRevision')?null:null;
   expect(source,contains('if(stopwatch.elapsed>=budget)'));
   expect(source,contains('summary[\'remaining\']='));
-  expect(source,contains('await WaffraAutoSms.markBackgroundReviewed(id,revision:ruleRevision)'));
+  expect(source,contains('await WaffraAutoSms.markBackgroundReviewed(id,revision:ruleRevision,'));
+  expect(source,contains('notificationDelivered:delivered'));
   expect(source,contains('await WaffraAutoSms.acknowledgeCommitted([id])'));
   expect(source,isNot(contains('actionable.take(25)')));
  });
@@ -90,7 +91,7 @@ s.includes('currentRulesRevision:ruleRevision')?null:null;
  test('M1020 no checkpoint before review and ACK outcome on worker channel',(){
   final worker=File('native/WaffraAutoSmsWorker.kt').readAsStringSync();
   expect(worker,contains('"markAutoBankSmsBackgroundReviewed" ->'));
-  expect(worker,contains('WaffraAutoSmsStore.markBackgroundSmsReviewed(context, id)'));
+  expect(worker,contains('WaffraAutoSmsStore.markBackgroundSmsReviewed('));
   final dart=File('lib/waffra_auto_sms.dart').readAsStringSync();
   expect(dart,contains("return _boolCall('markAutoBankSmsBackgroundReviewed',{'id':id,'revision':revision});"));
   final poster=File('lib/waffra_auto_sms_autopost.part.dart').readAsStringSync();
