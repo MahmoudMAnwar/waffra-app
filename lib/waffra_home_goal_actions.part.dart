@@ -929,41 +929,18 @@ extension _WaffraHomeGoalActions on _HomeScreenState {
         }
 
  }
- Future<void> _m689GoalActions(SavingGoal g)async{
-  await showModalBottomSheet<void>(
-   context:context,showDragHandle:true,
-   builder:(sheet)=>SafeArea(child:Column(
-    mainAxisSize:MainAxisSize.min,children:[
-     ListTile(
-      title:WaffraText(g.name,style:const TextStyle(
-       fontSize:18,fontWeight:FontWeight.bold)),
-      subtitle:WaffraText(waffraIsEnglish?
-       'Choose an action for this goal':'اختر إجراء للهدف')),
-     if(g.target<=0||g.saved<g.target)ListTile(
-      leading:const Icon(Icons.toll_outlined,color:emerald),
-      title:WaffraText(waffraIsEnglish?'Save now':'ادخر الآن'),
-      onTap:(){Navigator.pop(sheet);unawaited(fundGoal(g));}),
-     ListTile(
-      leading:const Icon(Icons.edit_outlined,color:emerald),
-      title:WaffraText(waffraIsEnglish?'Edit goal':'تعديل الهدف'),
-      onTap:(){Navigator.pop(sheet);
-       unawaited(_handleGoalCardAction(g,'edit'));}),
-     if(g.saved>0)ListTile(
-      leading:const Icon(Icons.account_balance_wallet_outlined,color:emerald),
-      title:WaffraText(waffraIsEnglish?'Release savings':'سحب المدخرات'),
-      onTap:(){Navigator.pop(sheet);
-       unawaited(_handleGoalCardAction(g,'release'));}),
-     SwitchListTile.adaptive(
-      key:Key('waffra-goal-active-switch-'+g.id),
-      title:WaffraText(waffraIsEnglish?'Goal active':'حالة الهدف'),
-      value:g.active,
-      onChanged:(enabled){Navigator.pop(sheet);
-       unawaited(setGoalActive(g,enabled));}),
-     ListTile(
-      leading:const Icon(Icons.delete_outline_rounded,color:Colors.deepOrange),
-      title:WaffraText(waffraIsEnglish?'Delete goal':'حذف الهدف'),
-      onTap:(){Navigator.pop(sheet);
-       unawaited(_handleGoalCardAction(g,'delete'));}),
-    ])));
+ /// M1021: the old tap-to-open "Save now" sheet was removed. Only the
+ /// explicit goal-header management popup dispatches these secondary actions.
+ /// Deposit, editing and account details appear directly below each card.
+ Future<void> _m689GoalActions(SavingGoal g,String action)async{
+  if(action=='release'&&g.saved>0){
+   await _handleGoalCardAction(g,'release');
+   return;
+  }
+  if(action=='toggle'){
+   await setGoalActive(g,!g.active);
+   return;
+  }
+  if(action=='delete')await _handleGoalCardAction(g,'delete');
  }
 }
