@@ -18,24 +18,26 @@ class WaffraAutoSmsReceiver : BroadcastReceiver() {
         try {
             val incoming = Telephony.Sms.Intents.getMessagesFromIntent(intent)
             if (incoming.isNullOrEmpty()) return
-            val bySender = linkedMapOf<String, StringBuilder>()
-            val receivedDates = mutableMapOf<String, Long>()
+            // M1029: one sender can emit independent financial messages
+            // within the same broadcast. Group only PDUs sharing sender,
+            // service-center timestamp and SMSC, preserving PDU order.
+            // 3GPP/3GPP2 multipart UDH on real devices remains an acceptance
+            // scenario; no cross-timestamp text is silently concatenated.
+            val bySenderAndTimestamp = linkedMapOf<Triple<String, Long, String>, StringBuilder>()
             for (sms in incoming) {
                 val sender = sms.displayOriginatingAddress ?: continue
-                bySender.getOrPut(sender) { StringBuilder() }
+                val identity = Triple(sender, sms.timestampMillis, sms.serviceCenterAddress ?: "")
+                bySenderAndTimestamp.getOrPut(identity) { StringBuilder() }
                     .append(sms.displayMessageBody ?: "")
-                receivedDates[sender] = minOf(
-                    receivedDates[sender] ?: sms.timestampMillis,
-                    sms.timestampMillis
-                )
             }
             // M1018 / #735: first persist every accepted SMS, then request
             // one successor for this broadcast. Multiple senders must not
             // create multiple expensive FlutterEngine jobs.
             var shouldEnqueue = false
-            for ((sender, parts) in bySender) {
-                if (WaffraAutoSmsStore.offer(context, sender, parts.toString(),
-                        receivedDates[sender] ?: System.currentTimeMillis())) {
+            for ((messageKey, parts) in bySenderAndTimestamp) {
+                val sender = messageKey.first
+                val receivedAt = messageKey.second
+                if (WaffraAutoSmsStore.offer(context, sender, parts.toString(), receivedAt)) {
                     shouldEnqueue = true
                 }
             }
