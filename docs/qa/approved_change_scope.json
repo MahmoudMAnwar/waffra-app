@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
-  "change_id": "M1007-ISSUE721-PR722-AUTOMATIC-GLOBAL-FOUR-KIND-LEARNING-NO-POPUP-20261116",
-  "human_scope_review": "Owner superseded manual teach popup and manual scope selection default: learn safe reusable income, expense, transfer, exclusion rules automatically from a successful user correction/confirmed transaction or explicit exclusion, across all senders by default. Previously learned sender-scoped rules remain unchanged, with optional editor controls; protect posted money, conflicts, verified ownership and SQLCipher.",
+  "change_id": "M1007-M1008-ISSUES721-723-PR722-USER-AUTHORIZED-SAFE-LEARNING-AND-MULTI-ACCOUNT-P0-20261116",
+  "human_scope_review": "Owner requested safe automatic global SMS learning with no popup, then explicitly reported P0 multi-account SMS income/expense missing from activities, inconsistent selected-account summary and balances; asked for whole-code investigation. Keep work inside current Draft PR #722 before starting the next PR, with separate Issue #723, full QA and no banking writer, account, backup or historical transaction mutation by presentation fixes.",
   "user_requested_changes": [
     "Remove the 'تتعلم وفرة من التصحيح ده؟' teaching dialog entirely after a confirmed SMS income/expense correction; learn silently instead.",
     "Automatically learn safe reusable rules for income, expense, transfer and exclusion after user-confirmed actions, defaulting new learned rules to all SMS senders.",
@@ -10,20 +10,32 @@
     "Only learn safe structural OTP/beneficiary exclusions; do not exclude posted financial or mixed-message evidence even if keywords match.",
     "Allow a conservative senderless merchant/category suggestion from a confirmed correction when the original SMS kind is uncertain; never silently override an independently proved bank direction.",
     "No global financial auto-post authorization, no automatic ledger writes, no native SMS deletion and no change to verified account/suffix/SQLCipher/backup guarantees.",
-    "Add executable four-kind auto learning, safe cross-sender matching and no-teaching-popup tests to mandatory M946 suite."
+    "Add executable four-kind auto learning, safe cross-sender matching and no-teaching-popup tests to mandatory M946 suite.",
+    "Investigate P0 selected-account SMS save not appearing or updating Home monthly summary and current account balance with multiple bank/wallet accounts; fix all verified Home account projections and period caches after confirmed bank SMS writes.",
+    "Read back verified account balances and exact all-time account entry IDs after SMS commit before claiming coherent Home state; never retry a confirmed debit when UI refresh fails.",
+    "Fix Home pull-to-refresh to invalidate stale ledger period indexes and revalidate account projections even on unchanged finance digest.",
+    "Audit and fix related stale account presentation after verified financial delete, undo and full delete, preserving SQLCipher safety and user confirmations.",
+    "Add real disposable encrypted SQLCipher two-account SMS history/balance tests and direct source UI refresh contracts to mandatory M946 money shard."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
+    "lib/waffra_home_delete_all_transactions.part.dart",
+    "lib/waffra_home_entry_sheet.part.dart",
     "lib/waffra_home_sms_confirmation.part.dart",
     "lib/waffra_home_sms_management.part.dart",
     "lib/waffra_home_sms_rules.part.dart",
+    "lib/waffra_home_transaction_ledger_actions.part.dart",
+    "lib/waffra_home_verified_account_flows.part.dart",
+    "lib/waffra_home_verified_refresh.part.dart",
     "lib/waffra_sms_local_rules.dart",
     "lib/waffra_sms_rule_settings_page.dart",
     "scripts/qa/m946_full_app_smoke_matrix.py",
-    "test/m1007_sms_rule_scope_test.dart"
+    "test/m1007_sms_rule_scope_test.dart",
+    "test/m1008_sms_account_projection_refresh_regression_test.dart",
+    "test/storage/m1008_two_accounts_sms_reconciliation_test.dart"
   ],
   "bounded_sections": {
     "lib/waffra_sms_local_rules.dart": [
@@ -50,6 +62,10 @@
     ],
     "lib/waffra_home_sms_confirmation.part.dart": [
       {
+        "start": " Future<void> _m565ConfirmSms({",
+        "end": " // M615: consistent, responsive detail rows with clear RTL text margins."
+      },
+      {
         "start": " Widget _m615ReviewDetail(",
         "end": "  Future<void> _m983OpenSmsTypedTemplate({"
       },
@@ -72,6 +88,36 @@
       {
         "start": " Future<bool> _learnSafeSmsRule({",
         "end": " /// Manual entries have no bank SMS sender."
+      }
+    ],
+    "lib/waffra_home_entry_sheet.part.dart": [
+      {
+        "start": "   if(smsEditorDraftKey!=null)_m492SmsEditorDrafts.remove(smsEditorDraftKey);",
+        "end": "   // No -> edit learns a confirmed sender+last-four bank identity only"
+      }
+    ],
+    "lib/waffra_home_verified_refresh.part.dart": [
+      {
+        "start": " Future<void> _refreshFromVerifiedFinance()async {",
+        "end": null
+      }
+    ],
+    "lib/waffra_home_verified_account_flows.part.dart": [
+      {
+        "start": " Future<void> _m467RefreshHomeAccounts()async{",
+        "end": " Future<void> _m468ReadVerifiedAccountsOnce()async{"
+      }
+    ],
+    "lib/waffra_home_transaction_ledger_actions.part.dart": [
+      {
+        "start": " void _publishVerifiedTransactionLedger(",
+        "end": " Future<void> _deleteVerifiedEntry("
+      }
+    ],
+    "lib/waffra_home_delete_all_transactions.part.dart": [
+      {
+        "start": " Future<void> confirmDeleteAllEntries() async {",
+        "end": null
       }
     ]
   },
