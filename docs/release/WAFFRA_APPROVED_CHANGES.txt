@@ -1085,3 +1085,9 @@ M969 / Issue #670 / Draft #665: real M120 Android SQLCipher receipt restart asse
 - Approved change: Removed manual SMS correction teaching popup; after verified user-confirmed save/exclusion, safe non-posting four-kind patterns now learn globally by default with legacy sender scope retained, conservative merchant/OTP cues and financial-transaction protection. No device acceptance claimed.
 - Changed production paths: lib/waffra_home_sms_confirmation.part.dart, lib/waffra_home_sms_management.part.dart, lib/waffra_home_sms_rules.part.dart, lib/waffra_sms_local_rules.dart, lib/waffra_sms_rule_settings_page.dart
 - Verification: exact-head CI and physical Android evidence remain separate, not approved merely by these notes.
+
+[M449 REVIEWED UPDATE — ISSUE #723 — PR #722 / P0 multi-account account-projection fix]
+- Reviewed source SHA: 09d733171dfbb07a9b1d26e2dbcc4ef05f77254e
+- Approved change: Owner reported P0 multi-account SMS save missing from filtered activities and stale monthly/account balances. Both confirmed SMS UI routes now invalidate Home period cache and re-read owner-verified SQLCipher account IDs/balances without repeating ledger writes; pull refresh, verified delete/undo/full delete and competing account reads now revalidate presentation. Real disposable two-account source parity tests added; physical device and old backup remain unverified.
+- Changed production paths: lib/waffra_home_entry_sheet.part.dart, lib/waffra_home_sms_confirmation.part.dart, lib/waffra_home_verified_refresh.part.dart, lib/waffra_home_verified_account_flows.part.dart, lib/waffra_home_transaction_ledger_actions.part.dart, lib/waffra_home_delete_all_transactions.part.dart
+- Verification: exact-head CI and physical Android evidence remain separate, not approved merely by these notes.
