@@ -1,157 +1,76 @@
 {
   "contract_version": 1,
-  "change_id": "M1016-M1020-ISSUES732-734-735-736-737-SMS-CHECKPOINTED-BACKGROUND-20261116",
-  "human_scope_review": "Issue #732 native financial intake, Issue #734 bounded all-candidate background draining, Issue #735 lossless event-driven wakeup for later bank SMS using WorkManager APPEND_OR_REPLACE and single enqueue per Android broadcast. No changes to verified money auth, rules, encrypted queue, 55-second timeout or 1000 native capacity. Physical device UAT required. Issue #736 capacity saturation: track non-sensitive retry-needed marker; enqueue worker even when finance-eligible live SMS cannot be offered because encrypted queue is full; after background run attempt bounded cursor-safe native history refill if space exists. Requires Android inbox retention; no eviction or money bypass. Issue #737: bound Dart processing to <=25 newly-unattempted SMS and target 35s, persist encrypted per-SMS review attempts only after review decision or verified finance ACK, return needsContinuation to Java worker and APPEND_OR_REPLACE next work. Reconcile stale M506/M549/M1018 tests from CI; preserve 55s native watchdog and fail-closed safety.",
+  "change_id": "M1021-ISSUE738-SAVINGS-GOAL-CARD-INLINE-ACTIONS-20261116",
+  "human_scope_review": "Issue #738: user-approved screenshots show the Savings Goal Due card with three bottom buttons: Quick deposit, Edit goal, Account details. Place same three directly below every Savings Goals card; remove whole-card bottom-sheet tap; preserve per-goal management (release, toggle active, delete) via explicit header overflow. No changes to due card, money arithmetic, SQLCipher or global FAB.",
   "user_requested_changes": [
-    "Prevent arbitrary nonfinancial personal SMS from entering finance review based solely on a nonblank sender and body.",
-    "Reject marketing discount offers without completed transaction evidence even if an amount or SAR text exists.",
-    "Preserve new/unrecognized banks when source shows credible finance evidence and keep read-only institutional finance notices for review.",
-    "Keep pure OTP eligible only for durable encrypted native 30-day exclusion and mixed completed financial+OTP masked in review; leave all sender exclusions, owner scope, post/ACK and WorkManager untouched.",
-    "Update previously permissive M549 source test, add M1016 regression and register exact M946 safety test matrix before invoking CI.",
-    "Issue #734: process all actionable encrypted SMS candidates in bounded sequential batches, not just the first 25, preserving every owner-reviewed financial guard and durable exclusion.",
-    "Issue #735 third SMS gap: new messages arriving during an active WorkManager job must enqueue a successor, never silently ignored by KEEP, with one schedule per accepted SMS broadcast and no cancellation of active verified money work.",
-    "Issue #736: recover bank SMS that arrived while 1000-slot encrypted queue was full via durable owner-scoped recovery marker and bounded re-import after space frees, without silent eviction, cursor skipping, or unsafe finance posting.",
-    "Issue #737 fifth gap: prevent 55-second FlutterEngine timeout from silently stopping a large SMS queue using bounded 35-second/25-message passes, durable per-row checkpoint, safe continuation scheduling, idempotent finance ACK and no repeated notifications."
+    "Render exactly the three due-card style action buttons directly under each savings goal, with Arabic and English labels, icons and overflow-safe sizes.",
+    "Remove tapping a savings-goal card to show the old 'Save now / Choose goal action' bottom sheet.",
+    "Preserve verified fund/edit/account routes and disable deposit for completed or inactive goals.",
+    "Retain savings release, goal active toggle and deletion with confirmation in separate per-goal header management menu, without adding a fourth bottom action.",
+    "Reconcile obsolete M388/M392/M665/M670/M674 source contracts before expensive CI; run M1021, M946, M550 and full app smoke on same head."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "native/WaffraAutoSmsStore.kt",
     "scripts/qa/m946_full_app_smoke_matrix.py",
-    "test/m1016_sms_background_financial_intake_test.dart",
-    "test/m549_sms_review_owner_scoped_test.dart",
-    "lib/main.dart",
-    "lib/waffra_auto_sms_autopost.part.dart",
-    "lib/waffra_sms_background_batches.dart",
-    "test/m462_smart_sms_rule_review_test.dart",
-    "test/m1017_sms_background_batch_drain_test.dart",
-    "native/WaffraAutoSmsWorker.kt",
-    "native/WaffraAutoSmsReceiver.kt",
-    "test/m1018_sms_workmanager_wakeup_race_test.dart",
-    "test/qa/m417_sms_permission_acceptance_test.py",
-    "test/m1019_sms_intake_capacity_recovery_test.dart",
-    "lib/waffra_auto_sms.dart",
-    "lib/waffra_sms_background_checkpoint.dart",
-    "test/m1020_sms_background_checkpoint_continuation_test.dart",
-    "test/m506_android_nine_regressions_test.dart"
+    "lib/waffra_home_goals_recurring_pages.part.dart",
+    "lib/waffra_home_goal_actions.part.dart",
+    "test/m1021_goal_card_inline_actions_test.dart",
+    "test/m388_m390_approved_goal_recurring_receipt_test.dart",
+    "test/m392_m395_budget_quick_actions_goal_ui_test.dart",
+    "test/m665_goal_due_display_and_linked_edit_test.dart",
+    "test/m670_feedback_transfer_dashboard_test.dart",
+    "test/m674_approved_page_designs_test.dart"
   ],
   "bounded_sections": {
-    "native/WaffraAutoSmsStore.kt": [
-      {
-        "start": "    private val senderName = Regex(",
-        "end": "    fun qualifies(sender: String, body: String): Boolean {"
-      },
-      {
-        "start": "    private const val maxCandidates = 1000",
-        "end": "    private const val activationMonth ="
-      },
-      {
-        "start": "    /** Read-only progress counters, persisted alongside the resume cursor. */",
-        "end": "    // Explicit opt-out must never auto-resume after a future login."
-      },
-      {
-        "start": "    fun offer(context: Context, sender: String, body: String, at: Long,",
-        "end": "    fun pending(context: Context):"
-      },
-      {
-        "start": "    fun importConsentMonth(context: Context, maxRead: Int = 500): Int {",
-        "end": "    /** Claim each review notification once; history never floods the shade. */"
-      },
-      {
-        "start": "    fun pending(context: Context): List<Map<String, Any>>",
-        "end": "    fun pendingById(context: Context, id: String)"
-      }
-    ],
-    "test/m549_sms_review_owner_scoped_test.dart": [
-      {
-        "start": "void main() {",
-        "end": " test('M549 sender exclusion drops queue and previous labelled exclusions atomically',(){"
-      },
-      {
-        "start": " test('M549 completed rescan dims unless fresh provider rows or unfinished history',(){",
-        "end": " test('M549 all sender lists still hide actual Android messages from deletion',(){"
-      }
-    ],
     "scripts/qa/m946_full_app_smoke_matrix.py": [
       {
         "start": "FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {",
-        "end": "    \"m1015_verified_standalone_expense_due_payment_approval\":"
+        "end": "    \"m1020_sms_background_35_second_checkpointed_continuation\":"
       }
     ],
-    "lib/main.dart": [
+    "lib/waffra_home_goals_recurring_pages.part.dart": [
       {
-        "start": "import 'waffra_auto_sms.dart';",
-        "end": "import 'waffra_bank_sms_facts.dart';"
-      },
-      {
-        "start": "@pragma('vm:entry-point')",
-        "end": "Future<void> main()async {"
+        "start": " Widget goalsPage(){",
+        "end": " Widget recurringPage(){"
       }
     ],
-    "lib/waffra_auto_sms_autopost.part.dart": [
+    "lib/waffra_home_goal_actions.part.dart": [
       {
-        "start": " static Future<Map<String,int>> run()async{",
+        "start": " Future<void> _m689GoalActions(SavingGoal g)async{",
         "end": null
       }
     ],
-    "test/m462_smart_sms_rule_review_test.dart": [
+    "test/m388_m390_approved_goal_recurring_receipt_test.dart": [
       {
-        "start": " test('M462 background safely acknowledges verified exclusions',(){",
-        "end": " test('M636 transfers cannot silently post through SMS expense editor',(){"
+        "start": " test('M388: open-ended goal never divided by zero or marked achieved',(){",
+        "end": " test('M390: restored receipt references open the same existing gallery',(){"
       }
     ],
-    "native/WaffraAutoSmsWorker.kt": [
+    "test/m392_m395_budget_quick_actions_goal_ui_test.dart": [
       {
-        "start": "        val done = CountDownLatch(1)",
-        "end": "        val main = Handler(Looper.getMainLooper())"
-      },
-      {
-        "start": "                messages.setMethodCallHandler { call, result ->",
-        "end": "                val workerChannel = MethodChannel("
-      },
-      {
-        "start": "                workerChannel.setMethodCallHandler { call, result ->",
-        "end": "                created.dartExecutor.executeDartEntrypoint("
-      },
-      {
-        "start": "        val completed = try { done.await(55, TimeUnit.SECONDS) }",
-        "end": "    companion object {"
-      },
-      {
-        "start": "        fun enqueue(context: Context) {",
-        "end": null
+        "start": " test('M393 goal pause is explicit in Quick Actions, with guarded finance writes',(){",
+        "end": " test('M393 recurring Quick Actions preserve original edit/delete/toggle',(){"
       }
     ],
-    "native/WaffraAutoSmsReceiver.kt": [
+    "test/m665_goal_due_display_and_linked_edit_test.dart": [
       {
-        "start": "            val bySender = linkedMapOf<String, StringBuilder>()",
-        "end": "        } catch (_: Exception) {"
+        "start": " test('M689 goal action sheet retains fund/edit/release/delete/active',(){",
+        "end": " test('M665.7 linked due edit explains without changing finance; standalone still editable',(){"
       }
     ],
-    "test/qa/m417_sms_permission_acceptance_test.py": [
+    "test/m670_feedback_transfer_dashboard_test.dart": [
       {
-        "start": "    def test_android_build_uses_explicit_scoped_receiver(self):",
-        "end": "if __name__==\"__main__\":"
+        "start": " test('M670 goals, recurring and category stats share layout geometry',(){",
+        "end": " test('M670 Snackbar central presenter has no visible X nor 2-line clipping',(){"
       }
     ],
-    "lib/waffra_auto_sms.dart": [
+    "test/m674_approved_page_designs_test.dart": [
       {
-        "start": " static Future<List<Map<String,Object?>>?> pendingChecked()async{",
-        "end": " static Future<List<Map<String,Object?>>> pending()async{"
-      }
-    ],
-    "test/m506_android_nine_regressions_test.dart": [
-      {
-        "start": "  test('M506 native bank sender aliases preserve OTP and consented review', () {",
-        "end": null
-      }
-    ],
-    "test/m1018_sms_workmanager_wakeup_race_test.dart": [
-      {
-        "start": " test('M1018 accepts encrypted messages before scheduling exactly once per broadcast',(){",
-        "end": " test('M1018 a new SMS appends a worker while older worker may still be running',(){"
+        "start": " test('M682 owner screenshot UI has no duplicate Edit and Accounts opens manager',(){",
+        "end": " test('M675 immutable + source contract and existing finance write routing',(){"
       }
     ]
   },
