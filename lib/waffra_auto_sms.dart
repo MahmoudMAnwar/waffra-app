@@ -46,6 +46,9 @@ abstract final class WaffraAutoSms {
  static Future<bool> restartCompletedHistory()=>
   _boolCall('restartCompletedSmsHistory');
 
+ /// Explicit, owner-verified all-history action from My Account only.
+ static Future<bool> enableAllHistoryScan()=>_boolCall('enableAllSmsHistoryScan');
+
  static Future<int> importConsentMonthChecked()async{
   if(!Platform.isAndroid)throw StateError('Android SMS scan is unavailable.');
   return await channel.invokeMethod<int>('importConsentMonthBankSms')??0;
