@@ -99,8 +99,10 @@ void main() {
   expect(gate,contains('mounted&&ready&&widget.postAuthVisible&&'));
   expect(gate,contains('epoch==_m630HomeStartupEpoch;'));
   expect(load,contains('_m630PostFrameFinanceWork=postFrameFinance;'));
-  // M1012: verified Home must show the user-confirmed goal-due dialog.
-  expect(load,contains('await applyRecurring(goalLinkedOnly:verifiedEncryptedStartup);'));
+  // M1015: verified Home must show BOTH independent and goal-linked due
+  // confirmations after the first authenticated interactive frame.
+  expect(load,contains('await applyRecurring(goalLinkedOnly:false);'));
+  expect(load,isNot(contains('goalLinkedOnly:verifiedEncryptedStartup')));
   expect(load,isNot(contains('if(!verifiedEncryptedStartup)await applyRecurring();')));
   expect(load,isNot(contains('unawaited(_refreshWidget());')));
   expect(load,isNot(contains('unawaited(syncRecurringReminders());')));
