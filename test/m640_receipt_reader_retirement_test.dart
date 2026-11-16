@@ -49,7 +49,10 @@ void main(){
   expect(app,isNot(contains('scannedImage')));
   expect(app,isNot(contains('scannedIncome')));
   expect(app,isNot(contains('SMS exports/OCR')));
-  expect(app,contains('manualIncomeOverride:kind==\'income\''));
+  // M1011: corrected SMS now persists an immutable original SMS record;
+  // the old manualIncomeOverride path was a provenance-loss bug, not OCR.
+  expect(app,contains('await _m1011SaveReviewedSmsKind('));
+  expect(app,isNot(contains("await entrySheet(manualIncomeOverride:kind=='income'")));
   expect(app,isNot(contains('sourceType:initial?.sourceType??(sms?\'sms\':scannedReceipt')));
   expect(app,contains('Future<void> entrySheet('));
   expect(app,contains('ImagePicker().pickImage(source:ImageSource.camera'));
