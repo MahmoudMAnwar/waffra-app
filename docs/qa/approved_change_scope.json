@@ -124,8 +124,8 @@
     ],
     "lib/waffra_home_account_tools.part.dart": [
       {
-        "start": "        restoreStage='HOME_REFRESH';",
-        "end": "        if(authenticatedLegacyRows!=null&&mounted){"
+        "start": "       restoreStage='HOME_REFRESH';",
+        "end": "       if(authenticatedLegacyRows!=null&&mounted){"
       }
     ]
   },
