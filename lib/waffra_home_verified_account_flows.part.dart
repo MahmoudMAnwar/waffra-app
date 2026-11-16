@@ -267,15 +267,21 @@ extension _WaffraHomeVerifiedAccountFlows on _HomeScreenState {
 
  /// Internal transfers use the verified account ledger, never expense.
  /// New manual income and expenses require an explicit money account.
- /// M985: SMS reclassified as transfer stays MANUAL and unacknowledged.
- /// Prefill only independently checked SAR/date. Both accounts stay empty
- /// until the user picks or creates them in the verified transfer form.
+ /// M1011: manual *account-to-account* correction retains SMS provenance,
+ /// a deterministic native ID, and an encrypted original transfer note.
+ /// Two explicitly verified owned accounts are required before any transfer.
  Future<void> openReviewedSmsManualTransfer({
-  required String body,required String sender,
+  required String id,required String body,required String sender,
  })async{
-  if(!mounted||WaffraBankSmsFactsParser.isVerificationChallenge(body))return;
+  if(!mounted||WaffraBankSmsFactsParser.isVerificationChallenge(body)||
+     WaffraSmsStructuredBankContext.multipleEvents(body))return;
   final facts=WaffraBankSmsFactsParser.parse(body);
-  if(facts.pending)return;
+  final lifecycle=WaffraSmsLifecycleEvidence.inspect(body,sender:sender);
+  if(facts.pending||lifecycle.stage==WaffraSmsLifecycleStage.reversed||
+     lifecycle.stage==WaffraSmsLifecycleStage.refunded)return;
+  // The native ID includes sender, body and receipt time: unlike a body
+  // hash it cannot combine two distinct bank messages into one transfer.
+  final stableTransferId=WaffraAutoSms.transferIdForMessage(id);
   final money=WaffraSmsCurrencies.originalAmount(body);
   final safeAmount=money!=null&&money.currency=='SAR'&&
    !WaffraSmsCurrencies.requiresReviewForSarLedger(body)?
@@ -288,6 +294,7 @@ extension _WaffraHomeVerifiedAccountFlows on _HomeScreenState {
    final api=WaffraVerifiedAccountsApi(bridge:bridge);
    final accounts=await api.balances();
    if(!mounted)return;
+   var transferCommitted=false,acknowledged=false;
    await Navigator.of(context).push<void>(MaterialPageRoute(
     builder:(ctx)=>Scaffold(
      appBar:AppBar(title:WaffraText(waffraIsEnglish?
@@ -295,6 +302,7 @@ extension _WaffraHomeVerifiedAccountFlows on _HomeScreenState {
      body:WaffraAccountTransactionForm(
       accounts:accounts,english:waffraIsEnglish,
       initialOperation:WaffraAccountOperation.transfer,
+      smsTransferRequestId:stableTransferId,
       originalSmsText:body,initialSarMinor:safeAmount,
       initialOccurredDate:confirmedDate,
       requireSmsDateConfirmation:confirmedDate==null||
@@ -344,14 +352,41 @@ extension _WaffraHomeVerifiedAccountFlows on _HomeScreenState {
        return created.single;
       },
       onConfirmTransfer:(draft)async{
-       await api.transfer(id:draft.requestId,
+       if(draft.requestId!=stableTransferId){
+        throw StateError('Reviewed bank SMS transfer identity changed.');
+       }
+       // SQLCipher encrypts transfer notes. Do not silently discard an
+       // original source or truncate it; storage limits notes to 2000 runes.
+       final note=[if(draft.memo.trim().isNotEmpty)draft.memo.trim(),
+        'نص الرسالة البنكية الأصلية:\n$body'].join('\n\n');
+       if(note.runes.length>2000){
+        throw StateError('Reviewed SMS original exceeds transfer note limit.');
+       }
+       // Repository transfer() is idempotent: same native identity with
+       // changed amount, date, owner accounts or note is rejected.
+       await api.transfer(id:stableTransferId,
         fromAccountId:draft.fromId,toAccountId:draft.toId,
         amountMinor:draft.amountMinor,occurredIso:draft.occurredIso,
-        note:draft.memo,userConfirmed:true);
+        note:note,userConfirmed:true);
+       transferCommitted=true;
+       acknowledged=await WaffraAutoSms.acknowledgeCompletedTransfer([id]);
+       if(acknowledged&&mounted){
+        setState(()=>_autoSmsPending.removeWhere((r)=>r['id']==id));
+       }
        if(ctx.mounted)Navigator.of(ctx).pop();
       },
      ),
     )));
+   if(transferCommitted&&mounted){
+    if(acknowledged)snackSuccess(context,waffraIsEnglish?
+     'Saved once with the original bank message. The notification was cleared.':
+     'تم تسجيل التحويل بنص الرسالة الأصلي وإزالته من الإشعارات.');
+    else snack(context,waffraIsEnglish?
+     'Transfer saved; notification acknowledgement failed. Reopen it to retry safely.':
+     'التحويل اتحفظ لكن إزالة الرسالة فشلت. إعادة المحاولة مش هتكرر التحويل.',
+     isError:true);
+    await _refreshAutoSmsInbox();
+   }
    if(mounted)await _m467RefreshHomeAccounts();
   }catch(error){
    debugPrint('M985 manual transfer unavailable');
