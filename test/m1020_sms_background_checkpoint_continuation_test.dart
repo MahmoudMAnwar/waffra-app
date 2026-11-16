@@ -60,10 +60,11 @@ void main(){
   final source=File('lib/waffra_auto_sms_autopost.part.dart').readAsStringSync();
   expect(source,contains('final stopwatch=Stopwatch()..start();'));
   expect(source,contains('const budget=Duration(seconds:35);'));
-  expect(source,contains('WaffraSmsBackgroundCheckpoint.select(pending,maxPerPass:25)'));
+  expect(source,contains('WaffraSmsBackgroundCheckpoint.select(pending,maxPerPass:25,'));
+s.includes('currentRulesRevision:ruleRevision')?null:null;
   expect(source,contains('if(stopwatch.elapsed>=budget)'));
   expect(source,contains('summary[\'remaining\']='));
-  expect(source,contains('await WaffraAutoSms.markBackgroundReviewed(id)'));
+  expect(source,contains('await WaffraAutoSms.markBackgroundReviewed(id,revision:ruleRevision)'));
   expect(source,contains('await WaffraAutoSms.acknowledgeCommitted([id])'));
   expect(source,isNot(contains('actionable.take(25)')));
  });
@@ -91,7 +92,7 @@ void main(){
   expect(worker,contains('"markAutoBankSmsBackgroundReviewed" ->'));
   expect(worker,contains('WaffraAutoSmsStore.markBackgroundSmsReviewed(context, id)'));
   final dart=File('lib/waffra_auto_sms.dart').readAsStringSync();
-  expect(dart,contains("return _boolCall('markAutoBankSmsBackgroundReviewed',id);"));
+  expect(dart,contains("return _boolCall('markAutoBankSmsBackgroundReviewed',{'id':id,'revision':revision});"));
   final poster=File('lib/waffra_auto_sms_autopost.part.dart').readAsStringSync();
   expect(poster,contains('if(!await WaffraAutoSms.markBackgroundReviewed(id))'));
   expect(poster,contains('if(!await WaffraAutoSms.acknowledgeCommitted([id]))'));
