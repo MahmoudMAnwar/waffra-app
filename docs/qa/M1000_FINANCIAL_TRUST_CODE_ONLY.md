@@ -10,7 +10,7 @@
 | 4 | Large-history performance | Reuse current SQLCipher verified keyset pagination; new filters apply before LIMIT, 50-entry pages. No large-device profiling. | **Partial** |
 | 5 | Search and unified filters | Account, income/expense, title/merchant text, category text, date range, exact SAR amount bounds inside verified SQL query | Code implemented in account transactions; **not tested** |
 | 6 | Recurring and due duplicate detection | Bounded read-only same-account/same-schedule-day/amount/title advisories, never auto-delete, no ledger charges | **Partial**, account-linked recurring only |
-| 7 | Projected liquidity | Active scheduled recurring account-linked dues projected in integer SAR halalas, independent of actual cash; no due marked paid | **Partial**, missing other due kinds |
+| 7 | Projected liquidity | Account-linked recurring dues projected in integer SAR halalas, with per-account next-month outcomes, negative-cash warnings and forecast fail-closed on mismatched verified balances; no due marked paid | **Partial**, missing other due kinds and device QA |
 | 8 | Accessibility/RTL stability | Localized trust screen, semantics for statuses, existing FAB/Snackbar/navigation untouched | **Partial**, full-app review not done |
 
 ## Safety
@@ -37,3 +37,9 @@
 - Blocking senders no longer removes already learned safe user rules.
 - **Existing historical exclusions are not retroactively converted to new keyword rules without the original authenticated SMS body and fresh owner approval.**
 - New test files / manual tests intentionally **not added** under owner's code-first request; handset verification of 38-message scenario is outstanding.
+
+## M1000 cashflow presentation continuation (2026-11-16)
+- Displays each account's read-only projected balance and pending scheduled count using verified account money, separate from actual wallet or bank balance.
+- Withholds forecasts on integrity mismatch rather than labeling the figure reliable.
+- Highlights a possible negative projected month-end without attempting to move or deduct funds.
+- Does not expand scheduled source coverage to savings goal dues or other due types until verified source wiring is reviewed. Android/RTL user acceptance is still not run.
