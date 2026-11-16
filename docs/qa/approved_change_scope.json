@@ -56,7 +56,8 @@
     "test/m636_owner_approved_retirement_and_ui_test.dart",
     "test/m954_all_sms_rule_routes_regression_test.dart",
     "test/qa/m417_sms_permission_acceptance_test.py",
-    "test/qa/m447_verified_sms_account_linking_test.py"
+    "test/qa/m447_verified_sms_account_linking_test.py",
+    "test/m638_sms_inbox_delete_sync_test.dart"
   ],
   "allowed_workflow_changes": [],
   "approved_deleted_files": [],
@@ -324,6 +325,12 @@
     "test/qa/m447_verified_sms_account_linking_test.py": [
       {
         "start": "class VerifiedSmsAccountLinkingTest",
+        "end": null
+      }
+    ],
+    "test/m638_sms_inbox_delete_sync_test.dart": [
+      {
+        "start": "void main(){",
         "end": null
       }
     ]
