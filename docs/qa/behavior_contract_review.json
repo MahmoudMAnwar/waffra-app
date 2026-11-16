@@ -1,12 +1,37 @@
 {
   "schema_version": 1,
-  "pr": "M1010–M1015 Issues #726/#728/#729/#730/#731 — UI, verified SMS, goal & standalone dues",
-  "issue": "Issues #726, #728, #729, #730, #731",
+  "pr": "M1016 Issue #732 — financial-evidence Android SMS intake (Draft)",
+  "issue": "Issue #732",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main after merged PR #725 (16 November 2026)",
   "reviewed_at": "2026-11-16",
-  "review_policy": "User explicitly requests verified owner-paid or postpone confirmation for BOTH independent recurring expenses and linked goal dues on Android after authenticated Home, without any automatic debit. All exact-head CI/backup/finance and manual device tests required before merge.",
+  "review_policy": "Authorized scope is ONLY native pre-encryption review eligibility on live SMS and consented historical import. Do not relax owner/permission/OTP safety or enable unapproved finance posting. Synthetic source tests are not physical Android proof.",
   "contracts": [
+    {
+      "id": "M1016-NATIVE-FINANCIAL-EVIDENCE-REVIEW-ELIGIBILITY-AND-OTP-ENCRYPTED-DENIAL",
+      "issue": "Issue #732",
+      "previous_behavior": "native reviewEligible accepted any nonblank sender <=100 and message <=1600, admitting arbitrary personal and marketing SMS into owner-encrypted finance review even without transaction evidence.",
+      "approved_behavior": "Reject irrelevant personal/advertising SMS at the same reviewEligible used by Android SMS_RECEIVED and consented historical scan. A candidate must be genuine pure verification (to remain eligible for native durable 30-day OTP-exclusion pipeline) or pass existing credible finance qualifies or read-only unknownFinancialKind. Explicit promotional calls to action without a completed bank-money action cannot enter queue even when a quote mentions SAR/discount; unknown genuine financial sender remains allowed on strong evidence, not a static bank list. Mixed completed-money plus OTP is always masked and review-only. No effect on finance ledger autoPost authorization, owner/sender exclusion, 1000 queue capacity, WorkManager run loop or CI skip policy.",
+      "source_paths": [
+        "native/WaffraAutoSmsStore.kt"
+      ],
+      "test_paths": [
+        "test/m1016_sms_background_financial_intake_test.dart",
+        "test/m549_sms_review_owner_scoped_test.dart",
+        "test/m979_native_otp_prequeue_exclusion_test.dart",
+        "test/m981_historical_otp_atomic_intake_test.dart",
+        "test/m954_all_sms_rule_routes_regression_test.dart"
+      ],
+      "safety_invariants": [
+        "SMS is never forwarded off-device or logged with sender/body/OTP.",
+        "Both live and historical intake use one predicate before encrypted queue write.",
+        "Pure OTP goes to exact encrypted native 30-day exclusion without showing digits.",
+        "Completed financial transaction containing OTP must not be excluded or auto-saved.",
+        "No guessed bank owner/account or unapproved money write, all financial rules remain in Dart secured verified authority.",
+        "Other work batching, WorkManager KEEP scheduling and queue limits are out of scope for this PR.",
+        "Real Android SMS delivery and OS background timing remain unverified until physical device acceptance."
+      ]
+    },
     {
       "id": "M1015-VERIFIED-STANDALONE-DUE-USER-CONFIRMATION-AND-IDEMPOTENT-WRITER",
       "issue": "Issue #731",
