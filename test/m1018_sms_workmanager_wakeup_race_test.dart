@@ -12,7 +12,8 @@ void main(){
   expect(receiver,contains('for ((sender, parts) in bySender) {'));
   expect(receiver,contains('var shouldEnqueue = false'));
   expect(receiver,contains('shouldEnqueue = true'));
-  expect(receiver,contains('if (shouldEnqueue) WaffraAutoSmsWorker.enqueue(context)'));
+  expect(receiver,contains('if (shouldEnqueue || WaffraAutoSmsStore.capacityRecoveryNeeded(context))'));
+  expect(receiver,contains('WaffraAutoSmsWorker.enqueue(context)'));
   expect('WaffraAutoSmsWorker.enqueue(context)'.allMatches(receiver),hasLength(1),
    reason:'one successor per received broadcast, not one expensive job per sender');
   expect(receiver.indexOf('WaffraAutoSmsStore.offer(context, sender, parts.toString()'),
