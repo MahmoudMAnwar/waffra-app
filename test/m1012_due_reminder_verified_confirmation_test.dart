@@ -59,7 +59,7 @@ void main(){
   expect(startup,isNot(contains('goalLinkedOnly:verifiedEncryptedStartup')));
   expect(startup,isNot(contains('if(!verifiedEncryptedStartup)await applyRecurring();')));
   expect(startup.indexOf('setState(()=>ready=true);'),
-   lessThan(startup.indexOf('await applyRecurring(goalLinkedOnly:verifiedEncryptedStartup);')));
+   lessThan(startup.indexOf('await applyRecurring(goalLinkedOnly:false);')));
   expect(dues,contains('Future<void> applyRecurring({bool goalLinkedOnly=false})async {'));
   expect(dues,contains('if(goalLinkedOnly&&r.linkedGoalId==null)continue;'));
   expect(dues,contains("if(action=='paid'){"));
