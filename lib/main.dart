@@ -80,6 +80,7 @@ import 'waffra_footer.dart';
 import 'waffra_messages.dart';
 import 'waffra_auto_sms.dart';
 import 'waffra_sms_background_batches.dart';
+import 'waffra_sms_background_checkpoint.dart';
 import 'waffra_auto_sms_policy.dart';
 import 'waffra_bank_sms_facts.dart';
 import 'waffra_sms_local_rules.dart';
@@ -223,8 +224,13 @@ void waffraAutoSmsBackgroundEntrypoint() {
  bridge.setMethodCallHandler((call)async{
   if(call.method!='process')return false;
   try{
-   await WaffraAutoSmsAutoPoster.run();
-   return true;
+   final summary=await WaffraAutoSmsAutoPoster.run();
+   // A successful partial pass isn't proof that all SMS were processed.
+   // Native WorkManager schedules a separate successor when needed.
+   return <String,Object?>{
+    'finished':true,
+    'hasMore':(summary['remaining']??0)>0,
+   };
   }catch(_){
    // Do not log banking text or claim it was recorded. WorkManager may retry
    // with the same encrypted candidate and atomic duplicate hash.
