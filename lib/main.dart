@@ -951,7 +951,10 @@ class BankParser {
   // witness. Never auto-import a foreign-currency SMS as Saudi riyals.
   final discoveredCurrencies=detectedCurrencies??
    WaffraSmsCurrencies.currenciesForMessage(s);
-  final currencyNeedsReview=discoveredCurrencies.length>1||
+  // M1001: never trust a worker's currency set without a fresh scan of
+  // the original SMS; mixed/non-SAR money always stays in review.
+  final currencyNeedsReview=WaffraSmsCurrencies.requiresReviewForSarLedger(s)||
+   discoveredCurrencies.length>1||
    discoveredCurrencies.any((code)=>code!='SAR');
   // A transfer between the user's own accounts, or a credit-card settlement,
   // must not be silently counted as everyday income/expense. Account ownership
@@ -1040,10 +1043,20 @@ class BankParser {
   // that the chosen number was the transaction amount. The exact source
   // amount MUST agree with the conservative action-only currency parser.
   if(value!=null){
-   final verifiedSource=sourceAmount??WaffraSmsCurrencies.originalAmount(
+   // M1001: independently verify the amount in the original bank action.
+   // A precomputed SMS hint cannot replace the trusted source witness.
+   final verifiedSource=WaffraSmsCurrencies.originalAmount(s);
+   // M338/M995: retain the optional worker-supplied source witness as an
+   // ADDITIONAL agreement check. The independent action-only scan above
+   // cannot be replaced by an untrusted cached or extracted amount.
+   final cachedOrSource=sourceAmount??WaffraSmsCurrencies.originalAmount(
     s,detectedCurrencies:discoveredCurrencies);
-   if(verifiedSource==null||verifiedSource.currency!='SAR'||
-      (verifiedSource.amount-value).abs()>0.00001)value=null;
+   if(verifiedSource==null||!verifiedSource.amount.isFinite||
+      verifiedSource.amount<=0||verifiedSource.currency!='SAR'||
+      (verifiedSource.amount-value).abs()>0.00001||
+      cachedOrSource==null||!cachedOrSource.amount.isFinite||
+      cachedOrSource.amount<=0||cachedOrSource.currency!='SAR'||
+      (cachedOrSource.amount-value).abs()>0.00001)value=null;
   }
   var title=income?'مبلغ وارد':'عملية بنكية',cat=income?'دخل آخر':'أخرى';
   String? suggestion;
