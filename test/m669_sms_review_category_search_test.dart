@@ -263,7 +263,7 @@ void main() {
     expect(expense.kind,WaffraBankOperationKind.expense);
     const bankTransfer='حوالة صادرة\nالمبلغ: 1900 ريال';
     expect(WaffraBankSmsFactsParser.parse(bankTransfer).kind,
-      WaffraBankOperationKind.transfer,
-      reason:'Bank transfer is not automatically an everyday expense');
+      WaffraBankOperationKind.expense,
+      reason:'Outgoing to an external beneficiary is a reviewed expense suggestion, not an owned-account transfer');
   });
 }

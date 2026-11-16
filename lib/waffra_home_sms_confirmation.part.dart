@@ -233,7 +233,8 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
     // message, do not impersonate its proven bank direction or ACK it.
     final beforeIds=entries.map((e)=>e.id).toSet();
     await entrySheet(manualIncomeOverride:kind=='income',
-     reviewedOriginalSms:body,reviewedSender:sender);
+     reviewedOriginalSms:body,reviewedSender:sender,
+     reviewedOriginalDate:bankSmsDate(body));
     if(mounted)await _m985AutoLearnManualCorrection(
      body:body,sender:sender,income:kind=='income',beforeIds:beforeIds);
    }
@@ -838,7 +839,8 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
      }else{
       final beforeIds=entries.map((e)=>e.id).toSet();
       await entrySheet(manualIncomeOverride:reviewType=='income',
-       reviewedOriginalSms:body,reviewedSender:sender);
+       reviewedOriginalSms:body,reviewedSender:sender,
+       reviewedOriginalDate:originalDate);
       if(mounted)await _m985AutoLearnManualCorrection(
        body:body,sender:sender,income:reviewType=='income',beforeIds:beforeIds);
      }
@@ -893,8 +895,12 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
     if(mounted&&(kind=='income'||kind=='expense')){
      // The chosen entry is a genuinely separate MANUAL operation: show
      // the original transfer SMS for reference, but never ACK or relabel it.
+     final beforeIds=entries.map((e)=>e.id).toSet();
      await entrySheet(manualIncomeOverride:kind=='income',
-      reviewedOriginalSms:body,reviewedSender:sender);
+      reviewedOriginalSms:body,reviewedSender:sender,
+      reviewedOriginalDate:originalDate);
+     if(mounted)await _m985AutoLearnManualCorrection(
+      body:body,sender:sender,income:kind=='income',beforeIds:beforeIds);
     }
    }else if(decision=='yes'&&mounted&&canConfirm&&
              reviewedAccount!=null&&originalAmount!=null&&

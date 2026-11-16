@@ -752,7 +752,7 @@ extension _WaffraHomeSmsInbox on _HomeScreenState {
                final body=row['body'],sender=row['sender'];
                if(body is! String||sender is! String||
                   blockedIds.contains(row['id']))continue;
-               final candidate=WaffraSmsLocalRules.suggestedRule(
+               final candidate=WaffraSmsLocalRules.suggestedGlobalRule(
                 body:body,sender:sender,kind:'excluded',
                 confidentOnly:true);
                if(candidate!=null)candidates.add(candidate);

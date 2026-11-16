@@ -317,7 +317,8 @@ void main(){
   final manual=review.split("}else if(decision=='transfer-manual'&&mounted){")[1]
    .split("}else if(decision=='yes'&&mounted")[0];
   expect(manual,contains("await entrySheet(manualIncomeOverride:kind=='income',"));
-  expect(manual,contains('reviewedOriginalSms:body,reviewedSender:sender);'));
+  expect(manual,contains('reviewedOriginalSms:body,reviewedSender:sender,'));
+  expect(manual,contains('reviewedOriginalDate:originalDate'));
   expect(manual,contains("kind=='income'||kind=='expense'"));
   expect(manual,isNot(contains('acknowledgeCompletedTransfer(')));
   expect(manual,isNot(contains('acknowledgeCommitted(')));

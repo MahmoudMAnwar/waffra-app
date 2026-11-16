@@ -11,7 +11,7 @@ void main(){
    ('تم إيداع راتب 7000 ريال في حسابك',WaffraBankOperationKind.income),
    ('شراء عبر نقاط البيع مبلغ 236 ريال التاجر العثيم',
      WaffraBankOperationKind.expense),
-   ('حوالة صادرة بمبلغ 140 ريال',WaffraBankOperationKind.transfer),
+   ('حوالة صادرة بين حساباتك بمبلغ 140 ريال',WaffraBankOperationKind.transfer),
   ];
   for(final item in cases){
    final facts=WaffraBankSmsFactsParser.parse(item.$1);

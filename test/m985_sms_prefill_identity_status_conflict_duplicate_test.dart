@@ -23,7 +23,7 @@ void main(){
    'شراء بمبلغ 125 ريال من حساب ****1234 إلى حساب ****5678',
    income:false),isNull,reason:'Two different masked identities require explicit account choice');
   expect(WaffraBankSmsFactsParser.suggestedAccountLastFour(
-   'حوالة صادرة بمبلغ 100 ريال من حساب ****1234',income:false),isNull);
+   'حوالة صادرة بمبلغ 100 ريال من حساب ****1234',income:false),'1234');
   expect(WaffraBankSmsFactsParser.suggestedAccountLastFour(
    'راتب 5000 ريال إلى حساب ****1234',income:false),isNull);
  });

@@ -14,13 +14,15 @@ class WaffraBankSmsFacts {
   this.reference,
   this.counterparty,
   this.pending=false,this.securityChallenge=false,
+  this.requiresBeneficiaryReview=false,
  });
  final WaffraBankOperationKind kind;
  final String? sourceSuffix,destinationSuffix,reference,counterparty;
  final double? fee;
- final bool pending,securityChallenge;
+ final bool pending,securityChallenge,requiresBeneficiaryReview;
  bool get canAutoPostAsIncomeExpense=>
-  !pending&&(kind==WaffraBankOperationKind.income||
+  !pending&&!requiresBeneficiaryReview&&
+   (kind==WaffraBankOperationKind.income||
              kind==WaffraBankOperationKind.expense);
 }
 
@@ -172,19 +174,35 @@ abstract final class WaffraBankSmsFactsParser {
   // NOT proof that the receiving owner also owns the source account.
   // Keep an otherwise unspecified "Credit Transfer" in manual transfer
   // review, but explicitly incoming/wāreda notices are income candidates.
+  // M1009: SAMA describes payment-rail direction, not that both bank
+  // accounts belong to this owner. Only an explicit own-account phrase is
+  // a transfer candidate; external outgoing/incoming is expense/income.
+  final ownAccountTransfer=RegExp(
+   r'بين\s+حسابات(?:ك|ي)|الى\s+حسابك\s+(?:الجاري|الاستثماري)|'
+   r'من\s+حسابك\s+(?:الجاري|الاستثماري)|'
+   r'between\s+(?:your|my|own)\s+accounts|'
+   r'to\s+your\s+(?:current|investment)\s+account|'
+   r'from\s+your\s+(?:current|investment)\s+account',
+   caseSensitive:false).hasMatch(header);
   final explicitlyIncoming=RegExp(
-   r'حوال[ةه](?:\s+(?:مالي[ةه]|داخلي[ةه]))?\s+وارد[ةه]|'
-   r'تحويل(?:\s+بنكي)?\s+وارد|'
+   r'حوال[ةه](?:\s+(?:مالي[ةه]|داخلي[ةه]|محلي[ةه]|دولي[ةه]))?\s+وارد[ةه]|'
+   r'تحويل(?:\s+(?:بنكي|داخلي|محلي|دولي))?\s+وارد|'
    r'\bincoming\s+(?:bank\s+)?transfer\b|'
+   r'\bcredit\s+transfer\s+(?:internal|local|international|salary|citizen\s+account|student\s+reward|sponsor|hafiz)\b|'
    r'\btransfer\s+received\b',
    caseSensitive:false).hasMatch(header);
   final explicitlyOutgoing=RegExp(
-   r'حوال[ةه](?:\s+(?:مالي[ةه]|داخلي[ةه]))?\s+صادر[ةه]|'
-   r'تحويل(?:\s+بنكي)?\s+صادر|'
-   r'\boutgoing\s+(?:bank\s+)?transfer\b',
+   r'حوال[ةه](?:\s+(?:مالي[ةه]|داخلي[ةه]|محلي[ةه]|دولي[ةه]))?\s+صادر[ةه]|'
+   r'تحويل(?:\s+(?:بنكي|محلي|داخلي|دولي))?\s+صادر|'
+   r'\boutgoing\s+(?:bank\s+)?transfer\b|'
+   r'\bdebit\s+transfer\s+(?:internal|local|international|salary|sponsored|to\s+card|loan\s+instalment)\b|'
+   r'\btransfer\s+(?:sent|out|to)\b',
    caseSensitive:false).hasMatch(header);
   final kind=securityChallenge?WaffraBankOperationKind.uncertain:
    isCard?WaffraBankOperationKind.cardSettlement:
+   ownAccountTransfer&&isTransfer?WaffraBankOperationKind.transfer:
+   explicitlyOutgoing&&!explicitlyIncoming?
+    WaffraBankOperationKind.expense:
    explicitlyIncoming&&!explicitlyOutgoing?
     WaffraBankOperationKind.income:
    isTransfer?WaffraBankOperationKind.transfer:
@@ -237,6 +255,10 @@ abstract final class WaffraBankSmsFactsParser {
    counterparty:_counterparty.firstMatch(normalized)?.group(1)?.trim(),
    pending:securityChallenge||_pending.hasMatch(normalized)||feeRequiresReview,
    securityChallenge:securityChallenge,
+   // SAMA describes debit/credit direction, not ownership of beneficiary.
+   // Even when this notice is an Expense/Income suggestion, no automatic
+   // money posting is authorized until the owner reviews account/recipient.
+   requiresBeneficiaryReview:isTransfer,
   );
  }
  /// Display-only accounting preview. A fee never modifies an internal

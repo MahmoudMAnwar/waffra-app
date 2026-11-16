@@ -60,7 +60,8 @@ abstract final class WaffraAutoSmsPolicy {
   // be represented faithfully by an income/expense-only transaction record.
   // Preserve it for a dedicated account-to-account review; do not debit Cash.
   final facts=WaffraBankSmsFactsParser.parse(sms);
-  if(facts.kind==WaffraBankOperationKind.transfer||
+  if(facts.requiresBeneficiaryReview||
+     facts.kind==WaffraBankOperationKind.transfer||
      facts.kind==WaffraBankOperationKind.cardSettlement||
      (facts.fee!=null&&facts.fee!>0)){
    return const WaffraAutoSmsDecision(

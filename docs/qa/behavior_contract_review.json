@@ -1,12 +1,41 @@
 {
   "schema_version": 1,
-  "pr": "M1007 + P0 M1008 #722 — safe global learning plus two-account verified SMS presentation fix",
-  "issue": "Issues #721 and #723",
+  "pr": "M1009 Issue #724 — SAMA SMS accounting + Notifications-center swipe (Draft)",
+  "issue": "Issue #724",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at f0def360ea75b9c865548b6f1b4fc07e9640f2c2 after #656",
   "reviewed_at": "2026-11-16",
-  "review_policy": "Owner approved automatic safe learning without teaching prompts, supported by new executable Dart tests; physical Android and old-owner backup acceptance remain separate.",
+  "review_policy": "Owner authorized precise SAMA Arabic/English direction and verified-own-account separation, safe repeated SMS exclusion, original source datetime and swipe inside actual Notifications screen; fail-closed money, SQLCipher, backups and Android UAT preserved.",
   "contracts": [
+    {
+      "id": "M1009-OWNER-SAMA-DIRECTION-SAFE-REUSE-ORIGINAL-TIMESTAMP-NOTIFICATIONS-SWIPE",
+      "issue": "Issue #724 / Draft PR pending",
+      "previous_behavior": "Outgoing internal bank transfer to external recipient was misclassified as own-account transfer, SAMA generic transfer keywords conflicted with expense rules, manual transfer-correction did not trigger learning or maintain source time consistently, repeatable non-financial excluded notifications were not learned by both bulk routes, and horizontal swipe existed only in a separate review page, not Notifications.",
+      "approved_behavior": "Official SAMA Arabic/English outgoing debit and incoming credit classification is a non-posting suggestion; transfer between two owner's own accounts requires explicit source and destination verification. Repeatable safe notification text from confirmed exclusions can be learned globally without stored amounts or secrets, while mixed/posted-money stays review-only. Confirmed owner corrections teach safe global header and trigger re-evaluation irrespective of amount. Source timestamp in bank SMS is preferred where unambiguous and made available to the manual correct-type editor. Notifications center itself supports sideways gesture between actual sender filters while selections/vertical scrolling remain.",
+      "source_paths": [
+        "lib/waffra_bank_sms_facts.dart",
+        "lib/main.dart",
+        "lib/waffra_sms_local_rules.dart",
+        "lib/waffra_approved_notifications.dart",
+        "lib/waffra_home_sms_inbox.part.dart",
+        "lib/waffra_home_entry_sheet.part.dart",
+        "lib/waffra_home_sms_confirmation.part.dart",
+        "lib/waffra_auto_sms_policy.dart"
+      ],
+      "test_paths": [
+        "test/m1009_sama_notification_swipe_regression_test.dart",
+        "test/m984_sms_calendar_dots_sender_swipe_test.dart",
+        "test/m980_four_sms_rule_kinds_every_route_test.dart"
+      ],
+      "safety_invariants": [
+        "External transfer head may display income/expense but requiresBeneficiaryReview prohibits finance auto-post in SMS policy and direct confirmation until owner validates account and recipient.",
+        "No money auto-post, no alternate ledger writer, no auto-debit from SMS learning, preserve dual verified account witness for own-account transfer.",
+        "No exclusion of posted-money SMS, mixed OTP plus money, finance reversal, unrelated bank messages or ambiguous source.",
+        "No unredacted raw SMS, reference, OTP, last-four account suffix, amount or names may become saved global exclusion keywords.",
+        "No backdating or fabricated timestamp when source date ambiguous; original SMS text displayed separately.",
+        "No physical Android swipe or backup assertion until independently reproduced on actual handset."
+      ]
+    },
     {
       "id": "M1008-VERIFIED-TWO-ACCOUNT-SMS-SAVE-ACCOUNT-SCOPE-AND-PERIOD-REFRESH",
       "issue": "Issue #723 / Draft PR #722",

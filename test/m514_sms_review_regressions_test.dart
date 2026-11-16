@@ -20,7 +20,11 @@ void main(){
    'إيبان: **9288\n'
    'القيمة: SAR 882\nالرسوم: SAR 0.58';
   final fact=WaffraBankSmsFactsParser.parse(outgoing);
-  expect(fact.kind,WaffraBankOperationKind.transfer);
+  // M1009/SAMA: an outgoing payment to an unverified beneficiary is
+  // an expense suggestion, not proof of transfer between owned accounts.
+  expect(fact.kind,WaffraBankOperationKind.expense);
+  expect(fact.requiresBeneficiaryReview,isTrue);
+  expect(fact.canAutoPostAsIncomeExpense,isFalse);
   expect(fact.sourceSuffix,'8308');
   expect(fact.destinationSuffix,'9288');
   expect(fact.fee,0.58);

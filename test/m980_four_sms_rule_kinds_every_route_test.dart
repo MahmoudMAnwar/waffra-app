@@ -66,7 +66,7 @@ void main() {
   test('M980 category evidence uses the same four-way matches and real bank direction',(){
     const income='تم إيداع راتب 7000 ريال في حسابك';
     const expense='شراء عبر نقاط البيع مبلغ 236 ريال التاجر العثيم';
-    const transfer='حوالة صادرة بمبلغ 140 ريال';
+    const transfer='حوالة صادرة بين حساباتك بمبلغ 140 ريال';
     const exclusion='رمز التحقق: 123456';
     for(final row in <(String,String,WaffraBankOperationKind)>[
       (income,'income',WaffraBankOperationKind.income),
@@ -157,7 +157,7 @@ void main() {
     final rows=<Map<String,Object?>>[
       sms('1','تم إيداع راتب 7000 ريال في حسابك'),
       sms('2','شراء عبر نقاط البيع مبلغ 236 ريال التاجر العثيم'),
-      sms('3','حوالة صادرة بمبلغ 140 ريال'),
+      sms('3','حوالة صادرة بين حساباتك بمبلغ 140 ريال'),
       sms('4','رمز التحقق: ••••••',sensitive:true),
     ];
     final result=waffraM632ClassifySmsQueue(<String,Object?>{
