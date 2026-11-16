@@ -1,14 +1,15 @@
 {
   "contract_version": 1,
-  "change_id": "M1016-M1017-ISSUES732-734-NATIVE-SMS-INTAKE-AND-BATCH-DRAIN-20261116",
-  "human_scope_review": "Issue #732 native financial-evidence intake and owner-requested second gap #734 remove the first-25 background processing cap through bounded sequential batches. Retain verified account/writer, OTP safety, exclusions and exact ACK. Android 55s/KEEP scheduling and native 1000 capacity are separate. No device UAT claimed.",
+  "change_id": "M1016-M1017-M1018-ISSUES732-734-735-SMS-INTAKE-BATCH-WAKEUP-20261116",
+  "human_scope_review": "Issue #732 native financial intake, Issue #734 bounded all-candidate background draining, Issue #735 lossless event-driven wakeup for later bank SMS using WorkManager APPEND_OR_REPLACE and single enqueue per Android broadcast. No changes to verified money auth, rules, encrypted queue, 55-second timeout or 1000 native capacity. Physical device UAT required.",
   "user_requested_changes": [
     "Prevent arbitrary nonfinancial personal SMS from entering finance review based solely on a nonblank sender and body.",
     "Reject marketing discount offers without completed transaction evidence even if an amount or SAR text exists.",
     "Preserve new/unrecognized banks when source shows credible finance evidence and keep read-only institutional finance notices for review.",
     "Keep pure OTP eligible only for durable encrypted native 30-day exclusion and mixed completed financial+OTP masked in review; leave all sender exclusions, owner scope, post/ACK and WorkManager untouched.",
     "Update previously permissive M549 source test, add M1016 regression and register exact M946 safety test matrix before invoking CI.",
-    "Issue #734: process all actionable encrypted SMS candidates in bounded sequential batches, not just the first 25, preserving every owner-reviewed financial guard and durable exclusion."
+    "Issue #734: process all actionable encrypted SMS candidates in bounded sequential batches, not just the first 25, preserving every owner-reviewed financial guard and durable exclusion.",
+    "Issue #735 third SMS gap: new messages arriving during an active WorkManager job must enqueue a successor, never silently ignored by KEEP, with one schedule per accepted SMS broadcast and no cancellation of active verified money work."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -23,7 +24,11 @@
     "lib/waffra_auto_sms_autopost.part.dart",
     "lib/waffra_sms_background_batches.dart",
     "test/m462_smart_sms_rule_review_test.dart",
-    "test/m1017_sms_background_batch_drain_test.dart"
+    "test/m1017_sms_background_batch_drain_test.dart",
+    "native/WaffraAutoSmsWorker.kt",
+    "native/WaffraAutoSmsReceiver.kt",
+    "test/m1018_sms_workmanager_wakeup_race_test.dart",
+    "test/qa/m417_sms_permission_acceptance_test.py"
   ],
   "bounded_sections": {
     "native/WaffraAutoSmsStore.kt": [
@@ -60,6 +65,24 @@
       {
         "start": " test('M462 background safely acknowledges verified exclusions',(){",
         "end": " test('M636 transfers cannot silently post through SMS expense editor',(){"
+      }
+    ],
+    "native/WaffraAutoSmsWorker.kt": [
+      {
+        "start": "        fun enqueue(context: Context) {",
+        "end": "            } catch (_: Exception) {"
+      }
+    ],
+    "native/WaffraAutoSmsReceiver.kt": [
+      {
+        "start": "            for ((sender, parts) in bySender) {",
+        "end": "        } catch (_: Exception) {"
+      }
+    ],
+    "test/qa/m417_sms_permission_acceptance_test.py": [
+      {
+        "start": "    def test_android_build_uses_explicit_scoped_receiver(self):",
+        "end": "if __name__==\"__main__\":"
       }
     ]
   },
