@@ -55,7 +55,8 @@ void main(){
    .readAsStringSync();
   final dues=File('lib/waffra_home_finance_persistence_due.part.dart')
    .readAsStringSync();
-  expect(startup,contains('await applyRecurring(goalLinkedOnly:verifiedEncryptedStartup);'));
+  expect(startup,contains('await applyRecurring(goalLinkedOnly:false);'));
+  expect(startup,isNot(contains('goalLinkedOnly:verifiedEncryptedStartup')));
   expect(startup,isNot(contains('if(!verifiedEncryptedStartup)await applyRecurring();')));
   expect(startup.indexOf('setState(()=>ready=true);'),
    lessThan(startup.indexOf('await applyRecurring(goalLinkedOnly:verifiedEncryptedStartup);')));
