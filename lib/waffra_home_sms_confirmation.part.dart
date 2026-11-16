@@ -242,7 +242,24 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
    final direct=targetId==null?null:await WaffraAutoSms.pendingById(targetId);
    final items=targetId==null?await WaffraAutoSms.pending():
     direct==null?<Map<String,Object?>>[]:<Map<String,Object?>>[direct];
-   if(!mounted||items.isEmpty)return;
+   if(!mounted)return;
+   if(items.isEmpty){
+    // M1005: an already excluded or stale native ID must not look like
+    // a button that did nothing. Recheck the native owner queue and report
+    // on the visible Notifications route without inventing an ACK.
+    if(targetId!=null){
+     await _refreshAutoSmsInbox();
+     if(mounted){
+      final visibleContext=Navigator.of(context).canPop()?
+       Navigator.of(context).context:context;
+      snack(visibleContext,waffraIsEnglish?
+       'This message is no longer in verified review. List refreshed.':
+       'الرسالة لم تعد موجودة في قائمة المراجعة الموثقة. تم تحديث القائمة.',
+       isError:true);
+     }
+    }
+    return;
+   }
    Map<String,Object?>? selected;
    for(final item in items){
     final id=item['id'],body=item['body'];

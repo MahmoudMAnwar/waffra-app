@@ -62,6 +62,10 @@
     ],
     "lib/waffra_home_sms_confirmation.part.dart": [
       {
+        "start": "   final direct=targetId==null?null:await WaffraAutoSms.pendingById(targetId);",
+        "end": "   Map<String,Object?>? selected;"
+      },
+      {
         "start": "   }else if(decision=='exclude'&&mounted){",
         "end": "   }else if(decision=='transfer'&&mounted){"
       }

@@ -92,6 +92,20 @@ void main(){
   expect(WaffraSmsLocalRules.matches(
    rule,body,sender:'AnotherSender'),isFalse);
  });
+ test('M1005 stale native review ID is refreshed and never silently ignored',(){
+  final src=File('lib/waffra_home_sms_confirmation.part.dart')
+   .readAsStringSync();
+  final start=src.indexOf('final direct=targetId==null?null:await WaffraAutoSms.pendingById(targetId);');
+  final end=src.indexOf('Map<String,Object?>? selected;',start);
+  expect(start,greaterThan(0));
+  expect(end,greaterThan(start));
+  final guard=src.substring(start,end);
+  expect(guard,contains('if(items.isEmpty){'));
+  expect(guard,contains('await _refreshAutoSmsInbox();'));
+  expect(guard,contains('snack(visibleContext,waffraIsEnglish?'));
+  expect(guard,contains('الرسالة لم تعد موجودة'));
+  expect(guard,isNot(contains('WaffraAutoSms.acknowledgeCommitted(')));
+ });
  test('M1005 single Exclude always reports on the visible route and rechecks queue',(){
   // The review popup is dismissed before this code runs. The root
   // Snackbar is hidden behind the pushed Notifications route otherwise.
