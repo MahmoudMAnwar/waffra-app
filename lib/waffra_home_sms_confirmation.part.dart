@@ -149,7 +149,8 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
   if(sender.trim().isEmpty)return;
   try{
    await _learnSafeSmsRule(body:body,sender:sender,
-    kind:income?'income':'expense',category:confirmed.single.category);
+    kind:income?'income':'expense',category:confirmed.single.category,
+    confirmedCorrection:true,description:confirmed.single.title);
   }catch(_){
    // No learning failure may roll back or repeat a committed finance entry.
   }
