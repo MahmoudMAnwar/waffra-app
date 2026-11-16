@@ -1187,6 +1187,7 @@ class WaffraVerifiedEncryptedFinanceBridge {
     required String occurredIso,
     required String messageHash,
     required String feeCategory,
+    String? originalSmsText,
     required bool userConfirmed,
   }) {
     if (!experimentalEnabled || !userConfirmed) {
@@ -1208,6 +1209,7 @@ class WaffraVerifiedEncryptedFinanceBridge {
       occurredIso: occurredIso,
       messageHash: messageHash,
       feeCategory: feeCategory,
+      originalSmsText: originalSmsText,
       userConfirmed: true,
     );
   }
