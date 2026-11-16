@@ -66,6 +66,7 @@ object WaffraAutoSmsStore {
     private const val historyScannedCount = "sms_history_scanned_count_v1"
     private const val historyAddedCount = "sms_history_added_count_v1"
     private const val historySourceMonth = "sms_history_source_install_month_v2"
+    private const val historyAllName = "sms_all_history_approved_v1"
     private fun monthStart() = Calendar.getInstance().apply {
         set(Calendar.DAY_OF_MONTH, 1)
         set(Calendar.HOUR_OF_DAY, 0)
@@ -78,6 +79,10 @@ object WaffraAutoSmsStore {
     // month in which this installation was installed (not SMS consent day).
     // PackageInfo.firstInstallTime survives an in-place app update.
     private fun installationMonthStart(context: Context): Long {
+        val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+        // M1026: full inbox history is strictly opt-in for the active owner.
+        // 1L includes every provider SMS since the Unix epoch.
+        if (prefs.getBoolean(historyAllName, false)) return 1L
         val installedAt = try {
             context.packageManager.getPackageInfo(context.packageName, 0).firstInstallTime
         } catch (_: Exception) { return 0L }
@@ -246,13 +251,17 @@ object WaffraAutoSmsStore {
                     .remove(historyCursorId).remove(historySourceMonth)
                     .remove(historyComplete).remove(historyInitialCompleted)
                     .remove(historyScannedCount).remove(historyAddedCount)
+                    .remove(historyAllName)
             }
             if (owner != null) editor.putString(consentedOwnerName, owner)
             else editor.remove(consentedOwnerName)
         }
         if (allow && !prefs.contains(activationMonth))
             editor.putLong(activationMonth, monthStart())
-        if (!allow) editor.remove(queueName)
+        if (!allow) {
+            editor.remove(queueName)
+            editor.remove(historyAllName)
+        }
         editor.commit()
     }
 
@@ -1412,6 +1421,23 @@ object WaffraAutoSmsStore {
      * committed and excluded SMS must stay invisible and the user should
      * see the number of *new* provider rows actually examined.
      */
+    /**
+     * M1026: called ONLY by the explicit My Account "scan all history"
+     * confirmation. Never delete pending encrypted rows, exclusions,
+     * account-bound completed fingerprints or finance ledger evidence.
+     * Existing cursor/progress are the only data restarted on new scope.
+     */
+    fun enableAllHistoryScan(context: Context): Boolean = synchronized(mutex) {
+        if (!enabled(context)) return@synchronized false
+        val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+        if (prefs.getBoolean(historyAllName, false)) return@synchronized true
+        prefs.edit().putBoolean(historyAllName, true)
+            .remove(historyCursorAt).remove(historyCursorId)
+            .remove(historySourceMonth).remove(historyComplete)
+            .remove(historyInitialCompleted).remove(historyScannedCount)
+            .remove(historyAddedCount).commit()
+    }
+
     fun restartCompletedHistory(context: Context): Boolean = synchronized(mutex) {
         // Compatibility entry point for older Flutter callers. It is
         // intentionally non-destructive: no cursor or owner data is erased.
