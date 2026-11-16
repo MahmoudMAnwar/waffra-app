@@ -11,14 +11,14 @@ void main(){
    lessThan(onReceive.indexOf('WaffraAutoSmsStore.offer(context,')));
   expect(onReceive,contains('finally { pending.finish() }'));
   expect(onReceive,contains('catch (_: Exception) { pending.finish() }'));
-  expect(onReceive,contains('private val smsIntakeExecutor'));
+  expect(s,contains('private val smsIntakeExecutor'));
   expect(s,isNot(contains('commitConfirmedSms(')));
  });
  test('M1030 owner consent, one WorkManager successor and sender-time boundaries',(){
   final s=File('native/WaffraAutoSmsReceiver.kt').readAsStringSync();
   expect(s,contains('if (!WaffraAutoSmsStore.enabled(context)) return@execute'));
   expect(s,contains('val bySenderAndTimestamp = linkedMapOf<Triple<String, Long, String>, StringBuilder>()'));
-  expect(s,contains('val shouldEnqueue'));
+  expect(s,contains('var shouldEnqueue = false'));
   expect('WaffraAutoSmsWorker.enqueue(context)'.allMatches(s),hasLength(1));
   expect(s,contains('WaffraAutoSmsStore.capacityRecoveryNeeded(context)'));
  });
