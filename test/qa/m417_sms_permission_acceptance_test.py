@@ -121,5 +121,19 @@ class M417AutoSmsContractTest(unittest.TestCase):
             self.assertIn("RECEIVE_SMS",script)
             self.assertNotIn("android.permission.SEND_SMS",script)
 
+    def test_m1018_background_worker_appends_new_arrivals_without_cancellation(self):
+        worker=self.read("native/WaffraAutoSmsWorker.kt")
+        receiver=self.read("native/WaffraAutoSmsReceiver.kt")
+        self.assertIn("ExistingWorkPolicy.APPEND_OR_REPLACE",worker)
+        self.assertNotIn("ExistingWorkPolicy.KEEP",worker)
+        self.assertNotIn("ExistingWorkPolicy.REPLACE,",worker)
+        self.assertIn("if (shouldEnqueue) WaffraAutoSmsWorker.enqueue(context)",receiver)
+        self.assertEqual(receiver.count("WaffraAutoSmsWorker.enqueue(context)"),1)
+        self.assertLess(receiver.index("WaffraAutoSmsStore.offer("),
+                        receiver.index("WaffraAutoSmsWorker.enqueue(context)"))
+        self.assertIn("if (isForegroundUiActive() || !WaffraAutoSmsStore.enabled(context)) return",worker)
+        self.assertNotIn("commitConfirmedSms(",worker+receiver)
+        self.assertNotIn("FirebaseFirestore",worker+receiver)
+
 if __name__=="__main__":
     unittest.main()
