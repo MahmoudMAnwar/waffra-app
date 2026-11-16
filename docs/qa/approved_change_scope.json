@@ -89,6 +89,14 @@
     ],
     "lib/waffra_account_context_page.dart": [
       {
+        "start": "import 'waffra_account_context_settings.dart';",
+        "end": "import 'waffra_i18n.dart';"
+      },
+      {
+        "start": "class WaffraAccountContextPage extends StatefulWidget {",
+        "end": "class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {"
+      },
+      {
         "start": "class _WaffraAccountContextPageState extends State<WaffraAccountContextPage> {",
         "end": null
       }
