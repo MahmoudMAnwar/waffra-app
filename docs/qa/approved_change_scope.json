@@ -24,7 +24,76 @@
     "test/m1003_restore_budget_and_blank_surface_contract_test.dart",
     "test/storage/m1003_atomic_restored_budget_account_link_test.dart"
   ],
-  "bounded_sections": {},
+  "bounded_sections": {
+    "lib/waffra_home_entry_sheet.part.dart": [
+      {
+        "start": " Future<void> entrySheet({MoneyEntry? initial",
+        "end": "  // The sender identifies a bank/provider only"
+      },
+      {
+        "start": "// Historical entries can predate creation of their money account.",
+        "end": "       if(initial!=null&&canMoveLinkedAccount&&"
+      },
+      {
+        "start": "   if(result==null||!mounted){",
+        "end": "  // M985: a bank reference is useful only alongside identical card/account"
+      },
+      {
+        "start": "    if(!await _m953SaveExistingVerifiedEntry(initial,result,",
+        "end": "   }else{\n   // Optimistic in-memory edits"
+      },
+      {
+        "start": "  final movedLinkedAccountInThisEdit=initial!=null",
+        "end": "  if(mounted)await budgetAlert(result,previousSpent);"
+      },
+      {
+        "start": " Future<bool> _m953SaveExistingVerifiedEntry(",
+        "end": "   final verifiedRaw=committed.ledgerRaw;"
+      }
+    ],
+    "lib/storage/waffra_verified_encrypted_finance_bridge.dart": [
+      {
+        "start": "  Future<WaffraFinanceSnapshotState> saveHomeChanges({",
+        "end": "  /// M956: source-witnessed metadata edit plus account reassignment, atomic."
+      }
+    ],
+    "lib/waffra_home_root_shell.part.dart": [
+      {
+        "start": "extension _WaffraHomeRootShell on _HomeScreenState {",
+        "end": "  appBar:AppBar("
+      }
+    ],
+    "lib/main.dart": [
+      {
+        "start": "  final showCountry=needsCountry||",
+        "end": "   if(showLoginScreen)KeyedSubtree("
+      }
+    ],
+    "test/m495_pr402_ui_performance_regression_test.dart": [
+      {
+        "start": " test('M500 #420 Details Edit enables verified retroactive account link',(){",
+        "end": " testWidgets('M499 #416 child picker"
+      }
+    ],
+    "test/m622_immediate_home_without_loader_test.dart": [
+      {
+        "start": "  expect(scaffold,contains('child:!ready&&_financeLoadFailure==null?'));",
+        "end": "  expect(scaffold,contains('Stack(clipBehavior:Clip.none,children:[GestureDetector('));"
+      }
+    ],
+    "test/m623_verified_home_handoff_no_black_frame_test.dart": [
+      {
+        "start": " test('M623 authenticated Home transition cannot expose unverified money',(){",
+        "end": " test('M623 background SMS runs only after the complete Home frame',(){"
+      }
+    ],
+    "test/m944_home_root_shell_extraction_test.dart": [
+      {
+        "start": "  expect(shell, contains('child:!ready&&_financeLoadFailure==null?'));",
+        "end": "  expect(shell, contains('body:_financeLoadFailure!=null?_financialRecoveryScreen():'));"
+      }
+    ]
+  },
   "allowed_workflow_changes": [],
   "approved_deleted_files": []
 }
