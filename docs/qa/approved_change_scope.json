@@ -96,6 +96,10 @@
     ],
     "lib/storage/waffra_accounts_repository.dart": [
       {
+        "start": "import 'dart:convert';",
+        "end": "class WaffraAccountBalance {"
+      },
+      {
         "start": "class WaffraAccountsRepository implements WaffraAccountOperations {",
         "end": null
       }

@@ -1,3 +1,7 @@
+[M1032 / EXACT SHA COMPILER AND M385 REPAIR]
+- Declared shared localReviewKinds in same background function scope as selector and four-kind loop; imported local rule model into M1032 contract regression; scoped new crypto/utf8 imports as approved source edits in M385.
+- No CI job removed or skipped. Previous compile and scope failures require exact-head rerun.
+
 [M1032 / VERIFIED FINANCIAL EDIT LEARNING RECONCILIATION]
 - SQLCipher-verified transaction edits now reconcile senderless, automatically learned description-category rules after committing. The old keyword survives if another confirmed transaction still uses that category; user-authored and AutoPost rules are never altered by this path.
 - A failure explicitly warns that the financial edit succeeded but learning needs review. No money edit is replayed.

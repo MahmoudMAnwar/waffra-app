@@ -68,6 +68,8 @@ abstract final class WaffraAutoSmsAutoPoster {
   final retryAck=StateError('Native SMS ACK pending verification');
   final retryCheckpoint=StateError('Encrypted SMS checkpoint unavailable');
 
+  // Captured by keepForReview and filled by the same four-kind matcher.
+  final localReviewKinds=<String,String>{};
   Future<void> keepForReview(Map<String,Object?> candidate)async{
    final id=candidate['id'];
    final body=candidate['body'];

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_bank_sms_facts.dart';
+import 'package:waffra/waffra_sms_local_rules.dart';
 import 'package:waffra/waffra_sms_multicurrency_review.dart';
 
 void main(){
