@@ -3,6 +3,7 @@
 - For reviewed external outgoing bank transfers, propose the uniquely source-verified SAR original amount in the editor without requiring permission for automatic finance posting or agreement from secondary advisory BankParser. Preserve the owner's existing draft amount.
 - Extract both `15:13 02-11-2026` and `15-11-2026 10:14` as explicit full-year bank timestamps, without guessing ambiguous two-digit years or invalid dates.
 - The SMS editor exposes a Restore original amount action and a specific source mismatch error before confirmed finance save. Original body, biometric/owner controls, verified account, category, SQLCipher finance authority, SMS native ACK and anti-duplicate rules remain unchanged.
+- Corrected real `الرقم المرجعي: EPY...` metadata lexing: EPY is an opaque transaction reference, not a currency. Verified source action `SAR 882` is now distinguishable from `SAR 0.58` fees, and genuine foreign action currencies remain blocked. Includes a regression case with the masked wallet SMS.
 - Added focused Dart/source-contract regression tests. Exact SHA CI and Android UAT pending. Draft PR #755 is NOT production-approved.
 
 [M1032 / #751 / REPAIRED PORTABLE LOCAL SMS RULE ENGINE]
