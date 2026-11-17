@@ -127,7 +127,9 @@ void main(){
   // Verified edit undo uses a witnessed SQLCipher single-row save; legacy\n  // undo still invalidates the Home index before its in-memory rollback.\n  expect(s,contains('if(!await _m953SaveExistingVerifiedEntry(result,initial))return;'));\n  expect(s,contains('_m684InvalidatePeriodRead();\n      setState(()=>entries[index]=initial)'));
   expect(s,contains('_m684InvalidatePeriodRead();\n  setState(()=>entries.removeWhere('));
   expect(s,contains('_m684InvalidatePeriodRead();\n    setState(()=>entries.insert(0,e)'));
-  expect(s,contains('_m684InvalidatePeriodRead();entries.clear();smsHashes.clear()'));
+  expect(s,contains('_m684InvalidatePeriodRead();entries.clear();'));
+  // Bulk recycle leaves the bank-SMS anti-replay set intact.
+  expect(s,isNot(contains('_m684InvalidatePeriodRead();entries.clear();smsHashes.clear()')));
   // The biometric reset reloads Home through the single verified recovery
   // path. That path, not the delete tap, invalidates stale period indexes.
   final reset=File('lib/waffra_home_account_tools.part.dart').readAsStringSync();
