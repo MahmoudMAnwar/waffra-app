@@ -30,7 +30,8 @@
     "M1032 gap 11: confirmed Delete All must atomically archive every verified SQLCipher entry with receipts and original account links for 30-day Undo, preserve original SMS anti-replay hashes, and fail closed for competing archives or stale witness",
     "M1032 gap 12: increase owner-scoped local rules safely from 100 to 256, split full 12-keyword learned buckets, retain encrypted V1 compatibility and readback/Undo/backup integrity without automatic finance authorization",
     "M1032 gap11 QA: reconcile obsolete positive deletion assertions M907/M947/M1008/M181, while preserving rollback, witness, receipt and explicit-consent tests",
-    "M1032 preserve M684 period index invalidation positive contract while requiring SMS anti-replay hashes to survive reversible Delete All"
+    "M1032 preserve M684 period index invalidation positive contract while requiring SMS anti-replay hashes to survive reversible Delete All",
+    "M1032 gap11 update M110 positive finance-baseline assertion to scan complete confirmed delete function, enforce original captured witness occurs before finance queue and forbid fresh unverified load; do not weaken financial consent contract."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -70,7 +71,8 @@
     "test/m947_deletion_flow_contract_test.dart",
     "test/m1008_sms_account_projection_refresh_regression_test.dart",
     "test/storage/m181_encrypted_catalog_atomic_install_test.dart",
-    "test/m684_finance_period_index_test.dart"
+    "test/m684_finance_period_index_test.dart",
+    "test/m110_live_finance_authority_writer_test.dart"
   ],
   "allowed_workflow_changes": [],
   "approved_deleted_files": [],
@@ -320,6 +322,12 @@
     "test/m684_finance_period_index_test.dart": [
       {
         "start": " test('M684 index invalidation covers insert/edit/delete, restore and reset',(){",
+        "end": null
+      }
+    ],
+    "test/m110_live_finance_authority_writer_test.dart": [
+      {
+        "start": "  test('M110 financial deletion carries baseline, not a fresh post-widget snapshot', () {",
         "end": null
       }
     ]
