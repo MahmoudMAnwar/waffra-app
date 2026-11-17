@@ -16,7 +16,8 @@
         "lib/waffra_auto_sms_autopost.part.dart"
       ],
       "test_paths": [
-        "test/m1032_outgoing_sms_owner_review_gate_test.dart"
+        "test/m1032_outgoing_sms_owner_review_gate_test.dart",
+        "test/m989_sms_review_lifecycle_guard_test.dart"
       ],
       "safety_invariants": [
         "No sensitive SMS, category, or amount in retry queue",

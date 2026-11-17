@@ -1,3 +1,6 @@
+[M1032 / EXACT-SHA M989 REGRESSION CONTRACT FIX]
+- Updated existing M989 lifecycle review test to validate actual shared ownerBlocker guard and requiresSeparateReview instead of its removed inline boolean spelling. No runtime safety change, no removed test or workflow.
+
 [M1032 / SQLCipher legacy test compatibility and reviewed account evidence]
 - Recycle account-link witness table now stores owner-id/checked confirmed ISO/SHA without a FK to optional money_accounts in older finance-only vaults. Undo verifies a live SAR account exists before restoration; no financial linking is fabricated.
 - M385 import boundary now anchored to an unchanged package import present in the main baseline (as required by scoped audit).

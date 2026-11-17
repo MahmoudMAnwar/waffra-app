@@ -18,8 +18,10 @@ void main(){
   final review=src.split('Future<void> _reviewAutoSmsCandidates({')[1]
    .split('Future<void> _m565ConfirmSms({')[0];
   expect(review,contains('final requiresSeparateReview=composite||'));
-  expect(review,contains('bool canConfirm=!requiresSeparateReview&&'));
-  expect(review,contains('canConfirm=!requiresSeparateReview&&'));
+  expect(review,contains('bool canConfirm=ownerBlocker()==null;'));
+  expect(review,contains('requiresSeparateReview:requiresSeparateReview'));
+  expect(review,contains('WaffraBankSmsFactsParser.ownerConfirmationBlocker('));
+  expect(review,contains('canConfirm=ownerBlocker()==null;'));
   expect(review,contains("Key('m989-lifecycle-manual-review-warning')"));
   expect(review,contains("key:const Key('m565-sms-yes-confirm')"));
  });

@@ -21,7 +21,8 @@
     "M1032 stages 5 and 7: idempotent reversing transfer with verified two-account posting, local-rule-kind review notifications in background",
     "M1032 gap 9+12+2: revoke stale SMS bank suffix auto-post permissions and local mapping when account identifier changes; expose rejected conflict/capacity reasons after confirmed finance",
     "M1032 issue #751 gap 1: on verified edit reconcile senderless financial learning, never silently retain stale original category when there is no other confirmed evidence",
-    "M1032 gap 8 encrypted owner-scoped background learning debt: retry using verified SQLCipher source without replaying money or native acknowledgement"
+    "M1032 gap 8 encrypted owner-scoped background learning debt: retry using verified SQLCipher source without replaying money or native acknowledgement",
+    "M1032 QA: reconcile lifecycle review regression M989 against new ownerBlocker that still forbids composite/refund/reversal"
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -46,7 +47,8 @@
     "test/m1031_sms_unified_review_contract_test.dart",
     "test/m1032_outgoing_sms_owner_review_gate_test.dart",
     "test/storage/m183_encrypted_transaction_recycle_test.dart",
-    "test/storage/m440_accounts_repository_test.dart"
+    "test/storage/m440_accounts_repository_test.dart",
+    "test/m989_sms_review_lifecycle_guard_test.dart"
   ],
   "allowed_workflow_changes": [],
   "approved_deleted_files": [],
@@ -182,6 +184,12 @@
     "lib/waffra_home_entry_sheet.part.dart": [
       {
         "start": " Future<void> entrySheet({MoneyEntry? initial,bool sms=false,String? initialSms,",
+        "end": null
+      }
+    ],
+    "test/m989_sms_review_lifecycle_guard_test.dart": [
+      {
+        "start": "void main(){",
         "end": null
       }
     ]
