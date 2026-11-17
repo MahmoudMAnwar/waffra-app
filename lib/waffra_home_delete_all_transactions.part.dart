@@ -6,16 +6,18 @@ extension _WaffraHomeDeleteAllTransactions on _HomeScreenState {
   if(entries.isEmpty){snack(context,waffraIsEnglish?'No transactions to delete':'لا توجد معاملات لحذفها');return;}
   final confirmed=await confirmDeletion(
    waffraIsEnglish?'Delete all transactions?':'حذف كل المعاملات؟',
-   waffraIsEnglish?'Delete all ${entries.length} recorded transactions permanently? This cannot be undone.':'سيُحذف ${entries.length} معاملة نهائيًا. لا يمكن التراجع.');
+   waffraIsEnglish?'Move all ${entries.length} recorded transactions and their attachments to encrypted Trash for 30 days? You can restore them individually.':'ستنقل ${entries.length} معاملة بكل مرفقاتها إلى المحذوفات المشفرة لمدة 30 يومًا، ويمكن استعادتها بشكل فردي.');
   if(confirmed!=true||!mounted)return;
-  // Crash journal BOTH the ledger and duplicate hashes as one recoverable
-  // intent. Do not clear in-memory finance until durable storage confirms it.
+  // Financial entries move to a reversible encrypted archive; preserve SMS
+  // hashes so historical rescans never charge the owner a second time.
+  final baseline=_lastFinanceAuthorityRead;
+  final hashes=baseline?.encryptedWitness?.snapshot.values['waffra_sms_hashes_v1'];
   final clear=<String,Object>{
    'entries':'[]',
-   'waffra_sms_hashes_v1':<String>[],
+   'waffra_sms_hashes_v1':hashes is List<String>?
+    List<String>.of(hashes):List<String>.of(smsHashes),
   };
   try{
-   final baseline=_lastFinanceAuthorityRead;
    await _financialWriteQueue.submit(clear,(captured)async{
     if(baseline==null)throw StateError('Finance source baseline unavailable.');
     final committed=await _financeAuthority.saveCaptured(
@@ -27,7 +29,7 @@ extension _WaffraHomeDeleteAllTransactions on _HomeScreenState {
     _lastWidgetRevision=committed.widgetRevision;
    });
    if(!mounted)return;
-   setState((){_m684InvalidatePeriodRead();entries.clear();smsHashes.clear();});
+   setState((){_m684InvalidatePeriodRead();entries.clear();});
    unawaited(_refreshWidget());
    // M1008: delete-all updates the durable account source as well as the
    // Home ledger. Refresh its read-only balances and selected-entry IDs.
@@ -42,7 +44,9 @@ extension _WaffraHomeDeleteAllTransactions on _HomeScreenState {
      'تم حذف العمليات، لكن أرصدة الحسابات تحتاج تحقق. حدّث الحسابات.',isError:true);
     return;
    }
-   snackSuccess(context,waffraIsEnglish?'All transactions deleted':'تم حذف جميع المعاملات');
+   snackSuccess(context,waffraIsEnglish?
+    'Transactions moved to encrypted Trash for 30 days.':
+    'تم نقل جميع المعاملات إلى المحذوفات المشفرة لمدة 30 يومًا.');
   }catch(e){
    debugPrint('Confirmed transaction deletion could not be verified: $e');
    if(mounted)snack(context,waffraIsEnglish?
