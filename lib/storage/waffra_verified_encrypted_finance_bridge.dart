@@ -480,9 +480,9 @@ class WaffraVerifiedEncryptedFinanceBridge {
   /// Delete a fully witnessed ledger without receipts, and clear its SMS
   /// dedupe hashes IN THE SAME SQL transaction. Receipt-bearing finance and
   /// orphan blobs deliberately fail closed until retention is certified.
-  /// M1032: the historical entry-point name is retained for route parity,
-  /// but Delete All now uses a reversible 30-day encrypted bulk archive.
-  /// No invoice bytes, account associations, or SMS anti-replay hashes vanish.
+  /// Delete a fully witnessed ledger without receipts, and clear its SMS
+  /// dedupe hashes IN THE SAME SQL transaction. Receipt-bearing finance and
+  /// orphan blobs deliberately fail closed until retention is certified.
   Future<WaffraFinanceSnapshotState> deleteAllUnattachedTransactions({
     required WaffraEncryptedHomeWitness baseline,
     required bool userConfirmed,
@@ -490,6 +490,8 @@ class WaffraVerifiedEncryptedFinanceBridge {
     if (!experimentalEnabled || !userConfirmed) {
       throw StateError('Confirmed encrypted finance deletion is required.');
     }
+    // M1032 replaces the older irreversible implementation with a
+    // fully witness-checked 30-day archive; its legacy API name remains.
     return WaffraEncryptedTransactionRecycle(
       snapshot: snapshot,
       writerDirectory: writerDirectory,
