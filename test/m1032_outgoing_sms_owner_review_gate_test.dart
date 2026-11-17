@@ -123,4 +123,57 @@ void main(){
   expect(native,contains('private const val excludedMessageBucketPrefix'));
  });
 
+ test('M1032 learned buckets spill after 12 keywords without losing approved patterns',(){
+  WaffraSmsLocalRule candidate(int i,String category){
+   final x=String.fromCharCode(97+(i%26));
+   final y=String.fromCharCode(97+((i~/26)%26));
+   final word='merchant$x$y';
+   return WaffraSmsLocalRule(
+    id:'manual_$word',name:'Merchant $x$y',
+    keywords:[word],kind:'expense',income:false,
+    category:category,sender:'',matchAll:false,autoPost:false,
+   );
+  }
+  var rules=<WaffraSmsLocalRule>[];
+  for(var i=0;i<35;i++){
+   rules=WaffraSmsLocalRules.upsertLearned(
+    existing:rules,candidate:candidate(i,'مقاهي'));
+  }
+  expect(rules.length,greaterThan(1));
+  expect(rules.every((r)=>r.keywords.length<=12&&!r.autoPost),isTrue);
+  for(var i=0;i<35;i++){
+   final word=candidate(i,'مقاهي').keywords.single;
+   expect(rules.any((r)=>r.keywords.contains(word)),isTrue,
+    reason:'Learned keyword $word must not be silently discarded');
+  }
+  final conflict=WaffraSmsLocalRules.upsertLearned(
+   existing:rules,candidate:candidate(0,'مطاعم'));
+  expect(conflict.length,rules.length);
+  expect(conflict.expand((r)=>r.keywords).length,
+   rules.expand((r)=>r.keywords).length);
+ });
+
+ test('M1032 101 legacy-format rules remain portable; oversized archive is refused',(){
+  final rows=<WaffraSmsLocalRule>[
+   for(var i=0;i<101;i++)
+    WaffraSmsLocalRule(id:'custom_local_$i',name:'Merchant pattern',
+     kind:'expense',income:false,category:'مقاهي',
+     keywords:['coffeeshop'],sender:'',matchAll:false,autoPost:false),
+  ];
+  const owner='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+  Object archive(List<WaffraSmsLocalRule> rules)=><String,Object?>{
+   'version':1,'owner':owner,
+   'rules':[for(final rule in rules)rule.toJson()],
+  };
+  final restored=WaffraSmsLocalRuleStore.validatePortableBackup(archive(rows));
+  expect((restored['rules'] as List).length,101);
+  final old=WaffraSmsLocalRuleStore.validatePortableBackup(
+    archive(rows.take(100).toList()));
+  expect((old['rules'] as List).length,100);
+  expect(()=>WaffraSmsLocalRuleStore.validatePortableBackup(
+   archive(List<WaffraSmsLocalRule>.filled(
+    WaffraSmsLocalRules.maxStoredRules+1,rows.first))),
+    throwsFormatException);
+ });
+
 }
