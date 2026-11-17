@@ -665,7 +665,8 @@ class WaffraVerifiedFinanceAuthority {
           !expectedFields.contains('waffra_sms_hashes_v1') ||
           immutableCapture['entries'] != '[]' ||
           immutableCapture['waffra_sms_hashes_v1'] is! List<String> ||
-          (immutableCapture['waffra_sms_hashes_v1'] as List<String>).isNotEmpty) {
+          jsonEncode(immutableCapture['waffra_sms_hashes_v1']) != jsonEncode(
+           witness.snapshot.values['waffra_sms_hashes_v1'] ?? const <String>[])) {
         throw StateError('Encrypted delete-all requires exact consent and scope.');
       }
       await encryptedSession!.deleteAllUnattachedTransactions(
