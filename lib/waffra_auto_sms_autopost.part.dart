@@ -21,48 +21,6 @@ abstract final class WaffraAutoSmsAutoPoster {
    // Missing native data is NOT a clean or completed queue.
    throw StateError('Encrypted SMS queue unavailable');
   }
-  final pass=WaffraSmsBackgroundCheckpoint.select(pending,maxPerPass:25);
-  if(pass.candidates.isEmpty)return summary;
-  var completed=0;
-  summary['remaining']=pass.unattempted;
-  void completedOne(){
-   completed++;
-   summary['remaining']=WaffraSmsBackgroundCheckpoint.remainingAfter(
-    pass.unattempted,completed);
-  }
-  // A failed native ACK or encrypted checkpoint cannot be called complete.
-  final retryAck=StateError('Native SMS ACK pending verification');
-  final retryCheckpoint=StateError('Encrypted SMS checkpoint unavailable');
-
-  Future<void> keepForReview(Map<String,Object?> candidate)async{
-   final id=candidate['id'];
-   final body=candidate['body'];
-   if(id is String){
-    var kind='uncertain';
-    if(body is String&&candidate['sensitiveOtp']!=true){
-     final facts=WaffraBankSmsFactsParser.parse(body);
-     if(!facts.pending){
-      kind=switch(facts.kind){
-       WaffraBankOperationKind.income=>'income',
-       WaffraBankOperationKind.expense=>'expense',
-       WaffraBankOperationKind.transfer=>'transfer',
-       _=>'uncertain',
-      };
-     }
-    }
-    // A classification is not a verified financial commit. Every suggested
-    // transaction, including transfers, still opens explicit user review.
-    await WaffraAutoSms.notifyReview(id,kind:kind);
-    if(!await WaffraAutoSms.markBackgroundReviewed(id)){
-     throw retryCheckpoint;
-    }
-    summary['review']=summary['review']!+1;
-    completedOne();
-   }else{
-    throw retryCheckpoint;
-   }
-  }
-
   final prefs=await SharedPreferences.getInstance();
   await prefs.reload();
   final rawProfile=prefs.getString('waffra_profile');
@@ -90,6 +48,48 @@ abstract final class WaffraAutoSmsAutoPoster {
     // All non-excluded SMS remain available for owner review.
    }
   }
+  // Rules unavailability is part of the revision. A later successful
+  // owner-rule load makes a previously reviewed SMS eligible for REVIEW
+  // reclassification, but never a retroactive unconfirmed money write.
+  final ruleRevision=waffraSmsRulesRevision(owner,ruleStoreReady,
+   rules.map((r)=>Map<String,Object?>.from(r.toJson())).toList(growable:false));
+  final notificationsAllowed=await WaffraAutoSms.notificationsAllowed();
+  final pass=WaffraSmsBackgroundCheckpoint.select(pending,maxPerPass:25,
+   currentRulesRevision:ruleRevision,notificationsAllowed:notificationsAllowed);
+  if(pass.candidates.isEmpty)return summary;
+  var completed=0;
+  summary['remaining']=pass.unattempted;
+  void completedOne(){
+   completed++;
+   summary['remaining']=WaffraSmsBackgroundCheckpoint.remainingAfter(
+    pass.unattempted,completed);
+  }
+  // A failed native ACK or encrypted checkpoint cannot be called complete.
+  final retryAck=StateError('Native SMS ACK pending verification');
+  final retryCheckpoint=StateError('Encrypted SMS checkpoint unavailable');
+
+  Future<void> keepForReview(Map<String,Object?> candidate)async{
+   final id=candidate['id'];
+   final body=candidate['body'];
+   if(id is String){
+    final kind=body is String?
+     (WaffraBankSmsFactsParser.reviewSuggestedKind(
+      body:body,sensitiveOtp:candidate['sensitiveOtp']==true)??
+      'uncertain'):'uncertain';
+    // A classification is not a verified financial commit. Every suggested
+    // transaction, including transfers, still opens explicit user review.
+    final delivered=await WaffraAutoSms.notifyReview(id,kind:kind);
+    if(!await WaffraAutoSms.markBackgroundReviewed(id,revision:ruleRevision,
+      notificationDelivered:delivered)){
+     throw retryCheckpoint;
+    }
+    summary['review']=summary['review']!+1;
+    completedOne();
+   }else{
+    throw retryCheckpoint;
+   }
+  }
+
   final actionable=<Map<String,Object?>>[];
   // M980: classify each original, owner-scoped SMS against four rule kinds
   // exactly once, then reuse the same matches for safe posting eligibility.
@@ -151,6 +151,12 @@ abstract final class WaffraAutoSmsAutoPoster {
     for(final candidate in batch){
     if(stopwatch.elapsed>=budget)break;
     final id=candidate['id'];
+    // Once a prior incoming SMS was review-only, a new rule revision may
+    // update its suggestion but must not silently post historical money.
+    final previouslyAttempted=candidate['backgroundAttempted']==true;
+    if(previouslyAttempted){
+     await keepForReview(candidate);continue;
+    }
     final body=candidate['body'];
     final sender=candidate['sender'];
     final at=candidate['receivedAt'];
@@ -187,7 +193,7 @@ abstract final class WaffraAutoSmsAutoPoster {
      }
      final arrived=DateTime.fromMillisecondsSinceEpoch(at);
      final date=bankSmsDate(body,referenceDate:arrived);
-     if(bankSmsHasUnverifiedTimestamp(body,referenceDate:arrived)){
+     if(date==null||bankSmsHasUnverifiedTimestamp(body,referenceDate:arrived)){
       await keepForReview(candidate);continue;
      }
      final decision=WaffraAutoSmsPolicy.decide(
@@ -238,14 +244,21 @@ abstract final class WaffraAutoSmsAutoPoster {
        waffraCategoryAvailableForNewEntry(categories,c))){
       await keepForReview(candidate);continue;
      }
-     final fingerprint=bankSmsHash(body);
-     if((before.finance.getStringList('waffra_sms_hashes_v1')??
-         const <String>[]).contains(fingerprint)){
+     final fingerprint=bankSmsHash(body,nativeId:id);
+     final finalHashesLegacy=before.finance.getStringList('waffra_sms_hashes_v1')??
+         const <String>[];
+     if(finalHashesLegacy.contains(fingerprint)){
       if(!await WaffraAutoSms.acknowledgeCommitted([id])){
        throw retryAck;
       }
       summary['duplicates']=summary['duplicates']!+1;
       completedOne();
+      continue;
+     }
+     if(finalHashesLegacy.contains(bankSmsHash(body))){
+      // An old body-only hash does not prove whether this independently
+      // received SMS is a duplicate. Leave it for owner review.
+      await keepForReview(candidate);
       continue;
      }
      final entry=MoneyEntry(
@@ -254,7 +267,7 @@ abstract final class WaffraAutoSmsAutoPoster {
        parsed.title,body,income:parsed.income),
       category:matched.category,
       amount:parsed.amount!,income:parsed.income,
-      date:date??arrived,notes:body,sourceType:'sms',
+      date:date,notes:body,sourceType:'sms',
       merchantKey:waffraMerchantKey(body,income:parsed.income)??'',
      );
      // Saving the account-bound AutoPost checkbox and rule was the user's
@@ -280,6 +293,26 @@ abstract final class WaffraAutoSmsAutoPoster {
        throw retryAck;
       }
       completedOne();
+      // M1031: bank-SMS AutoPost is a verified income/expense commit too.
+      // Record its encrypted owner-scoped learning receipt; a failure
+      // must never replay the money writer or undo its acknowledged hash.
+      try{
+       if(owner.isNotEmpty){
+        final store=const WaffraSmsLocalRuleStore();
+        await store.recordConfirmedFinanceLearning(
+         owner:owner,transactionId:entry.id,sourceType:'sms',
+         income:entry.income,category:entry.category);
+        final safe=WaffraSmsLocalRules.manualCategoryPattern(
+         description:entry.title,category:entry.category,
+         income:entry.income);
+        if(safe!=null){
+         await store.learnReviewedCandidates(owner,[safe]);
+        }
+       }
+      }catch(_){
+       // The ledger was committed and the native ID acknowledged. Preserve
+       // that authority; the original ledger can be reconciled later.
+      }
       await WaffraAutoSms.notifyCommitted(
        hash:id,amount:parsed.amount!,income:parsed.income,
        linkedBudget:false,entryId:entry.id);

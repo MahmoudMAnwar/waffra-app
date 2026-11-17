@@ -157,13 +157,15 @@ void main(){
   expect(result['committed'],isEmpty);
  });
 
- test('M954 known finance hash takes priority over local exclusion',(){
+ test('M954 legacy body-only finance hash needs owner review, never silent duplicate ACK',(){
   const body='رمز التحقق ••••••';
   final row=sms('e','ServiceApp',body,nativeSensitive:true);
   final result=scan([row],hashes:[bankSmsHash(body)]);
-  expect(ids(result,'committed'),[row['id']]);
+  expect(result['committed'],isEmpty);
   expect(result['excluded'],isEmpty);
-  expect(result['waiting'],isEmpty);
+  final waiting=(result['waiting'] as List).cast<Map<String,Object?>>();
+  expect(waiting.map((value)=>value['id']).toList(),[row['id']]);
+  expect(waiting.single['possibleLegacyDuplicate'],isTrue);
  });
 
  test('M954 excluded candidate remains recoverable on native ACK failure',(){
@@ -217,7 +219,7 @@ void main(){
 
  test('M954 no raw security code persisted by native SMS intake',(){
   final source=File('native/WaffraAutoSmsStore.kt').readAsStringSync();
-  expect(source,contains('val masked = if (sensitive) body.trim().replace('));
+  expect(source,contains('val masked = if (sensitive) redactMixedOtpSecrets(body) else body.trim()'));
   expect(source,contains('.put("body", masked)'));
   expect(source,contains('.put("sensitiveOtp", sensitive)'));
   expect(source,contains('if (isCommittedLocked(context, fingerprint) ||'));

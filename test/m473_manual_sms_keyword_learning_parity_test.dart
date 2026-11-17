@@ -89,19 +89,27 @@ void main(){
   // The SMS branch precedes the manual branch in the same editor.
   // Each learning call must follow its OWN verified finance commit.
   final smsCommit=editor.indexOf('_financeAuthority.commitConfirmedSms(');
+  final smsReceipt=editor.indexOf(
+    'await _m1031RecordConfirmedLearning(result);',smsCommit);
   final smsLearn=editor.indexOf(
-    'try{await _learnManualCategoryPreference(result);}',smsCommit);
+    'await _learnManualCategoryPreference(result);',smsReceipt);
   final manualCommit=editor.indexOf('commitConfirmedManual(');
+  final manualReceipt=editor.indexOf(
+    'await _m1031RecordConfirmedLearning(result);',manualCommit);
   final manualLearn=editor.indexOf(
-    'try{await _learnManualCategoryPreference(result);}',manualCommit);
+    'await _learnManualCategoryPreference(result);',manualReceipt);
   expect(smsCommit,greaterThanOrEqualTo(0));
-  expect(smsLearn,greaterThan(smsCommit));
+  expect(smsReceipt,greaterThan(smsCommit));
+  expect(smsLearn,greaterThan(smsReceipt));
   expect(manualCommit,greaterThan(smsLearn));
-  expect(manualLearn,greaterThan(manualCommit));
+  expect(manualReceipt,greaterThan(manualCommit));
+  expect(manualLearn,greaterThan(manualReceipt));
   // M636: the deleted bulk paste UI cannot maintain a second learning
   // pipeline; both SMS and manual confirmation use this verified editor.
   expect(editor,contains('WaffraSmsLocalRules.resolve(body:initialSms,'));
-  expect(editor,contains('try{await _learnManualCategoryPreference(result);}'));
+  expect(editor,contains('await _m1031RecordConfirmedLearning(result);'));
+  expect(editor,contains('await _learnManualCategoryPreference(result);'));
+  expect(editor,contains('تعذر التحقق من التعلم المحلي المشفر'));
   expect(main,isNot(contains(' Future<void> bulkSmsSheet(')));
  });
 }

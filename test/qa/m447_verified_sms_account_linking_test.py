@@ -11,7 +11,7 @@ class VerifiedSmsAccountLinkingTest(unittest.TestCase):
         home = read_waffra_home_source(ROOT)
         self.assertEqual(home.count("commitConfirmedSms("), 2)
         self.assertNotIn("Future<void> bulkSmsSheet(", home)
-        self.assertIn("await entrySheet(sms:true,initialSms:body,reviewedSender:sender);", home)
+        self.assertIn("await entrySheet(sms:true,initialSms:body,reviewedSender:sender,reviewedSmsId:id);", home)
         self.assertIn("userConfirmed:true", home)
         # M636: surviving paths are M565 yes-confirm + account-bound SMS editor;\n        # retired bulk paste and widget direct writers must NEVER return.
         self.assertIn("selectedAccountIds:chosen.ids", home)

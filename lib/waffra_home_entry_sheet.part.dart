@@ -4,7 +4,7 @@ part of 'main.dart';
 /// save logic extracted verbatim. No writer, account source or field changed.
 extension _WaffraHomeEntrySheetModule on _HomeScreenState {
  Future<void> entrySheet({MoneyEntry? initial,bool sms=false,String? initialSms,
-  String? reviewedSender,bool? reviewedIncomeOverride,bool? manualIncomeOverride,
+  String? reviewedSender,String? reviewedSmsId,bool? reviewedIncomeOverride,bool? manualIncomeOverride,
   String? reviewedOriginalSms,DateTime? reviewedOriginalDate})async {
   // A paid goal due is an immutable verified two-source settlement.
   // There is no independent edit path that can rewrite its wallet/bank split.
@@ -43,7 +43,7 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
   // Restore an unfinished bank SMS editor after one-step Back. No money or
   // SMS acknowledgement happens until a separate verified commit.
   final smsEditorDraftKey=sms&&initial==null&&initialSms!=null?
-   bankSmsHash(initialSms):null;
+   bankSmsHash(initialSms,nativeId:reviewedSmsId):null;
   final smsEditorDraft=smsEditorDraftKey==null?
    null:_m492SmsEditorDrafts[smsEditorDraftKey];
   // M485 / #403 #404: correction of a detected SMS is still a reviewed
@@ -1436,8 +1436,8 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
           'عملة الرسالة أجنبية أو غير مؤكدة؛ لم نحفظ العملية بالريال. يلزم التحقق من المبلغ وسعر الصرف أولًا.');
          return;
         }
-        final h=sha256.convert(utf8.encode(digits(message.text).replaceAll(RegExp(r'\s+'),' ').trim().toLowerCase())).toString();
-        if(smsHashes.contains(h)){
+        final h=bankSmsHash(message.text,nativeId:reviewedSmsId);
+        if(smsHashes.contains(h)||smsHashes.contains(bankSmsHash(message.text))){
          final proceed=await showWaffraDialog<bool>(context:sheetContext,builder:(dialogContext)=>AlertDialog(
           title:const WaffraText('⚠️ الرسالة مكررة'),
           content:const WaffraText('هذي الرسالة البنكية أضفتها قبل كذا. ودّك تضيفها مرة ثانية؟'),
@@ -1705,7 +1705,17 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
    }
    // The expense/income learner applies only AFTER an authoritative commit,
    // and uses user-approved description/category, not the raw SMS body.
-   try{await _learnManualCategoryPreference(result);}catch(_){}
+   try{
+      await _m1031RecordConfirmedLearning(result);
+      await _learnManualCategoryPreference(result);
+     }catch(error){
+      // No retry of the committed debit: learning is a separate encrypted
+      // post-commit operation. Surface its failure instead of swallowing it.
+      if(mounted)snack(context,waffraIsEnglish?
+       'Transaction saved, but encrypted local learning was not verified. Review your rules without saving the money movement again.':
+       'العملية اتحفظت، لكن تعذر التحقق من التعلم المحلي المشفر. راجع القواعد بدون إعادة تسجيل المبلغ.',
+       isError:true);
+     }
    // SMS classification must not compete with the next page's first
    // frame after a verified money save. Review reads new rules on opening;
    // native intake / exact confirmed ACK remains the source of truth.
@@ -1805,7 +1815,17 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
       catch(_){}
      }
      // A preference failure cannot retry an already-committed debit.
-     try{await _learnManualCategoryPreference(result);}catch(_){}
+     try{
+      await _m1031RecordConfirmedLearning(result);
+      await _learnManualCategoryPreference(result);
+     }catch(error){
+      // No retry of the committed debit: learning is a separate encrypted
+      // post-commit operation. Surface its failure instead of swallowing it.
+      if(mounted)snack(context,waffraIsEnglish?
+       'Transaction saved, but encrypted local learning was not verified. Review your rules without saving the money movement again.':
+       'العملية اتحفظت، لكن تعذر التحقق من التعلم المحلي المشفر. راجع القواعد بدون إعادة تسجيل المبلغ.',
+       isError:true);
+     }
      // Don't decrypt and reclassify up to 1000 SMS while the manual
      // finance confirmation is transitioning. Review refreshes on entry.
     }catch(error){
@@ -1864,7 +1884,17 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
      userConfirmed:initial==null,
      selectedAccountId:initial==null?chosenManual?.ids?.single:null);
     if(initial==null&&result.sourceType=='manual'){
-     try{await _learnManualCategoryPreference(result);}catch(_){}
+     try{
+      await _m1031RecordConfirmedLearning(result);
+      await _learnManualCategoryPreference(result);
+     }catch(error){
+      // No retry of the committed debit: learning is a separate encrypted
+      // post-commit operation. Surface its failure instead of swallowing it.
+      if(mounted)snack(context,waffraIsEnglish?
+       'Transaction saved, but encrypted local learning was not verified. Review your rules without saving the money movement again.':
+       'العملية اتحفظت، لكن تعذر التحقق من التعلم المحلي المشفر. راجع القواعد بدون إعادة تسجيل المبلغ.',
+       isError:true);
+     }
     }
    }catch(e){
     if(mounted){

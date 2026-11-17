@@ -181,6 +181,13 @@ extension _WaffraHomeProfileModule on _HomeScreenState {
      Icons.history_rounded,
      onTap:()=>unawaited(_scanPreviousBankSmsFromSettings())),
     _accountTile(
+     waffraIsEnglish?'Scan all SMS history':'فحص سجل الرسائل بالكامل',
+     waffraIsEnglish?
+      'With confirmation, scan older bank SMS in bounded batches; review required.':
+      'بعد التأكيد، فحص الرسائل البنكية القديمة على دفعات للمراجعة فقط.',
+     Icons.manage_history_rounded,
+     onTap:()=>unawaited(_scanAllBankSmsHistoryFromSettings())),
+    _accountTile(
      waffraIsEnglish?'Unrecognized SMS':'رسائل SMS غير معروفة',
      waffraIsEnglish?
       'Read financial notices that could not be verified as transactions.':

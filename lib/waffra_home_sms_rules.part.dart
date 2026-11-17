@@ -128,6 +128,22 @@ extension _WaffraHomeSmsRules on _HomeScreenState {
   if(saved.changed)_receiveAutoSmsNotice();
  }
 
+ /// After an authoritative SQLCipher commit, persist owner-bound evidence
+ /// even if the title is too generic to create a safely matching SMS rule.
+ /// Learning failure never undoes or repeats the already-posted transaction.
+ Future<void> _m1031RecordConfirmedLearning(MoneyEntry record)async{
+  if(_smsRuleOwnerKey.isEmpty||
+     !const <String>{'manual','sms'}.contains(record.sourceType)){
+   throw StateError('Verified learning owner or source unavailable');
+  }
+  final recorded=await const WaffraSmsLocalRuleStore()
+   .recordConfirmedFinanceLearning(
+    owner:_smsRuleOwnerKey,transactionId:record.id,
+    sourceType:record.sourceType,income:record.income,
+    category:record.category);
+  if(!recorded)throw StateError('Confirmed learning receipt not persisted');
+ }
+
  // Retained single-message reference for on-demand review and M473 parity;
  // the production bulk queue now uses the background compute worker.
  // ignore: unused_element

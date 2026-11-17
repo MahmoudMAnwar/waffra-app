@@ -24,9 +24,9 @@ void main(){
   expect(home,contains('WaffraAutoSms.suspendForSignOut()'));
  });
  test('M636 automatic SMS review still demands verified human editor',(){
-  expect(home,contains('await entrySheet(sms:true,initialSms:body,reviewedSender:sender);'));
+  expect(home,contains('await entrySheet(sms:true,initialSms:body,reviewedSender:sender,reviewedSmsId:id);'));
   expect(home,contains('await WaffraAutoSms.acknowledgeCommitted([id]);'));
-  expect(home,contains('if(smsHashes.contains(bankSmsHash(body)))'));
+  expect(home,contains('if(smsHashes.contains(bankSmsHash(body,nativeId:id)))'));
   expect(home,contains('Future<void> _m565ConfirmSms('));
   expect(home,isNot(contains('Future<void> bulkSmsSheet(')));
  });

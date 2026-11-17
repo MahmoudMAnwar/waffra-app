@@ -491,6 +491,18 @@ class MainActivity : FlutterFragmentActivity() {
                         }
                     }
                 }
+                "enableAllSmsHistoryScan" -> {
+                    val app = applicationContext
+                    smsHistoryExecutor.execute {
+                        try {
+                            val approved = WaffraAutoSmsStore.enableAllHistoryScan(app)
+                            runOnUiThread { result.success(approved) }
+                        } catch (_: Exception) {
+                            runOnUiThread { result.error("SMS_HISTORY_CONSENT_FAILED",
+                                "Could not approve full SMS history", null) }
+                        }
+                    }
+                }
                 "importConsentMonthBankSms" -> {
                     // Provider scans and encrypted queue writes are blocking IO.
                     val app = applicationContext

@@ -33,10 +33,13 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
   if(selectedAccount.ids?.length!=1||
      selectedAccount.ids!.single==null||
      selectedAccount.generation==null)return;
-  final hash=bankSmsHash(body);
+  final hash=bankSmsHash(body,nativeId:id);
   final facts=WaffraBankSmsFactsParser.parse(body);
   final original=WaffraSmsCurrencies.originalAmount(body);
-  if(!facts.canAutoPostAsIncomeExpense||
+  // Explicit owner review differs from unattended AutoPost permission:
+  // a confirmed external outgoing transfer is an Expense, not an own
+  // account Transfer. The secure finance writer still rechecks all fields.
+  if(!facts.canOwnerConfirmAsIncomeExpense||
     (facts.kind==WaffraBankOperationKind.income)!=income||
     original==null||original.currency!='SAR'||
     (original.amount-value).abs()>0.00001||
@@ -102,7 +105,16 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
     unawaited(_recordConfirmedSmsAccountAssociation(
      record:reviewed,sender:sender,accountId:chosen.ids!.single));
    }
-   try{await _learnManualCategoryPreference(reviewed);}catch(_){}
+   try{
+    await _m1031RecordConfirmedLearning(reviewed);
+    await _learnManualCategoryPreference(reviewed);
+   }catch(error){
+    // The SQLCipher charge was already committed; warn, never replay it.
+    if(mounted)snack(context,waffraIsEnglish?
+     'Bank transaction saved; encrypted local learning could not be verified.':
+     'العملية البنكية محفوظة لكن تعذر التحقق من التعلم المحلي المشفر.',
+     isError:true);
+   }
    if(sender.trim().isNotEmpty){
     try{await _learnSafeSmsRule(body:body,sender:sender,
      kind:income?'income':'expense',category:category);}catch(_){}
@@ -196,18 +208,18 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
     isError:true);
    return;
   }
-  final hash=bankSmsHash(body);
+  final hash=bankSmsHash(body,nativeId:id);
   if(!smsHashes.contains(hash)){
    // NEVER use manualIncomeOverride/reviewedOriginalSms for a reviewed SMS.
    // The manual writer loses sourceType and immutable original text/hash.
-   await entrySheet(sms:true,initialSms:body,reviewedSender:sender,
+   await entrySheet(sms:true,initialSms:body,reviewedSender:sender,reviewedSmsId:id,
     reviewedIncomeOverride:income);
   }
   if(!mounted)return;
   // Verify the exact original bank body AND owner-chosen direction from
   // the source-reloaded ledger, not a dialog success/toast or a rule match.
   final committed=entries.where((e)=>e.sourceType=='sms'&&
-   bankSmsHash(e.notes)==hash&&e.income==income).toList(growable:false);
+   e.notes==body&&e.income==income).toList(growable:false);
   if(!smsHashes.contains(hash)||committed.isEmpty)return;
   final ack=await WaffraAutoSms.acknowledgeCommitted([id]);
   if(!mounted)return;
@@ -311,7 +323,7 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
     final id=item['id'],body=item['body'];
     if(id is! String||body is! String||body.trim().isEmpty)continue;
     if(targetId!=null&&id!=targetId)continue;
-    if(smsHashes.contains(bankSmsHash(body))){
+    if(smsHashes.contains(bankSmsHash(body,nativeId:id))){
      final acknowledged=await WaffraAutoSms.acknowledgeCommitted([id]);
      if(acknowledged&&mounted){
       setState(()=>_autoSmsPending.removeWhere((row)=>row['id']==id));
@@ -373,7 +385,7 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
    // The atomic writer validates original facts, NOT that optional second
    // parser. A present conflicting parsed amount/direction still blocks Yes.
    bool canConfirm=!requiresSeparateReview&&
-    understood&&facts.canAutoPostAsIncomeExpense&&
+    understood&&facts.canOwnerConfirmAsIncomeExpense&&
     originalAmount!=null&&originalAmount.currency=='SAR'&&
     originalDate!=null&&!bankSmsHasUnverifiedTimestamp(body)&&
     (parsed.amount==null||
@@ -486,7 +498,7 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
      reviewedMainName=parent.single.displayName;
      reviewCategoryValid=unambiguous;
      canConfirm=!requiresSeparateReview&&
-      understood&&facts.canAutoPostAsIncomeExpense&&
+      understood&&facts.canOwnerConfirmAsIncomeExpense&&
       originalAmount!=null&&originalAmount.currency=='SAR'&&
       originalDate!=null&&!bankSmsHasUnverifiedTimestamp(body)&&
       (parsed.amount==null||
@@ -698,6 +710,13 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
           (waffraIsEnglish?'Choose money account':'اختيار الحساب المالي'))),
         ),
         const SizedBox(height:6),
+        if(!canConfirm)Padding(
+         padding:const EdgeInsets.only(bottom:8),
+         child:WaffraText(waffraIsEnglish?
+          'The amount, date, transaction direction or category needs review. Use Edit to correct the original SMS safely.':
+          'تعذر تأكيد المبلغ أو التاريخ أو اتجاه العملية أو القسم. استخدم تعديل لمراجعة الرسالة بأمان.',
+          style:TextStyle(fontSize:12,
+           color:Theme.of(dialog).colorScheme.error))),
         // Two readable actions on the first row, with Exclude at full
         // width below. Three narrow Expanded buttons truncated Arabic text.
         Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
@@ -918,8 +937,8 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
      value:originalAmount.amount,date:originalDate,
      selectedAccount:reviewedAccount!);
    }else if(decision=='no'&&mounted){
-    await entrySheet(sms:true,initialSms:body,reviewedSender:sender);
-    if(smsHashes.contains(bankSmsHash(body))){
+    await entrySheet(sms:true,initialSms:body,reviewedSender:sender,reviewedSmsId:id);
+    if(smsHashes.contains(bankSmsHash(body,nativeId:id))){
      final ack=await WaffraAutoSms.acknowledgeCommitted([id]);
      if(ack&&mounted){
       setState(()=>_autoSmsPending.removeWhere((r)=>r['id']==id));
@@ -928,8 +947,8 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
    }else if(decision=='manual'&&mounted){
     // Keep the SMS's verified source/hash instead of replacing it with
     // a blank 'manual' record. Uncertain fields remain editable.
-    await entrySheet(sms:true,initialSms:body,reviewedSender:sender);
-    if(smsHashes.contains(bankSmsHash(body))){
+    await entrySheet(sms:true,initialSms:body,reviewedSender:sender,reviewedSmsId:id);
+    if(smsHashes.contains(bankSmsHash(body,nativeId:id))){
      final acknowledged=await WaffraAutoSms.acknowledgeCommitted([id]);
      if(acknowledged&&mounted){
       setState(()=>_autoSmsPending.removeWhere((row)=>row['id']==id));
@@ -944,8 +963,8 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
     }
    }else if(decision=='review'&&mounted){
     // M636: the verified SMS editor remains, while the paste template is retired.
-    await entrySheet(sms:true,initialSms:body,reviewedSender:sender);
-    if(smsHashes.contains(bankSmsHash(body))){
+    await entrySheet(sms:true,initialSms:body,reviewedSender:sender,reviewedSmsId:id);
+    if(smsHashes.contains(bankSmsHash(body,nativeId:id))){
      // M484 #411: remove from review only after an exact saved SMS hash
      // and the native acknowledgement both succeed.
      final acknowledged=await WaffraAutoSms.acknowledgeCommitted([id]);

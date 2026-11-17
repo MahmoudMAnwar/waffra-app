@@ -105,26 +105,31 @@ object WaffraAutoSmsNotifications {
                      suggestedKind: String = "uncertain"): Boolean {
         if (!canNotify(context) || !validFingerprint.matches(fingerprint))
             return false
-        if (!WaffraAutoSmsStore.claimReviewNotification(context, fingerprint))
-            return false
-        ensureChannel(context)
-        // Built-in, locally understood kind is still only a proposal.
-        // Transfers always require the user's two verified accounts.
-        val title = when (suggestedKind) {
-            "income" -> "وفرة — دخل مقترح للمراجعة"
-            "expense" -> "وفرة — مصروف مقترح للمراجعة"
-            "transfer" -> "وفرة — تحويل مقترح للمراجعة"
-            else -> "وفرة — عملية تحتاج مراجعة"
-        }
-        manager(context).notify(fingerprint.take(8).toLong(16).toInt(),
-            NotificationCompat.Builder(context, channel)
-                .setSmallIcon(R.drawable.waffra_notification_wallet)
-                .setContentTitle(title)
-                .setContentText("افتح وفرة لمراجعة العملية وتأكيدها أو استبعادها")
-                .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
-                .setAutoCancel(true)
-                .setContentIntent(openPending(context, fingerprint, "review"))
-                .build())
-        return true
+        val alreadyDelivered =
+            WaffraAutoSmsStore.reviewNotificationClaimed(context, fingerprint)
+                ?: return false
+        if (alreadyDelivered) return true
+        // M1023: POST before marking reviewNotified. If Android rejects the
+        // notification or dies, no delivered flag is persisted. Duplicate
+        // attempts use the same immutable fingerprint PendingIntent/id.
+        return try {
+            ensureChannel(context)
+            val title = when (suggestedKind) {
+                "income" -> "وفرة — دخل مقترح للمراجعة"
+                "expense" -> "وفرة — مصروف مقترح للمراجعة"
+                "transfer" -> "وفرة — تحويل مقترح للمراجعة"
+                else -> "وفرة — عملية تحتاج مراجعة"
+            }
+            manager(context).notify(fingerprint.take(8).toLong(16).toInt(),
+                NotificationCompat.Builder(context, channel)
+                    .setSmallIcon(R.drawable.waffra_notification_wallet)
+                    .setContentTitle(title)
+                    .setContentText("افتح وفرة لمراجعة العملية وتأكيدها أو استبعادها")
+                    .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+                    .setAutoCancel(true)
+                    .setContentIntent(openPending(context, fingerprint, "review"))
+                    .build())
+            WaffraAutoSmsStore.claimReviewNotification(context, fingerprint)
+        } catch (_: Exception) { false }
     }
 }

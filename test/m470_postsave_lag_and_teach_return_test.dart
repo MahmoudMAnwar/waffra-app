@@ -33,7 +33,7 @@ void main(){
   expect(review,contains('final acknowledged=await WaffraAutoSms.acknowledgeCommitted([id]);'));
   expect(review,isNot(contains('WaffraAutoSms.acknowledge([id])')));
   final reviewAction=review.indexOf("decision=='review'&&mounted");
-  final confirmed=review.indexOf('if(smsHashes.contains(bankSmsHash(body)))',reviewAction);
+  final confirmed=review.indexOf('if(smsHashes.contains(bankSmsHash(body,nativeId:id)))',reviewAction);
   final rule=review.indexOf('await _learnSafeSmsRule(',confirmed);
   expect(confirmed,greaterThan(reviewAction));
   expect(rule,greaterThan(confirmed));

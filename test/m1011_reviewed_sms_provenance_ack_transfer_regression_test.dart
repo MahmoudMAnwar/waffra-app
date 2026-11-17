@@ -58,7 +58,7 @@ void main(){
   expect(helper,contains('await entrySheet(sms:true,initialSms:body,'));
   expect(helper,contains('reviewedIncomeOverride:income'));
   expect(helper,contains("e.sourceType=='sms'"));
-  expect(helper,contains('bankSmsHash(e.notes)==hash'));
+  expect(helper,contains('e.notes==body&&e.income==income'));
   expect(helper,contains('if(!smsHashes.contains(hash)||committed.isEmpty)return;'));
   expect(helper,contains('await WaffraAutoSms.acknowledgeCommitted([id])'));
   expect(helper.indexOf('if(!smsHashes.contains(hash)||committed.isEmpty)return;'),

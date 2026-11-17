@@ -63,7 +63,8 @@ void main(){
   expect(native,contains('وفرة — عملية تحتاج مراجعة'));
   final worker=File('lib/waffra_auto_sms_autopost.part.dart').readAsStringSync();
   expect(worker,contains('await WaffraAutoSms.notifyReview(id,kind:kind)'));
-  expect(worker,contains('WaffraBankOperationKind.transfer'));
+  expect(worker,contains('WaffraBankSmsFactsParser.reviewSuggestedKind('));
+  expect(worker,contains('!facts.canAutoPostAsIncomeExpense'));
   expect(worker,contains('if(committed.saved==1&&persisted&&'));
   expect(worker,contains('linkedBudget:false,entryId:entry.id'));
  });
@@ -107,6 +108,8 @@ void main(){
   // M636: no independent bulk-SMS route is allowed to swallow notification
   // taps or write money. The verified review remains the only SMS entry.
   expect(home,isNot(contains('Future<void> bulkSmsSheet(')));
-  expect(review,contains('await entrySheet(sms:true,initialSms:body,reviewedSender:sender);'));
+  expect(review,contains('await entrySheet(sms:true,initialSms:body,reviewedSender:sender,reviewedSmsId:id);'));
+  expect(review,contains('if(smsHashes.contains(bankSmsHash(body,nativeId:id)))'));
+  expect(review,contains('await WaffraAutoSms.acknowledgeCommitted([id]);'));
  });
 }

@@ -21,6 +21,38 @@ GROUPS = ("money", "experience", "safety")
 # Each user-facing capability has a real runnable suite. Tests can be reused
 # across capabilities; the runner de-duplicates within each CI shard.
 FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {
+    "m1031_sms_unified_review_predictions_and_owner_confirmation": ("money", (
+        "test/m1031_sms_unified_review_contract_test.dart",
+        "test/m1009_sama_notification_swipe_regression_test.dart",
+        "test/m462_smart_sms_rule_review_test.dart")),
+    "m1030_android_sms_receiver_background_io_and_finish": ("safety", (
+        "test/m1030_android_sms_receiver_latency_test.dart",
+        "test/m1029_android_sms_multipart_grouping_test.dart",
+        "test/m1018_sms_workmanager_wakeup_race_test.dart")),
+    "m1029_sms_sender_and_timestamp_multipart_guard": ("safety", (
+        "test/m1029_android_sms_multipart_grouping_test.dart",
+        "test/m1018_sms_workmanager_wakeup_race_test.dart")),
+    "m1028_sms_background_worker_exponential_recovery": ("safety", (
+        "test/m1028_sms_worker_retry_recovery_test.dart",
+        "test/m1020_sms_background_checkpoint_continuation_test.dart")),
+    "m1027_mixed_sms_otp_secret_redaction": ("safety", (
+        "test/m1027_sms_mixed_otp_redaction_test.dart",
+        "test/m1016_sms_background_financial_intake_test.dart")),
+    "m1026_sms_history_explicit_all_inbox_opt_in": ("experience", (
+        "test/m1026_sms_history_range_test.dart",
+        "test/m1019_sms_intake_capacity_recovery_test.dart")),
+    "m1025_sms_finance_native_identity_migration": ("money", (
+        "test/m1025_sms_transaction_identity_test.dart",
+        "test/m1024_sms_autopost_date_guard_test.dart")),
+    "m1024_sms_autopost_explicit_transaction_date_guard": ("money", (
+        "test/m1024_sms_autopost_date_guard_test.dart",
+        "test/m1020_sms_background_checkpoint_continuation_test.dart")),
+    "m1023_sms_review_notification_delivery_and_retry": ("safety", (
+        "test/m1023_sms_review_notification_ack_test.dart",
+        "test/m1022_sms_rule_checkpoint_revision_test.dart")),
+    "m1022_sms_background_rule_checkpoint_invalidation": ("safety", (
+        "test/m1022_sms_rule_checkpoint_revision_test.dart",
+        "test/m1020_sms_background_checkpoint_continuation_test.dart")),
     "m1021_goal_card_inline_actions_same_as_due_no_tap_sheet": ("experience", (
         "test/m1021_goal_card_inline_actions_test.dart",
         "test/m665_goal_due_display_and_linked_edit_test.dart",

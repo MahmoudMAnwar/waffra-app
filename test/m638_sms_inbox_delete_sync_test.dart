@@ -6,7 +6,7 @@ void main(){
  test('M638 native reconciliation removes only missing unconfirmed review IDs',(){
   final native=File('native/WaffraAutoSmsStore.kt').readAsStringSync();
   final start=native.indexOf('fun reconcilePendingWithInbox(context: Context): Int');
-  final end=native.indexOf('fun restartCompletedHistory(context: Context)',start);
+  final end=native.indexOf('fun enableAllHistoryScan(context: Context)',start);
   expect(start,greaterThan(0));
   expect(end,greaterThan(start));
   final reconcile=native.substring(start,end);
@@ -52,7 +52,7 @@ void main(){
   final native=File('native/WaffraAutoSmsStore.kt').readAsStringSync();
   final block=native.substring(
    native.indexOf('fun reconcilePendingWithInbox(context: Context): Int'),
-   native.indexOf('fun restartCompletedHistory(context: Context)'));
+   native.indexOf('fun enableAllHistoryScan(context: Context)'));
   for(final forbidden in <String>[
    'committedBucketPrefix','excludedMessageBucketPrefix',
    'excludedMessageInfoBucketPrefix','completedTransferBucketPrefix',

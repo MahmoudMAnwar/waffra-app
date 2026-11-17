@@ -814,6 +814,16 @@ abstract final class WaffraSmsLocalRules {
       candidate.category)))){
    return existing;
   }
+  // M1031: a contradictory confirmed direction must NOT silently create
+  // two globally matching income/expense rules for the same phrase.
+  // Preserve existing owner evidence and leave future SMS in human review.
+  if(existing.any((rule)=>rule.financial&&candidate.financial&&
+    rule.resolvedKind!=candidate.resolvedKind&&
+    normalized(rule.sender)==normalized(candidate.sender)&&
+    rule.keywords.any((word)=>candidate.keywords.any(
+     (other)=>normalized(word)==normalized(other))))){
+   return existing;
+  }
   // An existing explicit auto-post pattern must not be expanded or cloned.
   if(existing.any((rule)=>rule.autoPost&&
    rule.resolvedKind==candidate.resolvedKind&&
@@ -1051,6 +1061,126 @@ class WaffraSmsLocalRuleStore {
 
  /// Atomically combine safe financial/exclusion suggestions with latest
  /// encrypted owner rules instead of racing the four entry points.
+ /// M1031: every confirmed manual/SMS Income/Expense leaves an encrypted,
+ /// owner-scoped, idempotent learning receipt EVEN when its generic title
+ /// has no safe SMS-matching keyword. This is not a finance or AutoPost rule.
+ /// Only safe, separately validated patterns are put into active rule lists.
+ Future<bool> recordConfirmedFinanceLearning({
+  required String owner,required String transactionId,
+  required String sourceType,required bool income,required String category,
+ })=>_exclusive(owner,()async{
+  if(transactionId.trim().isEmpty||transactionId.length>180||
+     !const {'manual','sms'}.contains(sourceType)||
+     category.trim().isEmpty||category.length>160){
+   throw const FormatException('Confirmed learning source invalid');
+  }
+  final digest=sha256.convert(utf8.encode(
+   '$owner|$sourceType|$transactionId')).toString();
+  final key='waffra_sms_confirmed_finance_learning_v1_$owner';
+  final old=await _storage.read(key:key);
+  final parsed=old==null?<String,Object?>{}:jsonDecode(old);
+  if(parsed is! Map)throw const FormatException(
+   'Confirmed learning history unreadable');
+  final doc=Map<String,Object?>.from(parsed);
+  final recent=(doc['recent'] as List? ??const [])
+   .whereType<Map>().map((row)=>Map<String,Object?>.from(row))
+   .toList(growable:true);
+  if(recent.length>512||recent.any((row)=>
+    row['id'] is! String||row['kind'] is! String)) {
+   throw const FormatException('Invalid confirmed learning history');
+  }
+  if(recent.any((row)=>row['id']==digest))return true;
+  final kind=income?'income':'expense';
+  final totals=<String,int>{};
+  final sourceTotals=doc['totals'];
+  if(sourceTotals is Map){
+   for(final pair in sourceTotals.entries){
+    if(pair.key is! String||pair.value is! int||
+       (pair.value as int)<0)throw const FormatException(
+        'Invalid confirmed learning totals');
+    totals[pair.key as String]=pair.value as int;
+   }
+  }
+  final bySource=<String,int>{};
+  if(doc['sourceTotals'] is Map){
+   for(final entry in (doc['sourceTotals'] as Map).entries){
+    if(entry.key is! String||entry.value is! int||
+       (entry.value as int)<0)throw const FormatException(
+        'Invalid source learning totals');
+    bySource[entry.key as String]=entry.value as int;
+   }
+  }else{
+   // Backward compatibility for the first M1031 verified receipts created
+   // before the by-source counter existed.
+   for(final row in recent){
+    final src=row['source'],type=row['kind'];
+    if(src is String&&type is String){
+     final key='$src|$type';
+     bySource[key]=(bySource[key]??0)+1;
+    }
+   }
+  }
+  final bucket='$kind|$category';
+  totals[bucket]=(totals[bucket]??0)+1;
+  final sourceKey='$sourceType|$kind';
+  bySource[sourceKey]=(bySource[sourceKey]??0)+1;
+  recent.add(<String,Object?>{
+   'id':digest,'kind':kind,'category':category.trim(),
+   'source':sourceType,
+  });
+  if(recent.length>512)recent.removeRange(0,recent.length-512);
+  final next=jsonEncode(<String,Object?>{
+   'version':1,'recent':recent,'totals':totals,
+   'sourceTotals':bySource,
+  });
+  await _storage.write(key:key,value:next);
+  final reloaded=await _storage.read(key:key);
+  if(reloaded!=next)throw StateError(
+   'Confirmed local learning did not survive encrypted readback');
+  return true;
+ });
+
+ /// Read-only statistics: a confirmed learning observation is NOT
+ /// necessarily a safely reusable SMS keyword pattern. Never display
+ /// missing/decryption-failed statistics as a misleading zero.
+ Future<Map<String,int>> confirmedFinanceLearningCounts(String owner)async{
+  _key(owner);
+  final raw=await _storage.read(
+   key:'waffra_sms_confirmed_finance_learning_v1_$owner');
+  if(raw==null)return const <String,int>{
+   'manual|income':0,'manual|expense':0,
+   'sms|income':0,'sms|expense':0,
+  };
+  final doc=jsonDecode(raw);
+  if(doc is! Map)throw const FormatException(
+   'Confirmed local learning ledger unreadable');
+  final counts=<String,int>{
+   'manual|income':0,'manual|expense':0,
+   'sms|income':0,'sms|expense':0,
+  };
+  final encoded=doc['sourceTotals'];
+  if(encoded is Map){
+   for(final entry in encoded.entries){
+    if(entry.key is! String||entry.value is! int||
+       (entry.value as int)<0)throw const FormatException(
+        'Invalid confirmed local learning counter');
+    if(counts.containsKey(entry.key))counts[entry.key as String]=entry.value as int;
+   }
+  }else{
+   // Read legacy M1031 bounded history without erasing or changing it.
+   final rows=doc['recent'];
+   if(rows is! List)throw const FormatException(
+    'Confirmed learning snapshot missing');
+   for(final row in rows){
+    if(row is! Map)throw const FormatException('Invalid learning record');
+    final source=row['source'],kind=row['kind'];
+    final bucket='$source|$kind';
+    if(counts.containsKey(bucket))counts[bucket]=counts[bucket]!+1;
+   }
+  }
+  return Map<String,int>.unmodifiable(counts);
+ }
+
  Future<WaffraSmsRuleLearningResult> learnReviewedCandidates(
   String owner,Iterable<WaffraSmsLocalRule> candidates,
  )=>_exclusive(owner,()async{

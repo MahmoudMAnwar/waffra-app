@@ -1,9 +1,21 @@
 /// M1020 / #737: select only candidates not yet durably attempted in the
 /// owner-encrypted native SMS queue. This is a pure planner; it never posts
 /// money, acknowledges an SMS or saves a checkpoint.
+import 'dart:convert';
+import 'package:crypto/crypto.dart';
+
+/// Opaque version marker: no bank message, phone or rule contents stored
+/// separately from the already owner-encrypted native SMS queue.
+String waffraSmsRulesRevision(String owner,bool ready,
+ List<Map<String,Object?>> rules)=>
+ sha256.convert(utf8.encode(jsonEncode(<String,Object?>{
+  'owner':owner,'ready':ready,'rules':rules,
+ }))).toString();
+
 final class WaffraSmsBackgroundCheckpoint {
  static WaffraSmsBackgroundSelection<Map<String,Object?>> select(
-  List<Map<String,Object?>> pending,{int maxPerPass=25}
+  List<Map<String,Object?>> pending,{int maxPerPass=25,String? currentRulesRevision,
+  bool notificationsAllowed=false,int? nowMilliseconds}
  ){
   if(maxPerPass<=0){
    throw ArgumentError.value(maxPerPass,'maxPerPass','Must be positive');
@@ -11,7 +23,17 @@ final class WaffraSmsBackgroundCheckpoint {
   final selected=<Map<String,Object?>>[];
   var total=0;
   for(final item in pending){
-   if(item['backgroundAttempted']==true)continue;
+   if(item['backgroundAttempted']==true &&
+      (currentRulesRevision==null ||
+       item['backgroundRuleRevision']==currentRulesRevision)){
+    // An undelivered OS review notice does not justify a busy loop.
+    // Retry it only after permission returns AND the encrypted cooldown.
+    final pendingNotice=item['backgroundNotificationPending']==true;
+    final nextAt=item['backgroundNotificationRetryAt'];
+    final now=nowMilliseconds??DateTime.now().millisecondsSinceEpoch;
+    if(!notificationsAllowed||!pendingNotice||
+       nextAt is! int||now<nextAt)continue;
+   }
    total++;
    if(selected.length<maxPerPass)selected.add(item);
   }

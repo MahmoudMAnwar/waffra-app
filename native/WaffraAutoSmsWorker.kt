@@ -77,11 +77,17 @@ class WaffraAutoSmsWorker(context: Context, parameters: WorkerParameters) :
                                 ?.filterIsInstance<String>()?.toSet() ?: emptySet()
                             result.success(WaffraAutoSmsStore.excludeMessages(context, ids))
                         }
+                        "canNotifyBankSms" ->
+                            result.success(WaffraAutoSmsNotifications.canNotify(context))
                         "markAutoBankSmsBackgroundReviewed" -> {
                             // M1020: this marks a reviewed SMS as attempted,
                             // but must never perform an ACK or finance write.
-                            val id = call.arguments as? String ?: ""
-                            result.success(WaffraAutoSmsStore.markBackgroundSmsReviewed(context, id))
+                            val args = call.arguments as? Map<*, *>
+                            val id = args?.get("id") as? String ?: ""
+                            val revision = args?.get("revision") as? String ?: ""
+                            val delivered = args?.get("delivered") == true
+                            result.success(WaffraAutoSmsStore.markBackgroundSmsReviewed(
+                                context, id, revision, delivered))
                         }
                         "ackCommittedAutoBankSms" -> {
                             // Only Flutter's independent verified finance-hash
@@ -175,9 +181,12 @@ class WaffraAutoSmsWorker(context: Context, parameters: WorkerParameters) :
                 // Keep the durable capacity marker; next run can retry.
             }
         }
+        // M1028: failed owners do not lose their encrypted candidate queue
+        // after two attempts. WorkManager enforces exponential retry backoff;
+        // a logout or revoked consent stops the chain on the next run.
         return if (completed && successful) Result.success()
-            else if (runAttemptCount < 2) Result.retry()
-            else Result.failure()
+            else if (WaffraAutoSmsStore.enabled(context)) Result.retry()
+            else Result.success()
     }
 
     companion object {

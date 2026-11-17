@@ -79,7 +79,7 @@ void main() {
   expect(main,contains('_m632SmsNoticeTimer=Timer(const Duration(milliseconds:900),(){'));
   expect(main,contains('if(mounted&&ready&&!_m627ClosingSession){'));
   expect(main,contains('_m632SmsNoticeTimer?.cancel();'));
-  expect(main,contains('smsHashes.contains(bankSmsHash(body))'));
+  expect(main,contains('smsHashes.contains(bankSmsHash(body,nativeId:id))'));
   expect(main,contains('WaffraAutoSms.acknowledgeCommitted(batch)'));
  });
 }

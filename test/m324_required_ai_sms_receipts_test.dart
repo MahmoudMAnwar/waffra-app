@@ -17,7 +17,7 @@ void main(){
   expect(home,isNot(contains('WaffraOnDeviceQwen')));
  });
  test('M636 auto SMS remains reviewed, account-bound, and explicitly saved',(){
-  expect(home,contains('await entrySheet(sms:true,initialSms:body,reviewedSender:sender);'));
+  expect(home,contains('await entrySheet(sms:true,initialSms:body,reviewedSender:sender,reviewedSmsId:id);'));
   expect(home,contains('await WaffraAutoSms.acknowledgeCommitted([id]);'));
   expect(home,contains('waffraCanAssignManualCategory('));
  });

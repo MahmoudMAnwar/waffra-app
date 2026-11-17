@@ -49,7 +49,7 @@ void main(){
   final pending=store.split('    fun pending(context: Context): List<Map<String, Any>>')[1]
     .split('    fun pendingById(context: Context, id: String)')[0];
   expect(pending,contains('"backgroundAttempted" to row.optBoolean("backgroundAttempted", false)'));
-  expect(pending,contains('fun markBackgroundSmsReviewed(context: Context, id: String): Boolean'));
+  expect(pending,contains('fun markBackgroundSmsReviewed(context: Context, id: String,'));
   expect(pending,contains('row.put("backgroundAttempted", true)'));
   expect(pending,contains('save(context, data)'));
   expect(pending,isNot(contains('acknowledgeCommitted(')));
@@ -60,10 +60,12 @@ void main(){
   final source=File('lib/waffra_auto_sms_autopost.part.dart').readAsStringSync();
   expect(source,contains('final stopwatch=Stopwatch()..start();'));
   expect(source,contains('const budget=Duration(seconds:35);'));
-  expect(source,contains('WaffraSmsBackgroundCheckpoint.select(pending,maxPerPass:25)'));
+  expect(source,contains('WaffraSmsBackgroundCheckpoint.select(pending,maxPerPass:25,'));
+  expect(source,contains('currentRulesRevision:ruleRevision'));
   expect(source,contains('if(stopwatch.elapsed>=budget)'));
   expect(source,contains('summary[\'remaining\']='));
-  expect(source,contains('await WaffraAutoSms.markBackgroundReviewed(id)'));
+  expect(source,contains('await WaffraAutoSms.markBackgroundReviewed(id,revision:ruleRevision,'));
+  expect(source,contains('notificationDelivered:delivered'));
   expect(source,contains('await WaffraAutoSms.acknowledgeCommitted([id])'));
   expect(source,isNot(contains('actionable.take(25)')));
  });
@@ -89,11 +91,11 @@ void main(){
  test('M1020 no checkpoint before review and ACK outcome on worker channel',(){
   final worker=File('native/WaffraAutoSmsWorker.kt').readAsStringSync();
   expect(worker,contains('"markAutoBankSmsBackgroundReviewed" ->'));
-  expect(worker,contains('WaffraAutoSmsStore.markBackgroundSmsReviewed(context, id)'));
+  expect(worker,contains('WaffraAutoSmsStore.markBackgroundSmsReviewed('));
   final dart=File('lib/waffra_auto_sms.dart').readAsStringSync();
-  expect(dart,contains("return _boolCall('markAutoBankSmsBackgroundReviewed',id);"));
+  expect(dart,contains("return _boolCall('markAutoBankSmsBackgroundReviewed',{'id':id,'revision':revision,"));
   final poster=File('lib/waffra_auto_sms_autopost.part.dart').readAsStringSync();
-  expect(poster,contains('if(!await WaffraAutoSms.markBackgroundReviewed(id))'));
+  expect(poster,contains('if(!await WaffraAutoSms.markBackgroundReviewed(id,revision:ruleRevision,'));
   expect(poster,contains('if(!await WaffraAutoSms.acknowledgeCommitted([id]))'));
  });
 }

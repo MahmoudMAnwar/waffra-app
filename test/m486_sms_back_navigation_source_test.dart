@@ -41,8 +41,9 @@ void main(){
   expect(detailStart,greaterThanOrEqualTo(0));
   expect(end,greaterThan(detailStart));
   final detail=source.substring(detailStart,end);
-  expect(detail,contains('await entrySheet(sms:true,initialSms:body,reviewedSender:sender);'));
-  expect(detail,contains('if(smsHashes.contains(bankSmsHash(body)))'));
+  expect(detail,contains('await entrySheet(sms:true,initialSms:body,reviewedSender:sender,reviewedSmsId:id);'));
+  expect(detail,contains('if(smsHashes.contains(bankSmsHash(body,nativeId:id)))'));
+  expect(detail,isNot(contains('if(smsHashes.contains(bankSmsHash(body)))')));
   expect(detail,contains('await WaffraAutoSms.acknowledgeCommitted([id]);'));
   expect(detail,isNot(contains('await WaffraAutoSms.acknowledge([id]);')));
   expect(detail,contains('A failed Android acknowledgement must retain the review row.'));
@@ -71,7 +72,8 @@ void main(){
   expect(end,greaterThan(start));
   final editor=src.substring(start,end);
   expect(src,contains('final Map<String,Map<String,Object?>> _m492SmsEditorDrafts={}'));
-  expect(editor,contains('bankSmsHash(initialSms)'));
+  expect(editor,contains('bankSmsHash(initialSms,nativeId:reviewedSmsId)'));
+  expect(editor,isNot(contains('final smsEditorDraftKey=sms&&initial==null&&initialSms!=null?\n   bankSmsHash(initialSms):null')));
   expect(editor,contains('_m492SmsEditorDrafts[smsEditorDraftKey]'));
   for(final field in ["'title'","'amount'","'income'","'parent'",
       "'category'","'budget'","'provider'","'account'","'date'"]){

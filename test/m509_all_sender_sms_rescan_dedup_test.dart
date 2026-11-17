@@ -89,7 +89,7 @@ void main() {
   expect(nativeWorker,contains('"ackCommittedAutoBankSms" -> {'));
   // Native intake can only seal fingerprints after Flutter has confirmed
   // the same body hash exists in the verified SQLCipher financial ledger.
-  expect(home,contains('smsHashes.contains(bankSmsHash(body))'));
+  expect(home,contains('smsHashes.contains(bankSmsHash(body,nativeId:id))'));
   expect(worker,contains('finalHashes.contains(fingerprint)'));
  });
 

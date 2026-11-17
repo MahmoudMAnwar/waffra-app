@@ -46,6 +46,9 @@ abstract final class WaffraAutoSms {
  static Future<bool> restartCompletedHistory()=>
   _boolCall('restartCompletedSmsHistory');
 
+ /// Explicit, owner-verified all-history action from My Account only.
+ static Future<bool> enableAllHistoryScan()=>_boolCall('enableAllSmsHistoryScan');
+
  static Future<int> importConsentMonthChecked()async{
   if(!Platform.isAndroid)throw StateError('Android SMS scan is unavailable.');
   return await channel.invokeMethod<int>('importConsentMonthBankSms')??0;
@@ -102,10 +105,16 @@ abstract final class WaffraAutoSms {
  /// Only the short-lived Android background worker implements this
  /// receipt. It records a REVIEW ATTEMPT in the native encrypted queue;
  /// it never removes or ACKs a finance candidate.
- static Future<bool> markBackgroundReviewed(String id)async{
+ static Future<bool> markBackgroundReviewed(String id,{required String revision,
+  required bool notificationDelivered})async{
   if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(id))return false;
-  return _boolCall('markAutoBankSmsBackgroundReviewed',id);
+  if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(revision))return false;
+  return _boolCall('markAutoBankSmsBackgroundReviewed',{'id':id,'revision':revision,
+   'delivered':notificationDelivered});
  }
+
+ static Future<bool> notificationsAllowed()async=>
+  _boolCall('canNotifyBankSms');
 
  static Future<List<Map<String,Object?>>> pending()async{
   if(!Platform.isAndroid)return const [];

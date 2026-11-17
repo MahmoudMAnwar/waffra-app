@@ -295,7 +295,7 @@ void main(){
   expect(helper,isNot(contains('await entrySheet(manualIncomeOverride:')));
   final editor=app.split(' Future<void> entrySheet({')[1]
    .split(' Future<void> showReceipt(')[0];
-  expect(editor,contains('String? reviewedSender,bool? reviewedIncomeOverride,'));
+  expect(editor,contains('String? reviewedSender,String? reviewedSmsId,bool? reviewedIncomeOverride,'));
   expect(editor,contains("bool income=reviewedIncomeOverride??(smsEditorDraft?['income'] as bool?)"));
   expect(review,contains("Key('m565-sms-yes-confirm')"));
   expect(review,contains("Key('m565-sms-no-edit')"));

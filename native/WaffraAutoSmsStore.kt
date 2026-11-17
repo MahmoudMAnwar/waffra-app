@@ -66,6 +66,7 @@ object WaffraAutoSmsStore {
     private const val historyScannedCount = "sms_history_scanned_count_v1"
     private const val historyAddedCount = "sms_history_added_count_v1"
     private const val historySourceMonth = "sms_history_source_install_month_v2"
+    private const val historyAllName = "sms_all_history_approved_v1"
     private fun monthStart() = Calendar.getInstance().apply {
         set(Calendar.DAY_OF_MONTH, 1)
         set(Calendar.HOUR_OF_DAY, 0)
@@ -78,6 +79,10 @@ object WaffraAutoSmsStore {
     // month in which this installation was installed (not SMS consent day).
     // PackageInfo.firstInstallTime survives an in-place app update.
     private fun installationMonthStart(context: Context): Long {
+        val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+        // M1026: full inbox history is strictly opt-in for the active owner.
+        // 1L includes every provider SMS since the Unix epoch.
+        if (prefs.getBoolean(historyAllName, false)) return 1L
         val installedAt = try {
             context.packageManager.getPackageInfo(context.packageName, 0).firstInstallTime
         } catch (_: Exception) { return 0L }
@@ -246,13 +251,17 @@ object WaffraAutoSmsStore {
                     .remove(historyCursorId).remove(historySourceMonth)
                     .remove(historyComplete).remove(historyInitialCompleted)
                     .remove(historyScannedCount).remove(historyAddedCount)
+                    .remove(historyAllName)
             }
             if (owner != null) editor.putString(consentedOwnerName, owner)
             else editor.remove(consentedOwnerName)
         }
         if (allow && !prefs.contains(activationMonth))
             editor.putLong(activationMonth, monthStart())
-        if (!allow) editor.remove(queueName)
+        if (!allow) {
+            editor.remove(queueName)
+            editor.remove(historyAllName)
+        }
         editor.commit()
     }
 
@@ -904,6 +913,26 @@ object WaffraAutoSmsStore {
             .joinToString("") { "%02x".format(it.toInt() and 255) }
     }
 
+    // M1027: mask only a uniquely identified challenge token. If any code
+    // syntax is uncertain, revert to the old mask-ALL-numbers behavior.
+    // This function is used only on OTP + completed-money mixed messages;
+    // pure OTP events are excluded before any queue persistence.
+    private val otpCodeCandidate = Regex(
+        """(?:\botp\b|verification\s+code|security\s+code|one[ -]?time\s+(?:password|code)|\bpasscode\b|رمز(?:ك|\s+(?:التحقق|التفعيل|التأكيد|الدخول|التوثيق))?|كود(?:ك|\s+(?:التحقق|الدخول|التفعيل))?)\s*(?:[:：=]|هو|هي|is)?\s*([0-9٠-٩۰-۹]{4,8})""",
+        RegexOption.IGNORE_CASE
+    )
+    private fun redactMixedOtpSecrets(body: String): String {
+        val text = body.trim()
+        val maskAllNumbers = text.replace(Regex("[0-9٠-٩۰-۹]+"), "••••")
+        val candidates = otpCodeCandidate.findAll(text).toList()
+        if (candidates.size != 1) return maskAllNumbers
+        val secret = candidates.single().groups[1] ?: return maskAllNumbers
+        if (secret.value.length !in 4..8) return maskAllNumbers
+        // The amount, account suffix and bank transaction timestamp remain
+        // readable in mixed notices; the OTP value never leaves this method.
+        return text.replaceRange(secret.range, "••••")
+    }
+
     fun offer(context: Context, sender: String, body: String, at: Long,
               historical: Boolean = false, receivedAt: Long = at): Boolean {
         if (!enabled(context)) return false
@@ -950,8 +979,7 @@ object WaffraAutoSmsStore {
                 // including localized digit variants, before encryption.
                 // The original is used only to derive the dedupe hash;
                 // it is never put in the review queue or cloud payload.
-                val masked = if (sensitive) body.trim().replace(
-                    Regex("[0-9٠-٩۰-۹]+"), "••••") else body.trim()
+                val masked = if (sensitive) redactMixedOtpSecrets(body) else body.trim()
                 queue.put(JSONObject().put("id", fingerprint)
                     .put("sender", sender.trim()).put("body", masked)
                     .put("sensitiveOtp", sensitive)
@@ -976,7 +1004,10 @@ object WaffraAutoSmsStore {
                     "body" to row.getString("body"),
                     "receivedAt" to row.getLong("receivedAt"),
                     "sensitiveOtp" to row.optBoolean("sensitiveOtp", false),
-                    "backgroundAttempted" to row.optBoolean("backgroundAttempted", false))
+                    "backgroundAttempted" to row.optBoolean("backgroundAttempted", false),
+                    "backgroundRuleRevision" to row.optString("backgroundRuleRevision", ""),
+                    "backgroundNotificationPending" to row.optBoolean("backgroundNotificationPending", false),
+                    "backgroundNotificationRetryAt" to row.optLong("backgroundNotificationRetryAt", 0L))
                 if (row.has("cloud")) {
                     val proof = row.optJSONObject("cloud")
                     if (proof != null) {
@@ -1007,18 +1038,26 @@ object WaffraAutoSmsStore {
      * It only skips redundant background retries; the message remains in
      * the owner-encrypted inbox for explicit foreground confirmation.
      */
-    fun markBackgroundSmsReviewed(context: Context, id: String): Boolean =
+    fun markBackgroundSmsReviewed(context: Context, id: String,
+                                   revision: String, delivered: Boolean): Boolean =
         synchronized(mutex) {
-            if (!enabled(context) || !Regex("^[a-f0-9]{64}$").matches(id))
+            if (!enabled(context) || !Regex("^[a-f0-9]{64}$").matches(id) ||
+                !Regex("^[a-f0-9]{64}$").matches(revision))
                 return@synchronized false
             try {
                 val data = read(context)
                 for (i in 0 until data.length()) {
                     val row = data.getJSONObject(i)
                     if (row.optString("id") != id) continue
-                    if (row.optBoolean("backgroundAttempted", false))
+                    if (row.optBoolean("backgroundAttempted", false) &&
+                        row.optString("backgroundRuleRevision", "") == revision &&
+                        row.optBoolean("backgroundNotificationPending", false) == !delivered)
                         return@synchronized true
+                    row.put("backgroundRuleRevision", revision)
                     row.put("backgroundAttempted", true)
+                    row.put("backgroundNotificationPending", !delivered)
+                    row.put("backgroundNotificationRetryAt", if (delivered) 0L
+                        else System.currentTimeMillis() + 300000L)
                     return@synchronized save(context, data)
                 }
                 false
@@ -1401,6 +1440,23 @@ object WaffraAutoSmsStore {
      * committed and excluded SMS must stay invisible and the user should
      * see the number of *new* provider rows actually examined.
      */
+    /**
+     * M1026: called ONLY by the explicit My Account "scan all history"
+     * confirmation. Never delete pending encrypted rows, exclusions,
+     * account-bound completed fingerprints or finance ledger evidence.
+     * Existing cursor/progress are the only data restarted on new scope.
+     */
+    fun enableAllHistoryScan(context: Context): Boolean = synchronized(mutex) {
+        if (!enabled(context)) return@synchronized false
+        val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+        if (prefs.getBoolean(historyAllName, false)) return@synchronized true
+        prefs.edit().putBoolean(historyAllName, true)
+            .remove(historyCursorAt).remove(historyCursorId)
+            .remove(historySourceMonth).remove(historyComplete)
+            .remove(historyInitialCompleted).remove(historyScannedCount)
+            .remove(historyAddedCount).commit()
+    }
+
     fun restartCompletedHistory(context: Context): Boolean = synchronized(mutex) {
         // Compatibility entry point for older Flutter callers. It is
         // intentionally non-destructive: no cursor or owner data is erased.
@@ -1557,7 +1613,7 @@ object WaffraAutoSmsStore {
                             } else {
                                 val sensitive = otp.containsMatchIn(row.body)
                                 val masked = if (sensitive)
-                                    row.body.trim().replace(Regex("[0-9٠-٩۰-۹]+"), "••••")
+                                    redactMixedOtpSecrets(row.body)
                                     else row.body.trim()
                                 queue.put(JSONObject().put("id", fingerprint)
                                     .put("sender", row.sender.trim()).put("body", masked)
@@ -1616,6 +1672,25 @@ object WaffraAutoSmsStore {
     }
 
     /** Claim each review notification once; history never floods the shade. */
+    /** Read-only status for an existing owner-encrypted SMS. Calling notify()
+     * before claim avoids losing a notification if Android throws or dies.
+     * Duplicate calls replace the same fingerprint-keyed OS notification.
+     */
+    fun reviewNotificationClaimed(context: Context, fingerprint: String): Boolean? =
+        synchronized(mutex) {
+            if (!enabled(context) || !Regex("^[a-f0-9]{64}$").matches(fingerprint))
+                return@synchronized null
+            try {
+                val data = read(context)
+                for (i in 0 until data.length()) {
+                    val row = data.getJSONObject(i)
+                    if (row.optString("id") == fingerprint)
+                        return@synchronized row.optBoolean("reviewNotified", false)
+                }
+                null
+            } catch (_: Exception) { null }
+        }
+
     fun claimReviewNotification(context: Context, fingerprint: String): Boolean =
         synchronized(mutex) {
             if (!enabled(context)) return@synchronized false

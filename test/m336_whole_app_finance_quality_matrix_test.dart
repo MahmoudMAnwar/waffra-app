@@ -149,7 +149,7 @@ void main(){
   final end=app.indexOf(' Future<void> showReceipt(',start);
   final editor=app.substring(start,end);
   final currency=editor.indexOf('WaffraSmsCurrencies.requiresReviewForSarLedger(message.text)');
-  final hash=editor.indexOf('final h=sha256.convert(',currency);
+  final hash=editor.indexOf('final h=bankSmsHash(message.text,nativeId:reviewedSmsId);',currency);
   final commit=editor.indexOf('_financeAuthority.commitConfirmedSms(',hash);
   expect(currency,greaterThanOrEqualTo(0));
   expect(hash,greaterThan(currency));

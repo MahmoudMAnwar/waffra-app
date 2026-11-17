@@ -101,9 +101,12 @@ class _WaffraApprovedNotificationsPageState
  }
  Widget noticeTile(WaffraReviewNotice notice){
   final kind=switch(notice.kind){
-   'income'=>widget.english?'Income':'دخل',
-   'expense'=>widget.english?'Expense':'مصروف',
-   'transfer'=>widget.english?'Transfer':'تحويل',
+   'income'=>widget.english?'Suggested income • awaiting confirmation':
+    'مقترح دخل • بانتظار التأكيد',
+   'expense'=>widget.english?'Suggested expense • awaiting confirmation':
+    'مقترح مصروف • بانتظار التأكيد',
+   'transfer'=>widget.english?'Suggested transfer • awaiting confirmation':
+    'مقترح تحويل • بانتظار التأكيد',
    'excluded'=>widget.english?'Excluded':'مستبعدة',
    'otpReview'=>widget.english?'Verification • review only':
     'رسالة تحقق — تحتاج مراجعة',

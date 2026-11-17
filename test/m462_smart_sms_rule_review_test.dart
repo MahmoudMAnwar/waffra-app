@@ -241,7 +241,7 @@ void main(){
   expect(review,contains('await _reviewSmsAccountTransfer(item:selected,facts:facts);'));
   expect(review,contains('if(learned&&mounted){'));
   expect(ui,contains(r"Key('waffra-sms-rule-bucket-$kind')"));
-  expect(home,contains('await entrySheet(sms:true,initialSms:body,reviewedSender:sender);'));
+  expect(home,contains('await entrySheet(sms:true,initialSms:body,reviewedSender:sender,reviewedSmsId:id);'));
  });
  test('M462 background SMS respects explicit budget choice before auto-save',(){
   // Gate must read the SAME verified finance snapshot as the posting writer.
@@ -323,7 +323,7 @@ void main(){
   final confirmed=source.substring(
    source.indexOf(' Future<void> _m565ConfirmSms({'),
    source.indexOf(' Future<void> _reviewAutoSmsCandidates('));
-  expect(confirmed,contains('!facts.canAutoPostAsIncomeExpense'));
+  expect(confirmed,contains('!facts.canOwnerConfirmAsIncomeExpense'));
   expect(confirmed,contains('(facts.kind==WaffraBankOperationKind.income)!=income'));
   expect(confirmed,contains('original.currency!=\'SAR\''));
   expect(confirmed,contains('userConfirmed:true'));

@@ -53,7 +53,7 @@ void main(){
   expect(widget,isNot(contains('WaffraQuickActivity::class.java')));
   expect(home,contains('if(!mounted||!ready||waffraWidgetAction.value!=\'add\')return;'));
   expect(home,contains('unawaited(entrySheet())'));
-  expect(home,contains('await entrySheet(sms:true,initialSms:body,reviewedSender:sender);'));
+  expect(home,contains('await entrySheet(sms:true,initialSms:body,reviewedSender:sender,reviewedSmsId:id);'));
   expect(home,contains('await WaffraAutoSms.acknowledgeCommitted([id]);'));
   expect(home,contains('userConfirmed:true'));
  });

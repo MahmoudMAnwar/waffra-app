@@ -1,12 +1,89 @@
 {
   "schema_version": 1,
-  "pr": "M1021 Issue #738 — savings goal card direct actions (Draft)",
-  "issue": "Issue #738",
+  "pr": "M1022–M1030 (Issue #740) — nine SMS gaps (Draft)",
+  "issue": "Issue #740",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main after merged PR #725 (16 November 2026)",
-  "reviewed_at": "2026-11-16",
-  "review_policy": "Authorized scope covers owner-requested native SMS intake filtering, all-candidate bounded processing and WorkManager KEEP wakeup fix. Do not relax owner/permission/OTP safety or enable unapproved finance posting. Synthetic source tests are not physical Android proof.",
+  "reviewed_at": "2026-11-17",
+  "review_policy": "Owner-approved narrow SMS reliability/security/finance changes; tests prior to code. No automated production proof without Android UAT.",
   "contracts": [
+    {
+      "id": "M1031-SHARED-SMS-REVIEW-AND-OWNER-CONFIRM",
+      "issue": "Issue #750",
+      "previous_behavior": "Different notification/inbox/review classifiers could disagree, and external outgoing SMS confirmation remained disabled by unattended autopost guard.",
+      "approved_behavior": "Shared read-only prediction and explicit owner confirmation separate from automated posting; no financial writes from classifier; exact-SHA CI and Android acceptance. Encrypted owner-scoped post-commit evidence for all verified manual/SMS income/expense, plus only safe reusable patterns and cross-kind conflict guard. Learning UI displays both verified per-source counts and separately reusable safe matching patterns, with unreadable state not zero.",
+      "source_paths": [
+        "lib/waffra_bank_sms_facts.dart",
+        "lib/waffra_home_sms_inbox.part.dart",
+        "lib/waffra_home_sms_management.part.dart",
+        "lib/waffra_approved_notifications.dart",
+        "lib/waffra_home_sms_confirmation.part.dart",
+        "lib/waffra_auto_sms_autopost.part.dart",
+        "lib/waffra_sms_local_rules.dart",
+        "lib/waffra_home_sms_rules.part.dart",
+        "lib/waffra_home_entry_sheet.part.dart",
+        "lib/waffra_sms_rule_settings_page.dart"
+      ],
+      "test_paths": [
+        "test/m1031_sms_unified_review_contract_test.dart",
+        "test/m462_smart_sms_rule_review_test.dart",
+        "test/m620_m621_finance_notification_routing_test.dart",
+        "test/m983_sms_direct_kind_prefill_refresh_test.dart",
+        "test/m473_manual_sms_keyword_learning_parity_test.dart",
+        "test/m470_postsave_lag_and_teach_return_test.dart",
+        "test/m336_whole_app_finance_quality_matrix_test.dart",
+        "test/m300_all_supported_currency_sms_matrix_test.dart",
+        "test/m506_android_nine_regressions_test.dart",
+        "test/m486_sms_back_navigation_source_test.dart",
+        "test/m303_m306_hardening_regression_test.dart",
+        "test/waffra_design_preservation_test.dart",
+        "test/waffra_concept2_final_visual_test.dart"
+      ],
+      "safety_invariants": [
+        "AutoPost remains blocked on unresolved beneficiary, pending, OTP and foreign currency",
+        "Owner confirmation still requires finance authority/account/category/date",
+        "Notifications and review predictions do not acknowledge or debit",
+        "Learning fails separately after finance commit without retrying charge; generic titles never become broad SMS rules",
+        "Finance safety regression contracts assert FX guard before native-id v2 hash, post-commit encrypted learning receipt, and ACK only after verified saved native fingerprint"
+      ]
+    },
+    {
+      "id": "M1022-M1030-SMS-RELIABILITY-NINE-GAPS",
+      "issue": "Issue #740",
+      "previous_behavior": "1. Re-evaluate pending SMS when approved rules or accounts become available/changed, without duplicate finance; 2. Require notification delivery confirmation before marking a review attempt complete; 3. AutoPost must require verified transaction timestamp instead of arrival-time fallback; 4. Protect distinct same-text transactions while deduping exact re-delivery; 5. Offer explicitly-consented full SMS history scan with bounded cursor; 6. Mask only OTP digits in mixed SMS while retaining amount/date/suffix safely; 7. Recover encrypted pending SMS after terminal Worker error without busy loops; 8. Do not concatenate independent multipart SMS only because sender matches; 9. Avoid synchronous encrypted queue I/O on BroadcastReceiver main thread",
+      "approved_behavior": "Sequential fixes, nine regression suites, financial and OTP safety, no AI/network SMS upload",
+      "source_paths": [
+        "native/WaffraAutoSmsStore.kt",
+        "native/WaffraAutoSmsWorker.kt",
+        "native/WaffraAutoSmsReceiver.kt",
+        "native/WaffraAutoSmsNotifications.kt",
+        "lib/waffra_auto_sms_autopost.part.dart",
+        "lib/waffra_sms_background_checkpoint.dart",
+        "lib/waffra_auto_sms.dart",
+        "lib/main.dart",
+        "lib/waffra_home_sms_confirmation.part.dart",
+        "lib/waffra_home_sms_rules.part.dart",
+        "lib/waffra_sms_local_rules.dart",
+        "lib/waffra_bank_sms_facts.dart"
+      ],
+      "test_paths": [
+        "test/m1022_sms_rule_checkpoint_revision_test.dart",
+        "test/m1023_sms_review_notification_ack_test.dart",
+        "test/m1024_sms_autopost_date_guard_test.dart",
+        "test/m1025_sms_transaction_identity_test.dart",
+        "test/m1026_sms_history_range_test.dart",
+        "test/m1027_sms_mixed_otp_redaction_test.dart",
+        "test/m1028_sms_worker_retry_recovery_test.dart",
+        "test/m1029_android_sms_multipart_grouping_test.dart",
+        "test/m1030_android_sms_receiver_latency_test.dart"
+      ],
+      "safety_invariants": [
+        "Finance writer strictly verifies source/account, date, account identity and hash",
+        "OTP never stored in plaintext or notification",
+        "No silently discarded SMS, no infinite WorkManager retries",
+        "User consent for expanded history"
+      ]
+    },
     {
       "id": "M1021-GOAL-CARD-INLINE-THREE-ACTIONS-NO-ON-TAP-SHEET",
       "issue": "Issue #738",

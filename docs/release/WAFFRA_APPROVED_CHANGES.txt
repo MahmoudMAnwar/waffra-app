@@ -1,3 +1,50 @@
+[M1031 / ISSUE #750 / DRAFT PR #749 / EXACT-SHA 11-FAIL CI REPAIR]
+- Reconciled 11 pre-existing positive source contract regressions (10 tests). Old assertions used body-only SMS hash and a swallowed learning call; new assertions enforce native-ID v2 fingerprint after SAR guard, encrypted owner-scoped receipt after verified commit, a still-safe category rule, and ACK only for committed matching SMS.
+- Kept all cases enabled. Updated M385 approved scope and M550 behavior contract review before CI; no product source was changed by this CI repair itself.
+- Must run all existing full-suite and same-SHA workflows before merging; Android physical UAT remains outstanding.
+
+[M1031 / ENCRYPTED LEARNING COUNTS VISIBLE IN RULE SETTINGS]
+- The classification rules screen now distinguishes owner-encrypted observation counts from validated reusable keyword rules, across manual and bank-SMS income/expense; unavailable encrypted counters are never shown as zero.
+- Source totals are retained alongside bounded learning receipts, with compatibility for the first M1031 receipt format and no SMS plaintext, bank details or money amounts.
+- Added M1031 regression source contract; real Android test and exact-HEAD CI pending.
+
+[M1031 / RELIABLE LEARNING WRITE ORDER]
+- After a verified foreground manual/SMS finance commit, the owner-encrypted learning receipt is written BEFORE optional safe-pattern extraction, so failure in the latter cannot silently skip the receipt. Test M1031 now asserts all four foreground routes preserve this order. Still no second money write.
+
+[M1031 / ACTIVE CI CONTRACT RECONCILIATION]
+- Updated M620/M983 regression assertions to point to shared review predictor and kept strict unattended AutoPost guard.
+- Restored M385 earlier scan-settings boundary plus narrowly scoped notification and regression-test boundaries, without disabling tests.
+
+[M1031 / ISSUE #750 / POST-COMMIT FINANCE LEARNING]
+- Added owner-scoped encrypted, readback-verified category-learning receipt after each confirmed manual/bank SMS income or expense, including authorized background finance commits. Receipts store digest/category/source only, no SMS body, account identifiers, raw phone or amounts. Dedupes recent transaction IDs and preserves bounded per-category observation counts.
+- Existing safe description-based categories remain reusable local matching rules. Unsafe/generic descriptions are recorded as non-posting observations only; no broad financially dangerous rule. Opposing income/expense learned keywords cannot create contradictory matching rules.
+- Learning failure on manual/foreground SMS is now visible after the money was already committed; no debit replay. Background failure still requires explicit later reconciliation/UAT. Exact-head CI/Android acceptance pending.
+
+[M1031 / ISSUE #750 / DRAFT PR #749 / PREDICTION UNIFICATION]
+- Central bank direction prediction now reused for sender inbox, notifications and background review hints. Suggestions display as pending confirmation and never create a financial ledger write or native ACK.
+- Added separate explicit owner confirmation gate for verified external outgoing/incoming bank SMS (expense/income), preserving stricter unattended AutoPost and encrypted account/category/date/SAR validation. Disabled Done now shows an actionable blocking explanation when a verified finance field is missing or contradictory.
+- Dedicated M1031 regression suite registered in M946. All changes require exact-SHA CI and physical Android acceptance; no final production claim.
+
+[M1022–M1030 / CI REPAIR / PR #749 / SOURCE REVIEW]
+- Reviewed latest app source commit cdeff32af43a35fcc03a6fedcd27a9db127cc46e (lib/main.dart): legacy or synthetic non-Android IDs now remain review-only with legacy text fingerprint; verified 64-character native SMS IDs alone authorize v2 finance fingerprint. This prevents FormatException in existing M632/M983/M991 isolate paths without loosening finance provenance.
+- Updated existing M1016/M979 OTP source checks to match M1027 uniquely recognized OTP redaction, while retaining fail-closed ambiguous OTP masking.
+- M954 historical body-only collision now explicitly requires owner review rather than auto ACK. M638 reconciliation scope is kept separate from new user-consented full-history cursor reset. M580 and M1011 SMS correction contracts now match explicit reviewedSmsId and verified body equality.
+- M385 scope allowlist deduplicated, no test disabled. Re-run exact-HEAD CI. Android device UAT remains unverified.
+
+[M1022–M1030 / ISSUES #740–#748 / DRAFT PR — 9 SMS AUDIT GAPS / 17 NOV 2026]
+- M1022 (#740) Owner-scoped SHA-256 rule revisions are bound to existing AES-GCM background review checkpoints. On a changed revision, a prior review may be reclassified on the next worker wakeup, but it does NOT silently create retroactive finance transactions. Unreadable rule stores fail closed.
+- M1023 (#741) Native review notifications are posted before an encrypted delivered claim; failures leave a retry-needed marker plus 5-minute cooldown in the original owner-encrypted queue. Never use a notification as finance-authorized ACK.
+- M1024 (#742) Financial AutoPost now rejects SMS without an independently verified bank transaction date/time. No fallback to Android SMS arrival date. User-reviewed calendar selection is unchanged.
+- M1025 (#743) Explicit Android SMS review/AutoPost writes use an SHA-256 v2 hash including the authenticated native SMS ID, protecting two different same-body notices. Legacy body-only hashes are preserved for old backup interoperability; any ambiguous legacy collision remains review-only rather than being blindly acknowledged or automatically charged. Corrected selected native SMS editor and human-confirmation routing; manual paste without native identity still uses old body hash.
+- M1026 (#744) My Account offers a separate explicitly confirmed 'Scan all SMS history' action. Native owner-verified opt-in rewinds scan cursor/counters only and reads all available Android inbox history via existing bounded 1000-item encrypted candidate queue. No confirmed ledger, exclusion or ACK is erased; ordinary scan still starts at original installation month.
+- M1027 (#745) Mixed financial/OTP notices mask only a uniquely recognized 4–8 digit OTP token, preserving safe bank amount, date and account suffix. Unknown or multiple code patterns fail closed by masking all digits. Sensitive notices still never AutoPost.
+- M1028 (#746) Worker failures use WorkManager's exponential 20-second backoff instead of terminal failing after two attempts; retry stops on revoked consent or signed-out owner. The 55s native safety watchdog is retained and no second shadow finance writer is introduced.
+- M1029 (#747) Native SMS receiver groups multipart PDUs by sender plus original timestamp and SMSC; two separate received timestamps from the same sender never concatenate. Real Android UDH/3GPP2 semantics still need device UAT.
+- M1030 (#748) Native SMS_RECEIVED uses goAsync(), serialized background I/O and PendingResult.finish() on all paths, instead of synchronous AES-GCM queue access on Android broadcast main thread; WorkManager wakeup remains once per broadcast.
+- All nine items have dedicated Flutter/source regression tests registered in mandatory M946 and/or M417. Previous contracts and migration regressions remain active and must be reconciled, not disabled. High-risk finance/date/OTP changes require Android physical UAT and exact-HEAD green CI before certification/merge.
+- Reviewed source SHA: 4582940a4687a04afcd021221c6852a7c8f27832 (latest native receiver source).
+- No production release, Android device test, or final CI success is claimed by these notes. Keep PR Draft until complete verification.
+
 [M1020 CI REPAIR — Draft PR #733 — Dart SMS bridge restored]
 - A newly inserted native review-checkpoint bridge method previously broke Dart source syntax and duplicated part of lib/waffra_auto_sms.dart. That was a genuine source regression, not an obsolete job expectation. Restored the original complete class with exactly one pending() implementation and inserted only the verified markBackgroundReviewed() method.
 - Existing M417 privacy test now checks that class, method and regex remain well-formed and unique before expensive downstream jobs. M550 passed on the repaired source head. This does not constitute Android acceptance.
