@@ -560,6 +560,16 @@ class WaffraVerifiedEncryptedFinanceBridge {
             !actualHashes.containsAll(expectedHashes)) {
           throw StateError('SQLCipher hash projection differs from finance.');
         }
+        // Only source-verified entries without invoices are permitted.
+        // Their typed bank associations must be removed with their owner,
+        // not left to a RESTRICT foreign key or copied into another account.
+        final linkedTable=await snapshot.store.customSelect(
+         "SELECT name FROM sqlite_master WHERE type='table' "
+         "AND name='fresh_finance_account_entry_links'").get();
+        if(linkedTable.isNotEmpty){
+         await snapshot.store.customStatement(
+          'DELETE FROM fresh_finance_account_entry_links');
+        }
         await snapshot.store.customStatement(
           'DELETE FROM fresh_finance_entries',
         );

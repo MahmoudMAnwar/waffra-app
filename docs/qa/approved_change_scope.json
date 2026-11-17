@@ -16,74 +16,22 @@
     "10. M1031 unify SMS review suggestions/notification states and allow verified explicit owner confirmation of external outgoing expenses without AutoPost authority",
     "11. M1031 persist owner-scoped encrypted post-commit learning evidence for manual/SMS income/expense and prevent conflicting learned financial directions",
     "12. M1031 accurately display per-source verified encrypted learning events alongside distinct count of reusable matching rules",
-    "12. Fix all 11 CI failing legacy positive source contracts on PR #749 without weakening SAR currency gate, verified SMS v2 identity, post-commit learning or ACK safety."
+    "12. Fix all 11 CI failing legacy positive source contracts on PR #749 without weakening SAR currency gate, verified SMS v2 identity, post-commit learning or ACK safety.",
+    "M1032 Stage 3/4/11: account-linked delete+undo atomic archive, recurring-bound account archive guard and safe verified no-receipt Delete All account links"
   ],
   "allowed_changed_files": [
-    "docs/WAFFRA_REQUIREMENTS.md",
+    "lib/storage/waffra_encrypted_transaction_recycle.dart",
+    "lib/storage/waffra_accounts_repository.dart",
+    "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
+    "test/storage/m183_encrypted_transaction_recycle_test.dart",
+    "test/m1031_sms_unified_review_contract_test.dart",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
+    "docs/WAFFRA_REQUIREMENTS.md",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "lib/main.dart",
-    "lib/waffra_auto_sms.dart",
-    "lib/waffra_auto_sms_autopost.part.dart",
-    "lib/waffra_home_entry_sheet.part.dart",
-    "lib/waffra_home_profile.part.dart",
-    "lib/waffra_home_sms_confirmation.part.dart",
-    "lib/waffra_home_sms_management.part.dart",
-    "lib/waffra_sms_background_checkpoint.dart",
-    "native/WaffraAutoSmsNotifications.kt",
-    "native/WaffraAutoSmsReceiver.kt",
-    "native/WaffraAutoSmsStore.kt",
-    "native/WaffraAutoSmsWorker.kt",
-    "native/WaffraMainActivity.kt",
     "scripts/qa/m946_full_app_smoke_matrix.py",
-    "test/m1016_sms_background_financial_intake_test.dart",
-    "test/m1018_sms_workmanager_wakeup_race_test.dart",
-    "test/m1020_sms_background_checkpoint_continuation_test.dart",
-    "test/m1022_sms_rule_checkpoint_revision_test.dart",
-    "test/m1023_sms_review_notification_ack_test.dart",
-    "test/m1024_sms_autopost_date_guard_test.dart",
-    "test/m1025_sms_transaction_identity_test.dart",
-    "test/m1026_sms_history_range_test.dart",
-    "test/m1027_sms_mixed_otp_redaction_test.dart",
-    "test/m1028_sms_worker_retry_recovery_test.dart",
-    "test/m1029_android_sms_multipart_grouping_test.dart",
-    "test/m1030_android_sms_receiver_latency_test.dart",
-    "test/m273_production_user_journey_regression_test.dart",
-    "test/m320_ai_live_entrypoints_test.dart",
-    "test/m324_required_ai_sms_receipts_test.dart",
-    "test/m429_sms_phone_integration_test.dart",
-    "test/m436_cloud_review_pipeline_test.dart",
-    "test/m462_smart_sms_rule_review_test.dart",
-    "test/m470_sms_first_sender_account_test.dart",
-    "test/m509_all_sender_sms_rescan_dedup_test.dart",
-    "test/m547_sms_incremental_jank_regression_test.dart",
-    "test/m636_owner_approved_retirement_and_ui_test.dart",
-    "test/m954_all_sms_rule_routes_regression_test.dart",
-    "test/qa/m417_sms_permission_acceptance_test.py",
-    "test/qa/m447_verified_sms_account_linking_test.py",
-    "test/m638_sms_inbox_delete_sync_test.dart",
-    "test/m580_sms_security_navigation_performance_test.dart",
-    "test/m979_native_otp_prequeue_exclusion_test.dart",
-    "test/m1011_reviewed_sms_provenance_ack_transfer_regression_test.dart",
     "lib/waffra_bank_sms_facts.dart",
-    "lib/waffra_home_sms_inbox.part.dart",
-    "lib/waffra_approved_notifications.dart",
-    "test/m1031_sms_unified_review_contract_test.dart",
-    "lib/waffra_sms_local_rules.dart",
-    "lib/waffra_home_sms_rules.part.dart",
-    "test/m620_m621_finance_notification_routing_test.dart",
-    "test/m983_sms_direct_kind_prefill_refresh_test.dart",
-    "lib/waffra_sms_rule_settings_page.dart",
-    "test/m473_manual_sms_keyword_learning_parity_test.dart",
-    "test/m470_postsave_lag_and_teach_return_test.dart",
-    "test/m336_whole_app_finance_quality_matrix_test.dart",
-    "test/m300_all_supported_currency_sms_matrix_test.dart",
-    "test/m506_android_nine_regressions_test.dart",
-    "test/m486_sms_back_navigation_source_test.dart",
-    "test/m303_m306_hardening_regression_test.dart",
-    "test/waffra_design_preservation_test.dart",
-    "test/waffra_concept2_final_visual_test.dart",
+    "lib/waffra_home_sms_confirmation.part.dart",
     "test/m1032_outgoing_sms_owner_review_gate_test.dart"
   ],
   "allowed_workflow_changes": [],
@@ -494,6 +442,36 @@
       }
     ],
     "test/m1032_outgoing_sms_owner_review_gate_test.dart": [
+      {
+        "start": "void main(){",
+        "end": null
+      }
+    ],
+    "lib/storage/waffra_encrypted_transaction_recycle.dart": [
+      {
+        "start": "class WaffraEncryptedTransactionRecycle {",
+        "end": null
+      }
+    ],
+    "lib/storage/waffra_accounts_repository.dart": [
+      {
+        "start": " Future<void> archiveEmptyAccount({required String id,",
+        "end": null
+      }
+    ],
+    "lib/storage/waffra_verified_encrypted_finance_bridge.dart": [
+      {
+        "start": "  Future<WaffraFinanceSnapshotState> deleteAllUnattachedTransactions({",
+        "end": "  /// Combined recurring payment:"
+      }
+    ],
+    "test/storage/m183_encrypted_transaction_recycle_test.dart": [
+      {
+        "start": "void main() {",
+        "end": null
+      }
+    ],
+    "test/m1031_sms_unified_review_contract_test.dart": [
       {
         "start": "void main(){",
         "end": null

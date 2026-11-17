@@ -71,6 +71,7 @@ class WaffraEncryptedTransactionRecycle {
   static const retention = Duration(days: 30);
   static const _trash = 'fresh_finance_transaction_recycle';
   static const _images = 'fresh_finance_transaction_recycle_blobs';
+  static const _accountLinks = 'fresh_finance_transaction_recycle_account_links';
 
   final WaffraAtomicFinanceSnapshot snapshot;
   final Directory writerDirectory;
@@ -104,7 +105,20 @@ CREATE TABLE IF NOT EXISTS $_images(
   encrypted_blob BLOB NOT NULL,
   PRIMARY KEY(entry_id, position)
 )''');
+    // Account identity must survive the full 30-day recovery interval;
+    // archived data retains the same SQLCipher protection as live finance.
+    await snapshot.store.customStatement('''
+CREATE TABLE IF NOT EXISTS $_accountLinks(
+  entry_id TEXT PRIMARY KEY NOT NULL REFERENCES $_trash(entry_id) ON DELETE RESTRICT,
+  account_id TEXT NOT NULL REFERENCES fresh_finance_money_accounts(account_id) ON DELETE RESTRICT,
+  confirmed_iso TEXT NOT NULL,
+  record_sha256 TEXT NOT NULL
+)''');
   }
+
+  static String _accountLinkHash(String entryId,String accountId,String confirmedIso)=>
+   sha256.convert(utf8.encode(jsonEncode(
+    <String>[entryId,accountId,confirmedIso]))).toString();
 
   static List<Map<String, dynamic>> _decodeLedger(String? raw) {
     final decoded = jsonDecode(raw ?? '[]');
@@ -299,6 +313,31 @@ CREATE TABLE IF NOT EXISTS $_images(
            sha256.convert(utf8.encode(jsonEncode(record))).toString(),
            atIndex, receipts.length, at, until],
         );
+        // M1032: move the existing immutable account association into
+        // the encrypted recycle *before* deleting its RESTRICT owner.
+        // Restoring reattaches the exact source account, never the Home header.
+        final accountTable=await snapshot.store.customSelect(
+          "SELECT name FROM sqlite_master WHERE type='table' "
+          "AND name='fresh_finance_account_entry_links'",
+        ).get();
+        if(accountTable.isNotEmpty){
+          final linked=await snapshot.store.customSelect(
+           'SELECT account_id,confirmed_iso FROM fresh_finance_account_entry_links '
+           'WHERE entry_id=?',variables:[Variable.withString(entryId)]).get();
+          if(linked.length>1)throw StateError('Ambiguous historical account link.');
+          if(linked.length==1){
+           final accountId=linked.single.read<String>('account_id');
+           final linkedIso=linked.single.read<String>('confirmed_iso');
+           await snapshot.store.customStatement(
+            'INSERT INTO $_accountLinks(entry_id,account_id,confirmed_iso,record_sha256) '
+            'VALUES (?,?,?,?)',
+            [entryId,accountId,linkedIso,
+             _accountLinkHash(entryId,accountId,linkedIso)]);
+           await snapshot.store.customStatement(
+            'DELETE FROM fresh_finance_account_entry_links WHERE entry_id=?',
+            [entryId]);
+          }
+        }
         for (final receipt in receipts) {
           await snapshot.store.customStatement(
             'INSERT INTO $_images(entry_id,position,safe_name,sha256_hex,'
@@ -468,6 +507,33 @@ CREATE TABLE IF NOT EXISTS $_images(
            record['income'] == true ? 1 : 0, record['date'], count,
            jsonEncode(record)],
         );
+        // The account archive belongs to this transaction and is
+        // authenticated independently of restored transaction contents.
+        final archivedLinks=await snapshot.store.customSelect(
+         'SELECT account_id,confirmed_iso,record_sha256 FROM $_accountLinks '
+         'WHERE entry_id=?',variables:[Variable.withString(entryId)]).get();
+        if(archivedLinks.length>1)throw StateError(
+         'Archived account association is ambiguous.');
+        if(archivedLinks.isNotEmpty){
+         final archivedAccount=archivedLinks.single.read<String>('account_id');
+         final linkedIso=archivedLinks.single.read<String>('confirmed_iso');
+         if(archivedLinks.single.read<String>('record_sha256')!=
+          _accountLinkHash(entryId,archivedAccount,linkedIso)||
+          DateTime.tryParse(linkedIso)==null){
+          throw StateError('Archived account source has changed.');
+         }
+         final accounts=await snapshot.store.customSelect(
+          'SELECT archived,currency FROM fresh_finance_money_accounts '
+          'WHERE account_id=?',variables:[Variable.withString(archivedAccount)]).get();
+         if(accounts.length!=1||accounts.single.read<int>('archived')!=0||
+            accounts.single.read<String>('currency')!='SAR'){
+          throw StateError('Original linked bank account requires reactivation.');
+         }
+         await snapshot.store.customStatement(
+          'INSERT INTO fresh_finance_account_entry_links '
+          '(entry_id,account_id,confirmed_iso) VALUES (?,?,?)',
+          [entryId,archivedAccount,linkedIso]);
+        }
         for (var i = 0; i < parts.length; i++) {
           final part = parts[i];
           await snapshot.store.customStatement(
@@ -502,6 +568,9 @@ CREATE TABLE IF NOT EXISTS $_images(
         }
         await snapshot.store.customStatement(
           'DELETE FROM $_images WHERE entry_id=?', [entryId],
+        );
+        await snapshot.store.customStatement(
+          'DELETE FROM $_accountLinks WHERE entry_id=?', [entryId],
         );
         await snapshot.store.customStatement(
           'DELETE FROM $_trash WHERE entry_id=?', [entryId],
@@ -635,6 +704,19 @@ CREATE TABLE IF NOT EXISTS fresh_finance_transaction_recycle_clock(
               throw StateError('Expired encrypted invoice bytes differ.');
             }
           }
+          final links=await snapshot.store.customSelect(
+           'SELECT account_id,confirmed_iso,record_sha256 FROM $_accountLinks '
+           'WHERE entry_id=?',variables:[Variable.withString(id)]).get();
+          if(links.length>1)throw StateError(
+           'Expired account link archive is ambiguous.');
+          if(links.isNotEmpty){
+           final account=links.single.read<String>('account_id');
+           final linkedIso=links.single.read<String>('confirmed_iso');
+           if(links.single.read<String>('record_sha256')!=
+            _accountLinkHash(id,account,linkedIso)){
+            throw StateError('Expired account link checksum differs.');
+           }
+          }
           targets.add(<String, Object?>{'id': id, 'count': count});
         }
 
@@ -644,6 +726,9 @@ CREATE TABLE IF NOT EXISTS fresh_finance_transaction_recycle_clock(
           final id = target['id'] as String;
           await snapshot.store.customStatement(
             'DELETE FROM $_images WHERE entry_id=?', [id],
+          );
+          await snapshot.store.customStatement(
+            'DELETE FROM $_accountLinks WHERE entry_id=?', [id],
           );
           await snapshot.store.customStatement(
             'DELETE FROM $_trash WHERE entry_id=?', [id],

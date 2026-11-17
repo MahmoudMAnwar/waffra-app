@@ -1,3 +1,9 @@
+[M1032 / ACCOUNT-LINKED RECYCLE AND SAFE DELETE ALL]
+- Added encrypted immutable association archive and exact account reattachment on transaction Undo, ahead of FK-restricted ledger delete and within one writer lock/SQL transaction; typed balances now roll back correctly.
+- Account archive blocks recurring account defaults and pending deleted transaction account links even when balance is zero.
+- Verified Delete All with no invoices now removes linked account entry references atomically before typed ledger delete; invoice-bearing and other protected data still fail closed rather than silently disappearing.
+- Integrated tests added for link and balance parity. Exact-sha CI and physical-device acceptance outstanding.
+
 [M1032 / ISSUE #751 / DRAFT PR / OUTGOING SMS OWNER CONFIRMATION]
 - Replaced secondary BankParser hard veto with a pure bank-facts-based human confirmation gate (settled direction, verified SAR source amount, date/time, active subcategory, manually selected verified account). Kept stricter AutoPost and atomic finance write checks.
 - Replaced generic red warning with exact missing verification field. A suggested Other/unclassified leaf must be explicitly selected if inactive/ambiguous.

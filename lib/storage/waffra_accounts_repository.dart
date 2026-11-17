@@ -282,6 +282,30 @@ ORDER BY a.created_iso,a.account_id
    if(matched.length!=1||matched.single.balanceMinor!=0){
     throw StateError('Non-empty account cannot be archived.');
    }
+   // A zero balance does not mean this account has no future obligations.
+   // Never archive an account still selected by any recurring template.
+   final recurringTable=await db.customSelect(
+    "SELECT name FROM sqlite_master WHERE type='table' "
+    "AND name='fresh_finance_recurring_account_defaults'").get();
+   if(recurringTable.isNotEmpty){
+    final outstanding=await db.customSelect(
+     'SELECT recurring_id FROM fresh_finance_recurring_account_defaults '
+     'WHERE account_id=? LIMIT 1',variables:[Variable.withString(id)]).get();
+    if(outstanding.isNotEmpty)throw StateError(
+     'Reassign recurring obligations before archiving this account.');
+   }
+   // Recently deleted linked money still needs its account when the owner
+   // selects Undo. Avoid an archived account that cannot take restoration.
+   final deletedLinksTable=await db.customSelect(
+    "SELECT name FROM sqlite_master WHERE type='table' "
+    "AND name='fresh_finance_transaction_recycle_account_links'").get();
+   if(deletedLinksTable.isNotEmpty){
+    final inRecovery=await db.customSelect(
+     'SELECT entry_id FROM fresh_finance_transaction_recycle_account_links '
+     'WHERE account_id=? LIMIT 1',variables:[Variable.withString(id)]).get();
+    if(inRecovery.isNotEmpty)throw StateError(
+     'Recently deleted transactions still refer to this account.');
+   }
    // An Other-institution root with live children remains selectable as
    // a group; archiving it would orphan linked-child creation workflows.
    if(await WaffraCustomInstitutionLinks.exists(db)){
