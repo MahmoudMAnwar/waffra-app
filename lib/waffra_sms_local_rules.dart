@@ -852,6 +852,14 @@ abstract final class WaffraSmsLocalRules {
   if(candidate.autoPost||candidate.id.startsWith('custom_')){
    throw const FormatException('Learning cannot grant posting permission');
   }
+  // Idempotent across current and overflow buckets. Repeated bank messages
+  // must not consume capacity or duplicate a previously approved hint.
+  if(existing.any((rule)=>rule.resolvedKind==candidate.resolvedKind&&
+   normalized(rule.sender)==normalized(candidate.sender)&&
+   candidate.keywords.every((word)=>rule.keywords.any((stored)=>
+    normalized(stored)==normalized(word)&&
+    (rule.keywordCategories[normalized(stored)]??rule.category)==
+     candidate.category))))return existing;
   // A phrase already assigned to a different category is ambiguous.
   // Do not duplicate it, overwrite the owner, or teach a wrong category.
   if(existing.any((rule)=>rule.resolvedKind==candidate.resolvedKind&&
