@@ -123,6 +123,20 @@ void main(){
   expect(native,contains('private const val excludedMessageBucketPrefix'));
  });
 
+ test('M1032 repeat learned safe rule never consumes capacity or enables AutoPost',(){
+  const candidate=WaffraSmsLocalRule(
+   id:'smart_repeat_verified',name:'Repeated merchant',
+   keywords:['coffeeshop'],kind:'expense',income:false,
+   category:'مقاهي',sender:'AlRajhi',matchAll:true,autoPost:false);
+  final once=WaffraSmsLocalRules.upsertLearned(
+   existing:const [],candidate:candidate);
+  final repeated=WaffraSmsLocalRules.upsertLearned(
+   existing:once,candidate:candidate);
+  expect(repeated.length,1);
+  expect(repeated.single.autoPost,isFalse);
+  expect(repeated.single.id,'smart_repeat_verified');
+ });
+
  test('M1032 learned buckets spill after 12 keywords without losing approved patterns',(){
   WaffraSmsLocalRule candidate(int i,String category){
    final x=String.fromCharCode(97+(i%26));
