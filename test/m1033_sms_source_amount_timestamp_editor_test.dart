@@ -70,6 +70,9 @@ void main() {
   expect(editor,contains('WaffraSmsCurrencies.originalAmount(initialSms)'));
   expect(editor,contains("smsEditorDraft?['amount'] as String?"));
   expect(editor,contains('smsDateConfirmed'));
+  expect(editor,contains('استرجاع المبلغ الأصلي من الرسالة'));
+  expect(editor,contains('المبلغ المدخل لا يطابق أصل الرسالة'));
+  expect(editor,contains('(n-sourceAmount!.amount).abs()>0.00001'));
   expect(editor,contains('commitConfirmedSms('));
   expect(smsReview,contains('reviewedAccount?.ids?.single!=null'));
   expect(smsReview,contains('ownerBlocker()==null'));
