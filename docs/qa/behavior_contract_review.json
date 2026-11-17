@@ -1,12 +1,30 @@
 {
   "schema_version": 1,
-  "pr": "M1022–M1030 (Issue #740) — nine SMS gaps (Draft)",
-  "issue": "Issue #740",
+  "pr": "Draft PR pending #751",
+  "issue": "#751",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main after merged PR #725 (16 November 2026)",
   "reviewed_at": "2026-11-17",
   "review_policy": "Owner-approved narrow SMS reliability/security/finance changes; tests prior to code. No automated production proof without Android UAT.",
   "contracts": [
+    {
+      "id": "M1032-SAMA-SMS-OWNER-REVIEW-GATE",
+      "issue": "Issue #751",
+      "previous_behavior": "Outgoing external transfer can show SAR 1900 + verified account + old date but Done disabled by secondary BankParser direction or amount mismatches; generic blocker hides missing leaf/category.",
+      "approved_behavior": "Only verified original SAR amount/date, SAMA-settled direction, explicit active financial account and active unambiguous category can authorize Done. Untrusted secondary parser never vetoes a separately verified owner confirmation. Missing field-specific UI message.",
+      "source_paths": [
+        "lib/waffra_bank_sms_facts.dart",
+        "lib/waffra_home_sms_confirmation.part.dart"
+      ],
+      "test_paths": [
+        "test/m1032_outgoing_sms_owner_review_gate_test.dart"
+      ],
+      "safety_invariants": [
+        "OTP, pending, multi-event and reversal still refuse posting",
+        "AutoPost remains separate and stricter than owner verification",
+        "No confirmed original SMS hash without atomic finance writer"
+      ]
+    },
     {
       "id": "M1031-SHARED-SMS-REVIEW-AND-OWNER-CONFIRM",
       "issue": "Issue #750",

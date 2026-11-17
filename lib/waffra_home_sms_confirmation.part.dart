@@ -384,14 +384,18 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
    // an amount even when verified original SAR facts did extract one.
    // The atomic writer validates original facts, NOT that optional second
    // parser. A present conflicting parsed amount/direction still blocks Yes.
-   bool canConfirm=!requiresSeparateReview&&
-    understood&&facts.canOwnerConfirmAsIncomeExpense&&
-    originalAmount!=null&&originalAmount.currency=='SAR'&&
-    originalDate!=null&&!bankSmsHasUnverifiedTimestamp(body)&&
-    (parsed.amount==null||
-     (parsed.amount!-originalAmount.amount).abs()<0.00001)&&
-    (parsed.amount==null||parsed.income==expectedIncome)&&
-    reviewCategoryValid;
+   // A money prefill parser can pick an account balance or fee, or
+   // confuse the banking word "transfer" with own-account movement.
+   // It is not an independent financial authority. Verified original
+   // SAR amount, SAMA direction, date and selected leaf are authoritative.
+   String? ownerBlocker()=>WaffraBankSmsFactsParser.ownerConfirmationBlocker(
+    facts:facts,requiresSeparateReview:requiresSeparateReview,
+    amountVerifiedSar:originalAmount!=null&&
+     originalAmount.currency=='SAR',
+    timestampVerified:originalDate!=null&&
+     !bankSmsHasUnverifiedTimestamp(body),
+    leafVerified:reviewCategoryValid);
+   bool canConfirm=ownerBlocker()==null;
    // A type selection in compact review is only a requested correction;
    // it must never ACK or post money until the verified ledger editor saves.
    String? reviewType=sensitive?null:switch(facts.kind){
@@ -497,14 +501,7 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
      reviewedCategory=chosen.name;
      reviewedMainName=parent.single.displayName;
      reviewCategoryValid=unambiguous;
-     canConfirm=!requiresSeparateReview&&
-      understood&&facts.canOwnerConfirmAsIncomeExpense&&
-      originalAmount!=null&&originalAmount.currency=='SAR'&&
-      originalDate!=null&&!bankSmsHasUnverifiedTimestamp(body)&&
-      (parsed.amount==null||
-       (parsed.amount!-originalAmount.amount).abs()<0.00001)&&
-      (parsed.amount==null||parsed.income==expectedIncome)&&
-      reviewCategoryValid;
+     canConfirm=ownerBlocker()==null;
     });
    }
    Future<void> selectAccountBeforeYes(StateSetter redraw,BuildContext dialog)async{
@@ -712,9 +709,25 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
         const SizedBox(height:6),
         if(!canConfirm)Padding(
          padding:const EdgeInsets.only(bottom:8),
-         child:WaffraText(waffraIsEnglish?
-          'The amount, date, transaction direction or category needs review. Use Edit to correct the original SMS safely.':
-          'تعذر تأكيد المبلغ أو التاريخ أو اتجاه العملية أو القسم. استخدم تعديل لمراجعة الرسالة بأمان.',
+         child:WaffraText(ownerBlocker()=='category'?
+          (waffraIsEnglish?
+           'Select a valid active main and subcategory above to enable Done.':
+           'اختر قسمًا رئيسيًا وفرعيًا نشطين من زر تغيير القسم لتفعيل «تم».'):
+          ownerBlocker()=='date'?
+           (waffraIsEnglish?
+            'The original SMS date/time is unverified. Open Edit to confirm it.':
+            'تاريخ أو وقت الرسالة الأصلية غير مؤكد. اضغط تعديل لتأكيده.'):
+          ownerBlocker()=='amount_or_currency'?
+           (waffraIsEnglish?
+            'The SMS amount or SAR currency could not be verified. Open Edit.':
+            'تعذر التحقق من مبلغ الرسالة الأصلي أو عملته بالريال. اضغط تعديل.'):
+          ownerBlocker()=='multi_event'?
+           (waffraIsEnglish?
+            'This message includes multiple or reversed events. Review separately.':
+            'الرسالة تحتوي أحداثًا متعددة أو عملية معكوسة؛ راجعها منفصلة.'):
+          (waffraIsEnglish?
+           'The transaction is not a verified settled income/expense. Open Edit.':
+           'اتجاه العملية أو اكتمالها غير مؤكد. اضغط تعديل لمراجعتها.'),
           style:TextStyle(fontSize:12,
            color:Theme.of(dialog).colorScheme.error))),
         // Two readable actions on the first row, with Exclude at full

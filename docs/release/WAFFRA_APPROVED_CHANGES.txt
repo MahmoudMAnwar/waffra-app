@@ -1,3 +1,8 @@
+[M1032 / ISSUE #751 / DRAFT PR / OUTGOING SMS OWNER CONFIRMATION]
+- Replaced secondary BankParser hard veto with a pure bank-facts-based human confirmation gate (settled direction, verified SAR source amount, date/time, active subcategory, manually selected verified account). Kept stricter AutoPost and atomic finance write checks.
+- Replaced generic red warning with exact missing verification field. A suggested Other/unclassified leaf must be explicitly selected if inactive/ambiguous.
+- Covers reported AlRajhi outgoing SAR 1900 screenshot; exact original SMS text was not provided, so field-specific Android reproduction is still required.
+
 [M1031 / ISSUE #750 / DRAFT PR #749 / EXACT-SHA 11-FAIL CI REPAIR]
 - Reconciled 11 pre-existing positive source contract regressions (10 tests). Old assertions used body-only SMS hash and a swallowed learning call; new assertions enforce native-ID v2 fingerprint after SAR guard, encrypted owner-scoped receipt after verified commit, a still-safe category rule, and ACK only for committed matching SMS.
 - Kept all cases enabled. Updated M385 approved scope and M550 behavior contract review before CI; no product source was changed by this CI repair itself.
