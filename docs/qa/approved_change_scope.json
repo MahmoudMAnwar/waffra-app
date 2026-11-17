@@ -163,6 +163,10 @@
     ],
     "lib/waffra_sms_local_rules.dart": [
       {
+        "start": "abstract final class WaffraSmsLocalRules {",
+        "end": "class WaffraSmsRuleLearningResult {"
+      },
+      {
         "start": "class WaffraSmsLocalRuleStore {",
         "end": null
       }
