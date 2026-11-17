@@ -1,12 +1,214 @@
 {
   "schema_version": 1,
-  "pr": "M1022–M1030 (Issue #740) — nine SMS gaps (Draft)",
-  "issue": "Issue #740",
+  "pr": "Draft PR pending #751",
+  "issue": "#751",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main after merged PR #725 (16 November 2026)",
   "reviewed_at": "2026-11-17",
   "review_policy": "Owner-approved narrow SMS reliability/security/finance changes; tests prior to code. No automated production proof without Android UAT.",
   "contracts": [
+    {
+      "id": "M1032-BOUND-LEARNED-SMS-RULE-CAPACITY-AND-V1-COMPAT",
+      "issue": "Issue #751",
+      "previous_behavior": "100 encrypted rules limit and full 12-phrase bucket silently ignored further safe confirmed patterns.",
+      "approved_behavior": "Up to 256 owner-scoped safe rules in current V1 schema, overflow into separately validated review-only buckets, strict conflict and protected AutoPost permissions unchanged; legacy 100-rule backups and Undo remain readable. Show capacity in rule editor.",
+      "source_paths": [
+        "lib/waffra_sms_local_rules.dart",
+        "lib/waffra_sms_rule_settings_page.dart"
+      ],
+      "test_paths": [
+        "test/m1032_outgoing_sms_owner_review_gate_test.dart",
+        "test/storage/m440_accounts_portable_v3_test.dart"
+      ],
+      "safety_invariants": [
+        "Never auto-approve money from learned rule",
+        "No silent category conflict overwrite",
+        "Owner-scoped encrypted readback and exact backup import",
+        "Never persist OTP or raw financial SMS secrets"
+      ]
+    },
+    {
+      "id": "M1032-REVERSIBLE-BULK-DELETE-RECEIPTS-ACCOUNT-LINKS",
+      "issue": "Issue #751",
+      "previous_behavior": "Delete All permanently cleared ledger and SMS hash identities, was blocked by any receipt, and had no single-transaction retention-safe bulk archive.",
+      "approved_behavior": "Use a single verified SQLCipher writer lock and transaction to archive all transactions for 30-day individual Undo, including exact receipt bytes and original account links. Require exact owner witness and keep SMS anti-replay identifiers unchanged.",
+      "source_paths": [
+        "lib/storage/waffra_encrypted_transaction_recycle.dart",
+        "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
+        "lib/storage/waffra_verified_finance_authority.dart",
+        "lib/waffra_home_delete_all_transactions.part.dart"
+      ],
+      "test_paths": [
+        "test/storage/m183_encrypted_transaction_recycle_test.dart",
+        "test/m1032_outgoing_sms_owner_review_gate_test.dart",
+        "test/m110_live_finance_authority_writer_test.dart"
+      ],
+      "safety_invariants": [
+        "No partial archive or removed receipt if another archive, source mismatch or SQL FK rejects",
+        "No money replay on undo or SMS rescan",
+        "No change to original phone SMS",
+        "Any expired-archive physical purge remains independently authenticated",
+        "Owner dialog accurately describes recoverable 30-day archive"
+      ]
+    },
+    {
+      "id": "M1032-SMS-EXCLUSION-BOOT-VERIFIED-RETENTION",
+      "issue": "Issue #751",
+      "previous_behavior": "Recoverable excluded SMS labels were erased by subtracting excludedAt from System.currentTimeMillis; a manual date jump could purge them prematurely.",
+      "approved_behavior": "Retain labels until 30 continuous days measured by elapsedRealtime within a verified Settings.Global.BOOT_COUNT epoch. Legacy labels, rebooted devices, unknown boot counts and inconsistent witnesses fail closed and begin a new verified window. Wall time only governs non-destructive cleanup cadence and display metadata.",
+      "source_paths": [
+        "native/WaffraAutoSmsStore.kt"
+      ],
+      "test_paths": [
+        "test/m1032_outgoing_sms_owner_review_gate_test.dart",
+        "test/m615_m618_sms_review_retention_perf_contract_test.dart"
+      ],
+      "safety_invariants": [
+        "Never delete recoverable labels solely due to wall clock jumps",
+        "Encrypted owner-scoped excluded message fingerprint denial list survives label cleanup",
+        "All three exclusion paths stamp the native retention witness",
+        "No finance posting or SMS source contents altered"
+      ]
+    },
+    {
+      "id": "M1032-PASSWORD-ENCRYPTED-SMS-RULE-PORTABILITY",
+      "issue": "Issue #751",
+      "previous_behavior": "Portable V3 restored money accounts but never owner-scoped local SMS rules nor verified post-commit learning receipts.",
+      "approved_behavior": "Optional strictly validated rules+learning section inside the existing password-authenticated V3 envelope, owner ID check and secure readback on restore, never re-enable AutoPost after a device restore. Pre-M1032 V3 archives remain restorable without this field.",
+      "source_paths": [
+        "lib/waffra_sms_local_rules.dart",
+        "lib/storage/waffra_accounts_portable_backup_v3.dart",
+        "lib/storage/waffra_portable_encrypted_backup_exporter.dart",
+        "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
+        "lib/waffra_home_account_tools.part.dart"
+      ],
+      "test_paths": [
+        "test/storage/m440_accounts_portable_v3_test.dart"
+      ],
+      "safety_invariants": [
+        "No raw SMS/OTP or system credentials are exported",
+        "No owner mismatch import",
+        "No automatic posting after device restore",
+        "No financial replay when Keystore import fails"
+      ]
+    },
+    {
+      "id": "M1032-POSTCOMMIT-AUTOSMS-LEARNING-RECOVERY",
+      "issue": "Issue #751",
+      "previous_behavior": "Background AutoPost may commit+ACK a bank SMS then swallow a failed encrypted local rule learning write without durable retry.",
+      "approved_behavior": "Store only owner-scoped opaque transaction ID retry pointers and read exact saved SMS entries from the verified SQLCipher source on subsequent WorkManager runs; never redo finance commit, hashes, or ACK.",
+      "source_paths": [
+        "lib/waffra_auto_sms_autopost.part.dart"
+      ],
+      "test_paths": [
+        "test/m1032_outgoing_sms_owner_review_gate_test.dart",
+        "test/m989_sms_review_lifecycle_guard_test.dart"
+      ],
+      "safety_invariants": [
+        "No sensitive SMS, category, or amount in retry queue",
+        "No duplicate financial charge or ACK from learning retry",
+        "Old pending pointers retained while vault/rule store is unavailable"
+      ]
+    },
+    {
+      "id": "M1032-EDITED-FINANCE-CATEGORY-RECONCILIATION",
+      "issue": "Issue #751",
+      "previous_behavior": "Verified finance record editor persists new category and amount but leaves old auto-learned senderless local category keyword unchanged.",
+      "approved_behavior": "After verified SQLCipher edited-record readback, replace only previous matching auto-learned financial phrase if no other confirmed entry still uses it; retain custom/AutoPost permissions untouched and clearly show failure.",
+      "source_paths": [
+        "lib/waffra_sms_local_rules.dart",
+        "lib/waffra_home_sms_rules.part.dart",
+        "lib/waffra_home_entry_sheet.part.dart"
+      ],
+      "test_paths": [
+        "test/m1032_outgoing_sms_owner_review_gate_test.dart"
+      ],
+      "safety_invariants": [
+        "No learning before source commit",
+        "Never change an existing financial debit during local rule reconciliation",
+        "No unrelated manually created rules are dropped"
+      ]
+    },
+    {
+      "id": "M1032-ACCOUNT-SUFFIX-AND-LEARNING-CAPACITY",
+      "issue": "Issue #751",
+      "previous_behavior": "Editing bank last-four leaves old local SMS auto-post association active, and conflicting/saturated learned rules silently drop safe categories.",
+      "approved_behavior": "After a confirmed suffix mutation, revoke local auto-post and learned bank association. Independently require the currently verified SQLCipher bank suffix to match any unattended post. Surface safe-learning conflicts and capacity saturation.",
+      "source_paths": [
+        "lib/waffra_sms_local_rules.dart",
+        "lib/waffra_sms_account_learning.dart",
+        "lib/waffra_accounts_manager_page.dart",
+        "lib/waffra_home_verified_account_flows.part.dart",
+        "lib/waffra_auto_sms_autopost.part.dart",
+        "lib/waffra_home_sms_rules.part.dart"
+      ],
+      "test_paths": [
+        "test/m1032_outgoing_sms_owner_review_gate_test.dart"
+      ],
+      "safety_invariants": [
+        "Never debit account on stale account suffix",
+        "Owner must reconfirm a new suffix before unattended classification",
+        "Rule conflict/capacity cannot grant automatic posting"
+      ]
+    },
+    {
+      "id": "M1032-TRANSFER-REVERSAL-AND-BACKGROUND-REVIEW-KIND",
+      "issue": "Issue #751",
+      "previous_behavior": "Transfers have no correction route; background notices ignore matched local rules and show generic uncertain.",
+      "approved_behavior": "Explicit confirmed equal-and-opposite transfer with deterministic ID and preserved original, financial net worth unchanged. Native SMS review alerts consult the same local matching direction, but do not auto-post on it.",
+      "source_paths": [
+        "lib/storage/waffra_accounts_repository.dart",
+        "lib/storage/waffra_verified_accounts_api.dart",
+        "lib/waffra_home_verified_transfer_cards.part.dart",
+        "lib/waffra_auto_sms_autopost.part.dart"
+      ],
+      "test_paths": [
+        "test/storage/m440_accounts_repository_test.dart",
+        "test/m1032_outgoing_sms_owner_review_gate_test.dart"
+      ],
+      "safety_invariants": [
+        "Original historical transfer is immutable",
+        "Only one reversal per transfer ID",
+        "Background classification cannot create an automatic finance entry"
+      ]
+    },
+    {
+      "id": "M1032-ACCOUNT-TRANSACTION-RECYCLE-ATOMICITY",
+      "issue": "Issue #751",
+      "previous_behavior": "Transaction recycle deleted fresh_finance_entries while a RESTRICT account link referenced it; empty account archiving could hide active recurring defaults; Delete All could not remove linked entries.",
+      "approved_behavior": "Archive original account association with entry/invoices within one SQLCipher transaction and reattach exact account on restore. Block archive while any recurring default or recoverable transaction references account. Delete All without invoices removes typed account associations in the same transaction.",
+      "source_paths": [
+        "lib/storage/waffra_encrypted_transaction_recycle.dart",
+        "lib/storage/waffra_accounts_repository.dart",
+        "lib/storage/waffra_verified_encrypted_finance_bridge.dart"
+      ],
+      "test_paths": [
+        "test/storage/m183_encrypted_transaction_recycle_test.dart"
+      ],
+      "safety_invariants": [
+        "Never duplicate account balance changes",
+        "Never reroute restored transaction to Home header",
+        "No destructive invoice cleanup without retention policy"
+      ]
+    },
+    {
+      "id": "M1032-SAMA-SMS-OWNER-REVIEW-GATE",
+      "issue": "Issue #751",
+      "previous_behavior": "Outgoing external transfer can show SAR 1900 + verified account + old date but Done disabled by secondary BankParser direction or amount mismatches; generic blocker hides missing leaf/category.",
+      "approved_behavior": "Only verified original SAR amount/date, SAMA-settled direction, explicit active financial account and active unambiguous category can authorize Done. Untrusted secondary parser never vetoes a separately verified owner confirmation. Missing field-specific UI message.",
+      "source_paths": [
+        "lib/waffra_bank_sms_facts.dart",
+        "lib/waffra_home_sms_confirmation.part.dart"
+      ],
+      "test_paths": [
+        "test/m1032_outgoing_sms_owner_review_gate_test.dart"
+      ],
+      "safety_invariants": [
+        "OTP, pending, multi-event and reversal still refuse posting",
+        "AutoPost remains separate and stricter than owner verification",
+        "No confirmed original SMS hash without atomic finance writer"
+      ]
+    },
     {
       "id": "M1031-SHARED-SMS-REVIEW-AND-OWNER-CONFIRM",
       "issue": "Issue #750",

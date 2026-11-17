@@ -130,7 +130,8 @@ class WaffraVerifiedEncryptedFinanceBridge {
     });
   }
 
-  Future<String> exportPortableBackup(String password) =>
+  Future<String> exportPortableBackup(String password,{
+    Map<String,Object?>? smsRulesV1}) =>
       WaffraPortableEncryptedBackupExporter(
         snapshot: snapshot,
         receiptVault: WaffraEncryptedReceiptVault(
@@ -142,7 +143,7 @@ class WaffraVerifiedEncryptedFinanceBridge {
           await WaffraAccountsSchema.install(snapshot.store);
         },
         experimentalEnabled: experimentalEnabled,
-      ).exportV3(password: password);
+      ).exportV3(password: password,smsRulesV1:smsRulesV1);
 
   /// Encrypted-only, explicitly authenticated reset route. The independent
   /// source selector and the reset engine recheck the active SQLCipher
@@ -486,95 +487,18 @@ class WaffraVerifiedEncryptedFinanceBridge {
     if (!experimentalEnabled || !userConfirmed) {
       throw StateError('Confirmed encrypted finance deletion is required.');
     }
-    return WaffraExperimentalWriterGate(
-      disposableDirectory: writerDirectory,
+    // M1032 replaces the older irreversible implementation with a
+    // fully witness-checked 30-day archive; its legacy API name remains.
+    return WaffraEncryptedTransactionRecycle(
+      snapshot: snapshot,
+      writerDirectory: writerDirectory,
+      verifySourceUnderLock: _requireActivatedUnderLock,
       experimentalEnabled: true,
-    ).withExclusiveAccess(() async {
-      await _requireActivatedUnderLock();
-      return snapshot.store.transaction(() async {
-        final current = await snapshot.read();
-        if (current.generation != baseline.generation ||
-            current.digest != baseline.digest) {
-          throw StateError('Finance changed; reload before deleting.');
-        }
-        final raw = current.values['entries'] as String? ?? '[]';
-        final decoded = jsonDecode(raw);
-        if (decoded is! List || decoded.any((row) =>
-            row is! Map || row['id'] is! String ||
-            (row['receiptPath'] != null && row['receiptPath'] != ''))) {
-          throw StateError('Ledger contains unsafe or attached entries.');
-        }
-        final ids = decoded.map((row) => (row as Map)['id']).toSet();
-        if (ids.length != decoded.length) {
-          throw StateError('Ledger contains duplicate identities.');
-        }
-        final sql = await snapshot.store.customSelect(
-          'SELECT entry_id,source_json,receipt_count FROM fresh_finance_entries',
-        ).get();
-        if (sql.length != decoded.length ||
-            sql.any((row) => !ids.contains(row.read<String>('entry_id')) ||
-                row.read<int>('receipt_count') != 0)) {
-          throw StateError('Encrypted ledger projection differs from finance.');
-        }
-        final byId = <String, Object?>{
-          for (final item in decoded) (item as Map)['id'] as String: item,
-        };
-        for (final row in sql) {
-          if (jsonEncode(jsonDecode(row.read<String>('source_json'))) !=
-              jsonEncode(byId[row.read<String>('entry_id')])) {
-            throw StateError('Transaction SQL witness differs from ledger.');
-          }
-        }
-        // NEVER silently discard attached, archived or orphan receipt bytes.
-        for (final name in const <String>[
-          'fresh_finance_receipt_blobs',
-          'fresh_finance_receipt_recycle',
-          'fresh_finance_receipts',
-        ]) {
-          final present = await snapshot.store.customSelect(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
-            variables: [Variable.withString(name)],
-          ).get();
-          if (present.isNotEmpty) {
-            final count = await snapshot.store.customSelect(
-              'SELECT count(*) AS n FROM $name',
-            ).getSingle();
-            if (count.read<int>('n') != 0) {
-              throw StateError('Encrypted receipts require retention review.');
-            }
-          }
-        }
-        final hashes = current.values['waffra_sms_hashes_v1'];
-        if (hashes != null && hashes is! List<String>) {
-          throw StateError('Encrypted dedupe hashes are corrupted.');
-        }
-        final sqlHashes = await snapshot.store.customSelect(
-          'SELECT message_hash FROM fresh_finance_sms_hashes',
-        ).get();
-        final actualHashes =
-            sqlHashes.map((row) => row.read<String>('message_hash')).toSet();
-        final expectedHashes = (hashes as List<String>? ?? const <String>[])
-            .toSet();
-        if (actualHashes.length != sqlHashes.length ||
-            actualHashes.length != expectedHashes.length ||
-            !actualHashes.containsAll(expectedHashes)) {
-          throw StateError('SQLCipher hash projection differs from finance.');
-        }
-        await snapshot.store.customStatement(
-          'DELETE FROM fresh_finance_entries',
-        );
-        await snapshot.store.customStatement(
-          'DELETE FROM fresh_finance_sms_hashes',
-        );
-        final replacement = Map<String, Object?>.from(current.values)
-          ..['entries'] = '[]'
-          ..['waffra_sms_hashes_v1'] = <String>[];
-        return snapshot.commit(
-          expectedGeneration: current.generation,
-          fullFinanceSnapshot: replacement,
-        );
-      });
-    });
+    ).recycleAll(
+      baseline: baseline.snapshot,
+      now: DateTime.now().toUtc(),
+      userConfirmed: userConfirmed,
+    );
   }
 
   /// Combined recurring payment: the confirmed payment row, typed SQL ledger

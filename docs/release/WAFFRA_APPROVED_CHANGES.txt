@@ -1,3 +1,52 @@
+[M1032 / #751 / REPAIRED PORTABLE LOCAL SMS RULE ENGINE]
+- Corrected V3 owner-bound SMS rules export/import by rebuilding from the previous unmodified committed source and ensuring exactly one original learning store and one new portable validation feature; no duplicate code or finance writes.
+- Restored approved M385 scope to include earlier approved changes in WaffraSmsLocalRule class and owner rules store, without weakening M385 checks. Next exact-SHA CI and two-device backup recovery acceptance remain required.
+
+[M1032 / OPTIONAL V3 ENCRYPTED LOCAL SMS RULE BACKUP]
+- Added an authenticated optional owner-scoped V3 SMS rules+learning section. Rules and learning are validated with the same strict live classifiers; no plain source SMS, phone, OTP, transaction amount or device secrets enter the archive.
+- UI captures owner rules immediately before authoritatively locked V3 finance export. Restore verifies owner and encrypted Keystore readback; device-specific AutoPost account permissions are disabled pending fresh confirmation.
+- Existing V3 archive shape without the section stays backward compatible. SQLCipher money already committed is never replayed on local-rule restore error. Still needs Android UAT.
+
+[M1032 / EXACT-SHA M989 REGRESSION CONTRACT FIX]
+- Updated existing M989 lifecycle review test to validate actual shared ownerBlocker guard and requiresSeparateReview instead of its removed inline boolean spelling. No runtime safety change, no removed test or workflow.
+
+[M1032 / SQLCipher legacy test compatibility and reviewed account evidence]
+- Recycle account-link witness table now stores owner-id/checked confirmed ISO/SHA without a FK to optional money_accounts in older finance-only vaults. Undo verifies a live SAR account exists before restoration; no financial linking is fabricated.
+- M385 import boundary now anchored to an unchanged package import present in the main baseline (as required by scoped audit).
+
+[M1032 / OWNER-BOUND LOCAL LEARNING DEBT RETRY]
+- Failed post-commit bank-SMS local learning now stores bounded owner-scoped entry-ID-only debt pointers after a successful finance commit and ACK. A later worker binds to verified SQLCipher and retries local learning from immutable ledger facts, never reposting money or acknowledging native SMS a second time.
+- If the local debt-checkpoint storage itself is unavailable, the saved finance entry stays immutable and a diagnostic counter is reported. Physical Android recovery verification pending.
+
+[M1032 / EXACT SHA COMPILER AND M385 REPAIR]
+- Declared shared localReviewKinds in same background function scope as selector and four-kind loop; imported local rule model into M1032 contract regression; scoped new crypto/utf8 imports as approved source edits in M385.
+- No CI job removed or skipped. Previous compile and scope failures require exact-head rerun.
+
+[M1032 / VERIFIED FINANCIAL EDIT LEARNING RECONCILIATION]
+- SQLCipher-verified transaction edits now reconcile senderless, automatically learned description-category rules after committing. The old keyword survives if another confirmed transaction still uses that category; user-authored and AutoPost rules are never altered by this path.
+- A failure explicitly warns that the financial edit succeeded but learning needs review. No money edit is replayed.
+
+[M1032 / BANK ACCOUNT SUFFIX INTEGRITY AND LOCAL RULE SATURATION]
+- Updating or clearing a bank suffix revokes local account-bound AutoPost and old sender/suffix evidence, with independently verified SQLCipher bank suffix comparison prior to any unattended posting.
+- Learning receipt now distinguishes conflict and capacity saturation; a rejected confirmed category learning attempt is not silently counted as an active matching pattern.
+- Full long-term rule capacity scalability and conflict resolution UI remain pending.
+
+[M1032 / VERIFIED TRANSFER REVERSAL AND BACKGROUND REVIEW RULES]
+- Added explicit owner-confirmed, deterministic-ID reversal of internal two-sided transfers, with original immutable audit history preserved. Net worth and income/expense records unchanged.
+- Background review notification now uses already matched local income/expense/transfer/exclusion suggestion when bank facts are uncertain; suggestions never authorize money posting.
+- Resolved M183 test Drift import and recurring typed-table fixture and M550 contract issue formatting.
+
+[M1032 / ACCOUNT-LINKED RECYCLE AND SAFE DELETE ALL]
+- Added encrypted immutable association archive and exact account reattachment on transaction Undo, ahead of FK-restricted ledger delete and within one writer lock/SQL transaction; typed balances now roll back correctly.
+- Account archive blocks recurring account defaults and pending deleted transaction account links even when balance is zero.
+- Verified Delete All with no invoices now removes linked account entry references atomically before typed ledger delete; invoice-bearing and other protected data still fail closed rather than silently disappearing.
+- Integrated tests added for link and balance parity. Exact-sha CI and physical-device acceptance outstanding.
+
+[M1032 / ISSUE #751 / DRAFT PR / OUTGOING SMS OWNER CONFIRMATION]
+- Replaced secondary BankParser hard veto with a pure bank-facts-based human confirmation gate (settled direction, verified SAR source amount, date/time, active subcategory, manually selected verified account). Kept stricter AutoPost and atomic finance write checks.
+- Replaced generic red warning with exact missing verification field. A suggested Other/unclassified leaf must be explicitly selected if inactive/ambiguous.
+- Covers reported AlRajhi outgoing SAR 1900 screenshot; exact original SMS text was not provided, so field-specific Android reproduction is still required.
+
 [M1031 / ISSUE #750 / DRAFT PR #749 / EXACT-SHA 11-FAIL CI REPAIR]
 - Reconciled 11 pre-existing positive source contract regressions (10 tests). Old assertions used body-only SMS hash and a swallowed learning call; new assertions enforce native-ID v2 fingerprint after SAR guard, encrypted owner-scoped receipt after verified commit, a still-safe category rule, and ACK only for committed matching SMS.
 - Kept all cases enabled. Updated M385 approved scope and M550 behavior contract review before CI; no product source was changed by this CI repair itself.
@@ -1253,3 +1302,9 @@ M969 / Issue #670 / Draft #665: real M120 Android SQLCipher receipt restart asse
 - No changes to recurring dues page, deposit/finance authority, SQLCipher accounts, goal balances, recurring goal link, global FAB, or backup payload.
 - Reviewed production source commits: 16748709662b2bc6256ef6fe71097717e4c0c666 (goal cards), 592ee49358c7875ad40cfa9ac6da82553a1dbb84 (goal management dispatch).
 - M1021 tests and revised M388/M392/M665/M670/M674 positive contracts were authored before source changes; mandatory M946 experience shard and M385 scoped manifest updated before source. Exact-head GitHub CI, Android visual/overflow and owner UAT remain mandatory before production certification. Release notes are not evidence of device validation.
+
+M1032 / Issue #751 / gap 10: The recoverable excluded-SMS label cleanup now requires a boot-verified monotonic elapsed-time witness (Android BOOT_COUNT + elapsedRealtime); changing the phone wall clock forward cannot prematurely purge a label. Legacy, unavailable and rebooted witnesses fail closed and may extend retention beyond 30 days. All three exclusion entry points stamp witnesses, while owner-bound encrypted denied-ID fingerprints remain independent and durable. No finance posting, SMS body or source SMS modifications. Added M1032 source contract regression; exact-head CI, Kotlin build and Android UAT still required.
+
+M1032 Issue #751 gaps 11/12: Owner-confirmed Delete All now routes all SQLCipher typed entries, original account associations and exact encrypted receipt bytes into one 30-day reversible transaction recycle; canonical ledger and verified typed SQL commit once, original bank-SMS anti-replay hashes remain unchanged, and any incompatible receipt owner/source reverts the full batch. Confirmation text reflects recoverable Trash and individual Undo. Rule store expands from 100 to 256 owner-secure V1 patterns, safely opens new review-only learned buckets after 12 keywords, retains old rule archives/Undo and shows exact capacity without widening AutoPost. Synthetic rollback/reopen and rule overflow/101-rule archive regressions added. Exact-head full CI, signed Android account/backup and RTL UAT remain mandatory.
+
+M1032 Issue #751 final gap-12 correction: safely repeated approved SMS/merchant patterns are now idempotent even when the 12-keyword learned bucket spills into multiple bounded groups; unchanged finance confirmation, account linkage, storage owner and AutoPost privileges. Reconciled M684/M907/M947/M1008/M181 original positive tests to verify unchanged index invalidation, secure bulk recycle, exact receipt rollback, the owner consent gate and preserved bank-SMS anti-replay hashes. All current app-code commits are included here; latest exact-head CI and signed Android device acceptance still pending.

@@ -7,7 +7,7 @@ void main(){
   expect(main.split("part 'waffra_home_delete_all_transactions.part.dart';").length,2);
   expect(part,startsWith("part of 'main.dart';"));
   expect(main,isNot(contains(' Future<void> confirmDeleteAllEntries() async {')));
-  for(final source in ["if(confirmed!=true||!mounted)return;","'waffra_sms_hashes_v1':<String>[]","route:WaffraFinanceRoute.deleteAllTransactions","await _financialWriteQueue.submit(clear,(captured)async{","userConfirmed:true","setState((){_m684InvalidatePeriodRead();entries.clear();smsHashes.clear();});","unawaited(_refreshWidget());"]){expect(part,contains(source),reason:source);}
+  for(final source in ["if(confirmed!=true||!mounted)return;","'waffra_sms_hashes_v1':hashes is List<String>?","route:WaffraFinanceRoute.deleteAllTransactions","await _financialWriteQueue.submit(clear,(captured)async{","userConfirmed:true","setState((){_m684InvalidatePeriodRead();entries.clear();});","unawaited(_refreshWidget());","المحذوفات المشفرة لمدة 30 يومًا"]){expect(part,contains(source),reason:source);}
  });
  test('Original registered source reassembles byte-identically for old QA',(){
   final full=readWaffraMainSourceForContracts(),part=File('lib/waffra_home_delete_all_transactions.part.dart').readAsStringSync();

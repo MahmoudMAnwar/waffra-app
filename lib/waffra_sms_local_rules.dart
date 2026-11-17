@@ -129,6 +129,10 @@ class WaffraSmsRuleCandidateIndex {
 /// Approved keywords only. Never suggest bank identifiers, long numbers,
 /// statement balances, OTPs, account/card suffixes or unredacted SMS bodies.
 abstract final class WaffraSmsLocalRules {
+ // M1032 #751: bounded, backwards-compatible V1 owner-secure rule capacity.
+ // Existing 100-rule archives remain readable; no AutoPost grants are inferred.
+ static const int maxStoredRules=256;
+
  static String normalized(String text)=>text.toLowerCase()
   .replaceAll(RegExp(r'[\u200e\u200f\u061c\u064B-\u065F\u0670]'),'')
   .replaceAll(RegExp(r'[أإآٱ]'),'ا')
@@ -796,6 +800,50 @@ abstract final class WaffraSmsLocalRules {
  /// Add a confirmed keyword to its existing system bucket, not a new rule.
  /// Keep sender identity and per-phrase category intact. A user-created rule
  /// or a rule with explicit posting permission is NEVER widened silently.
+ /// Correct a saved financial operation without removing other owner's
+ /// manually approved rules. Only senderless auto-learned manual buckets
+ /// tied to the original category may have their stale phrase removed.
+ /// A remaining confirmed operation using the old phrase keeps it alive.
+ static List<WaffraSmsLocalRule> reconcileConfirmedManualCorrection({
+  required List<WaffraSmsLocalRule> existing,
+  WaffraSmsLocalRule? oldCandidate,WaffraSmsLocalRule? newCandidate,
+  required bool previousStillUsed,
+ }){
+  var current=existing;
+  if(oldCandidate!=null&&!previousStillUsed){
+   final oldPhrases=oldCandidate.keywords.map(normalized).toSet();
+   current=<WaffraSmsLocalRule>[
+    for(final rule in current)
+     if(!rule.id.startsWith('manual_')||rule.autoPost||
+        rule.resolvedKind!=oldCandidate.resolvedKind||
+        rule.sender!=oldCandidate.sender)rule
+     else ...(){
+      final retained=rule.keywords.where((phrase)=>
+       !oldPhrases.contains(normalized(phrase))||
+       (rule.keywordCategories[normalized(phrase)]??rule.category)!=
+        oldCandidate.category).toList(growable:false);
+      if(retained.length==rule.keywords.length)return <WaffraSmsLocalRule>[rule];
+      if(retained.isEmpty)return const <WaffraSmsLocalRule>[];
+      final categories=<String,String>{
+       for(final phrase in retained)
+        normalized(phrase):rule.keywordCategories[normalized(phrase)]??
+         rule.category,
+      };
+      final updated=WaffraSmsLocalRule.fromJson(<String,dynamic>{
+       ...rule.toJson(),'keywords':retained,
+       'keywordCategories':categories,
+      });
+      validate(updated);
+      return <WaffraSmsLocalRule>[updated];
+     }(),
+   ];
+  }
+  if(newCandidate!=null){
+   current=upsertLearned(existing:current,candidate:newCandidate);
+  }
+  return List<WaffraSmsLocalRule>.unmodifiable(current);
+ }
+
  static List<WaffraSmsLocalRule> upsertLearned({
   required List<WaffraSmsLocalRule> existing,
   required WaffraSmsLocalRule candidate,
@@ -804,6 +852,14 @@ abstract final class WaffraSmsLocalRules {
   if(candidate.autoPost||candidate.id.startsWith('custom_')){
    throw const FormatException('Learning cannot grant posting permission');
   }
+  // Idempotent across current and overflow buckets. Repeated bank messages
+  // must not consume capacity or duplicate a previously approved hint.
+  if(existing.any((rule)=>rule.resolvedKind==candidate.resolvedKind&&
+   normalized(rule.sender)==normalized(candidate.sender)&&
+   candidate.keywords.every((word)=>rule.keywords.any((stored)=>
+    normalized(stored)==normalized(word)&&
+    (rule.keywordCategories[normalized(stored)]??rule.category)==
+     candidate.category))))return existing;
   // A phrase already assigned to a different category is ambiguous.
   // Do not duplicate it, overwrite the owner, or teach a wrong category.
   if(existing.any((rule)=>rule.resolvedKind==candidate.resolvedKind&&
@@ -838,11 +894,28 @@ abstract final class WaffraSmsLocalRules {
    (rule.id.startsWith('smart_')||rule.id.startsWith('manual_'))&&
    rule.resolvedKind==candidate.resolvedKind&&
    normalized(rule.sender)==normalized(candidate.sender)&&
-   rule.accountId==candidate.accountId);
+   rule.accountId==candidate.accountId&&
+   <String>{...rule.keywords,...candidate.keywords}.length<=12);
   if(index<0){
-   if(existing.any((r)=>r.id==candidate.id))return existing;
-   if(existing.length>=100)return existing;
-   return List<WaffraSmsLocalRule>.unmodifiable([...existing,candidate]);
+   if(existing.length>=maxStoredRules)return existing;
+   // A filled 12-phrase learned bucket does not swallow the next verified
+   // merchant. Start an independent safe review-only bucket, with a stable
+   // collision-free identifier if an old V1 bucket already owns its ID.
+   var appended=candidate;
+   if(existing.any((r)=>r.id==candidate.id)){
+    final identity=sha256.convert(utf8.encode(jsonEncode([
+     candidate.id,candidate.resolvedKind,candidate.sender,
+     candidate.category,candidate.keywords,
+    ]))).toString().substring(0,12);
+    final prefix=candidate.id.length>64?
+     candidate.id.substring(0,64):candidate.id;
+    appended=WaffraSmsLocalRule.fromJson(<String,dynamic>{
+     ...candidate.toJson(),'id':'${prefix}_$identity',
+    });
+    if(existing.any((r)=>r.id==appended.id))return existing;
+   }
+   validate(appended);
+   return List<WaffraSmsLocalRule>.unmodifiable([...existing,appended]);
   }
   final current=existing[index];
   final combined=<String>{...current.keywords,...candidate.keywords};
@@ -910,9 +983,11 @@ abstract final class WaffraSmsLocalRules {
 class WaffraSmsRuleLearningResult {
  const WaffraSmsRuleLearningResult({
   required this.proposals,required this.addedOrUpdated,
-  required this.activeRules,
+  required this.activeRules,this.blockedConflicts=0,this.blockedCapacity=0,
  });
  final int proposals,addedOrUpdated,activeRules;
+ /// Owners must see why a safe category hint did not become a usable rule.
+ final int blockedConflicts,blockedCapacity;
  bool get changed=>addedOrUpdated>0;
 }
 
@@ -965,7 +1040,7 @@ class WaffraSmsLocalRuleStore {
    WaffraSmsLocalRules.validate(rule);
    rules.add(rule);
   }
-  if(rules.length>100||rules.map((e)=>e.id).toSet().length!=rules.length){
+  if(rules.length>WaffraSmsLocalRules.maxStoredRules||rules.map((e)=>e.id).toSet().length!=rules.length){
    throw const FormatException('Local rule store failed validation');
   }
   return rules;
@@ -984,7 +1059,7 @@ class WaffraSmsLocalRuleStore {
   if(raw==null||raw.isEmpty)return const [];
   final decoded=jsonDecode(raw);
   if(decoded is! List||decoded.length>5||
-     decoded.any((e)=>e is! String||e.length>128000)){
+     decoded.any((e)=>e is! String||e.length>512000)){
    throw const FormatException('Corrupt encrypted SMS rule revision history');
   }
   return decoded.cast<String>();
@@ -998,7 +1073,7 @@ class WaffraSmsLocalRuleStore {
    if(history.isEmpty)return null;
    final previous=history.last;
    final parsed=jsonDecode(previous);
-   if(parsed is! List||parsed.length>100){
+   if(parsed is! List||parsed.length>WaffraSmsLocalRules.maxStoredRules){
     throw const FormatException('Invalid prior SMS rules');
    }
    final restored=<WaffraSmsLocalRule>[];
@@ -1024,7 +1099,7 @@ class WaffraSmsLocalRuleStore {
   });
 
  Future<void> _writeUnlocked(String owner,List<WaffraSmsLocalRule> rules)async{
-  if(rules.length>100||rules.map((e)=>e.id).toSet().length!=rules.length){
+  if(rules.length>WaffraSmsLocalRules.maxStoredRules||rules.map((e)=>e.id).toSet().length!=rules.length){
    throw const FormatException('Too many or duplicate rules');
   }
   for(final rule in rules)WaffraSmsLocalRules.validate(rule);
@@ -1058,6 +1133,211 @@ class WaffraSmsLocalRuleStore {
   }
   await _writeUnlocked(owner,next);
  });
+
+ /// M1032: bank suffix changes instantly revoke previously authorized
+ /// posting and account associations. Rule text remains a non-posting hint,
+ /// so users can review and explicitly re-approve a new account binding.
+ Future<int> disableAccountBoundPosting(String owner,String accountId)=>
+  _exclusive(owner,()async{
+   if(accountId.trim().isEmpty||accountId.length>128){
+    throw ArgumentError('Invalid bank account identity');
+   }
+   final current=await read(owner);
+   final next=<WaffraSmsLocalRule>[
+    for(final r in current)
+     if(r.accountId==accountId)
+      WaffraSmsLocalRule.fromJson(<String,dynamic>{
+       ...r.toJson(),
+       'autoPost':false,'accountId':'','accountSuffix':'',
+      })
+     else r,
+   ];
+   final affected=current.where((r)=>r.accountId==accountId).length;
+   if(affected>0)await _writeUnlocked(owner,next);
+   return affected;
+  });
+
+ /// M1032: the verified ledger edit has already committed. Reconcile
+ /// only the old senderless learned phrase, preserving all user/custom
+ /// authorizations. A failed learning write NEVER retries the money edit.
+ Future<void> reconcileConfirmedCategoryCorrection({
+  required String owner,WaffraSmsLocalRule? previous,
+  WaffraSmsLocalRule? revised,required bool previousStillUsed,
+ })=>_exclusive(owner,()async{
+  final current=await read(owner);
+  final next=WaffraSmsLocalRules.reconcileConfirmedManualCorrection(
+   existing:current,oldCandidate:previous,newCandidate:revised,
+   previousStillUsed:previousStillUsed);
+  if(revised!=null){
+   final relevant=next.any((r)=>r.resolvedKind==revised.resolvedKind&&
+    r.sender==revised.sender&&
+    r.keywords.any((term)=>revised.keywords.any((word)=>
+     WaffraSmsLocalRules.normalized(term)==
+      WaffraSmsLocalRules.normalized(word)&&
+      (r.keywordCategories[WaffraSmsLocalRules.normalized(term)]??
+       r.category)==revised.category)));
+   if(!relevant)throw StateError('SMS_RULE_CATEGORY_CONFLICT_OR_CAPACITY');
+  }
+  if(jsonEncode(current.map((r)=>r.toJson()).toList())!=
+     jsonEncode(next.map((r)=>r.toJson()).toList())){
+   await _writeUnlocked(owner,next);
+  }
+ });
+
+
+ /// M1032: authenticated V3 archives can carry owner-scoped local rules and
+ /// encrypted learning observations. Reuse the *same* strict rule validator
+ /// used by live classification: no raw SMS, OTP digits or arbitrary bodies.
+ /// A destination device must explicitly approve future AutoPost again.
+ static Map<String,Object?> validatePortableBackup(Object? payload){
+  if(payload is! Map||
+     payload.keys.any((key)=>key is! String)||
+     payload.keys.toSet().difference(
+      const {'version','owner','rules','learning'}).isNotEmpty||
+     payload['version']!=1||
+     payload['owner'] is! String||
+     !RegExp(r'^[a-f0-9]{64}$').hasMatch(payload['owner'] as String)||
+     payload['rules'] is! List||
+     (payload['rules'] as List).length>WaffraSmsLocalRules.maxStoredRules){
+   throw const FormatException('Invalid owner-scoped portable SMS rules');
+  }
+  final parsed=<WaffraSmsLocalRule>[];
+  final seen=<String>{};
+  for(final item in payload['rules'] as List){
+   if(item is! Map||item.keys.any((key)=>key is! String)){
+    throw const FormatException('Invalid SMS rule in portable backup');
+   }
+   final rule=WaffraSmsLocalRule.fromJson(Map<String,dynamic>.from(item));
+   WaffraSmsLocalRules.validate(rule);
+   if(!seen.add(rule.id)){
+    throw const FormatException('Duplicate SMS rule in portable backup');
+   }
+   parsed.add(rule);
+  }
+  final value=payload['learning'];
+  Map<String,Object?>? observations;
+  if(value!=null){
+   if(value is! Map||value.keys.any((key)=>key is! String)||
+      value.keys.toSet().difference(
+       const {'version','recent','totals','sourceTotals'}).isNotEmpty||
+      value['version']!=1||
+      value['recent'] is! List||
+      (value['recent'] as List).length>512){
+    throw const FormatException('Invalid portable confirmed learning');
+   }
+   final recent=<Map<String,Object?>>[];
+   final hashes=<String>{};
+   for(final row in value['recent'] as List){
+    if(row is! Map||row.keys.toSet().difference(
+       const {'id','kind','category','source'}).isNotEmpty||
+       row['id'] is! String||
+       !RegExp(r'^[a-f0-9]{64}$').hasMatch(row['id'] as String)||
+       !hashes.add(row['id'] as String)||
+       row['category'] is! String||
+       (row['category'] as String).trim().isEmpty||
+       (row['category'] as String).length>160||
+       !const {'income','expense'}.contains(row['kind'])||
+       !const {'manual','sms'}.contains(row['source'])){
+     throw const FormatException('Invalid portable confirmed-learning receipt');
+    }
+    recent.add(<String,Object?>{
+     'id':row['id'],'kind':row['kind'],
+     'category':row['category'],'source':row['source']});
+   }
+   Map<String,int> verifyCounts(Object? raw){
+    if(raw==null)return <String,int>{};
+    if(raw is! Map||raw.length>1024){
+     throw const FormatException('Invalid portable learning counters');
+    }
+    final clean=<String,int>{};
+    for(final entry in raw.entries){
+     if(entry.key is! String||entry.key.trim().isEmpty||
+        entry.key.length>200||entry.value is! int||
+        (entry.value as int)<0||(entry.value as int)>0x7fffffffffffffff){
+      throw const FormatException('Invalid portable learning count');
+     }
+     clean[entry.key as String]=entry.value as int;
+    }
+    return clean;
+   }
+   observations=<String,Object?>{
+    'version':1,'recent':recent,
+    'totals':verifyCounts(value['totals']),
+    'sourceTotals':verifyCounts(value['sourceTotals']),
+   };
+  }
+  return <String,Object?>{
+   'version':1,'owner':payload['owner'],
+   'rules':[for(final rule in parsed)rule.toJson()],
+   if(observations!=null)'learning':observations,
+  };
+ }
+
+ /// V3 export operates on the owner-specific Android Keystore storage only.
+ /// The enclosing .waffra archive password authenticates the payload.
+ Future<Map<String,Object?>> exportPortableBackup(String owner)=>
+  _exclusive(owner,()async{
+   final rules=await read(owner);
+   final raw=await _storage.read(
+    key:'waffra_sms_confirmed_finance_learning_v1_$owner');
+   return validatePortableBackup(<String,Object?>{
+    'version':1,'owner':owner,
+    'rules':[for(final rule in rules)rule.toJson()],
+    if(raw!=null)'learning':jsonDecode(raw),
+   });
+  });
+
+ /// Import is separate from the canonical SQLCipher money restore. Do not
+ /// report successful local-rule recovery unless secure-store readback works.
+ /// Never re-enable automatic posting on a new device/backup recovery.
+ Future<void> restorePortableBackup(String owner,Object? payload)=>
+  _exclusive(owner,()async{
+   final verified=validatePortableBackup(payload);
+   if(verified['owner']!=owner){
+    throw StateError('Portable rules belong to another authenticated owner');
+   }
+   final safe=<WaffraSmsLocalRule>[
+    for(final item in verified['rules'] as List)
+     WaffraSmsLocalRule.fromJson(<String,dynamic>{
+      ...Map<String,dynamic>.from(item as Map),
+      'autoPost':false,'accountId':'','accountSuffix':'',
+     }),
+   ];
+   for(final rule in safe)WaffraSmsLocalRules.validate(rule);
+   final receiptKey='waffra_sms_confirmed_finance_learning_v1_$owner';
+   final previousRules=await _storage.read(key:_key(owner));
+   final previousReceipt=await _storage.read(key:receiptKey);
+   try{
+    await _writeUnlocked(owner,safe);
+    final restored=await read(owner);
+    if(jsonEncode(restored.map((r)=>r.toJson()).toList())!=
+       jsonEncode(safe.map((r)=>r.toJson()).toList())){
+     throw StateError('Portable SMS rule readback differs');
+    }
+    if(verified['learning']!=null){
+     final next=jsonEncode(verified['learning']);
+     await _storage.write(key:receiptKey,value:next);
+     if(await _storage.read(key:receiptKey)!=next){
+      throw StateError('Portable learning readback differs');
+     }
+    }else{
+     await _storage.delete(key:receiptKey);
+     if(await _storage.read(key:receiptKey)!=null){
+      throw StateError('Portable learning delete failed');
+     }
+    }
+   }catch(_){
+    // Preserve pre-existing local classification if this non-transactional
+    // OS Keystore operation fails. Money restoration is never replayed.
+    try{
+     if(previousRules==null){await _storage.delete(key:_key(owner));}
+     else{await _storage.write(key:_key(owner),value:previousRules);}
+     if(previousReceipt==null){await _storage.delete(key:receiptKey);}
+     else{await _storage.write(key:receiptKey,value:previousReceipt);}
+    }catch(_){/* Caller still reports incomplete local recovery. */}
+    rethrow;
+   }
+  });
 
  /// Atomically combine safe financial/exclusion suggestions with latest
  /// encrypted owner rules instead of racing the four entry points.
@@ -1187,9 +1467,28 @@ class WaffraSmsLocalRuleStore {
   final current=await read(owner);
   var next=current;
   var offered=0;
+  var conflict=0,capacity=0;
   for(final candidate in candidates){
    offered++;
+   final before=next;
    next=WaffraSmsLocalRules.upsertLearned(existing:next,candidate:candidate);
+   if(identical(before,next)&&candidate.financial){
+    final overlap=before.any((existing)=>
+     existing.sender==candidate.sender&&
+     existing.keywords.any((phrase)=>candidate.keywords.any((other)=>
+      WaffraSmsLocalRules.normalized(phrase)==
+       WaffraSmsLocalRules.normalized(other)))&&
+     (existing.resolvedKind!=candidate.resolvedKind||
+      existing.category!=candidate.category));
+    if(overlap)conflict++;
+    else if(before.length>=WaffraSmsLocalRules.maxStoredRules||
+     before.any((r)=>!r.autoPost&&!r.matchAll&&
+      r.resolvedKind==candidate.resolvedKind&&
+      r.sender==candidate.sender&&
+      r.keywords.toSet().union(candidate.keywords.toSet()).length>12)){
+     capacity++;
+    }
+   }
   }
   final changed=next.length!=current.length||
    jsonEncode(next.map((r)=>r.toJson()).toList())!=
@@ -1204,7 +1503,8 @@ class WaffraSmsLocalRuleStore {
    proposals:offered,addedOrUpdated:changed?
     next.where((r)=>!current.any((c)=>c.id==r.id&&
      jsonEncode(c.toJson())==jsonEncode(r.toJson()))).length:0,
-   activeRules:verified.length);
+   activeRules:verified.length,
+   blockedConflicts:conflict,blockedCapacity:capacity);
   });
 
 }

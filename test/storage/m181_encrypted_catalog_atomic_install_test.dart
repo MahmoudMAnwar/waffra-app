@@ -413,7 +413,7 @@ void main() {
   });
 
 
-  test('M181 consented empty-receipt delete-all atomically resets IDs and hashes',
+  test('M181 consented empty-receipt delete-all recycles IDs but retains hashes',
       () async {
     final original = await authority.load(
       route: WaffraFinanceRoute.manualTransactionSave,
@@ -435,12 +435,12 @@ void main() {
       baseline: before,
       captured: <String, Object>{
         'entries': '[]',
-        'waffra_sms_hashes_v1': <String>[],
+        'waffra_sms_hashes_v1': <String>[fingerprint],
       },
       userConfirmed: true,
     );
     expect(deleted.ledgerRaw, '[]');
-    expect(deleted.finance.getStringList('waffra_sms_hashes_v1'), isEmpty);
+    expect(deleted.finance.getStringList('waffra_sms_hashes_v1'), [fingerprint]);
     final entries = await vault.customSelect(
       'SELECT count(*) AS n FROM fresh_finance_entries',
     ).getSingle();
@@ -448,7 +448,11 @@ void main() {
       'SELECT count(*) AS n FROM fresh_finance_sms_hashes',
     ).getSingle();
     expect(entries.read<int>('n'), 0);
-    expect(hashes.read<int>('n'), 0);
+    expect(hashes.read<int>('n'), 1);
+    final archive = await vault.customSelect(
+      'SELECT count(*) AS n FROM fresh_finance_transaction_recycle',
+    ).getSingle();
+    expect(archive.read<int>('n'),1);
   });
 
   test('M181 delete-all requires explicit consent and exact capture', () async {

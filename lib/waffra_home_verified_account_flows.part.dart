@@ -252,6 +252,15 @@ extension _WaffraHomeVerifiedAccountFlows on _HomeScreenState {
     // M667: the Accounts button enters the *same* Home three-mode sheet as +.
     // Keep the Home-owned verified finance and transfer save paths intact.
     onCreateHomeTransaction:()=>entrySheet(),
+    onVerifiedBankSuffixChanged:(accountId)async{
+     if(_smsRuleOwnerKey.isEmpty)throw StateError(
+      'SMS owner identity is not verified');
+     await const WaffraSmsLocalRuleStore().disableAccountBoundPosting(
+      _smsRuleOwnerKey,accountId);
+     await const WaffraSmsAccountLearningStore().invalidateAccount(
+      _smsRuleOwnerKey,accountId);
+     _receiveAutoSmsNotice();
+    },
     incomeCategories:categories.where((item)=>item.income&&item.isSubcategory&&
       waffraCategoryAvailableForNewEntry(categories,item))
       .map((item)=>item.name).toList(growable:false),

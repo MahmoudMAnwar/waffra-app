@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:drift/drift.dart';
 
 import 'package:waffra/storage/waffra_atomic_finance_snapshot.dart';
 import 'package:waffra/storage/legacy_snapshot_preflight.dart';
@@ -16,6 +17,8 @@ import 'package:waffra/storage/waffra_verified_encrypted_finance_bridge.dart';
 import 'package:waffra/storage/waffra_verified_finance_authority.dart';
 import 'package:waffra/storage/waffra_encrypted_receipt_vault.dart';
 import 'package:waffra/storage/waffra_encrypted_store.dart';
+import 'package:waffra/storage/waffra_accounts_schema.dart';
+import 'package:waffra/storage/waffra_accounts_repository.dart';
 import 'package:waffra/storage/waffra_encrypted_transaction_recycle.dart';
 import 'package:waffra/storage/waffra_fresh_encrypted_vault_bootstrap.dart';
 import 'package:waffra/storage/waffra_live_legacy_finance_guard.dart';
@@ -282,6 +285,144 @@ void main() {
     expect(finalRows.where((r)=>r['income']==true).length,2);
     expect(await typedCount(),19);
     expect(await recycle.pendingRecoveries(),isEmpty);
+  });
+
+  test('M1032 bulk recycle keeps two receipts/ledger rows/account links and SMS anti-replay',()async{
+    await WaffraAccountsSchema.install(store);
+    await seed(withReceipt:true);
+    await store.customStatement(
+      'INSERT INTO fresh_finance_money_accounts '
+      '(account_id,label,kind,currency,opening_minor,archived,created_iso) '
+      'VALUES(?,?,?,?,?,?,?)',
+      ['bank','مصرف اختباري','bank','SAR',100000,0,
+       '2026-10-24T08:00:00Z']);
+    await store.customStatement(
+      'INSERT INTO fresh_finance_account_entry_links '
+      '(entry_id,account_id,confirmed_iso) VALUES(?,?,?)',
+      [id,'bank','2026-10-24T09:00:00Z']);
+    const secondId='bulk-second-no-receipt';
+    final second=<String,Object?>{
+      'id':secondId,'title':'Second expense','category':'Utilities',
+      'amount':25.0,'income':false,'date':'2026-10-24T10:00:00Z',
+      'receiptPath':null
+    };
+    await store.transaction(()async{
+      await store.customStatement(
+        'INSERT INTO fresh_finance_entries'
+        '(entry_id,title,category_snapshot,amount_minor,is_income,'
+        'occurred_iso,receipt_count,source_json) VALUES(?,?,?,?,?,?,?,?)',
+        [secondId,second['title'],second['category'],2500,0,
+         second['date'],0,jsonEncode(second)]);
+      final before=await snapshot.read();
+      await snapshot.commit(expectedGeneration:before.generation,
+        fullFinanceSnapshot:<String,Object?>{
+          ...before.values,
+          'entries':jsonEncode([entry(hasImage:true),second]),
+          'waffra_sms_hashes_v1':<String>[hash(imageBytes)]
+        });
+    });
+    final before=await snapshot.read();
+    final balanceBefore=(await WaffraAccountsRepository(db:store,
+      experimentalEnabled:true).balances()).single.balanceMinor;
+    expect(balanceBefore,98475);
+    await expectLater(recycle.recycleAll(baseline:before,
+      now:deletedAt,userConfirmed:false),throwsStateError);
+    expect((await snapshot.read()).digest,before.digest);
+    final after=await recycle.recycleAll(baseline:before,
+      now:deletedAt,userConfirmed:true);
+    expect(await typedCount(),0);
+    expect(after.values['entries'],'[]');
+    expect(after.values['waffra_sms_hashes_v1'],<String>[hash(imageBytes)]);
+    expect((await recycle.pendingRecoveries()).keys.toSet(),{id,secondId});
+    expect((await WaffraAccountsRepository(db:store,
+      experimentalEnabled:true).balances()).single.balanceMinor,100000);
+    final archivedReceipt=await store.customSelect(
+      'SELECT count(*) AS n FROM fresh_finance_transaction_recycle_blobs '
+      'WHERE entry_id=?',variables:[Variable.withString(id)]).getSingle();
+    expect(archivedReceipt.read<int>('n'),1);
+    await recycle.restore(baseline:after,entryId:id,
+      now:deletedAt.add(const Duration(days:1)));
+    expect(await typedCount(),1);
+    expect((await receipts.readAll(id)).single.bytes,imageBytes);
+    expect((await WaffraAccountsRepository(db:store,
+      experimentalEnabled:true).balances()).single.balanceMinor,98475);
+  });
+
+  test('M1032 bulk rollback leaves all finance and receipts unchanged on other archive',()async{
+    await seed(withReceipt:true);
+    // Existing encrypted schema requires position, safe filename and SHA.
+    // A valid competing receipt archive must block bulk recycle atomically.
+    await store.customStatement(
+      'INSERT INTO fresh_finance_receipts '
+      '(entry_id,position,safe_filename,sha256_hex) VALUES(?,?,?,?)',
+      [id,0,'synthetic-conflicting-receipt.bin',
+       List<String>.filled(64,'f').join()],
+    );
+    final before=await snapshot.read();
+    await expectLater(recycle.recycleAll(baseline:before,
+      now:deletedAt,userConfirmed:true),throwsStateError);
+    expect((await snapshot.read()).digest,before.digest);
+    expect(await typedCount(),1);
+    expect((await receipts.readAll(id)).single.bytes,imageBytes);
+    expect(await recycle.pendingRecoveries(),isEmpty);
+  });
+
+  test('M1032 linked account delete and undo preserve source, balance and receipts',()async{
+    await WaffraAccountsSchema.install(store);
+    await seed(withReceipt:true);
+    await store.customStatement(
+      'INSERT INTO fresh_finance_money_accounts '
+      '(account_id,label,kind,currency,opening_minor,archived,created_iso) '
+      'VALUES(?,?,?,?,?,?,?)',
+      ['alrajhi','مصرف الراجحي','bank','SAR',200000,0,
+       '2026-10-24T08:00:00Z']);
+    await store.customStatement(
+      'INSERT INTO fresh_finance_account_entry_links '
+      '(entry_id,account_id,confirmed_iso) VALUES(?,?,?)',
+      [id,'alrajhi','2026-10-24T09:00:00Z']);
+    final accounts=WaffraAccountsRepository(db:store,experimentalEnabled:true);
+    expect((await accounts.balances()).single.balanceMinor,198475);
+    await recycle.delete(baseline:await snapshot.read(),entryId:id,
+      expectedImageHashes:[hash(imageBytes)],now:deletedAt,
+      userConfirmed:true);
+    final activeLinks=await store.customSelect(
+      'SELECT account_id FROM fresh_finance_account_entry_links '
+      'WHERE entry_id=?',variables:[Variable.withString(id)]).get();
+    expect(activeLinks,isEmpty);
+    final archived=await store.customSelect(
+      'SELECT account_id FROM fresh_finance_transaction_recycle_account_links '
+      'WHERE entry_id=?',variables:[Variable.withString(id)]).get();
+    expect(archived.single.read<String>('account_id'),'alrajhi');
+    expect((await accounts.balances()).single.balanceMinor,200000);
+    await recycle.restore(baseline:await snapshot.read(),entryId:id,
+      now:deletedAt.add(const Duration(days:1)));
+    final restored=await store.customSelect(
+      'SELECT account_id FROM fresh_finance_account_entry_links '
+      'WHERE entry_id=?',variables:[Variable.withString(id)]).get();
+    expect(restored.single.read<String>('account_id'),'alrajhi');
+    expect((await accounts.balances()).single.balanceMinor,198475);
+    expect(await receipts.readAll(id),hasLength(1));
+  });
+
+  test('M1032 archive rejects recurring obligation even when account balance is zero',()async{
+    await WaffraAccountsSchema.install(store);
+    final accounts=WaffraAccountsRepository(db:store,experimentalEnabled:true);
+    await accounts.createAccount(id:'recurring-bank',name:'Recurring bank',
+      kind:'bank',openingMinor:0,createdIso:'2026-10-24T09:00:00Z',
+      userConfirmed:true);
+    await store.customStatement(
+      'INSERT INTO fresh_finance_recurring '
+      '(recurring_id,amount_minor,is_income,due_day,source_json) '
+      'VALUES(?,?,?,?,?)',
+      ['rec-one',1000,0,24,
+       '{"id":"rec-one","title":"Bill","amount":10,"income":false,"day":24}']);
+    await store.customStatement(
+      'INSERT INTO fresh_finance_recurring_account_defaults '
+      '(recurring_id,account_id,changed_iso) VALUES(?,?,?)',
+      ['rec-one','recurring-bank','2026-10-24T09:00:00Z']);
+    await expectLater(accounts.archiveEmptyAccount(id:'recurring-bank',
+      userConfirmed:true),throwsStateError);
+    expect((await accounts.balances()).single.archived,false);
   });
 
   test('M183 deletes transaction and encrypted invoice as one reversible SQL commit',

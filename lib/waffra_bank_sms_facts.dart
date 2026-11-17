@@ -88,6 +88,26 @@ abstract final class WaffraBankSmsFactsParser {
  /// inbox and background prompts. Neither this label nor a local rule
  /// authorizes a finance write or acknowledges the native SMS.
  /// Objective bank direction outranks an older, conflicting local guess.
+ /// M1032: one explicit blocker for human confirmation. The independent
+ /// BankParser is only an advisory prefill: if the SAMA header fixes the
+ /// outgoing/incoming direction, a contradictory heuristic must never
+ /// disable the owner-approved verified-finance action.
+ /// No caller may skip source SAR, settled-state, timestamp or leaf checks.
+ static String? ownerConfirmationBlocker({
+  required WaffraBankSmsFacts facts,
+  required bool requiresSeparateReview,
+  required bool amountVerifiedSar,
+  required bool timestampVerified,
+  required bool leafVerified,
+ }) {
+  if(requiresSeparateReview)return 'multi_event';
+  if(!facts.canOwnerConfirmAsIncomeExpense)return 'direction';
+  if(!amountVerifiedSar)return 'amount_or_currency';
+  if(!timestampVerified)return 'date';
+  if(!leafVerified)return 'category';
+  return null;
+ }
+
  static String? reviewSuggestedKind({
   required String body,String? localKind,bool sensitiveOtp=false,
  }){

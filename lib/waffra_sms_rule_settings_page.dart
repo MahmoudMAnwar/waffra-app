@@ -138,6 +138,12 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
  }
  Future<void> _edit({WaffraSmsLocalRule? existing,String? seed,String? kindHint})async{
   if(busy||error!=null)return;
+  if(existing==null&&saved.length>=WaffraSmsLocalRules.maxStoredRules){
+   widget.onNotice(widget.english?
+    'Rule storage is full. Delete an unused rule before adding another.':
+    'وصلت للحد الأقصى للقواعد. احذف قاعدة غير مستخدمة قبل إضافة واحدة جديدة.');
+   return;
+  }
   final proposed=seed==null?null:WaffraSmsLocalRules.suggestedRule(
    body:seed,sender:widget.seedSender,kind:kindHint??'expense',
    category:widget.seedCategory);
@@ -639,7 +645,8 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
    'Bank SMS classification rules':'قواعد تحليل الرسائل البنكية')),
   floatingActionButton:loading||error!=null?null:FloatingActionButton.extended(
    key:const Key('waffra-add-custom-sms-rule'),
-   onPressed:busy?null:()=>_edit(),
+   onPressed:busy||saved.length>=WaffraSmsLocalRules.maxStoredRules?
+    null:()=>_edit(),
    icon:const Icon(Icons.add),
    label:Text(widget.english?'Add rule':'إضافة قاعدة')),
   body:loading?const Center(child:CircularProgressIndicator()):
@@ -651,6 +658,10 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
      'القواعد تحلل الرسائل محليًا على جهازك وتقترح النوع والقسم، والعملية المالية تتطلب تأكيدك الموثق.',
      style:Theme.of(context).textTheme.bodyMedium),
     const SizedBox(height:12),
+    Text(widget.english?
+     'Saved rules: ${saved.length} / ${WaffraSmsLocalRules.maxStoredRules}':
+     'القواعد المحفوظة: ${saved.length} من ${WaffraSmsLocalRules.maxStoredRules}',
+     key:const Key('m1032-rule-capacity-count')),
     Card(child:ListTile(
      key:const Key('m1031-confirmed-learning-counts'),
      leading:const Icon(Icons.school_outlined),

@@ -1856,6 +1856,16 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
      linkUnassignedAccountId:canLinkExistingAccount&&
       originalLinkedAccountId==null?chosenManualAccount:null,
      openingExcludesHistory:historicalOpeningExcluded))return;
+    if(initial.category!=result.category||
+       initial.income!=result.income||initial.title!=result.title){
+     try{await _m1032ReconcileEditedFinanceLearning(initial,result);}
+     catch(error){
+      if(mounted)snack(context,waffraIsEnglish?
+       'The edit was saved, but the local SMS category correction needs review.':
+       'تم حفظ التعديل، لكن تحديث قاعدة تصنيف الرسائل يحتاج مراجعة.',
+       isError:true);
+     }
+    }
    }else{
    // Optimistic in-memory edits must roll back if durable save is rejected.
    // A spinner is NOT proof of a completed financial write.

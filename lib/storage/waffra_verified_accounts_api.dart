@@ -170,6 +170,14 @@ class WaffraVerifiedAccountsApi implements WaffraAccountOperations {
     toAccountId:toAccountId,amountMinor:amountMinor,occurredIso:occurredIso,
     note:note,userConfirmed:true),userConfirmed:userConfirmed);
 
+ /// Reversal is a compensating verified two-sided internal transfer.
+ /// It never edits the original financial record or posts an expense.
+ Future<bool> reverseInternalTransfer({required String originalTransferId,
+  required String reversedIso,required bool userConfirmed})=>
+   _commit<bool>((repository)=>repository.reverseInternalTransfer(
+    originalTransferId:originalTransferId,reversedIso:reversedIso,
+    userConfirmed:true),userConfirmed:userConfirmed);
+
  /// M597: never charge an SMS transfer and its bank fee in two writes.
  /// The witnessed API rejects a stale picker and preserves hash/ledger parity.
  Future<bool> transferReviewedSmsWithFee({

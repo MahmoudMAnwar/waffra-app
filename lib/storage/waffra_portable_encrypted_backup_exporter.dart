@@ -43,11 +43,13 @@ class WaffraPortableEncryptedBackupExporter {
 
   /// An account-aware authenticated archive; legacy V2 exports still fail
   /// closed rather than silently omitting any account balances.
-  Future<String> exportV3({required String password}) =>
-      _export(password:password,includeAccounts:true);
+  Future<String> exportV3({required String password,
+    Map<String,Object?>? smsRulesV1}) =>
+      _export(password:password,includeAccounts:true,
+       smsRulesV1:smsRulesV1);
 
   Future<String> _export({required String password,
-    required bool includeAccounts}) async {
+    required bool includeAccounts,Map<String,Object?>? smsRulesV1}) async {
     if (!experimentalEnabled) {
       throw StateError('Verified SQLCipher backup export is not activated.');
     }
@@ -240,7 +242,7 @@ class WaffraPortableEncryptedBackupExporter {
       if(capturedAccounts==null)return encryptedV2;
       return WaffraAccountsPortableBackupV3.bundle(
        encryptedV2:encryptedV2,capturedAccounts:capturedAccounts,history:history,
-       password:password,
+       smsRulesV1:smsRulesV1,password:password,
       );
     });
   }

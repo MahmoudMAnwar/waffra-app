@@ -80,7 +80,7 @@ void main(){
    contains('مقترح مصروف • بانتظار التأكيد'));
   final review=File('lib/waffra_home_sms_confirmation.part.dart').readAsStringSync();
   expect(review,contains('!facts.canOwnerConfirmAsIncomeExpense'));
-  expect(review,contains('understood&&facts.canOwnerConfirmAsIncomeExpense'));
+  expect(review,contains('String? ownerBlocker()=>WaffraBankSmsFactsParser.ownerConfirmationBlocker('));
   expect(review,contains('expectedAccountGeneration:chosen.generation'));
   expect(bg,contains('!facts.canAutoPostAsIncomeExpense'));
  });

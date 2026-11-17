@@ -154,6 +154,25 @@ class WaffraSmsAccountLearningStore {
    throw const FormatException('Duplicate SMS account evidence');
   return List.unmodifiable(result);
  }
+ /// Clear both sender-only and old four-digit evidence for a renamed bank
+ /// account. Never silently remap matching SMS to another account.
+ Future<int> invalidateAccount(String owner,String accountId)async{
+  if(accountId.trim().isEmpty||accountId.length>128){
+   throw ArgumentError('Invalid learned account');
+  }
+  final previous=await read(owner);
+  final next=previous.where((row)=>row.accountId!=accountId)
+   .toList(growable:false);
+  if(next.length!=previous.length){
+   await _storage.write(key:_key(owner),
+    value:jsonEncode(next.map((e)=>e.toJson()).toList()));
+   final verified=await read(owner);
+   if(verified.length!=next.length||verified.any((e)=>e.accountId==accountId)){
+    throw StateError('Bank SMS account evidence invalidation failed');
+   }
+  }
+  return previous.length-next.length;
+ }
  Future<void> confirm({required String owner,required String sender,
   required String accountId,String? suffix})async{
   final existing=await read(owner);

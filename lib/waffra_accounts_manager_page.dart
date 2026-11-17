@@ -18,7 +18,7 @@ class WaffraAccountsManagerPage extends StatefulWidget {
   super.key,required this.repository,this.english=false,this.onConfirmEntry,
   this.incomeCategories=const [],this.expenseCategories=const [],
   this.availableBudgets=const {},this.onTransferConfirmed,
-  this.onCreateHomeTransaction,
+  this.onCreateHomeTransaction,this.onVerifiedBankSuffixChanged,
   this.upcomingDues=const <WaffraTrustDue>[],
  });
  final Future<void> Function(WaffraInternalTransferDraft)? onTransferConfirmed;
@@ -26,6 +26,10 @@ class WaffraAccountsManagerPage extends StatefulWidget {
  /// cloned form or a second financial writer. Standalone clients keep the
  /// existing verified composer until they can provide the Home entry owner.
  final Future<void> Function()? onCreateHomeTransaction;
+ /// A verified changed bank suffix invalidates prior owner-local SMS links
+ /// after SQLCipher persisted the new suffix. The original bank balance
+ /// must not be rolled back on a separate local-rule storage error.
+ final Future<void> Function(String accountId)? onVerifiedBankSuffixChanged;
  final WaffraAccountOperations repository;
  final bool english;
  final List<WaffraTrustDue> upcomingDues;
@@ -217,6 +221,18 @@ class _WaffraAccountsManagerPageState extends State<WaffraAccountsManagerPage> {
    }else{
     await widget.repository.renameAccount(
      id:item.id,name:edited.name,userConfirmed:true);
+   }
+   // A changed or cleared suffix must never inherit an older bank SMS
+   // auto-post rule. The next message needs explicit reviewed association.
+   if(bankWithVerifiedSource&&
+      (edited.clearSuffix||
+       (edited.lastFour!=null&&edited.lastFour!=savedSuffix))){
+    try{await widget.onVerifiedBankSuffixChanged?.call(item.id);}
+    catch(error){
+     if(mounted)snack(context,t(
+      'تم حفظ رقم الحساب، لكن تعذر تحديث قواعد الرسائل. راجع قواعد الرسائل قبل استخدامها.',
+      'Account saved but SMS rules could not be refreshed. Review local rules.'));
+    }
    }
    reload();
   }catch(_){failed();}

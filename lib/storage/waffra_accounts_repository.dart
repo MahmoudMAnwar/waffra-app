@@ -1,4 +1,6 @@
 import 'package:drift/drift.dart';
+import 'dart:convert';
+import 'package:crypto/crypto.dart';
 
 import 'waffra_accounts_schema.dart';
 import 'waffra_account_details_schema.dart';
@@ -178,6 +180,54 @@ class WaffraAccountsRepository implements WaffraAccountOperations {
   });
  }
 
+ /// M1032: reverse an incorrect internal transfer using one independent
+ /// idempotent opposite movement. The original remains an immutable audit
+ /// event and no synthetic income/expense or budget charge is created.
+ Future<bool> reverseInternalTransfer({required String originalTransferId,
+  required String reversedIso,required bool userConfirmed})async{
+  await _ready();
+  if(!userConfirmed)throw StateError('Transfer reversal requires approval.');
+  _id(originalTransferId);_when(reversedIso);
+  if(originalTransferId.startsWith('reversal-')){
+   throw StateError('A transfer reversal cannot itself be reversed.');
+  }
+  final reversalId='reversal-${sha256.convert(
+   utf8.encode(originalTransferId))}';
+  return db.transaction(()async{
+   final rows=await db.customSelect(
+    'SELECT from_account_id,to_account_id,amount_minor FROM '
+    'fresh_finance_internal_transfers WHERE transfer_id=?',
+    variables:[Variable.withString(originalTransferId)]).get();
+   if(rows.length!=1)throw StateError('Original transfer is unavailable.');
+   final original=rows.single;
+   final from=original.read<String>('to_account_id');
+   final to=original.read<String>('from_account_id');
+   final amount=original.read<int>('amount_minor');
+   final previous=await db.customSelect(
+    'SELECT from_account_id,to_account_id,amount_minor,note FROM '
+    'fresh_finance_internal_transfers WHERE transfer_id=?',
+    variables:[Variable.withString(reversalId)]).get();
+   if(previous.isNotEmpty){
+    if(previous.length!=1||
+       previous.single.read<String>('from_account_id')!=from||
+       previous.single.read<String>('to_account_id')!=to||
+       previous.single.read<int>('amount_minor')!=amount||
+       previous.single.read<String>('note')!=originalTransferId){
+     throw StateError('Transfer reversal identity was altered.');
+    }
+    return false;
+   }
+   await _activeAccount(from);
+   await _activeAccount(to);
+   await db.customStatement(
+    'INSERT INTO fresh_finance_internal_transfers '
+    '(transfer_id,from_account_id,to_account_id,amount_minor,occurred_iso,note) '
+    'VALUES (?,?,?,?,?,?)',
+    [reversalId,from,to,amount,reversedIso,originalTransferId]);
+   return true;
+  });
+ }
+
  /// Calculated exclusively from SQL. No separate mutable balance can drift.
  Future<List<WaffraAccountBalance>> balances()async{
   await _ready();
@@ -281,6 +331,30 @@ ORDER BY a.created_iso,a.account_id
    final matched=(await balances()).where((a)=>a.id==id).toList();
    if(matched.length!=1||matched.single.balanceMinor!=0){
     throw StateError('Non-empty account cannot be archived.');
+   }
+   // A zero balance does not mean this account has no future obligations.
+   // Never archive an account still selected by any recurring template.
+   final recurringTable=await db.customSelect(
+    "SELECT name FROM sqlite_master WHERE type='table' "
+    "AND name='fresh_finance_recurring_account_defaults'").get();
+   if(recurringTable.isNotEmpty){
+    final outstanding=await db.customSelect(
+     'SELECT recurring_id FROM fresh_finance_recurring_account_defaults '
+     'WHERE account_id=? LIMIT 1',variables:[Variable.withString(id)]).get();
+    if(outstanding.isNotEmpty)throw StateError(
+     'Reassign recurring obligations before archiving this account.');
+   }
+   // Recently deleted linked money still needs its account when the owner
+   // selects Undo. Avoid an archived account that cannot take restoration.
+   final deletedLinksTable=await db.customSelect(
+    "SELECT name FROM sqlite_master WHERE type='table' "
+    "AND name='fresh_finance_transaction_recycle_account_links'").get();
+   if(deletedLinksTable.isNotEmpty){
+    final inRecovery=await db.customSelect(
+     'SELECT entry_id FROM fresh_finance_transaction_recycle_account_links '
+     'WHERE account_id=? LIMIT 1',variables:[Variable.withString(id)]).get();
+    if(inRecovery.isNotEmpty)throw StateError(
+     'Recently deleted transactions still refer to this account.');
    }
    // An Other-institution root with live children remains selectable as
    // a group; archiving it would orphan linked-child creation workflows.

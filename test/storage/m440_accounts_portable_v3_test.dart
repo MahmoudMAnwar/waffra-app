@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:waffra/waffra_secure_backup.dart';
+import 'package:waffra/waffra_sms_local_rules.dart';
 import 'package:waffra/storage/waffra_accounts_portable_backup_v3.dart';
 import 'package:waffra/storage/waffra_accounts_repository.dart';
 import 'package:waffra/storage/waffra_accounts_schema.dart';
@@ -90,6 +91,49 @@ void main(){
     'SELECT entry_id FROM fresh_finance_account_entry_links').get();
    expect(entries.single.read<String>('entry_id'),'salary');
   }finally{await restored.close();}
+ });
+
+ test('M1032 V3 password archive keeps owner-scoped rules and learning, with AutoPost reapproval',()async{
+  await seed();
+  const owner='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+  final rule=WaffraSmsLocalRules.manualCategoryPattern(
+   description:'ستاربكس',category:'المقاهي / قهوة',income:false);
+  expect(rule,isNotNull);
+  final attachment=WaffraSmsLocalRuleStore.validatePortableBackup({
+   'version':1,'owner':owner,'rules':[rule!.toJson()],
+   'learning':{
+    'version':1,'recent':[{
+     'id':'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+     'kind':'expense','category':'المقاهي / قهوة','source':'sms'
+    }],
+    'totals':{'expense|المقاهي / قهوة':1},
+    'sourceTotals':{'sms|expense':1}
+   },
+  });
+  final encrypted=await WaffraPortableEncryptedBackupExporter(
+   snapshot:finance(db),
+   receiptVault:WaffraEncryptedReceiptVault(store:db,experimentalEnabled:true),
+   writerDirectory:dir,verifySourceUnderLock:()async{},
+   experimentalEnabled:true,
+  ).exportV3(password:password,smsRulesV1:attachment);
+  expect(encrypted.contains('ستاربكس'),isFalse);
+  final verified=await WaffraAccountsPortableBackupV3.verifyAndPreview(
+   encryptedArchive:encrypted,password:password);
+  expect(verified.smsRulesV1?['owner'],owner);
+  expect((verified.smsRulesV1?['rules'] as List),hasLength(1));
+  final tampered=jsonDecode(await WaffraSecureBackup.decrypt(encrypted,password))
+   as Map<String,dynamic>;
+  ((tampered['smsRulesV1'] as Map)['rules'] as List).first['keywords']=
+   ['رمز التحقق 123456'];
+  final reEncrypted=await WaffraSecureBackup.encrypt(
+   jsonEncode(tampered),password);
+  await expectLater(WaffraAccountsPortableBackupV3.verifyAndPreview(
+   encryptedArchive:reEncrypted,password:password),
+   throwsA(isA<FormatException>()));
+  final previous=await exportV3();
+  final legacy=await WaffraAccountsPortableBackupV3.verifyAndPreview(
+   encryptedArchive:previous,password:password);
+  expect(legacy.smsRulesV1,isNull);
  });
 
  test('M440 V2 refuses account data while V3 accepts it',()async{

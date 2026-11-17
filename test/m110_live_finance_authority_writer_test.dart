@@ -58,8 +58,18 @@ void main() {
     final legacyDelete = main.indexOf(
       'route:WaffraFinanceRoute.deleteAllTransactions');
     expect(legacyDelete, greaterThan(0));
-    expect(main.substring(legacyDelete-440, legacyDelete),
-      contains('final baseline=_lastFinanceAuthorityRead;'));
+    // M1032: the expanded 30-day recycle and preserved SMS hashes add
+    // legitimate statements before the finance route. Inspect the entire
+    // function, not an arbitrary 440-character slice.
+    final deleteStart = main.indexOf(
+      ' Future<void> confirmDeleteAllEntries() async {');
+    expect(deleteStart, greaterThan(0));
+    expect(legacyDelete, greaterThan(deleteStart));
+    final deletion = main.substring(deleteStart, legacyDelete);
+    expect(deletion, contains('final baseline=_lastFinanceAuthorityRead;'));
+    expect(deletion.indexOf('final baseline=_lastFinanceAuthorityRead;'),
+      lessThan(deletion.indexOf('await _financialWriteQueue.submit(')));
+    expect(deletion, isNot(contains('final baseline=await _financeAuthority.load(')));
     // M644 full reset is uniquely destructive: after biometric approval it
     // drains queued writes, loads a fresh independent witness, and commits
     // only through the dedicated verified SQLCipher reset route.

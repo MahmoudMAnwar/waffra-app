@@ -99,7 +99,7 @@ void main(){
   expect(all,contains('await _m467RefreshHomeAccounts();'));
   expect(all,contains('if(!_m468VerifiedAccountsLoaded)'));
   expect(all.indexOf('await _m467RefreshHomeAccounts();'),
-    greaterThan(all.indexOf('entries.clear();smsHashes.clear();')));
+    greaterThan(all.indexOf('entries.clear();')));
  });
 
  test('M1008 active prior account read awaits a second verified SQLCipher '

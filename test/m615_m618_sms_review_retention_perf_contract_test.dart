@@ -54,7 +54,12 @@ void main(){
   expect(native,contains('private fun pruneExcludedLabelsLocked('));
   expect(native,contains('pruneExcludedLabelsLocked(context, force = false)'));
   expect(native,contains('pruneExcludedLabelsLocked(context, force = true)'));
-  expect(native,contains('now - excludedAt < excludedLabelRetentionMs'));
+  // M1032: retain the 30-day owner-visible label; never erase early due to a
+  // changed wall clock or a rebooted/unverifiable monotonic epoch.
+  expect(native,contains('Settings.Global.BOOT_COUNT'));
+  expect(native,contains('SystemClock.elapsedRealtime()'));
+  expect(native,contains('elapsed - witnessedElapsed < excludedLabelRetentionMs'));
+  expect(native,isNot(contains('now - excludedAt < excludedLabelRetentionMs')));
   expect(native,contains('if (changed && active.isEmpty()) editor.remove(key)'));
   expect(native,contains('val info = labels[id] ?: continue'));
   expect(native,contains('result.add(mapOf('));
