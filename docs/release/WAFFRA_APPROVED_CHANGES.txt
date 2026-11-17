@@ -1,3 +1,7 @@
+[M1032 / #751 / REPAIRED PORTABLE LOCAL SMS RULE ENGINE]
+- Corrected V3 owner-bound SMS rules export/import by rebuilding from the previous unmodified committed source and ensuring exactly one original learning store and one new portable validation feature; no duplicate code or finance writes.
+- Restored approved M385 scope to include earlier approved changes in WaffraSmsLocalRule class and owner rules store, without weakening M385 checks. Next exact-SHA CI and two-device backup recovery acceptance remain required.
+
 [M1032 / OPTIONAL V3 ENCRYPTED LOCAL SMS RULE BACKUP]
 - Added an authenticated optional owner-scoped V3 SMS rules+learning section. Rules and learning are validated with the same strict live classifiers; no plain source SMS, phone, OTP, transaction amount or device secrets enter the archive.
 - UI captures owner rules immediately before authoritatively locked V3 finance export. Restore verifies owner and encrypted Keystore readback; device-specific AutoPost account permissions are disabled pending fresh confirmation.
