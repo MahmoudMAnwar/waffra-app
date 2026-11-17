@@ -287,6 +287,83 @@ void main() {
     expect(await recycle.pendingRecoveries(),isEmpty);
   });
 
+  test('M1032 bulk recycle keeps two receipts/ledger rows/account links and SMS anti-replay',()async{
+    await WaffraAccountsSchema.install(store);
+    await seed(withReceipt:true);
+    await store.customStatement(
+      'INSERT INTO fresh_finance_money_accounts '
+      '(account_id,label,kind,currency,opening_minor,archived,created_iso) '
+      'VALUES(?,?,?,?,?,?,?)',
+      ['bank','مصرف اختباري','bank','SAR',100000,0,
+       '2026-10-24T08:00:00Z']);
+    await store.customStatement(
+      'INSERT INTO fresh_finance_account_entry_links '
+      '(entry_id,account_id,confirmed_iso) VALUES(?,?,?)',
+      [id,'bank','2026-10-24T09:00:00Z']);
+    const secondId='bulk-second-no-receipt';
+    final second=<String,Object?>{
+      'id':secondId,'title':'Second expense','category':'Utilities',
+      'amount':25.0,'income':false,'date':'2026-10-24T10:00:00Z',
+      'receiptPath':null
+    };
+    await store.transaction(()async{
+      await store.customStatement(
+        'INSERT INTO fresh_finance_entries'
+        '(entry_id,title,category_snapshot,amount_minor,is_income,'
+        'occurred_iso,receipt_count,source_json) VALUES(?,?,?,?,?,?,?,?)',
+        [secondId,second['title'],second['category'],2500,0,
+         second['date'],0,jsonEncode(second)]);
+      final before=await snapshot.read();
+      await snapshot.commit(expectedGeneration:before.generation,
+        fullFinanceSnapshot:<String,Object?>{
+          ...before.values,
+          'entries':jsonEncode([entry(hasImage:true),second]),
+          'waffra_sms_hashes_v1':<String>[hash(imageBytes)]
+        });
+    });
+    final before=await snapshot.read();
+    final balanceBefore=(await WaffraAccountsRepository(db:store,
+      experimentalEnabled:true).balances()).single.balanceMinor;
+    expect(balanceBefore,98475);
+    await expectLater(recycle.recycleAll(baseline:before,
+      now:deletedAt,userConfirmed:false),throwsStateError);
+    expect((await snapshot.read()).digest,before.digest);
+    final after=await recycle.recycleAll(baseline:before,
+      now:deletedAt,userConfirmed:true);
+    expect(await typedCount(),0);
+    expect(after.values['entries'],'[]');
+    expect(after.values['waffra_sms_hashes_v1'],<String>[hash(imageBytes)]);
+    expect((await recycle.pendingRecoveries()).keys.toSet(),{id,secondId});
+    expect((await WaffraAccountsRepository(db:store,
+      experimentalEnabled:true).balances()).single.balanceMinor,100000);
+    final archivedReceipt=await store.customSelect(
+      'SELECT count(*) AS n FROM fresh_finance_transaction_recycle_blobs '
+      'WHERE entry_id=?',variables:[Variable.withString(id)]).getSingle();
+    expect(archivedReceipt.read<int>('n'),1);
+    await recycle.restore(baseline:after,entryId:id,
+      now:deletedAt.add(const Duration(days:1)));
+    expect(await typedCount(),1);
+    expect((await receipts.readAll(id)).single.bytes,imageBytes);
+    expect((await WaffraAccountsRepository(db:store,
+      experimentalEnabled:true).balances()).single.balanceMinor,98475);
+  });
+
+  test('M1032 bulk rollback leaves all finance and receipts unchanged on other archive',()async{
+    await seed(withReceipt:true);
+    await store.customStatement(
+      'CREATE TABLE IF NOT EXISTS fresh_finance_receipts'
+      '(entry_id TEXT NOT NULL)');
+    await store.customStatement('INSERT INTO fresh_finance_receipts(entry_id) VALUES(?)',
+      [id]);
+    final before=await snapshot.read();
+    await expectLater(recycle.recycleAll(baseline:before,
+      now:deletedAt,userConfirmed:true),throwsStateError);
+    expect((await snapshot.read()).digest,before.digest);
+    expect(await typedCount(),1);
+    expect((await receipts.readAll(id)).single.bytes,imageBytes);
+    expect(await recycle.pendingRecoveries(),isEmpty);
+  });
+
   test('M1032 linked account delete and undo preserve source, balance and receipts',()async{
     await WaffraAccountsSchema.install(store);
     await seed(withReceipt:true);
