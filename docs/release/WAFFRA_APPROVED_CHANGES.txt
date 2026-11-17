@@ -1,3 +1,10 @@
+[M1033 / #754 / BANK SMS PRINCIPAL AND TIMESTAMP EDITOR REGRESSION — DRAFT, NOT RELEASE-CERTIFIED]
+- Correct user report: 882.5 SAR in the screenshot was manually entered by the owner because bank SMS parsing did not prefill its actual principal `القيمة: SAR 882`; bank fee `SAR 0.58` must remain separate and never change the principal.
+- For reviewed external outgoing bank transfers, propose the uniquely source-verified SAR original amount in the editor without requiring permission for automatic finance posting or agreement from secondary advisory BankParser. Preserve the owner's existing draft amount.
+- Extract both `15:13 02-11-2026` and `15-11-2026 10:14` as explicit full-year bank timestamps, without guessing ambiguous two-digit years or invalid dates.
+- The SMS editor exposes a Restore original amount action and a specific source mismatch error before confirmed finance save. Original body, biometric/owner controls, verified account, category, SQLCipher finance authority, SMS native ACK and anti-duplicate rules remain unchanged.
+- Added focused Dart/source-contract regression tests. Exact SHA CI and Android UAT pending. Draft PR #755 is NOT production-approved.
+
 [M1032 / #751 / REPAIRED PORTABLE LOCAL SMS RULE ENGINE]
 - Corrected V3 owner-bound SMS rules export/import by rebuilding from the previous unmodified committed source and ensuring exactly one original learning store and one new portable validation feature; no duplicate code or finance writes.
 - Restored approved M385 scope to include earlier approved changes in WaffraSmsLocalRule class and owner rules store, without weakening M385 checks. Next exact-SHA CI and two-device backup recovery acceptance remain required.
