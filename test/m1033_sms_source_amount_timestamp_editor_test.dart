@@ -40,7 +40,7 @@ void main() {
  });
 
  test('M1033 real foreign action currencies still require review',(){
-  const body='حوالة صادرة\\nالمبلغ: USD 882\\n'
+  const body='حوالة صادرة\nالمبلغ: USD 882\n'
    'الرقم المرجعي: EPY26306LLRVYG7H';
   expect(WaffraSmsCurrencies.currenciesForMessage(body),{'USD'});
   expect(WaffraSmsCurrencies.requiresReviewForSarLedger(body),isTrue);
