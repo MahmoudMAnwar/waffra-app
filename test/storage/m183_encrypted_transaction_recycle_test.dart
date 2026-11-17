@@ -350,11 +350,14 @@ void main() {
 
   test('M1032 bulk rollback leaves all finance and receipts unchanged on other archive',()async{
     await seed(withReceipt:true);
+    // Existing encrypted schema requires position, safe filename and SHA.
+    // A valid competing receipt archive must block bulk recycle atomically.
     await store.customStatement(
-      'CREATE TABLE IF NOT EXISTS fresh_finance_receipts'
-      '(entry_id TEXT NOT NULL)');
-    await store.customStatement('INSERT INTO fresh_finance_receipts(entry_id) VALUES(?)',
-      [id]);
+      'INSERT INTO fresh_finance_receipts '
+      '(entry_id,position,safe_filename,sha256_hex) VALUES(?,?,?,?)',
+      [id,0,'synthetic-conflicting-receipt.bin',
+       List<String>.filled(64,'f').join()],
+    );
     final before=await snapshot.read();
     await expectLater(recycle.recycleAll(baseline:before,
       now:deletedAt,userConfirmed:true),throwsStateError);
