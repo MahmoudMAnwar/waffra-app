@@ -25,7 +25,8 @@
     "M1032 QA: reconcile lifecycle review regression M989 against new ownerBlocker that still forbids composite/refund/reversal",
     "M1032 stage 6: V3 encrypted backup exports owner-bound verified SMS rules + learning history, imports with AutoPost forcibly disabled, preserves backwards compatibility",
     "M1032 M385: audit and permit only necessary import headers in V3 SMS portable rules and its encrypted archive test",
-    "M1032 gap 10: retain 30-day excluded SMS labels using boot-verified elapsed time; wall-clock jumps cannot purge labels early and permanent owner-bound denial fingerprints remain"
+    "M1032 gap 10: retain 30-day excluded SMS labels using boot-verified elapsed time; wall-clock jumps cannot purge labels early and permanent owner-bound denial fingerprints remain",
+    "M1032 M550: update old M616 positive source contract to enforce monotonic boot-verified 30-day exclusion instead of unsafe wall time"
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -56,7 +57,8 @@
     "lib/storage/waffra_portable_encrypted_backup_exporter.dart",
     "lib/waffra_home_account_tools.part.dart",
     "test/storage/m440_accounts_portable_v3_test.dart",
-    "native/WaffraAutoSmsStore.kt"
+    "native/WaffraAutoSmsStore.kt",
+    "test/m615_m618_sms_review_retention_perf_contract_test.dart"
   ],
   "allowed_workflow_changes": [],
   "approved_deleted_files": [],
@@ -249,6 +251,12 @@
       {
         "start": "    fun importConsentMonth(context: Context, maxRead: Int = 500): Int {",
         "end": null
+      }
+    ],
+    "test/m615_m618_sms_review_retention_perf_contract_test.dart": [
+      {
+        "start": " test('M616 30d reversible encrypted labels are distinct from immutable rescan denial',(){",
+        "end": " test('M618 notifications retain hidden sender selection and only block opt-in senders',(){"
       }
     ]
   }
