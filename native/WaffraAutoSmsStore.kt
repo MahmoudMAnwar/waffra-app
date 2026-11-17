@@ -1252,7 +1252,7 @@ object WaffraAutoSmsStore {
                             .put("sender", row.optString("sender").take(100))
                             .put("receivedAt", row.optLong("receivedAt", 0L))
                             .put("excludedAt", System.currentTimeMillis())
-            .also { stampExcludedRetention(context, it) }
+                            .also { stampExcludedRetention(context, it) }
                     } else remaining.put(row)
                 }
                 // Fail closed if a selected SMS was neither queued nor
@@ -1646,7 +1646,7 @@ object WaffraAutoSmsStore {
                                     .put("sender", row.sender.trim().take(100))
                                     .put("receivedAt", row.receivedAt)
                                     .put("excludedAt", System.currentTimeMillis())
-            .also { stampExcludedRetention(context, it) }
+                                    .also { stampExcludedRetention(context, it) }
                                 existingIds.add(fingerprint)
                             } else {
                                 val sensitive = otp.containsMatchIn(row.body)
