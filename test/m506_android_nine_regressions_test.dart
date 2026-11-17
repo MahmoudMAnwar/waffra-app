@@ -103,7 +103,9 @@ void main() {
       src.indexOf(' Future<void> showReceipt('));
     expect(editor,contains('reviewedSmsReceiptImages:smsReceiptImages.isEmpty?'));
     expect(editor,contains("smsRecord['receiptPath']=null;"));
-    expect(editor,contains('try{await _learnManualCategoryPreference(result);}catch(_){}'));
+    expect(editor,contains('await _m1031RecordConfirmedLearning(result);'));
+    expect(editor,contains('await _learnManualCategoryPreference(result);'));
+    expect(editor,contains('العملية اتحفظت، لكن تعذر التحقق من التعلم المحلي المشفر'));
     expect(editor,contains("key:const Key('m506-transfer-date')"));
     expect(editor,contains('final latest=await transferApi!.balances();'));
     expect(editor,contains('occurredIso:transferDate.toIso8601String(),'));

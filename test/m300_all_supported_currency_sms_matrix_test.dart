@@ -226,7 +226,7 @@ void main() {
     final app=readWaffraMainSourceForContracts();
     final editor=app.indexOf('Future<void> entrySheet(');
     final save=app.indexOf('if(message.text.trim().isEmpty)return;',editor);
-    final hash=app.indexOf('final h=sha256.convert',save);
+    final hash=app.indexOf('final h=bankSmsHash(message.text,nativeId:reviewedSmsId);',save);
     expect(editor,greaterThan(0));
     expect(save,greaterThan(editor));
     expect(hash,greaterThan(save));

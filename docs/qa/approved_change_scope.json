@@ -1,7 +1,7 @@
 {
   "contract_version": 1,
   "change_id": "M1022-M1031-ISSUE740-750-SMS-REVIEW-UNIFICATION",
-  "human_scope_review": "Owner-approved nine sequential SMS analysis and reliability corrections, single PR Draft. No financial write without original approval, verified account and source timestamp. OTP and permission safety remain. Registered tests before production. Owner approved M1031 (#750) for shared review classification/status and explicit human confirmation; unattended posting retains strict checks.",
+  "human_scope_review": "Owner-approved nine sequential SMS analysis and reliability corrections, single PR Draft. No financial write without original approval, verified account and source timestamp. OTP and permission safety remain. Registered tests before production. Owner approved M1031 (#750) for shared review classification/status and explicit human confirmation; unattended posting retains strict checks. QA reconciliation for M473/M470/M336/M300/M506/M620/M486/M303 and two UI preservation tests: use current native-id hash and encrypted post-commit receipt, keep all tests enabled.",
   "user_requested_changes": [
     "1. Re-evaluate pending SMS when approved rules or accounts become available/changed, without duplicate finance",
     "2. Require notification delivery confirmation before marking a review attempt complete",
@@ -14,7 +14,8 @@
     "9. Avoid synchronous encrypted queue I/O on BroadcastReceiver main thread",
     "10. M1031 unify SMS review suggestions/notification states and allow verified explicit owner confirmation of external outgoing expenses without AutoPost authority",
     "11. M1031 persist owner-scoped encrypted post-commit learning evidence for manual/SMS income/expense and prevent conflicting learned financial directions",
-    "12. M1031 accurately display per-source verified encrypted learning events alongside distinct count of reusable matching rules"
+    "12. M1031 accurately display per-source verified encrypted learning events alongside distinct count of reusable matching rules",
+    "12. Fix all 11 CI failing legacy positive source contracts on PR #749 without weakening SAR currency gate, verified SMS v2 identity, post-commit learning or ACK safety."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -72,7 +73,16 @@
     "lib/waffra_home_sms_rules.part.dart",
     "test/m620_m621_finance_notification_routing_test.dart",
     "test/m983_sms_direct_kind_prefill_refresh_test.dart",
-    "lib/waffra_sms_rule_settings_page.dart"
+    "lib/waffra_sms_rule_settings_page.dart",
+    "test/m473_manual_sms_keyword_learning_parity_test.dart",
+    "test/m470_postsave_lag_and_teach_return_test.dart",
+    "test/m336_whole_app_finance_quality_matrix_test.dart",
+    "test/m300_all_supported_currency_sms_matrix_test.dart",
+    "test/m506_android_nine_regressions_test.dart",
+    "test/m486_sms_back_navigation_source_test.dart",
+    "test/m303_m306_hardening_regression_test.dart",
+    "test/waffra_design_preservation_test.dart",
+    "test/waffra_concept2_final_visual_test.dart"
   ],
   "allowed_workflow_changes": [],
   "approved_deleted_files": [],
@@ -424,6 +434,60 @@
       },
       {
         "start": " @override Widget build(BuildContext context)=>Scaffold(",
+        "end": null
+      }
+    ],
+    "test/m473_manual_sms_keyword_learning_parity_test.dart": [
+      {
+        "start": "void main(){",
+        "end": null
+      }
+    ],
+    "test/m470_postsave_lag_and_teach_return_test.dart": [
+      {
+        "start": "void main(){",
+        "end": null
+      }
+    ],
+    "test/m336_whole_app_finance_quality_matrix_test.dart": [
+      {
+        "start": "void main(){",
+        "end": null
+      }
+    ],
+    "test/m300_all_supported_currency_sms_matrix_test.dart": [
+      {
+        "start": "void main() {",
+        "end": null
+      }
+    ],
+    "test/m506_android_nine_regressions_test.dart": [
+      {
+        "start": "void main() {",
+        "end": null
+      }
+    ],
+    "test/m486_sms_back_navigation_source_test.dart": [
+      {
+        "start": "void main(){",
+        "end": null
+      }
+    ],
+    "test/m303_m306_hardening_regression_test.dart": [
+      {
+        "start": "void main() {",
+        "end": null
+      }
+    ],
+    "test/waffra_design_preservation_test.dart": [
+      {
+        "start": "void main() {",
+        "end": null
+      }
+    ],
+    "test/waffra_concept2_final_visual_test.dart": [
+      {
+        "start": "void main() {",
         "end": null
       }
     ]

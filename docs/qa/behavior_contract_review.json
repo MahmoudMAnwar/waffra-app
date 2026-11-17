@@ -28,13 +28,23 @@
         "test/m1031_sms_unified_review_contract_test.dart",
         "test/m462_smart_sms_rule_review_test.dart",
         "test/m620_m621_finance_notification_routing_test.dart",
-        "test/m983_sms_direct_kind_prefill_refresh_test.dart"
+        "test/m983_sms_direct_kind_prefill_refresh_test.dart",
+        "test/m473_manual_sms_keyword_learning_parity_test.dart",
+        "test/m470_postsave_lag_and_teach_return_test.dart",
+        "test/m336_whole_app_finance_quality_matrix_test.dart",
+        "test/m300_all_supported_currency_sms_matrix_test.dart",
+        "test/m506_android_nine_regressions_test.dart",
+        "test/m486_sms_back_navigation_source_test.dart",
+        "test/m303_m306_hardening_regression_test.dart",
+        "test/waffra_design_preservation_test.dart",
+        "test/waffra_concept2_final_visual_test.dart"
       ],
       "safety_invariants": [
         "AutoPost remains blocked on unresolved beneficiary, pending, OTP and foreign currency",
         "Owner confirmation still requires finance authority/account/category/date",
         "Notifications and review predictions do not acknowledge or debit",
-        "Learning fails separately after finance commit without retrying charge; generic titles never become broad SMS rules"
+        "Learning fails separately after finance commit without retrying charge; generic titles never become broad SMS rules",
+        "Finance safety regression contracts assert FX guard before native-id v2 hash, post-commit encrypted learning receipt, and ACK only after verified saved native fingerprint"
       ]
     },
     {

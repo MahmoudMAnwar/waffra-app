@@ -1,3 +1,8 @@
+[M1031 / ISSUE #750 / DRAFT PR #749 / EXACT-SHA 11-FAIL CI REPAIR]
+- Reconciled 11 pre-existing positive source contract regressions (10 tests). Old assertions used body-only SMS hash and a swallowed learning call; new assertions enforce native-ID v2 fingerprint after SAR guard, encrypted owner-scoped receipt after verified commit, a still-safe category rule, and ACK only for committed matching SMS.
+- Kept all cases enabled. Updated M385 approved scope and M550 behavior contract review before CI; no product source was changed by this CI repair itself.
+- Must run all existing full-suite and same-SHA workflows before merging; Android physical UAT remains outstanding.
+
 [M1031 / ENCRYPTED LEARNING COUNTS VISIBLE IN RULE SETTINGS]
 - The classification rules screen now distinguishes owner-encrypted observation counts from validated reusable keyword rules, across manual and bank-SMS income/expense; unavailable encrypted counters are never shown as zero.
 - Source totals are retained alongside bounded learning receipts, with compatibility for the first M1031 receipt format and no SMS plaintext, bank details or money amounts.

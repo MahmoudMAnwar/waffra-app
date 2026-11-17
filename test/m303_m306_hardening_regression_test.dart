@@ -179,7 +179,7 @@ void main() {
         'Future<String?> chooseTransactionCategory(');
     final guard=sheet.indexOf(
       'WaffraSmsCurrencies.requiresReviewForSarLedger(message.text)');
-    final hash=sheet.indexOf('final h=sha256.convert');
+    final hash=sheet.indexOf('final h=bankSmsHash(message.text,nativeId:reviewedSmsId);');
     expect(guard, greaterThan(0));
     expect(hash, greaterThan(guard),
       reason:'Reject currency before any duplicate/hash write');

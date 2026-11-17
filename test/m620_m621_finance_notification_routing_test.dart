@@ -108,6 +108,8 @@ void main(){
   // M636: no independent bulk-SMS route is allowed to swallow notification
   // taps or write money. The verified review remains the only SMS entry.
   expect(home,isNot(contains('Future<void> bulkSmsSheet(')));
-  expect(review,contains('await entrySheet(sms:true,initialSms:body,reviewedSender:sender);'));
+  expect(review,contains('await entrySheet(sms:true,initialSms:body,reviewedSender:sender,reviewedSmsId:id);'));
+  expect(review,contains('if(smsHashes.contains(bankSmsHash(body,nativeId:id)))'));
+  expect(review,contains('await WaffraAutoSms.acknowledgeCommitted([id]);'));
  });
 }
