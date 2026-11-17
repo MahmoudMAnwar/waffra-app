@@ -23,7 +23,8 @@
     "M1032 issue #751 gap 1: on verified edit reconcile senderless financial learning, never silently retain stale original category when there is no other confirmed evidence",
     "M1032 gap 8 encrypted owner-scoped background learning debt: retry using verified SQLCipher source without replaying money or native acknowledgement",
     "M1032 QA: reconcile lifecycle review regression M989 against new ownerBlocker that still forbids composite/refund/reversal",
-    "M1032 stage 6: V3 encrypted backup exports owner-bound verified SMS rules + learning history, imports with AutoPost forcibly disabled, preserves backwards compatibility"
+    "M1032 stage 6: V3 encrypted backup exports owner-bound verified SMS rules + learning history, imports with AutoPost forcibly disabled, preserves backwards compatibility",
+    "M1032 M385: audit and permit only necessary import headers in V3 SMS portable rules and its encrypted archive test"
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -200,7 +201,7 @@
     ],
     "lib/storage/waffra_accounts_portable_backup_v3.dart": [
       {
-        "start": "class WaffraAccountsBackupV3Preview {",
+        "start": "import 'dart:convert';",
         "end": null
       }
     ],
@@ -218,7 +219,7 @@
     ],
     "test/storage/m440_accounts_portable_v3_test.dart": [
       {
-        "start": "void main(){",
+        "start": "import 'dart:convert';",
         "end": null
       }
     ]
