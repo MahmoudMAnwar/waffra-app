@@ -26,7 +26,9 @@
     "M1032 stage 6: V3 encrypted backup exports owner-bound verified SMS rules + learning history, imports with AutoPost forcibly disabled, preserves backwards compatibility",
     "M1032 M385: audit and permit only necessary import headers in V3 SMS portable rules and its encrypted archive test",
     "M1032 gap 10: retain 30-day excluded SMS labels using boot-verified elapsed time; wall-clock jumps cannot purge labels early and permanent owner-bound denial fingerprints remain",
-    "M1032 M550: update old M616 positive source contract to enforce monotonic boot-verified 30-day exclusion instead of unsafe wall time"
+    "M1032 M550: update old M616 positive source contract to enforce monotonic boot-verified 30-day exclusion instead of unsafe wall time",
+    "M1032 gap 11: confirmed Delete All must atomically archive every verified SQLCipher entry with receipts and original account links for 30-day Undo, preserve original SMS anti-replay hashes, and fail closed for competing archives or stale witness",
+    "M1032 gap 12: increase owner-scoped local rules safely from 100 to 256, split full 12-keyword learned buckets, retain encrypted V1 compatibility and readback/Undo/backup integrity without automatic finance authorization"
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -58,7 +60,10 @@
     "lib/waffra_home_account_tools.part.dart",
     "test/storage/m440_accounts_portable_v3_test.dart",
     "native/WaffraAutoSmsStore.kt",
-    "test/m615_m618_sms_review_retention_perf_contract_test.dart"
+    "test/m615_m618_sms_review_retention_perf_contract_test.dart",
+    "lib/storage/waffra_verified_finance_authority.dart",
+    "lib/waffra_home_delete_all_transactions.part.dart",
+    "lib/waffra_sms_rule_settings_page.dart"
   ],
   "allowed_workflow_changes": [],
   "approved_deleted_files": [],
@@ -257,6 +262,28 @@
       {
         "start": " test('M616 30d reversible encrypted labels are distinct from immutable rescan denial',(){",
         "end": " test('M618 notifications retain hidden sender selection and only block opt-in senders',(){"
+      }
+    ],
+    "lib/storage/waffra_verified_finance_authority.dart": [
+      {
+        "start": "    if (backend == WaffraRuntimeFinanceBackend.verifiedEncrypted &&\n        route == WaffraFinanceRoute.deleteAllTransactions) {",
+        "end": "    if (backend == WaffraRuntimeFinanceBackend.verifiedEncrypted &&\n        route == WaffraFinanceRoute.manualTransactionSave) {"
+      }
+    ],
+    "lib/waffra_home_delete_all_transactions.part.dart": [
+      {
+        "start": "extension _WaffraHomeDeleteAllTransactions on _HomeScreenState {",
+        "end": null
+      }
+    ],
+    "lib/waffra_sms_rule_settings_page.dart": [
+      {
+        "start": " Future<void> _edit({WaffraSmsLocalRule? existing,String? seed,String? kindHint})async{",
+        "end": " /// Curated built-in patterns are read-only and lazily rendered."
+      },
+      {
+        "start": " @override Widget build(BuildContext context)=>Scaffold(",
+        "end": null
       }
     ]
   }
