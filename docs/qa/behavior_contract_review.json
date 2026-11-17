@@ -1,12 +1,35 @@
 {
   "schema_version": 1,
-  "pr": "Draft PR #755",
-  "issue": "#754",
+  "pr": "M1034 Draft PR (pending creation)",
+  "issue": "#756",
   "workflow_review_policy": "scan-all-registered-workflows",
-  "baseline": "main after merged PR #725 (16 November 2026)",
+  "baseline": "main after merged PR #755 (17 November 2026)",
   "reviewed_at": "2026-11-17",
-  "review_policy": "Owner-requested SMS prefill and review bug correction; CI and Android still required for approval.",
+  "review_policy": "Harden source-only SMS date/time extraction to match Android Unicode and multi-line label variants. Fail closed without exact date/clock; verify on same-sha CI and Android.",
   "contracts": [
+    {
+      "id": "M1034-BANK-SMS-TIMESTAMP-UNICODE-AND-FIELD-VARIANTS",
+      "issue": "Issue #756",
+      "previous_behavior": "Screenshot shows 15-11-2026 10:14 but SMS review marks date/time unverified. PR #755 already recognizes plain full-year date-first text; unseen Android format characters and labeled multi-line fields were not normalized and ISO seconds/dot-separated dates were unsupported.",
+      "approved_behavior": "Normalize only bidi controls, nonbreaking whitespace and Arabic/Persian digits; join only adjacent labeled timestamp fields, parse full-year date-first/time-first and ISO T + seconds/dot/slash/hyphen with checked year/month/day/hour/minute/seconds. Date verification and uncertainty indicator use the same normalization. Never replace source date with arrival time and never loosen owner-approved SQLCipher ledger validation.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_sms_confirmation.part.dart",
+        "lib/waffra_home_entry_sheet.part.dart"
+      ],
+      "test_paths": [
+        "test/m1034_bank_sms_timestamp_variants_test.dart",
+        "test/m1033_sms_source_amount_timestamp_editor_test.dart",
+        "test/m337_bank_sms_timestamp_finance_safety_test.dart"
+      ],
+      "safety_invariants": [
+        "No new background financial posting or SMS ACK from parser-only changes",
+        "No inventing missing timestamps from receipt time or calendar current day",
+        "Reject impossible calendar dates/hours/minutes/seconds and ambiguous transfer DD/MM/YY",
+        "Ignore transfer reference IDs and account suffixes as timestamp evidence",
+        "Preserve original SMS content, owner account, category and source amount safeguards"
+      ]
+    },
     {
       "id": "M1033-BANK-SMS-SOURCE-PRINCIPAL-TIMESTAMP-EDITOR",
       "issue": "Issue #754",
