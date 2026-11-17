@@ -4,6 +4,31 @@ import 'package:waffra/waffra_bank_sms_facts.dart';
 import 'package:waffra/waffra_sms_multicurrency_review.dart';
 
 void main(){
+ test('M1032 financial edit removes only stale single-owner learned phrase',(){
+  final prior=WaffraSmsLocalRules.manualCategoryPattern(
+   description:'ستاربكس',category:'مقاهي',income:false)!;
+  final revised=WaffraSmsLocalRules.manualCategoryPattern(
+   description:'ستاربكس',category:'مطاعم',income:false)!;
+  final removed=WaffraSmsLocalRules.reconcileConfirmedManualCorrection(
+   existing:[prior],oldCandidate:prior,newCandidate:revised,
+   previousStillUsed:false);
+  expect(removed,hasLength(1));
+  expect(removed.single.category,'مطاعم');
+  expect(removed.single.autoPost,isFalse);
+  final retained=WaffraSmsLocalRules.reconcileConfirmedManualCorrection(
+   existing:[prior],oldCandidate:prior,newCandidate:revised,
+   previousStillUsed:true);
+  expect(retained.single.category,'مقاهي');
+  expect(retained.single.autoPost,isFalse);
+ });
+ test('M1032 source-verified edit invokes learning correction after finance commit',(){
+  final edit=File('lib/waffra_home_entry_sheet.part.dart').readAsStringSync();
+  final rule=File('lib/waffra_home_sms_rules.part.dart').readAsStringSync();
+  expect(edit,contains('if(!await _m953SaveExistingVerifiedEntry(initial,result,'));
+  expect(edit,contains('await _m1032ReconcileEditedFinanceLearning(initial,result)'));
+  expect(rule,contains('reconcileConfirmedCategoryCorrection('));
+ });
+
  test('M1032 bank suffix reconciliation and rule capacity are explicit in owner paths',(){
   final settings=File('lib/waffra_accounts_manager_page.dart').readAsStringSync();
   final controller=File('lib/waffra_home_verified_account_flows.part.dart').readAsStringSync();

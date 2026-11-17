@@ -134,6 +134,33 @@ extension _WaffraHomeSmsRules on _HomeScreenState {
   }
  }
 
+ /// Reconcile source-verified edited category/type/description after the
+ /// SQLCipher finance edit. Never learn from a failed or cancelled edit.
+ Future<void> _m1032ReconcileEditedFinanceLearning(
+  MoneyEntry previous,MoneyEntry revised)async{
+  if(_smsRuleOwnerKey.isEmpty)return;
+  if(!const <String>{'manual','sms'}.contains(revised.sourceType))return;
+  String caption(MoneyEntry e)=>
+   waffraMerchantKey(e.title,income:e.income)??e.title;
+  final oldCaption=caption(previous);
+  final prior=WaffraSmsLocalRules.manualCategoryPattern(
+   description:oldCaption,category:previous.category,
+   income:previous.income);
+  final current=WaffraSmsLocalRules.manualCategoryPattern(
+   description:caption(revised),category:revised.category,
+   income:revised.income);
+  final stillUsed=entries.any((other)=>other.id!=revised.id&&
+   const <String>{'manual','sms'}.contains(other.sourceType)&&
+   other.income==previous.income&&
+   other.category==previous.category&&
+   caption(other)==oldCaption);
+  await const WaffraSmsLocalRuleStore()
+   .reconcileConfirmedCategoryCorrection(
+    owner:_smsRuleOwnerKey,previous:prior,revised:current,
+    previousStillUsed:stillUsed);
+  _receiveAutoSmsNotice();
+ }
+
  /// After an authoritative SQLCipher commit, persist owner-bound evidence
  /// even if the title is too generic to create a safely matching SMS rule.
  /// Learning failure never undoes or repeats the already-posted transaction.

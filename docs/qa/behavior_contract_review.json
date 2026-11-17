@@ -8,6 +8,25 @@
   "review_policy": "Owner-approved narrow SMS reliability/security/finance changes; tests prior to code. No automated production proof without Android UAT.",
   "contracts": [
     {
+      "id": "M1032-EDITED-FINANCE-CATEGORY-RECONCILIATION",
+      "issue": "Issue #751",
+      "previous_behavior": "Verified finance record editor persists new category and amount but leaves old auto-learned senderless local category keyword unchanged.",
+      "approved_behavior": "After verified SQLCipher edited-record readback, replace only previous matching auto-learned financial phrase if no other confirmed entry still uses it; retain custom/AutoPost permissions untouched and clearly show failure.",
+      "source_paths": [
+        "lib/waffra_sms_local_rules.dart",
+        "lib/waffra_home_sms_rules.part.dart",
+        "lib/waffra_home_entry_sheet.part.dart"
+      ],
+      "test_paths": [
+        "test/m1032_outgoing_sms_owner_review_gate_test.dart"
+      ],
+      "safety_invariants": [
+        "No learning before source commit",
+        "Never change an existing financial debit during local rule reconciliation",
+        "No unrelated manually created rules are dropped"
+      ]
+    },
+    {
       "id": "M1032-ACCOUNT-SUFFIX-AND-LEARNING-CAPACITY",
       "issue": "Issue #751",
       "previous_behavior": "Editing bank last-four leaves old local SMS auto-post association active, and conflicting/saturated learned rules silently drop safe categories.",

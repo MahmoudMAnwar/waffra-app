@@ -1,3 +1,7 @@
+[M1032 / VERIFIED FINANCIAL EDIT LEARNING RECONCILIATION]
+- SQLCipher-verified transaction edits now reconcile senderless, automatically learned description-category rules after committing. The old keyword survives if another confirmed transaction still uses that category; user-authored and AutoPost rules are never altered by this path.
+- A failure explicitly warns that the financial edit succeeded but learning needs review. No money edit is replayed.
+
 [M1032 / BANK ACCOUNT SUFFIX INTEGRITY AND LOCAL RULE SATURATION]
 - Updating or clearing a bank suffix revokes local account-bound AutoPost and old sender/suffix evidence, with independently verified SQLCipher bank suffix comparison prior to any unattended posting.
 - Learning receipt now distinguishes conflict and capacity saturation; a rejected confirmed category learning attempt is not silently counted as an active matching pattern.

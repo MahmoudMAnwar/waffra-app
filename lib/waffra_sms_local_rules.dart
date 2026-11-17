@@ -796,6 +796,50 @@ abstract final class WaffraSmsLocalRules {
  /// Add a confirmed keyword to its existing system bucket, not a new rule.
  /// Keep sender identity and per-phrase category intact. A user-created rule
  /// or a rule with explicit posting permission is NEVER widened silently.
+ /// Correct a saved financial operation without removing other owner's
+ /// manually approved rules. Only senderless auto-learned manual buckets
+ /// tied to the original category may have their stale phrase removed.
+ /// A remaining confirmed operation using the old phrase keeps it alive.
+ static List<WaffraSmsLocalRule> reconcileConfirmedManualCorrection({
+  required List<WaffraSmsLocalRule> existing,
+  WaffraSmsLocalRule? oldCandidate,WaffraSmsLocalRule? newCandidate,
+  required bool previousStillUsed,
+ }){
+  var current=existing;
+  if(oldCandidate!=null&&!previousStillUsed){
+   final oldPhrases=oldCandidate.keywords.map(normalized).toSet();
+   current=<WaffraSmsLocalRule>[
+    for(final rule in current)
+     if(!rule.id.startsWith('manual_')||rule.autoPost||
+        rule.resolvedKind!=oldCandidate.resolvedKind||
+        rule.sender!=oldCandidate.sender)rule
+     else ...(){
+      final retained=rule.keywords.where((phrase)=>
+       !oldPhrases.contains(normalized(phrase))||
+       (rule.keywordCategories[normalized(phrase)]??rule.category)!=
+        oldCandidate.category).toList(growable:false);
+      if(retained.length==rule.keywords.length)return <WaffraSmsLocalRule>[rule];
+      if(retained.isEmpty)return const <WaffraSmsLocalRule>[];
+      final categories=<String,String>{
+       for(final phrase in retained)
+        normalized(phrase):rule.keywordCategories[normalized(phrase)]??
+         rule.category,
+      };
+      final updated=WaffraSmsLocalRule.fromJson(<String,dynamic>{
+       ...rule.toJson(),'keywords':retained,
+       'keywordCategories':categories,
+      });
+      validate(updated);
+      return <WaffraSmsLocalRule>[updated];
+     }(),
+   ];
+  }
+  if(newCandidate!=null){
+   current=upsertLearned(existing:current,candidate:newCandidate);
+  }
+  return List<WaffraSmsLocalRule>.unmodifiable(current);
+ }
+
  static List<WaffraSmsLocalRule> upsertLearned({
   required List<WaffraSmsLocalRule> existing,
   required WaffraSmsLocalRule candidate,
@@ -1083,6 +1127,33 @@ class WaffraSmsLocalRuleStore {
    if(affected>0)await _writeUnlocked(owner,next);
    return affected;
   });
+
+ /// M1032: the verified ledger edit has already committed. Reconcile
+ /// only the old senderless learned phrase, preserving all user/custom
+ /// authorizations. A failed learning write NEVER retries the money edit.
+ Future<void> reconcileConfirmedCategoryCorrection({
+  required String owner,WaffraSmsLocalRule? previous,
+  WaffraSmsLocalRule? revised,required bool previousStillUsed,
+ })=>_exclusive(owner,()async{
+  final current=await read(owner);
+  final next=WaffraSmsLocalRules.reconcileConfirmedManualCorrection(
+   existing:current,oldCandidate:previous,newCandidate:revised,
+   previousStillUsed:previousStillUsed);
+  if(revised!=null){
+   final relevant=next.any((r)=>r.resolvedKind==revised.resolvedKind&&
+    r.sender==revised.sender&&
+    r.keywords.any((term)=>revised.keywords.any((word)=>
+     WaffraSmsLocalRules.normalized(term)==
+      WaffraSmsLocalRules.normalized(word)&&
+      (r.keywordCategories[WaffraSmsLocalRules.normalized(term)]??
+       r.category)==revised.category)));
+   if(!relevant)throw StateError('SMS_RULE_CATEGORY_CONFLICT_OR_CAPACITY');
+  }
+  if(jsonEncode(current.map((r)=>r.toJson()).toList())!=
+     jsonEncode(next.map((r)=>r.toJson()).toList())){
+   await _writeUnlocked(owner,next);
+  }
+ });
 
  /// Atomically combine safe financial/exclusion suggestions with latest
  /// encrypted owner rules instead of racing the four entry points.
