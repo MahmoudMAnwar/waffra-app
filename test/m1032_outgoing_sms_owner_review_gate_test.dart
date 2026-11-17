@@ -106,4 +106,21 @@ void main(){
   expect(source,contains('bankSmsHasUnverifiedTimestamp(body)'));
   expect(source,contains('bankSmsHash(body,nativeId:id)'));
  });
+ test('M1032 excluded labels cannot expire from a forward wall clock or a reboot',(){
+  final native=File('native/WaffraAutoSmsStore.kt').readAsStringSync();
+  final prune=native.split(
+   'private fun pruneExcludedLabelsLocked(context: Context, force: Boolean) {'
+  ).last.split('/** Shows only excluded SMS identities').first;
+  expect(native,contains('Settings.Global.BOOT_COUNT'));
+  expect(native,contains('SystemClock.elapsedRealtime()'));
+  expect(prune,contains('if (boot < 0)'));
+  expect(prune,contains('witnessedBoot != boot'));
+  expect(prune,contains('elapsed - witnessedElapsed < excludedLabelRetentionMs'));
+  expect(prune,isNot(contains('now - excludedAt < excludedLabelRetentionMs')));
+  expect(prune,contains('active.add(record)'));
+  expect(native.split('stampExcludedRetention(context, it)').length-1,3);
+  // The owner-scoped fingerprint denial list is retained independently.
+  expect(native,contains('private const val excludedMessageBucketPrefix'));
+ });
+
 }
