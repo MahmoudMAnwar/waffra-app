@@ -64,9 +64,9 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
    !WaffraBankSmsFactsParser.isVerificationChallenge(manualReviewBody)&&
    manualReviewMoney?.currency=='SAR'&&
    !WaffraSmsCurrencies.requiresReviewForSarLedger(manualReviewBody)&&
-   manualReviewMoney!.amount>0&&
-   (manualReviewParsed?.amount==null||
-    (manualReviewParsed!.amount!-manualReviewMoney.amount).abs()<0.00001)?
+   manualReviewMoney!.amount>0?
+    // M1033: conflicting advisory BankParser suggestions must never hide
+    // the unique, source-extracted SAR principal in the human editor.
     manualReviewMoney.amount:null;
   // Source datetime is extracted at the original review boundary and
   // survives the transfer->manual expense/income correction route.
@@ -135,13 +135,14 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
      parsedSms.title):safeSmsTitle;
   // A verified SAR principal is a display suggestion ONLY: the existing
   // account, date, original facts and user confirmation guard still apply.
+  // M1033: a verified source-amount HINT does not grant AutoPost.
+  // Outgoing transfers need beneficiary review for posting, but the
+  // manual form must still display the unambiguous principal.
+  // Secondary BankParser disagreement never replaces the source figure.
   final safeSmsAmount=trustedSms?parsedSms!.amount:
-   (directionKnown&&factsSms!.canAutoPostAsIncomeExpense||
-    reviewedSmsCorrection)&&
+   (directionKnown||reviewedSmsCorrection)&&
    sourceAmount?.currency=='SAR'&&sourceAmount!.amount>0&&
-   !WaffraSmsCurrencies.requiresReviewForSarLedger(initialSms!)&&
-   (parsedSms?.amount==null||
-    (parsedSms!.amount!-sourceAmount.amount).abs()<0.00001)?
+   !WaffraSmsCurrencies.requiresReviewForSarLedger(initialSms!)?
     sourceAmount.amount:null;
   final title=TextEditingController(text:
    (smsEditorDraft?['title'] as String?)??initial?.title??
@@ -1031,6 +1032,19 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
        inputFormatters:[const WaffraAmountFormatter(truncateExcess:false)],
        onChanged:(_)=>update((){}),
        decoration:InputDecoration(labelText:waffraIsEnglish?'Amount *':'المبلغ *',
+        // M1033: a previous manual edit remains intact, but the owner can
+        // restore the unambiguous principal (never fee/total) with one tap.
+        helperText:sms&&sourceAmount?.currency=='SAR'?
+         (waffraIsEnglish?
+          'Original bank principal: ${sourceAmount!.amount.toStringAsFixed(2)} SAR (fee separate)':
+          'المبلغ الأصلي من البنك: ${sourceAmount!.amount.toStringAsFixed(2)} ر.س (الرسوم منفصلة)'):null,
+        suffixIcon:sms&&sourceAmount?.currency=='SAR'?
+         IconButton(
+          tooltip:waffraIsEnglish?'Restore original bank amount':
+           'استرجاع المبلغ الأصلي من الرسالة',
+          icon:const Icon(Icons.settings_backup_restore_rounded),
+          onPressed:()=>update(()=>value.text=
+           formatWaffraMoney(sourceAmount!.amount))):null,
         errorText:attempted?waffraAmountFieldError(value.text):null,
         border:OutlineInputBorder())),
       const SizedBox(height:12),
@@ -1434,6 +1448,17 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
          if(sheetContext.mounted)snack(sheetContext,waffraIsEnglish?
           'Foreign or unknown currency: no transaction was saved as SAR. Verify the source amount and FX first.':
           'عملة الرسالة أجنبية أو غير مؤكدة؛ لم نحفظ العملية بالريال. يلزم التحقق من المبلغ وسعر الصرف أولًا.');
+         return;
+        }
+        // M1033: an editable amount may have been typed manually. Never
+        // silently replace it or send a misleading total to the SQLCipher
+        // writer. Give the exact disagreement, not an inert confirm button.
+        if(sourceAmount?.currency=='SAR'&&
+           (n-sourceAmount!.amount).abs()>0.00001){
+         if(sheetContext.mounted)snack(sheetContext,waffraIsEnglish?
+          'Entered amount differs from the original bank principal (${sourceAmount.amount.toStringAsFixed(2)} SAR). Fees are separate. Use Restore original amount.':
+          'المبلغ المدخل لا يطابق أصل الرسالة (${sourceAmount.amount.toStringAsFixed(2)} ر.س). الرسوم منفصلة؛ اضغط استرجاع المبلغ الأصلي.',
+          isError:true);
          return;
         }
         final h=bankSmsHash(message.text,nativeId:reviewedSmsId);

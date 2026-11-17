@@ -1107,13 +1107,28 @@ class BankParser {
  }
 }
 DateTime? bankSmsDate(String raw, {DateTime? referenceDate}) {
- final normalized=digits(raw).replaceAll('‏','').replaceAll('‎','');
+ final normalized=digits(raw).replaceAll(RegExp(r'[\u200e\u200f\u061c]'),'')
+  .replaceAll('\u00a0',' ');
  final iso=RegExp(r'\b(\d{4})[-/](\d{1,2})[-/](\d{1,2})\s+(\d{1,2}):(\d{2})\b').firstMatch(normalized);
  DateTime? checked(int year,int month,int day,int hour,int minute){
   if(year<2000||year>2100||month<1||month>12||day<1||day>31||
      hour<0||hour>23||minute<0||minute>59)return null;
   final date=DateTime(year,month,day,hour,minute);
   return date.year==year&&date.month==month&&date.day==day?date:null;
+ }
+ // M1033 #754: Saudi wallet messages may put HH:mm BEFORE DD-MM-YYYY.
+ // This is a full-year, explicit timestamp, not an inferred SMS receive date.
+ final timeFirst=RegExp(
+  r'\b(\d{1,2}):(\d{2})[ \t]+(\d{1,2})[-/](\d{1,2})[-/](\d{4})\b'
+ ).firstMatch(normalized);
+ if(timeFirst!=null){
+  final hour=int.tryParse(timeFirst.group(1)!),
+   minute=int.tryParse(timeFirst.group(2)!),
+   day=int.tryParse(timeFirst.group(3)!),
+   month=int.tryParse(timeFirst.group(4)!),
+   year=int.tryParse(timeFirst.group(5)!);
+  if(hour==null||minute==null||day==null||month==null||year==null)return null;
+  return checked(year,month,day,hour,minute);
  }
  if(iso!=null){
   final y=int.tryParse(iso.group(1)!),m=int.tryParse(iso.group(2)!),
@@ -1154,9 +1169,10 @@ DateTime? bankSmsDate(String raw, {DateTime? referenceDate}) {
  return null;
 }
 bool bankSmsHasUnverifiedTimestamp(String raw,{DateTime? referenceDate}){
- final normalized=digits(raw).replaceAll('‏','').replaceAll('‎','');
+ final normalized=digits(raw).replaceAll(RegExp(r'[\u200e\u200f\u061c]'),'')
+  .replaceAll('\u00a0',' ');
  final hasExplicit=RegExp(
-  r'\b(?:\d{4}[-/]\d{1,2}[-/]\d{1,2}|\d{1,2}[-/]\d{1,2}[-/]\d{1,4})\s+\d{1,2}:\d{2}\b'
+  r'\b(?:(?:\d{4}[-/]\d{1,2}[-/]\d{1,2}|\d{1,2}[-/]\d{1,2}[-/]\d{1,4})\s+\d{1,2}:\d{2}|\d{1,2}:\d{2}[ \t]+\d{1,2}[-/]\d{1,2}[-/]\d{4})\b'
  ).hasMatch(normalized);
  return hasExplicit&&bankSmsDate(raw,referenceDate:referenceDate)==null;
 }

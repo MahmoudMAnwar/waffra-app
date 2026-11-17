@@ -107,8 +107,8 @@ abstract final class WaffraSmsCurrencies {
         // Ignore ONLY a standalone metadata clause, never mixed money.
         if (RegExp(
           r'^\s*(?:ref(?:erence)?|transaction\s+(?:ref(?:erence)?|id)|'
-          r'مرجع|رقم\s*(?:المرجع|العملية))\s*[:：#-]\s*'
-          r'[A-Za-z0-9_-]{5,}\s*$',
+          r'الرقم\s+المرجعي|رقم\s*(?:المرجع|العملية)|مرجع)'
+          r'\s*[:：#-]\s*[A-Za-z0-9_-]{5,}\s*$',
           caseSensitive:false,
         ).hasMatch(clause)) continue;
         final footer = RegExp(
