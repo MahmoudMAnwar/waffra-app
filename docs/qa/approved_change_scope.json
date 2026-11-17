@@ -1,11 +1,11 @@
 {
   "contract_version": 1,
-  "change_id": "ISSUE754-M1033-SMS-PRINCIPAL-DATE-EDITOR",
-  "human_scope_review": "Owner supplied SMS screenshots and corrected that 882.5 SAR was typed manually, not parsed. Fix source principal and date prefill, editor confirmation feedback; no merge without CI/Android.",
+  "change_id": "ISSUE756-M1034-BANK-SMS-TIMESTAMP-ANDROID",
+  "human_scope_review": "Owner supplied AlinmaPay SMS screenshot; main after PR #755 already tests basic 15-11-2026 10:14, but Android may surface invisible Unicode, field splits or older APK. Harden only source date parsing; do not loosen financial guard.",
   "user_requested_changes": [
-    "Recognize the original SAR 882 amount separate from SAR 0.58 fee despite EPY bank reference, and never treat references as foreign currency.",
-    "Support bank SMS dates with time before date and date before time, without accepting ambiguous or invalid timestamps.",
-    "Prefill owner-reviewed bank SMS forms independently from unattended auto-post eligibility, retain manual drafts, and make mismatch reason visible."
+    "Recognize verified full-year bank SMS date and 24-hour time despite bidi isolates, nonbreaking spaces, Arabic/Persian numerals and adjacent labeled date/time fields.",
+    "Support full-year date-first, time-first, date separators hyphen/slash/dot, ISO T + seconds without accepting impossible or ambiguous timestamps.",
+    "Keep review/entry-sheet original SMS timestamp extraction and strict finance, account, category, AutoPost, original SMS and ACK gates unchanged."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -13,27 +13,13 @@
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
     "lib/main.dart",
-    "lib/waffra_home_entry_sheet.part.dart",
-    "lib/waffra_sms_multicurrency_review.dart",
-    "test/m1033_sms_source_amount_timestamp_editor_test.dart"
+    "test/m1034_bank_sms_timestamp_variants_test.dart"
   ],
   "bounded_sections": {
     "lib/main.dart": [
       {
         "start": "DateTime? bankSmsDate(",
         "end": "String bankSmsHash("
-      }
-    ],
-    "lib/waffra_sms_multicurrency_review.dart": [
-      {
-        "start": "  static Set<String> currenciesForMessage(String raw) {",
-        "end": "  /// A pure currency precision table"
-      }
-    ],
-    "lib/waffra_home_entry_sheet.part.dart": [
-      {
-        "start": " Future<void> entrySheet({MoneyEntry? initial,bool sms=false,String? initialSms,",
-        "end": " /// M953: edit exactly one historical row"
       }
     ]
   }
