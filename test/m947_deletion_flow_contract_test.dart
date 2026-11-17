@@ -62,9 +62,10 @@ void main(){
    .readAsStringSync();
   expect(source,contains('if(confirmed!=true||!mounted)return;'));
   final write=source.indexOf('await _financialWriteQueue.submit(');
-  final clear=source.indexOf('setState((){_m684InvalidatePeriodRead();entries.clear();smsHashes.clear();});');
+  final clear=source.indexOf('setState((){_m684InvalidatePeriodRead();entries.clear();});');
   expect(write,greaterThan(0));
   expect(clear,greaterThan(write));
+  expect(source,isNot(contains('smsHashes.clear();')));
   expect(source,contains('route:WaffraFinanceRoute.deleteAllTransactions'));
   expect(source,contains('userConfirmed:true'));
   expect(source,isNot(contains('Navigator.pushReplacement(')));
