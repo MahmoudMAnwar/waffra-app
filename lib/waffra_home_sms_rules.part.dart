@@ -126,6 +126,12 @@ extension _WaffraHomeSmsRules on _HomeScreenState {
   final saved=await const WaffraSmsLocalRuleStore().learnReviewedCandidates(
    _smsRuleOwnerKey,[candidate]);
   if(saved.changed)_receiveAutoSmsNotice();
+  if(saved.blockedConflicts>0){
+   throw StateError('SMS_RULE_CATEGORY_CONFLICT');
+  }
+  if(saved.blockedCapacity>0){
+   throw StateError('SMS_RULE_CAPACITY_EXHAUSTED');
+  }
  }
 
  /// After an authoritative SQLCipher commit, persist owner-bound evidence

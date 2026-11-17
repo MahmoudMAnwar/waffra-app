@@ -910,9 +910,11 @@ abstract final class WaffraSmsLocalRules {
 class WaffraSmsRuleLearningResult {
  const WaffraSmsRuleLearningResult({
   required this.proposals,required this.addedOrUpdated,
-  required this.activeRules,
+  required this.activeRules,this.blockedConflicts=0,this.blockedCapacity=0,
  });
  final int proposals,addedOrUpdated,activeRules;
+ /// Owners must see why a safe category hint did not become a usable rule.
+ final int blockedConflicts,blockedCapacity;
  bool get changed=>addedOrUpdated>0;
 }
 
@@ -1059,6 +1061,29 @@ class WaffraSmsLocalRuleStore {
   await _writeUnlocked(owner,next);
  });
 
+ /// M1032: bank suffix changes instantly revoke previously authorized
+ /// posting and account associations. Rule text remains a non-posting hint,
+ /// so users can review and explicitly re-approve a new account binding.
+ Future<int> disableAccountBoundPosting(String owner,String accountId)=>
+  _exclusive(owner,()async{
+   if(accountId.trim().isEmpty||accountId.length>128){
+    throw ArgumentError('Invalid bank account identity');
+   }
+   final current=await read(owner);
+   final next=<WaffraSmsLocalRule>[
+    for(final r in current)
+     if(r.accountId==accountId)
+      WaffraSmsLocalRule.fromJson(<String,dynamic>{
+       ...r.toJson(),
+       'autoPost':false,'accountId':'','accountSuffix':'',
+      })
+     else r,
+   ];
+   final affected=current.where((r)=>r.accountId==accountId).length;
+   if(affected>0)await _writeUnlocked(owner,next);
+   return affected;
+  });
+
  /// Atomically combine safe financial/exclusion suggestions with latest
  /// encrypted owner rules instead of racing the four entry points.
  /// M1031: every confirmed manual/SMS Income/Expense leaves an encrypted,
@@ -1187,9 +1212,28 @@ class WaffraSmsLocalRuleStore {
   final current=await read(owner);
   var next=current;
   var offered=0;
+  var conflict=0,capacity=0;
   for(final candidate in candidates){
    offered++;
+   final before=next;
    next=WaffraSmsLocalRules.upsertLearned(existing:next,candidate:candidate);
+   if(identical(before,next)&&candidate.financial){
+    final overlap=before.any((existing)=>
+     existing.sender==candidate.sender&&
+     existing.keywords.any((phrase)=>candidate.keywords.any((other)=>
+      WaffraSmsLocalRules.normalized(phrase)==
+       WaffraSmsLocalRules.normalized(other)))&&
+     (existing.resolvedKind!=candidate.resolvedKind||
+      existing.category!=candidate.category));
+    if(overlap)conflict++;
+    else if(before.length>=100||
+     before.any((r)=>!r.autoPost&&!r.matchAll&&
+      r.resolvedKind==candidate.resolvedKind&&
+      r.sender==candidate.sender&&
+      r.keywords.toSet().union(candidate.keywords.toSet()).length>12)){
+     capacity++;
+    }
+   }
   }
   final changed=next.length!=current.length||
    jsonEncode(next.map((r)=>r.toJson()).toList())!=
@@ -1204,7 +1248,8 @@ class WaffraSmsLocalRuleStore {
    proposals:offered,addedOrUpdated:changed?
     next.where((r)=>!current.any((c)=>c.id==r.id&&
      jsonEncode(c.toJson())==jsonEncode(r.toJson()))).length:0,
-   activeRules:verified.length);
+   activeRules:verified.length,
+   blockedConflicts:conflict,blockedCapacity:capacity);
   });
 
 }

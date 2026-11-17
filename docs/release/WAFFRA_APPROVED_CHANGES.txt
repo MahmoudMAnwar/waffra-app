@@ -1,3 +1,8 @@
+[M1032 / BANK ACCOUNT SUFFIX INTEGRITY AND LOCAL RULE SATURATION]
+- Updating or clearing a bank suffix revokes local account-bound AutoPost and old sender/suffix evidence, with independently verified SQLCipher bank suffix comparison prior to any unattended posting.
+- Learning receipt now distinguishes conflict and capacity saturation; a rejected confirmed category learning attempt is not silently counted as an active matching pattern.
+- Full long-term rule capacity scalability and conflict resolution UI remain pending.
+
 [M1032 / VERIFIED TRANSFER REVERSAL AND BACKGROUND REVIEW RULES]
 - Added explicit owner-confirmed, deterministic-ID reversal of internal two-sided transfers, with original immutable audit history preserved. Net worth and income/expense records unchanged.
 - Background review notification now uses already matched local income/expense/transfer/exclusion suggestion when bank facts are uncertain; suggestions never authorize money posting.

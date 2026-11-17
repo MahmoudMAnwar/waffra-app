@@ -8,6 +8,28 @@
   "review_policy": "Owner-approved narrow SMS reliability/security/finance changes; tests prior to code. No automated production proof without Android UAT.",
   "contracts": [
     {
+      "id": "M1032-ACCOUNT-SUFFIX-AND-LEARNING-CAPACITY",
+      "issue": "Issue #751",
+      "previous_behavior": "Editing bank last-four leaves old local SMS auto-post association active, and conflicting/saturated learned rules silently drop safe categories.",
+      "approved_behavior": "After a confirmed suffix mutation, revoke local auto-post and learned bank association. Independently require the currently verified SQLCipher bank suffix to match any unattended post. Surface safe-learning conflicts and capacity saturation.",
+      "source_paths": [
+        "lib/waffra_sms_local_rules.dart",
+        "lib/waffra_sms_account_learning.dart",
+        "lib/waffra_accounts_manager_page.dart",
+        "lib/waffra_home_verified_account_flows.part.dart",
+        "lib/waffra_auto_sms_autopost.part.dart",
+        "lib/waffra_home_sms_rules.part.dart"
+      ],
+      "test_paths": [
+        "test/m1032_outgoing_sms_owner_review_gate_test.dart"
+      ],
+      "safety_invariants": [
+        "Never debit account on stale account suffix",
+        "Owner must reconfirm a new suffix before unattended classification",
+        "Rule conflict/capacity cannot grant automatic posting"
+      ]
+    },
+    {
       "id": "M1032-TRANSFER-REVERSAL-AND-BACKGROUND-REVIEW-KIND",
       "issue": "Issue #751",
       "previous_behavior": "Transfers have no correction route; background notices ignore matched local rules and show generic uncertain.",

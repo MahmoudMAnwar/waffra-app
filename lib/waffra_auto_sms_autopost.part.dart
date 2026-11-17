@@ -214,6 +214,18 @@ abstract final class WaffraAutoSmsAutoPoster {
      if(!accountValid){
       await keepForReview(candidate);continue;
      }
+     // The bank suffix may have been edited since this user-authorized
+     // AutoPost rule was created. Never trust a stale local rule to debit
+     // the same account using its previous four-digit identification.
+     final accountKind=accounts.balances.singleWhere(
+      (a)=>a.id==matched.accountId).kind;
+     if(accountKind=='bank'){
+      final currentSuffix=await WaffraVerifiedAccountsApi(bridge:bridge)
+       .verifiedBankSuffix(matched.accountId);
+      if(currentSuffix!=matched.accountSuffix){
+       await keepForReview(candidate);continue;
+      }
+     }
      final before=await binding.authority.load(
       route:WaffraFinanceRoute.widgetRead);
      before.finance.requireIntegrity();

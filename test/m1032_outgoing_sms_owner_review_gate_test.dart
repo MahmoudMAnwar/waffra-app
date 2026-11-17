@@ -4,6 +4,22 @@ import 'package:waffra/waffra_bank_sms_facts.dart';
 import 'package:waffra/waffra_sms_multicurrency_review.dart';
 
 void main(){
+ test('M1032 bank suffix reconciliation and rule capacity are explicit in owner paths',(){
+  final settings=File('lib/waffra_accounts_manager_page.dart').readAsStringSync();
+  final controller=File('lib/waffra_home_verified_account_flows.part.dart').readAsStringSync();
+  final inbox=File('lib/waffra_auto_sms_autopost.part.dart').readAsStringSync();
+  final rules=File('lib/waffra_sms_local_rules.dart').readAsStringSync();
+  final evidence=File('lib/waffra_sms_account_learning.dart').readAsStringSync();
+  expect(settings,contains('onVerifiedBankSuffixChanged'));
+  expect(controller,contains('disableAccountBoundPosting('));
+  expect(controller,contains('invalidateAccount('));
+  expect(evidence,contains('Future<int> invalidateAccount('));
+  expect(inbox,contains('if(currentSuffix!=matched.accountSuffix)'));
+  expect(inbox,contains('await keepForReview(candidate);continue;'));
+  expect(rules,contains('blockedConflicts:conflict,blockedCapacity:capacity'));
+  expect(rules,contains('Future<int> disableAccountBoundPosting('));
+ });
+
  test('M1032 outgoing AlRajhi transfer can be approved by owner after true SAR/date/category review',(){
   const sms='حوالة صادرة\nالمبلغ: ﷼ 1900.00\n2026-11-01 08:46';
   final facts=WaffraBankSmsFactsParser.parse(sms);
