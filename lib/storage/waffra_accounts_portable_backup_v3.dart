@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 
 import '../waffra_secure_backup.dart';
+import '../waffra_sms_local_rules.dart';
 import 'waffra_accounts_schema.dart';
 import 'waffra_account_context_schema.dart';
 import 'waffra_account_context_backup.dart';
@@ -20,11 +21,12 @@ class WaffraAccountsBackupV3Preview {
  const WaffraAccountsBackupV3Preview({
   required this.encryptedV2,required this.accounts,
   required this.links,required this.transfers,this.history,this.context,
-  this.details,this.customInstitutionLinks,
+  this.details,this.customInstitutionLinks,this.smsRulesV1,
  });
  final Map<String,dynamic>? history;
  final Map<String,List<Map<String,Object?>>>? context;
  final List<Map<String,Object?>>? details,customInstitutionLinks;
+ final Map<String,Object?>? smsRulesV1;
  final String encryptedV2;
  final List<Map<String,Object?>> accounts,links,transfers;
 }
@@ -208,6 +210,7 @@ abstract final class WaffraAccountsPortableBackupV3 {
   required String encryptedV2,
   required Map<String,Object?> capturedAccounts,
   Map<String,Object?>? history,
+  Map<String,Object?>? smsRulesV1,
   required String password,
  })async{
   final accounts=_rows(capturedAccounts['accounts'],_accountFields,maxAccounts);
@@ -224,6 +227,8 @@ abstract final class WaffraAccountsPortableBackupV3 {
    'innerV2':encryptedV2,
    'accounts':accounts,'links':links,'transfers':transfers,
    if(history!=null)'financeHistoryV1':history,
+   if(smsRulesV1!=null)'smsRulesV1':
+    WaffraSmsLocalRuleStore.validatePortableBackup(smsRulesV1),
    if(context!=null)'accountContextV1':context,
    if(details!=null&&details.isNotEmpty)'accountDetailsV1':details,
    if(institutionLinks!=null&&institutionLinks.isNotEmpty)
@@ -247,12 +252,13 @@ abstract final class WaffraAccountsPortableBackupV3 {
   if(raw is! Map || raw.keys.any((k)=>k is! String)||
      raw.keys.toSet().difference(const {
       'format','version','innerV2Sha256','innerV2','accounts','links','transfers','financeHistoryV1','accountContextV1','accountDetailsV1',
-       'customInstitutionLinksV1'
+       'customInstitutionLinksV1','smsRulesV1'
      }).isNotEmpty||
      raw.length!=7+(raw.containsKey('financeHistoryV1')?1:0)+
        (raw.containsKey('accountContextV1')?1:0)+
        (raw.containsKey('accountDetailsV1')?1:0)+
-       (raw.containsKey('customInstitutionLinksV1')?1:0)||raw['format']!=format||raw['version']!=version||
+       (raw.containsKey('customInstitutionLinksV1')?1:0)+
+       (raw.containsKey('smsRulesV1')?1:0)||raw['format']!=format||raw['version']!=version||
      raw['innerV2'] is! String||raw['innerV2Sha256'] is! String){
    throw const FormatException('Unsupported account backup format.');
   }
@@ -272,6 +278,8 @@ abstract final class WaffraAccountsPortableBackupV3 {
    encryptedV2:inner,accounts:accounts,links:links,transfers:transfers,
    context:context,details:details,
    customInstitutionLinks:institutionLinks,
+   smsRulesV1:raw.containsKey('smsRulesV1')?
+    WaffraSmsLocalRuleStore.validatePortableBackup(raw['smsRulesV1']):null,
    history:raw.containsKey('financeHistoryV1')
      ?WaffraAccountsFinanceHistory.validate(raw['financeHistoryV1']):null);
  }

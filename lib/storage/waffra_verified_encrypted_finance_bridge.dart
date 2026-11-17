@@ -130,7 +130,8 @@ class WaffraVerifiedEncryptedFinanceBridge {
     });
   }
 
-  Future<String> exportPortableBackup(String password) =>
+  Future<String> exportPortableBackup(String password,{
+    Map<String,Object?>? smsRulesV1}) =>
       WaffraPortableEncryptedBackupExporter(
         snapshot: snapshot,
         receiptVault: WaffraEncryptedReceiptVault(
@@ -142,7 +143,7 @@ class WaffraVerifiedEncryptedFinanceBridge {
           await WaffraAccountsSchema.install(snapshot.store);
         },
         experimentalEnabled: experimentalEnabled,
-      ).exportV3(password: password);
+      ).exportV3(password: password,smsRulesV1:smsRulesV1);
 
   /// Encrypted-only, explicitly authenticated reset route. The independent
   /// source selector and the reset engine recheck the active SQLCipher

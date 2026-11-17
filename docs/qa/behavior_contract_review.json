@@ -8,6 +8,28 @@
   "review_policy": "Owner-approved narrow SMS reliability/security/finance changes; tests prior to code. No automated production proof without Android UAT.",
   "contracts": [
     {
+      "id": "M1032-PASSWORD-ENCRYPTED-SMS-RULE-PORTABILITY",
+      "issue": "Issue #751",
+      "previous_behavior": "Portable V3 restored money accounts but never owner-scoped local SMS rules nor verified post-commit learning receipts.",
+      "approved_behavior": "Optional strictly validated rules+learning section inside the existing password-authenticated V3 envelope, owner ID check and secure readback on restore, never re-enable AutoPost after a device restore. Pre-M1032 V3 archives remain restorable without this field.",
+      "source_paths": [
+        "lib/waffra_sms_local_rules.dart",
+        "lib/storage/waffra_accounts_portable_backup_v3.dart",
+        "lib/storage/waffra_portable_encrypted_backup_exporter.dart",
+        "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
+        "lib/waffra_home_account_tools.part.dart"
+      ],
+      "test_paths": [
+        "test/storage/m440_accounts_portable_v3_test.dart"
+      ],
+      "safety_invariants": [
+        "No raw SMS/OTP or system credentials are exported",
+        "No owner mismatch import",
+        "No automatic posting after device restore",
+        "No financial replay when Keystore import fails"
+      ]
+    },
+    {
       "id": "M1032-POSTCOMMIT-AUTOSMS-LEARNING-RECOVERY",
       "issue": "Issue #751",
       "previous_behavior": "Background AutoPost may commit+ACK a bank SMS then swallow a failed encrypted local rule learning write without durable retry.",

@@ -147,7 +147,16 @@ extension _WaffraHomeAccountTools on _HomeScreenState {
       if(current.encryptedWitness!=null){
        final bridge=_financeBinding?.accountsBridge;
        if(bridge==null)throw StateError('Encrypted backup source unavailable.');
-       encrypted=await bridge.exportPortableBackup(secret.text);
+       // Owner-scoped rules remain in Android Keystore until their safe
+       // validated form joins the password-authenticated V3 archive.
+       // Missing owner identity must fail, not create a misleading backup.
+       if(_smsRuleOwnerKey.isEmpty){
+        throw StateError('Verified SMS rule owner not available');
+       }
+       final smsRules=await const WaffraSmsLocalRuleStore()
+        .exportPortableBackup(_smsRuleOwnerKey);
+       encrypted=await bridge.exportPortableBackup(secret.text,
+        smsRulesV1:smsRules);
       }else{
        final authoritativePayload=exportBackup(fromSource:current);
        encrypted=await compute(waffraEncryptBackupInIsolate,<String,String>{
@@ -350,6 +359,17 @@ extension _WaffraHomeAccountTools on _HomeScreenState {
        if(!ready||_financeLoadFailure!=null){
         restoreStage='HOME_RELOAD_FAILED';
         throw StateError('M1006_RESTORED_HOME_UNVERIFIED');
+       }
+       if(raw['smsRulesV1']!=null){
+        // Verified account finance already committed. A second readback
+        // protects classification recovery without replaying any debit.
+        restoreStage='SMS_RULES_RESTORE';
+        if(_smsRuleOwnerKey.isEmpty){
+         throw StateError('Verified SMS owner unavailable after restore');
+        }
+        await const WaffraSmsLocalRuleStore().restorePortableBackup(
+         _smsRuleOwnerKey,raw['smsRulesV1']);
+        _receiveAutoSmsNotice();
        }
        if(authenticatedLegacyRows!=null&&mounted){
         // M620: preflight attests an isolated candidate; verify live SQLCipher

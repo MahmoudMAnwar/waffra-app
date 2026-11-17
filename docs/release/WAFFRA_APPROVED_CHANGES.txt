@@ -1,3 +1,8 @@
+[M1032 / OPTIONAL V3 ENCRYPTED LOCAL SMS RULE BACKUP]
+- Added an authenticated optional owner-scoped V3 SMS rules+learning section. Rules and learning are validated with the same strict live classifiers; no plain source SMS, phone, OTP, transaction amount or device secrets enter the archive.
+- UI captures owner rules immediately before authoritatively locked V3 finance export. Restore verifies owner and encrypted Keystore readback; device-specific AutoPost account permissions are disabled pending fresh confirmation.
+- Existing V3 archive shape without the section stays backward compatible. SQLCipher money already committed is never replayed on local-rule restore error. Still needs Android UAT.
+
 [M1032 / EXACT-SHA M989 REGRESSION CONTRACT FIX]
 - Updated existing M989 lifecycle review test to validate actual shared ownerBlocker guard and requiresSeparateReview instead of its removed inline boolean spelling. No runtime safety change, no removed test or workflow.
 

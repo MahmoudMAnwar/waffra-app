@@ -1155,6 +1155,497 @@ class WaffraSmsLocalRuleStore {
   }
  });
 
+
+ /// M1032: authenticated V3 archives can carry owner-scoped local rules and
+ /// encrypted learning observations. Reuse the *same* strict rule validator
+ /// used by live classification: no raw SMS, OTP digits or arbitrary bodies.
+ /// A destination device must explicitly approve future AutoPost again.
+ static Map<String,Object?> validatePortableBackup(Object? payload){
+  if(payload is! Map||
+     payload.keys.any((key)=>key is! String)||
+     payload.keys.toSet().difference(
+      const {'version','owner','rules','learning'}).isNotEmpty||
+     payload['version']!=1||
+     payload['owner'] is! String||
+     !RegExp(r'^[a-f0-9]{64}
+ /// M1031: every confirmed manual/SMS Income/Expense leaves an encrypted,
+ /// owner-scoped, idempotent learning receipt EVEN when its generic title
+ /// has no safe SMS-matching keyword. This is not a finance or AutoPost rule.
+ /// Only safe, separately validated patterns are put into active rule lists.
+ Future<bool> recordConfirmedFinanceLearning({
+  required String owner,required String transactionId,
+  required String sourceType,required bool income,required String category,
+ })=>_exclusive(owner,()async{
+  if(transactionId.trim().isEmpty||transactionId.length>180||
+     !const {'manual','sms'}.contains(sourceType)||
+     category.trim().isEmpty||category.length>160){
+   throw const FormatException('Confirmed learning source invalid');
+  }
+  final digest=sha256.convert(utf8.encode(
+   '$owner|$sourceType|$transactionId')).toString();
+  final key='waffra_sms_confirmed_finance_learning_v1_$owner';
+  final old=await _storage.read(key:key);
+  final parsed=old==null?<String,Object?>{}:jsonDecode(old);
+  if(parsed is! Map)throw const FormatException(
+   'Confirmed learning history unreadable');
+  final doc=Map<String,Object?>.from(parsed);
+  final recent=(doc['recent'] as List? ??const [])
+   .whereType<Map>().map((row)=>Map<String,Object?>.from(row))
+   .toList(growable:true);
+  if(recent.length>512||recent.any((row)=>
+    row['id'] is! String||row['kind'] is! String)) {
+   throw const FormatException('Invalid confirmed learning history');
+  }
+  if(recent.any((row)=>row['id']==digest))return true;
+  final kind=income?'income':'expense';
+  final totals=<String,int>{};
+  final sourceTotals=doc['totals'];
+  if(sourceTotals is Map){
+   for(final pair in sourceTotals.entries){
+    if(pair.key is! String||pair.value is! int||
+       (pair.value as int)<0)throw const FormatException(
+        'Invalid confirmed learning totals');
+    totals[pair.key as String]=pair.value as int;
+   }
+  }
+  final bySource=<String,int>{};
+  if(doc['sourceTotals'] is Map){
+   for(final entry in (doc['sourceTotals'] as Map).entries){
+    if(entry.key is! String||entry.value is! int||
+       (entry.value as int)<0)throw const FormatException(
+        'Invalid source learning totals');
+    bySource[entry.key as String]=entry.value as int;
+   }
+  }else{
+   // Backward compatibility for the first M1031 verified receipts created
+   // before the by-source counter existed.
+   for(final row in recent){
+    final src=row['source'],type=row['kind'];
+    if(src is String&&type is String){
+     final key='$src|$type';
+     bySource[key]=(bySource[key]??0)+1;
+    }
+   }
+  }
+  final bucket='$kind|$category';
+  totals[bucket]=(totals[bucket]??0)+1;
+  final sourceKey='$sourceType|$kind';
+  bySource[sourceKey]=(bySource[sourceKey]??0)+1;
+  recent.add(<String,Object?>{
+   'id':digest,'kind':kind,'category':category.trim(),
+   'source':sourceType,
+  });
+  if(recent.length>512)recent.removeRange(0,recent.length-512);
+  final next=jsonEncode(<String,Object?>{
+   'version':1,'recent':recent,'totals':totals,
+   'sourceTotals':bySource,
+  });
+  await _storage.write(key:key,value:next);
+  final reloaded=await _storage.read(key:key);
+  if(reloaded!=next)throw StateError(
+   'Confirmed local learning did not survive encrypted readback');
+  return true;
+ });
+
+ /// Read-only statistics: a confirmed learning observation is NOT
+ /// necessarily a safely reusable SMS keyword pattern. Never display
+ /// missing/decryption-failed statistics as a misleading zero.
+ Future<Map<String,int>> confirmedFinanceLearningCounts(String owner)async{
+  _key(owner);
+  final raw=await _storage.read(
+   key:'waffra_sms_confirmed_finance_learning_v1_$owner');
+  if(raw==null)return const <String,int>{
+   'manual|income':0,'manual|expense':0,
+   'sms|income':0,'sms|expense':0,
+  };
+  final doc=jsonDecode(raw);
+  if(doc is! Map)throw const FormatException(
+   'Confirmed local learning ledger unreadable');
+  final counts=<String,int>{
+   'manual|income':0,'manual|expense':0,
+   'sms|income':0,'sms|expense':0,
+  };
+  final encoded=doc['sourceTotals'];
+  if(encoded is Map){
+   for(final entry in encoded.entries){
+    if(entry.key is! String||entry.value is! int||
+       (entry.value as int)<0)throw const FormatException(
+        'Invalid confirmed local learning counter');
+    if(counts.containsKey(entry.key))counts[entry.key as String]=entry.value as int;
+   }
+  }else{
+   // Read legacy M1031 bounded history without erasing or changing it.
+   final rows=doc['recent'];
+   if(rows is! List)throw const FormatException(
+    'Confirmed learning snapshot missing');
+   for(final row in rows){
+    if(row is! Map)throw const FormatException('Invalid learning record');
+    final source=row['source'],kind=row['kind'];
+    final bucket='$source|$kind';
+    if(counts.containsKey(bucket))counts[bucket]=counts[bucket]!+1;
+   }
+  }
+  return Map<String,int>.unmodifiable(counts);
+ }
+
+ Future<WaffraSmsRuleLearningResult> learnReviewedCandidates(
+  String owner,Iterable<WaffraSmsLocalRule> candidates,
+ )=>_exclusive(owner,()async{
+  final current=await read(owner);
+  var next=current;
+  var offered=0;
+  var conflict=0,capacity=0;
+  for(final candidate in candidates){
+   offered++;
+   final before=next;
+   next=WaffraSmsLocalRules.upsertLearned(existing:next,candidate:candidate);
+   if(identical(before,next)&&candidate.financial){
+    final overlap=before.any((existing)=>
+     existing.sender==candidate.sender&&
+     existing.keywords.any((phrase)=>candidate.keywords.any((other)=>
+      WaffraSmsLocalRules.normalized(phrase)==
+       WaffraSmsLocalRules.normalized(other)))&&
+     (existing.resolvedKind!=candidate.resolvedKind||
+      existing.category!=candidate.category));
+    if(overlap)conflict++;
+    else if(before.length>=100||
+     before.any((r)=>!r.autoPost&&!r.matchAll&&
+      r.resolvedKind==candidate.resolvedKind&&
+      r.sender==candidate.sender&&
+      r.keywords.toSet().union(candidate.keywords.toSet()).length>12)){
+     capacity++;
+    }
+   }
+  }
+  final changed=next.length!=current.length||
+   jsonEncode(next.map((r)=>r.toJson()).toList())!=
+    jsonEncode(current.map((r)=>r.toJson()).toList());
+  if(changed)await _writeUnlocked(owner,next);
+  final verified=await read(owner);
+  if(jsonEncode(verified.map((r)=>r.toJson()).toList())!=
+     jsonEncode(next.map((r)=>r.toJson()).toList())){
+   throw StateError('Saved SMS rules differ from the requested patterns.');
+  }
+  return WaffraSmsRuleLearningResult(
+   proposals:offered,addedOrUpdated:changed?
+    next.where((r)=>!current.any((c)=>c.id==r.id&&
+     jsonEncode(c.toJson())==jsonEncode(r.toJson()))).length:0,
+   activeRules:verified.length,
+   blockedConflicts:conflict,blockedCapacity:capacity);
+  });
+
+}
+).hasMatch(payload['owner'] as String)||
+     payload['rules'] is! List||
+     (payload['rules'] as List).length>100){
+   throw const FormatException('Invalid owner-scoped portable SMS rules');
+  }
+  final parsed=<WaffraSmsLocalRule>[];
+  final seen=<String>{};
+  for(final item in payload['rules'] as List){
+   if(item is! Map||item.keys.any((key)=>key is! String)){
+    throw const FormatException('Invalid SMS rule in portable backup');
+   }
+   final rule=WaffraSmsLocalRule.fromJson(Map<String,dynamic>.from(item));
+   WaffraSmsLocalRules.validate(rule);
+   if(!seen.add(rule.id)){
+    throw const FormatException('Duplicate SMS rule in portable backup');
+   }
+   parsed.add(rule);
+  }
+  final value=payload['learning'];
+  Map<String,Object?>? observations;
+  if(value!=null){
+   if(value is! Map||value.keys.any((key)=>key is! String)||
+      value.keys.toSet().difference(
+       const {'version','recent','totals','sourceTotals'}).isNotEmpty||
+      value['version']!=1||
+      value['recent'] is! List||
+      (value['recent'] as List).length>512){
+    throw const FormatException('Invalid portable confirmed learning');
+   }
+   final recent=<Map<String,Object?>>[];
+   final hashes=<String>{};
+   for(final row in value['recent'] as List){
+    if(row is! Map||row.keys.toSet().difference(
+       const {'id','kind','category','source'}).isNotEmpty||
+       row['id'] is! String||
+       !RegExp(r'^[a-f0-9]{64}
+ /// M1031: every confirmed manual/SMS Income/Expense leaves an encrypted,
+ /// owner-scoped, idempotent learning receipt EVEN when its generic title
+ /// has no safe SMS-matching keyword. This is not a finance or AutoPost rule.
+ /// Only safe, separately validated patterns are put into active rule lists.
+ Future<bool> recordConfirmedFinanceLearning({
+  required String owner,required String transactionId,
+  required String sourceType,required bool income,required String category,
+ })=>_exclusive(owner,()async{
+  if(transactionId.trim().isEmpty||transactionId.length>180||
+     !const {'manual','sms'}.contains(sourceType)||
+     category.trim().isEmpty||category.length>160){
+   throw const FormatException('Confirmed learning source invalid');
+  }
+  final digest=sha256.convert(utf8.encode(
+   '$owner|$sourceType|$transactionId')).toString();
+  final key='waffra_sms_confirmed_finance_learning_v1_$owner';
+  final old=await _storage.read(key:key);
+  final parsed=old==null?<String,Object?>{}:jsonDecode(old);
+  if(parsed is! Map)throw const FormatException(
+   'Confirmed learning history unreadable');
+  final doc=Map<String,Object?>.from(parsed);
+  final recent=(doc['recent'] as List? ??const [])
+   .whereType<Map>().map((row)=>Map<String,Object?>.from(row))
+   .toList(growable:true);
+  if(recent.length>512||recent.any((row)=>
+    row['id'] is! String||row['kind'] is! String)) {
+   throw const FormatException('Invalid confirmed learning history');
+  }
+  if(recent.any((row)=>row['id']==digest))return true;
+  final kind=income?'income':'expense';
+  final totals=<String,int>{};
+  final sourceTotals=doc['totals'];
+  if(sourceTotals is Map){
+   for(final pair in sourceTotals.entries){
+    if(pair.key is! String||pair.value is! int||
+       (pair.value as int)<0)throw const FormatException(
+        'Invalid confirmed learning totals');
+    totals[pair.key as String]=pair.value as int;
+   }
+  }
+  final bySource=<String,int>{};
+  if(doc['sourceTotals'] is Map){
+   for(final entry in (doc['sourceTotals'] as Map).entries){
+    if(entry.key is! String||entry.value is! int||
+       (entry.value as int)<0)throw const FormatException(
+        'Invalid source learning totals');
+    bySource[entry.key as String]=entry.value as int;
+   }
+  }else{
+   // Backward compatibility for the first M1031 verified receipts created
+   // before the by-source counter existed.
+   for(final row in recent){
+    final src=row['source'],type=row['kind'];
+    if(src is String&&type is String){
+     final key='$src|$type';
+     bySource[key]=(bySource[key]??0)+1;
+    }
+   }
+  }
+  final bucket='$kind|$category';
+  totals[bucket]=(totals[bucket]??0)+1;
+  final sourceKey='$sourceType|$kind';
+  bySource[sourceKey]=(bySource[sourceKey]??0)+1;
+  recent.add(<String,Object?>{
+   'id':digest,'kind':kind,'category':category.trim(),
+   'source':sourceType,
+  });
+  if(recent.length>512)recent.removeRange(0,recent.length-512);
+  final next=jsonEncode(<String,Object?>{
+   'version':1,'recent':recent,'totals':totals,
+   'sourceTotals':bySource,
+  });
+  await _storage.write(key:key,value:next);
+  final reloaded=await _storage.read(key:key);
+  if(reloaded!=next)throw StateError(
+   'Confirmed local learning did not survive encrypted readback');
+  return true;
+ });
+
+ /// Read-only statistics: a confirmed learning observation is NOT
+ /// necessarily a safely reusable SMS keyword pattern. Never display
+ /// missing/decryption-failed statistics as a misleading zero.
+ Future<Map<String,int>> confirmedFinanceLearningCounts(String owner)async{
+  _key(owner);
+  final raw=await _storage.read(
+   key:'waffra_sms_confirmed_finance_learning_v1_$owner');
+  if(raw==null)return const <String,int>{
+   'manual|income':0,'manual|expense':0,
+   'sms|income':0,'sms|expense':0,
+  };
+  final doc=jsonDecode(raw);
+  if(doc is! Map)throw const FormatException(
+   'Confirmed local learning ledger unreadable');
+  final counts=<String,int>{
+   'manual|income':0,'manual|expense':0,
+   'sms|income':0,'sms|expense':0,
+  };
+  final encoded=doc['sourceTotals'];
+  if(encoded is Map){
+   for(final entry in encoded.entries){
+    if(entry.key is! String||entry.value is! int||
+       (entry.value as int)<0)throw const FormatException(
+        'Invalid confirmed local learning counter');
+    if(counts.containsKey(entry.key))counts[entry.key as String]=entry.value as int;
+   }
+  }else{
+   // Read legacy M1031 bounded history without erasing or changing it.
+   final rows=doc['recent'];
+   if(rows is! List)throw const FormatException(
+    'Confirmed learning snapshot missing');
+   for(final row in rows){
+    if(row is! Map)throw const FormatException('Invalid learning record');
+    final source=row['source'],kind=row['kind'];
+    final bucket='$source|$kind';
+    if(counts.containsKey(bucket))counts[bucket]=counts[bucket]!+1;
+   }
+  }
+  return Map<String,int>.unmodifiable(counts);
+ }
+
+ Future<WaffraSmsRuleLearningResult> learnReviewedCandidates(
+  String owner,Iterable<WaffraSmsLocalRule> candidates,
+ )=>_exclusive(owner,()async{
+  final current=await read(owner);
+  var next=current;
+  var offered=0;
+  var conflict=0,capacity=0;
+  for(final candidate in candidates){
+   offered++;
+   final before=next;
+   next=WaffraSmsLocalRules.upsertLearned(existing:next,candidate:candidate);
+   if(identical(before,next)&&candidate.financial){
+    final overlap=before.any((existing)=>
+     existing.sender==candidate.sender&&
+     existing.keywords.any((phrase)=>candidate.keywords.any((other)=>
+      WaffraSmsLocalRules.normalized(phrase)==
+       WaffraSmsLocalRules.normalized(other)))&&
+     (existing.resolvedKind!=candidate.resolvedKind||
+      existing.category!=candidate.category));
+    if(overlap)conflict++;
+    else if(before.length>=100||
+     before.any((r)=>!r.autoPost&&!r.matchAll&&
+      r.resolvedKind==candidate.resolvedKind&&
+      r.sender==candidate.sender&&
+      r.keywords.toSet().union(candidate.keywords.toSet()).length>12)){
+     capacity++;
+    }
+   }
+  }
+  final changed=next.length!=current.length||
+   jsonEncode(next.map((r)=>r.toJson()).toList())!=
+    jsonEncode(current.map((r)=>r.toJson()).toList());
+  if(changed)await _writeUnlocked(owner,next);
+  final verified=await read(owner);
+  if(jsonEncode(verified.map((r)=>r.toJson()).toList())!=
+     jsonEncode(next.map((r)=>r.toJson()).toList())){
+   throw StateError('Saved SMS rules differ from the requested patterns.');
+  }
+  return WaffraSmsRuleLearningResult(
+   proposals:offered,addedOrUpdated:changed?
+    next.where((r)=>!current.any((c)=>c.id==r.id&&
+     jsonEncode(c.toJson())==jsonEncode(r.toJson()))).length:0,
+   activeRules:verified.length,
+   blockedConflicts:conflict,blockedCapacity:capacity);
+  });
+
+}
+).hasMatch(row['id'] as String)||
+       !hashes.add(row['id'] as String)||
+       row['category'] is! String||
+       (row['category'] as String).trim().isEmpty||
+       (row['category'] as String).length>160||
+       !const {'income','expense'}.contains(row['kind'])||
+       !const {'manual','sms'}.contains(row['source'])){
+     throw const FormatException('Invalid portable confirmed-learning receipt');
+    }
+    recent.add(<String,Object?>{
+     'id':row['id'],'kind':row['kind'],
+     'category':row['category'],'source':row['source']});
+   }
+   Map<String,int> verifyCounts(Object? raw){
+    if(raw==null)return <String,int>{};
+    if(raw is! Map||raw.length>1024){
+     throw const FormatException('Invalid portable learning counters');
+    }
+    final clean=<String,int>{};
+    for(final entry in raw.entries){
+     if(entry.key is! String||entry.key.trim().isEmpty||
+        entry.key.length>200||entry.value is! int||
+        (entry.value as int)<0||(entry.value as int)>0x7fffffffffffffff){
+      throw const FormatException('Invalid portable learning count');
+     }
+     clean[entry.key as String]=entry.value as int;
+    }
+    return clean;
+   }
+   observations=<String,Object?>{
+    'version':1,'recent':recent,
+    'totals':verifyCounts(value['totals']),
+    'sourceTotals':verifyCounts(value['sourceTotals']),
+   };
+  }
+  return <String,Object?>{
+   'version':1,'owner':payload['owner'],
+   'rules':[for(final rule in parsed)rule.toJson()],
+   if(observations!=null)'learning':observations,
+  };
+ }
+
+ /// V3 export operates on the owner-specific Android Keystore storage only.
+ /// The enclosing .waffra archive password authenticates the payload.
+ Future<Map<String,Object?>> exportPortableBackup(String owner)=>
+  _exclusive(owner,()async{
+   final rules=await read(owner);
+   final raw=await _storage.read(
+    key:'waffra_sms_confirmed_finance_learning_v1_$owner');
+   return validatePortableBackup(<String,Object?>{
+    'version':1,'owner':owner,
+    'rules':[for(final rule in rules)rule.toJson()],
+    if(raw!=null)'learning':jsonDecode(raw),
+   });
+  });
+
+ /// Import is separate from the canonical SQLCipher money restore. Do not
+ /// report successful local-rule recovery unless secure-store readback works.
+ /// Never re-enable automatic posting on a new device/backup recovery.
+ Future<void> restorePortableBackup(String owner,Object? payload)=>
+  _exclusive(owner,()async{
+   final verified=validatePortableBackup(payload);
+   if(verified['owner']!=owner){
+    throw StateError('Portable rules belong to another authenticated owner');
+   }
+   final safe=<WaffraSmsLocalRule>[
+    for(final item in verified['rules'] as List)
+     WaffraSmsLocalRule.fromJson(<String,dynamic>{
+      ...Map<String,dynamic>.from(item as Map),
+      'autoPost':false,'accountId':'','accountSuffix':'',
+     }),
+   ];
+   for(final rule in safe)WaffraSmsLocalRules.validate(rule);
+   final receiptKey='waffra_sms_confirmed_finance_learning_v1_$owner';
+   final previousRules=await _storage.read(key:_key(owner));
+   final previousReceipt=await _storage.read(key:receiptKey);
+   try{
+    await _writeUnlocked(owner,safe);
+    final restored=await read(owner);
+    if(jsonEncode(restored.map((r)=>r.toJson()).toList())!=
+       jsonEncode(safe.map((r)=>r.toJson()).toList())){
+     throw StateError('Portable SMS rule readback differs');
+    }
+    if(verified['learning']!=null){
+     final next=jsonEncode(verified['learning']);
+     await _storage.write(key:receiptKey,value:next);
+     if(await _storage.read(key:receiptKey)!=next){
+      throw StateError('Portable learning readback differs');
+     }
+    }else{
+     await _storage.delete(key:receiptKey);
+     if(await _storage.read(key:receiptKey)!=null){
+      throw StateError('Portable learning delete failed');
+     }
+    }
+   }catch(_){
+    // Preserve pre-existing local classification if this non-transactional
+    // OS Keystore operation fails. Money restoration is never replayed.
+    try{
+     if(previousRules==null){await _storage.delete(key:_key(owner));}
+     else{await _storage.write(key:_key(owner),value:previousRules);}
+     if(previousReceipt==null){await _storage.delete(key:receiptKey);}
+     else{await _storage.write(key:receiptKey,value:previousReceipt);}
+    }catch(_){/* Caller still reports incomplete local recovery. */}
+    rethrow;
+   }
+  });
+
  /// Atomically combine safe financial/exclusion suggestions with latest
  /// encrypted owner rules instead of racing the four entry points.
  /// M1031: every confirmed manual/SMS Income/Expense leaves an encrypted,
