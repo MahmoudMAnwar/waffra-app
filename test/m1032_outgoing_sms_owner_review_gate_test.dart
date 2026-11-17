@@ -5,6 +5,19 @@ import 'package:waffra/waffra_sms_local_rules.dart';
 import 'package:waffra/waffra_sms_multicurrency_review.dart';
 
 void main(){
+ test('M1032 saved background transaction retries local learning without replaying finance',(){
+  final worker=File('lib/waffra_auto_sms_autopost.part.dart').readAsStringSync();
+  final recovery=worker.split('static Future<int> _reconcileLearningDebt(').last
+   .split(' static Future<Map<String,int>> run()async{').first;
+  expect(recovery,contains('await binding.authority.load('));
+  expect(recovery,contains('WaffraFinanceRoute.widgetRead'));
+  expect(recovery,contains('await store.recordConfirmedFinanceLearning('));
+  expect(recovery,isNot(contains('commitConfirmedSms(')));
+  expect(recovery,isNot(contains('acknowledgeCommitted(')));
+  expect(worker,contains('await _rememberLearningDebt(owner,entry.id);'));
+  expect(worker,contains("summary['learningRecovered']=await _reconcileLearningDebt(owner,prefs);"));
+ });
+
  test('M1032 financial edit removes only stale single-owner learned phrase',(){
   final prior=WaffraSmsLocalRules.manualCategoryPattern(
    description:'ستاربكس',category:'مقاهي',income:false)!;

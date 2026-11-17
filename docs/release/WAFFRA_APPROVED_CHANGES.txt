@@ -1,3 +1,7 @@
+[M1032 / OWNER-BOUND LOCAL LEARNING DEBT RETRY]
+- Failed post-commit bank-SMS local learning now stores bounded owner-scoped entry-ID-only debt pointers after a successful finance commit and ACK. A later worker binds to verified SQLCipher and retries local learning from immutable ledger facts, never reposting money or acknowledging native SMS a second time.
+- If the local debt-checkpoint storage itself is unavailable, the saved finance entry stays immutable and a diagnostic counter is reported. Physical Android recovery verification pending.
+
 [M1032 / EXACT SHA COMPILER AND M385 REPAIR]
 - Declared shared localReviewKinds in same background function scope as selector and four-kind loop; imported local rule model into M1032 contract regression; scoped new crypto/utf8 imports as approved source edits in M385.
 - No CI job removed or skipped. Previous compile and scope failures require exact-head rerun.

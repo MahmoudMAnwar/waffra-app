@@ -8,6 +8,23 @@
   "review_policy": "Owner-approved narrow SMS reliability/security/finance changes; tests prior to code. No automated production proof without Android UAT.",
   "contracts": [
     {
+      "id": "M1032-POSTCOMMIT-AUTOSMS-LEARNING-RECOVERY",
+      "issue": "Issue #751",
+      "previous_behavior": "Background AutoPost may commit+ACK a bank SMS then swallow a failed encrypted local rule learning write without durable retry.",
+      "approved_behavior": "Store only owner-scoped opaque transaction ID retry pointers and read exact saved SMS entries from the verified SQLCipher source on subsequent WorkManager runs; never redo finance commit, hashes, or ACK.",
+      "source_paths": [
+        "lib/waffra_auto_sms_autopost.part.dart"
+      ],
+      "test_paths": [
+        "test/m1032_outgoing_sms_owner_review_gate_test.dart"
+      ],
+      "safety_invariants": [
+        "No sensitive SMS, category, or amount in retry queue",
+        "No duplicate financial charge or ACK from learning retry",
+        "Old pending pointers retained while vault/rule store is unavailable"
+      ]
+    },
+    {
       "id": "M1032-EDITED-FINANCE-CATEGORY-RECONCILIATION",
       "issue": "Issue #751",
       "previous_behavior": "Verified finance record editor persists new category and amount but leaves old auto-learned senderless local category keyword unchanged.",

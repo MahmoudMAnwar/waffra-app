@@ -20,7 +20,8 @@
     "M1032 Stage 3/4/11: account-linked delete+undo atomic archive, recurring-bound account archive guard and safe verified no-receipt Delete All account links",
     "M1032 stages 5 and 7: idempotent reversing transfer with verified two-account posting, local-rule-kind review notifications in background",
     "M1032 gap 9+12+2: revoke stale SMS bank suffix auto-post permissions and local mapping when account identifier changes; expose rejected conflict/capacity reasons after confirmed finance",
-    "M1032 issue #751 gap 1: on verified edit reconcile senderless financial learning, never silently retain stale original category when there is no other confirmed evidence"
+    "M1032 issue #751 gap 1: on verified edit reconcile senderless financial learning, never silently retain stale original category when there is no other confirmed evidence",
+    "M1032 gap 8 encrypted owner-scoped background learning debt: retry using verified SQLCipher source without replaying money or native acknowledgement"
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -58,7 +59,7 @@
     ],
     "lib/waffra_auto_sms_autopost.part.dart": [
       {
-        "start": "Future<Map<String,int>>",
+        "start": "abstract final class WaffraAutoSmsAutoPoster {",
         "end": null
       }
     ],

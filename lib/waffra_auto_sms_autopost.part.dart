@@ -9,6 +9,94 @@ part of 'main.dart';
 abstract final class WaffraAutoSmsAutoPoster {
  static bool get reviewOnly => false; // Only an approved per-rule match can post.
 
+ /// Only transaction IDs are stored in the owner-scoped retry pointer.
+ /// The source money/category is always reloaded from the authenticated
+ /// SQLCipher ledger; no amount, sender, message or category leaves the vault.
+ static String _learningDebtKey(String owner)=>
+  'waffra_sms_learning_debt_v1_$owner';
+
+ static Future<void> _rememberLearningDebt(String owner,String entryId)async{
+  if(owner.isEmpty||entryId.trim().isEmpty)return;
+  final prefs=await SharedPreferences.getInstance();
+  final key=_learningDebtKey(owner);
+  final old=prefs.getStringList(key)??const <String>[];
+  if(old.contains(entryId))return;
+  if(old.length>=256)throw StateError(
+   'Local learning debt capacity reached; finance remains committed.');
+  final next=<String>[...old,entryId];
+  if(!await prefs.setStringList(key,next)){
+   throw StateError('Local learning debt checkpoint could not be stored');
+  }
+ }
+
+ /// Retry only the *learning* side after an earlier verified money commit.
+ /// It must never invoke commitConfirmedSms, change hashes or ACK a message.
+ /// If SQLCipher is unavailable keep every debt pointer for the next run.
+ static Future<int> _reconcileLearningDebt(
+  String owner,SharedPreferences prefs)async{
+  if(owner.isEmpty)return 0;
+  final key=_learningDebtKey(owner);
+  final debts=(prefs.getStringList(key)??const <String>[])
+   .where((id)=>id.trim().isNotEmpty).toList(growable:false);
+  if(debts.isEmpty)return 0;
+  WaffraProductionFinanceAuthorityBinding? binding;
+  try{
+   binding=await WaffraProductionFinanceAuthorityBinding.bind(
+    installedApp:true,legacy:const WaffraHomeFinancePersistence(),
+    startupRoute:WaffraFinanceRoute.widgetStartup);
+   if(binding.accountsBridge==null)return 0;
+   final witnessed=await binding.authority.load(
+    route:WaffraFinanceRoute.widgetRead);
+   witnessed.finance.requireIntegrity();
+   final raw=witnessed.ledgerRaw;
+   if(raw==null)return 0;
+   final decoded=jsonDecode(raw);
+   if(decoded is! List)return 0;
+   final byId=<String,MoneyEntry>{};
+   for(final row in decoded){
+    if(row is! Map)continue;
+    final id=row['id'];
+    if(id is String&&debts.contains(id)){
+     final record=MoneyEntry.fromJson(Map<String,dynamic>.from(row));
+     if(record.sourceType=='sms')byId[id]=record;
+    }
+   }
+   final store=const WaffraSmsLocalRuleStore();
+   final remaining=<String>[];
+   var restored=0;
+   for(final id in debts){
+    // Process a bounded batch without blocking the next native SMS scan.
+    if(restored>=5){remaining.add(id);continue;}
+    final record=byId[id];
+    if(record==null){remaining.add(id);continue;}
+    try{
+     await store.recordConfirmedFinanceLearning(
+      owner:owner,transactionId:record.id,sourceType:'sms',
+      income:record.income,category:record.category);
+     final hint=WaffraSmsLocalRules.manualCategoryPattern(
+      description:record.title,category:record.category,
+      income:record.income);
+     if(hint!=null){
+      await store.learnReviewedCandidates(owner,[hint]);
+     }
+     restored++;
+    }catch(_){
+     remaining.add(id);
+    }
+   }
+   if(remaining.length!=debts.length){
+    await prefs.setStringList(key,remaining);
+   }
+   return restored;
+  }catch(_){
+   return 0;
+  }finally{
+   await binding?.close();
+  }
+ }
+
+
+
  static Future<Map<String,int>> run()async{
   final stopwatch=Stopwatch()..start();
   const budget=Duration(seconds:35);
@@ -37,6 +125,9 @@ abstract final class WaffraAutoSmsAutoPoster {
      provider:profile.provider,phone:profile.phone,email:profile.email);
    }catch(_){}
   }
+  // A previous post may have committed/ACKed before encrypted learning
+  // became available. Repair only that local observation, never the debit.
+  summary['learningRecovered']=await _reconcileLearningDebt(owner,prefs);
   var ruleStoreReady=false;
   var rules=<WaffraSmsLocalRule>[];
   if(owner.isNotEmpty){
@@ -326,8 +417,11 @@ abstract final class WaffraAutoSmsAutoPoster {
         }
        }
       }catch(_){
-       // The ledger was committed and the native ID acknowledged. Preserve
-       // that authority; the original ledger can be reconciled later.
+       // The ledger was committed and the native ID ACKed. Never repost it.
+       // Save a bounded owner-scoped pointer and rebuild learning from the
+       // current verified ledger on another worker invocation.
+       try{await _rememberLearningDebt(owner,entry.id);}
+       catch(_){summary['learningRecoveryCheckpointFailed']=1;}
       }
       await WaffraAutoSms.notifyCommitted(
        hash:id,amount:parsed.amount!,income:parsed.income,
