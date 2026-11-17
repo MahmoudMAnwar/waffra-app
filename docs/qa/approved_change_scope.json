@@ -117,6 +117,10 @@
     ],
     "test/storage/m183_encrypted_transaction_recycle_test.dart": [
       {
+        "start": "import 'package:shared_preferences/shared_preferences.dart';",
+        "end": "class _LabEncryptedSource extends WaffraProductionFinanceSourceGuard {"
+      },
+      {
         "start": "void main() {",
         "end": null
       }
