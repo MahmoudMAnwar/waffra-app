@@ -243,6 +243,154 @@ CREATE TABLE IF NOT EXISTS $_accountLinks(
     }
   }
 
+  /// Owner-confirmed Delete All moves every verified entry, its receipts and
+  /// original account link to the encrypted 30-day recycle in ONE SQLCipher
+  /// transaction. Existing bank-SMS fingerprints are intentionally retained:
+  /// deleting a ledger does not authorize importing the same SMS again.
+  ///
+  /// The entire batch fails closed for stale source, receipt mismatch,
+  /// independent receipt archive, or any RESTRICT foreign-key dependency.
+  /// Nothing is deleted from the real Android SMS provider.
+  Future<WaffraFinanceSnapshotState> recycleAll({
+    required WaffraFinanceSnapshotState baseline,
+    required DateTime now,
+    required bool userConfirmed,
+  }) async {
+    _requireCandidate();
+    if (!userConfirmed) {
+      throw StateError('Bulk transaction recycle requires owner approval.');
+    }
+    final at = now.toUtc().millisecondsSinceEpoch;
+    if (at < 0 || at > 8640000000000000 - retention.inMilliseconds) {
+      throw ArgumentError('Invalid bulk transaction recycle clock.');
+    }
+    return WaffraExperimentalWriterGate(
+      disposableDirectory: writerDirectory,
+      experimentalEnabled: true,
+    ).withExclusiveAccess(() async {
+      await verifySourceUnderLock();
+      return snapshot.store.transaction(() async {
+        final current = await snapshot.read();
+        if (current.generation != baseline.generation ||
+            current.digest != baseline.digest) {
+          throw StateError('Bulk transaction snapshot changed; reload first.');
+        }
+        final ledger = _decodeLedger(current.values['entries'] as String?);
+        await _requireExactTypedLedger(ledger);
+        if (ledger.isEmpty) return current;
+        await _ensureTables();
+        final vault = WaffraEncryptedReceiptVault(
+          store: snapshot.store, experimentalEnabled: true,
+        );
+        final accountTable = await snapshot.store.customSelect(
+          "SELECT name FROM sqlite_master WHERE type='table' "
+          "AND name='fresh_finance_account_entry_links'",
+        ).get();
+        final activeBlobTable = await snapshot.store.customSelect(
+          "SELECT name FROM sqlite_master WHERE type='table' "
+          "AND name='fresh_finance_receipt_blobs'",
+        ).get();
+        for (var position = 0; position < ledger.length; position++) {
+          final row = ledger[position];
+          final entryId = row['id'] as String;
+          if (entryId.length > 128) {
+            throw StateError('Bulk archive entry identity is invalid.');
+          }
+          await _requireNoOtherArchive(entryId);
+          final occupied = await snapshot.store.customSelect(
+            'SELECT entry_id FROM $_trash WHERE entry_id=?',
+            variables: [Variable.withString(entryId)],
+          ).get();
+          if (occupied.isNotEmpty) {
+            throw StateError('A transaction is already in the recycle bin.');
+          }
+          // The verified vault recomputes every attachment checksum and
+          // supplies encrypted bytes; no UI path or filename is trusted.
+          final receipts = await vault.readAll(entryId);
+          _references(row['receiptPath'], entryId, receipts.length);
+          final source = jsonEncode(row);
+          await snapshot.store.customStatement(
+            'INSERT INTO $_trash(entry_id,source_json,source_sha256,'
+            'original_index,receipt_count,deleted_at_ms,expires_at_ms) '
+            'VALUES (?,?,?,?,?,?,?)',
+            [entryId, source, sha256.convert(utf8.encode(source)).toString(),
+             position, receipts.length, at, at + retention.inMilliseconds],
+          );
+          if (accountTable.isNotEmpty) {
+            final links = await snapshot.store.customSelect(
+              'SELECT account_id,confirmed_iso '
+              'FROM fresh_finance_account_entry_links WHERE entry_id=?',
+              variables: [Variable.withString(entryId)],
+            ).get();
+            if (links.length > 1) {
+              throw StateError('Ambiguous bulk-deleted account link.');
+            }
+            if (links.isNotEmpty) {
+              final account = links.single.read<String>('account_id');
+              final confirmedIso = links.single.read<String>('confirmed_iso');
+              if (DateTime.tryParse(confirmedIso) == null) {
+                throw StateError('Invalid account link timestamp.');
+              }
+              await snapshot.store.customStatement(
+                'INSERT INTO $_accountLinks'
+                '(entry_id,account_id,confirmed_iso,record_sha256) '
+                'VALUES (?,?,?,?)',
+                [entryId, account, confirmedIso,
+                 _accountLinkHash(entryId, account, confirmedIso)],
+              );
+              await snapshot.store.customStatement(
+                'DELETE FROM fresh_finance_account_entry_links '
+                'WHERE entry_id=?', [entryId],
+              );
+            }
+          }
+          for (final receipt in receipts) {
+            await snapshot.store.customStatement(
+              'INSERT INTO $_images(entry_id,position,safe_name,sha256_hex,'
+              'byte_count,encrypted_blob) VALUES (?,?,?,?,?,?)',
+              [entryId, receipt.position, receipt.safeName, receipt.sha256Hex,
+               receipt.bytes.length, receipt.bytes],
+            );
+          }
+          if (activeBlobTable.isNotEmpty) {
+            await snapshot.store.customStatement(
+              'DELETE FROM fresh_finance_receipt_blobs WHERE entry_id=?',
+              [entryId],
+            );
+          } else if (receipts.isNotEmpty) {
+            throw StateError('Receipt BLOB source disappeared during recycle.');
+          }
+          await snapshot.store.customStatement(
+            'DELETE FROM fresh_finance_entries WHERE entry_id=?', [entryId],
+          );
+          final archived = await snapshot.store.customSelect(
+            'SELECT count(*) AS n FROM $_images WHERE entry_id=?',
+            variables: [Variable.withString(entryId)],
+          ).getSingle();
+          if (archived.read<int>('n') != receipts.length) {
+            throw StateError('Bulk receipt archive failed exact count.');
+          }
+        }
+        final next = Map<String, Object?>.from(current.values)
+          ..['entries'] = '[]';
+        final written = await snapshot.commit(
+          expectedGeneration: current.generation,
+          fullFinanceSnapshot: next,
+        );
+        final remaining = await snapshot.store.customSelect(
+          'SELECT count(*) AS n FROM fresh_finance_entries',
+        ).getSingle();
+        if (remaining.read<int>('n') != 0 ||
+            written.values['waffra_sms_hashes_v1'] != null &&
+            jsonEncode(written.values['waffra_sms_hashes_v1']) !=
+             jsonEncode(current.values['waffra_sms_hashes_v1'])) {
+          throw StateError('Bulk recycle changed SMS replay authority.');
+        }
+        return written;
+      });
+    });
+  }
+
   Future<WaffraTransactionRecycleResult> delete({
     required WaffraFinanceSnapshotState baseline,
     required String entryId,
