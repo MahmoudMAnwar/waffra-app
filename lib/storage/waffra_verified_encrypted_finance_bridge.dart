@@ -480,9 +480,6 @@ class WaffraVerifiedEncryptedFinanceBridge {
   /// Delete a fully witnessed ledger without receipts, and clear its SMS
   /// dedupe hashes IN THE SAME SQL transaction. Receipt-bearing finance and
   /// orphan blobs deliberately fail closed until retention is certified.
-  /// Delete a fully witnessed ledger without receipts, and clear its SMS
-  /// dedupe hashes IN THE SAME SQL transaction. Receipt-bearing finance and
-  /// orphan blobs deliberately fail closed until retention is certified.
   Future<WaffraFinanceSnapshotState> deleteAllUnattachedTransactions({
     required WaffraEncryptedHomeWitness baseline,
     required bool userConfirmed,
