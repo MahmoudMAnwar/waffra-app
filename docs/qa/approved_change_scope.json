@@ -119,7 +119,7 @@
     ],
     "lib/storage/waffra_verified_encrypted_finance_bridge.dart": [
       {
-        "start": "  Future<String> exportPortableBackup(",
+        "start": "  /// Restore is permitted ONLY on an already active verified encrypted vault.",
         "end": "  /// Encrypted-only, explicitly authenticated reset route."
       }
     ],
