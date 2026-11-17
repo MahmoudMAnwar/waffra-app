@@ -7425,6 +7425,21 @@
         "No unauthenticated financial read, backup/source switch, auto cash repair, duplicate deletion, or alternate money writer.",
         "Existing SQLCipher verified writer, biometric and backup staging must remain unchanged; all code remains Draft."
       ]
+    },
+    {
+      "id": "ISSUE751-SR-FEE",
+      "issue": "#751 outgoing owner SMS confirmation follow-up",
+      "previous_behavior": "SR fee token unrecognized, marking explicit outgoing SMS pending.",
+      "approved_behavior": "Parse SR fee alias; qualified local/international transfers require beneficiary review and never automatic posting.",
+      "source_paths": [
+        "lib/waffra_bank_sms_facts.dart"
+      ],
+      "test_paths": [
+        "test/outgoing_sms_sr_fee_test.dart"
+      ],
+      "safety_invariants": [
+        "Preserve OTP, foreign fee, malformed precision, and beneficiary review blockers."
+      ]
     }
   ],
   "m1006_restore_handoff": {

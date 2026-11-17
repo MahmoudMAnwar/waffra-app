@@ -2806,3 +2806,7 @@ Separate Draft PR stacked on #650. Fix unverified Home balance display; remove u
 - This is CI wiring only, not a claim of passed M946 on #667 or physical Android, signed APK, SMS, biometric and owner-private archive acceptance.
 
 - M968 follow-up: extend the same stacked-PR base-agnostic trigger to M550 exact-HEAD M385 scope/behavior preflight; both M946 and M550 are mandatory and remain unmodified beyond their PR event filters.
+
+## Issue #751 follow-up: outgoing SMS SR fee confirmation
+Owner supplied a local outgoing SMS using SR for both principal and fee. Reproduced on main 6d9e61fe: owner confirmation false despite explicit debit direction. Accept SR as a SAR fee alias; retain foreign/malformed/OTP blockers and mandatory beneficiary review for qualified outgoing/incoming transfers. Target: draft follow-up PR (number pending API availability). Regression: test/outgoing_sms_sr_fee_test.dart. Device and exact-head CI pending.
+The fee matcher also consumed the line break and misread the following date as malformed precision. Matching fee whitespace now stays on its line. Validation: supplied shape failed before patch; 31 focused tests passed after. PR numbering unavailable through API; release notes will be stamped against the actual source commit without inventing a PR number.
