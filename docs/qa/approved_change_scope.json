@@ -239,11 +239,15 @@
         "end": "    /** Shows only excluded SMS identities"
       },
       {
-        "start": "    private fun markAutomaticallyExcludedOtpLocked(",
-        "end": null
+        "start": "    private fun recordPureOtpExclusionLocked(",
+        "end": "    // M437: Unknown-finance lookup"
       },
       {
         "start": "    fun excludeMessages(context: Context, ids: Set<String>): Boolean =",
+        "end": "    /**"
+      },
+      {
+        "start": "    fun importConsentMonth(context: Context, maxRead: Int = 500): Int {",
         "end": null
       }
     ]
