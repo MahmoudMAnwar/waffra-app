@@ -25,6 +25,10 @@ void main() {
  test('M1033 wallet principal is SAR 882, fee is not principal or .5', () {
   final principal=WaffraSmsCurrencies.originalAmount(walletSms);
   final facts=WaffraBankSmsFactsParser.parse(walletSms);
+  // Bank reference EPY26306... is an identifier, not a foreign currency.
+  expect(WaffraSmsCurrencies.currenciesForMessage(walletSms),{'SAR'});
+  expect(WaffraSmsCurrencies.currenciesForMessage(
+   'الرقم المرجعي: EPY26306LLRVYG7H'),isEmpty);
   expect(principal?.currency,'SAR');
   expect(principal?.amount,882);
   expect(facts.fee,closeTo(0.58,0.000001));
@@ -33,6 +37,13 @@ void main() {
   expect(facts.canAutoPostAsIncomeExpense,isFalse);
   expect(facts.pending,isFalse);
   expect(WaffraSmsCurrencies.requiresReviewForSarLedger(walletSms),isFalse);
+ });
+
+ test('M1033 real foreign action currencies still require review',(){
+  const body='حوالة صادرة\\nالمبلغ: USD 882\\n'
+   'الرقم المرجعي: EPY26306LLRVYG7H';
+  expect(WaffraSmsCurrencies.currenciesForMessage(body),{'USD'});
+  expect(WaffraSmsCurrencies.requiresReviewForSarLedger(body),isTrue);
  });
 
  test('M1033 bank wallet time before full-year date is source verified',(){
