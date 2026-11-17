@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:crypto/crypto.dart';
 import 'package:drift/drift.dart';
 
 import 'waffra_accounts_schema.dart';
@@ -174,6 +176,54 @@ class WaffraAccountsRepository implements WaffraAccountOperations {
     '(transfer_id,from_account_id,to_account_id,amount_minor,occurred_iso,note) '
     'VALUES (?,?,?,?,?,?)',
     [id,fromAccountId,toAccountId,amountMinor,occurredIso,note]);
+   return true;
+  });
+ }
+
+ /// M1032: reverse an incorrect internal transfer using one independent
+ /// idempotent opposite movement. The original remains an immutable audit
+ /// event and no synthetic income/expense or budget charge is created.
+ Future<bool> reverseInternalTransfer({required String originalTransferId,
+  required String reversedIso,required bool userConfirmed})async{
+  await _ready();
+  if(!userConfirmed)throw StateError('Transfer reversal requires approval.');
+  _id(originalTransferId);_when(reversedIso);
+  if(originalTransferId.startsWith('reversal-')){
+   throw StateError('A transfer reversal cannot itself be reversed.');
+  }
+  final reversalId='reversal-${sha256.convert(
+   utf8.encode(originalTransferId))}';
+  return db.transaction(()async{
+   final rows=await db.customSelect(
+    'SELECT from_account_id,to_account_id,amount_minor FROM '
+    'fresh_finance_internal_transfers WHERE transfer_id=?',
+    variables:[Variable.withString(originalTransferId)]).get();
+   if(rows.length!=1)throw StateError('Original transfer is unavailable.');
+   final original=rows.single;
+   final from=original.read<String>('to_account_id');
+   final to=original.read<String>('from_account_id');
+   final amount=original.read<int>('amount_minor');
+   final previous=await db.customSelect(
+    'SELECT from_account_id,to_account_id,amount_minor,note FROM '
+    'fresh_finance_internal_transfers WHERE transfer_id=?',
+    variables:[Variable.withString(reversalId)]).get();
+   if(previous.isNotEmpty){
+    if(previous.length!=1||
+       previous.single.read<String>('from_account_id')!=from||
+       previous.single.read<String>('to_account_id')!=to||
+       previous.single.read<int>('amount_minor')!=amount||
+       previous.single.read<String>('note')!=originalTransferId){
+     throw StateError('Transfer reversal identity was altered.');
+    }
+    return false;
+   }
+   await _activeAccount(from);
+   await _activeAccount(to);
+   await db.customStatement(
+    'INSERT INTO fresh_finance_internal_transfers '
+    '(transfer_id,from_account_id,to_account_id,amount_minor,occurred_iso,note) '
+    'VALUES (?,?,?,?,?,?)',
+    [reversalId,from,to,amount,reversedIso,originalTransferId]);
    return true;
   });
  }

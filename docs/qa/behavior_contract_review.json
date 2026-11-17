@@ -8,8 +8,29 @@
   "review_policy": "Owner-approved narrow SMS reliability/security/finance changes; tests prior to code. No automated production proof without Android UAT.",
   "contracts": [
     {
+      "id": "M1032-TRANSFER-REVERSAL-AND-BACKGROUND-REVIEW-KIND",
+      "issue": "Issue #751",
+      "previous_behavior": "Transfers have no correction route; background notices ignore matched local rules and show generic uncertain.",
+      "approved_behavior": "Explicit confirmed equal-and-opposite transfer with deterministic ID and preserved original, financial net worth unchanged. Native SMS review alerts consult the same local matching direction, but do not auto-post on it.",
+      "source_paths": [
+        "lib/storage/waffra_accounts_repository.dart",
+        "lib/storage/waffra_verified_accounts_api.dart",
+        "lib/waffra_home_verified_transfer_cards.part.dart",
+        "lib/waffra_auto_sms_autopost.part.dart"
+      ],
+      "test_paths": [
+        "test/storage/m440_accounts_repository_test.dart",
+        "test/m1032_outgoing_sms_owner_review_gate_test.dart"
+      ],
+      "safety_invariants": [
+        "Original historical transfer is immutable",
+        "Only one reversal per transfer ID",
+        "Background classification cannot create an automatic finance entry"
+      ]
+    },
+    {
       "id": "M1032-ACCOUNT-TRANSACTION-RECYCLE-ATOMICITY",
-      "issue": "#751",
+      "issue": "Issue #751",
       "previous_behavior": "Transaction recycle deleted fresh_finance_entries while a RESTRICT account link referenced it; empty account archiving could hide active recurring defaults; Delete All could not remove linked entries.",
       "approved_behavior": "Archive original account association with entry/invoices within one SQLCipher transaction and reattach exact account on restore. Block archive while any recurring default or recoverable transaction references account. Delete All without invoices removes typed account associations in the same transaction.",
       "source_paths": [

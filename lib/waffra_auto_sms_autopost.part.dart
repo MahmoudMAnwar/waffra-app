@@ -74,7 +74,8 @@ abstract final class WaffraAutoSmsAutoPoster {
    if(id is String){
     final kind=body is String?
      (WaffraBankSmsFactsParser.reviewSuggestedKind(
-      body:body,sensitiveOtp:candidate['sensitiveOtp']==true)??
+      body:body,localKind:localReviewKinds[id],
+      sensitiveOtp:candidate['sensitiveOtp']==true)??
       'uncertain'):'uncertain';
     // A classification is not a verified financial commit. Every suggested
     // transaction, including transfers, still opens explicit user review.
@@ -109,6 +110,7 @@ abstract final class WaffraAutoSmsAutoPoster {
      body:body,sender:sender,bankKind:kind,custom:rules,
      nativeSensitiveOtp:row['sensitiveOtp']==true,
      matchedRules:fourWay);
+    if(rule!=null)localReviewKinds[id]=rule.resolvedKind;
     if(rule?.resolvedKind=='excluded'){
      // The exact native fingerprint goes into the durable 30-day excluded
      // ledger, not just a transient acknowledge(). No repeat after rescan.

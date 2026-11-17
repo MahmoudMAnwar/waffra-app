@@ -42,6 +42,21 @@ void main() {
   await expectLater(repo(enabled:false).balances(),throwsA(isA<StateError>()));
  });
 
+ test('M1032 reverse transfer is idempotent, two-sided, and keeps original audit',()async{
+  await bootstrap();await create('a',500000);await create('b',200000);
+  await repo().transfer(id:'old-transfer',fromAccountId:'a',toAccountId:'b',
+   amountMinor:190000,occurredIso:'2026-11-01T08:46:00',userConfirmed:true);
+  expect({for(final a in await repo().balances())a.id:a.balanceMinor},
+   {'a':310000,'b':390000});
+  expect(await repo().reverseInternalTransfer(originalTransferId:'old-transfer',
+   reversedIso:'2026-11-17T09:00:00',userConfirmed:true),isTrue);
+  expect(await repo().reverseInternalTransfer(originalTransferId:'old-transfer',
+   reversedIso:'2026-11-17T09:02:00',userConfirmed:true),isFalse);
+  expect({for(final a in await repo().balances())a.id:a.balanceMinor},
+   {'a':500000,'b':200000});
+  expect(await count('fresh_finance_internal_transfers'),2);
+  expect(await count('fresh_finance_entries'),0);
+ });
  test('M440 internal SAR transfer conserves total and is never income/expense',()async{
   await bootstrap();await create('bank',500000);await create('cash',200000);
   expect(await repo().transfer(id:'move1',fromAccountId:'bank',toAccountId:'cash',

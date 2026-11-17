@@ -1,3 +1,8 @@
+[M1032 / VERIFIED TRANSFER REVERSAL AND BACKGROUND REVIEW RULES]
+- Added explicit owner-confirmed, deterministic-ID reversal of internal two-sided transfers, with original immutable audit history preserved. Net worth and income/expense records unchanged.
+- Background review notification now uses already matched local income/expense/transfer/exclusion suggestion when bank facts are uncertain; suggestions never authorize money posting.
+- Resolved M183 test Drift import and recurring typed-table fixture and M550 contract issue formatting.
+
 [M1032 / ACCOUNT-LINKED RECYCLE AND SAFE DELETE ALL]
 - Added encrypted immutable association archive and exact account reattachment on transaction Undo, ahead of FK-restricted ledger delete and within one writer lock/SQL transaction; typed balances now roll back correctly.
 - Account archive blocks recurring account defaults and pending deleted transaction account links even when balance is zero.

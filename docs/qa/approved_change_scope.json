@@ -17,22 +17,27 @@
     "11. M1031 persist owner-scoped encrypted post-commit learning evidence for manual/SMS income/expense and prevent conflicting learned financial directions",
     "12. M1031 accurately display per-source verified encrypted learning events alongside distinct count of reusable matching rules",
     "12. Fix all 11 CI failing legacy positive source contracts on PR #749 without weakening SAR currency gate, verified SMS v2 identity, post-commit learning or ACK safety.",
-    "M1032 Stage 3/4/11: account-linked delete+undo atomic archive, recurring-bound account archive guard and safe verified no-receipt Delete All account links"
+    "M1032 Stage 3/4/11: account-linked delete+undo atomic archive, recurring-bound account archive guard and safe verified no-receipt Delete All account links",
+    "M1032 stages 5 and 7: idempotent reversing transfer with verified two-account posting, local-rule-kind review notifications in background"
   ],
   "allowed_changed_files": [
-    "lib/storage/waffra_encrypted_transaction_recycle.dart",
-    "lib/storage/waffra_accounts_repository.dart",
-    "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
-    "test/storage/m183_encrypted_transaction_recycle_test.dart",
-    "test/m1031_sms_unified_review_contract_test.dart",
+    "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
-    "docs/WAFFRA_REQUIREMENTS.md",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "scripts/qa/m946_full_app_smoke_matrix.py",
+    "lib/storage/waffra_accounts_repository.dart",
+    "lib/storage/waffra_encrypted_transaction_recycle.dart",
+    "lib/storage/waffra_verified_accounts_api.dart",
+    "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
+    "lib/waffra_auto_sms_autopost.part.dart",
     "lib/waffra_bank_sms_facts.dart",
     "lib/waffra_home_sms_confirmation.part.dart",
-    "test/m1032_outgoing_sms_owner_review_gate_test.dart"
+    "lib/waffra_home_verified_transfer_cards.part.dart",
+    "scripts/qa/m946_full_app_smoke_matrix.py",
+    "test/m1031_sms_unified_review_contract_test.dart",
+    "test/m1032_outgoing_sms_owner_review_gate_test.dart",
+    "test/storage/m183_encrypted_transaction_recycle_test.dart",
+    "test/storage/m440_accounts_repository_test.dart"
   ],
   "allowed_workflow_changes": [],
   "approved_deleted_files": [],
@@ -77,7 +82,7 @@
     ],
     "lib/waffra_auto_sms_autopost.part.dart": [
       {
-        "start": " static Future<Map<String,int>> run()async{",
+        "start": "Future<Map<String,int>>",
         "end": null
       }
     ],
@@ -455,7 +460,7 @@
     ],
     "lib/storage/waffra_accounts_repository.dart": [
       {
-        "start": " Future<void> archiveEmptyAccount({required String id,",
+        "start": "class WaffraAccountsRepository implements WaffraAccountOperations {",
         "end": null
       }
     ],
@@ -474,6 +479,24 @@
     "test/m1031_sms_unified_review_contract_test.dart": [
       {
         "start": "void main(){",
+        "end": null
+      }
+    ],
+    "lib/storage/waffra_verified_accounts_api.dart": [
+      {
+        "start": "class WaffraVerifiedAccountsApi",
+        "end": null
+      }
+    ],
+    "lib/waffra_home_verified_transfer_cards.part.dart": [
+      {
+        "start": "extension _WaffraHomeVerifiedTransferCards on _HomeScreenState {",
+        "end": null
+      }
+    ],
+    "test/storage/m440_accounts_repository_test.dart": [
+      {
+        "start": "void main() {",
         "end": null
       }
     ]

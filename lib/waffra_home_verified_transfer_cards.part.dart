@@ -12,6 +12,38 @@ extension _WaffraHomeVerifiedTransferCards on _HomeScreenState {
   if(name.toLowerCase().contains(label.toLowerCase()))return name;
   return '${label} • ${name}';
  }
+ /// A prior transfer is immutable; corrections are opposite signed
+ /// two-account movements, not in-place amount edits.
+ Future<void> _m1032ReverseTransfer(WaffraInternalTransferHistory movement)async{
+  if(movement.id.startsWith('reversal-'))return;
+  final approved=await confirmDeletion(
+   waffraIsEnglish?'Reverse this internal transfer?':'عكس التحويل بين حساباتي؟',
+   waffraIsEnglish?
+    'Create one equal and opposite transfer. The original stays in history. A bank fee, if any, will not be reversed automatically.':
+    'سيُضاف تحويل عكسي بنفس المبلغ بين الحسابين، مع إبقاء العملية الأصلية في السجل. الرسوم البنكية لا تنعكس تلقائيًا.');
+  if(approved!=true||!mounted)return;
+  try{
+   await _ensureFinanceBound();
+   final bridge=_financeBinding?.accountsBridge;
+   if(bridge==null)throw StateError('Verified account bridge unavailable');
+   final api=WaffraVerifiedAccountsApi(bridge:bridge);
+   await api.balances();
+   final reversed=await api.reverseInternalTransfer(
+    originalTransferId:movement.id,
+    reversedIso:DateTime.now().toUtc().toIso8601String(),
+    userConfirmed:true);
+   _m648InvalidateTransfers();
+   await _m467RefreshHomeAccounts();
+   if(mounted)snackSuccess(context,waffraIsEnglish?
+    (reversed?'Transfer reversal saved':'Transfer was already reversed'):
+    (reversed?'تم تسجيل التحويل العكسي':'تم عكس التحويل مسبقًا'));
+  }catch(error){
+   if(mounted)snack(context,waffraIsEnglish?
+    'Could not verify the transfer reversal. No duplicate was posted.':
+    'تعذر تأكيد التحويل العكسي. لم تُسجّل عملية مكررة.',isError:true);
+  }
+ }
+
  /// M647: source and destination are separate verified account identities.
  /// Presentation-only: no money write, no inferred sender, no extra expense.
  Widget _m647TransferCard(WaffraInternalTransferHistory t,{bool compact=false}){
@@ -108,6 +140,14 @@ extension _WaffraHomeVerifiedTransferCards on _HomeScreenState {
        style:TextStyle(fontSize:12,color:textColor))),
      ]),
     ],
+    if(!t.id.startsWith('reversal-'))
+     Align(alignment:AlignmentDirectional.centerStart,
+      child:TextButton.icon(
+       key:Key('m1032-reverse-transfer-'+t.id),
+       onPressed:WaffraHaptics.tap(()=>_m1032ReverseTransfer(t)),
+       icon:const Icon(Icons.undo_rounded,size:17),
+       label:WaffraText(waffraIsEnglish?
+        'Reverse transfer':'عكس التحويل'))),
     if(originalSms!=null&&originalSms.trim().isNotEmpty)
      Align(alignment:AlignmentDirectional.centerStart,
       child:TextButton.icon(

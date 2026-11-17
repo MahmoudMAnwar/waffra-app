@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:drift/drift.dart';
 
 import 'package:waffra/storage/waffra_atomic_finance_snapshot.dart';
 import 'package:waffra/storage/legacy_snapshot_preflight.dart';
@@ -331,9 +332,9 @@ void main() {
       userConfirmed:true);
     await store.customStatement(
       'INSERT INTO fresh_finance_recurring '
-      '(recurring_id,title,amount_minor,is_income,due_day,source_json) '
-      'VALUES(?,?,?,?,?,?)',
-      ['rec-one','Bill',1000,0,24,
+      '(recurring_id,amount_minor,is_income,due_day,source_json) '
+      'VALUES(?,?,?,?,?)',
+      ['rec-one',1000,0,24,
        '{"id":"rec-one","title":"Bill","amount":10,"income":false,"day":24}']);
     await store.customStatement(
       'INSERT INTO fresh_finance_recurring_account_defaults '
