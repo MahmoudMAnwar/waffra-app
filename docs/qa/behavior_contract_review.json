@@ -16,7 +16,8 @@
         "native/WaffraAutoSmsStore.kt"
       ],
       "test_paths": [
-        "test/m1032_outgoing_sms_owner_review_gate_test.dart"
+        "test/m1032_outgoing_sms_owner_review_gate_test.dart",
+        "test/m615_m618_sms_review_retention_perf_contract_test.dart"
       ],
       "safety_invariants": [
         "Never delete recoverable labels solely due to wall clock jumps",
