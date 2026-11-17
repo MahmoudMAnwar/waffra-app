@@ -119,6 +119,10 @@
     ],
     "lib/storage/waffra_verified_encrypted_finance_bridge.dart": [
       {
+        "start": "  Future<WaffraFinanceSnapshotState> deleteAllUnattachedTransactions({",
+        "end": "  /// Combined recurring payment:"
+      },
+      {
         "start": "  /// Restore is permitted ONLY on an already active verified encrypted vault.",
         "end": "  /// Encrypted-only, explicitly authenticated reset route."
       }
