@@ -129,6 +129,10 @@ class WaffraSmsRuleCandidateIndex {
 /// Approved keywords only. Never suggest bank identifiers, long numbers,
 /// statement balances, OTPs, account/card suffixes or unredacted SMS bodies.
 abstract final class WaffraSmsLocalRules {
+ // M1032 #751: bounded, backwards-compatible V1 owner-secure rule capacity.
+ // Existing 100-rule archives remain readable; no AutoPost grants are inferred.
+ static const int maxStoredRules=256;
+
  static String normalized(String text)=>text.toLowerCase()
   .replaceAll(RegExp(r'[\u200e\u200f\u061c\u064B-\u065F\u0670]'),'')
   .replaceAll(RegExp(r'[أإآٱ]'),'ا')
@@ -882,11 +886,28 @@ abstract final class WaffraSmsLocalRules {
    (rule.id.startsWith('smart_')||rule.id.startsWith('manual_'))&&
    rule.resolvedKind==candidate.resolvedKind&&
    normalized(rule.sender)==normalized(candidate.sender)&&
-   rule.accountId==candidate.accountId);
+   rule.accountId==candidate.accountId&&
+   <String>{...rule.keywords,...candidate.keywords}.length<=12);
   if(index<0){
-   if(existing.any((r)=>r.id==candidate.id))return existing;
-   if(existing.length>=100)return existing;
-   return List<WaffraSmsLocalRule>.unmodifiable([...existing,candidate]);
+   if(existing.length>=maxStoredRules)return existing;
+   // A filled 12-phrase learned bucket does not swallow the next verified
+   // merchant. Start an independent safe review-only bucket, with a stable
+   // collision-free identifier if an old V1 bucket already owns its ID.
+   var appended=candidate;
+   if(existing.any((r)=>r.id==candidate.id)){
+    final identity=sha256.convert(utf8.encode(jsonEncode([
+     candidate.id,candidate.resolvedKind,candidate.sender,
+     candidate.category,candidate.keywords,
+    ]))).toString().substring(0,12);
+    final prefix=candidate.id.length>64?
+     candidate.id.substring(0,64):candidate.id;
+    appended=WaffraSmsLocalRule.fromJson(<String,dynamic>{
+     ...candidate.toJson(),'id':'${prefix}_$identity',
+    });
+    if(existing.any((r)=>r.id==appended.id))return existing;
+   }
+   validate(appended);
+   return List<WaffraSmsLocalRule>.unmodifiable([...existing,appended]);
   }
   final current=existing[index];
   final combined=<String>{...current.keywords,...candidate.keywords};
@@ -1011,7 +1032,7 @@ class WaffraSmsLocalRuleStore {
    WaffraSmsLocalRules.validate(rule);
    rules.add(rule);
   }
-  if(rules.length>100||rules.map((e)=>e.id).toSet().length!=rules.length){
+  if(rules.length>WaffraSmsLocalRules.maxStoredRules||rules.map((e)=>e.id).toSet().length!=rules.length){
    throw const FormatException('Local rule store failed validation');
   }
   return rules;
@@ -1030,7 +1051,7 @@ class WaffraSmsLocalRuleStore {
   if(raw==null||raw.isEmpty)return const [];
   final decoded=jsonDecode(raw);
   if(decoded is! List||decoded.length>5||
-     decoded.any((e)=>e is! String||e.length>128000)){
+     decoded.any((e)=>e is! String||e.length>512000)){
    throw const FormatException('Corrupt encrypted SMS rule revision history');
   }
   return decoded.cast<String>();
@@ -1044,7 +1065,7 @@ class WaffraSmsLocalRuleStore {
    if(history.isEmpty)return null;
    final previous=history.last;
    final parsed=jsonDecode(previous);
-   if(parsed is! List||parsed.length>100){
+   if(parsed is! List||parsed.length>WaffraSmsLocalRules.maxStoredRules){
     throw const FormatException('Invalid prior SMS rules');
    }
    final restored=<WaffraSmsLocalRule>[];
@@ -1070,7 +1091,7 @@ class WaffraSmsLocalRuleStore {
   });
 
  Future<void> _writeUnlocked(String owner,List<WaffraSmsLocalRule> rules)async{
-  if(rules.length>100||rules.map((e)=>e.id).toSet().length!=rules.length){
+  if(rules.length>WaffraSmsLocalRules.maxStoredRules||rules.map((e)=>e.id).toSet().length!=rules.length){
    throw const FormatException('Too many or duplicate rules');
   }
   for(final rule in rules)WaffraSmsLocalRules.validate(rule);
@@ -1169,7 +1190,7 @@ class WaffraSmsLocalRuleStore {
      payload['owner'] is! String||
      !RegExp(r'^[a-f0-9]{64}$').hasMatch(payload['owner'] as String)||
      payload['rules'] is! List||
-     (payload['rules'] as List).length>100){
+     (payload['rules'] as List).length>WaffraSmsLocalRules.maxStoredRules){
    throw const FormatException('Invalid owner-scoped portable SMS rules');
   }
   final parsed=<WaffraSmsLocalRule>[];
@@ -1452,7 +1473,7 @@ class WaffraSmsLocalRuleStore {
      (existing.resolvedKind!=candidate.resolvedKind||
       existing.category!=candidate.category));
     if(overlap)conflict++;
-    else if(before.length>=100||
+    else if(before.length>=WaffraSmsLocalRules.maxStoredRules||
      before.any((r)=>!r.autoPost&&!r.matchAll&&
       r.resolvedKind==candidate.resolvedKind&&
       r.sender==candidate.sender&&
