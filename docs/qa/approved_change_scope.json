@@ -73,7 +73,7 @@
         "end": "   // A type selection in compact review is only a requested correction;"
       },
       {
-        "start": "         if(!canConfirm)Padding(",
+        "start": "        if(!canConfirm)Padding(",
         "end": "        // Two readable actions on the first row"
       }
     ],
