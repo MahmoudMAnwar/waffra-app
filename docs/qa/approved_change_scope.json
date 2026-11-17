@@ -244,7 +244,7 @@
       },
       {
         "start": "    fun excludeMessages(context: Context, ids: Set<String>): Boolean =",
-        "end": "    /**"
+        "end": "    fun acknowledgeCompletedTransfer(context: Context, ids: Set<String>): Boolean ="
       },
       {
         "start": "    fun importConsentMonth(context: Context, maxRead: Int = 500): Int {",
