@@ -1107,72 +1107,101 @@ class BankParser {
  }
 }
 DateTime? bankSmsDate(String raw, {DateTime? referenceDate}) {
- final normalized=digits(raw).replaceAll(RegExp(r'[\u200e\u200f\u061c]'),'')
-  .replaceAll('\u00a0',' ');
- final iso=RegExp(r'\b(\d{4})[-/](\d{1,2})[-/](\d{1,2})\s+(\d{1,2}):(\d{2})\b').firstMatch(normalized);
- DateTime? checked(int year,int month,int day,int hour,int minute){
+ final normalized=_waffraBankSmsTimestampText(raw);
+ // The source SMS must contain a complete date AND hour/minute; receivedAt
+ // is never substituted into a bank transaction's ledger timestamp.
+ final iso=RegExp(
+  r'\b(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})(?:\s+|[Tt])(\d{1,2}):(\d{2})(?::(\d{2}))?(?![:\d])\b'
+ ).firstMatch(normalized);
+ DateTime? checked(int year,int month,int day,int hour,int minute,
+   [int second=0]){
   if(year<2000||year>2100||month<1||month>12||day<1||day>31||
-     hour<0||hour>23||minute<0||minute>59)return null;
-  final date=DateTime(year,month,day,hour,minute);
-  return date.year==year&&date.month==month&&date.day==day?date:null;
+     hour<0||hour>23||minute<0||minute>59||
+     second<0||second>59)return null;
+  final date=DateTime(year,month,day,hour,minute,second);
+  return date.year==year&&date.month==month&&date.day==day&&
+   date.hour==hour&&date.minute==minute&&date.second==second?date:null;
  }
- // M1033 #754: Saudi wallet messages may put HH:mm BEFORE DD-MM-YYYY.
- // This is a full-year, explicit timestamp, not an inferred SMS receive date.
+ // Complete full-year, 24-hour messages: HH:mm DD-MM-YYYY.
+ // This is not an arrival-time fallback or a guess about a two-digit year.
  final timeFirst=RegExp(
-  r'\b(\d{1,2}):(\d{2})[ \t]+(\d{1,2})[-/](\d{1,2})[-/](\d{4})\b'
+  r'\b(\d{1,2}):(\d{2})(?::(\d{2}))?\s+(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})\b'
  ).firstMatch(normalized);
  if(timeFirst!=null){
   final hour=int.tryParse(timeFirst.group(1)!),
    minute=int.tryParse(timeFirst.group(2)!),
-   day=int.tryParse(timeFirst.group(3)!),
-   month=int.tryParse(timeFirst.group(4)!),
-   year=int.tryParse(timeFirst.group(5)!);
-  if(hour==null||minute==null||day==null||month==null||year==null)return null;
-  return checked(year,month,day,hour,minute);
+   second=int.tryParse(timeFirst.group(3)??'0'),
+   day=int.tryParse(timeFirst.group(4)!),
+   month=int.tryParse(timeFirst.group(5)!),
+   year=int.tryParse(timeFirst.group(6)!);
+  if(hour==null||minute==null||second==null||
+     day==null||month==null||year==null)return null;
+  return checked(year,month,day,hour,minute,second);
  }
  if(iso!=null){
   final y=int.tryParse(iso.group(1)!),m=int.tryParse(iso.group(2)!),
    d=int.tryParse(iso.group(3)!),h=int.tryParse(iso.group(4)!),
-   min=int.tryParse(iso.group(5)!);
-  return y==null||m==null||d==null||h==null||min==null?
-   null:checked(y,m,d,h,min);
+   min=int.tryParse(iso.group(5)!),
+   sec=int.tryParse(iso.group(6)??'0');
+  return y==null||m==null||d==null||h==null||min==null||sec==null?
+   null:checked(y,m,d,h,min,sec);
  }
- // M1011: do not parse a plausible DD/MM/YYYY substring within a
- // malformed three-digit day (e.g. 318-11-2026 -> 18-11-2026).
- // A missing trustworthy source timestamp requires explicit user choice.
- final match=RegExp(r'\b(\d{1,2})[/-](\d{1,2})[/-](\d{1,4})\s+(\d{1,2}):(\d{2})').firstMatch(normalized);
+ // Reject substrings of malformed longer digit runs. Do not infer a date
+ // from reference numbers, fees, SMS receipt metadata, or today's date.
+ final match=RegExp(
+  r'\b(\d{1,2})[-/.](\d{1,2})[-/.](\d{1,4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?(?![:\d])\b'
+ ).firstMatch(normalized);
  if(match==null)return null;
- final a=int.tryParse(match.group(1)!),month=int.tryParse(match.group(2)!),
-  c=int.tryParse(match.group(3)!),hour=int.tryParse(match.group(4)!),
-  minute=int.tryParse(match.group(5)!);
- if(a==null||month==null||c==null||hour==null||minute==null)return null;
+ final a=int.tryParse(match.group(1)!),
+  month=int.tryParse(match.group(2)!),
+  c=int.tryParse(match.group(3)!),
+  hour=int.tryParse(match.group(4)!),
+  minute=int.tryParse(match.group(5)!),
+  second=int.tryParse(match.group(6)??'0');
+ if(a==null||month==null||c==null||hour==null||
+    minute==null||second==null)return null;
  // DD/MM/YY is common for MADA. Two-digit YY/MM/DD also appears in
- // transfers. The word "transfer" alone does NOT establish that order.
- final dmy=checked(c<100?2000+c:c,month,a,hour,minute);
- final isTransfer=RegExp(r'حوال[ةه]|تحويل|transfer',caseSensitive:false).hasMatch(raw);
+ // transfers. A transfer keyword does NOT prove which ordering is correct.
+ final dmy=checked(c<100?2000+c:c,month,a,hour,minute,second);
+ final isTransfer=RegExp(
+  r'حوال[ةه]|تحويل|transfer',caseSensitive:false).hasMatch(raw);
  if(!isTransfer)return dmy;
- final ymd=checked(a<100?2000+a:a,month,c,hour,minute);
+ final ymd=checked(a<100?2000+a:a,month,c,hour,minute,second);
  if(dmy==null)return ymd;
  if(ymd==null)return dmy;
  if(dmy==ymd)return dmy;
- // A current-year source is more likely than one several years away.
- // Otherwise reject the ambiguous date instead of fabricating a timestamp.
+ // Keep ambiguous 2-digit year transfers unverified. The caller's
+ // referenceDate can break a tie only under the existing strict policy.
  final ref=referenceDate??DateTime.now();
  final dmyDistance=dmy.difference(ref).inDays.abs();
  final ymdDistance=ymd.difference(ref).inDays.abs();
- // Two dates within the plausible import-history window are ambiguous:
- // 26/10/25 could mean 25 Oct 2026 or 26 Oct 2025. Never silently
- // recast last year's banking transaction as today's or vice versa.
  if(dmyDistance<=730&&ymdDistance<=730)return null;
  if(dmyDistance<=180&&ymdDistance>540)return dmy;
  if(ymdDistance<=180&&dmyDistance>540)return ymd;
  return null;
 }
+
+/// Normalize only textual artifacts in the original Android SMS. A visible
+/// date may include bidi isolates or nonbreaking spaces not shown on screen.
+/// Adjacent labeled fields are joined without skipping an unrelated field.
+String _waffraBankSmsTimestampText(String raw){
+ final normalized=digits(raw)
+  .replaceAll(RegExp(r'[\u200b-\u200f\u061c\u202a-\u202e\u2060\u2066-\u2069\ufeff]'),'')
+  .replaceAll(RegExp(r'[\u00a0\u2007\u202f]'),' ')
+  .replaceAll(RegExp(r'[\u2028\u2029]'),'\n');
+ return normalized
+  .replaceAllMapped(RegExp(
+   r'(\d{4})\s+(?:الوقت|الساعة|time)\s*[:：]?\s*(?=\d{1,2}:\d{2})',
+   caseSensitive:false),(m)=>m.group(1)!+' ')
+  .replaceAllMapped(RegExp(
+   r'(\d{1,2}:\d{2}(?::\d{2})?)\s+(?:التاريخ|تاريخ|date)\s*[:：]?\s*(?=\d{1,2}[-/.]\d{1,2}[-/.]\d{4})',
+   caseSensitive:false),(m)=>m.group(1)!+' ');
+}
+
 bool bankSmsHasUnverifiedTimestamp(String raw,{DateTime? referenceDate}){
- final normalized=digits(raw).replaceAll(RegExp(r'[\u200e\u200f\u061c]'),'')
-  .replaceAll('\u00a0',' ');
+ final normalized=_waffraBankSmsTimestampText(raw);
  final hasExplicit=RegExp(
-  r'\b(?:(?:\d{4}[-/]\d{1,2}[-/]\d{1,2}|\d{1,2}[-/]\d{1,2}[-/]\d{1,4})\s+\d{1,2}:\d{2}|\d{1,2}:\d{2}[ \t]+\d{1,2}[-/]\d{1,2}[-/]\d{4})\b'
+  r'\b(?:(?:\d{4}[-/.]\d{1,2}[-/.]\d{1,2}|\d{1,2}[-/.]\d{1,2}[-/.]\d{1,4})(?:\s+|[Tt])\d{1,2}:\d{2}(?::\d{2})?|\d{1,2}:\d{2}(?::\d{2})?\s+\d{1,2}[-/.]\d{1,2}[-/.]\d{4})\b'
  ).hasMatch(normalized);
  return hasExplicit&&bankSmsDate(raw,referenceDate:referenceDate)==null;
 }
