@@ -1,6 +1,6 @@
+import 'package:drift/drift.dart';
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
-import 'package:drift/drift.dart';
 
 import 'waffra_accounts_schema.dart';
 import 'waffra_account_details_schema.dart';

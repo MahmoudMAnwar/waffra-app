@@ -110,7 +110,9 @@ CREATE TABLE IF NOT EXISTS $_images(
     await snapshot.store.customStatement('''
 CREATE TABLE IF NOT EXISTS $_accountLinks(
   entry_id TEXT PRIMARY KEY NOT NULL REFERENCES $_trash(entry_id) ON DELETE RESTRICT,
-  account_id TEXT NOT NULL REFERENCES fresh_finance_money_accounts(account_id) ON DELETE RESTRICT,
+  account_id TEXT NOT NULL,
+  -- The account may be absent in older standalone finance vaults. Its
+  -- identity is SHA-attested and the live SAR account is checked on Undo.
   confirmed_iso TEXT NOT NULL,
   record_sha256 TEXT NOT NULL
 )''');
