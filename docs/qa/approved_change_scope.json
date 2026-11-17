@@ -73,6 +73,10 @@
         "end": "   // A type selection in compact review is only a requested correction;"
       },
       {
+        "start": "   Future<void> selectReviewCategory(StateSetter redraw,BuildContext dialog)async{",
+        "end": "   Future<void> selectAccountBeforeYes(StateSetter redraw,BuildContext dialog)async{"
+      },
+      {
         "start": "        if(!canConfirm)Padding(",
         "end": "        // Two readable actions on the first row"
       }
