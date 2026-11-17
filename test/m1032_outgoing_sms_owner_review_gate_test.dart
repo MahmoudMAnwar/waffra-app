@@ -207,8 +207,8 @@ void main(){
   expect(recycle,contains('Future<WaffraFinanceSnapshotState> recycleAll('));
   expect(recycle,contains('await _requireExactTypedLedger(ledger);'));
   expect(recycle,contains('await vault.readAll(entryId)'));
-  expect(recycle,contains('INSERT INTO $_accountLinks'));
-  expect(recycle,contains('INSERT INTO $_images'));
+  expect(recycle,contains('INSERT INTO '+r'$_accountLinks'));
+  expect(recycle,contains('INSERT INTO '+r'$_images'));
   expect(recycle,isNot(contains("..['waffra_sms_hashes_v1'] = <String>[]")));
  });
 
