@@ -176,4 +176,33 @@ void main(){
     throwsFormatException);
  });
 
+ test('M1032 Delete All uses recoverable archive and retains SMS anti-replay',(){
+  final bridge=File('lib/storage/waffra_verified_encrypted_finance_bridge.dart')
+   .readAsStringSync();
+  final authority=File('lib/storage/waffra_verified_finance_authority.dart')
+   .readAsStringSync();
+  final ui=File('lib/waffra_home_delete_all_transactions.part.dart')
+   .readAsStringSync();
+  final recycle=File('lib/storage/waffra_encrypted_transaction_recycle.dart')
+   .readAsStringSync();
+  expect(bridge,contains('.recycleAll('));
+  expect(authority,contains(
+   "witness.snapshot.values['waffra_sms_hashes_v1'] ?? const <String>[]"));
+  expect(ui,contains('المحذوفات المشفرة لمدة 30 يومًا'));
+  expect(ui,isNot(contains('smsHashes.clear();')));
+  expect(recycle,contains('Future<WaffraFinanceSnapshotState> recycleAll('));
+  expect(recycle,contains('await _requireExactTypedLedger(ledger);'));
+  expect(recycle,contains('await vault.readAll(entryId)'));
+  expect(recycle,contains('INSERT INTO $_accountLinks'));
+  expect(recycle,contains('INSERT INTO $_images'));
+  expect(recycle,isNot(contains("..['waffra_sms_hashes_v1'] = <String>[]")));
+ });
+
+ test('M1032 rule UI exposes bounded capacity without silently changing older rules',(){
+  final ui=File('lib/waffra_sms_rule_settings_page.dart').readAsStringSync();
+  expect(ui,contains("Key('m1032-rule-capacity-count')"));
+  expect(ui,contains('saved.length>=WaffraSmsLocalRules.maxStoredRules'));
+  expect(WaffraSmsLocalRules.maxStoredRules,256);
+ });
+
 }
