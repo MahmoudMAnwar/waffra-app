@@ -6,6 +6,8 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
+import android.provider.Settings
 import android.provider.Telephony
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
@@ -46,6 +48,21 @@ object WaffraAutoSmsStore {
     private const val excludedInfoCleanupAt = "excluded_labels_last_cleanup_v1"
     private const val excludedLabelRetentionMs = 30L * 24 * 60 * 60 * 1000
     private const val excludedCleanupCadenceMs = 24L * 60 * 60 * 1000
+    // M1032 #751: retention must never be shortened by manually moving
+    // the wall clock forward. A boot-specific monotonic witness is required.
+    // If boot count is unavailable or a reboot occurred, restart the trusted
+    // retention window; never delete a recoverable label from wall time alone.
+    private fun currentRetentionBoot(context: Context): Int =
+        try { Settings.Global.getInt(context.contentResolver,
+            Settings.Global.BOOT_COUNT, -1) }
+        catch (_: Exception) { -1 }
+
+    private fun stampExcludedRetention(context: Context, record: JSONObject) {
+        val boot = currentRetentionBoot(context)
+        if (boot < 0) return
+        record.put("retentionBoot", boot)
+        record.put("retentionElapsedAt", SystemClock.elapsedRealtime())
+    }
     // M516 #455: a completed self-transfer is neither an excluded SMS nor
     // a finance income/expense commit; store its own encrypted anti-replay ID.
     private const val completedTransferBucketPrefix = "encrypted_completed_transfer_sms_v1_"
@@ -418,6 +435,8 @@ object WaffraAutoSmsStore {
         val last = prefs.getLong(excludedInfoCleanupAt, 0L)
         if (!force && last > 0L && last <= now &&
             now - last < excludedCleanupCadenceMs) return
+        val boot = currentRetentionBoot(context)
+        val elapsed = SystemClock.elapsedRealtime()
         val editor = prefs.edit()
         for (key in prefs.all.keys.filter {
             it.startsWith(excludedMessageInfoBucketPrefix)
@@ -430,16 +449,32 @@ object WaffraAutoSmsStore {
             var changed = false
             for (record in labels.values) {
                 val excludedAt = record.optLong("excludedAt", 0L)
-                if (excludedAt == 0L) {
+                if (excludedAt <= 0L) {
+                    // Legacy labels have no trustworthy exclusion origin.
                     record.put("excludedAt", now)
+                    changed = true
+                }
+                val witnessedBoot = record.optInt("retentionBoot", -1)
+                val witnessedElapsed = record.optLong("retentionElapsedAt", -1L)
+                if (boot < 0) {
+                    // Unknown boot identity means wall time cannot authorize
+                    // destructive cleanup, even when the label looks old.
+                    active.add(record)
+                } else if (witnessedBoot != boot ||
+                    witnessedElapsed < 0L || witnessedElapsed > elapsed) {
+                    // Reboot, migration, corrupted witness or first upgrade:
+                    // establish a fresh minimum 30-day monotonic window.
+                    stampExcludedRetention(context, record)
                     active.add(record)
                     changed = true
-                } else if (excludedAt > now ||
-                    now - excludedAt < excludedLabelRetentionMs) {
+                } else if (elapsed - witnessedElapsed < excludedLabelRetentionMs) {
                     active.add(record)
-                } else changed = true
-                // All old expired labels are physically erased; the separate
-                // encrypted fingerprint denial-list is never removed here.
+                } else {
+                    // Delete recoverable label only after thirty verified
+                    // continuous days in the same boot. The independent
+                    // encrypted denied-ID fingerprint is never removed.
+                    changed = true
+                }
             }
             if (changed && active.isEmpty()) editor.remove(key)
             else if (changed) editor.putString(key,
@@ -813,6 +848,7 @@ object WaffraAutoSmsStore {
             .put("sender", sender.trim().take(100))
             .put("receivedAt", receivedAt)
             .put("excludedAt", System.currentTimeMillis())
+            .also { stampExcludedRetention(context, it) }
         labels[fingerprint] = safeLabel
         val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
         val saved = prefs.edit()
@@ -1216,6 +1252,7 @@ object WaffraAutoSmsStore {
                             .put("sender", row.optString("sender").take(100))
                             .put("receivedAt", row.optLong("receivedAt", 0L))
                             .put("excludedAt", System.currentTimeMillis())
+            .also { stampExcludedRetention(context, it) }
                     } else remaining.put(row)
                 }
                 // Fail closed if a selected SMS was neither queued nor
@@ -1609,6 +1646,7 @@ object WaffraAutoSmsStore {
                                     .put("sender", row.sender.trim().take(100))
                                     .put("receivedAt", row.receivedAt)
                                     .put("excludedAt", System.currentTimeMillis())
+            .also { stampExcludedRetention(context, it) }
                                 existingIds.add(fingerprint)
                             } else {
                                 val sensitive = otp.containsMatchIn(row.body)
