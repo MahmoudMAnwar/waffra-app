@@ -8,6 +8,49 @@
   "review_policy": "Owner-approved narrow SMS reliability/security/finance changes; tests prior to code. No automated production proof without Android UAT.",
   "contracts": [
     {
+      "id": "M1032-BOUND-LEARNED-SMS-RULE-CAPACITY-AND-V1-COMPAT",
+      "issue": "Issue #751",
+      "previous_behavior": "100 encrypted rules limit and full 12-phrase bucket silently ignored further safe confirmed patterns.",
+      "approved_behavior": "Up to 256 owner-scoped safe rules in current V1 schema, overflow into separately validated review-only buckets, strict conflict and protected AutoPost permissions unchanged; legacy 100-rule backups and Undo remain readable. Show capacity in rule editor.",
+      "source_paths": [
+        "lib/waffra_sms_local_rules.dart",
+        "lib/waffra_sms_rule_settings_page.dart"
+      ],
+      "test_paths": [
+        "test/m1032_outgoing_sms_owner_review_gate_test.dart",
+        "test/storage/m440_accounts_portable_v3_test.dart"
+      ],
+      "safety_invariants": [
+        "Never auto-approve money from learned rule",
+        "No silent category conflict overwrite",
+        "Owner-scoped encrypted readback and exact backup import",
+        "Never persist OTP or raw financial SMS secrets"
+      ]
+    },
+    {
+      "id": "M1032-REVERSIBLE-BULK-DELETE-RECEIPTS-ACCOUNT-LINKS",
+      "issue": "Issue #751",
+      "previous_behavior": "Delete All permanently cleared ledger and SMS hash identities, was blocked by any receipt, and had no single-transaction retention-safe bulk archive.",
+      "approved_behavior": "Use a single verified SQLCipher writer lock and transaction to archive all transactions for 30-day individual Undo, including exact receipt bytes and original account links. Require exact owner witness and keep SMS anti-replay identifiers unchanged.",
+      "source_paths": [
+        "lib/storage/waffra_encrypted_transaction_recycle.dart",
+        "lib/storage/waffra_verified_encrypted_finance_bridge.dart",
+        "lib/storage/waffra_verified_finance_authority.dart",
+        "lib/waffra_home_delete_all_transactions.part.dart"
+      ],
+      "test_paths": [
+        "test/storage/m183_encrypted_transaction_recycle_test.dart",
+        "test/m1032_outgoing_sms_owner_review_gate_test.dart"
+      ],
+      "safety_invariants": [
+        "No partial archive or removed receipt if another archive, source mismatch or SQL FK rejects",
+        "No money replay on undo or SMS rescan",
+        "No change to original phone SMS",
+        "Any expired-archive physical purge remains independently authenticated",
+        "Owner dialog accurately describes recoverable 30-day archive"
+      ]
+    },
+    {
       "id": "M1032-SMS-EXCLUSION-BOOT-VERIFIED-RETENTION",
       "issue": "Issue #751",
       "previous_behavior": "Recoverable excluded SMS labels were erased by subtracting excludedAt from System.currentTimeMillis; a manual date jump could purge them prematurely.",
