@@ -1,3 +1,9 @@
+[M1034 / #756 / BANK SMS TIMESTAMP UNICODE AND FIELD-VARIANT FIX — DRAFT, PENDING CI/ANDROID]
+- AlinmaPay screenshot shows full-year bank source `في:15-11-2026 10:14` but review displays date/time missing. M1033 #754 already tests that exact plain string on main: do not assume the user's APK is current or that invisible Android SMS characters match screenshot text.
+- Normalize bidi control/isolate characters, nonbreaking/Unicode spaces and Arabic/Persian digits inside the shared source timestamp parser. Support adjacent date/time field labels over separate lines, full-year date-first/time-first, dot/slash/hyphen separators, ISO T and checked seconds.
+- No SMS receivedAt fallback, guessed year, blanket DateTime.parse normalization, change to transfer classification, manual draft, owner account, SQLCipher finance commit, background AutoPost or native SMS ACK. Impossible and ambiguous dates still require explicit owner correction.
+- New Dart regression for screenshot, Android Unicode, split field labels, localization and negative cases; exact-SHA CI and Android screenshot/device UAT required before Done or merge.
+
 [M1033 / #754 / EXACT-SHA CI CORRECTIONS — DRAFT]
 - Restored the original 419-line verified currency parser before applying only the Arabic standalone reference metadata regex change. An earlier patch expanded the file and caused Dart compilation errors; that malformed intermediate source was replaced, not shipped.
 - Added M385 exact-file/section manifest and M550 comprehensive source-to-regression-test behavior contract for this PR. No CI job, legacy test or finance safety rule removed.
