@@ -1,12 +1,35 @@
 {
   "schema_version": 1,
-  "pr": "Draft PR pending #751",
-  "issue": "#751",
+  "pr": "Draft PR #755",
+  "issue": "#754",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main after merged PR #725 (16 November 2026)",
   "reviewed_at": "2026-11-17",
-  "review_policy": "Owner-approved narrow SMS reliability/security/finance changes; tests prior to code. No automated production proof without Android UAT.",
+  "review_policy": "Owner-requested SMS prefill and review bug correction; CI and Android still required for approval.",
   "contracts": [
+    {
+      "id": "M1033-BANK-SMS-SOURCE-PRINCIPAL-TIMESTAMP-EDITOR",
+      "issue": "Issue #754",
+      "previous_behavior": "Source SAR 882 from a wallet SMS was not prefilled because the EPY reference was incorrectly read as an unknown ISO currency; outgoing transfer review prefill was additionally gated by unattended auto-post eligibility and secondary BankParser agreement. Time-before-date SMS was not recognized, and manual mismatch returned generic save feedback.",
+      "approved_behavior": "Ignore only standalone metadata line labelled الرقم المرجعي while continuing to detect real FX action currencies. Prefill unambiguous principal SAR 882 rather than SAR 0.58 fee irrespective of auto-post privilege and advisory parser conflict; preserve owner draft and provide source restore button with exact mismatch error. Parse explicit full-year time-first and date-first SMS timestamps while keeping invalid/ambiguous times blocked. Posting still requires owner-confirmed category, account and SQLCipher writer.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_sms_multicurrency_review.dart",
+        "lib/waffra_home_entry_sheet.part.dart"
+      ],
+      "test_paths": [
+        "test/m1033_sms_source_amount_timestamp_editor_test.dart",
+        "test/m337_bank_sms_timestamp_finance_safety_test.dart",
+        "test/m1032_outgoing_sms_owner_review_gate_test.dart"
+      ],
+      "safety_invariants": [
+        "No transaction recorded or SMS acknowledged from a suggestion alone",
+        "Do not treat financial references or fees as original SAR principal",
+        "Real foreign currency, OTP, pending and ambiguous timestamp remain blocked",
+        "Source original SMS and previously edited draft are preserved",
+        "Atomic owner-approved SQLCipher account and duplicate safeguards remain unchanged"
+      ]
+    },
     {
       "id": "M1032-BOUND-LEARNED-SMS-RULE-CAPACITY-AND-V1-COMPAT",
       "issue": "Issue #751",
