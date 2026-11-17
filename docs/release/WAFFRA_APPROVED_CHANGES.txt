@@ -1,3 +1,8 @@
+[M1033 / #754 / EXACT-SHA CI CORRECTIONS — DRAFT]
+- Restored the original 419-line verified currency parser before applying only the Arabic standalone reference metadata regex change. An earlier patch expanded the file and caused Dart compilation errors; that malformed intermediate source was replaced, not shipped.
+- Added M385 exact-file/section manifest and M550 comprehensive source-to-regression-test behavior contract for this PR. No CI job, legacy test or finance safety rule removed.
+- Next exact-SHA CI and Android owner acceptance still pending; do not merge a failed or unverified run.
+
 [M1033 / #754 / BANK SMS PRINCIPAL AND TIMESTAMP EDITOR REGRESSION — DRAFT, NOT RELEASE-CERTIFIED]
 - Correct user report: 882.5 SAR in the screenshot was manually entered by the owner because bank SMS parsing did not prefill its actual principal `القيمة: SAR 882`; bank fee `SAR 0.58` must remain separate and never change the principal.
 - For reviewed external outgoing bank transfers, propose the uniquely source-verified SAR original amount in the editor without requiring permission for automatic finance posting or agreement from secondary advisory BankParser. Preserve the owner's existing draft amount.
