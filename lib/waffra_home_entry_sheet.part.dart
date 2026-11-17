@@ -64,9 +64,9 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
    !WaffraBankSmsFactsParser.isVerificationChallenge(manualReviewBody)&&
    manualReviewMoney?.currency=='SAR'&&
    !WaffraSmsCurrencies.requiresReviewForSarLedger(manualReviewBody)&&
-   manualReviewMoney!.amount>0&&
-   (manualReviewParsed?.amount==null||
-    (manualReviewParsed!.amount!-manualReviewMoney.amount).abs()<0.00001)?
+   manualReviewMoney!.amount>0?
+    // M1033: conflicting advisory BankParser suggestions must never hide
+    // the unique, source-extracted SAR principal in the human editor.
     manualReviewMoney.amount:null;
   // Source datetime is extracted at the original review boundary and
   // survives the transfer->manual expense/income correction route.
@@ -135,13 +135,14 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
      parsedSms.title):safeSmsTitle;
   // A verified SAR principal is a display suggestion ONLY: the existing
   // account, date, original facts and user confirmation guard still apply.
+  // M1033: a verified source-amount HINT does not grant AutoPost.
+  // Outgoing transfers need beneficiary review for posting, but the
+  // manual form must still display the unambiguous principal.
+  // Secondary BankParser disagreement never replaces the source figure.
   final safeSmsAmount=trustedSms?parsedSms!.amount:
-   (directionKnown&&factsSms!.canAutoPostAsIncomeExpense||
-    reviewedSmsCorrection)&&
+   (directionKnown||reviewedSmsCorrection)&&
    sourceAmount?.currency=='SAR'&&sourceAmount!.amount>0&&
-   !WaffraSmsCurrencies.requiresReviewForSarLedger(initialSms!)&&
-   (parsedSms?.amount==null||
-    (parsedSms!.amount!-sourceAmount.amount).abs()<0.00001)?
+   !WaffraSmsCurrencies.requiresReviewForSarLedger(initialSms!)?
     sourceAmount.amount:null;
   final title=TextEditingController(text:
    (smsEditorDraft?['title'] as String?)??initial?.title??
