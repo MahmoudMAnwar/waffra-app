@@ -8,6 +8,24 @@
   "review_policy": "Owner-approved narrow SMS reliability/security/finance changes; tests prior to code. No automated production proof without Android UAT.",
   "contracts": [
     {
+      "id": "M1032-SMS-EXCLUSION-BOOT-VERIFIED-RETENTION",
+      "issue": "Issue #751",
+      "previous_behavior": "Recoverable excluded SMS labels were erased by subtracting excludedAt from System.currentTimeMillis; a manual date jump could purge them prematurely.",
+      "approved_behavior": "Retain labels until 30 continuous days measured by elapsedRealtime within a verified Settings.Global.BOOT_COUNT epoch. Legacy labels, rebooted devices, unknown boot counts and inconsistent witnesses fail closed and begin a new verified window. Wall time only governs non-destructive cleanup cadence and display metadata.",
+      "source_paths": [
+        "native/WaffraAutoSmsStore.kt"
+      ],
+      "test_paths": [
+        "test/m1032_outgoing_sms_owner_review_gate_test.dart"
+      ],
+      "safety_invariants": [
+        "Never delete recoverable labels solely due to wall clock jumps",
+        "Encrypted owner-scoped excluded message fingerprint denial list survives label cleanup",
+        "All three exclusion paths stamp the native retention witness",
+        "No finance posting or SMS source contents altered"
+      ]
+    },
+    {
       "id": "M1032-PASSWORD-ENCRYPTED-SMS-RULE-PORTABILITY",
       "issue": "Issue #751",
       "previous_behavior": "Portable V3 restored money accounts but never owner-scoped local SMS rules nor verified post-commit learning receipts.",
