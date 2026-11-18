@@ -183,7 +183,14 @@ void main(){
   // Commit succeeded before the refresh attempt: reporting "not saved"
   // would be a dangerous false negative and invite an unnecessary retry.
   expect(ui,contains('catch(refreshError)'));
-  expect(ui,contains('تم حفظ عكس التحويل، لكن تعذر تحديث الأرصدة'));
+  expect(ui,contains('تم حفظ عكس التحويل، لكن تعذر التحقق من تحديث الأرصدة'));
+  expect(ui,contains('final expectedFrom=reversed?restoredFrom:from.balanceMinor'));
+  expect(ui,contains('final expectedTo=reversed?debitedTo:to.balanceMinor'));
+  expect(ui,contains('sourceAfter.single.balanceMinor==expectedFrom'));
+  expect(ui,contains('targetAfter.single.balanceMinor==expectedTo'));
+  expect(ui,contains('verifiedAfterRefresh=ledgerMatches&&_m468VerifiedAccountsLoaded'));
+  expect(ui,contains('displayedFrom.single.balanceMinor==expectedFrom'));
+  expect(ui,contains('displayedTo.single.balanceMinor==expectedTo'));
   expect(ui,contains('حدّث السجل قبل إعادة المحاولة'));
  });
 }
