@@ -196,7 +196,10 @@ void main(){
   expect(history,contains('nextId = row.rowId'));
   expect(history,contains('.putLong(historyCursorAt, nextAt)'));
   expect(history,contains('.putLong(historyCursorId, nextId)'));
-  expect(history,contains('editor.putString(queueName, seal(queue.toString()))'));
+  // M1038 keeps sender identity and durable cursor, but encrypts a combined
+  // candidate rather than counting every provider SMS fragment as a purchase.
+  expect(history,contains('collapseQueuedMultipartLocked(context, queue)'));
+  expect(history,contains('editor.putString(queueName, seal(grouped.toString()))'));
   expect(history,contains('if (!editor.commit()) return@synchronized 0'));
   // No timestamp can justify coalescing different native SMS identities.
   final flutter=File('lib/waffra_auto_sms.dart').readAsStringSync();
