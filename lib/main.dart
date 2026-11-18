@@ -1122,6 +1122,21 @@ DateTime? bankSmsDate(String raw, {DateTime? referenceDate}) {
   return date.year==year&&date.month==month&&date.day==day&&
    date.hour==hour&&date.minute==minute&&date.second==second?date:null;
  }
+ // M1035 #758: full-year ISO messages can put time first:
+ // "في:15:08 2026-11-02". Reuse the identical recognizer in the
+ // unverified-timestamp guard; do not infer a year or SMS arrival time.
+ final isoTimeFirst=_waffraBankSmsIsoTimeFirst.firstMatch(normalized);
+ if(isoTimeFirst!=null){
+  final hour=int.tryParse(isoTimeFirst.group(1)!),
+   minute=int.tryParse(isoTimeFirst.group(2)!),
+   second=int.tryParse(isoTimeFirst.group(3)??'0'),
+   year=int.tryParse(isoTimeFirst.group(4)!),
+   month=int.tryParse(isoTimeFirst.group(5)!),
+   day=int.tryParse(isoTimeFirst.group(6)!);
+  if(hour==null||minute==null||second==null||
+     year==null||month==null||day==null)return null;
+  return checked(year,month,day,hour,minute,second);
+ }
  // Complete full-year, 24-hour messages: HH:mm DD-MM-YYYY.
  // This is not an arrival-time fallback or a guess about a two-digit year.
  final timeFirst=RegExp(
@@ -1181,6 +1196,12 @@ DateTime? bankSmsDate(String raw, {DateTime? referenceDate}) {
  return null;
 }
 
+// Reused by both the verified source parser and the uncertainty guard.
+// HH:mm [seconds] YYYY-MM-DD — the missing AlinmaPay time-first ISO layout.
+final RegExp _waffraBankSmsIsoTimeFirst=RegExp(
+ r'\b(\d{1,2}):(\d{2})(?::(\d{2}))?\s+(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})\b'
+);
+
 /// Normalize only textual artifacts in the original Android SMS. A visible
 /// date may include bidi isolates or nonbreaking spaces not shown on screen.
 /// Adjacent labeled fields are joined without skipping an unrelated field.
@@ -1194,13 +1215,13 @@ String _waffraBankSmsTimestampText(String raw){
    r'(\d{4})\s+(?:الوقت|الساعة|time)\s*[:：]?\s*(?=\d{1,2}:\d{2})',
    caseSensitive:false),(m)=>m.group(1)!+' ')
   .replaceAllMapped(RegExp(
-   r'(\d{1,2}:\d{2}(?::\d{2})?)\s+(?:التاريخ|تاريخ|date)\s*[:：]?\s*(?=\d{1,2}[-/.]\d{1,2}[-/.]\d{4})',
+   r'(\d{1,2}:\d{2}(?::\d{2})?)\s+(?:التاريخ|تاريخ|date)\s*[:：]?\s*(?=(?:\d{4}[-/.]\d{1,2}[-/.]\d{1,2}|\d{1,2}[-/.]\d{1,2}[-/.]\d{4}))',
    caseSensitive:false),(m)=>m.group(1)!+' ');
 }
 
 bool bankSmsHasUnverifiedTimestamp(String raw,{DateTime? referenceDate}){
  final normalized=_waffraBankSmsTimestampText(raw);
- final hasExplicit=RegExp(
+ final hasExplicit=_waffraBankSmsIsoTimeFirst.hasMatch(normalized)||RegExp(
   r'\b(?:(?:\d{4}[-/.]\d{1,2}[-/.]\d{1,2}|\d{1,2}[-/.]\d{1,2}[-/.]\d{1,4})(?:\s+|[Tt])\d{1,2}:\d{2}(?::\d{2})?|\d{1,2}:\d{2}(?::\d{2})?\s+\d{1,2}[-/.]\d{1,2}[-/.]\d{4})\b'
  ).hasMatch(normalized);
  return hasExplicit&&bankSmsDate(raw,referenceDate:referenceDate)==null;
