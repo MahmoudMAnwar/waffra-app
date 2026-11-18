@@ -33,6 +33,9 @@ void main() {
 
  test('one-message owner-only detail checks real fingerprint and respects legacy empty body',(){
   expect(native,contains('fun excludedMessageDetails(context: Context, id: String)'));
+  expect(native,contains('if (reviewed.isNotBlank()) visible["body"] = reviewed'));
+  expect(page,contains("Text(message['body'] as String,maxLines:3,"));
+
   expect(native,contains('isExcludedMessageLocked(context, id)'));
   expect(native,contains('fun findOriginalExcludedSms('));
   expect(native,contains('id(sender, body, identityAt) != fingerprint'));
