@@ -20,6 +20,7 @@
     "test/m1016_sms_background_financial_intake_test.dart",
     "test/m1038_sms_multipart_reassembly_test.dart",
     "test/m461_sms_exclusion_and_history_scan_test.dart",
+    "test/m514_sms_review_regressions_test.dart",
     "test/m547_sms_incremental_jank_regression_test.dart",
     "test/m638_sms_inbox_delete_sync_test.dart",
     "test/m981_historical_otp_atomic_intake_test.dart"
@@ -53,6 +54,10 @@
       {
         "start": "    fun importConsentMonth(context: Context, maxRead: Int = 500): Int {",
         "end": "    /** Claim each review notification once;"
+      },
+      {
+        "start": "    fun pendingById(context: Context, id: String): Map<String, Any>? =",
+        "end": "    fun claimCloudAttempt(context: Context, id: String): Boolean ="
       }
     ],
     "scripts/qa/m946_full_app_smoke_matrix.py": [
@@ -89,6 +94,12 @@
       {
         "start": "  test('M981 historical OTP denial and its cursor use ONE encrypted commit',",
         "end": "  test('M981 historical OTP does not advance on failure or pretend it was reviewed'"
+      }
+    ],
+    "test/m514_sms_review_regressions_test.dart": [
+      {
+        "start": " test('M518 live SMS and history prefer the same sender timestamp',",
+        "end": null
       }
     ]
   }
