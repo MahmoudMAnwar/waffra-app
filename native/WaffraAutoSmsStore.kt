@@ -1050,6 +1050,100 @@ object WaffraAutoSmsStore {
             .joinToString("") { "%02x".format(it.toInt() and 255) }
     }
 
+    /** M1038: constituent Android fingerprint aliases never enter a ledger.
+     * The canonical owner-review entry alone may be confirmed; its aliases
+     * follow that confirmation in the SAME native encrypted marker commit.
+     */
+    private fun allSourceIds(row: JSONObject): Set<String> {
+        val ids = linkedSetOf(row.getString("id"))
+        val stored = row.optJSONArray("sourceIds")
+        if (stored != null) {
+            if (stored.length() > 16)
+                throw IllegalStateException("Too many SMS fragment identities")
+            for (i in 0 until stored.length()) ids.add(stored.getString(i))
+        }
+        if (ids.any { !Regex("^[a-f0-9]{64}$").matches(it) })
+            throw IllegalStateException("Invalid SMS source fingerprint")
+        return ids
+    }
+
+    /**
+     * Owner-bound encrypted REVIEW queue only. No persisted ledger rows,
+     * exclusions, acknowledged finance, Android SMS content or raw OTPs are
+     * rewritten here. Prefer an existing full-message fingerprint to avoid
+     * needlessly changing a UI-visible candidate identity.
+     */
+    private fun collapseQueuedMultipartLocked(
+        context: Context, original: JSONArray
+    ): JSONArray {
+        if (original.length() < 2) return original
+        val rows = (0 until original.length()).map { original.getJSONObject(it) }
+        val parts = rows.map { row ->
+            WaffraSmsFragmentAssembler.Part(
+                sender = row.getString("sender"),
+                identityAt = row.optLong("identityAt",
+                    row.optLong("receivedAt", 0L)),
+                receivedAt = row.optLong("receivedAt", 0L),
+                body = if (row.optBoolean("sensitiveOtp", false)) "" else
+                    row.optString("body"),
+                sourceIds = allSourceIds(row).toList()
+            )
+        }
+        val groups = WaffraSmsFragmentAssembler.combine(parts)
+        if (groups.size == rows.size) return original
+        val lookup = mutableMapOf<String, JSONObject>()
+        for (row in rows) for (alias in allSourceIds(row)) {
+            if (lookup.put(alias, row) != null)
+                throw IllegalStateException("Duplicate source SMS identity")
+        }
+        val assembled = JSONArray()
+        for (group in groups) {
+            if (group.sourceIds.size <= 1) {
+                assembled.put(lookup.getValue(group.sourceIds.single()))
+                continue
+            }
+            // Never fold an already-confirmed/blocked SMS alias into
+            // another pending financial review candidate.
+            if (group.sourceIds.any { alias ->
+                    isCommittedLocked(context, alias) ||
+                    isExcludedMessageLocked(context, alias) ||
+                    isCompletedTransferLocked(context, alias)
+                }) {
+                for (id in group.sourceIds)
+                    assembled.put(lookup.getValue(id))
+                continue
+            }
+            val exact = group.sourceIds.firstOrNull { alias ->
+                lookup.getValue(alias).optString("body") == group.body
+            }
+            val canonical = exact ?: id(group.sender, group.body, group.identityAt)
+            val reference = JSONObject(lookup.getValue(group.sourceIds.first()).toString())
+            reference.put("id", canonical)
+                .put("body", group.body)
+                .put("receivedAt", group.receivedAt)
+                .put("identityAt", group.identityAt)
+                .put("sourceIds", JSONArray(group.sourceIds.distinct()))
+                .put("reviewNotified", false)
+                .remove("cloud")
+            assembled.put(reference)
+        }
+        return assembled
+    }
+
+    /** Upgrades already queued, unconfirmed split SMS on next review load. */
+    fun repairPendingMultipart(context: Context): Int = synchronized(mutex) {
+        if (!enabled(context)) return@synchronized 0
+        val original = read(context)
+        val corrected = collapseQueuedMultipartLocked(context, original)
+        val removed = original.length() - corrected.length()
+        if (removed > 0) {
+            if (!save(context, corrected))
+                throw IllegalStateException("Could not persist SMS fragment repair")
+            Handler(Looper.getMainLooper()).post { onChanged?.invoke() }
+        }
+        removed
+    }
+
     // M1027: mask only a uniquely identified challenge token. If any code
     // syntax is uncertain, revert to the old mask-ALL-numbers behavior.
     // This function is used only on OTP + completed-money mixed messages;
@@ -1121,8 +1215,10 @@ object WaffraAutoSmsStore {
                     .put("sender", sender.trim()).put("body", masked)
                     .put("sensitiveOtp", sensitive)
                     .put("receivedAt", receivedAt)
+                    .put("identityAt", at)
+                    .put("queuedAt", System.currentTimeMillis())
                     .put("reviewNotified", historical))
-                save(context, queue)
+                save(context, collapseQueuedMultipartLocked(context, queue))
             } catch (_: Exception) { false }
         }
         if (result && !historical) Handler(Looper.getMainLooper()).post { onChanged?.invoke() }
@@ -1132,7 +1228,10 @@ object WaffraAutoSmsStore {
     fun pending(context: Context): List<Map<String, Any>> = synchronized(mutex) {
         if (!enabled(context)) return@synchronized emptyList()
         try {
-            val data = read(context)
+            val existing = read(context)
+            val data = collapseQueuedMultipartLocked(context, existing)
+            if (data.length() < existing.length() && !save(context, data))
+                throw IllegalStateException("SMS multipart queue save failed")
             (0 until data.length()).map { index ->
                 val row = data.getJSONObject(index)
                 val fields = mutableMapOf<String, Any>(
@@ -1762,6 +1861,7 @@ object WaffraAutoSmsStore {
                                     .put("sender", row.sender.trim()).put("body", masked)
                                     .put("sensitiveOtp", sensitive)
                                     .put("receivedAt", row.receivedAt)
+                                    .put("identityAt", row.identityAt)
                                     .put("reviewNotified", true))
                                 existingIds.add(fingerprint)
                                 accepted++
@@ -1791,8 +1891,13 @@ object WaffraAutoSmsStore {
                 } else if (stoppedForCapacity) {
                     editor.putBoolean(capacityRecoveryRequestedName, true)
                 }
-                if (accepted > 0)
-                    editor.putString(queueName, seal(queue.toString()))
+                if (accepted > 0) {
+                    // Multipart rows from the Android inbox are never
+                    // independent bank transactions if they have provable
+                    // structural overlap and the same source clock.
+                    val grouped = collapseQueuedMultipartLocked(context, queue)
+                    editor.putString(queueName, seal(grouped.toString()))
+                }
                 // OTP exclusion IDs, recoverable 30d labels, cursor and queue
                 // MUST commit together. On failure none can be advanced.
                 for ((shard, ids) in deniedOtpByShard) {
