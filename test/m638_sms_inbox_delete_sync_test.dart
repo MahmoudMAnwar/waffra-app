@@ -15,7 +15,9 @@ void main(){
   expect(reconcile,contains('Uri.parse("content://sms/inbox")'));
   expect(reconcile,contains('if (++scanned > 50000)'));
   expect(reconcile,contains('throw IllegalStateException("Android SMS inbox scan incomplete")'));
-  expect(reconcile,contains('initialIds.contains(fingerprint)'));
+  expect(reconcile,contains('if (initialIds.contains(sentId)) present.add(sentId)'));
+  expect(reconcile,contains('initialIds.contains(receivedId)'));
+  // M1038: source alias matches, never sender-only matching.
   expect(reconcile,contains('allSourceIds(row).none { it in present }'));
   expect(reconcile,contains('addAll(allSourceIds(original.getJSONObject(i)))'));
   // M1038: repair a composite only when every original provider part is gone.
