@@ -39,6 +39,8 @@ void main(){
   expect(store,contains('isCommittedLocked(context, alias)'));
   expect(store,contains('isExcludedMessageLocked(context, alias)'));
   expect(store,contains('isCompletedTransferLocked(context, alias)'));
+  expect(store,contains('val reconstructed = id(group.sender, group.body, group.identityAt)'));
+  expect(store,contains('if (finished) continue'));
  });
  test('privacy and money guard: no sender-only/amount-only grouping or SQL writer',(){
   expect(assembler,contains('if (a.sender != b.sender) return false'));
