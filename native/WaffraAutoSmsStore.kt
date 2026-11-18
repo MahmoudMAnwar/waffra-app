@@ -509,12 +509,17 @@ object WaffraAutoSmsStore {
                     // Expired labels remain as opaque rescan-denial fingerprints
                     // only. They are intentionally NOT recoverable in the UI.
                     val info = labels[id] ?: continue
-                    result.add(mapOf(
+                    val visible = mutableMapOf<String, Any>(
                         "id" to id,
                         "sender" to info.optString("sender"),
                         "receivedAt" to info.optLong("receivedAt", 0L),
                         "excludedAt" to info.optLong("excludedAt", 0L)
-                    ))
+                    )
+                    // This preview was already OTP-masked before entering
+                    // the owner-encrypted review queue and exclusion label.
+                    val reviewed = info.optString("body")
+                    if (reviewed.isNotBlank()) visible["body"] = reviewed
+                    result.add(visible)
                 }
             }
             result.sortedWith(compareByDescending<Map<String, Any>> {
