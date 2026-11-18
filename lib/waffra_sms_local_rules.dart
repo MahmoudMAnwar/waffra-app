@@ -9,6 +9,32 @@ import 'waffra_merchant_rules.dart';
 
 part 'waffra_sms_saudi_seed_rules.part.dart';
 
+/// Human-readable, non-sensitive explanation for a missing learned rule.
+String waffraExclusionLearningReason(String? reason,{bool english=false}){
+ if(english)return switch(reason){
+  'financial_operation'=>'Financial SMS: only this message was excluded; similar payments will remain visible.',
+  'unsupported_template'=>'No safe reusable pattern was identified in this message.',
+  'owner_unavailable'=>'Signed-in owner verification is required before saving a rule.',
+  'sender_unverified'=>'The sender cannot be verified for a reusable rule.',
+  'conflicting_rules'=>'An existing rule conflicts with this proposed exclusion.',
+  'rule_capacity'=>'Rule storage is full.',
+  'rule_storage_unavailable'=>'The encrypted rule could not be saved or read back.',
+  'post_save_verification_failed'=>'The rule could not be verified after saving.',
+  _=>'A reusable exclusion rule was not confirmed.',
+ };
+ return switch(reason){
+  'financial_operation'=>'دي حركة مالية؛ استبعدنا الرسالة دي فقط حتى لا نخفي مشتريات أو حوالات مشابهة.',
+  'unsupported_template'=>'مفيش نمط استبعاد آمن يمكن تعميمه من نص الرسالة دي.',
+  'owner_unavailable'=>'لازم التحقق من صاحب الحساب قبل حفظ قاعدة جديدة.',
+  'sender_unverified'=>'مرسل الرسالة مش مؤكد لإنشاء قاعدة قابلة لإعادة الاستخدام.',
+  'conflicting_rules'=>'في قاعدة محفوظة متعارضة مع الاستبعاد المقترح.',
+  'rule_capacity'=>'وصلت للحد الأقصى للقواعد؛ احذف قاعدة غير مستخدمة أولًا.',
+  'rule_storage_unavailable'=>'تعذر حفظ القاعدة المشفرة أو قراءتها للتحقق من نجاح الحفظ.',
+  'post_save_verification_failed'=>'القاعدة لم تظهر بعد إعادة قراءة القواعد المحفوظة.',
+  _=>'لم يتم تأكيد حفظ قاعدة استبعاد للرسائل المشابهة.',
+ };
+}
+
 /// Local-only, user-reviewable SMS classification. Rules are suggestions:
 /// neither this file nor the settings screen can post money or link an account.
 class WaffraSmsLocalRule {
@@ -508,6 +534,23 @@ abstract final class WaffraSmsLocalRules {
    }
   }
   return (choices.toList()..sort((a,b)=>a.compareTo(b))).take(100).toList();
+ }
+
+ /// Why a user-selected one-SMS exclusion cannot become a reusable rule.
+ /// A completed financial event is NEVER hidden across different SMS.
+ static String? exclusionLearningBlocker({
+  required String body,required String sender,
+ }){
+  if(sender.trim().length<3||sender.trim().length>64)
+   return 'sender_unverified';
+  final facts=WaffraBankSmsFactsParser.parse(body);
+  if(facts.kind!=WaffraBankOperationKind.uncertain||
+     _hasCompletedFinanceCue(body)||_hasPostedMoneyEvidence(body))
+   return 'financial_operation';
+  if(suggestedGlobalRule(body:body,sender:sender,kind:'excluded',
+      confidentOnly:true)==null)
+   return 'unsupported_template';
+  return null;
  }
 
  /// Make a conservative, sender-scoped draft from a reviewed bank message.

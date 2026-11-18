@@ -574,6 +574,19 @@ class MainActivity : FlutterFragmentActivity() {
                         }
                     }
                 }
+                "excludedAutoSmsMessageDetails" -> {
+                    val id = call.arguments as? String ?: ""
+                    val app = applicationContext
+                    smsHistoryExecutor.execute {
+                        try {
+                            val details = WaffraAutoSmsStore.excludedMessageDetails(app, id)
+                            runOnUiThread { result.success(details) }
+                        } catch (_: Exception) {
+                            runOnUiThread { result.error("SMS_EXCLUDED_DETAILS_UNAVAILABLE",
+                                "Could not verify excluded SMS details for current owner", null) }
+                        }
+                    }
+                }
                 "restoreExcludedAutoSmsMessage" -> {
                     val id = call.arguments as? String ?: ""
                     val app = applicationContext

@@ -87,23 +87,44 @@ extension _WaffraHomeSmsRules on _HomeScreenState {
   required String body,required String sender,
   required String kind,String category='',
   bool confirmedCorrection=false,String description='',
+  void Function(String)? onFailure,
  })async{
-  if(_smsRuleOwnerKey.isEmpty)return false;
+  if(_smsRuleOwnerKey.isEmpty){
+   onFailure?.call('owner_unavailable');return false;
+  }
   final candidate=WaffraSmsLocalRules.suggestedGlobalRule(
    body:body,sender:sender,kind:kind,category:category,confidentOnly:true)??
    (confirmedCorrection?WaffraSmsLocalRules.suggestedConfirmedGlobalCorrection(
     body:body,description:description,kind:kind,category:category):null);
-  if(candidate==null)return false;
+  if(candidate==null){
+   onFailure?.call(kind=='excluded'?
+    (WaffraSmsLocalRules.exclusionLearningBlocker(
+      body:body,sender:sender)??'unsupported_template'):
+    'unsupported_template');
+   return false;
+  }
   final store=const WaffraSmsLocalRuleStore();
-  // M1002: an atomic owner-scoped read/merge/write prevents a bulk exclusion
-  // from silently reverting the latest income/expense/transfer learned rule.
-  final saved=await store.learnReviewedCandidates(
-   _smsRuleOwnerKey,[candidate]);
-  if(saved.changed)_receiveAutoSmsNotice();
-  final latest=await store.read(_smsRuleOwnerKey);
-  return latest.any((r)=>r.resolvedKind==kind&&
-   r.category==category&&WaffraSmsLocalRules.matches(
-    r,body,sender:sender));
+  try{
+   // Atomic owner-scoped merge; do not overwrite other classifications.
+   final saved=await store.learnReviewedCandidates(
+    _smsRuleOwnerKey,[candidate]);
+   if(saved.blockedConflicts>0){
+    onFailure?.call('conflicting_rules');return false;
+   }
+   if(saved.blockedCapacity>0){
+    onFailure?.call('rule_capacity');return false;
+   }
+   if(saved.changed)_receiveAutoSmsNotice();
+   final latest=await store.read(_smsRuleOwnerKey);
+   final verified=latest.any((r)=>r.resolvedKind==kind&&
+    r.category==category&&WaffraSmsLocalRules.matches(
+     r,body,sender:sender));
+   if(!verified)onFailure?.call('post_save_verification_failed');
+   return verified;
+  }catch(_){
+   onFailure?.call('rule_storage_unavailable');
+   rethrow;
+  }
  }
 
  /// Manual entries have no bank SMS sender. Learn only a non-posting

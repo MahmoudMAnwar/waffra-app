@@ -84,7 +84,15 @@ void main() {
     expect(block,contains('.put("sender", row.optString("sender").take(100))'));
     expect(block,contains('.put("excludedAt", System.currentTimeMillis())'));
     expect(block,contains('.commit()'));
-    expect(block,isNot(contains('.put("body"')));
+    // M1037: only the already OTP-masked queued review body is stored
+    // within the encrypted 30-day owner exclusion label, never in permanent
+    // dedupe fingerprints or automatic pure-OTP labels.
+    expect(block,contains('.put("body", row.optString("body"))'));
+    expect(block,contains('.put("sensitiveOtp", row.optBoolean("sensitiveOtp", false))'));
+    final otp=store.substring(
+      store.indexOf('private fun recordPureOtpExclusionLocked('),
+      store.indexOf('private val debtNotice'));
+    expect(otp,isNot(contains('.put("body"')));
     expect(block,isNot(contains('acknowledgeCommitted(')));
     expect(block,isNot(contains('commitConfirmedSms(')));
     expect(store,contains('excludedLabelRetentionMs = 30L * 24 * 60 * 60 * 1000'));

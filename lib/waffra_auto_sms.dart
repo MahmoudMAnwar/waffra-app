@@ -169,7 +169,7 @@ abstract final class WaffraAutoSms {
    on PlatformException{return null;}
  }
  /// Individually excluded SMS are encrypted natively, scoped to the owner.
- /// Only opaque identity, sender label and receipt time cross this boundary.
+ /// ID, safe sender/date and optional already-redacted preview cross this boundary.
  /// A missing plugin or malformed payload is UNKNOWN, not an empty policy.
  static Future<List<Map<String,Object?>>?> excludedMessages()async{
   if(!Platform.isAndroid)return null;
@@ -180,6 +180,7 @@ abstract final class WaffraAutoSms {
    return items.map((item){
     if(item is! Map)throw const FormatException('Invalid excluded SMS item');
     final id=item['id'],sender=item['sender'],receivedAt=item['receivedAt'];
+    final excludedAt=item['excludedAt'],body=item['body'];
     if(id is! String||
        !RegExp(r'^[a-f0-9]{64}$').hasMatch(id)||
        sender is! String||
@@ -188,8 +189,35 @@ abstract final class WaffraAutoSms {
     }
     return Map<String,Object?>.unmodifiable({
      'id':id,'sender':sender,'receivedAt':receivedAt,
+     if(excludedAt is int)'excludedAt':excludedAt,
+     if(body is String&&body.isNotEmpty)'body':body,
     });
    }).toList(growable:false);
+  }catch(_){return null;}
+ }
+ /// M1037: owner-selected single excluded SMS, decrypted on demand.
+ static Future<Map<String,Object?>?> excludedMessageDetails(String id)async{
+  if(!Platform.isAndroid||
+     !RegExp(r'^[a-f0-9]{64}$').hasMatch(id))return null;
+  try{
+   final item=await channel.invokeMapMethod<String,dynamic>(
+    'excludedAutoSmsMessageDetails',id);
+   if(item==null||item['id']!=id||item['sender'] is! String||
+      item['receivedAt'] is! int||item['excludedAt'] is! int||
+      item['status'] is! String)return null;
+   final status=item['status'] as String;
+   if(!const {'available','otp_protected','unavailable'}.contains(status))
+    return null;
+   final body=item['body'];
+   if(status=='available'&&(body is! String||body.trim().isEmpty))
+    return null;
+   return Map<String,Object?>.unmodifiable({
+    'id':id,'sender':item['sender'] as String,
+    'receivedAt':item['receivedAt'] as int,
+    'excludedAt':item['excludedAt'] as int,
+    'status':status,
+    if(status=='available')'body':body as String,
+   });
   }catch(_){return null;}
  }
  static Future<bool> restoreExcludedMessage(String id)async{

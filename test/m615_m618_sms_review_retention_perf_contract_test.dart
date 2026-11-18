@@ -62,7 +62,8 @@ void main(){
   expect(native,isNot(contains('now - excludedAt < excludedLabelRetentionMs')));
   expect(native,contains('if (changed && active.isEmpty()) editor.remove(key)'));
   expect(native,contains('val info = labels[id] ?: continue'));
-  expect(native,contains('result.add(mapOf('));
+  expect(native,contains('result.add(visible)'));
+  expect(native,contains('if (reviewed.isNotBlank()) visible["body"] = reviewed'));
   expect(native,contains('"excludedAt" to info.optLong('));
   // Revocable UI metadata may expire, but dedup fingerprints must never be
   // purged at the same time or old messages will reappear on Android rescan.
