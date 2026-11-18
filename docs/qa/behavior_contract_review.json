@@ -1,12 +1,38 @@
 {
   "schema_version": 1,
-  "pr": "Draft PR #757",
-  "issue": "#756",
+  "pr": "M1035 Draft PR pending",
+  "issue": "#758",
   "workflow_review_policy": "scan-all-registered-workflows",
-  "baseline": "main after merged PR #755 (17 November 2026)",
-  "reviewed_at": "2026-11-17",
-  "review_policy": "Harden source-only SMS date/time extraction to match Android Unicode and multi-line label variants. Fail closed without exact date/clock; verify on same-sha CI and Android.",
+  "baseline": "main after merged PR #757 (18 November 2026)",
+  "reviewed_at": "2026-11-18",
+  "review_policy": "Parser-only change. Exact SHA CI, unchanged financial blockers, Android UAT required.",
   "contracts": [
+    {
+      "id": "M1035-VERIFIED-TIME-FIRST-ISO-BANK-SMS",
+      "issue": "Issue #758",
+      "previous_behavior": "The existing full-year source parser recognizes '2026-11-07 16:06' but not '15:08 2026-11-02'; the review timestamp-uncertainty guard also fails to recognize this layout. Same original AlinmaPay message is blocked as timestamp missing.",
+      "approved_behavior": "Use the same explicit HH:mm[:ss] YYYY-MM-DD[/or dot] recognizer for bankSmsDate and bankSmsHasUnverifiedTimestamp; only valid exact calendar/time values produce DateTime. Support Android bidi/space and Arabic/Persian digit normalization and adjacent time/date labels. Retain four full-year layout matrix; no arrival-time guess.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_sms_confirmation.part.dart",
+        "lib/waffra_home_entry_sheet.part.dart",
+        "lib/waffra_auto_sms_autopost.part.dart"
+      ],
+      "test_paths": [
+        "test/m1035_sms_timestamp_order_matrix_test.dart",
+        "test/m1034_bank_sms_timestamp_variants_test.dart",
+        "test/m1033_sms_source_amount_timestamp_editor_test.dart",
+        "test/m337_bank_sms_timestamp_finance_safety_test.dart"
+      ],
+      "safety_invariants": [
+        "No source-less SMS date or receipt date fallback in financial ledger",
+        "Impossible and ambiguous dates remain unverified",
+        "Category and account remain owner-confirmed",
+        "No amount or direction correction by date-only parser",
+        "No unattended AutoPost permission expansion or native SMS ACK before verified finance commit",
+        "No raw personal banking details in repository test fixtures"
+      ]
+    },
     {
       "id": "M1034-BANK-SMS-TIMESTAMP-UNICODE-AND-FIELD-VARIANTS",
       "issue": "Issue #756",
