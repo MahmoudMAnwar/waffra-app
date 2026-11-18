@@ -1,25 +1,28 @@
 {
   "contract_version": 1,
-  "change_id": "ISSUE758-M1035-SMS-TIME-FIRST-YYYY-MM-DD",
-  "human_scope_review": "Two provided AlinmaPay screenshot SMS messages: 15:08 2026-11-02 fails while 2026-11-07 16:06 succeeds. Verified missing HH:mm YYYY-MM-DD parser + matching uncertainty recognizer on merged main.",
+  "change_id": "ISSUE760-M1036-TRANSFER-REVERSAL-LINKED-STATUS-UI",
+  "human_scope_review": "Owner reported bank-account transfer reversal defect. Main SQLCipher writer already idempotent, but original transfer card always shows Reverse and modal history is a stale Future; account history lacks linked reversal status and pre-confirmation preview.",
   "user_requested_changes": [
-    "Fix HH:mm YYYY-MM-DD source timestamps, including optional seconds, Arabic/Persian digits, Android bidi/space controls and adjacent time/date labels.",
-    "Cover exact anonymized owner bank SMS plus 4 full-year timestamp layouts across three separator types, invalid calendar/time values and previously supported dates.",
-    "Use one matching pattern in timestamp parser and uncertainty guard; preserve financial account/category confirmation, no receivedAt fallback and no new AutoPost/ACK permissions."
+    "Verified SQLCipher transfer-history relationship and reversal status on original; detail link to compensating transfer, no second correction button after reversal.",
+    "Live FutureBuilder reload in still-open transfer bottom sheet and Home account balances refreshed after confirmed reversal, without modifying unrelated account records.",
+    "Explicit pre-confirmation two-account before/after balance preview respecting masked amounts and warning that ledger reversal is not a bank refund.",
+    "Strict from!=to and positive amount safeguards; idempotent writer, no income/expense/budget changes, no implicit fee refund; test replay/cold reopen/corrupt pair and UI."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "lib/main.dart",
-    "test/m1035_sms_timestamp_order_matrix_test.dart"
+    "lib/storage/waffra_account_context_repository.dart",
+    "lib/storage/waffra_accounts_repository.dart",
+    "lib/waffra_home_verified_transfer_cards.part.dart",
+    "test/storage/m1036_transfer_reversal_linked_state_test.dart"
   ],
   "bounded_sections": {
-    "lib/main.dart": [
+    "lib/storage/waffra_accounts_repository.dart": [
       {
-        "start": "DateTime? bankSmsDate(",
-        "end": "String bankSmsHash("
+        "start": "  /// M1032: reverse an incorrect internal transfer",
+        "end": "  /// Calculated exclusively from SQL."
       }
     ]
   }
