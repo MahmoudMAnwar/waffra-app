@@ -19,10 +19,38 @@
     "test/storage/m1036_transfer_reversal_linked_state_test.dart"
   ],
   "bounded_sections": {
+    "lib/storage/waffra_account_context_repository.dart": [
+      {
+        "start": "import 'package:drift/drift.dart';",
+        "end": "import '../waffra_bank_sms_facts.dart';"
+      },
+      {
+        "start": "class WaffraInternalTransferHistory {",
+        "end": "/// M448 account attribution metadata:"
+      },
+      {
+        "start": " Future<List<WaffraInternalTransferHistory>> readInternalTransferHistory({",
+        "end": " /// M649: account-linked goal movements are a separate savings wallet."
+      }
+    ],
     "lib/storage/waffra_accounts_repository.dart": [
       {
-        "start": "  /// M1032: reverse an incorrect internal transfer",
-        "end": "  /// Calculated exclusively from SQL."
+        "start": " Future<bool> reverseInternalTransfer({",
+        "end": " /// Calculated exclusively from SQL."
+      }
+    ],
+    "lib/waffra_home_verified_transfer_cards.part.dart": [
+      {
+        "start": " String _m647VerifiedAccountLabel(",
+        "end": " /// M647: source and destination"
+      },
+      {
+        "start": " Widget _m647TransferCard(",
+        "end": " /// M649: this gold card"
+      },
+      {
+        "start": " Future<void> _m647ShowInternalTransfers(",
+        "end": " Widget _dashboardShortcut("
       }
     ]
   }
