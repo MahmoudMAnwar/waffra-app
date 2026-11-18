@@ -21,7 +21,9 @@ void main() {
   expect(history,contains('rows.size <= maxRead'));
   expect(history,contains('if (queue.length() >= maxCandidates)'));
   expect(history,contains('if (accepted > 0)'));
-  expect(history,contains('val grouped = collapseQueuedMultipartLocked(context, queue)'));
+  expect(history,contains('val grouped = if (accepted > 0)'));
+  expect(history,contains('collapseQueuedMultipartLocked(context, queue)'));
+  expect(history,contains('visibleAccepted = (grouped.length() - beforeQueueSize).coerceAtLeast(0)'));
   expect(history,contains('editor.putString(queueName, seal(grouped.toString()))'));
   // M1038: cursor remains source-row ordered even though review items may merge.
   expect(history,contains('.putLong(historyCursorAt, nextAt)'));
