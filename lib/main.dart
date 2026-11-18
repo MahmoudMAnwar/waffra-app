@@ -1106,11 +1106,6 @@ class BankParser {
   return BankResult(value,income,title,cat,suggestion);
  }
 }
-// Reused by both the verified source parser and the uncertainty guard.
-// HH:mm [seconds] YYYY-MM-DD — the missing AlinmaPay time-first ISO layout.
-final RegExp _waffraBankSmsIsoTimeFirst=RegExp(
- r'\b(\d{1,2}):(\d{2})(?::(\d{2}))?\s+(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})\b'
-);
 DateTime? bankSmsDate(String raw, {DateTime? referenceDate}) {
  final normalized=_waffraBankSmsTimestampText(raw);
  // The source SMS must contain a complete date AND hour/minute; receivedAt
@@ -1200,6 +1195,12 @@ DateTime? bankSmsDate(String raw, {DateTime? referenceDate}) {
  if(ymdDistance<=180&&dmyDistance>540)return ymd;
  return null;
 }
+
+// Reused by both the verified source parser and the uncertainty guard.
+// HH:mm [seconds] YYYY-MM-DD — the missing AlinmaPay time-first ISO layout.
+final RegExp _waffraBankSmsIsoTimeFirst=RegExp(
+ r'\b(\d{1,2}):(\d{2})(?::(\d{2}))?\s+(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})\b'
+);
 
 /// Normalize only textual artifacts in the original Android SMS. A visible
 /// date may include bidi isolates or nonbreaking spaces not shown on screen.
