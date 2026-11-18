@@ -805,9 +805,17 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
            message['sender'] as String:
            (widget.english?'Unknown sender':'مرسل غير معروف'),
            maxLines:1,overflow:TextOverflow.ellipsis),
-          subtitle:Text((widget.english?'Excluded: ':'استبعاد فردي • ')+
-           _m1037SmsTimestamp(message['receivedAt'])+
-           (widget.english?' • Tap to view original SMS':' • اضغط لعرض نص الرسالة')),
+          subtitle:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+           if(message['body'] is String&&
+              (message['body'] as String).trim().isNotEmpty)
+            Text(message['body'] as String,maxLines:3,
+             overflow:TextOverflow.ellipsis),
+           if(message['body'] is! String)
+            Text(widget.english?'Tap to recover older original SMS':
+             'اضغط لاسترجاع نص الرسالة القديمة من الهاتف'),
+           Text((widget.english?'Excluded SMS • ':'رسالة مستبعدة فرديًا • ')+
+            _m1037SmsTimestamp(message['receivedAt'])),
+          ]),
           onTap:()=>_m1037ShowExcludedMessage(message)),
         if(nativeExcluded!.length>40||nativeBlockedSenders!.length>30)
          Padding(padding:const EdgeInsets.all(12),
