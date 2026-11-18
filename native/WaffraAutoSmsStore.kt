@@ -42,8 +42,9 @@ object WaffraAutoSmsStore {
     // M514 #448: excluded review SMS are not finance commits. Keep independent
     // owner-bound encrypted fingerprints so a historical rescan cannot replay them.
     private const val excludedMessageBucketPrefix = "encrypted_excluded_sms_v1_"
-    // No raw SMS body: encrypted, owner-bound sender/time labels make
-    // individual excluded messages visible and reversible in Settings.
+    // M1037: owner-excluded review text (already OTP-masked at intake) may
+    // live ONLY inside this owner-bound AES-GCM recoverable 30-day label.
+    // Auto-excluded pure OTPs and the permanent fingerprints contain no body.
     private const val excludedMessageInfoBucketPrefix = "encrypted_excluded_sms_info_v1_"
     private const val excludedInfoCleanupAt = "excluded_labels_last_cleanup_v1"
     private const val excludedLabelRetentionMs = 30L * 24 * 60 * 60 * 1000
@@ -520,6 +521,101 @@ object WaffraAutoSmsStore {
                 (it["receivedAt"] as? Long) ?: 0L
             }.thenBy { it["id"] as String })
         }
+
+    /**
+     * M1037: read a single excluded message on deliberate owner tap, not while
+     * rendering the list. Older labels contain only sender/time: try the
+     * Android inbox, but display text ONLY after exact original fingerprint
+     * verification (sender + unmasked original body + SMS sent/received time).
+     * No historical cursor writes, SMS deletion, account or ledger changes.
+     */
+    fun excludedMessageDetails(context: Context, id: String): Map<String, Any>? {
+        if (!Regex("^[a-f0-9]{64}$").matches(id)) return null
+        val owner = signedInOwnerHash(context) ?: return null
+        val label = synchronized(mutex) {
+            if (!enabled(context) || !isExcludedMessageLocked(context, id))
+                return@synchronized null
+            val record = excludedMessageInfo(context, id)[id]
+                ?: return@synchronized null
+            JSONObject(record.toString())
+        } ?: return null
+        val info = mutableMapOf<String, Any>(
+            "id" to id,
+            "sender" to label.optString("sender"),
+            "receivedAt" to label.optLong("receivedAt", 0L),
+            "excludedAt" to label.optLong("excludedAt", 0L)
+        )
+        val reviewed = label.optString("body")
+        if (reviewed.isNotBlank()) {
+            info["body"] = reviewed
+            info["status"] = "available"
+        } else {
+            // A pre-M1037 record cannot be decrypted into text because no
+            // body was ever saved in its encrypted label.
+            val prior = findOriginalExcludedSms(context, id,
+                label.optString("sender"), label.optLong("receivedAt", 0L))
+            info["status"] = prior?.second ?: "unavailable"
+            if (prior != null && prior.second == "available")
+                info["body"] = prior.first
+        }
+        // A sign-out or account switch during provider I/O must not disclose
+        // the previous owner's message to the new session.
+        val stillOwner = synchronized(mutex) {
+            enabled(context) && signedInOwnerHash(context) == owner &&
+                isExcludedMessageLocked(context, id) &&
+                excludedMessageInfo(context, id).containsKey(id)
+        }
+        return if (stillOwner) info else null
+    }
+
+    private fun findOriginalExcludedSms(
+        context: Context, fingerprint: String, expectedSender: String,
+        receivedAt: Long
+    ): Pair<String, String>? {
+        if (receivedAt <= 0L || expectedSender.isBlank() ||
+            context.checkSelfPermission(Manifest.permission.READ_SMS) !=
+                PackageManager.PERMISSION_GRANTED) return null
+        val day = 24L * 60 * 60 * 1000
+        val start = (receivedAt - day).coerceAtLeast(0L)
+        val end = (receivedAt + day).coerceAtMost(System.currentTimeMillis() + 300000L)
+        val cursor = try {
+            context.contentResolver.query(Uri.parse("content://sms/inbox"),
+                arrayOf("address", "body", "date", "date_sent"),
+                "address = ? AND date >= ? AND date <= ?",
+                arrayOf(expectedSender, start.toString(), end.toString()),
+                "date DESC")
+        } catch (_: Exception) { null } ?: return null
+        var exact: Pair<String, String>? = null
+        cursor.use { sms ->
+            val senderAt = sms.getColumnIndex("address")
+            val bodyAt = sms.getColumnIndex("body")
+            val receivedAtCol = sms.getColumnIndex("date")
+            val sentAt = sms.getColumnIndex("date_sent")
+            if (senderAt < 0 || bodyAt < 0 || receivedAtCol < 0)
+                return null
+            var inspected = 0
+            while (sms.moveToNext() && inspected++ < 2000) {
+                val sender = sms.getString(senderAt) ?: continue
+                val body = sms.getString(bodyAt) ?: continue
+                val received = sms.getLong(receivedAtCol)
+                val sent = if (sentAt >= 0 && !sms.isNull(sentAt))
+                    sms.getLong(sentAt) else 0L
+                val identityAt = if (sent > 946684800000L &&
+                    sent <= System.currentTimeMillis() + 300000L) sent else received
+                if (sender != expectedSender ||
+                    (id(sender, body, identityAt) != fingerprint &&
+                     id(sender, body, received) != fingerprint)) continue
+                // Pure OTP content was deliberately never stored. Do not
+                // resurrect verification codes through the UI fallback.
+                exact = if (pureVerificationOnly(body))
+                    Pair("", "otp_protected")
+                else Pair(if (otp.containsMatchIn(body))
+                    redactMixedOtpSecrets(body) else body.trim(), "available")
+                break
+            }
+        }
+        return exact
+    }
 
     /** Restore just one excluded SMS; a later explicit rescan may offer it.
      * Excluded sender policy, completed transfers and finance are unaffected.
@@ -1251,6 +1347,10 @@ object WaffraAutoSmsStore {
                             .put("id", fingerprint)
                             .put("sender", row.optString("sender").take(100))
                             .put("receivedAt", row.optLong("receivedAt", 0L))
+                            // This is the already-redacted reviewed body; never
+                            // persist an unmasked verification secret here.
+                            .put("body", row.optString("body"))
+                            .put("sensitiveOtp", row.optBoolean("sensitiveOtp", false))
                             .put("excludedAt", System.currentTimeMillis())
                             .also { stampExcludedRetention(context, it) }
                     } else remaining.put(row)
