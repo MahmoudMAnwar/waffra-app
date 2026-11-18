@@ -43,7 +43,8 @@ void main() {
     expect(code,contains('if (queue.length() >= maxCandidates)'));
     expect(code,contains('val queue = read(context)'));
     expect(code,contains('rows.size <= maxRead'));
-    expect(code,contains('editor.putString(queueName, seal(queue.toString()))'));
+    expect(code,contains('editor.putString(queueName, seal(grouped.toString()))'));
+    expect(code,contains('collapseQueuedMultipartLocked(context, queue)'));
     expect(code,contains('.putBoolean(historyComplete, complete)'));
     expect(code,contains('editor.commit()'));
   });
