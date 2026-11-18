@@ -203,6 +203,10 @@ class WaffraAccountsRepository implements WaffraAccountOperations {
    final from=original.read<String>('to_account_id');
    final to=original.read<String>('from_account_id');
    final amount=original.read<int>('amount_minor');
+   // M1036: even malformed legacy rows cannot reverse from/to one account.
+   if(from==to||amount<=0){
+    throw StateError('Invalid original transfer cannot be reversed.');
+   }
    final previous=await db.customSelect(
     'SELECT from_account_id,to_account_id,amount_minor,note FROM '
     'fresh_finance_internal_transfers WHERE transfer_id=?',

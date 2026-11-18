@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
+import 'package:crypto/crypto.dart';
 
 import '../waffra_bank_sms_facts.dart';
 import 'waffra_account_context_policy.dart';
@@ -26,9 +27,16 @@ class WaffraInternalTransferHistory {
  const WaffraInternalTransferHistory({
   required this.id,required this.fromAccountId,required this.toAccountId,
   required this.amountMinor,required this.occurredIso,required this.note,
+  this.reversalId,this.originalTransferId,
  });
  final String id,fromAccountId,toAccountId,occurredIso,note;
  final int amountMinor;
+ /// Verified matching compensation, if this is an original transfer.
+ final String? reversalId;
+ /// Source transfer ID, if this row is itself a verified compensation.
+ final String? originalTransferId;
+ bool get isReversed=>reversalId!=null;
+ bool get isReversal=>originalTransferId!=null;
 }
 
 /// M448 account attribution metadata: never adds a second income, expense,
@@ -315,17 +323,71 @@ WHERE a.archived=0 AND a.kind='bank' AND a.currency='SAR'
     Variable.withInt(limit),
    ],
   ).get();
-  return List<WaffraInternalTransferHistory>.unmodifiable(rows.map((r)=>
-   WaffraInternalTransferHistory(
-    id:r.read<String>('transfer_id'),
-    fromAccountId:r.read<String>('from_account_id'),
-    toAccountId:r.read<String>('to_account_id'),
-    amountMinor:r.read<int>('amount_minor'),
-    occurredIso:r.read<String>('occurred_iso'),
-    note:r.read<String>('note'),
-   )));
+  // M1036: a reversal is a distinct immutable, two-sided journal event.
+  // Validate its deterministic ID; never trust a textual note alone.
+  final items=<WaffraInternalTransferHistory>[];
+  final originals=<String,WaffraInternalTransferHistory>{};
+  for(final row in rows){
+   final id=row.read<String>('transfer_id');
+   final note=row.read<String>('note');
+   String? originalTransferId;
+   if(id.startsWith('reversal-')){
+    if(note.isEmpty||
+       id!='reversal-${sha256.convert(utf8.encode(note))}'){
+     throw StateError('Unverified transfer reversal identity.');
+    }
+    originalTransferId=note;
+   }
+   final item=WaffraInternalTransferHistory(
+    id:id,
+    fromAccountId:row.read<String>('from_account_id'),
+    toAccountId:row.read<String>('to_account_id'),
+    amountMinor:row.read<int>('amount_minor'),
+    occurredIso:row.read<String>('occurred_iso'),
+    note:note,originalTransferId:originalTransferId,
+   );
+   items.add(item);
+   if(originalTransferId==null)originals[id]=item;
+  }
+  if(originals.isEmpty)return List.unmodifiable(items);
+  // One bounded SQL query for reversal IDs, not an N+1 correlated scan.
+  // Even if the matching reversal is outside this page or belongs to a
+  // different date, its original card must show the durable reversed state.
+  final byReversalId=<String,WaffraInternalTransferHistory>{
+   for(final item in originals.values)
+    'reversal-${sha256.convert(utf8.encode(item.id))}':item,
+  };
+  final keys=byReversalId.keys.toList(growable:false);
+  final matched=await store.customSelect(
+   'SELECT transfer_id,from_account_id,to_account_id,amount_minor,note '
+   'FROM fresh_finance_internal_transfers WHERE transfer_id IN ('
+   '${List.filled(keys.length,'?').join(',')})',
+   variables:[for(final key in keys)Variable.withString(key)],
+  ).get();
+  final reversed=<String,String>{};
+  for(final row in matched){
+   final reversalId=row.read<String>('transfer_id');
+   final original=byReversalId[reversalId];
+   if(original==null ||
+      row.read<String>('note')!=original.id||
+      row.read<String>('from_account_id')!=original.toAccountId||
+      row.read<String>('to_account_id')!=original.fromAccountId||
+      row.read<int>('amount_minor')!=original.amountMinor){
+    throw StateError('Transfer reversal pair does not match its original.');
+   }
+   reversed[original.id]=reversalId;
+  }
+  return List<WaffraInternalTransferHistory>.unmodifiable([
+   for(final item in items)
+    WaffraInternalTransferHistory(
+     id:item.id,fromAccountId:item.fromAccountId,
+     toAccountId:item.toAccountId,amountMinor:item.amountMinor,
+     occurredIso:item.occurredIso,note:item.note,
+     originalTransferId:item.originalTransferId,
+     reversalId:reversed[item.id],
+    ),
+  ]);
  }
-
 
  /// M649: account-linked goal movements are a separate savings wallet.
  /// Read only verified source provenance; never synthesize MoneyEntry rows.

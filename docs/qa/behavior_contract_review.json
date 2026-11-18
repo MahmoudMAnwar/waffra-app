@@ -1,12 +1,40 @@
 {
   "schema_version": 1,
-  "pr": "Draft PR #759",
-  "issue": "#758",
+  "pr": "Draft PR #761",
+  "issue": "#760",
   "workflow_review_policy": "scan-all-registered-workflows",
-  "baseline": "main after merged PR #757 (18 November 2026)",
+  "baseline": "main after merged PR #759 (18 November 2026)",
   "reviewed_at": "2026-11-18",
-  "review_policy": "Parser-only change. Exact SHA CI, unchanged financial blockers, Android UAT required.",
+  "review_policy": "M1036 transfer reversal state and modal refresh; no independent finance writer, only verified existing SQLCipher commit.",
   "contracts": [
+    {
+      "id": "M1036-VERIFIED-TRANSFER-REVERSAL-PAIR-AND-UI-REFRESH",
+      "issue": "Issue #760",
+      "previous_behavior": "The original transfer card never learned its reversal status from SQLCipher, retained an active reverse button; the bottom sheet captured a stale Future even after the writer invalidated its Home cache. No two-account preview or explicit bank-vs-ledger distinction.",
+      "approved_behavior": "Read deterministic reversal ID and strict source/target/amount/note pair from encrypted journal, show reversed status and bidirectional original/correction navigation. Preview source/destination verified balances and exact compensating changes using the masked-currency display before user confirmation. A successful owner-approved reversal refreshes Home and the modal Future. SQLCipher writer remains idempotent and excludes income/expense and bank fee refund. Prior M611 verified encrypted history positive coverage is retained, now asserting a refreshed Future after an owner-confirmed correction. If SQLCipher correction already committed but Home balance refresh fails, surface 'saved but refresh failed' rather than a false finance failure; if the writer outcome is unknown require fresh history verification before retry. Password-protected V3 backup/restore retains both verified transfer rows and idempotent link, and a pre-reversal archive remains eligible for one later correction after restore. SQLCipher balances and Home-displayed account balances must match both expected signed deltas after commit before issuing a fully successful message. Because the Home refresh catches exceptions internally, its mere Future completion cannot be treated as proof.",
+      "source_paths": [
+        "lib/storage/waffra_account_context_repository.dart",
+        "lib/storage/waffra_accounts_repository.dart",
+        "lib/waffra_home_verified_transfer_cards.part.dart"
+      ],
+      "test_paths": [
+        "test/storage/m1036_transfer_reversal_linked_state_test.dart",
+        "test/storage/m440_accounts_repository_test.dart",
+        "test/storage/m611_verified_transfer_history_test.dart",
+        "test/m611_manual_home_finance_regression_test.dart",
+        "test/storage/m1036_reversal_portable_backup_v3_test.dart"
+      ],
+      "safety_invariants": [
+        "Never write a second reversal for same source ID, retain immutable original and original note",
+        "Never reverse between equal account IDs or amount <=0; no account balance mutation outside verified SQLCipher journal",
+        "No real bank/wallet transfer, settlement, refund or background SMS ACK",
+        "Preserve owner account privacy mask and require explicit confirmation",
+        "Read-only SQLCipher history must not fabricate completion when hash/amount/direction/note differ",
+        "Net worth remains unchanged; no synthetic income/expense or new budget charge",
+        "Never tell owner an already-committed correction was not written just because Home refresh failed",
+        "After post-commit readback/visual mismatch show partial success and never claim money was rolled back"
+      ]
+    },
     {
       "id": "M1035-VERIFIED-TIME-FIRST-ISO-BANK-SMS",
       "issue": "Issue #758",
