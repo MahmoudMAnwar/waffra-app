@@ -1225,17 +1225,16 @@ object WaffraAutoSmsStore {
                 assembled.put(lookup.getValue(group.sourceIds.single()))
                 continue
             }
-            // Never fold an already-confirmed/blocked SMS alias into
-            // another pending financial review candidate.
-            if (group.sourceIds.any { alias ->
-                    isCommittedLocked(context, alias) ||
-                    isExcludedMessageLocked(context, alias) ||
-                    isCompletedTransferLocked(context, alias)
-                }) {
-                for (id in group.sourceIds)
-                    assembled.put(lookup.getValue(id))
-                continue
+            // A complete composite may already have been committed before
+            // Android later exposes its component rows to history scanning.
+            // Never re-offer those parts as fresh money candidates.
+            val reconstructed = id(group.sender, group.body, group.identityAt)
+            val finished = (group.sourceIds + reconstructed).any { alias ->
+                isCommittedLocked(context, alias) ||
+                isExcludedMessageLocked(context, alias) ||
+                isCompletedTransferLocked(context, alias)
             }
+            if (finished) continue
             val exact = group.sourceIds.firstOrNull { alias ->
                 lookup.getValue(alias).optString("body") == group.body
             }
