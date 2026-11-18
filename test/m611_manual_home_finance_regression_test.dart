@@ -67,7 +67,12 @@ void main() {
   expect(sheetStart,greaterThanOrEqualTo(0));
   expect(sheetEnd,greaterThan(sheetStart));
   final sheet=src.substring(sheetStart,sheetEnd);
-  expect(sheet,contains('final future=_m648HomeTransfers(selected);'));
+  // M1036: preserve the verified read AND reload the sheet after a
+  // confirmed correction, instead of leaving a stale one-time Future.
+  expect(sheet,contains('Future<List<WaffraInternalTransferHistory>> future='));
+  expect(sheet,contains('_m648HomeTransfers(selected);'));
+  expect(sheet,contains('StatefulBuilder('));
+  expect(sheet,contains('setSheetState(()=>future=_m648HomeTransfers(selected))'));
   expect(sheet,isNot(contains('transferApi!.transfer(')));
 
   final readStart=src.indexOf(
