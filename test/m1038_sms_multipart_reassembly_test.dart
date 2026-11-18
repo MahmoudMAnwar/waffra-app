@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main(){
  final receiver=File('native/WaffraAutoSmsReceiver.kt').readAsStringSync();
  final store=File('native/WaffraAutoSmsStore.kt').readAsStringSync();
- final assembler=File('native/WaffraSmsFragmentAssembler.kt').readAsStringSync();
+ final assembler=store; // Pure Kotlin helper is embedded in Store; CI copies Store.
  test('single bank purchase with overlapping tail and duplicate beginning',(){
   const full='شراء عبر نقاط البيع\nبطاقة: **6314 MADA\nمبلغ: 33.81 SAR\nلدى: Marakez Medical Compan\nفي: 2026-11-18 18:51\nالرصيد المتبقي: ريال 93.95';
   const prefix='شراء عبر نقاط البيع\nبطاقة: **6314 MADA\nمبلغ: 33.81 SAR\nلدى: Mar';
@@ -22,7 +22,9 @@ void main(){
   expect(assembler,contains('if (hasCompletePurchase(left) && hasCompletePurchase(right)) return null'));
  });
  test('native receiver and history share assembler before financial candidate review',(){
-  expect(receiver,contains('WaffraSmsFragmentAssembler.combine('));
+  expect(receiver,contains('WaffraAutoSmsStore.offer(context, sender, parts.toString(), receivedAt)'));
+  expect(store,contains('save(context, collapseQueuedMultipartLocked(context, queue))'));
+  // The native encrypted queue spans separate SMS_RECEIVED intents.
   expect(receiver,contains('WaffraAutoSmsStore.offer('));
   expect(store,contains('WaffraSmsFragmentAssembler.combine('));
   expect(store,contains('fun repairPendingMultipart('));
