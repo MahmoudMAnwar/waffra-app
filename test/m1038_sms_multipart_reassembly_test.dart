@@ -28,6 +28,11 @@ void main(){
   expect(receiver,contains('WaffraAutoSmsStore.offer('));
   expect(store,contains('WaffraSmsFragmentAssembler.combine('));
   expect(store,contains('fun repairPendingMultipart('));
+  expect(store,contains('private fun waitingForMultipart(row: JSONObject): Boolean'));
+  expect(store,contains('now - queuedAt >= 90000L'));
+  expect(store,contains('.filter { !waitingForMultipart(data.getJSONObject(it)) }'));
+  expect(store,contains('if (waitingForMultipart(row)) return@synchronized null'));
+  expect(store,contains('.put("queuedAt", System.currentTimeMillis())'));
   expect(store,contains('sourceIds'));
   expect(store,contains('allSourceIds('));
   expect(store,contains('identityAt'));
