@@ -903,16 +903,21 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
      // M661: a durable single-message exclusion is NOT a learned pattern.
      // The user sees the distinction instead of a misleading silent success.
      var learned=false;
-     try{learned=await _learnSafeSmsRule(
-      body:body,sender:sender,kind:'excluded');}catch(_){}
+     String? learningFailure;
+     try{
+      learned=await _learnSafeSmsRule(
+       body:body,sender:sender,kind:'excluded',
+       onFailure:(reason)=>learningFailure=reason);
+     }catch(_){learningFailure??='rule_storage_unavailable';}
      if(mounted){
       snackSuccess(visibleContext,learned?
        (waffraIsEnglish?
         'Message excluded for 30 days; a reusable safe rule was saved.':
         'تم استبعاد الرسالة لمدة 30 يوم، واتحفظت قاعدة آمنة للرسائل المشابهة.'):
        (waffraIsEnglish?
-        'Only this message was excluded for 30 days. No reusable rule was learned.':
-        'تم استبعاد الرسالة دي فقط لمدة 30 يوم. لم يتم تعلّم قاعدة للرسائل المشابهة.'));
+        'Only this message was excluded for 30 days. No reusable rule was learned. ':
+        'تم استبعاد الرسالة دي فقط لمدة 30 يوم. لم يتم تعلّم قاعدة للرسائل المشابهة. ')+
+        waffraExclusionLearningReason(learningFailure,english:waffraIsEnglish));
       await _refreshAutoSmsInbox();
      }
     }else if(mounted){
