@@ -1937,6 +1937,7 @@ object WaffraAutoSmsStore {
                 return@synchronized 0
             try {
                 val queue = read(context)
+                val beforeQueueSize = queue.length()
                 // Decrypt the excluded-sender list once per historical page.
                 val excluded = readExcluded(context)
                 val excludedNames = HashSet<String>(excluded.length() * 2 + 1)
@@ -1955,6 +1956,7 @@ object WaffraAutoSmsStore {
                     mutableMapOf<String, MutableMap<String, JSONObject>>()
                 var examined = 0
                 var accepted = 0
+                var visibleAccepted = 0
                 var stoppedForCapacity = false
                 var nextAt = originalCursor.first
                 var nextId = originalCursor.second
@@ -2019,12 +2021,17 @@ object WaffraAutoSmsStore {
                     prefs.getLong(historyScannedCount, 0L) else 0L
                 val previousAdded = if (stillSameMonth)
                     prefs.getLong(historyAddedCount, 0L) else 0L
+                // Progress counts BANK SMS REVIEW candidates, not Android
+                // PDU fragments. Three parts of one purchase count as one.
+                val grouped = if (accepted > 0)
+                    collapseQueuedMultipartLocked(context, queue) else queue
+                visibleAccepted = (grouped.length() - beforeQueueSize).coerceAtLeast(0)
                 val editor = prefs.edit()
                     .putLong(historyCursorAt, nextAt)
                     .putLong(historyCursorId, nextId)
                     .putLong(historySourceMonth, start)
                     .putLong(historyScannedCount, previousExamined + examined)
-                    .putLong(historyAddedCount, previousAdded + accepted)
+                    .putLong(historyAddedCount, previousAdded + visibleAccepted)
                     .putBoolean(historyComplete, complete)
                 if (complete) {
                     editor.putBoolean(historyInitialCompleted, true)
@@ -2033,10 +2040,8 @@ object WaffraAutoSmsStore {
                     editor.putBoolean(capacityRecoveryRequestedName, true)
                 }
                 if (accepted > 0) {
-                    // Multipart rows from the Android inbox are never
-                    // independent bank transactions if they have provable
-                    // structural overlap and the same source clock.
-                    val grouped = collapseQueuedMultipartLocked(context, queue)
+                    // An import page and its review identity are persisted
+                    // atomically with the original provider cursor.
                     editor.putString(queueName, seal(grouped.toString()))
                 }
                 // OTP exclusion IDs, recoverable 30d labels, cursor and queue
