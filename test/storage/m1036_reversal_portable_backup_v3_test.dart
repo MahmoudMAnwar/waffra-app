@@ -17,7 +17,7 @@ import 'package:waffra/storage/waffra_portable_encrypted_backup_exporter.dart';
 void main(){
  late Directory directory;
  late WaffraEncryptedStore source;
- const secret='m1036-v3-qa-source-key';
+ const secret='m1036-v3-disposable-source-key-32-characters-long';
  const password='m1036-test-only-v3-password';
  const occurred='2026-11-18T09:15:00';
  const corrected='2026-11-18T10:15:00';
