@@ -1,3 +1,4 @@
+- Corrected a deeper post-commit issue: Home refresh exceptions no longer turn an already-saved compensating transfer into a misleading 'not posted' warning; a clearly separated partial-success status asks for ledger refresh before any retry.
 - M611 positive verified SQLCipher history contract was updated, not removed: it still requires the witnessed reader and additionally requires the correction sheet's StatefulBuilder Future refresh.
 [M1036 / #760 / LINKED TRANSFER REVERSAL AND LIVE HISTORY RELOAD — DRAFT; CI/ANDROID PENDING]
 - Verified code defect: original account-to-account transfer shows Reverse even after correction and bottom sheet retained a Future captured before reversal; source history had no verified reversed relation. This is a UI/account-journal consistency fix, not an assertion that owner-device balances are wrong.
