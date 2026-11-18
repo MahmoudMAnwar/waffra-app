@@ -52,7 +52,9 @@ void main() {
     expect(history,contains('.putLong(historyCursorAt, nextAt)'));
     expect(history,contains('.putLong(historyCursorId, nextId)'));
     expect(history,contains('.putLong(historyScannedCount, previousExamined + examined)'));
-    expect(history,contains('.putLong(historyAddedCount, previousAdded + accepted)'));
+    expect(history,contains('.putLong(historyAddedCount, previousAdded + visibleAccepted)'));
+    expect(history,contains('val grouped = if (accepted > 0)'));
+    expect(history,contains('(grouped.length() - beforeQueueSize).coerceAtLeast(0)'));
     expect(history,contains('.putBoolean(historyComplete, complete)'));
     expect(RegExp(r'\beditor\.commit\(\)').allMatches(history).length,1);
     expect(history,contains('if (!editor.commit()) return@synchronized 0'));

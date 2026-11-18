@@ -1,12 +1,41 @@
 {
   "schema_version": 1,
-  "pr": "Draft PR #764",
-  "issue": "#763",
+  "pr": "Draft PR (M1038, to be opened)",
+  "issue": "#765",
   "workflow_review_policy": "scan-all-registered-workflows",
-  "baseline": "main 18 November 2026 before Issue #763",
+  "baseline": "main at 18 November 2026 after merged PR #764",
   "reviewed_at": "2026-11-18",
-  "review_policy": "M1037 owner-visible encrypted excluded SMS and explainable safe learning: all registered jobs and positive/negative source contracts must be checked; no financial writer changes",
+  "review_policy": "M1038 exact source multipart bank SMS reassembly; avoid false grouping, preserve financial authority, no OTP plaintext or destructive migration",
   "contracts": [
+    {
+      "id": "M1038-NATIVE-SOURCE-EVIDENCED-MULTIPART-AND-ALIAS-REPLAY",
+      "issue": "Issue #765",
+      "previous_behavior": "Android receiver combined only PDU parts from one broadcast when sender, timestamp and service center were exactly equal. Native history importer staged each Android SMS inbox row independently. A single split POS SMS with merchant and balance tail therefore surfaced as several expense/needs-review cards and source-hash IDs could reappear after rescan.",
+      "approved_behavior": "Owner-scoped encrypted native SMS candidate queue reconstructs complementary portions with exactly equal sender, <=120-second source/receipt boundaries and direct long literal overlap or strict fragment containment. Two independently complete purchases are never joined even if same amount, sender and merchant. A reconstructed candidate presents the combined source text while carrying all constituent original hashes in sourceIds. Commit/transfer/exclusion atomically marks all constituent hashes, and an explicit restore unwinds the same aliases; Android rescan and further historical import acknowledge those aliases. Existing finance SQLCipher rows and accounting balances stay untouched. Batch history reconstruction uses the exact previous durable per-row cursor, never sender/merchant matching alone. Pure OTP never stored in a joined candidate. The user-facing imported count is the delta in reconstructed review candidates, not the number of original SMS provider fragments; scanned cursor/count still uses original source rows. An incomplete incoming purchase header or balance-only tail is held from foreground/background review up to 90 seconds after intake to await complementary parts; the encrypted candidate is not discarded and remains eligible for later explicit manual review. M518 original sender timestamp regression must assert encrypted grouped queue seal rather than obsolete per-fragment queue seal; pendingById refuses an incomplete multipart SMS until native review-ready, so no partial purchase is submitted.",
+      "source_paths": [
+        "native/WaffraAutoSmsStore.kt"
+      ],
+      "test_paths": [
+        "test/m1038_sms_multipart_reassembly_test.dart",
+        "test/m1029_android_sms_multipart_grouping_test.dart",
+        "test/m1016_sms_background_financial_intake_test.dart",
+        "test/m461_sms_exclusion_and_history_scan_test.dart",
+        "test/m547_sms_incremental_jank_regression_test.dart",
+        "test/m638_sms_inbox_delete_sync_test.dart",
+        "test/m981_historical_otp_atomic_intake_test.dart",
+        "test/m514_sms_review_regressions_test.dart"
+      ],
+      "safety_invariants": [
+        "No financial transaction or SQLCipher ledger row may be inserted or deleted during SMS composition",
+        "Never match or merge messages based solely on equal amount or merchant; two complete same-sender purchases remain distinct",
+        "Never change a confirmed/excluded/completed SMS alias into a new pending finance candidate",
+        "Only original owner-scoped encrypted candidates may be modified; permanent markers stay encrypted and Android provider remains read-only",
+        "Mixed OTP secrets stay redacted, pure OTPs stay absent, and no SMS text goes to logs or external services",
+        "Do not reset historical cursor or delete source rows; source hashes must be marked before future replay",
+        "Real Android device verification of overlapping multipart PDU/provider rows is still required after source/CI gates",
+        "Do not call transaction editor/worker with a recent incomplete purchase PDU fragment, even if it has a partial amount; no early notification or financial ACK."
+      ]
+    },
     {
       "id": "M1037-OWNER-VISIBLE-SMS-EXCLUSION-AND-LEARNING-DIAGNOSTICS",
       "issue": "Issue #763",
