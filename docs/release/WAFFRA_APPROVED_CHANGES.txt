@@ -1,3 +1,10 @@
+[M1036 / #760 / LINKED TRANSFER REVERSAL AND LIVE HISTORY RELOAD — DRAFT; CI/ANDROID PENDING]
+- Verified code defect: original account-to-account transfer shows Reverse even after correction and bottom sheet retained a Future captured before reversal; source history had no verified reversed relation. This is a UI/account-journal consistency fix, not an assertion that owner-device balances are wrong.
+- Read-only encrypted transfer history now resolves deterministic SHA-256 reverse IDs and checks note, opposite endpoints and exact halala amount. Original displays reversed status and linked correction; inverse card links to original. Invalid pair fails closed.
+- Confirmation preview shows source/recipient account name, pre/post verified balances and amount, respects hidden-amount eye, explicitly disclaims any real-world bank refund and excludes implicit fee rollback.
+- A successful verified correction invalidates cached transfer reads, refreshes Home accounts, and rebinds the open modal Future; duplicate button hidden on reversed original and server writer stays deterministic/idempotent. Same-account/invalid original transfers refused.
+- Nine targeted disposable SQLCipher + source regression tests cover both-account balances, identity links, duplicate attempt, account filters, off-page status, cold reopen, corrupted note/amount and UI. No production cutover, other-entity finances or device SMS modifications. Exact PR head CI and Android acceptance still required.
+
 [M1035 / #758 / BANK SMS TIME-FIRST ISO TIMESTAMP REGRESSION — DRAFT, CI/ANDROID NOT VERIFIED]
 - User supplied two AlinmaPay screenshots: `في:15:08 2026-11-02` does NOT prefill date, whereas `في:2026-11-07 16:06` does. Confirmed root cause in `bankSmsDate`: missing full-year time-first ISO layout and a matching recognition branch in the timestamp uncertainty guard; the M1034 Unicode normalization alone could not solve this.
 - Add one strict shared matcher for HH:mm[:ss] YYYY-MM-DD and preserve date-first ISO, time-first/day-first, date-first/day-first; supports slash/dot/hyphen, Arabic/Persian digits, bidi controls, labeled time/date split across lines.
