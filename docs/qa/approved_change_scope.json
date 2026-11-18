@@ -1,66 +1,99 @@
 {
   "contract_version": 1,
-  "change_id": "ISSUE760-M1036-TRANSFER-REVERSAL-LINKED-STATUS-UI",
-  "human_scope_review": "Owner reported bank-account transfer reversal defect. Main SQLCipher writer already idempotent, but original transfer card always shows Reverse and modal history is a stale Future; account history lacks linked reversal status and pre-confirmation preview.",
+  "change_id": "ISSUE763-M1037-SMS-EXCLUSION-READABLE-OWNER-LEARNING",
+  "human_scope_review": "User requested that excluded SMS show their real content, sender and timestamps to the signed-in owner, and explain precisely why the reusable exclusion rule was not saved. Original SMS on Android remains unchanged, data at rest stays encrypted.",
   "user_requested_changes": [
-    "Verified SQLCipher transfer-history relationship and reversal status on original; detail link to compensating transfer, no second correction button after reversal.",
-    "Live FutureBuilder reload in still-open transfer bottom sheet and Home account balances refreshed after confirmed reversal, without modifying unrelated account records.",
-    "Explicit pre-confirmation two-account before/after balance preview respecting masked amounts and warning that ledger reversal is not a bank refund.",
-    "Strict from!=to and positive amount safeguards; idempotent writer, no income/expense/budget changes, no implicit fee refund; test replay/cold reopen/corrupt pair and UI.",
-    "Retain M611 positive SQLCipher-backed history-source assertions and update its stale one-time-Future expectation to explicitly verify reload after reversal.",
-    "Prove password-protected V3 backup/restore preserves both original and compensation link, remains idempotent and accepts legacy backup made before reversal."
+    "Show original reviewed SMS text and timestamps for each individual exclusion instead of a fixed encrypted placeholder, with owner-only on-demand decryption.",
+    "Restore older individually excluded message text by exact Android sender/body/timestamp fingerprint lookup when retained in the phone inbox, without guessing on deleted originals.",
+    "Distinguish verified reusable local-rule learning from one-message exclusion and explain financial-safety rejection, unsupported pattern, owner verification, conflicts, capacity and encrypted-store failure.",
+    "Protect pure OTP codes, mask mixed verification secrets, preserve 30-day encrypted labels and permanent anti-replay fingerprints, avoid financial posting and whole-sender exclusion.",
+    "Retain existing tests and add M1037 regressions in mandatory M946 safety matrix, updating obsolete M982 assertion without weakening security and maintaining release notes."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "lib/storage/waffra_account_context_repository.dart",
-    "lib/storage/waffra_accounts_repository.dart",
-    "lib/waffra_home_verified_transfer_cards.part.dart",
-    "test/storage/m1036_transfer_reversal_linked_state_test.dart",
-    "test/m611_manual_home_finance_regression_test.dart",
-    "test/storage/m1036_reversal_portable_backup_v3_test.dart"
+    "lib/waffra_auto_sms.dart",
+    "lib/waffra_home_sms_confirmation.part.dart",
+    "lib/waffra_home_sms_rules.part.dart",
+    "lib/waffra_sms_local_rules.dart",
+    "lib/waffra_sms_rule_settings_page.dart",
+    "native/WaffraAutoSmsStore.kt",
+    "native/WaffraMainActivity.kt",
+    "scripts/qa/m946_full_app_smoke_matrix.py",
+    "test/m1037_excluded_sms_readback_and_learning_test.dart",
+    "test/m982_background_sms_exclusion_bridge_test.dart"
   ],
   "bounded_sections": {
-    "lib/storage/waffra_account_context_repository.dart": [
+    "native/WaffraAutoSmsStore.kt": [
       {
-        "start": "import 'package:drift/drift.dart';",
-        "end": "import '../waffra_bank_sms_facts.dart';"
+        "start": "    // M514 #448: excluded review SMS are not finance commits.",
+        "end": "    private const val excludedMessageInfoBucketPrefix"
       },
       {
-        "start": "class WaffraInternalTransferHistory {",
-        "end": "/// M448 account attribution metadata:"
+        "start": "    /** Shows only excluded SMS identities and safe sender/time labels;",
+        "end": "    /** Restore just one excluded SMS;"
       },
       {
-        "start": " Future<List<WaffraInternalTransferHistory>> readInternalTransferHistory({",
-        "end": " /// M649: account-linked goal movements are a separate savings wallet."
+        "start": "    fun excludeMessages(context: Context, ids: Set<String>): Boolean =",
+        "end": "    /**\n     * M516 #455:"
       }
     ],
-    "lib/storage/waffra_accounts_repository.dart": [
+    "native/WaffraMainActivity.kt": [
       {
-        "start": " Future<bool> reverseInternalTransfer({",
-        "end": " /// Calculated exclusively from SQL."
+        "start": "                \"excludedAutoSmsMessages\" -> {",
+        "end": "                \"restoreExcludedAutoSmsMessage\" -> {"
       }
     ],
-    "lib/waffra_home_verified_transfer_cards.part.dart": [
+    "lib/waffra_auto_sms.dart": [
       {
-        "start": " String _m647VerifiedAccountLabel(",
-        "end": " /// M647: source and destination"
-      },
-      {
-        "start": " Widget _m647TransferCard(",
-        "end": " /// M649: this gold card"
-      },
-      {
-        "start": " Future<void> _m647ShowInternalTransfers(",
-        "end": " Widget _dashboardShortcut("
+        "start": " /// Individually excluded SMS are encrypted natively",
+        "end": " static Future<bool> restoreExcludedMessage(String id)async{"
       }
     ],
-    "test/m611_manual_home_finance_regression_test.dart": [
+    "lib/waffra_sms_local_rules.dart": [
       {
-        "start": " test('M611 transfer history reads real encrypted rows under owner witness'",
-        "end": " test('M681-M684 Account review uses SQL page, consent and all-time unassigned'"
+        "start": "part 'waffra_sms_saudi_seed_rules.part.dart';",
+        "end": "class WaffraSmsLocalRule {"
+      },
+      {
+        "start": " static List<String> suggestions(Iterable<String> messages){",
+        "end": " /// Make a conservative, sender-scoped draft"
+      }
+    ],
+    "lib/waffra_home_sms_rules.part.dart": [
+      {
+        "start": " Future<bool> _learnSafeSmsRule({",
+        "end": " /// Manual entries have no bank SMS sender."
+      }
+    ],
+    "lib/waffra_home_sms_confirmation.part.dart": [
+      {
+        "start": "   }else if(decision=='exclude'&&mounted){",
+        "end": "   }else if(decision=='transfer'&&mounted){"
+      }
+    ],
+    "lib/waffra_sms_rule_settings_page.dart": [
+      {
+        "start": " Future<void> _edit({WaffraSmsLocalRule? existing,String? seed,String? kindHint})async{",
+        "end": " Widget _defaultRuleBucket(String kind) {"
+      },
+      {
+        "start": " @override Widget build(BuildContext context)=>Scaffold(",
+        "end": null
+      }
+    ],
+    "test/m982_background_sms_exclusion_bridge_test.dart": [
+      {
+        "start": "  test('M982 no completed money or SMS secret travels through background exclusion',",
+        "end": null
+      }
+    ],
+    "scripts/qa/m946_full_app_smoke_matrix.py": [
+      {
+        "start": "FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {",
+        "end": "    \"m1032_owner_sms_rules_backup_v3_roundtrip\""
       }
     ]
   }
