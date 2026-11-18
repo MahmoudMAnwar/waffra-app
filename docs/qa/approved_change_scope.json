@@ -21,7 +21,8 @@
     "test/m1038_sms_multipart_reassembly_test.dart",
     "test/m461_sms_exclusion_and_history_scan_test.dart",
     "test/m547_sms_incremental_jank_regression_test.dart",
-    "test/m638_sms_inbox_delete_sync_test.dart"
+    "test/m638_sms_inbox_delete_sync_test.dart",
+    "test/m981_historical_otp_atomic_intake_test.dart"
   ],
   "bounded_sections": {
     "native/WaffraAutoSmsStore.kt": [
@@ -82,6 +83,12 @@
       {
         "start": " test('M638 native reconciliation removes only missing unconfirmed review IDs',",
         "end": " test('M638 explicit Rescan alone calls background native inbox sync'"
+      }
+    ],
+    "test/m981_historical_otp_atomic_intake_test.dart": [
+      {
+        "start": "  test('M981 historical OTP denial and its cursor use ONE encrypted commit',",
+        "end": "  test('M981 historical OTP does not advance on failure or pretend it was reviewed'"
       }
     ]
   }
