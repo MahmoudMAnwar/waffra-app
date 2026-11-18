@@ -67,20 +67,42 @@ extension _WaffraHomeVerifiedTransferCards on _HomeScreenState {
     reversedIso:DateTime.now().toUtc().toIso8601String(),
     userConfirmed:true);
    _m648InvalidateTransfers();
+   // Verify persisted halalas AND Home's displayed account projection after
+   // commit. _m467RefreshHomeAccounts can absorb read failures internally.
+   // Do not announce "balances updated" unless both accounts match.
+   var verifiedAfterRefresh=false;
    try{
+    final after=await api.balances();
+    final sourceAfter=after.where((a)=>
+     a.id==from.id&&!a.archived).toList();
+    final targetAfter=after.where((a)=>
+     a.id==to.id&&!a.archived).toList();
+    final expectedFrom=reversed?restoredFrom:from.balanceMinor;
+    final expectedTo=reversed?debitedTo:to.balanceMinor;
+    final ledgerMatches=sourceAfter.length==1&&targetAfter.length==1&&
+     sourceAfter.single.balanceMinor==expectedFrom&&
+     targetAfter.single.balanceMinor==expectedTo;
     await _m467RefreshHomeAccounts();
+    final displayedFrom=_m467Accounts.where((a)=>a.id==from.id).toList();
+    final displayedTo=_m467Accounts.where((a)=>a.id==to.id).toList();
+    verifiedAfterRefresh=ledgerMatches&&_m468VerifiedAccountsLoaded&&
+     displayedFrom.length==1&&displayedTo.length==1&&
+     displayedFrom.single.balanceMinor==expectedFrom&&
+     displayedTo.single.balanceMinor==expectedTo;
    }catch(refreshError){
-    // M1036: the encrypted writer has already returned success.
-    // Never present a post-commit UI refresh failure as a failed reversal.
+    verifiedAfterRefresh=false;
+   }
+   if(!verifiedAfterRefresh){
+    // The writer already returned; do not imply its atomic commit failed.
     if(mounted){
      onReversed?.call();
      snack(context,waffraIsEnglish?
       (reversed?
-       'Transfer correction was saved, but balances could not refresh. Reload the page.':
-       'Transfer was already corrected, but balances could not refresh.'):
+       'Transfer correction was saved, but balances could not be verified. Reload the page.':
+       'Transfer was already corrected, but balances could not be verified.') :
       (reversed?
-       'تم حفظ عكس التحويل، لكن تعذر تحديث الأرصدة. حدّث الصفحة للتحقق.':
-       'التحويل معكوس مسبقًا، لكن تعذر تحديث الأرصدة.'),
+       'تم حفظ عكس التحويل، لكن تعذر التحقق من تحديث الأرصدة. حدّث الصفحة للتحقق.':
+       'التحويل معكوس مسبقًا، لكن تعذر التحقق من الأرصدة.'),
       isError:true);
     }
     return;
