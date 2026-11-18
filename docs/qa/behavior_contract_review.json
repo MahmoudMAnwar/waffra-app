@@ -11,7 +11,7 @@
       "id": "M1036-VERIFIED-TRANSFER-REVERSAL-PAIR-AND-UI-REFRESH",
       "issue": "Issue #760",
       "previous_behavior": "The original transfer card never learned its reversal status from SQLCipher, retained an active reverse button; the bottom sheet captured a stale Future even after the writer invalidated its Home cache. No two-account preview or explicit bank-vs-ledger distinction.",
-      "approved_behavior": "Read deterministic reversal ID and strict source/target/amount/note pair from encrypted journal, show reversed status and bidirectional original/correction navigation. Preview source/destination verified balances and exact compensating changes using the masked-currency display before user confirmation. A successful owner-approved reversal refreshes Home and the modal Future. SQLCipher writer remains idempotent and excludes income/expense and bank fee refund.",
+      "approved_behavior": "Read deterministic reversal ID and strict source/target/amount/note pair from encrypted journal, show reversed status and bidirectional original/correction navigation. Preview source/destination verified balances and exact compensating changes using the masked-currency display before user confirmation. A successful owner-approved reversal refreshes Home and the modal Future. SQLCipher writer remains idempotent and excludes income/expense and bank fee refund. Prior M611 verified encrypted history positive coverage is retained, now asserting a refreshed Future after an owner-confirmed correction.",
       "source_paths": [
         "lib/storage/waffra_account_context_repository.dart",
         "lib/storage/waffra_accounts_repository.dart",
@@ -20,7 +20,8 @@
       "test_paths": [
         "test/storage/m1036_transfer_reversal_linked_state_test.dart",
         "test/storage/m440_accounts_repository_test.dart",
-        "test/storage/m611_verified_transfer_history_test.dart"
+        "test/storage/m611_verified_transfer_history_test.dart",
+        "test/m611_manual_home_finance_regression_test.dart"
       ],
       "safety_invariants": [
         "Never write a second reversal for same source ID, retain immutable original and original note",
