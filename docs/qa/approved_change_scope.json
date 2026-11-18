@@ -1,106 +1,87 @@
 {
   "contract_version": 1,
-  "change_id": "ISSUE763-M1037-SMS-EXCLUSION-READABLE-OWNER-LEARNING",
-  "human_scope_review": "User requested that excluded SMS show their real content, sender and timestamps to the signed-in owner, and explain precisely why the reusable exclusion rule was not saved. Original SMS on Android remains unchanged, data at rest stays encrypted.",
+  "change_id": "ISSUE765-M1038-SMS-STRUCTURAL-MULTIPART-REASSEMBLY",
+  "human_scope_review": "Owner reported one AlinmaPay purchase SMS SAR 33.81 split into three separate review notification cards, with partial merchant/date and one balance-only tail. Change only encrypted native SMS queue and source scope, never finance ledger, existing confirmed entries or owner permissions.",
   "user_requested_changes": [
-    "Show original reviewed SMS text and timestamps for each individual exclusion instead of a fixed encrypted placeholder, with owner-only on-demand decryption.",
-    "Restore older individually excluded message text by exact Android sender/body/timestamp fingerprint lookup when retained in the phone inbox, without guessing on deleted originals.",
-    "Distinguish verified reusable local-rule learning from one-message exclusion and explain financial-safety rejection, unsupported pattern, owner verification, conflicts, capacity and encrypted-store failure.",
-    "Protect pure OTP codes, mask mixed verification secrets, preserve 30-day encrypted labels and permanent anti-replay fingerprints, avoid financial posting and whole-sender exclusion.",
-    "Retain existing tests and add M1037 regressions in mandatory M946 safety matrix, updating obsolete M982 assertion without weakening security and maintaining release notes."
+    "Reconstruct separately delivered and historically imported bank SMS fragments using exact sender, bounded original SMS clock and strong literal text overlap, never amount/merchant-only merging.",
+    "Present one complete original purchase SMS containing SAR 33.81, merchant Marakez Medical Compan, timestamp 2026-11-18 18:51 and remaining balance SAR 93.95.",
+    "Repair already queued, unconfirmed fragments without rewriting confirmed financial transactions or deleting Android SMS.",
+    "On review acceptance, exclusion, transfer confirmation and restore preserve original fragment fingerprints as owner-encrypted aliases and prevent rescan replay.",
+    "Preserve pure OTP non-persistence, mixed OTP masking, owner-scoped encryption, durable cursor, bounded capacity, and separate identical independent completed purchases.",
+    "Update impacted source assertions and safety smoke matrix before Android/Flutter full CI, with real device UAT required before merge."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "lib/waffra_auto_sms.dart",
-    "lib/waffra_home_sms_confirmation.part.dart",
-    "lib/waffra_home_sms_rules.part.dart",
-    "lib/waffra_sms_local_rules.dart",
-    "lib/waffra_sms_rule_settings_page.dart",
     "native/WaffraAutoSmsStore.kt",
-    "native/WaffraMainActivity.kt",
     "scripts/qa/m946_full_app_smoke_matrix.py",
-    "test/m1037_excluded_sms_readback_and_learning_test.dart",
-    "test/m615_m618_sms_review_retention_perf_contract_test.dart",
-    "test/m982_background_sms_exclusion_bridge_test.dart"
+    "test/m1016_sms_background_financial_intake_test.dart",
+    "test/m1038_sms_multipart_reassembly_test.dart",
+    "test/m461_sms_exclusion_and_history_scan_test.dart",
+    "test/m547_sms_incremental_jank_regression_test.dart",
+    "test/m638_sms_inbox_delete_sync_test.dart"
   ],
   "bounded_sections": {
     "native/WaffraAutoSmsStore.kt": [
       {
-        "start": "    // M514 #448: excluded review SMS are not finance commits.",
-        "end": "    private const val excludedMessageInfoBucketPrefix"
+        "start": "import java.util.Calendar",
+        "end": "object WaffraAutoSmsStore {"
       },
       {
-        "start": "    /** Shows only excluded SMS identities and safe sender/time labels;",
-        "end": "    /** Restore just one excluded SMS;"
+        "start": "    fun restoreExcludedMessage(context: Context, id: String): Boolean =",
+        "end": "    private val completedTransferCipherCache"
+      },
+      {
+        "start": "    private fun id(sender: String, body: String, at: Long): String {",
+        "end": "    // M1027: mask only a uniquely identified challenge token."
+      },
+      {
+        "start": "    fun offer(context: Context, sender: String, body: String, at: Long,",
+        "end": "    fun markBackgroundSmsReviewed(context: Context,"
       },
       {
         "start": "    fun excludeMessages(context: Context, ids: Set<String>): Boolean =",
-        "end": "    /**\n     * M516 #455:"
-      }
-    ],
-    "native/WaffraMainActivity.kt": [
-      {
-        "start": "                \"excludedAutoSmsMessages\" -> {",
-        "end": "                \"restoreExcludedAutoSmsMessage\" -> {"
-      }
-    ],
-    "lib/waffra_auto_sms.dart": [
-      {
-        "start": " /// Individually excluded SMS are encrypted natively",
-        "end": " static Future<bool> restoreExcludedMessage(String id)async{"
-      }
-    ],
-    "lib/waffra_sms_local_rules.dart": [
-      {
-        "start": "part 'waffra_sms_saudi_seed_rules.part.dart';",
-        "end": "class WaffraSmsLocalRule {"
+        "end": "    fun reconcilePendingWithInbox(context: Context): Int {"
       },
       {
-        "start": " static List<String> suggestions(Iterable<String> messages){",
-        "end": " /// Make a conservative, sender-scoped draft"
-      }
-    ],
-    "lib/waffra_home_sms_rules.part.dart": [
-      {
-        "start": " Future<bool> _learnSafeSmsRule({",
-        "end": " /// Manual entries have no bank SMS sender."
-      }
-    ],
-    "lib/waffra_home_sms_confirmation.part.dart": [
-      {
-        "start": "   }else if(decision=='exclude'&&mounted){",
-        "end": "   }else if(decision=='transfer'&&mounted){"
-      }
-    ],
-    "lib/waffra_sms_rule_settings_page.dart": [
-      {
-        "start": " Future<void> _edit({WaffraSmsLocalRule? existing,String? seed,String? kindHint})async{",
-        "end": " Widget _defaultRuleBucket(String kind) {"
+        "start": "    fun reconcilePendingWithInbox(context: Context): Int {",
+        "end": "    fun enableAllHistoryScan(context: Context): Boolean = synchronized(mutex) {"
       },
       {
-        "start": " @override Widget build(BuildContext context)=>Scaffold(",
-        "end": null
-      }
-    ],
-    "test/m982_background_sms_exclusion_bridge_test.dart": [
-      {
-        "start": "  test('M982 no completed money or SMS secret travels through background exclusion',",
-        "end": null
+        "start": "    fun importConsentMonth(context: Context, maxRead: Int = 500): Int {",
+        "end": "    /** Claim each review notification once;"
       }
     ],
     "scripts/qa/m946_full_app_smoke_matrix.py": [
       {
         "start": "FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {",
-        "end": "    \"m1032_owner_sms_rules_backup_v3_roundtrip\""
+        "end": "    \"m1037_owner_visible_excluded_sms_and_learning_diagnostics\""
       }
     ],
-    "test/m615_m618_sms_review_retention_perf_contract_test.dart": [
+    "test/m1016_sms_background_financial_intake_test.dart": [
       {
-        "start": " test('M616 30d reversible encrypted labels are distinct from immutable rescan denial',",
-        "end": " test('M618 notifications retain hidden sender selection"
+        "start": " test('M1016 source gate rejects non-financial text before encrypted enqueue',",
+        "end": " test('M1016 historical and live share filter, with OTP 30-day exclusion'"
+      }
+    ],
+    "test/m461_sms_exclusion_and_history_scan_test.dart": [
+      {
+        "start": "  test('Android history scans are bounded by a durable cursor',",
+        "end": "  test('native history scanning does not block Android UI thread'"
+      }
+    ],
+    "test/m547_sms_incremental_jank_regression_test.dart": [
+      {
+        "start": " test('M547 historical SMS import has 1000 review slots and atomic cursor/queue persistence',",
+        "end": " test('M547 new-only rescans never clear a previously completed cursor'"
+      }
+    ],
+    "test/m638_sms_inbox_delete_sync_test.dart": [
+      {
+        "start": " test('M638 native reconciliation removes only missing unconfirmed review IDs',",
+        "end": " test('M638 explicit Rescan alone calls background native inbox sync'"
       }
     ]
   }
