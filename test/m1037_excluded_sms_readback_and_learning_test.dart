@@ -35,7 +35,7 @@ void main() {
   expect(native,contains('fun excludedMessageDetails(context: Context, id: String)'));
   expect(native,contains('isExcludedMessageLocked(context, id)'));
   expect(native,contains('fun findOriginalExcludedSms('));
-  expect(native,contains('id(sender, body, identityAt) == fingerprint'));
+  expect(native,contains('id(sender, body, identityAt) != fingerprint'));
   expect(native,contains('pureVerificationOnly(body)'));
   expect(native,contains('signedInOwnerHash(context)'));
   expect(activity,contains('"excludedAutoSmsMessageDetails" ->'));
