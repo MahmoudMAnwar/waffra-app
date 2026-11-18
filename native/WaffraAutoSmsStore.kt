@@ -630,17 +630,28 @@ object WaffraAutoSmsStore {
             if (!enabled(context) || !Regex("^[a-f0-9]{64}$").matches(id))
                 return@synchronized false
             try {
-                val current = excludedMessageBucket(context, id)
-                if (!current.contains(id)) return@synchronized false
+                if (!isExcludedMessageLocked(context, id)) return@synchronized false
                 val savedLabels = excludedMessageInfo(context, id).toMutableMap()
-                savedLabels.remove(id)
+                val label = savedLabels.remove(id) ?: return@synchronized false
+                val source = label.optJSONArray("sourceIds")
+                val identities = linkedSetOf(id)
+                if (source != null) {
+                    if (source.length() > 16) return@synchronized false
+                    for (i in 0 until source.length())
+                        identities.add(source.getString(i))
+                }
+                if (identities.any { !Regex("^[a-f0-9]{64}$").matches(it) })
+                    return@synchronized false
                 val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
-                val succeeded = prefs.edit()
-                    .putString(excludedMessageBucketPrefix + id.take(2),
-                        seal(JSONArray(current.filter { it != id }).toString()))
-                    .putString(excludedMessageInfoBucketPrefix + id.take(2),
-                        seal(JSONArray(savedLabels.values.toList()).toString()))
-                    .commit()
+                val editor = prefs.edit()
+                for ((bucket, ids) in identities.groupBy { it.take(2) }) {
+                    val existing = excludedMessageBucket(context, ids.first())
+                    editor.putString(excludedMessageBucketPrefix + bucket,
+                        seal(JSONArray(existing - ids.toSet()).toString()))
+                }
+                editor.putString(excludedMessageInfoBucketPrefix + id.take(2),
+                    seal(JSONArray(savedLabels.values.toList()).toString()))
+                val succeeded = editor.commit()
                 if (succeeded) {
                     excludedMessageCipherCache.clear()
                     Handler(Looper.getMainLooper()).post { onChanged?.invoke() }
@@ -648,7 +659,6 @@ object WaffraAutoSmsStore {
                 succeeded
             } catch (_: Exception) { false }
         }
-
 
     private val completedTransferCipherCache =
         mutableMapOf<String, Pair<String, Set<String>>>()
@@ -1187,7 +1197,7 @@ object WaffraAutoSmsStore {
                     isCompletedTransferLocked(context, fingerprint))
                     return@synchronized false
                 for (i in 0 until queue.length()) {
-                    if (queue.getJSONObject(i).optString("id") == fingerprint)
+                    if (fingerprint in allSourceIds(queue.getJSONObject(i)))
                         return@synchronized false
                 }
                 // M979: exclude pure OTP at intake, BEFORE queue capacity and
@@ -1441,14 +1451,18 @@ object WaffraAutoSmsStore {
                 val queue = read(context)
                 val remaining = JSONArray()
                 val matched = mutableSetOf<String>()
+                val expandedIds = mutableSetOf<String>()
                 val labels = mutableMapOf<String, JSONObject>()
                 for (i in 0 until queue.length()) {
                     val row = queue.getJSONObject(i)
                     val fingerprint = row.getString("id")
                     if (ids.contains(fingerprint)) {
                         matched.add(fingerprint)
+                        val aliases = allSourceIds(row)
+                        expandedIds.addAll(aliases)
                         labels[fingerprint] = JSONObject()
                             .put("id", fingerprint)
+                            .put("sourceIds", JSONArray(aliases.toList()))
                             .put("sender", row.optString("sender").take(100))
                             .put("receivedAt", row.optLong("receivedAt", 0L))
                             // This is the already-redacted reviewed body; never
@@ -1467,12 +1481,16 @@ object WaffraAutoSmsStore {
                 val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
                 val editor = prefs.edit()
                     .putString(queueName, seal(remaining.toString()))
-                for ((bucket, additions) in matched.groupBy { it.take(2) }) {
+                for ((bucket, additions) in expandedIds.groupBy { it.take(2) }) {
                     val updated = excludedMessageBucket(context,
                         additions.first()).toMutableSet()
                     updated.addAll(additions)
                     editor.putString(excludedMessageBucketPrefix + bucket,
                         seal(JSONArray(updated.toList()).toString()))
+                }
+                // Only the chosen composite receives a visible reversible
+                // owner label; raw fragments are denial-only fingerprints.
+                for ((bucket, additions) in matched.groupBy { it.take(2) }) {
                     val details = excludedMessageInfo(context, additions.first())
                         .toMutableMap()
                     for (item in additions) details[item] = labels.getValue(item)
@@ -1504,10 +1522,15 @@ object WaffraAutoSmsStore {
                 val queue = read(context)
                 val remaining = JSONArray()
                 val matched = mutableSetOf<String>()
+                val expandedIds = mutableSetOf<String>()
                 for (i in 0 until queue.length()) {
                     val row = queue.getJSONObject(i)
                     val fingerprint = row.getString("id")
-                    if (ids.contains(fingerprint)) matched.add(fingerprint)
+                    if (ids.contains(fingerprint)) {
+                        matched.add(fingerprint)
+                        val aliases = allSourceIds(row)
+                        expandedIds.addAll(aliases)
+                    }
                     else remaining.put(row)
                 }
                 if (ids.any { !matched.contains(it) &&
@@ -1515,7 +1538,7 @@ object WaffraAutoSmsStore {
                     return@synchronized false
                 val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
                 val editor = prefs.edit().putString(queueName, seal(remaining.toString()))
-                for ((bucket, additions) in matched.groupBy { it.take(2) }) {
+                for ((bucket, additions) in expandedIds.groupBy { it.take(2) }) {
                     val updated = completedTransferBucket(context, additions.first())
                         .toMutableSet()
                     updated.addAll(additions)
@@ -1550,17 +1573,22 @@ object WaffraAutoSmsStore {
                 val data = read(context)
                 val remaining = JSONArray()
                 val present = mutableSetOf<String>()
+                val expandedIds = mutableSetOf<String>()
                 for (i in 0 until data.length()) {
                     val row = data.getJSONObject(i)
                     val fingerprint = row.getString("id")
-                    if (ids.contains(fingerprint)) present.add(fingerprint)
+                    if (ids.contains(fingerprint)) {
+                        present.add(fingerprint)
+                        val aliases = allSourceIds(row)
+                        expandedIds.addAll(aliases)
+                    }
                     else remaining.put(row)
                 }
                 // Never accept an arbitrary ID as a "completed" bank SMS.
                 if (ids.any { !present.contains(it) &&
                         !isCommittedLocked(context, it) }) return@synchronized false
                 val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
-                val changed = present.groupBy { it.take(2) }
+                val changed = expandedIds.groupBy { it.take(2) }
                 val editor = prefs.edit()
                     .putString(queueName, seal(remaining.toString()))
                 for ((bucket, additions) in changed) {
@@ -1597,9 +1625,9 @@ object WaffraAutoSmsStore {
             if (!enabled(context) || signedInOwnerHash(context) != ownerAtStart)
                 throw IllegalStateException("SMS owner changed before reconciliation")
             val original = read(context)
-            HashSet<String>(original.length() * 2 + 1).apply {
+            HashSet<String>(original.length() * 3 + 1).apply {
                 for (i in 0 until original.length()) {
-                    add(original.getJSONObject(i).getString("id"))
+                    addAll(allSourceIds(original.getJSONObject(i)))
                 }
             }
         }
@@ -1657,8 +1685,8 @@ object WaffraAutoSmsStore {
                 val row = current.getJSONObject(index)
                 val fingerprint = row.getString("id")
                 val receivedAt = row.optLong("receivedAt", 0L)
-                if (initialIds.contains(fingerprint) &&
-                    !present.contains(fingerprint) &&
+                if (allSourceIds(row).any { it in initialIds } &&
+                    allSourceIds(row).none { it in present } &&
                     receivedAt > 0L && receivedAt < recentFloor) {
                     removed++
                 } else {
@@ -1804,7 +1832,7 @@ object WaffraAutoSmsStore {
                 }
                 val existingIds = HashSet<String>(queue.length() * 2 + 1)
                 for (i in 0 until queue.length()) {
-                    existingIds.add(queue.getJSONObject(i).getString("id"))
+                    existingIds.addAll(allSourceIds(queue.getJSONObject(i)))
                 }
                 // M981: collect OTP-only hashes/labels for ONE atomic commit
                 // with the history cursor. Decrypt each shard only once per
