@@ -169,7 +169,7 @@ abstract final class WaffraAutoSms {
    on PlatformException{return null;}
  }
  /// Individually excluded SMS are encrypted natively, scoped to the owner.
- /// Only opaque identity, sender label and receipt time cross this boundary.
+ /// Only opaque ID and safe sender/time metadata are listed; text is detail-only.
  /// A missing plugin or malformed payload is UNKNOWN, not an empty policy.
  static Future<List<Map<String,Object?>>?> excludedMessages()async{
   if(!Platform.isAndroid)return null;
@@ -180,6 +180,7 @@ abstract final class WaffraAutoSms {
    return items.map((item){
     if(item is! Map)throw const FormatException('Invalid excluded SMS item');
     final id=item['id'],sender=item['sender'],receivedAt=item['receivedAt'];
+    final excludedAt=item['excludedAt'];
     if(id is! String||
        !RegExp(r'^[a-f0-9]{64}$').hasMatch(id)||
        sender is! String||
@@ -188,8 +189,106 @@ abstract final class WaffraAutoSms {
     }
     return Map<String,Object?>.unmodifiable({
      'id':id,'sender':sender,'receivedAt':receivedAt,
+     if(excludedAt is int)'excludedAt':excludedAt,
     });
    }).toList(growable:false);
+  }catch(_){return null;}
+ }
+ /// M1037: single owner-selected excluded message, decrypted on demand.
+ /// The original text may be unavailable in old labels or pure OTP notices.
+ static Future<Map<String,Object?>?> excludedMessageDetails(String id)async{
+  if(!Platform.isAndroid||
+     !RegExp(r'^[a-f0-9]{64}
+  if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(id))return false;
+  return _boolCall('restoreExcludedAutoSmsMessage',id);
+ }
+ static Future<bool> excludeSender(String sender)async{
+  if(sender.trim().isEmpty)return false;
+  return _boolCall('excludeAutoSmsSender',sender.trim());
+ }
+ /// Atomic native sender exclusion for a large selected review group.
+ static Future<bool> excludeSenders(List<String> senders)async{
+  if(senders.isEmpty||senders.length>1000||
+     senders.any((name)=>name.trim().isEmpty||name.trim().length>100)){
+   return false;
+  }
+  return _boolCall('excludeAutoSmsSenders',senders);
+ }
+ static Future<bool> restoreExcludedSender(String sender)async{
+  if(sender.trim().isEmpty)return false;
+  return _boolCall('restoreExcludedAutoSmsSender',sender.trim());
+ }
+ // Only after verified financial hash is present in SQLCipher.
+ static Future<bool> acknowledgeCommitted(List<String> ids)async{
+  if(ids.isEmpty||ids.length>100||
+     ids.any((id)=>!RegExp(r'^[a-f0-9]{64}$').hasMatch(id)))return false;
+  return _boolCall('ackCommittedAutoBankSms',ids);
+ }
+
+ /// M514: an SMS explicitly excluded by the user must never be booked as
+ /// a completed income/expense. Native exclusion policy is independent.
+ static Future<bool> excludeMessages(List<String> ids)async{
+  if(ids.isEmpty||ids.length>100||
+     ids.any((id)=>!RegExp(r'^[a-f0-9]{64}$').hasMatch(id)))return false;
+  return _boolCall('excludeAutoBankSms',ids);
+ }
+ /// M516: the immutable native fingerprint contains sender, body and time.
+ /// It differs from historical body-only financial entry hashes.
+ static String transferIdForMessage(String fingerprint){
+  if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(fingerprint)){
+   throw ArgumentError.value(fingerprint,'fingerprint','Invalid SMS identity');
+  }
+  return 'sms-transfer-$fingerprint';
+ }
+ /// Durable completed-transfer ACK; only call after verified SQLCipher save.
+ static Future<bool> acknowledgeCompletedTransfer(List<String> ids)async{
+  if(ids.isEmpty||ids.length>100||
+     ids.any((id)=>!RegExp(r'^[a-f0-9]{64}$').hasMatch(id)))return false;
+  return _boolCall('ackCompletedTransferAutoBankSms',ids);
+ }
+ static Future<bool> acknowledge(List<String> ids)async{
+  if(ids.isEmpty||ids.length>100)return false;
+  return _boolCall('ackAutoBankSms',ids);
+ }
+ static Future<bool> notifyCommitted({
+  required String hash,required double amount,required bool income,
+  required bool linkedBudget,required String entryId,
+ })async{
+  if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(hash)||!amount.isFinite||
+     amount<=0||entryId.isEmpty||entryId.length>200)return false;
+  return _boolCall('notifyAutoSmsSaved',{
+   'hash':hash,'amount':amount.toStringAsFixed(2),
+   'income':income,'linkedBudget':linkedBudget,'entryId':entryId,
+  });
+ }
+ static Future<bool> notifyReview(String hash,{String kind='uncertain'})async{
+  if(!RegExp(r'^[a-f0-9]{64}$').hasMatch(hash))return false;
+  if(!{'income','expense','transfer','uncertain'}.contains(kind)){
+   kind='uncertain';
+  }
+  return _boolCall('notifyAutoSmsNeedsReview',{'hash':hash,'kind':kind});
+ }
+}
+).hasMatch(id))return null;
+  try{
+   final item=await channel.invokeMapMethod<String,dynamic>(
+    'excludedAutoSmsMessageDetails',id);
+   if(item==null||item['id']!=id||item['sender'] is! String||
+      item['receivedAt'] is! int||item['excludedAt'] is! int||
+      item['status'] is! String)return null;
+   final status=item['status'] as String;
+   if(!const {'available','otp_protected','unavailable'}.contains(status))
+    return null;
+   final body=item['body'];
+   if(status=='available'&&(body is! String||body.trim().isEmpty))
+    return null;
+   return Map<String,Object?>.unmodifiable({
+    'id':id,'sender':item['sender'] as String,
+    'receivedAt':item['receivedAt'] as int,
+    'excludedAt':item['excludedAt'] as int,
+    'status':status,
+    if(status=='available')'body':body as String,
+   });
   }catch(_){return null;}
  }
  static Future<bool> restoreExcludedMessage(String id)async{
