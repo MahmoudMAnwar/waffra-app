@@ -1252,6 +1252,27 @@ object WaffraAutoSmsStore {
         return assembled
     }
 
+    /** A PDU split received in separate broadcasts must not generate a
+     * premature expense suggestion/ACK before its companion part arrives.
+     * A genuinely incomplete single SMS is returned after the short window
+     * for deliberate manual review; it is never automatically posted.
+     */
+    private fun waitingForMultipart(row: JSONObject): Boolean {
+        if (row.optBoolean("sensitiveOtp", false)) return false
+        val queuedAt = row.optLong("queuedAt", 0L)
+        val now = System.currentTimeMillis()
+        if (queuedAt <= 0L || queuedAt > now ||
+            now - queuedAt >= 90000L) return false
+        val body = row.optString("body")
+        val headed = body.contains("شراء عبر نقاط البيع") ||
+            body.contains("purchase", ignoreCase = true)
+        val probableTail = !headed &&
+            (body.contains("الرصيد المتبقي") ||
+             body.contains("remaining balance", ignoreCase = true))
+        return (headed && !WaffraSmsFragmentAssembler.hasCompletePurchase(body)) ||
+            probableTail
+    }
+
     /** Upgrades already queued, unconfirmed split SMS on next review load. */
     fun repairPendingMultipart(context: Context): Int = synchronized(mutex) {
         if (!enabled(context)) return@synchronized 0
@@ -1354,7 +1375,9 @@ object WaffraAutoSmsStore {
             val data = collapseQueuedMultipartLocked(context, existing)
             if (data.length() < existing.length() && !save(context, data))
                 throw IllegalStateException("SMS multipart queue save failed")
-            (0 until data.length()).map { index ->
+            (0 until data.length())
+                .filter { !waitingForMultipart(data.getJSONObject(it)) }
+                .map { index ->
                 val row = data.getJSONObject(index)
                 val fields = mutableMapOf<String, Any>(
                     "id" to row.getString("id"),
@@ -1435,6 +1458,7 @@ object WaffraAutoSmsStore {
                 for (index in 0 until queue.length()) {
                     val row = queue.getJSONObject(index)
                     if (row.optString("id") != id) continue
+                    if (waitingForMultipart(row)) return@synchronized null
                     val fields = mutableMapOf<String, Any>(
                         "id" to row.getString("id"),
                         "sender" to row.getString("sender"),
@@ -2004,6 +2028,7 @@ object WaffraAutoSmsStore {
                                     .put("sensitiveOtp", sensitive)
                                     .put("receivedAt", row.receivedAt)
                                     .put("identityAt", row.identityAt)
+                                    .put("queuedAt", System.currentTimeMillis())
                                     .put("reviewNotified", true))
                                 existingIds.add(fingerprint)
                                 accepted++
