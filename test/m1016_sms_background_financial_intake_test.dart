@@ -26,7 +26,9 @@ void main(){
   expect(live,contains('if (pureVerificationOnly(body)) {'));
   expect(live,contains('recordPureOtpExclusionLocked('));
   expect(live,contains('if (queue.length() >= maxCandidates)'));
-  expect(live,contains('save(context, queue)'));
+  expect(live,contains('save(context, collapseQueuedMultipartLocked(context, queue))'));
+  expect(live,contains('if (fingerprint in allSourceIds(queue.getJSONObject(i)))'));
+  // M1038: only unconfirmed bank SMS fragments are combined; OTP guard remains before offer.
   expect(live,isNot(contains('commitConfirmedSms(')));
   expect(live,isNot(contains('FirebaseFirestore')));
  });
