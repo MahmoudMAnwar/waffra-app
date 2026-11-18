@@ -180,5 +180,10 @@ void main(){
   expect(ui,contains('_m648InvalidateTransfers();'));
   expect(ui,contains('await _m467RefreshHomeAccounts();'));
   expect(ui,contains('api.reverseInternalTransfer('));
+  // Commit succeeded before the refresh attempt: reporting "not saved"
+  // would be a dangerous false negative and invite an unnecessary retry.
+  expect(ui,contains('catch(refreshError)'));
+  expect(ui,contains('تم حفظ عكس التحويل، لكن تعذر تحديث الأرصدة'));
+  expect(ui,contains('حدّث السجل قبل إعادة المحاولة'));
  });
 }
