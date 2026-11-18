@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "pr": "M1035 Draft PR pending",
+  "pr": "Draft PR #759",
   "issue": "#758",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main after merged PR #757 (18 November 2026)",
