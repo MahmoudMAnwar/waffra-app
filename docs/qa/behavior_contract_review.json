@@ -1,12 +1,41 @@
 {
   "schema_version": 1,
-  "pr": "Draft PR #761",
-  "issue": "#760",
+  "pr": "Draft PR #764",
+  "issue": "#763",
   "workflow_review_policy": "scan-all-registered-workflows",
-  "baseline": "main after merged PR #759 (18 November 2026)",
+  "baseline": "main 18 November 2026 before Issue #763",
   "reviewed_at": "2026-11-18",
-  "review_policy": "M1036 transfer reversal state and modal refresh; no independent finance writer, only verified existing SQLCipher commit.",
+  "review_policy": "M1037 owner-visible encrypted excluded SMS and explainable safe learning: all registered jobs and positive/negative source contracts must be checked; no financial writer changes",
   "contracts": [
+    {
+      "id": "M1037-OWNER-VISIBLE-SMS-EXCLUSION-AND-LEARNING-DIAGNOSTICS",
+      "issue": "Issue #763",
+      "previous_behavior": "User selected Exclude removed encrypted review text and kept only hash/sender/timestamp in an encrypted label. Settings printed a fixed 'encrypted on device' subtitle. Rule learner returned false/silently caught errors without identifying financial action or safe-pattern refusal.",
+      "approved_behavior": "Preserve ONLY already OTP-redacted reviewed body for owner-selected individual exclusion within the existing 30-day AES-GCM label and exact anti-replay fingerprint atomic commit. On a deliberate authenticated tap show sender/date/text with exact-hash Android provider legacy fallback, but never expose pure OTP or fabricate missing text. Distinguish individual excluded SMS, blocked senders, reusable safe rules and show exact reason a learning proposal was denied, conflicted, capped, unreadable, or unverified. Never auto-exclude future money movements, ban an entire sender, write finance or send SMS to any network. Existing M982 test updates only the old blanket no-body exclusion assertion; preserves strict OTP protection and historical anti-replay.",
+      "source_paths": [
+        "native/WaffraAutoSmsStore.kt",
+        "native/WaffraMainActivity.kt",
+        "lib/waffra_auto_sms.dart",
+        "lib/waffra_home_sms_rules.part.dart",
+        "lib/waffra_home_sms_confirmation.part.dart",
+        "lib/waffra_sms_local_rules.dart",
+        "lib/waffra_sms_rule_settings_page.dart"
+      ],
+      "test_paths": [
+        "test/m1037_excluded_sms_readback_and_learning_test.dart",
+        "test/m982_background_sms_exclusion_bridge_test.dart",
+        "test/m615_m618_sms_review_retention_perf_contract_test.dart",
+        "test/m1007_sms_rule_scope_test.dart"
+      ],
+      "safety_invariants": [
+        "Only an active, exact authenticated owner receives content from the encrypted label or original SMS provider",
+        "Never persist or show unmasked original pure OTP and never expose mixed OTP challenge token",
+        "Legacy SMS readback must compare cryptographic fingerprint of original sender, body and message date, not sender alone",
+        "Permanent encrypted dedupe fingerprint and 30-day reversible label must be atomically persisted with queue exclusion",
+        "A transaction-looking SMS cannot teach reusable automatic exclusion; exclusion cannot post money or ban a sender",
+        "No change to SQLCipher ledger, bank account balances, budget, SMS history cursor or background notification ACK"
+      ]
+    },
     {
       "id": "M1036-VERIFIED-TRANSFER-REVERSAL-PAIR-AND-UI-REFRESH",
       "issue": "Issue #760",
