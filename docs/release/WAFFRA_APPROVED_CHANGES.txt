@@ -1,3 +1,9 @@
+[M1035 / #758 / BANK SMS TIME-FIRST ISO TIMESTAMP REGRESSION — DRAFT, CI/ANDROID NOT VERIFIED]
+- User supplied two AlinmaPay screenshots: `في:15:08 2026-11-02` does NOT prefill date, whereas `في:2026-11-07 16:06` does. Confirmed root cause in `bankSmsDate`: missing full-year time-first ISO layout and a matching recognition branch in the timestamp uncertainty guard; the M1034 Unicode normalization alone could not solve this.
+- Add one strict shared matcher for HH:mm[:ss] YYYY-MM-DD and preserve date-first ISO, time-first/day-first, date-first/day-first; supports slash/dot/hyphen, Arabic/Persian digits, bidi controls, labeled time/date split across lines.
+- Nine targeted regression groups cover both anonymized SMS templates, four full-year layouts across three separators, optional seconds, Unicode, labels, impossible dates/times, ambiguous two-digit years and shared review/editor/background caller paths.
+- No auto-post, account, category, original amount, native ACK, SQLCipher writer, backup or SMS receipt fallback is changed. CI on exact PR SHA and physical Android SMS UAT still required before claiming fixed in deployed APK or merging.
+
 [M1034 / #756 / BANK SMS TIMESTAMP UNICODE AND FIELD-VARIANT FIX — DRAFT, PENDING CI/ANDROID]
 - AlinmaPay screenshot shows full-year bank source `في:15-11-2026 10:14` but review displays date/time missing. M1033 #754 already tests that exact plain string on main: do not assume the user's APK is current or that invisible Android SMS characters match screenshot text.
 - Normalize bidi control/isolate characters, nonbreaking/Unicode spaces and Arabic/Persian digits inside the shared source timestamp parser. Support adjacent date/time field labels over separate lines, full-year date-first/time-first, dot/slash/hyphen separators, ISO T and checked seconds.
