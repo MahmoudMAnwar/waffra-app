@@ -1,3 +1,4 @@
+- M611 positive verified SQLCipher history contract was updated, not removed: it still requires the witnessed reader and additionally requires the correction sheet's StatefulBuilder Future refresh.
 [M1036 / #760 / LINKED TRANSFER REVERSAL AND LIVE HISTORY RELOAD — DRAFT; CI/ANDROID PENDING]
 - Verified code defect: original account-to-account transfer shows Reverse even after correction and bottom sheet retained a Future captured before reversal; source history had no verified reversed relation. This is a UI/account-journal consistency fix, not an assertion that owner-device balances are wrong.
 - Read-only encrypted transfer history now resolves deterministic SHA-256 reverse IDs and checks note, opposite endpoints and exact halala amount. Original displays reversed status and linked correction; inverse card links to original. Invalid pair fails closed.
