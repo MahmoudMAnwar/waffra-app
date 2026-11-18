@@ -67,7 +67,24 @@ extension _WaffraHomeVerifiedTransferCards on _HomeScreenState {
     reversedIso:DateTime.now().toUtc().toIso8601String(),
     userConfirmed:true);
    _m648InvalidateTransfers();
-   await _m467RefreshHomeAccounts();
+   try{
+    await _m467RefreshHomeAccounts();
+   }catch(refreshError){
+    // M1036: the encrypted writer has already returned success.
+    // Never present a post-commit UI refresh failure as a failed reversal.
+    if(mounted){
+     onReversed?.call();
+     snack(context,waffraIsEnglish?
+      (reversed?
+       'Transfer correction was saved, but balances could not refresh. Reload the page.':
+       'Transfer was already corrected, but balances could not refresh.'):
+      (reversed?
+       'تم حفظ عكس التحويل، لكن تعذر تحديث الأرصدة. حدّث الصفحة للتحقق.':
+       'التحويل معكوس مسبقًا، لكن تعذر تحديث الأرصدة.'),
+      isError:true);
+    }
+    return;
+   }
    if(mounted){
     // The modal's FutureBuilder must explicitly reload its own Future.
     onReversed?.call();
@@ -78,8 +95,8 @@ extension _WaffraHomeVerifiedTransferCards on _HomeScreenState {
    }
   }catch(error){
    if(mounted)snack(context,waffraIsEnglish?
-    'Transfer correction could not be verified. No new correction was posted.':
-    'تعذر تأكيد تصحيح التحويل. لم تُسجّل حركة عكس جديدة.',
+    'Correction status could not be verified. Reload the history before retrying.':
+    'تعذر التحقق من نتيجة عكس التحويل. حدّث السجل قبل إعادة المحاولة.',
     isError:true);
   }
  }
