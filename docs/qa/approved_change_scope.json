@@ -23,6 +23,7 @@
     "native/WaffraMainActivity.kt",
     "scripts/qa/m946_full_app_smoke_matrix.py",
     "test/m1037_excluded_sms_readback_and_learning_test.dart",
+    "test/m615_m618_sms_review_retention_perf_contract_test.dart",
     "test/m982_background_sms_exclusion_bridge_test.dart"
   ],
   "bounded_sections": {
@@ -94,6 +95,12 @@
       {
         "start": "FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {",
         "end": "    \"m1032_owner_sms_rules_backup_v3_roundtrip\""
+      }
+    ],
+    "test/m615_m618_sms_review_retention_perf_contract_test.dart": [
+      {
+        "start": " test('M616 30d reversible encrypted labels are distinct from immutable rescan denial',",
+        "end": " test('M618 notifications retain hidden sender selection"
       }
     ]
   }
