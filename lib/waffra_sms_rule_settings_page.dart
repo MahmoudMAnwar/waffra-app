@@ -599,6 +599,48 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
    suffix.dispose();
   }
  }
+ String _m1037SmsTimestamp(Object? ms){
+  if(ms is! int||ms<=0)return widget.english?'Unknown':'غير معروف';
+  return DateTime.fromMillisecondsSinceEpoch(ms).toLocal()
+   .toString().split('.').first;
+ }
+ /// Load the original, owner-authorized message ONLY after deliberate tap.
+ Future<void> _m1037ShowExcludedMessage(Map<String,Object?> message)async{
+  final id=message['id'];
+  if(id is! String||!mounted)return;
+  final detail=await WaffraAutoSms.excludedMessageDetails(id);
+  if(!mounted)return;
+  final sender=(detail?['sender'] as String?)??
+   (message['sender'] as String?)??'';
+  final body=detail?['body'] as String?;
+  final status=detail?['status'] as String?;
+  final content=status=='available'&&body!=null&&body.trim().isNotEmpty?
+   body:(status=='otp_protected'?
+    (widget.english?'This verification code was not retained.':
+     'رسالة تحقق محمية؛ رمز التحقق الأصلي غير محفوظ ولا يُعرض.'):
+    (widget.english?'Original SMS text unavailable. It may have been deleted from Android SMS.':
+     'تعذر استرجاع نص الرسالة. قد تكون الرسالة الأصلية اتحذفت من رسائل الهاتف.'));
+  await showDialog<void>(context:context,builder:(dialog)=>AlertDialog(
+   title:Text(widget.english?'Excluded SMS details':'تفاصيل الرسالة المستبعدة'),
+   content:SingleChildScrollView(child:Column(
+    mainAxisSize:MainAxisSize.min,
+    crossAxisAlignment:CrossAxisAlignment.start,children:[
+    Text((widget.english?'Sender: ':'المرسل: ')+sender),
+    const SizedBox(height:8),
+    Text((widget.english?'Received: ':'وصلت في: ')+
+     _m1037SmsTimestamp(detail?['receivedAt']??message['receivedAt'])),
+    Text((widget.english?'Excluded: ':'استُبعدت في: ')+
+     _m1037SmsTimestamp(detail?['excludedAt']??message['excludedAt'])),
+    const SizedBox(height:14),
+    Text(widget.english?'Original SMS text':'نص الرسالة الأصلي',
+     style:Theme.of(dialog).textTheme.titleSmall),
+    const SizedBox(height:8),
+    SelectableText(content,textAlign:TextAlign.start),
+   ])),
+   actions:[TextButton(onPressed:()=>Navigator.pop(dialog),
+    child:Text(widget.english?'Close':'إغلاق'))],
+  ));
+ }
  /// Curated built-in patterns are read-only and lazily rendered. Avoid
  /// constructing hundreds of ListTiles on each tap or panel scroll.
  Widget _defaultRuleBucket(String kind) {
@@ -745,25 +787,37 @@ class _WaffraSmsRuleSettingsPageState extends State<WaffraSmsRuleSettingsPage>{
           'These are saved message IDs or whole blocked senders, not reusable keyword rules. You can restore them from Settings > Excluded.':
           'دي رسائل مستبعدة أو مرسلون محجوبون فعليًا، مش قواعد كلمات. تقدر ترجعهم من إعدادات المستبعدين.'),
         ),
+        if(nativeBlockedSenders!.isNotEmpty)
+         Padding(padding:const EdgeInsets.fromLTRB(12,8,12,6),
+          child:Text(widget.english?'Blocked senders':'المرسلون المستبعدون',
+           style:Theme.of(context).textTheme.titleSmall)),
         for(final blocked in nativeBlockedSenders!.take(30))
          ListTile(dense:true,leading:const Icon(Icons.block_outlined),
           title:Text(blocked,maxLines:1,overflow:TextOverflow.ellipsis),
           subtitle:Text(widget.english?'Blocked sender':'مرسل مستبعد')),
+        Padding(padding:const EdgeInsets.fromLTRB(12,12,12,6),
+         child:Text(widget.english?'Individually excluded messages':
+          'الرسائل المستبعدة فرديًا',
+          style:Theme.of(context).textTheme.titleSmall)),
         for(final message in nativeExcluded!.take(40))
          ListTile(dense:true,leading:const Icon(Icons.mark_email_read_outlined),
           title:Text((message['sender'] as String?)?.trim().isNotEmpty==true?
            message['sender'] as String:
            (widget.english?'Unknown sender':'مرسل غير معروف'),
            maxLines:1,overflow:TextOverflow.ellipsis),
-          subtitle:Text(widget.english?
-           'Excluded individual message (encrypted on device)':
-           'رسالة مستبعدة منفردة (محفوظة مشفرة على الجهاز)')),
+          subtitle:Text((widget.english?'Excluded: ':'استبعاد فردي • ')+
+           _m1037SmsTimestamp(message['receivedAt'])+
+           (widget.english?' • Tap to view original SMS':' • اضغط لعرض نص الرسالة')),
+          onTap:()=>_m1037ShowExcludedMessage(message)),
         if(nativeExcluded!.length>40||nativeBlockedSenders!.length>30)
          Padding(padding:const EdgeInsets.all(12),
           child:Text(widget.english?
            'Only the first 40 messages and 30 senders are shown here. Open Settings > Excluded for full management.':
            'يظهر أول 40 رسالة و30 مرسل هنا. افتح الإعدادات > المستبعدون للإدارة الكاملة.')),
        ],
+       Padding(padding:const EdgeInsets.fromLTRB(12,10,12,5),
+        child:Text(widget.english?'Learned reusable rules':
+         'القواعد المتعلّمة',style:Theme.of(context).textTheme.titleSmall)),
        if(!saved.any((r)=>r.resolvedKind==kind))
         Padding(padding:const EdgeInsets.all(14),
          child:Text(widget.english?
