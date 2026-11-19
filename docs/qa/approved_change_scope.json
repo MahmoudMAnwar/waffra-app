@@ -1,12 +1,14 @@
 {
   "contract_version": 1,
-  "change_id": "ISSUE769-M1040-SQLCIPHER-TRANSFER-SOURCE-FUNDS",
-  "human_scope_review": "One financial-integrity defect: internal account-to-account transfer may credit a destination without sufficient available money at source; SMS transfer+fee must enforce the combined debit. Exact SQLCipher transaction source only, no new permissions, no historical rewriting.",
+  "change_id": "ISSUE769-M1040-AND-ISSUE773-M1042-PR770",
+  "human_scope_review": "One financial-integrity defect: internal account-to-account transfer may credit a destination without sufficient available money at source; SMS transfer+fee must enforce the combined debit. Exact SQLCipher transaction source only, no new permissions, no historical rewriting. Owner explicitly approved adding M1042/#773 AlinmaPay wallet Save disabled by hidden bank-only SMS suffix to this same Draft PR #770; preserve M1040 finance bounds.",
   "user_requested_changes": [
     "Reject new internal transfers exceeding the source account's current SQLCipher-computed balance, under the existing transaction and writer lock.",
     "Check total source debit (credited transfer plus separately booked fee) for a confirmed fee-bearing SMS transfer using the same canonical account writer.",
     "Keep matching replay IDs idempotent, block conflicting replays, and allow the independent corrective reversal writer to retain previous compensation semantics.",
-    "Add isolated SQLCipher and fee source regression tests without reading user data, updating release provenance and M550 behavior contract before CI."
+    "Add isolated SQLCipher and fee source regression tests without reading user data, updating release provenance and M550 behavior contract before CI.",
+    "Fix the new wallet form's invisible bank SMS last-four validation and clear stale suffix on type transitions; preserve strict bank-only suffix.",
+    "Add M1042 widget regression for AlinmaPay wallet zero/positive balance, save draft, bank-to-wallet-to-bank transition and bank suffix constraints."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -16,7 +18,9 @@
     "lib/storage/waffra_accounts_repository.dart",
     "lib/storage/waffra_unified_finance_writer.dart",
     "test/storage/m1040_internal_transfer_balance_guard_test.dart",
-    "test/m1040_sms_transfer_fee_balance_contract_test.dart"
+    "test/m1040_sms_transfer_fee_balance_contract_test.dart",
+    "lib/waffra_new_account_dialog.dart",
+    "test/m1042_hidden_wallet_suffix_account_save_test.dart"
   ],
   "bounded_sections": {
     "lib/storage/waffra_accounts_repository.dart": [
@@ -29,6 +33,16 @@
       {
         "start": "  Future<bool> appendReviewedSmsTransferWithFee({",
         "end": "  /// Called AFTER explicit confirmation for bank SMS"
+      }
+    ],
+    "lib/waffra_new_account_dialog.dart": [
+      {
+        "start": " @override void initState(){",
+        "end": " Future<void> addCustomSubtype()async{"
+      },
+      {
+        "start": "     key:const Key('m470-new-account-kind'),",
+        "end": "     key:ValueKey('m638-bank-category-$bankCategory'),"
       }
     ]
   }

@@ -1,12 +1,34 @@
 {
   "schema_version": 1,
-  "pr": "Draft PR (M1040, Issue #769)",
-  "issue": "#769",
+  "pr": "Draft PR #770 (M1040 / M1042; Issues #769 / #773)",
+  "issue": "#769, #773",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at 18 November 2026 after merged PR #764",
   "reviewed_at": "2026-11-19",
-  "review_policy": "M1040 one insufficient transfer-source debit defect, source+fee same atomic cash guard; retain prior M550 contracts",
+  "review_policy": "M1040 one insufficient transfer-source debit defect, source+fee same atomic cash guard; retain prior M550 contracts; M1042 wallet-only hidden SMS suffix form validation and bank suffix preservation",
   "contracts": [
+    {
+      "id": "M1042-WALLET-HIDDEN-SMS-SUFFIX-SAVE-ENABLEMENT",
+      "issue": "Issue #773 / owner explicitly requested same Draft PR #770",
+      "previous_behavior": "After a bank SMS provides a four-digit masked card suffix, the account creation dialog retains smsSuffix even when the user selects wallet and the bank-only input becomes hidden. The valid getter then demands kind==bank whenever the hidden suffix is nonempty, disabling Create account with fully visible correct AlinmaPay wallet fields, regardless of zero/positive opening balance.",
+      "approved_behavior": "In WaffraNewAccountDialog only a displayed bank form may retain and validate an optional four-English-digit suffix. Never initialize hidden suffix on a wallet; clearing kind away from bank discards previous suffix. Fully confirmed digital wallet with institution, subtype, name and nonnegative SAR opening can Save and returns lastFour=null. Bank validation remains strict, no change to account SQLCipher writer, message source/acknowledgement or auto-post.",
+      "source_paths": [
+        "lib/waffra_new_account_dialog.dart"
+      ],
+      "test_paths": [
+        "test/m1042_hidden_wallet_suffix_account_save_test.dart",
+        "test/m483_sms_account_suffix_prefill_test.dart",
+        "test/m470_new_account_dialog_test.dart",
+        "test/m942_opening_account_dropdown_regression_test.dart"
+      ],
+      "safety_invariants": [
+        "The wallet form never disables Save because of a hidden bank-only smsSuffix and always emits lastFour null for wallet.",
+        "Switching away from bank discards any stale bank-only suffix; switching back cannot silently re-associate a prior card.",
+        "A visible bank suffix remains optional, exact four digits if entered, and cannot contain a full bank account number.",
+        "Name, valid active provider, subtype and verified nonnegative SAR opening remain mandatory; no finance write or SMS acknowledgement occurs merely by enabling a button.",
+        "The pre-existing M1040 underfunded transfer guard, atomic fee and 285 prior behavior contracts remain unchanged."
+      ]
+    },
     {
       "id": "M1040-VERIFIED-SOURCE-FUNDS-AND-SMS-FEE-ATOMIC-TRANSFER",
       "issue": "Issue #769",
