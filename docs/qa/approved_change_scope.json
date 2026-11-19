@@ -50,10 +50,6 @@
       },
       {
         "start": "  // M983: override legacy bank-SMS fallback only for a fresh typed SMS.",
-        "end": "  // Unknown original SMS timestamp requires an explicit calendar pick."
-      },
-      {
-        "start": "  // Unknown original SMS timestamp requires an explicit calendar pick.",
         "end": "   String? suggestion,pendingHash,receiptPath=initial?.receiptPath;"
       },
       {
