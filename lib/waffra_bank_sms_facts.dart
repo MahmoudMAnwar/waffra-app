@@ -126,8 +126,10 @@ abstract final class WaffraBankSmsFactsParser {
  }
  static final _source=RegExp(
   r'(?:من\s+(?:محفظ[ةه]|حساب|بطاق[ةه])|'
+  r'(?:البطاق[ةه]|بطاق[ةه]|بطاقتك|بطاقتي)\s*[:：]\s*|'
   r'(?:from|source|account|card|wallet|acct)\s*(?:no\.?|ending)?\s*[:：]?)'
-  r'[^\r\n]{0,22}?(?:\*{2,}|x{2,}|X{2,})\s*([0-9٠-٩]{4})',
+  r'[^\r\n]{0,22}?(?:\*{2,}|[xX]{2,}|[•●]{2,})\s*'
+  r'([0-9٠-٩۰-۹]{4})(?![0-9٠-٩۰-۹])',
   caseSensitive:false);
  static final _destination=RegExp(
   r'(?:إلى|الى|إيبان|أيبان|ايبان|iban|to\s+(?:account|wallet|card)|destination)'
@@ -260,7 +262,16 @@ abstract final class WaffraBankSmsFactsParser {
    value.replaceAll('٠','0').replaceAll('١','1').replaceAll('٢','2')
    .replaceAll('٣','3').replaceAll('٤','4').replaceAll('٥','5')
    .replaceAll('٦','6').replaceAll('٧','7').replaceAll('٨','8')
-   .replaceAll('٩','9');
+   .replaceAll('٩','9')
+   .replaceAll('۰','0').replaceAll('۱','1').replaceAll('۲','2')
+   .replaceAll('۳','3').replaceAll('۴','4').replaceAll('۵','5')
+   .replaceAll('۶','6').replaceAll('۷','7').replaceAll('۸','8')
+   .replaceAll('۹','9');
+  // A contradictory pair of masked source cards cannot select one bank.
+  // Never fall back to the dashboard's current account.
+  final sourceSuffixes=_source.allMatches(normalized)
+   .map((match)=>normalizeSuffix(match.group(1)))
+   .whereType<String>().toSet();
   final feeMatch=_fee.firstMatch(normalized);
   // M596: foreign, unparseable, or sub-halalah fees cannot become SAR.
   // Keep the SMS unposted if fee evidence is ambiguous.
@@ -295,7 +306,7 @@ abstract final class WaffraBankSmsFactsParser {
    double.tryParse(normalizeSuffix(feeMatch.group(1))!.replaceAll(',',''));
   return WaffraBankSmsFacts(
    kind:kind,
-   sourceSuffix:normalizeSuffix(_source.firstMatch(normalized)?.group(1)),
+   sourceSuffix:sourceSuffixes.length==1?sourceSuffixes.single:null,
    destinationSuffix:normalizeSuffix(_destination.firstMatch(normalized)?.group(1)),
    fee:fee!=null&&fee.isFinite&&fee>=0?fee:null,
    reference:_ref.firstMatch(normalized)?.group(1),

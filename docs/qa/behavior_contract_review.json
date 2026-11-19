@@ -1,12 +1,33 @@
 {
   "schema_version": 1,
-  "pr": "Draft PR (M1038, to be opened)",
-  "issue": "#765",
+  "pr": "Draft PR #768 (M1039)",
+  "issue": "#767",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at 18 November 2026 after merged PR #764",
-  "reviewed_at": "2026-11-18",
-  "review_policy": "M1038 exact source multipart bank SMS reassembly; avoid false grouping, preserve financial authority, no OTP plaintext or destructive migration",
+  "reviewed_at": "2026-11-19",
+  "review_policy": "M1039 POS source identity narrow fix; prior history retained; all-workflow preflight and source-only tests",
   "contracts": [
+    {
+      "id": "M1039-POS-CARD-SOURCE-UNIQUE-ACCOUNT-BINDING",
+      "issue": "Issue #767",
+      "previous_behavior": "Bank SMS source-suffix parser only accepts 'من حساب/بطاقة' or English card/account prefixes. Standalone Arabic POS 'بطاقة: **6314 MADA' has sourceSuffix=null and a uniquely pre-verified matching account cannot be resolved.",
+      "approved_behavior": "An explicitly labeled, masked four-digit Saudi card number yields a normalized sourceSuffix for completed POS review. Source candidates are rejected if two different masked source identities are found, any unmasked or overlong source digits are ignored, and unique verified active SAR bank account matching remains mandatory. This only fixes read-only identity parsing; no balances, auto-post permissions, OTP handling, source SMS, native ACK or cloud fields change.",
+      "source_paths": [
+        "lib/waffra_bank_sms_facts.dart"
+      ],
+      "test_paths": [
+        "test/m1039_pos_card_verified_account_binding_test.dart",
+        "test/waffra_bank_sms_facts_test.dart",
+        "test/m985_sms_prefill_identity_status_conflict_duplicate_test.dart"
+      ],
+      "safety_invariants": [
+        "No finance ledger mutation or new AutoPost permission is introduced by parsing the four masked digits",
+        "Only exactly one verified active SAR account may be suggested, never the current dashboard account or a beneficiary account",
+        "Multiple conflicting cards or unmasked digits must produce no confident binding",
+        "OTP, cancelled transfers, foreign currency, duplicate/ACK and human-confirmation gates remain unchanged",
+        "Full Flutter and exact-head CI plus on-device POS SMS approval are mandatory before release"
+      ]
+    },
     {
       "id": "M1038-NATIVE-SOURCE-EVIDENCED-MULTIPART-AND-ALIAS-REPLAY",
       "issue": "Issue #765",

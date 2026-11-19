@@ -1,105 +1,34 @@
 {
   "contract_version": 1,
-  "change_id": "ISSUE765-M1038-SMS-STRUCTURAL-MULTIPART-REASSEMBLY",
-  "human_scope_review": "Owner reported one AlinmaPay purchase SMS SAR 33.81 split into three separate review notification cards, with partial merchant/date and one balance-only tail. Change only encrypted native SMS queue and source scope, never finance ledger, existing confirmed entries or owner permissions.",
+  "change_id": "ISSUE767-M1039-POS-VERIFIED-CARD-SUFFIX",
+  "human_scope_review": "Owner requests one critical bug only: Saudi POS SMS بطاقة: **6314 fails to identify an already verified account. Restrict to read-only bank SMS facts extraction; never widen finance writers, relax OTP or silently attach unverified accounts.",
   "user_requested_changes": [
-    "Reconstruct separately delivered and historically imported bank SMS fragments using exact sender, bounded original SMS clock and strong literal text overlap, never amount/merchant-only merging.",
-    "Present one complete original purchase SMS containing SAR 33.81, merchant Marakez Medical Compan, timestamp 2026-11-18 18:51 and remaining balance SAR 93.95.",
-    "Repair already queued, unconfirmed fragments without rewriting confirmed financial transactions or deleting Android SMS.",
-    "On review acceptance, exclusion, transfer confirmation and restore preserve original fragment fingerprints as owner-encrypted aliases and prevent rescan replay.",
-    "Preserve pure OTP non-persistence, mixed OTP masking, owner-scoped encryption, durable cursor, bounded capacity, and separate identical independent completed purchases.",
-    "Update impacted source assertions and safety smoke matrix before Android/Flutter full CI, with real device UAT required before merge."
+    "Recognize explicitly labeled and masked Saudi POS card last-four digits in the exact bank SMS fact parser used by verified-account matching.",
+    "Reject conflicting masked source identities, unmasked account numbers, and invalid longer masks; maintain existing source, destination and OTP guards.",
+    "Add one targeted real-format regression test for card extraction, unique verified account selection, and negative finance scenarios.",
+    "Record the change in requirements, exact bounded scope, behavior review and truthful source-based release notes before CI; do not merge without verification."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "native/WaffraAutoSmsStore.kt",
-    "scripts/qa/m946_full_app_smoke_matrix.py",
-    "test/m1016_sms_background_financial_intake_test.dart",
-    "test/m1038_sms_multipart_reassembly_test.dart",
-    "test/m461_sms_exclusion_and_history_scan_test.dart",
-    "test/m514_sms_review_regressions_test.dart",
-    "test/m547_sms_incremental_jank_regression_test.dart",
-    "test/m638_sms_inbox_delete_sync_test.dart",
-    "test/m981_historical_otp_atomic_intake_test.dart"
+    "lib/waffra_bank_sms_facts.dart",
+    "test/m1039_pos_card_verified_account_binding_test.dart"
   ],
   "bounded_sections": {
-    "native/WaffraAutoSmsStore.kt": [
+    "lib/waffra_bank_sms_facts.dart": [
       {
-        "start": "import java.util.Calendar",
-        "end": "object WaffraAutoSmsStore {"
+        "start": " static final _source=RegExp(",
+        "end": " static final _destination=RegExp("
       },
       {
-        "start": "    fun restoreExcludedMessage(context: Context, id: String): Boolean =",
-        "end": "    private val completedTransferCipherCache"
+        "start": "  String? normalizeSuffix(String? value)=>",
+        "end": "  final feeMatch=_fee.firstMatch(normalized);"
       },
       {
-        "start": "    private fun id(sender: String, body: String, at: Long): String {",
-        "end": "    // M1027: mask only a uniquely identified challenge token."
-      },
-      {
-        "start": "    fun offer(context: Context, sender: String, body: String, at: Long,",
-        "end": "    fun markBackgroundSmsReviewed(context: Context,"
-      },
-      {
-        "start": "    fun excludeMessages(context: Context, ids: Set<String>): Boolean =",
-        "end": "    fun reconcilePendingWithInbox(context: Context): Int {"
-      },
-      {
-        "start": "    fun reconcilePendingWithInbox(context: Context): Int {",
-        "end": "    fun enableAllHistoryScan(context: Context): Boolean = synchronized(mutex) {"
-      },
-      {
-        "start": "    fun importConsentMonth(context: Context, maxRead: Int = 500): Int {",
-        "end": "    /** Claim each review notification once;"
-      },
-      {
-        "start": "    fun pendingById(context: Context, id: String): Map<String, Any>? =",
-        "end": "    fun claimCloudAttempt(context: Context, id: String): Boolean ="
-      }
-    ],
-    "scripts/qa/m946_full_app_smoke_matrix.py": [
-      {
-        "start": "FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {",
-        "end": "    \"m1037_owner_visible_excluded_sms_and_learning_diagnostics\""
-      }
-    ],
-    "test/m1016_sms_background_financial_intake_test.dart": [
-      {
-        "start": " test('M1016 source gate rejects non-financial text before encrypted enqueue',",
-        "end": " test('M1016 historical and live share filter, with OTP 30-day exclusion'"
-      }
-    ],
-    "test/m461_sms_exclusion_and_history_scan_test.dart": [
-      {
-        "start": "  test('Android history scans are bounded by a durable cursor',",
-        "end": "  test('native history scanning does not block Android UI thread'"
-      }
-    ],
-    "test/m547_sms_incremental_jank_regression_test.dart": [
-      {
-        "start": " test('M547 historical SMS import has 1000 review slots and atomic cursor/queue persistence',",
-        "end": " test('M547 new-only rescans never clear a previously completed cursor'"
-      }
-    ],
-    "test/m638_sms_inbox_delete_sync_test.dart": [
-      {
-        "start": " test('M638 native reconciliation removes only missing unconfirmed review IDs',",
-        "end": " test('M638 explicit Rescan alone calls background native inbox sync'"
-      }
-    ],
-    "test/m981_historical_otp_atomic_intake_test.dart": [
-      {
-        "start": "  test('M981 historical OTP denial and its cursor use ONE encrypted commit',",
-        "end": "  test('M981 historical OTP does not advance on failure or pretend it was reviewed'"
-      }
-    ],
-    "test/m514_sms_review_regressions_test.dart": [
-      {
-        "start": " test('M518 live SMS and history prefer the same sender timestamp',",
-        "end": null
+        "start": "   kind:kind,",
+        "end": "   fee:fee!=null&&fee.isFinite&&fee>=0?fee:null,"
       }
     ]
   }
