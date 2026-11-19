@@ -254,7 +254,18 @@ abstract final class WaffraSmsLocalRules {
    'حوالة داخلية صادرة','حوالة محلية صادرة','حوالة دولية صادرة',
    'حوالة صادرة','debit transfer internal','outgoing transfer',
   ];
-  return headings.any((heading)=>normalized(heading)==normalized(word));
+  final value=normalized(word);
+  const generic=<String>{
+   'حواله','حوالات','تحويل','تحويلات','داخليه','خارجيه',
+   'محليه','دوليه','صادره','وارده','الداخليه','الخارجيه',
+   'المحليه','الدوليه','الصادره','الوارده','بنكيه',
+   'شراء','عبر','نقاط','البيع','مدي','عمليه','مبلغ',
+   'outgoing','incoming','transfer','internal','external',
+   'local','international','debit','credit','received','sent',
+   'purchase','payment','pos','bank','transaction',
+  };
+  return headings.any((heading)=>normalized(heading)==value)||
+   (value.isNotEmpty&&value.split(' ').every(generic.contains));
  }
 
  static bool matches(WaffraSmsLocalRule rule,String body,{
@@ -276,6 +287,12 @@ abstract final class WaffraSmsLocalRules {
   if(rule.templateFamily=='beneficiary_management'){
    return _beneficiaryManagement(body)&&!_hasCompletedFinanceCue(body);
   }
+  // Legacy manual review hints can contain broad words like "outgoing"
+  // or "internal". They must never select a category by those words alone.
+  final matchKeywords=rule.financial&&rule.id.startsWith('manual_')?
+   rule.keywords.where((word)=>!_genericBankOperationHeading(word))
+    .toList(growable:false):rule.keywords;
+  if(matchKeywords.isEmpty)return false;
   // M980: same normalization reused by all four rule groups per SMS.
   final source=' ${preNormalizedBody??normalized(body)} ';
   bool has(String keyword){
@@ -288,7 +305,7 @@ abstract final class WaffraSmsLocalRules {
     RegExp('(^|[^a-z\\u0621-\\u064a])${RegExp.escape(safe)}([^a-z\\u0621-\\u064a]|\u0024)')
      .hasMatch(source);
   }
-  return rule.matchAll?rule.keywords.every(has):rule.keywords.any(has);
+  return rule.matchAll?matchKeywords.every(has):matchKeywords.any(has);
  }
 
  /// OTP plus a completed purchase/debit must remain in financial review.
@@ -777,7 +794,8 @@ abstract final class WaffraSmsLocalRules {
   final words=<String>[];
   for(final item in normalizedText.split(RegExp(r'[^a-z\u0621-\u064a]+',
    caseSensitive:false))){
-   if(item.length<4||generic.contains(item)||!safeKeyword(item))continue;
+   if(item.length<4||generic.contains(item)||
+      _genericBankOperationHeading(item)||!safeKeyword(item))continue;
    if(!words.contains(item))words.add(item);
    if(words.length>=6)break;
   }
@@ -810,7 +828,11 @@ abstract final class WaffraSmsLocalRules {
  }) {
   if(category.trim().isEmpty||normalized(category).contains('غير مصنف')||
      normalized(category).contains('غير محدد'))return null;
-  final keywords=safeDescriptionKeywords(description);
+  // Never create category rules from a generic bank heading or its
+  // direction words; the owner picked the category for one record only.
+  final keywords=safeDescriptionKeywords(description)
+   .where((keyword)=>!_genericBankOperationHeading(keyword))
+   .toList(growable:false);
   if(keywords.isEmpty)return null;
   final kind=income?'income':'expense';
   final id='manual_${sha256.convert(utf8.encode(
