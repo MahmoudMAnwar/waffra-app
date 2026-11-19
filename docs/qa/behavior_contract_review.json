@@ -11,7 +11,7 @@
       "id": "M1045-M160-ANDROID-KOTLIN-PLUGIN-LOADER-OFFICIAL-MAVEN",
       "issue": "Issue #777, sole M160 CI failure for PR #776",
       "previous_behavior": "All Flutter and screenshot SMS tests pass, but M160's minimal regenerated Android host on latest Flutter can resolve transitive Kotlin DSL 6.5.7 / Kotlin 2.3.20 plugin dependencies only via Gradle Plugin Portal and rejects published official Maven Central POMs, failing at plugin loader before Android compilation.",
-      "approved_behavior": "Use Java 21 matching M147 and CI-only Gradle init hook to add official mavenCentral() to settings.pluginManagement.repositories for included Flutter build and generated Android host, with normal Plugin Portal still intact; run flutter pub get again after host generation, then compile the actual release APK with existing non-skipped M160 gate.",
+      "approved_behavior": "Use Java 21 matching M147 and CI-only Gradle init hook to add official mavenCentral() to settings.pluginManagement.repositories for included Flutter build and generated Android host, with normal Plugin Portal still intact; run flutter pub get again after host generation, then compile the actual release APK with existing non-skipped M160 gate. In the same ephemeral generated Android QA host, enable the exact flutter_local_notifications Java core-library desugaring used by the already-green M147 Android job and remove only debug-only integration_test registration from the release Java plugin registrar, rejecting any unknown form. Preserve real release APK build and all production plugins.",
       "source_paths": [
         ".github/workflows/m160-main-reconciliation.yml"
       ],
@@ -24,7 +24,8 @@
         "Existing Gradle/Kotlin/SQLite3MC prefetch SHA pinning stays active and in previous required order.",
         "M160 full Flutter unit/widget/backup tests and unsigned Android release build remain required; no continue-on-error, failed-step skip, or preview-only bypass.",
         "Java 21 is selected before Flutter/Android compile; generated Android host plugins re-resolve after flutter create.",
-        "Existing M1044 bank-SMS source hash, verified account, malformed timestamp consent and no duplicate writes unchanged."
+        "Existing M1044 bank-SMS source hash, verified account, malformed timestamp consent and no duplicate writes unchanged.",
+        "M160 still compiles a release APK with official notification desugaring; only the debug/test-only integration_test registrar can be excluded, using exact text/unknown-form fail-closed checks."
       ]
     },
     {

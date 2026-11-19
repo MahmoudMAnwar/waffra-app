@@ -28,6 +28,17 @@ class KotlinPluginLoaderResolution(unittest.TestCase):
   self.assertNotIn('continue-on-error: true',s)
   self.assertNotIn('--offline',s)
 
+ def test_release_host_applies_m147_native_plugin_and_desugaring_guards(self):
+  s=WORKFLOW.read_text(encoding='utf-8')
+  self.assertIn('isCoreLibraryDesugaringEnabled = true',s)
+  self.assertIn('coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")',s)
+  self.assertIn('GeneratedPluginRegistrant.java',s)
+  self.assertIn('IntegrationTestPlugin()',s)
+  self.assertIn('debug/test-only',s)
+  self.assertIn("raise SystemExit('Unexpected integration_test registrar form')",s)
+  self.assertIn('flutter build apk --release --no-pub --target-platform android-arm64',s)
+  self.assertNotIn('continue-on-error: true',s)
+
  def test_full_suite_and_real_apk_compilation_remain_mandatory(self):
   s=WORKFLOW.read_text(encoding='utf-8')
   self.assertIn('run: flutter test',s)
