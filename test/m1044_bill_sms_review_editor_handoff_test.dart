@@ -80,6 +80,7 @@ void main() {
 
   test('M1044 date picker must require day AND time and disclose provenance', () {
     final editor=File('lib/waffra_home_entry_sheet.part.dart').readAsStringSync();
+    final review=File('lib/waffra_home_sms_confirmation.part.dart').readAsStringSync();
     expect(editor,contains("Key('m1044-sms-date-provenance')"));
     expect(editor,contains('showTimePicker('));
     expect(editor,contains('smsDateConfirmed=true;'));
