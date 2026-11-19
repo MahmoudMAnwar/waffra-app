@@ -146,13 +146,20 @@ class WaffraAccountsRepository implements WaffraAccountOperations {
  /// ledger income/expense entries. Same intent may be retried safely.
  Future<bool> transfer({required String id,required String fromAccountId,
   required String toAccountId,required int amountMinor,
-  required String occurredIso,String note='',required bool userConfirmed})async{
+  required String occurredIso,String note='',required bool userConfirmed,
+  int additionalSourceDebitMinor=0})async{
   await _ready();
   if(!userConfirmed)throw StateError('Transfer requires user confirmation.');
   _id(id);_id(fromAccountId);_id(toAccountId);_when(occurredIso);
-  if(fromAccountId==toAccountId||amountMinor<=0||note.runes.length>2000){
+  // A reviewed SMS transfer can also debit a separately booked bank fee.
+  // Keep the gross source debit in the canonical verified money transaction;
+  // a UI balance or a source-only transfer amount is not adequate.
+  if(fromAccountId==toAccountId||amountMinor<=0||note.runes.length>2000||
+     additionalSourceDebitMinor<0||
+     amountMinor>9007199254740991-additionalSourceDebitMinor){
    throw ArgumentError('Invalid internal transfer.');
   }
+  final requiredSourceDebitMinor=amountMinor+additionalSourceDebitMinor;
   return db.transaction(()async{
    await _activeAccount(fromAccountId);
    await _activeAccount(toAccountId);
@@ -170,6 +177,20 @@ class WaffraAccountsRepository implements WaffraAccountOperations {
       throw StateError('Transfer ID reused with different money.');
     }
     return false;
+   }
+   // This is the CURRENT SQLCipher balance, re-read while the transaction
+   // and the caller's app/widget writer lock are held. Compare *before* the
+   // transfer/fee/hash is persisted; a stale account-picker read cannot
+   // authorize an overdraft or create imaginary destination cash.
+   final currentBalances=await balances();
+   final sources=currentBalances.where((a)=>
+    a.id==fromAccountId&&!a.archived).toList(growable:false);
+   if(sources.length!=1){
+    throw StateError('Verified transfer source is unavailable.');
+   }
+   final source=sources.single;
+   if(source.balanceMinor < requiredSourceDebitMinor){
+    throw StateError('Insufficient verified source funds for transfer.');
    }
    await db.customStatement(
     'INSERT INTO fresh_finance_internal_transfers '
