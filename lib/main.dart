@@ -699,7 +699,7 @@ waffraSmartSmsReviewCategory(Iterable<BudgetCategory> categories,{
  if(income||facts.kind!=WaffraBankOperationKind.expense||
     facts.pending||facts.securityChallenge||
     WaffraBankSmsFactsParser.isVerificationChallenge(sms)||
-    RegExp(r'حوال[ةه]|تحويل|\\btransfer\\b',caseSensitive:false)
+    RegExp(r'حوال[ةه]|تحويل|\btransfer\b',caseSensitive:false)
      .hasMatch(sms))return prior;
  final merchant=waffraMerchantName(sms,income:false);
  if(merchant==null)return prior;
