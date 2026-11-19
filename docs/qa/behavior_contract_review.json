@@ -1,12 +1,35 @@
 {
   "schema_version": 1,
-  "pr": "Draft PR #768 (M1039)",
-  "issue": "#767",
+  "pr": "Draft PR (M1040, Issue #769)",
+  "issue": "#769",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at 18 November 2026 after merged PR #764",
   "reviewed_at": "2026-11-19",
-  "review_policy": "M1039 POS source identity narrow fix; prior history retained; all-workflow preflight and source-only tests",
+  "review_policy": "M1040 one insufficient transfer-source debit defect, source+fee same atomic cash guard; retain prior M550 contracts",
   "contracts": [
+    {
+      "id": "M1040-VERIFIED-SOURCE-FUNDS-AND-SMS-FEE-ATOMIC-TRANSFER",
+      "issue": "Issue #769",
+      "previous_behavior": "Transfer writer checked positive amount, two active accounts and ID replay but inserted a new internal transfer without comparing its debit with freshly SQLCipher-computed source balance. SMS fee writer debited the credited internal transfer amount and a separate bank fee, without a combined available-source balance check. Both can produce negative bank/source balances and fictitious destination credit.",
+      "approved_behavior": "Under the existing authenticated SQLCipher transaction, the canonical transfer writer verifies the sender's current account balance against transfer amount plus any separately posted source fee before any new transfer row is inserted. An SMS transfer passes its fee burden to this same check and the atomic transfer/fee/hash writer rolls back entirely on insufficient funds. Exact-balance transfers, idempotent replay, unique IDs and compensating reversal semantics are preserved. No existing ledger history, SMS OTP, bank notification ACK or user database changes.",
+      "source_paths": [
+        "lib/storage/waffra_accounts_repository.dart",
+        "lib/storage/waffra_unified_finance_writer.dart"
+      ],
+      "test_paths": [
+        "test/storage/m1040_internal_transfer_balance_guard_test.dart",
+        "test/m1040_sms_transfer_fee_balance_contract_test.dart",
+        "test/storage/m440_accounts_repository_test.dart",
+        "test/storage/m1036_transfer_reversal_linked_state_test.dart"
+      ],
+      "safety_invariants": [
+        "Read fresh available source balance from the same active SQLCipher database after acquiring the existing transfer transaction, not from cached account cards.",
+        "The fee-bearing SMS path must check recipient-credited amount plus the separately inserted fee, whether the bank says the fee is included in the principal or added to it.",
+        "A rejected transfer must not add SQL transfer, fee entry, canonical money, SMS hash or Android ACK.",
+        "An idempotent retry of the same transfer must not be rejected due to its already-debited source cash; different money under the same ID remains blocked.",
+        "Existing reverseInternalTransfer compensations, protected historical records, signed finance source checks and physical Android UAT remain unchanged."
+      ]
+    },
     {
       "id": "M1039-POS-CARD-SOURCE-UNIQUE-ACCOUNT-BINDING",
       "issue": "Issue #767",
