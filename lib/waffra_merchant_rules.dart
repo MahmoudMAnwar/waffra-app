@@ -81,6 +81,7 @@ String? waffraMerchantName(String raw,{bool income=false}) {
    r'merchant(?:\s+name)?|store(?:\s+name)?|shop)\s*[:：]?\s*'
    r'([^;\n\r]{2,100}?)'
    r'(?=\s+(?:في\s*[:：]|الرصيد(?:\s+المتبقي)?\s*[:：]|'
+   r'(?:المبلغ|مبلغ|بمبلغ|بقيمة|amount)\s*[:：]|'
    r'balance\s*[:：]|on\s*[:：]|date\s*[:：]|time\s*[:：]|'
    r'الرقم\s+المرجعي\s*[:：])|$)',
    caseSensitive:false).firstMatch(text);
