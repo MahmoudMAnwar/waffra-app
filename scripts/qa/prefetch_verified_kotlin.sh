@@ -14,6 +14,47 @@ versions=(
  '2.2.21:9588fa696ac5507af764fd5660df6894185e12704ec1bc3f5cb772af4987f295'
  '2.4.0:c2b25e8c1c93ec416ba4327f5e31eaec0f0c8847241b9353e294b8db9dce564f'
 )
+
+# M1043 / Issue #774: an upstream Maven 404 must not permanently block Android
+# CI when the original Kotlin JAR is SHA256-valid. Two canonical Maven Central
+# endpoints are the ONLY permitted POM/sidecar sources. Both POM and SHA1
+# MUST be fetched from the same endpoint and verified before installation.
+fetch_verified_kotlin_pom() {
+  local version="$1" pom="$2" work="$3"
+  local module='kotlin-compiler-embeddable'
+  local relative="org/jetbrains/kotlin/$module/$version"
+  local pom_file="$work/$pom" sha_file="$work/$pom.sha1"
+  local base digest
+  for base in 'https://repo.maven.apache.org/maven2' 'https://repo1.maven.org/maven2'; do
+    rm -f "$pom_file" "$sha_file"
+    if ! curl --fail --silent --show-error --location --retry 2 \
+        --retry-all-errors --retry-delay 1 --connect-timeout 15 \
+        --max-time 40 "$base/$relative/$pom" -o "$pom_file"; then
+      echo "M1043: official Kotlin $version POM unavailable at $base; checking alternate" >&2
+      continue
+    fi
+    if ! curl --fail --silent --show-error --location --retry 2 \
+        --retry-all-errors --retry-delay 1 --connect-timeout 15 \
+        --max-time 40 "$base/$relative/$pom.sha1" -o "$sha_file"; then
+      echo "M1043: official Kotlin $version checksum unavailable at $base; checking alternate" >&2
+      continue
+    fi
+    digest="$(tr -d '[:space:]' < "$sha_file")"
+    if [[ ! "$digest" =~ ^[A-Fa-f0-9]{40}$ ]]; then
+      echo "FATAL: malformed official Kotlin $version POM checksum" >&2
+      return 1
+    fi
+    if ! printf '%s  %s\n' "$digest" "$pom_file" | sha1sum --check --status; then
+      echo "FATAL: Kotlin $version official POM digest mismatch" >&2
+      return 1
+    fi
+    echo "PASS verified Kotlin $version POM SHA1 from $base"
+    return 0
+  done
+  echo "FATAL: official Kotlin $version POM and SHA1 unavailable from both Maven Central endpoints" >&2
+  return 1
+}
+
 for spec in "${versions[@]}"; do
   version="${spec%%:*}"
   expected="${spec#*:}"
@@ -36,15 +77,22 @@ for spec in "${versions[@]}"; do
     }
     install -m 0644 "$work/$jar" "$file"
   fi
-  url="https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/$module/$version"
-  curl --fail --location --retry 2 --connect-timeout 15 --max-time 40 "$url/$pom" -o "$work/$pom"
-  curl --fail --location --retry 2 --connect-timeout 15 --max-time 40 "$url/$pom.sha1" -o "$work/pom-$version.sha1"
-  pinned_sha1="$(grep -Eo '[a-fA-F0-9]{40}' "$work/pom-$version.sha1" | head -1 | tr 'A-F' 'a-f')"
-  [[ -n "$pinned_sha1" ]] || { echo "FATAL: official Kotlin $version POM digest unavailable" >&2; exit 1; }
-  printf '%s  %s\n' "$pinned_sha1" "$work/$pom" | sha1sum --check --status || {
-    echo "FATAL: Kotlin $version official POM digest mismatch" >&2; exit 1
-  }
-  install -m 0644 "$work/$pom" "$root/$pom"
+  # Reuse only a previously verified POM + SHA1, avoiding unrelated CDN
+  # outages on every Android rebuild; otherwise fetch and revalidate both.
+  cached_pom="$root/$pom"
+  cached_sha="$root/$pom.sha1"
+  cached_digest=''
+  if [[ -s "$cached_pom" && -s "$cached_sha" ]]; then
+    cached_digest="$(tr -d '[:space:]' < "$cached_sha")"
+  fi
+  if [[ "$cached_digest" =~ ^[A-Fa-f0-9]{40}$ ]] &&
+      printf '%s  %s\n' "$cached_digest" "$cached_pom" | sha1sum --check --status; then
+    echo "PASS cached official Kotlin $version POM SHA1"
+  else
+    fetch_verified_kotlin_pom "$version" "$pom" "$work"
+    install -m 0644 "$work/$pom" "$cached_pom"
+    install -m 0644 "$work/$pom.sha1" "$cached_sha"
+  fi
   printf '%s  %s\n' "$expected" "$file" | sha256sum --check --status || exit 1
 done
 
