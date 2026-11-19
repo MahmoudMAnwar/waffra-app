@@ -30,7 +30,7 @@ void main() {
   test('M1040 account transfer source guard cannot read a stale UI balance', () {
     final repo = File('lib/storage/waffra_accounts_repository.dart')
         .readAsStringSync();
-    final start = repo.indexOf('Future<bool> transfer({required String id');
+    final start = repo.lastIndexOf('Future<bool> transfer({required String id');
     final end = repo.indexOf('/// M1032: reverse an incorrect internal transfer', start);
     expect(start, greaterThanOrEqualTo(0));
     expect(end, greaterThan(start));
