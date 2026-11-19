@@ -27,17 +27,17 @@
     ],
     ".github/workflows/m147-final-main-review-gate.yml": [
       {
-        "start": "      # Flutter plugins (including the JNI-backed Android path provider) need",
+        "start": "      - name: Create Android project (CI only)",
         "end": "      - name: Re-resolve plugins after generating Android host"
       },
       {
-        "start": "      # Do not publish a compile-only preview with missing native bindings:",
+        "start": "      - name: Refuse APK missing native runtime libraries",
         "end": "      # PREVIEW appId is not the Firebase-registered"
       }
     ],
     "scripts/qa/m268_scope_review.py": [
       {
-        "start": "    # The full app needs JNI in the distributed QA APK.",
+        "start": "    demand(\"waffra-financial-calendar-today\" in calendar,",
         "end": "    demand(preview.index(\"Refuse APK missing native runtime libraries\")"
       }
     ]
