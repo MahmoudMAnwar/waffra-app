@@ -81,4 +81,45 @@ jobs:
           # Native Flutter plugins must be registered against the GENERATED
           # Android host, not only the pre-generation Dart package graph.
           flutter pub get
+          # Match the passing M147 generated Android QA host; this generated
+          # Kotlin Gradle file is not included in the source-controlled app.
+          python3 - <<'PY'
+          from pathlib import Path
+          gradle=Path('android/app/build.gradle.kts')
+          if not gradle.is_file():
+              raise SystemExit('Generated Android Kotlin Gradle configuration missing')
+          source=gradle.read_text()
+          marker='compileOptions {'
+          if marker not in source:
+              raise SystemExit('Cannot find compileOptions for Java desugaring')
+          if 'isCoreLibraryDesugaringEnabled = true' not in source:
+              source=source.replace(marker,marker+'\n        isCoreLibraryDesugaringEnabled = true',1)
+          dependency='coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")'
+          if dependency not in source:
+              source+='\n// Required by flutter_local_notifications\ndependencies {\n    '+dependency+'\n}\n'
+          gradle.write_text(source)
+          assert 'isCoreLibraryDesugaringEnabled = true' in source
+          assert dependency in source
+          print('PASS: generated M160 Android host matches M147 notification desugaring')
+          PY
+          # integration_test is deliberately debug/test-only; keep every
+          # production plugin, fail closed on an unexpected registrar layout.
+          python3 - <<'PY'
+          from pathlib import Path
+          path=Path('android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java')
+          if not path.exists():
+              print('Generated Java plugin registrant not present')
+          else:
+              text=path.read_text()
+              statement='flutterEngine.getPlugins().add(new dev.flutter.plugins.integration_test.IntegrationTestPlugin());'
+              if statement in text:
+                  text=text.replace(statement,
+                      '// integration_test is debug/test-only and not on release classpath.')
+                  path.write_text(text)
+                  print('Removed only debug/test-only integration_test registration')
+              elif 'dev.flutter.plugins.integration_test.IntegrationTestPlugin()' in text:
+                  raise SystemExit('Unexpected integration_test registrar form')
+              else:
+                  print('No debug-only integration_test registrar')
+          PY
           flutter build apk --release --no-pub --target-platform android-arm64
