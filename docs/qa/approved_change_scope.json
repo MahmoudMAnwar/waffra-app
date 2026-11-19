@@ -1,34 +1,34 @@
 {
   "contract_version": 1,
-  "change_id": "ISSUE767-M1039-POS-VERIFIED-CARD-SUFFIX",
-  "human_scope_review": "Owner requests one critical bug only: Saudi POS SMS بطاقة: **6314 fails to identify an already verified account. Restrict to read-only bank SMS facts extraction; never widen finance writers, relax OTP or silently attach unverified accounts.",
+  "change_id": "ISSUE769-M1040-SQLCIPHER-TRANSFER-SOURCE-FUNDS",
+  "human_scope_review": "One financial-integrity defect: internal account-to-account transfer may credit a destination without sufficient available money at source; SMS transfer+fee must enforce the combined debit. Exact SQLCipher transaction source only, no new permissions, no historical rewriting.",
   "user_requested_changes": [
-    "Recognize explicitly labeled and masked Saudi POS card last-four digits in the exact bank SMS fact parser used by verified-account matching.",
-    "Reject conflicting masked source identities, unmasked account numbers, and invalid longer masks; maintain existing source, destination and OTP guards.",
-    "Add one targeted real-format regression test for card extraction, unique verified account selection, and negative finance scenarios.",
-    "Record the change in requirements, exact bounded scope, behavior review and truthful source-based release notes before CI; do not merge without verification."
+    "Reject new internal transfers exceeding the source account's current SQLCipher-computed balance, under the existing transaction and writer lock.",
+    "Check total source debit (credited transfer plus separately booked fee) for a confirmed fee-bearing SMS transfer using the same canonical account writer.",
+    "Keep matching replay IDs idempotent, block conflicting replays, and allow the independent corrective reversal writer to retain previous compensation semantics.",
+    "Add isolated SQLCipher and fee source regression tests without reading user data, updating release provenance and M550 behavior contract before CI."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "lib/waffra_bank_sms_facts.dart",
-    "test/m1039_pos_card_verified_account_binding_test.dart"
+    "lib/storage/waffra_accounts_repository.dart",
+    "lib/storage/waffra_unified_finance_writer.dart",
+    "test/storage/m1040_internal_transfer_balance_guard_test.dart",
+    "test/m1040_sms_transfer_fee_balance_contract_test.dart"
   ],
   "bounded_sections": {
-    "lib/waffra_bank_sms_facts.dart": [
+    "lib/storage/waffra_accounts_repository.dart": [
       {
-        "start": " static final _source=RegExp(",
-        "end": " static final _destination=RegExp("
-      },
+        "start": " Future<bool> transfer({required String id,required String fromAccountId,",
+        "end": " /// M1032: reverse an incorrect internal transfer"
+      }
+    ],
+    "lib/storage/waffra_unified_finance_writer.dart": [
       {
-        "start": "  String? normalizeSuffix(String? value)=>",
-        "end": "  final feeMatch=_fee.firstMatch(normalized);"
-      },
-      {
-        "start": "   kind:kind,",
-        "end": "   fee:fee!=null&&fee.isFinite&&fee>=0?fee:null,"
+        "start": "  Future<bool> appendReviewedSmsTransferWithFee({",
+        "end": "  /// Called AFTER explicit confirmation for bank SMS"
       }
     ]
   }
