@@ -1,46 +1,66 @@
 {
   "contract_version": 1,
-  "change_id": "ISSUE778-M1046-SMS-CATEGORY-INDEPENDENCE",
-  "human_scope_review": "19 Nov 2026: owner reported unrelated bank SMS notifications adopting the last confirmed expense main/subcategory and explicitly asked to repair failing PR #779 CI. This bounded source/test documentation requires owner review before merge; device validation is still pending.",
+  "change_id": "ISSUE780-M1047-SMART-SMS-MERCHANT-CATEGORY",
+  "human_scope_review": "19 Nov 2026: owner approved local main/subcategory identification from incoming bank SMS and correction learning. Only advisory category extraction/selection is authorized: no automatic debit/ACK, sender/account permissions, ledger, archived category or cloud AI changes. Boundaries require human review before merge.",
   "user_requested_changes": [
-    "On saving a bank SMS expense and selecting main/subcategory, never propagate that category onto other pending notification transactions merely because they share a generic financial-operation heading.",
-    "Prevent future learning and existing saved heading-only smart finance category rules from applying misleading category suggestions to unrelated SMS, while keeping verified income/expense direction and committed ledger unchanged.",
-    "Preserve independent merchant-specific suggestions, owner-specific account matching and exclusion, add regression coverage, and reconcile the obsolete M1009 heading-spread expectation.",
-    "Maintain all existing M385/M550 release, scope, financial, Android and SMS QA gates; update notes, tested contracts and QA documentation on the same PR.",
-    "Prevent previously stored auto-learned manual_ rules for generic bank-operation descriptions (internal/outgoing/point-of-sale) from contaminating unrelated notifications; retain specific merchant-only learning."
+    "Extract the explicitly labelled merchant when Saudi POS SMS is delivered as a single line, without leaking bank/card/OTP/account identifiers or trailing amount/date/balance into merchant identity.",
+    "Use the existing deterministic Saudi Arabic/English merchant-to-main/leaf catalog in the actual SMS confirmation preview; a nonfinancial transfer person or generic bank operation heading is never a merchant-category signal.",
+    "Preserve user-confirmed specific local category precedence and only prefill a live unambiguous correctly typed parent and child; unknown, archived, duplicate, pending or sensitive messages remain under review.",
+    "Keep all owner-confirmed finance writer, account choice, SAR amount, date, duplicate hash, native SMS ACK, encryption and multi-message separation unchanged; regressions test user selection and isolation.",
+    "Update original M565 M574 M669 source assertions to the new catalog-safe selector without skipping their money/privacy/bank identity checks."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "lib/waffra_sms_local_rules.dart",
-    "test/m1009_sama_notification_swipe_regression_test.dart",
-    "test/m1040_sms_category_isolation_test.dart"
+    "lib/main.dart",
+    "lib/waffra_merchant_rules.dart",
+    "lib/waffra_home_sms_confirmation.part.dart",
+    "test/m1047_smart_sms_merchant_category_test.dart",
+    "test/m669_sms_review_category_search_test.dart",
+    "test/qa/m565_sms_yes_no_test.py",
+    "test/qa/m574_sms_confirmation_full_fields_test.py"
   ],
   "bounded_sections": {
-    "lib/waffra_sms_local_rules.dart": [
+    "lib/main.dart": [
       {
-        "start": " static WaffraSmsLocalRule? _excludedStructuralTemplate({",
-        "end": " /// OTP plus a completed purchase/debit must remain in financial review."
+        "start": "({BudgetCategory? parent,BudgetCategory? leaf})\nwaffraResolveSmsReviewCategory(",
+        "end": "/// M1044 #775:"
       },
       {
-        "start": " static WaffraSmsLocalRule? suggestedRule({",
-        "end": " /// Learn safe non-posting suggestions for EVERY sender after a committed"
-      },
-      {
-        "start": " static List<String> safeDescriptionKeywords(String description){",
-        "end": " /// A manual OR reviewed-SMS transaction teaches a safe description/category"
-      },
-      {
-        "start": " static WaffraSmsLocalRule? manualCategoryPattern({",
-        "end": " /// A manual account transfer teaches safe bilingual classification hints;"
+        "start": "Map<String,Object?> waffraM632ClassifySmsQueue(",
+        "end": "List<String> splitBankMessages("
       }
     ],
-    "test/m1009_sama_notification_swipe_regression_test.dart": [
+    "lib/waffra_merchant_rules.dart": [
       {
-        "start": " test('M1009 SAMA outgoing is an expense candidate, not own account transfer',(){",
-        "end": " test('M1009 explicit exclusion learns repeatable service notice without numeric refs',(){"
+        "start": "String? waffraMerchantName(",
+        "end": "String waffraNormalizeMerchantName("
+      }
+    ],
+    "lib/waffra_home_sms_confirmation.part.dart": [
+      {
+        "start": "   final parsed=BankParser.parse(body);\n   final proposedCategory=",
+        "end": "   final previewMainName="
+      }
+    ],
+    "test/m669_sms_review_category_search_test.dart": [
+      {
+        "start": "  test('M669 all SMS review routes keep original source and explicit reasons',(){",
+        "end": "  test('M669 all non-command production dropdowns use centralized search', () {"
+      }
+    ],
+    "test/qa/m565_sms_yes_no_test.py": [
+      {
+        "start": " def test_yes_no_with_preview_and_no_guessing(self):",
+        "end": " def test_authoritative"
+      }
+    ],
+    "test/qa/m574_sms_confirmation_full_fields_test.py": [
+      {
+        "start": " def test_review_preview_displays_all_495_fields(self):",
+        "end": null
       }
     ]
   }

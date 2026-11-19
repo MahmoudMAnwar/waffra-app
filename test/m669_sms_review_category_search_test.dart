@@ -176,7 +176,7 @@ void main() {
       main.indexOf(' void _receiveSharedSms('));
     // Analyzer regression: the typed parent/leaf resolver replaces both
     // obsolete preview scratch lists, including their unused-local warning.
-    expect(part,contains('final previewHint=waffraResolveSmsReviewCategory('));
+    expect(part,contains('final previewHint=waffraSmartSmsReviewCategory('));
     expect(part,isNot(contains('final previewLeaves=')));
     expect(part,isNot(contains('final previewParents=')));
     expect(part,contains("Key('m669-review-original-sms-text')"));

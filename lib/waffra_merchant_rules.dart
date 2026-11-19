@@ -71,6 +71,28 @@ String? waffraMerchantName(String raw,{bool income=false}) {
    .replaceAll(RegExp(r'\s+'),' ').trim();
   if(_waffraSafeMerchantCandidate(merchant))return merchant;
  }
+ // M1047: Saudi POS providers often send the whole purchase on ONE line:
+ // "مبلغ: 33.81 SAR لدى: Marakez Medical Compan في: ... الرصيد المتبقي".
+ // Only a labelled merchant field is evidence. Do not harvest a transfer
+ // beneficiary, card number, amount, balance or arbitrary bank prose.
+ if(!transfer){
+  final inline=RegExp(
+   r'(?:^|[\s;،])(?:لدى|اسم\s+التاجر|التاجر|اسم\s+المتجر|المتجر|'
+   r'merchant(?:\s+name)?|store(?:\s+name)?|shop)\s*[:：]?\s*'
+   r'([^;\n\r]{2,100}?)'
+   r'(?=\s+(?:في\s*[:：]|الرصيد(?:\s+المتبقي)?\s*[:：]|'
+   r'(?:المبلغ|مبلغ|بمبلغ|بقيمة|amount)\s*[:：]|'
+   r'balance\s*[:：]|on\s*[:：]|date\s*[:：]|time\s*[:：]|'
+   r'الرقم\s+المرجعي\s*[:：])|$)',
+   caseSensitive:false).firstMatch(text);
+  if(inline!=null){
+   final name=(inline.group(1)??'').trim()
+    .replaceAll(RegExp(r'\s+'),' ');
+   if(_waffraSafeMerchantCandidate(name)&&
+     !RegExp(r'^(?:مدى|mada|mada pay|sr|sar|pos|pay)$',
+      caseSensitive:false).hasMatch(name))return name;
+  }
+ }
  return null;
 }
 

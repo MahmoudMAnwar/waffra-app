@@ -11,7 +11,7 @@ class SmsYesNoTest(unittest.TestCase):
    "Key('m565-sms-yes-confirm')",'onPressed:canConfirm&&reviewedAccount?.ids?.single!=null&&',
    "decision=='yes'", "decision=='no'",'originalDate=bankSmsDate(body)',
    "originalAmount.currency=='SAR'",
-   'previewHint=waffraResolveSmsReviewCategory(categories,',
+   'previewHint=waffraSmartSmsReviewCategory(categories,',
    'reviewedCategory=previewHint.leaf?.name??',
    'reviewCategoryValid=previewHint.leaf!=null&&',
    'previewHint.parent!=null',

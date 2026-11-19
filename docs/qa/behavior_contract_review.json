@@ -1,12 +1,37 @@
 {
   "schema_version": 1,
-  "pr": "Draft PR #779 (issue #778 SMS category isolation; preserving existing contracts)",
-  "issue": "#778 (prior contracts retained)",
+  "pr": "Draft PR for M1047 Issue #780: merchant-intelligent main/subcategory bank SMS review",
+  "issue": "#780 (prior reviewed behavior contracts retained)",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at 18 November 2026 after merged PR #764",
   "reviewed_at": "2026-11-19",
-  "review_policy": "M1040 one insufficient transfer-source debit defect, source+fee same atomic cash guard; retain prior M550 contracts; M1042 wallet-only hidden SMS suffix form validation and bank suffix preservation; M1043 fail-closed official Kotlin Maven POM retry/fallback after upstream 404; M1044 reviewed SMS editor category+account identity, invalid date provenance and deliberate date/time confirmation; M1045 M160 Android Gradle plugin loader uses official Maven Central and Java21 without bypassing build; M1046 owner-approved no generic SAMA operation heading category propagation; M1009 deprecated positive assertion updated without skipping excluded/swipe tests",
+  "review_policy": "M1040 one insufficient transfer-source debit defect, source+fee same atomic cash guard; retain prior M550 contracts; M1042 wallet-only hidden SMS suffix form validation and bank suffix preservation; M1043 fail-closed official Kotlin Maven POM retry/fallback after upstream 404; M1044 reviewed SMS editor category+account identity, invalid date provenance and deliberate date/time confirmation; M1045 M160 Android Gradle plugin loader uses official Maven Central and Java21 without bypassing build; M1046 owner-approved no generic SAMA operation heading category propagation; M1009 deprecated positive assertion updated without skipping excluded/swipe tests; M1047 merchant-labelled main/leaf category review without user history rewrite or auto-post. Existing M565/M574/M669 positive tests moved to new resolver.",
   "contracts": [
+    {
+      "id": "M1047-SMART-SMS-MERCHANT-MAIN-AND-LEAF",
+      "issue": "Issue #780",
+      "previous_behavior": "Although a bilingual Saudi merchant classification catalog exists, real notification review prefilled only local rules/BankParser hints; one-line Saudi POS with inline لدى: merchant was missed and generic operation seed rules could preselect inaccurate category. Existing M565/M574/M669 source contracts pointed at the prior catalog resolver.",
+      "approved_behavior": "Extract a separately labelled one-line merchant, select only its known active and uniquely named main/leaf using deterministic on-device Arabic categories, preserve explicitly owner-learned category precedence, and require all existing user-reviewed finance checks. A transfer counterparty, OTP, pending, unknown or duplicate/deleted category never becomes a merchant category suggestion.",
+      "source_paths": [
+        "lib/waffra_merchant_rules.dart",
+        "lib/main.dart",
+        "lib/waffra_home_sms_confirmation.part.dart"
+      ],
+      "test_paths": [
+        "test/m1047_smart_sms_merchant_category_test.dart",
+        "test/m669_sms_review_category_search_test.dart",
+        "test/qa/m565_sms_yes_no_test.py",
+        "test/qa/m574_sms_confirmation_full_fields_test.py",
+        "test/m1040_sms_category_isolation_test.dart"
+      ],
+      "safety_invariants": [
+        "Exact amount/date/original SMS/verified account and explicit Yes remain mandatory; recommendation never ACKs, chooses bank identity or commits funds.",
+        "A previously confirmed owner-specific category beats a generic dictionary candidate; same sender and generic POS heading alone never propagate another merchant category.",
+        "No merchant inference on personal outgoing transfer, income, OTP, declined/pending, composite or disputed reverse SMS.",
+        "Only existing active correct-direction unique parent and child are selected; no category resurrection, account or cloud dependency.",
+        "Legacy M565/M574/M669, M1046 SMS isolation, encrypted/local rule review, source privacy and full GitHub CI are preserved, not skipped."
+      ]
+    },
     {
       "id": "M1046-ISOLATE-BANK-SMS-CATEGORY-PER-NOTIFICATION",
       "issue": "Issue #778 / PR #779",
