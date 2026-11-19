@@ -16,6 +16,13 @@ def _load_function() -> str:
     return content[start:end]
 
 
+
+def _load_release_manifest_function() -> str:
+    content = SCRIPT.read_text(encoding="utf-8")
+    start = content.index("verify_cached_kotlin_pom_release() {")
+    end = content.index("\n}\n", start) + 2
+    return content[start:end]
+
 class VerifiedKotlinPomFallbackTests(unittest.TestCase):
     def _simulate(self, mode: str):
         shell = (
@@ -70,6 +77,57 @@ fetch_verified_kotlin_pom '2.2.21' "$pom" "$work"
         result = self._simulate("bad_digest")
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("digest mismatch", result.stderr)
+
+    def test_cached_pom_can_use_jetbrains_release_manifest_when_maven_is_404(self):
+        manifest_function = _load_release_manifest_function()
+        shell = (
+            "set -Eeuo pipefail\n"
+            + manifest_function
+            + "\nwork=$(mktemp -d)\ntrap 'rm -rf \"$work\"' EXIT\n"
+            + "upstream='JetBrains/kotlin'\n"
+            + "root=\"$work/cache\"\nmkdir -p \"$root\"\n"
+            + "pom='kotlin-compiler-embeddable-2.2.21.pom'\n"
+            + "printf '%s' '<project><modelVersion>4.0.0</modelVersion></project>' > \"$root/$pom\"\n"
+            + "actual=$(sha256sum \"$root/$pom\" | cut -d' ' -f1)\n"
+            + r'''gh() {
+  [[ "$1" == 'release' && "$2" == 'download' ]] || return 3
+  printf '%s  %s\n' "$actual" \
+    "org/jetbrains/kotlin/kotlin-compiler-embeddable/2.2.21/$pom" \
+    > "$work/maven-2.2.21-sha256.txt"
+}
+verify_cached_kotlin_pom_release '2.2.21' "$pom" "$root" "$work"
+[[ -s "$root/$pom.sha1" ]]
+sha1sum --check --status <(printf '%s  %s\n' \
+  "$(cat "$root/$pom.sha1")" "$root/$pom")
+'''
+        )
+        result = subprocess.run(["bash", "-c", shell], cwd=ROOT,
+                                capture_output=True, text=True, timeout=20)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("PASS verified cached Kotlin", result.stdout)
+
+    def test_cached_pom_manifest_digest_mismatch_fails_closed(self):
+        manifest_function = _load_release_manifest_function()
+        shell = (
+            "set -Eeuo pipefail\n"
+            + manifest_function
+            + "\nwork=$(mktemp -d)\ntrap 'rm -rf \"$work\"' EXIT\n"
+            + "upstream='JetBrains/kotlin'\n"
+            + "root=\"$work/cache\"\nmkdir -p \"$root\"\n"
+            + "pom='kotlin-compiler-embeddable-2.2.21.pom'\n"
+            + "printf '%s' '<project>original</project>' > \"$root/$pom\"\n"
+            + r'''gh() {
+  printf '%064d  %s\n' 0 \
+    "org/jetbrains/kotlin/kotlin-compiler-embeddable/2.2.21/$pom" \
+    > "$work/maven-2.2.21-sha256.txt"
+}
+verify_cached_kotlin_pom_release '2.2.21' "$pom" "$root" "$work"
+'''
+        )
+        result = subprocess.run(["bash", "-c", shell], cwd=ROOT,
+                                capture_output=True, text=True, timeout=20)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("mismatch", result.stderr)
 
     def test_original_sha256_jar_pinning_and_gradle_scope_still_enforced(self):
         content = SCRIPT.read_text(encoding="utf-8")

@@ -11,7 +11,7 @@
       "id": "M1043-VERIFIED-KOTLIN-MAVEN-POM-FALLBACK",
       "issue": "Issue #774 / owner requested CI failure repair in PR #770",
       "previous_behavior": "The Android M147 job could validate the Kotlin 2.2.21 SHA256-pinned cached JAR, then fail immediately on a single network request for kotlin-compiler-embeddable POM or POM.sha1 returning upstream HTTP 404, before compiling the Android app. Previously verified POM metadata lacked a safely reusable cached SHA1 sidecar.",
-      "approved_behavior": "Keep the original Kotlin compiler JAR versions and pinning, try official Maven Central origin with bounded retries and official repo1.maven.org fallback for POM and SHA1 sidecars from the SAME chosen origin, validate the exact SHA1 before installing or trusting the POM, and cache+revalidate the trusted sidecar on future runs. Both unavailable/mismatching means the Android job fails closed, never skipped.",
+      "approved_behavior": "Keep the original Kotlin compiler JAR versions and pinning, try official Maven Central origin with bounded retries and official repo1.maven.org fallback for POM and SHA1 sidecars from the SAME chosen origin, validate the exact SHA1 before installing or trusting the POM, and cache+revalidate the trusted sidecar on future runs. Both unavailable/mismatching means the Android job fails closed, never skipped. If both Maven Central endpoints return 404 and the Kotlin compiler POM is already cached, compare the cached POM SHA256 to the matching module file in the official JetBrains Kotlin release Maven SHA256 manifest downloaded from GitHub; only a verified match can seed a cached SHA1. Reject absent/mismatched manifest or POM.",
       "source_paths": [
         "scripts/qa/prefetch_verified_kotlin.sh"
       ],
@@ -24,7 +24,8 @@
         "The existing SHA256 digests and exact Kotlin compiler versions 2.2.21 and 2.4.0 remain unchanged, and Gradle exclusiveContent still restricts original module versions.",
         "The POM SHA1 digest is checked against the downloaded POM from the same origin before installation, and any cached sidecar is revalidated before use.",
         "Failure of both official origins or a digest mismatch fails the job; no Android unit/device job, financial test, or release readiness check is disabled.",
-        "M1040 SQLCipher transfer fees and M1042 AlinmaPay wallet form remain unchanged and under exact-head CI."
+        "M1040 SQLCipher transfer fees and M1042 AlinmaPay wallet form remain unchanged and under exact-head CI.",
+        "A cached POM with no usable Maven SHA1 must match the official JetBrains GitHub release Maven SHA256 manifest before it is trusted; mismatches fail closed."
       ]
     },
     {
