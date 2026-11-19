@@ -506,17 +506,79 @@ jobs:
               raise SystemExit('QA STARTUP BLOCKED: resolved packages missing')
           lock=lockfile.read_text()
           provider=re.search(
-              r'(?ms)^  path_provider_android:\\n(.*?)(?=^  [a-zA-Z0-9_-]+:\\n|\\Z)',
+              r'(?ms)^  path_provider_android:\n(.*?)(?=^  [a-zA-Z0-9_-]+:\n|\Z)',
               lock)
           if provider is None or not re.search(
-              r'(?m)^    version: ["\\\']?2\\.2\\.23["\\\']?\\s*$',
+              r'(?m)^    version: "2\.2\.23"\s*$',
               provider.group(1)):
               raise SystemExit('QA STARTUP BLOCKED: unreviewed Android path provider')
           # CI must not treat a historical JNI dependency as permanent.
           # If any resolved plugin still requires jni_flutter, its ELF stays
           # mandatory. Otherwise do not fail merely because an unused JNI
           # library was correctly omitted from the packaged APK.
-          jni_required=re.search(r'(?m)^  jni_flutter:\\s*$',lock) is not None
+          jni_required=re.search(r'(?m)^  jni_flutter:\s*,lock) is not None
+          # Parse the binary AndroidManifest.xml with aapt, not ASCII search.
+          sdk=os.environ.get('ANDROID_HOME') or os.environ.get('ANDROID_SDK_ROOT')
+          if not sdk:
+              raise SystemExit('QA STARTUP BLOCKED: Android SDK path unavailable')
+          aapt_candidates=sorted((Path(sdk)/'build-tools').glob('*/aapt'))
+          if not aapt_candidates:
+              raise SystemExit('QA STARTUP BLOCKED: Android aapt unavailable')
+          result=subprocess.run([str(aapt_candidates[-1]),'dump','badging',str(apk)],
+                                capture_output=True,text=True,check=True)
+          package=re.search(r"^package:\s+name='([^']+)'",result.stdout,re.MULTILINE)
+          if package is None or package.group(1)!='com.waffra.waffra':
+              raise SystemExit('QA preview identity mismatch: expected com.waffra.waffra; got '+
+                               (package.group(1) if package else '<unreadable>'))
+          with ZipFile(apk) as archive:
+              contents=set(archive.namelist())
+              required={'lib/arm64-v8a/'+item for item in
+                        ('libapp.so','libflutter.so','libsqlite3mc.so')}
+              jni_elf='lib/arm64-v8a/libdartjni.so'
+              if jni_required:
+                  required.add(jni_elf)
+              missing=required-contents
+              if missing:
+                  raise SystemExit('QA STARTUP BLOCKED: missing required native ELF: '+
+                                   ', '.join(sorted(missing)))
+              verified=required | ({jni_elf} if jni_elf in contents else set())
+              for item in sorted(verified):
+                  meta=archive.getinfo(item)
+                  if meta.file_size < 4096:
+                      raise SystemExit('QA STARTUP BLOCKED: invalid native ELF: '+item)
+                  with archive.open(item) as stream:
+                      if stream.read(4)!=bytes((0x7f,69,76,70)):
+                          raise SystemExit('QA STARTUP BLOCKED: not an ELF: '+item)
+          print('PASS: pinned pre-JNI path provider; required ARM64 Flutter/SQLCipher ELFs valid')
+          PY
+      # PREVIEW appId is not the Firebase-registered com.waffra.app, and this
+      # workflow does not have production signing credentials or native Widget
+      # parity. Do not represent this artifact as full-feature device QA.
+      - name: Label unsigned-identity offline UI preview limitations
+        shell: bash
+        run: |
+          cat > build/WAFFRA_PREVIEW_LIMITATIONS.txt <<'TXT'
+          Waffra M268 — COMPILE-ONLY UI PREVIEW
+          Application ID: com.waffra.waffra (not registered with Firebase)
+          Google authentication: NOT SUPPORTED in this preview.
+          Native widget / share-to-Waffra / OS notification boot receivers:
+            NOT PRESENT in the generated Android host.
+          Release certificate: NOT the Firebase-registered app certificate.
+          Local preview data is separate from the installed production app.
+          Preview for illustrations, calendars and offline planning tools only.
+          Do not uninstall an existing Waffra installation or delete user data.
+          Require a complete signed, exact-main APK for real device sign-in QA.
+          SQLCipher financial production cutover is NOT authorized.
+          TXT
+      - name: Attach unapproved-for-production APK for device QA
+        uses: actions/upload-artifact@v4
+        with:
+          name: m147-arm64-ci-review-apk-not-production-signed
+          path: |
+            build/app/outputs/flutter-apk/app-release.apk
+            build/WAFFRA_PREVIEW_LIMITATIONS.txt
+          if-no-files-found: error
+,lock) is not None
           # Parse the binary AndroidManifest.xml with aapt, not ASCII search.
           sdk=os.environ.get('ANDROID_HOME') or os.environ.get('ANDROID_SDK_ROOT')
           if not sdk:
