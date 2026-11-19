@@ -41,15 +41,17 @@
         "scripts/qa/m268_scope_review.py"
       ],
       "test_paths": [
-        "test/qa/m1041_android_path_provider_startup_test.py",
-        "integration_test/fresh_install_production_binding_android_test.dart",
-        "integration_test/encrypted_storage_android_test.dart"
+        "test/qa/m1041_android_path_provider_startup_test.py"
       ],
       "safety_invariants": [
         "Same getApplicationSupportDirectory Android app-private path; no data migration or deletion.",
         "On unrecoverable key/db or source mismatch remain fail closed, never create new vault over existing source.",
         "Validate resolution in pubspec.lock in QA workflow, assert production ELF requirements and Android startup test, preserve 283 prior M550 contracts.",
         "M1040 finance PR remains separate and unmerged until its own independent review."
+      ],
+      "android_integration_test_paths": [
+        "integration_test/fresh_install_production_binding_android_test.dart",
+        "integration_test/encrypted_storage_android_test.dart"
       ]
     },
     {
