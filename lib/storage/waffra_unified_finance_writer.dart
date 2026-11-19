@@ -201,9 +201,15 @@ class WaffraUnifiedFinanceWriter {
         }
         final accounts = WaffraAccountsRepository(
           db: snapshot.store, experimentalEnabled: true);
+        // Reserve the ENTIRE source debit before inserting the transfer.
+        // Included fee: credited=(principal-fee), total source=principal.
+        // Separate fee: credited=principal, total source=principal+fee.
+        // The canonical transfer writer checks both under this exact same
+        // SQLCipher transaction; a fee cannot overdraw a depleted bank.
         final inserted = await accounts.transfer(
           id: transferId, fromAccountId: fromAccountId,
           toAccountId: toAccountId, amountMinor: creditedMinor,
+          additionalSourceDebitMinor: feeMinor,
           occurredIso: occurredIso, note: protectedTransferNote,
           userConfirmed: true);
         if (!inserted) {
