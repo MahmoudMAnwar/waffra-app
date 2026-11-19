@@ -363,8 +363,14 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
    // M669: a bank classifier can suggest a ROOT (e.g. تحويلات) without
    // providing any leaf. The root is shown as MAIN only; a user must pick
    // an actual child. Same-name/legacy hints need exact parent validation.
-   final previewHint=waffraResolveSmsReviewCategory(categories,
-    income:expectedIncome,proposed:proposedCategory);
+   // M1047: owner-learned specific categories win over dictionary guesses.
+   // Otherwise prefill an active main+leaf from the actual merchant, never
+   // from the bank heading/amount or the last reviewed notification.
+   // This cannot save money or ACK an SMS before the user's final Yes.
+   final previewHint=waffraSmartSmsReviewCategory(categories,
+    sms:body,income:expectedIncome,proposed:proposedCategory,
+    ownerLearned:localFacts?['defaultSeed']==false&&
+     localFacts?['suggestedOnly']!=true);
    final previewMainName=previewHint.parent?.displayName??
     (waffraIsEnglish?'Choose main category':'يحتاج اختيار القسم الرئيسي');
    // The first account is an independent setup step, NOT a valid-category
