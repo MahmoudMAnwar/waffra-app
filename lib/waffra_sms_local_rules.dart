@@ -245,6 +245,29 @@ abstract final class WaffraSmsLocalRules {
   return rule;
  }
 
+ // Bank operation types describe direction, not a merchant/category identity.
+ // Never learn or replay a category from only this shared SMS heading.
+ static bool _genericBankOperationHeading(String word){
+  const headings=<String>[
+   'حوالة داخلية واردة','حوالة محلية واردة','حوالة دولية واردة',
+   'حوالة واردة','credit transfer internal','received transfer',
+   'حوالة داخلية صادرة','حوالة محلية صادرة','حوالة دولية صادرة',
+   'حوالة صادرة','debit transfer internal','outgoing transfer',
+  ];
+  final value=normalized(word);
+  const generic=<String>{
+   'حواله','حوالات','تحويل','تحويلات','داخليه','خارجيه',
+   'محليه','دوليه','صادره','وارده','الداخليه','الخارجيه',
+   'المحليه','الدوليه','الصادره','الوارده','بنكيه',
+   'شراء','عبر','نقاط','البيع','مدي','عمليه','مبلغ',
+   'outgoing','incoming','transfer','internal','external',
+   'local','international','debit','credit','received','sent',
+   'purchase','payment','pos','bank','transaction',
+  };
+  return headings.any((heading)=>normalized(heading)==value)||
+   (value.isNotEmpty&&value.split(' ').every(generic.contains));
+ }
+
  static bool matches(WaffraSmsLocalRule rule,String body,{
   String sender='',String? preNormalizedBody,
  }) {
@@ -253,6 +276,10 @@ abstract final class WaffraSmsLocalRules {
     trustedSeed?!_safeSaudiSeedKeyword(word,rule.resolvedKind):
     !safeRuleKeyword(word,rule.resolvedKind)))return false;
   if(rule.sender.isNotEmpty&&normalized(rule.sender)!=normalized(sender))return false;
+  // A previously learned bank-operation heading cannot carry a merchant
+  // category across unrelated notifications (including existing V3 rules).
+  if(rule.id.startsWith('smart_')&&rule.financial&&
+     rule.keywords.every((word)=>_genericBankOperationHeading(word)))return false;
   if(rule.templateFamily=='verification'){
    return WaffraBankSmsFactsParser.isVerificationChallenge(body)&&
     !_hasCompletedFinanceCue(body);
@@ -260,6 +287,12 @@ abstract final class WaffraSmsLocalRules {
   if(rule.templateFamily=='beneficiary_management'){
    return _beneficiaryManagement(body)&&!_hasCompletedFinanceCue(body);
   }
+  // Legacy manual review hints can contain broad words like "outgoing"
+  // or "internal". They must never select a category by those words alone.
+  final matchKeywords=rule.financial&&rule.id.startsWith('manual_')?
+   rule.keywords.where((word)=>!_genericBankOperationHeading(word))
+    .toList(growable:false):rule.keywords;
+  if(matchKeywords.isEmpty)return false;
   // M980: same normalization reused by all four rule groups per SMS.
   final source=' ${preNormalizedBody??normalized(body)} ';
   bool has(String keyword){
@@ -272,7 +305,7 @@ abstract final class WaffraSmsLocalRules {
     RegExp('(^|[^a-z\\u0621-\\u064a])${RegExp.escape(safe)}([^a-z\\u0621-\\u064a]|\u0024)')
      .hasMatch(source);
   }
-  return rule.matchAll?rule.keywords.every(has):rule.keywords.any(has);
+  return rule.matchAll?matchKeywords.every(has):matchKeywords.any(has);
  }
 
  /// OTP plus a completed purchase/debit must remain in financial review.
@@ -586,21 +619,8 @@ abstract final class WaffraSmsLocalRules {
    if(family!=null&&matches(family,body,sender:sender))return family;
   }
   final safe=<String>[];
-  // M1009: learn the exact SAMA operation heading after owner-confirmed
-  // classification; amounts, beneficiaries and references never enter rules.
-  // This is review-only, and a changed amount must not invalidate the hint.
-  if(isIncome||isExpense){
-   final headings=isIncome?const <String>[
-    'حوالة داخلية واردة','حوالة محلية واردة','حوالة دولية واردة',
-    'حوالة واردة','credit transfer internal','received transfer',
-   ]:const <String>[
-    'حوالة داخلية صادرة','حوالة محلية صادرة','حوالة دولية صادرة',
-    'حوالة صادرة','debit transfer internal','outgoing transfer',
-   ];
-   final heading=headings.where((h)=>normalizedBody.contains(normalized(h)))
-    .where((h)=>safeRuleKeyword(h,kind)).take(1).toList();
-   if(heading.isNotEmpty)safe.addAll(heading);
-  }
+  // Financial category learning must use a distinct merchant/service signal.
+  // A SAMA operation heading is shared by unrelated purchases/transfers.
   if(kind=='excluded'){
    for(final term in const <String>[
     'رمز التفعيل','رمز التحقق','رمز الدخول','verification code',
@@ -774,7 +794,8 @@ abstract final class WaffraSmsLocalRules {
   final words=<String>[];
   for(final item in normalizedText.split(RegExp(r'[^a-z\u0621-\u064a]+',
    caseSensitive:false))){
-   if(item.length<4||generic.contains(item)||!safeKeyword(item))continue;
+   if(item.length<4||generic.contains(item)||
+      _genericBankOperationHeading(item)||!safeKeyword(item))continue;
    if(!words.contains(item))words.add(item);
    if(words.length>=6)break;
   }
@@ -807,7 +828,11 @@ abstract final class WaffraSmsLocalRules {
  }) {
   if(category.trim().isEmpty||normalized(category).contains('غير مصنف')||
      normalized(category).contains('غير محدد'))return null;
-  final keywords=safeDescriptionKeywords(description);
+  // Never create category rules from a generic bank heading or its
+  // direction words; the owner picked the category for one record only.
+  final keywords=safeDescriptionKeywords(description)
+   .where((keyword)=>!_genericBankOperationHeading(keyword))
+   .toList(growable:false);
   if(keywords.isEmpty)return null;
   final kind=income?'income':'expense';
   final id='manual_${sha256.convert(utf8.encode(

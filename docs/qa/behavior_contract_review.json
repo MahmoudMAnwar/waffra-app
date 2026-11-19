@@ -1,12 +1,33 @@
 {
   "schema_version": 1,
-  "pr": "Draft PR #776 (M1044/M1045 issues #775/#777)",
-  "issue": "#775, #777",
+  "pr": "Draft PR #779 (issue #778 SMS category isolation; preserving existing contracts)",
+  "issue": "#778 (prior contracts retained)",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at 18 November 2026 after merged PR #764",
   "reviewed_at": "2026-11-19",
-  "review_policy": "M1040 one insufficient transfer-source debit defect, source+fee same atomic cash guard; retain prior M550 contracts; M1042 wallet-only hidden SMS suffix form validation and bank suffix preservation; M1043 fail-closed official Kotlin Maven POM retry/fallback after upstream 404; M1044 reviewed SMS editor category+account identity, invalid date provenance and deliberate date/time confirmation; M1045 M160 Android Gradle plugin loader uses official Maven Central and Java21 without bypassing build",
+  "review_policy": "M1040 one insufficient transfer-source debit defect, source+fee same atomic cash guard; retain prior M550 contracts; M1042 wallet-only hidden SMS suffix form validation and bank suffix preservation; M1043 fail-closed official Kotlin Maven POM retry/fallback after upstream 404; M1044 reviewed SMS editor category+account identity, invalid date provenance and deliberate date/time confirmation; M1045 M160 Android Gradle plugin loader uses official Maven Central and Java21 without bypassing build; M1046 owner-approved no generic SAMA operation heading category propagation; M1009 deprecated positive assertion updated without skipping excluded/swipe tests",
   "contracts": [
+    {
+      "id": "M1046-ISOLATE-BANK-SMS-CATEGORY-PER-NOTIFICATION",
+      "issue": "Issue #778 / PR #779",
+      "previous_behavior": "A user-confirmed outgoing bank SMS expense could auto-learn the general SAMA operation heading as the latest category and display that category on unrelated pending notifications, including different recipients/amounts; M1009 regression encoded this overly broad category propagation.",
+      "approved_behavior": "Keep independently parsed bank debit/income direction but learn financial main/subcategory only from a distinguishing merchant/service token. Existing heading-only smart rules do not match new SMS; unrelated pending messages retain their own category review. No auto-post or historical ledger rewrite. The manual_ description-learning path also excludes generic bank-operation tokens; archived senderless manual_ rules are matched only on remaining specific merchant/service keywords and cannot apply when no specific keywords remain.",
+      "source_paths": [
+        "lib/waffra_sms_local_rules.dart"
+      ],
+      "test_paths": [
+        "test/m1040_sms_category_isolation_test.dart",
+        "test/m1009_sama_notification_swipe_regression_test.dart"
+      ],
+      "safety_invariants": [
+        "No last-confirmed category leaks to another bank notification only because both say outgoing transfer or purchase.",
+        "Past owner smart heading-only category rules are ignored at match time without altering committed finance history or backup data.",
+        "Bank facts direction still comes from SMS facts; account, idempotent SMS and auto-post permissions remain unchanged.",
+        "Merchant-specific review hints, exclusion rules, notification swipe and owner boundary checks are not removed.",
+        "Exact-head tests and M385/M449/M550 financial and release gates stay active; Android owner device test remains required.",
+        "Previously saved manual_ rules containing only generic outgoing/internal/point-of-sale keywords cannot inherit an unrelated financial category; recognized merchant names still match."
+      ]
+    },
     {
       "id": "M1045-M160-ANDROID-KOTLIN-PLUGIN-LOADER-OFFICIAL-MAVEN",
       "issue": "Issue #777, sole M160 CI failure for PR #776",
