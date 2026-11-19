@@ -11,7 +11,7 @@
       "id": "M1046-ISOLATE-BANK-SMS-CATEGORY-PER-NOTIFICATION",
       "issue": "Issue #778 / PR #779",
       "previous_behavior": "A user-confirmed outgoing bank SMS expense could auto-learn the general SAMA operation heading as the latest category and display that category on unrelated pending notifications, including different recipients/amounts; M1009 regression encoded this overly broad category propagation.",
-      "approved_behavior": "Keep independently parsed bank debit/income direction but learn financial main/subcategory only from a distinguishing merchant/service token. Existing heading-only smart rules do not match new SMS; unrelated pending messages retain their own category review. No auto-post or historical ledger rewrite.",
+      "approved_behavior": "Keep independently parsed bank debit/income direction but learn financial main/subcategory only from a distinguishing merchant/service token. Existing heading-only smart rules do not match new SMS; unrelated pending messages retain their own category review. No auto-post or historical ledger rewrite. The manual_ description-learning path also excludes generic bank-operation tokens; archived senderless manual_ rules are matched only on remaining specific merchant/service keywords and cannot apply when no specific keywords remain.",
       "source_paths": [
         "lib/waffra_sms_local_rules.dart"
       ],
@@ -24,7 +24,8 @@
         "Past owner smart heading-only category rules are ignored at match time without altering committed finance history or backup data.",
         "Bank facts direction still comes from SMS facts; account, idempotent SMS and auto-post permissions remain unchanged.",
         "Merchant-specific review hints, exclusion rules, notification swipe and owner boundary checks are not removed.",
-        "Exact-head tests and M385/M449/M550 financial and release gates stay active; Android owner device test remains required."
+        "Exact-head tests and M385/M449/M550 financial and release gates stay active; Android owner device test remains required.",
+        "Previously saved manual_ rules containing only generic outgoing/internal/point-of-sale keywords cannot inherit an unrelated financial category; recognized merchant names still match."
       ]
     },
     {
