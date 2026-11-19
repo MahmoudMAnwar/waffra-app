@@ -31,7 +31,7 @@
         "end": "      - name: Re-resolve plugins after generating Android host"
       },
       {
-        "start": "      - name: Refuse APK missing native runtime libraries",
+        "start": "            sleep $((20 * attempt))",
         "end": "      # PREVIEW appId is not the Firebase-registered"
       }
     ],
