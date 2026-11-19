@@ -39,8 +39,8 @@ void main() {
     expect(writer, contains('final currentBalances=await balances();'));
     expect(writer, contains('source.balanceMinor < requiredSourceDebitMinor'));
     expect(writer.indexOf('final currentBalances=await balances();'),
-      lessThan(writer.indexOf("'INSERT INTO fresh_finance_internal_transfers '"),
-       reason: 'Available balance must be re-read before the insert.'));
+      lessThan(writer.indexOf("'INSERT INTO fresh_finance_internal_transfers '")),
+      reason: 'Available balance must be re-read before the insert.');
     expect(writer, contains('return false;'),
       reason: 'Exact replay must be idempotent after the first debit.');
     final reversal = repo.substring(end);
