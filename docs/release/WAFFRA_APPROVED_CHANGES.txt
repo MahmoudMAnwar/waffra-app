@@ -1354,3 +1354,9 @@ Accept SR-denominated bank fees and stop fee parsing at its line boundary. Prese
 - Approved change: M1039 owner-requested single P1 fix: read-only bank SMS parser recognizes explicitly masked بطاقة: **6314 on POS expenses and rejects conflicting source identities; uniquely verified account choice still required. No new financial writes, AutoPost permissions, SMS ACK or OTP persistence.
 - Changed production paths: lib/waffra_bank_sms_facts.dart
 - Verification: exact-head CI and physical Android evidence remain separate, not approved merely by these notes.
+
+[M449 REVIEWED UPDATE — ISSUE #769 — PR #770]
+- Reviewed source SHA: 3157d8b8359676754a8357006ab26436ec2b2080
+- Approved change: M1040 owner-requested one P1 financial integrity fix. The canonical SQLCipher internal transfer writer now checks fresh, transaction-scoped available source funds before inserting a new transfer, with any separately charged SMS bank fee included in the required source debit. Repeated same-ID transfers remain idempotent and independent corrective reversals are unchanged.
+- Changed production paths: lib/storage/waffra_accounts_repository.dart, lib/storage/waffra_unified_finance_writer.dart
+- Verification: exact-head CI and physical Android evidence remain separate; source review alone is NOT release certification. No existing balances are rewritten, no auto-post or SMS ACK permissions changed.
