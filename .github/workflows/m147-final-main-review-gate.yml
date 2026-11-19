@@ -357,10 +357,9 @@ jobs:
           flutter pub get
       - name: Create Android project (CI only)
         run: flutter create --no-pub --platforms=android --project-name=waffra --org com.waffra .
-      # Flutter plugins (including the JNI-backed Android path provider) need
-      # an Android host project at pub resolution time. The earlier PR preview
-      # called pub get before flutter create, silently producing an APK without
-      # libdartjni.so; the app then failed to start on a physical phone.
+      # Every endorsed Android plugin must be re-resolved after generating
+      # the Android host: a successful Dart compile without registered native
+      # plugins is not evidence of an APK that can open private app storage.
       - name: Re-resolve plugins after generating Android host
         run: |
           flutter pub get
@@ -486,9 +485,10 @@ jobs:
             sleep $((20 * attempt))
           done
           exit 1
-      # Do not publish a compile-only preview with missing native bindings:
-      # libdartjni is used by transitive Android plugins on real devices, and
-      # sqlite3mc is required for Waffra's guarded encrypted storage.
+      # M1041: never publish a preview missing app/Flutter/SQLCipher native
+      # assets. The endorsed Android path provider is pinned pre-JNI because
+      # its JNI variant can fail before encrypted finance startup. JNI is
+      # mandatory only when the resolved package graph actually needs it.
       - name: Refuse APK missing native runtime libraries
         shell: bash
         run: |
@@ -501,9 +501,23 @@ jobs:
           apk=Path('build/app/outputs/flutter-apk/app-release.apk')
           if not apk.is_file():
               raise SystemExit('QA APK not generated')
-          # AndroidManifest.xml is compiled binary XML: raw ASCII substring
-          # checks reject otherwise valid packages. Ask Android build-tools
-          # for the *parsed* application ID instead, and fail closed if absent.
+          lockfile=Path('pubspec.lock')
+          if not lockfile.is_file():
+              raise SystemExit('QA STARTUP BLOCKED: resolved packages missing')
+          lock=lockfile.read_text()
+          provider=re.search(
+              r'(?ms)^  path_provider_android:\n(.*?)(?=^  [a-zA-Z0-9_-]+:\n|\Z)',
+              lock)
+          if provider is None or not re.search(
+              r'(?m)^    version: "2\.2\.23"\s*$',
+              provider.group(1)):
+              raise SystemExit('QA STARTUP BLOCKED: unreviewed Android path provider')
+          # CI must not treat a historical JNI dependency as permanent.
+          # If any resolved plugin still requires jni_flutter, its ELF stays
+          # mandatory. Otherwise do not fail merely because an unused JNI
+          # library was correctly omitted from the packaged APK.
+          jni_required=re.search(r'(?m)^  jni_flutter:\s*$',lock) is not None
+          # Parse the binary AndroidManifest.xml with aapt, not ASCII search.
           sdk=os.environ.get('ANDROID_HOME') or os.environ.get('ANDROID_SDK_ROOT')
           if not sdk:
               raise SystemExit('QA STARTUP BLOCKED: Android SDK path unavailable')
@@ -519,19 +533,23 @@ jobs:
           with ZipFile(apk) as archive:
               contents=set(archive.namelist())
               required={'lib/arm64-v8a/'+item for item in
-                        ('libapp.so','libflutter.so','libdartjni.so','libsqlite3mc.so')}
+                        ('libapp.so','libflutter.so','libsqlite3mc.so')}
+              jni_elf='lib/arm64-v8a/libdartjni.so'
+              if jni_required:
+                  required.add(jni_elf)
               missing=required-contents
               if missing:
-                  raise SystemExit('QA STARTUP BLOCKED: missing JNI/native libraries: '+
+                  raise SystemExit('QA STARTUP BLOCKED: missing required native ELF: '+
                                    ', '.join(sorted(missing)))
-              for item in sorted(required):
+              verified=required | ({jni_elf} if jni_elf in contents else set())
+              for item in sorted(verified):
                   meta=archive.getinfo(item)
                   if meta.file_size < 4096:
                       raise SystemExit('QA STARTUP BLOCKED: invalid native ELF: '+item)
                   with archive.open(item) as stream:
                       if stream.read(4)!=bytes((0x7f,69,76,70)):
                           raise SystemExit('QA STARTUP BLOCKED: not an ELF: '+item)
-          print('PASS: ARM64 JNI, SQLCipher, Flutter and Dart native ELF bundled')
+          print('PASS: pinned pre-JNI path provider; required ARM64 Flutter/SQLCipher ELFs valid')
           PY
       # PREVIEW appId is not the Firebase-registered com.waffra.app, and this
       # workflow does not have production signing credentials or native Widget

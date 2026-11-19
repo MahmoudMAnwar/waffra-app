@@ -1355,6 +1355,12 @@ Accept SR-denominated bank fees and stop fee parsing at its line boundary. Prese
 - Changed production paths: lib/waffra_bank_sms_facts.dart
 - Verification: exact-head CI and physical Android evidence remain separate, not approved merely by these notes.
 
+[M449 REVIEWED UPDATE — ISSUE #771 — PR #772 — P0 ANDROID STARTUP]
+- Reviewed production dependency source SHA: b50f97a4bca5b19521df172b7f39de2d6c42145c
+- Approved change: pin path_provider_android 2.2.23 before JNI migration, retaining the same application support directory and fail-closed SQLCipher vault/key authority. Last main SHA e5c471e1 user screenshot on Android showed the encrypted-storage Retry screen before login; separate Android emulator tests on PR #770 failed with java.lang.ClassNotFoundException for Landroid/content/Context; through package:jni. The exact physical-device exception is not yet established.
+- Native APK QA change: never omit Flutter/app/sqlite3mc ELFs; require libdartjni.so only when jni_flutter is resolved, while verifying any packaged JNI ELF and exact resolved Android path-provider version. Legacy permission, key rotation, SQL finance and user deletion paths NOT changed.
+- Source files: pubspec.yaml, .github/workflows/m147-final-main-review-gate.yml, scripts/qa/m268_scope_review.py; new source regression test is test/qa/m1041_android_path_provider_startup_test.py.
+- Verification status: CI and installation-over-existing-data Android physical acceptance are PENDING. Build-only pass is not evidence of runtime recovery. Issue #771 / Draft PR #772, separate from unmerged finance PR #770.
 [M449 REVIEWED UPDATE — ISSUE #769 — PR #770]
 - Reviewed source SHA: 3157d8b8359676754a8357006ab26436ec2b2080
 - Approved change: M1040 owner-requested one P1 financial integrity fix. The canonical SQLCipher internal transfer writer now checks fresh, transaction-scoped available source funds before inserting a new transfer, with any separately charged SMS bank fee included in the required source debit. Repeated same-ID transfers remain idempotent and independent corrective reversals are unchanged.

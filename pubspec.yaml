@@ -25,6 +25,9 @@ dependencies:
   geocoding: ^4.0.0
   flutter_timezone: ^5.1.1
   path_provider: ^2.1.5
+  # M1041/#771: Android startup must not resolve JNI-backed 2.3.x until
+  # verified on physical devices; 2.2.23 uses the previous Pigeon bridge.
+  path_provider_android: 2.2.23
   fl_chart: ^0.69.2
   image: 4.5.4
   archive: 4.0.9

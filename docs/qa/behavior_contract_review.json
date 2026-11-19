@@ -31,6 +31,28 @@
       ]
     },
     {
+      "id": "M1041-JNI-FREE-ANDROID-PATH-PROVIDER-ENCRYPTED-STARTUP",
+      "issue": "Issue #771",
+      "previous_behavior": "Waffra starts Android by getApplicationSupportDirectory before SQLCipher source checks. Unconstrained transitive path_provider_android can resolve 2.3.1, which uses JNI. Exact-head Android integration CI fails with java.lang.ClassNotFoundException Landroid/content/Context; through package:jni, matching user's generic startup Retry catch and leaving login inaccessible.",
+      "approved_behavior": "Use exact endorsed path_provider_android 2.2.23 (pre-JNI Pigeon) compatible with path_provider ^2.1.5; keep private application-support path stable; require app/Flutter/sqlite3mc native ELF, require libdartjni ELF only if jni_flutter is actually resolved. Re-run Android first fresh install and cold source reopen. No data wipe, new key, SQLCipher change, unsafe legacy fallback or assumed physical device success.",
+      "source_paths": [
+        "pubspec.yaml",
+        ".github/workflows/m147-final-main-review-gate.yml",
+        "scripts/qa/m268_scope_review.py"
+      ],
+      "test_paths": [
+        "test/qa/m1041_android_path_provider_startup_test.py",
+        "integration_test/fresh_install_production_binding_android_test.dart",
+        "integration_test/encrypted_storage_android_test.dart"
+      ],
+      "safety_invariants": [
+        "Same getApplicationSupportDirectory Android app-private path; no data migration or deletion.",
+        "On unrecoverable key/db or source mismatch remain fail closed, never create new vault over existing source.",
+        "Validate resolution in pubspec.lock in QA workflow, assert production ELF requirements and Android startup test, preserve 283 prior M550 contracts.",
+        "M1040 finance PR remains separate and unmerged until its own independent review."
+      ]
+    },
+    {
       "id": "M1039-POS-CARD-SOURCE-UNIQUE-ACCOUNT-BINDING",
       "issue": "Issue #767",
       "previous_behavior": "Bank SMS source-suffix parser only accepts 'من حساب/بطاقة' or English card/account prefixes. Standalone Arabic POS 'بطاقة: **6314 MADA' has sourceSuffix=null and a uniquely pre-verified matching account cannot be resolved.",
