@@ -67,7 +67,8 @@ void main() {
     final review=File('lib/waffra_home_sms_confirmation.part.dart').readAsStringSync();
     final editor=File('lib/waffra_home_entry_sheet.part.dart').readAsStringSync();
     expect(review,contains('reviewedCategoryParentId:reviewedCategoryParentId'));
-    expect(review,contains('reviewedCategoryLeafId:reviewedCategoryLeafId'));
+    expect(review,contains('reviewedCategoryLeafId:reviewCategoryValid?'));
+    expect(review,contains('reviewedCategoryLeafId=unambiguous?chosen.id:null'));
     expect(editor,contains('waffraValidateSmsEditorReviewedCategory('));
     expect(editor,contains('reviewedSmsCategoryParentId'));
     expect(editor,contains('reviewedSmsCategoryLeafId'));
@@ -82,11 +83,13 @@ void main() {
     expect(editor,contains("Key('m1044-sms-date-provenance')"));
     expect(editor,contains('showTimePicker('));
     expect(editor,contains('smsDateConfirmed=true;'));
-    expect(editor,contains('&& !smsDateConfirmed'));
+    expect(editor,contains('!smsDateConfirmed'));
+    expect(editor,contains('savedManualDate'));
     expect(editor,contains('تاريخ ووقت الرسالة الأصلية غير مؤكدين'));
     expect(editor,contains('تم تأكيدهما يدويًا'));
     expect(editor,contains('DateTime.now()'));
     expect(editor,contains("waffra-entry-date-action"));
-    expect(editor,contains("notes:body"));
+    expect(review,contains('e.notes==body'));
+    expect(review,contains('acknowledgeCommitted([id])'));
   });
 }

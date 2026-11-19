@@ -61,8 +61,8 @@
         "end": "    Future<void> createAccountInsideEntryDropdown("
       },
       {
-        "start": "dateAction(),",
-        "end": ""
+        "start": "        // M478 #418: date uses 100% width without an optional budget.",
+        "end": "      Row(children:[\n       Expanded(child:OutlinedButton.icon(onPr"
       }
     ]
   }
