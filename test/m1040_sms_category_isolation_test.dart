@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:waffra_app/waffra_sms_local_rules.dart';
+import 'package:waffra/waffra_sms_local_rules.dart';
 
 void main() {
  test('confirmed category does not spread through generic outgoing bank heading', () {
