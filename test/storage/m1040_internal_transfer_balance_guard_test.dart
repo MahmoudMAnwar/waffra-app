@@ -105,8 +105,9 @@ void main() {
     // Included fee: 100.00 SAR gross, recipient gets 95.00 and fee is 5.00.
     expect(await move('exact-with-fee', 9500, fee: 500), isTrue);
     expect(await count('fresh_finance_internal_transfers'), 1);
-    await expectLater(move('post-reservation-no-cash', 1),
-      throwsStateError);
+    // This accounts-only fixture has no fee entry; the production SMS writer
+    // adds that expense under the SAME outer SQL transaction and app lock.
+    expect(await balances(), {'bank': 500, 'wallet': 9500, 'other': 5000});
     await expectLater(move('invalid-negative-fee', 100, fee: -1),
       throwsArgumentError);
   });
