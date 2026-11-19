@@ -20,6 +20,17 @@ void main(){
   expect(waffraMerchantName(
    'Purchase Card Amount: 38 SAR Merchant: Al Nahdi On: 2026-11-19 13:12'),
    'Al Nahdi');
+  // Bank SMS can put an amount AFTER the merchant on the same line.
+  // The amount, date and bank suffix never become part of merchant identity.
+  expect(waffraMerchantName(
+   'شراء نقاط بيع لدى: Al Nahdi مبلغ: 20 SAR في: 2026-11-18'),
+   'Al Nahdi');
+  expect(waffraMerchantName(
+   'Purchase Card Merchant: Starbucks Amount: 20 SAR On: 2026-11-18'),
+   'Starbucks');
+  expect(waffraMerchantName(
+   'شراء نقاط بيع لدى: Marakez Medical Compan المبلغ: 33.81 SAR في: 2026-11-18'),
+   'Marakez Medical Compan');
   for(final unsafe in [
    'شراء نقاط بيع مبلغ: 10 SAR لدى: Card **6314 في: 2026-11-19',
    'شراء نقاط بيع مبلغ: 10 SAR لدى: Account 123456 في: 2026-11-19',
