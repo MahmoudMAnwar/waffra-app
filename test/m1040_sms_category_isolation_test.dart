@@ -25,4 +25,25 @@ void main() {
   expect(WaffraSmsLocalRules.matches(legacy,
    'حوالة داخلية صادرة مبلغ:SAR 22 الى: شخص آخر',sender:'BANK'),isFalse);
  });
+ test('generic bank directions do not create manual category hints', () {
+  expect(WaffraSmsLocalRules.manualCategoryPattern(
+   description:'حوالة داخلية صادرة',category:'فواتير / جوال',income:false),isNull);
+  expect(WaffraSmsLocalRules.manualCategoryPattern(
+   description:'شراء عبر نقاط البيع',category:'فواتير / جوال',income:false),isNull);
+  final specific=WaffraSmsLocalRules.manualCategoryPattern(
+   description:'ستاربكس',category:'مطاعم / مقاهي',income:false);
+  expect(specific,isNotNull);
+  expect(WaffraSmsLocalRules.matches(specific!,
+   'شراء لدى ستاربكس مبلغ 30 SAR',sender:'BANK'),isTrue);
+ });
+
+ test('legacy senderless manual category ignores generic operation terms', () {
+  const legacy=WaffraSmsLocalRule(
+   id:'manual_legacy_generic',name:'حوالة داخلية صادرة',kind:'expense',
+   income:false,category:'فواتير / جوال',sender:'',
+   keywords:['داخليه','صادره'],matchAll:false,autoPost:false);
+  expect(WaffraSmsLocalRules.matches(legacy,
+   'حوالة داخلية صادرة مبلغ SAR 50',sender:'BANK'),isFalse);
+ });
+
 }
