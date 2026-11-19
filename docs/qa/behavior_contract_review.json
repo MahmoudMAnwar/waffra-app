@@ -1,12 +1,32 @@
 {
   "schema_version": 1,
-  "pr": "Draft PR #770 (M1040 / M1042; Issues #769 / #773)",
-  "issue": "#769, #773",
+  "pr": "Draft PR #770 (M1040 / M1042 / M1043; Issues #769 / #773 / #774)",
+  "issue": "#769, #773, #774",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at 18 November 2026 after merged PR #764",
   "reviewed_at": "2026-11-19",
-  "review_policy": "M1040 one insufficient transfer-source debit defect, source+fee same atomic cash guard; retain prior M550 contracts; M1042 wallet-only hidden SMS suffix form validation and bank suffix preservation",
+  "review_policy": "M1040 one insufficient transfer-source debit defect, source+fee same atomic cash guard; retain prior M550 contracts; M1042 wallet-only hidden SMS suffix form validation and bank suffix preservation; M1043 fail-closed official Kotlin Maven POM retry/fallback after upstream 404",
   "contracts": [
+    {
+      "id": "M1043-VERIFIED-KOTLIN-MAVEN-POM-FALLBACK",
+      "issue": "Issue #774 / owner requested CI failure repair in PR #770",
+      "previous_behavior": "The Android M147 job could validate the Kotlin 2.2.21 SHA256-pinned cached JAR, then fail immediately on a single network request for kotlin-compiler-embeddable POM or POM.sha1 returning upstream HTTP 404, before compiling the Android app. Previously verified POM metadata lacked a safely reusable cached SHA1 sidecar.",
+      "approved_behavior": "Keep the original Kotlin compiler JAR versions and pinning, try official Maven Central origin with bounded retries and official repo1.maven.org fallback for POM and SHA1 sidecars from the SAME chosen origin, validate the exact SHA1 before installing or trusting the POM, and cache+revalidate the trusted sidecar on future runs. Both unavailable/mismatching means the Android job fails closed, never skipped.",
+      "source_paths": [
+        "scripts/qa/prefetch_verified_kotlin.sh"
+      ],
+      "test_paths": [
+        "test/qa/test_m1043_verified_kotlin_pom_fallback.py",
+        "test/qa/m550_behavior_contract_preflight_test.py"
+      ],
+      "safety_invariants": [
+        "Only Maven Central canonical repo.maven.apache.org and repo1.maven.org are used for POM/digest retrieval; no arbitrary mirror or secret URL is introduced.",
+        "The existing SHA256 digests and exact Kotlin compiler versions 2.2.21 and 2.4.0 remain unchanged, and Gradle exclusiveContent still restricts original module versions.",
+        "The POM SHA1 digest is checked against the downloaded POM from the same origin before installation, and any cached sidecar is revalidated before use.",
+        "Failure of both official origins or a digest mismatch fails the job; no Android unit/device job, financial test, or release readiness check is disabled.",
+        "M1040 SQLCipher transfer fees and M1042 AlinmaPay wallet form remain unchanged and under exact-head CI."
+      ]
+    },
     {
       "id": "M1042-WALLET-HIDDEN-SMS-SUFFIX-SAVE-ENABLEMENT",
       "issue": "Issue #773 / owner explicitly requested same Draft PR #770",
