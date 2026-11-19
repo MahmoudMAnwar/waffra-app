@@ -192,6 +192,8 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
  Future<void> _m1011SaveReviewedSmsKind({
   required String id,required String body,required String sender,
   required bool income,
+  String? reviewedCategoryParentId,String? reviewedCategoryLeafId,
+  String? reviewedAccountId,
  })async{
   if(!mounted)return;
   final facts=WaffraBankSmsFactsParser.parse(body);
@@ -213,7 +215,10 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
    // NEVER use manualIncomeOverride/reviewedOriginalSms for a reviewed SMS.
    // The manual writer loses sourceType and immutable original text/hash.
    await entrySheet(sms:true,initialSms:body,reviewedSender:sender,reviewedSmsId:id,
-    reviewedIncomeOverride:income);
+    reviewedIncomeOverride:income,
+    reviewedSmsCategoryParentId:reviewedCategoryParentId,
+    reviewedSmsCategoryLeafId:reviewedCategoryLeafId,
+    reviewedSmsAccountId:reviewedAccountId);
   }
   if(!mounted)return;
   // Verify the exact original bank body AND owner-chosen direction from
@@ -377,6 +382,10 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
    // selector. A verified account alone never bypasses mandatory category checks.
    String reviewedCategory=previewHint.leaf?.name??
     (waffraIsEnglish?'Choose subcategory':'يحتاج اختيار القسم الفرعي');
+   // Carry the ACTUAL reviewed category identities to the editor, not
+   // a separately re-parsed category guess. These still require revalidation.
+   String? reviewedCategoryParentId=previewHint.parent?.id;
+   String? reviewedCategoryLeafId=previewHint.leaf?.id;
    String reviewedMainName=previewMainName;
    bool reviewCategoryValid=previewHint.leaf!=null&&
     previewHint.parent!=null;
@@ -500,6 +509,8 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
     redraw((){
      reviewedCategory=chosen.name;
      reviewedMainName=parent.single.displayName;
+     reviewedCategoryParentId=parent.single.id;
+     reviewedCategoryLeafId=unambiguous?chosen.id:null;
      reviewCategoryValid=unambiguous;
      canConfirm=ownerBlocker()==null;
     });
@@ -889,7 +900,12 @@ extension _WaffraHomeSmsConfirmation on _HomeScreenState {
      if(approved==true&&mounted)await openReviewedSmsManualTransfer(id:id,body:body,sender:sender);
     }else{
      await _m1011SaveReviewedSmsKind(id:id,body:body,
-      sender:sender,income:reviewType=='income');
+      sender:sender,income:reviewType=='income',
+      reviewedCategoryParentId:reviewedCategoryParentId,
+      reviewedCategoryLeafId:reviewCategoryValid?
+       reviewedCategoryLeafId:null,
+      reviewedAccountId:reviewedAccount?.ids?.length==1?
+       reviewedAccount!.ids!.single:null);
     }
    }else if(decision=='exclude'&&mounted){
     // M1005: if Notifications is pushed above Home, feedback must be

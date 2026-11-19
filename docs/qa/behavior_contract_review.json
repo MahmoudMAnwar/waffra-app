@@ -1,12 +1,60 @@
 {
   "schema_version": 1,
-  "pr": "Draft PR #770 (M1040 / M1042 / M1043; Issues #769 / #773 / #774)",
-  "issue": "#769, #773, #774",
+  "pr": "Draft PR #776 (M1044/M1045 issues #775/#777)",
+  "issue": "#775, #777",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at 18 November 2026 after merged PR #764",
   "reviewed_at": "2026-11-19",
-  "review_policy": "M1040 one insufficient transfer-source debit defect, source+fee same atomic cash guard; retain prior M550 contracts; M1042 wallet-only hidden SMS suffix form validation and bank suffix preservation; M1043 fail-closed official Kotlin Maven POM retry/fallback after upstream 404",
+  "review_policy": "M1040 one insufficient transfer-source debit defect, source+fee same atomic cash guard; retain prior M550 contracts; M1042 wallet-only hidden SMS suffix form validation and bank suffix preservation; M1043 fail-closed official Kotlin Maven POM retry/fallback after upstream 404; M1044 reviewed SMS editor category+account identity, invalid date provenance and deliberate date/time confirmation; M1045 M160 Android Gradle plugin loader uses official Maven Central and Java21 without bypassing build",
   "contracts": [
+    {
+      "id": "M1045-M160-ANDROID-KOTLIN-PLUGIN-LOADER-OFFICIAL-MAVEN",
+      "issue": "Issue #777, sole M160 CI failure for PR #776",
+      "previous_behavior": "All Flutter and screenshot SMS tests pass, but M160's minimal regenerated Android host on latest Flutter can resolve transitive Kotlin DSL 6.5.7 / Kotlin 2.3.20 plugin dependencies only via Gradle Plugin Portal and rejects published official Maven Central POMs, failing at plugin loader before Android compilation.",
+      "approved_behavior": "Use Java 21 matching M147 and CI-only Gradle init hook to add official mavenCentral() to settings.pluginManagement.repositories for included Flutter build and generated Android host, with normal Plugin Portal still intact; run flutter pub get again after host generation, then compile the actual release APK with existing non-skipped M160 gate. In the same ephemeral generated Android QA host, enable the exact flutter_local_notifications Java core-library desugaring used by the already-green M147 Android job and remove only debug-only integration_test registration from the release Java plugin registrar, rejecting any unknown form. Preserve real release APK build and all production plugins.",
+      "source_paths": [
+        ".github/workflows/m160-main-reconciliation.yml"
+      ],
+      "test_paths": [
+        "test/qa/test_m1045_m160_official_kotlin_repository_test.py",
+        "test/qa/m554_gradle_release_cache_test.py"
+      ],
+      "safety_invariants": [
+        "Only official Maven Central is added to plugin resolution, alongside Gradle Plugin Portal; no arbitrary mirrors, plugin versions, Kotlin downgrades or forbidden fallback.",
+        "Existing Gradle/Kotlin/SQLite3MC prefetch SHA pinning stays active and in previous required order.",
+        "M160 full Flutter unit/widget/backup tests and unsigned Android release build remain required; no continue-on-error, failed-step skip, or preview-only bypass.",
+        "Java 21 is selected before Flutter/Android compile; generated Android host plugins re-resolve after flutter create.",
+        "Existing M1044 bank-SMS source hash, verified account, malformed timestamp consent and no duplicate writes unchanged.",
+        "M160 still compiles a release APK with official notification desugaring; only the debug/test-only integration_test registrar can be excluded, using exact text/unknown-form fail-closed checks."
+      ]
+    },
+    {
+      "id": "M1044-ALINMAPAY-BILL-REVIEW-EDIT-DATE-AND-CATEGORY",
+      "issue": "Issue #775 / Owner-supplied 19 Nov 2026 Android screenshots",
+      "previous_behavior": "An electricity bill SMS with the invalid source date 318-11-2026 02:27 is correctly blocked from compact one-tap confirmation. The source review selected an active electricity category leaf and account, but editing recalculated category suggestions independently and lost the electricity child, while a prefilled or restored date could appear without explaining whether it came from bank SMS or from a prior manual edit.",
+      "approved_behavior": "Preserve the original SMS and reject all malformed dates without guessing; copy only the reviewed, active, unique parent+leaf and selected active account as revalidated editor candidates when the corrected direction matches, deferring any finance write to explicit user-confirmed save. Explicitly label unverified date/time and any manually confirmed date; require both picker steps before verified SMS commit when original source is invalid.",
+      "source_paths": [
+        "lib/main.dart",
+        "lib/waffra_home_sms_confirmation.part.dart",
+        "lib/waffra_home_entry_sheet.part.dart"
+      ],
+      "test_paths": [
+        "test/m1044_bill_sms_review_editor_handoff_test.dart",
+        "test/m1011_reviewed_sms_provenance_ack_transfer_regression_test.dart",
+        "test/m669_sms_review_category_search_test.dart",
+        "test/m1034_bank_sms_timestamp_variants_test.dart",
+        "test/qa/m566_sms_manual_date_confirmation_test.py"
+      ],
+      "safety_invariants": [
+        "Original source date 318-11-2026 02:27 must never be parsed as 18 Nov or transaction arrival date; the unverified guard rejects three-digit days.",
+        "Only exact active category parent and child IDs with matching expense/income direction and unique persisted child name are handed to the editor.",
+        "A user-chosen valid category in a saved editor draft takes precedence; inactive/stale or ambiguous category never enables automatic Save.",
+        "An explicitly reviewed account is an editable candidate only if still active and belongs to one current provider group, not inferred from SMS sender alone.",
+        "When source SMS date is invalid, a date-looking fallback must not claim bank verification; deliberate date and time selection are mandatory unless an earlier explicit user-confirmed draft is restored.",
+        "No new writer, auto-post, hash ACK, SQLCipher integrity, SMS source text, duplicate suppression, currency or security gate changes.",
+        "Legacy M566 date-consent QA keeps checking both deliberate calendar+clock and rejects dates beyond current time; it must not demand obsolete source syntax."
+      ]
+    },
     {
       "id": "M1043-VERIFIED-KOTLIN-MAVEN-POM-FALLBACK",
       "issue": "Issue #774 / owner requested CI failure repair in PR #770",

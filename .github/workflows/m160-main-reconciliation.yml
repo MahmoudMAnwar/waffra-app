@@ -30,6 +30,12 @@ jobs:
           for f in docs/m160-main-reconciliation.md test/m131_backup_boundary_tamper_qa_test.dart test/m132_backup_corruption_recovery_negative_test.dart test/m140_backup_utf8_cross_archive_integrity_test.dart; do test -f "$f"; done
           test -f .github/workflows/m147-final-main-review-gate.yml
           if ! git merge-base --is-ancestor origin/main HEAD; then echo 'BLOCKED: main moved after M160 reconciliation'; exit 1; fi
+      # M1045: match the Java version proven by the M147 Android gate.
+      - name: Set up JDK 21 for Gradle Android release compilation
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
@@ -50,7 +56,70 @@ jobs:
         run: flutter analyze --no-fatal-infos lib/storage lib/waffra_secure_backup.dart test/m131_backup_boundary_tamper_qa_test.dart test/m132_backup_corruption_recovery_negative_test.dart test/m140_backup_utf8_cross_archive_integrity_test.dart
       - name: Full Flutter tests including legacy backup compatibility
         run: flutter test
+      # M1045: Flutter's included Gradle build can resolve its Kotlin DSL
+      # plugins solely from plugins.gradle.org, which does not reliably serve
+      # the transitive official Kotlin 2.3.20 POMs. Add ONLY Maven Central
+      # plus the existing Gradle Plugin Portal for settings-level plugins.
+      # This CI-only init script runs for included builds and generated host;
+      # no Kotlin version, checksum or shipped Android files are changed.
+      - name: Add official Maven Central for included Flutter Kotlin plugin DSL
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "${GRADLE_USER_HOME:-$HOME/.gradle}/init.d"
+          cat > "${GRADLE_USER_HOME:-$HOME/.gradle}/init.d/m160-official-kotlin-plugin-repositories.gradle" <<'GROOVY'
+          gradle.beforeSettings { settings ->
+            settings.pluginManagement.repositories {
+              mavenCentral()
+              gradlePluginPortal()
+            }
+          }
+          GROOVY
       - name: Android release compile (unsigned validation only)
         run: |
           flutter create --no-pub --platforms=android --project-name=waffra --org com.waffra .
+          # Native Flutter plugins must be registered against the GENERATED
+          # Android host, not only the pre-generation Dart package graph.
+          flutter pub get
+          # Match the passing M147 generated Android QA host; this generated
+          # Kotlin Gradle file is not included in the source-controlled app.
+          python3 - <<'PY'
+          from pathlib import Path
+          gradle=Path('android/app/build.gradle.kts')
+          if not gradle.is_file():
+              raise SystemExit('Generated Android Kotlin Gradle configuration missing')
+          source=gradle.read_text()
+          marker='compileOptions {'
+          if marker not in source:
+              raise SystemExit('Cannot find compileOptions for Java desugaring')
+          if 'isCoreLibraryDesugaringEnabled = true' not in source:
+              source=source.replace(marker,marker+'\n        isCoreLibraryDesugaringEnabled = true',1)
+          dependency='coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")'
+          if dependency not in source:
+              source+='\n// Required by flutter_local_notifications\ndependencies {\n    '+dependency+'\n}\n'
+          gradle.write_text(source)
+          assert 'isCoreLibraryDesugaringEnabled = true' in source
+          assert dependency in source
+          print('PASS: generated M160 Android host matches M147 notification desugaring')
+          PY
+          # integration_test is deliberately debug/test-only; keep every
+          # production plugin, fail closed on an unexpected registrar layout.
+          python3 - <<'PY'
+          from pathlib import Path
+          path=Path('android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java')
+          if not path.exists():
+              print('Generated Java plugin registrant not present')
+          else:
+              text=path.read_text()
+              statement='flutterEngine.getPlugins().add(new dev.flutter.plugins.integration_test.IntegrationTestPlugin());'
+              if statement in text:
+                  text=text.replace(statement,
+                      '// integration_test is debug/test-only and not on release classpath.')
+                  path.write_text(text)
+                  print('Removed only debug/test-only integration_test registration')
+              elif 'dev.flutter.plugins.integration_test.IntegrationTestPlugin()' in text:
+                  raise SystemExit('Unexpected integration_test registrar form')
+              else:
+                  print('No debug-only integration_test registrar')
+          PY
           flutter build apk --release --no-pub --target-platform android-arm64

@@ -1,58 +1,86 @@
 {
   "contract_version": 1,
-  "change_id": "PR770-ISSUES769-773-774-M1040-M1042-M1043",
-  "human_scope_review": "One financial-integrity defect: internal account-to-account transfer may credit a destination without sufficient available money at source; SMS transfer+fee must enforce the combined debit. Exact SQLCipher transaction source only, no new permissions, no historical rewriting. Owner explicitly approved adding M1042/#773 AlinmaPay wallet Save disabled by hidden bank-only SMS suffix to this same Draft PR #770; preserve M1040 finance bounds. Owner separately requested fixing latest CI failures in this same PR: Kotlin POM HTTP 404 during M147 Android prefetch. Only exact upstream Maven Central POM fallbacks with unchanged cryptographic checks.",
+  "change_id": "ISSUES775-777-M1044-M1045-SMS-BILL-CI",
+  "human_scope_review": "On 2026-11-19 owner explicitly requested fixing all issues demonstrated by screenshots: preserve source invalid 318-11-2026, category/main-to-leaf propagation, reviewed account candidate and explicit date/time provenance/confirmation. New PR only, current main after #770; no unrequested writers or permission changes. CI on the same PR: after all 5 SMS screenshot regressions and full Flutter suite succeeded, M160 Android-only plugin loader could not resolve officially published Kotlin 2.3.20 artifacts from plugins.gradle.org alone. Owner asked to complete all repairs, so allow exact M160 official repository/JDK parity fix, no test skips.",
   "user_requested_changes": [
-    "Reject new internal transfers exceeding the source account's current SQLCipher-computed balance, under the existing transaction and writer lock.",
-    "Check total source debit (credited transfer plus separately booked fee) for a confirmed fee-bearing SMS transfer using the same canonical account writer.",
-    "Keep matching replay IDs idempotent, block conflicting replays, and allow the independent corrective reversal writer to retain previous compensation semantics.",
-    "Add isolated SQLCipher and fee source regression tests without reading user data, updating release provenance and M550 behavior contract before CI.",
-    "Fix the new wallet form's invisible bank SMS last-four validation and clear stale suffix on type transitions; preserve strict bank-only suffix.",
-    "Add M1042 widget regression for AlinmaPay wallet zero/positive balance, save draft, bank-to-wallet-to-bank transition and bank suffix constraints.",
-    "Repair Kotlin compiler POM and matching SHA1 downloads on CI HTTP 404 with bounded retries and official Maven Central fallback; never weaken SHA256, SHA1 or Gradle verification.",
-    "Regression-test successful fallback and fail-closed missing/mismatched Kotlin POM hashes while retaining all original Android CI jobs."
+    "Transfer exact validated active expense/income category parent and leaf identities from SMS review to edit, preserving explicitly user-selected saved valid edit drafts.",
+    "Carry explicitly selected active reviewed account to editor as a revalidated optional candidate, never authorizing posting.",
+    "For malformed three-digit source date display unverified-time warning until deliberate date+time picker; distinguish restored manually confirmed date from bank-extracted dates; do not repair 318 into 18.",
+    "Keep bank message, expense source, SAR amount, idempotent SMS hash, financial account, time and user-confirmed transaction write/ACK safety unchanged; add exact screenshot tests.",
+    "Update M566 SMS date confirmation QA assertions for stricter verified source date / manually consented non-future draft, without removing the original date/time save guards.",
+    "Fix the sole remaining M160 Android Kotlin 2.3.20 plugin dependency resolution without disabling APK compilation or modifying the financial app.",
+    "Add pinned Java21 parity with M147, official Maven Central plugin repositories for CI-only generated Gradle builds, and post-generation Flutter plugin refresh; test M160 workflow guards."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "lib/storage/waffra_accounts_repository.dart",
-    "lib/storage/waffra_unified_finance_writer.dart",
-    "test/storage/m1040_internal_transfer_balance_guard_test.dart",
-    "test/m1040_sms_transfer_fee_balance_contract_test.dart",
-    "lib/waffra_new_account_dialog.dart",
-    "test/m1042_hidden_wallet_suffix_account_save_test.dart",
-    "scripts/qa/prefetch_verified_kotlin.sh",
-    "test/qa/test_m1043_verified_kotlin_pom_fallback.py"
+    "lib/main.dart",
+    "lib/waffra_home_sms_confirmation.part.dart",
+    "lib/waffra_home_entry_sheet.part.dart",
+    "test/m1044_bill_sms_review_editor_handoff_test.dart",
+    "test/qa/m566_sms_manual_date_confirmation_test.py",
+    ".github/workflows/m160-main-reconciliation.yml",
+    "test/qa/test_m1045_m160_official_kotlin_repository_test.py"
   ],
   "bounded_sections": {
-    "lib/storage/waffra_accounts_repository.dart": [
+    "lib/main.dart": [
       {
-        "start": " /// Exactly one durable transfer ID, opposite account effects and ZERO",
-        "end": " /// M1032: reverse an incorrect internal transfer"
-      }
-    ],
-    "lib/storage/waffra_unified_finance_writer.dart": [
-      {
-        "start": "  Future<bool> appendReviewedSmsTransferWithFee({",
-        "end": "  /// Called AFTER explicit confirmation for bank SMS"
-      }
-    ],
-    "lib/waffra_new_account_dialog.dart": [
-      {
-        "start": " @override void initState(){",
-        "end": " Future<void> addCustomSubtype()async{"
+        "start": "/// M669: bank SMS suggestions are NOT category selections.",
+        "end": "class SavingGoal {"
       },
       {
-        "start": "     key:const Key('m470-new-account-kind'),",
-        "end": "     key:ValueKey('m638-bank-category-$bankCategory'),"
+        "start": "bool bankSmsHasUnverifiedTimestamp(String raw,{DateTime? referenceDate}){",
+        "end": "String bankSmsHash(String raw,{String? nativeId}){"
       }
     ],
-    "scripts/qa/prefetch_verified_kotlin.sh": [
+    "lib/waffra_home_sms_confirmation.part.dart": [
       {
-        "start": "home=\"${GRADLE_USER_HOME:-$HOME/.gradle}\"",
-        "end": "# Gradle/Flutter included builds can enforce FAIL_ON_PROJECT_REPOS."
+        "start": " Future<void> _m1011SaveReviewedSmsKind({",
+        "end": " Future<void> _m983OpenSmsTypedTemplate({"
+      },
+      {
+        "start": "   final previewHint=waffraResolveSmsReviewCategory(categories,",
+        "end": "   Future<void> selectAccountBeforeYes("
+      },
+      {
+        "start": "   if(decision=='correct-type'&&mounted&&reviewType!=null){",
+        "end": "   }else if(decision=='exclude'&&mounted){"
+      }
+    ],
+    "lib/waffra_home_entry_sheet.part.dart": [
+      {
+        "start": " Future<void> entrySheet({MoneyEntry? initial,bool sms=false,String? initialSms,",
+        "end": "  // A paid goal due is an immutable verified two-source settlement."
+      },
+      {
+        "start": "  // M983: override legacy bank-SMS fallback only for a fresh typed SMS.",
+        "end": "   String? suggestion,pendingHash,receiptPath=initial?.receiptPath;"
+      },
+      {
+        "start": "    Widget dateAction()=>OutlinedButton.icon(",
+        "end": "    Future<void> createAccountInsideEntryDropdown("
+      },
+      {
+        "start": "        // M478 #418: date uses 100% width without an optional budget.",
+        "end": "      Row(children:[\n       Expanded(child:OutlinedButton.icon(onPr"
+      }
+    ],
+    "test/qa/m566_sms_manual_date_confirmation_test.py": [
+      {
+        "start": "class SmsDateReviewTest(unittest.TestCase):",
+        "end": "if __name__=='__main__':unittest.main()"
+      }
+    ],
+    ".github/workflows/m160-main-reconciliation.yml": [
+      {
+        "start": "      - name: Verify retained main ancestry and M160 audit scope",
+        "end": "      - name: Prefetch SHA256-verified official SQLite3MC native release assets"
+      },
+      {
+        "start": "      - name: Full Flutter tests including legacy backup compatibility",
+        "end": null
       }
     ]
   }
