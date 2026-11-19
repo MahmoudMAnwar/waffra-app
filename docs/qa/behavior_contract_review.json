@@ -21,7 +21,8 @@
         "test/m1044_bill_sms_review_editor_handoff_test.dart",
         "test/m1011_reviewed_sms_provenance_ack_transfer_regression_test.dart",
         "test/m669_sms_review_category_search_test.dart",
-        "test/m1034_bank_sms_timestamp_variants_test.dart"
+        "test/m1034_bank_sms_timestamp_variants_test.dart",
+        "test/qa/m566_sms_manual_date_confirmation_test.py"
       ],
       "safety_invariants": [
         "Original source date 318-11-2026 02:27 must never be parsed as 18 Nov or transaction arrival date; the unverified guard rejects three-digit days.",
@@ -29,7 +30,8 @@
         "A user-chosen valid category in a saved editor draft takes precedence; inactive/stale or ambiguous category never enables automatic Save.",
         "An explicitly reviewed account is an editable candidate only if still active and belongs to one current provider group, not inferred from SMS sender alone.",
         "When source SMS date is invalid, a date-looking fallback must not claim bank verification; deliberate date and time selection are mandatory unless an earlier explicit user-confirmed draft is restored.",
-        "No new writer, auto-post, hash ACK, SQLCipher integrity, SMS source text, duplicate suppression, currency or security gate changes."
+        "No new writer, auto-post, hash ACK, SQLCipher integrity, SMS source text, duplicate suppression, currency or security gate changes.",
+        "Legacy M566 date-consent QA keeps checking both deliberate calendar+clock and rejects dates beyond current time; it must not demand obsolete source syntax."
       ]
     },
     {
