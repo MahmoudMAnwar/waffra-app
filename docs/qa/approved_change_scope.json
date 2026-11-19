@@ -1,44 +1,58 @@
 {
   "contract_version": 1,
-  "change_id": "ISSUE771-M1041-ANDROID-PATH-PROVIDER-JNI-STARTUP",
-  "human_scope_review": "P0 Android encrypted-storage startup Retry only; resolve new JNI-based endorsed Android path provider causing ClassNotFoundException in emulator startup tests, without touching existing finance vault, encryption key, source selector, login/OTP or SQL records.",
+  "change_id": "PR770-ISSUES769-773-774-M1040-M1042-M1043",
+  "human_scope_review": "One financial-integrity defect: internal account-to-account transfer may credit a destination without sufficient available money at source; SMS transfer+fee must enforce the combined debit. Exact SQLCipher transaction source only, no new permissions, no historical rewriting. Owner explicitly approved adding M1042/#773 AlinmaPay wallet Save disabled by hidden bank-only SMS suffix to this same Draft PR #770; preserve M1040 finance bounds. Owner separately requested fixing latest CI failures in this same PR: Kotlin POM HTTP 404 during M147 Android prefetch. Only exact upstream Maven Central POM fallbacks with unchanged cryptographic checks.",
   "user_requested_changes": [
-    "Pin path_provider_android 2.2.23, the last Pigeon non-JNI implementation compatible with the existing Flutter path_provider, to avoid runtime ClassNotFoundException before WaffraFreshInstallSource.prepare.",
-    "Retain required APK Flutter/app/SQLCipher native ELF validation; require JNI binary if JNI Flutter package is still resolved, otherwise verify its ELF only if present.",
-    "Retain host-project plugin re-resolution for valid native registration and attach regression test that prevents unreviewed version drift or weakened native checks.",
-    "Run exact-head Android encrypted first install and cold-open emulator tests; do not merge or claim user Android success without live-device evidence."
+    "Reject new internal transfers exceeding the source account's current SQLCipher-computed balance, under the existing transaction and writer lock.",
+    "Check total source debit (credited transfer plus separately booked fee) for a confirmed fee-bearing SMS transfer using the same canonical account writer.",
+    "Keep matching replay IDs idempotent, block conflicting replays, and allow the independent corrective reversal writer to retain previous compensation semantics.",
+    "Add isolated SQLCipher and fee source regression tests without reading user data, updating release provenance and M550 behavior contract before CI.",
+    "Fix the new wallet form's invisible bank SMS last-four validation and clear stale suffix on type transitions; preserve strict bank-only suffix.",
+    "Add M1042 widget regression for AlinmaPay wallet zero/positive balance, save draft, bank-to-wallet-to-bank transition and bank suffix constraints.",
+    "Repair Kotlin compiler POM and matching SHA1 downloads on CI HTTP 404 with bounded retries and official Maven Central fallback; never weaken SHA256, SHA1 or Gradle verification.",
+    "Regression-test successful fallback and fail-closed missing/mismatched Kotlin POM hashes while retaining all original Android CI jobs."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "pubspec.yaml",
-    ".github/workflows/m147-final-main-review-gate.yml",
-    "scripts/qa/m268_scope_review.py",
-    "test/qa/m1041_android_path_provider_startup_test.py"
+    "lib/storage/waffra_accounts_repository.dart",
+    "lib/storage/waffra_unified_finance_writer.dart",
+    "test/storage/m1040_internal_transfer_balance_guard_test.dart",
+    "test/m1040_sms_transfer_fee_balance_contract_test.dart",
+    "lib/waffra_new_account_dialog.dart",
+    "test/m1042_hidden_wallet_suffix_account_save_test.dart",
+    "scripts/qa/prefetch_verified_kotlin.sh",
+    "test/qa/test_m1043_verified_kotlin_pom_fallback.py"
   ],
   "bounded_sections": {
-    "pubspec.yaml": [
+    "lib/storage/waffra_accounts_repository.dart": [
       {
-        "start": "  path_provider: ^2.1.5",
-        "end": "  fl_chart: ^0.69.2"
+        "start": " /// Exactly one durable transfer ID, opposite account effects and ZERO",
+        "end": " /// M1032: reverse an incorrect internal transfer"
       }
     ],
-    ".github/workflows/m147-final-main-review-gate.yml": [
+    "lib/storage/waffra_unified_finance_writer.dart": [
       {
-        "start": "      - name: Create Android project (CI only)",
-        "end": "      - name: Re-resolve plugins after generating Android host"
+        "start": "  Future<bool> appendReviewedSmsTransferWithFee({",
+        "end": "  /// Called AFTER explicit confirmation for bank SMS"
+      }
+    ],
+    "lib/waffra_new_account_dialog.dart": [
+      {
+        "start": " @override void initState(){",
+        "end": " Future<void> addCustomSubtype()async{"
       },
       {
-        "start": "            sleep $((20 * attempt))",
-        "end": "      # PREVIEW appId is not the Firebase-registered"
+        "start": "     key:const Key('m470-new-account-kind'),",
+        "end": "     key:ValueKey('m638-bank-category-$bankCategory'),"
       }
     ],
-    "scripts/qa/m268_scope_review.py": [
+    "scripts/qa/prefetch_verified_kotlin.sh": [
       {
-        "start": "    demand(\"waffra-financial-calendar-today\" in calendar,",
-        "end": "    demand(preview.index(\"Refuse APK missing native runtime libraries\")"
+        "start": "home=\"${GRADLE_USER_HOME:-$HOME/.gradle}\"",
+        "end": "# Gradle/Flutter included builds can enforce FAIL_ON_PROJECT_REPOS."
       }
     ]
   }

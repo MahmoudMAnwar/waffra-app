@@ -1,12 +1,78 @@
 {
   "schema_version": 1,
-  "pr": "Draft PR (M1041, Issue #771)",
-  "issue": "#771",
+  "pr": "Draft PR #770 (M1040 / M1042 / M1043; Issues #769 / #773 / #774)",
+  "issue": "#769, #773, #774",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at 18 November 2026 after merged PR #764",
   "reviewed_at": "2026-11-19",
-  "review_policy": "M1041 safe Android startup dependency rollback of JNI path provider; keep source key/ledger untouched and prior M550 history",
+  "review_policy": "M1040 one insufficient transfer-source debit defect, source+fee same atomic cash guard; retain prior M550 contracts; M1042 wallet-only hidden SMS suffix form validation and bank suffix preservation; M1043 fail-closed official Kotlin Maven POM retry/fallback after upstream 404",
   "contracts": [
+    {
+      "id": "M1043-VERIFIED-KOTLIN-MAVEN-POM-FALLBACK",
+      "issue": "Issue #774 / owner requested CI failure repair in PR #770",
+      "previous_behavior": "The Android M147 job could validate the Kotlin 2.2.21 SHA256-pinned cached JAR, then fail immediately on a single network request for kotlin-compiler-embeddable POM or POM.sha1 returning upstream HTTP 404, before compiling the Android app. Previously verified POM metadata lacked a safely reusable cached SHA1 sidecar.",
+      "approved_behavior": "Keep the original Kotlin compiler JAR versions and pinning, try official Maven Central origin with bounded retries and official repo1.maven.org fallback for POM and SHA1 sidecars from the SAME chosen origin, validate the exact SHA1 before installing or trusting the POM, and cache+revalidate the trusted sidecar on future runs. Both unavailable/mismatching means the Android job fails closed, never skipped. If both Maven Central endpoints return 404 and the Kotlin compiler POM is already cached, compare the cached POM SHA256 to the matching module file in the official JetBrains Kotlin release Maven SHA256 manifest downloaded from GitHub; only a verified match can seed a cached SHA1. Reject absent/mismatched manifest or POM.",
+      "source_paths": [
+        "scripts/qa/prefetch_verified_kotlin.sh"
+      ],
+      "test_paths": [
+        "test/qa/test_m1043_verified_kotlin_pom_fallback.py",
+        "test/qa/m550_behavior_contract_preflight_test.py"
+      ],
+      "safety_invariants": [
+        "Only Maven Central canonical repo.maven.apache.org and repo1.maven.org are used for POM/digest retrieval; no arbitrary mirror or secret URL is introduced.",
+        "The existing SHA256 digests and exact Kotlin compiler versions 2.2.21 and 2.4.0 remain unchanged, and Gradle exclusiveContent still restricts original module versions.",
+        "The POM SHA1 digest is checked against the downloaded POM from the same origin before installation, and any cached sidecar is revalidated before use.",
+        "Failure of both official origins or a digest mismatch fails the job; no Android unit/device job, financial test, or release readiness check is disabled.",
+        "M1040 SQLCipher transfer fees and M1042 AlinmaPay wallet form remain unchanged and under exact-head CI.",
+        "A cached POM with no usable Maven SHA1 must match the official JetBrains GitHub release Maven SHA256 manifest before it is trusted; mismatches fail closed."
+      ]
+    },
+    {
+      "id": "M1042-WALLET-HIDDEN-SMS-SUFFIX-SAVE-ENABLEMENT",
+      "issue": "Issue #773 / owner explicitly requested same Draft PR #770",
+      "previous_behavior": "After a bank SMS provides a four-digit masked card suffix, the account creation dialog retains smsSuffix even when the user selects wallet and the bank-only input becomes hidden. The valid getter then demands kind==bank whenever the hidden suffix is nonempty, disabling Create account with fully visible correct AlinmaPay wallet fields, regardless of zero/positive opening balance.",
+      "approved_behavior": "In WaffraNewAccountDialog only a displayed bank form may retain and validate an optional four-English-digit suffix. Never initialize hidden suffix on a wallet; clearing kind away from bank discards previous suffix. Fully confirmed digital wallet with institution, subtype, name and nonnegative SAR opening can Save and returns lastFour=null. Bank validation remains strict, no change to account SQLCipher writer, message source/acknowledgement or auto-post.",
+      "source_paths": [
+        "lib/waffra_new_account_dialog.dart"
+      ],
+      "test_paths": [
+        "test/m1042_hidden_wallet_suffix_account_save_test.dart",
+        "test/m483_sms_account_suffix_prefill_test.dart",
+        "test/m470_new_account_dialog_test.dart",
+        "test/m942_opening_account_dropdown_regression_test.dart"
+      ],
+      "safety_invariants": [
+        "The wallet form never disables Save because of a hidden bank-only smsSuffix and always emits lastFour null for wallet.",
+        "Switching away from bank discards any stale bank-only suffix; switching back cannot silently re-associate a prior card.",
+        "A visible bank suffix remains optional, exact four digits if entered, and cannot contain a full bank account number.",
+        "Name, valid active provider, subtype and verified nonnegative SAR opening remain mandatory; no finance write or SMS acknowledgement occurs merely by enabling a button.",
+        "The pre-existing M1040 underfunded transfer guard, atomic fee and 285 prior behavior contracts remain unchanged."
+      ]
+    },
+    {
+      "id": "M1040-VERIFIED-SOURCE-FUNDS-AND-SMS-FEE-ATOMIC-TRANSFER",
+      "issue": "Issue #769",
+      "previous_behavior": "Transfer writer checked positive amount, two active accounts and ID replay but inserted a new internal transfer without comparing its debit with freshly SQLCipher-computed source balance. SMS fee writer debited the credited internal transfer amount and a separate bank fee, without a combined available-source balance check. Both can produce negative bank/source balances and fictitious destination credit.",
+      "approved_behavior": "Under the existing authenticated SQLCipher transaction, the canonical transfer writer verifies the sender's current account balance against transfer amount plus any separately posted source fee before any new transfer row is inserted. An SMS transfer passes its fee burden to this same check and the atomic transfer/fee/hash writer rolls back entirely on insufficient funds. Exact-balance transfers, idempotent replay, unique IDs and compensating reversal semantics are preserved. No existing ledger history, SMS OTP, bank notification ACK or user database changes.",
+      "source_paths": [
+        "lib/storage/waffra_accounts_repository.dart",
+        "lib/storage/waffra_unified_finance_writer.dart"
+      ],
+      "test_paths": [
+        "test/storage/m1040_internal_transfer_balance_guard_test.dart",
+        "test/m1040_sms_transfer_fee_balance_contract_test.dart",
+        "test/storage/m440_accounts_repository_test.dart",
+        "test/storage/m1036_transfer_reversal_linked_state_test.dart"
+      ],
+      "safety_invariants": [
+        "Read fresh available source balance from the same active SQLCipher database after acquiring the existing transfer transaction, not from cached account cards.",
+        "The fee-bearing SMS path must check recipient-credited amount plus the separately inserted fee, whether the bank says the fee is included in the principal or added to it.",
+        "A rejected transfer must not add SQL transfer, fee entry, canonical money, SMS hash or Android ACK.",
+        "An idempotent retry of the same transfer must not be rejected due to its already-debited source cash; different money under the same ID remains blocked.",
+        "Existing reverseInternalTransfer compensations, protected historical records, signed finance source checks and physical Android UAT remain unchanged."
+      ]
+    },
     {
       "id": "M1041-JNI-FREE-ANDROID-PATH-PROVIDER-ENCRYPTED-STARTUP",
       "issue": "Issue #771",
@@ -18,15 +84,17 @@
         "scripts/qa/m268_scope_review.py"
       ],
       "test_paths": [
-        "test/qa/m1041_android_path_provider_startup_test.py",
-        "integration_test/fresh_install_production_binding_android_test.dart",
-        "integration_test/encrypted_storage_android_test.dart"
+        "test/qa/m1041_android_path_provider_startup_test.py"
       ],
       "safety_invariants": [
         "Same getApplicationSupportDirectory Android app-private path; no data migration or deletion.",
         "On unrecoverable key/db or source mismatch remain fail closed, never create new vault over existing source.",
         "Validate resolution in pubspec.lock in QA workflow, assert production ELF requirements and Android startup test, preserve 283 prior M550 contracts.",
         "M1040 finance PR remains separate and unmerged until its own independent review."
+      ],
+      "android_integration_test_paths": [
+        "integration_test/fresh_install_production_binding_android_test.dart",
+        "integration_test/encrypted_storage_android_test.dart"
       ]
     },
     {
