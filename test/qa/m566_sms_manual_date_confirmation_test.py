@@ -1,10 +1,8 @@
-"""M566 + M1044: malformed bank SMS timestamps need true owner date+time consent."""
+"""M566: editable SMS must confirm unknown original bank date before finance write."""
 from pathlib import Path
 from waffra_home_source import read_waffra_home_source
 import unittest
-
 SOURCE=read_waffra_home_source()
-
 class SmsDateReviewTest(unittest.TestCase):
  def test_date_consent_inside_editor(self):
   region=SOURCE.split('Future<void> entrySheet(',1)[1].split('Future<void> showReceipt(',1)[0]
