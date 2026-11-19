@@ -75,7 +75,7 @@
     ],
     ".github/workflows/m160-main-reconciliation.yml": [
       {
-        "start": "      - uses: subosito/flutter-action@v2",
+        "start": "      - name: Verify retained main ancestry and M160 audit scope",
         "end": "      - name: Prefetch SHA256-verified official SQLite3MC native release assets"
       },
       {
