@@ -245,6 +245,18 @@ abstract final class WaffraSmsLocalRules {
   return rule;
  }
 
+ // Bank operation types describe direction, not a merchant/category identity.
+ // Never learn or replay a category from only this shared SMS heading.
+ static bool _genericBankOperationHeading(String word){
+  const headings=<String>[
+   'حوالة داخلية واردة','حوالة محلية واردة','حوالة دولية واردة',
+   'حوالة واردة','credit transfer internal','received transfer',
+   'حوالة داخلية صادرة','حوالة محلية صادرة','حوالة دولية صادرة',
+   'حوالة صادرة','debit transfer internal','outgoing transfer',
+  ];
+  return headings.any((heading)=>normalized(heading)==normalized(word));
+ }
+
  static bool matches(WaffraSmsLocalRule rule,String body,{
   String sender='',String? preNormalizedBody,
  }) {
@@ -253,6 +265,10 @@ abstract final class WaffraSmsLocalRules {
     trustedSeed?!_safeSaudiSeedKeyword(word,rule.resolvedKind):
     !safeRuleKeyword(word,rule.resolvedKind)))return false;
   if(rule.sender.isNotEmpty&&normalized(rule.sender)!=normalized(sender))return false;
+  // A previously learned bank-operation heading cannot carry a merchant
+  // category across unrelated notifications (including existing V3 rules).
+  if(rule.id.startsWith('smart_')&&rule.financial&&
+     rule.keywords.every((word)=>_genericBankOperationHeading(word)))return false;
   if(rule.templateFamily=='verification'){
    return WaffraBankSmsFactsParser.isVerificationChallenge(body)&&
     !_hasCompletedFinanceCue(body);
@@ -586,21 +602,8 @@ abstract final class WaffraSmsLocalRules {
    if(family!=null&&matches(family,body,sender:sender))return family;
   }
   final safe=<String>[];
-  // M1009: learn the exact SAMA operation heading after owner-confirmed
-  // classification; amounts, beneficiaries and references never enter rules.
-  // This is review-only, and a changed amount must not invalidate the hint.
-  if(isIncome||isExpense){
-   final headings=isIncome?const <String>[
-    'حوالة داخلية واردة','حوالة محلية واردة','حوالة دولية واردة',
-    'حوالة واردة','credit transfer internal','received transfer',
-   ]:const <String>[
-    'حوالة داخلية صادرة','حوالة محلية صادرة','حوالة دولية صادرة',
-    'حوالة صادرة','debit transfer internal','outgoing transfer',
-   ];
-   final heading=headings.where((h)=>normalizedBody.contains(normalized(h)))
-    .where((h)=>safeRuleKeyword(h,kind)).take(1).toList();
-   if(heading.isNotEmpty)safe.addAll(heading);
-  }
+  // Financial category learning must use a distinct merchant/service signal.
+  // A SAMA operation heading is shared by unrelated purchases/transfers.
   if(kind=='excluded'){
    for(final term in const <String>[
     'رمز التفعيل','رمز التحقق','رمز الدخول','verification code',
