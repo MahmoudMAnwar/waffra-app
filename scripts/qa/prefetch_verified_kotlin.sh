@@ -55,6 +55,44 @@ fetch_verified_kotlin_pom() {
   return 1
 }
 
+
+# Reuse the exact Maven POM from the immutable Actions cache even when BOTH
+# Maven Central endpoints are 404, but ONLY after checking its SHA256 against
+# JetBrains' version-matched official Maven release manifest on GitHub.
+# No fabricated POM, no unverified cache hit and no relaxed compiler/JAR pin.
+verify_cached_kotlin_pom_release() {
+  local version="$1" pom="$2" root="$3" work="$4"
+  local cached_pom="$root/$pom" cached_sha="$root/$pom.sha1"
+  local manifest="$work/maven-$version-sha256.txt"
+  local record digest
+  [[ -s "$cached_pom" ]] || return 1
+  if ! gh release download "v$version" --repo "$upstream" \
+      --pattern "maven-$version-sha256.txt" --dir "$work" --clobber; then
+    echo "M1043: signed-release Maven SHA256 manifest unavailable for Kotlin $version" >&2
+    return 1
+  fi
+  [[ -s "$manifest" ]] || return 1
+  # Exactly one POM basename, not .pom.sha1/.pom.sha256 nor unrelated plugins.
+  record="$(grep -F "$pom" "$manifest" | grep -E '\.pom([[:space:]]|$)' || true)"
+  if [[ -z "$record" || "$(printf '%s\n' "$record" | wc -l)" -ne 1 ]]; then
+    echo "FATAL: Kotlin $version release SHA256 manifest missing/ambiguous exact POM" >&2
+    return 1
+  fi
+  digest="$(printf '%s\n' "$record" | grep -Eo '[A-Fa-f0-9]{64}' || true)"
+  if [[ ! "$digest" =~ ^[A-Fa-f0-9]{64}$ ]]; then
+    echo "FATAL: Kotlin $version release POM SHA256 malformed" >&2
+    return 1
+  fi
+  if ! printf '%s  %s\n' "$digest" "$cached_pom" | sha256sum --check --status; then
+    echo "FATAL: Kotlin $version cached POM SHA256 release digest mismatch" >&2
+    return 1
+  fi
+  # The SHA1 sidecar is now derived FROM a SHA256-verified original POM.
+  sha1sum "$cached_pom" | cut -d' ' -f1 > "$cached_sha"
+  echo "PASS verified cached Kotlin $version POM SHA256 against JetBrains release manifest"
+  return 0
+}
+
 for spec in "${versions[@]}"; do
   version="${spec%%:*}"
   expected="${spec#*:}"
@@ -88,6 +126,8 @@ for spec in "${versions[@]}"; do
   if [[ "$cached_digest" =~ ^[A-Fa-f0-9]{40}$ ]] &&
       printf '%s  %s\n' "$cached_digest" "$cached_pom" | sha1sum --check --status; then
     echo "PASS cached official Kotlin $version POM SHA1"
+  elif verify_cached_kotlin_pom_release "$version" "$pom" "$root" "$work"; then
+    echo "PASS release-verified Kotlin $version cached POM reused safely"
   else
     fetch_verified_kotlin_pom "$version" "$pom" "$work"
     install -m 0644 "$work/$pom" "$cached_pom"
