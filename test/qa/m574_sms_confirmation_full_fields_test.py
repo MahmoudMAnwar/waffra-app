@@ -36,7 +36,7 @@ class FullSmsPreviewTest(unittest.TestCase):
   # The real bank confirmation must display one verified parent AND leaf,
   # original bank SMS, and exact account generation before enabling Yes.
   for evidence in (
-   'previewHint=waffraResolveSmsReviewCategory(categories,',
+   'previewHint=waffraSmartSmsReviewCategory(categories,',
    'reviewCategoryValid=previewHint.leaf!=null&&',
    'previewHint.parent!=null',
    "Key('m669-review-original-sms-text')",
