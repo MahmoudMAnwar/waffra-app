@@ -21,7 +21,7 @@
   "bounded_sections": {
     "lib/storage/waffra_accounts_repository.dart": [
       {
-        "start": " Future<bool> transfer({required String id,required String fromAccountId,",
+        "start": " /// Exactly one durable transfer ID, opposite account effects and ZERO",
         "end": " /// M1032: reverse an incorrect internal transfer"
       }
     ],
