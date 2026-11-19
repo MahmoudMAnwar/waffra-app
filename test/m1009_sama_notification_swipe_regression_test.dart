@@ -51,9 +51,9 @@ void main(){
    category:'حوالات صادرة / حوالة محلية');
   expect(learned,isNull,
    reason:'A generic outgoing bank heading is not merchant category evidence');
-  const second='حوالة داخلية صادرة\\nمن: صاحب الحساب\\nمبلغ:SAR 175.00\\n'
-   'إلى: مستفيد آخر\\nحساب:**8765\\nالرسوم:0\\n'
-   'الرقم المرجعي:FT999999ABC\\nفي:15-11-2026 10:15';
+  const second='حوالة داخلية صادرة\nمن: صاحب الحساب\nمبلغ:SAR 175.00\n'
+   'إلى: مستفيد آخر\nحساب:**8765\nالرسوم:0\n'
+   'الرقم المرجعي:FT999999ABC\nفي:15-11-2026 10:15';
   expect(WaffraBankSmsFactsParser.parse(second).kind,
    WaffraBankOperationKind.expense);
   final worker=waffraM632ClassifySmsQueue({
