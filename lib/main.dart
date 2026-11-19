@@ -682,6 +682,40 @@ waffraResolveSmsReviewCategory(Iterable<BudgetCategory> categories,{
 }
 
 
+/// M1047: suggest a real, active MAIN+LEAF only from an identified merchant.
+/// An owner-confirmed local category wins. Generic bank-operation/seed
+/// labels do not override merchant evidence. This is advisory and pure:
+/// it cannot pick a financial account, write a ledger row or ACK an SMS.
+({BudgetCategory? parent,BudgetCategory? leaf})
+waffraSmartSmsReviewCategory(Iterable<BudgetCategory> categories,{
+ required String sms,required bool income,
+ required String proposed,bool ownerLearned=false,
+}){
+ final all=categories.toList(growable:false);
+ final prior=waffraResolveSmsReviewCategory(all,
+  income:income,proposed:proposed);
+ if(ownerLearned&&prior.leaf!=null)return prior;
+ final facts=WaffraBankSmsFactsParser.parse(sms);
+ if(income||facts.kind!=WaffraBankOperationKind.expense||
+    facts.pending||facts.securityChallenge||
+    WaffraBankSmsFactsParser.isVerificationChallenge(sms)||
+    RegExp(r'حوال[ةه]|تحويل|\\btransfer\\b',caseSensitive:false)
+     .hasMatch(sms))return prior;
+ final merchant=waffraMerchantName(sms,income:false);
+ if(merchant==null)return prior;
+ final suggestedPath=waffraRecognizedMerchantLeaf(merchant,income:false);
+ if(suggestedPath==null)return prior;
+ final suggested=waffraResolveSmsReviewCategory(all,
+  income:false,proposed:suggestedPath);
+ if(suggested.parent==null||suggested.leaf==null)return prior;
+ // The ledger stores category names; duplicate names are not stable IDs.
+ // Never silently select an ambiguous, deleted or paused category.
+ final duplicates=all.where((c)=>c.income==false&&c.isSubcategory&&
+    c.name==suggested.leaf!.name&&
+    waffraCategoryAvailableForNewEntry(all,c)).length;
+ return duplicates==1?suggested:prior;
+}
+
 /// M1044 #775: carry only an exact, still-active category selection from
 /// the reviewed SMS to the ledger editor. Ledger persists a category NAME:
 /// a duplicate name in this income/expense tree is deliberately ambiguous.
@@ -1410,6 +1444,7 @@ Map<String,Object?> waffraM632ClassifySmsQueue(Map<String,Object?> input){
     local=<String,Object?>{
      'rule':rule.name,'kind':rule.resolvedKind,
      'category':rule.category,'income':rule.income,
+     'defaultSeed':rule.builtIn,
     };
    }
   }
