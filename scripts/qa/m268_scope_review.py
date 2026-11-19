@@ -147,14 +147,19 @@ def main():
     calendar=Path("lib/waffra_financial_tools.dart").read_text()
     demand("waffra-financial-calendar-today" in calendar,
            "financial calendar Today missing")
-    # The full app needs JNI in the distributed QA APK. A compilation-only
-    # PR artifact previously omitted libdartjni.so and crashed on startup.
-    # Keep the native-library refusal before any artifact publication.
+    # M1041: unpinned Android path provider can resolve 2.3.x JNI and fail
+    # before the encrypted vault is opened. Refuse dependency/version drift.
+    pubspec=Path("pubspec.yaml").read_text()
+    demand("path_provider_android: 2.2.23" in pubspec,
+           "pre-JNI Android path-provider dependency pin is missing")
+    # Preview APK must contain Flutter+app+SQLCipher, with JNI mandatory
+    # ONLY if the resolved package graph still contains jni_flutter.
     preview=Path(".github/workflows/m147-final-main-review-gate.yml").read_text()
     for marker in ("Re-resolve plugins after generating Android host",
                    "Install the approved Waffra launcher artwork",
                    "Refuse APK missing native runtime libraries",
-                   "'libdartjni.so'","'libsqlite3mc.so'"):
+                   "pubspec.lock", "jni_required",
+                   "libdartjni.so", "'libsqlite3mc.so'"):
         demand(marker in preview,"preview APK native startup gate missing: "+marker)
     demand(preview.index("Refuse APK missing native runtime libraries") <
            preview.index("Attach unapproved-for-production APK for device QA"),

@@ -1,34 +1,44 @@
 {
   "contract_version": 1,
-  "change_id": "ISSUE767-M1039-POS-VERIFIED-CARD-SUFFIX",
-  "human_scope_review": "Owner requests one critical bug only: Saudi POS SMS بطاقة: **6314 fails to identify an already verified account. Restrict to read-only bank SMS facts extraction; never widen finance writers, relax OTP or silently attach unverified accounts.",
+  "change_id": "ISSUE771-M1041-ANDROID-PATH-PROVIDER-JNI-STARTUP",
+  "human_scope_review": "P0 Android encrypted-storage startup Retry only; resolve new JNI-based endorsed Android path provider causing ClassNotFoundException in emulator startup tests, without touching existing finance vault, encryption key, source selector, login/OTP or SQL records.",
   "user_requested_changes": [
-    "Recognize explicitly labeled and masked Saudi POS card last-four digits in the exact bank SMS fact parser used by verified-account matching.",
-    "Reject conflicting masked source identities, unmasked account numbers, and invalid longer masks; maintain existing source, destination and OTP guards.",
-    "Add one targeted real-format regression test for card extraction, unique verified account selection, and negative finance scenarios.",
-    "Record the change in requirements, exact bounded scope, behavior review and truthful source-based release notes before CI; do not merge without verification."
+    "Pin path_provider_android 2.2.23, the last Pigeon non-JNI implementation compatible with the existing Flutter path_provider, to avoid runtime ClassNotFoundException before WaffraFreshInstallSource.prepare.",
+    "Retain required APK Flutter/app/SQLCipher native ELF validation; require JNI binary if JNI Flutter package is still resolved, otherwise verify its ELF only if present.",
+    "Retain host-project plugin re-resolution for valid native registration and attach regression test that prevents unreviewed version drift or weakened native checks.",
+    "Run exact-head Android encrypted first install and cold-open emulator tests; do not merge or claim user Android success without live-device evidence."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "lib/waffra_bank_sms_facts.dart",
-    "test/m1039_pos_card_verified_account_binding_test.dart"
+    "pubspec.yaml",
+    ".github/workflows/m147-final-main-review-gate.yml",
+    "scripts/qa/m268_scope_review.py",
+    "test/qa/m1041_android_path_provider_startup_test.py"
   ],
   "bounded_sections": {
-    "lib/waffra_bank_sms_facts.dart": [
+    "pubspec.yaml": [
       {
-        "start": " static final _source=RegExp(",
-        "end": " static final _destination=RegExp("
+        "start": "  path_provider: ^2.1.5",
+        "end": "  fl_chart: ^0.69.2"
+      }
+    ],
+    ".github/workflows/m147-final-main-review-gate.yml": [
+      {
+        "start": "      - name: Create Android project (CI only)",
+        "end": "      - name: Re-resolve plugins after generating Android host"
       },
       {
-        "start": "  String? normalizeSuffix(String? value)=>",
-        "end": "  final feeMatch=_fee.firstMatch(normalized);"
-      },
+        "start": "            sleep $((20 * attempt))",
+        "end": "      # PREVIEW appId is not the Firebase-registered"
+      }
+    ],
+    "scripts/qa/m268_scope_review.py": [
       {
-        "start": "   kind:kind,",
-        "end": "   fee:fee!=null&&fee.isFinite&&fee>=0?fee:null,"
+        "start": "    demand(\"waffra-financial-calendar-today\" in calendar,",
+        "end": "    demand(preview.index(\"Refuse APK missing native runtime libraries\")"
       }
     ]
   }
