@@ -30,6 +30,12 @@ jobs:
           for f in docs/m160-main-reconciliation.md test/m131_backup_boundary_tamper_qa_test.dart test/m132_backup_corruption_recovery_negative_test.dart test/m140_backup_utf8_cross_archive_integrity_test.dart; do test -f "$f"; done
           test -f .github/workflows/m147-final-main-review-gate.yml
           if ! git merge-base --is-ancestor origin/main HEAD; then echo 'BLOCKED: main moved after M160 reconciliation'; exit 1; fi
+      # M1045: match the Java version proven by the M147 Android gate.
+      - name: Set up JDK 21 for Gradle Android release compilation
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
@@ -50,7 +56,29 @@ jobs:
         run: flutter analyze --no-fatal-infos lib/storage lib/waffra_secure_backup.dart test/m131_backup_boundary_tamper_qa_test.dart test/m132_backup_corruption_recovery_negative_test.dart test/m140_backup_utf8_cross_archive_integrity_test.dart
       - name: Full Flutter tests including legacy backup compatibility
         run: flutter test
+      # M1045: Flutter's included Gradle build can resolve its Kotlin DSL
+      # plugins solely from plugins.gradle.org, which does not reliably serve
+      # the transitive official Kotlin 2.3.20 POMs. Add ONLY Maven Central
+      # plus the existing Gradle Plugin Portal for settings-level plugins.
+      # This CI-only init script runs for included builds and generated host;
+      # no Kotlin version, checksum or shipped Android files are changed.
+      - name: Add official Maven Central for included Flutter Kotlin plugin DSL
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "${GRADLE_USER_HOME:-$HOME/.gradle}/init.d"
+          cat > "${GRADLE_USER_HOME:-$HOME/.gradle}/init.d/m160-official-kotlin-plugin-repositories.gradle" <<'GROOVY'
+          gradle.beforeSettings { settings ->
+            settings.pluginManagement.repositories {
+              mavenCentral()
+              gradlePluginPortal()
+            }
+          }
+          GROOVY
       - name: Android release compile (unsigned validation only)
         run: |
           flutter create --no-pub --platforms=android --project-name=waffra --org com.waffra .
+          # Native Flutter plugins must be registered against the GENERATED
+          # Android host, not only the pre-generation Dart package graph.
+          flutter pub get
           flutter build apk --release --no-pub --target-platform android-arm64
