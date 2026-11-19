@@ -1,86 +1,37 @@
 {
   "contract_version": 1,
-  "change_id": "ISSUES775-777-M1044-M1045-SMS-BILL-CI",
-  "human_scope_review": "On 2026-11-19 owner explicitly requested fixing all issues demonstrated by screenshots: preserve source invalid 318-11-2026, category/main-to-leaf propagation, reviewed account candidate and explicit date/time provenance/confirmation. New PR only, current main after #770; no unrequested writers or permission changes. CI on the same PR: after all 5 SMS screenshot regressions and full Flutter suite succeeded, M160 Android-only plugin loader could not resolve officially published Kotlin 2.3.20 artifacts from plugins.gradle.org alone. Owner asked to complete all repairs, so allow exact M160 official repository/JDK parity fix, no test skips.",
+  "change_id": "ISSUE778-M1046-SMS-CATEGORY-INDEPENDENCE",
+  "human_scope_review": "19 Nov 2026: owner reported unrelated bank SMS notifications adopting the last confirmed expense main/subcategory and explicitly asked to repair failing PR #779 CI. This bounded source/test documentation requires owner review before merge; device validation is still pending.",
   "user_requested_changes": [
-    "Transfer exact validated active expense/income category parent and leaf identities from SMS review to edit, preserving explicitly user-selected saved valid edit drafts.",
-    "Carry explicitly selected active reviewed account to editor as a revalidated optional candidate, never authorizing posting.",
-    "For malformed three-digit source date display unverified-time warning until deliberate date+time picker; distinguish restored manually confirmed date from bank-extracted dates; do not repair 318 into 18.",
-    "Keep bank message, expense source, SAR amount, idempotent SMS hash, financial account, time and user-confirmed transaction write/ACK safety unchanged; add exact screenshot tests.",
-    "Update M566 SMS date confirmation QA assertions for stricter verified source date / manually consented non-future draft, without removing the original date/time save guards.",
-    "Fix the sole remaining M160 Android Kotlin 2.3.20 plugin dependency resolution without disabling APK compilation or modifying the financial app.",
-    "Add pinned Java21 parity with M147, official Maven Central plugin repositories for CI-only generated Gradle builds, and post-generation Flutter plugin refresh; test M160 workflow guards."
+    "On saving a bank SMS expense and selecting main/subcategory, never propagate that category onto other pending notification transactions merely because they share a generic financial-operation heading.",
+    "Prevent future learning and existing saved heading-only smart finance category rules from applying misleading category suggestions to unrelated SMS, while keeping verified income/expense direction and committed ledger unchanged.",
+    "Preserve independent merchant-specific suggestions, owner-specific account matching and exclusion, add regression coverage, and reconcile the obsolete M1009 heading-spread expectation.",
+    "Maintain all existing M385/M550 release, scope, financial, Android and SMS QA gates; update notes, tested contracts and QA documentation on the same PR."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "lib/main.dart",
-    "lib/waffra_home_sms_confirmation.part.dart",
-    "lib/waffra_home_entry_sheet.part.dart",
-    "test/m1044_bill_sms_review_editor_handoff_test.dart",
-    "test/qa/m566_sms_manual_date_confirmation_test.py",
-    ".github/workflows/m160-main-reconciliation.yml",
-    "test/qa/test_m1045_m160_official_kotlin_repository_test.py"
+    "lib/waffra_sms_local_rules.dart",
+    "test/m1009_sama_notification_swipe_regression_test.dart",
+    "test/m1040_sms_category_isolation_test.dart"
   ],
   "bounded_sections": {
-    "lib/main.dart": [
+    "lib/waffra_sms_local_rules.dart": [
       {
-        "start": "/// M669: bank SMS suggestions are NOT category selections.",
-        "end": "class SavingGoal {"
+        "start": " static WaffraSmsLocalRule? _excludedStructuralTemplate({",
+        "end": " /// OTP plus a completed purchase/debit must remain in financial review."
       },
       {
-        "start": "bool bankSmsHasUnverifiedTimestamp(String raw,{DateTime? referenceDate}){",
-        "end": "String bankSmsHash(String raw,{String? nativeId}){"
+        "start": " static WaffraSmsLocalRule? suggestedGlobalRule({",
+        "end": " /// Learn safe non-posting suggestions for EVERY sender after a committed"
       }
     ],
-    "lib/waffra_home_sms_confirmation.part.dart": [
+    "test/m1009_sama_notification_swipe_regression_test.dart": [
       {
-        "start": " Future<void> _m1011SaveReviewedSmsKind({",
-        "end": " Future<void> _m983OpenSmsTypedTemplate({"
-      },
-      {
-        "start": "   final previewHint=waffraResolveSmsReviewCategory(categories,",
-        "end": "   Future<void> selectAccountBeforeYes("
-      },
-      {
-        "start": "   if(decision=='correct-type'&&mounted&&reviewType!=null){",
-        "end": "   }else if(decision=='exclude'&&mounted){"
-      }
-    ],
-    "lib/waffra_home_entry_sheet.part.dart": [
-      {
-        "start": " Future<void> entrySheet({MoneyEntry? initial,bool sms=false,String? initialSms,",
-        "end": "  // A paid goal due is an immutable verified two-source settlement."
-      },
-      {
-        "start": "  // M983: override legacy bank-SMS fallback only for a fresh typed SMS.",
-        "end": "   String? suggestion,pendingHash,receiptPath=initial?.receiptPath;"
-      },
-      {
-        "start": "    Widget dateAction()=>OutlinedButton.icon(",
-        "end": "    Future<void> createAccountInsideEntryDropdown("
-      },
-      {
-        "start": "        // M478 #418: date uses 100% width without an optional budget.",
-        "end": "      Row(children:[\n       Expanded(child:OutlinedButton.icon(onPr"
-      }
-    ],
-    "test/qa/m566_sms_manual_date_confirmation_test.py": [
-      {
-        "start": "class SmsDateReviewTest(unittest.TestCase):",
-        "end": "if __name__=='__main__':unittest.main()"
-      }
-    ],
-    ".github/workflows/m160-main-reconciliation.yml": [
-      {
-        "start": "      - name: Verify retained main ancestry and M160 audit scope",
-        "end": "      - name: Prefetch SHA256-verified official SQLite3MC native release assets"
-      },
-      {
-        "start": "      - name: Full Flutter tests including legacy backup compatibility",
-        "end": null
+        "start": " test('M1009 SAMA outgoing is an expense candidate, not own account transfer',(){",
+        "end": " test('M1009 explicit exclusion learns repeatable service notice without numeric refs',(){"
       }
     ]
   }
