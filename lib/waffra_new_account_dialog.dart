@@ -83,12 +83,7 @@ class _WaffraNewAccountDialogState extends State<WaffraNewAccountDialog> {
  };
  @override void initState(){
   super.initState();
-  // A masked bank SMS suffix is an editable suggestion, not a verified
-  // financial account link. Creation still requires explicit approval.
-  final suffix=widget.suggestedLastFour;
-  if(suffix!=null&&RegExp(r'^[0-9]{4}$').hasMatch(suffix)){
-   smsSuffix.text=suffix;
-  }
+  // Only a bank account form can prefill its visible SMS card suffix.
   final suggested=widget.suggestedProviderId;
   if(suggested!=null&&banks.containsKey(suggested)&&suggested!='other'){
    final selected=WaffraSaudiFinancialProviders.byId(suggested);
@@ -103,6 +98,11 @@ class _WaffraNewAccountDialogState extends State<WaffraNewAccountDialog> {
       !RegExp(r'[\u0000-\u001f\u007f]').hasMatch(sender)){
     nickname.text=sender;
    }
+  }
+  // Wallets do not contain the bank-only suffix field.
+  final suffix=widget.suggestedLastFour;
+  if(kind=='bank'&&suffix!=null&&RegExp(r'^[0-9]{4}$').hasMatch(suffix)){
+   smsSuffix.text=suffix;
   }
  }
  @override void dispose(){nickname.dispose();opening.dispose();smsSuffix.dispose();super.dispose();}
@@ -126,8 +126,9 @@ class _WaffraNewAccountDialogState extends State<WaffraNewAccountDialog> {
     (customSubtypeLabel!.trim().runes.length>=2&&
      customSubtypeLabel!.trim().runes.length<=40&&
      !RegExp(r'[\u0000-\u001f\u007f]').hasMatch(customSubtypeLabel!)))&&
-   (smsSuffix.text.trim().isEmpty||
-    (kind=='bank'&&RegExp(r'^[0-9]{4}$').hasMatch(smsSuffix.text.trim())));
+   // Hidden bank-only suffix is not a prerequisite for wallet creation.
+   (kind!='bank'||smsSuffix.text.trim().isEmpty||
+    RegExp(r'^[0-9]{4}$').hasMatch(smsSuffix.text.trim()));
  }
  Future<void> addCustomSubtype()async{
   // Keep the typed value in the nested dialog state. A locally owned
@@ -200,6 +201,8 @@ class _WaffraNewAccountDialogState extends State<WaffraNewAccountDialog> {
      ],
      onChanged:(v){if(v!=null)setState((){
       kind=v;provider=null;customSubtypeLabel=null;
+      // A hidden bank/card suggestion may never survive a type change.
+      if(kind!='bank')smsSuffix.clear();
       bankCategory=WaffraSaudiFinancialProviders.local;
       subtype=kind=='cash'?'cash':kind=='other'?'other':null;
      });},
