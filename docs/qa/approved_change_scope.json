@@ -6,7 +6,8 @@
     "On saving a bank SMS expense and selecting main/subcategory, never propagate that category onto other pending notification transactions merely because they share a generic financial-operation heading.",
     "Prevent future learning and existing saved heading-only smart finance category rules from applying misleading category suggestions to unrelated SMS, while keeping verified income/expense direction and committed ledger unchanged.",
     "Preserve independent merchant-specific suggestions, owner-specific account matching and exclusion, add regression coverage, and reconcile the obsolete M1009 heading-spread expectation.",
-    "Maintain all existing M385/M550 release, scope, financial, Android and SMS QA gates; update notes, tested contracts and QA documentation on the same PR."
+    "Maintain all existing M385/M550 release, scope, financial, Android and SMS QA gates; update notes, tested contracts and QA documentation on the same PR.",
+    "Prevent previously stored auto-learned manual_ rules for generic bank-operation descriptions (internal/outgoing/point-of-sale) from contaminating unrelated notifications; retain specific merchant-only learning."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -26,6 +27,14 @@
       {
         "start": " static WaffraSmsLocalRule? suggestedRule({",
         "end": " /// Learn safe non-posting suggestions for EVERY sender after a committed"
+      },
+      {
+        "start": " static List<String> safeDescriptionKeywords(String description){",
+        "end": " /// A manual OR reviewed-SMS transaction teaches a safe description/category"
+      },
+      {
+        "start": " static WaffraSmsLocalRule? manualCategoryPattern({",
+        "end": " /// A manual account transfer teaches safe bilingual classification hints;"
       }
     ],
     "test/m1009_sama_notification_swipe_regression_test.dart": [
