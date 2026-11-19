@@ -29,7 +29,7 @@ class AndroidEncryptedStartupTest(unittest.TestCase):
         self.assertIn("pubspec.lock", build)
         self.assertIn("jni_flutter", build)
         self.assertIn("path_provider_android", build)
-        self.assertIn("2.2.23", build)
+        self.assertIn(r'2\.2\.23', build)
         for library in ("libapp.so", "libflutter.so", "libsqlite3mc.so"):
             self.assertIn(library, build)
         self.assertIn("libdartjni.so", build)
