@@ -5,7 +5,9 @@ part of 'main.dart';
 extension _WaffraHomeEntrySheetModule on _HomeScreenState {
  Future<void> entrySheet({MoneyEntry? initial,bool sms=false,String? initialSms,
   String? reviewedSender,String? reviewedSmsId,bool? reviewedIncomeOverride,bool? manualIncomeOverride,
-  String? reviewedOriginalSms,DateTime? reviewedOriginalDate})async {
+  String? reviewedOriginalSms,DateTime? reviewedOriginalDate,
+  String? reviewedSmsCategoryParentId,String? reviewedSmsCategoryLeafId,
+  String? reviewedSmsAccountId})async {
   // A paid goal due is an immutable verified two-source settlement.
   // There is no independent edit path that can rewrite its wallet/bank split.
   if(initial?.sourceType=='goal_due'){
@@ -214,6 +216,20 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
     else if(catalog.length==1)chosenManualProvider=catalog.single.id;
    }
   }
+  // The review may provide an explicitly selected account, not inferred
+  // ownership from SMS sender. Refresh/revalidate against ACTIVE accounts.
+  // A prior valid user's editor choice takes precedence over this hint.
+  if(sms&&initial==null&&reviewedSmsAccountId!=null&&
+     chosenManualAccount==null){
+   final stillActive=entryAccounts.where((a)=>!a.archived&&
+    a.id==reviewedSmsAccountId).toList(growable:false);
+   final groups=entryProviders.where((g)=>g.accounts.any((a)=>
+    !a.archived&&a.id==reviewedSmsAccountId)).toList(growable:false);
+   if(stillActive.length==1&&groups.length==1){
+    chosenManualAccount=stillActive.single.id;
+    chosenManualProvider=groups.single.id;
+   }
+  }
   if(initial!=null&&canLinkExistingAccount&&originalLinkedAccountId!=null){
    final matched=entryProviders.where((p)=>p.accounts.any(
     (a)=>a.id==originalLinkedAccountId)).toList();
@@ -259,11 +275,32 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
     chosenManualProvider=null;
    }
   }
-  // Unknown original SMS timestamp requires an explicit calendar pick.
+  // M1044: review's category IDs are checked again against the CURRENT
+  // active income/expense taxonomy. A valid explicit editor draft wins.
+  final reviewedCategorySelection=sms&&initial==null?
+   waffraValidateSmsEditorReviewedCategory(categories,
+    income:income,parentId:reviewedSmsCategoryParentId,
+    leafId:reviewedSmsCategoryLeafId):(parent:null,leaf:null);
+  final savedEditorCategoryValid=smsEditorDraft!=null&&
+   waffraCanAssignManualCategory(categories,income,
+    smsEditorDraft['parent'] as String?,
+    smsEditorDraft['category'] as String? ??'');
+  if(!savedEditorCategoryValid&&reviewedCategorySelection.leaf!=null){
+   selectedParentId=reviewedCategorySelection.parent!.id;
+   category=reviewedCategorySelection.leaf!.name;
+  }
+  // Unknown original SMS timestamp requires explicit day AND time.
+  // Never turn malformed source "318-11-2026" into day 18 or use
+  // an arrival-time hint as verified transaction date.
   final originalSmsDate=sms&&initialSms!=null?
    bankSmsDate(initialSms,referenceDate:DateTime.now()):manualReviewDate;
-  var smsDateConfirmed=initial!=null||
-   smsEditorDraft?['dateConfirmed']==true||originalSmsDate!=null;
+  final verifiedOriginalSmsDate=originalSmsDate!=null&&
+   !originalSmsDate.isAfter(DateTime.now())&&
+   !(sms&&initialSms!=null&&bankSmsHasUnverifiedTimestamp(initialSms));
+  final savedManualDate=smsEditorDraft?['dateConfirmed']==true&&
+   smsEditorDraft?['date'] is DateTime&&
+   !(smsEditorDraft!['date'] as DateTime).isAfter(DateTime.now());
+  var smsDateConfirmed=initial!=null||savedManualDate||verifiedOriginalSmsDate;
   DateTime date=(smsEditorDraft?['date'] as DateTime?)??
    initial?.date??originalSmsDate??DateTime.now();
    String? suggestion,pendingHash,receiptPath=initial?.receiptPath;
@@ -1200,6 +1237,28 @@ extension _WaffraHomeEntrySheetModule on _HomeScreenState {
          )),
         ],
        ])),
+      // M1044: this is a SOURCE warning, not a silent current-time fallback.
+      // A restored manual date is explicitly labeled as user-confirmed.
+      if((sms||manualReviewBody!=null)&&initial==null&&
+         (originalSmsDate==null||
+          (smsDateConfirmed&&date!=originalSmsDate)))
+       Padding(
+        key:const Key('m1044-sms-date-provenance'),
+        padding:const EdgeInsets.only(bottom:9),
+        child:WaffraText(
+         originalSmsDate==null?
+          (smsDateConfirmed?
+           (waffraIsEnglish?
+            'The original SMS date/time is unverified; date and time were confirmed manually.':
+            'تاريخ ووقت الرسالة الأصلية غير مؤكدين؛ تم تأكيدهما يدويًا.'):
+           (waffraIsEnglish?
+            'The original SMS date/time is unverified. Select the true date AND time.':
+            'تاريخ ووقت الرسالة الأصلية غير مؤكدين. اختر التاريخ والوقت الحقيقيين.')):
+          (waffraIsEnglish?
+           'Date and time were confirmed manually, not extracted from the bank SMS.':
+           'تم تأكيدهما يدويًا، وليس من تاريخ الرسالة البنكية.'),
+         style:TextStyle(fontSize:12,
+          color:Theme.of(sheetContext).colorScheme.error))),
       const SizedBox(height:12),
       Row(children:[
        Expanded(child:OutlinedButton.icon(onPressed:WaffraHaptics.tap(()async{
