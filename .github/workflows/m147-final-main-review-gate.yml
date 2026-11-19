@@ -516,7 +516,7 @@ jobs:
           # If any resolved plugin still requires jni_flutter, its ELF stays
           # mandatory. Otherwise do not fail merely because an unused JNI
           # library was correctly omitted from the packaged APK.
-          jni_required=re.search(r'(?m)^  jni_flutter:\s*,lock) is not None
+          jni_required=re.search(r'(?m)^  jni_flutter:\s*$',lock) is not None
           # Parse the binary AndroidManifest.xml with aapt, not ASCII search.
           sdk=os.environ.get('ANDROID_HOME') or os.environ.get('ANDROID_SDK_ROOT')
           if not sdk:
