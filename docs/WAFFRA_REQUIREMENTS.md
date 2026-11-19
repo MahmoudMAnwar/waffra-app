@@ -1,3 +1,10 @@
+## M1045 — إصلاح M160 Android Kotlin 2.3.20 Plugin Portal Resolution (Issue #777 / Same PR #776)
+- **السبب المؤكد من CI:** 37/38 Workflow نجحوا على SHA 27e8417d14ee، وشملت كامل Flutter tests وخمس حالات M1044 في Workflow M160. لكن مرحلة `flutter build apk --release` في M160 وحدها فشلت في حل `org.jetbrains.kotlin:kotlin-stdlib:2.3.20` و`kotlin-gradle-plugin(-api/-bom):2.3.20` من Gradle Plugin Portal دون Maven Central. M147 Android ARM64 قد نجح بالفعل على نفس SHA.
+- **موافقة الإصلاح ضمن نفس PR:** ضبط CI M160 ليتطابق مع بيئة Java 21 المستخدمة في M147؛ السماح لمشروع Gradle المولد ومشروع Flutter Gradle المضمن باسترجاع تبعيات Plugin من **Maven Central الرسمي** بالإضافة إلى Plugin Portal بواسطة init script مؤقت لا يُشحن مع APK، وإعادة `flutter pub get` بعد إنشاء Android host لتثبيت تسجيل الإضافات الأصلية قبل بناء release.
+- **الضمانات:** لا downgrade أو تجاوز لمكتبات Kotlin، ولا إزالة فحص SHA256 الخاص بالـGradle والـKotlin، ولا `continue-on-error`، ولا إلغاء الاختبارات الحالية أو المسارات المالية أو تخفيف شرط بناء APK الحقيقي؛ فشل Maven الرسمي يظل فشلًا للبناء.
+- **الاختبار:** `test/qa/test_m1045_m160_official_kotlin_repository_test.py` يثبت أن M160 ينفذ Java 21، يضيف فقط Maven Central وPlugin Portal في سياق التبعية، يظل قادرًا على تشغيل Flutter الكامل وبناء Android، وأن خطوات بناء M147 لا تتأثر.
+- **النطاق:** `.github/workflows/m160-main-reconciliation.yml` فقط وQA test ووثائق M385/M550/M449؛ لا تغيير على أي كود بنكي/تاريخ/SMS أو SQLCipher. CI الجديد ومراجعة الجهاز الحقيقي مطلوبان قبل الدمج.
+
 - **M1044 CI follow-up M566:** اختبار Python القديم كان يطالب نصيًا `smsEditorDraft?['dateConfirmed']==true||originalSmsDate!=null;`، وهي صيغة لا تتحقق من صلاحية التاريخ المستعاد أو كونه مستقبليًا. تحديث الاختبار ليتأكد من `savedManualDate` الموثق و`verifiedOriginalSmsDate` غير المستقبلي واختيار الساعة، واستمرار منع الحفظ إن لم يؤكد المستخدم الوقت. لا يتم تعطيل اختبار M566 ولا إزالة شرط الأمان.
 
 ## M1044 — إصلاح مراجعة فاتورة الكهرباء من AlinmaPay وفتح التعديل بنفس بيانات التصنيف والتاريخ (Issue #775)

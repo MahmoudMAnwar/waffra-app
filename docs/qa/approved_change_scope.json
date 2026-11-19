@@ -1,13 +1,15 @@
 {
   "contract_version": 1,
-  "change_id": "ISSUE775-M1044-SMS-BILL-REVIEW-EDITOR",
-  "human_scope_review": "On 2026-11-19 owner explicitly requested fixing all issues demonstrated by screenshots: preserve source invalid 318-11-2026, category/main-to-leaf propagation, reviewed account candidate and explicit date/time provenance/confirmation. New PR only, current main after #770; no unrequested writers or permission changes.",
+  "change_id": "ISSUES775-777-M1044-M1045-SMS-BILL-CI",
+  "human_scope_review": "On 2026-11-19 owner explicitly requested fixing all issues demonstrated by screenshots: preserve source invalid 318-11-2026, category/main-to-leaf propagation, reviewed account candidate and explicit date/time provenance/confirmation. New PR only, current main after #770; no unrequested writers or permission changes. CI on the same PR: after all 5 SMS screenshot regressions and full Flutter suite succeeded, M160 Android-only plugin loader could not resolve officially published Kotlin 2.3.20 artifacts from plugins.gradle.org alone. Owner asked to complete all repairs, so allow exact M160 official repository/JDK parity fix, no test skips.",
   "user_requested_changes": [
     "Transfer exact validated active expense/income category parent and leaf identities from SMS review to edit, preserving explicitly user-selected saved valid edit drafts.",
     "Carry explicitly selected active reviewed account to editor as a revalidated optional candidate, never authorizing posting.",
     "For malformed three-digit source date display unverified-time warning until deliberate date+time picker; distinguish restored manually confirmed date from bank-extracted dates; do not repair 318 into 18.",
     "Keep bank message, expense source, SAR amount, idempotent SMS hash, financial account, time and user-confirmed transaction write/ACK safety unchanged; add exact screenshot tests.",
-    "Update M566 SMS date confirmation QA assertions for stricter verified source date / manually consented non-future draft, without removing the original date/time save guards."
+    "Update M566 SMS date confirmation QA assertions for stricter verified source date / manually consented non-future draft, without removing the original date/time save guards.",
+    "Fix the sole remaining M160 Android Kotlin 2.3.20 plugin dependency resolution without disabling APK compilation or modifying the financial app.",
+    "Add pinned Java21 parity with M147, official Maven Central plugin repositories for CI-only generated Gradle builds, and post-generation Flutter plugin refresh; test M160 workflow guards."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
@@ -18,7 +20,9 @@
     "lib/waffra_home_sms_confirmation.part.dart",
     "lib/waffra_home_entry_sheet.part.dart",
     "test/m1044_bill_sms_review_editor_handoff_test.dart",
-    "test/qa/m566_sms_manual_date_confirmation_test.py"
+    "test/qa/m566_sms_manual_date_confirmation_test.py",
+    ".github/workflows/m160-main-reconciliation.yml",
+    "test/qa/test_m1045_m160_official_kotlin_repository_test.py"
   ],
   "bounded_sections": {
     "lib/main.dart": [
@@ -67,6 +71,16 @@
       {
         "start": "class SmsDateReviewTest(unittest.TestCase):",
         "end": "if __name__=='__main__':unittest.main()"
+      }
+    ],
+    ".github/workflows/m160-main-reconciliation.yml": [
+      {
+        "start": "      - uses: subosito/flutter-action@v2",
+        "end": "      - name: Prefetch SHA256-verified official SQLite3MC native release assets"
+      },
+      {
+        "start": "      - name: Full Flutter tests including legacy backup compatibility",
+        "end": null
       }
     ]
   }

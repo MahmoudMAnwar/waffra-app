@@ -1,12 +1,32 @@
 {
   "schema_version": 1,
-  "pr": "Draft PR for Issue #775 / M1044",
-  "issue": "#775",
+  "pr": "Draft PR #776 (M1044/M1045 issues #775/#777)",
+  "issue": "#775, #777",
   "workflow_review_policy": "scan-all-registered-workflows",
   "baseline": "main at 18 November 2026 after merged PR #764",
   "reviewed_at": "2026-11-19",
-  "review_policy": "M1040 one insufficient transfer-source debit defect, source+fee same atomic cash guard; retain prior M550 contracts; M1042 wallet-only hidden SMS suffix form validation and bank suffix preservation; M1043 fail-closed official Kotlin Maven POM retry/fallback after upstream 404; M1044 reviewed SMS editor category+account identity, invalid date provenance and deliberate date/time confirmation",
+  "review_policy": "M1040 one insufficient transfer-source debit defect, source+fee same atomic cash guard; retain prior M550 contracts; M1042 wallet-only hidden SMS suffix form validation and bank suffix preservation; M1043 fail-closed official Kotlin Maven POM retry/fallback after upstream 404; M1044 reviewed SMS editor category+account identity, invalid date provenance and deliberate date/time confirmation; M1045 M160 Android Gradle plugin loader uses official Maven Central and Java21 without bypassing build",
   "contracts": [
+    {
+      "id": "M1045-M160-ANDROID-KOTLIN-PLUGIN-LOADER-OFFICIAL-MAVEN",
+      "issue": "Issue #777, sole M160 CI failure for PR #776",
+      "previous_behavior": "All Flutter and screenshot SMS tests pass, but M160's minimal regenerated Android host on latest Flutter can resolve transitive Kotlin DSL 6.5.7 / Kotlin 2.3.20 plugin dependencies only via Gradle Plugin Portal and rejects published official Maven Central POMs, failing at plugin loader before Android compilation.",
+      "approved_behavior": "Use Java 21 matching M147 and CI-only Gradle init hook to add official mavenCentral() to settings.pluginManagement.repositories for included Flutter build and generated Android host, with normal Plugin Portal still intact; run flutter pub get again after host generation, then compile the actual release APK with existing non-skipped M160 gate.",
+      "source_paths": [
+        ".github/workflows/m160-main-reconciliation.yml"
+      ],
+      "test_paths": [
+        "test/qa/test_m1045_m160_official_kotlin_repository_test.py",
+        "test/qa/m554_gradle_release_cache_test.py"
+      ],
+      "safety_invariants": [
+        "Only official Maven Central is added to plugin resolution, alongside Gradle Plugin Portal; no arbitrary mirrors, plugin versions, Kotlin downgrades or forbidden fallback.",
+        "Existing Gradle/Kotlin/SQLite3MC prefetch SHA pinning stays active and in previous required order.",
+        "M160 full Flutter unit/widget/backup tests and unsigned Android release build remain required; no continue-on-error, failed-step skip, or preview-only bypass.",
+        "Java 21 is selected before Flutter/Android compile; generated Android host plugins re-resolve after flutter create.",
+        "Existing M1044 bank-SMS source hash, verified account, malformed timestamp consent and no duplicate writes unchanged."
+      ]
+    },
     {
       "id": "M1044-ALINMAPAY-BILL-REVIEW-EDIT-DATE-AND-CATEGORY",
       "issue": "Issue #775 / Owner-supplied 19 Nov 2026 Android screenshots",
