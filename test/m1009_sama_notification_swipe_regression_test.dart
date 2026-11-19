@@ -43,28 +43,26 @@ void main(){
     WaffraBankOperationKind.transfer);
  });
 
- test('M1009 confirmed expense teaches same safe heading across new amount/sender',(){
-  // Unlike a financial write, learning only authorizes a screen suggestion.
+ test('M1009 confirmed outgoing cannot teach a shared financial category',(){
+  // The SAMA heading proves debit direction, not that unrelated recipients
+  // belong to the same main/subcategory. Exact source amount can vary.
   final learned=WaffraSmsLocalRules.suggestedGlobalRule(
    body:outgoing,sender:'AlinmaPay',kind:'expense',
    category:'حوالات صادرة / حوالة محلية');
-  expect(learned,isNotNull);
-  expect(learned!.sender,isEmpty);
-  expect(learned.autoPost,isFalse);
-  expect(learned.keywords.any((s)=>s.contains('حوالة داخلية صادرة')),isTrue);
-  const second='حوالة داخلية صادرة\nمن: صاحب الحساب\nمبلغ:SAR 175.00\n'
-   'إلى: مستفيد آخر\nحساب:**8765\nالرسوم:0\n'
-   'الرقم المرجعي:FT999999ABC\nفي:15-11-2026 10:15';
-  final matched=WaffraSmsLocalRules.matchAllFourKinds(
-   body:second,sender:'AnotherBank',custom:[learned]);
-  expect(matched.any((r)=>r.id==learned.id),isTrue);
+  expect(learned,isNull,
+   reason:'A generic outgoing bank heading is not merchant category evidence');
+  const second='حوالة داخلية صادرة\\nمن: صاحب الحساب\\nمبلغ:SAR 175.00\\n'
+   'إلى: مستفيد آخر\\nحساب:**8765\\nالرسوم:0\\n'
+   'الرقم المرجعي:FT999999ABC\\nفي:15-11-2026 10:15';
+  expect(WaffraBankSmsFactsParser.parse(second).kind,
+   WaffraBankOperationKind.expense);
   final worker=waffraM632ClassifySmsQueue({
    'results':[{
-     'id':'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa','sender':'AnotherBank','body':second,
-     'receivedAt':1763200000000,
+     'id':'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+     'sender':'AnotherBank','body':second,'receivedAt':1763200000000,
    }],
-   'rules':[learned.toJson()],
-   'categories':['0:${learned.category}'],
+   'rules':<Map<String,Object?>>[],
+   'categories':['0:حوالات صادرة / حوالة محلية'],
    'hashes':<String>[],
    'history':<Map<String,Object?>>[],
    'previousRules':<Map<String,Object?>>[],
@@ -72,7 +70,9 @@ void main(){
   });
   final waiting=(worker['waiting'] as List).cast<Map<String,Object?>>();
   expect(waiting,hasLength(1));
-  expect((waiting.single['local'] as Map)['kind'],'expense');
+  final hint=waiting.single['local'];
+  if(hint is Map)expect(hint['category'],isNot('حوالات صادرة / حوالة محلية'),
+   reason:'No user category is inherited merely from outgoing heading');
   expect(worker['committed'],isEmpty);
   expect(worker['excluded'],isEmpty);
  });
