@@ -682,6 +682,29 @@ waffraResolveSmsReviewCategory(Iterable<BudgetCategory> categories,{
 }
 
 
+/// M1044 #775: carry only an exact, still-active category selection from
+/// the reviewed SMS to the ledger editor. Ledger persists a category NAME:
+/// a duplicate name in this income/expense tree is deliberately ambiguous.
+({BudgetCategory? parent,BudgetCategory? leaf})
+waffraValidateSmsEditorReviewedCategory(Iterable<BudgetCategory> categories,{
+ required bool income,required String? parentId,required String? leafId,
+}){
+ if(parentId==null||leafId==null)return (parent:null,leaf:null);
+ final all=categories.toList(growable:false);
+ final parents=all.where((c)=>!c.isSubcategory&&c.income==income&&
+  c.categoryActive&&c.id==parentId).toList(growable:false);
+ final children=all.where((c)=>c.isSubcategory&&c.income==income&&
+  c.parentId==parentId&&c.id==leafId&&
+  waffraCategoryAvailableForNewEntry(all,c)).toList(growable:false);
+ if(parents.length!=1||children.length!=1)return (parent:null,leaf:null);
+ // Distinguish financial category identity from a mere duplicated label.
+ final sameName=all.where((c)=>c.isSubcategory&&c.income==income&&
+  c.name==children.single.name&&
+  waffraCategoryAvailableForNewEntry(all,c)).toList(growable:false);
+ if(sameName.length!=1)return (parent:null,leaf:null);
+ return (parent:parents.single,leaf:children.single);
+}
+
 class SavingGoal {
  final String id,name;
  /// Stable, user-approved verified funding account; null only for old goals.
@@ -1224,7 +1247,14 @@ bool bankSmsHasUnverifiedTimestamp(String raw,{DateTime? referenceDate}){
  final hasExplicit=_waffraBankSmsIsoTimeFirst.hasMatch(normalized)||RegExp(
   r'\b(?:(?:\d{4}[-/.]\d{1,2}[-/.]\d{1,2}|\d{1,2}[-/.]\d{1,2}[-/.]\d{1,4})(?:\s+|[Tt])\d{1,2}:\d{2}(?::\d{2})?|\d{1,2}:\d{2}(?::\d{2})?\s+\d{1,2}[-/.]\d{1,2}[-/.]\d{4})\b'
  ).hasMatch(normalized);
- return hasExplicit&&bankSmsDate(raw,referenceDate:referenceDate)==null;
+ // M1044 #775: a malformed three-digit day after an explicit SMS date
+ // label is unverified source evidence, NOT a valid shorter date substring.
+ // Do not silently rewrite e.g. "318-11-2026" to "18-11-2026".
+ final malformedLabeledDate=RegExp(
+  r'(?:بتاريخ|التاريخ|تاريخ|date|في)\s*[:：]?\s*\d{3,}[-/.]\d{1,2}[-/.]\d{4}\s+\d{1,2}:\d{2}',
+  caseSensitive:false).hasMatch(normalized);
+ return (hasExplicit||malformedLabeledDate)&&
+  bankSmsDate(raw,referenceDate:referenceDate)==null;
 }
 
 String bankSmsHash(String raw,{String? nativeId}){
