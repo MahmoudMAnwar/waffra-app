@@ -24,7 +24,7 @@
         "end": " /// OTP plus a completed purchase/debit must remain in financial review."
       },
       {
-        "start": " static WaffraSmsLocalRule? suggestedGlobalRule({",
+        "start": " static WaffraSmsLocalRule? suggestedRule({",
         "end": " /// Learn safe non-posting suggestions for EVERY sender after a committed"
       }
     ],
