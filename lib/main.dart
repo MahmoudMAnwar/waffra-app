@@ -1397,7 +1397,8 @@ Map<String,Object?> waffraM632ClassifySmsQueue(Map<String,Object?> input){
   // No bypass for an excluded rule: each exclusion is freshly validated
   // against all four rule kinds and current OTP/financial safety gates.
   final prior=oldRows[id];
-  if(prior!=null&&WaffraSmsIncrementalRuleReview.canReuse(
+  if(candidate['manualRestoreReview']!=true&&prior!=null&&
+     WaffraSmsIncrementalRuleReview.canReuse(
      previous:prior,currentId:id,currentSender:sender,
      currentBodyHash:annotated['m991SourceHash'] as String,
      currentBody:body,changed:changedRules)){
@@ -1499,6 +1500,14 @@ Map<String,Object?> waffraM632ClassifySmsQueue(Map<String,Object?> input){
    }
   }
   annotated['m991Evaluated']=true;
+  // M1051: owner explicitly reversed THIS exact native exclusion. Re-run
+  // financial parsing, but never repeat rule-driven exclusion for this ID.
+  // This flag is set only by the native owner-encrypted restoration gate;
+  // pure OTP and committed money are rejected before it can be written.
+  if(candidate['manualRestoreReview']==true&&local?['kind']=='excluded'){
+   local=null;
+   annotated['manualRestoreReview']=true;
+  }
   if(local!=null){
    annotated['local']=local;
    if(local['kind']=='excluded'){
