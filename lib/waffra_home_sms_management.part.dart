@@ -118,12 +118,12 @@ extension _WaffraHomeSmsManagement on _HomeScreenState {
       Padding(padding:const EdgeInsets.symmetric(horizontal:20,vertical:5),
        child:WaffraText(waffraIsEnglish?
         '${messages.length} excluded messages • ${senders.length} blocked senders. '
-        'Restoring an individual message allows it on the next manual rescan; '
-        'blocked senders remain blocked. Financial records are unchanged.':
+        'Restoring an eligible individual message returns it to review now. '
+        'Unblocking a sender rescans recent Android SMS. Financial records stay unchanged.':
         '${messages.length} رسالة مستبعدة • ${senders.length} مرسل مستبعد. '
-        'تقدر ترجع الرسالة خلال 30 يوم من الاستبعاد، وبعدها بيتحذف وصفها '
-        'تلقائيًا مع استمرار منع ظهورها تاني في الفحص. '
-        'استبعاد المرسل منفصل والعمليات المالية لا تتغير.',
+        'إلغاء استبعاد رسالة محفوظ نصها الآمن بيرجعها للمراجعة فورًا. '
+        'إلغاء استبعاد مرسل بيفحص رسائله الأخيرة من الهاتف. '
+        'رموز التحقق والعمليات المسجلة محمية، والعمليات المالية لا تتغير.',
         style:Theme.of(ctx).textTheme.bodySmall)),
       Expanded(child:messages.isEmpty&&senders.isEmpty?
        Center(child:WaffraText(waffraIsEnglish?
@@ -168,18 +168,24 @@ extension _WaffraHomeSmsManagement on _HomeScreenState {
            trailing:TextButton(
             onPressed:busy?null:()async{
              refresh(()=>busy=true);
-             final restored=await WaffraAutoSms.restoreExcludedMessage(id);
+             var restored=false;
+             try{
+              restored=await WaffraAutoSms.restoreExcludedMessage(id);
+              if(restored&&mounted)await _refreshAutoSmsInbox();
+             }catch(_){restored=false;}
+             final visible=mounted&&_autoSmsPending.any((row)=>row['id']==id);
              if(ctx.mounted)refresh((){
               busy=false;
               if(restored)messages.removeWhere((item)=>item['id']==id);
              });
              if(mounted){
-              if(restored)snackSuccess(context,waffraIsEnglish?
-               'Message restored for the next rescan.':
-               'اتلغى استبعاد الرسالة. تقدر ترجعها بإعادة الفحص.');
+              if(visible)snackSuccess(context,waffraIsEnglish?
+               'Message restored to review.':
+               'تم إرجاع الرسالة إلى قائمة المراجعة.');
               else snack(context,waffraIsEnglish?
-               'Could not restore the message. Retry.':
-               'تعذر إلغاء استبعاد الرسالة. حاول مرة أخرى.',isError:true);
+               'This SMS was not restored to review. It may be a verification code, already booked, blocked, or unavailable.':
+               'لم ترجع الرسالة للمراجعة. قد تكون رمز تحقق أو عملية مسجلة أو المرسل محظور أو النص غير متاح.',
+               isError:true);
              }
             },child:WaffraText(waffraIsEnglish?'Restore':'إلغاء الاستبعاد')),
           );
@@ -199,19 +205,23 @@ extension _WaffraHomeSmsManagement on _HomeScreenState {
           trailing:TextButton(
            onPressed:busy?null:()async{
             refresh(()=>busy=true);
-            final restored=await WaffraAutoSms.restoreExcludedSender(sender);
+            var restored=false;
+            try{
+             restored=await WaffraAutoSms.restoreExcludedSender(sender);
+             if(restored&&mounted){
+              // M1051: unblock historical provider rows, not just future SMS.
+              // The existing bounded, owner-checked rescan also repaints the
+              // open review and reports partial/capacity/provider failures.
+              await _rescanAutoSmsInbox(feedbackContext:ctx);
+             }
+            }catch(_){/* A failed rescan has its own error feedback. */}
             if(ctx.mounted)refresh((){
              busy=false;
              if(restored)senders.remove(sender);
             });
-            if(mounted){
-             if(restored)snackSuccess(context,waffraIsEnglish?
-              'Sender restored for future SMS.':
-              'تم إلغاء استبعاد المرسل للرسائل القادمة.');
-             else snack(context,waffraIsEnglish?
-              'Could not restore the sender. Retry.':
-              'تعذر إلغاء استبعاد المرسل. حاول مرة أخرى.',isError:true);
-            }
+            if(mounted&&!restored)snack(context,waffraIsEnglish?
+             'Could not unblock the sender. Retry.':
+             'تعذر إلغاء استبعاد المرسل. حاول مرة أخرى.',isError:true);
            },
            child:WaffraText(waffraIsEnglish?'Restore':'إلغاء الاستبعاد')),
          );

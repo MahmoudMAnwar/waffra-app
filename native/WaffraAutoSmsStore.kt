@@ -735,8 +735,13 @@ object WaffraAutoSmsStore {
         return exact
     }
 
-    /** Restore just one excluded SMS; a later explicit rescan may offer it.
-     * Excluded sender policy, completed transfers and finance are unaffected.
+    /**
+     * M1051 / #784: an owner-selected exclusion undo restores the saved,
+     * already redacted review candidate in the SAME encrypted preferences
+     * transaction that removes its exact exclusion markers. This is not a
+     * new Android SMS, a financial posting, or a blanket sender allowlist.
+     * Pure OTP, missing archived text, confirmed money and a blocked sender
+     * are not eligible for direct review restoration.
      */
     fun restoreExcludedMessage(context: Context, id: String): Boolean =
         synchronized(mutex) {
@@ -745,7 +750,17 @@ object WaffraAutoSmsStore {
             try {
                 if (!isExcludedMessageLocked(context, id)) return@synchronized false
                 val savedLabels = excludedMessageInfo(context, id).toMutableMap()
-                val label = savedLabels.remove(id) ?: return@synchronized false
+                val label = savedLabels[id] ?: return@synchronized false
+                val sender = label.optString("sender").trim()
+                val body = label.optString("body").trim()
+                val receivedAt = label.optLong("receivedAt", 0L)
+                val identityAt = label.optLong("identityAt", receivedAt)
+                // The historic label never contains an unredacted OTP. Never
+                // convert an empty/OTP-only label into a reviewable bank event.
+                if (sender.isEmpty() || body.isEmpty() || receivedAt <= 0L ||
+                    label.optBoolean("sensitiveOtp", false) ||
+                    pureVerificationOnly(body) || !reviewEligible(sender, body) ||
+                    isExcludedLocked(context, sender)) return@synchronized false
                 val source = label.optJSONArray("sourceIds")
                 val identities = linkedSetOf(id)
                 if (source != null) {
@@ -755,6 +770,37 @@ object WaffraAutoSmsStore {
                 }
                 if (identities.any { !Regex("^[a-f0-9]{64}$").matches(it) })
                     return@synchronized false
+                // A previously booked finance identity cannot be revived as
+                // an unconfirmed SMS. Identity and fragment aliases are all
+                // independently checked against durable completion markers.
+                if (identities.any { isCommittedLocked(context, it) ||
+                        isCompletedTransferLocked(context, it) })
+                    return@synchronized false
+                val queue = read(context)
+                val alreadyQueued = (0 until queue.length()).any { index ->
+                    allSourceIds(queue.getJSONObject(index)).any { alias ->
+                        alias in identities
+                    }
+                }
+                if (!alreadyQueued && queue.length() >= maxCandidates)
+                    return@synchronized false
+                if (!alreadyQueued) {
+                    val restored = JSONObject()
+                        .put("id", id)
+                        .put("sourceIds", JSONArray(identities.toList()))
+                        .put("sender", sender)
+                        .put("body", body)
+                        .put("sensitiveOtp", false)
+                        .put("receivedAt", receivedAt)
+                        .put("identityAt", identityAt)
+                        .put("queuedAt", 0L)
+                        .put("reviewNotified", true)
+                        // This ONE owner-selected message cannot be silently
+                        // ACKed again by a previously learned exclude rule.
+                        .put("manualRestoreReview", true)
+                    queue.put(restored)
+                }
+                savedLabels.remove(id)
                 val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
                 val editor = prefs.edit()
                 for ((bucket, ids) in identities.groupBy { it.take(2) }) {
@@ -764,6 +810,8 @@ object WaffraAutoSmsStore {
                 }
                 editor.putString(excludedMessageInfoBucketPrefix + id.take(2),
                     seal(JSONArray(savedLabels.values.toList()).toString()))
+                if (!alreadyQueued)
+                    editor.putString(queueName, seal(queue.toString()))
                 val succeeded = editor.commit()
                 if (succeeded) {
                     excludedMessageCipherCache.clear()
@@ -1385,6 +1433,7 @@ object WaffraAutoSmsStore {
                     "body" to row.getString("body"),
                     "receivedAt" to row.getLong("receivedAt"),
                     "sensitiveOtp" to row.optBoolean("sensitiveOtp", false),
+                    "manualRestoreReview" to row.optBoolean("manualRestoreReview", false),
                     "backgroundAttempted" to row.optBoolean("backgroundAttempted", false),
                     "backgroundRuleRevision" to row.optString("backgroundRuleRevision", ""),
                     "backgroundNotificationPending" to row.optBoolean("backgroundNotificationPending", false),
@@ -1601,6 +1650,8 @@ object WaffraAutoSmsStore {
                             .put("sourceIds", JSONArray(aliases.toList()))
                             .put("sender", row.optString("sender").take(100))
                             .put("receivedAt", row.optLong("receivedAt", 0L))
+                            .put("identityAt", row.optLong("identityAt",
+                                row.optLong("receivedAt", 0L)))
                             // This is the already-redacted reviewed body; never
                             // persist an unmasked verification secret here.
                             .put("body", row.optString("body"))
