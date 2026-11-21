@@ -2952,3 +2952,11 @@ Status: Partial — source and regression tests added in a draft branch; exact-h
 
 - Native source now checks the exact Android SMS provider fingerprint for legacy excluded labels with no cached body, rechecks account/exclusions/booked money and atomically requeues eligible messages. An OTP authorization challenge mentioning SAR remains excluded while posted POS/outgoing remains reviewable.
 - Excluded sheet shows retained safe preview; tapping retrieves the exact matched original when available, while Undo reports whether requeued/failed. New source-contract and parser regression: `test/m1052_legacy_excluded_sms_recovery_test.dart`, registered in M946 safety.
+
+### M1053 — Owner-observed missing AlRajhiBank after M1052 (Issue #788)
+
+- Status: investigation and code remediation in Draft PR (Android phone validation not yet obtained). The installed screenshot proves the M1052 excluded UI reached the device; the root cause is not an outdated APK.
+- Expected: 20 Nov 2026 11:02 SAR 83 KUDU POS, 15:56 SAR 37 SARA AYED POS and 20:44 SAR 30 completed outgoing transfer remain eligible for manual review. The 20:43 temporary code is OTP-only and never becomes financial income/expense.
+- Identify actual skip/reject reasons across native sender block, exact-message marker, duplicate-finance marker, Android date identity, local exclusion rules and destructive queue reconciliation. An unchanged 3-message review count after a green CI is a UAT failure.
+- Undo of old opaque labels must never silently succeed/fail or invent bank SMS text. Preserve encrypted owner evidence, source IDs, 30-day retention, any completed finance, and Android originals. Do not unblock a whole sender on a single-message request.
+- Test real Android inbox on the owner device before declaring fixed. No backup/SQLCipher mutation, auto-post, security bypass or disabled CI checks.
