@@ -34,7 +34,7 @@ class M452ReviewAndRegistration(unittest.TestCase):
         # M514: do not display the old history-since-install counter.
         # The rescan completion must render only this invocation's delta.
         self.assertIn("if(_autoSmsLastRescanScanned!=null)...[", card)
-        self.assertIn("final scanned=(nowScanned-priorScanned)", home)
+        self.assertIn("final scanned=((nowScanned-priorScanned)", home)
         self.assertNotIn("if(_autoSmsProgress['scanned'] is num)", card)
         self.assertIn(
             " Future<void> _rescanAutoSmsInbox({BuildContext? feedbackContext})async{", home
