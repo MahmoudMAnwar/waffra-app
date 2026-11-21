@@ -2937,7 +2937,7 @@ Status: Partial — source and regression tests added in a draft branch; exact-h
 
 
 ### M1051 — Manual restoration of excluded SMS and sender recovery (Issue #784)
-- **Status:** Partial / code pending — regression verification and physical Android UAT outstanding. **Target PR:** pending initial documentation PR creation.
+- **Status:** Partial / code pending — regression verification and physical Android UAT outstanding. **PR:** #785 (`fix/m1051-excluded-sms-rescan-recovery`).
 - The owner-reported 20 Nov 2026 AlRajhiBank POS messages are in the phone inbox but not visible in Waffra. M1050 #783 provides seven-day rescan on `main`; whether that exact APK is installed and its provider outcomes are not yet verified.
 - Restoring one owner-excluded *reviewable* SMS must restore its encrypted redacted review text into the owner pending queue atomically with removing its denial markers, preserving the exact fingerprint, source fragment IDs, date and 1000-item capacity. It must not resurrect OTP-only content, reverse a confirmed financial write or bypass a blocked sender. Explicit restore overrides only the learned rule that would immediately re-exclude that same SMS, until the owner reviews it.
 - Restoring an excluded sender must trigger a bounded actual Android provider rescan and refresh the live review UI, including last-seven-day SMS, without a manual second action or cursor rewind. Restoration with no recoverable message must not claim a new notification appeared.
