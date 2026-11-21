@@ -2945,7 +2945,10 @@ Status: Partial — source and regression tests added in a draft branch; exact-h
 
 ### M1052 — Recover wrongly excluded bank SMS and make Undo effective (Issue #786)
 
-- Status: Partial. Target PR branch `fix/m1052-bank-sms-exclusion-recovery`. Validate against the Android inbox and the excluded sheet.
+- Status: Code and M1052 regression committed on Draft PR #787 (`fix/m1052-bank-sms-exclusion-recovery`); exact-head CI and signed Android device acceptance pending. Do not claim live-phone success yet.
 - Completed Arabic POS debits and outgoing transfers must reach review through live, history and recovery scans. A real verification code sent by the same bank remains protected.
 - Undo for a retained legacy exclusion with no cached body must recover the exact original from Android when available, and update the excluded sheet and notifications. Preserve explicit blocks, completed transactions, source identities and pending capacity.
 - Regression coverage: bank/OTP examples, legacy restore and refresh/restart idempotence. Physical device acceptance is pending.
+
+- Native source now checks the exact Android SMS provider fingerprint for legacy excluded labels with no cached body, rechecks account/exclusions/booked money and atomically requeues eligible messages. An OTP authorization challenge mentioning SAR remains excluded while posted POS/outgoing remains reviewable.
+- Excluded sheet shows retained safe preview; tapping retrieves the exact matched original when available, while Undo reports whether requeued/failed. New source-contract and parser regression: `test/m1052_legacy_excluded_sms_recovery_test.dart`, registered in M946 safety.
