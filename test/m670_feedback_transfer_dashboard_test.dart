@@ -67,7 +67,10 @@ void main() {
   expect(rescan,contains('final feedback=feedbackContext??context;'));
   expect(rescan,contains("snackSuccess(feedback,waffraIsEnglish?"));
   expect(rescan,contains('لا توجد رسائل جديدة للمراجعة.'));
-  expect(rescan,contains('تمت إضافة \$added رسالة جديدة للمراجعة.'));
+  // M1050: count messages actually shown; filtered/excluded intake is not a visible add.
+  expect(rescan,contains('final visibleAdded=_autoSmsPending.where('));
+  expect(rescan,contains('تمت إضافة \$visibleAdded رسالة جديدة للمراجعة.'));
+  expect(rescan,isNot(contains('تمت إضافة \$added رسالة جديدة للمراجعة.')));
   expect(rescan,isNot(contains('snackSuccess(context,')));
   expect(rescan,isNot(contains('snack(context,')));
  });

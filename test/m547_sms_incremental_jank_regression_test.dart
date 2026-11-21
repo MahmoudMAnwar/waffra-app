@@ -46,8 +46,8 @@ void main() {
   expect(rescan,isNot(contains('restartCompletedHistory()')));
   expect(rescan,contains('final before=await WaffraAutoSms.scanProgress();'));
   expect(rescan,contains('final after=await WaffraAutoSms.scanProgress();'));
-  expect(rescan,contains('final scanned=(nowScanned-priorScanned)'));
-  expect(rescan,contains('final added=(current-previous)'));
+  expect(rescan,contains('final scanned=((nowScanned-priorScanned)'));
+  expect(rescan,contains('final added=((current-previous)'));
   expect(rescan,contains("before?['initialComplete']!=true"));
   expect(rescan,contains('استكمال الفحص الأول'));
  });

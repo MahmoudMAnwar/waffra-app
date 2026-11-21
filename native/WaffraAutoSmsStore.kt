@@ -1888,6 +1888,110 @@ object WaffraAutoSmsStore {
      * On commit failure neither the queue nor cursor is advanced, allowing
      * a safe replay without duplicate financial posting.
      */
+    /**
+     * M1050 / #782: explicitly recover late Android inbox rows whose provider
+     * receive dates lie behind the durable high-water history cursor.
+     *
+     * This is NOT a cursor rewind. Only the owner's user-initiated Rescan calls
+     * this bounded recent window. Every candidate passes through the SAME
+     * native offer() gate as live broadcasts (verification-only SMS exclusion,
+     * denied senders, committed/transfer proofs, exact IDs and queue capacity).
+     * The financial ledger and original Android SMS are never modified.
+     */
+    fun recoverRecentlyMissedSms(
+        context: Context, maxRead: Int = 2500
+    ): Map<String, Any> {
+        if (maxRead <= 0 || !enabled(context) || !permissionGranted(context))
+            throw SecurityException("SMS_RECOVERY_OWNER_OR_PERMISSION_UNAVAILABLE")
+        val ownerAtStart = signedInOwnerHash(context)
+            ?: throw IllegalStateException("SMS_RECOVERY_OWNER_UNAVAILABLE")
+        val installed = installationMonthStart(context)
+        if (installed <= 0L)
+            throw IllegalStateException("SMS_RECOVERY_SOURCE_WINDOW_UNAVAILABLE")
+        val now = System.currentTimeMillis()
+        val start = maxOf(installed, now - 7L * 24L * 60L * 60L * 1000L)
+        val projection = arrayOf("_id", "address", "body", "date", "date_sent")
+        val provider = try {
+            context.contentResolver.query(Uri.parse("content://sms/inbox"),
+                projection, "date >= ? AND date < ?",
+                arrayOf(start.toString(), (now + 1L).toString()),
+                "date DESC, _id DESC")
+        } catch (failure: Exception) {
+            throw IllegalStateException("SMS_RECOVERY_PROVIDER_UNAVAILABLE", failure)
+        } ?: throw IllegalStateException("SMS_RECOVERY_PROVIDER_UNAVAILABLE")
+
+        // Skip already-encrypted candidates without thousands of repeated
+        // decrypt/linear-search operations on every owner pull.
+        val existingIds = synchronized(mutex) {
+            if (!enabled(context) || ownerAtStart != signedInOwnerHash(context))
+                throw SecurityException("SMS_RECOVERY_OWNER_CHANGED")
+            val queue = read(context)
+            HashSet<String>(queue.length() * 2 + 1).apply {
+                for (i in 0 until queue.length())
+                    addAll(allSourceIds(queue.getJSONObject(i)))
+            }
+        }
+        var checked = 0
+        var added = 0
+        var partial = false
+        var capacityBlocked = false
+        provider.use { rows ->
+            val senderCol = rows.getColumnIndex("address")
+            val bodyCol = rows.getColumnIndex("body")
+            val dateCol = rows.getColumnIndex("date")
+            val sentCol = rows.getColumnIndex("date_sent")
+            if (senderCol < 0 || bodyCol < 0 || dateCol < 0)
+                throw IllegalStateException("SMS_RECOVERY_PROVIDER_UNAVAILABLE")
+            while (rows.moveToNext()) {
+                if (checked >= maxRead) {
+                    partial = true
+                    break
+                }
+                if (!enabled(context) || ownerAtStart != signedInOwnerHash(context))
+                    throw SecurityException("SMS_RECOVERY_OWNER_CHANGED")
+                checked++
+                val sender = rows.getString(senderCol) ?: continue
+                val body = rows.getString(bodyCol) ?: continue
+                if (!reviewEligible(sender, body)) continue
+                val receivedAt = rows.getLong(dateCol)
+                val sent = if (sentCol >= 0 && !rows.isNull(sentCol))
+                    rows.getLong(sentCol) else 0L
+                val identityAt = if (sent > 946684800000L &&
+                    sent <= now + 300000L) sent else receivedAt
+                val fingerprint = id(sender, body, identityAt)
+                if (fingerprint in existingIds) continue
+
+                // Do not evict a single existing review row if all 1000
+                // encrypted slots are occupied. Report incomplete recovery.
+                val full = synchronized(mutex) {
+                    if (!enabled(context) ||
+                        ownerAtStart != signedInOwnerHash(context))
+                        throw SecurityException("SMS_RECOVERY_OWNER_CHANGED")
+                    read(context).length() >= maxCandidates
+                }
+                if (full) {
+                    partial = true
+                    capacityBlocked = true
+                    break
+                }
+
+                if (offer(context, sender, body, identityAt,
+                        historical = true, receivedAt = receivedAt)) {
+                    added++
+                    existingIds.add(fingerprint)
+                }
+            }
+        }
+        if (!enabled(context) || ownerAtStart != signedInOwnerHash(context))
+            throw SecurityException("SMS_RECOVERY_OWNER_CHANGED")
+        return mapOf(
+            "checked" to checked,
+            "added" to added,
+            "partial" to partial,
+            "capacityBlocked" to capacityBlocked
+        )
+    }
+
     fun importConsentMonth(context: Context, maxRead: Int = 500): Int {
         if (maxRead <= 0 || !enabled(context)) return 0
         val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)

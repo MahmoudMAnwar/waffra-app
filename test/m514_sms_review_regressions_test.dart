@@ -38,7 +38,7 @@ void main(){
   final home=readWaffraMainSourceForContracts();
   expect(home,contains('final priorScanned=before?'));
   expect(home,contains('final nowScanned=after?'));
-  expect(home,contains('final scanned=(nowScanned-priorScanned)'));
+  expect(home,contains('final scanned=((nowScanned-priorScanned)'));
   expect(home,contains('_autoSmsLastRescanScanned=scanned;'));
   expect(home,contains('آخر إعادة فحص: \$_autoSmsLastRescanScanned'));
   expect(home,isNot(contains('إجمالي الرسائل المفحوصة:')));

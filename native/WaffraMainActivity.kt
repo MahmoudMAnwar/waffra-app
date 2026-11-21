@@ -503,6 +503,22 @@ class MainActivity : FlutterFragmentActivity() {
                         }
                     }
                 }
+                "recoverRecentlyMissedBankSms" -> {
+                    // M1050 / #782: owner-initiated recent provider replay only.
+                    // Never scan or decrypt SMS on the Android main thread.
+                    val app = applicationContext
+                    smsHistoryExecutor.execute {
+                        try {
+                            val recovered = WaffraAutoSmsStore.recoverRecentlyMissedSms(app)
+                            runOnUiThread { result.success(recovered) }
+                        } catch (_: Exception) {
+                            runOnUiThread {
+                                result.error("SMS_RESCAN_RECOVERY_FAILED",
+                                    "Could not finish safe recent SMS recovery", null)
+                            }
+                        }
+                    }
+                }
                 "importConsentMonthBankSms" -> {
                     // Provider scans and encrypted queue writes are blocking IO.
                     val app = applicationContext

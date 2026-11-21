@@ -64,6 +64,26 @@ abstract final class WaffraAutoSms {
   return removed;
  }
 
+ /// M1050: explicit recent Android provider recovery behind the durable
+ /// high-water scan cursor. Never replace a provider failure with zero.
+ /// The native response distinguishes a partial/bounded scan from completion.
+ static Future<Map<String,Object?>> recoverRecentlyMissedSmsChecked()async{
+  if(!Platform.isAndroid)throw StateError('Android SMS recovery unavailable');
+  final data=await channel.invokeMapMethod<String,dynamic>(
+   'recoverRecentlyMissedBankSms');
+  if(data==null)throw StateError('Recent SMS recovery unavailable');
+  final checked=data['checked'],added=data['added'];
+  final partial=data['partial'],capacityBlocked=data['capacityBlocked'];
+  if(checked is! int||added is! int||checked<0||added<0||
+     partial is! bool||capacityBlocked is! bool){
+   throw StateError('Invalid recent SMS recovery status');
+  }
+  return <String,Object?>{
+   'checked':checked,'added':added,
+   'partial':partial,'capacityBlocked':capacityBlocked,
+  };
+ }
+
  static Future<bool> suspendForSignOut()=>_boolCall('pauseAutoSmsForSignOut');
  static Future<bool> resumeAfterSignIn()=>_boolCall('resumeAutoSmsAfterSignIn');
  static Future<bool> notificationPermission()=>_boolCall('autoSmsNotificationsEnabled');

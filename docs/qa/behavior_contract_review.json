@@ -1,12 +1,40 @@
 {
   "schema_version": 1,
-  "pr": "Draft PR for M1047 Issue #780: merchant-intelligent main/subcategory bank SMS review",
-  "issue": "#780 (prior reviewed behavior contracts retained)",
+  "pr": "Draft PR #783 for M1050 Issue #782: recover late/backdated SMS via explicit notification refresh",
+  "issue": "#782",
   "workflow_review_policy": "scan-all-registered-workflows",
-  "baseline": "main at 18 November 2026 after merged PR #764",
-  "reviewed_at": "2026-11-19",
-  "review_policy": "M1040 one insufficient transfer-source debit defect, source+fee same atomic cash guard; retain prior M550 contracts; M1042 wallet-only hidden SMS suffix form validation and bank suffix preservation; M1043 fail-closed official Kotlin Maven POM retry/fallback after upstream 404; M1044 reviewed SMS editor category+account identity, invalid date provenance and deliberate date/time confirmation; M1045 M160 Android Gradle plugin loader uses official Maven Central and Java21 without bypassing build; M1046 owner-approved no generic SAMA operation heading category propagation; M1009 deprecated positive assertion updated without skipping excluded/swipe tests; M1047 merchant-labelled main/leaf category review without user history rewrite or auto-post. Existing M565/M574/M669 positive tests moved to new resolver.",
+  "baseline": "main at PR #783 branch creation, 21 Nov 2026",
+  "reviewed_at": "2026-11-21",
+  "review_policy": "M1050 recent SMS provider lookback only on explicit pull, without resetting native source cursor; same live owner permissions, encrypted local-only candidate queue, OTP/exclusion/committed-finance dedupe, and 1000-capacity safeguard; existing M1047 and earlier contracts preserved. All-PR CI and real Android SMS UAT pending.",
   "contracts": [
+    {
+      "id": "M1050-RECOVER-LATE-BANK-SMS-BEHIND-HISTORY-CURSOR",
+      "issue": "Issue #782 / Draft PR #783",
+      "previous_behavior": "Notification pull resumed only the high-water Android provider cursor, so an SMS inserted late with a receive timestamp at/before the cursor could never be imported by later manual swipes; success sometimes reported despite pending capacity/partial scans.",
+      "approved_behavior": "After normal forward import, an explicit notification pull checks the last seven days of Android inbox from the active verified SMS owner independently of high-water, through the existing local encrypted offer and exclusion/finance-dedupe gate, then rebuilds the same pending review UI. Missing provider/permission and partial/capacity scans are visible errors/warnings, not false empty inbox.",
+      "source_paths": [
+        "native/WaffraAutoSmsStore.kt",
+        "native/WaffraMainActivity.kt",
+        "lib/waffra_auto_sms.dart",
+        "lib/waffra_home_sms_rescan.part.dart"
+      ],
+      "test_paths": [
+        "test/m1050_recent_sms_rescan_recovery_test.dart",
+        "test/m638_sms_inbox_delete_sync_test.dart",
+        "test/m509_all_sender_sms_rescan_dedup_test.dart",
+        "test/m547_sms_incremental_jank_regression_test.dart",
+        "test/m514_sms_review_regressions_test.dart",
+        "test/m670_feedback_transfer_dashboard_test.dart"
+      ],
+      "safety_invariants": [
+        "Never rewind or clear the durable history cursor or overwrite the encrypted queue during a recover scan; all native candidate receipts pass the shared live offer gate.",
+        "Owner-bound SMS consent and READ/RECEIVE_SMS access are mandatory; no provider or vault failures may be turned into an empty-success result.",
+        "Existing user exclusions, OTP denial fingerprints, duplicate paid entries and completed transfers remain suppressed; no additional cloud or financial ledger writer is introduced.",
+        "Replay only recent bounded provider rows on explicit pull, not during every Home lifecycle refresh; report 1000-slot pressure and bounded partial work truthfully.",
+        "M385, M550, M946, M449, Kotlin/Flutter analyses and physical Android QA remain required before merging.",
+        "Owner route feedback still uses the requesting notifications context, and the visible SMS added count only increases for actual newly displayed pending review rows."
+      ]
+    },
     {
       "id": "M1047-SMART-SMS-MERCHANT-MAIN-AND-LEAF",
       "issue": "Issue #780",

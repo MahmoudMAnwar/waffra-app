@@ -1,66 +1,83 @@
 {
   "contract_version": 1,
-  "change_id": "ISSUE780-M1047-SMART-SMS-MERCHANT-CATEGORY",
-  "human_scope_review": "19 Nov 2026: owner approved local main/subcategory identification from incoming bank SMS and correction learning. Only advisory category extraction/selection is authorized: no automatic debit/ACK, sender/account permissions, ledger, archived category or cloud AI changes. Boundaries require human review before merge.",
+  "change_id": "ISSUE782-M1050-EXPLICIT-RECENT-SMS-RECOVERY",
+  "human_scope_review": "21 Nov 2026: Owner requested repair of a bank SMS from 20 Nov missing despite repeated notifications pull-to-refresh. Approved scope: explicit bounded recent provider recovery, native current-owner consent, dedup/exclusions/ledger unchanged, user-visible incomplete warnings. Draft implementation; CI and physical Android validation outstanding. Human approval required before merge.",
   "user_requested_changes": [
-    "Extract the explicitly labelled merchant when Saudi POS SMS is delivered as a single line, without leaking bank/card/OTP/account identifiers or trailing amount/date/balance into merchant identity.",
-    "Use the existing deterministic Saudi Arabic/English merchant-to-main/leaf catalog in the actual SMS confirmation preview; a nonfinancial transfer person or generic bank operation heading is never a merchant-category signal.",
-    "Preserve user-confirmed specific local category precedence and only prefill a live unambiguous correctly typed parent and child; unknown, archived, duplicate, pending or sensitive messages remain under review.",
-    "Keep all owner-confirmed finance writer, account choice, SAR amount, date, duplicate hash, native SMS ACK, encryption and multi-message separation unchanged; regressions test user selection and isolation.",
-    "Update original M565 M574 M669 source assertions to the new catalog-safe selector without skipping their money/privacy/bank identity checks."
+    "Recover eligible Android bank SMS missed because provider dates/times lag behind the durable forward history cursor during explicit user-triggered notifications Pull to Refresh.",
+    "Preserve the original history cursor, encrypted owner binding, SMS exclusion fingerprints and committed finance/transfer anti-replay; never auto-post or duplicate financial transactions.",
+    "Re-check a bounded seven-day Android provider window in a background native executor, showing a clear partial or full-capacity warning rather than false success.",
+    "Refresh the same verified SMS review UI after native recovery, without changing saved financial records, account balances, deleted SMS or unrelated screens.",
+    "Add the targeted M1050 regression before source changes, retain existing SMS tests and register it in mandatory all-PR M946 smoke without disabling any tests."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "lib/main.dart",
-    "lib/waffra_merchant_rules.dart",
-    "lib/waffra_home_sms_confirmation.part.dart",
-    "test/m1047_smart_sms_merchant_category_test.dart",
-    "test/m669_sms_review_category_search_test.dart",
-    "test/qa/m565_sms_yes_no_test.py",
-    "test/qa/m574_sms_confirmation_full_fields_test.py"
+    "lib/waffra_auto_sms.dart",
+    "lib/waffra_home_sms_rescan.part.dart",
+    "native/WaffraAutoSmsStore.kt",
+    "native/WaffraMainActivity.kt",
+    "scripts/qa/m946_full_app_smoke_matrix.py",
+    "test/m1050_recent_sms_rescan_recovery_test.dart",
+    "test/m514_sms_review_regressions_test.dart",
+    "test/m547_sms_incremental_jank_regression_test.dart",
+    "test/m670_feedback_transfer_dashboard_test.dart",
+    "test/qa/m452_sms_review_signup_regression_test.py"
   ],
   "bounded_sections": {
-    "lib/main.dart": [
+    "lib/waffra_auto_sms.dart": [
       {
-        "start": "({BudgetCategory? parent,BudgetCategory? leaf})\nwaffraResolveSmsReviewCategory(",
-        "end": "/// M1044 #775:"
-      },
-      {
-        "start": "Map<String,Object?> waffraM632ClassifySmsQueue(",
-        "end": "List<String> splitBankMessages("
+        "start": " static Future<int> reconcilePendingWithAndroidInboxChecked()async{",
+        "end": " static Future<bool> suspendForSignOut()"
       }
     ],
-    "lib/waffra_merchant_rules.dart": [
+    "lib/waffra_home_sms_rescan.part.dart": [
       {
-        "start": "String? waffraMerchantName(",
-        "end": "String waffraNormalizeMerchantName("
-      }
-    ],
-    "lib/waffra_home_sms_confirmation.part.dart": [
-      {
-        "start": "   final parsed=BankParser.parse(body);\n   final proposedCategory=",
-        "end": "   final previewMainName="
-      }
-    ],
-    "test/m669_sms_review_category_search_test.dart": [
-      {
-        "start": "  test('M669 all SMS review routes keep original source and explicit reasons',(){",
-        "end": "  test('M669 all non-command production dropdowns use centralized search', () {"
-      }
-    ],
-    "test/qa/m565_sms_yes_no_test.py": [
-      {
-        "start": " def test_yes_no_with_preview_and_no_guessing(self):",
-        "end": " def test_authoritative"
-      }
-    ],
-    "test/qa/m574_sms_confirmation_full_fields_test.py": [
-      {
-        "start": " def test_review_preview_displays_all_495_fields(self):",
+        "start": " Future<void> _rescanAutoSmsInbox({BuildContext? feedbackContext})async{",
         "end": null
+      }
+    ],
+    "native/WaffraAutoSmsStore.kt": [
+      {
+        "start": "    fun restartCompletedHistory(context: Context): Boolean",
+        "end": "    fun importConsentMonth(context: Context, maxRead: Int = 500): Int {"
+      }
+    ],
+    "native/WaffraMainActivity.kt": [
+      {
+        "start": "\"enableAllSmsHistoryScan\" -> {",
+        "end": "\"importConsentMonthBankSms\" -> {"
+      }
+    ],
+    "scripts/qa/m946_full_app_smoke_matrix.py": [
+      {
+        "start": "FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {",
+        "end": "\"m1038_source_evidenced_sms_multipart_reassembly\": (\"safety\", ("
+      }
+    ],
+    "test/m514_sms_review_regressions_test.dart": [
+      {
+        "start": " test('M514 per-button scanned number is never native history total',(){",
+        "end": " test('M514 excluded queue items use dedicated encrypted fingerprints',(){"
+      }
+    ],
+    "test/m547_sms_incremental_jank_regression_test.dart": [
+      {
+        "start": " test('M547 new-only rescans never clear a previously completed cursor', () {",
+        "end": " test('M547 only an explicit rescan fetches historical pages during UI interactions', () {"
+      }
+    ],
+    "test/qa/m452_sms_review_signup_regression_test.py": [
+      {
+        "start": "    def test_sms_review_is_collapsible_and_count_remains_visible(self):",
+        "end": "    def test_registration_has_single_submit_and_avatar_choices(self):"
+      }
+    ],
+    "test/m670_feedback_transfer_dashboard_test.dart": [
+      {
+        "start": " test('M670 SMS rescan feedback belongs to the requesting route',(){",
+        "end": " test('M670 transfer always opens verified editor; second account is required',(){"
       }
     ]
   }
