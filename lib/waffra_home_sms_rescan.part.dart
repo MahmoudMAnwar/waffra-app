@@ -146,7 +146,7 @@ extension _WaffraHomeSmsRescan on _HomeScreenState {
      final note=waffraIsEnglish?
       (added>0?
        '$added SMS accepted, but none remains for review after local rules.':
-       'No newly visible SMS from $scanned Android rows.'):
+       'No new messages to review. Checked $scanned Android rows.'):
       (added>0?
        'تم التقاط $added رسالة لكن اختفت بعد تطبيق القواعد المحلية.':
        'لم تظهر رسائل جديدة من $scanned صفًا فُحص في أندرويد.');
