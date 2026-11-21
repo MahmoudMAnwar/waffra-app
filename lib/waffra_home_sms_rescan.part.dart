@@ -22,6 +22,9 @@ extension _WaffraHomeSmsRescan on _HomeScreenState {
  Future<void> _rescanAutoSmsInbox({BuildContext? feedbackContext})async{
   if(_autoSmsRescanRunning||!mounted)return;
   final feedback=feedbackContext??context;
+  // Only genuinely new visible candidates count as added to review.
+  final previouslyVisibleIds=_autoSmsPending
+   .map((row)=>row['id']).whereType<String>().toSet();
   setState(()=>_autoSmsRescanRunning=true);
   try{
    // Do not rewind the durable month cursor after it has completed.
@@ -56,7 +59,7 @@ extension _WaffraHomeSmsRescan on _HomeScreenState {
    // The native cursor never rewinds; counters are cumulative and this
    // button reports only the difference observed during this invocation.
    final scanned=((nowScanned-priorScanned).clamp(0,2147483647)+
-    (recovery['checked'] as int)).clamp(0,2147483647);
+    (recovery['checked'] as int)).clamp(0,2147483647).toInt();
    if(after!=null)setState((){
     _autoSmsProgress=after;
     _autoSmsLastRescanScanned=scanned;
@@ -66,7 +69,9 @@ extension _WaffraHomeSmsRescan on _HomeScreenState {
    final current=after?['added'] is num?
     (after!['added'] as num).toInt():previous;
    final added=((current-previous).clamp(0,2147483647)+
-    (recovery['added'] as int)).clamp(0,2147483647);
+    (recovery['added'] as int)).clamp(0,2147483647).toInt();
+   final visibleAdded=_autoSmsPending.where((row)=>
+    row['id'] is String&&!previouslyVisibleIds.contains(row['id'])).length;
    final recoveryPartial=recovery['partial']==true;
    final recoveryAtCapacity=recovery['capacityBlocked']==true;
    if(_autoSmsStatusProblem!=null){
@@ -86,21 +91,26 @@ extension _WaffraHomeSmsRescan on _HomeScreenState {
       (waffraIsEnglish?'More newly received messages remain to scan.':
        'لسه فيه رسائل جديدة محتاجة استكمال الفحص.');
     snack(feedback,waffraIsEnglish?
-     'Examined $scanned new inbox rows • $added added • '
+     'Checked $scanned inbox rows • $added candidates accepted • '
       '$removedFromPhone deleted from phone removed from review • '
       '${_autoSmsPending.length} awaiting review. $continuation':
-     'تم فحص $scanned رسالة من الدفعة الحالية • $added اتضافت للمراجعة • '
+     'تم فحص $scanned صفًا من رسائل الهاتف • $added مرشحة تم التقاطها • '
       '$removedFromPhone اتحذفت من المراجعة بعد حذفها من الهاتف • '
       '${_autoSmsPending.length} بانتظار المراجعة. $continuation');
    }else{
     if(feedbackContext!=null&&!feedbackContext.mounted)return;
-    if(added==0){
+    if(visibleAdded==0){
      snackSuccess(feedback,waffraIsEnglish?
-      'No new messages to review.':'لا توجد رسائل جديدة للمراجعة.');
+      (added>0?
+       '$added candidate SMS were processed, but no new message remains for review after rules.':
+       'No new messages to review.'):
+      (added>0?
+       'تم تحليل $added رسالة مرشحة، لكن لا توجد رسائل جديدة للمراجعة بعد تطبيق القواعد.':
+       'لا توجد رسائل جديدة للمراجعة.'));
     }else{
      snackSuccess(feedback,waffraIsEnglish?
-      '$added new messages added for review.':
-      'تمت إضافة $added رسالة جديدة للمراجعة.');
+      '$visibleAdded new messages added for review.':
+      'تمت إضافة $visibleAdded رسالة جديدة للمراجعة.');
     }
    }
   }catch(_){
