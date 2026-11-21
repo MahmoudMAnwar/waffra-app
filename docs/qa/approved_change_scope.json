@@ -22,6 +22,7 @@
     "test/m1050_recent_sms_rescan_recovery_test.dart",
     "test/m514_sms_review_regressions_test.dart",
     "test/m547_sms_incremental_jank_regression_test.dart",
+    "test/m670_feedback_transfer_dashboard_test.dart",
     "test/qa/m452_sms_review_signup_regression_test.py"
   ],
   "bounded_sections": {
@@ -71,6 +72,12 @@
       {
         "start": "    def test_sms_review_is_collapsible_and_count_remains_visible(self):",
         "end": "    def test_registration_has_single_submit_and_avatar_choices(self):"
+      }
+    ],
+    "test/m670_feedback_transfer_dashboard_test.dart": [
+      {
+        "start": " test('M670 SMS rescan feedback belongs to the requesting route',(){",
+        "end": " test('M670 transfer always opens verified editor; second account is required',(){"
       }
     ]
   }
