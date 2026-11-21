@@ -39,6 +39,15 @@ extension _WaffraHomeSmsRescan on _HomeScreenState {
    if(!mounted)return;
    await _refreshAutoSmsInbox(importMonth:true);
    if(!mounted)return;
+   // SMS_RESCAN_RECOVERY (M1050): a late Android provider row may have a
+   // receipt date older than the already-committed forward history cursor.
+   // The explicit pull alone replays a bounded recent window through the
+   // owner-encrypted live offer/dedup gate, WITHOUT resetting any cursor.
+   final recovery=await WaffraAutoSms.recoverRecentlyMissedSmsChecked();
+   if(!mounted)return;
+   // Native replay is review-only; re-classify and repaint the live queue.
+   await _refreshAutoSmsInbox();
+   if(!mounted)return;
    final after=await WaffraAutoSms.scanProgress();
    final priorScanned=before?['scanned'] is num?
     (before!['scanned'] as num).toInt():0;
@@ -46,7 +55,8 @@ extension _WaffraHomeSmsRescan on _HomeScreenState {
     (after!['scanned'] as num).toInt():priorScanned;
    // The native cursor never rewinds; counters are cumulative and this
    // button reports only the difference observed during this invocation.
-   final scanned=(nowScanned-priorScanned).clamp(0,2147483647);
+   final scanned=((nowScanned-priorScanned).clamp(0,2147483647)+
+    (recovery['checked'] as int)).clamp(0,2147483647);
    if(after!=null)setState((){
     _autoSmsProgress=after;
     _autoSmsLastRescanScanned=scanned;
@@ -55,15 +65,26 @@ extension _WaffraHomeSmsRescan on _HomeScreenState {
     (before!['added'] as num).toInt():0;
    final current=after?['added'] is num?
     (after!['added'] as num).toInt():previous;
-   final added=(current-previous).clamp(0,2147483647);
+   final added=((current-previous).clamp(0,2147483647)+
+    (recovery['added'] as int)).clamp(0,2147483647);
+   final recoveryPartial=recovery['partial']==true;
+   final recoveryAtCapacity=recovery['capacityBlocked']==true;
    if(_autoSmsStatusProblem!=null){
     snack(feedback,_autoSmsStatusProblem!,isError:true);
-   }else if(after?['complete']!=true){
-    final continuation=continuingInitialHistory?
-     (waffraIsEnglish?'Continuing first history scan.':
-      'جارٍ استكمال الفحص الأول للرسائل السابقة.'):
-     (waffraIsEnglish?'More newly received messages remain to scan.':
-      'لسه فيه رسائل جديدة محتاجة استكمال الفحص.');
+   }else if(after?['complete']!=true||recoveryPartial){
+    final continuation=recoveryAtCapacity?
+     (waffraIsEnglish?
+       'Review queue is full (1000). Review/exclude pending SMS, then pull again.':
+       'قائمة المراجعة ممتلئة (1000). راجع أو استبعد الرسائل المعلقة ثم اسحب للتحديث.'):
+     recoveryPartial?
+      (waffraIsEnglish?
+       'Recent SMS recovery was partial; not all provider rows were checked.':
+       'فحص الرسائل الفائتة جزئي؛ لم تُفحص كل رسائل الهاتف.'):
+     continuingInitialHistory?
+      (waffraIsEnglish?'Continuing first history scan.':
+       'جارٍ استكمال الفحص الأول للرسائل السابقة.'):
+      (waffraIsEnglish?'More newly received messages remain to scan.':
+       'لسه فيه رسائل جديدة محتاجة استكمال الفحص.');
     snack(feedback,waffraIsEnglish?
      'Examined $scanned new inbox rows • $added added • '
       '$removedFromPhone deleted from phone removed from review • '
