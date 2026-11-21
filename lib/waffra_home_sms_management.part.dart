@@ -157,14 +157,41 @@ extension _WaffraHomeSmsManagement on _HomeScreenState {
           final dateLabel=date==null?'':
            '${date.day}/${date.month}/${date.year}';
           final labelPrefix=dateLabel.isEmpty?'':'$dateLabel • ';
+          final storedBody=(message['body'] as String? ?? '').trim();
+          final preview=storedBody.replaceAll(RegExp(r'\s+'),' ');
           return ListTile(
            key:Key('waffra-excluded-message-${id.substring(0,12)}'),
            leading:const Icon(Icons.mark_email_read_outlined,color:emerald),
            title:WaffraText(sender.isNotEmpty?sender:
             (waffraIsEnglish?'Excluded message':'رسالة مستبعدة')),
            subtitle:WaffraText(
-            '$labelPrefix••••${id.substring(id.length-8)}$expiryNote',
-            style:Theme.of(ctx).textTheme.bodySmall),
+            '$labelPrefix••••${id.substring(id.length-8)}$expiryNote\n'
+            '${preview.isNotEmpty?preview:(waffraIsEnglish?
+             'Tap to retrieve the original SMS':'اضغط لعرض الرسالة الأصلية')}',
+            maxLines:3,style:Theme.of(ctx).textTheme.bodySmall),
+           onTap:busy?null:()async{
+            // Do not pretend an opaque legacy fingerprint is the SMS text.
+            // Android only returns the body after exact fingerprint recovery.
+            final details=await WaffraAutoSms.excludedMessageDetails(id);
+            if(!ctx.mounted)return;
+            final status=details?['status'] as String? ?? 'unavailable';
+            final original=(details?['body'] as String? ?? '').trim();
+            final explanation=status=='available'&&original.isNotEmpty?
+             original:status=='otp_protected'?
+             (waffraIsEnglish?
+              'Verification code protected; its secret is never displayed.':
+              'هذه رسالة رمز تحقق محمية؛ لن يُعرض الرمز السري.') :
+             (waffraIsEnglish?
+              'The original SMS could not be verified in Android Messages.':
+              'تعذر مطابقة النص الأصلي مع الرسالة الموجودة على الهاتف.');
+            await showWaffraDialog<void>(context:ctx,builder:(dialog)=>
+             AlertDialog(
+              title:WaffraText(sender.isNotEmpty?sender:
+               (waffraIsEnglish?'Excluded SMS':'رسالة مستبعدة')),
+              content:SingleChildScrollView(child:SelectableText(explanation)),
+              actions:[TextButton(onPressed:()=>Navigator.pop(dialog),
+               child:WaffraText(waffraIsEnglish?'Close':'إغلاق'))]));
+           },
            trailing:TextButton(
             onPressed:busy?null:()async{
              refresh(()=>busy=true);
@@ -174,6 +201,10 @@ extension _WaffraHomeSmsManagement on _HomeScreenState {
               if(restored&&mounted)await _refreshAutoSmsInbox();
              }catch(_){restored=false;}
              final visible=mounted&&_autoSmsPending.any((row)=>row['id']==id);
+             // A failed undo must keep the row visible and explain whether
+             // the original is a protected OTP or unavailable legacy text.
+             final details=restored?null:
+              await WaffraAutoSms.excludedMessageDetails(id);
              if(ctx.mounted)refresh((){
               busy=false;
               if(restored)messages.removeWhere((item)=>item['id']==id);
@@ -182,9 +213,21 @@ extension _WaffraHomeSmsManagement on _HomeScreenState {
               if(visible)snackSuccess(context,waffraIsEnglish?
                'Message restored to review.':
                'تم إرجاع الرسالة إلى قائمة المراجعة.');
-              else snack(context,waffraIsEnglish?
-               'This SMS was not restored to review. It may be a verification code, already booked, blocked, or unavailable.':
-               'لم ترجع الرسالة للمراجعة. قد تكون رمز تحقق أو عملية مسجلة أو المرسل محظور أو النص غير متاح.',
+              else if(restored)snack(context,waffraIsEnglish?
+               'Exclusion removed, but the SMS is not visible in review yet. Rescan notifications and verify SMS access.':
+               'تم إلغاء الاستبعاد لكن الرسالة لم تظهر في المراجعة بعد. افحص الإشعارات وتأكد من صلاحية الرسائل.',
+               isError:true);
+              else snack(context,details?['status']=='otp_protected'?
+               (waffraIsEnglish?
+                'This is a protected verification SMS, not a completed debit.':
+                'هذه رسالة تحقق محمية وليست عملية خصم مكتملة.') :
+               details?['status']=='unavailable'?
+               (waffraIsEnglish?
+                'Could not find the exact original SMS on your phone. No exclusion was changed.':
+                'تعذر العثور على النص الأصلي المطابق على الهاتف؛ لم يتغير الاستبعاد.') :
+               (waffraIsEnglish?
+                'Undo refused: sender blocked, already booked, pending full, or storage unavailable.':
+                'تعذر الإلغاء: المرسل مستبعد أو العملية مسجلة أو قائمة المراجعة ممتلئة أو التخزين غير متاح.'),
                isError:true);
              }
             },child:WaffraText(waffraIsEnglish?'Restore':'إلغاء الاستبعاد')),
