@@ -1920,6 +1920,17 @@ object WaffraAutoSmsStore {
             throw IllegalStateException("SMS_RECOVERY_PROVIDER_UNAVAILABLE", failure)
         } ?: throw IllegalStateException("SMS_RECOVERY_PROVIDER_UNAVAILABLE")
 
+        // Skip already-encrypted candidates without thousands of repeated
+        // decrypt/linear-search operations on every owner pull.
+        val existingIds = synchronized(mutex) {
+            if (!enabled(context) || ownerAtStart != signedInOwnerHash(context))
+                throw SecurityException("SMS_RECOVERY_OWNER_CHANGED")
+            val queue = read(context)
+            HashSet<String>(queue.length() * 2 + 1).apply {
+                for (i in 0 until queue.length())
+                    addAll(allSourceIds(queue.getJSONObject(i)))
+            }
+        }
         var checked = 0
         var added = 0
         var partial = false
@@ -1942,6 +1953,13 @@ object WaffraAutoSmsStore {
                 val sender = rows.getString(senderCol) ?: continue
                 val body = rows.getString(bodyCol) ?: continue
                 if (!reviewEligible(sender, body)) continue
+                val receivedAt = rows.getLong(dateCol)
+                val sent = if (sentCol >= 0 && !rows.isNull(sentCol))
+                    rows.getLong(sentCol) else 0L
+                val identityAt = if (sent > 946684800000L &&
+                    sent <= now + 300000L) sent else receivedAt
+                val fingerprint = id(sender, body, identityAt)
+                if (fingerprint in existingIds) continue
 
                 // Do not evict a single existing review row if all 1000
                 // encrypted slots are occupied. Report incomplete recovery.
@@ -1957,14 +1975,10 @@ object WaffraAutoSmsStore {
                     break
                 }
 
-                val receivedAt = rows.getLong(dateCol)
-                val sent = if (sentCol >= 0 && !rows.isNull(sentCol))
-                    rows.getLong(sentCol) else 0L
-                val identityAt = if (sent > 946684800000L &&
-                    sent <= now + 300000L) sent else receivedAt
                 if (offer(context, sender, body, identityAt,
                         historical = true, receivedAt = receivedAt)) {
                     added++
+                    existingIds.add(fingerprint)
                 }
             }
         }
