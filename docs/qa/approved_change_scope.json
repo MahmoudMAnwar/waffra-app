@@ -25,6 +25,10 @@
   "bounded_sections": {
     "native/WaffraAutoSmsStore.kt": [
       {
+        "start": "    fun excludedMessageDetails(context: Context, id: String): Map<String, Any>? {",
+        "end": "    private fun findOriginalExcludedSms("
+      },
+      {
         "start": "    private fun findOriginalExcludedSms(",
         "end": "    private val completedTransferCipherCache"
       },
