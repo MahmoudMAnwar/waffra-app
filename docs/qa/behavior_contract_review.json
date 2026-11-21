@@ -20,8 +20,7 @@
       "test_paths": [
         "test/m1051_excluded_sms_restore_regression_test.dart",
         "test/m1050_recent_sms_rescan_recovery_test.dart",
-        "test/m1037_excluded_sms_readback_and_learning_test.dart",
-        "scripts/qa/m946_full_app_smoke_matrix.py"
+        "test/m1037_excluded_sms_readback_and_learning_test.dart"
       ],
       "safety_invariants": [
         "Restore only owner-selected exact SMS ID and only when its encrypted redacted label contains review-eligible non-OTP text; no wildcard undo or replay of pure verification codes.",
