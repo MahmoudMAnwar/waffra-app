@@ -689,7 +689,7 @@ object WaffraAutoSmsStore {
     private fun findOriginalExcludedSms(
         context: Context, fingerprint: String, expectedSender: String,
         receivedAt: Long
-    ): Pair<String, String>? {
+    ): Triple<String, String, Long>? {
         if (receivedAt <= 0L || expectedSender.isBlank() ||
             context.checkSelfPermission(Manifest.permission.READ_SMS) !=
                 PackageManager.PERMISSION_GRANTED) return null
@@ -699,11 +699,11 @@ object WaffraAutoSmsStore {
         val cursor = try {
             context.contentResolver.query(Uri.parse("content://sms/inbox"),
                 arrayOf("address", "body", "date", "date_sent"),
-                "address = ? AND date >= ? AND date <= ?",
-                arrayOf(expectedSender, start.toString(), end.toString()),
+                "date >= ? AND date <= ?",
+                arrayOf(start.toString(), end.toString()),
                 "date DESC")
         } catch (_: Exception) { null } ?: return null
-        var exact: Pair<String, String>? = null
+        var exact: Triple<String, String, Long>? = null
         cursor.use { sms ->
             val senderAt = sms.getColumnIndex("address")
             val bodyAt = sms.getColumnIndex("body")
@@ -726,9 +726,9 @@ object WaffraAutoSmsStore {
                 // Pure OTP content was deliberately never stored. Do not
                 // resurrect verification codes through the UI fallback.
                 exact = if (pureVerificationOnly(body))
-                    Pair("", "otp_protected")
-                else Pair(if (otp.containsMatchIn(body))
-                    redactMixedOtpSecrets(body) else body.trim(), "available")
+                    Triple("", "otp_protected", identityAt)
+                else Triple(if (otp.containsMatchIn(body))
+                    redactMixedOtpSecrets(body) else body.trim(), "available", identityAt)
                 break
             }
         }
@@ -736,27 +736,53 @@ object WaffraAutoSmsStore {
     }
 
     /**
-     * M1051 / #784: an owner-selected exclusion undo restores the saved,
-     * already redacted review candidate in the SAME encrypted preferences
-     * transaction that removes its exact exclusion markers. This is not a
-     * new Android SMS, a financial posting, or a blanket sender allowlist.
-     * Pure OTP, missing archived text, confirmed money and a blocked sender
-     * are not eligible for direct review restoration.
+     * M1052 / #786: Undo a legacy encrypted exclusion by verifying the exact
+     * original Android provider fingerprint when its old label has no body.
+     * Provider I/O happens OUTSIDE mutex. Recheck the encrypted owner, label,
+     * exact denied ID, finance completion, sender block and queue capacity
+     * under mutex before ONE atomic encrypted undo plus pending review write.
+     * A real OTP stays denied even if its text mentions a SAR amount.
      */
-    fun restoreExcludedMessage(context: Context, id: String): Boolean =
-        synchronized(mutex) {
-            if (!enabled(context) || !Regex("^[a-f0-9]{64}$").matches(id))
+    fun restoreExcludedMessage(context: Context, id: String): Boolean {
+        if (!Regex("^[a-f0-9]{64}$").matches(id)) return false
+        val snapshot = synchronized(mutex) {
+            try {
+                if (!enabled(context) || !isExcludedMessageLocked(context, id))
+                    null
+                else excludedMessageInfo(context, id)[id]?.let {
+                    Pair(signedInOwnerHash(context), JSONObject(it.toString()))
+                }
+            } catch (_: Exception) { null }
+        } ?: return false
+        if (snapshot.first == null) return false
+        val oldLabel = snapshot.second
+        val needsProvider = oldLabel.optString("body").isBlank()
+        // The old encrypted records were sender/time/hash only. Never invent
+        // a financial body, and never expose the Android SMS to another owner.
+        val original = if (needsProvider) try {
+            findOriginalExcludedSms(context, id,
+                oldLabel.optString("sender"), oldLabel.optLong("receivedAt", 0L))
+        } catch (_: Exception) { null } else null
+        return synchronized(mutex) {
+            if (!enabled(context) || signedInOwnerHash(context) != snapshot.first)
                 return@synchronized false
             try {
                 if (!isExcludedMessageLocked(context, id)) return@synchronized false
                 val savedLabels = excludedMessageInfo(context, id).toMutableMap()
                 val label = savedLabels[id] ?: return@synchronized false
+                if (label.optString("sender") != oldLabel.optString("sender") ||
+                    label.optLong("receivedAt", 0L) != oldLabel.optLong("receivedAt", 0L) ||
+                    label.optLong("excludedAt", 0L) != oldLabel.optLong("excludedAt", 0L) ||
+                    label.optString("body") != oldLabel.optString("body"))
+                    return@synchronized false
                 val sender = label.optString("sender").trim()
-                val body = label.optString("body").trim()
+                val body = (if (needsProvider && original?.second == "available")
+                    original.first else label.optString("body")).trim()
                 val receivedAt = label.optLong("receivedAt", 0L)
-                val identityAt = label.optLong("identityAt", receivedAt)
-                // The historic label never contains an unredacted OTP. Never
-                // convert an empty/OTP-only label into a reviewable bank event.
+                val identityAt = if (needsProvider) original?.third ?: receivedAt
+                    else label.optLong("identityAt", receivedAt)
+                // The old record is recoverable ONLY when the original ID was
+                // verified against Android. Newer labels were already redacted.
                 if (sender.isEmpty() || body.isEmpty() || receivedAt <= 0L ||
                     label.optBoolean("sensitiveOtp", false) ||
                     pureVerificationOnly(body) || !reviewEligible(sender, body) ||
@@ -770,9 +796,7 @@ object WaffraAutoSmsStore {
                 }
                 if (identities.any { !Regex("^[a-f0-9]{64}$").matches(it) })
                     return@synchronized false
-                // A previously booked finance identity cannot be revived as
-                // an unconfirmed SMS. Identity and fragment aliases are all
-                // independently checked against durable completion markers.
+                // Never resurrect a booked SQLCipher SMS or completed transfer.
                 if (identities.any { isCommittedLocked(context, it) ||
                         isCompletedTransferLocked(context, it) })
                     return@synchronized false
@@ -795,8 +819,6 @@ object WaffraAutoSmsStore {
                         .put("identityAt", identityAt)
                         .put("queuedAt", 0L)
                         .put("reviewNotified", true)
-                        // This ONE owner-selected message cannot be silently
-                        // ACKed again by a previously learned exclude rule.
                         .put("manualRestoreReview", true)
                     queue.put(restored)
                 }
@@ -820,6 +842,7 @@ object WaffraAutoSmsStore {
                 succeeded
             } catch (_: Exception) { false }
         }
+    }
 
     private val completedTransferCipherCache =
         mutableMapOf<String, Pair<String, Set<String>>>()
@@ -1095,11 +1118,28 @@ object WaffraAutoSmsStore {
         "(?:\\botp\\b|one.?time.?password|\\b(?:code|passcode)\\b|" +
         "رمز|كود|كلمة\\s+مرور\\s+مؤقت)",
         RegexOption.IGNORE_CASE)
-    private fun pureVerificationOnly(body: String): Boolean =
-        otp.containsMatchIn(body) &&
-        explicitOtpToken.containsMatchIn(body) &&
-        !completedFinancialAction.containsMatchIn(body) &&
-        !(action.containsMatchIn(body) && money.containsMatchIn(body))
+    // "رمز مؤقت: 5265 ل: تحويل داخلي - التطبيق المبلغ: SAR 30"
+    // is a verification CHALLENGE, not a completed SAR 30 transfer. An
+    // explicit OTP-first challenge cannot be treated as paid merely because
+    // its stated purpose mentions a transfer and an amount.
+    private val authorizationChallenge = Regex(
+        "(?:^|\\n)\\s*(?:رمز\\s*(?:مؤقت|التحقق|التحويل|التفعيل)|" +
+        "كود\\s*(?:التحقق|التفعيل)|\\botp\\b)\\s*[:：]?\\s*" +
+        "[0-9٠-٩۰-۹]{4,8}(?:\\b|\\s|$)",
+        RegexOption.IGNORE_CASE)
+    private val completedBankHeadline = Regex(
+        "(?:شراء\\s*(?:pos|نقاط\\s*البيع)|" +
+        "حوال[ةه]\\s+(?:(?:محلي[ةه]|داخلي[ةه]|دولي[ةه])\\s+)?صادر[ةه]|" +
+        "تحويل\\s+صادر|\\b(?:pos\\s+purchase|purchase\\s+approved)\\b)",
+        RegexOption.IGNORE_CASE)
+    private fun pureVerificationOnly(body: String): Boolean {
+        if (!otp.containsMatchIn(body) ||
+            !explicitOtpToken.containsMatchIn(body) ||
+            completedFinancialAction.containsMatchIn(body)) return false
+        if (authorizationChallenge.containsMatchIn(body) &&
+            !completedBankHeadline.containsMatchIn(body)) return true
+        return !(action.containsMatchIn(body) && money.containsMatchIn(body))
+    }
 
     /**
      * An automatic OTP exclusion is an owner-encrypted, reversible LABEL plus
