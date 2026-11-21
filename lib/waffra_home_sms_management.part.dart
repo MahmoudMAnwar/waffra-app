@@ -125,6 +125,40 @@ extension _WaffraHomeSmsManagement on _HomeScreenState {
         'إلغاء استبعاد مرسل بيفحص رسائله الأخيرة من الهاتف. '
         'رموز التحقق والعمليات المسجلة محمية، والعمليات المالية لا تتغير.',
         style:Theme.of(ctx).textTheme.bodySmall)),
+      // M1053: sender-wide blocking can hide every new bank SMS. Never
+      // bury the only blocked sender below 22+ old excluded messages.
+      // Keep the owner-selected unblock visible without erasing individual
+      // exclusions or bypassing OTP safeguards.
+      if(senders.isNotEmpty)
+       Padding(padding:const EdgeInsets.symmetric(horizontal:20,vertical:8),
+        child:Row(children:[
+         Expanded(child:WaffraText(waffraIsEnglish?
+          'Blocked sender: ${senders.first}. New bank SMS from this sender cannot appear.':
+          'مرسل محظور بالكامل: ${senders.first}. رسائله الجديدة لن تظهر حتى إلغاء حظره.',
+          maxLines:3,style:Theme.of(ctx).textTheme.bodySmall)),
+         const SizedBox(width:8),
+         TextButton(
+          onPressed:busy?null:()async{
+           final selected=senders.first;
+           refresh(()=>busy=true);
+           var restored=false;
+           try{
+            restored=await WaffraAutoSms.restoreExcludedSender(selected);
+            if(restored&&mounted){
+             await _rescanAutoSmsInbox(feedbackContext:ctx);
+            }
+           }catch(_){restored=false;}
+           if(ctx.mounted)refresh((){
+            busy=false;
+            if(restored)senders.remove(selected);
+           });
+           if(mounted&&!restored)snack(context,waffraIsEnglish?
+            'Sender unblock failed. Check SMS permission and retry.':
+            'فشل إلغاء حظر المرسل. تأكد من صلاحية الرسائل وحاول مرة أخرى.',
+            isError:true);
+          },
+          child:WaffraText(waffraIsEnglish?'Unblock sender':'إلغاء حظر المرسل')),
+        ])),
       Expanded(child:messages.isEmpty&&senders.isEmpty?
        Center(child:WaffraText(waffraIsEnglish?
         'No excluded SMS':'لا توجد رسائل أو مرسلون مستبعدون')):
