@@ -1,12 +1,34 @@
 {
   "schema_version": 1,
-  "pr": "Draft PR #785 for M1051 Issue #784: owner-restored excluded SMS review and sender backfill",
-  "issue": "#784",
+  "pr": "Draft PR #787 for M1052 Issue #786: exact Android SMS legacy undo and bank/OTP intake",
+  "issue": "#786",
   "workflow_review_policy": "scan-all-registered-workflows",
-  "baseline": "main badddee35b69104a38eaf33d19e3c033cc68c3fb at PR #785 branch creation, 21 Nov 2026",
+  "baseline": "main 4578e04338a5f7173c5c6a926fa39ca627375b09 at #787 branch creation, 21 Nov 2026",
   "reviewed_at": "2026-11-21",
-  "review_policy": "M1051 owner-requested restore of excluded financial SMS and sender-scoped rescan, keeping encrypted owner verification, OTP/finance replay exclusions, queue capacity, no auto ledger posting and all M1050 Android provider partial-scan warnings. Historic contracts remain. All-PR CI and real Android SMS UAT pending.",
+  "review_policy": "M1052 owner-supplied excluded bank SMS/Undo regression: preserve original verified provider fingerprint, owner-bound SMS policy, OTP-safe review, completed finance anti-replay, no auto posting or original SMS deletion. Every-PR CI and physical Android APK acceptance pending.",
   "contracts": [
+    {
+      "id": "M1052-LEGACY-EXCLUDED-SMS-PROVIDER-READBACK",
+      "issue": "Issue #786 / Draft PR #787",
+      "previous_behavior": "Legacy excluded labels have only sender/date/hash and Undo refused to requeue; some bank debits and OTP authorization notices were not distinguished in exclusion UI.",
+      "approved_behavior": "For only the selected legacy label, read Android provider outside lock and match exact original sender+body+date fingerprint; recheck owner and original exclusion before atomic encrypted requeue/removal. Keep OTP including amount-bearing authorization protected. Show original SMS after owner on-demand verified readback, and distinguish success/refusal in UI.",
+      "source_paths": [
+        "native/WaffraAutoSmsStore.kt",
+        "lib/waffra_home_sms_management.part.dart"
+      ],
+      "test_paths": [
+        "test/m1052_legacy_excluded_sms_recovery_test.dart",
+        "test/m1051_excluded_sms_restore_regression_test.dart",
+        "test/m1016_sms_background_financial_intake_test.dart"
+      ],
+      "safety_invariants": [
+        "No Android SMS deletion or cloud upload, no auto money write, no restart of history cursor.",
+        "Exact original hash and active owner must match, keep blocked sender and completed financial fingerprints protected.",
+        "OTP challenge with amount is not a posted debit; completed POS and outgoing transfer stay reviewable.",
+        "Native queue capacity and stored original identity retained; failure never reports false success."
+      ],
+      "status": "Source implemented; exact-head CI and real Android SMS validation pending."
+    },
     {
       "id": "M1051-OWNER-RESTORE-EXCLUDED-SMS-AND-SENDER-RESCAN",
       "issue": "Issue #784 / Draft PR #785",
