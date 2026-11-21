@@ -72,6 +72,9 @@ void main() {
   expect(review,contains('"restoredFromExcludedId" to row.optString('));
   final sheet=File('lib/waffra_home_sms_management.part.dart').readAsStringSync();
   expect(sheet,contains("row['id']==id||row['restoredFromExcludedId']==id"));
+  expect(sheet,contains('مرسل محظور بالكامل:'));
+  expect(sheet,contains('WaffraAutoSms.restoreExcludedSender(selected)'));
+  expect(sheet,contains('await _rescanAutoSmsInbox(feedbackContext:ctx)'));
  });
 
  test('M1053 owner rescan reports native hidden reasons instead of false zero',(){
