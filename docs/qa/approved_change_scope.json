@@ -34,7 +34,7 @@
     ],
     "native/WaffraAutoSmsStore.kt": [
       {
-        "start": "    fun restoreExcludedMessage(context: Context, id: String): Boolean =",
+        "start": "    private fun findOriginalExcludedSms(",
         "end": "    private val completedTransferCipherCache"
       },
       {
