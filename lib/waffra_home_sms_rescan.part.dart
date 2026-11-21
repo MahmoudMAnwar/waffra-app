@@ -149,7 +149,7 @@ extension _WaffraHomeSmsRescan on _HomeScreenState {
        'No new messages to review. Checked $scanned Android rows.'):
       (added>0?
        'تم التقاط $added رسالة لكن اختفت بعد تطبيق القواعد المحلية.':
-       'لم تظهر رسائل جديدة من $scanned صفًا فُحص في أندرويد.');
+       'لا توجد رسائل جديدة للمراجعة. تم فحص $scanned صفًا من أندرويد.');
      // No false success when relevant financial SMS have been filtered.
      if(diagnostic.isNotEmpty)snack(feedback,'$note $diagnostic',isError:true);
      else snackSuccess(feedback,note);
