@@ -723,8 +723,8 @@ object WaffraAutoSmsStore {
                 val identityAt = if (sent > 946684800000L &&
                     sent <= System.currentTimeMillis() + 300000L) sent else received
                 val providerId = id(sender, body, identityAt)
-                val exactFingerprint = id(sender, body, identityAt) == fingerprint ||
-                    id(sender, body, received) == fingerprint
+                val exactFingerprint = !(id(sender, body, identityAt) != fingerprint &&
+                    id(sender, body, received) != fingerprint)
                 // The original is never surfaced if it contains a pure OTP.
                 val original = if (pureVerificationOnly(body))
                     Triple("", "otp_protected", identityAt)
