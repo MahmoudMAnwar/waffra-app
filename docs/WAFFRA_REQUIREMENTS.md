@@ -2942,3 +2942,10 @@ Status: Partial — source and regression tests added in a draft branch; exact-h
 - Restoring one owner-excluded *reviewable* SMS must restore its encrypted redacted review text into the owner pending queue atomically with removing its denial markers, preserving the exact fingerprint, source fragment IDs, date and 1000-item capacity. It must not resurrect OTP-only content, reverse a confirmed financial write or bypass a blocked sender. Explicit restore overrides only the learned rule that would immediately re-exclude that same SMS, until the owner reviews it.
 - Restoring an excluded sender must trigger a bounded actual Android provider rescan and refresh the live review UI, including last-seven-day SMS, without a manual second action or cursor rewind. Restoration with no recoverable message must not claim a new notification appeared.
 - Tests: `test/m1051_excluded_sms_restore_regression_test.dart` and retained M1037/M1050 tests. All financial posting remains explicit user confirmation; no source deletion, silent auto-post or skipped required CI tests.
+
+### M1052 — Recover wrongly excluded bank SMS and make Undo effective (Issue #786)
+
+- Status: Partial. Target PR branch `fix/m1052-bank-sms-exclusion-recovery`. Validate against the Android inbox and the excluded sheet.
+- Completed Arabic POS debits and outgoing transfers must reach review through live, history and recovery scans. A real verification code sent by the same bank remains protected.
+- Undo for a retained legacy exclusion with no cached body must recover the exact original from Android when available, and update the excluded sheet and notifications. Preserve explicit blocks, completed transactions, source identities and pending capacity.
+- Regression coverage: bank/OTP examples, legacy restore and refresh/restart idempotence. Physical device acceptance is pending.
