@@ -1472,3 +1472,7 @@ Accept SR-denominated bank fees and stop fee parsing at its line boundary. Prese
 [M449 M1053 SOURCE FOLLOW-UP — ISSUE #788 / PR #789]
 - Re-reviewed exact latest native source change d1e584ad62ff1076537152dd8a21a4227a14516e. Preserved original M1050 source-contract guarantee that explicit SMS rescan cannot reach any monetary writer. Removed misleading generic terminology from a diagnostic-only comment without altering runtime account, source or SMS behavior.
 - New regression, old M1050 safety test, and complete M946 safety shard must be green on this code before considering the PR. Retain the owner physical Android SMS checks; the current installed-app defect is still not accepted.
+
+[M1053 CI REGRESSION RECONCILIATION — 21 NOV 2026]
+- Reviewed M946 money-shard failure from exact PR head 82421cd: the existing M670 rescan-feedback source contract expects the user-facing Arabic no-new-messages phrase. Preserved the approved phrase `لا توجد رسائل جديدة للمراجعة.` in the real zero-added rescan path while appending the actual Android rows checked and keeping source-backed exclusion/OTP/commit reason counts.
+- This is an application behavior-compatible copy correction on commit aa89c26eb6ce9f15867234d56dbe99692b71b078, not a disabled test, weakened assertion, automatic bank posting, or broad acceptance of excluded SMS. Existing no-false-success rejection evidence remains present. Revalidate every exact-head CI job and physical Android SMS behavior before claiming the defect fixed.
