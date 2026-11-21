@@ -1,12 +1,36 @@
 {
   "schema_version": 1,
-  "pr": "Draft PR #787 for M1052 Issue #786: exact Android SMS legacy undo and bank/OTP intake",
-  "issue": "#786",
+  "pr": "Draft PR #789 for M1053 Issue #788: real-device missing bank SMS source diagnostics and legacy exact undo recovery",
+  "issue": "#788",
   "workflow_review_policy": "scan-all-registered-workflows",
-  "baseline": "main 4578e04338a5f7173c5c6a926fa39ca627375b09 at #787 branch creation, 21 Nov 2026",
+  "baseline": "main includes squash M1052 PR #787 (3516a7783d2540a6526def1ca0252ac660762be2)",
   "reviewed_at": "2026-11-21",
-  "review_policy": "M1052 owner-supplied excluded bank SMS/Undo regression: preserve original verified provider fingerprint, owner-bound SMS policy, OTP-safe review, completed finance anti-replay, no auto posting or original SMS deletion. Every-PR CI and physical Android APK acceptance pending.",
+  "review_policy": "Owner screenshot confirms that M1052 UI is installed but bank SMS still do not appear. Add source-level evidence on every explicit rescan and safely verify single provider time variation for a selected legacy exclusion. No untested device claim; preserve finance/OTP/owner safety.",
   "contracts": [
+    {
+      "id": "M1053-MISSED-ANDROID-SMS-SKIP-DIAGNOSTICS-AND-LEGACY-UNDO",
+      "issue": "Issue #788 / Draft PR #789",
+      "previous_behavior": "Rescan could report zero newly visible notices without revealing whether the Android SMS was skipped due to explicit sender/exact exclusion, finance booking, existing pending or native intake failure. Undo of a legacy label rejected the original when Android normalized its timestamp even if sender+receivedAt were correct.",
+      "approved_behavior": "On explicit bounded provider rescan, report local-only reason counters with a short sender summary and an honest failure explanation when visibleAdded=0. On selected old label, prefer exact SHA identity; otherwise accept only one independently verified same-sender SMS within 1.5 seconds of provider receipt time and safely requeue under the provider canonical fingerprint with the old excluded ID retained as source alias. Never unmask OTP or override blocked sender, other user exclusions or booked finance.",
+      "source_paths": [
+        "native/WaffraAutoSmsStore.kt",
+        "lib/waffra_auto_sms.dart",
+        "lib/waffra_home_sms_management.part.dart",
+        "lib/waffra_home_sms_rescan.part.dart"
+      ],
+      "test_paths": [
+        "test/m1053_sms_recovery_reason_and_legacy_provenance_test.dart",
+        "test/m1051_excluded_sms_restore_regression_test.dart",
+        "test/m1052_legacy_excluded_sms_recovery_test.dart"
+      ],
+      "safety_invariants": [
+        "All source reads are authenticated owner-scoped, bounded and local. No original SMS deletion or upload.",
+        "Restore is single-label owner action only; exact SHA preferred, unique reception time fallback rejects ambiguous/OTP text.",
+        "Native completed and transfer identity markers for provider canonical ID and previous ID are revalidated before one encrypted transaction.",
+        "No automatic finance posting, verified bank/account changes, global sender unblocking or rewriting old financial data."
+      ],
+      "status": "Source patch and regression committed; exact-head CI and physical Android UAT pending."
+    },
     {
       "id": "M1052-LEGACY-EXCLUDED-SMS-PROVIDER-READBACK",
       "issue": "Issue #786 / Draft PR #787",

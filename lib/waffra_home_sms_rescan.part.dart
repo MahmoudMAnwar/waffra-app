@@ -72,6 +72,49 @@ extension _WaffraHomeSmsRescan on _HomeScreenState {
     (recovery['added'] as int)).clamp(0,2147483647).toInt();
    final visibleAdded=_autoSmsPending.where((row)=>
     row['id'] is String&&!previouslyVisibleIds.contains(row['id'])).length;
+   // M1053: a zero-result recovery must show WHY Android candidates
+   // disappeared. The provider returns aggregate local-only reason counts,
+   // not bank message text, account numbers or verification secrets.
+   final skipMap=recovery['skipReasons'];
+   final skip=skipMap is Map?skipMap:const <String,int>{};
+   int skipped(String reason){
+    final value=skip[reason];
+    return value is int&&value>0?value:0;
+   }
+   final topReasons=<String>[
+    if(skipped('senderBlocked')>0)
+     (waffraIsEnglish?'sender blocked':'مرسل محظور')+
+      ': ${skipped('senderBlocked')}',
+    if(skipped('messageExcluded')>0)
+     (waffraIsEnglish?'exact message excluded':'رسالة مستبعدة ببصمتها')+
+      ': ${skipped('messageExcluded')}',
+    if(skipped('alreadyCommitted')>0)
+     (waffraIsEnglish?'already booked':'عملية مسجلة')+
+      ': ${skipped('alreadyCommitted')}',
+    if(skipped('intakeRejected')>0)
+     (waffraIsEnglish?'capture rejected':'تعذر إدراجها')+
+      ': ${skipped('intakeRejected')}',
+    if(skipped('alreadyPending')>0)
+     (waffraIsEnglish?'already awaiting review':'موجودة للمراجعة')+
+      ': ${skipped('alreadyPending')}',
+    if(skipped('verification')>0)
+     (waffraIsEnglish?'OTP protected':'رمز تحقق محمي')+
+      ': ${skipped('verification')}',
+   ];
+   final senderMap=recovery['senderSkipReasons'];
+   final senderInfo=senderMap is Map?
+    senderMap.entries.where((entry)=>entry.key is String&&entry.value is Map)
+     .take(3).map((entry){
+      final breakdown=entry.value as Map;
+      final denied=(breakdown['messageExcluded'] is int?
+       breakdown['messageExcluded'] as int:0);
+      final blocked=(breakdown['senderBlocked'] is int?
+       breakdown['senderBlocked'] as int:0);
+      return (denied+blocked)>0?
+       '${entry.key}: ${waffraIsEnglish?'blocked':'محجوبة'} ${denied+blocked}':'';
+     }).where((s)=>s.isNotEmpty).join(' • '):'';
+   final diagnostic=(topReasons.take(4).join(' • ')+
+     (senderInfo.isEmpty?'':' • $senderInfo')).trim();
    final recoveryPartial=recovery['partial']==true;
    final recoveryAtCapacity=recovery['capacityBlocked']==true;
    if(_autoSmsStatusProblem!=null){
@@ -100,13 +143,16 @@ extension _WaffraHomeSmsRescan on _HomeScreenState {
    }else{
     if(feedbackContext!=null&&!feedbackContext.mounted)return;
     if(visibleAdded==0){
-     snackSuccess(feedback,waffraIsEnglish?
+     final note=waffraIsEnglish?
       (added>0?
-       '$added candidate SMS were processed, but no new message remains for review after rules.':
-       'No new messages to review.'):
+       '$added SMS accepted, but none remains for review after local rules.':
+       'No new messages to review. Checked $scanned Android rows.'):
       (added>0?
-       'تم تحليل $added رسالة مرشحة، لكن لا توجد رسائل جديدة للمراجعة بعد تطبيق القواعد.':
-       'لا توجد رسائل جديدة للمراجعة.'));
+       'تم التقاط $added رسالة لكن اختفت بعد تطبيق القواعد المحلية.':
+       'لا توجد رسائل جديدة للمراجعة. تم فحص $scanned صفًا من أندرويد.');
+     // No false success when relevant financial SMS have been filtered.
+     if(diagnostic.isNotEmpty)snack(feedback,'$note $diagnostic',isError:true);
+     else snackSuccess(feedback,note);
     }else{
      snackSuccess(feedback,waffraIsEnglish?
       '$visibleAdded new messages added for review.':

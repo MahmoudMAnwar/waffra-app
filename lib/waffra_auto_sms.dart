@@ -78,9 +78,34 @@ abstract final class WaffraAutoSms {
      partial is! bool||capacityBlocked is! bool){
    throw StateError('Invalid recent SMS recovery status');
   }
+  // M1053: preserve bounded native skip diagnostics for the user-visible
+  // rescan result. Reject malformed payloads rather than fabricate zeros.
+  final reasonsRaw=data['skipReasons'];
+  final sendersRaw=data['senderSkipReasons'];
+  final reasons=<String,int>{};
+  if(reasonsRaw is Map){
+   for(final item in reasonsRaw.entries){
+    if(item.key is String&&item.value is int&&item.value>=0){
+     reasons[item.key as String]=item.value as int;
+    }
+   }
+  }
+  final bySender=<String,Map<String,int>>{};
+  if(sendersRaw is Map){
+   for(final item in sendersRaw.entries){
+    if(item.key is! String||item.value is! Map)continue;
+    final counts=<String,int>{};
+    for(final count in (item.value as Map).entries){
+     if(count.key is String&&count.value is int&&count.value>=0)
+      counts[count.key as String]=count.value as int;
+    }
+    bySender[item.key as String]=counts;
+   }
+  }
   return <String,Object?>{
    'checked':checked,'added':added,
    'partial':partial,'capacityBlocked':capacityBlocked,
+   'skipReasons':reasons,'senderSkipReasons':bySender,
   };
  }
 

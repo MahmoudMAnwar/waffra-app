@@ -1,32 +1,33 @@
 {
   "contract_version": 1,
-  "change_id": "ISSUE786-M1052-EXACT-LEGACY-EXCLUDED-BANK-SMS-RECOVERY",
-  "human_scope_review": "21 Nov 2026: Owner supplied current screenshots of excluded AlRajhiBank bank messages not shown in review, opaque legacy fingerprints and an ineffective Undo. Scope is the existing #787 Draft PR: exact original Android provider readback for legacy exclusions, OTP authorization vs posted debit distinction, truthful UI result and regression tests; no bank ledger/Android SMS deletion/auto posting. Source implementation and real signed-device acceptance are distinct.",
+  "change_id": "ISSUE788-M1053-ACTUAL-ANDROID-SMS-MISSING-AFTER-M1052",
+  "human_scope_review": "21 Nov 2026: Owner supplied latest installed APK screenshots with M1052 UI present but still only three older AlRajhiBank review notices, 22 old excluded labels and one blocked sender. Owner requests an actual source fix, not a claim based solely on green CI. Scope limited to exact old-provider SMS restore and bounded reason visibility on explicit rescan; no finance writer or Android source deletion.",
   "user_requested_changes": [
-    "Recover one selected legacy excluded message with no retained body only after exact Android SMS fingerprint verification and authenticated-owner recheck, and atomically requeue for review.",
-    "Allow completed Arabic PoS debits and outgoing bank transfers to remain visible for review, while OTP authorization challenges mentioning amounts remain excluded.",
-    "Expose the verified excluded message text on user tap where available and show whether Undo restored the review row or was refused.",
-    "Retain explicit sender and individual exclusions for other messages, confirmed finance anti-replay and pending queue bounds. Add executable regression to every-PR safety CI.",
-    "No existing financial ledger write, bank balance change, native SMS deletion, owner-data migration or automatic posting."
+    "Show why a bank SMS is missing from review after a bounded real Android inbox scan: blocked sender, exact excluded fingerprint, already committed, already pending, verification, or capture rejection; no raw SMS bodies in diagnostic results.",
+    "Restore only a uniquely matched old encrypted excluded SMS when its Android provider identity timestamp differs, verified by same owner, exact sender and provider receipt time within 1.5 seconds, with no ambiguity. Do not restore pure OTP or revive any completed finance.",
+    "Use canonical Android provider fingerprint on fallback, retain original excluded ID as a source alias, preserve manualRestoreReview and update the UI receipt match so Undo does not falsely fail after verified restoration.",
+    "Retain explicit sender blocks and unrelated exact exclusions; no reset/erase of original SMS, SQLCipher, saved finance, backup or 30-day policy.",
+    "Register executable regression in mandatory safety smoke and preserve historical m1051 source contract with narrow adjustment. Signed owner Android UAT required before declaring fixed."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
+    "lib/waffra_auto_sms.dart",
+    "lib/waffra_home_sms_rescan.part.dart",
     "lib/waffra_home_sms_management.part.dart",
     "native/WaffraAutoSmsStore.kt",
     "scripts/qa/m946_full_app_smoke_matrix.py",
-    "test/m1052_legacy_excluded_sms_recovery_test.dart"
+    "test/m1051_excluded_sms_restore_regression_test.dart",
+    "test/m1053_sms_recovery_reason_and_legacy_provenance_test.dart"
   ],
   "bounded_sections": {
-    "lib/waffra_home_sms_management.part.dart": [
-      {
-        "start": " Future<void> _openExcludedSenders()async{",
-        "end": " /// Real notifications: SMS stay pending until the owner confirms a financial"
-      }
-    ],
     "native/WaffraAutoSmsStore.kt": [
+      {
+        "start": "    fun excludedMessageDetails(context: Context, id: String): Map<String, Any>? {",
+        "end": "    private fun findOriginalExcludedSms("
+      },
       {
         "start": "    private fun findOriginalExcludedSms(",
         "end": "    private val completedTransferCipherCache"
@@ -36,12 +37,32 @@
         "end": "    fun markBackgroundSmsReviewed(context: Context, id: String,"
       },
       {
-        "start": "    fun excludeMessages(context: Context, ids: Set<String>): Boolean =",
-        "end": "    fun acknowledgeCompletedTransfer("
-      },
+        "start": "    fun recoverRecentlyMissedSms(",
+        "end": "    fun importConsentMonth(context: Context, maxRead: Int = 500): Int {"
+      }
+    ],
+    "lib/waffra_home_sms_management.part.dart": [
       {
-        "start": "    private val explicitOtpToken = Regex(",
-        "end": "    private fun recordPureOtpExclusionLocked("
+        "start": " Future<void> _openExcludedSenders()async{",
+        "end": " /// Real notifications: SMS stay pending until the owner confirms a financial"
+      }
+    ],
+    "lib/waffra_auto_sms.dart": [
+      {
+        "start": " static Future<Map<String,Object?>> recoverRecentlyMissedSmsChecked()async{",
+        "end": " static Future<bool> suspendForSignOut()"
+      }
+    ],
+    "lib/waffra_home_sms_rescan.part.dart": [
+      {
+        "start": " Future<void> _rescanAutoSmsInbox({BuildContext? feedbackContext})async{",
+        "end": null
+      }
+    ],
+    "test/m1051_excluded_sms_restore_regression_test.dart": [
+      {
+        "start": " test('both restore actions refresh the same live review and real provider',(){",
+        "end": null
       }
     ],
     "scripts/qa/m946_full_app_smoke_matrix.py": [

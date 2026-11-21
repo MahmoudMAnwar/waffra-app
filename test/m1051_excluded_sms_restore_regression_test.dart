@@ -57,7 +57,7 @@ void main() {
    screen.indexOf('WaffraAutoSms.restoreExcludedMessage(id)')-120,
    screen.indexOf('WaffraAutoSms.restoreExcludedMessage(id)')+700);
   expect(message,contains('await _refreshAutoSmsInbox();'));
-  expect(message,contains('_autoSmsPending.any((row)=>row[\'id\']==id)'));
+  expect(message,contains("row['id']==id||row['restoredFromExcludedId']==id"));
   final sender=screen.substring(
    screen.indexOf('WaffraAutoSms.restoreExcludedSender(sender)')-120,
    screen.indexOf('WaffraAutoSms.restoreExcludedSender(sender)')+450);

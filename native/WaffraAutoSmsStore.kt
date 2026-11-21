@@ -672,9 +672,9 @@ object WaffraAutoSmsStore {
             // body was ever saved in its encrypted label.
             val prior = findOriginalExcludedSms(context, id,
                 label.optString("sender"), label.optLong("receivedAt", 0L))
-            info["status"] = prior?.second ?: "unavailable"
-            if (prior != null && prior.second == "available")
-                info["body"] = prior.first
+            info["status"] = prior?.first?.second ?: "unavailable"
+            if (prior != null && prior.first.second == "available")
+                info["body"] = prior.first.first
         }
         // A sign-out or account switch during provider I/O must not disclose
         // the previous owner's message to the new session.
@@ -689,7 +689,7 @@ object WaffraAutoSmsStore {
     private fun findOriginalExcludedSms(
         context: Context, fingerprint: String, expectedSender: String,
         receivedAt: Long
-    ): Triple<String, String, Long>? {
+    ): Pair<Triple<String, String, Long>, String>? {
         if (receivedAt <= 0L || expectedSender.isBlank() ||
             context.checkSelfPermission(Manifest.permission.READ_SMS) !=
                 PackageManager.PERMISSION_GRANTED) return null
@@ -703,7 +703,8 @@ object WaffraAutoSmsStore {
                 arrayOf(start.toString(), end.toString()),
                 "date DESC")
         } catch (_: Exception) { null } ?: return null
-        var exact: Triple<String, String, Long>? = null
+        var exact: Pair<Triple<String, String, Long>, String>? = null
+        val near = mutableListOf<Pair<Triple<String, String, Long>, String>>()
         cursor.use { sms ->
             val senderAt = sms.getColumnIndex("address")
             val bodyAt = sms.getColumnIndex("body")
@@ -714,25 +715,44 @@ object WaffraAutoSmsStore {
             var inspected = 0
             while (sms.moveToNext() && inspected++ < 2000) {
                 val sender = sms.getString(senderAt) ?: continue
+                if (sender != expectedSender) continue
                 val body = sms.getString(bodyAt) ?: continue
                 val received = sms.getLong(receivedAtCol)
                 val sent = if (sentAt >= 0 && !sms.isNull(sentAt))
                     sms.getLong(sentAt) else 0L
                 val identityAt = if (sent > 946684800000L &&
                     sent <= System.currentTimeMillis() + 300000L) sent else received
-                if (sender != expectedSender ||
-                    (id(sender, body, identityAt) != fingerprint &&
-                     id(sender, body, received) != fingerprint)) continue
-                // Pure OTP content was deliberately never stored. Do not
-                // resurrect verification codes through the UI fallback.
-                exact = if (pureVerificationOnly(body))
+                val providerId = id(sender, body, identityAt)
+                val exactFingerprint = !(id(sender, body, identityAt) != fingerprint &&
+                    id(sender, body, received) != fingerprint)
+                // The original is never surfaced if it contains a pure OTP.
+                val original = if (pureVerificationOnly(body))
                     Triple("", "otp_protected", identityAt)
                 else Triple(if (otp.containsMatchIn(body))
                     redactMixedOtpSecrets(body) else body.trim(), "available", identityAt)
-                break
+                if (exactFingerprint) {
+                    exact = Pair(original, providerId)
+                    break
+                }
+                // M1053: a pre-migration SHA may have been based on a
+                // provider-normalized SMS timestamp. Allow ONLY one original
+                // SMS from the same authenticated inbox, exact sender and
+                // matching provider reception millisecond (±1.5s). A single
+                // selected owner label authorizes a review-only fallback,
+                // not a broad sender allowlist or automatic finance posting.
+                // A neighboring SMS, multi-part ambiguity and unverifiable
+                // receipt date MUST fail closed rather than borrow its text.
+                if (kotlin.math.abs(received - receivedAt) > 1500L ||
+                    !reviewEligible(sender, body)) continue
+                if (!pureVerificationOnly(body) &&
+                    !(completedBankHeadline.containsMatchIn(body) ||
+                      (action.containsMatchIn(body) &&
+                       money.containsMatchIn(body) && digits.containsMatchIn(body))))
+                    continue
+                if (near.size < 2) near.add(Pair(original, providerId))
             }
         }
-        return exact
+        return exact ?: if (near.size == 1) near.single() else null
     }
 
     /**
@@ -776,11 +796,17 @@ object WaffraAutoSmsStore {
                     label.optString("body") != oldLabel.optString("body"))
                     return@synchronized false
                 val sender = label.optString("sender").trim()
-                val body = (if (needsProvider && original?.second == "available")
-                    original.first else label.optString("body")).trim()
+                val body = (if (needsProvider && original?.first?.second == "available")
+                    original.first.first else label.optString("body")).trim()
                 val receivedAt = label.optLong("receivedAt", 0L)
-                val identityAt = if (needsProvider) original?.third ?: receivedAt
+                val identityAt = if (needsProvider) original?.first?.third ?: receivedAt
                     else label.optLong("identityAt", receivedAt)
+                val restoredId = if (needsProvider) original?.second ?: id else id
+                // The source provider ID must not already be separately
+                // excluded by an unrelated owner decision.
+                if (restoredId != id &&
+                    isExcludedMessageLocked(context, restoredId))
+                    return@synchronized false
                 // The old record is recoverable ONLY when the original ID was
                 // verified against Android. Newer labels were already redacted.
                 if (sender.isEmpty() || body.isEmpty() || receivedAt <= 0L ||
@@ -788,7 +814,7 @@ object WaffraAutoSmsStore {
                     pureVerificationOnly(body) || !reviewEligible(sender, body) ||
                     isExcludedLocked(context, sender)) return@synchronized false
                 val source = label.optJSONArray("sourceIds")
-                val identities = linkedSetOf(id)
+                val identities = linkedSetOf(id, restoredId)
                 if (source != null) {
                     if (source.length() > 16) return@synchronized false
                     for (i in 0 until source.length())
@@ -810,8 +836,9 @@ object WaffraAutoSmsStore {
                     return@synchronized false
                 if (!alreadyQueued) {
                     val restored = JSONObject()
-                        .put("id", id)
+                        .put("id", restoredId)
                         .put("sourceIds", JSONArray(identities.toList()))
+                        .put("restoredFromExcludedId", id)
                         .put("sender", sender)
                         .put("body", body)
                         .put("sensitiveOtp", false)
@@ -1478,6 +1505,7 @@ object WaffraAutoSmsStore {
                     "receivedAt" to row.getLong("receivedAt"),
                     "sensitiveOtp" to row.optBoolean("sensitiveOtp", false),
                     "manualRestoreReview" to row.optBoolean("manualRestoreReview", false),
+                    "restoredFromExcludedId" to row.optString("restoredFromExcludedId", ""),
                     "backgroundAttempted" to row.optBoolean("backgroundAttempted", false),
                     "backgroundRuleRevision" to row.optString("backgroundRuleRevision", ""),
                     "backgroundNotificationPending" to row.optBoolean("backgroundNotificationPending", false),
@@ -2030,6 +2058,26 @@ object WaffraAutoSmsStore {
         var added = 0
         var partial = false
         var capacityBlocked = false
+        // M1053: report WHY an Android SMS did not reach owner review.
+        // Counts are local-only; neither SMS bodies nor account data leave
+        // the device, and these counters never mutate encrypted state.
+        val skipped = linkedMapOf(
+            "notFinancial" to 0, "verification" to 0,
+            "senderBlocked" to 0, "messageExcluded" to 0,
+            "alreadyCommitted" to 0, "alreadyPending" to 0,
+            "intakeRejected" to 0
+        )
+        val skippedBySender = mutableMapOf<String, MutableMap<String, Int>>()
+        fun record(reason: String, sender: String) {
+            skipped[reason] = (skipped[reason] ?: 0) + 1
+            // Only counts and the bank sender title already visible in the
+            // authenticated UI; no message snippets, OTP or hashes.
+            val name = sender.trim().take(100)
+            if (name.isNotEmpty()) {
+                val totals = skippedBySender.getOrPut(name) { mutableMapOf() }
+                totals[reason] = (totals[reason] ?: 0) + 1
+            }
+        }
         provider.use { rows ->
             val senderCol = rows.getColumnIndex("address")
             val bodyCol = rows.getColumnIndex("body")
@@ -2047,14 +2095,44 @@ object WaffraAutoSmsStore {
                 checked++
                 val sender = rows.getString(senderCol) ?: continue
                 val body = rows.getString(bodyCol) ?: continue
-                if (!reviewEligible(sender, body)) continue
+                if (!reviewEligible(sender, body)) {
+                    record("notFinancial", sender)
+                    continue
+                }
                 val receivedAt = rows.getLong(dateCol)
                 val sent = if (sentCol >= 0 && !rows.isNull(sentCol))
                     rows.getLong(sentCol) else 0L
                 val identityAt = if (sent > 946684800000L &&
                     sent <= now + 300000L) sent else receivedAt
                 val fingerprint = id(sender, body, identityAt)
-                if (fingerprint in existingIds) continue
+                val why = synchronized(mutex) {
+                    if (!enabled(context) ||
+                        ownerAtStart != signedInOwnerHash(context))
+                        throw SecurityException("SMS_RECOVERY_OWNER_CHANGED")
+                    when {
+                        isExcludedLocked(context, sender) -> "senderBlocked"
+                        isCommittedLocked(context, fingerprint) ||
+                            isCompletedTransferLocked(context, fingerprint) ->
+                            "alreadyCommitted"
+                        isExcludedMessageLocked(context, fingerprint) ->
+                            "messageExcluded"
+                        fingerprint in existingIds -> "alreadyPending"
+                        else -> null
+                    }
+                }
+                if (why != null) {
+                    record(why, sender)
+                    continue
+                }
+                // A real OTP is deliberately excluded by native offer();
+                // count it distinctly so a SAR amount in its purpose cannot
+                // be mistaken for a missing completed bank transfer.
+                if (pureVerificationOnly(body)) {
+                    record("verification", sender)
+                    offer(context, sender, body, identityAt,
+                        historical = true, receivedAt = receivedAt)
+                    continue
+                }
 
                 // Do not evict a single existing review row if all 1000
                 // encrypted slots are occupied. Report incomplete recovery.
@@ -2074,16 +2152,23 @@ object WaffraAutoSmsStore {
                         historical = true, receivedAt = receivedAt)) {
                     added++
                     existingIds.add(fingerprint)
-                }
+                } else record("intakeRejected", sender)
             }
         }
         if (!enabled(context) || ownerAtStart != signedInOwnerHash(context))
             throw SecurityException("SMS_RECOVERY_OWNER_CHANGED")
+        // Limit the displayed diagnostic sender list. Only owners with active
+        // SMS consent receive this aggregate; no raw bodies or OTP can leak.
+        val senderSummary = skippedBySender.entries
+            .sortedByDescending { it.value.values.sum() }
+            .take(12).associate { it.key to it.value.toMap() }
         return mapOf(
             "checked" to checked,
             "added" to added,
             "partial" to partial,
-            "capacityBlocked" to capacityBlocked
+            "capacityBlocked" to capacityBlocked,
+            "skipReasons" to skipped.toMap(),
+            "senderSkipReasons" to senderSummary
         )
     }
 
