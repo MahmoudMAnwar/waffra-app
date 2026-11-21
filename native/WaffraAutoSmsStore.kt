@@ -2060,7 +2060,7 @@ object WaffraAutoSmsStore {
         var capacityBlocked = false
         // M1053: report WHY an Android SMS did not reach owner review.
         // Counts are local-only; neither SMS bodies nor account data leave
-        // the device, and no finance or exclusion state is changed by them.
+        // the device, and these counters never mutate encrypted state.
         val skipped = linkedMapOf(
             "notFinancial" to 0, "verification" to 0,
             "senderBlocked" to 0, "messageExcluded" to 0,
