@@ -2930,7 +2930,7 @@ Status: Partial — source and regression tests added in a draft branch; exact-h
 
 
 ### M1050 — Recover missed backdated SMS on explicit notification Pull to Refresh (Issue #782)
-- **Status:** Partial until exact-head CI and user Android receipt/UAT pass. **PR:** pending creation on `fix/sms-rescan-recent-provider-recovery`.
+- **Status:** Partial until exact-head CI and user Android receipt/UAT pass. **PR:** #783 (`fix/sms-rescan-recent-provider-recovery`).
 - Explicit notifications pull first continues the durable forward-only SMS cursor, then rechecks a bounded recent Android inbox window independent of that cursor to recover provider-late/backdated rows. The recheck must run off the UI thread, be tied to the verified owner, and fail closed on provider/permission errors.
 - New candidates must pass the **same** native `offer` gate as live intake (sender and OTP eligibility, encrypted exclusions, completed finance and internal-transfer fingerprints, 1000 pending review capacity, multipart grouping) and must **never** auto-post money or reset/re-import the whole history.
 - Re-read the encrypted pending list after recovery and show explicit incomplete/capacity warning rather than false “no new SMS”; do not claim real-device success from structural tests. Regression: `test/m1050_recent_sms_rescan_recovery_test.dart`. Physical Android approval remains outstanding.
