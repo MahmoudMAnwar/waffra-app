@@ -1,83 +1,55 @@
 {
   "contract_version": 1,
-  "change_id": "ISSUE782-M1050-EXPLICIT-RECENT-SMS-RECOVERY",
-  "human_scope_review": "21 Nov 2026: Owner requested repair of a bank SMS from 20 Nov missing despite repeated notifications pull-to-refresh. Approved scope: explicit bounded recent provider recovery, native current-owner consent, dedup/exclusions/ledger unchanged, user-visible incomplete warnings. Draft implementation; CI and physical Android validation outstanding. Human approval required before merge.",
+  "change_id": "ISSUE784-M1051-OWNER-RESTORED-EXCLUDED-SMS",
+  "human_scope_review": "21 Nov 2026: Owner provided screenshots of AlRajhiBank 20-Nov POS and outgoing SMS absent from Waffra despite latest notification rescan, and owner-restored excluded messages not appearing. This draft restricts work to native encrypted SMS restoration, on-device review classifier exception for the exact manually restored SMS, immediate UI refresh and sender backfill. This file records the requested scope; human merge approval and signed Android UAT remain outstanding.",
   "user_requested_changes": [
-    "Recover eligible Android bank SMS missed because provider dates/times lag behind the durable forward history cursor during explicit user-triggered notifications Pull to Refresh.",
-    "Preserve the original history cursor, encrypted owner binding, SMS exclusion fingerprints and committed finance/transfer anti-replay; never auto-post or duplicate financial transactions.",
-    "Re-check a bounded seven-day Android provider window in a background native executor, showing a clear partial or full-capacity warning rather than false success.",
-    "Refresh the same verified SMS review UI after native recovery, without changing saved financial records, account balances, deleted SMS or unrelated screens.",
-    "Add the targeted M1050 regression before source changes, retain existing SMS tests and register it in mandatory all-PR M946 smoke without disabling any tests."
+    "Restore the exact owner-selected, already redacted and encrypted message previously excluded to the pending review immediately without waiting for a second manual pull.",
+    "When restoring a blocked sender, run a bounded checked real Android SMS provider lookback and repaint notifications for eligible recent messages.",
+    "Prevent owner-restored pending review SMS from being silently re-excluded by the same learned rule while keeping pure OTP, sender blocking, native dedupe, confirmed finance and pending capacity gates.",
+    "Preserve financial ledger, Android SMS content, protected owner identities, and prior tests; add specific regression and register it in existing M946 all-feature smoke."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "lib/waffra_auto_sms.dart",
-    "lib/waffra_home_sms_rescan.part.dart",
+    "lib/main.dart",
+    "lib/waffra_home_sms_management.part.dart",
     "native/WaffraAutoSmsStore.kt",
-    "native/WaffraMainActivity.kt",
     "scripts/qa/m946_full_app_smoke_matrix.py",
-    "test/m1050_recent_sms_rescan_recovery_test.dart",
-    "test/m514_sms_review_regressions_test.dart",
-    "test/m547_sms_incremental_jank_regression_test.dart",
-    "test/m670_feedback_transfer_dashboard_test.dart",
-    "test/qa/m452_sms_review_signup_regression_test.py"
+    "test/m1051_excluded_sms_restore_regression_test.dart"
   ],
   "bounded_sections": {
-    "lib/waffra_auto_sms.dart": [
+    "lib/main.dart": [
       {
-        "start": " static Future<int> reconcilePendingWithAndroidInboxChecked()async{",
-        "end": " static Future<bool> suspendForSignOut()"
+        "start": "Map<String,Object?> waffraM632ClassifySmsQueue(Map<String,Object?> input){",
+        "end": "List<String> splitBankMessages(String raw){"
       }
     ],
-    "lib/waffra_home_sms_rescan.part.dart": [
+    "lib/waffra_home_sms_management.part.dart": [
       {
-        "start": " Future<void> _rescanAutoSmsInbox({BuildContext? feedbackContext})async{",
-        "end": null
+        "start": " Future<void> _openExcludedSenders()async{",
+        "end": " /// Real notifications: SMS stay pending until the owner confirms a financial"
       }
     ],
     "native/WaffraAutoSmsStore.kt": [
       {
-        "start": "    fun restartCompletedHistory(context: Context): Boolean",
-        "end": "    fun importConsentMonth(context: Context, maxRead: Int = 500): Int {"
-      }
-    ],
-    "native/WaffraMainActivity.kt": [
+        "start": "    fun restoreExcludedMessage(context: Context, id: String): Boolean =",
+        "end": "    private val completedTransferCipherCache"
+      },
       {
-        "start": "\"enableAllSmsHistoryScan\" -> {",
-        "end": "\"importConsentMonthBankSms\" -> {"
+        "start": "    fun pending(context: Context): List<Map<String, Any>> =",
+        "end": "    fun markBackgroundSmsReviewed(context: Context, id: String,"
+      },
+      {
+        "start": "    fun excludeMessages(context: Context, ids: Set<String>): Boolean =",
+        "end": "    fun acknowledgeCompletedTransfer("
       }
     ],
     "scripts/qa/m946_full_app_smoke_matrix.py": [
       {
         "start": "FEATURES: dict[str, tuple[str, tuple[str, ...]]] = {",
-        "end": "\"m1038_source_evidenced_sms_multipart_reassembly\": (\"safety\", ("
-      }
-    ],
-    "test/m514_sms_review_regressions_test.dart": [
-      {
-        "start": " test('M514 per-button scanned number is never native history total',(){",
-        "end": " test('M514 excluded queue items use dedicated encrypted fingerprints',(){"
-      }
-    ],
-    "test/m547_sms_incremental_jank_regression_test.dart": [
-      {
-        "start": " test('M547 new-only rescans never clear a previously completed cursor', () {",
-        "end": " test('M547 only an explicit rescan fetches historical pages during UI interactions', () {"
-      }
-    ],
-    "test/qa/m452_sms_review_signup_regression_test.py": [
-      {
-        "start": "    def test_sms_review_is_collapsible_and_count_remains_visible(self):",
-        "end": "    def test_registration_has_single_submit_and_avatar_choices(self):"
-      }
-    ],
-    "test/m670_feedback_transfer_dashboard_test.dart": [
-      {
-        "start": " test('M670 SMS rescan feedback belongs to the requesting route',(){",
-        "end": " test('M670 transfer always opens verified editor; second account is required',(){"
+        "end": "    \"m1038_source_evidenced_sms_multipart_reassembly\""
       }
     ]
   }
