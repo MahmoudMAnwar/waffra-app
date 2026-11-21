@@ -200,7 +200,11 @@ extension _WaffraHomeSmsManagement on _HomeScreenState {
               restored=await WaffraAutoSms.restoreExcludedMessage(id);
               if(restored&&mounted)await _refreshAutoSmsInbox();
              }catch(_){restored=false;}
-             final visible=mounted&&_autoSmsPending.any((row)=>row['id']==id);
+             // M1053: old exclusion ID may differ from the Android provider's
+             // canonical date-based ID; the owner-only restoredFrom marker
+             // allows the UI to verify this exact undo, not any sibling SMS.
+             final visible=mounted&&_autoSmsPending.any((row)=>
+              row['id']==id||row['restoredFromExcludedId']==id);
              // A failed undo must keep the row visible and explain whether
              // the original is a protected OTP or unavailable legacy text.
              final details=restored?null:
