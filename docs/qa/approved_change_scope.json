@@ -57,14 +57,14 @@
     ],
     "test/m514_sms_review_regressions_test.dart": [
       {
-        "start": "  test('M514 per-button scanned number is never native history total',(){",
-        "end": "  test('M514 excluded queue items use dedicated encrypted fingerprints',(){"
+        "start": " test('M514 per-button scanned number is never native history total',(){",
+        "end": " test('M514 excluded queue items use dedicated encrypted fingerprints',(){"
       }
     ],
     "test/m547_sms_incremental_jank_regression_test.dart": [
       {
-        "start": "  test('M547 new-only rescans never clear a previously completed cursor', () {",
-        "end": "  test('M547 only an explicit rescan fetches historical pages during UI interactions', () {"
+        "start": " test('M547 new-only rescans never clear a previously completed cursor', () {",
+        "end": " test('M547 only an explicit rescan fetches historical pages during UI interactions', () {"
       }
     ],
     "test/qa/m452_sms_review_signup_regression_test.py": [
