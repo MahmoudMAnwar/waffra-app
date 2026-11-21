@@ -2030,6 +2030,26 @@ object WaffraAutoSmsStore {
         var added = 0
         var partial = false
         var capacityBlocked = false
+        // M1053: report WHY an Android SMS did not reach owner review.
+        // Counts are local-only; neither SMS bodies nor account data leave
+        // the device, and no finance or exclusion state is changed by them.
+        val skipped = linkedMapOf(
+            "notFinancial" to 0, "verification" to 0,
+            "senderBlocked" to 0, "messageExcluded" to 0,
+            "alreadyCommitted" to 0, "alreadyPending" to 0,
+            "intakeRejected" to 0
+        )
+        val skippedBySender = mutableMapOf<String, MutableMap<String, Int>>()
+        fun record(reason: String, sender: String) {
+            skipped[reason] = (skipped[reason] ?: 0) + 1
+            // Only counts and the bank sender title already visible in the
+            // authenticated UI; no message snippets, OTP or hashes.
+            val name = sender.trim().take(100)
+            if (name.isNotEmpty()) {
+                val totals = skippedBySender.getOrPut(name) { mutableMapOf() }
+                totals[reason] = (totals[reason] ?: 0) + 1
+            }
+        }
         provider.use { rows ->
             val senderCol = rows.getColumnIndex("address")
             val bodyCol = rows.getColumnIndex("body")
@@ -2047,14 +2067,44 @@ object WaffraAutoSmsStore {
                 checked++
                 val sender = rows.getString(senderCol) ?: continue
                 val body = rows.getString(bodyCol) ?: continue
-                if (!reviewEligible(sender, body)) continue
+                if (!reviewEligible(sender, body)) {
+                    record("notFinancial", sender)
+                    continue
+                }
                 val receivedAt = rows.getLong(dateCol)
                 val sent = if (sentCol >= 0 && !rows.isNull(sentCol))
                     rows.getLong(sentCol) else 0L
                 val identityAt = if (sent > 946684800000L &&
                     sent <= now + 300000L) sent else receivedAt
                 val fingerprint = id(sender, body, identityAt)
-                if (fingerprint in existingIds) continue
+                val why = synchronized(mutex) {
+                    if (!enabled(context) ||
+                        ownerAtStart != signedInOwnerHash(context))
+                        throw SecurityException("SMS_RECOVERY_OWNER_CHANGED")
+                    when {
+                        isExcludedLocked(context, sender) -> "senderBlocked"
+                        isCommittedLocked(context, fingerprint) ||
+                            isCompletedTransferLocked(context, fingerprint) ->
+                            "alreadyCommitted"
+                        isExcludedMessageLocked(context, fingerprint) ->
+                            "messageExcluded"
+                        fingerprint in existingIds -> "alreadyPending"
+                        else -> null
+                    }
+                }
+                if (why != null) {
+                    record(why, sender)
+                    continue
+                }
+                // A real OTP is deliberately excluded by native offer();
+                // count it distinctly so a SAR amount in its purpose cannot
+                // be mistaken for a missing completed bank transfer.
+                if (pureVerificationOnly(body)) {
+                    record("verification", sender)
+                    offer(context, sender, body, identityAt,
+                        historical = true, receivedAt = receivedAt)
+                    continue
+                }
 
                 // Do not evict a single existing review row if all 1000
                 // encrypted slots are occupied. Report incomplete recovery.
@@ -2074,16 +2124,23 @@ object WaffraAutoSmsStore {
                         historical = true, receivedAt = receivedAt)) {
                     added++
                     existingIds.add(fingerprint)
-                }
+                } else record("intakeRejected", sender)
             }
         }
         if (!enabled(context) || ownerAtStart != signedInOwnerHash(context))
             throw SecurityException("SMS_RECOVERY_OWNER_CHANGED")
+        // Limit the displayed diagnostic sender list. Only owners with active
+        // SMS consent receive this aggregate; no raw bodies or OTP can leak.
+        val senderSummary = skippedBySender.entries
+            .sortedByDescending { it.value.values.sum() }
+            .take(12).associate { it.key to it.value.toMap() }
         return mapOf(
             "checked" to checked,
             "added" to added,
             "partial" to partial,
-            "capacityBlocked" to capacityBlocked
+            "capacityBlocked" to capacityBlocked,
+            "skipReasons" to skipped.toMap(),
+            "senderSkipReasons" to senderSummary
         )
     }
 
