@@ -1,31 +1,25 @@
 {
   "contract_version": 1,
-  "change_id": "ISSUE784-M1051-OWNER-RESTORED-EXCLUDED-SMS",
-  "human_scope_review": "21 Nov 2026: Owner provided screenshots of AlRajhiBank 20-Nov POS and outgoing SMS absent from Waffra despite latest notification rescan, and owner-restored excluded messages not appearing. This draft restricts work to native encrypted SMS restoration, on-device review classifier exception for the exact manually restored SMS, immediate UI refresh and sender backfill. This file records the requested scope; human merge approval and signed Android UAT remain outstanding.",
+  "change_id": "ISSUE786-M1052-EXACT-LEGACY-EXCLUDED-BANK-SMS-RECOVERY",
+  "human_scope_review": "21 Nov 2026: Owner supplied current screenshots of excluded AlRajhiBank bank messages not shown in review, opaque legacy fingerprints and an ineffective Undo. Scope is the existing #787 Draft PR: exact original Android provider readback for legacy exclusions, OTP authorization vs posted debit distinction, truthful UI result and regression tests; no bank ledger/Android SMS deletion/auto posting. Source implementation and real signed-device acceptance are distinct.",
   "user_requested_changes": [
-    "Restore the exact owner-selected, already redacted and encrypted message previously excluded to the pending review immediately without waiting for a second manual pull.",
-    "When restoring a blocked sender, run a bounded checked real Android SMS provider lookback and repaint notifications for eligible recent messages.",
-    "Prevent owner-restored pending review SMS from being silently re-excluded by the same learned rule while keeping pure OTP, sender blocking, native dedupe, confirmed finance and pending capacity gates.",
-    "Preserve financial ledger, Android SMS content, protected owner identities, and prior tests; add specific regression and register it in existing M946 all-feature smoke."
+    "Recover one selected legacy excluded message with no retained body only after exact Android SMS fingerprint verification and authenticated-owner recheck, and atomically requeue for review.",
+    "Allow completed Arabic PoS debits and outgoing bank transfers to remain visible for review, while OTP authorization challenges mentioning amounts remain excluded.",
+    "Expose the verified excluded message text on user tap where available and show whether Undo restored the review row or was refused.",
+    "Retain explicit sender and individual exclusions for other messages, confirmed finance anti-replay and pending queue bounds. Add executable regression to every-PR safety CI.",
+    "No existing financial ledger write, bank balance change, native SMS deletion, owner-data migration or automatic posting."
   ],
   "allowed_changed_files": [
     "docs/WAFFRA_REQUIREMENTS.md",
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "lib/main.dart",
     "lib/waffra_home_sms_management.part.dart",
     "native/WaffraAutoSmsStore.kt",
     "scripts/qa/m946_full_app_smoke_matrix.py",
-    "test/m1051_excluded_sms_restore_regression_test.dart"
+    "test/m1052_legacy_excluded_sms_recovery_test.dart"
   ],
   "bounded_sections": {
-    "lib/main.dart": [
-      {
-        "start": "Map<String,Object?> waffraM632ClassifySmsQueue(Map<String,Object?> input){",
-        "end": "List<String> splitBankMessages(String raw){"
-      }
-    ],
     "lib/waffra_home_sms_management.part.dart": [
       {
         "start": " Future<void> _openExcludedSenders()async{",
@@ -44,6 +38,10 @@
       {
         "start": "    fun excludeMessages(context: Context, ids: Set<String>): Boolean =",
         "end": "    fun acknowledgeCompletedTransfer("
+      },
+      {
+        "start": "    private val explicitOtpToken = Regex(",
+        "end": "    private fun recordPureOtpExclusionLocked("
       }
     ],
     "scripts/qa/m946_full_app_smoke_matrix.py": [

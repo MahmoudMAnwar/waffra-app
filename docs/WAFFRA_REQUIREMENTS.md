@@ -2942,3 +2942,13 @@ Status: Partial — source and regression tests added in a draft branch; exact-h
 - Restoring one owner-excluded *reviewable* SMS must restore its encrypted redacted review text into the owner pending queue atomically with removing its denial markers, preserving the exact fingerprint, source fragment IDs, date and 1000-item capacity. It must not resurrect OTP-only content, reverse a confirmed financial write or bypass a blocked sender. Explicit restore overrides only the learned rule that would immediately re-exclude that same SMS, until the owner reviews it.
 - Restoring an excluded sender must trigger a bounded actual Android provider rescan and refresh the live review UI, including last-seven-day SMS, without a manual second action or cursor rewind. Restoration with no recoverable message must not claim a new notification appeared.
 - Tests: `test/m1051_excluded_sms_restore_regression_test.dart` and retained M1037/M1050 tests. All financial posting remains explicit user confirmation; no source deletion, silent auto-post or skipped required CI tests.
+
+### M1052 — Recover wrongly excluded bank SMS and make Undo effective (Issue #786)
+
+- Status: Code and M1052 regression committed on Draft PR #787 (`fix/m1052-bank-sms-exclusion-recovery`); exact-head CI and signed Android device acceptance pending. Do not claim live-phone success yet.
+- Completed Arabic POS debits and outgoing transfers must reach review through live, history and recovery scans. A real verification code sent by the same bank remains protected.
+- Undo for a retained legacy exclusion with no cached body must recover the exact original from Android when available, and update the excluded sheet and notifications. Preserve explicit blocks, completed transactions, source identities and pending capacity.
+- Regression coverage: bank/OTP examples, legacy restore and refresh/restart idempotence. Physical device acceptance is pending.
+
+- Native source now checks the exact Android SMS provider fingerprint for legacy excluded labels with no cached body, rechecks account/exclusions/booked money and atomically requeues eligible messages. An OTP authorization challenge mentioning SAR remains excluded while posted POS/outgoing remains reviewable.
+- Excluded sheet shows retained safe preview; tapping retrieves the exact matched original when available, while Undo reports whether requeued/failed. New source-contract and parser regression: `test/m1052_legacy_excluded_sms_recovery_test.dart`, registered in M946 safety.
