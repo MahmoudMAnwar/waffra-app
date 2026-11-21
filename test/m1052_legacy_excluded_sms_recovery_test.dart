@@ -44,7 +44,7 @@ void main() {
     native.indexOf('private val authorizationChallenge = Regex(')));
   expect(classifier,contains('authorizationChallenge.containsMatchIn(body)'));
   expect(classifier,contains('completedBankHeadline.containsMatchIn(body)'));
-  expect(classifier,contains('completedFinancialAction.containsMatchIn(body)) return false'));
+  expect(classifier,contains('!completedFinancialAction.containsMatchIn(body)'));
   expect(native,contains('if (pureVerificationOnly(body)) {'));
   expect(native,contains('recordPureOtpExclusionLocked('));
  });
