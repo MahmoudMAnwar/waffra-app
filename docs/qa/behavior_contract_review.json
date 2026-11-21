@@ -1,12 +1,36 @@
 {
   "schema_version": 1,
-  "pr": "Draft PR #783 for M1050 Issue #782: recover late/backdated SMS via explicit notification refresh",
-  "issue": "#782",
+  "pr": "Draft PR #785 for M1051 Issue #784: owner-restored excluded SMS review and sender backfill",
+  "issue": "#784",
   "workflow_review_policy": "scan-all-registered-workflows",
-  "baseline": "main at PR #783 branch creation, 21 Nov 2026",
+  "baseline": "main badddee35b69104a38eaf33d19e3c033cc68c3fb at PR #785 branch creation, 21 Nov 2026",
   "reviewed_at": "2026-11-21",
-  "review_policy": "M1050 recent SMS provider lookback only on explicit pull, without resetting native source cursor; same live owner permissions, encrypted local-only candidate queue, OTP/exclusion/committed-finance dedupe, and 1000-capacity safeguard; existing M1047 and earlier contracts preserved. All-PR CI and real Android SMS UAT pending.",
+  "review_policy": "M1051 owner-requested restore of excluded financial SMS and sender-scoped rescan, keeping encrypted owner verification, OTP/finance replay exclusions, queue capacity, no auto ledger posting and all M1050 Android provider partial-scan warnings. Historic contracts remain. All-PR CI and real Android SMS UAT pending.",
   "contracts": [
+    {
+      "id": "M1051-OWNER-RESTORE-EXCLUDED-SMS-AND-SENDER-RESCAN",
+      "issue": "Issue #784 / Draft PR #785",
+      "previous_behavior": "Native undo removed an exclusion label and exact fingerprint but did not requeue the SMS; saved exclude rules could remove it again on a subsequent scan. Unblocking a sender only allowed future SMS, without a historical provider rescan or live review repaint. Missing Nov-20 AlRajhiBank messages are owner-observed, but the exact installed APK/source cause is not yet proven.",
+      "approved_behavior": "An owner-verified individual non-OTP, non-booked SMS with a readable redacted encrypted exclusion label is atomically returned to the existing encrypted review queue with its source ID/timestamp, while only that one manually restored ID bypasses subsequent learned exclusion suggestions in Dart review. Removing a blocked sender immediately requests the M1050 bounded Android provider lookback and live review refresh, retaining non-financial no-auto-post rules and honest capacity/permission failures.",
+      "source_paths": [
+        "native/WaffraAutoSmsStore.kt",
+        "lib/main.dart",
+        "lib/waffra_home_sms_management.part.dart"
+      ],
+      "test_paths": [
+        "test/m1051_excluded_sms_restore_regression_test.dart",
+        "test/m1050_recent_sms_rescan_recovery_test.dart",
+        "test/m1037_excluded_sms_readback_and_learning_test.dart",
+        "scripts/qa/m946_full_app_smoke_matrix.py"
+      ],
+      "safety_invariants": [
+        "Restore only owner-selected exact SMS ID and only when its encrypted redacted label contains review-eligible non-OTP text; no wildcard undo or replay of pure verification codes.",
+        "Native exclude fingerprint removal and candidate queue insertion share one encrypted editor.commit; on capacity/denied sender/committed financial evidence, reject without removing any exclusion markers.",
+        "Manual restore only overrides learned classification 'excluded' for the exact native restored review candidate; financial parsing and independent user confirmation remain mandatory.",
+        "Sender unblock triggers the pre-existing bounded seven-day Android SMS provider replay; never reset the durable cursor, delete Android SMS, or modify verified financial ledger/account balances.",
+        "Physical signed Android verification and exact-head CI pending; no source tests claim device-proof."
+      ]
+    },
     {
       "id": "M1050-RECOVER-LATE-BANK-SMS-BEHIND-HISTORY-CURSOR",
       "issue": "Issue #782 / Draft PR #783",
