@@ -23,14 +23,16 @@
         "test/m638_sms_inbox_delete_sync_test.dart",
         "test/m509_all_sender_sms_rescan_dedup_test.dart",
         "test/m547_sms_incremental_jank_regression_test.dart",
-        "test/m514_sms_review_regressions_test.dart"
+        "test/m514_sms_review_regressions_test.dart",
+        "test/m670_feedback_transfer_dashboard_test.dart"
       ],
       "safety_invariants": [
         "Never rewind or clear the durable history cursor or overwrite the encrypted queue during a recover scan; all native candidate receipts pass the shared live offer gate.",
         "Owner-bound SMS consent and READ/RECEIVE_SMS access are mandatory; no provider or vault failures may be turned into an empty-success result.",
         "Existing user exclusions, OTP denial fingerprints, duplicate paid entries and completed transfers remain suppressed; no additional cloud or financial ledger writer is introduced.",
         "Replay only recent bounded provider rows on explicit pull, not during every Home lifecycle refresh; report 1000-slot pressure and bounded partial work truthfully.",
-        "M385, M550, M946, M449, Kotlin/Flutter analyses and physical Android QA remain required before merging."
+        "M385, M550, M946, M449, Kotlin/Flutter analyses and physical Android QA remain required before merging.",
+        "Owner route feedback still uses the requesting notifications context, and the visible SMS added count only increases for actual newly displayed pending review rows."
       ]
     },
     {
