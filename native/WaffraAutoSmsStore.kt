@@ -1134,11 +1134,15 @@ object WaffraAutoSmsStore {
         RegexOption.IGNORE_CASE)
     private fun pureVerificationOnly(body: String): Boolean {
         if (!otp.containsMatchIn(body) ||
-            !explicitOtpToken.containsMatchIn(body) ||
-            completedFinancialAction.containsMatchIn(body)) return false
-        if (authorizationChallenge.containsMatchIn(body) &&
+            !explicitOtpToken.containsMatchIn(body)) return false
+        // Keep the completed-bank-event evidence authoritative on mixed SMS.
+        // An OTP-first authorization to make a transfer is not a completed
+        // money movement merely because it mentions a transfer or SAR amount.
+        if (!completedFinancialAction.containsMatchIn(body) &&
+            authorizationChallenge.containsMatchIn(body) &&
             !completedBankHeadline.containsMatchIn(body)) return true
-        return !(action.containsMatchIn(body) && money.containsMatchIn(body))
+        return !completedFinancialAction.containsMatchIn(body) &&
+            !(action.containsMatchIn(body) && money.containsMatchIn(body))
     }
 
     /**
