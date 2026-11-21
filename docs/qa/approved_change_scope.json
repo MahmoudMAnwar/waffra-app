@@ -14,20 +14,12 @@
     "docs/qa/approved_change_scope.json",
     "docs/qa/behavior_contract_review.json",
     "docs/release/WAFFRA_APPROVED_CHANGES.txt",
-    "lib/main.dart",
     "lib/waffra_home_sms_management.part.dart",
     "native/WaffraAutoSmsStore.kt",
     "scripts/qa/m946_full_app_smoke_matrix.py",
-    "test/m1051_excluded_sms_restore_regression_test.dart",
     "test/m1052_legacy_excluded_sms_recovery_test.dart"
   ],
   "bounded_sections": {
-    "lib/main.dart": [
-      {
-        "start": "Map<String,Object?> waffraM632ClassifySmsQueue(Map<String,Object?> input){",
-        "end": "List<String> splitBankMessages(String raw){"
-      }
-    ],
     "lib/waffra_home_sms_management.part.dart": [
       {
         "start": " Future<void> _openExcludedSenders()async{",
